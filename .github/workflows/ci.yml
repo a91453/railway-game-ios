@@ -20,8 +20,9 @@ jobs:
       fail-fast: false
       matrix:
         # 6.0 is the minimum declared by Package.swift (swift-tools-version: 6.0);
+        # 6.2.4 is the iPad / Swift Playgrounds compatibility target;
         # 6.4 is the current stable release.
-        swift: ["6.0", "6.4"]
+        swift: ["6.0", "6.2.4", "6.4"]
     container: swift:${{ matrix.swift }}-noble
     steps:
       - uses: actions/checkout@v5
