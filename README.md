@@ -31,7 +31,9 @@ GameCore 目前能做到：
 
 ## 技術方向
 
-- Swift 6（language mode 6，最低 toolchain 6.0）
+- Swift 6（language mode 6）
+  - 最低 Swift tools version：6.0（`swift-tools-version: 6.0`）
+  - iPad / Swift Playgrounds 相容目標：Swift 6.2.x
 - Swift Package Manager
 - SwiftUI（Presentation，未來）
 - SpriteKit / Metal（Rendering，未來依效能需求評估）
@@ -67,4 +69,4 @@ swift build
 swift test
 ```
 
-GameCore 只使用 Swift 標準函式庫，因此可在 macOS、iPadOS（Swift Playgrounds）與 Linux 上建置。CI 在 Linux 上以 Swift 6.0 與 6.4 執行 build 與 test。
+GameCore 只使用 Swift 標準函式庫，因此可在 macOS、iPadOS（Swift Playgrounds）與 Linux 上建置。CI 在 Linux 上以 Swift 6.0（最低版本）、6.2.4（Swift Playgrounds 相容目標）與 6.4（目前穩定版）執行 build 與 test。
