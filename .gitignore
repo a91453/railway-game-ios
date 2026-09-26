@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+build/
+
+# Editors
+.vscode/
+*.swp
+
+# Secrets — never commit these
+.env
+.env.*
+*.pem
+*.p12
+*.p8
+*.key
+*.mobileprovision
