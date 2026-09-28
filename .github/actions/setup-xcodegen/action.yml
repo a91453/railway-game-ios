@@ -1,7 +1,8 @@
 name: Set up XcodeGen
 description: >-
   Installs a pinned, checksum-verified XcodeGen release and adds it to PATH.
-  macOS runners only. To upgrade, change both values below together.
+  macOS runners only. To upgrade, change both values below together, update
+  the source build steps in CLAUDE.md, and commit the regenerated project.
 
 runs:
   using: composite
