@@ -1,0 +1,420 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7E2B69371F0B985A7107860 /* GameCore */; };
+		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
+		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
+		4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903982CCE649E985E784BE87 /* HUDView.swift */; };
+		72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC137C507F9A22C91174E71 /* NetworkOverview.swift */; };
+		80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */; };
+		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
+		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
+		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
+		AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */; };
+		BAAE6E57E7C2D199CC097CF2 /* DemoLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */; };
+		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
+		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
+		E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41251B12461A0FD34DFCB786 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0A8A6A623CDA7792FB18C0A2 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		2C7E3045294CC098C802F9DA /* railway-game-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "railway-game-ios"; path = ..; sourceTree = SOURCE_ROOT; };
+		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
+		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackPieceEditor.swift; sourceTree = "<group>"; };
+		903982CCE649E985E784BE87 /* HUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDView.swift; sourceTree = "<group>"; };
+		908DF494BE421AA1D9D8EE60 /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
+		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
+		A7D933E24E26C2077E5BC12A /* RailwayGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RailwayGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLayout.swift; sourceTree = "<group>"; };
+		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileArt.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B071A2BE9B6A4A2054356841 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */,
+				DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		04B4E0263838A9F3091ABD24 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A7D933E24E26C2077E5BC12A /* RailwayGame.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		323CCFDFD5FC7E9426C5F161 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */,
+				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		4BC825607E71A86B2AAEA49F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D490F999E435A0570BE04635 /* ContentView.swift */,
+				A07E2BC9805D886DEE596859 /* ControlPanel.swift */,
+				903982CCE649E985E784BE87 /* HUDView.swift */,
+				908DF494BE421AA1D9D8EE60 /* InspectorView.swift */,
+				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
+				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
+				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
+				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
+				60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		828A069B3EBF9E0D71CBF431 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				2C7E3045294CC098C802F9DA /* railway-game-ios */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		A1765EA1CC06988CA8C37FF3 = {
+			isa = PBXGroup;
+			children = (
+				323CCFDFD5FC7E9426C5F161 /* App */,
+				828A069B3EBF9E0D71CBF431 /* Packages */,
+				F93DAEBD83BEBF200EC0536D /* Resources */,
+				4BC825607E71A86B2AAEA49F /* Views */,
+				04B4E0263838A9F3091ABD24 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F93DAEBD83BEBF200EC0536D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				41251B12461A0FD34DFCB786 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6B2730D54DA2BD4386F0AEE3 /* RailwayGame */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D02E24E17509A8E74B0F95A /* Build configuration list for PBXNativeTarget "RailwayGame" */;
+			buildPhases = (
+				3D91C31EC1F78548D564B05C /* Sources */,
+				C61135149A74BBA2B4090747 /* Resources */,
+				B071A2BE9B6A4A2054356841 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RailwayGame;
+			packageProductDependencies = (
+				B7E2B69371F0B985A7107860 /* GameCore */,
+				45EC5C77CE30354C4B4E2BAF /* GamePresentation */,
+			);
+			productName = RailwayGame;
+			productReference = A7D933E24E26C2077E5BC12A /* RailwayGame.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		20F26E761254EC6D2A5F8CC9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					6B2730D54DA2BD4386F0AEE3 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = CEB4CA7D01BF206898BE6B83 /* Build configuration list for PBXProject "RailwayGame" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A1765EA1CC06988CA8C37FF3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B62E968A3FFCDAC313506A7E /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 04B4E0263838A9F3091ABD24 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6B2730D54DA2BD4386F0AEE3 /* RailwayGame */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C61135149A74BBA2B4090747 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3D91C31EC1F78548D564B05C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */,
+				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
+				BAAE6E57E7C2D199CC097CF2 /* DemoLayout.swift in Sources */,
+				4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */,
+				9C344F54682319D6B608F56A /* InspectorView.swift in Sources */,
+				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
+				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
+				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
+				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
+				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
+				AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		56720F79A03BC1087880FEC5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame;
+				SDKROOT = iphoneos;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8830125C4DA391731F463A14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		E4FFDE7BFDC7E8349E70DBAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		F8FCB828881F14C677775352 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.a91453.RailwayGame;
+				SDKROOT = iphoneos;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7D02E24E17509A8E74B0F95A /* Build configuration list for PBXNativeTarget "RailwayGame" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				56720F79A03BC1087880FEC5 /* Debug */,
+				F8FCB828881F14C677775352 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CEB4CA7D01BF206898BE6B83 /* Build configuration list for PBXProject "RailwayGame" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8830125C4DA391731F463A14 /* Debug */,
+				E4FFDE7BFDC7E8349E70DBAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B62E968A3FFCDAC313506A7E /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		45EC5C77CE30354C4B4E2BAF /* GamePresentation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GamePresentation;
+		};
+		B7E2B69371F0B985A7107860 /* GameCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GameCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 20F26E761254EC6D2A5F8CC9 /* Project object */;
+}

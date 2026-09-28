@@ -13,9 +13,6 @@ xcuserdata/
 *.xccheckout
 build/
 
-# XcodeGen output — generated from RailwayGameApp/project.yml, never committed
-/RailwayGameApp/RailwayGame.xcodeproj/
-
 # Editors
 .vscode/
 *.swp

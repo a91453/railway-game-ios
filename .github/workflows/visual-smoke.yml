@@ -16,7 +16,6 @@ on:
     paths:
       - .github/workflows/visual-smoke.yml
       - .github/scripts/simulator-screenshot.sh
-      - .github/actions/setup-xcodegen/**
 
 permissions:
   contents: read
@@ -55,14 +54,9 @@ jobs:
             echo "- **Xcode:** $(xcodebuild -version | head -n 1)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Set up XcodeGen
-        uses: ./.github/actions/setup-xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate --spec RailwayGameApp/project.yml
-
-      # One Simulator build serves both devices. Code signing is disabled:
-      # Simulator builds need no certificate or Apple Developer account.
+      # One Simulator build of the committed project serves both devices. Code
+      # signing is disabled: Simulator builds need no certificate or Apple
+      # Developer account.
       - name: Build for iOS Simulator
         run: |
           xcodebuild build \

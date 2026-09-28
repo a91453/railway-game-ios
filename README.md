@@ -45,7 +45,7 @@ GameCore 目前能做到：
   - 最低 Swift tools version：6.0（`swift-tools-version: 6.0`）
   - 持續相容 Swift 6.2.x（CI 驗證 6.2.4）
 - Swift Package Manager
-- XcodeGen（由 `RailwayGameApp/project.yml` 產生 Xcode 專案）
+- XcodeGen（由 `RailwayGameApp/project.yml` 產生 Xcode 專案，產生結果提交進版控）
 - SwiftUI（Presentation；Phase 2B prototype UI，iOS 17+，iPhone / iPad）
 - SpriteKit / Metal（Rendering，未來依效能需求評估）
 
@@ -74,7 +74,9 @@ Tests/GameCoreTests/
 Tests/GamePresentationTests/
 GoldenScenarios/  可移植的 golden scenario（JSON，schema 見該目錄的 README）
 RailwayGameApp/
-  project.yml   XcodeGen spec（產生的 .xcodeproj 不進版控）
+  project.yml   XcodeGen spec（專案設定的唯一來源）
+  RailwayGame.xcodeproj  由 project.yml 產生並提交（Xcode Cloud 需要），不要手改
+  Resources/    Assets.xcassets（App Icon）
   App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，截圖用）
   Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor
 ```
@@ -91,11 +93,12 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 | --- | --- | --- |
 | 1. Claude Code Cloud | Linux 容器 | 原始碼開發；GameCore `swift build` / `swift test`。**沒有** Xcode、Simulator、SwiftUI / UIKit |
 | 2. Linux CI（`ci.yml`） | 每次 push / PR | GameCore 與 GamePresentation 在 Swift 6.0、6.2.4、6.4 的 build（warnings as errors）與 test |
-| 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | XcodeGen 產生專案；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；不需簽章 |
+| 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；不需簽章 |
 | 4. Visual Smoke（`visual-smoke.yml`） | macOS runner，**手動**觸發 | 在 iPhone 與 iPad Simulator 啟動 App、確認沒有閃退、截圖並上傳為 artifact（新遊戲畫面，以及 Debug 限定的 `-demo-layout` 示範配置） |
+| 5. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
 
 - **Swift Playgrounds**：可選，不是必要的開發或驗證環境。
-- **TestFlight / App Store 簽章 / 實機部署**：延後，不屬於 Phase 2；目前完全不需要 Apple Developer Program、憑證或 provisioning profile。
+- **TestFlight / 實機安裝**：以 Xcode Cloud 建置、簽章並發佈到**內部** TestFlight。Repository 端已準備好；Apple Developer Program、App Store Connect 設定與第一次在 Mac 上建立 workflow 尚未完成，步驟見 [docs/XCODE_CLOUD_ONBOARDING.md](docs/XCODE_CLOUD_ONBOARDING.md)。簽章由 Xcode Cloud 管理，repository 不含、也不提交任何憑證或 provisioning profile。
 
 ### 在 iPhone / iPad 上查看截圖
 
@@ -104,7 +107,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 3. 打開該次執行的 Summary 頁面 → **Artifacts** → 下載 **visual-smoke**
 4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，選取格子並開啟鋪軌工具）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
 
-Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow、其腳本或 XcodeGen 安裝步驟的 PR，每次推送都會自動執行。
+Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow 或其腳本的 PR，每次推送都會自動執行。
 
 ## Building
 
@@ -114,14 +117,22 @@ GameCore（任何有 Swift 6 的環境，包括 Linux）：
 swift build
 ```
 
-iOS App（需要 macOS + Xcode 16 以上與 [XcodeGen](https://github.com/yonaskolb/XcodeGen)）：
+iOS App（需要 macOS + Xcode 16 以上；上傳 App Store Connect 的 build 需要 Xcode 26 以上，由 Xcode Cloud 建置）：
 
 ```sh
-xcodegen generate --spec RailwayGameApp/project.yml
 open RailwayGameApp/RailwayGame.xcodeproj
 ```
 
-`RailwayGame.xcodeproj` 由 `project.yml` 產生、不進版控（已列入 `.gitignore`），專案設定一律改 `project.yml`。CI 使用的 XcodeGen 版本固定在 `.github/actions/setup-xcodegen/action.yml`。
+`RailwayGame.xcodeproj` 由 `project.yml` 以 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 產生，並**提交進版控**：Xcode Cloud 要求專案與 shared scheme 持續存在於 repository。專案設定一律改 `project.yml`；改了設定，或新增、刪除、改名 App 的原始檔或資源後，重新產生並一起提交：
+
+```sh
+xcodegen generate --spec RailwayGameApp/project.yml
+```
+
+- 使用 `.github/actions/setup-xcodegen/action.yml` 固定的 XcodeGen 版本；Linux（Claude Code 工作階段）從同一版本的原始碼建置，步驟見 `CLAUDE.md`。
+- 在名為 `railway-game-ios` 的資料夾（`git clone` 的預設名稱）中執行：資料夾名稱會寫進專案。
+- 不要手改 `.xcodeproj`，也不要在 Xcode 的專案編輯器（例如 Signing & Capabilities）修改設定。`ios-build.yml` 會重新產生並比對，不一致就失敗，並附上預期專案的 `regenerated-xcodeproj` artifact。
+- Xcode Cloud 寫入的 `xcshareddata/xcodecloud/manifest.json` 與日後的 `Package.resolved` 要提交；重新產生專案時它們會被保留。
 
 ## Testing
 

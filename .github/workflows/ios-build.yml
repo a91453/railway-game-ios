@@ -1,7 +1,9 @@
 name: iOS App Build
 
-# Compile-only validation of the native app against the real Apple SDK.
-# GameCore tests stay in ci.yml (Linux). Screenshots live in visual-smoke.yml.
+# Compile-only validation of the native app against the real Apple SDK, and a
+# check that the committed Xcode project still matches project.yml.
+# GameCore tests stay in ci.yml (Linux). Screenshots live in visual-smoke.yml;
+# the unsigned Release device archive lives in release-archive.yml.
 
 on:
   pull_request:
@@ -47,14 +49,55 @@ jobs:
       - name: Set up XcodeGen
         uses: ./.github/actions/setup-xcodegen
 
-      - name: Generate Xcode project
-        run: xcodegen generate --spec RailwayGameApp/project.yml
+      # The project is committed because Xcode Cloud needs it (and its shared
+      # scheme) in the repository. Regenerating it in place must change
+      # nothing; otherwise it is stale or was edited outside project.yml.
+      - name: Check the committed Xcode project matches project.yml
+        id: project-check
+        run: |
+          project=RailwayGameApp/RailwayGame.xcodeproj
+          scheme="$project/xcshareddata/xcschemes/RailwayGame.xcscheme"
+          if ! git ls-files --error-unmatch "$scheme" >/dev/null 2>&1; then
+            echo "::error::The shared scheme $scheme is not committed; Xcode Cloud needs it."
+            exit 1
+          fi
+          xcodegen generate --spec RailwayGameApp/project.yml
+          changes="$(git status --porcelain --untracked-files=all -- RailwayGameApp)"
+          if [[ -n "$changes" ]]; then
+            echo "::error::$project does not match RailwayGameApp/project.yml. Regenerate it with the pinned XcodeGen from a checkout directory named railway-game-ios and commit the result (see README, Building). This run's regenerated-xcodeproj artifact holds the expected project."
+            echo "$changes"
+            git --no-pager diff -- RailwayGameApp
+            exit 1
+          fi
+          echo "Committed project matches a fresh generation."
 
-      - name: List schemes
-        run: xcodebuild -list -project RailwayGameApp/RailwayGame.xcodeproj
+      - name: Upload regenerated project
+        if: failure() && steps.project-check.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: regenerated-xcodeproj
+          path: RailwayGameApp/RailwayGame.xcodeproj
+          retention-days: 7
+
+      # Xcode Cloud onboarding lists the products this command finds (Apple:
+      # "Configuring your first Xcode Cloud workflow"); the app must be one.
+      # The local package's GameCore and GamePresentation libraries are
+      # listed too.
+      - name: List schemes and archivable products
+        run: |
+          project=RailwayGameApp/RailwayGame.xcodeproj
+          xcodebuild -list -project "$project"
+          products="$(xcodebuild -project "$project" -describeAllArchivableProducts -json)"
+          echo "$products"
+          if ! grep -Eq '"bundleIdentifier" *: *"io\.github\.a91453\.RailwayGame"' <<<"$products"; then
+            echo "::error::Xcode finds no archivable io.github.a91453.RailwayGame app, so Xcode Cloud could not offer it."
+            exit 1
+          fi
 
       # A generic destination needs no booted Simulator. Code signing is
       # disabled: Simulator builds need no certificate or Apple Developer account.
+      # Package resolution is disabled as on Xcode Cloud, which only uses a
+      # committed Package.resolved, so a missing one fails here first.
       - name: Build for iOS Simulator
         run: |
           xcodebuild build \
@@ -63,4 +106,5 @@ jobs:
             -configuration Debug \
             -destination "generic/platform=iOS Simulator" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
             CODE_SIGNING_ALLOWED=NO
