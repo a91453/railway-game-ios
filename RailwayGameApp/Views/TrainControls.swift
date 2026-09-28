@@ -12,8 +12,9 @@ import SwiftUI
 /// HUD).
 struct TrainControls: View {
     /// What one press of the rate control changes, in logical units per game
-    /// minute (1024 units are one tile; at 1× a game minute is 100 ms).
-    static let rateStep: Int64 = 32
+    /// minute (1024 units are one tile; at 1× a game minute is 100 ms). An
+    /// `Int`, because that is `Int64`'s stride.
+    static let rateStep = 32
     static let maximumRate: Int64 = 1_024
 
     @Bindable var session: GameSession
