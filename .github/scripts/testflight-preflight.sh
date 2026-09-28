@@ -4,8 +4,11 @@
 # Reports every problem at once and exits non-zero if there is any. Never
 # prints a secret: it only tests whether values are set and well formed.
 #
-# Used by the preflight job of .github/workflows/testflight.yml; tested by
-# testflight-selftest.sh. Inputs (environment):
+# Used by .github/workflows/testflight.yml twice: by the preflight job, to
+# stop before a macOS runner starts, and first thing in the release job, so
+# the build number always comes from the attempt that is running (a re-run
+# of only the failed jobs reuses the earlier preflight job's results).
+# Tested by testflight-selftest.sh. Inputs (environment):
 #   GITHUB_EVENT_NAME, GITHUB_REF,
 #   GITHUB_RUN_NUMBER, GITHUB_RUN_ATTEMPT  set by GitHub Actions
 #   APPLE_TEAM_ID        variable: 10-character Team ID
@@ -14,7 +17,8 @@
 #   ASC_KEY_ID           secret: App Store Connect team API key ID
 #   ASC_ISSUER_ID        secret: App Store Connect issuer ID
 #   ASC_PRIVATE_KEY      secret: the whole text of AuthKey_<key id>.p8
-# Output: build_number=<n>.<attempt>, appended to $GITHUB_OUTPUT when set.
+# Output: build_number=<n>.<attempt> appended to $GITHUB_OUTPUT, and
+# BUILD_NUMBER=<n>.<attempt> to $GITHUB_ENV, when those are set.
 set -euo pipefail
 
 guide="docs/TESTFLIGHT_GITHUB_ACTIONS.md"
@@ -83,4 +87,7 @@ build_number="$((${BUILD_NUMBER_OFFSET:-0} + run_number)).$attempt"
 echo "Preflight passed. Build number for this run: $build_number"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "build_number=$build_number" >>"$GITHUB_OUTPUT"
+fi
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "BUILD_NUMBER=$build_number" >>"$GITHUB_ENV"
 fi

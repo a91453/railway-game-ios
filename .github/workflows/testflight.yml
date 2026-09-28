@@ -47,15 +47,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: testflight
-    outputs:
-      build_number: ${{ steps.check.outputs.build_number }}
     steps:
       - uses: actions/checkout@v7
 
       # Fails in seconds, listing every missing or malformed setting, before
       # a macOS runner starts. Prints no secret.
       - name: Check branch and settings
-        id: check
         env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
@@ -74,10 +71,21 @@ jobs:
     environment: testflight
     env:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-      BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
     steps:
       - uses: actions/checkout@v7
+
+      # The same check again, and BUILD_NUMBER for later steps. It is
+      # computed here, from this job's own run attempt, so that re-running
+      # only the failed jobs still gets a build number no attempt has used.
+      - name: Check settings and set the build number
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          BUILD_NUMBER_OFFSET: ${{ vars.BUILD_NUMBER_OFFSET }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-preflight.sh
 
       # App Store Connect accepts only builds made with Xcode 26 or later.
       - name: Toolchain versions

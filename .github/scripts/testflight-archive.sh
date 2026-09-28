@@ -42,9 +42,13 @@ args=(
   -derivedDataPath "${RUNNER_TEMP:?RUNNER_TEMP is not set}/DerivedData"
   -disableAutomaticPackageResolution
 )
+# Release modes run with -quiet: a verbose signed build prints each code
+# signing identity, whose name is the account holder's, into public logs.
+# Errors and warnings are still printed.
 case "$mode" in
   automatic)
     args+=(
+      -quiet
       -allowProvisioningUpdates
       -authenticationKeyPath "${ASC_KEY_PATH:?ASC_KEY_PATH is not set}"
       -authenticationKeyID "${ASC_KEY_ID:?ASC_KEY_ID is not set}"
@@ -55,6 +59,7 @@ case "$mode" in
     ;;
   adhoc)
     args+=(
+      -quiet
       CODE_SIGN_STYLE=Automatic
       CODE_SIGN_IDENTITY=-
       AD_HOC_CODE_SIGNING_ALLOWED=YES

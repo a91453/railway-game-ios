@@ -37,8 +37,9 @@ run() {
   shift 2
   cases=$((cases + 1))
   : >"$tmp/$name.out"
+  : >"$tmp/$name.env"
   local status=0
-  env -i PATH="$PATH" GITHUB_OUTPUT="$tmp/$name.out" "$@" \
+  env -i PATH="$PATH" GITHUB_OUTPUT="$tmp/$name.out" GITHUB_ENV="$tmp/$name.env" "$@" \
     bash "$preflight" >"$tmp/$name.log" 2>&1 || status=$?
   if [[ "$status" -ne "$expected" ]]; then
     fail "$name: exit $status, expected $expected"
@@ -47,9 +48,11 @@ run() {
 }
 build_number_of() { sed -n 's/^build_number=//p' "$tmp/$1.out"; }
 expect_build() {
-  local actual
+  local actual env_value
   actual="$(build_number_of "$1")"
   [[ "$actual" == "$2" ]] || fail "$1: build number '$actual', expected '$2'"
+  env_value="$(sed -n 's/^BUILD_NUMBER=//p' "$tmp/$1.env")"
+  [[ "$env_value" == "$2" ]] || fail "$1: BUILD_NUMBER in GITHUB_ENV is '$env_value', expected '$2'"
 }
 expect_error() {
   grep -qF -- "$2" "$tmp/$1.log" || fail "$1: no error containing '$2'"
@@ -108,7 +111,7 @@ expect_error negative-offset "BUILD_NUMBER_OFFSET must be"
 run no-run-number 1 "${valid[@]}" GITHUB_RUN_NUMBER=
 expect_error no-run-number "GITHUB_RUN_NUMBER"
 for name in nothing-set not-main malformed truncated-key; do
-  [[ ! -s "$tmp/$name.out" ]] || fail "$name: wrote a build number despite failing"
+  [[ ! -s "$tmp/$name.out" && ! -s "$tmp/$name.env" ]] || fail "$name: wrote a build number despite failing"
 done
 
 # --- No secret in any output ------------------------------------------------

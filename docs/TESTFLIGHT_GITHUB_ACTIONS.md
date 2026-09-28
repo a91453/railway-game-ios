@@ -32,7 +32,8 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
   │    分支與觸發方式、每個必要設定是否存在且格式正確；
   │    缺少就一次列出全部並停止，不啟動 macOS runner
   └─ release（macos-26）
-       暫存 keychain + API key 檔（權限 600）
+       再檢查一次設定，並依這次執行的 attempt 決定 build number
+       → 暫存 keychain + API key 檔（權限 600）
        → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
          自動簽章 + 真實 Team + API key + -allowProvisioningUpdates
        → 匯出 IPA：xcodebuild -exportArchive，App Store Connect 發佈，
@@ -102,7 +103,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
      - 不要貼給任何人（包括 Claude），也不要放進 repository、issue、PR 或聊天。
 6. **建立 GitHub environment**：在 github.com 用 Safari 開 repository → Settings → Environments → New environment，名稱 `testflight`。
    - **Deployment branches and tags**：選 **Selected branches and tags**，只加入 `main`。
-   - **Required reviewers**（選用）：加上自己，每次發佈前多一次確認。不要勾「Prevent self-review」，否則你無法核准自己的發佈。
+   - **Required reviewers**（選用）：加上自己，每次發佈前多一次確認。不要勾「Prevent self-review」，否則你無法核准自己的發佈。preflight 與 release 兩個 job 都使用這個 environment，所以每次發佈會要求核准兩次。
    - **Environment secrets**：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY`（貼上 `.p8` 全文，換行保持原樣即可）。
    - **Environment variables**：`APPLE_TEAM_ID`、`ASC_APP_ID`；`BUILD_NUMBER_OFFSET` 選填。
 7. **內部測試群組**：App Store Connect → 你的 App → TestFlight → Internal Testing「+」→ 群組 `Internal`，加入自己，勾「Enable automatic distribution」。Apple 說明中必須手動加入群組的是 Xcode Cloud 的 build；若新 build 沒有自動出現，在群組頁按 Add Builds 手動加入。
@@ -120,6 +121,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - 例如第 7 次執行是 `7.1`，重跑同一次是 `7.2`，下一次執行是 `8.1`。
   - 版本號（0.1.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
+  - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
 - **Apple**：
   - `CFBundleVersion` 是一到三段以點分隔的整數，所以 `7.2` 合法。
   - App Store Connect 要求版本號與 build number 的組合不重複。
