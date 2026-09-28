@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 5
     environment: testflight
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Fails in seconds, listing every missing or malformed setting, before
       # a macOS runner starts. Prints no secret.
@@ -73,7 +73,7 @@ jobs:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # The same check again, and BUILD_NUMBER for later steps. It is
       # computed here, from this job's own run attempt, so that re-running
@@ -127,7 +127,8 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
-      # Checks the exact file that is uploaded next.
+      # Checks a local IPA exported from the same archive and signing options
+      # that the upload step reuses.
       - name: Check the IPA
         id: ipa
         run: |
@@ -148,9 +149,9 @@ jobs:
             echo "version=$EXPECTED_VERSION"
           } >>"$GITHUB_OUTPUT"
 
-      # Runs only after the IPA check passed. Same archive and options as the
-      # checked export except destination=upload (supported with API keys
-      # since Xcode 15).
+      # Runs only after the IPA check passed. It re-exports the same archive
+      # with the same signing options; only destination changes to upload
+      # (supported with API keys since Xcode 15).
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
