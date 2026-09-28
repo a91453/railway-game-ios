@@ -35,4 +35,13 @@ public enum GameError: Error, Hashable, Sendable {
     /// or strictly inside a link between two joined track tiles (see
     /// ``TrainPosition``).
     case invalidTrainPosition
+    /// A train's movement rate must not be negative.
+    case invalidMovementRate
+    /// A continuation must name, in order, nodes the train can enter from
+    /// where it is: each joined to the one before (starting from the train's
+    /// node, or the end of its link), with no immediate U-turn.
+    case invalidContinuation
+    /// Advancing that many ticks at the current speed would take game time
+    /// past the largest minute the clock can hold. Nothing was advanced.
+    case clockOverflow
 }

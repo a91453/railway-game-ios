@@ -476,13 +476,13 @@ final class TrainPositionTests: XCTestCase {
         let positions = world.trains.map(\.position)
 
         world.setSpeed(.normal)
-        world.advance(ticks: 30)
+        try world.advance(ticks: 30)
         world.setSpeed(.double)
-        world.advance(ticks: 10)
+        try world.advance(ticks: 10)
         world.pause()
-        world.advance(ticks: 5)
+        try world.advance(ticks: 5)
         world.resume()
-        world.advance(ticks: 1)
+        try world.advance(ticks: 1)
 
         XCTAssertEqual(world.clock.now, GameTime(minutes: 52))
         XCTAssertEqual(world.clock.speed, .double)
@@ -513,7 +513,7 @@ final class TrainPositionTests: XCTestCase {
         try world.unplaceTrain(second)
         try world.placeTrain(second, at: .onLink(from: north, to: center, offset: 1000))
         world.setSpeed(.normal)
-        world.advance(ticks: 7)
+        try world.advance(ticks: 7)
     }
 
     private func encode(_ world: GameWorld) throws -> Data {

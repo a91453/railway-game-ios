@@ -62,9 +62,40 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(wrongTime.differences().count, 1, name)
 
             var extraTrain = committed
-            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil)))
+            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle)))
             XCTAssertEqual(extraTrain.differences().count, 1, name)
         }
+    }
+
+    /// A train's expected movement is compared exactly: another rate, cursor
+    /// or continuation is reported once.
+    func testChangedTrainMovementExpectationsAreReported() throws {
+        var movingCount = 0
+        for url in try GoldenScenarioFixtures.urls() {
+            let name = url.lastPathComponent
+            let committed = try GoldenScenario.decode(Data(contentsOf: url))
+            for (index, train) in committed.expectedFinalState.trains.enumerated() {
+                if train.movement.rate > 0 {
+                    movingCount += 1
+                }
+                var wrongMovements: [TrainMovementSummary] = []
+                var changed = train.movement
+                changed.rate += 1
+                wrongMovements.append(changed)
+                changed = train.movement
+                changed.cursor += 1
+                wrongMovements.append(changed)
+                changed = train.movement
+                changed.continuation.append(PositionSummary(GridPosition(x: 0, y: 0)))
+                wrongMovements.append(changed)
+                for wrong in wrongMovements {
+                    var scenario = committed
+                    scenario.expectedFinalState.trains[index].movement = wrong
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) expecting \(wrong)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(movingCount, 0, "No fixture expects a train with a rate")
     }
 
     /// A train's expected position is compared exactly: unplaced instead of
@@ -98,11 +129,13 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     /// Every observation's expectation is compared exactly: a flipped answer,
-    /// a missing, extra or repeated neighbour, or the same neighbours in
-    /// another order is reported at that step and nowhere else.
-    func testChangedTopologyExpectationsAreReported() throws {
+    /// a missing, extra or repeated neighbour, the same neighbours in another
+    /// order, or any change to a train's position or movement is reported at
+    /// that step and nowhere else.
+    func testChangedObservationExpectationsAreReported() throws {
         var observationCount = 0
         var orderedAnswerCount = 0
+        var trainAnswerCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -111,6 +144,9 @@ final class GoldenScenarioTests: XCTestCase {
                 observationCount += 1
                 if case .neighbors(let neighbors) = expect, neighbors.count > 1 {
                     orderedAnswerCount += 1
+                }
+                if case .train = expect {
+                    trainAnswerCount += 1
                 }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
@@ -123,6 +159,7 @@ final class GoldenScenarioTests: XCTestCase {
         }
         XCTAssertGreaterThan(observationCount, 0, "No fixture observes track connectivity")
         XCTAssertGreaterThan(orderedAnswerCount, 0, "No fixture pins the order of connected neighbours")
+        XCTAssertGreaterThan(trainAnswerCount, 0, "No fixture observes a train")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -139,7 +176,36 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.neighbors(neighbors.reversed()))
             }
             return wrong
+        case .train(nil):
+            return []
+        case .train(let state?):
+            return [.train(nil)] + wrongStates(for: state).map { .train($0) }
         }
+    }
+
+    /// Train states that differ from `state` in one field each.
+    private static func wrongStates(for state: TrainState) -> [TrainState] {
+        var wrong: [TrainState] = []
+        var changed = state
+        switch state.position.position {
+        case nil:
+            changed.position = TrainPositionSummary(.atNode(GridPosition(x: 0, y: 0), heading: .north))
+        case .atNode(let tile, let heading)?:
+            changed.position = TrainPositionSummary(.atNode(tile, heading: heading.opposite))
+        case .onLink(let from, let to, let offset)?:
+            changed.position = TrainPositionSummary(.onLink(from: from, to: to, offset: offset + 1))
+        }
+        wrong.append(changed)
+        changed = state
+        changed.movement.rate += 1
+        wrong.append(changed)
+        changed = state
+        changed.movement.cursor += 1
+        wrong.append(changed)
+        changed = state
+        changed.movement.continuation.append(PositionSummary(GridPosition(x: 99, y: 99)))
+        wrong.append(changed)
+        return wrong
     }
 
     /// A fixture that wrongly expects a one-sided exit to be a link fails,
@@ -147,7 +213,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 3,
+              "schemaVersion": 4,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -192,7 +258,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 4] {
+        for version in [1, 2, 3, 5] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -216,6 +282,15 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"type": "placeTrain", "position": {"type": "node", "x": 1, "y": 1, "heading": "east"}}"#,
             #"{"type": "placeTrain", "train": 1}"#,
             #"{"type": "placeTrain", "train": 1, "position": {"type": "unplaced"}}"#,
+            // Movement commands need a train and a value of the right kind.
+            #"{"type": "setTrainMovementRate", "train": 1}"#,
+            #"{"type": "setTrainMovementRate", "rate": 5}"#,
+            #"{"type": "setTrainMovementRate", "train": 1, "rate": "fast"}"#,
+            #"{"type": "setTrainContinuation", "train": 1}"#,
+            #"{"type": "setTrainContinuation", "train": 1, "continuation": [{"x": 1}]}"#,
+            #"{"type": "setTrainContinuation", "train": 1, "continuation": ["east"]}"#,
+            // Observations are not commands.
+            #"{"type": "train", "train": 1}"#,
         ]
         for json in commands {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
@@ -249,6 +324,14 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "connectedNeighbors", "x": 0}, "expect": {"neighbors": []}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [{"x": 1}]}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": ["east"]}}"#,
+            // A train is answered by its position and movement, both required,
+            // and by nothing else.
+            #"{"observe": {"type": "train"}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"movement": {"rate": 0, "continuation": [], "cursor": 0}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": []}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}, "connected": true}}"#,
+            #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "position": {"type": "unplaced"}}}"#,
         ]
         for json in steps {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
@@ -267,6 +350,15 @@ final class GoldenScenarioTests: XCTestCase {
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(connected.utf8)),
             .observe(.isConnected(GridPosition(x: 2, y: 1), to: GridPosition(x: 3, y: 1)), expect: .connected(true))
         )
+
+        let train = #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}, "offset": 532}, "movement": {"rate": 1300, "continuation": [{"x": 3, "y": 1}, {"x": 4, "y": 1}], "cursor": 1}}}"#
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(train.utf8)),
+            .observe(.train(TrainID(rawValue: 1)), expect: .train(TrainState(
+                position: TrainPositionSummary(.onLink(from: GridPosition(x: 2, y: 1), to: GridPosition(x: 3, y: 1), offset: 532)),
+                movement: TrainMovementSummary(rate: 1300, continuation: [GridPosition(x: 3, y: 1), GridPosition(x: 4, y: 1)], cursor: 1)
+            )))
+        )
     }
 
     func testTrainCommandsAndResultsDecode() throws {
@@ -280,6 +372,12 @@ final class GoldenScenarioTests: XCTestCase {
              .placeTrain(TrainID(rawValue: 1), .onLink(from: GridPosition(x: 1, y: 2), to: GridPosition(x: 1, y: 1), offset: 0))),
             (#"{"type": "unplaceTrain", "train": 3}"#, .unplaceTrain(TrainID(rawValue: 3))),
             (#"{"type": "reverseTrain", "train": 4}"#, .reverseTrain(TrainID(rawValue: 4))),
+            (#"{"type": "setTrainMovementRate", "train": 2, "rate": 1300}"#, .setTrainMovementRate(TrainID(rawValue: 2), 1300)),
+            // Read as written: rejecting a negative rate is GameCore's decision.
+            (#"{"type": "setTrainMovementRate", "train": 2, "rate": -1}"#, .setTrainMovementRate(TrainID(rawValue: 2), -1)),
+            (#"{"type": "setTrainContinuation", "train": 1, "continuation": [{"x": 3, "y": 1}, {"x": 3, "y": 2}]}"#,
+             .setTrainContinuation(TrainID(rawValue: 1), [GridPosition(x: 3, y: 1), GridPosition(x: 3, y: 2)])),
+            (#"{"type": "setTrainContinuation", "train": 1, "continuation": []}"#, .setTrainContinuation(TrainID(rawValue: 1), [])),
         ]
         for (json, expected) in commands {
             XCTAssertEqual(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), expected, json)
@@ -291,6 +389,9 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"result": "trainAlreadyPlaced", "train": 1}"#, .rejected(.trainAlreadyPlaced(TrainID(rawValue: 1)))),
             (#"{"result": "trainNotPlaced", "train": 1}"#, .rejected(.trainNotPlaced(TrainID(rawValue: 1)))),
             (#"{"result": "invalidTrainPosition"}"#, .rejected(.invalidTrainPosition)),
+            (#"{"result": "invalidMovementRate"}"#, .rejected(.invalidMovementRate)),
+            (#"{"result": "invalidContinuation"}"#, .rejected(.invalidContinuation)),
+            (#"{"result": "clockOverflow"}"#, .rejected(.clockOverflow)),
         ]
         for (json, expected) in results {
             XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)

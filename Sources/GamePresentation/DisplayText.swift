@@ -104,6 +104,12 @@ extension GameError {
             "Train #\(id.rawValue) is not on the track."
         case .invalidTrainPosition:
             "A train can only be placed on a track tile or between two joined track tiles."
+        case .invalidMovementRate:
+            "A train's rate cannot be negative."
+        case .invalidContinuation:
+            "The train cannot follow that path: each step must lead to joined track, without turning back."
+        case .clockOverflow:
+            "Game time cannot advance any further."
         }
     }
 }

@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 3
+    static let schemaVersion = 4
 
     var description: String
     var initialState: InitialState
@@ -141,12 +141,13 @@ extension GoldenScenario.Step: Decodable {
         case command, observe, expect
     }
 
-    private enum AnswerKeys: String, CodingKey {
-        case neighbors, connected
+    private enum AnswerKeys: String, CodingKey, CaseIterable {
+        case neighbors, connected, position, movement
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
-    /// an observation's `expect` is fixed by the observation's type.
+    /// an observation's `expect` is fixed by the observation's type; an
+    /// answer field that belongs to another type is rejected.
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         switch (container.contains(.command), container.contains(.observe)) {
@@ -158,18 +159,26 @@ extension GoldenScenario.Step: Decodable {
         case (false, true):
             let observation = try container.decode(ScenarioObservation.self, forKey: .observe)
             let expect = try container.nestedContainer(keyedBy: AnswerKeys.self, forKey: .expect)
+            func requireOnly(_ keys: [AnswerKeys], answering type: String) throws {
+                for key in AnswerKeys.allCases where !keys.contains(key) && expect.contains(key) {
+                    throw DecodingError.dataCorruptedError(forKey: key, in: expect, debugDescription: "\(type) is not answered by \"\(key.stringValue)\".")
+                }
+            }
             switch observation {
             case .connectedNeighbors:
-                guard !expect.contains(.connected) else {
-                    throw DecodingError.dataCorruptedError(forKey: .connected, in: expect, debugDescription: "connectedNeighbors is answered by \"neighbors\" alone.")
-                }
+                try requireOnly([.neighbors], answering: "connectedNeighbors")
                 let neighbors = try expect.decode([PositionSummary].self, forKey: .neighbors)
                 self = .observe(observation, expect: .neighbors(neighbors.map(\.position)))
             case .isConnected:
-                guard !expect.contains(.neighbors) else {
-                    throw DecodingError.dataCorruptedError(forKey: .neighbors, in: expect, debugDescription: "isConnected is answered by \"connected\" alone.")
-                }
+                try requireOnly([.connected], answering: "isConnected")
                 self = try .observe(observation, expect: .connected(expect.decode(Bool.self, forKey: .connected)))
+            case .train:
+                try requireOnly([.position, .movement], answering: "train")
+                let state = try TrainState(
+                    position: expect.decode(TrainPositionSummary.self, forKey: .position),
+                    movement: expect.decode(TrainMovementSummary.self, forKey: .movement)
+                )
+                self = .observe(observation, expect: .train(state))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -191,6 +200,8 @@ enum ScenarioCommand: Equatable {
     case placeTrain(TrainID, TrainPosition)
     case unplaceTrain(TrainID)
     case reverseTrain(TrainID)
+    case setTrainMovementRate(TrainID, Int64)
+    case setTrainContinuation(TrainID, [GridPosition])
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -214,6 +225,10 @@ enum ScenarioCommand: Equatable {
                 try world.unplaceTrain(id)
             case .reverseTrain(let id):
                 try world.reverseTrain(id)
+            case .setTrainMovementRate(let id, let rate):
+                try world.setTrainMovementRate(id, to: rate)
+            case .setTrainContinuation(let id, let nodes):
+                try world.setTrainContinuation(id, to: nodes)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -221,7 +236,7 @@ enum ScenarioCommand: Equatable {
             case .resume:
                 world.resume()
             case .advance(let ticks):
-                world.advance(ticks: ticks)
+                try world.advance(ticks: ticks)
             }
             return .ok
         } catch {
@@ -232,7 +247,7 @@ enum ScenarioCommand: Equatable {
 
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, connections, name, train, position, speed, ticks
+        case type, x, y, connections, name, train, position, rate, continuation, speed, ticks
     }
 
     init(from decoder: any Decoder) throws {
@@ -260,6 +275,12 @@ extension ScenarioCommand: Decodable {
             self = try .unplaceTrain(container.decodeTrain(forKey: .train))
         case "reverseTrain":
             self = try .reverseTrain(container.decodeTrain(forKey: .train))
+        case "setTrainMovementRate":
+            // Read as written: rejecting a negative rate is GameCore's decision.
+            self = try .setTrainMovementRate(container.decodeTrain(forKey: .train), container.decode(Int64.self, forKey: .rate))
+        case "setTrainContinuation":
+            let nodes = try container.decode([PositionSummary].self, forKey: .continuation)
+            self = try .setTrainContinuation(container.decodeTrain(forKey: .train), nodes.map(\.position))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -325,6 +346,12 @@ extension StepOutcome: Codable {
             self = try .rejected(.trainNotPlaced(container.decodeTrain(forKey: .train)))
         case "invalidTrainPosition":
             self = .rejected(.invalidTrainPosition)
+        case "invalidMovementRate":
+            self = .rejected(.invalidMovementRate)
+        case "invalidContinuation":
+            self = .rejected(.invalidContinuation)
+        case "clockOverflow":
+            self = .rejected(.clockOverflow)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -376,18 +403,25 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .train)
         case .rejected(.invalidTrainPosition):
             try container.encode("invalidTrainPosition", forKey: .result)
+        case .rejected(.invalidMovementRate):
+            try container.encode("invalidMovementRate", forKey: .result)
+        case .rejected(.invalidContinuation):
+            try container.encode("invalidContinuation", forKey: .result)
+        case .rejected(.clockOverflow):
+            try container.encode("clockOverflow", forKey: .result)
         }
     }
 }
 
 // MARK: - Observations
 
-/// A read-only track topology query as a scenario step, tagged by `"type"`.
-/// Observations are not commands: they ask the world through its public
-/// queries and never change it.
+/// A read-only query as a scenario step, tagged by `"type"`: track topology,
+/// or one train's position and movement. Observations are not commands: they
+/// ask the world through its public queries and never change it.
 enum ScenarioObservation: Equatable {
     case connectedNeighbors(GridPosition)
     case isConnected(GridPosition, to: GridPosition)
+    case train(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -395,13 +429,15 @@ enum ScenarioObservation: Equatable {
             .neighbors(world.connectedNeighbors(of: position))
         case .isConnected(let position, let other):
             .connected(world.isConnected(position, to: other))
+        case .train(let id):
+            .train(world.train(id: id).map(TrainState.init))
         }
     }
 }
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to
+        case type, x, y, from, to, train
     }
 
     init(from decoder: any Decoder) throws {
@@ -413,6 +449,8 @@ extension ScenarioObservation: Decodable {
         case "isConnected":
             let from = try container.decode(PositionSummary.self, forKey: .from)
             self = try .isConnected(from.position, to: container.decode(PositionSummary.self, forKey: .to).position)
+        case "train":
+            self = try .train(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -420,15 +458,18 @@ extension ScenarioObservation: Decodable {
 }
 
 /// What an observation answered. Encoded as `{"neighbors": [{"x", "y"}, ...]}`
-/// in the order the query returned them, or `{"connected": true|false}`.
+/// in the order the query returned them, `{"connected": true|false}`, or
+/// `{"position", "movement"}` for a train. A train the world does not have
+/// answers `{}`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
     case neighbors([GridPosition])
     case connected(Bool)
+    case train(TrainState?)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case neighbors, connected
+        case neighbors, connected, position, movement
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -438,7 +479,28 @@ extension ObservationAnswer: Encodable {
             try container.encode(positions.map(PositionSummary.init), forKey: .neighbors)
         case .connected(let connected):
             try container.encode(connected, forKey: .connected)
+        case .train(let state?):
+            try container.encode(state.position, forKey: .position)
+            try container.encode(state.movement, forKey: .movement)
+        case .train(nil):
+            break
         }
+    }
+}
+
+/// A train's position and movement, as observed or summarised.
+struct TrainState: Equatable {
+    var position: TrainPositionSummary
+    var movement: TrainMovementSummary
+
+    init(position: TrainPositionSummary, movement: TrainMovementSummary) {
+        self.position = position
+        self.movement = movement
+    }
+
+    init(_ train: Train) {
+        position = TrainPositionSummary(train.position)
+        movement = TrainMovementSummary(train.movement)
     }
 }
 
@@ -460,9 +522,10 @@ struct PositionSummary: Codable, Equatable {
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money, what has been
-/// built or bought, and where each train is. Lists are in the contract's canonical order (stations and
-/// trains by ascending ID, tracks row by row from the north-west corner),
-/// sorted here rather than inherited from how GameCore stores them.
+/// built or bought, and where each train is and how it moves. Lists are in
+/// the contract's canonical order (stations and trains by ascending ID,
+/// tracks row by row from the north-west corner), sorted here rather than
+/// inherited from how GameCore stores them.
 struct WorldSummary: Codable, Equatable {
     var gameMinutes: Int64
     var speed: SpeedName
@@ -488,6 +551,7 @@ struct WorldSummary: Codable, Equatable {
         var id: Int
         var name: String
         var position: TrainPositionSummary
+        var movement: TrainMovementSummary
     }
 
     init(_ world: GameWorld) {
@@ -501,7 +565,7 @@ struct WorldSummary: Codable, Equatable {
             .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections)) }
             .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
         trains = world.trains
-            .map { TrainSummary(id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position)) }
+            .map { TrainSummary(id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position), movement: TrainMovementSummary($0.movement)) }
             .sorted { $0.id < $1.id }
     }
 }
@@ -665,6 +729,28 @@ struct TrainPositionSummary: Codable, Equatable {
             try container.encode(PositionSummary(to), forKey: .to)
             try container.encode(offset, forKey: .offset)
         }
+    }
+}
+
+/// A train's movement as a fixture value:
+/// `{"rate", "continuation": [{"x", "y"}, ...], "cursor"}`, in GameCore's
+/// terms (see `TrainMovement`): `rate` units per basic step, the whole
+/// continuation in order, and how many of its entries have been entered.
+/// A spent continuation is `[]` with cursor 0; an idle train is
+/// `{"rate": 0, "continuation": [], "cursor": 0}`.
+struct TrainMovementSummary: Codable, Equatable {
+    var rate: Int64
+    var continuation: [PositionSummary]
+    var cursor: Int
+
+    init(rate: Int64, continuation: [GridPosition], cursor: Int) {
+        self.rate = rate
+        self.continuation = continuation.map(PositionSummary.init)
+        self.cursor = cursor
+    }
+
+    init(_ movement: TrainMovement) {
+        self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor)
     }
 }
 

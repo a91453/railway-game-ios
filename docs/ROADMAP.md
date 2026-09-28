@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J 已實作；下一步是 Phase 3 的 Stage K。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K 已實作；下一步是 Phase 3 的 Stage L。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -84,15 +84,22 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - Golden scenario schema v3：列車指令、結果與最終狀態的列車位置，以及 `train-position.json`
 - 列車不會移動；App 沒有放置列車的介面（ARCHITECTURE 決策 14）
 
-### Stage K — Train Movement Kernel
+### Stage K — Train Movement Kernel ✅
 
-- 以固定步長沿著相接的鐵軌移動列車，以及抵達節點後如何延續移動（movement continuation）
-- 沿用 Stage J 的位置契約：恰好抵達節點存成 `atNode`、一步可跨越多條連結、不自動選路或折返、2× 以兩次基本步長執行、反向時清除 continuation
-- 開始前需決定：拆軌導致路段失效、修復後是否自動續行；批次 tick 與時鐘的溢位上限如何處理
+- `TrainMovement`：`rate`（`Int64`，每遊戲分鐘的邏輯單位）、`continuation`（之後依序要進入的節點）與 `cursor`（已開始進入的項數；用完後存成空清單）；未放置的列車一律 idle
+- `GameWorld`：`setTrainMovementRate(_:to:)`、`setTrainContinuation(_:to:)`（整份驗證後原子替換，空清單即清除）；`reverseTrain` 清空 continuation 並保留 rate，`unplaceTrain` 重設為 idle
+- 純整數距離 kernel：先走完目前連結再依 continuation 前進，一步可跨多條連結；恰好抵達存成 `atNode` 且不消耗下一項；不選路、不折返
+- `advance(ticks:)`：每個基本步長依 `TrainID` 順序移動列車、再推進一分鐘；2× 執行兩個基本步長；沒有列車能再改變時，時鐘直接跳過剩餘分鐘（精確捷徑）
+- 前方鐵軌被拆時在最後可達節點等待，補回後下一步自動續行，等待期間的距離不累積
+- `advance(ticks:)` 改為 `throws(GameError)`：先檢查倍速乘法與時鐘容量，溢位就整批拒絕（`clockOverflow`）；`GameClock.advance(ticks:)` 同樣檢查
+- 存檔：idle 不寫 `movement`，舊存檔讀成 idle；等待修復中的世界可以存讀；壞資料一律拒絕
+- Golden scenario schema v4：移動指令、`train` 觀察、最終狀態的列車 movement，以及 `train-movement.json`
+- App 仍沒有放置或指定路徑的介面，列車移動只由測試與 golden fixture 驗證（ARCHITECTURE 決策 15）
 
 ### Stage L — Route / Pathfinding
 
-- 路線與路徑搜尋，產生 Stage K 能執行的路徑
+- 路線與路徑搜尋，輸出一份 continuation（節點清單）交給 `setTrainContinuation`；kernel 不需要知道目的地或成本
+- 可以同時考慮最小的畫面整合：放置列車、指定路徑、依 `Train.position` 顯示位置（插值只用於顯示，不寫回 GameCore）
 
 ### Stage M — Station Stop
 
