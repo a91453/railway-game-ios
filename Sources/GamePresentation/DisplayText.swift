@@ -94,6 +94,16 @@ extension GameError {
             "Not enough cash: this costs \(required.displayText) and you have \(available.displayText)."
         case .noTrackToRemove(let position):
             "There is no track to remove at \(position)."
+        case .trackInUse(let position):
+            "A train is on the track at \(position). Take the train off the track first."
+        case .unknownTrain(let id):
+            "There is no train #\(id.rawValue)."
+        case .trainAlreadyPlaced(let id):
+            "Train #\(id.rawValue) is already on the track."
+        case .trainNotPlaced(let id):
+            "Train #\(id.rawValue) is not on the track."
+        case .invalidTrainPosition:
+            "A train can only be placed on a track tile or between two joined track tiles."
         }
     }
 }

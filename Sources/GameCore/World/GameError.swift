@@ -20,4 +20,19 @@ public enum GameError: Error, Hashable, Sendable {
     /// Track removal was requested where there is no track (an empty tile or
     /// a station).
     case noTrackToRemove(GridPosition)
+    /// The track at the position carries a placed train (it is the train's
+    /// node, or an end of its link), so it cannot be removed.
+    case trackInUse(GridPosition)
+    /// No train with this ID exists.
+    case unknownTrain(TrainID)
+    /// The train is already on the track. Placement does not move a train;
+    /// unplace it first.
+    case trainAlreadyPlaced(TrainID)
+    /// The train is not on the track, so there is nothing to unplace or
+    /// reverse.
+    case trainNotPlaced(TrainID)
+    /// A train cannot be placed there: the position is not at a track tile
+    /// or strictly inside a link between two joined track tiles (see
+    /// ``TrainPosition``).
+    case invalidTrainPosition
 }
