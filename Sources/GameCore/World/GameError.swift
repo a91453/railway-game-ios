@@ -44,4 +44,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// Advancing that many ticks at the current speed would take game time
     /// past the largest minute the clock can hold. Nothing was advanced.
     case clockOverflow
+    /// Every ID of the kind the command would allocate (stations, or
+    /// trains) has been handed out: the world keeps the next ID in an `Int`,
+    /// so the last one it can allocate is `Int.max - 1`. Nothing was built
+    /// or bought, and nothing was charged.
+    case idsExhausted
 }

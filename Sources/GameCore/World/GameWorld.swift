@@ -16,6 +16,8 @@ public struct GameWorld: Equatable, Sendable {
     public private(set) var clock: GameClock
     public private(set) var economy: GameEconomy
 
+    /// The next ID to hand out to a station or a train (see
+    /// `allocateID(from:)`).
     private var nextStationID: Int
     private var nextTrainID: Int
 
@@ -112,16 +114,17 @@ public struct GameWorld: Equatable, Sendable {
     /// Builds a station on an empty tile and charges ``ConstructionCosts/station``.
     ///
     /// - Throws: ``GameError/invalidName``, ``GameError/outOfBounds(_:)``,
-    ///   ``GameError/tileOccupied(_:)``, or
+    ///   ``GameError/tileOccupied(_:)``, ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildStation(named name: String, at position: GridPosition) throws(GameError) -> Station {
         guard Self.isValidName(name) else { throw .invalidName }
         try requireEmptyTile(at: position)
+        let (id, nextID) = try Self.allocateID(from: nextStationID)
         try economy.spend(economy.costs.station)
 
-        let station = Station(id: StationID(rawValue: nextStationID), name: name, position: position)
-        nextStationID += 1
+        let station = Station(id: StationID(rawValue: id), name: name, position: position)
+        nextStationID = nextID
         stations.append(station)
         map.setType(.station(id: station.id), at: position)
         return station
@@ -132,15 +135,16 @@ public struct GameWorld: Equatable, Sendable {
     /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
     /// the track with ``placeTrain(_:at:)``.
     ///
-    /// - Throws: ``GameError/invalidName`` or
+    /// - Throws: ``GameError/invalidName``, ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func purchaseTrain(named name: String) throws(GameError) -> Train {
         guard Self.isValidName(name) else { throw .invalidName }
+        let (id, nextID) = try Self.allocateID(from: nextTrainID)
         try economy.spend(economy.costs.train)
 
-        let train = Train(id: TrainID(rawValue: nextTrainID), name: name)
-        nextTrainID += 1
+        let train = Train(id: TrainID(rawValue: id), name: name)
+        nextTrainID = nextID
         trains.append(train)
         return train
     }
@@ -371,6 +375,24 @@ public struct GameWorld: Equatable, Sendable {
         case .onLink(let from, let to, _):
             return isConnected(from, to: to)
         }
+    }
+}
+
+// MARK: - ID allocation
+
+extension GameWorld {
+    /// The ID a counter hands out, and the counter's value afterwards.
+    ///
+    /// A counter holds the next ID to hand out, and every ID is below it, so
+    /// handing out `next` needs `next + 1` to fit in an `Int`: the last ID is
+    /// `Int.max - 1`, leaving the counter at `Int.max`, where it stays. Only
+    /// reads the counter, so a command can check before changing anything.
+    ///
+    /// - Throws: ``GameError/idsExhausted`` once the counter is at `Int.max`.
+    private static func allocateID(from next: Int) throws(GameError) -> (id: Int, next: Int) {
+        let (following, overflow) = next.addingReportingOverflow(1)
+        guard !overflow else { throw .idsExhausted }
+        return (next, following)
     }
 }
 

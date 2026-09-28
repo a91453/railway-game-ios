@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 5
+    static let schemaVersion = 6
 
     var description: String
     var initialState: InitialState
@@ -364,6 +364,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidContinuation)
         case "clockOverflow":
             self = .rejected(.clockOverflow)
+        case "idsExhausted":
+            self = .rejected(.idsExhausted)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -421,6 +423,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidContinuation", forKey: .result)
         case .rejected(.clockOverflow):
             try container.encode("clockOverflow", forKey: .result)
+        case .rejected(.idsExhausted):
+            try container.encode("idsExhausted", forKey: .result)
         }
     }
 }

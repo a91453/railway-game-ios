@@ -150,6 +150,8 @@ extension GameError {
             "The train cannot follow that path: each step must lead to joined track, without turning back."
         case .clockOverflow:
             "Game time cannot advance any further."
+        case .idsExhausted:
+            "This game has no IDs left for anything more of this kind."
         }
     }
 }
