@@ -114,7 +114,7 @@ App Store Connect → Apps → 你的 App → TestFlight → Internal Testing �
    - Target RailwayGame → Signing & Capabilities：「Automatically manage signing」已勾選，Team 顯示你的團隊（來自步驟 4），Bundle Identifier 為 `io.github.a91453.RailwayGame`。
    - 若 Xcode 提示「Update to recommended settings」，**不要**套用（它會修改產生的專案）。
 4. Report navigator（⌘9）→ **Cloud** → **Get Started**。
-5. Select a Product：選 **RailwayGame**（iOS App）。若有多個團隊，選你要用來發佈 TestFlight 的團隊。
+5. Select a Product：選 **RailwayGame**（iOS App，`io.github.a91453.RailwayGame`）。清單也可能列出 GameCore、GamePresentation：那是本地套件的 library，不要選。若有多個團隊，選你要用來發佈 TestFlight 的團隊。
 6. Review Workflow → **Edit Workflow**，改成下方〈Workflow 1：Build〉的設定後儲存。Apple 建議的預設是「每次 `main` 變更與每個指向 `main` 的 PR 都 Archive」，會消耗運算時間，所以改成手動啟動的 Build。
 7. **Grant Access**：Xcode 會帶你到 GitHub 安裝 / 授權 Xcode Cloud 的 GitHub App。只授權 `a91453/railway-game-ios` 這一個 repository 即可；需要 repository 的 admin 權限（你是擁有者）。
 8. App record：出現「Confirm Existing App」時，確認名稱與 Bundle ID 後按 Next（步驟 3 已建立）。
@@ -229,7 +229,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 | 症狀 | 可能原因 | 處理 |
 | --- | --- | --- |
-| Get Started 找不到產品 / 沒有 RailwayGame | 打開的是 `Package.swift` 或資料夾；scheme 沒有 Archive | 開 `RailwayGameApp/RailwayGame.xcodeproj`；iOS App Build 的「List schemes and archivable products」應列出 RailwayGame |
+| Get Started 找不到產品 / 沒有 RailwayGame | 打開的是 `Package.swift` 或資料夾；scheme 沒有 Archive | 開 `RailwayGameApp/RailwayGame.xcodeproj`；iOS App Build 的「List schemes and archivable products」應列出 `io.github.a91453.RailwayGame`（類型 app） |
 | Onboarding 在建立產品時失敗 | 團隊還沒有任何 App（Apple 已知問題） | 先做步驟 3 建立 app record |
 | Xcode Cloud 找不到專案或 scheme | 專案或 scheme 沒有提交、或被改名 | 確認 `main` 上有 `RailwayGame.xcodeproj/xcshareddata/xcschemes/RailwayGame.xcscheme`；不要改 scheme 名稱 |
 | 「a resolved file is required…」 | 新增了遠端套件但沒提交 `Package.resolved` | 提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved` |

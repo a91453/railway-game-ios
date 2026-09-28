@@ -81,14 +81,16 @@ jobs:
 
       # Xcode Cloud onboarding lists the products this command finds (Apple:
       # "Configuring your first Xcode Cloud workflow"); the app must be one.
+      # The local package's GameCore and GamePresentation libraries are
+      # listed too.
       - name: List schemes and archivable products
         run: |
           project=RailwayGameApp/RailwayGame.xcodeproj
           xcodebuild -list -project "$project"
           products="$(xcodebuild -project "$project" -describeAllArchivableProducts -json)"
           echo "$products"
-          if ! grep -q 'RailwayGame' <<<"$products"; then
-            echo "::error::Xcode finds no archivable RailwayGame product, so Xcode Cloud could not offer it."
+          if ! grep -Eq '"bundleIdentifier" *: *"io\.github\.a91453\.RailwayGame"' <<<"$products"; then
+            echo "::error::Xcode finds no archivable io.github.a91453.RailwayGame app, so Xcode Cloud could not offer it."
             exit 1
           fi
 
