@@ -82,9 +82,10 @@ xcodebuild "${args[@]}"
 
 # App Store Connect distribution, signed automatically by xcodebuild at
 # export (cloud-managed distribution certificate when no local one exists).
-# "export" writes the IPA that is checked; "upload" sends the same archive,
-# signed the same way, to App Store Connect. The build number comes from the
-# archive; Xcode must not change it.
+# "export" writes the IPA that is checked; "upload" re-exports the same
+# archive with the same signing options and sends it to App Store Connect.
+# Both paths are restricted to internal TestFlight. The build number comes
+# from the archive; Xcode must not change it.
 team_entry=""
 if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
   team_entry="	<key>teamID</key>
@@ -106,6 +107,8 @@ write_options() {
 	<key>signingStyle</key>
 	<string>automatic</string>
 $team_entry
+	<key>testFlightInternalTestingOnly</key>
+	<true/>
 	<key>uploadSymbols</key>
 	<true/>
 </dict>
