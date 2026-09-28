@@ -8,7 +8,7 @@ struct RailwayGameApp: App {
     ///
     /// Views get the session and change the world only through its methods,
     /// which apply `GameWorld` commands; nothing else keeps a copy of the world.
-    @State private var session = GameSession(world: .newGame())
+    @State private var session = RailwayGameApp.makeSession()
     /// The combined phase of all the app's scenes.
     @Environment(\.scenePhase) private var scenePhase
 
@@ -26,6 +26,15 @@ struct RailwayGameApp: App {
                 session.stopGameLoop()
             }
         }
+    }
+
+    private static func makeSession() -> GameSession {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains(DemoLayout.launchArgument) {
+            return DemoLayout.makeSession()
+        }
+        #endif
+        return GameSession(world: .newGame())
     }
 }
 
