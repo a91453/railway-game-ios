@@ -97,3 +97,4 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - save/load：加入存檔版本欄位與 migration
 - undo/redo：利用 `GameWorld` 的 value semantics 快照
 - 大型地圖與大量列車：量測後再考慮 chunking、背景計算
+- 新的模擬行為同時加入 `GoldenScenarios/` 情境；若日後決定移植到其他引擎，逐一子系統移植並以同一批情境驗證（ARCHITECTURE 決策 13）

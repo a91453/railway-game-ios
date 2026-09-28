@@ -58,6 +58,8 @@ GameCore 目前能做到：
 
 Presentation 與 Rendering 只讀取 GameCore 狀態並送出指令，不持有另一份遊戲真實狀態。App 以 SwiftUI `@State` 持有唯一一個 `GameSession`，由它持有唯一一份 `GameWorld` 並執行所有指令與 game loop。詳見 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，未來規劃見 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
+Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境把它的行為寫成與語言無關的 fixture，GameSession 則是可替換的平台 shell。是否移植到 Unity / Godot 尚未決定；目前只保留逐一子系統移植並以同一批情境驗證的路徑（ARCHITECTURE 決策 13）。
+
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
@@ -69,6 +71,7 @@ Sources/GamePresentation/
   ConstructionTool / TrackPiece、MapScale、DisplayText（玩家看到的文字）
 Tests/GameCoreTests/
 Tests/GamePresentationTests/
+GoldenScenarios/  可移植的 golden scenario（JSON，schema 見該目錄的 README）
 RailwayGameApp/
   project.yml   XcodeGen spec（產生的 .xcodeproj 不進版控）
   App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，截圖用）
@@ -126,3 +129,5 @@ swift test
 ```
 
 `swift test` 會執行 GameCore 與 GamePresentation 的測試。兩者都只使用 Swift 標準函式庫（GamePresentation 另用標準函式庫的 `Observation`），因此可在 macOS、iOS 與 Linux 上建置。CI 在 Linux 上以 Swift 6.0（最低版本）、6.2.4（持續相容的 6.2 系列）與 6.4（目前穩定版）執行 build 與 test。
+
+GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案中手寫的預期結果比對。測試只讀取 fixture、從不寫回；預期值改變代表遊戲行為改變，必須在 PR 中說明。

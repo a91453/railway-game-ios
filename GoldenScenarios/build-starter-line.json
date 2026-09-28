@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "description": "Builds a short line between two stations with a branch, then checks the construction and purchase rejections (occupied tiles, out of bounds, empty connections, blank names, removing a non-track tile, insufficient funds) and the order in which those checks apply. Rejected commands must leave the world unchanged, removal is free and not refunded, and failed commands consume no station or train IDs.",
+  "initialState": {
+    "mapWidth": 12,
+    "mapHeight": 8,
+    "balance": 400000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildStation", "name": "West", "x": 1, "y": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["east", "south", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "East", "x": 6, "y": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 4, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["north", "south"] },
+      "expect": { "result": "tileOccupied", "x": 4, "y": 3 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Depot", "x": 3, "y": 3 },
+      "expect": { "result": "tileOccupied", "x": 3, "y": 3 }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "tileOccupied", "x": 6, "y": 3 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Depot", "x": 1, "y": 3 },
+      "expect": { "result": "tileOccupied", "x": 1, "y": 3 }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 12, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "outOfBounds", "x": 12, "y": 3 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": -1, "y": 0 },
+      "expect": { "result": "outOfBounds", "x": -1, "y": 0 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "South", "x": 0, "y": 8 },
+      "expect": { "result": "outOfBounds", "x": 0, "y": 8 }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 7, "y": 3, "connections": [] },
+      "expect": { "result": "invalidTrackConnections" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 12, "y": 3, "connections": [] },
+      "expect": { "result": "invalidTrackConnections" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "   ", "x": 7, "y": 3 },
+      "expect": { "result": "invalidName" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "   ", "x": 2, "y": 3 },
+      "expect": { "result": "invalidName" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 6, "y": 3 },
+      "expect": { "result": "noTrackToRemove", "x": 6, "y": 3 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 4 },
+      "expect": { "result": "noTrackToRemove", "x": 4, "y": 4 }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "   " },
+      "expect": { "result": "invalidName" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 1" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 2" },
+      "expect": { "result": "insufficientFunds", "required": 200000, "available": 95000 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "North", "x": 4, "y": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Harbor", "x": 8, "y": 3 },
+      "expect": { "result": "insufficientFunds", "required": 50000, "available": 45000 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Harbor", "x": 2, "y": 3 },
+      "expect": { "result": "tileOccupied", "x": 2, "y": 3 }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 45000,
+    "stations": [
+      { "id": 1, "name": "West", "x": 1, "y": 3 },
+      { "id": 2, "name": "East", "x": 6, "y": 3 },
+      { "id": 3, "name": "North", "x": 4, "y": 0 }
+    ],
+    "tracks": [
+      { "x": 2, "y": 3, "connections": ["east", "west"] },
+      { "x": 3, "y": 3, "connections": ["east", "west"] },
+      { "x": 4, "y": 3, "connections": ["east", "south", "west"] },
+      { "x": 5, "y": 3, "connections": ["east", "west"] }
+    ],
+    "trains": [
+      { "id": 1, "name": "Local 1" }
+    ]
+  }
+}
