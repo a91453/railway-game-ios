@@ -91,11 +91,20 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Removes the track piece at `position`. Removal is free and not refunded.
     ///
-    /// - Throws: ``GameError/outOfBounds(_:)``, or
-    ///   ``GameError/noTrackToRemove(_:)`` if the tile is empty or a station.
+    /// Track that a placed train rests on (its node, or either end of its
+    /// link) cannot be removed while the train is there; unplace the train
+    /// first. Any other track can be removed, including track next to a train.
+    /// Checking scans every train once (O(trains)); no occupancy index is kept.
+    ///
+    /// - Throws: ``GameError/outOfBounds(_:)``,
+    ///   ``GameError/noTrackToRemove(_:)`` if the tile is empty or a station,
+    ///   or ``GameError/trackInUse(_:)``.
     public mutating func removeTrack(at position: GridPosition) throws(GameError) {
         guard map.contains(position) else { throw .outOfBounds(position) }
         guard track(at: position) != nil else { throw .noTrackToRemove(position) }
+        guard !trains.contains(where: { $0.position?.isSupported(by: position) == true }) else {
+            throw .trackInUse(position)
+        }
 
         map.setType(.empty, at: position)
     }
@@ -120,8 +129,8 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Buys a new train and charges ``ConstructionCosts/train``.
     ///
-    /// The train is not placed on the map; placement arrives with train
-    /// simulation.
+    /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
+    /// the track with ``placeTrain(_:at:)``.
     ///
     /// - Throws: ``GameError/invalidName`` or
     ///   ``GameError/insufficientFunds(required:available:)``.
@@ -134,6 +143,59 @@ public struct GameWorld: Equatable, Sendable {
         nextTrainID += 1
         trains.append(train)
         return train
+    }
+
+    // MARK: - Trains
+
+    /// The train with `id`, or `nil` if there is none.
+    public func train(id: TrainID) -> Train? {
+        trains.first { $0.id == id }
+    }
+
+    /// Puts an unplaced train on the track at `position`. Placement is free.
+    ///
+    /// `position` must be on this map's track:
+    /// ``TrainPosition/atNode(_:heading:)`` on a track tile, with any heading
+    /// (whether or not the track continues that way), or
+    /// ``TrainPosition/onLink(from:to:offset:)`` between two joined track
+    /// tiles with `0 < offset < TrainPosition.linkLength`. A train at either
+    /// end of a link must be placed at that node instead. Other trains at the
+    /// same place do not matter.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
+    ///   train), or ``GameError/invalidTrainPosition``.
+    public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
+        guard isOnTrack(position) else { throw .invalidTrainPosition }
+
+        trains[index].position = position
+    }
+
+    /// Takes a placed train off the track. The train keeps its ID and name.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainNotPlaced(_:)``.
+    public mutating func unplaceTrain(_ id: TrainID) throws(GameError) {
+        let (index, _) = try placedTrain(id)
+
+        trains[index].position = nil
+    }
+
+    /// Turns a placed train around where it stands, without moving it.
+    ///
+    /// At a node the heading becomes its opposite. On a link the ends swap
+    /// and the offset becomes `TrainPosition.linkLength - offset`, measured
+    /// from the new `from`, which is the same point. Reversing twice restores
+    /// the original position exactly.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainNotPlaced(_:)``.
+    public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
+        let (index, position) = try placedTrain(id)
+
+        trains[index].position = position.reversed
     }
 
     // MARK: - Time
@@ -165,6 +227,29 @@ public struct GameWorld: Equatable, Sendable {
     private static func isValidName(_ name: String) -> Bool {
         name.contains { !$0.isWhitespace }
     }
+
+    private func trainIndex(of id: TrainID) throws(GameError) -> Int {
+        guard let index = trains.firstIndex(where: { $0.id == id }) else { throw .unknownTrain(id) }
+        return index
+    }
+
+    private func placedTrain(_ id: TrainID) throws(GameError) -> (index: Int, position: TrainPosition) {
+        let index = try trainIndex(of: id)
+        guard let position = trains[index].position else { throw .trainNotPlaced(id) }
+        return (index, position)
+    }
+
+    /// Whether `position` is well formed and lies on this map's track: a node
+    /// on a track tile, or a link between two joined track tiles.
+    private func isOnTrack(_ position: TrainPosition) -> Bool {
+        guard position.isWellFormed else { return false }
+        switch position {
+        case .atNode(let tile, _):
+            return track(at: tile) != nil
+        case .onLink(let from, let to, _):
+            return isConnected(from, to: to)
+        }
+    }
 }
 
 // MARK: - Codable
@@ -176,7 +261,8 @@ extension GameWorld: Codable {
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
     /// (station tiles and station records must agree; IDs must be unique and
-    /// below the next ID to allocate).
+    /// below the next ID to allocate; every placed train must be on this
+    /// map's track, as ``placeTrain(_:at:)`` requires).
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         map = try container.decode(GridMap.self, forKey: .map)
@@ -217,6 +303,11 @@ extension GameWorld: Codable {
         }
         guard trains.allSatisfy({ Self.isValidName($0.name) }) else {
             return "A train has an invalid name."
+        }
+        for train in trains {
+            if let position = train.position, !isOnTrack(position) {
+                return "Train \(train.id.rawValue) is not on this map's track."
+            }
         }
         return nil
     }

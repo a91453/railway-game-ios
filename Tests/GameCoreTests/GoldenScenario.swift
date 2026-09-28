@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 2
+    static let schemaVersion = 3
 
     var description: String
     var initialState: InitialState
@@ -188,6 +188,9 @@ enum ScenarioCommand: Equatable {
     case removeTrack(GridPosition)
     case buildStation(name: String, GridPosition)
     case purchaseTrain(name: String)
+    case placeTrain(TrainID, TrainPosition)
+    case unplaceTrain(TrainID)
+    case reverseTrain(TrainID)
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -205,6 +208,12 @@ enum ScenarioCommand: Equatable {
                 try world.buildStation(named: name, at: position)
             case .purchaseTrain(let name):
                 try world.purchaseTrain(named: name)
+            case .placeTrain(let id, let position):
+                try world.placeTrain(id, at: position)
+            case .unplaceTrain(let id):
+                try world.unplaceTrain(id)
+            case .reverseTrain(let id):
+                try world.reverseTrain(id)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -223,7 +232,7 @@ enum ScenarioCommand: Equatable {
 
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, connections, name, speed, ticks
+        case type, x, y, connections, name, train, position, speed, ticks
     }
 
     init(from decoder: any Decoder) throws {
@@ -239,6 +248,18 @@ extension ScenarioCommand: Decodable {
             self = try .buildStation(name: container.decode(String.self, forKey: .name), container.decodePosition(x: .x, y: .y))
         case "purchaseTrain":
             self = try .purchaseTrain(name: container.decode(String.self, forKey: .name))
+        case "placeTrain":
+            let train = try container.decodeTrain(forKey: .train)
+            // A placement names where to put the train; taking it off the
+            // track is the separate unplaceTrain command.
+            guard let position = try container.decode(TrainPositionSummary.self, forKey: .position).position else {
+                throw DecodingError.dataCorruptedError(forKey: .position, in: container, debugDescription: "placeTrain needs a \"node\" or \"link\" position.")
+            }
+            self = .placeTrain(train, position)
+        case "unplaceTrain":
+            self = try .unplaceTrain(container.decodeTrain(forKey: .train))
+        case "reverseTrain":
+            self = try .reverseTrain(container.decodeTrain(forKey: .train))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -269,7 +290,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available
+        case result, x, y, width, height, required, available, train
     }
 
     init(from decoder: any Decoder) throws {
@@ -294,6 +315,16 @@ extension StepOutcome: Codable {
             self = try .rejected(.insufficientFunds(required: required, available: Money(container.decode(Int64.self, forKey: .available))))
         case "noTrackToRemove":
             self = try .rejected(.noTrackToRemove(container.decodePosition(x: .x, y: .y)))
+        case "trackInUse":
+            self = try .rejected(.trackInUse(container.decodePosition(x: .x, y: .y)))
+        case "unknownTrain":
+            self = try .rejected(.unknownTrain(container.decodeTrain(forKey: .train)))
+        case "trainAlreadyPlaced":
+            self = try .rejected(.trainAlreadyPlaced(container.decodeTrain(forKey: .train)))
+        case "trainNotPlaced":
+            self = try .rejected(.trainNotPlaced(container.decodeTrain(forKey: .train)))
+        case "invalidTrainPosition":
+            self = .rejected(.invalidTrainPosition)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -331,6 +362,20 @@ extension StepOutcome: Codable {
         case .rejected(.noTrackToRemove(let position)):
             try container.encode("noTrackToRemove", forKey: .result)
             try encode(position)
+        case .rejected(.trackInUse(let position)):
+            try container.encode("trackInUse", forKey: .result)
+            try encode(position)
+        case .rejected(.unknownTrain(let id)):
+            try container.encode("unknownTrain", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainAlreadyPlaced(let id)):
+            try container.encode("trainAlreadyPlaced", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainNotPlaced(let id)):
+            try container.encode("trainNotPlaced", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.invalidTrainPosition):
+            try container.encode("invalidTrainPosition", forKey: .result)
         }
     }
 }
@@ -414,8 +459,8 @@ struct PositionSummary: Codable, Equatable {
 
 // MARK: - Final state
 
-/// The externally meaningful state of a world: time, money and what has been
-/// built or bought. Lists are in the contract's canonical order (stations and
+/// The externally meaningful state of a world: time, money, what has been
+/// built or bought, and where each train is. Lists are in the contract's canonical order (stations and
 /// trains by ascending ID, tracks row by row from the north-west corner),
 /// sorted here rather than inherited from how GameCore stores them.
 struct WorldSummary: Codable, Equatable {
@@ -442,6 +487,7 @@ struct WorldSummary: Codable, Equatable {
     struct TrainSummary: Codable, Equatable {
         var id: Int
         var name: String
+        var position: TrainPositionSummary
     }
 
     init(_ world: GameWorld) {
@@ -455,7 +501,7 @@ struct WorldSummary: Codable, Equatable {
             .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections)) }
             .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
         trains = world.trains
-            .map { TrainSummary(id: $0.id.rawValue, name: $0.name) }
+            .map { TrainSummary(id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position)) }
             .sorted { $0.id < $1.id }
     }
 }
@@ -493,16 +539,15 @@ struct SpeedName: Codable, Equatable {
     }
 }
 
-/// Track connections as a JSON array of direction names. Order does not
-/// matter when reading; writing uses north, east, south, west.
-struct Directions: Codable, Equatable {
-    var connections: TrackConnections
+/// A direction as its fixture name: `"north"`, `"east"`, `"south"` or `"west"`.
+struct DirectionName: Codable, Equatable {
+    var direction: TrackDirection
 
-    init(_ connections: TrackConnections) {
-        self.connections = connections
+    init(_ direction: TrackDirection) {
+        self.direction = direction
     }
 
-    private static func name(of direction: TrackDirection) -> String {
+    static func name(of direction: TrackDirection) -> String {
         switch direction {
         case .north: "north"
         case .east: "east"
@@ -512,15 +557,36 @@ struct Directions: Codable, Equatable {
     }
 
     init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let direction = TrackDirection.allCases.first(where: { Self.name(of: $0) == name }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown direction \"\(name)\".")
+        }
+        self.direction = direction
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Self.name(of: direction))
+    }
+}
+
+/// Track connections as a JSON array of direction names. Order does not
+/// matter when reading; writing uses north, east, south, west.
+struct Directions: Codable, Equatable {
+    var connections: TrackConnections
+
+    init(_ connections: TrackConnections) {
+        self.connections = connections
+    }
+
+    init(from decoder: any Decoder) throws {
         var container = try decoder.unkeyedContainer()
         var connections: TrackConnections = []
         while !container.isAtEnd {
-            let name = try container.decode(String.self)
-            guard let direction = TrackDirection.allCases.first(where: { Self.name(of: $0) == name }) else {
-                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown direction \"\(name)\".")
-            }
+            let direction = try container.decode(DirectionName.self).direction
             guard connections.insert(TrackConnections(direction)).inserted else {
-                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Direction \"\(name)\" is listed twice.")
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Direction \"\(DirectionName.name(of: direction))\" is listed twice.")
             }
         }
         self.connections = connections
@@ -529,7 +595,75 @@ struct Directions: Codable, Equatable {
     func encode(to encoder: any Encoder) throws {
         var container = encoder.unkeyedContainer()
         for direction in connections.directions {
-            try container.encode(Self.name(of: direction))
+            try container.encode(DirectionName(direction))
+        }
+    }
+}
+
+/// A train position as a fixture value, tagged by `"type"`:
+/// `{"type": "unplaced"}`, `{"type": "node", "x", "y", "heading"}`, or
+/// `{"type": "link", "from": {"x", "y"}, "to": {"x", "y"}, "offset"}`.
+///
+/// Values are read as written, not checked or normalised: whether a position
+/// is valid is GameCore's decision, so a fixture can expect a placement at
+/// offset 0 to be rejected. Fields that belong to another type are rejected
+/// rather than ignored.
+struct TrainPositionSummary: Codable, Equatable {
+    /// `nil` for an unplaced train.
+    var position: TrainPosition?
+
+    init(_ position: TrainPosition?) {
+        self.position = position
+    }
+
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case type, x, y, heading, from, to, offset
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        let fields: [CodingKeys]
+        switch type {
+        case "unplaced":
+            fields = []
+            position = nil
+        case "node":
+            fields = [.x, .y, .heading]
+            position = try .atNode(
+                container.decodePosition(x: .x, y: .y),
+                heading: container.decode(DirectionName.self, forKey: .heading).direction
+            )
+        case "link":
+            fields = [.from, .to, .offset]
+            position = try .onLink(
+                from: container.decode(PositionSummary.self, forKey: .from).position,
+                to: container.decode(PositionSummary.self, forKey: .to).position,
+                offset: container.decode(Int64.self, forKey: .offset)
+            )
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown position type \"\(type)\".")
+        }
+        for key in CodingKeys.allCases where key != .type && !fields.contains(key) && container.contains(key) {
+            throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "A \"\(type)\" position has no \"\(key.stringValue)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch position {
+        case nil:
+            try container.encode("unplaced", forKey: .type)
+        case .atNode(let tile, let heading)?:
+            try container.encode("node", forKey: .type)
+            try container.encode(tile.x, forKey: .x)
+            try container.encode(tile.y, forKey: .y)
+            try container.encode(DirectionName(heading), forKey: .heading)
+        case .onLink(let from, let to, let offset)?:
+            try container.encode("link", forKey: .type)
+            try container.encode(PositionSummary(from), forKey: .from)
+            try container.encode(PositionSummary(to), forKey: .to)
+            try container.encode(offset, forKey: .offset)
         }
     }
 }
@@ -538,6 +672,11 @@ extension KeyedDecodingContainer {
     /// A grid position stored as two flat integer fields.
     fileprivate func decodePosition(x: Key, y: Key) throws -> GridPosition {
         try GridPosition(x: decode(Int.self, forKey: x), y: decode(Int.self, forKey: y))
+    }
+
+    /// A train ID stored as a plain integer.
+    fileprivate func decodeTrain(forKey key: Key) throws -> TrainID {
+        try TrainID(rawValue: decode(Int.self, forKey: key))
     }
 }
 

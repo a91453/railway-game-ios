@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 3,
+  "description": "Train positions: new trains are unplaced; placement at a node (any heading, also on an isolated tile or facing a dead end) or strictly inside a link between two joined tracks; rejected placements (unknown train, empty, station, outside the map, offsets 0, 1024 and -1, same tile, skipped tile, diagonal, one-sided exit, station end) and the order of those checks; reversing a link (offset 256 becomes 768 from the other end) and a node (heading flips), and reversing twice restoring the position; unplacing; removal of track that carries a train (its node or either end of its link) is rejected, even when a second train is unplaced from it, while other track can be removed; after unplacing, the track can be removed. Placement is free, removal is not refunded, and time passes without moving any train.",
+  "initialState": {
+    "mapWidth": 8,
+    "mapHeight": 5,
+    "balance": 900000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 2, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 2, "connections": ["east", "south", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 3, "connections": ["north"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 4, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 4, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 4, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Depot", "x": 5, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 1" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 2" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 3" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 4" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 5, "position": { "type": "node", "x": 1, "y": 2, "heading": "east" } },
+      "expect": { "result": "unknownTrain", "train": 5 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 5, "position": { "type": "node", "x": 0, "y": 0, "heading": "north" } },
+      "expect": { "result": "unknownTrain", "train": 5 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 0, "y": 0, "heading": "north" } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 5, "y": 2, "heading": "west" } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 8, "y": 2, "heading": "west" } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 2 }, "to": { "x": 2, "y": 2 }, "offset": 0 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 2 }, "to": { "x": 2, "y": 2 }, "offset": 1024 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 2 }, "to": { "x": 2, "y": 2 }, "offset": -1 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 2, "y": 2 }, "to": { "x": 2, "y": 2 }, "offset": 512 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 2 }, "to": { "x": 3, "y": 2 }, "offset": 512 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 2, "y": 2 }, "to": { "x": 3, "y": 3 }, "offset": 512 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 4 }, "to": { "x": 2, "y": 4 }, "offset": 512 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 4, "y": 2 }, "to": { "x": 5, "y": 2 }, "offset": 512 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 2 }, "to": { "x": 2, "y": 2 }, "offset": 256 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 6, "y": 4, "heading": "north" } },
+      "expect": { "result": "trainAlreadyPlaced", "train": 1 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 0, "y": 0, "heading": "north" } },
+      "expect": { "result": "trainAlreadyPlaced", "train": 1 }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 6, "y": 4, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 3, "position": { "type": "link", "from": { "x": 3, "y": 3 }, "to": { "x": 3, "y": 2 }, "offset": 1 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 5 },
+      "expect": { "result": "unknownTrain", "train": 5 }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 4 },
+      "expect": { "result": "trainNotPlaced", "train": 4 }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 4 },
+      "expect": { "result": "trainNotPlaced", "train": 4 }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 5 },
+      "expect": { "result": "unknownTrain", "train": 5 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 2, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 2, "y": 2 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 1, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 1, "y": 2 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 6, "y": 4 },
+      "expect": { "result": "trackInUse", "x": 6, "y": 4 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 3, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 3, "y": 2 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 3, "y": 3 },
+      "expect": { "result": "trackInUse", "x": 3, "y": 3 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 2, "y": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 4, "position": { "type": "node", "x": 4, "y": 2, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 4, "y": 2 }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 4 },
+      "expect": { "result": "trainNotPlaced", "train": 4 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 4, "position": { "type": "node", "x": 1, "y": 2, "heading": "south" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 1, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 1, "y": 2 }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 1, "y": 2 },
+      "expect": { "result": "trackInUse", "x": 1, "y": 2 }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "normal" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 10 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "double" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "pause" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 3 },
+      "expect": { "result": "ok" }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 20,
+    "speed": "paused",
+    "balance": 42000,
+    "stations": [
+      { "id": 1, "name": "Depot", "x": 5, "y": 2 }
+    ],
+    "tracks": [
+      { "x": 1, "y": 2, "connections": ["east"] },
+      { "x": 2, "y": 2, "connections": ["east", "west"] },
+      { "x": 3, "y": 2, "connections": ["east", "south", "west"] },
+      { "x": 3, "y": 3, "connections": ["north"] },
+      { "x": 1, "y": 4, "connections": ["east"] },
+      { "x": 6, "y": 4, "connections": ["north", "south"] }
+    ],
+    "trains": [
+      { "id": 1, "name": "Local 1", "position": { "type": "link", "from": { "x": 2, "y": 2 }, "to": { "x": 1, "y": 2 }, "offset": 768 } },
+      { "id": 2, "name": "Local 2", "position": { "type": "node", "x": 6, "y": 4, "heading": "west" } },
+      { "id": 3, "name": "Local 3", "position": { "type": "link", "from": { "x": 3, "y": 3 }, "to": { "x": 3, "y": 2 }, "offset": 1 } },
+      { "id": 4, "name": "Local 4", "position": { "type": "unplaced" } }
+    ]
+  }
+}

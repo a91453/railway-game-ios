@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I 已實作；下一步是 Phase 3 的 Stage J。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J 已實作；下一步是 Phase 3 的 Stage K。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -74,13 +74,21 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - `buildTrack` 與地圖解碼一致，只接受四個方向的 bit（rawValue 1…15）
 - Golden scenario schema v2：唯讀的觀察步驟與 `track-connectivity.json`
 
-### Stage J — Train Position
+### Stage J — Train Position ✅
 
-- 列車在軌道上的位置表示。整數尺度、停在節點上（atNode）的表示方式，以及有列車佔用時能不能拆軌，都在這個 Stage 設計，目前尚未決定。
+- `TrainPosition`：`atNode(tile, heading:)`（任何朝向，死路與孤立鐵軌也可以）與 `onLink(from:to:offset:)`（兩格相接鐵軌之間，方向由端點推導）；未放置是 `Train.position == nil`
+- 每條相鄰連結固定 1024 個抽象單位（`TrainPosition.linkLength`，`Int64` offset）；端點一律用 `atNode`，`onLink` 限 `0 < offset < 1024`，不做正規化
+- `GameWorld`：`train(id:)`、`placeTrain(_:at:)`、`unplaceTrain(_:)`、`reverseTrain(_:)`（原地反向，兩次還原）；新購列車未放置；放置、取下、反向免費
+- 列車所在節點或連結兩端的鐵軌拒絕拆除（`trackInUse`）；其他鐵軌照常可拆，取下列車後也可拆
+- 存檔：未放置的列車不寫 `position`，舊存檔讀成未放置；壞資料，以及節點不在鐵軌格、連結兩端不相接的位置，一律拒絕
+- Golden scenario schema v3：列車指令、結果與最終狀態的列車位置，以及 `train-position.json`
+- 列車不會移動；App 沒有放置列車的介面（ARCHITECTURE 決策 14）
 
 ### Stage K — Train Movement Kernel
 
 - 以固定步長沿著相接的鐵軌移動列車，以及抵達節點後如何延續移動（movement continuation）
+- 沿用 Stage J 的位置契約：恰好抵達節點存成 `atNode`、一步可跨越多條連結、不自動選路或折返、2× 以兩次基本步長執行、反向時清除 continuation
+- 開始前需決定：拆軌導致路段失效、修復後是否自動續行；批次 tick 與時鐘的溢位上限如何處理
 
 ### Stage L — Route / Pathfinding
 

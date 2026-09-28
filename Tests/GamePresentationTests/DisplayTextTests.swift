@@ -57,6 +57,11 @@ final class ErrorMessageTests: XCTestCase {
             .insufficientFunds(required: 50_000, available: 1_234):
                 "Not enough cash: this costs 50,000 and you have 1,234.",
             .noTrackToRemove(position): "There is no track to remove at (4, 7).",
+            .trackInUse(position): "A train is on the track at (4, 7). Take the train off the track first.",
+            .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",
+            .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
+            .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",
+            .invalidTrainPosition: "A train can only be placed on a track tile or between two joined track tiles.",
         ]
 
         for (error, message) in messages {

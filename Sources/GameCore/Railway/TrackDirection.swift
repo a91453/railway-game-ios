@@ -12,6 +12,25 @@ public enum TrackDirection: CaseIterable, Hashable, Codable, Sendable {
         case .west: .east
         }
     }
+
+    /// The direction from `position` to `neighbor` when `neighbor` is the
+    /// next tile north, east, south or west of it; `nil` for the same tile,
+    /// diagonal and more distant tiles.
+    ///
+    /// Needs no map and is safe for any coordinates: a difference too large
+    /// for `Int` is simply not a neighbour.
+    init?(from position: GridPosition, to neighbor: GridPosition) {
+        let dx = neighbor.x.subtractingReportingOverflow(position.x)
+        let dy = neighbor.y.subtractingReportingOverflow(position.y)
+        guard !dx.overflow, !dy.overflow else { return nil }
+        switch (dx.partialValue, dy.partialValue) {
+        case (0, -1): self = .north
+        case (1, 0): self = .east
+        case (0, 1): self = .south
+        case (-1, 0): self = .west
+        default: return nil
+        }
+    }
 }
 
 /// The set of tile edges a track piece connects to.
