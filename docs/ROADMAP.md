@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 已實作；下一步是 Phase 3。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I 已實作；下一步是 Phase 3 的 Stage J。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -45,7 +45,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - iPhone 直向 / iPad 直向版面已以 Visual Smoke 截圖確認；橫向版面（側邊欄）只經過編譯
 - GameCore 未修改：時間顯示換算放在 Presentation 層；拆除車站延後（見下）
 
-延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查、存檔。
+延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查（Phase 3 Stage I 已提供唯讀的連通查詢；鋪設時仍不要求相接）、存檔。
 
 ### 之後（可選）— TestFlight
 
@@ -53,11 +53,32 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
 ## Phase 3 — Train simulation
 
-- 由 `TrackConnections` 推導 track topology / graph
-- route
-- pathfinding
-- train movement（位置表示方式在此決定）
-- station stop
+拆成依序進行的小 Stage，每個 Stage 一個可 review 的 PR。
+
+### Stage I — Derived Track Connectivity ✅
+
+- `TrackDirection.opposite`；`GameWorld.connectedNeighbors(of:)`（固定北、東、南、西順序）與 `isConnected(_:to:)`
+- 連通每次由地圖直接推導：雙向出口才相接；懸空出口可以鋪設；每格鐵軌是一個互通節點；車站不是鐵軌；沒有 graph cache（ARCHITECTURE 決策 10）
+- `buildTrack` 與地圖解碼一致，只接受四個方向的 bit（rawValue 1…15）
+- Golden scenario schema v2：唯讀的觀察步驟與 `track-connectivity.json`
+
+### Stage J — Train Position
+
+- 列車在軌道上的位置表示。整數尺度、停在節點上（atNode）的表示方式，以及有列車佔用時能不能拆軌，都在這個 Stage 設計，目前尚未決定。
+
+### Stage K — Train Movement Kernel
+
+- 以固定步長沿著相接的鐵軌移動列車，以及抵達節點後如何延續移動（movement continuation）
+
+### Stage L — Route / Pathfinding
+
+- 路線與路徑搜尋，產生 Stage K 能執行的路徑
+
+### Stage M — Station Stop
+
+- 停站
+
+順序調整的理由：route / pathfinder 產生的路徑，必須是列車移動核心真的能執行的東西。先確立列車位置與移動延續的契約（J、K），路徑搜尋（L）才有明確的輸出形式可以對準；反過來做，路徑的表示方式會先把位置與移動的設計鎖死。
 
 ## Phase 4 — Timetable
 

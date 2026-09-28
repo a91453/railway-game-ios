@@ -28,7 +28,7 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、`Station` / `StationID`、`Train` / `TrainID` |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID` |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -44,7 +44,7 @@
 
 - 一格鐵軌可以同時連接多個方向（直線、彎道、T 字、十字），單一 enum 無法表達。
 - 相較 `Set<TrackDirection>`：每格只佔 1 byte、比較便宜，且編碼結果穩定（`Set` 的迭代順序每個 process 都不同，會讓存檔輸出不 deterministic）。
-- 解碼時拒絕未知 bit；GameWorld 拒絕沒有任何連接的鐵軌。
+- `TrackConnections(rawValue:)` 接受任何 byte，驗證放在邊界：地圖（`GridMap`）解碼與 `buildTrack` 對鐵軌格都只接受四個方向的 bit（rawValue 1…15）。空連接與含未知 bit 的值一律拒絕，不會把未知 bit 遮掉後接受；`buildTrack` 丟出 `invalidTrackConnections`，而且這項檢查先於範圍、佔用與資金。
 
 ### 3. 遊戲時間
 
@@ -86,11 +86,18 @@
 
 ### 9. 為什麼 Train 保持 minimal
 
-`Train` 目前只有 ID 與名稱。列車的位置表示方式（格子？邊？路段上的距離？）、路線所有權、時刻表與閉塞都取決於尚未設計的軌道拓撲。現在先決定這些會把未來設計鎖死，因此延到 Phase 3。
+`Train` 目前只有 ID 與名稱。Phase 3 Stage I 只確立了軌道的連通規則（決策 10）；列車的位置表示方式（格子？邊？路段上的距離？）、路線所有權、時刻表與閉塞都還沒設計。現在先決定這些會把未來設計鎖死，因此留到之後的 Stage（見 ROADMAP）。
 
-### 10. 為什麼現在不建立完整 track graph
+### 10. Track connectivity：由地圖推導，不建立 graph
 
-每格只記錄本地連接方向，尚未檢查相鄰格是否相接，也沒有節點 / 邊的圖結構。Graph 的形狀（以格子為節點、以路段為邊、是否含道岔狀態）應由列車移動與路徑搜尋的需求決定。現有的 `TrackConnections` 已足以在之後推導出 graph。
+鐵軌是否相接，每次查詢時直接由地圖推導（`GameWorld.connectedNeighbors(of:)`、`isConnected(_:to:)`，Phase 3 Stage I）。地圖上的 `TileType.track(connections:)` 仍是鐵軌唯一的權威紀錄，`Track` 仍只是唯讀快照。
+
+- **相接規則**：格子 p 往方向 d 的鄰格 q，只有在 p、q 都在地圖內、都是鐵軌、p 有 d 出口、q 有 `d.opposite` 出口時才相接。目前所有實體連結都是雙向的，因此 `isConnected(p, q) == isConnected(q, p)`。同一格、斜對角、相隔一格以上、地圖外、空格與車站都不相接；車站目前不是鐵軌。
+- **雙向出口是通行條件，不是鋪設條件**：孤立的鐵軌、只有一個出口的鐵軌，以及朝向空格、車站、不相配的鐵軌或地圖邊界外的出口，都可以鋪設。GameCore 不會自動補齊、旋轉或修改鄰格的出口。拆軌後，下一次查詢立即反映斷開；鄰格的出口保持原樣，成為懸空（dangling）出口。
+- **Junction**：每一格鐵軌是一個互通節點。兩個出口是直線或彎道，三個是互通的 T 字，四個是互通的十字。四個出口不代表「交叉但不互通」的兩條鐵軌；這種交叉、道岔狀態與入口—出口配對目前都不支援。
+- **查詢回傳所有相接的鄰格**，包括列車之後可能的身後方向。要不要折返、走哪個出口，是列車移動與路徑搜尋的責任，不屬於拓撲查詢。
+- **順序固定為北、東、南、西**，沒有重複項；由 `TrackDirection` 的宣告順序決定，不依賴 `Dictionary` / `Set` 的迭代順序。
+- **沒有 graph cache**：不另存 graph、registry、revision counter 或索引，因此不可能與地圖不同步，每個 `GameWorld` 快照也自然保留它自己的連通結果。每次查詢只讀取起點與最多四個鄰格，不使用 `tracks` 或 `map.tiles` 掃描整張地圖。先確認起點在地圖內才計算鄰格，因此極端座標（`Int.min` / `Int.max`）不會溢位。
 
 ### 11. GameSession：UI 如何持有唯一的 GameWorld
 
@@ -139,6 +146,8 @@ Swift 參考實作
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
 - 鋪軌與建站只能在空格；車站不能與鐵軌重疊。
+- 鐵軌的連接方向至少一個、只能是北、東、南、西；鋪設時不要求與鄰格相接。
+- 兩格鐵軌只有在相鄰且各自有朝向對方的出口時才相接；車站不是鐵軌（決策 10）。
 - 拆軌只接受鐵軌格；空格與車站會被拒絕。拆除免費且**不退款**。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。

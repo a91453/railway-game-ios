@@ -67,15 +67,21 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Lays a track piece on an empty tile and charges ``ConstructionCosts/track``.
     ///
+    /// The piece does not have to meet any neighbouring track: isolated
+    /// pieces and exits toward empty tiles, stations, mismatched track or the
+    /// map edge are all allowed, and neighbouring tiles are never changed.
+    /// Whether tiles are joined is derived by ``connectedNeighbors(of:)``.
+    ///
     /// - Throws: ``GameError/invalidTrackConnections`` if `connections` is
-    ///   empty, ``GameError/outOfBounds(_:)``, ``GameError/tileOccupied(_:)``,
-    ///   or ``GameError/insufficientFunds(required:available:)``.
+    ///   empty or has bits other than the four directions,
+    ///   ``GameError/outOfBounds(_:)``, ``GameError/tileOccupied(_:)``, or
+    ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildTrack(
         at position: GridPosition,
         connections: TrackConnections
     ) throws(GameError) -> Track {
-        guard !connections.isEmpty else { throw .invalidTrackConnections }
+        guard !connections.isEmpty, connections.hasOnlyKnownDirections else { throw .invalidTrackConnections }
         try requireEmptyTile(at: position)
         try economy.spend(economy.costs.track)
 

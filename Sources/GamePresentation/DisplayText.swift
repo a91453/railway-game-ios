@@ -34,7 +34,7 @@ extension TrackConnections {
             let isStraight = self == [.north, .south] || self == [.east, .west]
             return isStraight ? "Straight" : "Curve"
         case 3: return "T-junction"
-        default: return "Crossing"
+        default: return "Four-way"
         }
     }
 
@@ -85,6 +85,8 @@ extension GameError {
         case .tileOccupied(let position):
             "Tile \(position) is already occupied."
         case .invalidTrackConnections:
+            // The app builds pieces only from the four named directions, so
+            // an empty piece is the only way a player can get this error.
             "Choose at least one direction for the track."
         case .invalidName:
             "Enter a name."

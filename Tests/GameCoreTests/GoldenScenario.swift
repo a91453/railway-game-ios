@@ -7,14 +7,15 @@ import GameCore
 //
 // Only the public GameCore API is used: the same commands and read-only state
 // a GameSession has. Every fixture value (integers, speed and direction names,
-// commands, results) is spelled out here rather than borrowed from a GameCore
-// type's Codable form, so changing the Swift save format can never change
-// what a fixture means.
+// commands, results, observations) is spelled out here rather than borrowed
+// from a GameCore type's Codable form, so changing the Swift save format can
+// never change what a fixture means.
 
-/// A checked-in scenario: a starting world, commands in order with the outcome
-/// each one must have, and the state the world must end in.
+/// A checked-in scenario: a starting world, steps in order (commands with the
+/// outcome each one must have, and read-only observations with the answer
+/// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 1
+    static let schemaVersion = 2
 
     var description: String
     var initialState: InitialState
@@ -68,9 +69,11 @@ struct GoldenScenario: Decodable {
         }
     }
 
-    struct Step: Decodable {
-        var command: ScenarioCommand
-        var expect: StepOutcome
+    /// One step: a command and the outcome it must have, or a read-only
+    /// observation of the world at that point and the answer it must give.
+    enum Step: Equatable {
+        case command(ScenarioCommand, expect: StepOutcome)
+        case observe(ScenarioObservation, expect: ObservationAnswer)
     }
 
     enum FixtureError: Error, Equatable {
@@ -103,13 +106,21 @@ struct GoldenScenario: Decodable {
 
         var differences: [String] = []
         for (index, step) in steps.enumerated() {
-            let before = world
-            let outcome = step.command.apply(to: &world)
-            if outcome != step.expect {
-                differences.append("steps[\(index)]: expected \(compactJSON(step.expect)), got \(compactJSON(outcome))")
-            }
-            if case .rejected = outcome, world != before {
-                differences.append("steps[\(index)]: the rejected command changed the world")
+            switch step {
+            case .command(let command, let expect):
+                let before = world
+                let outcome = command.apply(to: &world)
+                if outcome != expect {
+                    differences.append("steps[\(index)]: expected \(compactJSON(expect)), got \(compactJSON(outcome))")
+                }
+                if case .rejected = outcome, world != before {
+                    differences.append("steps[\(index)]: the rejected command changed the world")
+                }
+            case .observe(let observation, let expect):
+                let answer = observation.answer(in: world)
+                if answer != expect {
+                    differences.append("steps[\(index)]: expected \(compactJSON(expect)), got \(compactJSON(answer))")
+                }
             }
         }
 
@@ -122,6 +133,50 @@ struct GoldenScenario: Decodable {
                 """)
         }
         return differences
+    }
+}
+
+extension GoldenScenario.Step: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case command, observe, expect
+    }
+
+    private enum AnswerKeys: String, CodingKey {
+        case neighbors, connected
+    }
+
+    /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
+    /// an observation's `expect` is fixed by the observation's type.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch (container.contains(.command), container.contains(.observe)) {
+        case (true, false):
+            self = try .command(
+                container.decode(ScenarioCommand.self, forKey: .command),
+                expect: container.decode(StepOutcome.self, forKey: .expect)
+            )
+        case (false, true):
+            let observation = try container.decode(ScenarioObservation.self, forKey: .observe)
+            let expect = try container.nestedContainer(keyedBy: AnswerKeys.self, forKey: .expect)
+            switch observation {
+            case .connectedNeighbors:
+                guard !expect.contains(.connected) else {
+                    throw DecodingError.dataCorruptedError(forKey: .connected, in: expect, debugDescription: "connectedNeighbors is answered by \"neighbors\" alone.")
+                }
+                let neighbors = try expect.decode([PositionSummary].self, forKey: .neighbors)
+                self = .observe(observation, expect: .neighbors(neighbors.map(\.position)))
+            case .isConnected:
+                guard !expect.contains(.neighbors) else {
+                    throw DecodingError.dataCorruptedError(forKey: .neighbors, in: expect, debugDescription: "isConnected is answered by \"connected\" alone.")
+                }
+                self = try .observe(observation, expect: .connected(expect.decode(Bool.self, forKey: .connected)))
+            }
+        default:
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: container.codingPath,
+                debugDescription: "A step needs exactly one of \"command\" and \"observe\"."
+            ))
+        }
     }
 }
 
@@ -277,6 +332,83 @@ extension StepOutcome: Codable {
             try container.encode("noTrackToRemove", forKey: .result)
             try encode(position)
         }
+    }
+}
+
+// MARK: - Observations
+
+/// A read-only track topology query as a scenario step, tagged by `"type"`.
+/// Observations are not commands: they ask the world through its public
+/// queries and never change it.
+enum ScenarioObservation: Equatable {
+    case connectedNeighbors(GridPosition)
+    case isConnected(GridPosition, to: GridPosition)
+
+    func answer(in world: GameWorld) -> ObservationAnswer {
+        switch self {
+        case .connectedNeighbors(let position):
+            .neighbors(world.connectedNeighbors(of: position))
+        case .isConnected(let position, let other):
+            .connected(world.isConnected(position, to: other))
+        }
+    }
+}
+
+extension ScenarioObservation: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case type, x, y, from, to
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "connectedNeighbors":
+            self = try .connectedNeighbors(container.decodePosition(x: .x, y: .y))
+        case "isConnected":
+            let from = try container.decode(PositionSummary.self, forKey: .from)
+            self = try .isConnected(from.position, to: container.decode(PositionSummary.self, forKey: .to).position)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
+        }
+    }
+}
+
+/// What an observation answered. Encoded as `{"neighbors": [{"x", "y"}, ...]}`
+/// in the order the query returned them, or `{"connected": true|false}`.
+enum ObservationAnswer: Equatable {
+    case neighbors([GridPosition])
+    case connected(Bool)
+}
+
+extension ObservationAnswer: Encodable {
+    private enum CodingKeys: String, CodingKey {
+        case neighbors, connected
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .neighbors(let positions):
+            try container.encode(positions.map(PositionSummary.init), forKey: .neighbors)
+        case .connected(let connected):
+            try container.encode(connected, forKey: .connected)
+        }
+    }
+}
+
+/// A grid position as `{"x": ..., "y": ...}`.
+struct PositionSummary: Codable, Equatable {
+    var x: Int
+    var y: Int
+
+    init(_ position: GridPosition) {
+        x = position.x
+        y = position.y
+    }
+
+    var position: GridPosition {
+        GridPosition(x: x, y: y)
     }
 }
 

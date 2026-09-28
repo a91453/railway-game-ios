@@ -11,7 +11,7 @@ final class DisplayTextTests: XCTestCase {
         XCTAssertEqual(TrackConnections([.north, .east]).shapeName, "Curve")
         XCTAssertEqual(TrackConnections([.south, .west]).shapeName, "Curve")
         XCTAssertEqual(TrackConnections([.north, .east, .west]).shapeName, "T-junction")
-        XCTAssertEqual(TrackConnections([.north, .east, .south, .west]).shapeName, "Crossing")
+        XCTAssertEqual(TrackConnections([.north, .east, .south, .west]).shapeName, "Four-way")
     }
 
     func testTrackSummaryListsDirectionsInCompassOrder() {

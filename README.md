@@ -20,7 +20,8 @@ App 目前能做到：
 GameCore 目前能做到：
 
 - 建立指定尺寸的方格地圖（1…1024 × 1…1024）
-- 鋪設 / 拆除鐵軌（每格記錄連接方向）
+- 鋪設 / 拆除鐵軌（每格記錄連接方向，只能是北、東、南、西；不要求與鄰格相接）
+- 查詢鐵軌連通：由地圖推導相鄰鐵軌是否雙向相接（`connectedNeighbors(of:)`、`isConnected(_:to:)`）；列車還不會在鐵軌上運行
 - 建造車站（唯一、可保存的 Station ID）
 - 購買列車（僅 ID 與名稱，不在地圖上運行）
 - 整數金額的資金與建設成本
@@ -31,7 +32,7 @@ GameCore 目前能做到：
 
 | 動作 | 條件 | 成本 |
 | --- | --- | --- |
-| 鋪軌 | 位置在地圖內、該格為空、至少一個連接方向、資金足夠 | `ConstructionCosts.track` |
+| 鋪軌 | 位置在地圖內、該格為空、至少一個連接方向（只能是北、東、南、西）、資金足夠；不需要與鄰格相接 | `ConstructionCosts.track` |
 | 拆軌 | 該格必須是鐵軌（空格與車站都會被拒絕） | 免費，**不退款** |
 | 建站 | 名稱非空白、位置在地圖內、該格為空、資金足夠 | `ConstructionCosts.station` |
 | 購買列車 | 名稱非空白、資金足夠 | `ConstructionCosts.train` |
@@ -63,7 +64,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、Station、Train
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
