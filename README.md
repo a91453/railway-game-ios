@@ -23,7 +23,7 @@ GameCore 目前能做到：
 - 鋪設 / 拆除鐵軌（每格記錄連接方向，只能是北、東、南、西；不要求與鄰格相接）
 - 查詢鐵軌連通：由地圖推導相鄰鐵軌是否雙向相接（`connectedNeighbors(of:)`、`isConnected(_:to:)`）；列車還不會在鐵軌上運行
 - 建造車站（唯一、可保存的 Station ID）
-- 購買列車（僅 ID 與名稱，不在地圖上運行）
+- 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）。列車還不會移動，App 也還沒有放置列車的介面
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -33,9 +33,11 @@ GameCore 目前能做到：
 | 動作 | 條件 | 成本 |
 | --- | --- | --- |
 | 鋪軌 | 位置在地圖內、該格為空、至少一個連接方向（只能是北、東、南、西）、資金足夠；不需要與鄰格相接 | `ConstructionCosts.track` |
-| 拆軌 | 該格必須是鐵軌（空格與車站都會被拒絕） | 免費，**不退款** |
+| 拆軌 | 該格必須是鐵軌（空格與車站都會被拒絕），且沒有列車停在該格或以該格為所在連結的一端 | 免費，**不退款** |
 | 建站 | 名稱非空白、位置在地圖內、該格為空、資金足夠 | `ConstructionCosts.station` |
 | 購買列車 | 名稱非空白、資金足夠 | `ConstructionCosts.train` |
+| 放置列車 | 列車存在且未放置；位置是鐵軌格中心，或兩格相接鐵軌之間 `0 < offset < 1024` | 免費 |
+| 取下 / 反向列車 | 列車存在且已放置 | 免費 |
 
 任何失敗都會丟出 `GameError`，且世界狀態（地圖、資金、車站、列車）完全不變。餘額永遠不會因建設變成負數。
 
@@ -64,7 +66,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
