@@ -65,6 +65,7 @@ final class ErrorMessageTests: XCTestCase {
             .invalidMovementRate: "A train's rate cannot be negative.",
             .invalidContinuation: "The train cannot follow that path: each step must lead to joined track, without turning back.",
             .clockOverflow: "Game time cannot advance any further.",
+            .idsExhausted: "This game has no IDs left for anything more of this kind.",
         ]
 
         for (error, message) in messages {

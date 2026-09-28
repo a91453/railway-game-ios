@@ -229,7 +229,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 5,
+              "schemaVersion": 6,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -274,7 +274,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 6] {
+        for version in [1, 2, 3, 4, 5, 7] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -432,6 +432,7 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"result": "invalidMovementRate"}"#, .rejected(.invalidMovementRate)),
             (#"{"result": "invalidContinuation"}"#, .rejected(.invalidContinuation)),
             (#"{"result": "clockOverflow"}"#, .rejected(.clockOverflow)),
+            (#"{"result": "idsExhausted"}"#, .rejected(.idsExhausted)),
         ]
         for (json, expected) in results {
             XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)
