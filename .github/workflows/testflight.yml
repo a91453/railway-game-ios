@@ -139,8 +139,8 @@ jobs:
             echo "version=$EXPECTED_VERSION"
           } >>"$GITHUB_OUTPUT"
 
-      # Uploads the checked IPA. altool reads the key from
-      # API_PRIVATE_KEYS_DIR, which the setup step points at the key file.
+      # Uploads the checked IPA. altool finds the key file through
+      # API_PRIVATE_KEYS_DIR and, run from its parent folder, ./private_keys.
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
@@ -150,6 +150,7 @@ jobs:
           BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
           VERSION: ${{ steps.ipa.outputs.version }}
         run: |
+          cd "$(dirname "$API_PRIVATE_KEYS_DIR")"
           xcrun altool --upload-package "$IPA_PATH" \
             --type ios \
             --apple-id "$ASC_APP_ID" \

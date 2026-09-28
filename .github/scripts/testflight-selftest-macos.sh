@@ -34,9 +34,13 @@ finish() {
 user_keychains() { security list-keychains -d user | sed -e 's/^ *"//' -e 's/"$//'; }
 default_keychain() { security default-keychain -d user | sed -e 's/^ *"//' -e 's/"$//'; }
 
+# A new temporary folder, as the canonical path that security(1) reports
+# (on macOS /var is a link to /private/var).
+canonical_temp_dir() { (cd "$(mktemp -d)" && pwd -P); }
+
 test_signing() {
   local tmp runner_temp env_file log before_list before_default
-  tmp="$(mktemp -d)"
+  tmp="$(canonical_temp_dir)"
   runner_temp="$tmp/runner"
   env_file="$tmp/github_env"
   log="$tmp/log"
@@ -129,16 +133,23 @@ test_tools() {
   local altool_help
   altool_help="$(xcrun altool --help 2>&1 || true)"
   for key in --upload-package --apiKey --apiIssuer --apple-id --bundle-id --bundle-version \
-    --bundle-short-version-string API_PRIVATE_KEYS_DIR; do
+    --bundle-short-version-string; do
     grep -qe "$key" <<<"$altool_help" || fail "altool --help does not mention $key"
   done
+  # The upload finds the key through API_PRIVATE_KEYS_DIR and, as a fallback
+  # that altool has long documented, ./private_keys; both point at the file.
+  if grep -q API_PRIVATE_KEYS_DIR <<<"$altool_help"; then
+    echo "altool --help documents API_PRIVATE_KEYS_DIR."
+  else
+    echo "altool --help does not mention API_PRIVATE_KEYS_DIR; the upload also runs next to ./private_keys."
+  fi
   echo "$(xcodebuild -version | head -n 1): export options, xcodebuild and altool options checked."
   finish
 }
 
 test_ipa() {
   local tmp kc kc_password saved
-  tmp="$(mktemp -d)"
+  tmp="$(canonical_temp_dir)"
   kc="$tmp/fixtures.keychain-db"
   kc_password="$(openssl rand -hex 16)"
   saved="$(user_keychains)"
