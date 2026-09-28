@@ -11,6 +11,8 @@ depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
 - `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project is
   generated from `RailwayGameApp/project.yml` by XcodeGen and is not committed.
+- `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
+  GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
 - `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.2.4 / 6.4),
   `ios-build.yml` (Xcode Simulator build on macOS), `visual-smoke.yml`
   (manual Simulator screenshots).
@@ -28,6 +30,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   second authoritative copy of the world in the UI.
 - Preserve determinism, value semantics, `Codable` validation, failure
   atomicity and `Sendable`. Do not make GameCore observable for UI convenience.
+- Golden scenarios are a behavior contract (`GoldenScenarios/README.md`). Tests
+  only read them; never edit an expected value to make a test pass. A changed
+  value is a deliberate behavior change that the PR must justify value by value.
 - Do not raise `swift-tools-version` (6.0) or drop Swift 6.0 / 6.2.4
   compatibility without a concrete technical reason.
 
