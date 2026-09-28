@@ -143,7 +143,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - **Log 是公開的**：這個 repository 公開，Actions log 任何人都看得到。
   - 腳本只印出「是否存在、格式是否正確、yes/no、版本資訊」，不印秘密，也不印含帳號持有人姓名的憑證或描述檔名稱。
   - GitHub 會自動遮蔽 secrets，但官方說明遮蔽不保證完整，所以腳本本身就不輸出它們。
-  - Apple 工具的錯誤訊息仍可能提到憑證名稱。
+  - 簽章 Archive、IPA export 與 upload 都以 `xcodebuild -quiet` 執行，降低公開 log 出現 signing identity 的機會；Apple 工具的錯誤訊息仍可能提到憑證名稱。
 - **寫入權限**：有 repository 寫入權限的人都能讀取 secrets，不要把寫入權限給不信任的人。
 
 ## 驗證狀態
