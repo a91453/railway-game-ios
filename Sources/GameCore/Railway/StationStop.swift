@@ -75,8 +75,9 @@ extension GameWorld {
     /// - A train that passes a platform, one given a new continuation there
     ///   (even while its rate is 0), and one waiting there for removed track
     ///   still has a continuation, so it is not stopped.
-    /// - A train on a link is not stopped, even with an empty continuation;
-    ///   it stops once it reaches the end of the link.
+    /// - A train on a link is not stopped, even with an empty continuation.
+    ///   It is stopped only once it has reached the end of the link (which
+    ///   takes a rate above 0), and only if that end is a platform.
     /// - Reversing a train, or clearing its continuation, at a platform stops
     ///   it there; so does placing a train on a platform.
     /// - A station built beside a stopped train is one it is stopped at.
