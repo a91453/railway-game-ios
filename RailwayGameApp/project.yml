@@ -1,11 +1,17 @@
 # XcodeGen spec for the native iPhone / iPad app.
 #
-# The generated RailwayGame.xcodeproj is NOT committed. Regenerate it on a Mac
-# (or let CI do it) from the repository root with:
+# This file is the source of all project settings. The RailwayGame.xcodeproj
+# generated from it IS committed (Xcode Cloud needs the project and its shared
+# scheme in the repository). After changing this file, regenerate from the
+# repository root and commit both:
 #
 #   xcodegen generate --spec RailwayGameApp/project.yml
 #
-# CI pins the XcodeGen version in .github/actions/setup-xcodegen/action.yml.
+# Use the XcodeGen version pinned in .github/actions/setup-xcodegen/action.yml
+# (on Linux, build that release from source as CLAUDE.md describes), in a
+# checkout directory named railway-game-ios: the directory name ends up in the
+# project. ios-build.yml fails if the committed project differs from a fresh
+# generation. Never edit the .xcodeproj by hand or in Xcode's project editor.
 # Paths below are relative to this file.
 name: RailwayGame
 
@@ -29,6 +35,7 @@ targets:
     sources:
       - path: App
       - path: Views
+      - path: Resources
     dependencies:
       - package: RailwayGame
         product: GameCore
@@ -41,6 +48,15 @@ targets:
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
+        # Automatic signing; Xcode Cloud manages the certificates and
+        # profiles, so none are committed. DEVELOPMENT_TEAM, the 10-character
+        # Team ID of the Apple Developer Program team (an identifier, not a
+        # secret), stays unset until that team exists: Simulator builds and
+        # the unsigned CI archive do not need it. To set it, add
+        # `DEVELOPMENT_TEAM: <Team ID>` here and regenerate; do not pick the
+        # team in Xcode's Signing & Capabilities pane, which would edit the
+        # generated project. See docs/XCODE_CLOUD_ONBOARDING.md.
+        CODE_SIGN_STYLE: Automatic
         SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: Railway Game
