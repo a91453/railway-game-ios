@@ -30,4 +30,46 @@ final class DisplayTextTests: XCTestCase {
         XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0)), "Station · Central")
         XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0)), "Outside the map")
     }
+
+    func testNetworkSummaryCountsStationsAndTrackTiles() throws {
+        var world = try makeWorld()
+        XCTAssertEqual(world.networkSummary, "0 stations · 0 track tiles")
+
+        try world.buildStation(named: "Central", at: GridPosition(x: 0, y: 0))
+        try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
+        XCTAssertEqual(world.networkSummary, "1 station · 1 track tile")
+
+        try world.buildStation(named: "Harbor", at: GridPosition(x: 3, y: 0))
+        try world.buildTrack(at: GridPosition(x: 2, y: 0), connections: [.east, .west])
+        XCTAssertEqual(world.networkSummary, "2 stations · 2 track tiles")
+    }
+}
+
+final class ErrorMessageTests: XCTestCase {
+    func testEveryGameErrorHasAPlayerMessage() {
+        let position = GridPosition(x: 4, y: 7)
+        let messages: [GameError: String] = [
+            .invalidMapSize(width: 0, height: 5): "A 0 × 5 map is not supported.",
+            .outOfBounds(position): "(4, 7) is outside the map.",
+            .tileOccupied(position): "Tile (4, 7) is already occupied.",
+            .invalidTrackConnections: "Choose at least one direction for the track.",
+            .invalidName: "Enter a name.",
+            .insufficientFunds(required: 50_000, available: 1_234):
+                "Not enough cash: this costs 50,000 and you have 1,234.",
+            .noTrackToRemove(position): "There is no track to remove at (4, 7).",
+        ]
+
+        for (error, message) in messages {
+            XCTAssertEqual(error.playerMessage, message)
+        }
+    }
+
+    func testMoneyUsesThousandsSeparators() {
+        XCTAssertEqual(Money(0).displayText, "0")
+        XCTAssertEqual(Money(999).displayText, "999")
+        XCTAssertEqual(Money(1_000).displayText, "1,000")
+        XCTAssertEqual(Money(1_000_000).displayText, "1,000,000")
+        XCTAssertEqual(Money(-12_345).displayText, "-12,345")
+        XCTAssertEqual(Money(.min).displayText, "-9,223,372,036,854,775,808")
+    }
 }

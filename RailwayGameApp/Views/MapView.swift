@@ -22,9 +22,8 @@ struct MapView: View {
                 ?? MapScale.automaticSize(fitting: fitting)
 
             ScrollView([.horizontal, .vertical]) {
-                MapCanvas(map: map, selection: session.selection, tileSize: tileSize) { position in
-                    session.select(position)
-                }
+                MapCanvas(map: map, selection: session.selection, tileSize: tileSize, session: session)
+                    .equatable()
                 .accessibilityElement()
                 .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
                 .accessibilityValue(selectionDescription)
@@ -36,6 +35,7 @@ struct MapView: View {
                 // Centres the map when it is smaller than the viewport.
                 .frame(minWidth: proxy.size.width, minHeight: proxy.size.height)
             }
+            .background(Color(uiColor: .secondarySystemBackground))
             .overlay(alignment: .bottomTrailing) {
                 zoomControls(tileSize: tileSize, fitting: fitting)
             }
@@ -76,11 +76,21 @@ struct MapView: View {
 }
 
 /// Draws the whole map in one `Canvas` and turns taps into grid positions.
-private struct MapCanvas: View {
+///
+/// Equatable so that game ticks, which change the world's clock but not the
+/// map, do not redraw it.
+private struct MapCanvas: View, Equatable {
     let map: GridMap
     let selection: GridPosition?
     let tileSize: Double
-    let onSelect: (GridPosition) -> Void
+    let session: GameSession
+
+    nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
+        lhs.map == rhs.map
+            && lhs.selection == rhs.selection
+            && lhs.tileSize == rhs.tileSize
+            && lhs.session === rhs.session
+    }
 
     var body: some View {
         let map = map, selection = selection, tileSize = tileSize
@@ -90,7 +100,7 @@ private struct MapCanvas: View {
         .frame(width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         .contentShape(Rectangle())
         .onTapGesture { location in
-            onSelect(MapScale.position(atX: location.x, y: location.y, tileSize: tileSize))
+            session.select(MapScale.position(atX: location.x, y: location.y, tileSize: tileSize))
         }
     }
 }

@@ -61,3 +61,55 @@ extension GameWorld {
         }
     }
 }
+
+extension GameWorld {
+    /// How much has been built, such as "3 stations · 17 track tiles".
+    public var networkSummary: String {
+        let stationCount = stations.count
+        let trackCount = tracks.count
+        let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
+        let trackText = trackCount == 1 ? "1 track tile" : "\(trackCount) track tiles"
+        return "\(stationText) · \(trackText)"
+    }
+}
+
+extension GameError {
+    /// What went wrong, in words a player can act on. GameError itself
+    /// carries only structured data.
+    public var playerMessage: String {
+        switch self {
+        case .invalidMapSize(let width, let height):
+            "A \(width) × \(height) map is not supported."
+        case .outOfBounds(let position):
+            "\(position) is outside the map."
+        case .tileOccupied(let position):
+            "Tile \(position) is already occupied."
+        case .invalidTrackConnections:
+            "Choose at least one direction for the track."
+        case .invalidName:
+            "Enter a name."
+        case .insufficientFunds(let required, let available):
+            "Not enough cash: this costs \(required.displayText) and you have \(available.displayText)."
+        case .noTrackToRemove(let position):
+            "There is no track to remove at \(position)."
+        }
+    }
+}
+
+extension Money {
+    /// The amount with thousands separators, such as "1,000,000".
+    ///
+    /// Deterministic rather than locale-dependent, so it reads the same in
+    /// every message and test.
+    public var displayText: String {
+        let digits = String(amount.magnitude)
+        var text = amount < 0 ? "-" : ""
+        for (index, digit) in digits.enumerated() {
+            if index > 0, (digits.count - index) % 3 == 0 {
+                text.append(",")
+            }
+            text.append(digit)
+        }
+        return text
+    }
+}

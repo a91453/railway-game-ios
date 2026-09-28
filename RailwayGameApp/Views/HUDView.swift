@@ -8,9 +8,10 @@ struct HUDView: View {
 
     var body: some View {
         let world = session.world
+        let cash = world.economy.balance.displayText
         HStack(spacing: 16) {
-            Label(world.economy.balance.amount.formatted(), systemImage: "banknote")
-                .accessibilityLabel("Cash \(world.economy.balance.amount.formatted())")
+            Label(cash, systemImage: "banknote")
+                .accessibilityLabel("Cash \(cash)")
             Label("\(world.clock.now.minutes) min", systemImage: "clock")
                 .accessibilityLabel("Game time \(world.clock.now.minutes) minutes")
             Spacer(minLength: 0)

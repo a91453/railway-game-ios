@@ -4,19 +4,36 @@ import SwiftUI
 
 /// The game screen: HUD, map and controls.
 ///
-/// Tall screens (phones, and iPads in portrait) stack the map above the
-/// controls; wide screens put the controls in a sidebar next to the map.
+/// Tall screens stack the map above the controls (on iPad the controls then
+/// sit side by side); wide screens put the controls in a sidebar next to the
+/// map.
 struct ContentView: View {
     let session: GameSession
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isWide = false
 
     var body: some View {
-        GeometryReader { proxy in
-            if proxy.size.width > proxy.size.height {
+        Group {
+            if isWide {
                 wideLayout
             } else {
                 tallLayout
             }
         }
+        .background {
+            // Measured ignoring the keyboard: otherwise typing a station name
+            // on an iPad in portrait would flip the layout and end editing.
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size, initial: true) { _, size in
+                        isWide = size.width > size.height
+                    }
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+        // The map and controls share one screen, so text stops growing at the
+        // largest standard size instead of pushing the map off screen.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private var tallLayout: some View {
@@ -26,32 +43,56 @@ struct ContentView: View {
                 .padding(.vertical, 10)
                 .background(.bar)
             Divider()
-            MapView(session: session)
-            Divider()
-            controls
-                .padding()
+            if horizontalSizeClass == .regular {
+                // iPad portrait: the whole map across the full width, and
+                // the controls get the rest of the height.
+                map
+                    .aspectRatio(mapAspectRatio, contentMode: .fit)
+                    .layoutPriority(1)
+                Divider()
+                ScrollView {
+                    ControlPanel(session: session, arrangement: .sideBySide)
+                        .padding()
+                }
                 .background(.bar)
+            } else {
+                map
+                Divider()
+                ControlPanel(session: session, arrangement: .column)
+                    .padding()
+                    .background(.bar)
+            }
         }
+    }
+
+    private var mapAspectRatio: CGFloat {
+        let map = session.world.map
+        return CGFloat(map.width) / CGFloat(map.height)
     }
 
     private var wideLayout: some View {
         HStack(spacing: 0) {
-            MapView(session: session)
+            map
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HUDView(session: session)
                     Divider()
-                    controls
+                    ControlPanel(session: session, arrangement: .column)
+                    Divider()
+                    NetworkOverview(session: session)
                 }
                 .padding()
             }
-            .frame(width: 340)
+            .frame(width: 360)
             .background(.bar)
         }
     }
 
-    private var controls: some View {
-        InspectorView(session: session)
+    private var map: some View {
+        MapView(session: session)
+            .overlay(alignment: .top) {
+                StatusBanner(session: session)
+            }
     }
 }
