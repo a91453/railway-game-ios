@@ -6,7 +6,7 @@
 
 **Early development — GameCore + native prototype UI（Phase 2B）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動與最短路徑搜尋的核心，但 App 還不能操作列車；**尚未**有停站、時刻表、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動與最短路徑搜尋的核心，App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車；**尚未**有停站、時刻表、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -15,7 +15,8 @@ App 目前能做到：
 - 工具：選取、鋪軌、建站、拆軌；以 N / E / S / W 開關、常用形狀（直線、彎道、T 字、十字）與旋轉選擇鐵軌連接方向
 - 建設透過 GameCore 指令執行；失敗時顯示玩家看得懂的訊息，世界不變
 - HUD：現金、遊戲時間（`Day 1 · 08:30`）、暫停 / 1× / 2×
-- `GameSession` 的 game loop 把真實時間換算成整數 tick 推進遊戲時間；App 不在前景作用中（背景、控制中心、App 切換器）時停止，回來不補跑
+- `GameSession` 的 game loop 把真實時間換算成整數 tick 推進遊戲時間與列車；App 不在前景作用中（背景、控制中心、App 切換器）時停止，回來不補跑
+- Train 工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格（GameCore 求路後原封不動提交為 continuation；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑與 rate，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
 
 GameCore 目前能做到：
 
@@ -24,7 +25,7 @@ GameCore 目前能做到：
 - 查詢鐵軌連通：由地圖推導相鄰鐵軌是否雙向相接（`connectedNeighbors(of:)`、`isConnected(_:to:)`）
 - 建造車站（唯一、可保存的 Station ID）
 - 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）
-- 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行。App 還沒有放置或指定路徑的介面，移動目前只由測試驗證
+- 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行
 - 路徑搜尋：`route(from:to:)` 找出到目的地鐵軌格的最短、不折返路徑（同長時依北、東、南、西順序），結果可直接交給 `setTrainContinuation`；只查詢、不改變世界
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
@@ -83,7 +84,7 @@ RailwayGameApp/
   RailwayGame.xcodeproj  由 project.yml 產生並提交（Xcode Cloud 需要），不要手改
   Resources/    Assets.xcassets（App Icon）
   App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，截圖用）
-  Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor
+  Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor、TrainControls
 ```
 
 ## 開發流程（cloud-first）
@@ -115,7 +116,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 1. GitHub → **Actions** → 左側選 **Visual Smoke** → **Run workflow**（選擇分支）→ **Run workflow**
 2. 等待執行完成
 3. 打開該次執行的 Summary 頁面 → **Artifacts** → 下載 **visual-smoke**
-4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，選取格子並開啟鋪軌工具）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
+4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，以及用 Train 工具購買、放置並送出、正在行駛的一台列車）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
 
 Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow 或其腳本的 PR，每次推送都會自動執行。
 

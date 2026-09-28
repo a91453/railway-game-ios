@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）已實作；下一步可以是讓 App 操作列車的最小畫面整合，或 Phase 3 的 Stage M。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）已實作；下一步是 Phase 3 的 Stage N（停站）。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -102,15 +102,21 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - 最少連結數、不立即折返（可繞圈掉頭，不會 reverse）；同長時依出口方向的北、東、南、西順序決定，結果與鋪設順序和平台無關
 - 對 (節點, heading) 做 breadth-first search，只走訪可達鐵軌，不建立 graph 或快取；Stage K 的移動契約不變
 - Golden scenario schema v5：`route` 觀察與 `train-route.json`（ARCHITECTURE 決策 16）
-- 尚未做：多個途經點、以車站為目的地（Stage M）、UI
+- 尚未做：多個途經點、以車站為目的地（Stage N）；App 的操作畫面見 Stage M
 
-### 最小畫面整合（尚未排定）
+### Stage M — 最小畫面整合 ✅（App）
 
-- 放置列車、選目的地（呼叫 `route` 後以 `setTrainContinuation` 提交）、設定 rate，依 `Train.position` 顯示位置；插值只用於顯示，不寫回 GameCore
+原本「最小畫面整合（尚未排定）」的項目，排在停站之前成為 Stage M；原本的 Stage M（停站）順延為 Stage N。
 
-### Stage M — Station Stop
+- App 的「Train」工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格、反向、取下；每個操作都是一個 `GameWorld` 指令
+- 送出：`GameSession` 以 `route(from:to:)` 從列車目前的位置求路，在同一次呼叫中原封不動交給 `setTrainContinuation`；沒有路徑時世界不變
+- 推進沿用 Phase 2B 的 game loop（HUD 的暫停 / 1× / 2×），沒有第二個推進入口
+- 顯示 GameCore 記錄的位置、剩餘 continuation 與 rate；地圖在列車的權威位置畫出列車，每個 tick 跳一步，沒有插值
+- GameCore 未修改（ARCHITECTURE 決策 17）
 
-- 停站
+### Stage N — Station Stop
+
+- 停站、以車站為目的地
 
 順序調整的理由：route / pathfinder 產生的路徑，必須是列車移動核心真的能執行的東西。先確立列車位置與移動延續的契約（J、K），路徑搜尋（L）才有明確的輸出形式可以對準；反過來做，路徑的表示方式會先把位置與移動的設計鎖死。
 
