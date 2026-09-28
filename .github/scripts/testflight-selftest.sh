@@ -74,6 +74,10 @@ run offset 0 "${valid[@]}" BUILD_NUMBER_OFFSET=100
 expect_build offset 107.1
 run offset-zero 0 "${valid[@]}" BUILD_NUMBER_OFFSET=0
 expect_build offset-zero 7.1
+run max-components 0 "${valid[@]}" GITHUB_RUN_NUMBER=9999 GITHUB_RUN_ATTEMPT=99
+expect_build max-components 9999.99
+run max-offset-sum 0 "${valid[@]}" GITHUB_RUN_NUMBER=7 BUILD_NUMBER_OFFSET=9992
+expect_build max-offset-sum 9999.1
 # Each later build number must sort after the earlier ones, as App Store
 # Connect compares them: component by component, as integers.
 ordered="$(printf '%s\n' 8.1 7.2 7.1 107.1 | sort -t. -k1,1n -k2,2n | tr '\n' ' ')"
@@ -108,9 +112,17 @@ run truncated-key 1 "${valid[@]}" ASC_PRIVATE_KEY=$'-----BEGIN PRIVATE KEY-----\
 expect_error truncated-key "ASC_PRIVATE_KEY must be"
 run negative-offset 1 "${valid[@]}" BUILD_NUMBER_OFFSET=-1
 expect_error negative-offset "BUILD_NUMBER_OFFSET must be"
+run too-large-offset 1 "${valid[@]}" BUILD_NUMBER_OFFSET=10000
+expect_error too-large-offset "BUILD_NUMBER_OFFSET must be"
+run offset-sum-too-large 1 "${valid[@]}" GITHUB_RUN_NUMBER=8 BUILD_NUMBER_OFFSET=9992
+expect_error offset-sum-too-large "must not exceed 9999"
+run too-large-run-number 1 "${valid[@]}" GITHUB_RUN_NUMBER=10000
+expect_error too-large-run-number "GITHUB_RUN_NUMBER must be"
+run too-large-attempt 1 "${valid[@]}" GITHUB_RUN_ATTEMPT=100
+expect_error too-large-attempt "GITHUB_RUN_ATTEMPT must be"
 run no-run-number 1 "${valid[@]}" GITHUB_RUN_NUMBER=
 expect_error no-run-number "GITHUB_RUN_NUMBER"
-for name in nothing-set not-main malformed truncated-key; do
+for name in nothing-set not-main malformed truncated-key too-large-offset offset-sum-too-large too-large-run-number too-large-attempt; do
   [[ ! -s "$tmp/$name.out" && ! -s "$tmp/$name.env" ]] || fail "$name: wrote a build number despite failing"
 done
 
