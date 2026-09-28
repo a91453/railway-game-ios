@@ -47,13 +47,21 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
 延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查（Phase 3 Stage I 已提供唯讀的連通查詢；鋪設時仍不要求相接）、存檔。
 
-### Xcode Cloud onboarding — 內部 TestFlight（進行中）
+### 發佈管線 — 內部 TestFlight
 
-以 Xcode Cloud 建置、簽章並發佈到**內部** TestFlight，讓 App 能安裝在實機上。這是發佈管線的準備，不改變遊戲開發範圍（Phase 3 照原計畫進行）。操作手冊與狀態：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)。
+讓 App 能以內部 TestFlight 安裝在實機上。這是發佈管線的準備，不改變遊戲開發範圍（Phase 3 照原計畫進行）。
 
-- Repository readiness（本輪）：XcodeGen 產生的 Xcode 專案與 shared scheme 提交進版控（Xcode Cloud 需要），`ios-build.yml` 檢查它與 `project.yml` 一致；Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon；未簽章的 Release 裝置 Archive（`release-archive.yml`）
-- 待使用者完成：Apple Developer Program 與 App Store Connect 設定、`DEVELOPMENT_TEAM`、在 Mac 上建立第一個 workflow、內部測試群組、第一次 TestFlight 安裝
-- 之後：Xcode Cloud 穩定後，依手冊的移交條件決定 GitHub macOS 的 Simulator build 是否退場；外部 TestFlight 與 App Store 上架另行規劃
+- **Repository readiness ✅**（PR #8）：
+  - XcodeGen 產生的 Xcode 專案與 shared scheme 提交進版控，`ios-build.yml` 檢查它與 `project.yml` 一致；
+  - Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon；
+  - 未簽章的 Release 裝置 Archive（`release-archive.yml`）。
+- **GitHub Actions → 內部 TestFlight 基礎設施：已實作，dry run 驗證**：
+  - `testflight.yml`：只能從 `main` 手動觸發；preflight → 簽章 Archive → 匯出 IPA → 檢查 → 上傳；
+  - `testflight-checks.yml`：只用假值的腳本測試、macOS dry run、合成 IPA 檢查。
+  - 手冊：[TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
+- **真實 Apple 簽章與上傳：blocked**，等待 Apple Developer Program 生效、API 存取與 Team API key；第一次執行同時驗證雲端簽章在 GitHub runner 上的行為。
+- **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
+- **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 
 ## Phase 3 — Train simulation
 

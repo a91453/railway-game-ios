@@ -1,0 +1,125 @@
+name: TestFlight Checks
+
+# Tests the TestFlight release workflow (testflight.yml) and its scripts with
+# no Apple account and no secret: fake values only; nothing is signed with an
+# Apple certificate and nothing is uploaded. It cannot show that real
+# signing, upload or TestFlight processing work; see
+# docs/TESTFLIGHT_GITHUB_ACTIONS.md for what is verified where.
+#
+# Runs on pull requests that change the release workflow, this workflow or
+# the scripts, and by hand (Actions -> TestFlight Checks -> Run workflow).
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/testflight.yml
+      - .github/workflows/testflight-checks.yml
+      - .github/scripts/testflight-*.sh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  scripts:
+    name: Scripts (lint, preflight, build numbers)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (pinned, checksum-verified)
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 --output "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "$ACTIONLINT_SHA256  $archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -version
+
+      # actionlint also runs shellcheck on every workflow `run:` block.
+      - name: Lint scripts and workflows
+        run: |
+          shellcheck --version | head -n 2
+          shellcheck .github/scripts/*.sh
+          "$RUNNER_TEMP/actionlint"
+
+      - name: Preflight and build-number tests (fake values)
+        run: .github/scripts/testflight-selftest.sh
+
+  macos-dry-run:
+    name: macOS dry run (no Apple account; nothing signed or uploaded)
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Toolchain versions
+        run: |
+          sw_vers
+          xcodebuild -version
+          echo "iOS SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
+          openssl version
+
+      - name: Keychain and API key file (fake key, failing step, cleanup)
+        run: .github/scripts/testflight-selftest-macos.sh signing
+
+      # The steps below run the release workflow's own scripts in the order
+      # testflight.yml does, minus the account: no key, an unsigned archive.
+      - name: Record the keychains before setup
+        run: |
+          security list-keychains -d user >"$RUNNER_TEMP/keychains-before.txt"
+          security default-keychain -d user >"$RUNNER_TEMP/default-keychain-before.txt"
+
+      - name: Set up signing (no key)
+        run: .github/scripts/testflight-signing.sh setup
+
+      - name: Archive the committed project (unsigned)
+        run: .github/scripts/testflight-archive.sh unsigned
+
+      - name: Check the archive, the export options and the Xcode tools
+        run: .github/scripts/testflight-selftest-macos.sh tools
+
+      - name: Simulate a failing release step
+        id: simulated-failure
+        continue-on-error: true
+        run: |
+          echo "This step fails on purpose; the cleanup below must still run and restore everything."
+          exit 1
+
+      - name: Clean up signing material
+        if: always()
+        run: .github/scripts/testflight-signing.sh cleanup
+
+      - name: Check the cleanup
+        env:
+          SIMULATED_FAILURE: ${{ steps.simulated-failure.outcome }}
+        run: |
+          [[ "$SIMULATED_FAILURE" == failure ]] || { echo "::error::The simulated step did not fail."; exit 1; }
+          diff "$RUNNER_TEMP/keychains-before.txt" <(security list-keychains -d user) ||
+            { echo "::error::The keychain search list was not restored."; exit 1; }
+          diff "$RUNNER_TEMP/default-keychain-before.txt" <(security default-keychain -d user) ||
+            { echo "::error::The default keychain was not restored."; exit 1; }
+          if [[ -e "$RUNNER_TEMP/testflight-state" || -e "$RUNNER_TEMP/testflight" ]]; then
+            echo "::error::The temporary keychain, key file, archive or export folder was left behind."
+            exit 1
+          fi
+          echo "Keychains restored; temporary keychain, archive and export options removed."
+
+      - name: IPA check against synthetic IPAs
+        run: .github/scripts/testflight-selftest-macos.sh ipa

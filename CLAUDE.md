@@ -21,9 +21,14 @@ depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
   `ios-build.yml` (committed-project drift check and Xcode Simulator build on
   macOS), `visual-smoke.yml` (manual Simulator screenshots),
   `release-archive.yml` (unsigned Release device archive; manual, and on PRs
-  that change project settings or app resources).
-- Distribution: Xcode Cloud → internal TestFlight, not yet onboarded; steps and
-  status in `docs/XCODE_CLOUD_ONBOARDING.md`.
+  that change project settings or app resources), `testflight.yml` (signed
+  archive → IPA → App Store Connect; `workflow_dispatch` from `main` only,
+  secrets in the `testflight` environment), `testflight-checks.yml` (tests
+  of the release scripts with fake values and a macOS dry run; no secrets).
+- Distribution: GitHub Actions → internal TestFlight
+  (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). Real signing and upload are blocked
+  until the Apple Developer Program membership and API key exist. Xcode Cloud
+  is deferred (`docs/XCODE_CLOUD_ONBOARDING.md`).
 
 ## Architecture rules
 
@@ -51,8 +56,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   from swift.org. Xcode, `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are
   **not** available there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
-  `visual-smoke.yml`, `release-archive.yml`). The unsigned archive does not
-  prove signing, upload or TestFlight; only Xcode Cloud can.
+  `visual-smoke.yml`, `release-archive.yml`, `testflight-checks.yml`). The
+  unsigned archive and the dry run do not prove signing, upload or
+  TestFlight; only a real `testflight.yml` run with the Apple account can.
+- Never run `testflight.yml` or add a trigger to it, and never let pull
+  requests reach its secrets; the user starts releases.
 - Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
   regenerate the Xcode project with the XcodeGen release pinned in
   `.github/actions/setup-xcodegen/action.yml` (2.46.0) and commit the result.
@@ -86,7 +94,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,
   certificates, provisioning profiles, tokens, `.env` files, personal data).
-  Signing is automatic and managed by Xcode Cloud; the only signing value in
-  the repository is the public Team ID (`DEVELOPMENT_TEAM`). Apple account
-  steps (agreements, App Store Connect, testers, the first workflow in Xcode on
-  a Mac) are the user's; never ask for passwords or 2FA codes.
+  Signing is automatic through the App Store Connect API key; the key, Team
+  ID and app ID live only in the GitHub environment `testflight`, never in
+  the repository, logs or artifacts. Apple account steps (agreements, App
+  Store Connect, API key, testers) are the user's; never ask for passwords,
+  2FA codes or private keys.

@@ -1,0 +1,184 @@
+name: TestFlight (internal)
+
+# Archives the committed project on a GitHub-hosted macOS runner, signs it
+# through App Store Connect with the team's API key, exports an IPA and
+# checks it, then uploads the archive, signed the same way, to App Store
+# Connect for internal TestFlight testing. Every Apple step uses xcodebuild
+# with the API key.
+#
+# Started only by hand (Actions -> TestFlight (internal) -> Run workflow) and
+# only from main. Pull requests never run it; its secrets live in the
+# "testflight" environment, which only main may use. Setup, the required
+# secrets and variables, and what is verified: docs/TESTFLIGHT_GITHUB_ACTIONS.md.
+# The same scripts are exercised without an Apple account by
+# testflight-checks.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      archive_signing:
+        description: >-
+          How the archive is signed before export. "automatic" (default):
+          automatic signing with the API key. "adhoc": no development
+          certificate or profile; try it if automatic signing fails, for
+          example because the team has no registered devices.
+        type: choice
+        options:
+          - automatic
+          - adhoc
+        default: automatic
+
+permissions:
+  contents: read
+
+# One release at a time: a second run waits instead of uploading in parallel,
+# and a running upload is never cancelled.
+concurrency:
+  group: testflight-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preflight:
+    name: Preflight (branch and settings)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: testflight
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Fails in seconds, listing every missing or malformed setting, before
+      # a macOS runner starts. Prints no secret.
+      - name: Check branch and settings
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          BUILD_NUMBER_OFFSET: ${{ vars.BUILD_NUMBER_OFFSET }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-preflight.sh
+
+  release:
+    name: Archive, sign, export, check and upload
+    needs: preflight
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: testflight
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # The same check again, and BUILD_NUMBER for later steps. It is
+      # computed here, from this job's own run attempt, so that re-running
+      # only the failed jobs still gets a build number no attempt has used.
+      - name: Check settings and set the build number
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          BUILD_NUMBER_OFFSET: ${{ vars.BUILD_NUMBER_OFFSET }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-preflight.sh
+
+      # App Store Connect accepts only builds made with Xcode 26 or later.
+      - name: Toolchain versions
+        run: |
+          sw_vers
+          xcodebuild -version
+          echo "iOS SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
+          major="$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
+          if (( major < 26 )); then
+            echo "::error::App Store Connect needs Xcode 26 or later; this runner has Xcode $major."
+            exit 1
+          fi
+
+      - name: Set up signing (temporary keychain and API key file)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-signing.sh setup
+
+      - name: Archive (Release, generic iOS device)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: .github/scripts/testflight-archive.sh "$ARCHIVE_SIGNING"
+
+      # Automatic signing for App Store Connect distribution; with no local
+      # distribution certificate, xcodebuild uses the team's cloud-managed one.
+      - name: Sign and export the IPA
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -quiet -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$EXPORT_OPTIONS" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Checks a local IPA exported from the same archive and signing options
+      # that the upload step reuses.
+      - name: Check the IPA
+        id: ipa
+        run: |
+          shopt -s nullglob
+          ipas=("$EXPORT_PATH"/*.ipa)
+          if [[ ${#ipas[@]} -ne 1 ]]; then
+            echo "::error::Expected one IPA in the export folder, found ${#ipas[@]}."
+            exit 1
+          fi
+          archived="$ARCHIVE_PATH/Info.plist"
+          EXPECTED_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleIdentifier' "$archived")"
+          EXPECTED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleShortVersionString' "$archived")"
+          export EXPECTED_BUNDLE_ID EXPECTED_VERSION
+          EXPECTED_BUILD="$BUILD_NUMBER" EXPECTED_TEAM_ID="$APPLE_TEAM_ID" \
+            .github/scripts/testflight-verify-ipa.sh "${ipas[0]}"
+          {
+            echo "bundle_id=$EXPECTED_BUNDLE_ID"
+            echo "version=$EXPECTED_VERSION"
+          } >>"$GITHUB_OUTPUT"
+
+      # Runs only after the IPA check passed. It re-exports the same archive
+      # with the same signing options; only destination changes to upload
+      # (supported with API keys since Xcode 15).
+      - name: Upload to App Store Connect
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
+          VERSION: ${{ steps.ipa.outputs.version }}
+        run: |
+          xcodebuild -quiet -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$TESTFLIGHT_DIR/upload" \
+            -exportOptionsPlist "$UPLOAD_OPTIONS" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          {
+            echo ""
+            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER). App Store Connect now processes it; it appears in TestFlight when processing ends:"
+            echo "https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      # Runs even when an earlier step failed or the run was cancelled.
+      - name: Clean up signing material
+        if: always()
+        run: .github/scripts/testflight-signing.sh cleanup

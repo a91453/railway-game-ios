@@ -1,5 +1,11 @@
 # Xcode Cloud 首次啟用與內部 TestFlight 操作手冊
 
+> **目前策略：Xcode Cloud 暫緩。** 優先路線是 GitHub Actions → 內部 TestFlight，不需要 Mac，見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
+>
+> 本手冊保留供日後使用，內容仍然有效：Xcode Cloud 的第一次 onboarding 仍需要一次在 Mac 上操作 Xcode。兩條路線共用同一份已提交的 Xcode 專案與 shared scheme。日後啟用 Xcode Cloud 時，再決定是否保留 GitHub macOS 的發佈 workflow。
+>
+> GitHub Actions 路線的 Team ID 放在 GitHub variable，不寫進 `project.yml`。下方步驟 4（把 `DEVELOPMENT_TEAM` 寫進 repository）只在啟用 Xcode Cloud 時需要。
+
 目標：把這個原型 App 以 Xcode Cloud 建置、上傳 App Store Connect，並透過**內部** TestFlight 安裝到自己的 iPhone / iPad。外部 Beta（Beta App Review）與 App Store 上架都不是首次安裝的必要條件，本手冊不處理。
 
 前提：主要使用 iPhone / iPad，**沒有自己的 Mac**。
@@ -10,7 +16,7 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 
 | 項目 | 狀態 | 說明 |
 | --- | --- | --- |
-| Repository readiness | 本 PR 完成（macOS 部分由 GitHub Actions 驗證） | 已提交的 Xcode 專案與 shared scheme、Release Archive 設定、App Icon、自動簽章設定、漂移檢查 |
+| Repository readiness | 已完成（PR #8；macOS 部分由 GitHub Actions 驗證） | 已提交的 Xcode 專案與 shared scheme、Release Archive 設定、App Icon、自動簽章設定、漂移檢查 |
 | Apple 帳號 onboarding | **尚未開始，需要你操作** | Developer Program、Team ID、Bundle ID、App Store Connect app record、測試群組 |
 | 簽章 Archive 與上傳 | **尚未執行** | 只能由 Xcode Cloud 在 onboarding 後完成；GitHub 上的 Archive 是**未簽章**的，不能證明簽章或上傳 |
 | TestFlight 安裝 | **尚未執行** | 需要上面兩項都完成 |
