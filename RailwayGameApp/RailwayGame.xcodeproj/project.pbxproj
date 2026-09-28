@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
 		1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7E2B69371F0B985A7107860 /* GameCore */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
@@ -31,6 +32,7 @@
 		60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackPieceEditor.swift; sourceTree = "<group>"; };
 		903982CCE649E985E784BE87 /* HUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDView.swift; sourceTree = "<group>"; };
 		908DF494BE421AA1D9D8EE60 /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		9A68301E79140AEFC540BBA0 /* TrainControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainControls.swift; sourceTree = "<group>"; };
 		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
 		A7D933E24E26C2077E5BC12A /* RailwayGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RailwayGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +84,7 @@
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
 				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
 				60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */,
+				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
 				AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */,
+				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

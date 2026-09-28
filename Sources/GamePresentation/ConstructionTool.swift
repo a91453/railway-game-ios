@@ -10,6 +10,9 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     case buildTrack
     case buildStation
     case removeTrack
+    /// Places the selected train on the selected tile, or sends it there
+    /// once it is on the track (see ``GameSession/applyTool()``).
+    case train
 
     /// Short name for the tool picker.
     public var title: String {
@@ -18,6 +21,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
         case .buildTrack: "Track"
         case .buildStation: "Station"
         case .removeTrack: "Remove"
+        case .train: "Train"
         }
     }
 }

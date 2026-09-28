@@ -10,9 +10,10 @@ import Observation
 /// own copy of game state.
 ///
 /// Besides the world, the session keeps only transient UI state: the selected
-/// tile, the active tool, the track piece being placed, the draft station name
-/// and the last action's message. Anything shown about the game is derived
-/// from ``world`` on demand.
+/// tile, the active tool, the track piece being placed, the draft station name,
+/// the selected train, the heading for placing it, and the last action's
+/// message. Anything shown about the game, including where each train is and
+/// where it is going, is derived from ``world`` on demand.
 ///
 /// The session also hosts the game loop: it measures real time, turns it into
 /// whole ticks with a ``TickAccumulator`` and calls `GameWorld.advance(ticks:)`.
@@ -40,6 +41,14 @@ public final class GameSession {
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
 
+    /// The train the train tool acts on: an ID only, never a copy of the
+    /// train. Read the train itself through ``selectedTrain``.
+    public private(set) var selectedTrainID: TrainID?
+
+    /// The heading the selected train gets when it is placed. Only used by
+    /// ``placeSelectedTrain()``; it never turns a train that is on the track.
+    public private(set) var placementHeading: TrackDirection = .east
+
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another tile or tool.
     public private(set) var message: StatusMessage?
@@ -59,6 +68,7 @@ public final class GameSession {
     public init(world: GameWorld) {
         self.world = world
         self.stationName = Self.suggestedStationName(for: world)
+        self.selectedTrainID = world.trains.first?.id
     }
 
     // MARK: - Selection
@@ -187,6 +197,159 @@ public final class GameSession {
         tickAccumulator.reset()
     }
 
+    // MARK: - Trains
+
+    /// The selected train as the world has it now, or `nil` if none is
+    /// selected. Its position, rate and continuation are always GameCore's;
+    /// the session never keeps a copy.
+    public var selectedTrain: Train? {
+        selectedTrainID.flatMap { world.train(id: $0) }
+    }
+
+    /// The selected train's rate as GameCore has it (0 without a selected
+    /// train). Setting it calls ``setSelectedTrainRate(_:)``, so a control
+    /// bound to it never holds a rate of its own.
+    public var selectedTrainRate: Int64 {
+        get { selectedTrain?.movement.rate ?? 0 }
+        set { setSelectedTrainRate(newValue) }
+    }
+
+    /// Chooses the train the train tool acts on. Never changes the world;
+    /// an ID the world does not have is ignored.
+    public func selectTrain(_ id: TrainID) {
+        guard id != selectedTrainID, world.train(id: id) != nil else { return }
+        selectedTrainID = id
+        message = nil
+    }
+
+    /// Chooses the heading for the next placement. Never changes the world.
+    public func setPlacementHeading(_ heading: TrackDirection) {
+        placementHeading = heading
+    }
+
+    /// Buys a train through `GameWorld.purchaseTrain(named:)`, which charges
+    /// its cost and allocates its ID, and selects it. It is not on the track
+    /// until it is placed.
+    public func purchaseTrain() {
+        var purchased: TrainID?
+        perform { world throws(GameError) in
+            let train = try world.purchaseTrain(named: Self.suggestedTrainName(for: world))
+            purchased = train.id
+            return "Bought \(train.name). Select a track tile to place it."
+        }
+        if let purchased {
+            selectedTrainID = purchased
+        }
+    }
+
+    /// Puts the selected train at the centre of the selected tile, facing
+    /// ``placementHeading``, through `GameWorld.placeTrain(_:at:)`. GameCore
+    /// decides whether the tile can take it.
+    public func placeSelectedTrain() {
+        guard let train = requireSelectedTrain() else { return }
+        guard let tile = selection else {
+            message = StatusMessage(kind: .failure, text: "Select a track tile to place \(train.name) on.")
+            return
+        }
+        let heading = placementHeading
+        perform { world throws(GameError) in
+            try world.placeTrain(train.id, at: .atNode(tile, heading: heading))
+            return "Placed \(train.name) at \(tile), facing \(heading.name.lowercased())."
+        }
+    }
+
+    /// Sets the selected train's rate through
+    /// `GameWorld.setTrainMovementRate(_:to:)`. Like a speed change, a new
+    /// rate is shown by the control itself rather than announced; a rejected
+    /// one is reported.
+    public func setSelectedTrainRate(_ rate: Int64) {
+        guard let train = requireSelectedTrain() else { return }
+        do throws(GameError) {
+            try world.setTrainMovementRate(train.id, to: rate)
+        } catch {
+            message = StatusMessage(kind: .failure, text: error.playerMessage)
+        }
+    }
+
+    /// Sends the selected train to the selected tile.
+    ///
+    /// Asks GameCore for the route from where the train is now
+    /// (`GameWorld.route(from:to:)`) and commits exactly that route with
+    /// `GameWorld.setTrainContinuation(_:to:)`. Both run against the same
+    /// world within this one call, with nothing in between, so the route can
+    /// never be stale or reach another train. The session never finds or
+    /// edits a path itself.
+    ///
+    /// Without a route (the tile is not track, or the train cannot get there
+    /// without turning straight back) nothing changes, and the train keeps
+    /// the continuation it had.
+    public func sendSelectedTrain() {
+        guard let train = requireSelectedTrain() else { return }
+        guard let destination = selection else {
+            message = StatusMessage(kind: .failure, text: "Select the track tile to send \(train.name) to.")
+            return
+        }
+        guard let position = train.position else {
+            message = StatusMessage(kind: .failure, text: GameError.trainNotPlaced(train.id).playerMessage)
+            return
+        }
+        guard let route = world.route(from: position, to: destination) else {
+            message = StatusMessage(
+                kind: .failure,
+                text: "No route for \(train.name) to \(destination): it must be track the train can reach without turning back. Its path is unchanged."
+            )
+            return
+        }
+        // The route starts after this node: the one the train stands on, or
+        // the far end of its link.
+        let start: GridPosition
+        switch position {
+        case .atNode(let tile, _): start = tile
+        case .onLink(_, let to, _): start = to
+        }
+        perform { world throws(GameError) in
+            try world.setTrainContinuation(train.id, to: route)
+            let links = route.count == 1 ? "1 link" : "\(route.count) links"
+            let sent = route.isEmpty
+                ? "\(train.name) stops at \(destination)."
+                : "Sent \(train.name) to \(destination), \(links) from \(start)."
+            return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
+        }
+    }
+
+    /// Turns the selected train around where it stands through
+    /// `GameWorld.reverseTrain(_:)`, which also clears its continuation.
+    public func reverseSelectedTrain() {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.reverseTrain(train.id)
+            return "Reversed \(train.name); its path was cleared."
+        }
+    }
+
+    /// Takes the selected train off the track through
+    /// `GameWorld.unplaceTrain(_:)`, which also clears its rate and path.
+    public func unplaceSelectedTrain() {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.unplaceTrain(train.id)
+            return "Took \(train.name) off the track."
+        }
+    }
+
+    /// The selected train, or `nil` after reporting that there is none.
+    private func requireSelectedTrain() -> Train? {
+        guard let id = selectedTrainID else {
+            message = StatusMessage(kind: .failure, text: "Buy a train first.")
+            return nil
+        }
+        guard let train = world.train(id: id) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(id).playerMessage)
+            return nil
+        }
+        return train
+    }
+
     // MARK: - Actions
 
     /// Applies the current tool to the selected tile through the matching
@@ -219,6 +382,14 @@ public final class GameSession {
                 try world.removeTrack(at: position)
                 return "Removed track at \(position)."
             }
+        case .train:
+            // The selected tile is where an unplaced train goes, or where a
+            // placed one is sent.
+            if selectedTrain?.position == nil {
+                placeSelectedTrain()
+            } else {
+                sendSelectedTrain()
+            }
         }
     }
 
@@ -248,6 +419,17 @@ public final class GameSession {
             number += 1
         }
         return "Station \(number)"
+    }
+
+    /// "Train N" with the lowest N from the next train number upward that no
+    /// existing train uses.
+    private static func suggestedTrainName(for world: GameWorld) -> String {
+        let names = Set(world.trains.map(\.name))
+        var number = world.trains.count + 1
+        while names.contains("Train \(number)") {
+            number += 1
+        }
+        return "Train \(number)"
     }
 }
 

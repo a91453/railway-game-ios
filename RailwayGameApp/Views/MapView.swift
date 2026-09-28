@@ -22,8 +22,15 @@ struct MapView: View {
                 ?? MapScale.automaticSize(fitting: fitting)
 
             ScrollView([.horizontal, .vertical]) {
-                MapCanvas(map: map, selection: session.selection, tileSize: tileSize, session: session)
-                    .equatable()
+                MapCanvas(
+                    map: map,
+                    trains: session.world.trains,
+                    selectedTrainID: session.selectedTrainID,
+                    selection: session.selection,
+                    tileSize: tileSize,
+                    session: session
+                )
+                .equatable()
                 .accessibilityElement()
                 .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
                 .accessibilityValue(selectionDescription)
@@ -75,27 +82,41 @@ struct MapView: View {
     }
 }
 
-/// Draws the whole map in one `Canvas` and turns taps into grid positions.
+/// Draws the whole map and its placed trains in one `Canvas` and turns taps
+/// into grid positions.
 ///
-/// Equatable so that game ticks, which change the world's clock but not the
-/// map, do not redraw it.
+/// Equatable so that game ticks that change only the world's clock do not
+/// redraw it; a tick that moves a train does, and the train is drawn where
+/// GameCore now has it.
 private struct MapCanvas: View, Equatable {
     let map: GridMap
+    let trains: [Train]
+    let selectedTrainID: TrainID?
     let selection: GridPosition?
     let tileSize: Double
     let session: GameSession
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.map == rhs.map
+            && lhs.trains == rhs.trains
+            && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.selection == rhs.selection
             && lhs.tileSize == rhs.tileSize
             && lhs.session === rhs.session
     }
 
     var body: some View {
-        let map = map, selection = selection, tileSize = tileSize
+        let map = map, trains = trains, selectedTrainID = selectedTrainID
+        let selection = selection, tileSize = tileSize
         Canvas { context, _ in
-            TileArt.drawMap(map, selection: selection, tileSize: tileSize, in: context)
+            TileArt.drawMap(
+                map,
+                trains: trains,
+                selectedTrainID: selectedTrainID,
+                selection: selection,
+                tileSize: tileSize,
+                in: context
+            )
         }
         .frame(width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         .contentShape(Rectangle())

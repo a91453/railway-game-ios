@@ -1,13 +1,21 @@
 import GameCore
+import GamePresentation
 import SwiftUI
 
-/// Draws map tiles. Shared by the map and the track-direction preview, so a
-/// piece looks the same before and after it is built.
+/// Draws map tiles and trains. Shared by the map and the track-direction
+/// preview, so a piece looks the same before and after it is built.
 ///
 /// Tile kinds differ in shape, not only colour: track is drawn as rails,
-/// a station as a badge with a train symbol.
+/// a station as a badge with a train symbol, a train as a disc.
 enum TileArt {
-    static func drawMap(_ map: GridMap, selection: GridPosition?, tileSize: Double, in context: GraphicsContext) {
+    static func drawMap(
+        _ map: GridMap,
+        trains: [Train],
+        selectedTrainID: TrainID?,
+        selection: GridPosition?,
+        tileSize: Double,
+        in context: GraphicsContext
+    ) {
         let bounds = CGRect(x: 0, y: 0, width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         context.fill(Path(bounds), with: .color(Palette.land))
         drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
@@ -27,6 +35,34 @@ enum TileArt {
         if let selection, map.contains(selection) {
             drawSelection(in: rect(for: selection, tileSize: tileSize), context: context)
         }
+
+        for train in trains {
+            guard let position = train.position else { continue }
+            drawTrain(at: position, isSelected: train.id == selectedTrainID, tileSize: tileSize, in: context)
+        }
+    }
+
+    /// A disc where GameCore has the train, with a short bar toward the way
+    /// it faces. Drawn at the position after the last tick: nothing is
+    /// interpolated between ticks, so a moving train visibly steps.
+    static func drawTrain(at position: TrainPosition, isSelected: Bool, tileSize: Double, in context: GraphicsContext) {
+        let center = MapScale.center(of: position, tileSize: tileSize)
+        let facing = MapScale.facing(of: position)
+        let radius = tileSize * 0.26
+        let noseLength = radius * 1.7
+
+        var nose = Path()
+        nose.move(to: CGPoint(x: center.x, y: center.y))
+        nose.addLine(to: CGPoint(x: center.x + facing.dx * noseLength, y: center.y + facing.dy * noseLength))
+        let noseWidth = max(2, tileSize * 0.12)
+        context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: noseWidth, lineCap: .round))
+
+        let disc = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+        context.fill(disc, with: .color(Palette.train))
+        // The selected train gets a thick accent ring, so it does not rely on
+        // colour alone.
+        let ring = isSelected ? Color.accentColor : Color(uiColor: .systemBackground)
+        context.stroke(disc, with: .color(ring), lineWidth: isSelected ? 3 : 1.5)
     }
 
     static func rect(for position: GridPosition, tileSize: Double) -> CGRect {

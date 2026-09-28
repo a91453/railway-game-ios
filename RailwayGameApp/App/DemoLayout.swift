@@ -6,7 +6,9 @@ import GamePresentation
 /// builds launched with ``launchArgument`` (see visual-smoke.yml).
 ///
 /// Not a shortcut: it starts from a normal new game and builds everything
-/// with ordinary `GameWorld` commands that charge their usual costs.
+/// with ordinary `GameWorld` commands that charge their usual costs. Its
+/// train is bought, placed, given a rate and sent the way a player would, so
+/// the screenshots show the train tool and a train the game loop is moving.
 enum DemoLayout {
     static let launchArgument = "-demo-layout"
 
@@ -19,10 +21,26 @@ enum DemoLayout {
             preconditionFailure("The demo layout no longer builds: \(error)")
         }
         let session = GameSession(world: world)
-        session.select(GridPosition(x: 5, y: 7))
-        session.selectTool(.buildTrack)
-        session.selectTrackPiece(.curve)
+        sendTrain(in: session)
         return session
+    }
+
+    /// Buys a train, places it at the west end of the main line facing east,
+    /// and sends it to the buffer stop south of the junction, through the
+    /// same session methods as the train tool.
+    @MainActor
+    private static func sendTrain(in session: GameSession) {
+        session.selectTool(.train)
+        session.purchaseTrain()
+        session.setPlacementHeading(.east)
+        session.select(GridPosition(x: 2, y: 3))
+        session.applyTool()
+        session.setSelectedTrainRate(128)
+        session.select(GridPosition(x: 9, y: 8))
+        session.applyTool()
+        guard session.selectedTrain?.movement.remainingContinuation.isEmpty == false else {
+            preconditionFailure("The demo train was not sent: \(session.message?.text ?? "no message")")
+        }
     }
 
     private static func build(in world: inout GameWorld) throws(GameError) {

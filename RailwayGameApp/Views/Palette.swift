@@ -10,6 +10,7 @@ enum Palette {
     static let rail = dynamic(light: (0.24, 0.21, 0.19), dark: (0.90, 0.88, 0.84))
     static let station = dynamic(light: (0.82, 0.36, 0.08), dark: (0.93, 0.50, 0.18))
     static let stationSymbol = Color.white
+    static let train = dynamic(light: (0.10, 0.36, 0.78), dark: (0.45, 0.68, 1.00))
 
     private static func dynamic(
         light: (Double, Double, Double),
