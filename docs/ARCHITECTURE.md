@@ -4,7 +4,9 @@
 
 ```
 ┌──────────────────────────┐
-│ App / Presentation        │  SwiftUI、輸入、HUD
+│ App（RailwayGameApp）     │  SwiftUI 畫面、輸入、HUD、地圖繪製
+├──────────────────────────┤
+│ GamePresentation          │  GameSession、tick 換算、顯示文字（無 SwiftUI）
 ├──────────────────────────┤
 │ Rendering (未來)          │  SpriteKit / Metal、動畫
 └────────────┬─────────────┘
@@ -18,7 +20,8 @@
 
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
-- **App**（`RailwayGameApp/`，Phase 2A 起）目前只是 smoke test：`@main` App 以 SwiftUI `@State` 持有唯一一份 `GameWorld`，畫面只收到唯讀值。GameCore 維持不變、不為 UI 加上 observation。
+- **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額）與地圖縮放換算。它只依賴 GameCore 與 Swift 標準函式庫的 `Observation`，不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
+- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有唯一一個 `GameSession`，畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
 
 ## GameCore 模組
 
@@ -45,7 +48,7 @@
 
 ### 3. 遊戲時間
 
-`GameTime` 是自開局以來的整數「遊戲分鐘」。`GameClock` 從不讀取 wall clock：宿主（未來的 SwiftUI / SpriteKit 迴圈）把真實經過時間換算成整數 tick，再呼叫 `advance(ticks:)`。每個 tick 在 paused / 1x / 2x 下分別推進 0 / 1 / 2 分鐘。相同的 tick 序列必定得到相同結果，測試不需要 sleep。
+`GameTime` 是自開局以來的整數「遊戲分鐘」。`GameClock` 從不讀取 wall clock：宿主（Presentation 層的 game loop，見決策 12）把真實經過時間換算成整數 tick，再呼叫 `advance(ticks:)`。每個 tick 在 paused / 1x / 2x 下分別推進 0 / 1 / 2 分鐘。相同的 tick 序列必定得到相同結果，測試不需要 sleep。
 
 未來加入逐步模擬時，2x 應以「每 tick 執行兩次固定步長」實作，而不是把步長加倍，讓結果與速度無關。
 
@@ -88,6 +91,25 @@
 ### 10. 為什麼現在不建立完整 track graph
 
 每格只記錄本地連接方向，尚未檢查相鄰格是否相接，也沒有節點 / 邊的圖結構。Graph 的形狀（以格子為節點、以路段為邊、是否含道岔狀態）應由列車移動與路徑搜尋的需求決定。現有的 `TrackConnections` 已足以在之後推導出 graph。
+
+### 11. GameSession：UI 如何持有唯一的 GameWorld
+
+`GameSession` 是 `@MainActor`、`@Observable` 的 class，`world` 為 `private(set)`，是 App 執行期間唯一一份 `GameWorld`。
+
+- SwiftUI 需要一個可觀察的 reference 擁有者；把這個責任放在 Presentation 層，GameCore 就能維持 value type、`Sendable`、不 import Observation。
+- 每個玩家動作都是 session 方法 → 對應的 `GameWorld` 指令。session 不預先檢查遊戲規則（空格、資金、名稱），由 GameCore 決定並丟出 `GameError`；session 只把結果轉成畫面訊息（`GameError.playerMessage`，定義在 GamePresentation）。失敗時世界保持不變（GameCore 的原子性保證）。
+- session 另外只保存 UI 暫時狀態：選取的格子、目前工具、下一段鐵軌的方向、車站名稱草稿、最後一則訊息。現金、時間、速度、地圖、車站都直接從 `world` 讀取，不另存副本。
+- 全部在 main actor 上執行，不需要鎖或 `@unchecked Sendable`。
+- 放在獨立的 SwiftPM target 而不是 App target，是為了讓 session 與其規則在 Linux 上以 `swift test` 驗證（App target 只能在 macOS CI 編譯）。
+
+### 12. 宿主 game loop：真實時間 → 整數 tick
+
+wall clock 只存在於 Presentation 層；GameCore 只收到 `advance(ticks:)`。
+
+- `GameSession` 的 loop 以 `ContinuousClock` 量測經過時間，交給 `TickAccumulator` 換算成固定間隔（100 ms）的整數 tick，不足一個 tick 的餘數留到下一次，因此 tick 頻率不會隨畫面節奏漂移。`Task.sleep` 只負責節奏，不影響正確性。
+- 速度不改變 tick 頻率：1× 與 2× 都是每 100 ms 一個 tick，由 `GameClock` 決定每個 tick 推進幾分鐘（對應決策 3 的固定步長語義）。暫停時丟棄經過的時間，不累積。
+- 單次最多換算 500 ms（5 個 tick）：主執行緒卡頓或除錯暫停不會變成一次大量補跑。
+- App 以所有 scene 合併的 `scenePhase` 啟停 loop：只有 `.active` 時執行；離開前景即停止並丟棄殘餘，回到前景不補跑背景時間（prototype 不做離線進度）。loop 由 session 持有且只會有一個，iPad 多視窗也不會重複推進。
 
 ## 目前規則摘要
 

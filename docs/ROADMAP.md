@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1 已實作，Phase 2A 進行中。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 已實作；下一步是 Phase 3。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -26,7 +26,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 
 Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
-### Phase 2A — Cloud iOS build pipeline 🟡
+### Phase 2A — Cloud iOS build pipeline ✅
 
 - 根目錄 `CLAUDE.md`（Claude Code 專案規則）
 - 最小原生 SwiftUI App（iPhone / iPad、iOS 17+），連結 GameCore 並顯示地圖尺寸、現金、遊戲時間與速度
@@ -34,19 +34,22 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - macOS 自動編譯驗證（`ios-build.yml`），不需簽章
 - 手動 Visual Smoke workflow（`visual-smoke.yml`）：iPhone / iPad Simulator 截圖
 
-### Phase 2B — Prototype UI
+### Phase 2B — Prototype UI ✅
 
-- 以 SwiftUI 顯示 grid
-- 點擊 tile
-- 鋪軌（選擇連接方向）
-- 建站
-- HUD：現金、遊戲時間與速度控制
-- 由 UI 迴圈把真實時間換算成 tick 呼叫 `advance(ticks:)`
-- GameCore 可能需要的補充：日期 / 時刻顯示用的換算、拆除車站
+- 以 SwiftUI `Canvas` 顯示 `GameWorld` 的 grid（尺寸由世界決定），可捲動、縮放；空地 / 鐵軌 / 車站以不同形狀區分
+- 點擊 tile 選取，顯示座標與內容
+- 工具：選取、鋪軌（N / E / S / W 開關、常用形狀與旋轉選擇連接方向）、建站（可編輯的預設名稱）、拆軌
+- 所有建設都經由 `GameWorld` 指令；`GameError` 在 Presentation 層轉成玩家看得懂的訊息
+- HUD：現金、遊戲時間（`Day 1 · 08:30`，只是顯示換算）、暫停 / 1× / 2×
+- `GameSession`（新的 `GamePresentation` target）持有唯一的 `GameWorld`，並把真實時間換算成整數 tick 呼叫 `advance(ticks:)`；背景時停止、不補跑
+- iPhone 直向 / iPad 直向版面已以 Visual Smoke 截圖確認；橫向版面（側邊欄）只經過編譯
+- GameCore 未修改：時間顯示換算放在 Presentation 層；拆除車站延後（見下）
+
+延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查、存檔。
 
 ### 之後（可選）— TestFlight
 
-在 Simulator 流程穩定之後，才評估以 TestFlight 發佈到實機（需要 Apple Developer Program、簽章憑證與 App Store Connect）。不屬於 Phase 2A。
+在 Simulator 流程穩定之後，才評估以 TestFlight 發佈到實機（需要 Apple Developer Program、簽章憑證與 App Store Connect）。不屬於 Phase 2。
 
 ## Phase 3 — Train simulation
 
