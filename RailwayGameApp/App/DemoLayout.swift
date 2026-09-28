@@ -42,7 +42,7 @@ enum DemoLayout {
         try world.buildTrack(at: GridPosition(x: 9, y: 7), connections: [.north, .south])
         try world.buildTrack(at: GridPosition(x: 9, y: 8), connections: .north)
 
-        // A crossing where a north–south line meets the main line.
+        // A four-way junction where a north–south line meets the main line.
         try world.buildTrack(at: GridPosition(x: 5, y: 3), connections: [.north, .east, .south, .west])
         try world.buildTrack(at: GridPosition(x: 5, y: 2), connections: [.south, .north])
         try world.buildStation(named: "Hill", at: GridPosition(x: 5, y: 1))

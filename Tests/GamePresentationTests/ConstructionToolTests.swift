@@ -35,7 +35,7 @@ final class ConstructionToolTests: XCTestCase {
             let session = GameSession(world: world)
 
             session.selectTool(.buildTrack)
-            session.selectTrackPiece(.crossing)
+            session.selectTrackPiece(.fourWay)
             session.rotateTrackPiece()
             session.toggleTrackDirection(.north)
 
@@ -84,7 +84,7 @@ final class ConstructionToolTests: XCTestCase {
         XCTAssertEqual(TrackPiece.straight.connections.shapeName, "Straight")
         XCTAssertEqual(TrackPiece.curve.connections.shapeName, "Curve")
         XCTAssertEqual(TrackPiece.junction.connections.shapeName, "T-junction")
-        XCTAssertEqual(TrackPiece.crossing.connections.shapeName, "Crossing")
+        XCTAssertEqual(TrackPiece.fourWay.connections.shapeName, "Four-way")
     }
 
     func testRotatingFourTimesReturnsTheSamePiece() {

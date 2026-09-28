@@ -28,14 +28,16 @@ public enum TrackPiece: CaseIterable, Hashable, Sendable {
     case straight
     case curve
     case junction
-    case crossing
+    /// Four exits that all join each other (GameCore has no crossing
+    /// without a junction).
+    case fourWay
 
     public var title: String {
         switch self {
         case .straight: "Straight"
         case .curve: "Curve"
         case .junction: "T-junction"
-        case .crossing: "Crossing"
+        case .fourWay: "Four-way"
         }
     }
 
@@ -45,7 +47,7 @@ public enum TrackPiece: CaseIterable, Hashable, Sendable {
         case .straight: [.east, .west]
         case .curve: [.south, .east]
         case .junction: [.east, .south, .west]
-        case .crossing: [.north, .east, .south, .west]
+        case .fourWay: [.north, .east, .south, .west]
         }
     }
 }

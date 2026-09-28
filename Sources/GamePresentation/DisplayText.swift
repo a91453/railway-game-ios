@@ -34,7 +34,7 @@ extension TrackConnections {
             let isStraight = self == [.north, .south] || self == [.east, .west]
             return isStraight ? "Straight" : "Curve"
         case 3: return "T-junction"
-        default: return "Crossing"
+        default: return "Four-way"
         }
     }
 
