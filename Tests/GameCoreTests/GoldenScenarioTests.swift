@@ -13,40 +13,56 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertFalse(urls.isEmpty, "No fixtures in \(GoldenScenarioFixtures.directory.path)")
 
         for url in urls {
-            let scenario = try GoldenScenario.decode(Data(contentsOf: url))
+            let scenario: GoldenScenario
+            do {
+                scenario = try GoldenScenario.decode(Data(contentsOf: url))
+            } catch {
+                XCTFail("\(url.lastPathComponent): \(error)")
+                continue
+            }
             for difference in scenario.differences() {
                 XCTFail("\(url.lastPathComponent): \(difference)")
             }
         }
     }
 
-    func testFixturesContainOnlyPortableIntegers() throws {
+    /// ASCII only, and numbers only as plain integers every JSON reader
+    /// represents exactly.
+    func testFixturesUsePortableJSON() throws {
         for url in try GoldenScenarioFixtures.urls() {
             let text = try String(contentsOf: url, encoding: .utf8)
+            XCTAssertTrue(text.unicodeScalars.allSatisfy(\.isASCII), "\(url.lastPathComponent) is not ASCII")
             XCTAssertEqual(GoldenScenarioFixtures.nonPortableNumbers(in: text), [], url.lastPathComponent)
         }
     }
 
     // MARK: - The mechanism itself
 
-    /// A golden test that cannot fail protects nothing: changing any committed
-    /// expectation must be reported.
+    /// A golden test that cannot fail protects nothing: changing a committed
+    /// expectation in any fixture must be reported.
     func testChangedExpectationsAreReported() throws {
-        let url = GoldenScenarioFixtures.directory.appendingPathComponent("build-starter-line.json")
-        let committed = try GoldenScenario.decode(Data(contentsOf: url))
-        XCTAssertEqual(committed.differences(), [])
+        for url in try GoldenScenarioFixtures.urls() {
+            let name = url.lastPathComponent
+            let committed = try GoldenScenario.decode(Data(contentsOf: url))
+            XCTAssertEqual(committed.differences(), [], name)
 
-        var wrongOutcome = committed
-        wrongOutcome.steps[7].expect = .ok
-        XCTAssertEqual(wrongOutcome.differences().count, 1)
+            var wrongOutcome = committed
+            let first = try XCTUnwrap(committed.steps.indices.first, name)
+            wrongOutcome.steps[first].expect = committed.steps[first].expect == .ok ? .rejected(.invalidName) : .ok
+            XCTAssertEqual(wrongOutcome.differences().count, 1, name)
 
-        var wrongBalance = committed
-        wrongBalance.expectedFinalState.balance = Money(45_001)
-        XCTAssertEqual(wrongBalance.differences().count, 1)
+            var wrongBalance = committed
+            wrongBalance.expectedFinalState.balance += 1
+            XCTAssertEqual(wrongBalance.differences().count, 1, name)
 
-        var missingTrack = committed
-        missingTrack.expectedFinalState.tracks.removeLast()
-        XCTAssertEqual(missingTrack.differences().count, 1)
+            var wrongTime = committed
+            wrongTime.expectedFinalState.gameMinutes += 1
+            XCTAssertEqual(wrongTime.differences().count, 1, name)
+
+            var extraTrain = committed
+            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost"))
+            XCTAssertEqual(extraTrain.differences().count, 1, name)
+        }
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
@@ -69,6 +85,9 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
         }
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "maybe"}"#.utf8)))
+
+        let negativeCost = #"{"track": -1, "station": 0, "train": 0}"#
+        XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Costs.self, from: Data(negativeCost.utf8)))
     }
 
     func testDirectionOrderDoesNotMatter() throws {
@@ -86,5 +105,7 @@ final class GoldenScenarioTests: XCTestCase {
             GoldenScenarioFixtures.nonPortableNumbers(in: json),
             ["1.0", "1e3", "9007199254740992", "012"]
         )
+        // A combining mark right after a quote must not hide the string's end.
+        XCTAssertEqual(GoldenScenarioFixtures.nonPortableNumbers(in: #"{"s": "\#u{301}x", "n": 2.5}"#), ["2.5"])
     }
 }

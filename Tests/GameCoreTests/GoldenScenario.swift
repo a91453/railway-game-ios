@@ -6,10 +6,10 @@ import GameCore
 // GoldenScenarios/README.md; this file is the reference implementation of it.
 //
 // Only the public GameCore API is used: the same commands and read-only state
-// a GameSession has. Where a GameCore type's Codable form is already a plain
-// value (Money, GameTime, GameSpeed, ConstructionCosts) the fixture uses it;
-// everything else (positions, track directions, commands, results) is spelled
-// out here so the fixtures never depend on Swift-specific encodings.
+// a GameSession has. Every fixture value (integers, speed and direction names,
+// commands, results) is spelled out here rather than borrowed from a GameCore
+// type's Codable form, so changing the Swift save format can never change
+// what a fixture means.
 
 /// A checked-in scenario: a starting world, commands in order with the outcome
 /// each one must have, and the state the world must end in.
@@ -24,18 +24,47 @@ struct GoldenScenario: Decodable {
     struct InitialState: Decodable {
         var mapWidth: Int
         var mapHeight: Int
-        var balance: Money
-        var costs: ConstructionCosts
-        var gameMinutes: GameTime
-        var speed: GameSpeed
+        var balance: Int64
+        var costs: Costs
+        var gameMinutes: Int64
+        var speed: SpeedName
 
         func makeWorld() throws(GameError) -> GameWorld {
             try GameWorld(
                 width: mapWidth,
                 height: mapHeight,
-                economy: GameEconomy(balance: balance, costs: costs),
-                clock: GameClock(now: gameMinutes, speed: speed)
+                economy: GameEconomy(balance: Money(balance), costs: costs.constructionCosts),
+                clock: GameClock(now: GameTime(minutes: gameMinutes), speed: speed.speed)
             )
+        }
+    }
+
+    struct Costs: Decodable {
+        var track: Int64
+        var station: Int64
+        var train: Int64
+
+        var constructionCosts: ConstructionCosts {
+            ConstructionCosts(track: Money(track), station: Money(station), train: Money(train))
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case track, station, train
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            func cost(_ key: CodingKeys) throws -> Int64 {
+                let cost = try container.decode(Int64.self, forKey: key)
+                // GameCore treats spending a negative amount as a programming error.
+                guard cost >= 0 else {
+                    throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Costs must not be negative.")
+                }
+                return cost
+            }
+            track = try cost(.track)
+            station = try cost(.station)
+            train = try cost(.train)
         }
     }
 
@@ -144,22 +173,19 @@ extension ScenarioCommand: Decodable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        func position() throws -> GridPosition {
-            try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y))
-        }
         let type = try container.decode(String.self, forKey: .type)
         switch type {
         case "buildTrack":
             let connections = try container.decode(Directions.self, forKey: .connections)
-            self = try .buildTrack(position(), connections.connections)
+            self = try .buildTrack(container.decodePosition(x: .x, y: .y), connections.connections)
         case "removeTrack":
-            self = try .removeTrack(position())
+            self = try .removeTrack(container.decodePosition(x: .x, y: .y))
         case "buildStation":
-            self = try .buildStation(name: container.decode(String.self, forKey: .name), position())
+            self = try .buildStation(name: container.decode(String.self, forKey: .name), container.decodePosition(x: .x, y: .y))
         case "purchaseTrain":
             self = try .purchaseTrain(name: container.decode(String.self, forKey: .name))
         case "setSpeed":
-            self = try .setSpeed(container.decode(GameSpeed.self, forKey: .speed))
+            self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
             self = .pause
         case "resume":
@@ -193,9 +219,6 @@ extension StepOutcome: Codable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        func position() throws -> GridPosition {
-            try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y))
-        }
         let result = try container.decode(String.self, forKey: .result)
         switch result {
         case "ok":
@@ -204,18 +227,18 @@ extension StepOutcome: Codable {
             let width = try container.decode(Int.self, forKey: .width)
             self = try .rejected(.invalidMapSize(width: width, height: container.decode(Int.self, forKey: .height)))
         case "outOfBounds":
-            self = try .rejected(.outOfBounds(position()))
+            self = try .rejected(.outOfBounds(container.decodePosition(x: .x, y: .y)))
         case "tileOccupied":
-            self = try .rejected(.tileOccupied(position()))
+            self = try .rejected(.tileOccupied(container.decodePosition(x: .x, y: .y)))
         case "invalidTrackConnections":
             self = .rejected(.invalidTrackConnections)
         case "invalidName":
             self = .rejected(.invalidName)
         case "insufficientFunds":
-            let required = try container.decode(Money.self, forKey: .required)
-            self = try .rejected(.insufficientFunds(required: required, available: container.decode(Money.self, forKey: .available)))
+            let required = try Money(container.decode(Int64.self, forKey: .required))
+            self = try .rejected(.insufficientFunds(required: required, available: Money(container.decode(Int64.self, forKey: .available))))
         case "noTrackToRemove":
-            self = try .rejected(.noTrackToRemove(position()))
+            self = try .rejected(.noTrackToRemove(container.decodePosition(x: .x, y: .y)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -248,8 +271,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidName", forKey: .result)
         case .rejected(.insufficientFunds(let required, let available)):
             try container.encode("insufficientFunds", forKey: .result)
-            try container.encode(required, forKey: .required)
-            try container.encode(available, forKey: .available)
+            try container.encode(required.amount, forKey: .required)
+            try container.encode(available.amount, forKey: .available)
         case .rejected(.noTrackToRemove(let position)):
             try container.encode("noTrackToRemove", forKey: .result)
             try encode(position)
@@ -260,12 +283,13 @@ extension StepOutcome: Codable {
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money and what has been
-/// built or bought. Lists are in a canonical order: stations and trains by
-/// ascending ID, tracks row by row from the north-west corner.
+/// built or bought. Lists are in the contract's canonical order (stations and
+/// trains by ascending ID, tracks row by row from the north-west corner),
+/// sorted here rather than inherited from how GameCore stores them.
 struct WorldSummary: Codable, Equatable {
-    var gameMinutes: GameTime
-    var speed: GameSpeed
-    var balance: Money
+    var gameMinutes: Int64
+    var speed: SpeedName
+    var balance: Int64
     var stations: [StationSummary]
     var tracks: [TrackSummary]
     var trains: [TrainSummary]
@@ -289,16 +313,51 @@ struct WorldSummary: Codable, Equatable {
     }
 
     init(_ world: GameWorld) {
-        gameMinutes = world.clock.now
-        speed = world.clock.speed
-        balance = world.economy.balance
-        stations = world.stations.map {
-            StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y)
+        gameMinutes = world.clock.now.minutes
+        speed = SpeedName(world.clock.speed)
+        balance = world.economy.balance.amount
+        stations = world.stations
+            .map { StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y) }
+            .sorted { $0.id < $1.id }
+        tracks = world.tracks
+            .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections)) }
+            .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
+        trains = world.trains
+            .map { TrainSummary(id: $0.id.rawValue, name: $0.name) }
+            .sorted { $0.id < $1.id }
+    }
+}
+
+// MARK: - Names
+
+/// A game speed as its fixture name: `"paused"`, `"normal"` or `"double"`.
+struct SpeedName: Codable, Equatable {
+    var speed: GameSpeed
+
+    init(_ speed: GameSpeed) {
+        self.speed = speed
+    }
+
+    private static func name(of speed: GameSpeed) -> String {
+        switch speed {
+        case .paused: "paused"
+        case .normal: "normal"
+        case .double: "double"
         }
-        tracks = world.tracks.map {
-            TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections))
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let speed = GameSpeed.allCases.first(where: { Self.name(of: $0) == name }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown speed \"\(name)\".")
         }
-        trains = world.trains.map { TrainSummary(id: $0.id.rawValue, name: $0.name) }
+        self.speed = speed
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Self.name(of: speed))
     }
 }
 
@@ -343,6 +402,13 @@ struct Directions: Codable, Equatable {
     }
 }
 
+extension KeyedDecodingContainer {
+    /// A grid position stored as two flat integer fields.
+    fileprivate func decodePosition(x: Key, y: Key) throws -> GridPosition {
+        try GridPosition(x: decode(Int.self, forKey: x), y: decode(Int.self, forKey: y))
+    }
+}
+
 // MARK: - Fixture files
 
 enum GoldenScenarioFixtures {
@@ -371,35 +437,37 @@ enum GoldenScenarioFixtures {
     /// and larger integers; other languages' readers may reject them or round
     /// them, so fixtures avoid them.
     static func nonPortableNumbers(in text: String) -> [String] {
+        let digits: ClosedRange<Unicode.Scalar> = "0"..."9"
         var found: [String] = []
-        var number = ""
+        var number = String.UnicodeScalarView()
         var inString = false
         var escaped = false
         func finishNumber() {
-            if !number.isEmpty, !isPortableInteger(number) {
-                found.append(number)
+            if !number.isEmpty, !isPortableInteger(String(number)) {
+                found.append(String(number))
             }
-            number = ""
+            number = String.UnicodeScalarView()
         }
-        for character in text {
+        // Scalars rather than Characters: a quote followed by a combining mark
+        // is a single Character but still opens or closes a string.
+        for scalar in text.unicodeScalars {
             if inString {
                 if escaped {
                     escaped = false
-                } else if character == "\\" {
+                } else if scalar == "\\" {
                     escaped = true
-                } else if character == "\"" {
+                } else if scalar == "\"" {
                     inString = false
                 }
                 continue
             }
-            let isDigit = character.isASCII && character.isNumber
             // A JSON number starts with "-" or a digit and may continue with
             // digits, ".", "e", "E", "+" and "-".
-            if isDigit || character == "-" || (!number.isEmpty && "+.eE".contains(character)) {
-                number.append(character)
+            if digits.contains(scalar) || scalar == "-" || (!number.isEmpty && "+.eE".unicodeScalars.contains(scalar)) {
+                number.append(scalar)
             } else {
                 finishNumber()
-                inString = character == "\""
+                inString = scalar == "\""
             }
         }
         finishNumber()
