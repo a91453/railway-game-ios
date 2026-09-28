@@ -6,7 +6,7 @@
 
 **Early development — GameCore + native prototype UI（Phase 2B）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。**尚未**有列車運行模擬、時刻表、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置與沿明確路徑移動的核心，但 App 還不能操作列車；**尚未**有路徑搜尋、停站、時刻表、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -23,9 +23,10 @@ GameCore 目前能做到：
 - 鋪設 / 拆除鐵軌（每格記錄連接方向，只能是北、東、南、西；不要求與鄰格相接）
 - 查詢鐵軌連通：由地圖推導相鄰鐵軌是否雙向相接（`connectedNeighbors(of:)`、`isConnected(_:to:)`）；列車還不會在鐵軌上運行
 - 建造車站（唯一、可保存的 Station ID）
-- 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）。列車還不會移動，App 也還沒有放置列車的介面
+- 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）
+- 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行。App 還沒有放置或指定路徑的介面，移動目前只由測試驗證
 - 整數金額的資金與建設成本
-- 可暫停、1x、2x 的 deterministic 遊戲時鐘
+- 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
 
 ### 建設規則
@@ -38,6 +39,7 @@ GameCore 目前能做到：
 | 購買列車 | 名稱非空白、資金足夠 | `ConstructionCosts.train` |
 | 放置列車 | 列車存在且未放置；位置是鐵軌格中心，或兩格相接鐵軌之間 `0 < offset < 1024` | 免費 |
 | 取下 / 反向列車 | 列車存在且已放置 | 免費 |
+| 設定 rate / continuation | 列車存在且已放置；rate 非負；continuation 從列車前方節點起每一步都相接、不折返 | 免費 |
 
 任何失敗都會丟出 `GameError`，且世界狀態（地圖、資金、車站、列車）完全不變。餘額永遠不會因建設變成負數。
 
@@ -66,7 +68,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
