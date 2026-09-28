@@ -1,0 +1,136 @@
+import GameCore
+import SwiftUI
+
+/// Draws map tiles. Shared by the map and the track-direction preview, so a
+/// piece looks the same before and after it is built.
+///
+/// Tile kinds differ in shape, not only colour: track is drawn as rails,
+/// a station as a badge with a train symbol.
+enum TileArt {
+    static func drawMap(_ map: GridMap, selection: GridPosition?, tileSize: Double, in context: GraphicsContext) {
+        let bounds = CGRect(x: 0, y: 0, width: tileSize * Double(map.width), height: tileSize * Double(map.height))
+        context.fill(Path(bounds), with: .color(Palette.land))
+        drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
+
+        for tile in map.tiles {
+            let rect = rect(for: tile.position, tileSize: tileSize)
+            switch tile.type {
+            case .empty:
+                break
+            case .track(let connections):
+                drawTrack(connections, in: rect, context: context)
+            case .station:
+                drawStation(in: rect, context: context)
+            }
+        }
+
+        if let selection, map.contains(selection) {
+            drawSelection(in: rect(for: selection, tileSize: tileSize), context: context)
+        }
+    }
+
+    static func rect(for position: GridPosition, tileSize: Double) -> CGRect {
+        CGRect(x: Double(position.x) * tileSize, y: Double(position.y) * tileSize, width: tileSize, height: tileSize)
+    }
+
+    static func drawTrack(_ connections: TrackConnections, in rect: CGRect, context: GraphicsContext) {
+        guard !connections.isEmpty else { return }
+        var context = context
+        // Round caps join the pieces neatly at the centre; clipping keeps
+        // them from spilling into neighbouring tiles.
+        context.clip(to: Path(rect))
+
+        let path = trackPath(connections, in: rect)
+        let ballastWidth = rect.width * 0.42
+        let railWidth = max(1.5, rect.width * 0.1)
+        context.stroke(path, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: ballastWidth, lineCap: .round, lineJoin: .round))
+        context.stroke(path, with: .color(Palette.rail), style: StrokeStyle(lineWidth: railWidth, lineCap: .round, lineJoin: .round))
+
+        if let end = connections.directions.first, connections.directions.count == 1 {
+            // A buffer stop across the open end of a dead end.
+            var bar = Path()
+            let half = rect.width * 0.22
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            switch end {
+            case .north, .south:
+                bar.move(to: CGPoint(x: center.x - half, y: center.y))
+                bar.addLine(to: CGPoint(x: center.x + half, y: center.y))
+            case .east, .west:
+                bar.move(to: CGPoint(x: center.x, y: center.y - half))
+                bar.addLine(to: CGPoint(x: center.x, y: center.y + half))
+            }
+            context.stroke(bar, with: .color(Palette.rail), style: StrokeStyle(lineWidth: railWidth * 1.4, lineCap: .round))
+        }
+    }
+
+    static func drawStation(in rect: CGRect, context: GraphicsContext) {
+        let badgeRect = rect.insetBy(dx: rect.width * 0.08, dy: rect.height * 0.08)
+        let badge = Path(roundedRect: badgeRect, cornerRadius: rect.width * 0.18)
+        context.fill(badge, with: .color(Palette.station))
+        context.stroke(badge, with: .color(Palette.rail.opacity(0.5)), lineWidth: 1)
+
+        var symbol = context.resolve(Image(systemName: "tram.fill"))
+        symbol.shading = .color(Palette.stationSymbol)
+        let natural = symbol.size
+        guard natural.width > 0, natural.height > 0 else { return }
+        let box = badgeRect.width * 0.62
+        let scale = min(box / natural.width, box / natural.height)
+        let size = CGSize(width: natural.width * scale, height: natural.height * scale)
+        context.draw(symbol, in: CGRect(
+            x: badgeRect.midX - size.width / 2,
+            y: badgeRect.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        ))
+    }
+
+    private static func drawGrid(columns: Int, rows: Int, tileSize: Double, in context: GraphicsContext) {
+        let width = tileSize * Double(columns)
+        let height = tileSize * Double(rows)
+        var grid = Path()
+        for column in 0...columns {
+            let x = Double(column) * tileSize
+            grid.move(to: CGPoint(x: x, y: 0))
+            grid.addLine(to: CGPoint(x: x, y: height))
+        }
+        for row in 0...rows {
+            let y = Double(row) * tileSize
+            grid.move(to: CGPoint(x: 0, y: y))
+            grid.addLine(to: CGPoint(x: width, y: y))
+        }
+        context.stroke(grid, with: .color(Palette.gridLine), lineWidth: 0.5)
+    }
+
+    private static func drawSelection(in rect: CGRect, context: GraphicsContext) {
+        // A thick outline with a contrasting halo, so the selection does not
+        // rely on colour alone and stays visible on every kind of tile.
+        let outline = Path(rect.insetBy(dx: 1.5, dy: 1.5))
+        context.stroke(outline, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
+        context.stroke(outline, with: .color(.accentColor), lineWidth: 3)
+    }
+
+    private static func trackPath(_ connections: TrackConnections, in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let directions = connections.directions
+        var path = Path()
+        if directions.count == 2, connections != [.north, .south], connections != [.east, .west] {
+            path.move(to: edgeMidpoint(directions[0], of: rect))
+            path.addQuadCurve(to: edgeMidpoint(directions[1], of: rect), control: center)
+        } else {
+            for direction in directions {
+                path.move(to: center)
+                path.addLine(to: edgeMidpoint(direction, of: rect))
+            }
+        }
+        return path
+    }
+
+    private static func edgeMidpoint(_ direction: TrackDirection, of rect: CGRect) -> CGPoint {
+        switch direction {
+        case .north: CGPoint(x: rect.midX, y: rect.minY)
+        case .east: CGPoint(x: rect.maxX, y: rect.midY)
+        case .south: CGPoint(x: rect.midX, y: rect.maxY)
+        case .west: CGPoint(x: rect.minX, y: rect.midY)
+        }
+    }
+}

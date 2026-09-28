@@ -32,6 +32,8 @@ targets:
     dependencies:
       - package: RailwayGame
         product: GameCore
+      - package: RailwayGame
+        product: GamePresentation
     scheme: {}
     settings:
       base:

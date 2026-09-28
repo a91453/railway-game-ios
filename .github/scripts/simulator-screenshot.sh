@@ -2,22 +2,25 @@
 # Boots an installed iOS Simulator of one device family, installs and launches
 # the app, checks that it is still running, and saves a screenshot.
 #
-# Usage: simulator-screenshot.sh <iPhone|iPad> <path/to/App.app> <output.png>
+# Usage: simulator-screenshot.sh <iPhone|iPad> <path/to/App.app> <output.png> [launch argument...]
 #
 # macOS + Xcode only; used by .github/workflows/visual-smoke.yml. The device is
 # picked at run time from the Simulators installed on the runner instead of a
 # hard-coded model name, because runner images add and drop models over time.
+# Any arguments after the output path are passed to the app at launch.
 # The app's stderr is saved next to the screenshot as <name>-app-stderr.log.
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: $0 <iPhone|iPad> <path/to/App.app> <output.png>" >&2
+if [[ $# -lt 3 ]]; then
+  echo "usage: $0 <iPhone|iPad> <path/to/App.app> <output.png> [launch argument...]" >&2
   exit 64
 fi
 
 family="$1"
 app_path="$2"
 screenshot="$3"
+shift 3
+launch_args=("$@")
 settle_seconds=8
 
 case "$family" in
@@ -75,6 +78,7 @@ if [[ -z "$selection" ]]; then
 fi
 IFS=$'\t' read -r udid device_name runtime_version <<<"$selection"
 echo "Selected $family: $device_name (iOS $runtime_version, $udid); Simulator SDK $sdk_version"
+echo "Launch arguments: ${launch_args[*]:-(none)}"
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   echo "- **$family:** $device_name, iOS $runtime_version" >>"$GITHUB_STEP_SUMMARY"
 fi
@@ -93,7 +97,9 @@ xcrun simctl install "$udid" "$app_path"
 
 launch_output=""
 for attempt in 1 2 3; do
-  if launch_output="$(xcrun simctl launch --stderr="$stderr_log" "$udid" "$bundle_id")"; then
+  # The ${a[@]+...} form keeps an empty array safe under set -u in bash 3.2.
+  if launch_output="$(xcrun simctl launch --stderr="$stderr_log" "$udid" "$bundle_id" \
+    ${launch_args[@]+"${launch_args[@]}"})"; then
     break
   fi
   if [[ $attempt -eq 3 ]]; then

@@ -1,32 +1,98 @@
 import GameCore
+import GamePresentation
 import SwiftUI
 
-/// Phase 2A smoke-test screen: shows that GameCore links into the app and that
-/// the presentation layer can read its state.
+/// The game screen: HUD, map and controls.
+///
+/// Tall screens stack the map above the controls (on iPad the controls then
+/// sit side by side); wide screens put the controls in a sidebar next to the
+/// map.
 struct ContentView: View {
-    let world: GameWorld
+    let session: GameSession
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isWide = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section("GameCore") {
-                    LabeledContent("Map", value: "\(world.map.width) × \(world.map.height)")
-                    LabeledContent("Cash", value: world.economy.balance.amount.formatted())
-                    LabeledContent("Game time", value: "\(world.clock.now.minutes) min")
-                    LabeledContent("Speed", value: world.clock.speed.label)
-                }
+        Group {
+            if isWide {
+                wideLayout
+            } else {
+                tallLayout
             }
-            .navigationTitle("Railway Game")
+        }
+        .background {
+            // Measured ignoring the keyboard: otherwise typing a station name
+            // on an iPad in portrait would flip the layout and end editing.
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size, initial: true) { _, size in
+                        isWide = size.width > size.height
+                    }
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+        // The map and controls share one screen, so text stops growing at the
+        // largest standard size instead of pushing the map off screen.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    private var tallLayout: some View {
+        VStack(spacing: 0) {
+            HUDView(session: session)
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+                .background(.bar)
+            Divider()
+            if horizontalSizeClass == .regular {
+                // iPad portrait: the whole map across the full width, and
+                // the controls get the rest of the height.
+                map
+                    .aspectRatio(mapAspectRatio, contentMode: .fit)
+                    .layoutPriority(1)
+                Divider()
+                ScrollView {
+                    ControlPanel(session: session, arrangement: .sideBySide)
+                        .padding()
+                }
+                .background(.bar)
+            } else {
+                map
+                Divider()
+                ControlPanel(session: session, arrangement: .column)
+                    .padding()
+                    .background(.bar)
+            }
         }
     }
-}
 
-private extension GameSpeed {
-    var label: String {
-        switch self {
-        case .paused: "Paused"
-        case .normal: "1×"
-        case .double: "2×"
+    private var mapAspectRatio: CGFloat {
+        let map = session.world.map
+        return CGFloat(map.width) / CGFloat(map.height)
+    }
+
+    private var wideLayout: some View {
+        HStack(spacing: 0) {
+            map
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HUDView(session: session)
+                    Divider()
+                    ControlPanel(session: session, arrangement: .column)
+                    Divider()
+                    NetworkOverview(session: session)
+                }
+                .padding()
+            }
+            .frame(width: 360)
+            .background(.bar)
         }
+    }
+
+    private var map: some View {
+        MapView(session: session)
+            .overlay(alignment: .top) {
+                StatusBanner(session: session)
+            }
     }
 }
