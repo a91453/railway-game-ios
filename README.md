@@ -96,9 +96,14 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 | 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；不需簽章 |
 | 4. Visual Smoke（`visual-smoke.yml`） | macOS runner，**手動**觸發 | 在 iPhone 與 iPad Simulator 啟動 App、確認沒有閃退、截圖並上傳為 artifact（新遊戲畫面，以及 Debug 限定的 `-demo-layout` 示範配置） |
 | 5. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
+| 6. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
+| 7. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | 簽章 Archive → 匯出 IPA → 檢查 → 上傳 App Store Connect → 內部 TestFlight；需要 environment `testflight` 的 secrets |
 
 - **Swift Playgrounds**：可選，不是必要的開發或驗證環境。
-- **TestFlight / 實機安裝**：以 Xcode Cloud 建置、簽章並發佈到**內部** TestFlight。Repository 端已準備好；Apple Developer Program、App Store Connect 設定與第一次在 Mac 上建立 workflow 尚未完成，步驟見 [docs/XCODE_CLOUD_ONBOARDING.md](docs/XCODE_CLOUD_ONBOARDING.md)。簽章由 Xcode Cloud 管理，repository 不含、也不提交任何憑證或 provisioning profile。
+- **TestFlight / 實機安裝**：以 GitHub Actions（`testflight.yml`）Archive、簽章、上傳，發佈到**內部** TestFlight，不需要 Mac。
+  - Workflow 與不需帳號的驗證已完成；真實簽章與上傳要等 Apple Developer Program 生效、設定 API key 後才能執行。步驟與狀態見 [docs/TESTFLIGHT_GITHUB_ACTIONS.md](docs/TESTFLIGHT_GITHUB_ACTIONS.md)。
+  - 簽章以 App Store Connect API key 自動完成；repository 不含、也不提交任何憑證、描述檔或金鑰。
+  - Xcode Cloud 暫緩（[docs/XCODE_CLOUD_ONBOARDING.md](docs/XCODE_CLOUD_ONBOARDING.md)）。
 
 ### 在 iPhone / iPad 上查看截圖
 
@@ -117,7 +122,7 @@ GameCore（任何有 Swift 6 的環境，包括 Linux）：
 swift build
 ```
 
-iOS App（需要 macOS + Xcode 16 以上；上傳 App Store Connect 的 build 需要 Xcode 26 以上，由 Xcode Cloud 建置）：
+iOS App（需要 macOS + Xcode 16 以上；上傳 App Store Connect 的 build 需要 Xcode 26 以上，由 GitHub Actions 的 `testflight.yml` 建置）：
 
 ```sh
 open RailwayGameApp/RailwayGame.xcodeproj
