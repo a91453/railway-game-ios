@@ -63,7 +63,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 ### 觀察（`observe.type`）
 
-觀察透過 GameCore 的公開唯讀查詢回答，不屬於指令，也不能寫在 `command.type`。`expect` 的形式由觀察種類決定，種類不符（例如 `connectedNeighbors` 配 `connected`）必須報錯。
+觀察透過 GameCore 的公開唯讀查詢回答，不屬於指令，也不能寫在 `command.type`。`expect` 的形式由觀察種類決定，種類不符或同時寫了兩種答案（例如 `connectedNeighbors` 配 `connected`，或 `neighbors` 與 `connected` 並列）必須報錯。
 
 | `type` | 其他欄位 | `expect` | GameCore 查詢 |
 | --- | --- | --- | --- |

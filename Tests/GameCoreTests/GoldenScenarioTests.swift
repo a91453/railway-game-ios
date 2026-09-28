@@ -203,6 +203,9 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"connected": false}}"#,
             #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"neighbors": []}}"#,
             #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"result": "ok"}}"#,
+            // Both answers at once: neither may be silently ignored.
+            #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "connected": false}}"#,
+            #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"connected": false, "neighbors": []}}"#,
             // Missing or ill-typed values.
             #"{"observe": {"type": "isConnected", \#(from)}, "expect": {"connected": false}}"#,
             #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"connected": "yes"}}"#,

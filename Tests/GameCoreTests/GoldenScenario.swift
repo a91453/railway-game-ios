@@ -160,9 +160,15 @@ extension GoldenScenario.Step: Decodable {
             let expect = try container.nestedContainer(keyedBy: AnswerKeys.self, forKey: .expect)
             switch observation {
             case .connectedNeighbors:
+                guard !expect.contains(.connected) else {
+                    throw DecodingError.dataCorruptedError(forKey: .connected, in: expect, debugDescription: "connectedNeighbors is answered by \"neighbors\" alone.")
+                }
                 let neighbors = try expect.decode([PositionSummary].self, forKey: .neighbors)
                 self = .observe(observation, expect: .neighbors(neighbors.map(\.position)))
             case .isConnected:
+                guard !expect.contains(.neighbors) else {
+                    throw DecodingError.dataCorruptedError(forKey: .neighbors, in: expect, debugDescription: "isConnected is answered by \"connected\" alone.")
+                }
                 self = try .observe(observation, expect: .connected(expect.decode(Bool.self, forKey: .connected)))
             }
         default:
