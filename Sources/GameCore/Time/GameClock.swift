@@ -110,3 +110,26 @@ public struct GameClock: Hashable, Codable, Sendable {
         now.minutes += steps
     }
 }
+
+extension GameClock {
+    private enum CodingKeys: String, CodingKey {
+        case now, speed, resumeSpeed
+    }
+
+    /// Decodes a clock, rejecting a resume speed no command can store:
+    /// ``resume()`` returns to the speed that was running before the pause,
+    /// so the resume speed is never paused, and a running clock's resume
+    /// speed is its own speed.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        now = try container.decode(GameTime.self, forKey: .now)
+        speed = try container.decode(GameSpeed.self, forKey: .speed)
+        resumeSpeed = try container.decode(GameSpeed.self, forKey: .resumeSpeed)
+        guard resumeSpeed != .paused, speed == .paused || speed == resumeSpeed else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .resumeSpeed, in: container,
+                debugDescription: "A clock resumes to the speed it was running at, never to paused."
+            )
+        }
+    }
+}

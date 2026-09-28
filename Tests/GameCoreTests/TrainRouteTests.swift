@@ -6,9 +6,9 @@ import XCTest
 /// west order of the exit directions.
 ///
 /// Hand-made cases write their routes out. Random maps are checked against
-/// an independent reference written here from the rules (distances by
-/// repeated relaxation, then a greedy walk), not against a copy of the
-/// breadth-first search in GameCore.
+/// an independent reference written from the rules (distances by repeated
+/// relaxation, then a greedy walk; `ReferenceRoute` in PropertySupport.swift),
+/// not against a copy of the breadth-first search in GameCore.
 final class TrainRouteTests: XCTestCase {
     // A line with a loop at its east end:
     //
@@ -279,7 +279,7 @@ final class TrainRouteTests: XCTestCase {
                 let destination = GridPosition(x: Int(random.next() % 7) - 1, y: Int(random.next() % 7) - 1)
                 let route = world.route(from: start, to: destination)
                 compared += 1
-                XCTAssertEqual(route, Self.referenceRoute(in: world, from: start, to: destination), "\(start) to \(destination)")
+                XCTAssertEqual(route, ReferenceRoute.route(in: world, from: start, to: destination), "\(start) to \(destination)")
 
                 guard let route else { continue }
                 found += 1
@@ -315,89 +315,5 @@ final class TrainRouteTests: XCTestCase {
             return .onLink(from: tile, to: to, offset: Int64(random.next() % 1023) + 1)
         }
         return .atNode(tile, heading: heading)
-    }
-
-    private static func direction(from position: GridPosition, to other: GridPosition) -> TrackDirection? {
-        switch (other.x - position.x, other.y - position.y) {
-        case (0, -1): .north
-        case (1, 0): .east
-        case (0, 1): .south
-        case (-1, 0): .west
-        default: nil
-        }
-    }
-
-    private struct State: Hashable {
-        var node: GridPosition
-        var heading: TrackDirection
-    }
-
-    /// The rules, written out a second way: the distance (in links) from
-    /// every (node, heading) to the destination by relaxing until nothing
-    /// changes, then from the start the first direction in north, east,
-    /// south, west order that keeps the distance falling by one.
-    private static func referenceRoute(in world: GameWorld, from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
-        let startState: State
-        switch start {
-        case .atNode(let tile, let heading):
-            guard world.track(at: tile) != nil else { return nil }
-            startState = State(node: tile, heading: heading)
-        case .onLink(let from, let to, let offset):
-            guard (1...1023).contains(offset), world.isConnected(from, to: to), let heading = direction(from: from, to: to) else { return nil }
-            startState = State(node: to, heading: heading)
-        }
-        guard world.track(at: destination) != nil else { return nil }
-
-        func moves(from state: State) -> [State] {
-            world.connectedNeighbors(of: state.node).compactMap { neighbor in
-                guard let way = direction(from: state.node, to: neighbor), way != state.heading.opposite else { return nil }
-                return State(node: neighbor, heading: way)
-            }
-        }
-        let states = world.tracks.flatMap { track in TrackDirection.allCases.map { State(node: track.position, heading: $0) } }
-        var distance: [State: Int] = [:]
-        for state in states where state.node == destination {
-            distance[state] = 0
-        }
-        var changed = true
-        while changed {
-            changed = false
-            for state in states where state.node != destination {
-                let best = moves(from: state).compactMap { distance[$0] }.min().map { $0 + 1 }
-                if let best, best < distance[state] ?? Int.max {
-                    distance[state] = best
-                    changed = true
-                }
-            }
-        }
-
-        guard var remaining = distance[startState] else { return nil }
-        var state = startState
-        var route: [GridPosition] = []
-        while remaining > 0 {
-            guard let next = moves(from: state).first(where: { distance[$0] == remaining - 1 }) else { return nil }
-            route.append(next.node)
-            state = next
-            remaining -= 1
-        }
-        return route
-    }
-}
-
-/// A small deterministic generator (SplitMix64), so random maps are the same
-/// on every run and platform.
-private struct SplitMix64 {
-    private var state: UInt64
-
-    init(seed: UInt64) {
-        state = seed
-    }
-
-    mutating func next() -> UInt64 {
-        state &+= 0x9E37_79B9_7F4A_7C15
-        var z = state
-        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
-        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
-        return z ^ (z >> 31)
     }
 }
