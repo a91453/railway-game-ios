@@ -114,12 +114,20 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         XCTAssertEqual(standard, .standard)
     }
 
-    /// `resume()` returns to the last running speed, which is never
-    /// `.paused`. A save claiming otherwise used to load a clock that
-    /// `resume()` left paused; it is refused as it loads.
-    func testDecodingRejectsAClockThatWouldResumePaused() throws {
-        assertDataCorrupted(GameClock.self, Data(#"{"now": 0, "speed": "paused", "resumeSpeed": "paused"}"#.utf8))
-        assertDataCorrupted(GameClock.self, Data(#"{"now": 5, "speed": "normal", "resumeSpeed": "paused"}"#.utf8))
+    /// `resume()` returns to the speed that was running before the pause,
+    /// never to `.paused`, so a running clock's resume speed is its own
+    /// speed. Saves claiming otherwise used to load a clock that `resume()`
+    /// left paused, or resumed at a speed that was never running; they are
+    /// refused as they load.
+    func testDecodingRejectsAClockThatWouldNotResumeWhereItWas() throws {
+        for json in [
+            #"{"now": 0, "speed": "paused", "resumeSpeed": "paused"}"#,
+            #"{"now": 5, "speed": "normal", "resumeSpeed": "paused"}"#,
+            #"{"now": 5, "speed": "normal", "resumeSpeed": "double"}"#,
+            #"{"now": 5, "speed": "double", "resumeSpeed": "normal"}"#,
+        ] {
+            assertDataCorrupted(GameClock.self, Data(json.utf8), json)
+        }
         let data = try savedWorld { object in
             var clock = try XCTUnwrap(object["clock"] as? [String: Any])
             clock["resumeSpeed"] = "paused"
@@ -127,18 +135,21 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         }
         assertDataCorrupted(GameWorld.self, data)
 
-        // Every clock the commands can make still loads unchanged, and
-        // resumes where it should.
+        // Every clock the commands can make still loads unchanged and
+        // resumes where it should, paused or not.
         for start in GameSpeed.allCases {
             for next in GameSpeed.allCases {
-                var clock = GameClock(now: GameTime(minutes: 7), speed: start)
-                clock.setSpeed(next)
-                clock.pause()
-                let loaded = try JSONDecoder().decode(GameClock.self, from: try JSONEncoder().encode(clock))
-                XCTAssertEqual(loaded, clock, "\(start) then \(next)")
-                var resumed = loaded
-                resumed.resume()
-                XCTAssertEqual(resumed.speed, next == .paused ? (start == .paused ? .normal : start) : next, "\(start) then \(next)")
+                for pausedAfterwards in [false, true] {
+                    var clock = GameClock(now: GameTime(minutes: 7), speed: start)
+                    clock.setSpeed(next)
+                    if pausedAfterwards { clock.pause() }
+                    let lastRunning = next != .paused ? next : (start != .paused ? start : .normal)
+                    let loaded = try JSONDecoder().decode(GameClock.self, from: try JSONEncoder().encode(clock))
+                    XCTAssertEqual(loaded, clock, "\(start) then \(next)")
+                    var resumed = loaded
+                    resumed.resume()
+                    XCTAssertEqual(resumed.speed, lastRunning, "\(start) then \(next), paused afterwards: \(pausedAfterwards)")
+                }
             }
         }
     }
