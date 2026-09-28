@@ -112,6 +112,7 @@ private struct ToolPicker: View {
         case .buildTrack: return "Lay a track piece · \(costs.track.displayText)"
         case .buildStation: return "Build a station · \(costs.station.displayText)"
         case .removeTrack: return "Remove track · free, no refund"
+        case .train: return "Place and send trains · \(costs.train.displayText) each"
         }
     }
 }
@@ -142,6 +143,8 @@ private struct ToolOptions: View {
             Label("Removing track is free, but its cost is not refunded.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        case .train:
+            TrainControls(session: session)
         }
     }
 }
@@ -178,6 +181,10 @@ private struct ActionButton: View {
         case .buildTrack: return "Build Track · \(costs.track.displayText)"
         case .buildStation: return "Build Station · \(costs.station.displayText)"
         case .removeTrack: return "Remove Track"
+        case .train:
+            // Placing and sending both act on the selected train.
+            guard let train = session.selectedTrain else { return nil }
+            return train.position == nil ? "Place \(train.name) Here" : "Send \(train.name) Here"
         }
     }
 }
@@ -257,6 +264,7 @@ extension ConstructionTool {
         case .buildTrack: "road.lanes"
         case .buildStation: "tram.fill"
         case .removeTrack: "trash"
+        case .train: "train.side.front.car"
         }
     }
 
@@ -266,6 +274,7 @@ extension ConstructionTool {
         case .buildTrack: "Build track tool"
         case .buildStation: "Build station tool"
         case .removeTrack: "Remove track tool"
+        case .train: "Train tool"
         }
     }
 }

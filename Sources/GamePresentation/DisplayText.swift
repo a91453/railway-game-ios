@@ -73,6 +73,46 @@ extension GameWorld {
     }
 }
 
+extension TrainPosition {
+    /// Where a train is, exactly as GameCore records it: "At (3, 2), facing
+    /// East" at a node, or "(3, 2) → (4, 2), 256 / 1024" on a link (the
+    /// offset from the first tile, out of ``TrainPosition/linkLength``).
+    public var displayText: String {
+        switch self {
+        case .atNode(let tile, let heading):
+            "At \(tile), facing \(heading.name)"
+        case .onLink(let from, let to, let offset):
+            "\(from) → \(to), \(offset) / \(TrainPosition.linkLength)"
+        }
+    }
+}
+
+extension Train {
+    /// The train's position, or "Not on the track" while it is unplaced.
+    public var positionText: String {
+        position?.displayText ?? "Not on the track"
+    }
+}
+
+extension TrainMovement {
+    /// The rate, such as "Rate 128 / min": logical units per game minute,
+    /// where ``TrainPosition/linkLength`` units are one tile.
+    public var rateText: String {
+        "Rate \(rate) / min"
+    }
+
+    /// The continuation entries the train has not entered yet, such as
+    /// "No path ahead", "Path: 1 more node, (4, 2)" or "Path: 5 more nodes,
+    /// ending at (8, 3)".
+    public var pathText: String {
+        let remaining = remainingContinuation
+        guard let last = remaining.last else { return "No path ahead" }
+        return remaining.count == 1
+            ? "Path: 1 more node, \(last)"
+            : "Path: \(remaining.count) more nodes, ending at \(last)"
+    }
+}
+
 extension GameError {
     /// What went wrong, in words a player can act on. GameError itself
     /// carries only structured data.

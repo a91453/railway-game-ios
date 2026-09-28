@@ -53,4 +53,49 @@ public enum MapScale {
         precondition(tileSize > 0, "position(atX:y:tileSize:) requires a positive tile size")
         return GridPosition(x: Int((x / tileSize).rounded(.down)), y: Int((y / tileSize).rounded(.down)))
     }
+
+    /// The centre of the tile at `position`, in map coordinates.
+    public static func center(of position: GridPosition, tileSize: Double) -> (x: Double, y: Double) {
+        ((Double(position.x) + 0.5) * tileSize, (Double(position.y) + 0.5) * tileSize)
+    }
+
+    /// Where a train at `position` is drawn, in map coordinates: the centre
+    /// of its tile, or `offset / linkLength` of the way from the centre of
+    /// `from` to the centre of `to`.
+    ///
+    /// Display only: worked out from the authoritative position each time
+    /// the map is drawn, never stored, and never fed back into GameCore.
+    public static func center(of position: TrainPosition, tileSize: Double) -> (x: Double, y: Double) {
+        switch position {
+        case .atNode(let tile, _):
+            return center(of: tile, tileSize: tileSize)
+        case .onLink(let from, let to, let offset):
+            let start = center(of: from, tileSize: tileSize)
+            let end = center(of: to, tileSize: tileSize)
+            let fraction = Double(offset) / Double(TrainPosition.linkLength)
+            return (start.x + (end.x - start.x) * fraction, start.y + (end.y - start.y) * fraction)
+        }
+    }
+
+    /// The unit vector, in map coordinates, of the way a train at `position`
+    /// faces: its heading at a node, or from `from` toward `to` on a link.
+    public static func facing(of position: TrainPosition) -> (dx: Double, dy: Double) {
+        switch position {
+        case .atNode(_, let heading):
+            switch heading {
+            case .north: return (0, -1)
+            case .east: return (1, 0)
+            case .south: return (0, 1)
+            case .west: return (-1, 0)
+            }
+        case .onLink(let from, let to, _):
+            // The ends of a link on the track are orthogonal neighbours.
+            // Comparing rather than subtracting cannot overflow.
+            return (step(from: from.x, to: to.x), step(from: from.y, to: to.y))
+        }
+    }
+
+    private static func step(from start: Int, to end: Int) -> Double {
+        end > start ? 1 : end < start ? -1 : 0
+    }
 }
