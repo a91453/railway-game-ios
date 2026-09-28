@@ -23,7 +23,7 @@
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "buildTrack", "x": 4, "y": 2, "connections": ["west"] },
+      "command": { "type": "buildTrack", "x": 4, "y": 2, "connections": ["east", "west"] },
       "expect": { "result": "ok" }
     },
     {

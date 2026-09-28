@@ -80,7 +80,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - 每條相鄰連結固定 1024 個抽象單位（`TrainPosition.linkLength`，`Int64` offset）；端點一律用 `atNode`，`onLink` 限 `0 < offset < 1024`，不做正規化
 - `GameWorld`：`train(id:)`、`placeTrain(_:at:)`、`unplaceTrain(_:)`、`reverseTrain(_:)`（原地反向，兩次還原）；新購列車未放置；放置、取下、反向免費
 - 列車所在節點或連結兩端的鐵軌拒絕拆除（`trackInUse`）；其他鐵軌照常可拆，取下列車後也可拆
-- 存檔：未放置的列車不寫 `position`，舊存檔讀成未放置；壞資料與不在相接鐵軌上的位置一律拒絕
+- 存檔：未放置的列車不寫 `position`，舊存檔讀成未放置；壞資料，以及節點不在鐵軌格、連結兩端不相接的位置，一律拒絕
 - Golden scenario schema v3：列車指令、結果與最終狀態的列車位置，以及 `train-position.json`
 - 列車不會移動；App 沒有放置列車的介面（ARCHITECTURE 決策 14）
 
