@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。只有 Phase 1 已實作。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1 已實作，Phase 2A 進行中。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -9,7 +9,32 @@
 - 整數金額經濟、deterministic 遊戲時鐘
 - Codable、XCTest、Linux CI
 
-## Phase 2 — M4 iPad + Swift Playgrounds prototype UI
+## Phase 2 — Native app prototype UI（cloud-first）
+
+原本假設 Phase 2 以 M4 iPad 上的 Swift Playgrounds 為主要開發環境，但目前使用的 Swift Playgrounds 環境在執行專案程式碼之前的 prewarm / runtime 階段就會失敗，因此改為不需要 Mac、也不依賴 Swift Playgrounds 的流程：
+
+```
+Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator) → 截圖 / log artifact → 在 iPhone / iPad 上檢視
+```
+
+驗證分層：
+
+1. Claude Code Cloud（Linux）：原始碼開發、GameCore `swift build` / `swift test`
+2. Linux CI：GameCore 在 Swift 6.0、6.2.4、6.4 的相容性
+3. macOS CI：XcodeGen 產生專案，以真正的 Xcode / Apple SDK 編譯原生 SwiftUI App
+4. 手動 Visual Smoke：iPhone / iPad Simulator 截圖，以 GitHub artifact 在手機或平板上檢視
+
+Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
+
+### Phase 2A — Cloud iOS build pipeline 🟡
+
+- 根目錄 `CLAUDE.md`（Claude Code 專案規則）
+- 最小原生 SwiftUI App（iPhone / iPad、iOS 17+），連結 GameCore 並顯示地圖尺寸、現金、遊戲時間與速度
+- XcodeGen spec（`RailwayGameApp/project.yml`），產生的 `.xcodeproj` 不進版控
+- macOS 自動編譯驗證（`ios-build.yml`），不需簽章
+- 手動 Visual Smoke workflow（`visual-smoke.yml`）：iPhone / iPad Simulator 截圖
+
+### Phase 2B — Prototype UI
 
 - 以 SwiftUI 顯示 grid
 - 點擊 tile
@@ -18,6 +43,10 @@
 - HUD：現金、遊戲時間與速度控制
 - 由 UI 迴圈把真實時間換算成 tick 呼叫 `advance(ticks:)`
 - GameCore 可能需要的補充：日期 / 時刻顯示用的換算、拆除車站
+
+### 之後（可選）— TestFlight
+
+在 Simulator 流程穩定之後，才評估以 TestFlight 發佈到實機（需要 Apple Developer Program、簽章憑證與 App Store Connect）。不屬於 Phase 2A。
 
 ## Phase 3 — Train simulation
 
