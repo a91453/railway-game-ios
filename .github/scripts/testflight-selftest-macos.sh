@@ -145,20 +145,35 @@ test_tools() {
   finish
 }
 
+# The EXIT trap below reads these, so they are global: the macOS runner's
+# bash has already dropped a function's locals when an EXIT trap runs.
+ipa_tmp=""
+ipa_kc=""
+ipa_saved=""
+restore_after_ipa() {
+  if [[ -n "$ipa_saved" ]]; then
+    local list=() line
+    while IFS= read -r line; do [[ -n "$line" ]] && list+=("$line"); done <<<"$ipa_saved"
+    security list-keychains -d user -s ${list[@]+"${list[@]}"}
+  fi
+  if [[ -n "$ipa_kc" ]]; then
+    security delete-keychain "$ipa_kc" 2>/dev/null || true
+  fi
+  if [[ -n "$ipa_tmp" ]]; then
+    rm -rf "$ipa_tmp"
+  fi
+}
+
 test_ipa() {
   local tmp kc kc_password saved
   tmp="$(canonical_temp_dir)"
   kc="$tmp/fixtures.keychain-db"
   kc_password="$(openssl rand -hex 16)"
   saved="$(user_keychains)"
-  restore() {
-    local list=()
-    while IFS= read -r line; do [[ -n "$line" ]] && list+=("$line"); done <<<"$saved"
-    security list-keychains -d user -s ${list[@]+"${list[@]}"}
-    security delete-keychain "$kc" 2>/dev/null || true
-    rm -rf "$tmp"
-  }
-  trap restore EXIT
+  ipa_tmp="$tmp"
+  ipa_kc="$kc"
+  ipa_saved="$saved"
+  trap restore_after_ipa EXIT
 
   security create-keychain -p "$kc_password" "$kc"
   security unlock-keychain -p "$kc_password" "$kc"
