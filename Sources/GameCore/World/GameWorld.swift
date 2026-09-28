@@ -214,8 +214,9 @@ public struct GameWorld: Equatable, Sendable {
     /// Sets how many logical units a placed train may travel in each basic
     /// step (one game minute). 0 holds the train where it is and keeps its
     /// continuation, so setting a rate again resumes the same journey. Any
-    /// non-negative `Int64` is accepted: travel never adds a rate to an
-    /// offset, so no rate can overflow.
+    /// non-negative `Int64` is accepted: travel adds distance to an offset
+    /// only after checking that it is shorter than the rest of the link, so
+    /// no rate can overflow.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``, or
@@ -275,9 +276,11 @@ public struct GameWorld: Equatable, Sendable {
     /// each basic step every train, in ascending ``TrainID`` order, travels up
     /// to its rate (see ``TrainMovement``), and then the clock moves on one
     /// game minute. Trains do not interact, so the order only fixes when
-    /// each is updated. `advance(ticks: n)` is the same as `n` calls of
-    /// `advance(ticks: 1)`, and one tick at 2x the same as two at 1x apart
-    /// from the speed itself.
+    /// each is updated. Whenever the clock can hold the whole batch,
+    /// `advance(ticks: n)` is the same as `n` calls of `advance(ticks: 1)`,
+    /// and one tick at 2x the same as two at 1x apart from the speed itself.
+    /// (Near the clock's limit a batch is rejected whole, while single ticks
+    /// may still fit one at a time.)
     ///
     /// A train that cannot enter the next link of its continuation (the track
     /// was removed after the continuation was set) waits at its node, and

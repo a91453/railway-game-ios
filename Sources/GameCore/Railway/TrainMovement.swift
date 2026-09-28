@@ -8,7 +8,9 @@
 ///
 /// Only ``GameWorld`` changes a train's movement, through
 /// ``GameWorld/setTrainMovementRate(_:to:)``,
-/// ``GameWorld/setTrainContinuation(_:to:)`` and ``GameWorld/advance(ticks:)``.
+/// ``GameWorld/setTrainContinuation(_:to:)``, ``GameWorld/advance(ticks:)``,
+/// and ``GameWorld/reverseTrain(_:)`` and ``GameWorld/unplaceTrain(_:)``,
+/// which clear the continuation (unplacing also resets the rate).
 public struct TrainMovement: Hashable, Sendable {
     /// Logical units (``TrainPosition/linkLength`` per link) the train may
     /// travel in each basic step, that is per game minute. Never negative;
