@@ -14,6 +14,27 @@ public struct ConstructionCosts: Hashable, Codable, Sendable {
     public static let standard = ConstructionCosts(track: 1_000, station: 50_000, train: 200_000)
 }
 
+extension ConstructionCosts {
+    private enum CodingKeys: String, CodingKey {
+        case track, station, train
+    }
+
+    /// Decodes prices, rejecting a negative one: spending a negative amount is
+    /// a programming error (see ``GameEconomy/spend(_:)``), so a save holding
+    /// one would load and then trap at the next purchase.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func price(_ key: CodingKeys) throws -> Money {
+            let price = try container.decode(Money.self, forKey: key)
+            guard price >= .zero else {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Construction costs must not be negative.")
+            }
+            return price
+        }
+        self.init(track: try price(.track), station: try price(.station), train: try price(.train))
+    }
+}
+
 /// The player's finances.
 public struct GameEconomy: Hashable, Codable, Sendable {
     public private(set) var balance: Money
