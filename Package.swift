@@ -9,9 +9,12 @@ let package = Package(
     ],
     products: [
         .library(name: "GameCore", targets: ["GameCore"]),
+        .library(name: "GamePresentation", targets: ["GamePresentation"]),
     ],
     targets: [
         .target(name: "GameCore"),
+        .target(name: "GamePresentation", dependencies: ["GameCore"]),
         .testTarget(name: "GameCoreTests", dependencies: ["GameCore"]),
+        .testTarget(name: "GamePresentationTests", dependencies: ["GamePresentation"]),
     ]
 )

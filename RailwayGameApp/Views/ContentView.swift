@@ -1,12 +1,14 @@
 import GameCore
+import GamePresentation
 import SwiftUI
 
 /// Phase 2A smoke-test screen: shows that GameCore links into the app and that
 /// the presentation layer can read its state.
 struct ContentView: View {
-    let world: GameWorld
+    let session: GameSession
 
     var body: some View {
+        let world = session.world
         NavigationStack {
             List {
                 Section("GameCore") {
