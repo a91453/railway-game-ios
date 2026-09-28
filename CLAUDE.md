@@ -9,13 +9,21 @@ depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
-- `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project is
-  generated from `RailwayGameApp/project.yml` by XcodeGen and is not committed.
+- `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project
+  (`RailwayGame.xcodeproj`, with the shared `RailwayGame` scheme) is generated
+  from `RailwayGameApp/project.yml` by XcodeGen and **committed**, because
+  Xcode Cloud needs it in the repository. `project.yml` is the source of
+  truth: change it, regenerate (see below), and commit both. Never hand-edit
+  the `.xcodeproj`.
 - `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
 - `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.2.4 / 6.4),
-  `ios-build.yml` (Xcode Simulator build on macOS), `visual-smoke.yml`
-  (manual Simulator screenshots).
+  `ios-build.yml` (committed-project drift check and Xcode Simulator build on
+  macOS), `visual-smoke.yml` (manual Simulator screenshots),
+  `release-archive.yml` (unsigned Release device archive; manual, and on PRs
+  that change project settings or app resources).
+- Distribution: Xcode Cloud → internal TestFlight, not yet onboarded; steps and
+  status in `docs/XCODE_CLOUD_ONBOARDING.md`.
 
 ## Architecture rules
 
@@ -43,7 +51,24 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   from swift.org. Xcode, `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are
   **not** available there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
-  `visual-smoke.yml`).
+  `visual-smoke.yml`, `release-archive.yml`). The unsigned archive does not
+  prove signing, upload or TestFlight; only Xcode Cloud can.
+- Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
+  regenerate the Xcode project with the XcodeGen release pinned in
+  `.github/actions/setup-xcodegen/action.yml` (2.46.0) and commit the result.
+  On Linux, build that release from source (Swift 6.4 works), from a
+  checkout directory named `railway-game-ios`:
+
+  ```sh
+  git clone --depth 1 --branch 2.46.0 https://github.com/yonaskolb/XcodeGen /tmp/xcodegen
+  test "$(git -C /tmp/xcodegen rev-parse HEAD)" = 8445e778451c7e44237b90281bde622d764b0084
+  swift build -c release --package-path /tmp/xcodegen --product xcodegen
+  USER="${USER:-ci}" /tmp/xcodegen/.build/release/xcodegen generate --spec RailwayGameApp/project.yml
+  ```
+
+  The drift check in `ios-build.yml` (the official macOS binary) is
+  authoritative. When upgrading XcodeGen, update the action and these lines
+  together.
 - Whenever GameCore changes, run `swift build` and `swift test`, and keep
   warnings-as-errors clean (`swift build --build-tests -Xswiftc -warnings-as-errors`).
 - Never claim a check passed unless it actually ran. Report results as
@@ -61,4 +86,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,
   certificates, provisioning profiles, tokens, `.env` files, personal data).
-  Signing and TestFlight are deliberately out of scope until a later phase.
+  Signing is automatic and managed by Xcode Cloud; the only signing value in
+  the repository is the public Team ID (`DEVELOPMENT_TEAM`). Apple account
+  steps (agreements, App Store Connect, testers, the first workflow in Xcode on
+  a Mac) are the user's; never ask for passwords or 2FA codes.
