@@ -13,6 +13,7 @@ on:
     paths:
       - .github/workflows/visual-smoke.yml
       - .github/scripts/simulator-screenshot.sh
+      - .github/actions/setup-xcodegen/**
 
 permissions:
   contents: read

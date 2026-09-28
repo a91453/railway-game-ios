@@ -18,9 +18,10 @@ on:
 permissions:
   contents: read
 
+# Superseded PR runs are cancelled; runs on main are never cancelled mid-build.
 concurrency:
   group: ios-build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:

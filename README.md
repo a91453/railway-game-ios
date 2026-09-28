@@ -85,9 +85,9 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 1. GitHub → **Actions** → 左側選 **Visual Smoke** → **Run workflow**（選擇分支）→ **Run workflow**
 2. 等待執行完成
 3. 打開該次執行的 Summary 頁面 → **Artifacts** → 下載 **visual-smoke**
-4. zip 內含 `iphone.png`、`ipad.png`、`simulator.log`、`xcodebuild.log`、`simulators.txt`（失敗時另有 crash report 與 App stderr）
+4. zip 內含 `iphone.png`、`ipad.png`、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
 
-Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow 或其腳本的 PR 會自動執行一次。
+Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow、其腳本或 XcodeGen 安裝步驟的 PR，每次推送都會自動執行。
 
 ## Building
 

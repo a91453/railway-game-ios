@@ -18,7 +18,6 @@ fi
 family="$1"
 app_path="$2"
 screenshot="$3"
-minimum_ios="17.0" # keep in sync with deploymentTarget in RailwayGameApp/project.yml
 settle_seconds=8
 
 case "$family" in
@@ -34,6 +33,10 @@ if [[ ! -d "$app_path" ]]; then
 fi
 command -v jq >/dev/null || { echo "::error::jq is required but not installed."; exit 1; }
 
+info_plist="$app_path/Info.plist"
+bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info_plist")"
+minimum_ios="$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$info_plist")"
+
 mkdir -p "$(dirname "$screenshot")"
 out_dir="$(cd "$(dirname "$screenshot")" && pwd)"
 name="$(basename "$screenshot" .png)"
@@ -41,8 +44,8 @@ stderr_log="$out_dir/$name-app-stderr.log"
 
 # --- Pick a device -----------------------------------------------------------
 # The newest available iOS runtime that is not newer than the active Xcode's
-# Simulator SDK (major.minor) and not older than the deployment target. Within
-# it, prefer a "Pro" (non-Max) model, otherwise any model of the family.
+# Simulator SDK (major.minor) and not older than the app's MinimumOSVersion.
+# Within it, prefer a "Pro" (non-Max) model, otherwise any model of the family.
 sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
 selection="$(
   xcrun simctl list --json | jq -r \
@@ -86,7 +89,6 @@ trap shutdown_simulator EXIT
 # calling workflow step's timeout-minutes bounds the wait.
 xcrun simctl bootstatus "$udid" -b
 
-bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
 xcrun simctl install "$udid" "$app_path"
 
 launch_output=""
