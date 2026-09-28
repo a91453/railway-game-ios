@@ -35,10 +35,14 @@ extension GameWorld {
     /// (see ``placeTrain(_:at:)``), when `destination` is not a track tile
     /// (empty, a station, or outside the map), or when no route exists.
     ///
-    /// Pure: reads the map only through ``connectedNeighbors(of:)``, changes
-    /// nothing and keeps no cache. It explores only track reachable from
-    /// `start`: at most four states per track tile, so time and memory are
-    /// O(reachable track tiles), without scanning the map.
+    /// Pure: reads the map only through its public queries (the start and
+    /// destination checks, then ``connectedNeighbors(of:)`` while
+    /// searching), changes nothing and keeps no cache. It explores only track
+    /// reachable from `start`: at most four states per track tile, so time
+    /// and memory are O(reachable track tiles), without scanning the map. On
+    /// a nearly full 1024 x 1024 map that is seconds and hundreds of
+    /// megabytes, so a host should not call it synchronously on the main
+    /// actor for large maps.
     public func route(from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
         guard isOnTrack(start), track(at: destination) != nil else { return nil }
         let (node, heading) = start.ahead
