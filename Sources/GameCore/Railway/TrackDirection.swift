@@ -1,6 +1,17 @@
 /// One of the four edges of a tile that a track can connect through.
 public enum TrackDirection: CaseIterable, Hashable, Codable, Sendable {
     case north, east, south, west
+
+    /// The direction pointing back: a track leaving a tile through this edge
+    /// enters the neighbouring tile through `opposite`.
+    public var opposite: TrackDirection {
+        switch self {
+        case .north: .south
+        case .east: .west
+        case .south: .north
+        case .west: .east
+        }
+    }
 }
 
 /// The set of tile edges a track piece connects to.
@@ -35,13 +46,20 @@ public struct TrackConnections: OptionSet, Hashable, Sendable {
     public var directions: [TrackDirection] {
         TrackDirection.allCases.filter { contains(TrackConnections($0)) }
     }
+
+    /// Whether every set bit is one of the four directions. `init(rawValue:)`
+    /// accepts any byte, so values from outside GameCore are checked with this
+    /// and rejected rather than masked.
+    var hasOnlyKnownDirections: Bool {
+        Self.all.isSuperset(of: self)
+    }
 }
 
 extension TrackConnections: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(UInt8.self)
-        guard Self.all.isSuperset(of: TrackConnections(rawValue: rawValue)) else {
+        guard TrackConnections(rawValue: rawValue).hasOnlyKnownDirections else {
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Unknown track connection bits in \(rawValue)."

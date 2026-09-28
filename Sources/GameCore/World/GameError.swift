@@ -10,7 +10,8 @@ public enum GameError: Error, Hashable, Sendable {
     case outOfBounds(GridPosition)
     /// Something is already built at the position.
     case tileOccupied(GridPosition)
-    /// A track piece must connect in at least one direction.
+    /// A track piece must connect in at least one direction, and only in the
+    /// four known directions (no other bits set).
     case invalidTrackConnections
     /// Names must contain at least one non-whitespace character.
     case invalidName
