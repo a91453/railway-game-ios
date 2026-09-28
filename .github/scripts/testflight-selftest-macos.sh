@@ -112,12 +112,14 @@ test_tools() {
   local key options destination
   for options in "$export_options" "$upload_options"; do
     plutil -lint "$options" || fail "$(basename "$options") is not a valid property list"
-    for key in destination manageAppVersionAndBuildNumber method signingStyle uploadSymbols; do
+    for key in destination manageAppVersionAndBuildNumber method signingStyle testFlightInternalTestingOnly uploadSymbols; do
       /usr/libexec/PlistBuddy -c "Print :$key" "$options" >/dev/null 2>&1 ||
         fail "$(basename "$options") has no $key"
     done
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :method' "$options")" == "app-store-connect" ]] ||
       fail "$(basename "$options"): the method is not app-store-connect"
+    [[ "$(/usr/libexec/PlistBuddy -c 'Print :testFlightInternalTestingOnly' "$options")" == "true" ]] ||
+      fail "$(basename "$options"): internal-TestFlight-only is not enabled"
   done
   destination="$(/usr/libexec/PlistBuddy -c 'Print :destination' "$export_options")"
   [[ "$destination" == export ]] || fail "the export options' destination is $destination, not export"
@@ -132,7 +134,7 @@ test_tools() {
   # xcodebuild options the release uses.
   local help
   help="$(xcodebuild -help 2>&1)"
-  for key in destination manageAppVersionAndBuildNumber method signingStyle teamID uploadSymbols; do
+  for key in destination manageAppVersionAndBuildNumber method signingStyle teamID testFlightInternalTestingOnly uploadSymbols; do
     grep -Eq "^[[:space:]]+$key : " <<<"$help" || fail "xcodebuild -help does not document the export option $key"
   done
   grep -q 'app-store-connect' <<<"$help" || fail "xcodebuild -help does not offer the app-store-connect method"
