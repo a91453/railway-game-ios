@@ -6,9 +6,10 @@
 #   testflight-selftest-macos.sh signing   temporary keychain and API key file:
 #                                          setup with a fake key, a failing
 #                                          step, cleanup, restore, repeat
-#   testflight-selftest-macos.sh tools     the archive and export options the
-#                                          dry run produced, and the xcodebuild
-#                                          and altool options the release uses
+#   testflight-selftest-macos.sh tools     the archive and the export and
+#                                          upload options the dry run produced,
+#                                          and the xcodebuild options the
+#                                          release uses
 #   testflight-selftest-macos.sh ipa       testflight-verify-ipa.sh against
 #                                          synthetic IPAs signed with throwaway
 #                                          self-signed certificates
@@ -61,13 +62,13 @@ test_signing() {
   local key_path
   key_path="$(sed -n 's/^ASC_KEY_PATH=//p' "$env_file")"
   [[ "$key_path" == */AuthKey_$fake_key_id.p8 ]] || fail "unexpected key file name"
-  [[ "$(sed -n 's/^API_PRIVATE_KEYS_DIR=//p' "$env_file")" == "$(dirname "$key_path")" ]] ||
-    fail "API_PRIVATE_KEYS_DIR does not hold the key file"
   [[ "$(stat -f %Lp "$key_path")" == 600 ]] || fail "the key file is not mode 600"
   ! grep -q $'\r' "$key_path" || fail "the key file keeps CR line endings"
   [[ "$(head -n 1 "$key_path")" == "-----BEGIN PRIVATE KEY-----" ]] || fail "the key file does not start with the key"
   sed -n 's/^ARCHIVE_PATH=//p' "$env_file" | grep -q '/testflight/RailwayGame.xcarchive$' ||
     fail "ARCHIVE_PATH is not exported"
+  grep -q '^UPLOAD_OPTIONS=.*/testflight/UploadOptions.plist$' "$env_file" ||
+    fail "UPLOAD_OPTIONS is not exported"
 
   signing setup && fail "a second setup without cleanup was accepted"
 
@@ -101,19 +102,31 @@ test_signing() {
 
 test_tools() {
   local archive="${ARCHIVE_PATH:?run the unsigned dry-run archive first}"
-  local options="${EXPORT_OPTIONS:?run the unsigned dry-run archive first}"
+  local export_options="${EXPORT_OPTIONS:?run the unsigned dry-run archive first}"
+  local upload_options="${UPLOAD_OPTIONS:?run the unsigned dry-run archive first}"
   [[ -d "$archive/Products/Applications/RailwayGame.app" ]] || fail "the archive has no RailwayGame.app"
   if ! /usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleIdentifier' "$archive/Info.plist" >/dev/null 2>&1; then
     fail "the archive's Info.plist has no ApplicationProperties"
   fi
 
-  plutil -lint "$options" || fail "the export options are not a valid property list"
-  local key
-  for key in destination manageAppVersionAndBuildNumber method signingStyle uploadSymbols; do
-    /usr/libexec/PlistBuddy -c "Print :$key" "$options" >/dev/null 2>&1 || fail "the export options have no $key"
+  local key options destination
+  for options in "$export_options" "$upload_options"; do
+    plutil -lint "$options" || fail "$(basename "$options") is not a valid property list"
+    for key in destination manageAppVersionAndBuildNumber method signingStyle uploadSymbols; do
+      /usr/libexec/PlistBuddy -c "Print :$key" "$options" >/dev/null 2>&1 ||
+        fail "$(basename "$options") has no $key"
+    done
+    [[ "$(/usr/libexec/PlistBuddy -c 'Print :method' "$options")" == "app-store-connect" ]] ||
+      fail "$(basename "$options"): the method is not app-store-connect"
   done
-  [[ "$(/usr/libexec/PlistBuddy -c 'Print :method' "$options")" == "app-store-connect" ]] ||
-    fail "the export method is not app-store-connect"
+  destination="$(/usr/libexec/PlistBuddy -c 'Print :destination' "$export_options")"
+  [[ "$destination" == export ]] || fail "the export options' destination is $destination, not export"
+  destination="$(/usr/libexec/PlistBuddy -c 'Print :destination' "$upload_options")"
+  [[ "$destination" == upload ]] || fail "the upload options' destination is $destination, not upload"
+  if ! diff <(grep -v -e '<string>export</string>' -e '<string>upload</string>' "$export_options") \
+    <(grep -v -e '<string>export</string>' -e '<string>upload</string>' "$upload_options") >/dev/null; then
+    fail "the export and upload options differ in more than the destination"
+  fi
 
   # What this Xcode documents: the export option keys, the method, and the
   # xcodebuild options the release uses.
@@ -128,22 +141,7 @@ test_tools() {
     grep -qe "$key" <<<"$help" || fail "xcodebuild -help does not document $key"
   done
 
-  # What this Xcode's altool offers for the upload step.
-  xcrun --find altool >/dev/null || fail "xcrun cannot find altool"
-  local altool_help
-  altool_help="$(xcrun altool --help 2>&1 || true)"
-  for key in --upload-package --apiKey --apiIssuer --apple-id --bundle-id --bundle-version \
-    --bundle-short-version-string; do
-    grep -qe "$key" <<<"$altool_help" || fail "altool --help does not mention $key"
-  done
-  # The upload finds the key through API_PRIVATE_KEYS_DIR and, as a fallback
-  # that altool has long documented, ./private_keys; both point at the file.
-  if grep -q API_PRIVATE_KEYS_DIR <<<"$altool_help"; then
-    echo "altool --help documents API_PRIVATE_KEYS_DIR."
-  else
-    echo "altool --help does not mention API_PRIVATE_KEYS_DIR; the upload also runs next to ./private_keys."
-  fi
-  echo "$(xcodebuild -version | head -n 1): export options, xcodebuild and altool options checked."
+  echo "$(xcodebuild -version | head -n 1): export and upload options and xcodebuild options checked."
   finish
 }
 

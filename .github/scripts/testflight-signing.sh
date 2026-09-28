@@ -19,7 +19,7 @@
 # macOS only. Inputs (environment): RUNNER_TEMP, HOME, GITHUB_ENV (set by
 # GitHub Actions); ASC_KEY_ID and ASC_PRIVATE_KEY (secrets; omitted in dry
 # runs). Exports to later steps: TESTFLIGHT_DIR, ARCHIVE_PATH, EXPORT_PATH,
-# EXPORT_OPTIONS and, with a key, ASC_KEY_PATH and API_PRIVATE_KEYS_DIR.
+# EXPORT_OPTIONS, UPLOAD_OPTIONS and, with a key, ASC_KEY_PATH.
 set -euo pipefail
 
 work="${RUNNER_TEMP:?RUNNER_TEMP is not set}/testflight"
@@ -82,6 +82,7 @@ setup() {
     echo "ARCHIVE_PATH=$work/RailwayGame.xcarchive"
     echo "EXPORT_PATH=$work/export"
     echo "EXPORT_OPTIONS=$work/ExportOptions.plist"
+    echo "UPLOAD_OPTIONS=$work/UploadOptions.plist"
   } >>"${GITHUB_ENV:-/dev/null}"
 
   if [[ -n "${ASC_PRIVATE_KEY:-}" ]]; then
@@ -91,10 +92,7 @@ setup() {
     # Drop CR line endings and leading blank lines a paste may have added.
     printf '%s\n' "$ASC_PRIVATE_KEY" | tr -d '\r' | sed '/./,$!d' >"$key_path"
     chmod 600 "$key_path"
-    {
-      echo "ASC_KEY_PATH=$key_path"
-      echo "API_PRIVATE_KEYS_DIR=$key_dir"
-    } >>"${GITHUB_ENV:-/dev/null}"
+    echo "ASC_KEY_PATH=$key_path" >>"${GITHUB_ENV:-/dev/null}"
     echo "App Store Connect API key written to a file only this job's user can read."
   else
     echo "No App Store Connect API key given (dry run)."

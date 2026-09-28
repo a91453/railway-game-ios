@@ -1,8 +1,10 @@
 name: TestFlight (internal)
 
 # Archives the committed project on a GitHub-hosted macOS runner, signs it
-# through App Store Connect with the team's API key, exports an IPA, checks
-# it, and uploads it to App Store Connect for internal TestFlight testing.
+# through App Store Connect with the team's API key, exports an IPA and
+# checks it, then uploads the archive, signed the same way, to App Store
+# Connect for internal TestFlight testing. Every Apple step uses xcodebuild
+# with the API key.
 #
 # Started only by hand (Actions -> TestFlight (internal) -> Run workflow) and
 # only from main. Pull requests never run it; its secrets live in the
@@ -134,34 +136,33 @@ jobs:
           EXPECTED_BUILD="$BUILD_NUMBER" EXPECTED_TEAM_ID="$APPLE_TEAM_ID" \
             .github/scripts/testflight-verify-ipa.sh "${ipas[0]}"
           {
-            echo "path=${ipas[0]}"
             echo "bundle_id=$EXPECTED_BUNDLE_ID"
             echo "version=$EXPECTED_VERSION"
           } >>"$GITHUB_OUTPUT"
 
-      # Uploads the checked IPA. altool finds the key file through
-      # API_PRIVATE_KEYS_DIR and, run from its parent folder, ./private_keys.
+      # Runs only after the IPA check passed. Same archive and options as the
+      # checked export except destination=upload (supported with API keys
+      # since Xcode 15).
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          IPA_PATH: ${{ steps.ipa.outputs.path }}
           BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
           VERSION: ${{ steps.ipa.outputs.version }}
         run: |
-          cd "$(dirname "$API_PRIVATE_KEYS_DIR")"
-          xcrun altool --upload-package "$IPA_PATH" \
-            --type ios \
-            --apple-id "$ASC_APP_ID" \
-            --bundle-id "$BUNDLE_ID" \
-            --bundle-short-version-string "$VERSION" \
-            --bundle-version "$BUILD_NUMBER" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$TESTFLIGHT_DIR/upload" \
+            -exportOptionsPlist "$UPLOAD_OPTIONS" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           {
             echo ""
-            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER). App Store Connect now processes it; it appears in TestFlight when processing ends."
+            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER). App Store Connect now processes it; it appears in TestFlight when processing ends:"
+            echo "https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios"
           } >>"$GITHUB_STEP_SUMMARY"
 
       # Runs even when an earlier step failed or the run was cancelled.

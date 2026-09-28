@@ -39,7 +39,9 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
          自動簽章（本機沒有發佈憑證時使用 Apple 雲端管理的發佈憑證）
        → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
          發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
-       → 上傳剛檢查過的 IPA：xcrun altool --upload-package（API key）
+       → 上傳：同一份 archive、相同設定再以 xcodebuild -exportArchive
+         （destination=upload，API key）送到 App Store Connect；
+         只在 IPA 檢查通過後執行
        → 清理（成功、失敗、取消都執行）
 ```
 
@@ -48,7 +50,7 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
 | `.github/workflows/testflight.yml` | 發佈；**只有** `workflow_dispatch`，沒有排程、push 或 PR 觸發 |
 | `.github/scripts/testflight-preflight.sh` | 發佈前檢查與 build number |
 | `.github/scripts/testflight-signing.sh` | 暫存 keychain、API key 檔的建立與清理 |
-| `.github/scripts/testflight-archive.sh` | Archive 與 ExportOptions |
+| `.github/scripts/testflight-archive.sh` | Archive，以及匯出（export）與上傳（upload）兩份 ExportOptions |
 | `.github/scripts/testflight-verify-ipa.sh` | 上傳前的 IPA 檢查 |
 | `.github/workflows/testflight-checks.yml` | PR 檢查：lint、腳本測試、macOS dry run、合成 IPA 測試；不需帳號、不用 secrets |
 | `.github/scripts/testflight-selftest*.sh` | 上述檢查用的測試（只用假值） |
@@ -134,6 +136,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - 刪除暫存 keychain、key 檔、這次新增的描述檔、archive 與 IPA（IPA 內含描述檔）。
   - 清理可以重複執行，setup 失敗或只完成一半時也安全。
 - **不會存成 artifact**：IPA、archive、描述檔、憑證、key 都不會上傳成 artifact。
+- **上傳的內容**：上傳的是第二次匯出，與通過檢查的 IPA 來自同一份 archive、相同的 ExportOptions（只差 `destination`）、相同的簽章方式；上傳步驟只在 IPA 檢查通過後才執行。
 - **Log 是公開的**：這個 repository 公開，Actions log 任何人都看得到。
   - 腳本只印出「是否存在、格式是否正確、yes/no、版本資訊」，不印秘密，也不印含帳號持有人姓名的憑證或描述檔名稱。
   - GitHub 會自動遮蔽 secrets，但官方說明遮蔽不保證完整，所以腳本本身就不輸出它們。
@@ -148,7 +151,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | Build number：`7.1` → 重跑 `7.2` → 下一次 `8.1`；offset；排序遞增 | VERIFIED | 同上 |
 | 暫存 keychain 建立、設定、設為預設、還原、刪除；假 `.p8` 的權限與正規化；失敗步驟後清理；重複清理 | VERIFIED | macOS dry run（真實 `security`）＋ 本機 stub |
 | Archive 指令三種模式的參數與 ExportOptions；已提交的專案能以未簽章方式 archive | VERIFIED | macOS dry run ＋ 本機 stub |
-| Xcode 26 提供需要的 `xcodebuild` 選項、ExportOptions 鍵、`app-store-connect` 方法，以及 `altool --upload-package` 與 API key 選項 | VERIFIED | macOS dry run |
+| Xcode 26 提供需要的 `xcodebuild` 選項（`-exportArchive`、`-allowProvisioningUpdates`、`-authenticationKey*`）、ExportOptions 鍵與 `app-store-connect` 方法；匯出與上傳兩份設定只差在 `destination` | VERIFIED | macOS dry run |
 | IPA 檢查：正確的發佈 IPA 通過；build number 不符、開發描述檔、有裝置清單、缺描述檔、開發憑證簽章都擋下；不輸出姓名 | VERIFIED | macOS dry run（自簽的一次性憑證、合成 IPA）＋ 本機 stub |
 | 在 GitHub runner 上以 API key 自動簽章（archive）與雲端管理發佈憑證（export） | **UNVERIFIED** | 官方文件支持；尚未實際執行 |
 | 真實 preflight（有 secrets）、簽章 Archive、匯出、上傳、processing、TestFlight 安裝 | **BLOCKED** | 需要會員、API 存取與 key |
@@ -197,11 +200,11 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - Cloud-managed certificates：https://developer.apple.com/help/account/certificates/cloud-managed-certificates/
 - xcodebuild 以 API key 在無人操作環境自動簽章；雲端簽章與 Admin 角色：https://developer.apple.com/documentation/xcode-release-notes/xcode-13-release-notes
 - `-exportArchive` 以 API key 上傳：https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes
-- Xcode 26.1–26.6 release notes：對上傳、altool、exportArchive 沒有變更。
-- 上傳方式（Xcode、altool、Transporter）與「Xcode 26 or later」：
+- Xcode 26.1–26.6 release notes：對上傳、exportArchive 沒有變更。
+- 上傳方式與「Xcode 26 or later」：
   - https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
   - https://developer.apple.com/news/upcoming-requirements/
-- altool（`--upload-package`、`--apiKey`、`API_PRIVATE_KEYS_DIR`）：https://help.apple.com/asc/appsaltool/
+- 為何不用 altool：Apple 的 altool 說明頁寫 `--upload-package` 需要 `--bundle-id`，但 macos-26 runner 上 Xcode 26.6 的 `altool --help` 沒有列出這個選項（dry run 實測）。所以上傳改用有官方說明、也能用 API key 的 `xcodebuild -exportArchive`。
 - CFBundleVersion 格式：https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleversion
 - 版本號與 build number 組合唯一：https://developer.apple.com/documentation/xcode/setting-the-next-build-number-for-xcode-cloud-builds
 - 同版本遞增（舊文件）：https://developer.apple.com/library/archive/technotes/tn2420/_index.html

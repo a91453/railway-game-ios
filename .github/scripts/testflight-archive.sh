@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Archives the committed Xcode project for App Store distribution and writes
-# the export options the IPA is signed with.
+# the export options: one to export the signed IPA that is checked, one to
+# upload the same archive to App Store Connect.
 #
 #   testflight-archive.sh automatic   the release default: automatic signing
 #                                     for the real team, with the App Store
@@ -19,7 +20,8 @@
 # resolution (see ios-build.yml).
 #
 # macOS only; run after `testflight-signing.sh setup`. Inputs (environment):
-#   ARCHIVE_PATH, EXPORT_OPTIONS      from testflight-signing.sh
+#   ARCHIVE_PATH, EXPORT_OPTIONS,
+#   UPLOAD_OPTIONS                    from testflight-signing.sh
 #   APPLE_TEAM_ID                     automatic, adhoc
 #   BUILD_NUMBER                      optional: CFBundleVersion of this build
 #   ASC_KEY_PATH, ASC_KEY_ID, ASC_ISSUER_ID   automatic
@@ -28,6 +30,7 @@ set -euo pipefail
 mode="${1:-}"
 archive_path="${ARCHIVE_PATH:?ARCHIVE_PATH is not set; run testflight-signing.sh setup first}"
 export_options="${EXPORT_OPTIONS:?EXPORT_OPTIONS is not set; run testflight-signing.sh setup first}"
+upload_options="${UPLOAD_OPTIONS:?UPLOAD_OPTIONS is not set; run testflight-signing.sh setup first}"
 
 args=(
   archive
@@ -73,21 +76,24 @@ fi
 xcodebuild "${args[@]}"
 
 # App Store Connect distribution, signed automatically by xcodebuild at
-# export (cloud-managed distribution certificate when no local one exists),
-# kept as a local IPA so it can be checked before the separate upload step.
-# The build number comes from the archive; Xcode must not change it.
+# export (cloud-managed distribution certificate when no local one exists).
+# "export" writes the IPA that is checked; "upload" sends the same archive,
+# signed the same way, to App Store Connect. The build number comes from the
+# archive; Xcode must not change it.
 team_entry=""
 if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
   team_entry="	<key>teamID</key>
 	<string>$APPLE_TEAM_ID</string>"
 fi
-cat >"$export_options" <<PLIST
+write_options() {
+  local destination="$1" path="$2"
+  cat >"$path" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>destination</key>
-	<string>export</string>
+	<string>$destination</string>
 	<key>manageAppVersionAndBuildNumber</key>
 	<false/>
 	<key>method</key>
@@ -100,4 +106,7 @@ $team_entry
 </dict>
 </plist>
 PLIST
-echo "Archive ($mode) and export options written."
+}
+write_options export "$export_options"
+write_options upload "$upload_options"
+echo "Archive ($mode) and export and upload options written."
