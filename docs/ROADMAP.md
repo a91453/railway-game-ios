@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K 已實作；下一步是 Phase 3 的 Stage L。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）已實作；下一步可以是讓 App 操作列車的最小畫面整合，或 Phase 3 的 Stage M。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -96,10 +96,17 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - Golden scenario schema v4：移動指令、`train` 觀察、最終狀態的列車 movement，以及 `train-movement.json`
 - App 仍沒有放置或指定路徑的介面，列車移動只由測試與 golden fixture 驗證（ARCHITECTURE 決策 15）
 
-### Stage L — Route / Pathfinding
+### Stage L — Route / Pathfinding ✅（GameCore）
 
-- 路線與路徑搜尋，輸出一份 continuation（節點清單）交給 `setTrainContinuation`；kernel 不需要知道目的地或成本
-- 可以同時考慮最小的畫面整合：放置列車、指定路徑、依 `Train.position` 顯示位置（插值只用於顯示，不寫回 GameCore）
+- `GameWorld.route(from:to:)`：唯讀查詢，回傳可直接交給 `setTrainContinuation` 的節點清單，或 `nil`
+- 最少連結數、不立即折返（可繞圈掉頭，不會 reverse）；同長時依出口方向的北、東、南、西順序決定，結果與鋪設順序和平台無關
+- 對 (節點, heading) 做 breadth-first search，只走訪可達鐵軌，不建立 graph 或快取；Stage K 的移動契約不變
+- Golden scenario schema v5：`route` 觀察與 `train-route.json`（ARCHITECTURE 決策 16）
+- 尚未做：多個途經點、以車站為目的地（Stage M）、UI
+
+### 最小畫面整合（尚未排定）
+
+- 放置列車、選目的地（呼叫 `route` 後以 `setTrainContinuation` 提交）、設定 rate，依 `Train.position` 顯示位置；插值只用於顯示，不寫回 GameCore
 
 ### Stage M — Station Stop
 

@@ -6,7 +6,7 @@
 
 **Early development — GameCore + native prototype UI（Phase 2B）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置與沿明確路徑移動的核心，但 App 還不能操作列車；**尚未**有路徑搜尋、停站、時刻表、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動與最短路徑搜尋的核心，但 App 還不能操作列車；**尚未**有停站、時刻表、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -25,6 +25,7 @@ GameCore 目前能做到：
 - 建造車站（唯一、可保存的 Station ID）
 - 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）
 - 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行。App 還沒有放置或指定路徑的介面，移動目前只由測試驗證
+- 路徑搜尋：`route(from:to:)` 找出到目的地鐵軌格的最短、不折返路徑（同長時依北、東、南、西順序），結果可直接交給 `setTrainContinuation`；只查詢、不改變世界
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -68,7 +69,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/

@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 4
+    static let schemaVersion = 5
 
     var description: String
     var initialState: InitialState
@@ -142,7 +142,7 @@ extension GoldenScenario.Step: Decodable {
     }
 
     private enum AnswerKeys: String, CodingKey, CaseIterable {
-        case neighbors, connected, position, movement
+        case neighbors, connected, position, movement, found, route
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -179,6 +179,18 @@ extension GoldenScenario.Step: Decodable {
                     movement: expect.decode(TrainMovementSummary.self, forKey: .movement)
                 )
                 self = .observe(observation, expect: .train(state))
+            case .route:
+                try requireOnly([.found, .route], answering: "route")
+                // "route" is required when a route is found and absent when not.
+                if try expect.decode(Bool.self, forKey: .found) {
+                    let nodes = try expect.decode([PositionSummary].self, forKey: .route)
+                    self = .observe(observation, expect: .route(nodes.map(\.position)))
+                } else {
+                    guard !expect.contains(.route) else {
+                        throw DecodingError.dataCorruptedError(forKey: .route, in: expect, debugDescription: "A route that is not found has no \"route\".")
+                    }
+                    self = .observe(observation, expect: .route(nil))
+                }
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -416,12 +428,14 @@ extension StepOutcome: Codable {
 // MARK: - Observations
 
 /// A read-only query as a scenario step, tagged by `"type"`: track topology,
-/// or one train's position and movement. Observations are not commands: they
-/// ask the world through its public queries and never change it.
+/// one train's position and movement, or a route. Observations are not
+/// commands: they ask the world through its public queries and never change
+/// it.
 enum ScenarioObservation: Equatable {
     case connectedNeighbors(GridPosition)
     case isConnected(GridPosition, to: GridPosition)
     case train(TrainID)
+    case route(from: TrainPosition, to: GridPosition)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -431,6 +445,8 @@ enum ScenarioObservation: Equatable {
             .connected(world.isConnected(position, to: other))
         case .train(let id):
             .train(world.train(id: id).map(TrainState.init))
+        case .route(let start, let destination):
+            .route(world.route(from: start, to: destination))
         }
     }
 }
@@ -451,6 +467,13 @@ extension ScenarioObservation: Decodable {
             self = try .isConnected(from.position, to: container.decode(PositionSummary.self, forKey: .to).position)
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
+        case "route":
+            // Read as written: whether the start is valid is GameCore's
+            // decision, answered by "found": false.
+            guard let start = try container.decode(TrainPositionSummary.self, forKey: .from).position else {
+                throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A route starts from a \"node\" or \"link\" position.")
+            }
+            self = try .route(from: start, to: container.decode(PositionSummary.self, forKey: .to).position)
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -458,18 +481,20 @@ extension ScenarioObservation: Decodable {
 }
 
 /// What an observation answered. Encoded as `{"neighbors": [{"x", "y"}, ...]}`
-/// in the order the query returned them, `{"connected": true|false}`, or
-/// `{"position", "movement"}` for a train. A train the world does not have
-/// answers `{}`, which no fixture can expect.
+/// in the order the query returned them, `{"connected": true|false}`,
+/// `{"position", "movement"}` for a train, or `{"found": true, "route":
+/// [{"x", "y"}, ...]}` / `{"found": false}` for a route. A train the world
+/// does not have answers `{}`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
     case neighbors([GridPosition])
     case connected(Bool)
     case train(TrainState?)
+    case route([GridPosition]?)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case neighbors, connected, position, movement
+        case neighbors, connected, position, movement, found, route
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -484,6 +509,11 @@ extension ObservationAnswer: Encodable {
             try container.encode(state.movement, forKey: .movement)
         case .train(nil):
             break
+        case .route(let nodes?):
+            try container.encode(true, forKey: .found)
+            try container.encode(nodes.map(PositionSummary.init), forKey: .route)
+        case .route(nil):
+            try container.encode(false, forKey: .found)
         }
     }
 }

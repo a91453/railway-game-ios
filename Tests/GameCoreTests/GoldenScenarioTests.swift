@@ -136,6 +136,7 @@ final class GoldenScenarioTests: XCTestCase {
         var observationCount = 0
         var orderedAnswerCount = 0
         var trainAnswerCount = 0
+        var routeAnswerCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -147,6 +148,9 @@ final class GoldenScenarioTests: XCTestCase {
                 }
                 if case .train = expect {
                     trainAnswerCount += 1
+                }
+                if case .route(let nodes?) = expect, nodes.count > 1 {
+                    routeAnswerCount += 1
                 }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
@@ -160,6 +164,7 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(observationCount, 0, "No fixture observes track connectivity")
         XCTAssertGreaterThan(orderedAnswerCount, 0, "No fixture pins the order of connected neighbours")
         XCTAssertGreaterThan(trainAnswerCount, 0, "No fixture observes a train")
+        XCTAssertGreaterThan(routeAnswerCount, 0, "No fixture pins a route of more than one node")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -174,6 +179,17 @@ final class GoldenScenarioTests: XCTestCase {
             }
             if neighbors.count > 1 {
                 wrong.append(.neighbors(neighbors.reversed()))
+            }
+            return wrong
+        case .route(nil):
+            return [.route([])]
+        case .route(let nodes?):
+            var wrong: [ObservationAnswer] = [.route(nil), .route(nodes + [GridPosition(x: 99, y: 99)])]
+            if !nodes.isEmpty {
+                wrong.append(.route(Array(nodes.dropLast())))
+            }
+            if nodes.count > 1 {
+                wrong.append(.route(nodes.reversed()))
             }
             return wrong
         case .train(nil):
@@ -213,7 +229,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 4,
+              "schemaVersion": 5,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -258,7 +274,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 5] {
+        for version in [1, 2, 3, 4, 6] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -332,6 +348,16 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": []}}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}, "connected": true}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "position": {"type": "unplaced"}}}"#,
+            // A route is answered by "found", with "route" exactly when found.
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "to": {"x": 1, "y": 0}}, "expect": {"route": []}}"#,
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "to": {"x": 1, "y": 0}}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "to": {"x": 1, "y": 0}}, "expect": {"found": false, "route": []}}"#,
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "to": {"x": 1, "y": 0}}, "expect": {"found": "yes", "route": []}}"#,
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "to": {"x": 1, "y": 0}}, "expect": {"found": false, "connected": false}}"#,
+            // A route starts from a placed position and needs a destination.
+            #"{"observe": {"type": "route", "from": {"type": "unplaced"}, "to": {"x": 1, "y": 0}}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "route", "from": {"x": 0, "y": 0}, "to": {"x": 1, "y": 0}}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "route", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}}, "expect": {"found": false}}"#,
         ]
         for json in steps {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
@@ -349,6 +375,20 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(connected.utf8)),
             .observe(.isConnected(GridPosition(x: 2, y: 1), to: GridPosition(x: 3, y: 1)), expect: .connected(true))
+        )
+
+        let found = #"{"observe": {"type": "route", "from": {"type": "link", "from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 1}, "offset": 9}, "to": {"x": 3, "y": 2}}, "expect": {"found": true, "route": [{"x": 3, "y": 1}, {"x": 3, "y": 2}]}}"#
+        let notFound = #"{"observe": {"type": "route", "from": {"type": "node", "x": 1, "y": 1, "heading": "west"}, "to": {"x": 3, "y": 2}}, "expect": {"found": false}}"#
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(found.utf8)),
+            .observe(
+                .route(from: .onLink(from: GridPosition(x: 1, y: 1), to: GridPosition(x: 2, y: 1), offset: 9), to: GridPosition(x: 3, y: 2)),
+                expect: .route([GridPosition(x: 3, y: 1), GridPosition(x: 3, y: 2)])
+            )
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(notFound.utf8)),
+            .observe(.route(from: .atNode(GridPosition(x: 1, y: 1), heading: .west), to: GridPosition(x: 3, y: 2)), expect: .route(nil))
         )
 
         let train = #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}, "offset": 532}, "movement": {"rate": 1300, "continuation": [{"x": 3, "y": 1}, {"x": 4, "y": 1}], "cursor": 1}}}"#
