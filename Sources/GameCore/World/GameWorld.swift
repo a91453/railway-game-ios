@@ -363,7 +363,7 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Whether `position` is well formed and lies on this map's track: a node
     /// on a track tile, or a link between two joined track tiles.
-    private func isOnTrack(_ position: TrainPosition) -> Bool {
+    func isOnTrack(_ position: TrainPosition) -> Bool {
         guard position.isWellFormed else { return false }
         switch position {
         case .atNode(let tile, _):
