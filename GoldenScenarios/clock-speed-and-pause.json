@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "description": "Advances game time in whole ticks across speed changes. A tick is 0, 1 or 2 game minutes when paused, at normal or at double speed; resuming returns to the last running speed (normal if the game started paused), and setting the speed to paused keeps that resume speed.",
+  "initialState": {
+    "mapWidth": 1,
+    "mapHeight": 1,
+    "balance": 0,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 480,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": { "type": "advance", "ticks": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "resume" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 30 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "double" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 15 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "pause" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 100 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "resume" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 10 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "paused" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "resume" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "normal" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 18 },
+      "expect": { "result": "ok" }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 580,
+    "speed": "normal",
+    "balance": 0,
+    "stations": [],
+    "tracks": [],
+    "trains": []
+  }
+}
