@@ -113,3 +113,44 @@ extension Money {
         return text
     }
 }
+
+extension GameTime {
+    public static let minutesPerDay: Int64 = 24 * 60
+
+    /// Day and time of day, such as "Day 1 · 08:30". Minute 0 is the start of
+    /// day 1. Display only: GameCore has no calendar.
+    public var displayText: String {
+        var day = minutes / Self.minutesPerDay
+        var minuteOfDay = minutes % Self.minutesPerDay
+        if minuteOfDay < 0 {
+            minuteOfDay += Self.minutesPerDay
+            day -= 1
+        }
+        return "Day \(day + 1) · \(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+    }
+
+    private static func twoDigits(_ value: Int64) -> String {
+        value < 10 ? "0\(value)" : "\(value)"
+    }
+}
+
+extension GameSpeed {
+    /// Compact label for the speed controls.
+    public var label: String {
+        switch self {
+        case .paused: "Pause"
+        case .normal: "1×"
+        case .double: "2×"
+        }
+    }
+
+    /// Spoken name, since "1×" reads poorly aloud.
+    public var accessibilityName: String {
+        switch self {
+        case .paused: "Paused"
+        case .normal: "Normal speed"
+        case .double: "Double speed"
+        }
+    }
+}
+

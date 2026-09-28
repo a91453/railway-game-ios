@@ -73,3 +73,23 @@ final class ErrorMessageTests: XCTestCase {
         XCTAssertEqual(Money(.min).displayText, "-9,223,372,036,854,775,808")
     }
 }
+
+final class GameTimeDisplayTests: XCTestCase {
+    func testGameTimeShowsDayAndTimeOfDay() {
+        XCTAssertEqual(GameTime.zero.displayText, "Day 1 · 00:00")
+        XCTAssertEqual(GameTime(minutes: 9).displayText, "Day 1 · 00:09")
+        XCTAssertEqual(GameTime(minutes: 8 * 60 + 30).displayText, "Day 1 · 08:30")
+        XCTAssertEqual(GameTime(minutes: 1_439).displayText, "Day 1 · 23:59")
+        XCTAssertEqual(GameTime(minutes: 1_440).displayText, "Day 2 · 00:00")
+        XCTAssertEqual(GameTime(minutes: 10 * 1_440 + 61).displayText, "Day 11 · 01:01")
+    }
+
+    func testTimesBeforeTheStartCountBackwards() {
+        XCTAssertEqual(GameTime(minutes: -1).displayText, "Day 0 · 23:59")
+    }
+
+    func testSpeedLabels() {
+        XCTAssertEqual(GameSpeed.allCases.map(\.label), ["Pause", "1×", "2×"])
+        XCTAssertEqual(GameSpeed.allCases.map(\.accessibilityName), ["Paused", "Normal speed", "Double speed"])
+    }
+}

@@ -14,8 +14,12 @@ import Observation
 /// and the last action's message. Anything shown about the game is derived
 /// from ``world`` on demand.
 ///
-/// Main-actor isolated because SwiftUI drives it on the main actor, so no
-/// locks or `@unchecked Sendable` are needed.
+/// The session also hosts the game loop: it measures real time, turns it into
+/// whole ticks with a ``TickAccumulator`` and calls `GameWorld.advance(ticks:)`.
+/// Wall-clock time never reaches GameCore.
+///
+/// Main-actor isolated because both SwiftUI and the game loop run on the main
+/// actor, so no locks or `@unchecked Sendable` are needed.
 @MainActor
 @Observable
 public final class GameSession {
@@ -39,6 +43,18 @@ public final class GameSession {
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another tile or tool.
     public private(set) var message: StatusMessage?
+
+    /// Real time per simulation tick. At 1× a tick is one game minute, so a
+    /// game day lasts 144 real seconds.
+    public nonisolated static let tickInterval: Duration = .milliseconds(100)
+    /// The most real time one loop step turns into ticks (five ticks).
+    public nonisolated static let maximumStepDuration: Duration = .milliseconds(500)
+
+    @ObservationIgnored private var tickAccumulator = TickAccumulator(
+        tickInterval: GameSession.tickInterval,
+        maximumElapsed: GameSession.maximumStepDuration
+    )
+    @ObservationIgnored private var gameLoop: Task<Void, Never>?
 
     public init(world: GameWorld) {
         self.world = world
@@ -102,6 +118,67 @@ public final class GameSession {
     /// Turns the next track piece a quarter turn clockwise.
     public func rotateTrackPiece() {
         trackConnections = trackConnections.rotatedClockwise
+    }
+
+    // MARK: - Speed
+
+    /// Changes the game speed through the world's clock, the only record of it.
+    public func setSpeed(_ speed: GameSpeed) {
+        world.setSpeed(speed)
+    }
+
+    // MARK: - Game loop
+
+    /// Whether the real-time loop is currently advancing the world.
+    public var isGameLoopRunning: Bool {
+        gameLoop != nil
+    }
+
+    /// Turns `elapsed` real time into whole ticks and advances the world by
+    /// them. While paused, elapsed time is discarded rather than saved up.
+    public func advance(realElapsed elapsed: Duration) {
+        guard !world.clock.isPaused else {
+            tickAccumulator.reset()
+            return
+        }
+        let ticks = tickAccumulator.ticks(for: elapsed)
+        if ticks > 0 {
+            world.advance(ticks: ticks)
+        }
+    }
+
+    /// Starts advancing the world in real time. Calling it while the loop is
+    /// already running does nothing, so the world is never ticked twice.
+    public func startGameLoop() {
+        guard gameLoop == nil else { return }
+        tickAccumulator.reset()
+        gameLoop = Task { [weak self] in
+            let clock = ContinuousClock()
+            var last = clock.now
+            while true {
+                // Sleeping only paces the loop; the ticks come from measured time.
+                do {
+                    try await Task.sleep(for: GameSession.tickInterval, clock: clock)
+                } catch {
+                    return
+                }
+                // A stop that arrives while this task waits to resume must
+                // not let one more step through.
+                guard !Task.isCancelled, let self else { return }
+                let now = clock.now
+                self.advance(realElapsed: now - last)
+                last = now
+            }
+        }
+    }
+
+    /// Stops the loop and drops any partial tick. The host calls this when the
+    /// app leaves the foreground; restarting later does not replay the time
+    /// spent away.
+    public func stopGameLoop() {
+        gameLoop?.cancel()
+        gameLoop = nil
+        tickAccumulator.reset()
     }
 
     // MARK: - Actions
