@@ -311,9 +311,8 @@ final class TrainControlTests: XCTestCase {
         try world.setTrainContinuation(Self.first, to: [Self.c, Self.d, Self.e])
         await MainActor.run { [world] in
             let session = GameSession(world: world)
-            // Behind the train with no loop to turn round, a station, and an
-            // empty tile.
-            for tile in [Self.a, Self.station, Self.emptyTile] {
+            // Behind the train with no loop to turn round, and an empty tile.
+            for tile in [Self.a, Self.emptyTile] {
                 session.select(tile)
                 session.sendSelectedTrain()
                 XCTAssertEqual(session.world, world)
@@ -325,6 +324,18 @@ final class TrainControlTests: XCTestCase {
                     )
                 )
             }
+            // A station with no track beside it (Stage N): no platform.
+            XCTAssertEqual(session.world.platforms(of: StationID(rawValue: 1)), [])
+            session.select(Self.station)
+            session.sendSelectedTrain()
+            XCTAssertEqual(session.world, world)
+            XCTAssertEqual(
+                session.message,
+                StatusMessage(
+                    kind: .failure,
+                    text: "No route for Train 1 to Terminus: it needs track beside the station that the train can reach without turning back. Its path is unchanged."
+                )
+            )
             XCTAssertEqual(Array(session.selectedTrain?.movement.remainingContinuation ?? []), [Self.c, Self.d, Self.e])
 
             // A failed request does not get in the way of the next one.
