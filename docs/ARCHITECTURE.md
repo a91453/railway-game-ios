@@ -4,7 +4,7 @@
 
 ```
 ┌──────────────────────────┐
-│ App / Presentation (未來) │  SwiftUI、輸入、HUD
+│ App / Presentation        │  SwiftUI、輸入、HUD
 ├──────────────────────────┤
 │ Rendering (未來)          │  SpriteKit / Metal、動畫
 └────────────┬─────────────┘
@@ -18,6 +18,7 @@
 
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
+- **App**（`RailwayGameApp/`，Phase 2A 起）目前只是 smoke test：`@main` App 以 SwiftUI `@State` 持有唯一一份 `GameWorld`，畫面只收到唯讀值。GameCore 維持不變、不為 UI 加上 observation。
 
 ## GameCore 模組
 

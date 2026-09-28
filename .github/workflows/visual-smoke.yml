@@ -1,0 +1,126 @@
+name: Visual Smoke
+
+# Builds the app, runs it on an iPhone and an iPad Simulator, and uploads the
+# screenshots plus logs as the "visual-smoke" artifact.
+#
+# Normally started by hand: Actions -> Visual Smoke -> Run workflow.
+# It also runs on pull requests that change this workflow or its script, so
+# edits to the pipeline itself are exercised before they are merged.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/visual-smoke.yml
+      - .github/scripts/simulator-screenshot.sh
+      - .github/actions/setup-xcodegen/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  screenshots:
+    name: Simulator screenshots
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain versions and Simulator inventory
+        run: |
+          smoke_dir="$RUNNER_TEMP/visual-smoke"
+          mkdir -p "$smoke_dir"
+          echo "SMOKE_DIR=$smoke_dir" >> "$GITHUB_ENV"
+          sw_vers
+          uname -m
+          xcode-select --print-path
+          xcodebuild -version
+          swift --version
+          echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+          { xcrun simctl list runtimes; xcrun simctl list devices available; } > "$smoke_dir/simulators.txt"
+          {
+            echo "### Visual smoke"
+            echo "- **Xcode:** $(xcodebuild -version | head -n 1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up XcodeGen
+        uses: ./.github/actions/setup-xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec RailwayGameApp/project.yml
+
+      # One Simulator build serves both devices. Code signing is disabled:
+      # Simulator builds need no certificate or Apple Developer account.
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$SMOKE_DIR/xcodebuild.log"
+
+      - name: Locate app bundle
+        id: app
+        run: |
+          products="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator"
+          shopt -s nullglob
+          apps=("$products"/*.app)
+          if [[ ${#apps[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly one .app in $products, found ${#apps[@]}."
+            ls -la "$products" || true
+            exit 1
+          fi
+          echo "Found ${apps[0]}"
+          echo "path=${apps[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: iPhone screenshot
+        timeout-minutes: 15
+        env:
+          APP_PATH: ${{ steps.app.outputs.path }}
+        run: |
+          .github/scripts/simulator-screenshot.sh iPhone "$APP_PATH" "$SMOKE_DIR/iphone.png" \
+            2>&1 | tee -a "$SMOKE_DIR/simulator.log"
+
+      # Runs even if the iPhone step failed, so one failure does not hide the other.
+      - name: iPad screenshot
+        if: ${{ !cancelled() && steps.app.outputs.path != '' }}
+        timeout-minutes: 15
+        env:
+          APP_PATH: ${{ steps.app.outputs.path }}
+        run: |
+          .github/scripts/simulator-screenshot.sh iPad "$APP_PATH" "$SMOKE_DIR/ipad.png" \
+            2>&1 | tee -a "$SMOKE_DIR/simulator.log"
+
+      - name: Collect crash reports
+        if: failure()
+        env:
+          APP_PATH: ${{ steps.app.outputs.path }}
+        run: |
+          app_name="$(basename "${APP_PATH:-RailwayGame.app}" .app)"
+          find "$HOME/Library/Logs/DiagnosticReports" -name "$app_name*" \
+            -exec cp {} "$SMOKE_DIR/" \; 2>/dev/null || true
+
+      - name: Upload visual-smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-smoke
+          path: ${{ runner.temp }}/visual-smoke
+          retention-days: 7
+          if-no-files-found: warn
+          overwrite: true
+
+      - name: Summary
+        if: always()
+        run: echo "- **Screenshots and logs:** download the \`visual-smoke\` artifact from this run's Summary page." >> "$GITHUB_STEP_SUMMARY"

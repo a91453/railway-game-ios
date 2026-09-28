@@ -1,0 +1,66 @@
+name: iOS App Build
+
+# Compile-only validation of the native app against the real Apple SDK.
+# GameCore tests stay in ci.yml (Linux). Screenshots live in visual-smoke.yml.
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Superseded PR runs are cancelled; runs on main are never cancelled mid-build.
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Xcode build (iOS Simulator)
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain versions
+        run: |
+          sw_vers
+          uname -m
+          xcode-select --print-path
+          xcodebuild -version
+          swift --version
+          echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+
+      - name: Set up XcodeGen
+        uses: ./.github/actions/setup-xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec RailwayGameApp/project.yml
+
+      - name: List schemes
+        run: xcodebuild -list -project RailwayGameApp/RailwayGame.xcodeproj
+
+      # A generic destination needs no booted Simulator. Code signing is
+      # disabled: Simulator builds need no certificate or Apple Developer account.
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO
