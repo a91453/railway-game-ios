@@ -118,7 +118,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          xcodebuild -exportArchive \
+          xcodebuild -quiet -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportPath "$EXPORT_PATH" \
             -exportOptionsPlist "$EXPORT_OPTIONS" \
@@ -160,7 +160,7 @@ jobs:
           BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
           VERSION: ${{ steps.ipa.outputs.version }}
         run: |
-          xcodebuild -exportArchive \
+          xcodebuild -quiet -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportPath "$TESTFLIGHT_DIR/upload" \
             -exportOptionsPlist "$UPLOAD_OPTIONS" \
