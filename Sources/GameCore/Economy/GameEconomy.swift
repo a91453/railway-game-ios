@@ -1,4 +1,7 @@
 /// Prices for things the player can build or buy.
+///
+/// Prices are never negative: spending a negative amount is a programming
+/// error (see ``GameEconomy/spend(_:)``), and decoding refuses one.
 public struct ConstructionCosts: Hashable, Codable, Sendable {
     public var track: Money
     public var station: Money
