@@ -6,7 +6,7 @@
 
 **Early development — GameCore + native prototype UI（Phase 2B）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動與最短路徑搜尋的核心，App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車；**尚未**有停站、時刻表、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車；**尚未**有時刻表、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -16,7 +16,7 @@ App 目前能做到：
 - 建設透過 GameCore 指令執行；失敗時顯示玩家看得懂的訊息，世界不變
 - HUD：現金、遊戲時間（`Day 1 · 08:30`）、暫停 / 1× / 2×
 - `GameSession` 的 game loop 把真實時間換算成整數 tick 推進遊戲時間與列車；App 不在前景作用中（背景、控制中心、App 切換器）時停止，回來不補跑
-- Train 工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格（GameCore 求路後原封不動提交為 continuation；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑與 rate，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
+- Train 工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格或車站（GameCore 求路後原封不動提交為 continuation；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑、rate 與停在哪些車站，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
 
 GameCore 目前能做到：
 
@@ -27,6 +27,7 @@ GameCore 目前能做到：
 - 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）
 - 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行
 - 路徑搜尋：`route(from:to:)` 找出到目的地鐵軌格的最短、不折返路徑（同長時依北、東、南、西順序），結果可直接交給 `setTrainContinuation`；只查詢、不改變世界
+- 停站：車站旁（正北、東、南、西）的鐵軌格是月台（`platforms(of:)`）；`route(from:toStation:)` 找出到最近月台的路徑；列車在月台格中心、行程結束時停在該站（`stationsStoppedAt(by:)`）。都由狀態推導，不另存
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -70,7 +71,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
