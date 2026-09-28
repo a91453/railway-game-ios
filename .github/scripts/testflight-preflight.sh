@@ -49,8 +49,11 @@ fi
 if is_set ASC_APP_ID variable && [[ ! "$ASC_APP_ID" =~ ^[1-9][0-9]{5,14}$ ]]; then
   problem "The variable ASC_APP_ID must be the app's numeric Apple ID from App Store Connect (App Information)."
 fi
-if [[ -n "${BUILD_NUMBER_OFFSET:-}" && ! "$BUILD_NUMBER_OFFSET" =~ ^(0|[1-9][0-9]{0,5})$ ]]; then
-  problem "The variable BUILD_NUMBER_OFFSET must be a whole number from 0 to 999999."
+offset="${BUILD_NUMBER_OFFSET:-0}"
+offset_ok=true
+if [[ ! "$offset" =~ ^(0|[1-9][0-9]{0,3})$ ]]; then
+  problem "The variable BUILD_NUMBER_OFFSET must be a whole number from 0 to 9999."
+  offset_ok=false
 fi
 if is_set ASC_KEY_ID secret && [[ ! "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]; then
   problem "The secret ASC_KEY_ID must be the 10-character API key ID."
@@ -70,8 +73,17 @@ fi
 
 run_number="${GITHUB_RUN_NUMBER:-}"
 attempt="${GITHUB_RUN_ATTEMPT:-}"
-if [[ ! "$run_number" =~ ^[1-9][0-9]{0,8}$ || ! "$attempt" =~ ^[1-9][0-9]{0,3}$ ]]; then
-  problem "GITHUB_RUN_NUMBER and GITHUB_RUN_ATTEMPT must be set by GitHub Actions."
+run_ok=true
+if [[ ! "$run_number" =~ ^[1-9][0-9]{0,3}$ ]]; then
+  problem "GITHUB_RUN_NUMBER must be an integer from 1 to 9999."
+  run_ok=false
+fi
+if [[ ! "$attempt" =~ ^[1-9][0-9]?$ ]]; then
+  problem "GITHUB_RUN_ATTEMPT must be an integer from 1 to 99."
+  run_ok=false
+fi
+if [[ "$offset_ok" == true && "$run_ok" == true ]] && ((offset + run_number > 9999)); then
+  problem "BUILD_NUMBER_OFFSET + GITHUB_RUN_NUMBER must not exceed 9999."
 fi
 
 if ((problems > 0)); then
@@ -79,11 +91,11 @@ if ((problems > 0)); then
   exit 1
 fi
 
-# <offset + run number>.<attempt> (CFBundleVersion allows up to three
-# period-separated integers). A new run gets a higher first number and a
-# re-run of the same run a higher second number, so no two runs of this
-# workflow ever produce the same build number.
-build_number="$((${BUILD_NUMBER_OFFSET:-0} + run_number)).$attempt"
+# <offset + run number>.<attempt>. Apple limits CFBundleVersion's first
+# integer to four digits and the second to two, so preflight enforces
+# <= 9999 and <= 99 before constructing it. A new run gets a higher first
+# number and a re-run of that run a higher second number.
+build_number="$((offset + run_number)).$attempt"
 echo "Preflight passed. Build number for this run: $build_number"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "build_number=$build_number" >>"$GITHUB_OUTPUT"
