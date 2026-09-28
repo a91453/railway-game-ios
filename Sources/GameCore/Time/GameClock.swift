@@ -76,9 +76,37 @@ public struct GameClock: Hashable, Codable, Sendable {
         }
     }
 
-    /// Advances game time by `ticks` fixed steps at the current speed.
-    public mutating func advance(ticks: Int) {
+    /// Advances game time by `ticks` ticks at the current speed, or by nothing
+    /// if the result would not fit.
+    ///
+    /// - Throws: ``GameError/clockOverflow`` if the time would pass the
+    ///   largest minute a clock can hold; the clock is then unchanged.
+    /// - Precondition: `ticks >= 0`.
+    public mutating func advance(ticks: Int) throws(GameError) {
+        now.minutes += try basicSteps(forTicks: ticks)
+    }
+
+    /// The basic steps (one game minute each) `ticks` ticks run at the
+    /// current speed: none while paused, one per tick at 1x, two at 2x.
+    ///
+    /// Checks the multiplication and that the clock can hold the result
+    /// before anything is changed, so a caller can validate a whole batch up
+    /// front. Paused is always 0 steps, however many ticks.
+    ///
+    /// - Throws: ``GameError/clockOverflow``.
+    /// - Precondition: `ticks >= 0`.
+    func basicSteps(forTicks ticks: Int) throws(GameError) -> Int64 {
         precondition(ticks >= 0, "advance(ticks:) requires a non-negative tick count")
-        now.minutes += Int64(ticks) * speed.minutesPerTick
+        let steps = Int64(ticks).multipliedReportingOverflow(by: speed.minutesPerTick)
+        guard !steps.overflow, !now.minutes.addingReportingOverflow(steps.partialValue).overflow else {
+            throw .clockOverflow
+        }
+        return steps.partialValue
+    }
+
+    /// Moves time on by `steps` basic steps that ``basicSteps(forTicks:)``
+    /// already checked.
+    mutating func advance(basicSteps steps: Int64) {
+        now.minutes += steps
     }
 }

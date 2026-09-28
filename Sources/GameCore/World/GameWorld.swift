@@ -160,7 +160,8 @@ public struct GameWorld: Equatable, Sendable {
     /// ``TrainPosition/onLink(from:to:offset:)`` between two joined track
     /// tiles with `0 < offset < TrainPosition.linkLength`. A train at either
     /// end of a link must be placed at that node instead. Other trains at the
-    /// same place do not matter.
+    /// same place do not matter. The train starts idle: rate 0 and no
+    /// continuation.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
@@ -173,7 +174,9 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].position = position
     }
 
-    /// Takes a placed train off the track. The train keeps its ID and name.
+    /// Takes a placed train off the track. The train keeps its ID and name;
+    /// its movement becomes ``TrainMovement/idle`` (rate 0, no
+    /// continuation), so placing it again never resumes an old journey.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
     ///   ``GameError/trainNotPlaced(_:)``.
@@ -181,6 +184,7 @@ public struct GameWorld: Equatable, Sendable {
         let (index, _) = try placedTrain(id)
 
         trains[index].position = nil
+        trains[index].movement = .idle
     }
 
     /// Turns a placed train around where it stands, without moving it.
@@ -190,12 +194,65 @@ public struct GameWorld: Equatable, Sendable {
     /// from the new `from`, which is the same point. Reversing twice restores
     /// the original position exactly.
     ///
+    /// The continuation is cleared, because it was a path for the other
+    /// direction; the rate is kept. A reversed train on a link therefore runs
+    /// to the end of that link (now its `to`) and stops there until it is
+    /// given a new continuation.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
     ///   ``GameError/trainNotPlaced(_:)``.
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try placedTrain(id)
 
         trains[index].position = position.reversed
+        trains[index].movement.continuation = []
+        trains[index].movement.cursor = 0
+    }
+
+    // MARK: - Train movement
+
+    /// Sets how many logical units a placed train may travel in each basic
+    /// step (one game minute). 0 holds the train where it is and keeps its
+    /// continuation, so setting a rate again resumes the same journey. Any
+    /// non-negative `Int64` is accepted: travel never adds a rate to an
+    /// offset, so no rate can overflow.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainNotPlaced(_:)``, or
+    ///   ``GameError/invalidMovementRate`` for a negative rate.
+    public mutating func setTrainMovementRate(_ id: TrainID, to rate: Int64) throws(GameError) {
+        let (index, _) = try placedTrain(id)
+        guard rate >= 0 else { throw .invalidMovementRate }
+
+        trains[index].movement.rate = rate
+    }
+
+    /// Replaces a placed train's continuation with `nodes`, the nodes to
+    /// enter in order after the node the train is at, or after the end of
+    /// the link it is on (that node is not listed). An empty list clears the
+    /// continuation.
+    ///
+    /// The whole list is checked against the current map before anything
+    /// changes: starting from that node, each entry must be joined to the one
+    /// before it (see ``isConnected(_:to:)``) and must not lead straight
+    /// back, including back past the train's heading. Loops and revisits are
+    /// allowed; stations, empty or off-map tiles, and gaps are not. The train
+    /// never picks a way itself, and clearing the continuation does not move
+    /// it: a train on a link still runs to the end of that link at its rate
+    /// (set the rate to 0 to hold it where it is).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainNotPlaced(_:)``, or
+    ///   ``GameError/invalidContinuation``.
+    public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
+        let (index, position) = try placedTrain(id)
+        let (node, heading) = position.ahead
+        guard TrainMovement.isPath(nodes, from: node, heading: heading, isJoined: { isConnected($0, to: $1) }) else {
+            throw .invalidContinuation
+        }
+
+        trains[index].movement.continuation = nodes
+        trains[index].movement.cursor = 0
     }
 
     // MARK: - Time
@@ -212,9 +269,71 @@ public struct GameWorld: Equatable, Sendable {
         clock.setSpeed(speed)
     }
 
-    /// Advances the simulation by `ticks` fixed steps at the current speed.
-    public mutating func advance(ticks: Int) {
-        clock.advance(ticks: ticks)
+    /// Advances the simulation by `ticks` ticks at the current speed.
+    ///
+    /// A tick runs one basic step at 1x, two at 2x and none while paused. In
+    /// each basic step every train, in ascending ``TrainID`` order, travels up
+    /// to its rate (see ``TrainMovement``), and then the clock moves on one
+    /// game minute. Trains do not interact, so the order only fixes when
+    /// each is updated. `advance(ticks: n)` is the same as `n` calls of
+    /// `advance(ticks: 1)`, and one tick at 2x the same as two at 1x apart
+    /// from the speed itself.
+    ///
+    /// A train that cannot enter the next link of its continuation (the track
+    /// was removed after the continuation was set) waits at its node, and
+    /// every later step tries that same link again; once it is rebuilt the
+    /// train carries on with that step's distance. Distance a train cannot
+    /// use is dropped, so a train never catches up.
+    ///
+    /// When a whole step changes no train, no later step of this call can
+    /// either (the map and every train's inputs stay the same until the next
+    /// command), so the clock moves the remaining minutes at once. This is an
+    /// exact shortcut, not an approximation.
+    ///
+    /// - Throws: ``GameError/clockOverflow`` if game time would pass the
+    ///   largest minute the clock can hold. This is checked before any train
+    ///   or the clock changes, so a rejected call changes nothing.
+    /// - Precondition: `ticks >= 0`.
+    public mutating func advance(ticks: Int) throws(GameError) {
+        var remaining = try clock.basicSteps(forTicks: ticks)
+        while remaining > 0 {
+            let moved = moveTrainsOneStep()
+            clock.advance(basicSteps: 1)
+            remaining -= 1
+            if !moved {
+                clock.advance(basicSteps: remaining)
+                remaining = 0
+            }
+        }
+    }
+
+    /// One basic step of travel for every placed train with a rate, in
+    /// ascending ID order. Returns whether any train changed.
+    private mutating func moveTrainsOneStep() -> Bool {
+        var moved = false
+        for index in trains.indices {
+            let movement = trains[index].movement
+            guard let position = trains[index].position, movement.rate > 0 else { continue }
+            let travel = TrainMovement.travel(
+                from: position,
+                distance: movement.rate,
+                continuation: movement.continuation,
+                cursor: movement.cursor,
+                isJoined: { isConnected($0, to: $1) }
+            )
+            guard travel.position != position || travel.cursor != movement.cursor else { continue }
+
+            trains[index].position = travel.position
+            if travel.cursor == movement.continuation.count {
+                // Every entry has been entered: the continuation is spent.
+                trains[index].movement.continuation = []
+                trains[index].movement.cursor = 0
+            } else {
+                trains[index].movement.cursor = travel.cursor
+            }
+            moved = true
+        }
+        return moved
     }
 
     // MARK: - Validation
@@ -262,7 +381,12 @@ extension GameWorld: Codable {
     /// Decodes a world, rejecting data that breaks cross-object invariants
     /// (station tiles and station records must agree; IDs must be unique and
     /// below the next ID to allocate; every placed train must be on this
-    /// map's track, as ``placeTrain(_:at:)`` requires).
+    /// map's track, as ``placeTrain(_:at:)`` requires; every continuation
+    /// node must lie inside the map).
+    ///
+    /// A continuation's links are not required to exist: track ahead of a
+    /// train may have been removed after the continuation was set, and a
+    /// world where a train waits for that track to be rebuilt is valid.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         map = try container.decode(GridMap.self, forKey: .map)
@@ -307,6 +431,11 @@ extension GameWorld: Codable {
         for train in trains {
             if let position = train.position, !isOnTrack(position) {
                 return "Train \(train.id.rawValue) is not on this map's track."
+            }
+            // The map's size never changes, so a node that was on the map
+            // when the continuation was set still is.
+            guard train.movement.continuation.allSatisfy(map.contains) else {
+                return "Train \(train.id.rawValue)'s continuation leaves the map."
             }
         }
         return nil

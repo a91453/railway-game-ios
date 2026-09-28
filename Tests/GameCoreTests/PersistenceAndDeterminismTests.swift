@@ -14,9 +14,9 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         try world.buildTrack(at: GridPosition(x: 5, y: 6), connections: [.north, .south])
         try world.removeTrack(at: GridPosition(x: 5, y: 6))
         try world.purchaseTrain(named: "Local 1")
-        world.advance(ticks: 90)
+        try world.advance(ticks: 90)
         world.setSpeed(.double)
-        world.advance(ticks: 45)
+        try world.advance(ticks: 45)
     }
 
     private func encode(_ world: GameWorld) throws -> Data {

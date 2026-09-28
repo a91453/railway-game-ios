@@ -136,6 +136,8 @@ public final class GameSession {
 
     /// Turns `elapsed` real time into whole ticks and advances the world by
     /// them. While paused, elapsed time is discarded rather than saved up.
+    /// If GameCore refuses to advance (game time is at its limit), the world
+    /// is unchanged and the refusal is shown as the status message.
     public func advance(realElapsed elapsed: Duration) {
         guard !world.clock.isPaused else {
             tickAccumulator.reset()
@@ -143,7 +145,11 @@ public final class GameSession {
         }
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
-            world.advance(ticks: ticks)
+            do throws(GameError) {
+                try world.advance(ticks: ticks)
+            } catch {
+                message = StatusMessage(kind: .failure, text: error.playerMessage)
+            }
         }
     }
 

@@ -26,7 +26,7 @@ final class GameLoopTests: XCTestCase {
     func testDoubleSpeedKeepsTheTickRateAndLetsGameCoreApplyTheSpeed() async throws {
         let world = try makeWorld(speed: .double)
         var expected = world
-        expected.advance(ticks: 3)
+        try expected.advance(ticks: 3)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
 
@@ -34,6 +34,23 @@ final class GameLoopTests: XCTestCase {
 
             XCTAssertEqual(session.world, expected, "three ticks, not a larger step")
             XCTAssertEqual(session.world.clock.now, GameTime(minutes: 6))
+        }
+    }
+
+    func testTimeThatCannotAdvanceChangesNothingAndIsReported() async throws {
+        let world = try GameWorld(
+            width: 8, height: 6,
+            economy: GameEconomy(balance: 10_000, costs: testCosts),
+            clock: GameClock(now: GameTime(minutes: .max - 1), speed: .normal)
+        )
+        await MainActor.run {
+            let session = GameSession(world: world)
+
+            // Three ticks, but only one minute is left: nothing advances.
+            session.advance(realElapsed: .milliseconds(300))
+
+            XCTAssertEqual(session.world, world)
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.clockOverflow.playerMessage))
         }
     }
 

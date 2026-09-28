@@ -62,6 +62,9 @@ final class ErrorMessageTests: XCTestCase {
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",
             .invalidTrainPosition: "A train can only be placed on a track tile or between two joined track tiles.",
+            .invalidMovementRate: "A train's rate cannot be negative.",
+            .invalidContinuation: "The train cannot follow that path: each step must lead to joined track, without turning back.",
+            .clockOverflow: "Game time cannot advance any further.",
         ]
 
         for (error, message) in messages {

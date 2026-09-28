@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "description": "Builds a short line between two stations with a branch, then checks the construction and purchase rejections (occupied tiles, out of bounds, empty connections, blank names, removing a non-track tile, insufficient funds) and the order in which those checks apply. Rejected commands must leave the world unchanged, removal is free and not refunded, and failed commands consume no station or train IDs.",
   "initialState": {
     "mapWidth": 12,
@@ -135,7 +135,7 @@
       { "x": 5, "y": 3, "connections": ["east", "west"] }
     ],
     "trains": [
-      { "id": 1, "name": "Local 1", "position": { "type": "unplaced" } }
+      { "id": 1, "name": "Local 1", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 } }
     ]
   }
 }

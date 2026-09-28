@@ -66,6 +66,23 @@ extension TrainPosition {
         }
     }
 
+    /// The node the train stands on or is heading for, and the direction it
+    /// faces there: the node's heading, or for a link its `to` end and the
+    /// direction from `from` to `to`. Where it leaves next starts here.
+    ///
+    /// Only for well-formed positions.
+    var ahead: (node: GridPosition, heading: TrackDirection) {
+        switch self {
+        case .atNode(let tile, let heading):
+            return (tile, heading)
+        case .onLink(let from, let to, _):
+            guard let heading = TrackDirection(from: from, to: to) else {
+                preconditionFailure("\(self) is not a well-formed position")
+            }
+            return (to, heading)
+        }
+    }
+
     /// Whether the train rests on the track at `tile`: the tile of a node, or
     /// either end of a link. Removing that track would leave the train on
     /// track that no longer exists.

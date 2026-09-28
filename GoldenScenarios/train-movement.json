@@ -1,0 +1,415 @@
+{
+  "schemaVersion": 4,
+  "description": "Train movement on a line A(1,1)-B-C-D(4,1)-E-I(6,1), a branch south from D through F(4,2) to H(4,3), then east to J and K(6,3), and a station east of I. Every basic step (one game minute) a train travels its rate: to the end of its link, then into the explicit continuation, one link after another; exact arrival is a node and does not consume the next entry; partial arrival is a link. Checks: the 256 + 1300 / 124 / 1148 units case (cursor 1, then spent), exact arrival and no route choice without a continuation, rejected rates and continuations (U-turns, gaps, a station, unplaced and unknown trains), a continuation blocked by removed track ahead (the train waits at the last node without saving distance, a one-sided rebuild does not unblock it, the true rebuild resumes it with only that step's distance), a second train moving while the first waits, rate 0 and pause holding a train, two basic steps per tick at 2x, and reverse and unplace clearing the continuation.",
+  "initialState": {
+    "mapWidth": 8,
+    "mapHeight": 5,
+    "balance": 700000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 1, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "south", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 2, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["north", "east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 3, "connections": ["west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Yard", "x": 7, "y": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 1" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 2" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Local 3" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 9, "rate": 100 },
+      "expect": { "result": "unknownTrain", "train": 9 }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 100 },
+      "expect": { "result": "trainNotPlaced", "train": 1 }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 2, "y": 1 }] },
+      "expect": { "result": "trainNotPlaced", "train": 1 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 256 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": -1 },
+      "expect": { "result": "invalidMovementRate" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 3, "y": 1 }, { "x": 3, "y": 2 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 3, "y": 1 }, { "x": 2, "y": 1 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 1, "y": 1 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 3, "y": 1 }, { "x": 4, "y": 1 }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1300 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 256 }, "movement": { "rate": 1300, "continuation": [{ "x": 3, "y": 1 }, { "x": 4, "y": 1 }], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 256 }, "movement": { "rate": 1300, "continuation": [{ "x": 3, "y": 1 }, { "x": 4, "y": 1 }], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "normal" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 2, "y": 1 }, "to": { "x": 3, "y": 1 }, "offset": 532 }, "movement": { "rate": 1300, "continuation": [{ "x": 3, "y": 1 }, { "x": 4, "y": 1 }], "cursor": 1 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 124 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 2, "y": 1 }, "to": { "x": 3, "y": 1 }, "offset": 656 }, "movement": { "rate": 124, "continuation": [{ "x": 3, "y": 1 }, { "x": 4, "y": 1 }], "cursor": 1 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1148 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 3, "y": 1 }, "to": { "x": 4, "y": 1 }, "offset": 780 }, "movement": { "rate": 1148, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 244 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 1, "heading": "east" }, "movement": { "rate": 244, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 1, "heading": "east" }, "movement": { "rate": 244, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 3, "y": 1 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 2, "heading": "south" }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 1 } }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "link", "from": { "x": 5, "y": 1 }, "to": { "x": 6, "y": 1 }, "offset": 512 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 256 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 2, "heading": "south" }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 1 } }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "node", "x": 6, "y": 1, "heading": "east" }, "movement": { "rate": 256, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 2, "heading": "south" }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 1 } }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["north", "east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 3, "heading": "south" }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 2 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 3, "heading": "south" }, "movement": { "rate": 0, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 2 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "pause" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 3, "heading": "south" }, "movement": { "rate": 512, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 2 } }
+    },
+    {
+      "command": { "type": "resume" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 4, "y": 3 }, "to": { "x": 5, "y": 3 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 5, "y": 3 }, { "x": 6, "y": 3 }], "cursor": 3 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "link", "from": { "x": 5, "y": 3 }, "to": { "x": 6, "y": 3 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 6, "y": 3, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [{ "x": 7, "y": 1 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "node", "x": 6, "y": 1, "heading": "west" }, "movement": { "rate": 256, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [{ "x": 5, "y": 1 }, { "x": 4, "y": 1 }, { "x": 3, "y": 1 }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "double" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "node", "x": 5, "y": 1, "heading": "west" }, "movement": { "rate": 512, "continuation": [{ "x": 5, "y": 1 }, { "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1 } }
+    },
+    {
+      "command": { "type": "setSpeed", "speed": "normal" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "link", "from": { "x": 5, "y": 1 }, "to": { "x": 4, "y": 1 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [{ "x": 5, "y": 1 }, { "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 2 } }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "link", "from": { "x": 4, "y": 1 }, "to": { "x": 5, "y": 1 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 100 },
+      "expect": { "result": "trainNotPlaced", "train": 2 }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [] },
+      "expect": { "result": "trainNotPlaced", "train": 2 }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 3, "continuation": [] },
+      "expect": { "result": "trainNotPlaced", "train": 3 }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 26,
+    "speed": "normal",
+    "balance": 38000,
+    "stations": [
+      { "id": 1, "name": "Yard", "x": 7, "y": 1 }
+    ],
+    "tracks": [
+      { "x": 1, "y": 1, "connections": ["east"] },
+      { "x": 2, "y": 1, "connections": ["east", "west"] },
+      { "x": 3, "y": 1, "connections": ["east", "west"] },
+      { "x": 4, "y": 1, "connections": ["east", "south", "west"] },
+      { "x": 5, "y": 1, "connections": ["east", "west"] },
+      { "x": 6, "y": 1, "connections": ["east", "west"] },
+      { "x": 4, "y": 2, "connections": ["north", "south"] },
+      { "x": 4, "y": 3, "connections": ["north", "east"] },
+      { "x": 5, "y": 3, "connections": ["east", "west"] },
+      { "x": 6, "y": 3, "connections": ["west"] }
+    ],
+    "trains": [
+      { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 6, "y": 3, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0 } },
+      { "id": 2, "name": "Local 2", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 } },
+      { "id": 3, "name": "Local 3", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 } }
+    ]
+  }
+}
