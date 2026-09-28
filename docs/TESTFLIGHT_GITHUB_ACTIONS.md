@@ -70,7 +70,7 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
 | --- | --- | --- | --- |
 | `APPLE_TEAM_ID` | Variable | 10 字元 Team ID（公開識別碼） | developer.apple.com → Account → Membership details |
 | `ASC_APP_ID` | Variable | App 在 App Store Connect 的數字 Apple ID | App Store Connect → Apps → 你的 App → App Information → Apple ID |
-| `BUILD_NUMBER_OFFSET` | Variable（選填） | 加到 run number 上的整數，預設 0 | 見〈Build number〉 |
+| `BUILD_NUMBER_OFFSET` | Variable（選填） | 0–9999；加到 run number 上，且相加後不可超過 9999；預設 0 | 見〈Build number〉 |
 | `ASC_KEY_ID` | Secret | Team API key 的 Key ID | App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys |
 | `ASC_ISSUER_ID` | Secret | Issuer ID（UUID） | 同一頁上方 |
 | `ASC_PRIVATE_KEY` | Secret | `AuthKey_<Key ID>.p8` 的**完整文字**，含 BEGIN / END 兩行 | 產生 key 時下載，**只能下載一次** |
@@ -124,10 +124,10 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
   - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
 - **Apple**：
-  - `CFBundleVersion` 是一到三段以點分隔的整數，所以 `7.2` 合法。
+  - `CFBundleVersion` 使用整數段；Apple 對第一段限制最多 4 位、第二段最多 2 位，所以 `7.2` 合法，而 workflow 會拒絕第一段大於 9999 或 attempt 大於 99。
   - App Store Connect 要求版本號與 build number 的組合不重複。
   - Apple 舊技術文件（TN2420）另寫明：同一版本內 build number 要遞增。所以同一版本已上傳較新的 build 之後，**不要重跑更舊的執行**，改按一次新的 Run workflow。
-- **需要跳號時**設定 `BUILD_NUMBER_OFFSET`，例如 workflow 改名讓 run number 從 1 重新起算，或曾用其他方式上傳過較大的 build。
+- **需要跳號時**設定 `BUILD_NUMBER_OFFSET`，例如 workflow 改名讓 run number 從 1 重新起算，或曾用其他方式上傳過較大的 build。Offset 與 run number 相加後必須 ≤ 9999；若此 workflow 真正累積到 10,000 次手動發佈，需要先改 build-number 編碼方案。
 
 ## 安全設計
 
@@ -151,7 +151,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | 項目 | 狀態 | 在哪裡 |
 | --- | --- | --- |
 | Preflight：缺值、格式錯誤、非 main、tag、非手動觸發、`.p8` 截斷都會停止並一次列出；CRLF／前導空行的 `.p8` 可接受；不輸出秘密 | VERIFIED | 本機 Linux ＋ `testflight-checks.yml`（Linux） |
-| Build number：`7.1` → 重跑 `7.2` → 下一次 `8.1`；offset；排序遞增 | VERIFIED | 同上 |
+| Build number：`7.1` → 重跑 `7.2` → 下一次 `8.1`；offset；排序遞增；Apple 的 4 位／2 位 component 上限會在 preflight 擋下 | VERIFIED | 同上 |
 | 暫存 keychain 建立、設定、設為預設、還原、刪除；假 `.p8` 的權限與正規化；失敗步驟後清理；重複清理 | VERIFIED | macOS dry run（真實 `security`）＋ 本機 stub |
 | Archive 指令三種模式的參數與 ExportOptions；已提交的專案能以未簽章方式 archive | VERIFIED | macOS dry run ＋ 本機 stub |
 | Xcode 26 提供需要的 `xcodebuild` 選項（`-exportArchive`、`-allowProvisioningUpdates`、`-authenticationKey*`）、ExportOptions 鍵、`app-store-connect` 方法與 `testFlightInternalTestingOnly`；匯出與上傳兩份設定只差在 `destination`，且兩者都限制為 internal TestFlight | VERIFIED | macOS dry run |
