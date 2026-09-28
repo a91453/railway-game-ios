@@ -47,8 +47,10 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(committed.differences(), [], name)
 
             var wrongOutcome = committed
-            let first = try XCTUnwrap(committed.steps.indices.first, name)
-            wrongOutcome.steps[first].expect = committed.steps[first].expect == .ok ? .rejected(.invalidName) : .ok
+            let first = try XCTUnwrap(committed.steps.firstIndex { if case .command = $0 { true } else { false } }, name)
+            if case .command(let command, let expect) = committed.steps[first] {
+                wrongOutcome.steps[first] = .command(command, expect: expect == .ok ? .rejected(.invalidName) : .ok)
+            }
             XCTAssertEqual(wrongOutcome.differences().count, 1, name)
 
             var wrongBalance = committed
@@ -65,11 +67,107 @@ final class GoldenScenarioTests: XCTestCase {
         }
     }
 
-    func testUnsupportedSchemaVersionIsRejected() {
-        let data = Data(#"{"schemaVersion": 2}"#.utf8)
+    /// Every observation's expectation is compared exactly: a flipped answer,
+    /// a missing, extra or repeated neighbour, or the same neighbours in
+    /// another order is reported at that step and nowhere else.
+    func testChangedTopologyExpectationsAreReported() throws {
+        var observationCount = 0
+        var orderedAnswerCount = 0
+        for url in try GoldenScenarioFixtures.urls() {
+            let name = url.lastPathComponent
+            let committed = try GoldenScenario.decode(Data(contentsOf: url))
+            for (index, step) in committed.steps.enumerated() {
+                guard case .observe(let observation, let expect) = step else { continue }
+                observationCount += 1
+                if case .neighbors(let neighbors) = expect, neighbors.count > 1 {
+                    orderedAnswerCount += 1
+                }
+                for wrong in Self.wrongAnswers(for: expect) {
+                    var changed = committed
+                    changed.steps[index] = .observe(observation, expect: wrong)
+                    let differences = changed.differences()
+                    XCTAssertEqual(differences.count, 1, "\(name) steps[\(index)] expecting \(wrong)")
+                    XCTAssertTrue(differences.first?.hasPrefix("steps[\(index)]: ") == true, "\(name) steps[\(index)]")
+                }
+            }
+        }
+        XCTAssertGreaterThan(observationCount, 0, "No fixture observes track connectivity")
+        XCTAssertGreaterThan(orderedAnswerCount, 0, "No fixture pins the order of connected neighbours")
+    }
 
-        XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
-            XCTAssertEqual(error as? GoldenScenario.FixtureError, .unsupportedSchemaVersion(2))
+    private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
+        switch answer {
+        case .connected(let connected):
+            return [.connected(!connected)]
+        case .neighbors(let neighbors):
+            var wrong: [ObservationAnswer] = [.neighbors(neighbors + [GridPosition(x: 99, y: 99)])]
+            if let first = neighbors.first {
+                wrong.append(.neighbors(Array(neighbors.dropFirst())))
+                wrong.append(.neighbors(neighbors + [first]))
+            }
+            if neighbors.count > 1 {
+                wrong.append(.neighbors(neighbors.reversed()))
+            }
+            return wrong
+        }
+    }
+
+    /// A fixture that wrongly expects a one-sided exit to be a link fails,
+    /// and the message shows GameCore's actual answer.
+    func testAWrongTopologyExpectationIsReported() throws {
+        let json = #"""
+            {
+              "schemaVersion": 2,
+              "description": "Deliberately wrong: expects a one-sided exit to join.",
+              "initialState": {
+                "mapWidth": 2, "mapHeight": 1, "balance": 2000,
+                "costs": { "track": 1000, "station": 50000, "train": 200000 },
+                "gameMinutes": 0, "speed": "paused"
+              },
+              "steps": [
+                {
+                  "command": { "type": "buildTrack", "x": 0, "y": 0, "connections": ["east"] },
+                  "expect": { "result": "ok" }
+                },
+                {
+                  "command": { "type": "buildTrack", "x": 1, "y": 0, "connections": ["north"] },
+                  "expect": { "result": "ok" }
+                },
+                {
+                  "observe": { "type": "isConnected", "from": { "x": 0, "y": 0 }, "to": { "x": 1, "y": 0 } },
+                  "expect": { "connected": true }
+                },
+                {
+                  "observe": { "type": "connectedNeighbors", "x": 0, "y": 0 },
+                  "expect": { "neighbors": [{ "x": 1, "y": 0 }] }
+                }
+              ],
+              "expectedFinalState": {
+                "gameMinutes": 0, "speed": "paused", "balance": 0, "stations": [],
+                "tracks": [
+                  { "x": 0, "y": 0, "connections": ["east"] },
+                  { "x": 1, "y": 0, "connections": ["north"] }
+                ],
+                "trains": []
+              }
+            }
+            """#
+
+        let scenario = try GoldenScenario.decode(Data(json.utf8))
+
+        XCTAssertEqual(scenario.differences(), [
+            #"steps[2]: expected {"connected":true}, got {"connected":false}"#,
+            #"steps[3]: expected {"neighbors":[{"x":1,"y":0}]}, got {"neighbors":[]}"#,
+        ])
+    }
+
+    func testUnsupportedSchemaVersionIsRejected() {
+        for version in [1, 3] {
+            let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
+
+            XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
+                XCTAssertEqual(error as? GoldenScenario.FixtureError, .unsupportedSchemaVersion(version))
+            }
         }
     }
 
@@ -80,6 +178,8 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "east"]}"#,
             #"{"type": "advance", "ticks": -1}"#,
             #"{"type": "setSpeed", "speed": "triple"}"#,
+            // Observations are not commands.
+            #"{"type": "connectedNeighbors", "x": 1, "y": 1}"#,
         ]
         for json in commands {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
@@ -88,6 +188,45 @@ final class GoldenScenarioTests: XCTestCase {
 
         let negativeCost = #"{"track": -1, "station": 0, "train": 0}"#
         XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Costs.self, from: Data(negativeCost.utf8)))
+    }
+
+    func testMalformedObservationsAreRejectedRatherThanGuessed() {
+        let from = #""from": {"x": 0, "y": 0}"#
+        let to = #""to": {"x": 1, "y": 0}"#
+        let steps = [
+            // Exactly one of command and observe.
+            #"{"expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "pause"}, "observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"result": "ok"}}"#,
+            // Unknown observation.
+            #"{"observe": {"type": "shortestPath", "x": 0, "y": 0}, "expect": {"neighbors": []}}"#,
+            // An answer of another observation's kind, or a command result.
+            #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"connected": false}}"#,
+            #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"neighbors": []}}"#,
+            #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"result": "ok"}}"#,
+            // Missing or ill-typed values.
+            #"{"observe": {"type": "isConnected", \#(from)}, "expect": {"connected": false}}"#,
+            #"{"observe": {"type": "isConnected", \#(from), \#(to)}, "expect": {"connected": "yes"}}"#,
+            #"{"observe": {"type": "connectedNeighbors", "x": 0}, "expect": {"neighbors": []}}"#,
+            #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [{"x": 1}]}}"#,
+            #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": ["east"]}}"#,
+        ]
+        for json in steps {
+            XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
+        }
+    }
+
+    func testObservationStepsDecode() throws {
+        let neighbors = #"{"observe": {"type": "connectedNeighbors", "x": 2, "y": 1}, "expect": {"neighbors": [{"x": 2, "y": 0}, {"x": 1, "y": 1}]}}"#
+        let connected = #"{"observe": {"type": "isConnected", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}}, "expect": {"connected": true}}"#
+
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(neighbors.utf8)),
+            .observe(.connectedNeighbors(GridPosition(x: 2, y: 1)), expect: .neighbors([GridPosition(x: 2, y: 0), GridPosition(x: 1, y: 1)]))
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(connected.utf8)),
+            .observe(.isConnected(GridPosition(x: 2, y: 1), to: GridPosition(x: 3, y: 1)), expect: .connected(true))
+        )
     }
 
     func testDirectionOrderDoesNotMatter() throws {

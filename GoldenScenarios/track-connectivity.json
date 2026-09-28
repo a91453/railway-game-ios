@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 2,
+  "description": "Derived track connectivity: two orthogonally adjacent track tiles are joined only when each has an exit toward the other. Builds a four-way junction whose exits all dangle, then neighbors in west, south, north, east order, and observes them listed north, east, south, west. A one-sided exit, the same tile, a diagonal tile, a tile off the map, an empty tile and a station are never joined. Removing and rebuilding the junction changes the answers at once, and the neighbors keep the exits they were built with.",
+  "initialState": {
+    "mapWidth": 5,
+    "mapHeight": 4,
+    "balance": 200000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 2, "connections": ["north", "east", "south", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 2 },
+      "expect": { "neighbors": [] }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 3, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 2, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 2, "y": 2 }, "to": { "x": 3, "y": 2 } },
+      "expect": { "connected": false }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 3, "y": 2 }, "to": { "x": 2, "y": 2 } },
+      "expect": { "connected": false }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 2 },
+      "expect": { "neighbors": [{ "x": 2, "y": 1 }, { "x": 2, "y": 3 }, { "x": 1, "y": 2 }] }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 3, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 2 },
+      "expect": { "neighbors": [{ "x": 2, "y": 1 }, { "x": 3, "y": 2 }, { "x": 2, "y": 3 }, { "x": 1, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 3, "y": 2 }, "to": { "x": 2, "y": 2 } },
+      "expect": { "connected": true }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 1 },
+      "expect": { "neighbors": [{ "x": 2, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 2, "y": 2 }, "to": { "x": 2, "y": 2 } },
+      "expect": { "connected": false }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 1, "y": 2 }, "to": { "x": 2, "y": 1 } },
+      "expect": { "connected": false }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 3 },
+      "expect": { "neighbors": [{ "x": 2, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 2, "y": 3 }, "to": { "x": 2, "y": 4 } },
+      "expect": { "connected": false }
+    },
+    {
+      "command": { "type": "buildStation", "name": "East", "x": 4, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 3, "y": 2 }, "to": { "x": 4, "y": 2 } },
+      "expect": { "connected": false }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 4, "y": 2 },
+      "expect": { "neighbors": [] }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 3, "y": 2 },
+      "expect": { "neighbors": [{ "x": 2, "y": 2 }] }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 2, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 1 },
+      "expect": { "neighbors": [] }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 3, "y": 2 }, "to": { "x": 2, "y": 2 } },
+      "expect": { "connected": false }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 2 },
+      "expect": { "neighbors": [] }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "connectedNeighbors", "x": 2, "y": 2 },
+      "expect": { "neighbors": [{ "x": 3, "y": 2 }, { "x": 1, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "isConnected", "from": { "x": 2, "y": 1 }, "to": { "x": 2, "y": 2 } },
+      "expect": { "connected": false }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 143000,
+    "stations": [
+      { "id": 1, "name": "East", "x": 4, "y": 2 }
+    ],
+    "tracks": [
+      { "x": 2, "y": 1, "connections": ["south"] },
+      { "x": 1, "y": 2, "connections": ["east", "west"] },
+      { "x": 2, "y": 2, "connections": ["east", "west"] },
+      { "x": 3, "y": 2, "connections": ["east", "west"] },
+      { "x": 2, "y": 3, "connections": ["north", "south"] }
+    ],
+    "trains": []
+  }
+}
