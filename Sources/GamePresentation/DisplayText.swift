@@ -73,6 +73,18 @@ extension GameWorld {
     }
 }
 
+extension GameWorld {
+    /// The stations the train `id` is stopped at, such as "Stopped at
+    /// Central" (several in ascending ID order: "Stopped at Central,
+    /// Market"), or `nil` when it is not stopped at a station. Read from
+    /// `stationsStoppedAt(by:)`.
+    public func stationStopText(of id: TrainID) -> String? {
+        let names = stationsStoppedAt(by: id).map { station(id: $0)?.name ?? "#\($0.rawValue)" }
+        guard !names.isEmpty else { return nil }
+        return "Stopped at \(names.joined(separator: ", "))"
+    }
+}
+
 extension TrainPosition {
     /// Where a train is, exactly as GameCore records it: "At (3, 2), facing
     /// East" at a node, or "(3, 2) → (4, 2), 256 / 1024" on a link (the

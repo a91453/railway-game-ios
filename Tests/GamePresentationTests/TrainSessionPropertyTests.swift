@@ -129,9 +129,15 @@ final class TrainSessionPropertyTests: XCTestCase {
             try? shadow.placeTrain(id, at: .atNode(tile, heading: session.placementHeading))
         }
         func send() {
-            guard let id, let tile, let position = shadow.train(id: id)?.position,
-                  let route = shadow.route(from: position, to: tile)
-            else { return }
+            guard let id, let tile, let position = shadow.train(id: id)?.position else { return }
+            // A station tile sends the train to the station (Stage N).
+            let route: [GridPosition]?
+            if let station = shadow.station(at: tile) {
+                route = shadow.route(from: position, toStation: station.id)
+            } else {
+                route = shadow.route(from: position, to: tile)
+            }
+            guard let route else { return }
             try? shadow.setTrainContinuation(id, to: route)
         }
         switch action {
@@ -222,6 +228,9 @@ final class TrainSessionPropertyTests: XCTestCase {
                     }
                     if !onTrack { problems.append("train \(train.id.rawValue) is off the track at \(position)") }
                     if train.positionText != position.displayText { problems.append("position text is not derived") }
+                    let stops = session.world.stationsStoppedAt(by: train.id)
+                    let stopText = stops.isEmpty ? nil : "Stopped at " + stops.compactMap { session.world.station(id: $0)?.name }.joined(separator: ", ")
+                    if session.world.stationStopText(of: train.id) != stopText { problems.append("stop text is not derived") }
                 } else if train.movement != .idle || train.positionText != "Not on the track" {
                     problems.append("unplaced train \(train.id.rawValue) is not idle")
                 }

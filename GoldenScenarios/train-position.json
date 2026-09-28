@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "description": "Train positions: new trains are unplaced; placement at a node (any heading, also on an isolated tile or facing a dead end) or strictly inside a link between two joined tracks; rejected placements (unknown train, empty, station, outside the map, offsets 0, 1024 and -1, same tile, skipped tile, diagonal, one-sided exit, station end) and the order of those checks; reversing a link (offset 256 becomes 768 from the other end) and a node (heading flips), and reversing twice restoring the position; unplacing; removal of track that carries a train (its node or either end of its link) is rejected, even when a second train is unplaced from it, while other track can be removed; after unplacing, the track can be removed. Placement is free, removal is not refunded, and time passes without moving any train.",
   "initialState": {
     "mapWidth": 8,

@@ -271,18 +271,21 @@ public final class GameSession {
         }
     }
 
-    /// Sends the selected train to the selected tile.
+    /// Sends the selected train to the selected tile, or to the selected
+    /// station.
     ///
     /// Asks GameCore for the route from where the train is now
-    /// (`GameWorld.route(from:to:)`) and commits exactly that route with
-    /// `GameWorld.setTrainContinuation(_:to:)`. Both run against the same
+    /// (`GameWorld.route(from:to:)` for a track tile, or
+    /// `GameWorld.route(from:toStation:)` for a station tile, which ends at
+    /// the nearest of the station's platforms) and commits exactly that route
+    /// with `GameWorld.setTrainContinuation(_:to:)`. Both run against the same
     /// world within this one call, with nothing in between, so the route can
     /// never be stale or reach another train. The session never finds or
     /// edits a path itself.
     ///
-    /// Without a route (the tile is not track, or the train cannot get there
-    /// without turning straight back) nothing changes, and the train keeps
-    /// the continuation it had.
+    /// Without a route (the tile is neither track nor a station with track
+    /// beside it, or the train cannot get there without turning straight
+    /// back) nothing changes, and the train keeps the continuation it had.
     public func sendSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let destination = selection else {
@@ -293,10 +296,21 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: GameError.trainNotPlaced(train.id).playerMessage)
             return
         }
-        guard let route = world.route(from: position, to: destination) else {
+        // A station is not track: the train goes to one of its platforms.
+        let station = world.station(at: destination)
+        let found: [GridPosition]?
+        if let station {
+            found = world.route(from: position, toStation: station.id)
+        } else {
+            found = world.route(from: position, to: destination)
+        }
+        guard let route = found else {
+            let reason = station == nil
+                ? "it must be track the train can reach without turning back"
+                : "it needs track beside the station that the train can reach without turning back"
             message = StatusMessage(
                 kind: .failure,
-                text: "No route for \(train.name) to \(destination): it must be track the train can reach without turning back. Its path is unchanged."
+                text: "No route for \(train.name) to \(station?.name ?? "\(destination)"): \(reason). Its path is unchanged."
             )
             return
         }
@@ -307,12 +321,14 @@ public final class GameSession {
         case .atNode(let tile, _): start = tile
         case .onLink(_, let to, _): start = to
         }
+        // For a station, name it and the platform the route ends at.
+        let target = station.map { "\($0.name), platform \(route.last ?? start)" } ?? "\(destination)"
         perform { world throws(GameError) in
             try world.setTrainContinuation(train.id, to: route)
             let links = route.count == 1 ? "1 link" : "\(route.count) links"
             let sent = route.isEmpty
-                ? "\(train.name) stops at \(destination)."
-                : "Sent \(train.name) to \(destination), \(links) from \(start)."
+                ? "\(train.name) stops at \(target)."
+                : "Sent \(train.name) to \(target), \(links) from \(start)."
             return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
         }
     }

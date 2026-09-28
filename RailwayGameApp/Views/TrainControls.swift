@@ -2,8 +2,9 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// The train tool's options: which train, where GameCore has it and the
-/// path it has left, its rate, and the train commands that need no tile.
+/// The train tool's options: which train, where GameCore has it, the path
+/// it has left and the station it is stopped at, its rate, and the train
+/// commands that need no tile.
 ///
 /// Everything shown is read from `session.world` each time the view is
 /// drawn, and every control calls a `GameSession` method that applies one
@@ -72,8 +73,8 @@ struct TrainControls: View {
         }
     }
 
-    /// Where the train is and the path it has left, exactly as GameCore
-    /// records them.
+    /// Where the train is, the path it has left and the station it is
+    /// stopped at, exactly as GameCore records or derives them.
     private func status(of train: Train) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(train.positionText)
@@ -84,6 +85,10 @@ struct TrainControls: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                if let stop = session.world.stationStopText(of: train.id) {
+                    Text(stop)
+                        .font(.footnote.weight(.semibold))
+                }
             }
         }
         .accessibilityElement(children: .combine)
