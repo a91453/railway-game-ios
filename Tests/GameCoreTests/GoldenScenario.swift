@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 6
+    static let schemaVersion = 7
 
     var description: String
     var initialState: InitialState
@@ -142,7 +142,7 @@ extension GoldenScenario.Step: Decodable {
     }
 
     private enum AnswerKeys: String, CodingKey, CaseIterable {
-        case neighbors, connected, position, movement, found, route
+        case neighbors, connected, position, movement, found, route, platforms, stations
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -179,8 +179,8 @@ extension GoldenScenario.Step: Decodable {
                     movement: expect.decode(TrainMovementSummary.self, forKey: .movement)
                 )
                 self = .observe(observation, expect: .train(state))
-            case .route:
-                try requireOnly([.found, .route], answering: "route")
+            case .route, .routeToStation:
+                try requireOnly([.found, .route], answering: "a route")
                 // "route" is required when a route is found and absent when not.
                 if try expect.decode(Bool.self, forKey: .found) {
                     let nodes = try expect.decode([PositionSummary].self, forKey: .route)
@@ -191,6 +191,14 @@ extension GoldenScenario.Step: Decodable {
                     }
                     self = .observe(observation, expect: .route(nil))
                 }
+            case .platforms:
+                try requireOnly([.platforms], answering: "platforms")
+                let platforms = try expect.decode([PositionSummary].self, forKey: .platforms)
+                self = .observe(observation, expect: .platforms(platforms.map(\.position)))
+            case .stationStops:
+                try requireOnly([.stations], answering: "stationStops")
+                let stations = try expect.decode([Int].self, forKey: .stations)
+                self = .observe(observation, expect: .stations(stations.map(StationID.init(rawValue:))))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -432,14 +440,18 @@ extension StepOutcome: Codable {
 // MARK: - Observations
 
 /// A read-only query as a scenario step, tagged by `"type"`: track topology,
-/// one train's position and movement, or a route. Observations are not
-/// commands: they ask the world through its public queries and never change
-/// it.
+/// one train's position and movement, a route to a tile or a station, a
+/// station's platforms, or the stations a train is stopped at. Observations
+/// are not commands: they ask the world through its public queries and never
+/// change it.
 enum ScenarioObservation: Equatable {
     case connectedNeighbors(GridPosition)
     case isConnected(GridPosition, to: GridPosition)
     case train(TrainID)
     case route(from: TrainPosition, to: GridPosition)
+    case platforms(StationID)
+    case routeToStation(from: TrainPosition, station: StationID)
+    case stationStops(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -451,13 +463,19 @@ enum ScenarioObservation: Equatable {
             .train(world.train(id: id).map(TrainState.init))
         case .route(let start, let destination):
             .route(world.route(from: start, to: destination))
+        case .platforms(let station):
+            .platforms(world.platforms(of: station))
+        case .routeToStation(let start, let station):
+            .route(world.route(from: start, toStation: station))
+        case .stationStops(let train):
+            .stations(world.stationsStoppedAt(by: train))
         }
     }
 }
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, train
+        case type, x, y, from, to, train, station
     }
 
     init(from decoder: any Decoder) throws {
@@ -478,6 +496,17 @@ extension ScenarioObservation: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A route starts from a \"node\" or \"link\" position.")
             }
             self = try .route(from: start, to: container.decode(PositionSummary.self, forKey: .to).position)
+        case "platforms":
+            self = try .platforms(container.decodeStation(forKey: .station))
+        case "routeToStation":
+            // Read as written, like "route": whether the start and the
+            // station are valid is GameCore's decision.
+            guard let start = try container.decode(TrainPositionSummary.self, forKey: .from).position else {
+                throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A route starts from a \"node\" or \"link\" position.")
+            }
+            self = try .routeToStation(from: start, station: container.decodeStation(forKey: .station))
+        case "stationStops":
+            self = try .stationStops(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -486,19 +515,24 @@ extension ScenarioObservation: Decodable {
 
 /// What an observation answered. Encoded as `{"neighbors": [{"x", "y"}, ...]}`
 /// in the order the query returned them, `{"connected": true|false}`,
-/// `{"position", "movement"}` for a train, or `{"found": true, "route":
-/// [{"x", "y"}, ...]}` / `{"found": false}` for a route. A train the world
-/// does not have answers `{}`, which no fixture can expect.
+/// `{"position", "movement"}` for a train, `{"found": true, "route":
+/// [{"x", "y"}, ...]}` / `{"found": false}` for a route to a tile or a
+/// station, `{"platforms": [{"x", "y"}, ...]}` in the order the query
+/// returned them, or `{"stations": [id, ...]}` for the stations a train is
+/// stopped at. A train the world does not have answers `{}`, which no
+/// fixture can expect.
 enum ObservationAnswer: Equatable {
     case neighbors([GridPosition])
     case connected(Bool)
     case train(TrainState?)
     case route([GridPosition]?)
+    case platforms([GridPosition])
+    case stations([StationID])
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case neighbors, connected, position, movement, found, route
+        case neighbors, connected, position, movement, found, route, platforms, stations
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -518,6 +552,10 @@ extension ObservationAnswer: Encodable {
             try container.encode(nodes.map(PositionSummary.init), forKey: .route)
         case .route(nil):
             try container.encode(false, forKey: .found)
+        case .platforms(let positions):
+            try container.encode(positions.map(PositionSummary.init), forKey: .platforms)
+        case .stations(let ids):
+            try container.encode(ids.map(\.rawValue), forKey: .stations)
         }
     }
 }
@@ -797,6 +835,11 @@ extension KeyedDecodingContainer {
     /// A train ID stored as a plain integer.
     fileprivate func decodeTrain(forKey key: Key) throws -> TrainID {
         try TrainID(rawValue: decode(Int.self, forKey: key))
+    }
+
+    /// A station ID stored as a plain integer.
+    fileprivate func decodeStation(forKey key: Key) throws -> StationID {
+        try StationID(rawValue: decode(Int.self, forKey: key))
     }
 }
 

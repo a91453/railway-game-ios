@@ -33,7 +33,8 @@ extension GameWorld {
     ///
     /// Returns `nil` when `start` is not a valid position on this map's track
     /// (see ``placeTrain(_:at:)``), when `destination` is not a track tile
-    /// (empty, a station, or outside the map), or when no route exists.
+    /// (empty, a station, or outside the map), or when no route exists. To
+    /// go to a station, use ``route(from:toStation:)``.
     ///
     /// Pure: reads the map only through its public queries (the start and
     /// destination checks, then ``connectedNeighbors(of:)`` while
@@ -46,7 +47,7 @@ extension GameWorld {
     public func route(from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
         guard isOnTrack(start), track(at: destination) != nil else { return nil }
         let (node, heading) = start.ahead
-        return TrainRoute.shortest(from: node, heading: heading, to: destination) { connectedNeighbors(of: $0) }
+        return TrainRoute.shortest(from: node, heading: heading, to: { $0 == destination }) { connectedNeighbors(of: $0) }
     }
 }
 
@@ -60,22 +61,23 @@ enum TrainRoute {
     }
 
     /// Breadth-first search over (node, heading) from `node` facing
-    /// `heading` to any state at `destination`.
+    /// `heading` to any state at a node that `isDestination` accepts.
     ///
     /// `neighbors` must list the nodes joined to a node in north, east,
     /// south, west order. States are expanded in the order they were found
     /// and their neighbours in that fixed order, so each layer of the search
     /// is discovered in the order of its routes' direction sequences, and the
-    /// first route found to `destination` is the shortest and, among the
-    /// shortest, the first in that order. The search ends, at the latest,
-    /// when every reachable state has been visited once.
+    /// first route found to a destination is the shortest and, among the
+    /// shortest, the first in that order. It ends at the first destination
+    /// it reaches, so it passes no other destination on the way. The search
+    /// ends, at the latest, when every reachable state has been visited once.
     static func shortest(
         from node: GridPosition,
         heading: TrackDirection,
-        to destination: GridPosition,
+        to isDestination: (GridPosition) -> Bool,
         neighbors: (GridPosition) -> [GridPosition]
     ) -> [GridPosition]? {
-        guard node != destination else { return [] }
+        guard !isDestination(node) else { return [] }
 
         // Every discovered state with the index of the state it was reached
         // from; the queue is the array itself, read from `next` onward.
@@ -91,7 +93,7 @@ enum TrainRoute {
                 let state = State(node: neighbor, heading: direction)
                 guard seen.insert(state).inserted else { continue }
                 found.append((state, next))
-                if neighbor == destination {
+                if isDestination(neighbor) {
                     return path(to: found.count - 1, in: found)
                 }
             }
