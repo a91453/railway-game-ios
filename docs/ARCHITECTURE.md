@@ -315,7 +315,7 @@ Stage P 回答決策 19 留下的問題：「這台列車現在是否該出發�
   → 移動（TrainMovement，決策 15）
 ```
 
-- **為什麼這樣分層**（Stage P 前的第三方研究）：TrainApp 把 schedule、per-train controller、dispatcher、interlocking 與 movement authority 分開；OpenTTD 把 orders 與 timetable 的時間分開，並標示早到與誤點；OSRD 把 target arrival、停留、路徑與模擬結果視為不同概念；Simutrans 以固定出發時刻作為「在此之前不得出發」的閘門；軌島（Rail Island）則是把真實班表沿軌道呈現。本決策採用「計畫 / 執行 / 路徑 / 移動」分離與「排定出發時刻是閘門」；**不**採用 TrainApp 的整段進路預約、OpenTTD 的 shared／循環 orders 與追趕、OSRD 的連續物理與日曆時間、Simutrans 的月份班表，也不把軌島的時刻表插值當成交通模擬。待避、交會這類決策需要軌道資源、進路與 dispatcher，不能寫進 `ScheduledStop`。
+- **為什麼這樣分層**（Stage P 前的第三方研究）：TrainApp 把 schedule、per-train controller、dispatcher、interlocking 與 movement authority 分開；OpenTTD 把 orders 與 timetable 的時間分開，並標示早到與誤點；OSRD 把 target arrival、停留、路徑與模擬結果視為不同概念；Simutrans 以固定出發時刻作為「在此之前不得出發」的閘門；真實時刻表的呈現則是把班表沿軌道顯示。本決策採用「計畫 / 執行 / 路徑 / 移動」分離與「排定出發時刻是閘門」；**不**採用 TrainApp 的整段進路預約、OpenTTD 的 shared／循環 orders 與追趕、OSRD 的連續物理與日曆時間、Simutrans 的月份班表，也不把時刻表沿軌道的插值當成交通模擬。待避、交會這類決策需要軌道資源、進路與 dispatcher，不能寫進 `ScheduledStop`。
 - **資料模型**
   - `Train.execution: TimetableExecution?`：`nil` 表示沒有執行中的服務（新購列車一律是 `nil`）。
   - `TimetableExecution` 只有兩種：`.waitingAtStop(i)`（停在時刻表第 `i` 站，等待它的排定出發）與 `.travellingToStop(i)`（已離開第 `i − 1` 站，正前往第 `i` 站）。`i` 一律是**時刻表的索引**，不是車站 ID：決策 19 允許重複的車站，只看列車在哪裡或哪個車站，無法知道現在是第幾個停靠。
@@ -429,8 +429,8 @@ Stage Q1 回答決策 20 留下的兩個問題：服務只跑一次，而且停�
   - 時段、班距與多台列車的線路服務屬於 Q2；交路與快慢車屬於 Q3。
   - 晚點超過一個週期的列車會照順序把每一輪跑完，不會取消班次。之後若需要取消落後的班次，再另外決定。
   - 停止服務後重新啟動，只能從第 0 站開始。
-  - 列車之間仍然互不阻擋，要到 Phase 4.5 才處理。
-- **本 Stage 不做**：自動折返、服務模式與線路（Q2）、交路與停站模式（Q3）、取消班次、時刻表畫面（Stage R）、車廠，以及佔用與進路（Phase 4.5）。
+  - 列車之間仍然互不阻擋，要到 Phase 4.6 才處理。
+- **本 Stage 不做**：自動折返、服務模式與線路（Q2）、交路與停站模式（Q3）、取消班次、時刻表畫面（Stage R）、車廠，以及佔用與進路（Phase 4.5、4.6）。
 
 ### 22. 服務線路：資料與推導（Phase 4 Stage Q2a）
 
@@ -505,7 +505,7 @@ Stage I–Q1 的契約都不變。
   - 平日與週末不分，也沒有日曆。
   - 行程是規劃值：實際列車的 rate 可能不同，晚點由 Stage P 的規則吸收。
   - 行程查詢每次要求路最多 16 × 2 ×（站數 − 1）次；還沒有快取，畫面若頻繁詢問，之後量測後再考慮。
-  - **最多列車數假設上下行互不干擾**，等於把線路當成雙線：只要間隔 2 分鐘，就能一直發車。單線區段的列車只能在交會站錯車，實際能跑的列車會比這個值少。目前列車互不阻擋，所以和現在的規則一致；Phase 4.5 加入佔用、進路與交會時，要一併修正這個上限（真實時刻表的研究見 [TIMETABLE_DATA_STUDY.md](TIMETABLE_DATA_STUDY.md)）。
+  - **最多列車數假設上下行互不干擾**，等於把線路當成雙線：只要間隔 2 分鐘，就能一直發車。單線區段的列車只能在交會站錯車，實際能跑的列車會比這個值少。目前列車互不阻擋，所以和現在的規則一致；Phase 4.5、4.6 加入佔用、進路與交會時，要一併修正這個上限（真實時刻表的研究見 [TIMETABLE_DATA_STUDY.md](TIMETABLE_DATA_STUDY.md)）。
 - **本 Stage 不做**：派車、把列車指派給線路、依時段增減列車、到終點才退出（Q2b），以及線路畫面（Stage R）。
 
 ### 23. 自動派車與目標班距（Phase 4 Stage Q2b）
@@ -555,7 +555,7 @@ Stage Q2b 讓決策 22 的線路真正跑起來：線路把指派給它的列車
   - Stage I–Q2a 的 property digest 在修改前後相同。
 - **GamePresentation**：只為三個新錯誤加上 `playerMessage`。App 沒有修改，線路畫面屬於 Stage R。
 - **已知限制**
-  - 列車之間仍然互不阻擋（Phase 4.5）；同一條線路的列車可能在同一段鐵軌上重疊。
+  - 列車之間仍然互不阻擋（Phase 4.6）；同一條線路的列車可能在同一段鐵軌上重疊。
   - 最多列車數仍然假設雙線（見決策 22 的已知限制）。
   - 只從第一站派車；停在最後一站的列車不會從那裡出發。
   - 派車時只看列車停在第一站的哪個月台、朝哪個方向，不會把列車開到規劃的起點。
