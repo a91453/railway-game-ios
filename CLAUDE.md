@@ -26,8 +26,8 @@ simulation.
   the `.xcodeproj`.
 - `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
-- `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.2.4 / 6.4;
-  the property campaigns run on 6.4 only), `ios-build.yml` (committed-project drift check and Xcode Simulator build on
+- `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.4; the
+  property campaigns run on 6.4 only), `ios-build.yml` (committed-project drift check and Xcode Simulator build on
   macOS), `visual-smoke.yml` (manual Simulator screenshots),
   `release-archive.yml` (unsigned Release device archive; manual, and on PRs
   that change project settings or app resources), `testflight.yml` (signed
@@ -55,8 +55,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Golden scenarios are a behavior contract (`GoldenScenarios/README.md`). Tests
   only read them; never edit an expected value to make a test pass. A changed
   value is a deliberate behavior change that the PR must justify value by value.
-- Do not raise `swift-tools-version` (6.0) or drop Swift 6.0 / 6.2.4
-  compatibility without a concrete technical reason.
+- Do not raise `swift-tools-version` (6.0) or drop Swift 6.0 compatibility
+  without a concrete technical reason.
 
 ## Environments and validation
 

@@ -21,14 +21,14 @@ jobs:
       fail-fast: false
       matrix:
         # 6.0 is the minimum declared by Package.swift (swift-tools-version: 6.0);
-        # 6.2.4 is the iPad / Swift Playgrounds compatibility target;
-        # 6.4 is the current stable release.
-        swift: ["6.0", "6.2.4", "6.4"]
+        # 6.4 is the current stable release. Releases between them (such as
+        # the iPad Swift Playgrounds' 6.2) are not built separately.
+        swift: ["6.0", "6.4"]
         # The property campaigns (generated sequences checked against the
         # reference models and saves) take most of the test time and check
         # logic, which does not depend on the compiler: they run on the
-        # current release only. Every version still builds all targets and
-        # tests with warnings as errors and runs every other test.
+        # current release only. 6.0 still builds all targets and tests with
+        # warnings as errors and runs every other test.
         include:
           - swift: "6.4"
             campaigns: true
