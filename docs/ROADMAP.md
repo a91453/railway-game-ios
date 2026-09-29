@@ -31,7 +31,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 驗證分層：
 
 1. Claude Code Cloud（Linux）：原始碼開發、GameCore `swift build` / `swift test`
-2. Linux CI：GameCore 在 Swift 6.0、6.2.4、6.4 的相容性
+2. Linux CI：GameCore 在 Swift 6.0、6.4 的相容性
 3. macOS CI：XcodeGen 產生專案，以真正的 Xcode / Apple SDK 編譯原生 SwiftUI App
 4. 手動 Visual Smoke：iPhone / iPad Simulator 截圖，以 GitHub artifact 在手機或平板上檢視
 
