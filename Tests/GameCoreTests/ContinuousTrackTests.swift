@@ -29,6 +29,11 @@ final class ContinuousTrackTests: XCTestCase {
         TrackTraversal(edge: edge, direction: .backward)
     }
 
+    /// The span of `edge` from `start` to `end` (Stage S3A).
+    private func span(_ edge: TrackEdgeID, _ start: Int64, _ end: Int64) -> TrackResource {
+        .span(TrackSpan(edge: edge, start: start, end: end))
+    }
+
     // MARK: - Geometry
 
     func testAStraightEdgeRunsAtAnyHeadingWithAnExactIntegerLength() throws {
@@ -227,8 +232,10 @@ final class ContinuousTrackTests: XCTestCase {
         try world.placeTrain(first, at: .onEdge(forward(we), offset: 2_048))
         try world.placeTrain(second, at: .onEdge(forward(ns), offset: 2_048))
         XCTAssertNil(world.route(from: .onEdge(forward(we), offset: 2_048), to: s), "no way from one to the other")
-        XCTAssertEqual(world.occupiedResources(of: first), [.edge(we)])
-        XCTAssertEqual(world.occupiedResources(of: second), [.edge(ns)])
+        // Each stands on the boundary between the second and third of its
+        // edge's four spans (4096 long: a span per 1024), so holds both.
+        XCTAssertEqual(world.occupiedResources(of: first), [span(we, 1_024, 2_048), span(we, 2_048, 3_072)])
+        XCTAssertEqual(world.occupiedResources(of: second), [span(ns, 1_024, 2_048), span(ns, 2_048, 3_072)])
         XCTAssertEqual(world.occupancyConflicts(), [], "both stand at the crossing point, but share no track")
     }
 
@@ -472,7 +479,10 @@ final class ContinuousTrackTests: XCTestCase {
         // 2048 long: 1500 on B–C, and 548 more back along A–B.
         try world.placeTrain(first, at: .onEdge(forward(bc), offset: 1_500))
         XCTAssertEqual(world.train(id: first)?.trailEdges, [ab])
-        XCTAssertEqual(world.occupiedResources(of: first), [.node(nodes[1]), .edge(ab), .edge(bc)])
+        // B–C (2560) is three spans: 0–853, 853–1706, 1706–2560; the train
+        // covers 0–1500 of it and 476–1024 of A–B, one span.
+        XCTAssertEqual(world.trackSpans(of: bc).map(\.end), [853, 1_706, 2_560])
+        XCTAssertEqual(world.occupiedResources(of: first), [.node(nodes[1]), span(ab, 0, 1_024), span(bc, 0, 853), span(bc, 853, 1_706)])
         XCTAssertEqual(world.bodyPath(of: first), [WorldCoordinate(x: 3_036, y: 1_536), WorldCoordinate(x: 1_536, y: 1_536), WorldCoordinate(x: 988, y: 1_536)])
         XCTAssertThrowsError(try world.removeTrackEdge(ab)) { XCTAssertEqual($0 as? GameError, .trackEdgeInUse(ab), "the body is on it") }
 
@@ -483,12 +493,14 @@ final class ContinuousTrackTests: XCTestCase {
         // on B–C alone (2500 ≥ 2048).
         XCTAssertEqual(world.train(id: first)?.position, .onEdge(forward(bc), offset: 2_500))
         XCTAssertEqual(world.train(id: first)?.trailEdges, [])
-        XCTAssertEqual(world.occupiedResources(of: first), [.edge(bc)])
+        XCTAssertEqual(world.occupiedResources(of: first), [span(bc, 0, 853), span(bc, 853, 1_706), span(bc, 1_706, 2_560)], "452 to 2500")
         try world.advance(ticks: 1)
         // 60 to C, then 512 of C–D; the body reaches back 1536 onto B–C.
         XCTAssertEqual(world.train(id: first)?.position, .onEdge(forward(cd), offset: 512))
         XCTAssertEqual(world.train(id: first)?.trailEdges, [bc])
-        XCTAssertEqual(world.occupiedResources(of: first), [.node(nodes[2]), .node(nodes[3]), .edge(bc), .edge(cd)])
+        XCTAssertEqual(world.occupiedResources(of: first), [
+            .node(nodes[2]), .node(nodes[3]), span(bc, 853, 1_706), span(bc, 1_706, 2_560), span(cd, 0, 512),
+        ], "1024 to 2560 of B–C, all of C–D")
         try world.removeTrackEdge(ab)
     }
 

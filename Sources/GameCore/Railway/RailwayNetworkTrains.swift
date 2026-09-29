@@ -205,26 +205,81 @@ extension GameWorld {
 
     /// The track a train on the network occupies (see
     /// ``occupiedResources(of:)``): every node its centre line reaches or
-    /// passes, from head to tail, and every edge with part of the train
-    /// strictly inside it. A train of one car occupies the node it stands
-    /// at, or the edge it stands on.
+    /// passes, from head to tail, and every span (Stage S3A) that shares a
+    /// point with the train other than the edge's ends: a train touching the
+    /// boundary between two spans holds both. A train of one car holds the
+    /// node it stands at, or the span (or two) at its point of an edge.
     func networkResources(of train: Train) -> [TrackResource] {
-        guard case .onEdge(let traversal, let offset)? = train.position, let edge = network.edge(traversal.edge) else { return [] }
-        let length = train.length
+        guard case .onEdge(let traversal, let offset)? = train.position, network.edge(traversal.edge) != nil else { return [] }
+        // The stretch of each edge the train covers, measured along the way
+        // it is travelled: the head's edge, then its body's, nearest first.
+        var stretches = [(traversal: traversal, from: max(0, offset - train.length), to: offset)]
+        var remaining = train.length - offset
+        for behind in trailTraversals(behind: traversal, trail: train.trailEdges) ?? [] where remaining > 0 {
+            let length = network.edge(behind.edge)!.length
+            stretches.append((behind, max(0, length - remaining), length))
+            remaining -= length
+        }
         var resources: [TrackResource] = []
-        if offset == edge.length { resources.append(.node(edge.end(of: traversal.direction))) }
-        if offset == 0 { resources.append(.node(edge.start(of: traversal.direction))) }
-        if (offset > 0 && offset < edge.length) || (length > 0 && offset > 0) { resources.append(.edge(edge.id)) }
-        guard length > 0 else { return resources }
-        var covered = offset
-        if covered <= length, offset > 0 { resources.append(.node(edge.start(of: traversal.direction))) }
-        for behind in trailTraversals(behind: traversal, trail: train.trailEdges) ?? [] {
-            let behindEdge = network.edge(behind.edge)!
-            resources.append(.edge(behindEdge.id))
-            covered += behindEdge.length
-            if covered <= length { resources.append(.node(behindEdge.start(of: behind.direction))) }
+        for stretch in stretches {
+            let edge = network.edge(stretch.traversal.edge)!
+            if stretch.from == 0 { resources.append(.node(edge.start(of: stretch.traversal.direction))) }
+            if stretch.to == edge.length { resources.append(.node(edge.end(of: stretch.traversal.direction))) }
+            // The stretch in the edge's own chainage, from its `from` node.
+            let (low, high) = stretch.traversal.direction == .forward
+                ? (stretch.from, stretch.to)
+                : (edge.length - stretch.to, edge.length - stretch.from)
+            for span in RailwayNetwork.spans(of: edge.id, length: edge.length) {
+                let a = max(low, span.start)
+                let b = min(high, span.end)
+                // Some point of both, strictly between the edge's ends.
+                if a < b || (a == b && a > 0 && a < edge.length) { resources.append(.span(span)) }
+            }
         }
         return resources
+    }
+
+    // MARK: - The resources along an edge (Stage S3A)
+
+    /// The spans of edge `id` of the railway graph, from its `from` node to
+    /// its `to` node (see ``RailwayNetwork/spans(of:length:)``): one for a
+    /// grid link, one for every tile's length or less of a network edge.
+    /// Empty if there is no such edge.
+    public func trackSpans(of id: TrackEdgeID) -> [TrackSpan] {
+        guard let edge = trackEdge(id) else { return [] }
+        return RailwayNetwork.spans(of: id, length: edge.length)
+    }
+
+    /// The traversals train `id` will enter after the one it is on, in
+    /// order (Stage S3A): what traffic control reads to know a train's way,
+    /// whichever kind of track it runs on.
+    ///
+    /// - On the grid, every link of its continuation still ahead, whether or
+    ///   not it is laid now: a train waits where a link is missing and goes
+    ///   on once it is rebuilt.
+    /// - On the network, its edges still ahead up to one it cannot enter: an
+    ///   edge that was removed never comes back, as IDs are not reused.
+    ///
+    /// Empty for an unplaced train, one with nothing ahead, or an unknown ID.
+    public func pathAhead(of id: TrainID) -> [TrackTraversal] {
+        guard let train = train(id: id), let position = train.position else { return [] }
+        var path: [TrackTraversal] = []
+        switch position {
+        case .onEdge(let traversal, _):
+            var arrival = traversal
+            for edge in train.movement.remainingEdges {
+                guard let entry = transitions(after: arrival).first(where: { $0.edge == edge }) else { break }
+                path.append(entry)
+                arrival = entry
+            }
+        case .atNode, .onLink:
+            guard var node = position.ahead?.node else { return [] }
+            for next in train.movement.remainingContinuation {
+                path.append(.link(from: node, to: next))
+                node = next
+            }
+        }
+        return path
     }
 
     // MARK: - World coordinates, for renderers

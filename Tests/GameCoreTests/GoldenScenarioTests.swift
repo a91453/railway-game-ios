@@ -722,7 +722,7 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "pathToNode", "from": {"type": "unplaced"}, "node": 1}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "pathToNode", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "bodyPath", "train": 1}, "expect": {"points": [{"x": 1, "y": 2}]}}"#,
-            #"{"observe": {"type": "occupancy", "train": 1}, "expect": {"resources": [{"type": "networkEdge"}]}}"#,
+            #"{"observe": {"type": "occupancy", "train": 1}, "expect": {"resources": [{"type": "networkSpan", "edge": 1}]}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "connected": true}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "position": {"type": "unplaced"}}}"#,
             // A route is answered by "found", with "route" exactly when found.
@@ -1020,7 +1020,7 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"observe": {"type": "exits", "x": 2, "y": 2, "heading": "south"}, "expect": {"exits": [{"x": 3, "y": 2}]}}"#,
              .observe(.exits(p(2, 2), facing: .south), expect: .exits([p(3, 2)]))),
             (#"{"observe": {"type": "occupancy", "train": 2}, "expect": {"resources": [{"type": "link", "from": {"x": 1, "y": 0}, "to": {"x": 2, "y": 0}}]}}"#,
-             .observe(.occupancy(TrainID(rawValue: 2)), expect: .resources([.edge(.link(p(1, 0), p(2, 0)))]))),
+             .observe(.occupancy(TrainID(rawValue: 2)), expect: .resources([.wholeLink(.link(p(1, 0), p(2, 0)))]))),
             (#"{"observe": {"type": "conflicts"}, "expect": {"conflicts": [{"resource": {"type": "node", "x": 4, "y": 2}, "trains": [1, 2]}]}}"#,
              .observe(.conflicts, expect: .conflicts([TrackConflict(resource: .tile(p(4, 2)), trains: [TrainID(rawValue: 1), TrainID(rawValue: 2)])]))),
             (#"{"observe": {"type": "trackSections"}, "expect": {"sections": [{"nodes": [{"x": 0, "y": 0}], "loop": false}]}}"#,

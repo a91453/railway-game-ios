@@ -25,6 +25,13 @@ extension TrackEdgeID {
     }
 }
 
+extension TrackResource {
+    /// The one span of grid link `link`, the whole of it.
+    static func wholeLink(_ link: TrackEdgeID) -> TrackResource {
+        .span(TrackSpan(edge: link, start: 0, end: TrainPosition.linkLength))
+    }
+}
+
 enum NetworkInvariants {
     /// Every documented invariant of the network a world reachable through
     /// commands keeps (decision 29), from its public state only.
@@ -49,6 +56,13 @@ enum NetworkInvariants {
             }
         }
         for edge in network.edges {
+            // Stage S3A: the spans cover the edge end to end, none longer
+            // than a tile, as few as that allows.
+            let spans = world.trackSpans(of: edge.id)
+            if spans.first?.start != 0 || spans.last?.end != edge.length || zip(spans, spans.dropFirst()).contains(where: { $0.end != $1.start })
+                || spans.contains(where: { $0.edge != edge.id || $0.length <= 0 || $0.length > 1_024 }) || Int64(spans.count) != (edge.length + 1_023) / 1_024 {
+                problems.append("track edge \(edge.id.number)'s spans do not cover it: \(spans.map { ($0.start, $0.end) })")
+            }
             guard let from = network.node(edge.from), let to = network.node(edge.to), edge.from != edge.to else {
                 problems.append("track edge \(edge.id.number) does not join two nodes")
                 continue

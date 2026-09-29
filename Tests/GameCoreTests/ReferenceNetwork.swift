@@ -393,8 +393,10 @@ extension ReferenceWorld {
         return train
     }
 
-    /// Decision 29: every node within the train's stretch of its path, and
-    /// every edge with a point of the stretch strictly inside it.
+    /// Decision 29 (S3A): every node within the train's stretch of its path,
+    /// and every span of an edge that shares a point of the stretch lying
+    /// strictly between the edge's ends. Worked in distances along the path
+    /// rather than along each edge.
     func networkResources(of train: Train) -> [TrackResource] {
         guard case .onEdge(_, let offset)? = train.position else { return [] }
         let path = path(of: train)
@@ -405,9 +407,36 @@ extension ReferenceWorld {
         for (run, span) in zip(path, spans) {
             if tail <= span.start && span.start <= head { found.insert(.node(.node(startNode(run)))) }
             if tail <= span.end && span.end <= head { found.insert(.node(.node(endNode(run)))) }
-            if tail < span.end && head > span.start { found.insert(.edge(.edge(run.edge))) }
+            let length = span.end - span.start
+            for piece in Self.resourceSpans(length: length) {
+                // The piece's place along the path, whichever way it is run.
+                let (a, b) = run.forward ? (span.start + piece.start, span.start + piece.end) : (span.end - piece.end, span.end - piece.start)
+                let low = max(tail, a)
+                let high = min(head, b)
+                if low < high || (low == high && low > span.start && low < span.end) {
+                    found.insert(.span(TrackSpan(edge: .edge(run.edge), start: piece.start, end: piece.end)))
+                }
+            }
         }
         return found.sorted()
+    }
+
+    /// S3A: an edge `length` long in equal parts of at most 1024: as many
+    /// as 1024 goes into it, rounded up, the `k`-th ending at `k × length ÷
+    /// parts` rounded down.
+    static func resourceSpans(length: Int64) -> [(start: Int64, end: Int64)] {
+        var parts: Int64 = 1
+        while parts * 1_024 < length {
+            parts += 1
+        }
+        var result: [(start: Int64, end: Int64)] = []
+        var start: Int64 = 0
+        for k in 1...parts {
+            let end = floorDivide(k * length, parts)
+            result.append((start, end))
+            start = end
+        }
+        return result
     }
 
     // MARK: - Queries

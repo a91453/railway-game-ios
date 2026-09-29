@@ -8,6 +8,8 @@
 /// Presentation and rendering layers read from a world and send it commands;
 /// they must not keep a separate copy of game state as the source of truth.
 public struct GameWorld: Equatable, Sendable {
+    /// The land: empty ground and the tiles stations stand on. It holds no
+    /// railway (Stage S3A): see ``network``.
     public private(set) var map: GridMap
     /// All stations, ordered by ascending ``StationID``.
     public private(set) var stations: [Station]
@@ -19,10 +21,10 @@ public struct GameWorld: Equatable, Sendable {
     public private(set) var serviceDay: ServiceDay
     public private(set) var clock: GameClock
     public private(set) var economy: GameEconomy
-    /// The continuous track network (Phase 4.5 Stage S3): nodes at world
-    /// coordinates and edges of any length and shape between them, beside
-    /// the grid's track. Empty in a new world.
-    public private(set) var network: TrackNetwork
+    /// The railway (Phase 4.5 Stage S3): the one record of all track, the
+    /// grid's track pieces and the continuous network's nodes and edges.
+    /// Empty in a new world.
+    public private(set) var network: RailwayNetwork
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -47,7 +49,7 @@ public struct GameWorld: Equatable, Sendable {
         self.serviceDay = .standard
         self.clock = clock
         self.economy = economy
-        self.network = TrackNetwork()
+        self.network = RailwayNetwork()
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -55,24 +57,15 @@ public struct GameWorld: Equatable, Sendable {
 
     // MARK: - Queries
 
-    /// The track at `position`, or `nil` if the tile holds no track (plain
-    /// track, a turnout or a crossing).
+    /// The grid track at `position`, or `nil` if the tile holds no track
+    /// (plain track, a turnout or a crossing). Read from the ``network``.
     public func track(at position: GridPosition) -> Track? {
-        map.tile(at: position).flatMap(Self.track(on:))
+        network.track(at: position)
     }
 
-    /// Every track piece in row-major order.
+    /// Every grid track piece in row-major order.
     public var tracks: [Track] {
-        map.tiles.compactMap(Self.track(on:))
-    }
-
-    private static func track(on tile: MapTile) -> Track? {
-        switch tile.type {
-        case .track(let connections): Track(position: tile.position, connections: connections)
-        case .turnout(let connections, let stem): Track(position: tile.position, connections: connections, layout: .turnout(stem: stem))
-        case .crossing: Track(position: tile.position, connections: [.north, .east, .south, .west], layout: .crossing)
-        case .empty, .station: nil
-        }
+        network.tracks
     }
 
     public func station(id: StationID) -> Station? {
@@ -106,8 +99,9 @@ public struct GameWorld: Equatable, Sendable {
         try requireEmptyTile(at: position)
         try economy.spend(economy.costs.track)
 
-        map.setType(.track(connections: connections), at: position)
-        return Track(position: position, connections: connections)
+        let track = Track(position: position, connections: connections)
+        network.lay(track)
+        return track
     }
 
     /// Lays a turnout on an empty tile and charges ``ConstructionCosts/track``
@@ -130,8 +124,9 @@ public struct GameWorld: Equatable, Sendable {
         try requireEmptyTile(at: position)
         try economy.spend(economy.costs.track)
 
-        map.setType(.turnout(connections: connections, stem: stem), at: position)
-        return Track(position: position, connections: connections, layout: .turnout(stem: stem))
+        let track = Track(position: position, connections: connections, layout: .turnout(stem: stem))
+        network.lay(track)
+        return track
     }
 
     /// Whether `connections` and `stem` make a turnout: three exits or more,
@@ -153,8 +148,9 @@ public struct GameWorld: Equatable, Sendable {
         try requireEmptyTile(at: position)
         try economy.spend(economy.costs.track)
 
-        map.setType(.crossing, at: position)
-        return Track(position: position, connections: [.north, .east, .south, .west], layout: .crossing)
+        let track = Track(position: position, connections: [.north, .east, .south, .west], layout: .crossing)
+        network.lay(track)
+        return track
     }
 
     /// Removes the track piece at `position`. Removal is free and not refunded.
@@ -175,7 +171,7 @@ public struct GameWorld: Equatable, Sendable {
             throw .trackInUse(position)
         }
 
-        map.setType(.empty, at: position)
+        network.removeTrack(at: position)
     }
 
     // MARK: - Track network
@@ -1329,7 +1325,9 @@ public struct GameWorld: Equatable, Sendable {
 
     private func requireEmptyTile(at position: GridPosition) throws(GameError) {
         guard let tile = map.tile(at: position) else { throw .outOfBounds(position) }
-        guard tile.type == .empty else { throw .tileOccupied(position) }
+        // Grid track and stations take a tile each (the rules of Stages
+        // I–S2); the continuous network takes none.
+        guard tile.type == .empty, track(at: position) == nil else { throw .tileOccupied(position) }
     }
 
     private static func isValidName(_ name: String) -> Bool {
@@ -1437,7 +1435,11 @@ extension GameWorld: Codable {
     /// world where a train waits for that track to be rebuilt is valid.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        map = try container.decode(GridMap.self, forKey: .map)
+        // Stage S3A: the saved tiles hold the land and the grid's track
+        // together, as every save has since Stage I; the land goes to the
+        // map and the track to the railway network, and nowhere else.
+        let saved = try container.decode(SavedMap.self, forKey: .map)
+        map = saved.land
         stations = try container.decode([Station].self, forKey: .stations)
         trains = try container.decode([Train].self, forKey: .trains)
         clock = try container.decode(GameClock.self, forKey: .clock)
@@ -1447,7 +1449,10 @@ extension GameWorld: Codable {
         lines = container.contains(.lines) ? try container.decode([ServiceLine].self, forKey: .lines) : []
         nextLineID = container.contains(.nextLineID) ? try container.decode(Int.self, forKey: .nextLineID) : 1
         serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
-        network = container.contains(.network) ? try container.decode(TrackNetwork.self, forKey: .network) : TrackNetwork()
+        network = container.contains(.network) ? try container.decode(RailwayNetwork.self, forKey: .network) : RailwayNetwork()
+        for track in saved.tracks {
+            network.lay(track)
+        }
 
         if let problem = invariantViolation() {
             throw DecodingError.dataCorrupted(
@@ -1466,7 +1471,7 @@ extension GameWorld: Codable {
     /// `null` for any of them is rejected.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(map, forKey: .map)
+        try container.encode(SavedMap(land: map, tracks: network.tracks), forKey: .map)
         try container.encode(stations, forKey: .stations)
         try container.encode(trains, forKey: .trains)
         if !lines.isEmpty {
@@ -1484,6 +1489,100 @@ extension GameWorld: Codable {
         }
         if !network.isPristine {
             try container.encode(network, forKey: .network)
+        }
+    }
+
+    /// The map as a save holds it (Stage S3A): each tile's land or grid
+    /// track, in the format every save has had since Stage I. It is only a
+    /// way of writing the two down: the land is the ``GridMap``'s and the
+    /// track the ``RailwayNetwork``'s, and neither is kept here.
+    private struct SavedMap: Codable {
+        /// A saved tile: the land, or a grid track piece on it. The cases and
+        /// their labels are the saved form of the map's tiles before Stage
+        /// S3A, so saves read and write byte for byte as before.
+        private enum Tile: Codable, Equatable {
+            case empty
+            case track(connections: TrackConnections)
+            case station(id: StationID)
+            case turnout(connections: TrackConnections, stem: TrackDirection)
+            case crossing
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case width, height, tiles
+        }
+
+        let land: GridMap
+        /// The grid's track pieces in row-major order.
+        let tracks: [Track]
+
+        init(land: GridMap, tracks: [Track]) {
+            self.land = land
+            self.tracks = tracks
+        }
+
+        /// Decodes `{"width", "height", "tiles"}`, the tiles in row-major
+        /// order, rejecting a size the map cannot have, a tile count that
+        /// does not match it, a track piece without exits and a turnout
+        /// that is not one.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let width = try container.decode(Int.self, forKey: .width)
+            let height = try container.decode(Int.self, forKey: .height)
+            let tiles = try container.decode([Tile].self, forKey: .tiles)
+            func corrupt(_ description: String) -> DecodingError {
+                DecodingError.dataCorruptedError(forKey: .tiles, in: container, debugDescription: description)
+            }
+            guard let map = try? GridMap(width: width, height: height), tiles.count == width * height else {
+                throw corrupt("Tile count \(tiles.count) does not match a valid \(width)x\(height) map.")
+            }
+            var land = map
+            var tracks: [Track] = []
+            for (index, tile) in tiles.enumerated() {
+                let position = GridPosition(x: index % width, y: index / width)
+                switch tile {
+                case .empty:
+                    break
+                case .station(let id):
+                    land.setType(.station(id: id), at: position)
+                case .track(let connections):
+                    guard !connections.isEmpty else { throw corrupt("Track tiles must have at least one connection.") }
+                    tracks.append(Track(position: position, connections: connections))
+                case .turnout(let connections, let stem):
+                    guard GameWorld.isTurnout(connections, stem: stem) else {
+                        throw corrupt("A turnout needs three exits or more, its stem among them.")
+                    }
+                    tracks.append(Track(position: position, connections: connections, layout: .turnout(stem: stem)))
+                case .crossing:
+                    tracks.append(Track(position: position, connections: [.north, .east, .south, .west], layout: .crossing))
+                }
+            }
+            self.land = land
+            self.tracks = tracks
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(land.width, forKey: .width)
+            try container.encode(land.height, forKey: .height)
+            var pieces: [GridPosition: Track] = [:]
+            for track in tracks {
+                pieces[track.position] = track
+            }
+            let tiles = land.tiles.map { tile -> Tile in
+                if let track = pieces[tile.position] {
+                    switch track.layout {
+                    case .open: return .track(connections: track.connections)
+                    case .turnout(let stem): return .turnout(connections: track.connections, stem: stem)
+                    case .crossing: return .crossing
+                    }
+                }
+                switch tile.type {
+                case .empty: return .empty
+                case .station(let id): return .station(id: id)
+                }
+            }
+            try container.encode(tiles, forKey: .tiles)
         }
     }
 
@@ -1534,6 +1633,11 @@ extension GameWorld: Codable {
         }
         guard trains.allSatisfy({ Self.isValidName($0.name) }) else {
             return "A train has an invalid name."
+        }
+        // Stage S3A: grid track stands on the map's empty land, one piece a
+        // tile (a station tile is not track).
+        guard network.tracks.allSatisfy({ map.tile(at: $0.position)?.type == .empty }) else {
+            return "Grid track lies off the map or on a station."
         }
         // Stage S3: the network lies over the map, at ground level.
         guard network.nodes.allSatisfy({ isOnMap($0.position) }) else {

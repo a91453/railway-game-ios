@@ -12,7 +12,7 @@ final class TrackConstructionTests: XCTestCase {
 
         XCTAssertEqual(track, Track(position: origin, connections: straight))
         XCTAssertEqual(world.track(at: origin), track)
-        XCTAssertEqual(world.map.tile(at: origin)?.type, .track(connections: straight))
+        XCTAssertEqual(world.map.tile(at: origin)?.type, .empty, "track lives in the railway network, not on the land")
         XCTAssertEqual(world.tracks, [track])
         XCTAssertEqual(world.economy.balance, 9_900)
     }

@@ -8,42 +8,74 @@
 // a train or changes a rule: it is the ground the route reservation and
 // movement authority of Phase 4.6 will stand on.
 
-/// A piece of track a train can occupy: a node or an edge of the railway
-/// graph (see ``TrackNodeID`` and ``TrackEdgeID``).
+/// A piece of track a train can occupy: a node of the railway graph, or a
+/// span of an edge (see ``TrackNodeID`` and ``TrackSpan``).
 ///
-/// On the grid, a track tile is a node and the link between two joined
-/// tiles an edge; a level crossing is one tile, so trains crossing it
-/// either way share it. On the track network (Stage S3) a node shared by
-/// two lines is a level crossing in the same way, while edges that only
-/// cross in plan share nothing.
+/// An edge is a connection with a length; the resources along it are its
+/// spans, so a long edge is many resources and a train holds only the part
+/// it is on (Stage S3A, ARCHITECTURE decision 29). On the grid, a track tile
+/// is a node and the link between two joined tiles is one span; a level
+/// crossing is one tile, so trains crossing it either way share it. On the
+/// track network a node shared by two lines is a level crossing in the same
+/// way, while edges that only cross in plan share nothing.
 public enum TrackResource: Hashable, Comparable, Sendable {
     case node(TrackNodeID)
-    case edge(TrackEdgeID)
+    case span(TrackSpan)
 
     /// The track tile at `position`.
     public static func tile(_ position: GridPosition) -> TrackResource {
         .node(.tile(position))
     }
 
-    /// The grid link between `a` and `b`, in either order.
+    /// The grid link between `a` and `b`, in either order: its one span.
     public static func link(between a: GridPosition, and b: GridPosition) -> TrackResource {
-        .edge(.link(between: a, and: b))
+        .span(TrackSpan(edge: .link(between: a, and: b), start: 0, end: TrainPosition.linkLength))
     }
 
-    /// Nodes before edges; each kind in its own order (see ``TrackNodeID``
-    /// and ``TrackEdgeID``): on the grid, tiles in row-major order and
-    /// links by their first tile, then their second.
+    /// Nodes before spans; each kind in its own order (see ``TrackNodeID``
+    /// and ``TrackSpan``): on the grid, tiles in row-major order and links
+    /// by their first tile, then their second.
     public static func < (lhs: TrackResource, rhs: TrackResource) -> Bool {
         switch (lhs, rhs) {
         case (.node(let a), .node(let b)):
             a < b
-        case (.node, .edge):
+        case (.node, .span):
             true
-        case (.edge, .node):
+        case (.span, .node):
             false
-        case (.edge(let a), .edge(let b)):
+        case (.span(let a), .span(let b)):
             a < b
         }
+    }
+}
+
+/// A stretch of an edge's chainage, from `start` to `end` (measured from the
+/// edge's `from` node): the unit of track a train occupies along an edge
+/// and, from Stage T, reserves (Stage S3A).
+///
+/// An edge's spans cover it end to end without overlapping (see
+/// ``GameWorld/trackSpans(of:)``). They are worked out from the edge's
+/// integer length, never from its drawn shape, so occupancy and reservation
+/// never depend on how the track is sampled or rendered.
+public struct TrackSpan: Hashable, Comparable, Sendable {
+    public let edge: TrackEdgeID
+    public let start: Int64
+    public let end: Int64
+
+    public init(edge: TrackEdgeID, start: Int64, end: Int64) {
+        self.edge = edge
+        self.start = start
+        self.end = end
+    }
+
+    /// How long the span is.
+    public var length: Int64 {
+        end - start
+    }
+
+    /// By edge, then along it.
+    public static func < (lhs: TrackSpan, rhs: TrackSpan) -> Bool {
+        (lhs.edge, lhs.start, lhs.end) < (rhs.edge, rhs.start, rhs.end)
     }
 }
 

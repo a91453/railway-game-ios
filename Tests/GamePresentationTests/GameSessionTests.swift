@@ -27,7 +27,7 @@ final class GameSessionTests: XCTestCase {
             session.select(GridPosition(x: 2, y: 1))
 
             XCTAssertEqual(session.selection, GridPosition(x: 2, y: 1))
-            XCTAssertEqual(session.selectedTile?.type, .track(connections: [.east, .west]))
+            XCTAssertEqual(session.selectedTrack, Track(position: session.selection!, connections: [.east, .west]))
             XCTAssertEqual(session.world, world)
         }
     }

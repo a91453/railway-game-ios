@@ -15,7 +15,7 @@ extension ReferenceWorld {
             head = .node(.tile(tile))
         case .onLink(let from, let to, _):
             let first = (from.y, from.x) < (to.y, to.x)
-            head = .edge(.link(first ? from : to, first ? to : from))
+            head = .wholeLink(.link(first ? from : to, first ? to : from))
         case .onEdge:
             return networkResources(of: train)
         }

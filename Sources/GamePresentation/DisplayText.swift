@@ -55,13 +55,18 @@ extension GameWorld {
     /// "Station · Central" or, for a station grown onto more tiles,
     /// "Station · Central · 3 tiles".
     public func tileSummary(at position: GridPosition) -> String {
+        // The railway first (Stage S3A: it is not on the map), then the land.
+        if let track = track(at: position) {
+            switch track.layout {
+            case .open: return "Track · \(track.connections.summary)"
+            case .turnout(let stem): return "Turnout · \(track.connections.abbreviation), stem \(stem.abbreviation)"
+            case .crossing: return "Level crossing · N–S over E–W"
+            }
+        }
         switch map.tile(at: position)?.type {
-        case nil: "Outside the map"
-        case .empty?: "Empty"
-        case .track(let connections)?: "Track · \(connections.summary)"
-        case .station(let id)?: stationSummary(id)
-        case .turnout(let connections, let stem)?: "Turnout · \(connections.abbreviation), stem \(stem.abbreviation)"
-        case .crossing?: "Level crossing · N–S over E–W"
+        case nil: return "Outside the map"
+        case .empty?: return "Empty"
+        case .station(let id)?: return stationSummary(id)
         }
     }
 }

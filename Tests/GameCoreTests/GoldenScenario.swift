@@ -1226,7 +1226,7 @@ struct WorldSummary: Codable, Equatable {
             var length: Int64
         }
 
-        init(_ network: TrackNetwork) {
+        init(_ network: RailwayNetwork) {
             nodes = network.nodes.map { NodeSummary(id: $0.id.number, x: $0.position.x, y: $0.position.y, z: $0.position.z) }
             edges = network.edges.map { EdgeSummary(id: $0.id.number, from: $0.from.number, to: $0.to.number, curve: CurveSummary($0.curve), length: $0.length) }
         }
@@ -2032,8 +2032,10 @@ struct LayoutSummary: Codable, Equatable {
 }
 
 /// A track resource as a fixture value: `{"type": "node", "x", "y"}` or
-/// `{"type": "link", "from": {"x", "y"}, "to": {"x", "y"}}`, `from` first
-/// in row-major order (see `TrackResource`).
+/// `{"type": "link", "from": {"x", "y"}, "to": {"x", "y"}}` (a grid link's
+/// one span), `from` first in row-major order; on the network (schema 16)
+/// `{"type": "networkNode", "node"}` or `{"type": "networkSpan", "edge",
+/// "start", "end"}` (see `TrackResource` and `TrackSpan`).
 struct ResourceSummary: Codable, Equatable {
     var resource: TrackResource
 
@@ -2042,7 +2044,7 @@ struct ResourceSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, node, edge
+        case type, x, y, from, to, node, edge, start, end
     }
 
     init(from decoder: any Decoder) throws {
@@ -2051,15 +2053,19 @@ struct ResourceSummary: Codable, Equatable {
         case "node":
             resource = .tile(try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y)))
         case "link":
-            resource = .edge(.link(
+            // A grid link is one span, the whole link (schema 16).
+            resource = .wholeLink(.link(
                 try container.decode(PositionSummary.self, forKey: .from).position, try container.decode(PositionSummary.self, forKey: .to).position
             ))
         case "networkNode":
             resource = .node(.node(try container.decode(Int.self, forKey: .node)))
-        case "networkEdge":
-            resource = .edge(.edge(try container.decode(Int.self, forKey: .edge)))
+        case "networkSpan":
+            resource = .span(TrackSpan(
+                edge: .edge(try container.decode(Int.self, forKey: .edge)),
+                start: try container.decode(Int64.self, forKey: .start), end: try container.decode(Int64.self, forKey: .end)
+            ))
         default:
-            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "A resource is a node or a link.")
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "A resource is a node, a link or a network span.")
         }
     }
 
@@ -2070,16 +2076,26 @@ struct ResourceSummary: Codable, Equatable {
             try container.encode("node", forKey: .type)
             try container.encode(position.x, forKey: .x)
             try container.encode(position.y, forKey: .y)
-        case .edge(.link(let from, let to)):
-            try container.encode("link", forKey: .type)
-            try container.encode(PositionSummary(from), forKey: .from)
-            try container.encode(PositionSummary(to), forKey: .to)
+        case .span(let span):
+            switch span.edge {
+            case .link(let from, let to):
+                try container.encode("link", forKey: .type)
+                try container.encode(PositionSummary(from), forKey: .from)
+                try container.encode(PositionSummary(to), forKey: .to)
+                // Never part of a link: written so a failure report shows it.
+                if span.start != 0 || span.end != TrainPosition.linkLength {
+                    try container.encode(span.start, forKey: .start)
+                    try container.encode(span.end, forKey: .end)
+                }
+            case .edge(let number):
+                try container.encode("networkSpan", forKey: .type)
+                try container.encode(number, forKey: .edge)
+                try container.encode(span.start, forKey: .start)
+                try container.encode(span.end, forKey: .end)
+            }
         case .node(.node(let number)):
             try container.encode("networkNode", forKey: .type)
             try container.encode(number, forKey: .node)
-        case .edge(.edge(let number)):
-            try container.encode("networkEdge", forKey: .type)
-            try container.encode(number, forKey: .edge)
         }
     }
 }

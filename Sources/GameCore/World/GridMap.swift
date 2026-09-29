@@ -1,4 +1,6 @@
-/// A fixed-size rectangular grid of tiles, stored densely in row-major order.
+/// A fixed-size rectangular grid of tiles, stored densely in row-major order:
+/// the land (empty ground and the tiles stations stand on). Railway track is
+/// in ``RailwayNetwork`` (Stage S3A).
 ///
 /// Only ``GameWorld`` mutates a map, so every change goes through validated
 /// game rules. Callers read tiles via ``tile(at:)`` or ``tiles``.
@@ -92,26 +94,6 @@ extension GridMap: Codable {
             throw DecodingError.dataCorruptedError(
                 forKey: .tiles, in: container,
                 debugDescription: "Tile count \(tiles.count) does not match a valid \(width)x\(height) map."
-            )
-        }
-        let hasEmptyTrack = tiles.contains { tile in
-            if case .track(let connections) = tile { return connections.isEmpty }
-            return false
-        }
-        guard !hasEmptyTrack else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .tiles, in: container,
-                debugDescription: "Track tiles must have at least one connection."
-            )
-        }
-        let hasBadTurnout = tiles.contains { tile in
-            if case .turnout(let connections, let stem) = tile { return !GameWorld.isTurnout(connections, stem: stem) }
-            return false
-        }
-        guard !hasBadTurnout else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .tiles, in: container,
-                debugDescription: "A turnout needs three exits or more, its stem among them."
             )
         }
         self.width = width

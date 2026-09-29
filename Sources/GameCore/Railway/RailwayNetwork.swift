@@ -1,5 +1,16 @@
-// The continuous track network (Phase 4.5 Stage S3, ARCHITECTURE decision
-// 29). Nodes are points in the world; edges run between two of them along a
+// The railway network (Phase 4.5 Stage S3, ARCHITECTURE decision 29): the
+// one record of all railway track in a world (S3A). It holds two kinds of
+// track behind one graph vocabulary (see TrackGraph):
+//
+// - grid track, anchored to tiles: each track tile's exits and layout (plain,
+//   turnout or level crossing), the railway of Stages I–S2. A tile is a node
+//   and the link between two tiles whose exits face each other an edge,
+//   1024 long, derived from the pieces;
+// - the continuous network (S3B): numbered nodes at world coordinates and
+//   numbered edges between them.
+//
+// The land (empty ground, stations) is the GridMap's; the railway is only
+// here. For the continuous network: nodes are points in the world; edges run between two of them along a
 // TrackCurve, any length and any heading. Only a shared node joins two
 // edges: edges that cross in plan without one never meet. Which edges a
 // train may pass between at a node is derived once, when an edge is built or
@@ -82,7 +93,12 @@ public struct TrackEdge: Hashable, Sendable {
 
 /// The continuous track network of a world: its nodes and edges, each in
 /// ascending ID order. Changed only by ``GameWorld``'s commands.
-public struct TrackNetwork: Hashable, Sendable {
+public struct RailwayNetwork: Hashable, Sendable {
+    /// The grid's track pieces by the tile they are anchored to (Stage
+    /// S3A). Saved in the map's tile list, the save format of Stages I–S2
+    /// (see ``GameWorld``), not under the network's own key.
+    private var pieces: [GridPosition: Track]
+    /// The continuous network's nodes and edges, in ascending ID order.
     public private(set) var nodes: [TrackNode]
     public private(set) var edges: [TrackEdge]
     /// The next node and edge number to hand out; every number in use is
@@ -92,17 +108,67 @@ public struct TrackNetwork: Hashable, Sendable {
 
     /// An empty network, handing out numbers from 1.
     public init() {
+        pieces = [:]
         nodes = []
         edges = []
         nextNodeNumber = 1
         nextEdgeNumber = 1
     }
 
-    /// Whether the network has no nodes and has never handed out a number,
-    /// so a world saves it by leaving it out.
+    /// Whether the continuous network has no nodes and has never handed out
+    /// a number, so a world saves it by leaving it out. Grid track does not
+    /// count: it is saved in the map's tiles.
     var isPristine: Bool {
         nodes.isEmpty && edges.isEmpty && nextNodeNumber == 1 && nextEdgeNumber == 1
     }
+
+    // MARK: - Grid track (Stage S3A)
+
+    /// The grid track piece anchored to `position`, or `nil`.
+    public func track(at position: GridPosition) -> Track? {
+        pieces[position]
+    }
+
+    /// Every grid track piece, in row-major order.
+    public var tracks: [Track] {
+        pieces.values.sorted { TrackEdgeID.precedes($0.position, $1.position) }
+    }
+
+    /// Lays `track` on its tile, replacing nothing: the caller has checked
+    /// the tile is free.
+    mutating func lay(_ track: Track) {
+        precondition(pieces[track.position] == nil, "lay(_:) needs a tile without track")
+        pieces[track.position] = track
+    }
+
+    /// Removes the grid track piece at `position`, which exists.
+    mutating func removeTrack(at position: GridPosition) {
+        let removed = pieces.removeValue(forKey: position)
+        precondition(removed != nil, "removeTrack(at:) needs a tile with track")
+    }
+
+    // MARK: - Spans (Stage S3A)
+
+    /// The longest a span of an edge is: 1024, a tile, as long as a grid
+    /// link, so the grid and the network are divided alike.
+    public static let spanLength: Int64 = 1_024
+
+    /// The spans of edge `edge`, `length` long, from its `from` node: the
+    /// fewest equal parts no longer than ``spanLength``. With
+    /// `n = ⌈length ÷ 1024⌉` parts, the `k`-th boundary is at
+    /// `⌊k × length ÷ n⌋`. A grid link is one span; an edge of 2 km is 125.
+    /// Worked out from the integer length alone, never from the samples.
+    ///
+    /// - Precondition: `length > 0`.
+    public static func spans(of edge: TrackEdgeID, length: Int64) -> [TrackSpan] {
+        precondition(length > 0, "spans(of:length:) needs a length")
+        let count = (length + spanLength - 1) / spanLength
+        return (0..<count).map { k in
+            TrackSpan(edge: edge, start: k * length / count, end: (k + 1) * length / count)
+        }
+    }
+
+    // MARK: - The continuous network
 
     /// The node with `id`, or `nil`. Binary search: O(log n).
     public func node(_ id: TrackNodeID) -> TrackNode? {
@@ -211,7 +277,7 @@ public struct TrackNetwork: Hashable, Sendable {
 
 // MARK: - Codable
 
-extension TrackNetwork: Codable {
+extension RailwayNetwork: Codable {
     private enum CodingKeys: String, CodingKey {
         case nodes, edges, nextNodeID, nextEdgeID
     }

@@ -73,7 +73,7 @@ final class TrackResourceTests: XCTestCase {
         let built = try world.buildTurnout(at: p(1, 1), connections: [.north, .east, .south, .west], stem: .north)
         XCTAssertEqual(built, Track(position: p(1, 1), connections: [.north, .east, .south, .west], layout: .turnout(stem: .north)))
         XCTAssertEqual(world.track(at: p(1, 1)), built, "a three-way turnout")
-        XCTAssertEqual(world.map.tile(at: p(1, 1))?.type, .turnout(connections: [.north, .east, .south, .west], stem: .north))
+        XCTAssertEqual(world.map.tile(at: p(1, 1))?.type, .empty, "a turnout is railway, not land")
         let cross = try world.buildCrossing(at: p(2, 2))
         XCTAssertEqual(cross, Track(position: p(2, 2), connections: [.north, .east, .south, .west], layout: .crossing))
         XCTAssertEqual(world.economy.balance, 350 - 300, "each costs what track costs")
@@ -158,16 +158,16 @@ final class TrackResourceTests: XCTestCase {
         try world.placeTrain(d, at: .onLink(from: crossing, to: p(3, 2), offset: 100))
 
         XCTAssertEqual(world.occupiedResources(of: a), [.tile(crossing)])
-        XCTAssertEqual(world.occupiedResources(of: c), [.edge(.link(p(3, 2), crossing))])
-        XCTAssertEqual(world.occupiedResources(of: d), [.edge(.link(p(3, 2), crossing))], "a link is the same either way")
+        XCTAssertEqual(world.occupiedResources(of: c), [.wholeLink(.link(p(3, 2), crossing))])
+        XCTAssertEqual(world.occupiedResources(of: d), [.wholeLink(.link(p(3, 2), crossing))], "a link is the same either way")
         XCTAssertEqual(world.occupiedResources(of: TrainID(rawValue: 9)), [])
         XCTAssertEqual(world.occupancyConflicts(), [
             TrackConflict(resource: .tile(crossing), trains: [a, b]),
-            TrackConflict(resource: .edge(.link(p(3, 2), crossing)), trains: [c, d]),
+            TrackConflict(resource: .wholeLink(.link(p(3, 2), crossing)), trains: [c, d]),
         ])
-        XCTAssertEqual(TrackResource.link(between: crossing, and: p(3, 2)), .edge(.link(p(3, 2), crossing)))
+        XCTAssertEqual(TrackResource.link(between: crossing, and: p(3, 2)), .wholeLink(.link(p(3, 2), crossing)))
         XCTAssertLessThan(TrackResource.tile(p(6, 0)), .tile(p(0, 1)), "row-major")
-        XCTAssertLessThan(TrackResource.tile(p(6, 6)), .edge(.link(p(0, 0), p(1, 0))), "nodes before links")
+        XCTAssertLessThan(TrackResource.tile(p(6, 6)), .wholeLink(.link(p(0, 0), p(1, 0))), "nodes before links")
 
         try world.unplaceTrain(b)
         try world.unplaceTrain(d)
@@ -186,7 +186,7 @@ final class TrackResourceTests: XCTestCase {
             TrackSection(nodes: [crossing, p(5, 2), p(6, 2)], isLoop: false),
             TrackSection(nodes: [crossing, p(4, 3), p(4, 4)], isLoop: false),
         ])
-        XCTAssertEqual(world.trackSections()[2].links, [.edge(.link(turnout, p(3, 2))), .edge(.link(p(3, 2), crossing))])
+        XCTAssertEqual(world.trackSections()[2].links, [.wholeLink(.link(turnout, p(3, 2))), .wholeLink(.link(p(3, 2), crossing))])
 
         var lone = try GameWorld(width: 2, height: 1, economy: GameEconomy(balance: 1_000, costs: testCosts))
         try lone.buildTrack(at: p(0, 0), connections: .north)

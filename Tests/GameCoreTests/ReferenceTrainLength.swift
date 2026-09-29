@@ -193,7 +193,7 @@ extension ReferenceWorld {
             if points[k].distance <= length { found.append(.node(.tile(points[k].node))) }
             if points[k - 1].distance < length {
                 let (p, q) = (points[k - 1].node, points[k].node)
-                found.append(.edge((p.y, p.x) < (q.y, q.x) ? .link(p, q) : .link(q, p)))
+                found.append(.wholeLink((p.y, p.x) < (q.y, q.x) ? .link(p, q) : .link(q, p)))
             }
         }
         return found

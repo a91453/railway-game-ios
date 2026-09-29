@@ -25,24 +25,31 @@ enum TileArt {
             drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
         }
 
+        // The land: stations. The grid's track is the railway network's
+        // (Stage S3A), drawn from it below.
         for tile in map.tiles {
             let rect = rect(for: tile.position, tileSize: tileSize)
             switch (tile.type, detail) {
             case (.empty, _):
                 break
-            case (.track(let connections), .full):
-                drawTrack(connections, in: rect, context: context)
-            case (.track(let connections), .overview):
-                drawTrackLine(connections, in: rect, context: context)
             case (.station, .full):
                 drawStation(in: rect, context: context)
             case (.station, .overview):
                 context.fill(Path(rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.1)), with: .color(Palette.station))
-            case (.turnout(let connections, let stem), .full):
-                drawTrack(connections, in: rect, context: context)
+            }
+        }
+        for track in world.tracks {
+            let rect = rect(for: track.position, tileSize: tileSize)
+            switch (track.layout, detail) {
+            case (.open, .full):
+                drawTrack(track.connections, in: rect, context: context)
+            case (.open, .overview):
+                drawTrackLine(track.connections, in: rect, context: context)
+            case (.turnout(let stem), .full):
+                drawTrack(track.connections, in: rect, context: context)
                 drawStemMark(stem, in: rect, context: context)
-            case (.turnout(let connections, _), .overview):
-                drawTrackLine(connections, in: rect, context: context)
+            case (.turnout, .overview):
+                drawTrackLine(track.connections, in: rect, context: context)
             case (.crossing, .full):
                 drawTrack([.north, .south], in: rect, context: context)
                 drawTrack([.east, .west], in: rect, context: context)

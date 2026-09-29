@@ -393,7 +393,8 @@ final class TrackConnectivityTests: XCTestCase {
                 let track = try world.buildTrack(at: position, connections: TrackConnections(rawValue: raw))
                 XCTAssertTrue(isValidPiece, "\(raw) was accepted")
                 XCTAssertEqual(track.connections.rawValue, raw)
-                XCTAssertEqual(world.map.tile(at: position)?.type, .track(connections: TrackConnections(rawValue: raw)))
+                XCTAssertEqual(world.track(at: position), Track(position: position, connections: TrackConnections(rawValue: raw)))
+                XCTAssertEqual(world.map.tile(at: position)?.type, .empty, "the land holds no track")
                 XCTAssertEqual(world.economy.balance, 9_900)
             } catch {
                 XCTAssertFalse(isValidPiece, "\(raw) was rejected")
@@ -404,9 +405,14 @@ final class TrackConnectivityTests: XCTestCase {
     }
 
     func testCommandsAndSavesAcceptTheSameConnectionMasks() throws {
+        // Stage S3A: a saved map tile may still hold grid track; the world
+        // decoder moves it into the railway network.
+        let empty = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(try makeWorld(width: 1, height: 1))) as? [String: Any])
         for raw in UInt8.min...UInt8.max {
-            let save = Data(#"{"width":1,"height":1,"tiles":[{"track":{"connections":\#(raw)}}]}"#.utf8)
-            let decodes = (try? JSONDecoder().decode(GridMap.self, from: save)) != nil
+            var object = empty
+            object["map"] = ["width": 1, "height": 1, "tiles": [["track": ["connections": Int(raw)]]]]
+            let save = try JSONSerialization.data(withJSONObject: object)
+            let decodes = (try? JSONDecoder().decode(GameWorld.self, from: save)) != nil
             var world = try makeWorld(width: 1, height: 1)
             let builds = (try? world.buildTrack(at: GridPosition(x: 0, y: 0), connections: TrackConnections(rawValue: raw))) != nil
 

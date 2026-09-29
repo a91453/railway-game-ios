@@ -8,7 +8,7 @@
 //   tile's layout (see exits(from:facing:));
 // - the continuous track network of Stage S3: numbered nodes at world
 //   coordinates and numbered edges of any length and shape between them
-//   (see TrackNetwork).
+//   (see RailwayNetwork).
 //
 // Nothing here depends on north, east, south and west: the grid's
 // directions stay inside its own adapter.
