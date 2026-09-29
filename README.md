@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.5 Stage S1（軌道資源）.**
+**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.5 Stage S2（車站設施）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），以及道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有號誌與待避、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），以及多格車站、月台股道與多節列車（Phase 4.5 Stage S2）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有號誌與待避、乘客或城市模擬。
 
 App 目前能做到：
 

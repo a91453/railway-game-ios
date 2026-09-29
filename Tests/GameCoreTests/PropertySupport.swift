@@ -609,6 +609,24 @@ enum WorldInvariants {
         for station in world.stations where world.map.tile(at: station.position)?.type != .station(id: station.id) {
             problems.append("station \(station.id.rawValue) does not match its tile")
         }
+        // Decision 27: every tile of a station is its tile on the map, each
+        // annex beside an earlier tile, none twice; no other station tiles.
+        for station in world.stations {
+            var earlier = [station.position]
+            for annex in station.annexes {
+                if world.map.tile(at: annex)?.type != .station(id: station.id) {
+                    problems.append("station \(station.id.rawValue) annex \(annex) does not match its tile")
+                }
+                if earlier.contains(annex) || !earlier.contains(where: { stepDirection(from: $0, to: annex) != nil }) {
+                    problems.append("station \(station.id.rawValue) annex \(annex) is not beside an earlier tile")
+                }
+                earlier.append(annex)
+            }
+        }
+        let stationTiles = world.map.tiles.filter { if case .station = $0.type { true } else { false } }.count
+        if stationTiles != world.stations.reduce(0, { $0 + 1 + $1.annexes.count }) {
+            problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")
+        }
         // Decision 26: a turnout has three exits or more, its stem among them.
         for track in world.tracks {
             if case .turnout(let stem) = track.layout, track.connections.directions.count < 3 || !track.connections.contains(TrackConnections(stem)) {
@@ -705,6 +723,7 @@ enum WorldInvariants {
                 }
             }
             problems += serviceViolations(of: train, in: world)
+            problems += bodyViolations(of: train, in: world)
             let movement = train.movement
             guard let position = train.position else {
                 if movement != .idle { problems.append("unplaced train \(train.id.rawValue) is not idle") }
@@ -746,6 +765,61 @@ enum WorldInvariants {
         return problems
     }
 
+    /// Decision 27: 1 to 16 cars; no body off the track; on it, the body
+    /// starts right behind the head (the tile behind a train at a node, the
+    /// `from` end of a link), runs over joined track by turns a train may
+    /// take, and ends at the first node at or beyond the tail.
+    static func bodyViolations(of train: Train, in world: GameWorld) -> [String] {
+        let id = train.id.rawValue
+        var problems: [String] = []
+        if !(1...16).contains(train.cars) { problems.append("train \(id) has \(train.cars) cars") }
+        guard let position = train.position else {
+            if !train.trail.isEmpty { problems.append("unplaced train \(id) has a body") }
+            return problems
+        }
+        // One car to a tile: a link between car centres.
+        let length = Int64(train.cars - 1) * 1024
+        var spine: [GridPosition]
+        var distance: Int64
+        switch position {
+        case .atNode(let tile, let heading):
+            if let first = train.trail.first, stepDirection(from: tile, to: first) != heading.opposite {
+                problems.append("train \(id)'s body does not start behind it")
+            }
+            spine = [tile]
+            distance = 1024
+        case .onLink(let from, let to, let offset):
+            if let first = train.trail.first, first != from {
+                problems.append("train \(id)'s body does not start at its link's far end")
+            }
+            spine = [to]
+            distance = offset
+        }
+        // The distances of the nodes: each must be short of the tail but
+        // the last, which must reach it.
+        for (index, node) in train.trail.enumerated() {
+            let last = index == train.trail.count - 1
+            if last ? distance < length : distance >= length {
+                problems.append("train \(id)'s body of \(train.trail.count) nodes does not fit \(train.cars) cars")
+                break
+            }
+            distance += 1024
+            spine.append(node)
+        }
+        if length > 0, train.trail.isEmpty { problems.append("train \(id) of \(train.cars) cars has no body") }
+        if length == 0, !train.trail.isEmpty { problems.append("train \(id) of one car has a body") }
+        for index in spine.indices.dropFirst() where !world.isConnected(spine[index - 1], to: spine[index]) {
+            problems.append("train \(id)'s body crosses \(spine[index - 1])-\(spine[index]), which is not joined")
+        }
+        for index in spine.indices.dropFirst().dropLast() {
+            let heading = stepDirection(from: spine[index + 1], to: spine[index])!
+            if !world.exits(from: spine[index], facing: heading).contains(spine[index - 1]) {
+                problems.append("train \(id)'s body turns at \(spine[index]) where no train may")
+            }
+        }
+        return problems
+    }
+
     /// Decision 20: a service points at an entry of the timetable of a
     /// placed train; a waiting train is stopped at that entry's station; a
     /// travelling one heads for an entry after the service's first, has not
@@ -778,7 +852,8 @@ enum WorldInvariants {
             let remaining = train.movement.remainingContinuation
             if case .atNode = position, remaining.isEmpty { problems.append("train \(id) travels but its journey has ended") }
             let end = remaining.last ?? ahead(of: position).node
-            if let station = world.station(id: target), stepDirection(from: end, to: station.position) == nil {
+            // Decision 27: beside any tile of the station.
+            if let station = world.station(id: target), !station.tiles.contains(where: { stepDirection(from: end, to: $0) != nil }) {
                 problems.append("train \(id) travels to station \(target.rawValue) but its journey ends at \(end)")
             }
             return problems

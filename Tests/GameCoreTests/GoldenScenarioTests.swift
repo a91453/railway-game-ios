@@ -62,9 +62,46 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(wrongTime.differences().count, 1, name)
 
             var extraTrain = committed
-            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: [], repeat: RepeatSummary(nil), execution: ExecutionSummary(nil)))
+            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: [], repeat: RepeatSummary(nil), execution: ExecutionSummary(nil), cars: 1, trail: []))
             XCTAssertEqual(extraTrain.differences().count, 1, name)
         }
+    }
+
+    /// A station's expected annexes and a train's expected cars and body
+    /// are compared exactly: one more, one fewer or another order is
+    /// reported once.
+    func testChangedStationFacilityExpectationsAreReported() throws {
+        var annexCount = 0
+        var trailCount = 0
+        for url in try GoldenScenarioFixtures.urls() {
+            let name = url.lastPathComponent
+            let committed = try GoldenScenario.decode(Data(contentsOf: url))
+            for (index, station) in committed.expectedFinalState.stations.enumerated() {
+                if station.annexes.count > 1 { annexCount += 1 }
+                var wrongAnnexes = [station.annexes + [PositionSummary(GridPosition(x: 99, y: 99))]]
+                if station.annexes.count > 1 { wrongAnnexes += [Array(station.annexes.dropLast()), station.annexes.reversed()] }
+                for wrong in wrongAnnexes {
+                    var scenario = committed
+                    scenario.expectedFinalState.stations[index].annexes = wrong
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) station \(station.id) expecting \(wrong)")
+                }
+            }
+            for (index, train) in committed.expectedFinalState.trains.enumerated() {
+                if train.trail.count > 1 { trailCount += 1 }
+                var scenario = committed
+                scenario.expectedFinalState.trains[index].cars += 1
+                XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) with another car")
+                var wrongTrails = [train.trail + [PositionSummary(GridPosition(x: 99, y: 99))]]
+                if train.trail.count > 1 { wrongTrails += [Array(train.trail.dropLast()), train.trail.reversed()] }
+                for wrong in wrongTrails {
+                    scenario = committed
+                    scenario.expectedFinalState.trains[index].trail = wrong
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) expecting \(wrong)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(annexCount, 0, "No fixture expects a station of three tiles or more")
+        XCTAssertGreaterThan(trailCount, 0, "No fixture expects a train body over two nodes or more")
     }
 
     /// A train's expected movement is compared exactly: another rate, cursor
@@ -231,6 +268,9 @@ final class GoldenScenarioTests: XCTestCase {
         var sectionAnswerCount = 0
         var conflictAnswerCount = 0
         var doubleTrackCount = 0
+        var longRouteCount = 0
+        var wholeTrainCount = 0
+        var platformTrackCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -282,6 +322,9 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .sections(let sections) = expect, sections.count > 2 { sectionAnswerCount += 1 }
                 if case .conflicts(let conflicts) = expect, !conflicts.isEmpty { conflictAnswerCount += 1 }
                 if case .tracks(let count) = expect, count >= 2 { doubleTrackCount += 1 }
+                if case .routeToStation(_, _, let cars) = observation, cars > 2, case .route(let nodes?) = expect, !nodes.isEmpty { longRouteCount += 1 }
+                if case .wholeTrainStops = observation, case .stations(let stations) = expect, !stations.isEmpty { wholeTrainCount += 1 }
+                if case .platformTracks(let tracks) = expect, tracks.count > 1, tracks.contains(where: { $0.count > 1 }) { platformTrackCount += 1 }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -308,6 +351,9 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(sectionAnswerCount, 0, "No fixture pins three sections or more")
         XCTAssertGreaterThan(conflictAnswerCount, 0, "No fixture pins a conflict")
         XCTAssertGreaterThan(doubleTrackCount, 0, "No fixture pins double track")
+        XCTAssertGreaterThan(longRouteCount, 0, "No fixture pins a route for a long train")
+        XCTAssertGreaterThan(wholeTrainCount, 0, "No fixture pins a train beside a station with its whole length")
+        XCTAssertGreaterThan(platformTrackCount, 0, "No fixture pins two platform tracks, one of several tiles")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -427,6 +473,14 @@ final class GoldenScenarioTests: XCTestCase {
             return wrong
         case .tracks(let count):
             return [.tracks(count + 1)]
+        case .platformTracks(let tracks):
+            var wrong: [ObservationAnswer] = [.platformTracks(tracks + [[GridPosition(x: 99, y: 99)]])]
+            if let first = tracks.first {
+                wrong.append(.platformTracks(Array(tracks.dropFirst())))
+                wrong.append(.platformTracks([first.dropLast()] + tracks.dropFirst()))
+            }
+            if tracks.count > 1 { wrong.append(.platformTracks(tracks.reversed())) }
+            return wrong
         }
     }
 
@@ -460,7 +514,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 14,
+              "schemaVersion": 15,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -510,7 +564,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -716,13 +770,13 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(toStation.utf8)),
             .observe(
-                .routeToStation(from: .atNode(GridPosition(x: 1, y: 1), heading: .east), station: StationID(rawValue: 2)),
+                .routeToStation(from: .atNode(GridPosition(x: 1, y: 1), heading: .east), station: StationID(rawValue: 2), cars: 1),
                 expect: .route([GridPosition(x: 2, y: 1), GridPosition(x: 3, y: 1)])
             )
         )
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(noStationRoute.utf8)),
-            .observe(.routeToStation(from: .atNode(GridPosition(x: 1, y: 1), heading: .west), station: StationID(rawValue: 9)), expect: .route(nil))
+            .observe(.routeToStation(from: .atNode(GridPosition(x: 1, y: 1), heading: .west), station: StationID(rawValue: 9), cars: 1), expect: .route(nil))
         )
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(stops.utf8)),
@@ -945,6 +999,47 @@ final class GoldenScenarioTests: XCTestCase {
         }
         for json in [#"{"type": "open", "stem": "east"}"#, #"{"type": "turnout"}"#, #"{"type": "switch"}"#] {
             XCTAssertThrowsError(try JSONDecoder().decode(LayoutSummary.self, from: Data(json.utf8)), json)
+        }
+    }
+
+    func testStationFacilityStepsDecode() throws {
+        let p = { (x: Int, y: Int) in GridPosition(x: x, y: y) }
+        let steps: [(String, GoldenScenario.Step)] = [
+            (#"{"command": {"type": "extendStation", "station": 1, "x": 3, "y": 1}, "expect": {"result": "ok"}}"#,
+             .command(.extendStation(StationID(rawValue: 1), p(3, 1)), expect: .ok)),
+            (#"{"command": {"type": "extendStation", "station": 1, "x": 5, "y": 1}, "expect": {"result": "invalidStationTile", "x": 5, "y": 1}}"#,
+             .command(.extendStation(StationID(rawValue: 1), p(5, 1)), expect: .rejected(.invalidStationTile(p(5, 1))))),
+            (#"{"command": {"type": "setTrainCars", "train": 2, "cars": 4}, "expect": {"result": "ok"}}"#,
+             .command(.setTrainCars(TrainID(rawValue: 2), 4), expect: .ok)),
+            // Read as written: rejecting 17 cars is GameCore's decision.
+            (#"{"command": {"type": "setTrainCars", "train": 2, "cars": 17}, "expect": {"result": "invalidTrainLength"}}"#,
+             .command(.setTrainCars(TrainID(rawValue: 2), 17), expect: .rejected(.invalidTrainLength))),
+            (#"{"observe": {"type": "routeToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1, "cars": 4}, "expect": {"found": true, "route": [{"x": 1, "y": 0}]}}"#,
+             .observe(.routeToStation(from: .atNode(p(0, 0), heading: .east), station: StationID(rawValue: 1), cars: 4), expect: .route([p(1, 0)]))),
+            (#"{"observe": {"type": "routeToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1}, "expect": {"found": false}}"#,
+             .observe(.routeToStation(from: .atNode(p(0, 0), heading: .east), station: StationID(rawValue: 1), cars: 1), expect: .route(nil))),
+            (#"{"observe": {"type": "wholeTrainStops", "train": 1}, "expect": {"stations": [2]}}"#,
+             .observe(.wholeTrainStops(TrainID(rawValue: 1)), expect: .stations([StationID(rawValue: 2)]))),
+            (#"{"observe": {"type": "platformTracks", "station": 1}, "expect": {"platformTracks": [[{"x": 1, "y": 0}, {"x": 2, "y": 0}], []]}}"#,
+             .observe(.platformTracks(StationID(rawValue: 1)), expect: .platformTracks([[p(1, 0), p(2, 0)], []]))),
+        ]
+        for (json, expected) in steps {
+            XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
+        }
+        let malformed = [
+            #"{"command": {"type": "extendStation", "x": 3, "y": 1}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setTrainCars", "train": 2}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setTrainCars", "train": 2, "cars": 4}, "expect": {"result": "invalidStationTile"}}"#,
+            #"{"observe": {"type": "routeToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1, "cars": 17}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "routeToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1, "cars": 0}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "routeToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1, "cars": null}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "wholeTrainStops"}, "expect": {"stations": []}}"#,
+            #"{"observe": {"type": "wholeTrainStops", "train": 1}, "expect": {"platforms": []}}"#,
+            #"{"observe": {"type": "platformTracks", "station": 1}, "expect": {"platformTracks": [{"x": 1, "y": 0}]}}"#,
+            #"{"observe": {"type": "platformTracks", "station": 1}, "expect": {"platforms": []}}"#,
+        ]
+        for json in malformed {
+            XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
         }
     }
 

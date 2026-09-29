@@ -36,7 +36,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.speed, final.speed.speed, name)
             XCTAssertEqual(model.balance, final.balance, name)
             XCTAssertEqual(
-                model.stations.map { WorldSummary.StationSummary(id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y) },
+                model.stations.map {
+                    WorldSummary.StationSummary(id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init))
+                },
                 final.stations, name
             )
             let tracks = model.tiles.compactMap { position, tile -> WorldSummary.TrackSummary? in
@@ -59,7 +61,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
-                        execution: ExecutionSummary($0.service?.execution)
+                        execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init)
                     )
                 },
                 final.trains, name
@@ -78,7 +80,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .buildCrossing(let p): error = model.buildCrossing(at: p)
         case .removeTrack(let p): error = model.removeTrack(at: p)
         case .buildStation(let name, let p): error = model.buildStation(named: name, at: p)
+        case .extendStation(let id, let p): error = model.extendStation(id, to: p)
         case .purchaseTrain(let name): error = model.purchaseTrain(named: name)
+        case .setTrainCars(let id, let cars): error = model.setCars(id, cars)
         case .placeTrain(let id, let position): error = model.placeTrain(id, at: position)
         case .unplaceTrain(let id): error = model.unplaceTrain(id)
         case .reverseTrain(let id): error = model.reverseTrain(id)
@@ -124,10 +128,14 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .route(model.route(from: start, to: destination))
         case .platforms(let station):
             return .platforms(model.platforms(of: station))
-        case .routeToStation(let start, let station):
-            return .route(model.route(from: start, toStation: station))
+        case .routeToStation(let start, let station, let cars):
+            return .route(model.route(from: start, toStation: station, length: ReferenceWorld.length(cars: cars)))
         case .stationStops(let train):
             return .stations(model.stationsStoppedAt(by: train))
+        case .wholeTrainStops(let train):
+            return .stations(model.stationsBesideWholeTrain(train))
+        case .platformTracks(let station):
+            return .platformTracks(model.platformTracks(of: station))
         case .timetable(let id):
             return .timetable(model.trains.first { $0.id == id.rawValue }?.timetable)
         case .execution(let id):

@@ -58,6 +58,7 @@ enum TileArt {
 
         for train in trains {
             guard let position = train.position else { continue }
+            drawBody(of: train, tileSize: tileSize, in: context)
             drawTrain(at: position, isSelected: train.id == selectedTrainID, tileSize: tileSize, in: context)
         }
     }
@@ -83,6 +84,20 @@ enum TileArt {
         // colour alone.
         let ring = isSelected ? Color.accentColor : Color(uiColor: .systemBackground)
         context.stroke(disc, with: .color(ring), lineWidth: isSelected ? 3 : 1.5)
+    }
+
+    /// A thick line from the head back along the track the train's body
+    /// lies over, to its tail (see `MapScale.bodyPoints(of:tileSize:)`);
+    /// nothing for a train of one car.
+    static func drawBody(of train: Train, tileSize: Double, in context: GraphicsContext) {
+        let points = MapScale.bodyPoints(of: train, tileSize: tileSize)
+        guard points.count > 1 else { return }
+        var body = Path()
+        body.move(to: CGPoint(x: points[0].x, y: points[0].y))
+        for point in points.dropFirst() {
+            body.addLine(to: CGPoint(x: point.x, y: point.y))
+        }
+        context.stroke(body, with: .color(Palette.train.opacity(0.75)), style: StrokeStyle(lineWidth: max(3, tileSize * 0.3), lineCap: .round, lineJoin: .round))
     }
 
     static func rect(for position: GridPosition, tileSize: Double) -> CGRect {

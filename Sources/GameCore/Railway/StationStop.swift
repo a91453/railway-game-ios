@@ -15,8 +15,8 @@
 
 extension GameWorld {
     /// The track tiles where trains stop for the station `id`: the track
-    /// tiles directly north, east, south and west of the station's tile, in
-    /// that order.
+    /// tiles directly north, east, south and west of each of the station's
+    /// tiles (see ``Station/tiles``), in that order, each once.
     ///
     /// A platform runs alongside the track, so it needs no exit toward the
     /// station and need not be joined to other track. Diagonal tiles, empty
@@ -24,16 +24,51 @@ extension GameWorld {
     /// track tile next to two stations is a platform of both. Empty for an
     /// unknown station and for a station with no track beside it.
     ///
-    /// Reads at most five tiles once the station is found, and never scans
-    /// the map.
+    /// Reads at most five tiles per station tile once the station is
+    /// found, and never scans the map.
     public func platforms(of id: StationID) -> [GridPosition] {
         guard let station = station(id: id) else { return [] }
-        return TrackDirection.allCases.compactMap { direction in
-            guard let tile = map.neighbor(of: station.position, toward: direction),
-                  track(at: tile) != nil
-            else { return nil }
-            return tile
+        var platforms: [GridPosition] = []
+        for stationTile in station.tiles {
+            for direction in TrackDirection.allCases {
+                guard let tile = map.neighbor(of: stationTile, toward: direction),
+                      track(at: tile) != nil,
+                      !platforms.contains(tile)
+                else { continue }
+                platforms.append(tile)
+            }
         }
+        return platforms
+    }
+
+    /// The station's platform tracks (Stage S2): its platforms (see
+    /// ``platforms(of:)``) in groups joined to each other by track, each
+    /// group in ``platforms(of:)`` order, the groups in the order of their
+    /// first platform. A group's count is that track's platform length in
+    /// tiles, the longest train (see ``Train/tileCount``) it holds beside
+    /// the station if the track runs straight along it. Track on two sides
+    /// of a station makes two platform tracks.
+    ///
+    /// Empty for an unknown station and for a station with no track
+    /// beside it. Reads only the tiles around the station.
+    public func platformTracks(of id: StationID) -> [[GridPosition]] {
+        let platforms = platforms(of: id)
+        var group = [Int?](repeating: nil, count: platforms.count)
+        var groups: [[Int]] = []
+        for start in platforms.indices where group[start] == nil {
+            group[start] = groups.count
+            var members = [start]
+            var queue = [start]
+            while let index = queue.popLast() {
+                for other in platforms.indices where group[other] == nil && isConnected(platforms[index], to: platforms[other]) {
+                    group[other] = groups.count
+                    members.append(other)
+                    queue.append(other)
+                }
+            }
+            groups.append(members.sorted())
+        }
+        return groups.map { $0.map { platforms[$0] } }
     }
 
     /// The shortest continuation that takes a train at `start` to a platform
@@ -57,13 +92,60 @@ extension GameWorld {
     /// no platform, or when no platform can be reached without turning
     /// straight back.
     ///
+    /// A train `length` long (Stage S2) then pulls forward along the
+    /// station's platforms until its whole body is beside the station, if
+    /// the platform goes on that far: from where the route reaches the
+    /// first platform, one tile further, the first way north, east, south,
+    /// west that is a platform of the station, for every tile behind its
+    /// head that its body would stand over (a tile per car after the
+    /// first). For a train of one car (length 0) that is no further.
+    ///
     /// Pure, and costs what ``route(from:to:)`` costs: it explores only track
     /// reachable from `start`.
-    public func route(from start: TrainPosition, toStation id: StationID) -> [GridPosition]? {
+    public func route(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> [GridPosition]? {
         let platforms = platforms(of: id)
         guard isOnTrack(start), !platforms.isEmpty else { return nil }
         let (node, heading) = start.ahead
-        return TrainRoute.shortest(from: node, heading: heading, to: platforms.contains) { exits(from: $0, facing: $1) }
+        guard var route = TrainRoute.shortest(from: node, heading: heading, to: platforms.contains, exits: { exits(from: $0, facing: $1) }) else {
+            return nil
+        }
+        var behind = Self.tilesBehind(length: length)
+        var end = route.last ?? node
+        var facing = route.count >= 2 ? TrackDirection(from: route[route.count - 2], to: end)! : route.isEmpty ? heading : TrackDirection(from: node, to: end)!
+        while behind > 0, let next = exits(from: end, facing: facing).first(where: platforms.contains) {
+            route.append(next)
+            facing = TrackDirection(from: end, to: next)!
+            end = next
+            behind -= 1
+        }
+        return route
+    }
+
+    /// How many tiles behind the one its head stands at a train `length`
+    /// long reaches into: its body runs back `length` from the centre of the
+    /// head's tile, and each tile is ``TrainPosition/linkLength`` wide. For
+    /// a train's length (whole links) that is a tile per car after the
+    /// first.
+    static func tilesBehind(length: Int64) -> Int {
+        Int((length + TrainPosition.linkLength / 2 + TrainPosition.linkLength - 1) / TrainPosition.linkLength) - 1
+    }
+
+    /// The stations train `id` stands beside with its whole length (Stage
+    /// S2): the stations it is stopped at (see ``stationsStoppedAt(by:)``)
+    /// for which every tile its body stands over is a platform. A stopped
+    /// train is at a node, so those tiles are its trail's nodes (see
+    /// ``Train/trail``). The same as ``stationsStoppedAt(by:)`` for a train
+    /// of one car.
+    ///
+    /// A train of several cars that turns round where it stands beside a
+    /// station with its whole length has its head at a platform of the
+    /// station again; one whose platform is too short has its head off it.
+    public func stationsBesideWholeTrain(_ id: TrainID) -> [StationID] {
+        guard let train = train(id: id) else { return [] }
+        return stationsStoppedAt(by: id).filter { station in
+            let platforms = platforms(of: station)
+            return train.trail.allSatisfy(platforms.contains)
+        }
     }
 
     /// The stations the train `id` is stopped at, in ascending ID order.
@@ -93,12 +175,14 @@ extension GameWorld {
               case .atNode(let tile, _)? = train.position,
               train.movement.remainingContinuation.isEmpty
         else { return [] }
-        return TrackDirection.allCases.compactMap { direction -> StationID? in
+        let stations = TrackDirection.allCases.compactMap { direction -> StationID? in
             guard let neighbor = map.neighbor(of: tile, toward: direction),
                   case .station(let station)? = map.tile(at: neighbor)?.type
             else { return nil }
             return station
-        }.sorted()
+        }
+        // A platform beside two tiles of one station is one stop.
+        return Set(stations).sorted()
     }
 
     /// Whether `train` is stopped at the station `id`: whether
@@ -109,6 +193,6 @@ extension GameWorld {
               train.movement.remainingContinuation.isEmpty,
               let station = station(id: id)
         else { return false }
-        return TrackDirection(from: tile, to: station.position) != nil
+        return station.tiles.contains { TrackDirection(from: tile, to: $0) != nil }
     }
 }

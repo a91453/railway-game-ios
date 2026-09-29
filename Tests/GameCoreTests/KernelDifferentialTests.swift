@@ -64,6 +64,13 @@ final class KernelDifferentialTests: XCTestCase {
         /// draws these.
         case buildTurnout(GridPosition, UInt8, TrackDirection)
         case buildCrossing(GridPosition)
+        /// Only the station-facility campaign (`StationFacilityPropertyTests`)
+        /// draws these.
+        case extendStation(StationID, GridPosition)
+        case setCars(TrainID, Int)
+        /// The train tool's send to a station for a train with cars: the
+        /// route that pulls it along the platforms.
+        case sendWholeTrainToStation(TrainID, StationID)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -102,6 +109,9 @@ final class KernelDifferentialTests: XCTestCase {
             case .removePattern(let id, let pattern): ".removePattern(\(id.rawValue), \(pattern))"
             case .buildTurnout(let p, let mask, let stem): ".buildTurnout(\(p), \(mask), stem \(stem))"
             case .buildCrossing(let p): ".buildCrossing(\(p))"
+            case .extendStation(let id, let p): ".extendStation(\(id.rawValue), \(p))"
+            case .setCars(let id, let cars): ".setCars(\(id.rawValue), \(cars))"
+            case .sendWholeTrainToStation(let id, let station): ".sendWholeTrainToStation(\(id.rawValue), \(station.rawValue))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
@@ -312,6 +322,13 @@ final class KernelDifferentialTests: XCTestCase {
             case .removePattern(let id, let pattern): try world.removeLinePattern(id, at: pattern)
             case .buildTurnout(let p, let mask, let stem): try world.buildTurnout(at: p, connections: TrackConnections(rawValue: mask), stem: stem)
             case .buildCrossing(let p): try world.buildCrossing(at: p)
+            case .extendStation(let id, let p): try world.extendStation(id, to: p)
+            case .setCars(let id, let cars): try world.setTrainCars(id, to: cars)
+            case .sendWholeTrainToStation(let id, let station):
+                guard let train = world.train(id: id), let position = train.position,
+                      let route = world.route(from: position, toStation: station, length: train.length)
+                else { return nil }
+                try world.setTrainContinuation(id, to: route)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -370,6 +387,13 @@ final class KernelDifferentialTests: XCTestCase {
         case .removePattern(let id, let pattern): return model.removePattern(id, pattern)
         case .buildTurnout(let p, let mask, let stem): return model.buildTurnout(at: p, mask: mask, stem: stem)
         case .buildCrossing(let p): return model.buildCrossing(at: p)
+        case .extendStation(let id, let p): return model.extendStation(id, to: p)
+        case .setCars(let id, let cars): return model.setCars(id, cars)
+        case .sendWholeTrainToStation(let id, let station):
+            guard let train = model.trains.first(where: { $0.id == id.rawValue }), let position = train.position,
+                  let route = model.route(from: position, toStation: station, length: ReferenceWorld.length(train))
+            else { return nil }
+            return model.setContinuation(id, route)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -405,13 +429,16 @@ final class KernelDifferentialTests: XCTestCase {
         }
         check(
             world.stations.map { [$0.id.rawValue, $0.position.x, $0.position.y] } == model.stations.map { [$0.id, $0.position.x, $0.position.y] }
-                && world.stations.map(\.name) == model.stations.map(\.name),
+                && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.annexes) == model.stations.map(\.annexes),
             "stations \(world.stations) vs \(model.stations)"
         )
         check(world.trains.map(\.id.rawValue) == model.trains.map(\.id), "train IDs \(world.trains.map(\.id.rawValue)) vs \(model.trains.map(\.id))")
         for (train, expected) in zip(world.trains, model.trains) {
             check(train.name == expected.name, "train \(expected.id) name")
             check(train.position == expected.position, "train \(expected.id) position \(String(describing: train.position)) vs \(String(describing: expected.position))")
+            // Decision 27: its cars and body.
+            check(train.cars == expected.cars, "train \(expected.id) cars \(train.cars) vs \(expected.cars)")
+            check(train.trail == expected.trail, "train \(expected.id) trail \(train.trail) vs \(expected.trail)")
             check(train.movement.rate == expected.rate, "train \(expected.id) rate \(train.movement.rate) vs \(expected.rate)")
             check(
                 train.movement.continuation == expected.continuation && train.movement.cursor == expected.cursor,
@@ -495,12 +522,20 @@ final class KernelDifferentialTests: XCTestCase {
         for raw in world.stations.map(\.id.rawValue) + [0, -1, Int.max] {
             let id = StationID(rawValue: raw)
             check(world.platforms(of: id) == model.platforms(of: id), "platforms of \(raw): \(world.platforms(of: id)) vs \(model.platforms(of: id))")
+            check(
+                world.platformTracks(of: id) == model.platformTracks(of: id),
+                "platform tracks of \(raw): \(world.platformTracks(of: id)) vs \(model.platformTracks(of: id))"
+            )
         }
         for raw in world.trains.map(\.id.rawValue) + [0, Int.max] {
             let id = TrainID(rawValue: raw)
             check(
                 world.stationsStoppedAt(by: id) == model.stationsStoppedAt(by: id),
                 "stops of train \(raw): \(world.stationsStoppedAt(by: id)) vs \(model.stationsStoppedAt(by: id))"
+            )
+            check(
+                world.stationsBesideWholeTrain(id) == model.stationsBesideWholeTrain(id),
+                "whole-train stops of train \(raw): \(world.stationsBesideWholeTrain(id)) vs \(model.stationsBesideWholeTrain(id))"
             )
         }
         return found
@@ -509,7 +544,8 @@ final class KernelDifferentialTests: XCTestCase {
     /// Decision 18's transitions: whose stop an operation may begin or end.
     /// Decision 20 adds one: `advance` may move a stopped train, and so end
     /// its stop, when a service was running it. Decision 23 another: when
-    /// the train is on a line, which may send it out.
+    /// the train is on a line, which may send it out. Decision 27 two more:
+    /// turning round a train with cars, and growing a station.
     static func stopTransitionProblems(
         _ operation: Operation,
         before: GameWorld,
@@ -531,10 +567,14 @@ final class KernelDifferentialTests: XCTestCase {
             case _ where refused: false
             case .advance: was.isEmpty || wasInService
             case .place(let id, _): isThis(id) && was.isEmpty
-            case .reverse(let id): isThis(id) && was.isEmpty
+            // Decision 27: a train with cars turns round with its head at
+            // its tail, which may be beside other stations or none.
+            case .reverse(let id): isThis(id) && (was.isEmpty || train.cars > 0)
             case .unplace(let id): isThis(id) && now.isEmpty
-            case .setContinuation(let id, _), .sendToTile(let id, _), .sendToStation(let id, _): isThis(id)
-            case .buildStation: now.count == was.count + 1 && Set(was).isSubset(of: Set(now))
+            case .setContinuation(let id, _), .sendToTile(let id, _), .sendToStation(let id, _), .sendWholeTrainToStation(let id, _): isThis(id)
+            // Decision 27: a station grown beside a stopped train is one it
+            // is stopped at, as one built there is.
+            case .buildStation, .extendStation: now.count == was.count + 1 && Set(was).isSubset(of: Set(now))
             default: false
             }
             if !allowed {

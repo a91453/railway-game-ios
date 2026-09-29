@@ -66,7 +66,7 @@ final class ErrorMessageTests: XCTestCase {
             .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",
-            .invalidTrainPosition: "A train can only be placed on a track tile or between two joined track tiles.",
+            .invalidTrainPosition: "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars.",
             .invalidMovementRate: "A train's rate cannot be negative.",
             .invalidContinuation: "The train cannot follow that path: each step must lead to joined track, without turning back.",
             .clockOverflow: "Game time cannot advance any further.",
@@ -90,6 +90,8 @@ final class ErrorMessageTests: XCTestCase {
             .trainNotOnLine(TrainID(rawValue: 3)): "Train #3 is not on a line.",
             .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order.",
             .unknownLinePattern(2): "The line has no pattern #3.",
+            .invalidStationTile(GridPosition(x: 4, y: 2)): "A station can only grow onto an empty tile beside one of its tiles, not (4, 2).",
+            .invalidTrainLength: "A train has 1 to 16 cars.",
         ]
 
         for (error, message) in messages {

@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–Q3) written a second time, straight
+/// The whole GameCore kernel (Stages I–S2) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–24; the rules summary), for differential testing.
+/// 18–27; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -44,6 +44,12 @@ struct ReferenceWorld: Equatable {
         var id: Int
         var name: String
         var position: GridPosition
+        /// Decision 27: the tiles it grew onto, in order.
+        var annexes: [GridPosition] = []
+
+        var tiles: [GridPosition] {
+            [position] + annexes
+        }
     }
 
     struct Train: Equatable {
@@ -56,6 +62,9 @@ struct ReferenceWorld: Equatable {
         var timetable: [ScheduledStop] = []
         var period: Int64?
         var service: Service?
+        /// Decision 27: its cars, and the nodes its body lies over.
+        var cars = 1
+        var trail: [GridPosition] = []
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
@@ -236,9 +245,22 @@ struct ReferenceWorld: Equatable {
 
     // MARK: - Stations (decision 18)
 
+    /// Decision 27: the track beside every tile of the station, tile by
+    /// tile, each once.
     func platforms(of id: StationID) -> [GridPosition] {
         guard let station = stations.first(where: { $0.id == id.rawValue }) else { return [] }
-        return TrackDirection.allCases.map { step(station.position, $0) }.filter { mask(at: $0) != nil }
+        var found: [GridPosition] = []
+        for tile in station.tiles {
+            for p in TrackDirection.allCases.map({ step(tile, $0) }) where mask(at: p) != nil && !found.contains(p) {
+                found.append(p)
+            }
+        }
+        return found
+    }
+
+    /// The stations with a tile beside `tile`.
+    func stations(beside tile: GridPosition) -> [StationID] {
+        stations.filter { $0.tiles.contains { stepDirection(from: tile, to: $0) != nil } }.map { StationID(rawValue: $0.id) }
     }
 
     func stationsStoppedAt(by id: TrainID) -> [StationID] {
@@ -246,7 +268,7 @@ struct ReferenceWorld: Equatable {
               case .atNode(let tile, _)? = train.position,
               train.cursor >= train.continuation.count
         else { return [] }
-        return stations.filter { stepDirection(from: tile, to: $0.position) != nil }.map { StationID(rawValue: $0.id) }
+        return stations(beside: tile)
     }
 
     // MARK: - Commands
@@ -294,10 +316,12 @@ struct ReferenceWorld: Equatable {
         guard inMap(p) else { return .outOfBounds(p) }
         guard mask(at: p) != nil else { return .noTrackToRemove(p) }
         let supports = trains.contains { train in
+            // Decision 27: the body's nodes too.
+            if train.trail.contains(p) { return true }
             switch train.position {
-            case .atNode(let tile, _)?: tile == p
-            case .onLink(let from, let to, _)?: from == p || to == p
-            case nil: false
+            case .atNode(let tile, _)?: return tile == p
+            case .onLink(let from, let to, _)?: return from == p || to == p
+            case nil: return false
             }
         }
         guard !supports else { return .trackInUse(p) }
@@ -315,6 +339,31 @@ struct ReferenceWorld: Equatable {
         tiles[p] = .station(nextStationID)
         nextStationID += 1
         return nil
+    }
+
+    /// Decision 27: in the order station, tile (on the map, empty), beside
+    /// one of the station's tiles, money.
+    mutating func extendStation(_ id: StationID, to p: GridPosition) -> GameError? {
+        guard let i = stations.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownStation(id) }
+        if let error = requireEmpty(p) { return error }
+        guard stations[i].tiles.contains(where: { stepDirection(from: $0, to: p) != nil }) else { return .invalidStationTile(p) }
+        if let error = funds(costs.station) { return error }
+        balance -= costs.station
+        stations[i].annexes.append(p)
+        tiles[p] = .station(stations[i].id)
+        return nil
+    }
+
+    /// Decision 27: in the order train, 1 to 16 cars, off the track.
+    mutating func setCars(_ id: TrainID, _ cars: Int) -> GameError? {
+        switch index(id) {
+        case .failure(let error): return error
+        case .success(let i):
+            guard cars >= 1, cars <= 16 else { return .invalidTrainLength }
+            guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
+            trains[i].cars = cars
+            return nil
+        }
     }
 
     mutating func purchaseTrain(named name: String) -> GameError? {
@@ -347,8 +396,9 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
-            guard isOnTrack(position) else { return .invalidTrainPosition }
+            guard isOnTrack(position), let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
             trains[i].position = position
+            trains[i].trail = body
             return nil
         }
     }
@@ -358,7 +408,8 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             // Position and movement go; the timetable is plan data and stays.
-            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable, period: trains[i].period)
+            // Decision 27: so do the cars.
+            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable, period: trains[i].period, cars: trains[i].cars)
             return nil
         }
     }
@@ -367,7 +418,7 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
-            trains[i].position = Self.turned(trains[i].position!)
+            (trains[i].position, trains[i].trail) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
             trains[i].continuation = []
             trains[i].cursor = 0
             return nil
@@ -566,36 +617,48 @@ struct ReferenceWorld: Equatable {
     /// Decision 20's departures at the current minute for one train: from
     /// each stop whose departure has come, finish at the last stop, arrive
     /// at once where the train already is stopped at the next stop's
-    /// station, or set off along a route; wait if there is none. Decision
+    /// station (decision 27: and needs no pull along its platforms), or set
+    /// off along a route; wait if there is none. Decision
     /// 21: turn the train first at a stop marked to, but only if it then
     /// finishes, arrives at once or finds a route; after the last stop of a
     /// repeating timetable go on to the first stop of the next cycle while
     /// its times fit; leave at most as many stops as the timetable has.
     private mutating func depart(_ i: Int) {
-        let id = TrainID(rawValue: trains[i].id)
         var left = 0
         while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
               Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
             left += 1
             let stop = trains[i].timetable[service.stop]
-            let start = stop.reverses ? Self.turned(trains[i].position!) : trains[i].position!
+            // Decision 27: a train with cars turns round with its head at
+            // its tail.
+            let length = Self.length(trains[i])
+            let (start, body) = stop.reverses
+                ? Self.turnedWithBody(trains[i].position!, trains[i].trail, length: length)
+                : (trains[i].position!, trains[i].trail)
             var next = (stop: service.stop + 1, cycle: service.cycle)
             if next.stop == trains[i].timetable.count {
                 next = (0, service.cycle + 1)
                 if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
                     trains[i].position = start
+                    trains[i].trail = body
                     trains[i].service = nil
                     return
                 }
             }
             let target = trains[i].timetable[next.stop].station
-            if stationsStoppedAt(by: id).contains(target) {
+            // Decision 27: the route pulls a train with cars along the
+            // platforms; one already stopped there that needs no pull is
+            // there at once.
+            let route = route(from: start, toStation: target, length: length)
+            if case .atNode(let tile, _) = start, stations(beside: tile).contains(target), route == [] {
                 trains[i].position = start
+                trains[i].trail = body
                 trains[i].service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
                 continue
             }
-            guard let route = route(from: start, toStation: target) else { return }
+            guard let route else { return }
             trains[i].position = start
+            trains[i].trail = body
             trains[i].continuation = route
             trains[i].cursor = 0
             trains[i].service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
@@ -607,15 +670,23 @@ struct ReferenceWorld: Equatable {
     /// whole links and `r` units over, it has entered `q` links and, if
     /// `r > 0` and another link can be entered, is `r` into the next one.
     private func stepped(_ train: Train) -> Train {
+        // Decision 27: the body follows the head over the nodes it passed.
+        var (moved, passed) = steppedHead(train)
+        moved.trail = Self.body(after: train.position!, train.trail, to: moved.position!, passed: passed, length: Self.length(train))
+        return moved
+    }
+
+    /// The head's step, and the nodes it entered on the way, in order.
+    private func steppedHead(_ train: Train) -> (Train, [GridPosition]) {
         var train = train
-        guard let position = train.position else { return train }
+        let position = train.position!
         let (node, heading) = Self.ahead(position)
         var distance = train.rate
         if case .onLink(let from, let to, let offset) = position {
             let toEnd = Self.linkLength - offset
             if distance < toEnd {
                 train.position = .onLink(from: from, to: to, offset: offset + distance)
-                return train
+                return (train, [])
             }
             distance -= toEnd
             train.position = .atNode(node, heading: heading)
@@ -647,7 +718,7 @@ struct ReferenceWorld: Equatable {
             train.continuation = []
             train.cursor = 0
         }
-        return train
+        return (train, chain.prefix(entered).map(\.0))
     }
 
     // MARK: - Routes
@@ -698,7 +769,4 @@ struct ReferenceWorld: Equatable {
         mask(at: destination) == nil ? nil : route(from: start, toAny: [destination])
     }
 
-    func route(from start: TrainPosition, toStation id: StationID) -> [GridPosition]? {
-        route(from: start, toAny: Set(platforms(of: id)))
-    }
 }

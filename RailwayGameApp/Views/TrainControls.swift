@@ -26,6 +26,12 @@ struct TrainControls: View {
             if let train = session.selectedTrain {
                 status(of: train)
                 if train.position == nil {
+                    Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
+                        Text(train.carsText)
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                    }
+                    .accessibilityHint("One car to a tile. A train of several cars needs track behind it, and platforms as long as it.")
                     headingPicker
                 } else {
                     Stepper(value: $session.selectedTrainRate, in: 0...Self.maximumRate, step: Self.rateStep) {
@@ -77,7 +83,7 @@ struct TrainControls: View {
     /// stopped at, exactly as GameCore records or derives them.
     private func status(of train: Train) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(train.positionText)
+            Text("\(train.positionText) · \(train.carsText)")
                 .font(.subheadline)
                 .monospacedDigit()
             if train.position != nil {

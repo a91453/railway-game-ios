@@ -41,6 +41,10 @@ public final class GameSession {
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
 
+    /// Whether the station tool grows the station beside the selected tile
+    /// onto it, rather than building a new station there.
+    public var growsStation = false
+
     /// The train the train tool acts on: an ID only, never a copy of the
     /// train. Read the train itself through ``selectedTrain``.
     public private(set) var selectedTrainID: TrainID?
@@ -267,6 +271,16 @@ public final class GameSession {
         }
     }
 
+    /// Sets how many cars the selected train has through
+    /// `GameWorld.setTrainCars(_:to:)`: only while it is off the track.
+    public func setSelectedTrainCars(_ cars: Int) {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.setTrainCars(train.id, to: cars)
+            return "\(train.name) now has \(cars == 1 ? "1 car" : "\(cars) cars")."
+        }
+    }
+
     /// Sets the selected train's rate through
     /// `GameWorld.setTrainMovementRate(_:to:)`. Like a speed change, a new
     /// rate is shown by the control itself rather than announced; a rejected
@@ -285,8 +299,9 @@ public final class GameSession {
     ///
     /// Asks GameCore for the route from where the train is now
     /// (`GameWorld.route(from:to:)` for a track tile, or
-    /// `GameWorld.route(from:toStation:)` for a station tile, which ends at
-    /// the nearest of the station's platforms) and commits exactly that route
+    /// `GameWorld.route(from:toStation:length:)` for a station tile, which
+    /// reaches the nearest of the station's platforms and pulls a train of
+    /// several cars along them) and commits exactly that route
     /// with `GameWorld.setTrainContinuation(_:to:)`. Both run against the same
     /// world within this one call, with nothing in between, so the route can
     /// never be stale or reach another train. The session never finds or
@@ -309,7 +324,7 @@ public final class GameSession {
         let station = world.station(at: destination)
         let found: [GridPosition]?
         if let station {
-            found = world.route(from: position, toStation: station.id)
+            found = world.route(from: position, toStation: station.id, length: train.length)
         } else {
             found = world.route(from: position, to: destination)
         }
@@ -582,6 +597,8 @@ public final class GameSession {
                 let track = try world.buildTrack(at: position, connections: trackConnections)
                 return "Built \(track.connections.shapeName.lowercased()) track at \(position)."
             }
+        case .buildStation where growsStation:
+            growStation(onto: position)
         case .buildStation:
             let built = perform { world throws(GameError) in
                 // The world allocates the station's ID.
@@ -604,6 +621,22 @@ public final class GameSession {
             } else {
                 sendSelectedTrain()
             }
+        }
+    }
+
+    /// Grows the first station, in ID order, with a tile beside `position`
+    /// onto it through `GameWorld.extendStation(_:to:)`.
+    private func growStation(onto position: GridPosition) {
+        let beside = world.stations.filter { station in
+            station.tiles.contains { abs($0.x - position.x) + abs($0.y - position.y) == 1 }
+        }
+        guard let station = beside.min(by: { $0.id < $1.id }) else {
+            message = StatusMessage(kind: .failure, text: "There is no station beside \(position) to grow.")
+            return
+        }
+        perform { world throws(GameError) in
+            try world.extendStation(station.id, to: position)
+            return "“\(station.name)” now covers \(station.tiles.count + 1) tiles."
         }
     }
 

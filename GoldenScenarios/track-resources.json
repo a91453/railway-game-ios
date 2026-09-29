@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "description": "Turnouts, a crossing and track resources. Row 2: dead end (0,2), (1,2), a turnout at (2,2) with exits east, south and west and its stem west, (3,2), a crossing at (4,2), (5,2), dead end (6,2); column 4 crosses it from dead end (4,0) to dead end (4,4); a siding leaves the turnout south to dead end (2,4). West(0,1) and East(6,1) have platforms (0,2) and (6,2). Apart from them, A(1,5) and B(5,5) have platforms (1,6) and (5,6) on a ring of plain track, rows 6 and 7, x 1 to 5. A turnout joins its stem to each branch and each branch only to the stem; a crossing joins each exit only to the opposite one; a train that did not come in by an exit (facing south at the turnout, which has no north exit) may leave by any but the one behind. Routes and continuations follow the same rules. Sections run between branch points (the turnout, the crossing, dead ends), from the end first in row-major order, then by first step north, east, south, west; the ring has none and is one section from (1,6), east first. West to East is single track; A to B is two tracks that share no link; West and A are not joined. A train occupies its tile or its link (either way round); two trains on one resource conflict. T2, moved off the crossing, runs from (3,2) through the turnout from its east branch to the stem and on to (1,2) in two minutes, but may not be sent from that branch into the siding.",
   "initialState": {
     "mapWidth": 7,
@@ -280,10 +280,10 @@
     "speed": "normal",
     "balance": 977000,
     "stations": [
-      { "id": 1, "name": "West", "x": 0, "y": 1 },
-      { "id": 2, "name": "East", "x": 6, "y": 1 },
-      { "id": 3, "name": "A", "x": 1, "y": 5 },
-      { "id": 4, "name": "B", "x": 5, "y": 5 }
+      { "id": 1, "name": "West", "x": 0, "y": 1, "annexes": [] },
+      { "id": 2, "name": "East", "x": 6, "y": 1, "annexes": [] },
+      { "id": 3, "name": "A", "x": 1, "y": 5, "annexes": [] },
+      { "id": 4, "name": "B", "x": 5, "y": 5, "annexes": [] }
     ],
     "tracks": [
       { "x": 4, "y": 0, "connections": ["south"], "layout": { "type": "open" } },
@@ -311,10 +311,10 @@
       { "x": 5, "y": 7, "connections": ["north", "west"], "layout": { "type": "open" } }
     ],
     "trains": [
-      { "id": 1, "name": "T1", "position": { "type": "node", "x": 4, "y": 2, "heading": "east" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
-      { "id": 2, "name": "T2", "position": { "type": "node", "x": 1, "y": 2, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
-      { "id": 3, "name": "T3", "position": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 }, "offset": 512 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
-      { "id": 4, "name": "T4", "position": { "type": "link", "from": { "x": 2, "y": 6 }, "to": { "x": 1, "y": 6 }, "offset": 256 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } }
+      { "id": 1, "name": "T1", "position": { "type": "node", "x": 4, "y": 2, "heading": "east" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] },
+      { "id": 2, "name": "T2", "position": { "type": "node", "x": 1, "y": 2, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] },
+      { "id": 3, "name": "T3", "position": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 }, "offset": 512 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] },
+      { "id": 4, "name": "T4", "position": { "type": "link", "from": { "x": 2, "y": 6 }, "to": { "x": 1, "y": 6 }, "offset": 256 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] }
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }]

@@ -101,4 +101,8 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLinePattern
     /// The line has no pattern at this index.
     case unknownLinePattern(Int)
+    /// A station grows only onto a tile beside one of its tiles.
+    case invalidStationTile(GridPosition)
+    /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.
+    case invalidTrainLength
 }

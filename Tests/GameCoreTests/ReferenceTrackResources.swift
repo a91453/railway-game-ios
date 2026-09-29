@@ -9,13 +9,16 @@ import GameCore
 extension ReferenceWorld {
     func occupiedResources(of id: TrainID) -> [TrackResource] {
         guard let train = trains.first(where: { $0.id == id.rawValue }), let position = train.position else { return [] }
+        let head: TrackResource
         switch position {
         case .atNode(let tile, _):
-            return [.node(tile)]
+            head = .node(tile)
         case .onLink(let from, let to, _):
             let first = (from.y, from.x) < (to.y, to.x)
-            return [.link(first ? from : to, first ? to : from)]
+            head = .link(first ? from : to, first ? to : from)
         }
+        // Decision 27: and the body's.
+        return Set([head] + bodyResources(of: train)).sorted()
     }
 
     func occupancyConflicts() -> [TrackConflict] {
