@@ -632,6 +632,15 @@ enum WorldInvariants {
         if stationTiles != world.stations.reduce(0, { $0 + 1 + $1.annexes.count }) {
             problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")
         }
+        // Decision 29 (S3A): the railway network holds the grid's track, one
+        // piece a tile, in row-major order, each on the map's empty land.
+        let positions = world.tracks.map(\.position)
+        if positions != positions.sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) }) || Set(positions).count != positions.count {
+            problems.append("grid track not one piece a tile in row-major order")
+        }
+        for track in world.tracks where world.map.tile(at: track.position)?.type != .empty || world.track(at: track.position) != track {
+            problems.append("grid track at \(track.position) is not on empty land or not found there")
+        }
         // Decision 26: a turnout has three exits or more, its stem among them.
         for track in world.tracks {
             if case .turnout(let stem) = track.layout, track.connections.directions.count < 3 || !track.connections.contains(TrackConnections(stem)) {
