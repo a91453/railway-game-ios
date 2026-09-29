@@ -859,6 +859,26 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 - 可以沿用的測試：方格上的手算情境，以及 `traffic.reservation` campaign 的結構。
 - 新的 T 依賴：`TrackResource`（`.node(TrackNodeID)` / `.span(TrackSpan)`）、`pathAhead(of:)` 的 `TrackTraversal`、`occupiedResources(of:)`，以及「平面交叉共用節點、立體交叉不共用任何資源」這條規則（決策 30）。預約的範圍是 span，不是整條邊。
 
+**PR #31 的遷移檢查**（逐項對照它的程式碼，唯讀檢視，不修改 PR #31）
+
+| PR #31 依賴的方格表示 | 在哪裡 | 新的 T 改成 |
+| --- | --- | --- |
+| `GridPosition`：`.node(tile)` 資源、拆軌保護 `reservation(of:).contains(.node(position))` | `reservation(at:trail:length:ahead:)`、`removeTrack(at:)` | `TrackNodeID` 與 `TrackSpan`；拆軌、拆邊都查「有沒有被預約的節點或 span」 |
+| `TrackDirection`：`position.ahead` 回傳（格、朝向），預約從那一格開始 | `reservation(at:…)`、`reverseTrain` | `pathAhead(of:)` 的第一個 `TrackTraversal`；折返後的前方由 `reversedOnNetwork` / 方格的 `reversed` 推導 |
+| 固定 1024 的連結：`.link(between:and:)` 就是整條連結 | `reservation(at:…)` 逐格加 `.link` | 每條走過的 traversal 的 span（方格連結恰好一個 span，長邊是很多個） |
+| `[GridPosition]` continuation 與 `route(from:toStation:length:)` 的格序列 | `setTrainContinuation(_:to:)`、`trainHoldingRoute(of:)`、派車階段 | `[TrackTraversal]`（`route(from:to:)`、`pathAhead(of:)`），方格與路網同一個型別 |
+| 節點與連結的 `TrackResource` | 整個 `TrackReservation.swift` | `.node` / `.span`；`Set<TrackResource>` 的比較方式不變 |
+| 以格為單位的車身 `trail: [GridPosition]` 與 `Train.distanceBehind` | `occupiedResources(at:trail:length:)`、`bodyResources` | `occupiedResources(of:)`（泛用，路網用 `trailEdges` 與里程），不另寫車身資源 |
+
+- **可以直接沿用的語義**：一次預約到下一個停靠站的整條路（最小的防死結規則）；整批原子取得（任何一個資源被佔就整個拒絕，世界不變）；路被佔時服務在原站等待、每步重試，不折返；衝突回報取編號最小的列車（`reservationHolder`、`firstSharedTrack` 依 ID 順序）；`trafficControl` 旗標只在開啟時寫入存檔、舊存檔讀成關閉；`trackReserved`、`trainsShareTrack` 兩個錯誤；預約由位置、車身與前方路徑推導、不另存第二份真相。
+- **可以沿用的測試意圖**：`TrafficControlTests` 的手算情境（持有的資源、開啟時的檢查、各指令的拒絕與拆軌、連結上的反向、等待路徑的服務、存檔）、`traffic.reservation` campaign 的結構與參考模型的寫法（持有者逐一檢查每台其他列車、重疊逐對檢查）、`save.trafficMutation`，以及它的兩個刻意植入的錯誤（預約漏掉前方節點、出發忽略預約）。
+- **要重新評估的設計**：
+  - 資源身分：span 由邊長與月台推導，新增或移除月台會改變 span（決策 30）；T 存的預約應是邊上的里程區間，或在有預約時拒絕改動月台，不能假設 span 永遠不變。
+  - 路徑表示：預約沿 `[TrackTraversal]`；列車所在的邊只預約車頭之後的 span。
+  - 拆除保護：方格的 `trackInUse` 與路網的 `trackEdgeInUse` 都要看預約，而且以 span 為單位回報。
+  - 預約範圍：到下一個停靠站（或 U 之後的下一個號誌）；長邊不再整條鎖住。
+  - 車身資源：一律用 `occupiedResources(of:)` 推導，方格與路網同一條規則。
+
 **S3 不做**：進路預約、movement authority、dispatcher、renderer、行駛動態、城市、乘客、完整的 spline 編輯器與建造畫面；GameCore 只提供最小的開發者 API。
 
 #### 實作
