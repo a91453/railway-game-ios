@@ -62,7 +62,7 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(wrongTime.differences().count, 1, name)
 
             var extraTrain = committed
-            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: [], execution: ExecutionSummary(nil)))
+            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: [], repeat: RepeatSummary(nil), execution: ExecutionSummary(nil)))
             XCTAssertEqual(extraTrain.differences().count, 1, name)
         }
     }
@@ -99,8 +99,9 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     /// A train's expected timetable is compared exactly, in order: an extra,
-    /// missing or repeated stop, another station, a time one minute off, or
-    /// the same stops in another order is reported once.
+    /// missing or repeated stop, another station, a time one minute off, a
+    /// stop that turns the train round or not, or the same stops in another
+    /// order is reported once.
     func testChangedTrainTimetableExpectationsAreReported() throws {
         var scheduledCount = 0
         for url in try GoldenScenarioFixtures.urls() {
@@ -121,8 +122,8 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     /// A train's expected service is compared exactly: inactive instead of
-    /// active (or the reverse), the other phase, or another stop is
-    /// reported once.
+    /// active (or the reverse), the other phase, another stop, or another
+    /// cycle is reported once.
     func testChangedTrainExecutionExpectationsAreReported() throws {
         var activeCount = 0
         for url in try GoldenScenarioFixtures.urls() {
@@ -147,10 +148,10 @@ final class GoldenScenarioTests: XCTestCase {
         switch execution {
         case nil:
             return [.waitingAtStop(0), .travellingToStop(1)]
-        case .waitingAtStop(let stop)?:
-            return [nil, .travellingToStop(stop), .waitingAtStop(stop + 1)]
-        case .travellingToStop(let stop)?:
-            return [nil, .waitingAtStop(stop), .travellingToStop(stop + 1)]
+        case .waitingAtStop(let stop, let cycle)?:
+            return [nil, .travellingToStop(stop, cycle: cycle), .waitingAtStop(stop + 1, cycle: cycle), .waitingAtStop(stop, cycle: cycle + 1)]
+        case .travellingToStop(let stop, let cycle)?:
+            return [nil, .waitingAtStop(stop, cycle: cycle), .travellingToStop(stop + 1, cycle: cycle), .travellingToStop(stop, cycle: cycle + 1)]
         }
     }
 
@@ -168,6 +169,9 @@ final class GoldenScenarioTests: XCTestCase {
         wrong.append(changed)
         changed = stops
         changed[stops.count - 1].departure += 1
+        wrong.append(changed)
+        changed = stops
+        changed[0].reverse.toggle()
         wrong.append(changed)
         if stops.count > 1 {
             wrong.append(stops.reversed())
@@ -359,7 +363,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 9,
+              "schemaVersion": 10,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -404,7 +408,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 10] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -438,17 +442,30 @@ final class GoldenScenarioTests: XCTestCase {
             // Observations are not commands.
             #"{"type": "train", "train": 1}"#,
             #"{"type": "timetable", "train": 1}"#,
-            // A timetable needs a train and stops with a station and two
-            // integer times each.
-            #"{"type": "setTrainTimetable", "train": 1}"#,
-            #"{"type": "setTrainTimetable", "timetable": []}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0}]}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"arrival": 0, "departure": 0}]}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": "Alpha", "arrival": 0, "departure": 0}]}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": "08:00", "departure": 0}]}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0.5, "departure": 1}]}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": {"station": 1, "arrival": 0, "departure": 0}}"#,
-            #"{"type": "setTrainTimetable", "train": 1, "timetable": null}"#,
+            // A timetable needs a train, stops with a station, two integer
+            // times and whether the train turns round each, and how it
+            // repeats.
+            #"{"type": "setTrainTimetable", "train": 1, "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "timetable": [], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0, "reverse": false}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"arrival": 0, "departure": 0, "reverse": false}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": "Alpha", "arrival": 0, "departure": 0, "reverse": false}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": "08:00", "departure": 0, "reverse": false}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0.5, "departure": 1, "reverse": false}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": {"station": 1, "arrival": 0, "departure": 0, "reverse": false}, "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": null, "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0, "departure": 0}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0, "departure": 0, "reverse": "yes"}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0, "departure": 0, "reverse": null}], "repeat": {"type": "once"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": []}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": null}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": 60}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "every"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "every", "minutes": "60"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "every", "minutes": null}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "once", "minutes": 60}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "daily"}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"minutes": 60}}"#,
             // Starting and stopping a service needs a train, and an
             // observation is not a command.
             #"{"type": "startTrainService"}"#,
@@ -536,15 +553,21 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [{"station": 1, "arrival": 0}]}}"#,
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": null}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}, "timetable": []}}"#,
-            // A service is answered by its type, with "stop" exactly when
-            // active, and by nothing else.
+            // A service is answered by its type, with "stop" and "cycle"
+            // exactly when active, and by nothing else.
             #"{"observe": {"type": "execution"}, "expect": {"execution": {"type": "inactive"}}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": null}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "running", "stop": 0}}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "inactive", "stop": 0}}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "waiting"}}}"#,
-            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "travelling", "stop": "1"}}}"#,
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "waiting", "cycle": 0}}}"#,
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "travelling", "stop": "1", "cycle": 0}}}"#,
+            // ...and by its cycle when active, never without one.
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "waiting", "stop": 0}}}"#,
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "travelling", "stop": 1, "cycle": "0"}}}"#,
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "waiting", "stop": 1, "cycle": null}}}"#,
+            #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "inactive", "cycle": 0}}}"#,
             #"{"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "inactive"}, "timetable": []}}"#,
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"execution": {"type": "inactive"}}}"#,
         ]
@@ -604,13 +627,13 @@ final class GoldenScenarioTests: XCTestCase {
             .observe(.stationStops(TrainID(rawValue: 3)), expect: .stations([StationID(rawValue: 1), StationID(rawValue: 4)]))
         )
 
-        let timetable = #"{"observe": {"type": "timetable", "train": 2}, "expect": {"timetable": [{"station": 3, "arrival": 0, "departure": 0}, {"station": 1, "arrival": 1440, "departure": 1450}]}}"#
+        let timetable = #"{"observe": {"type": "timetable", "train": 2}, "expect": {"timetable": [{"station": 3, "arrival": 0, "departure": 0, "reverse": false}, {"station": 1, "arrival": 1440, "departure": 1450, "reverse": true}]}}"#
         let emptyTimetable = #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": []}}"#
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(timetable.utf8)),
             .observe(.timetable(TrainID(rawValue: 2)), expect: .timetable([
                 ScheduledStop(station: StationID(rawValue: 3), arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
-                ScheduledStop(station: StationID(rawValue: 1), arrival: GameTime(minutes: 1440), departure: GameTime(minutes: 1450)),
+                ScheduledStop(station: StationID(rawValue: 1), arrival: GameTime(minutes: 1440), departure: GameTime(minutes: 1450), reverses: true),
             ]))
         )
         XCTAssertEqual(
@@ -620,8 +643,12 @@ final class GoldenScenarioTests: XCTestCase {
 
         let executions: [(String, TimetableExecution?)] = [
             (#"{"type": "inactive"}"#, nil),
-            (#"{"type": "waiting", "stop": 0}"#, .waitingAtStop(0)),
-            (#"{"type": "travelling", "stop": 3}"#, .travellingToStop(3)),
+            (#"{"type": "waiting", "stop": 0, "cycle": 0}"#, .waitingAtStop(0)),
+            (#"{"type": "travelling", "stop": 3, "cycle": 0}"#, .travellingToStop(3)),
+            (#"{"type": "waiting", "stop": 2, "cycle": 7}"#, .waitingAtStop(2, cycle: 7)),
+            (#"{"type": "travelling", "stop": 0, "cycle": 1}"#, .travellingToStop(0, cycle: 1)),
+            // Read as written: rejecting a negative cycle is GameCore's decision.
+            (#"{"type": "waiting", "stop": 0, "cycle": -1}"#, .waitingAtStop(0, cycle: -1)),
         ]
         for (json, expected) in executions {
             let step = #"{"observe": {"type": "execution", "train": 2}, "expect": {"execution": \#(json)}}"#
@@ -659,16 +686,21 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"type": "setTrainContinuation", "train": 1, "continuation": [{"x": 3, "y": 1}, {"x": 3, "y": 2}]}"#,
              .setTrainContinuation(TrainID(rawValue: 1), [GridPosition(x: 3, y: 1), GridPosition(x: 3, y: 2)])),
             (#"{"type": "setTrainContinuation", "train": 1, "continuation": []}"#, .setTrainContinuation(TrainID(rawValue: 1), [])),
-            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 2, "arrival": 20, "departure": 25}, {"station": 2, "arrival": 25, "departure": 25}]}"#,
+            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 2, "arrival": 20, "departure": 25, "reverse": false}, {"station": 2, "arrival": 25, "departure": 25, "reverse": true}], "repeat": {"type": "once"}}"#,
              .setTrainTimetable(TrainID(rawValue: 1), [
                 ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 20), departure: GameTime(minutes: 25)),
-                ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 25), departure: GameTime(minutes: 25)),
-             ])),
-            (#"{"type": "setTrainTimetable", "train": 3, "timetable": []}"#, .setTrainTimetable(TrainID(rawValue: 3), [])),
+                ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 25), departure: GameTime(minutes: 25), reverses: true),
+             ], period: nil)),
+            (#"{"type": "setTrainTimetable", "train": 3, "timetable": [], "repeat": {"type": "once"}}"#, .setTrainTimetable(TrainID(rawValue: 3), [], period: nil)),
+            (#"{"type": "setTrainTimetable", "train": 2, "timetable": [{"station": 1, "arrival": 0, "departure": 5, "reverse": true}], "repeat": {"type": "every", "minutes": 60}}"#,
+             .setTrainTimetable(TrainID(rawValue: 2), [ScheduledStop(station: StationID(rawValue: 1), arrival: .zero, departure: GameTime(minutes: 5), reverses: true)], period: 60)),
             // Read as written: rejecting a negative time, a departure before
-            // the arrival or an unknown station is GameCore's decision.
-            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 0, "arrival": -1, "departure": -5}]}"#,
-             .setTrainTimetable(TrainID(rawValue: 1), [ScheduledStop(station: StationID(rawValue: 0), arrival: GameTime(minutes: -1), departure: GameTime(minutes: -5))])),
+            // the arrival, an unknown station, or a period that is not
+            // positive or repeats an empty timetable is GameCore's decision.
+            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 0, "arrival": -1, "departure": -5, "reverse": false}], "repeat": {"type": "once"}}"#,
+             .setTrainTimetable(TrainID(rawValue: 1), [ScheduledStop(station: StationID(rawValue: 0), arrival: GameTime(minutes: -1), departure: GameTime(minutes: -5))], period: nil)),
+            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": {"type": "every", "minutes": -3}}"#,
+             .setTrainTimetable(TrainID(rawValue: 1), [], period: -3)),
             (#"{"type": "startTrainService", "train": 2}"#, .startTrainService(TrainID(rawValue: 2))),
             (#"{"type": "stopTrainService", "train": 3}"#, .stopTrainService(TrainID(rawValue: 3))),
         ]

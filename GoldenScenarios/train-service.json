@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "description": "Timetable services on a line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1) with dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) has platform d, Gamma(5,0) and Delta(5,2) share platform f, and Echo(6,0) has no platform until g(6,1) is built. startTrainService checks, in the order unknownTrain, trainServiceActive, noTimetable, trainNotPlaced, trainNotAtFirstStop (the train must be stopped at the first stop's station); stopTrainService checks unknownTrain, trainServiceNotActive. A service runs the timetable once, in order, and its execution is the timetable index it waits at or travels to. Each basic step from minute T: departures at T (a waiting service leaves when the clock is at or past its scheduled departure), movement, the clock to T+1, arrivals at T+1 (a travelling service whose train is stopped at the next stop's station waits there). Local 1 (rate 1024, one link a minute) starts at Alpha: it never leaves before 5 even in one advance of 5 ticks, arrives early at Beta at 7 and waits until its departure at 10; Beta again (a repeated station) is reached at once and left in the same minute (zero dwell); Gamma is reached late at 12 and left in the next step with no dwell added; Delta shares Gamma's platform, so it is reached at once, but Echo has no platform: without a route the train waits at Delta, also across an advance of 5 ticks, and leaves in the step after g is built; it arrives at Echo at 19, waits at the last stop until its departure at 20, and the service ends there, keeping the timetable. While a service runs, setTrainContinuation, reverseTrain, unplaceTrain and setTrainTimetable are refused with trainServiceActive, and setTrainMovementRate is allowed. Local 2 (rate 512) is stopped mid-journey: stopTrainService keeps its position, rate and continuation, it runs on to Beta under manual control, and a service only starts again from the first stop. Local 2 then runs Beta to Gamma within one advance of 20 ticks: it leaves at 40, reaches Gamma at 44, one minute before its last departure at 45, and the service still ends at 45 instead of that departure being skipped; a new one-stop service then starts at Delta, which shares Gamma's platform.",
   "initialState": {
     "mapWidth": 8,
@@ -83,7 +83,7 @@
       "expect": { "result": "noTimetable", "train": 2 }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 1, "arrival": 20, "departure": 25 }, { "station": 2, "arrival": 30, "departure": 30 }] },
+      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 1, "arrival": 20, "departure": 25, "reverse": false }, { "station": 2, "arrival": 30, "departure": 30, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "ok" }
     },
     {
@@ -119,7 +119,7 @@
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 0, "departure": 5 }, { "station": 2, "arrival": 8, "departure": 10 }, { "station": 2, "arrival": 10, "departure": 10 }, { "station": 3, "arrival": 11, "departure": 11 }, { "station": 4, "arrival": 12, "departure": 12 }, { "station": 5, "arrival": 14, "departure": 20 }] },
+      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 0, "departure": 5, "reverse": false }, { "station": 2, "arrival": 8, "departure": 10, "reverse": false }, { "station": 2, "arrival": 10, "departure": 10, "reverse": false }, { "station": 3, "arrival": 11, "departure": 11, "reverse": false }, { "station": 4, "arrival": 12, "departure": 12, "reverse": false }, { "station": 5, "arrival": 14, "departure": 20, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "ok" }
     },
     {
@@ -136,7 +136,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 0 } }
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -159,11 +159,11 @@
       "expect": { "result": "trainServiceActive", "train": 1 }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [] },
+      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [], "repeat": { "type": "once" } },
       "expect": { "result": "trainServiceActive", "train": 1 }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 5, "departure": 0 }] },
+      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 5, "departure": 0, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "trainServiceActive", "train": 1 }
     },
     {
@@ -180,7 +180,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 0 } }
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -192,7 +192,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "travelling", "stop": 1 } }
+      "expect": { "execution": { "type": "travelling", "stop": 1, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -208,7 +208,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 1 } }
+      "expect": { "execution": { "type": "waiting", "stop": 1, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -224,7 +224,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 1 } }
+      "expect": { "execution": { "type": "waiting", "stop": 1, "cycle": 0 } }
     },
     {
       "command": { "type": "advance", "ticks": 1 },
@@ -232,7 +232,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "travelling", "stop": 3 } }
+      "expect": { "execution": { "type": "travelling", "stop": 3, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -244,7 +244,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 3 } }
+      "expect": { "execution": { "type": "waiting", "stop": 3, "cycle": 0 } }
     },
     {
       "observe": { "type": "stationStops", "train": 1 },
@@ -256,7 +256,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 4 } }
+      "expect": { "execution": { "type": "waiting", "stop": 4, "cycle": 0 } }
     },
     {
       "observe": { "type": "routeToStation", "from": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "station": 5 },
@@ -268,7 +268,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 4 } }
+      "expect": { "execution": { "type": "waiting", "stop": 4, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -292,7 +292,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 5 } }
+      "expect": { "execution": { "type": "waiting", "stop": 5, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
@@ -304,7 +304,7 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 5 } }
+      "expect": { "execution": { "type": "waiting", "stop": 5, "cycle": 0 } }
     },
     {
       "command": { "type": "advance", "ticks": 1 },
@@ -316,7 +316,7 @@
     },
     {
       "observe": { "type": "timetable", "train": 1 },
-      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departure": 5 }, { "station": 2, "arrival": 8, "departure": 10 }, { "station": 2, "arrival": 10, "departure": 10 }, { "station": 3, "arrival": 11, "departure": 11 }, { "station": 4, "arrival": 12, "departure": 12 }, { "station": 5, "arrival": 14, "departure": 20 }] }
+      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departure": 5, "reverse": false }, { "station": 2, "arrival": 8, "departure": 10, "reverse": false }, { "station": 2, "arrival": 10, "departure": 10, "reverse": false }, { "station": 3, "arrival": 11, "departure": 11, "reverse": false }, { "station": 4, "arrival": 12, "departure": 12, "reverse": false }, { "station": 5, "arrival": 14, "departure": 20, "reverse": false }] }
     },
     {
       "observe": { "type": "stationStops", "train": 1 },
@@ -352,7 +352,7 @@
     },
     {
       "observe": { "type": "execution", "train": 2 },
-      "expect": { "execution": { "type": "travelling", "stop": 1 } }
+      "expect": { "execution": { "type": "travelling", "stop": 1, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 2 },
@@ -391,7 +391,7 @@
       "expect": { "result": "trainNotAtFirstStop", "train": 2 }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 2, "arrival": 29, "departure": 40 }, { "station": 3, "arrival": 45, "departure": 45 }] },
+      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 2, "arrival": 29, "departure": 40, "reverse": false }, { "station": 3, "arrival": 45, "departure": 45, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "ok" }
     },
     {
@@ -400,7 +400,7 @@
     },
     {
       "observe": { "type": "execution", "train": 2 },
-      "expect": { "execution": { "type": "waiting", "stop": 0 } }
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
     },
     {
       "command": { "type": "advance", "ticks": 20 },
@@ -419,7 +419,7 @@
       "expect": { "stations": [3, 4] }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 4, "arrival": 49, "departure": 60 }] },
+      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 4, "arrival": 49, "departure": 60, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "ok" }
     },
     {
@@ -428,7 +428,7 @@
     },
     {
       "observe": { "type": "execution", "train": 2 },
-      "expect": { "execution": { "type": "waiting", "stop": 0 } }
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
     }
   ],
   "expectedFinalState": {
@@ -452,8 +452,8 @@
       { "x": 6, "y": 1, "connections": ["west"] }
     ],
     "trains": [
-      { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 6, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 5 }, { "station": 2, "arrival": 8, "departure": 10 }, { "station": 2, "arrival": 10, "departure": 10 }, { "station": 3, "arrival": 11, "departure": 11 }, { "station": 4, "arrival": 12, "departure": 12 }, { "station": 5, "arrival": 14, "departure": 20 }], "execution": { "type": "inactive" } },
-      { "id": 2, "name": "Local 2", "position": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 4, "arrival": 49, "departure": 60 }], "execution": { "type": "waiting", "stop": 0 } }
+      { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 6, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 5, "reverse": false }, { "station": 2, "arrival": 8, "departure": 10, "reverse": false }, { "station": 2, "arrival": 10, "departure": 10, "reverse": false }, { "station": 3, "arrival": 11, "departure": 11, "reverse": false }, { "station": 4, "arrival": 12, "departure": 12, "reverse": false }, { "station": 5, "arrival": 14, "departure": 20, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
+      { "id": 2, "name": "Local 2", "position": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 4, "arrival": 49, "departure": 60, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
     ]
   }
 }

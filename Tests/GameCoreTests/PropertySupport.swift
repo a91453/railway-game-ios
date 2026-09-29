@@ -612,6 +612,18 @@ enum WorldInvariants {
             for stop in train.timetable where world.station(id: stop.station) == nil {
                 problems.append("train \(train.id.rawValue) timetable names unknown station \(stop.station.rawValue)")
             }
+            // Decision 21: a repeating timetable has a stop and a period of a
+            // minute or more, and does not go back when it starts again.
+            if let period = train.timetablePeriod {
+                if let first = train.timetable.first, let last = train.timetable.last {
+                    let (again, overflow) = first.arrival.minutes.addingReportingOverflow(period)
+                    if period < 1 || (!overflow && last.departure.minutes > again) {
+                        problems.append("train \(train.id.rawValue) timetable cannot repeat every \(period) minutes")
+                    }
+                } else {
+                    problems.append("train \(train.id.rawValue) repeats an empty timetable")
+                }
+            }
             problems += serviceViolations(of: train, in: world)
             let movement = train.movement
             guard let position = train.position else {
@@ -656,22 +668,33 @@ enum WorldInvariants {
 
     /// Decision 20: a service points at an entry of the timetable of a
     /// placed train; a waiting train is stopped at that entry's station; a
-    /// travelling one heads for an entry after the first, has not ended its
-    /// journey, and ends it next to that entry's station.
+    /// travelling one heads for an entry after the service's first, has not
+    /// ended its journey, and ends it next to that entry's station.
+    /// Decision 21: the cycle is 0 unless the timetable repeats, and then
+    /// its latest time still fits in a game minute.
     static func serviceViolations(of train: Train, in world: GameWorld) -> [String] {
         guard let execution = train.execution else { return [] }
         let id = train.id.rawValue
         guard train.timetable.indices.contains(execution.stop) else {
             return ["train \(id) service at stop \(execution.stop) of \(train.timetable.count)"]
         }
+        if execution.cycle != 0 {
+            guard let period = train.timetablePeriod, execution.cycle > 0 else {
+                return ["train \(id) service in cycle \(execution.cycle) of a timetable that does not repeat"]
+            }
+            let (shift, overflow) = execution.cycle.multipliedReportingOverflow(by: period)
+            if overflow || train.timetable.last!.departure.minutes.addingReportingOverflow(shift).overflow {
+                return ["train \(id) service in cycle \(execution.cycle), whose times do not fit"]
+            }
+        }
         guard let position = train.position else { return ["unplaced train \(id) runs a service"] }
         let target = train.timetable[execution.stop].station
         switch execution {
         case .waitingAtStop:
             return world.stationsStoppedAt(by: train.id).contains(target) ? [] : ["train \(id) waits at station \(target.rawValue) but is not stopped there"]
-        case .travellingToStop(let stop):
+        case .travellingToStop(let stop, let cycle):
             var problems: [String] = []
-            if stop < 1 { problems.append("train \(id) travels to the first stop") }
+            if stop < 1, cycle < 1 { problems.append("train \(id) travels to the service's first stop") }
             let remaining = train.movement.remainingContinuation
             if case .atNode = position, remaining.isEmpty { problems.append("train \(id) travels but its journey has ended") }
             let end = remaining.last ?? ahead(of: position).node

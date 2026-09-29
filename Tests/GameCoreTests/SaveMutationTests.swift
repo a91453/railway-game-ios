@@ -361,4 +361,113 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(serviceMutations > 1_000, "only \(serviceMutations) mutations aimed at services")
         assertVolume(loadedServices > 500, "only \(loadedServices) services loaded")
     }
+
+    /// The same for repeating timetables and turning round (decision 21),
+    /// with many mutations aimed at a train's period, its stops' turns and
+    /// its service's cycle, or writing a period or a cycle onto a train
+    /// (mostly plausible: a small period or cycle). Whatever loads keeps
+    /// every period and cycle consistent with its timetable, survives
+    /// another save, and stays so under further commands and advances,
+    /// which never trap.
+    func testMutatedRepeatsAreRefusedOrLoadWithAConsistentService() throws {
+        var accepted = 0
+        var refused = 0
+        var repeatMutations = 0
+        var loadedRepeats = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.repeatMutation", cases: 30) { c in
+            let (setup, operations) = try ServicePropertyTests.generate(&c, operations: 60, repeating: true)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let inRepeats = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.contains(".period") || text.contains(".reverse") || text.contains(".execution")
+            }
+            let trainObjects = all.filter { path in
+                path.map(\.description).joined().hasPrefix(".trains[") && path.count == 2
+            }
+            for _ in 0..<40 {
+                let path: [Step]
+                var written = false
+                let roll = c.random.below(4)
+                if roll < 2, !inRepeats.isEmpty {
+                    path = c.random.element(of: inRepeats)
+                    repeatMutations += 1
+                } else if roll == 2, !trainObjects.isEmpty {
+                    path = c.random.element(of: trainObjects)
+                    written = true
+                    repeatMutations += 1
+                } else {
+                    path = c.random.element(of: outsideTiles)
+                }
+                var described = ""
+                let mutated = Self.replacing(path[...], in: json) { value in
+                    guard written, var train = value as? [String: Any] else {
+                        let (result, text) = Self.mutation(of: value, addedKeys: ["period", "cycle", "reverse", "extra"], using: &c.random)
+                        described = text
+                        return result
+                    }
+                    switch c.random.below(3) {
+                    case 0:
+                        let period = c.random.element(of: [1, 5, 12, 30, 60, 0, -1, Int64.max])
+                        train["period"] = period
+                        described = "period set to \(period)"
+                    case 1:
+                        train["period"] = nil
+                        described = "period removed"
+                    default:
+                        let cycle = c.random.element(of: [0, 1, 2, 5, 100, -1, Int64.max])
+                        if var execution = train["execution"] as? [String: Any] {
+                            execution["cycle"] = cycle
+                            train["execution"] = execution
+                        } else {
+                            train["execution"] = ["phase": c.random.element(of: ["waiting", "travelling"]), "stop": c.random.below(3), "cycle": cycle]
+                        }
+                        described = "cycle set to \(cycle)"
+                    }
+                    return train
+                }
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                loadedRepeats += loaded.trains.count { $0.timetablePeriod != nil }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<10 {
+                    let operation = c.random.chance(1, in: 3)
+                        ? .advance(c.random.below(40))
+                        : c.random.chance(1, in: 2)
+                            ? ServicePropertyTests.nextServiceOperation(in: current, repeating: true, using: &c.random)
+                            : KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.repeatMutation \(accepted) mutated saves loaded, \(refused) refused, \(repeatMutations) aimed at repeats, \(loadedRepeats) repeating timetables loaded")
+        assertVolume(refused > 1_000, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
+        assertVolume(repeatMutations > 1_000, "only \(repeatMutations) mutations aimed at repeats")
+        assertVolume(loadedRepeats > 500, "only \(loadedRepeats) repeating timetables loaded")
+    }
 }

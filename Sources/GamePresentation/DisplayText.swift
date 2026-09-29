@@ -165,7 +165,7 @@ extension GameError {
         case .idsExhausted:
             "This game has no IDs left for anything more of this kind."
         case .invalidTimetable:
-            "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives."
+            "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives. A repeating timetable needs a stop, and a period long enough to start again without going back."
         case .unknownStation(let id):
             "There is no station #\(id.rawValue)."
         case .trainServiceActive(let id):

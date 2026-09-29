@@ -87,7 +87,7 @@ final class TimetablePropertyTests: XCTestCase {
                 let before = scheduled
                 let error = KernelDifferentialTests.apply(operation, to: &scheduled)
                 let at = "step \(index) \(operation)"
-                if case .setTimetable(let id, let stops) = operation {
+                if case .setTimetable(let id, let stops, _) = operation {
                     let outcome = error.map { "\($0)".prefix { $0 != "(" } } ?? (stops.isEmpty ? "cleared" : "set")
                     outcomes[String(outcome), default: 0] += 1
                     if error == nil {

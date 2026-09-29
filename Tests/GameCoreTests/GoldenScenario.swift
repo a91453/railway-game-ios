@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 9
+    static let schemaVersion = 10
 
     var description: String
     var initialState: InitialState
@@ -229,7 +229,7 @@ enum ScenarioCommand: Equatable {
     case reverseTrain(TrainID)
     case setTrainMovementRate(TrainID, Int64)
     case setTrainContinuation(TrainID, [GridPosition])
-    case setTrainTimetable(TrainID, [ScheduledStop])
+    case setTrainTimetable(TrainID, [ScheduledStop], period: Int64?)
     case startTrainService(TrainID)
     case stopTrainService(TrainID)
     case setSpeed(GameSpeed)
@@ -259,8 +259,8 @@ enum ScenarioCommand: Equatable {
                 try world.setTrainMovementRate(id, to: rate)
             case .setTrainContinuation(let id, let nodes):
                 try world.setTrainContinuation(id, to: nodes)
-            case .setTrainTimetable(let id, let stops):
-                try world.setTrainTimetable(id, to: stops)
+            case .setTrainTimetable(let id, let stops, let period):
+                try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
             case .startTrainService(let id):
                 try world.startTrainService(id)
             case .stopTrainService(let id):
@@ -283,7 +283,7 @@ enum ScenarioCommand: Equatable {
 
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, connections, name, train, position, rate, continuation, timetable, speed, ticks
+        case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
     }
 
     init(from decoder: any Decoder) throws {
@@ -318,10 +318,11 @@ extension ScenarioCommand: Decodable {
             let nodes = try container.decode([PositionSummary].self, forKey: .continuation)
             self = try .setTrainContinuation(container.decodeTrain(forKey: .train), nodes.map(\.position))
         case "setTrainTimetable":
-            // Read as written: rejecting negative or backward times and
-            // unknown stations is GameCore's decision.
+            // Read as written: rejecting negative or backward times, a period
+            // that does not fit and unknown stations is GameCore's decision.
             let stops = try container.decode([StopSummary].self, forKey: .timetable)
-            self = try .setTrainTimetable(container.decodeTrain(forKey: .train), stops.map(\.stop))
+            let period = try container.decode(RepeatSummary.self, forKey: .repeat).period
+            self = try .setTrainTimetable(container.decodeTrain(forKey: .train), stops.map(\.stop), period: period)
         case "startTrainService":
             self = try .startTrainService(container.decodeTrain(forKey: .train))
         case "stopTrainService":
@@ -672,7 +673,7 @@ struct PositionSummary: Codable, Equatable {
 
 /// The externally meaningful state of a world: time, money, what has been
 /// built or bought, where each train is and how it moves, and each train's
-/// timetable and service. Lists are in
+/// timetable, how it repeats, and service. Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
 /// inherited from how GameCore stores them.
@@ -703,6 +704,7 @@ struct WorldSummary: Codable, Equatable {
         var position: TrainPositionSummary
         var movement: TrainMovementSummary
         var timetable: [StopSummary]
+        var `repeat`: RepeatSummary
         var execution: ExecutionSummary
     }
 
@@ -721,7 +723,7 @@ struct WorldSummary: Codable, Equatable {
                 TrainSummary(
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
-                    execution: ExecutionSummary($0.execution)
+                    repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution)
                 )
             }
             .sorted { $0.id < $1.id }
@@ -912,32 +914,85 @@ struct TrainMovementSummary: Codable, Equatable {
     }
 }
 
-/// A timetable stop as a fixture value: `{"station", "arrival", "departure"}`,
-/// a station ID and two game minutes (see `ScheduledStop`). Read as written,
-/// not checked: whether a timetable is valid is GameCore's decision, so a
-/// fixture can expect a negative time to be rejected.
+/// A timetable stop as a fixture value: `{"station", "arrival", "departure",
+/// "reverse"}`, a station ID, two game minutes and whether the train turns
+/// round as it leaves (see `ScheduledStop`). Read as written, not checked:
+/// whether a timetable is valid is GameCore's decision, so a fixture can
+/// expect a negative time to be rejected.
 struct StopSummary: Codable, Equatable {
     var station: Int
     var arrival: Int64
     var departure: Int64
+    var reverse: Bool
 
     init(_ stop: ScheduledStop) {
         station = stop.station.rawValue
         arrival = stop.arrival.minutes
         departure = stop.departure.minutes
+        reverse = stop.reverses
     }
 
     var stop: ScheduledStop {
-        ScheduledStop(station: StationID(rawValue: station), arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure))
+        ScheduledStop(
+            station: StationID(rawValue: station), arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure),
+            reverses: reverse
+        )
+    }
+}
+
+/// How a timetable repeats, as a fixture value tagged by `"type"`:
+/// `{"type": "once"}` for a timetable that runs once, or `{"type": "every",
+/// "minutes"}` for one that repeats every `minutes` (see
+/// `Train.timetablePeriod`). Read as written: whether a period fits is
+/// GameCore's decision, so a fixture can expect 0 to be rejected. A field
+/// that belongs to another type is rejected.
+struct RepeatSummary: Codable, Equatable {
+    /// `nil` for a timetable that runs once.
+    var period: Int64?
+
+    init(_ period: Int64?) {
+        self.period = period
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, minutes
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "once":
+            guard !container.contains(.minutes) else {
+                throw DecodingError.dataCorruptedError(forKey: .minutes, in: container, debugDescription: "A \"once\" timetable has no \"minutes\".")
+            }
+            period = nil
+        case "every":
+            period = try container.decode(Int64.self, forKey: .minutes)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown repeat type \"\(type)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let period {
+            try container.encode("every", forKey: .type)
+            try container.encode(period, forKey: .minutes)
+        } else {
+            try container.encode("once", forKey: .type)
+        }
     }
 }
 
 /// A train's timetable service as a fixture value, tagged by `"type"`:
-/// `{"type": "inactive"}` without a service, `{"type": "waiting", "stop"}`
-/// while it waits at timetable entry `stop`, or `{"type": "travelling",
-/// "stop"}` on its way to that entry (see `TimetableExecution`). `stop` is a
-/// 0-based index into the timetable, not a station ID. Values are read as
-/// written; a field that belongs to another type is rejected.
+/// `{"type": "inactive"}` without a service, `{"type": "waiting", "stop",
+/// "cycle"}` while it waits at timetable entry `stop`, or `{"type":
+/// "travelling", "stop", "cycle"}` on its way to that entry (see
+/// `TimetableExecution`). `stop` is a 0-based index into the timetable, not
+/// a station ID; `cycle` counts the times a repeating timetable has started
+/// again, 0 for one that runs once. Values are read as written; a field that
+/// belongs to another type is rejected.
 struct ExecutionSummary: Codable, Equatable {
     /// `nil` without an active service.
     var execution: TimetableExecution?
@@ -947,7 +1002,7 @@ struct ExecutionSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, stop
+        case type, stop, cycle
     }
 
     init(from decoder: any Decoder) throws {
@@ -955,14 +1010,14 @@ struct ExecutionSummary: Codable, Equatable {
         let type = try container.decode(String.self, forKey: .type)
         switch type {
         case "inactive":
-            guard !container.contains(.stop) else {
-                throw DecodingError.dataCorruptedError(forKey: .stop, in: container, debugDescription: "An \"inactive\" service has no \"stop\".")
+            for key in [CodingKeys.stop, .cycle] where container.contains(key) {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "An \"inactive\" service has no \"\(key.stringValue)\".")
             }
             execution = nil
         case "waiting":
-            execution = try .waitingAtStop(container.decode(Int.self, forKey: .stop))
+            execution = try .waitingAtStop(container.decode(Int.self, forKey: .stop), cycle: container.decode(Int64.self, forKey: .cycle))
         case "travelling":
-            execution = try .travellingToStop(container.decode(Int.self, forKey: .stop))
+            execution = try .travellingToStop(container.decode(Int.self, forKey: .stop), cycle: container.decode(Int64.self, forKey: .cycle))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown service type \"\(type)\".")
         }
@@ -973,12 +1028,14 @@ struct ExecutionSummary: Codable, Equatable {
         switch execution {
         case nil:
             try container.encode("inactive", forKey: .type)
-        case .waitingAtStop(let stop)?:
+        case .waitingAtStop(let stop, let cycle)?:
             try container.encode("waiting", forKey: .type)
             try container.encode(stop, forKey: .stop)
-        case .travellingToStop(let stop)?:
+            try container.encode(cycle, forKey: .cycle)
+        case .travellingToStop(let stop, let cycle)?:
             try container.encode("travelling", forKey: .type)
             try container.encode(stop, forKey: .stop)
+            try container.encode(cycle, forKey: .cycle)
         }
     }
 }

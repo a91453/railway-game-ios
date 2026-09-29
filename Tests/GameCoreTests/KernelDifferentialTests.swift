@@ -30,8 +30,9 @@ final class KernelDifferentialTests: XCTestCase {
         case setContinuation(TrainID, [GridPosition])
         /// Never drawn by ``nextOperation(in:using:)``, so the Stage I–N
         /// campaigns and their digests are as before; the timetable
-        /// campaigns (`TimetablePropertyTests`) add it.
-        case setTimetable(TrainID, [ScheduledStop])
+        /// campaigns (`TimetablePropertyTests`) add it, and the repeating
+        /// service campaign (`ServicePropertyTests`) gives it a period.
+        case setTimetable(TrainID, [ScheduledStop], period: Int64? = nil)
         /// Never drawn by ``nextOperation(in:using:)`` either; the service
         /// campaigns (`ServicePropertyTests`) add them.
         case startService(TrainID)
@@ -58,8 +59,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .reverse(let id): ".reverse(\(id.rawValue))"
             case .setRate(let id, let rate): ".setRate(\(id.rawValue), \(rate))"
             case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
-            case .setTimetable(let id, let stops):
-                ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.minutes)-\($0.departure.minutes)" }.joined(separator: ", "))])"
+            case .setTimetable(let id, let stops, let period):
+                ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.minutes)-\($0.departure.minutes)\($0.reverses ? "R" : "")" }.joined(separator: ", "))]\(period.map { ", every \($0)" } ?? ""))"
             case .startService(let id): ".startService(\(id.rawValue))"
             case .stopService(let id): ".stopService(\(id.rawValue))"
             case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
@@ -244,7 +245,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .reverse(let id): try world.reverseTrain(id)
             case .setRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
             case .setContinuation(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
-            case .setTimetable(let id, let stops): try world.setTrainTimetable(id, to: stops)
+            case .setTimetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
             case .startService(let id): try world.startTrainService(id)
             case .stopService(let id): try world.stopTrainService(id)
             case .sendToTile(let id, let p):
@@ -284,7 +285,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .reverse(let id): return model.reverseTrain(id)
         case .setRate(let id, let rate): return model.setRate(id, rate)
         case .setContinuation(let id, let nodes): return model.setContinuation(id, nodes)
-        case .setTimetable(let id, let stops): return model.setTimetable(id, stops)
+        case .setTimetable(let id, let stops, let period): return model.setTimetable(id, stops, period: period)
         case .startService(let id): return model.startService(id)
         case .stopService(let id): return model.stopService(id)
         case .sendToTile(let id, let p):
@@ -340,6 +341,10 @@ final class KernelDifferentialTests: XCTestCase {
                 "train \(expected.id) continuation \(train.movement.continuation)@\(train.movement.cursor) vs \(expected.continuation)@\(expected.cursor)"
             )
             check(train.timetable == expected.timetable, "train \(expected.id) timetable \(train.timetable) vs \(expected.timetable)")
+            check(
+                train.timetablePeriod == expected.period,
+                "train \(expected.id) period \(String(describing: train.timetablePeriod)) vs \(String(describing: expected.period))"
+            )
             check(
                 train.execution == expected.service?.execution,
                 "train \(expected.id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))"
