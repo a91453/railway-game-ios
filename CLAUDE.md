@@ -6,6 +6,15 @@ Instructions for Claude Code sessions in this repository.
 
 A native iPhone / iPad railway and city management game (long-term goal: gameplay
 depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
+Later stages draw on `docs/WEB_REFERENCE_STUDY.md`, a study of the owner's
+web transport game. Its logic may be ported by rewriting it in Swift under
+GameCore's rules (integers, determinism). Never commit the snapshot, its
+JavaScript or its assets: this repository is public, and the owner does not
+want them downloadable from it. Third-party code and assets in it are never
+ported. `docs/TIMETABLE_DATA_STUDY.md` maps concepts from real railway
+timetables to stages: raw timetable data stays out of the repository (only
+converted scenario data, with attribution), and live data never feeds the
+simulation.
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
