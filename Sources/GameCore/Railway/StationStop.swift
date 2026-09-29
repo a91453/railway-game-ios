@@ -104,8 +104,7 @@ extension GameWorld {
     /// reachable from `start`.
     public func route(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> [GridPosition]? {
         let platforms = platforms(of: id)
-        guard isOnTrack(start), !platforms.isEmpty else { return nil }
-        let (node, heading) = start.ahead
+        guard isOnTrack(start), !platforms.isEmpty, let (node, heading) = start.ahead else { return nil }
         guard var route = TrainRoute.shortest(from: node, heading: heading, to: platforms.contains, exits: { exits(from: $0, facing: $1) }) else {
             return nil
         }

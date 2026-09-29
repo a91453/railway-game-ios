@@ -43,6 +43,9 @@ extension Train {
             return Int((length + link - 1) / link)
         case .onLink(_, _, let offset):
             return length <= offset ? 1 : 1 + Int((length - offset + link - 1) / link)
+        case .onEdge:
+            // On the track network the body is kept as edges, not nodes.
+            return 0
         }
     }
 
@@ -54,6 +57,8 @@ extension Train {
             return Int64(index + 1) * TrainPosition.linkLength
         case .onLink(_, _, let offset):
             return offset + Int64(index) * TrainPosition.linkLength
+        case .onEdge:
+            preconditionFailure("distanceBehind(_:at:) is for positions on the grid")
         }
     }
 
@@ -74,6 +79,9 @@ extension Train {
         case .onLink(let from, let to, _):
             guard first == from else { return false }
             spine = [to] + trail
+        case .onEdge:
+            // No grid trail on the track network (the count above is 0).
+            return false
         }
         for index in spine.indices.dropFirst() where TrackDirection(from: spine[index - 1], to: spine[index]) == nil {
             return false
@@ -109,6 +117,8 @@ extension GameWorld {
             trail = [from]
             node = from
             backward = TrackDirection(from: to, to: from)!
+        case .onEdge:
+            return nil
         }
         while trail.count < count {
             guard let next = exits(from: node, facing: backward).first else { return nil }
@@ -130,6 +140,7 @@ extension GameWorld {
         switch position {
         case .atNode(let tile, _): spine = [tile] + trail
         case .onLink(_, let to, _): spine = [to] + trail
+        case .onEdge: return false
         }
         for index in spine.indices.dropFirst() where !isConnected(spine[index - 1], to: spine[index]) {
             return false
@@ -152,7 +163,7 @@ extension GameWorld {
         guard count > 0 else { return [] }
         // The nodes from far behind to the head's newest node.
         var history = Array(trail.reversed())
-        history.append(old.ahead.node)
+        history.append(old.ahead!.node)
         history.append(contentsOf: entered)
         // The last one is the node the head stands at or is heading for.
         history.removeLast()
@@ -176,6 +187,7 @@ extension GameWorld {
         switch position {
         case .atNode(let tile, _): headEnd = tile
         case .onLink(_, let to, _): headEnd = to
+        case .onEdge: preconditionFailure("reversed(_:trail:length:) is for positions on the grid")
         }
         toward.append(headEnd)
         let tailNode = trail[last]
@@ -212,6 +224,8 @@ extension GameWorld {
             previous = tile
         case .onLink(let from, _, _):
             previous = from
+        case .onEdge:
+            return []
         }
         for (index, node) in train.trail.enumerated() {
             let distance = Train.distanceBehind(index, at: position)
@@ -221,7 +235,7 @@ extension GameWorld {
                 resources.append(.link(between: previous, and: node))
             }
             if distance <= length {
-                resources.append(.node(node))
+                resources.append(.tile(node))
             }
             previous = node
         }

@@ -6,9 +6,15 @@
 /// node when the continuation is used up or the next named link cannot be
 /// entered, and the distance it could not use is dropped, not saved up.
 ///
+/// On the track network (Stage S3) the path ahead is ``edges`` instead of
+/// ``continuation``: the edges the train enters in order, of any length.
+/// A train uses one or the other, never both, and ``cursor`` counts the
+/// entries entered of whichever it uses.
+///
 /// Only ``GameWorld`` changes a train's movement, through
 /// ``GameWorld/setTrainMovementRate(_:to:)``,
-/// ``GameWorld/setTrainContinuation(_:to:)``, ``GameWorld/advance(ticks:)``,
+/// ``GameWorld/setTrainContinuation(_:to:)``,
+/// ``GameWorld/setTrainContinuation(_:along:)``, ``GameWorld/advance(ticks:)``,
 /// and ``GameWorld/reverseTrain(_:)`` and ``GameWorld/unplaceTrain(_:)``,
 /// which clear the continuation (unplacing also resets the rate).
 public struct TrainMovement: Hashable, Sendable {
@@ -27,27 +33,47 @@ public struct TrainMovement: Hashable, Sendable {
     /// so that advancing the cursor needs no copying; their track may be gone.
     public internal(set) var continuation: [GridPosition]
 
-    /// How many ``continuation`` entries the train has entered: it set off on
-    /// the link toward each of the first `cursor` nodes. Reaching a node does
-    /// not advance the cursor; starting along the next link does.
+    /// On the track network (Stage S3): the edges the train enters, in
+    /// order, after the edge it is on. Always ``TrackEdgeID/edge(_:)``s,
+    /// and empty for a train on the grid. Entries before ``cursor`` have
+    /// been entered already, as for ``continuation``.
+    public internal(set) var edges: [TrackEdgeID]
+
+    /// How many ``continuation`` (or, on the network, ``edges``) entries the
+    /// train has entered: it set off on the link toward each of the first
+    /// `cursor` nodes, or along each of the first `cursor` edges. Reaching a
+    /// node does not advance the cursor; starting along the next link or
+    /// edge does.
     ///
-    /// Once every entry has been entered, the continuation is spent and is
-    /// stored as empty with cursor 0, so `cursor < continuation.count` unless
-    /// both are empty.
+    /// Once every entry has been entered, the list is spent and is stored as
+    /// empty with cursor 0, so the cursor is below the count of the list in
+    /// use unless both lists are empty.
     public internal(set) var cursor: Int
 
     /// No rate and no continuation: every unplaced train, and every newly
     /// placed one.
     public static let idle = TrainMovement(rate: 0, continuation: [], cursor: 0)
 
-    /// The continuation entries not yet entered, in order.
+    /// The continuation entries not yet entered, in order. Empty on the
+    /// track network.
     public var remainingContinuation: ArraySlice<GridPosition> {
-        continuation[cursor...]
+        continuation.isEmpty ? [] : continuation[cursor...]
     }
 
-    init(rate: Int64, continuation: [GridPosition], cursor: Int) {
+    /// The network edges not yet entered, in order. Empty on the grid.
+    public var remainingEdges: ArraySlice<TrackEdgeID> {
+        edges.isEmpty ? [] : edges[cursor...]
+    }
+
+    /// Whether any entry of either list is still to be entered.
+    public var hasRemainingPath: Bool {
+        !remainingContinuation.isEmpty || !remainingEdges.isEmpty
+    }
+
+    init(rate: Int64, continuation: [GridPosition], cursor: Int, edges: [TrackEdgeID] = []) {
         self.rate = rate
         self.continuation = continuation
+        self.edges = edges
         self.cursor = cursor
     }
 }
@@ -84,9 +110,9 @@ extension TrainMovement {
         mayPass: (GridPosition, TrackDirection, GridPosition) -> Bool
     ) -> (position: TrainPosition, cursor: Int) {
         precondition(distance >= 0, "travel(from:distance:...) requires a non-negative distance")
+        guard var (node, heading) = start.ahead else { preconditionFailure("travel(from:distance:...) is for positions on the grid") }
         var budget = distance
         var cursor = cursor
-        var (node, heading) = start.ahead
 
         if case .onLink(let from, let to, let offset) = start {
             let toEnd = TrainPosition.linkLength - offset
@@ -110,6 +136,54 @@ extension TrainMovement {
             (node, heading) = (next, direction)
         }
         return (.atNode(node, heading: heading), cursor)
+    }
+
+    /// Where a train on the track network ends up after travelling up to
+    /// `distance` units from `start`, along the rest of its edge and then
+    /// `edges` from entry `cursor` on, and the cursor it ends with: the same
+    /// rules as ``travel(from:distance:continuation:cursor:mayPass:)``,
+    /// with each edge as long as it is.
+    ///
+    /// - Reaching the end of an edge exactly stops there (offset = length),
+    ///   facing on, and never looks at the next entry.
+    /// - With distance left at the end of an edge, the train enters the next
+    ///   entry only if `enter` gives a traversal of it from there (the edge
+    ///   exists, ends at that node and joins the edge the train arrived
+    ///   along) and its length. Otherwise it stops at the end of its edge,
+    ///   the entry stays unconsumed, and the rest of `distance` is unused.
+    ///
+    /// Terminates for any `distance`: every loop pass enters one entry.
+    /// Distance left is compared with the distance to the end of the edge
+    /// before subtracting, so no sum can overflow. The geometry is never
+    /// read: only lengths.
+    ///
+    /// - Precondition: `distance >= 0`, `0 <= offset <= length`, and
+    ///   `0 <= cursor <= edges.count`.
+    static func travel(
+        along traversal: TrackTraversal,
+        offset: Int64,
+        length: Int64,
+        distance: Int64,
+        edges: [TrackEdgeID],
+        cursor: Int,
+        enter: (TrackTraversal, TrackEdgeID) -> (traversal: TrackTraversal, length: Int64)?
+    ) -> (position: TrainPosition, cursor: Int) {
+        precondition(distance >= 0, "travel(along:...) requires a non-negative distance")
+        var budget = distance
+        var cursor = cursor
+        var (current, offset, length) = (traversal, offset, length)
+        while true {
+            let toEnd = length - offset
+            guard budget > toEnd else {
+                return (.onEdge(current, offset: offset + budget), cursor)
+            }
+            budget -= toEnd
+            guard cursor < edges.count, let next = enter(current, edges[cursor]) else {
+                return (.onEdge(current, offset: length), cursor)
+            }
+            cursor += 1
+            (current, offset, length) = (next.traversal, 0, next.length)
+        }
     }
 
     /// Whether a train at `node` facing `heading` could follow `nodes` in
@@ -136,12 +210,20 @@ extension TrainMovement {
     }
 
     /// Whether the stored fields have a shape any world could hold: a
-    /// non-negative rate, a cursor inside a non-spent continuation (or both
-    /// empty), and a continuation whose consecutive nodes are neighbours with
-    /// no node returning to the one two before it.
+    /// non-negative rate, at most one of the two lists in use, a cursor
+    /// inside the one in use if it is not spent (or 0 when both are empty),
+    /// a continuation whose consecutive nodes are neighbours with no node
+    /// returning to the one two before it, and network edges numbered from 1
+    /// with no edge straight after itself (which would turn straight back).
     var isWellFormed: Bool {
         guard rate >= 0 else { return false }
-        guard continuation.isEmpty ? cursor == 0 : (0..<continuation.count).contains(cursor) else { return false }
+        guard continuation.isEmpty || edges.isEmpty else { return false }
+        let count = max(continuation.count, edges.count)
+        guard count == 0 ? cursor == 0 : (0..<count).contains(cursor) else { return false }
+        guard edges.allSatisfy({ ($0.networkNumber ?? 0) >= 1 }) else { return false }
+        for index in edges.indices.dropFirst() where edges[index] == edges[index - 1] {
+            return false
+        }
         for index in continuation.indices.dropFirst() {
             guard TrackDirection(from: continuation[index - 1], to: continuation[index]) != nil else { return false }
         }
@@ -159,10 +241,23 @@ extension TrainMovement {
     /// is at or heading for the last entered node, and after two it faces the
     /// way the last entered link runs. The entries left must be a path from
     /// there without an immediate U-turn.
+    ///
+    /// On the track network the same holds for ``edges``: with entries
+    /// entered, the train is on the last entered edge, and the first edge
+    /// left is not the one it is on. A train on the network has no grid
+    /// continuation, and one on the grid no network edges.
     func fits(_ position: TrainPosition?) -> Bool {
         guard let position else { return self == .idle }
-        guard !continuation.isEmpty else { return true }
-        let (node, heading) = position.ahead
+        if case .onEdge(let traversal, _) = position {
+            guard continuation.isEmpty else { return false }
+            guard !edges.isEmpty else { return true }
+            if cursor >= 1 {
+                guard edges[cursor - 1] == traversal.edge else { return false }
+            }
+            return edges[cursor] != traversal.edge
+        }
+        guard edges.isEmpty else { return false }
+        guard !continuation.isEmpty, let (node, heading) = position.ahead else { return true }
         if cursor >= 1 {
             guard node == continuation[cursor - 1] else { return false }
         }
@@ -177,25 +272,29 @@ extension TrainMovement {
 
 extension TrainMovement: Codable {
     private enum CodingKeys: String, CodingKey {
-        case rate, continuation, cursor
+        case rate, continuation, cursor, edges
     }
 
-    /// Decodes `{"rate", "continuation", "cursor"}`, rejecting values that are
-    /// not well formed (see ``isWellFormed``) rather than repairing them.
-    /// Whether the movement fits the train's position is checked by
-    /// ``Train``'s decoder, and that the nodes lie on the map by the
+    /// Decodes `{"rate", "continuation", "cursor"}`, plus `"edges"` (network
+    /// edge numbers) for a train on the track network; without it, which is
+    /// also how movements saved before Stage S3 read, there are none, and
+    /// an explicit `null` is rejected. Rejects values that are not well
+    /// formed (see ``isWellFormed``) rather than repairing them. Whether the
+    /// movement fits the train's position is checked by ``Train``'s decoder,
+    /// and that the nodes lie on the map (or the edges were built) by the
     /// ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
             rate: try container.decode(Int64.self, forKey: .rate),
             continuation: try container.decode([GridPosition].self, forKey: .continuation),
-            cursor: try container.decode(Int.self, forKey: .cursor)
+            cursor: try container.decode(Int.self, forKey: .cursor),
+            edges: container.contains(.edges) ? try container.decode([Int].self, forKey: .edges).map(TrackEdgeID.edge) : []
         )
         guard isWellFormed else {
             throw DecodingError.dataCorrupted(DecodingError.Context(
                 codingPath: container.codingPath,
-                debugDescription: "A train movement needs a non-negative rate, a cursor inside an unspent continuation, and a continuation of neighbouring nodes without U-turns."
+                debugDescription: "A train movement needs a non-negative rate, one continuation at most with a cursor inside it unless spent, neighbouring nodes without U-turns, and network edges from 1 without an edge straight after itself."
             ))
         }
     }
@@ -205,5 +304,8 @@ extension TrainMovement: Codable {
         try container.encode(rate, forKey: .rate)
         try container.encode(continuation, forKey: .continuation)
         try container.encode(cursor, forKey: .cursor)
+        if !edges.isEmpty {
+            try container.encode(edges.map { $0.networkNumber }, forKey: .edges)
+        }
     }
 }

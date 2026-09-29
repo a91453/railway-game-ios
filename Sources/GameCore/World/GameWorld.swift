@@ -19,6 +19,10 @@ public struct GameWorld: Equatable, Sendable {
     public private(set) var serviceDay: ServiceDay
     public private(set) var clock: GameClock
     public private(set) var economy: GameEconomy
+    /// The continuous track network (Phase 4.5 Stage S3): nodes at world
+    /// coordinates and edges of any length and shape between them, beside
+    /// the grid's track. Empty in a new world.
+    public private(set) var network: TrackNetwork
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -43,6 +47,7 @@ public struct GameWorld: Equatable, Sendable {
         self.serviceDay = .standard
         self.clock = clock
         self.economy = economy
+        self.network = TrackNetwork()
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -173,6 +178,115 @@ public struct GameWorld: Equatable, Sendable {
         map.setType(.empty, at: position)
     }
 
+    // MARK: - Track network
+
+    /// Builds a node of the track network at `position` (Phase 4.5 Stage S3):
+    /// a point where edges can end and meet. Free: track is paid for by its
+    /// edges. Returns the new node's ID, ``TrackNodeID/node(_:)``, numbered
+    /// in order from 1 and never reused.
+    ///
+    /// The node must lie on the map (`0 <= x < width × 1024` and
+    /// `0 <= y < height × 1024`; see ``WorldCoordinate``), at ground level
+    /// (`z == 0`: elevation comes with Stage S4), where no node stands yet.
+    /// The network does not interact with the grid: a node can stand over
+    /// any tile.
+    ///
+    /// - Throws, checked in this order: ``GameError/invalidTrackGeometry``
+    ///   or ``GameError/idsExhausted``.
+    @discardableResult
+    public mutating func buildTrackNode(at position: WorldCoordinate) throws(GameError) -> TrackNodeID {
+        guard isOnMap(position), !network.hasNode(at: position) else { throw .invalidTrackGeometry }
+        let (_, next) = try Self.allocateID(from: network.nextNodeNumber)
+
+        return network.addNode(at: position, next: next)
+    }
+
+    /// Builds an edge of the track network from node `from` to node `to`,
+    /// shaped in plan by `curve` (Phase 4.5 Stage S3), and charges
+    /// ``ConstructionCosts/track`` for every tile of its length (1024 units),
+    /// rounded up. Returns the new edge's ID, ``TrackEdgeID/edge(_:)``,
+    /// numbered in order from 1 and never reused.
+    ///
+    /// The edge's length and centre line are worked out from its end nodes
+    /// and curve (see ``TrackGeometry``); its control points must lie on the
+    /// map. Which edges it joins at each end follows from the way it leaves
+    /// the node (see ``TrackNodeEnd``): an edge that meets others at an
+    /// angle joins none of them there. Edges that cross in plan without a
+    /// shared node never join. Several edges may join the same two nodes.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)``
+    ///   for `from`, then for `to`; ``GameError/invalidTrackGeometry`` (the
+    ///   same node twice, a control point off the map, or a curve that does
+    ///   not make an edge); ``GameError/idsExhausted``; or
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    @discardableResult
+    public mutating func buildTrackEdge(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight) throws(GameError) -> TrackEdgeID {
+        guard let start = network.node(from) else { throw .unknownTrackNode(from) }
+        guard let end = network.node(to) else { throw .unknownTrackNode(to) }
+        guard from != to, curve.controlPoints.allSatisfy(isOnMap),
+              let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve)
+        else { throw .invalidTrackGeometry }
+        let (_, next) = try Self.allocateID(from: network.nextEdgeNumber)
+        try economy.spend(try edgeCost(length: geometry.length))
+
+        return network.addEdge(from: from, to: to, curve: curve, geometry: geometry, next: next)
+    }
+
+    /// Removes edge `id` of the track network (Stage S3). Removal is free and
+    /// not refunded. Its nodes stay; the edges it joined there no longer join
+    /// it. A train whose continuation names it stops at the node before it
+    /// and waits there: IDs are never reused, so give that train a new
+    /// continuation.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``
+    ///   or ``GameError/trackEdgeInUse(_:)`` while a placed train's head or
+    ///   body is on it (unplace the train first).
+    public mutating func removeTrackEdge(_ id: TrackEdgeID) throws(GameError) {
+        guard network.edge(id) != nil else { throw .unknownTrackEdge(id) }
+        guard !trains.contains(where: { train in
+            if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
+            return train.trailEdges.contains(id)
+        }) else { throw .trackEdgeInUse(id) }
+
+        network.removeEdge(id)
+    }
+
+    /// Removes node `id` of the track network (Stage S3). Free. No edge may
+    /// end at it, so no train can be there.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)`` or
+    ///   ``GameError/trackNodeInUse(_:)`` while edges end at it.
+    public mutating func removeTrackNode(_ id: TrackNodeID) throws(GameError) {
+        guard let node = network.node(id) else { throw .unknownTrackNode(id) }
+        guard node.ends.isEmpty else { throw .trackNodeInUse(id) }
+
+        network.removeNode(id)
+    }
+
+    /// Whether a node at `position` would lie on the map, at ground level.
+    private func isOnMap(_ position: WorldCoordinate) -> Bool {
+        position.z == 0 && isOnMap(position.plan)
+    }
+
+    /// Whether `point` lies over the map: `0 <= x < width × 1024` and
+    /// `0 <= y < height × 1024`.
+    private func isOnMap(_ point: PlanPoint) -> Bool {
+        point.x >= 0 && point.y >= 0 && point.x < Int64(map.width) * WorldCoordinate.tileSize && point.y < Int64(map.height) * WorldCoordinate.tileSize
+    }
+
+    /// What an edge `length` long costs: ``ConstructionCosts/track`` for
+    /// every tile of its length, rounded up, and at least one.
+    ///
+    /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
+    ///   the price does not even fit in a ``Money``, so no balance could pay
+    ///   it; `required` is then the largest amount there is.
+    private func edgeCost(length: Int64) throws(GameError) -> Money {
+        let tiles = max(1, (length + WorldCoordinate.tileSize - 1) / WorldCoordinate.tileSize)
+        let (price, overflow) = economy.costs.track.amount.multipliedReportingOverflow(by: tiles)
+        guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+        return Money(price)
+    }
+
     /// Builds a station on an empty tile and charges ``ConstructionCosts/station``.
     ///
     /// - Throws: ``GameError/invalidName``, ``GameError/outOfBounds(_:)``,
@@ -252,13 +366,30 @@ public struct GameWorld: Equatable, Sendable {
     /// same place do not matter. The train starts idle: rate 0 and no
     /// continuation.
     ///
+    /// On the track network (Stage S3) `position` is
+    /// ``TrainPosition/onEdge(_:offset:)`` on an edge, `0 <= offset <=` its
+    /// length; a train with a body stands at an offset above 0 (at a node,
+    /// at the end of the edge it arrived along; see ``TrainPosition``). Its
+    /// body is laid back from the start of its edge the way a train could
+    /// have come, the lowest numbered edge first where the track branches.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
     ///   train), or ``GameError/invalidTrainPosition``.
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
-        guard isOnTrack(position), let trail = trailBehind(position, length: trains[index].length) else { throw .invalidTrainPosition }
+        guard isOnTrack(position) else { throw .invalidTrainPosition }
+        let length = trains[index].length
+        if case .onEdge(let traversal, let offset) = position {
+            guard length == 0 || offset > 0, let trail = networkTrailBehind(traversal, offset: offset, length: length) else {
+                throw .invalidTrainPosition
+            }
+            trains[index].position = position
+            trains[index].trailEdges = trail
+            return
+        }
+        guard let trail = trailBehind(position, length: length) else { throw .invalidTrainPosition }
 
         trains[index].position = position
         trains[index].trail = trail
@@ -294,6 +425,7 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].position = nil
         trains[index].movement = .idle
         trains[index].trail = []
+        trains[index].trailEdges = []
     }
 
     /// Turns a placed train around where it stands, without moving it.
@@ -315,8 +447,15 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
 
-        (trains[index].position, trains[index].trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
+        if case .onEdge(let traversal, let offset) = position {
+            (trains[index].position, trains[index].trailEdges) = reversedOnNetwork(
+                traversal, offset: offset, trail: trains[index].trailEdges, length: trains[index].length
+            )
+        } else {
+            (trains[index].position, trains[index].trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
+        }
         trains[index].movement.continuation = []
+        trains[index].movement.edges = []
         trains[index].movement.cursor = 0
     }
 
@@ -362,14 +501,66 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
     ///   timetable (the service owns the continuation; stop it first), or
     ///   ``GameError/invalidContinuation``.
+    ///
+    /// A train on the track network follows edges, not tiles: an empty list
+    /// clears its continuation, and any other list is refused (see
+    /// ``setTrainContinuation(_:along:)``).
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
-        let (node, heading) = position.ahead
+        guard let (node, heading) = position.ahead else {
+            guard nodes.isEmpty else { throw .invalidContinuation }
+            trains[index].movement.edges = []
+            trains[index].movement.cursor = 0
+            return
+        }
         guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
             throw .invalidContinuation
         }
 
         trains[index].movement.continuation = nodes
+        trains[index].movement.cursor = 0
+    }
+
+    /// Replaces a placed train's continuation with the path `traversals`
+    /// (Stage S3), for a train on the grid or on the track network alike: the
+    /// form ``route(from:to:)`` returns for a ``TrackNodeID``. Each traversal
+    /// must be one a train may take after the one before it (see
+    /// ``transitions(after:)``): the first after the edge the train is on,
+    /// or on the grid from the node ahead of it as
+    /// ``setTrainContinuation(_:to:)`` requires. The whole list is checked
+    /// against the current track, then replaces the old continuation, and
+    /// the cursor goes back to 0; an empty list clears it. On the grid it is
+    /// kept as the nodes the links lead to (``TrainMovement/continuation``),
+    /// on the network as its edges (``TrainMovement/edges``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainNotPlaced(_:)``,
+    ///   ``GameError/trainServiceActive(_:)``, or
+    ///   ``GameError/invalidContinuation`` (a step a train may not take, or
+    ///   the other kind of track).
+    public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal]) throws(GameError) {
+        let (index, position) = try manuallyControlledTrain(id)
+        guard case .onEdge(let traversal, _) = position else {
+            // On the grid: the node each link leads to, from the node ahead.
+            var node = position.ahead!.node
+            var nodes: [GridPosition] = []
+            for next in traversals {
+                guard case .link(let a, let b) = next.edge, TrackEdgeID.precedes(a, b) else { throw .invalidContinuation }
+                let (from, to) = next.direction == .forward ? (a, b) : (b, a)
+                guard from == node else { throw .invalidContinuation }
+                nodes.append(to)
+                node = to
+            }
+            try setTrainContinuation(id, to: nodes)
+            return
+        }
+        var arrival = traversal
+        for next in traversals {
+            guard transitions(after: arrival).contains(next) else { throw .invalidContinuation }
+            arrival = next
+        }
+
+        trains[index].movement.edges = traversals.map(\.edge)
         trains[index].movement.cursor = 0
     }
 
@@ -1082,6 +1273,32 @@ public struct GameWorld: Equatable, Sendable {
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
+            if case .onEdge(let traversal, let offset) = position {
+                // On the track network: the same rules, each edge as long as
+                // it is (Stage S3).
+                let travel = TrainMovement.travel(
+                    along: traversal, offset: offset, length: network.edge(traversal.edge)!.length,
+                    distance: movement.rate, edges: movement.edges, cursor: movement.cursor,
+                    enter: { networkEntry(after: $0, into: $1) }
+                )
+                guard travel.position != position || travel.cursor != movement.cursor,
+                      case .onEdge(_, let reached) = travel.position
+                else { continue }
+                trains[index].trailEdges = networkTrail(
+                    after: traversal.edge, trail: trains[index].trailEdges,
+                    entered: movement.edges[movement.cursor..<travel.cursor], offset: reached, length: trains[index].length
+                )
+                trains[index].position = travel.position
+                if travel.cursor == movement.edges.count {
+                    // Every edge has been entered: the continuation is spent.
+                    trains[index].movement.edges = []
+                    trains[index].movement.cursor = 0
+                } else {
+                    trains[index].movement.cursor = travel.cursor
+                }
+                moved = true
+                continue
+            }
             let travel = TrainMovement.travel(
                 from: position,
                 distance: movement.rate,
@@ -1160,6 +1377,9 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Whether `position` is well formed and lies on this map's track: a node
     /// on a track tile, or a link between two joined track tiles.
+    ///
+    /// On the track network: the edge exists and the offset lies within it
+    /// (see ``isOnNetwork(_:offset:)``).
     func isOnTrack(_ position: TrainPosition) -> Bool {
         guard position.isWellFormed else { return false }
         switch position {
@@ -1167,6 +1387,8 @@ public struct GameWorld: Equatable, Sendable {
             return track(at: tile) != nil
         case .onLink(let from, let to, _):
             return isConnected(from, to: to)
+        case .onEdge(let traversal, let offset):
+            return isOnNetwork(traversal, offset: offset)
         }
     }
 }
@@ -1193,7 +1415,7 @@ extension GameWorld {
 
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
-        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID
+        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1225,6 +1447,7 @@ extension GameWorld: Codable {
         lines = container.contains(.lines) ? try container.decode([ServiceLine].self, forKey: .lines) : []
         nextLineID = container.contains(.nextLineID) ? try container.decode(Int.self, forKey: .nextLineID) : 1
         serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
+        network = container.contains(.network) ? try container.decode(TrackNetwork.self, forKey: .network) : TrackNetwork()
 
         if let problem = invariantViolation() {
             throw DecodingError.dataCorrupted(
@@ -1237,8 +1460,10 @@ extension GameWorld: Codable {
     /// that never had a line no `"nextLineID"`, and one with the standard
     /// service day no `"serviceDay"`: such worlds save exactly as before
     /// lines existed, and those saves read as having none, handing out line
-    /// IDs from 1, with the standard day. An explicit `null` for any of them
-    /// is rejected.
+    /// IDs from 1, with the standard day. Likewise a world whose track
+    /// network never had a node or an edge has no `"network"` key (Stage
+    /// S3), and a save without one reads as an empty network. An explicit
+    /// `null` for any of them is rejected.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(map, forKey: .map)
@@ -1256,6 +1481,9 @@ extension GameWorld: Codable {
         try container.encode(nextTrainID, forKey: .nextTrainID)
         if nextLineID != 1 {
             try container.encode(nextLineID, forKey: .nextLineID)
+        }
+        if !network.isPristine {
+            try container.encode(network, forKey: .network)
         }
     }
 
@@ -1307,12 +1535,28 @@ extension GameWorld: Codable {
         guard trains.allSatisfy({ Self.isValidName($0.name) }) else {
             return "A train has an invalid name."
         }
+        // Stage S3: the network lies over the map, at ground level.
+        guard network.nodes.allSatisfy({ isOnMap($0.position) }) else {
+            return "A track node lies off the map or off the ground."
+        }
+        guard network.edges.allSatisfy({ $0.curve.controlPoints.allSatisfy(isOnMap) }) else {
+            return "A track edge's curve leaves the map."
+        }
         for train in trains {
             if let position = train.position, !isOnTrack(position) {
                 return "Train \(train.id.rawValue) is not on this map's track."
             }
             if let position = train.position, !isTrailOnTrack(train.trail, behind: position) {
                 return "Train \(train.id.rawValue)'s body is not on track it could have come along."
+            }
+            if case .onEdge(let traversal, let offset)? = train.position,
+               !isNetworkTrail(train.trailEdges, behind: traversal, offset: offset, length: train.length) {
+                return "Train \(train.id.rawValue)'s body is not on track it could have come along."
+            }
+            // IDs are never reused, so an edge that was built once is below
+            // the next number even after it was removed.
+            guard train.movement.edges.allSatisfy({ ($0.networkNumber ?? .max) < network.nextEdgeNumber }) else {
+                return "Train \(train.id.rawValue)'s continuation names an edge that was never built."
             }
             // The map's size never changes, so a node that was on the map
             // when the continuation was set still is.
@@ -1351,7 +1595,8 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service waits at a station the train is not stopped at."
             }
         case .travellingToStop:
-            let end = train.movement.continuation.last ?? position.ahead.node
+            guard let ahead = position.ahead else { return "Train \(train.id.rawValue) runs a service on the track network." }
+            let end = train.movement.continuation.last ?? ahead.node
             guard station.tiles.contains(where: { TrackDirection(from: end, to: $0) != nil }) else {
                 return "Train \(train.id.rawValue)'s service travels on a journey that does not end at its next stop."
             }

@@ -8,37 +8,41 @@
 // a train or changes a rule: it is the ground the route reservation and
 // movement authority of Phase 4.6 will stand on.
 
-/// A piece of track a train can occupy.
+/// A piece of track a train can occupy: a node or an edge of the railway
+/// graph (see ``TrackNodeID`` and ``TrackEdgeID``).
+///
+/// On the grid, a track tile is a node and the link between two joined
+/// tiles an edge; a level crossing is one tile, so trains crossing it
+/// either way share it. On the track network (Stage S3) a node shared by
+/// two lines is a level crossing in the same way, while edges that only
+/// cross in plan share nothing.
 public enum TrackResource: Hashable, Comparable, Sendable {
-    /// A track tile. A crossing is one tile, so trains crossing it either
-    /// way share it.
-    case node(GridPosition)
-    /// The link between two joined track tiles, the one further north (or,
-    /// in the same row, further west) first.
-    case link(GridPosition, GridPosition)
+    case node(TrackNodeID)
+    case edge(TrackEdgeID)
 
-    /// The link between `a` and `b`, in either order.
+    /// The track tile at `position`.
+    public static func tile(_ position: GridPosition) -> TrackResource {
+        .node(.tile(position))
+    }
+
+    /// The grid link between `a` and `b`, in either order.
     public static func link(between a: GridPosition, and b: GridPosition) -> TrackResource {
-        precedes(a, b) ? .link(a, b) : .link(b, a)
+        .edge(.link(between: a, and: b))
     }
 
-    /// Row-major order: north before south, then west before east.
-    static func precedes(_ a: GridPosition, _ b: GridPosition) -> Bool {
-        (a.y, a.x) < (b.y, b.x)
-    }
-
-    /// Nodes before links; nodes in row-major order; links by their first
-    /// tile, then their second.
+    /// Nodes before edges; each kind in its own order (see ``TrackNodeID``
+    /// and ``TrackEdgeID``): on the grid, tiles in row-major order and
+    /// links by their first tile, then their second.
     public static func < (lhs: TrackResource, rhs: TrackResource) -> Bool {
         switch (lhs, rhs) {
         case (.node(let a), .node(let b)):
-            precedes(a, b)
-        case (.node, .link):
+            a < b
+        case (.node, .edge):
             true
-        case (.link, .node):
+        case (.edge, .node):
             false
-        case (.link(let a, let b), .link(let c, let d)):
-            a == c ? precedes(b, d) : precedes(a, c)
+        case (.edge(let a), .edge(let b)):
+            a < b
         }
     }
 }
@@ -90,6 +94,11 @@ extension GameWorld {
     /// stands on, or the link it is on, and for a train of several cars (Stage S2)
     /// every link its body lies over and every node it reaches or passes.
     /// Empty for an unplaced train or an unknown ID.
+    ///
+    /// On the track network (Stage S3) the same rule holds for any shape and
+    /// length: every node the train's centre line reaches or passes, and
+    /// every edge with part of the train strictly inside it (see
+    /// ``networkResources(of:)``).
     public func occupiedResources(of id: TrainID) -> [TrackResource] {
         guard let train = train(id: id) else { return [] }
         let head: [TrackResource]
@@ -97,9 +106,11 @@ extension GameWorld {
         case nil:
             return []
         case .atNode(let tile, _)?:
-            head = [.node(tile)]
+            head = [.tile(tile)]
         case .onLink(let from, let to, _)?:
             head = [.link(between: from, and: to)]
+        case .onEdge?:
+            return Array(Set(networkResources(of: train))).sorted()
         }
         return Array(Set(head + bodyResources(of: train))).sorted()
     }
@@ -204,7 +215,7 @@ extension GameWorld {
         while true {
             // Breadth-first search for a path with room left, from any source.
             var previous: [GridPosition: GridPosition] = [:]
-            var queue = sources.sorted { TrackResource.precedes($0, $1) }
+            var queue = sources.sorted { TrackEdgeID.precedes($0, $1) }
             var seen = Set(queue)
             var index = 0
             var reached: GridPosition?

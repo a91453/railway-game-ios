@@ -25,6 +25,33 @@ enum DemoLayout {
         return session
     }
 
+    /// A loop of continuous track east of the grid lines (Phase 4.5 Stage
+    /// S3): four nodes around a circle of three tiles' radius, joined by
+    /// cubic quarter curves that leave and arrive along the circle, so each
+    /// joins the next. A three-car train runs round it for many laps.
+    private static func buildLoop(in world: inout GameWorld) throws(GameError) {
+        let radius: Int64 = 3 * 1_024
+        // Bézier handles of 0.5523 × the radius make a close quarter circle.
+        let handle: Int64 = radius * 5_523 / 10_000
+        let (cx, cy): (Int64, Int64) = (17 * 1_024, 7 * 1_024)
+        let top = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy - radius))
+        let right = try world.buildTrackNode(at: WorldCoordinate(x: cx + radius, y: cy))
+        let bottom = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy + radius))
+        let left = try world.buildTrackNode(at: WorldCoordinate(x: cx - radius, y: cy))
+        let quarters = [
+            try world.buildTrackEdge(from: top, to: right, curve: .cubic(PlanPoint(x: cx + handle, y: cy - radius), PlanPoint(x: cx + radius, y: cy - handle))),
+            try world.buildTrackEdge(from: right, to: bottom, curve: .cubic(PlanPoint(x: cx + radius, y: cy + handle), PlanPoint(x: cx + handle, y: cy + radius))),
+            try world.buildTrackEdge(from: bottom, to: left, curve: .cubic(PlanPoint(x: cx - handle, y: cy + radius), PlanPoint(x: cx - radius, y: cy + handle))),
+            try world.buildTrackEdge(from: left, to: top, curve: .cubic(PlanPoint(x: cx - radius, y: cy - handle), PlanPoint(x: cx - handle, y: cy - radius))),
+        ]
+        let train = try world.purchaseTrain(named: "Loop")
+        try world.setTrainCars(train.id, to: 3)
+        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: quarters[0], direction: .forward), offset: 2_048))
+        let lap = [quarters[1], quarters[2], quarters[3], quarters[0]].map { TrackTraversal(edge: $0, direction: .forward) }
+        try world.setTrainContinuation(train.id, along: Array(repeating: lap, count: 50).flatMap { $0 })
+        try world.setTrainMovementRate(train.id, to: 384)
+    }
+
     /// Buys a train, places it at the west end of the main line facing east,
     /// and sends it to the buffer stop south of the junction, through the
     /// same session methods as the train tool.
@@ -66,6 +93,8 @@ enum DemoLayout {
         try world.buildStation(named: "Hill", at: GridPosition(x: 5, y: 1))
         try world.buildTrack(at: GridPosition(x: 5, y: 4), connections: [.north, .south])
         try world.buildTrack(at: GridPosition(x: 5, y: 5), connections: [.north, .west])
+
+        try buildLoop(in: &world)
     }
 }
 #endif

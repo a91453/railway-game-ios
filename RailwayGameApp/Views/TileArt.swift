@@ -11,13 +11,13 @@ import SwiftUI
 /// square, without the grid.
 enum TileArt {
     static func drawMap(
-        _ map: GridMap,
-        trains: [Train],
+        _ world: GameWorld,
         selectedTrainID: TrainID?,
         selection: GridPosition?,
         tileSize: Double,
         in context: GraphicsContext
     ) {
+        let map = world.map
         let detail = MapScale.detail(forTileSize: tileSize)
         let bounds = CGRect(x: 0, y: 0, width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         context.fill(Path(bounds), with: .color(Palette.land))
@@ -52,23 +52,58 @@ enum TileArt {
             }
         }
 
+        drawNetwork(world, detail: detail, tileSize: tileSize, in: context)
+
         if let selection, map.contains(selection) {
             drawSelection(in: rect(for: selection, tileSize: tileSize), context: context)
         }
 
-        for train in trains {
+        for train in world.trains {
             guard let position = train.position else { continue }
-            drawBody(of: train, tileSize: tileSize, in: context)
-            drawTrain(at: position, isSelected: train.id == selectedTrainID, tileSize: tileSize, in: context)
+            drawBody(of: train, in: world, tileSize: tileSize, in: context)
+            drawTrain(at: position, in: world, isSelected: train.id == selectedTrainID, tileSize: tileSize, in: context)
+        }
+    }
+
+    /// The continuous track network (Stage S3) seen from above: each
+    /// edge's sampled centre line (see `GameWorld.trackGeometry(of:)`), as
+    /// ballast and rail at full detail or a thin line zoomed out, and each
+    /// node a small dot. A top-down debug projection until a real renderer
+    /// (Phase 8): heights are not shown, and the centre lines are worked out
+    /// again whenever the map is redrawn.
+    static func drawNetwork(_ world: GameWorld, detail: MapDetail, tileSize: Double, in context: GraphicsContext) {
+        guard !world.network.edges.isEmpty || !world.network.nodes.isEmpty else { return }
+        var lines = Path()
+        for edge in world.network.edges {
+            guard let geometry = world.trackGeometry(of: edge.id), let first = geometry.points.first else { continue }
+            let start = MapScale.center(of: first, tileSize: tileSize)
+            lines.move(to: CGPoint(x: start.x, y: start.y))
+            for point in geometry.points.dropFirst() {
+                let next = MapScale.center(of: point, tileSize: tileSize)
+                lines.addLine(to: CGPoint(x: next.x, y: next.y))
+            }
+        }
+        switch detail {
+        case .full:
+            context.stroke(lines, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .round, lineJoin: .round))
+            context.stroke(lines, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1.5, tileSize * 0.1), lineCap: .round, lineJoin: .round))
+        case .overview:
+            context.stroke(lines, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, tileSize * 0.12), lineCap: .round, lineJoin: .round))
+        }
+        let radius = max(1.5, tileSize * 0.08)
+        for node in world.network.nodes {
+            let centre = MapScale.center(of: node.position, tileSize: tileSize)
+            let dot = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
+            context.fill(Path(ellipseIn: dot), with: .color(Palette.rail))
         }
     }
 
     /// A disc where GameCore has the train, with a short bar toward the way
     /// it faces. Drawn at the position after the last tick: nothing is
     /// interpolated between ticks, so a moving train visibly steps.
-    static func drawTrain(at position: TrainPosition, isSelected: Bool, tileSize: Double, in context: GraphicsContext) {
-        let center = MapScale.center(of: position, tileSize: tileSize)
-        let facing = MapScale.facing(of: position)
+    static func drawTrain(at position: TrainPosition, in world: GameWorld, isSelected: Bool, tileSize: Double, in context: GraphicsContext) {
+        let center = MapScale.center(of: position, in: world, tileSize: tileSize)
+        let facing = MapScale.facing(of: position, in: world)
         let radius = tileSize * 0.26
         let noseLength = radius * 1.7
 
@@ -87,10 +122,10 @@ enum TileArt {
     }
 
     /// A thick line from the head back along the track the train's body
-    /// lies over, to its tail (see `MapScale.bodyPoints(of:tileSize:)`);
+    /// lies over, to its tail (see `MapScale.bodyPoints(of:in:tileSize:)`);
     /// nothing for a train of one car.
-    static func drawBody(of train: Train, tileSize: Double, in context: GraphicsContext) {
-        let points = MapScale.bodyPoints(of: train, tileSize: tileSize)
+    static func drawBody(of train: Train, in world: GameWorld, tileSize: Double, in context: GraphicsContext) {
+        let points = MapScale.bodyPoints(of: train, in: world, tileSize: tileSize)
         guard points.count > 1 else { return }
         var body = Path()
         body.move(to: CGPoint(x: points[0].x, y: points[0].y))

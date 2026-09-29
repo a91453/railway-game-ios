@@ -1,0 +1,307 @@
+// The continuous track network (Phase 4.5 Stage S3, ARCHITECTURE decision
+// 29). Nodes are points in the world; edges run between two of them along a
+// TrackCurve, any length and any heading. Only a shared node joins two
+// edges: edges that cross in plan without one never meet. Which edges a
+// train may pass between at a node is derived once, when an edge is built or
+// a save is loaded, from the way each edge leaves the node: two edge ends
+// that leave in opposite directions (to within 1 in 16) join. That one rule
+// gives plain track, turnouts (one end joining two or more), diamond
+// crossings (two pairs that do not join each other) and slips. Routes,
+// movement and occupancy read only the result, never the geometry.
+
+/// A node of the track network: a point where edges end and meet.
+public struct TrackNode: Hashable, Sendable {
+    /// Always ``TrackNodeID/node(_:)`` for a node of the network; a grid
+    /// tile seen as a node (see ``GameWorld/trackNode(_:)``) has
+    /// ``TrackNodeID/tile(_:)``.
+    public let id: TrackNodeID
+    public let position: WorldCoordinate
+    /// The edges that end here, in ascending order, each with the edges a
+    /// train arriving along it may leave by. Derived from the edges, never
+    /// saved.
+    public internal(set) var ends: [TrackNodeEnd]
+
+    init(id: TrackNodeID, position: WorldCoordinate, ends: [TrackNodeEnd] = []) {
+        self.id = id
+        self.position = position
+        self.ends = ends
+    }
+
+    /// The end of `edge` at this node, if the edge ends here.
+    public func end(of edge: TrackEdgeID) -> TrackNodeEnd? {
+        ends.first { $0.edge == edge }
+    }
+}
+
+/// An edge's end at a node, and where a train arriving along it may go on.
+public struct TrackNodeEnd: Hashable, Sendable {
+    public let edge: TrackEdgeID
+    /// The way the edge leaves the node (its end tangent), not normalised.
+    public let direction: PlanVector
+    /// The edges a train arriving at the node along ``edge`` may leave by,
+    /// in ascending order: those whose ends leave the node the opposite way
+    /// to within 1 in 16. Never ``edge`` itself: a train does not turn
+    /// straight back.
+    public internal(set) var exits: [TrackEdgeID]
+}
+
+/// An edge of the railway graph: a stretch of track between two nodes.
+public struct TrackEdge: Hashable, Sendable {
+    /// ``TrackEdgeID/edge(_:)`` for an edge of the network;
+    /// ``TrackEdgeID/link(_:_:)`` for a grid link seen as an edge (see
+    /// ``GameWorld/trackEdge(_:)``).
+    public let id: TrackEdgeID
+    public let from: TrackNodeID
+    public let to: TrackNodeID
+    /// The shape in plan between the end nodes.
+    public let curve: TrackCurve
+    /// The distance a train travels along the edge, in world units (see
+    /// ``TrackGeometry/length``): derived from the end nodes and the curve
+    /// when the edge is built or loaded, never saved. A grid link is
+    /// ``TrainPosition/linkLength`` long.
+    public let length: Int64
+
+    /// The node a traversal of this edge ends at.
+    public func end(of direction: TrackEdgeDirection) -> TrackNodeID {
+        direction == .forward ? to : from
+    }
+
+    /// The node a traversal of this edge starts from.
+    public func start(of direction: TrackEdgeDirection) -> TrackNodeID {
+        direction == .forward ? from : to
+    }
+
+    /// The traversal of this edge that leaves `node`, if the edge ends
+    /// there.
+    public func traversal(leaving node: TrackNodeID) -> TrackTraversal? {
+        if node == from { return TrackTraversal(edge: id, direction: .forward) }
+        if node == to { return TrackTraversal(edge: id, direction: .backward) }
+        return nil
+    }
+}
+
+/// The continuous track network of a world: its nodes and edges, each in
+/// ascending ID order. Changed only by ``GameWorld``'s commands.
+public struct TrackNetwork: Hashable, Sendable {
+    public private(set) var nodes: [TrackNode]
+    public private(set) var edges: [TrackEdge]
+    /// The next node and edge number to hand out; every number in use is
+    /// below it, and numbers are never reused.
+    private(set) var nextNodeNumber: Int
+    private(set) var nextEdgeNumber: Int
+
+    /// An empty network, handing out numbers from 1.
+    public init() {
+        nodes = []
+        edges = []
+        nextNodeNumber = 1
+        nextEdgeNumber = 1
+    }
+
+    /// Whether the network has no nodes and has never handed out a number,
+    /// so a world saves it by leaving it out.
+    var isPristine: Bool {
+        nodes.isEmpty && edges.isEmpty && nextNodeNumber == 1 && nextEdgeNumber == 1
+    }
+
+    /// The node with `id`, or `nil`. Binary search: O(log n).
+    public func node(_ id: TrackNodeID) -> TrackNode? {
+        nodeIndex(id).map { nodes[$0] }
+    }
+
+    /// The edge with `id`, or `nil`. Binary search: O(log n).
+    public func edge(_ id: TrackEdgeID) -> TrackEdge? {
+        edgeIndex(id).map { edges[$0] }
+    }
+
+    /// The index of node `id`, or `nil`.
+    func nodeIndex(_ id: TrackNodeID) -> Int? {
+        id.networkNumber.flatMap { number in Self.index(of: number, count: nodes.count) { nodes[$0].id.networkNumber ?? 0 } }
+    }
+
+    /// The index of edge `id`, or `nil`.
+    func edgeIndex(_ id: TrackEdgeID) -> Int? {
+        id.networkNumber.flatMap { number in Self.index(of: number, count: edges.count) { edges[$0].id.networkNumber ?? 0 } }
+    }
+
+    /// Binary search for `number` among `count` elements whose numbers,
+    /// read by `numberAt`, ascend.
+    private static func index(of number: Int, count: Int, numberAt: (Int) -> Int) -> Int? {
+        var low = 0
+        var high = count - 1
+        while low <= high {
+            let middle = low + (high - low) / 2
+            let candidate = numberAt(middle)
+            if candidate == number { return middle }
+            if candidate < number {
+                low = middle + 1
+            } else {
+                high = middle - 1
+            }
+        }
+        return nil
+    }
+
+    /// Whether a node stands at exactly `position`.
+    func hasNode(at position: WorldCoordinate) -> Bool {
+        nodes.contains { $0.position == position }
+    }
+
+    // MARK: - Changes
+
+    /// Adds a node at `position` with the next number, which the caller
+    /// has checked can be handed out (see `GameWorld.allocateID(from:)`).
+    mutating func addNode(at position: WorldCoordinate, next: Int) -> TrackNodeID {
+        let id = TrackNodeID.node(nextNodeNumber)
+        nodes.append(TrackNode(id: id, position: position))
+        nextNodeNumber = next
+        return id
+    }
+
+    /// Adds an edge with the next number between two existing nodes, with
+    /// `geometry` already worked out from them and `curve`; the caller has
+    /// checked the number can be handed out. Updates the ends of both nodes.
+    mutating func addEdge(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, geometry: TrackGeometry, next: Int) -> TrackEdgeID {
+        let id = TrackEdgeID.edge(nextEdgeNumber)
+        edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length))
+        nextEdgeNumber = next
+        attach(id, direction: geometry.startDirection, at: from)
+        attach(id, direction: geometry.endDirection, at: to)
+        return id
+    }
+
+    /// Removes the edge `id`, which exists, and its ends at its nodes.
+    mutating func removeEdge(_ id: TrackEdgeID) {
+        guard let index = edgeIndex(id) else { preconditionFailure("removeEdge(_:) needs an edge of the network") }
+        let edge = edges.remove(at: index)
+        for node in [edge.from, edge.to] {
+            guard let nodeIndex = nodeIndex(node) else { continue }
+            nodes[nodeIndex].ends.removeAll { $0.edge == id }
+            Self.join(&nodes[nodeIndex].ends)
+        }
+    }
+
+    /// Removes the node `id`, which exists and has no edges.
+    mutating func removeNode(_ id: TrackNodeID) {
+        guard let index = nodeIndex(id) else { preconditionFailure("removeNode(_:) needs a node of the network") }
+        nodes.remove(at: index)
+    }
+
+    private mutating func attach(_ edge: TrackEdgeID, direction: PlanVector, at node: TrackNodeID) {
+        guard let index = nodeIndex(node) else { preconditionFailure("an edge ends at nodes of the network") }
+        var ends = nodes[index].ends
+        let end = TrackNodeEnd(edge: edge, direction: direction, exits: [])
+        ends.insert(end, at: ends.firstIndex { $0.edge > edge } ?? ends.count)
+        Self.join(&ends)
+        nodes[index].ends = ends
+    }
+
+    /// Works out which ends at one node join: every pair whose directions
+    /// are opposite to within 1 in 16 (see
+    /// ``PlanVector/isOpposite(to:)``). `ends` are in ascending edge order,
+    /// so each list of exits is too.
+    private static func join(_ ends: inout [TrackNodeEnd]) {
+        for index in ends.indices {
+            ends[index].exits = ends.indices.compactMap { other in
+                other != index && ends[index].direction.isOpposite(to: ends[other].direction) ? ends[other].edge : nil
+            }
+        }
+    }
+}
+
+// MARK: - Codable
+
+extension TrackNetwork: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case nodes, edges, nextNodeID, nextEdgeID
+    }
+
+    private enum NodeKeys: String, CodingKey {
+        case id, x, y, z
+    }
+
+    private enum EdgeKeys: String, CodingKey {
+        case id, from, to, curve
+    }
+
+    /// Decodes `{"nodes", "edges", "nextNodeID", "nextEdgeID"}`: nodes as
+    /// `{"id", "x", "y", "z"}` and edges as `{"id", "from", "to", "curve"}`,
+    /// both in ascending ID order, IDs from 1 and below the next ID. Every
+    /// derived value (each edge's length, each node's ends) is worked out
+    /// again, not read. Rejects, rather than repairing: an ID out of order,
+    /// repeated or not below the next one; a coordinate beyond
+    /// ``WorldCoordinate/limit``; two nodes at one point; an edge whose end
+    /// nodes do not exist or are the same node; and a curve that does not
+    /// make an edge between its nodes (see
+    /// ``TrackGeometry/init(from:to:curve:)``). Whether the network lies on
+    /// the world's map is checked by the ``GameWorld`` decoder.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func corrupt(_ description: String) -> DecodingError {
+            DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: description))
+        }
+        self.init()
+        nextNodeNumber = try container.decode(Int.self, forKey: .nextNodeID)
+        nextEdgeNumber = try container.decode(Int.self, forKey: .nextEdgeID)
+        var positions: Set<WorldCoordinate> = []
+        var list = try container.nestedUnkeyedContainer(forKey: .nodes)
+        while !list.isAtEnd {
+            let node = try list.nestedContainer(keyedBy: NodeKeys.self)
+            let number = try node.decode(Int.self, forKey: .id)
+            let position = WorldCoordinate(
+                x: try node.decode(Int64.self, forKey: .x), y: try node.decode(Int64.self, forKey: .y), z: try node.decode(Int64.self, forKey: .z)
+            )
+            guard number >= 1, number < nextNodeNumber, number > nodes.last?.id.networkNumber ?? 0 else {
+                throw corrupt("Track node IDs must be ascending, from 1 and below nextNodeID.")
+            }
+            guard position.isWithinLimits else { throw corrupt("Track node \(number) lies beyond \(WorldCoordinate.limit).") }
+            guard positions.insert(position).inserted else { throw corrupt("Two track nodes stand at one point.") }
+            nodes.append(TrackNode(id: .node(number), position: position))
+        }
+        list = try container.nestedUnkeyedContainer(forKey: .edges)
+        var lastEdge = 0
+        while !list.isAtEnd {
+            let edge = try list.nestedContainer(keyedBy: EdgeKeys.self)
+            let number = try edge.decode(Int.self, forKey: .id)
+            let from = TrackNodeID.node(try edge.decode(Int.self, forKey: .from))
+            let to = TrackNodeID.node(try edge.decode(Int.self, forKey: .to))
+            let curve = try edge.decode(TrackCurve.self, forKey: .curve)
+            guard number >= 1, number < nextEdgeNumber, number > lastEdge else {
+                throw corrupt("Track edge IDs must be ascending, from 1 and below nextEdgeID.")
+            }
+            lastEdge = number
+            guard let start = node(from), let end = node(to), from != to else {
+                throw corrupt("Track edge \(number) does not join two different nodes of the network.")
+            }
+            guard let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve) else {
+                throw corrupt("Track edge \(number)'s curve does not make an edge between its nodes.")
+            }
+            let id = TrackEdgeID.edge(number)
+            edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length))
+            attach(id, direction: geometry.startDirection, at: from)
+            attach(id, direction: geometry.endDirection, at: to)
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        var list = container.nestedUnkeyedContainer(forKey: .nodes)
+        for node in nodes {
+            var entry = list.nestedContainer(keyedBy: NodeKeys.self)
+            try entry.encode(node.id.networkNumber, forKey: .id)
+            try entry.encode(node.position.x, forKey: .x)
+            try entry.encode(node.position.y, forKey: .y)
+            try entry.encode(node.position.z, forKey: .z)
+        }
+        list = container.nestedUnkeyedContainer(forKey: .edges)
+        for edge in edges {
+            var entry = list.nestedContainer(keyedBy: EdgeKeys.self)
+            try entry.encode(edge.id.networkNumber, forKey: .id)
+            try entry.encode(edge.from.networkNumber, forKey: .from)
+            try entry.encode(edge.to.networkNumber, forKey: .to)
+            try entry.encode(edge.curve, forKey: .curve)
+        }
+        try container.encode(nextNodeNumber, forKey: .nextNodeID)
+        try container.encode(nextEdgeNumber, forKey: .nextEdgeID)
+    }
+}

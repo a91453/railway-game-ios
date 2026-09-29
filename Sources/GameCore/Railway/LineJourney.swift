@@ -254,7 +254,7 @@ extension GameWorld {
             minutes = total
             legs.append(LineLeg(from: from, to: to, route: route, minutes: legMinutes))
             if let last = route.last {
-                let before = route.count >= 2 ? route[route.count - 2] : position.ahead.node
+                let before = route.count >= 2 ? route[route.count - 2] : position.ahead!.node
                 let arrived = TrainPosition.atNode(last, heading: TrackDirection(from: before, to: last)!)
                 trail = Self.trail(after: position, trail: trail, to: arrived, entered: route[...], length: length)
                 position = arrived

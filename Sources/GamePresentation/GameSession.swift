@@ -344,6 +344,9 @@ public final class GameSession {
         switch position {
         case .atNode(let tile, _): start = tile
         case .onLink(_, let to, _): start = to
+        // A train on the track network has no route to a tile: `found` is
+        // nil above, so this is never reached.
+        case .onEdge: return
         }
         // For a station, name it and the platform the route ends at.
         let target = station.map { "\($0.name), platform \(route.last ?? start)" } ?? "\(destination)"
