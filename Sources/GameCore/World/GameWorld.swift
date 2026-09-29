@@ -667,8 +667,9 @@ extension GameWorld: Codable {
     /// below the next ID to allocate; every placed train must be on this
     /// map's track, as ``placeTrain(_:at:)`` requires; every continuation
     /// node must lie inside the map; every timetable stop must name one of
-    /// this world's stations, as ``setTrainTimetable(_:to:)`` requires; a
-    /// waiting service's train must be stopped at its stop's station, and a
+    /// this world's stations, as
+    /// ``setTrainTimetable(_:to:repeatingEvery:)`` requires; a waiting
+    /// service's train must be stopped at its stop's station, and a
     /// travelling service's journey must end beside the station of the stop
     /// it travels to, as a route from the service would).
     ///

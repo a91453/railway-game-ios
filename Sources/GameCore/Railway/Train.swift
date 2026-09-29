@@ -39,8 +39,8 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// placing, unplacing, reversing, the movement commands and time leave
     /// it as it is. Only an active service (``execution``) reads it to move
     /// the train. Only ``GameWorld`` changes it, through
-    /// ``GameWorld/setTrainTimetable(_:to:)``, which is refused while a
-    /// service is active.
+    /// ``GameWorld/setTrainTimetable(_:to:repeatingEvery:)``, which is
+    /// refused while a service is active.
     public internal(set) var timetable: [ScheduledStop]
     /// How often the timetable repeats, in whole game minutes, or `nil` for
     /// a timetable that runs once (as for every newly bought train).
@@ -48,7 +48,8 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// A service of a repeating timetable starts it again when it leaves the
     /// last stop: every time shifted one period later, cycle after cycle
     /// (see ``TimetableExecution/cycle``). Plan data like the timetable, and
-    /// set together with it by ``GameWorld/setTrainTimetable(_:to:repeatingEvery:)``.
+    /// set together with it by
+    /// ``GameWorld/setTrainTimetable(_:to:repeatingEvery:)``.
     public internal(set) var timetablePeriod: Int64?
     /// How far the train's timetable service has got, or `nil` while no
     /// service is active (as for every newly bought train).

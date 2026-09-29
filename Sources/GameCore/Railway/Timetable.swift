@@ -17,8 +17,8 @@
 /// whole periods, never stored.
 ///
 /// Like ``TrainPosition``, the struct accepts any values. Validity is checked
-/// where a timetable enters a world: ``GameWorld/setTrainTimetable(_:to:)``
-/// and decoding.
+/// where a timetable enters a world:
+/// ``GameWorld/setTrainTimetable(_:to:repeatingEvery:)`` and decoding.
 public struct ScheduledStop: Hashable, Sendable {
     /// The station the train is scheduled to call at.
     public let station: StationID
