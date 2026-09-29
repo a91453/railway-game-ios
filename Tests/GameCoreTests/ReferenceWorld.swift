@@ -35,6 +35,9 @@ struct ReferenceWorld: Equatable {
     enum Tile: Equatable {
         case track(UInt8)
         case station(Int)
+        /// Decision 26: a turnout's exits and stem, and a level crossing.
+        case turnout(UInt8, TrackDirection)
+        case crossing
     }
 
     struct Station: Equatable {
@@ -178,8 +181,36 @@ struct ReferenceWorld: Equatable {
     }
 
     func mask(at p: GridPosition) -> UInt8? {
-        guard inMap(p), case .track(let mask)? = tiles[p] else { return nil }
-        return mask
+        guard inMap(p) else { return nil }
+        switch tiles[p] {
+        case .track(let mask)?, .turnout(let mask, _)?: return mask
+        case .crossing?: return 15
+        case .station?, nil: return nil
+        }
+    }
+
+    /// Decision 26, as a table: the (way in, way out) pairs a piece allows,
+    /// written as the side a train entered by and the side it leaves by;
+    /// `nil` for a piece that allows every pair but straight back.
+    func allowedTurns(at p: GridPosition) -> Set<[TrackDirection]>? {
+        switch tiles[p] {
+        case .turnout(let mask, let stem)?:
+            let branches = TrackDirection.allCases.filter { mask & Self.bit($0) != 0 && $0 != stem }
+            return Set(branches.flatMap { [[stem, $0], [$0, stem]] })
+        case .crossing?:
+            return [[.north, .south], [.south, .north], [.east, .west], [.west, .east]]
+        default:
+            return nil
+        }
+    }
+
+    /// Whether a train at `p` facing `facing` may leave toward `way`: never
+    /// straight back, and on a turnout or crossing only by an allowed pair
+    /// when it came in by one of the piece's exits.
+    func mayTurn(at p: GridPosition, facing: TrackDirection, to way: TrackDirection) -> Bool {
+        guard way != facing.opposite else { return false }
+        guard let turns = allowedTurns(at: p), let mask = mask(at: p), mask & Self.bit(facing.opposite) != 0 else { return true }
+        return turns.contains([facing.opposite, way])
     }
 
     /// Decision 10: both tiles are track, orthogonal neighbours, and each has
@@ -238,6 +269,24 @@ struct ReferenceWorld: Equatable {
         if let error = requireEmpty(p) ?? funds(costs.track) { return error }
         balance -= costs.track
         tiles[p] = .track(mask)
+        return nil
+    }
+
+    /// Decision 26: three exits or more, only the four, the stem among them.
+    mutating func buildTurnout(at p: GridPosition, mask: UInt8, stem: TrackDirection) -> GameError? {
+        guard mask & 0xF0 == 0, mask & Self.bit(stem) != 0, TrackDirection.allCases.filter({ mask & Self.bit($0) != 0 }).count >= 3 else {
+            return .invalidTrackConnections
+        }
+        if let error = requireEmpty(p) ?? funds(costs.track) { return error }
+        balance -= costs.track
+        tiles[p] = .turnout(mask, stem)
+        return nil
+    }
+
+    mutating func buildCrossing(at p: GridPosition) -> GameError? {
+        if let error = requireEmpty(p) ?? funds(costs.track) { return error }
+        balance -= costs.track
+        tiles[p] = .crossing
         return nil
     }
 
@@ -357,7 +406,7 @@ struct ReferenceWorld: Equatable {
         var result: [(GridPosition, TrackDirection)] = []
         var (current, facing) = (node, heading)
         for next in nodes {
-            guard let way = stepDirection(from: current, to: next), way != facing.opposite, joined(current, next) else { break }
+            guard let way = stepDirection(from: current, to: next), mayTurn(at: current, facing: facing, to: way), joined(current, next) else { break }
             result.append((next, way))
             (current, facing) = (next, way)
         }
@@ -616,13 +665,10 @@ struct ReferenceWorld: Equatable {
         func moves(_ s: State) -> [State] {
             neighbors(of: s.node).compactMap { n in
                 let way = stepDirection(from: s.node, to: n)!
-                return way == s.heading.opposite ? nil : State(node: n, heading: way)
+                return mayTurn(at: s.node, facing: s.heading, to: way) ? State(node: n, heading: way) : nil
             }
         }
-        let trackTiles = tiles.compactMap { key, value -> GridPosition? in
-            if case .track = value, inMap(key) { return key }
-            return nil
-        }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
+        let trackTiles = tiles.keys.filter { mask(at: $0) != nil }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
         let states = trackTiles.flatMap { tile in TrackDirection.allCases.map { State(node: tile, heading: $0) } }
         var distance: [State: Int] = [:]
         for s in states where destinations.contains(s.node) { distance[s] = 0 }

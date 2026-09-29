@@ -63,7 +63,7 @@ extension GameWorld {
         let platforms = platforms(of: id)
         guard isOnTrack(start), !platforms.isEmpty else { return nil }
         let (node, heading) = start.ahead
-        return TrainRoute.shortest(from: node, heading: heading, to: platforms.contains) { connectedNeighbors(of: $0) }
+        return TrainRoute.shortest(from: node, heading: heading, to: platforms.contains) { exits(from: $0, facing: $1) }
     }
 
     /// The stations the train `id` is stopped at, in ascending ID order.

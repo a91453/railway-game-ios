@@ -50,17 +50,23 @@ public struct GameWorld: Equatable, Sendable {
 
     // MARK: - Queries
 
-    /// The track at `position`, or `nil` if the tile holds no track.
+    /// The track at `position`, or `nil` if the tile holds no track (plain
+    /// track, a turnout or a crossing).
     public func track(at position: GridPosition) -> Track? {
-        guard case .track(let connections)? = map.tile(at: position)?.type else { return nil }
-        return Track(position: position, connections: connections)
+        map.tile(at: position).flatMap(Self.track(on:))
     }
 
     /// Every track piece in row-major order.
     public var tracks: [Track] {
-        map.tiles.compactMap { tile in
-            guard case .track(let connections) = tile.type else { return nil }
-            return Track(position: tile.position, connections: connections)
+        map.tiles.compactMap(Self.track(on:))
+    }
+
+    private static func track(on tile: MapTile) -> Track? {
+        switch tile.type {
+        case .track(let connections): Track(position: tile.position, connections: connections)
+        case .turnout(let connections, let stem): Track(position: tile.position, connections: connections, layout: .turnout(stem: stem))
+        case .crossing: Track(position: tile.position, connections: [.north, .east, .south, .west], layout: .crossing)
+        case .empty, .station: nil
         }
     }
 
@@ -99,6 +105,53 @@ public struct GameWorld: Equatable, Sendable {
         return Track(position: position, connections: connections)
     }
 
+    /// Lays a turnout on an empty tile and charges ``ConstructionCosts/track``
+    /// (Phase 4.5 Stage S1). The `stem` joins every other exit; the others
+    /// join only the stem, so a train cannot pass from one branch to
+    /// another. Like any track piece it need not meet its neighbours.
+    ///
+    /// - Throws: ``GameError/invalidTrackConnections`` unless `connections`
+    ///   has three exits or more, only the four directions, and the `stem`
+    ///   among them; then ``GameError/outOfBounds(_:)``,
+    ///   ``GameError/tileOccupied(_:)``, or
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    @discardableResult
+    public mutating func buildTurnout(
+        at position: GridPosition,
+        connections: TrackConnections,
+        stem: TrackDirection
+    ) throws(GameError) -> Track {
+        guard Self.isTurnout(connections, stem: stem) else { throw .invalidTrackConnections }
+        try requireEmptyTile(at: position)
+        try economy.spend(economy.costs.track)
+
+        map.setType(.turnout(connections: connections, stem: stem), at: position)
+        return Track(position: position, connections: connections, layout: .turnout(stem: stem))
+    }
+
+    /// Whether `connections` and `stem` make a turnout: three exits or more,
+    /// only the four directions, the stem among them.
+    static func isTurnout(_ connections: TrackConnections, stem: TrackDirection) -> Bool {
+        connections.hasOnlyKnownDirections && connections.directions.count >= 3 && connections.contains(TrackConnections(stem))
+    }
+
+    /// Lays a level crossing on an empty tile and charges
+    /// ``ConstructionCosts/track`` (Phase 4.5 Stage S1): exits in all four
+    /// directions, each joining only the one opposite, so two straight
+    /// tracks cross without trains changing from one to the other.
+    ///
+    /// - Throws: ``GameError/outOfBounds(_:)``,
+    ///   ``GameError/tileOccupied(_:)``, or
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    @discardableResult
+    public mutating func buildCrossing(at position: GridPosition) throws(GameError) -> Track {
+        try requireEmptyTile(at: position)
+        try economy.spend(economy.costs.track)
+
+        map.setType(.crossing, at: position)
+        return Track(position: position, connections: [.north, .east, .south, .west], layout: .crossing)
+    }
+
     /// Removes the track piece at `position`. Removal is free and not refunded.
     ///
     /// Track that a placed train rests on (its node, or either end of its
@@ -108,7 +161,8 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws: ``GameError/outOfBounds(_:)``,
     ///   ``GameError/noTrackToRemove(_:)`` if the tile is empty or a station,
-    ///   or ``GameError/trackInUse(_:)``.
+    ///   or ``GameError/trackInUse(_:)``. Turnouts and crossings are track
+    ///   and are removed the same way.
     public mutating func removeTrack(at position: GridPosition) throws(GameError) {
         guard map.contains(position) else { throw .outOfBounds(position) }
         guard track(at: position) != nil else { throw .noTrackToRemove(position) }
@@ -270,7 +324,7 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         let (node, heading) = position.ahead
-        guard TrainMovement.isPath(nodes, from: node, heading: heading, isJoined: { isConnected($0, to: $1) }) else {
+        guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
             throw .invalidContinuation
         }
 
@@ -986,7 +1040,7 @@ public struct GameWorld: Equatable, Sendable {
                 distance: movement.rate,
                 continuation: movement.continuation,
                 cursor: movement.cursor,
-                isJoined: { isConnected($0, to: $1) }
+                mayPass: { canPass(from: $0, facing: $1, to: $2) }
             )
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
 

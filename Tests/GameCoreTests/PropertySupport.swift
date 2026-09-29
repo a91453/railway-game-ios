@@ -244,6 +244,9 @@ struct TileSpec {
     enum Kind {
         case track(TrackConnections)
         case station
+        /// Only the track-resource campaign (`TrackResourcePropertyTests`) draws these.
+        case turnout(TrackConnections, stem: TrackDirection)
+        case crossing
     }
 
     let position: GridPosition
@@ -283,6 +286,10 @@ enum NetworkGenerator {
                 try world.buildTrack(at: spec.position, connections: connections)
             case .station:
                 try world.buildStation(named: "S\(spec.position.x)-\(spec.position.y)", at: spec.position)
+            case .turnout(let connections, let stem):
+                try world.buildTurnout(at: spec.position, connections: connections, stem: stem)
+            case .crossing:
+                try world.buildCrossing(at: spec.position)
             }
         }
         return world
@@ -601,6 +608,12 @@ enum WorldInvariants {
         }
         for station in world.stations where world.map.tile(at: station.position)?.type != .station(id: station.id) {
             problems.append("station \(station.id.rawValue) does not match its tile")
+        }
+        // Decision 26: a turnout has three exits or more, its stem among them.
+        for track in world.tracks {
+            if case .turnout(let stem) = track.layout, track.connections.directions.count < 3 || !track.connections.contains(TrackConnections(stem)) {
+                problems.append("turnout at \(track.position) with exits \(track.connections) and stem \(stem)")
+            }
         }
         // Decision 22: lines in ID order, each with two stops or more (none
         // twice in a row) at known stations, a rate of 1 or more, a window

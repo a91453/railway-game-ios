@@ -58,14 +58,15 @@ extension TrainMovement {
     /// Where a train ends up after travelling up to `distance` units from
     /// `start`, along the rest of its link and then `continuation` from
     /// entry `cursor` on, and the cursor it ends with. Pure: it reads the
-    /// network only through `isJoined` and changes nothing.
+    /// network only through `mayPass` and changes nothing.
     ///
     /// - A partial link is `onLink`; reaching a node exactly is `atNode`,
     ///   facing the way the train arrived. Arriving exactly never looks at,
     ///   enters or consumes the next entry, whether or not it is passable.
     /// - At a node with distance left, the train enters the next entry only if
-    ///   `isJoined` says that link exists and it does not lead straight back
-    ///   (the opposite of the heading). Otherwise it stops there, the entry
+    ///   it does not lead straight back (the opposite of the heading) and
+    ///   `mayPass` accepts it (the link exists and the piece lets a train
+    ///   facing that way go on to it). Otherwise it stops there, the entry
     ///   stays unconsumed, and the rest of `distance` is unused.
     /// - Without further entries it stops at the node. It never picks a way.
     ///
@@ -80,7 +81,7 @@ extension TrainMovement {
         distance: Int64,
         continuation: [GridPosition],
         cursor: Int,
-        isJoined: (GridPosition, GridPosition) -> Bool
+        mayPass: (GridPosition, TrackDirection, GridPosition) -> Bool
     ) -> (position: TrainPosition, cursor: Int) {
         precondition(distance >= 0, "travel(from:distance:...) requires a non-negative distance")
         var budget = distance
@@ -99,7 +100,7 @@ extension TrainMovement {
             let next = continuation[cursor]
             guard let direction = TrackDirection(from: node, to: next),
                   direction != heading.opposite,
-                  isJoined(node, next)
+                  mayPass(node, heading, next)
             else { break }
             cursor += 1
             guard budget >= TrainPosition.linkLength else {
@@ -114,19 +115,20 @@ extension TrainMovement {
     /// Whether a train at `node` facing `heading` could follow `nodes` in
     /// order: each is the next tile north, east, south or west of the one
     /// before, none leads straight back the way the train is facing (no
-    /// immediate U-turn, including at `node` itself), and `isJoined` accepts
-    /// every link. Loops and revisits are allowed.
+    /// immediate U-turn, including at `node` itself), and `mayPass` accepts
+    /// every step from the node and heading before it. Loops and revisits
+    /// are allowed.
     static func isPath(
         _ nodes: some Sequence<GridPosition>,
         from node: GridPosition,
         heading: TrackDirection,
-        isJoined: (GridPosition, GridPosition) -> Bool
+        mayPass: (GridPosition, TrackDirection, GridPosition) -> Bool
     ) -> Bool {
         var (node, heading) = (node, heading)
         for next in nodes {
             guard let direction = TrackDirection(from: node, to: next),
                   direction != heading.opposite,
-                  isJoined(node, next)
+                  mayPass(node, heading, next)
             else { return false }
             (node, heading) = (next, direction)
         }
@@ -167,7 +169,7 @@ extension TrainMovement {
         if cursor >= 2 {
             guard TrackDirection(from: continuation[cursor - 2], to: continuation[cursor - 1]) == heading else { return false }
         }
-        return Self.isPath(remainingContinuation, from: node, heading: heading) { _, _ in true }
+        return Self.isPath(remainingContinuation, from: node, heading: heading) { _, _, _ in true }
     }
 }
 

@@ -1,0 +1,322 @@
+{
+  "schemaVersion": 14,
+  "description": "Turnouts, a crossing and track resources. Row 2: dead end (0,2), (1,2), a turnout at (2,2) with exits east, south and west and its stem west, (3,2), a crossing at (4,2), (5,2), dead end (6,2); column 4 crosses it from dead end (4,0) to dead end (4,4); a siding leaves the turnout south to dead end (2,4). West(0,1) and East(6,1) have platforms (0,2) and (6,2). Apart from them, A(1,5) and B(5,5) have platforms (1,6) and (5,6) on a ring of plain track, rows 6 and 7, x 1 to 5. A turnout joins its stem to each branch and each branch only to the stem; a crossing joins each exit only to the opposite one; a train that did not come in by an exit (facing south at the turnout, which has no north exit) may leave by any but the one behind. Routes and continuations follow the same rules. Sections run between branch points (the turnout, the crossing, dead ends), from the end first in row-major order, then by first step north, east, south, west; the ring has none and is one section from (1,6), east first. West to East is single track; A to B is two tracks that share no link; West and A are not joined. A train occupies its tile or its link (either way round); two trains on one resource conflict. T2, moved off the crossing, runs from (3,2) through the turnout from its east branch to the stem and on to (1,2) in two minutes, but may not be sent from that branch into the siding.",
+  "initialState": {
+    "mapWidth": 7,
+    "mapHeight": 8,
+    "balance": 2000000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 0, "y": 2, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTurnout", "x": 2, "y": 2, "connections": ["east", "south", "west"], "stem": "west" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildCrossing", "x": 4, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 2, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 2, "connections": ["west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 0, "connections": ["south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 4, "connections": ["north"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 3, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 4, "connections": ["north"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 6, "connections": ["east", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 6, "connections": ["south", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 7, "connections": ["north", "east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 7, "connections": ["north", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 6, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 7, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 6, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 7, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 6, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 7, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTurnout", "x": 3, "y": 3, "connections": ["east", "west"], "stem": "west" },
+      "expect": { "result": "invalidTrackConnections" }
+    },
+    {
+      "command": { "type": "buildTurnout", "x": 3, "y": 3, "connections": ["north", "east", "south"], "stem": "west" },
+      "expect": { "result": "invalidTrackConnections" }
+    },
+    {
+      "command": { "type": "buildTurnout", "x": 2, "y": 2, "connections": ["north", "east", "south"], "stem": "north" },
+      "expect": { "result": "tileOccupied", "x": 2, "y": 2 }
+    },
+    {
+      "command": { "type": "buildCrossing", "x": 9, "y": 9 },
+      "expect": { "result": "outOfBounds", "x": 9, "y": 9 }
+    },
+    {
+      "command": { "type": "buildStation", "name": "West", "x": 0, "y": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "East", "x": 6, "y": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "A", "x": 1, "y": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "B", "x": 5, "y": 5 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "exits", "x": 2, "y": 2, "heading": "east" },
+      "expect": { "exits": [{ "x": 3, "y": 2 }, { "x": 2, "y": 3 }] }
+    },
+    {
+      "observe": { "type": "exits", "x": 2, "y": 2, "heading": "west" },
+      "expect": { "exits": [{ "x": 1, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "exits", "x": 2, "y": 2, "heading": "north" },
+      "expect": { "exits": [{ "x": 1, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "exits", "x": 2, "y": 2, "heading": "south" },
+      "expect": { "exits": [{ "x": 3, "y": 2 }, { "x": 2, "y": 3 }, { "x": 1, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "exits", "x": 4, "y": 2, "heading": "north" },
+      "expect": { "exits": [{ "x": 4, "y": 1 }] }
+    },
+    {
+      "observe": { "type": "exits", "x": 3, "y": 2, "heading": "east" },
+      "expect": { "exits": [{ "x": 4, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "route", "from": { "type": "node", "x": 1, "y": 2, "heading": "east" }, "to": { "x": 2, "y": 4 } },
+      "expect": { "found": true, "route": [{ "x": 2, "y": 2 }, { "x": 2, "y": 3 }, { "x": 2, "y": 4 }] }
+    },
+    {
+      "observe": { "type": "route", "from": { "type": "node", "x": 3, "y": 2, "heading": "west" }, "to": { "x": 2, "y": 4 } },
+      "expect": { "found": false }
+    },
+    {
+      "observe": { "type": "route", "from": { "type": "node", "x": 3, "y": 2, "heading": "east" }, "to": { "x": 4, "y": 4 } },
+      "expect": { "found": false }
+    },
+    {
+      "observe": { "type": "route", "from": { "type": "node", "x": 4, "y": 1, "heading": "south" }, "to": { "x": 4, "y": 4 } },
+      "expect": { "found": true, "route": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 4, "y": 4 }] }
+    },
+    {
+      "observe": { "type": "routeToStation", "from": { "type": "node", "x": 1, "y": 2, "heading": "east" }, "station": 2 },
+      "expect": { "found": true, "route": [{ "x": 2, "y": 2 }, { "x": 3, "y": 2 }, { "x": 4, "y": 2 }, { "x": 5, "y": 2 }, { "x": 6, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "trackSections" },
+      "expect": { "sections": [{ "nodes": [{ "x": 4, "y": 0 }, { "x": 4, "y": 1 }, { "x": 4, "y": 2 }], "loop": false }, { "nodes": [{ "x": 0, "y": 2 }, { "x": 1, "y": 2 }, { "x": 2, "y": 2 }], "loop": false }, { "nodes": [{ "x": 2, "y": 2 }, { "x": 3, "y": 2 }, { "x": 4, "y": 2 }], "loop": false }, { "nodes": [{ "x": 2, "y": 2 }, { "x": 2, "y": 3 }, { "x": 2, "y": 4 }], "loop": false }, { "nodes": [{ "x": 4, "y": 2 }, { "x": 5, "y": 2 }, { "x": 6, "y": 2 }], "loop": false }, { "nodes": [{ "x": 4, "y": 2 }, { "x": 4, "y": 3 }, { "x": 4, "y": 4 }], "loop": false }, { "nodes": [{ "x": 1, "y": 6 }, { "x": 2, "y": 6 }, { "x": 3, "y": 6 }, { "x": 4, "y": 6 }, { "x": 5, "y": 6 }, { "x": 5, "y": 7 }, { "x": 4, "y": 7 }, { "x": 3, "y": 7 }, { "x": 2, "y": 7 }, { "x": 1, "y": 7 }], "loop": true }] }
+    },
+    {
+      "observe": { "type": "parallelTracks", "from": 1, "to": 2 },
+      "expect": { "tracks": 1 }
+    },
+    {
+      "observe": { "type": "parallelTracks", "from": 3, "to": 4 },
+      "expect": { "tracks": 2 }
+    },
+    {
+      "observe": { "type": "parallelTracks", "from": 1, "to": 3 },
+      "expect": { "tracks": 0 }
+    },
+    {
+      "observe": { "type": "parallelTracks", "from": 3, "to": 9 },
+      "expect": { "tracks": 0 }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T1" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T2" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T3" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T4" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 4, "y": 2, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 4, "y": 2, "heading": "north" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 3, "position": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 }, "offset": 512 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 4, "position": { "type": "link", "from": { "x": 2, "y": 6 }, "to": { "x": 1, "y": 6 }, "offset": 256 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "node", "x": 4, "y": 2 }] }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 4 },
+      "expect": { "resources": [{ "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 } }] }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 9 },
+      "expect": { "resources": [] }
+    },
+    {
+      "observe": { "type": "conflicts" },
+      "expect": { "conflicts": [{ "resource": { "type": "node", "x": 4, "y": 2 }, "trains": [1, 2] }, { "resource": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 } }, "trains": [3, 4] }] }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 3, "y": 2, "heading": "west" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [{ "x": 2, "y": 2 }, { "x": 2, "y": 3 }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [{ "x": 2, "y": 2 }, { "x": 1, "y": 2 }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "conflicts" },
+      "expect": { "conflicts": [{ "resource": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 } }, "trains": [3, 4] }] }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 2,
+    "speed": "normal",
+    "balance": 977000,
+    "stations": [
+      { "id": 1, "name": "West", "x": 0, "y": 1 },
+      { "id": 2, "name": "East", "x": 6, "y": 1 },
+      { "id": 3, "name": "A", "x": 1, "y": 5 },
+      { "id": 4, "name": "B", "x": 5, "y": 5 }
+    ],
+    "tracks": [
+      { "x": 4, "y": 0, "connections": ["south"], "layout": { "type": "open" } },
+      { "x": 4, "y": 1, "connections": ["north", "south"], "layout": { "type": "open" } },
+      { "x": 0, "y": 2, "connections": ["east"], "layout": { "type": "open" } },
+      { "x": 1, "y": 2, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 2, "y": 2, "connections": ["east", "south", "west"], "layout": { "type": "turnout", "stem": "west" } },
+      { "x": 3, "y": 2, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 2, "connections": ["north", "east", "south", "west"], "layout": { "type": "crossing" } },
+      { "x": 5, "y": 2, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 6, "y": 2, "connections": ["west"], "layout": { "type": "open" } },
+      { "x": 2, "y": 3, "connections": ["north", "south"], "layout": { "type": "open" } },
+      { "x": 4, "y": 3, "connections": ["north", "south"], "layout": { "type": "open" } },
+      { "x": 2, "y": 4, "connections": ["north"], "layout": { "type": "open" } },
+      { "x": 4, "y": 4, "connections": ["north"], "layout": { "type": "open" } },
+      { "x": 1, "y": 6, "connections": ["east", "south"], "layout": { "type": "open" } },
+      { "x": 2, "y": 6, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 6, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 6, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 6, "connections": ["south", "west"], "layout": { "type": "open" } },
+      { "x": 1, "y": 7, "connections": ["north", "east"], "layout": { "type": "open" } },
+      { "x": 2, "y": 7, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 7, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 7, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 7, "connections": ["north", "west"], "layout": { "type": "open" } }
+    ],
+    "trains": [
+      { "id": 1, "name": "T1", "position": { "type": "node", "x": 4, "y": 2, "heading": "east" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
+      { "id": 2, "name": "T2", "position": { "type": "node", "x": 1, "y": 2, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
+      { "id": 3, "name": "T3", "position": { "type": "link", "from": { "x": 1, "y": 6 }, "to": { "x": 2, "y": 6 }, "offset": 512 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
+      { "id": 4, "name": "T4", "position": { "type": "link", "from": { "x": 2, "y": 6 }, "to": { "x": 1, "y": 6 }, "offset": 256 }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } }
+    ],
+    "lines": [],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }]
+  }
+}

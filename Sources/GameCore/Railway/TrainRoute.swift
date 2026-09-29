@@ -37,8 +37,8 @@ extension GameWorld {
     /// go to a station, use ``route(from:toStation:)``.
     ///
     /// Pure: reads the map only through its public queries (the start and
-    /// destination checks, then ``connectedNeighbors(of:)`` while
-    /// searching), changes nothing and keeps no cache. It explores only track
+    /// destination checks, then ``exits(from:facing:)`` while searching),
+    /// changes nothing and keeps no cache. It explores only track
     /// reachable from `start`: at most four states per track tile, so time
     /// and memory are O(reachable track tiles), without scanning the map. On
     /// a nearly full 1024 x 1024 map that is seconds and hundreds of
@@ -47,7 +47,7 @@ extension GameWorld {
     public func route(from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
         guard isOnTrack(start), track(at: destination) != nil else { return nil }
         let (node, heading) = start.ahead
-        return TrainRoute.shortest(from: node, heading: heading, to: { $0 == destination }) { connectedNeighbors(of: $0) }
+        return TrainRoute.shortest(from: node, heading: heading, to: { $0 == destination }) { exits(from: $0, facing: $1) }
     }
 }
 
@@ -63,8 +63,9 @@ enum TrainRoute {
     /// Breadth-first search over (node, heading) from `node` facing
     /// `heading` to any state at a node that `isDestination` accepts.
     ///
-    /// `neighbors` must list the nodes joined to a node in north, east,
-    /// south, west order. States are expanded in the order they were found
+    /// `exits` must list the nodes a train at a node facing a heading may go
+    /// on to, in north, east, south, west order (see
+    /// ``GameWorld/exits(from:facing:)``). States are expanded in the order they were found
     /// and their neighbours in that fixed order, so each layer of the search
     /// is discovered in the order of its routes' direction sequences, and the
     /// first route found to a destination is the shortest and, among the
@@ -75,7 +76,7 @@ enum TrainRoute {
         from node: GridPosition,
         heading: TrackDirection,
         to isDestination: (GridPosition) -> Bool,
-        neighbors: (GridPosition) -> [GridPosition]
+        exits: (GridPosition, TrackDirection) -> [GridPosition]
     ) -> [GridPosition]? {
         guard !isDestination(node) else { return [] }
 
@@ -86,7 +87,7 @@ enum TrainRoute {
         var next = 0
         while next < found.count {
             let current = found[next].state
-            for neighbor in neighbors(current.node) {
+            for neighbor in exits(current.node, current.heading) {
                 guard let direction = TrackDirection(from: current.node, to: neighbor),
                       direction != current.heading.opposite
                 else { continue }
