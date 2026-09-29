@@ -5,7 +5,9 @@ import XCTest
 /// Train timetables (Phase 4 Stage O, ARCHITECTURE decision 19): an ordered
 /// list of scheduled stops, each a station with an arrival and a departure
 /// in game minutes, replaced whole by `setTrainTimetable` and saved with the
-/// train. A timetable is plan data only: nothing in the simulation reads it.
+/// train. A timetable is plan data only: without a service started by
+/// `startTrainService` (Stage P, `TrainServiceTests`), nothing in the
+/// simulation reads it.
 ///
 /// Expected values are worked out by hand from the rules and written out,
 /// never taken from a previous run.

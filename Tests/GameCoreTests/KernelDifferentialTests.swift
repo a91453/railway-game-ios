@@ -32,6 +32,10 @@ final class KernelDifferentialTests: XCTestCase {
         /// campaigns and their digests are as before; the timetable
         /// campaigns (`TimetablePropertyTests`) add it.
         case setTimetable(TrainID, [ScheduledStop])
+        /// Never drawn by ``nextOperation(in:using:)`` either; the service
+        /// campaigns (`ServicePropertyTests`) add them.
+        case startService(TrainID)
+        case stopService(TrainID)
         /// The train tool's send to a tile: route from where the train is,
         /// committed unchanged.
         case sendToTile(TrainID, GridPosition)
@@ -56,6 +60,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
             case .setTimetable(let id, let stops):
                 ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.minutes)-\($0.departure.minutes)" }.joined(separator: ", "))])"
+            case .startService(let id): ".startService(\(id.rawValue))"
+            case .stopService(let id): ".stopService(\(id.rawValue))"
             case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
             case .sendToStation(let id, let station): ".sendToStation(\(id.rawValue), \(station.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
@@ -113,8 +119,11 @@ final class KernelDifferentialTests: XCTestCase {
 
     // MARK: - Generation
 
-    static func makeSetup(using random: inout SplitMix64) -> Setup {
-        let shape = random.element(of: NetworkShape.allCases)
+    /// A setup on a network of one of `shapes` (with repeats to weight
+    /// them); the default draws exactly as the Stage I–N campaigns always
+    /// have.
+    static func makeSetup(shapes: [NetworkShape] = NetworkShape.allCases, using random: inout SplitMix64) -> Setup {
+        let shape = random.element(of: shapes)
         var (specs, width, height) = NetworkGenerator.specs(shape, using: &random)
         // Stations beside the network, so that platforms are common.
         let occupied = Set(specs.map(\.position))
@@ -236,6 +245,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .setRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
             case .setContinuation(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
             case .setTimetable(let id, let stops): try world.setTrainTimetable(id, to: stops)
+            case .startService(let id): try world.startTrainService(id)
+            case .stopService(let id): try world.stopTrainService(id)
             case .sendToTile(let id, let p):
                 guard let position = world.train(id: id)?.position, let route = world.route(from: position, to: p) else { return nil }
                 try world.setTrainContinuation(id, to: route)
@@ -274,6 +285,8 @@ final class KernelDifferentialTests: XCTestCase {
         case .setRate(let id, let rate): return model.setRate(id, rate)
         case .setContinuation(let id, let nodes): return model.setContinuation(id, nodes)
         case .setTimetable(let id, let stops): return model.setTimetable(id, stops)
+        case .startService(let id): return model.startService(id)
+        case .stopService(let id): return model.stopService(id)
         case .sendToTile(let id, let p):
             guard let position = model.trains.first(where: { $0.id == id.rawValue })?.position,
                   let route = model.route(from: position, to: p)
@@ -327,6 +340,10 @@ final class KernelDifferentialTests: XCTestCase {
                 "train \(expected.id) continuation \(train.movement.continuation)@\(train.movement.cursor) vs \(expected.continuation)@\(expected.cursor)"
             )
             check(train.timetable == expected.timetable, "train \(expected.id) timetable \(train.timetable) vs \(expected.timetable)")
+            check(
+                train.execution == expected.service?.execution,
+                "train \(expected.id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))"
+            )
         }
         // Derived answers: connectivity (a ring outside the map included),
         // platforms and stops, for known and unknown IDs.
@@ -351,6 +368,8 @@ final class KernelDifferentialTests: XCTestCase {
     }
 
     /// Decision 18's transitions: whose stop an operation may begin or end.
+    /// Decision 20 adds one: `advance` may move a stopped train, and so end
+    /// its stop, when a service was running it.
     static func stopTransitionProblems(
         _ operation: Operation,
         before: GameWorld,
@@ -361,7 +380,8 @@ final class KernelDifferentialTests: XCTestCase {
         for train in after.trains {
             let was = before.stationsStoppedAt(by: train.id)
             let now = after.stationsStoppedAt(by: train.id)
-            if case .advance = operation, !was.isEmpty, let old = before.train(id: train.id),
+            let wasInService = before.train(id: train.id)?.execution != nil
+            if case .advance = operation, !was.isEmpty, !wasInService, let old = before.train(id: train.id),
                old.position != train.position || old.movement != train.movement {
                 found.append("advance moved train \(train.id.rawValue), stopped at \(was)")
             }
@@ -369,7 +389,7 @@ final class KernelDifferentialTests: XCTestCase {
             let isThis: (TrainID) -> Bool = { $0 == train.id }
             let allowed: Bool = switch operation {
             case _ where refused: false
-            case .advance: was.isEmpty
+            case .advance: was.isEmpty || wasInService
             case .place(let id, _): isThis(id) && was.isEmpty
             case .reverse(let id): isThis(id) && was.isEmpty
             case .unplace(let id): isThis(id) && now.isEmpty

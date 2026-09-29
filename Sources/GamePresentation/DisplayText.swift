@@ -168,6 +168,14 @@ extension GameError {
             "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives."
         case .unknownStation(let id):
             "There is no station #\(id.rawValue)."
+        case .trainServiceActive(let id):
+            "Train #\(id.rawValue) is running its timetable. Stop its service first."
+        case .trainServiceNotActive(let id):
+            "Train #\(id.rawValue) is not running a timetable."
+        case .noTimetable(let id):
+            "Train #\(id.rawValue) has no timetable to run."
+        case .trainNotAtFirstStop(let id):
+            "Train #\(id.rawValue) must be stopped at its timetable's first station to start its service."
         }
     }
 }

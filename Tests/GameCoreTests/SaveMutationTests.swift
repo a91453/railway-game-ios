@@ -261,4 +261,103 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
         assertVolume(timetableMutations > 1_000, "only \(timetableMutations) mutations inside timetables")
     }
+    /// The same for services (decision 20), with many mutations aimed at
+    /// them: a phase or stop changed, a service removed, or one written onto
+    /// a train (most of them plausible: a known phase and a small stop).
+    /// Whatever loads keeps every service consistent with its timetable,
+    /// train and stations, survives another save, and stays so under further
+    /// commands and advances, which never trap.
+    func testMutatedServicesAreRefusedOrLoadWithAConsistentService() throws {
+        var accepted = 0
+        var refused = 0
+        var serviceMutations = 0
+        var loadedServices = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.serviceMutation", cases: 30) { c in
+            let (setup, operations) = try ServicePropertyTests.generate(&c, operations: 60)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let inServices = all.filter { $0.map(\.description).joined().contains(".execution") }
+            let trainObjects = all.filter { path in
+                path.map(\.description).joined().hasPrefix(".trains[") && path.count == 2
+            }
+            for _ in 0..<40 {
+                // Half aimed inside services and a quarter writing a service
+                // onto a train (or removing its own), when the world has
+                // them; the rest, and any aim without a target, anywhere but
+                // tiles.
+                let path: [Step]
+                var written = false
+                let roll = c.random.below(4)
+                if roll < 2, !inServices.isEmpty {
+                    path = c.random.element(of: inServices)
+                    serviceMutations += 1
+                } else if roll == 2, !trainObjects.isEmpty {
+                    path = c.random.element(of: trainObjects)
+                    written = true
+                    serviceMutations += 1
+                } else {
+                    path = c.random.element(of: outsideTiles)
+                }
+                var described = ""
+                let mutated = Self.replacing(path[...], in: json) { value in
+                    guard written, var train = value as? [String: Any] else {
+                        let (result, text) = Self.mutation(of: value, addedKeys: ["execution", "extra"], using: &c.random)
+                        described = text
+                        return result
+                    }
+                    if train["execution"] != nil, c.random.chance(1, in: 4) {
+                        train["execution"] = nil
+                        described = "service removed"
+                    } else {
+                        let phase = c.random.element(of: ["waiting", "travelling", "waiting", "travelling", "arrived"])
+                        let stop = c.random.element(of: [0, 0, 1, 1, 2, 3, 4, -1])
+                        train["execution"] = ["phase": phase, "stop": stop]
+                        described = "service set to \(phase) \(stop)"
+                    }
+                    return train
+                }
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                loadedServices += loaded.trains.count { $0.execution != nil }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<10 {
+                    let operation = c.random.chance(1, in: 3)
+                        ? .advance(c.random.below(40))
+                        : c.random.chance(1, in: 2)
+                            ? ServicePropertyTests.nextServiceOperation(in: current, using: &c.random)
+                            : KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.serviceMutation \(accepted) mutated saves loaded, \(refused) refused, \(serviceMutations) aimed at services, \(loadedServices) services loaded")
+        assertVolume(refused > 1_000, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
+        assertVolume(serviceMutations > 1_000, "only \(serviceMutations) mutations aimed at services")
+        assertVolume(loadedServices > 500, "only \(loadedServices) services loaded")
+    }
 }

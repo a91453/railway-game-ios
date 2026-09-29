@@ -49,7 +49,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor),
-                        timetable: $0.timetable.map(StopSummary.init)
+                        timetable: $0.timetable.map(StopSummary.init),
+                        execution: ExecutionSummary($0.service?.execution)
                     )
                 },
                 final.trains, name
@@ -71,6 +72,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setTrainMovementRate(let id, let rate): error = model.setRate(id, rate)
         case .setTrainContinuation(let id, let nodes): error = model.setContinuation(id, nodes)
         case .setTrainTimetable(let id, let stops): error = model.setTimetable(id, stops)
+        case .startTrainService(let id): error = model.startService(id)
+        case .stopTrainService(let id): error = model.stopService(id)
         case .setSpeed(let speed): model.setSpeed(speed)
         case .pause: model.pause()
         case .resume: model.resume()
@@ -102,6 +105,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .stations(model.stationsStoppedAt(by: train))
         case .timetable(let id):
             return .timetable(model.trains.first { $0.id == id.rawValue }?.timetable)
+        case .execution(let id):
+            return .execution(model.trains.first { $0.id == id.rawValue }.map { ExecutionSummary($0.service?.execution) })
         }
     }
 }

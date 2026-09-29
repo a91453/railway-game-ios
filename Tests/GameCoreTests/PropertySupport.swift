@@ -612,6 +612,7 @@ enum WorldInvariants {
             for stop in train.timetable where world.station(id: stop.station) == nil {
                 problems.append("train \(train.id.rawValue) timetable names unknown station \(stop.station.rawValue)")
             }
+            problems += serviceViolations(of: train, in: world)
             let movement = train.movement
             guard let position = train.position else {
                 if movement != .idle { problems.append("unplaced train \(train.id.rawValue) is not idle") }
@@ -651,6 +652,34 @@ enum WorldInvariants {
             }
         }
         return problems
+    }
+
+    /// Decision 20: a service points at an entry of the timetable of a
+    /// placed train; a waiting train is stopped at that entry's station; a
+    /// travelling one heads for an entry after the first, has not ended its
+    /// journey, and ends it next to that entry's station.
+    static func serviceViolations(of train: Train, in world: GameWorld) -> [String] {
+        guard let execution = train.execution else { return [] }
+        let id = train.id.rawValue
+        guard train.timetable.indices.contains(execution.stop) else {
+            return ["train \(id) service at stop \(execution.stop) of \(train.timetable.count)"]
+        }
+        guard let position = train.position else { return ["unplaced train \(id) runs a service"] }
+        let target = train.timetable[execution.stop].station
+        switch execution {
+        case .waitingAtStop:
+            return world.stationsStoppedAt(by: train.id).contains(target) ? [] : ["train \(id) waits at station \(target.rawValue) but is not stopped there"]
+        case .travellingToStop(let stop):
+            var problems: [String] = []
+            if stop < 1 { problems.append("train \(id) travels to the first stop") }
+            let remaining = train.movement.remainingContinuation
+            if case .atNode = position, remaining.isEmpty { problems.append("train \(id) travels but its journey has ended") }
+            let end = remaining.last ?? ahead(of: position).node
+            if let station = world.station(id: target), stepDirection(from: end, to: station.position) == nil {
+                problems.append("train \(id) travels to station \(target.rawValue) but its journey ends at \(end)")
+            }
+            return problems
+        }
     }
 
     /// The world survives a save and load unchanged: the decoder accepts
