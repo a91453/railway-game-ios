@@ -131,21 +131,26 @@ extension ReferenceWorld {
 
     /// The line driven once from `start`, calling at `calls` (indices of its
     /// stops): out along them, turning at the last, back along them in
-    /// reverse; `nil` if a leg has no route.
-    func journey(of line: Line, calling calls: [Int], from start: TrainPosition) -> LineJourney? {
+    /// reverse; `nil` if a leg has no route. Decision 27: a train `length`
+    /// long with body `trail` turns with its head at its tail and is pulled
+    /// along the platforms.
+    func journey(of line: Line, calling calls: [Int], from start: TrainPosition, trail: [GridPosition] = [], length: Int64 = 0) -> LineJourney? {
         let n = calls.count
         var position = start
+        var body = trail
         var legs: [LineLeg] = []
         var pairs: [(Int, Int)] = (0..<(n - 1)).map { (calls[$0], calls[$0 + 1]) }
         pairs += (1..<n).reversed().map { (calls[$0], calls[$0 - 1]) }
         for (from, to) in pairs {
-            if from == calls[n - 1] { position = Self.turned(position) }
-            guard let route = route(from: position, toStation: line.stops[to]) else { return nil }
+            if from == calls[n - 1] { (position, body) = Self.turnedWithBody(position, body, length: length) }
+            guard let route = route(from: position, toStation: line.stops[to], length: length) else { return nil }
             let units = Int64(route.count) * Self.linkLength
             legs.append(LineLeg(from: from, to: to, route: route, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
             if route.count >= 1 {
                 let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
-                position = .atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
+                let arrived = TrainPosition.atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
+                body = Self.body(after: position, body, to: arrived, passed: route, length: length)
+                position = arrived
             }
         }
         let total = legs.reduce(Int64(0)) { $0 + $1.minutes } + 2 * 2 + Int64(2 * (n - 2)) * 1
@@ -385,8 +390,14 @@ extension ReferenceWorld {
     /// What stays the same within one call of `advance`.
     struct DispatchMemo {
         var journeys: [ServiceKey: LineJourney?] = [:]
-        /// Trips found from a train's place: `(turned, journey)`, or none.
-        var trips: [TrainPosition: [ServiceKey: (Bool, LineJourney)?]] = [:]
+        /// Trips found from a train's place and body: `(turned, journey)`,
+        /// or none.
+        var trips: [Place: [ServiceKey: (Bool, LineJourney)?]] = [:]
+    }
+
+    struct Place: Hashable {
+        var position: TrainPosition
+        var trail: [GridPosition]
     }
 
     /// Every service of one line, its own first, dispatching at the current
@@ -432,18 +443,21 @@ extension ReferenceWorld {
             guard train.service == nil, let position = train.position, train.rate > 0,
                   stationsStoppedAt(by: TrainID(rawValue: id)).contains(first)
             else { continue }
-            if memo.trips[position]?[key] == nil {
-                let straight = journey(of: line, calling: service.calls, from: position)
-                let turned = journey(of: line, calling: service.calls, from: Self.turned(position))
+            let place = Place(position: position, trail: train.trail)
+            let length = Self.length(train)
+            if memo.trips[place]?[key] == nil {
+                let straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
+                let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
+                let turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
                 let pick: (Bool, LineJourney)? = switch (straight, turned) {
                 case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
                 case (let s?, nil): (false, s)
                 case (nil, let t?): (true, t)
                 case (nil, nil): nil
                 }
-                memo.trips[position, default: [:]][key] = .some(pick)
+                memo.trips[place, default: [:]][key] = .some(pick)
             }
-            guard let (turn, trip) = memo.trips[position]![key]! else { continue }
+            guard let (turn, trip) = memo.trips[place]![key]! else { continue }
             // The timetable: leave now; each call the leg's minutes after
             // the one before; stay 1 between the ends, 2 at the far end
             // (turning), and finish on arrival back at the first call

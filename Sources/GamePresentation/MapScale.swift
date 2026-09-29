@@ -77,6 +77,40 @@ public enum MapScale {
         }
     }
 
+    /// The line a train's body is drawn along, in map coordinates: from
+    /// where its head is drawn (see ``center(of:tileSize:)``) through
+    /// the centre of each node of its trail to its tail, `length` behind
+    /// the head. Just the head for a train of one car; empty for an
+    /// unplaced train.
+    ///
+    /// Display only, like ``center(of:tileSize:)``.
+    public static func bodyPoints(of train: Train, tileSize: Double) -> [(x: Double, y: Double)] {
+        guard let position = train.position else { return [] }
+        var points = [center(of: position, tileSize: tileSize)]
+        let length = train.length
+        var distance: Int64 = 0
+        var next: Int64
+        switch position {
+        case .atNode: next = TrainPosition.linkLength
+        case .onLink(_, _, let offset): next = offset
+        }
+        for node in train.trail {
+            let previous = points[points.count - 1]
+            let target = center(of: node, tileSize: tileSize)
+            if next <= length {
+                points.append(target)
+            } else {
+                // The tail lies on the way to this node.
+                let fraction = Double(length - distance) / Double(next - distance)
+                points.append((previous.x + (target.x - previous.x) * fraction, previous.y + (target.y - previous.y) * fraction))
+                break
+            }
+            distance = next
+            next += TrainPosition.linkLength
+        }
+        return points
+    }
+
     /// The unit vector, in map coordinates, of the way a train at `position`
     /// faces: its heading at a node, or from `from` toward `to` on a link.
     public static func facing(of position: TrainPosition) -> (dx: Double, dy: Double) {

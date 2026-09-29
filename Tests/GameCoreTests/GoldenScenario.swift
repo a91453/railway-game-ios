@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 14
+    static let schemaVersion = 15
 
     var description: String
     var initialState: InitialState
@@ -143,7 +143,7 @@ extension GoldenScenario.Step: Decodable {
 
     fileprivate enum AnswerKeys: String, CodingKey, CaseIterable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks
+        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -196,8 +196,8 @@ extension GoldenScenario.Step: Decodable {
                 try requireOnly([.platforms], answering: "platforms")
                 let platforms = try expect.decode([PositionSummary].self, forKey: .platforms)
                 self = .observe(observation, expect: .platforms(platforms.map(\.position)))
-            case .stationStops:
-                try requireOnly([.stations], answering: "stationStops")
+            case .stationStops, .wholeTrainStops:
+                try requireOnly([.stations], answering: "a train's stops")
                 let stations = try expect.decode([Int].self, forKey: .stations)
                 self = .observe(observation, expect: .stations(stations.map(StationID.init(rawValue:))))
             case .timetable:
@@ -241,6 +241,10 @@ extension GoldenScenario.Step: Decodable {
             case .parallelTracks:
                 try requireOnly([.tracks], answering: "parallelTracks")
                 self = try .observe(observation, expect: .tracks(expect.decode(Int.self, forKey: .tracks)))
+            case .platformTracks:
+                try requireOnly([.platformTracks], answering: "platformTracks")
+                let tracks = try expect.decode([[PositionSummary]].self, forKey: .platformTracks)
+                self = .observe(observation, expect: .platformTracks(tracks.map { $0.map(\.position) }))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -278,7 +282,9 @@ enum ScenarioCommand: Equatable {
     case buildCrossing(GridPosition)
     case removeTrack(GridPosition)
     case buildStation(name: String, GridPosition)
+    case extendStation(StationID, GridPosition)
     case purchaseTrain(name: String)
+    case setTrainCars(TrainID, Int)
     case placeTrain(TrainID, TrainPosition)
     case unplaceTrain(TrainID)
     case reverseTrain(TrainID)
@@ -318,8 +324,12 @@ enum ScenarioCommand: Equatable {
                 try world.removeTrack(at: position)
             case .buildStation(let name, let position):
                 try world.buildStation(named: name, at: position)
+            case .extendStation(let id, let position):
+                try world.extendStation(id, to: position)
             case .purchaseTrain(let name):
                 try world.purchaseTrain(named: name)
+            case .setTrainCars(let id, let cars):
+                try world.setTrainCars(id, to: cars)
             case .placeTrain(let id, let position):
                 try world.placeTrain(id, at: position)
             case .unplaceTrain(let id):
@@ -379,7 +389,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem
+        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
     }
 
     init(from decoder: any Decoder) throws {
@@ -400,8 +410,13 @@ extension ScenarioCommand: Decodable {
             self = try .removeTrack(container.decodePosition(x: .x, y: .y))
         case "buildStation":
             self = try .buildStation(name: container.decode(String.self, forKey: .name), container.decodePosition(x: .x, y: .y))
+        case "extendStation":
+            self = try .extendStation(container.decodeStation(forKey: .station), container.decodePosition(x: .x, y: .y))
         case "purchaseTrain":
             self = try .purchaseTrain(name: container.decode(String.self, forKey: .name))
+        case "setTrainCars":
+            // Read as written: rejecting a count outside 0...16 is GameCore's decision.
+            self = try .setTrainCars(container.decodeTrain(forKey: .train), container.decode(Int.self, forKey: .cars))
         case "placeTrain":
             let train = try container.decodeTrain(forKey: .train)
             // A placement names where to put the train; taking it off the
@@ -571,6 +586,10 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidLinePattern)
         case "unknownLinePattern":
             self = try .rejected(.unknownLinePattern(container.decode(Int.self, forKey: .pattern)))
+        case "invalidStationTile":
+            self = try .rejected(.invalidStationTile(container.decodePosition(x: .x, y: .y)))
+        case "invalidTrainLength":
+            self = .rejected(.invalidTrainLength)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -673,6 +692,11 @@ extension StepOutcome: Codable {
         case .rejected(.unknownLinePattern(let pattern)):
             try container.encode("unknownLinePattern", forKey: .result)
             try container.encode(pattern, forKey: .pattern)
+        case .rejected(.invalidStationTile(let position)):
+            try container.encode("invalidStationTile", forKey: .result)
+            try encode(position)
+        case .rejected(.invalidTrainLength):
+            try container.encode("invalidTrainLength", forKey: .result)
         }
     }
 }
@@ -692,8 +716,10 @@ enum ScenarioObservation: Equatable {
     case train(TrainID)
     case route(from: TrainPosition, to: GridPosition)
     case platforms(StationID)
-    case routeToStation(from: TrainPosition, station: StationID)
+    case routeToStation(from: TrainPosition, station: StationID, cars: Int)
     case stationStops(TrainID)
+    case wholeTrainStops(TrainID)
+    case platformTracks(StationID)
     case timetable(TrainID)
     case execution(TrainID)
     case serviceLevel(LineID, at: GameTime)
@@ -720,10 +746,14 @@ enum ScenarioObservation: Equatable {
             .route(world.route(from: start, to: destination))
         case .platforms(let station):
             .platforms(world.platforms(of: station))
-        case .routeToStation(let start, let station):
-            .route(world.route(from: start, toStation: station))
+        case .routeToStation(let start, let station, let cars):
+            .route(world.route(from: start, toStation: station, length: Int64(cars - 1) * Train.carLength))
         case .stationStops(let train):
             .stations(world.stationsStoppedAt(by: train))
+        case .wholeTrainStops(let train):
+            .stations(world.stationsBesideWholeTrain(train))
+        case .platformTracks(let station):
+            .platformTracks(world.platformTracks(of: station))
         case .timetable(let id):
             .timetable(world.train(id: id)?.timetable)
         case .execution(let id):
@@ -756,7 +786,7 @@ enum ScenarioObservation: Equatable {
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, train, station, line, gameMinutes, level, pattern, heading
+        case type, x, y, from, to, train, station, line, gameMinutes, level, pattern, heading, cars
     }
 
     init(from decoder: any Decoder) throws {
@@ -785,9 +815,18 @@ extension ScenarioObservation: Decodable {
             guard let start = try container.decode(TrainPositionSummary.self, forKey: .from).position else {
                 throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A route starts from a \"node\" or \"link\" position.")
             }
-            self = try .routeToStation(from: start, station: container.decodeStation(forKey: .station))
+            // "cars" is absent for a train of one car.
+            let cars = try container.contains(.cars) ? container.decode(Int.self, forKey: .cars) : 1
+            guard (Train.minimumCars...Train.maximumCars).contains(cars) else {
+                throw DecodingError.dataCorruptedError(forKey: .cars, in: container, debugDescription: "A route is for 1 to \(Train.maximumCars) cars.")
+            }
+            self = try .routeToStation(from: start, station: container.decodeStation(forKey: .station), cars: cars)
         case "stationStops":
             self = try .stationStops(container.decodeTrain(forKey: .train))
+        case "wholeTrainStops":
+            self = try .wholeTrainStops(container.decodeTrain(forKey: .train))
+        case "platformTracks":
+            self = try .platformTracks(container.decodeStation(forKey: .station))
         case "timetable":
             self = try .timetable(container.decodeTrain(forKey: .train))
         case "execution":
@@ -843,7 +882,10 @@ extension ScenarioObservation: Decodable {
 /// each of its segments; and for track resources `{"exits": [{"x", "y"},
 /// ...]}`, `{"resources": [...]}` for what a train occupies, `{"conflicts":
 /// [{"resource", "trains"}, ...]}`, `{"sections": [{"nodes", "loop"}, ...]}`
-/// and `{"tracks": n}` for the parallel tracks between two stations. A
+/// and `{"tracks": n}` for the parallel tracks between two stations; for
+/// station facilities `{"stations": [id, ...]}` for the stations a train
+/// stands beside with its whole length, and `{"platformTracks": [[{"x",
+/// "y"}, ...], ...]}` for a station's platform tracks. A
 /// train the world does not have answers `{}` to `train`, `timetable` and
 /// `execution`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
@@ -865,12 +907,13 @@ enum ObservationAnswer: Equatable {
     case conflicts([TrackConflict])
     case sections([TrackSection])
     case tracks(Int)
+    case platformTracks([[GridPosition]])
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks
+        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -928,6 +971,8 @@ extension ObservationAnswer: Encodable {
             try container.encode(sections.map(SectionSummary.init), forKey: .sections)
         case .tracks(let count):
             try container.encode(count, forKey: .tracks)
+        case .platformTracks(let tracks):
+            try container.encode(tracks.map { $0.map(PositionSummary.init) }, forKey: .platformTracks)
         }
     }
 }
@@ -966,9 +1011,10 @@ struct PositionSummary: Codable, Equatable {
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money, what has been
-/// built or bought, where each train is and how it moves, each train's
-/// timetable, how it repeats, and service, the service lines and the
-/// service day. Lists are in
+/// built or bought (each station with the tiles it grew onto), where each
+/// train is and how it moves, each train's timetable, how it repeats, and
+/// service, its cars and its body, the service lines and the service day.
+/// Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
 /// inherited from how GameCore stores them.
@@ -987,6 +1033,8 @@ struct WorldSummary: Codable, Equatable {
         var name: String
         var x: Int
         var y: Int
+        /// The tiles it grew onto, in order; `[]` for one tile.
+        var annexes: [PositionSummary]
     }
 
     struct TrackSummary: Codable, Equatable {
@@ -1004,6 +1052,10 @@ struct WorldSummary: Codable, Equatable {
         var timetable: [StopSummary]
         var `repeat`: RepeatSummary
         var execution: ExecutionSummary
+        /// Its cars, and the nodes its body lies over, nearest first; `1`
+        /// and `[]` for a train of one car.
+        var cars: Int
+        var trail: [PositionSummary]
     }
 
     init(_ world: GameWorld) {
@@ -1011,7 +1063,7 @@ struct WorldSummary: Codable, Equatable {
         speed = SpeedName(world.clock.speed)
         balance = world.economy.balance.amount
         stations = world.stations
-            .map { StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y) }
+            .map { StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)) }
             .sorted { $0.id < $1.id }
         tracks = world.tracks
             .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections), layout: LayoutSummary($0.layout)) }
@@ -1021,7 +1073,8 @@ struct WorldSummary: Codable, Equatable {
                 TrainSummary(
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
-                    repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution)
+                    repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution),
+                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init)
                 )
             }
             .sorted { $0.id < $1.id }

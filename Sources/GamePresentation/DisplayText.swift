@@ -51,17 +51,26 @@ extension TrackConnections {
 
 extension GameWorld {
     /// What is on the tile at `position`, such as "Empty", "Track · Straight N–S",
-    /// "Turnout · E–S–W, stem W", "Level crossing · N–S over E–W" or
-    /// "Station · Central".
+    /// "Turnout · E–S–W, stem W", "Level crossing · N–S over E–W",
+    /// "Station · Central" or, for a station grown onto more tiles,
+    /// "Station · Central · 3 tiles".
     public func tileSummary(at position: GridPosition) -> String {
         switch map.tile(at: position)?.type {
         case nil: "Outside the map"
         case .empty?: "Empty"
         case .track(let connections)?: "Track · \(connections.summary)"
-        case .station(let id)?: "Station · \(station(id: id)?.name ?? "#\(id.rawValue)")"
+        case .station(let id)?: stationSummary(id)
         case .turnout(let connections, let stem)?: "Turnout · \(connections.abbreviation), stem \(stem.abbreviation)"
         case .crossing?: "Level crossing · N–S over E–W"
         }
+    }
+}
+
+extension GameWorld {
+    private func stationSummary(_ id: StationID) -> String {
+        guard let station = station(id: id) else { return "Station · #\(id.rawValue)" }
+        let tiles = station.tiles.count
+        return tiles == 1 ? "Station · \(station.name)" : "Station · \(station.name) · \(tiles) tiles"
     }
 }
 
@@ -80,11 +89,15 @@ extension GameWorld {
     /// The stations the train `id` is stopped at, such as "Stopped at
     /// Central" (several in ascending ID order: "Stopped at Central,
     /// Market"), or `nil` when it is not stopped at a station. Read from
-    /// `stationsStoppedAt(by:)`.
+    /// `stationsStoppedAt(by:)`. A train of several cars not wholly beside
+    /// one of them (see `stationsBesideWholeTrain(_:)`) is told so:
+    /// "Stopped at Central · the platform is too short for all its cars".
     public func stationStopText(of id: TrainID) -> String? {
-        let names = stationsStoppedAt(by: id).map { station(id: $0)?.name ?? "#\($0.rawValue)" }
+        let stopped = stationsStoppedAt(by: id)
+        let names = stopped.map { station(id: $0)?.name ?? "#\($0.rawValue)" }
         guard !names.isEmpty else { return nil }
-        return "Stopped at \(names.joined(separator: ", "))"
+        let text = "Stopped at \(names.joined(separator: ", "))"
+        return stationsBesideWholeTrain(id).count < stopped.count ? "\(text) · the platform is too short for all its cars" : text
     }
 }
 
@@ -106,6 +119,11 @@ extension Train {
     /// The train's position, or "Not on the track" while it is unplaced.
     public var positionText: String {
         position?.displayText ?? "Not on the track"
+    }
+
+    /// How many cars it has, one to a tile: "1 car", "3 cars".
+    public var carsText: String {
+        cars == 1 ? "1 car" : "\(cars) cars"
     }
 }
 
@@ -158,7 +176,7 @@ extension GameError {
         case .trainNotPlaced(let id):
             "Train #\(id.rawValue) is not on the track."
         case .invalidTrainPosition:
-            "A train can only be placed on a track tile or between two joined track tiles."
+            "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars."
         case .invalidMovementRate:
             "A train's rate cannot be negative."
         case .invalidContinuation:
@@ -201,6 +219,10 @@ extension GameError {
             "A pattern calls at two of its line's stops or more, in the line's order."
         case .unknownLinePattern(let index):
             "The line has no pattern #\(index + 1)."
+        case .invalidStationTile(let position):
+            "A station can only grow onto an empty tile beside one of its tiles, not \(position)."
+        case .invalidTrainLength:
+            "A train has \(Train.minimumCars) to \(Train.maximumCars) cars."
         }
     }
 }

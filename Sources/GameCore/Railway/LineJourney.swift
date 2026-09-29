@@ -206,14 +206,18 @@ extension GameWorld {
         return (line, service, (0...service).map { journey(of: line, service: $0)?.roundTripMinutes })
     }
 
-    /// The round trip a train of `line`'s service `service` would make
-    /// from `position`, where it stands at the first call: as it faces, or
-    /// turned round first when only that can be driven or its round trip
-    /// is shorter. `nil` if neither can be driven.
-    func trip(of line: ServiceLine, service: Int, from position: TrainPosition) -> LineTrip? {
+    /// The round trip `train` would make for `line`'s service `service`
+    /// from where it stands at the first call: as it faces, or turned round
+    /// first (with its head where its tail was, for a train of several
+    /// cars) when only that can be driven or its round trip is shorter.
+    /// `nil` if neither can be driven, or the train is not placed.
+    func trip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
+        guard let position = train.position else { return nil }
         let calls = line.calls(ofService: service)
-        let ahead = drive(line, calling: calls, from: position)
-        let turned = drive(line, calling: calls, from: position.reversed)
+        let length = train.length
+        let ahead = drive(line, calling: calls, from: position, trail: train.trail, length: length)
+        let reversed = Self.reversed(position, trail: train.trail, length: length)
+        let turned = drive(line, calling: calls, from: reversed.position, trail: reversed.trail, length: length)
         if let turned, ahead.map({ turned.roundTripMinutes < $0.roundTripMinutes }) ?? true {
             return LineTrip(turnsFirst: true, journey: turned)
         }
@@ -223,19 +227,26 @@ extension GameWorld {
     /// The round trip of `line` calling at `calls` (indices into its
     /// stops), driven from `start`, or `nil` if a leg has no route (or,
     /// beyond any real map, the minutes would overflow).
-    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPosition) -> LineJourney? {
+    ///
+    /// A train `length` long with trail `trail` at `start` (Stage S2) turns
+    /// round with its head where its tail was, and pulls along each
+    /// station's platforms as ``route(from:toStation:length:)`` takes it.
+    /// The start is a node (a train is sent out stopped at a platform), and
+    /// a train's length is whole links, so every leg starts at a node.
+    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPosition, trail: [GridPosition] = [], length: Int64 = 0) -> LineJourney? {
         let stops = line.stops
         let farEnd = calls[calls.count - 1]
         let order = calls + calls.dropLast().reversed()
         var position = start
+        var trail = trail
         var legs: [LineLeg] = []
         var minutes = ServiceLine.terminalDwellMinutes * 2 + ServiceLine.dwellMinutes * Int64(2 * (calls.count - 2))
         for (from, to) in zip(order, order.dropFirst()) {
             if from == farEnd {
                 // The far end: turn round before coming back.
-                position = position.reversed
+                (position, trail) = Self.reversed(position, trail: trail, length: length)
             }
-            guard let route = route(from: position, toStation: stops[to]) else { return nil }
+            guard let route = route(from: position, toStation: stops[to], length: length) else { return nil }
             let distance = Int64(route.count) * TrainPosition.linkLength
             let legMinutes = distance / line.rate + (distance % line.rate == 0 ? 0 : 1)
             let (total, overflow) = minutes.addingReportingOverflow(legMinutes)
@@ -244,7 +255,9 @@ extension GameWorld {
             legs.append(LineLeg(from: from, to: to, route: route, minutes: legMinutes))
             if let last = route.last {
                 let before = route.count >= 2 ? route[route.count - 2] : position.ahead.node
-                position = .atNode(last, heading: TrackDirection(from: before, to: last)!)
+                let arrived = TrainPosition.atNode(last, heading: TrackDirection(from: before, to: last)!)
+                trail = Self.trail(after: position, trail: trail, to: arrived, entered: route[...], length: length)
+                position = arrived
             }
         }
         return LineJourney(start: start, legs: legs, roundTripMinutes: minutes)

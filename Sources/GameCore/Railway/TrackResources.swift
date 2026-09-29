@@ -86,18 +86,22 @@ public struct TrackSection: Hashable, Sendable {
 extension GameWorld {
     // MARK: - Occupancy
 
-    /// The track train `id` occupies: the tile it stands on, or the link it
-    /// is on. Empty for an unplaced train or an unknown ID. Trains have no
-    /// length yet (Stage S2), so a train occupies exactly one resource.
+    /// The track train `id` occupies, in resource order: the tile its head
+    /// stands on, or the link it is on, and for a train of several cars (Stage S2)
+    /// every link its body lies over and every node it reaches or passes.
+    /// Empty for an unplaced train or an unknown ID.
     public func occupiedResources(of id: TrainID) -> [TrackResource] {
-        switch train(id: id)?.position {
+        guard let train = train(id: id) else { return [] }
+        let head: [TrackResource]
+        switch train.position {
         case nil:
             return []
         case .atNode(let tile, _)?:
-            return [.node(tile)]
+            head = [.node(tile)]
         case .onLink(let from, let to, _)?:
-            return [.link(between: from, and: to)]
+            head = [.link(between: from, and: to)]
         }
+        return Array(Set(head + bodyResources(of: train))).sorted()
     }
 
     /// Every resource two trains or more occupy, in resource order, each

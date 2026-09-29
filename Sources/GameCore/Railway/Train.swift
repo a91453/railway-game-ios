@@ -60,8 +60,19 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// While it is set, the service owns the train's continuation (see
     /// ``TimetableExecution``).
     public internal(set) var execution: TimetableExecution?
+    /// How many cars the train has (Phase 4.5 Stage S2), one to a tile:
+    /// 1, as every newly bought train has, up to ``maximumCars``. Set by
+    /// ``GameWorld/setTrainCars(_:to:)`` while the train is unplaced.
+    public internal(set) var cars: Int
+    /// The nodes the train's body lies over behind its head, nearest first
+    /// (see ``length``): every node behind the head that the body reaches
+    /// or passes, up to and including the first at or beyond its tail.
+    /// Empty for a train of one car or unplaced. Only ``GameWorld``
+    /// changes it, as the head moves.
+    public internal(set) var trail: [GridPosition]
 
-    /// Creates an unplaced, idle train without a timetable or a service.
+    /// Creates an unplaced, idle train of one car without a timetable or a
+    /// service.
     public init(id: TrainID, name: String) {
         self.id = id
         self.name = name
@@ -70,6 +81,8 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.timetable = []
         self.timetablePeriod = nil
         self.execution = nil
+        self.cars = 1
+        self.trail = []
     }
 }
 
@@ -118,7 +131,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution
+        case id, name, position, movement, timetable, period, execution, cars, trail
     }
 
     /// Decodes a train.
@@ -141,7 +154,12 @@ extension Train: Codable {
     /// none is ever read as unplaced, idle, without a timetable, as running
     /// once or without a service, no timetable is sorted or trimmed, no
     /// period is changed, and no execution is moved to another stop or
-    /// cycle or dropped.
+    /// cycle or dropped. A train of one car has no `"cars"` and no
+    /// `"trail"` key, which is also how trains saved before trains had
+    /// length read; cars outside `minimumCars...maximumCars`, or a trail that does not
+    /// fit the length and position (see ``isTrail(_:length:at:)``), are
+    /// rejected. That the trail is on this map's track is checked by the
+    /// ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -161,6 +179,18 @@ extension Train: Codable {
         execution = container.contains(.execution)
             ? try container.decode(TimetableExecution.self, forKey: .execution)
             : nil
+        cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
+        trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
+        guard (Self.minimumCars...Self.maximumCars).contains(cars) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .cars, in: container, debugDescription: "Train \(id.rawValue) has \(cars) cars; a train has \(Self.minimumCars) to \(Self.maximumCars)."
+            )
+        }
+        guard Self.isTrail(trail, length: length, at: position) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .trail, in: container, debugDescription: "Train \(id.rawValue)'s trail does not fit its length and position."
+            )
+        }
         guard movement.fits(position) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .movement, in: container,
@@ -200,5 +230,11 @@ extension Train: Codable {
         }
         try container.encodeIfPresent(timetablePeriod, forKey: .period)
         try container.encodeIfPresent(execution, forKey: .execution)
+        if cars != Self.minimumCars {
+            try container.encode(cars, forKey: .cars)
+        }
+        if !trail.isEmpty {
+            try container.encode(trail, forKey: .trail)
+        }
     }
 }

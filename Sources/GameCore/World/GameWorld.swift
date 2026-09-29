@@ -154,9 +154,9 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Removes the track piece at `position`. Removal is free and not refunded.
     ///
-    /// Track that a placed train rests on (its node, or either end of its
-    /// link) cannot be removed while the train is there; unplace the train
-    /// first. Any other track can be removed, including track next to a train.
+    /// Track that a placed train rests on (its node, either end of its
+    /// link, or a node its body lies over) cannot be removed while the train
+    /// is there; unplace the train first. Any other track can be removed, including track next to a train.
     /// Checking scans every train once (O(trains)); no occupancy index is kept.
     ///
     /// - Throws: ``GameError/outOfBounds(_:)``,
@@ -166,7 +166,7 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func removeTrack(at position: GridPosition) throws(GameError) {
         guard map.contains(position) else { throw .outOfBounds(position) }
         guard track(at: position) != nil else { throw .noTrackToRemove(position) }
-        guard !trains.contains(where: { $0.position?.isSupported(by: position) == true }) else {
+        guard !trains.contains(where: { $0.position?.isSupported(by: position) == true || $0.trail.contains(position) }) else {
             throw .trackInUse(position)
         }
 
@@ -190,6 +190,29 @@ public struct GameWorld: Equatable, Sendable {
         stations.append(station)
         map.setType(.station(id: station.id), at: position)
         return station
+    }
+
+    /// Grows station `id` onto the empty tile at `position`, beside one of
+    /// its tiles, and charges ``ConstructionCosts/station`` (Phase 4.5
+    /// Stage S2). Track beside the new tile becomes the station's platforms
+    /// too (see ``platforms(of:)``), so a larger station has more and longer
+    /// platforms.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``,
+    ///   ``GameError/outOfBounds(_:)``, ``GameError/tileOccupied(_:)``,
+    ///   ``GameError/invalidStationTile(_:)`` if the tile is not beside one
+    ///   of the station's tiles, or
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    public mutating func extendStation(_ id: StationID, to position: GridPosition) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        try requireEmptyTile(at: position)
+        guard stations[index].tiles.contains(where: { TrackDirection(from: $0, to: position) != nil }) else {
+            throw .invalidStationTile(position)
+        }
+        try economy.spend(economy.costs.station)
+
+        stations[index].annexes.append(position)
+        map.setType(.station(id: id), at: position)
     }
 
     /// Buys a new train and charges ``ConstructionCosts/train``.
@@ -235,9 +258,26 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
-        guard isOnTrack(position) else { throw .invalidTrainPosition }
+        guard isOnTrack(position), let trail = trailBehind(position, length: trains[index].length) else { throw .invalidTrainPosition }
 
         trains[index].position = position
+        trains[index].trail = trail
+    }
+
+    /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2), one
+    /// to a tile: ``Train/minimumCars`` to ``Train/maximumCars``. Free. A
+    /// train of more than one car is placed with its body behind its head
+    /// along the track it could have come by (see ``placeTrain(_:at:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/invalidTrainLength``, or
+    ///   ``GameError/trainAlreadyPlaced(_:)`` (take it off the track first).
+    public mutating func setTrainCars(_ id: TrainID, to cars: Int) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard (Train.minimumCars...Train.maximumCars).contains(cars) else { throw .invalidTrainLength }
+        guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
+
+        trains[index].cars = cars
     }
 
     /// Takes a placed train off the track. The train keeps its ID, name and
@@ -253,6 +293,7 @@ public struct GameWorld: Equatable, Sendable {
 
         trains[index].position = nil
         trains[index].movement = .idle
+        trains[index].trail = []
     }
 
     /// Turns a placed train around where it stands, without moving it.
@@ -274,7 +315,7 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
 
-        trains[index].position = position.reversed
+        (trains[index].position, trains[index].trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
         trains[index].movement.continuation = []
         trains[index].movement.cursor = 0
     }
@@ -813,9 +854,9 @@ public struct GameWorld: Equatable, Sendable {
         /// Each service's journey (see ``lineJourney(_:pattern:)``), by line
         /// and service (see ``ServiceLine/serviceCount``), once looked up.
         var journeys: [LineID: [Int: LineJourney?]] = [:]
-        /// Each train's round trip from where it stood idle when it was
-        /// looked up, or `nil` if it had none.
-        var trips: [TrainID: (from: TrainPosition, trip: LineTrip?)] = [:]
+        /// Each train's round trip from where it stood idle (its position
+        /// and trail) when it was looked up, or `nil` if it had none.
+        var trips: [TrainID: (from: TrainPosition, trail: [GridPosition], trip: LineTrip?)] = [:]
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
@@ -882,7 +923,7 @@ public struct GameWorld: Equatable, Sendable {
     /// The first of the trains of `line`'s service `service`, in ID order,
     /// that it can send out: one without a service, placed, with a rate
     /// above 0, stopped at the first call's station, and able to drive the
-    /// whole round trip from there (see ``trip(of:service:from:)``); with
+    /// whole round trip from there (see ``trip(of:service:for:)``); with
     /// its index and that trip.
     private func readyTrain(of line: ServiceLine, _ service: Int, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         let first = line.stops[line.calls(ofService: service)[0]]
@@ -893,11 +934,11 @@ public struct GameWorld: Equatable, Sendable {
                   isStopped(train, at: first)
             else { continue }
             let trip: LineTrip?
-            if let known = memo.trips[id], known.from == position {
+            if let known = memo.trips[id], known.from == position, known.trail == train.trail {
                 trip = known.trip
             } else {
-                trip = self.trip(of: line, service: service, from: position)
-                memo.trips[id] = (position, trip)
+                trip = self.trip(of: line, service: service, for: train)
+                memo.trips[id] = (position, train.trail, trip)
             }
             if let trip { return (index, trip) }
         }
@@ -966,22 +1007,28 @@ public struct GameWorld: Equatable, Sendable {
                 passes += 1
                 let train = trains[index]
                 // A waiting train stands at a node with no continuation
-                // left, so turning it round needs nothing else.
-                let start = train.timetable[stop].reverses ? position.reversed : position
+                // left, so turning it round needs nothing else. A train of
+                // several cars turns round with its head where its tail was,
+                // at a node again (see reversed(_:trail:length:)).
+                let (start, startTrail) = train.timetable[stop].reverses
+                    ? Self.reversed(position, trail: train.trail, length: train.length)
+                    : (position, train.trail)
                 guard let next = train.call(after: stop, cycle: cycle) else {
                     // The last stop's departure: the service is complete.
                     trains[index].position = start
+                    trains[index].trail = startTrail
                     trains[index].execution = nil
                     changed = true
                     break
                 }
-                guard let route = route(from: start, toStation: train.timetable[next.stop].station) else {
+                guard let route = route(from: start, toStation: train.timetable[next.stop].station, length: train.length) else {
                     // Nothing changes: the train is not turned round either.
                     unroutable.insert(train.id)
                     break
                 }
                 changed = true
                 trains[index].position = start
+                trains[index].trail = startTrail
                 if route.isEmpty {
                     // Already stopped at the next call's station.
                     trains[index].execution = .waitingAtStop(next.stop, cycle: next.cycle)
@@ -1044,6 +1091,10 @@ public struct GameWorld: Equatable, Sendable {
             )
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
 
+            trains[index].trail = Self.trail(
+                after: position, trail: trains[index].trail, to: travel.position,
+                entered: movement.continuation[movement.cursor..<travel.cursor], length: trains[index].length
+            )
             trains[index].position = travel.position
             if travel.cursor == movement.continuation.count {
                 // Every entry has been entered: the continuation is spent.
@@ -1242,7 +1293,7 @@ extension GameWorld: Codable {
         }
         for station in stations {
             guard Self.isValidName(station.name) else { return "Station \(station.id.rawValue) has an invalid name." }
-            guard map.tile(at: station.position)?.type == .station(id: station.id) else {
+            guard station.tiles.allSatisfy({ map.tile(at: $0)?.type == .station(id: station.id) }) else {
                 return "Station \(station.id.rawValue) does not match the map tile at \(station.position)."
             }
         }
@@ -1250,7 +1301,7 @@ extension GameWorld: Codable {
             if case .station = tile.type { return true }
             return false
         }
-        guard stationTileCount == stations.count else {
+        guard stationTileCount == stations.reduce(0, { $0 + $1.tiles.count }) else {
             return "The map has station tiles without matching station records."
         }
         guard trains.allSatisfy({ Self.isValidName($0.name) }) else {
@@ -1259,6 +1310,9 @@ extension GameWorld: Codable {
         for train in trains {
             if let position = train.position, !isOnTrack(position) {
                 return "Train \(train.id.rawValue) is not on this map's track."
+            }
+            if let position = train.position, !isTrailOnTrack(train.trail, behind: position) {
+                return "Train \(train.id.rawValue)'s body is not on track it could have come along."
             }
             // The map's size never changes, so a node that was on the map
             // when the continuation was set still is.
@@ -1298,7 +1352,7 @@ extension GameWorld: Codable {
             }
         case .travellingToStop:
             let end = train.movement.continuation.last ?? position.ahead.node
-            guard TrackDirection(from: end, to: station.position) != nil else {
+            guard station.tiles.contains(where: { TrackDirection(from: end, to: $0) != nil }) else {
                 return "Train \(train.id.rawValue)'s service travels on a journey that does not end at its next stop."
             }
         }

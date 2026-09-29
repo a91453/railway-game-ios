@@ -131,13 +131,24 @@ private struct ToolOptions: View {
             TrackPieceEditor(session: session)
         case .buildStation:
             VStack(alignment: .leading, spacing: 6) {
-                Text("Station name")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("Station name", text: $session.stationName)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-                    .submitLabel(.done)
+                Picker("Station", selection: $session.growsStation) {
+                    Text("New station").tag(false)
+                    Text("Grow a station").tag(true)
+                }
+                .pickerStyle(.segmented)
+                if session.growsStation {
+                    Label("Select an empty tile beside a station: it grows onto it, and track beside the new tile becomes platform.", systemImage: "info.circle")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Station name")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Station name", text: $session.stationName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                }
             }
         case .removeTrack:
             Label("Removing track is free, but its cost is not refunded.", systemImage: "info.circle")
@@ -179,7 +190,8 @@ private struct ActionButton: View {
         switch session.tool {
         case .select: return nil
         case .buildTrack: return "Build Track · \(costs.track.displayText)"
-        case .buildStation: return "Build Station · \(costs.station.displayText)"
+        case .buildStation:
+            return session.growsStation ? "Grow Station · \(costs.station.displayText)" : "Build Station · \(costs.station.displayText)"
         case .removeTrack: return "Remove Track"
         case .train:
             // Placing and sending both act on the selected train.
