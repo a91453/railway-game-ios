@@ -37,7 +37,10 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.balance, final.balance, name)
             XCTAssertEqual(
                 model.stations.map {
-                    WorldSummary.StationSummary(id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init))
+                    WorldSummary.StationSummary(
+                        id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init),
+                        trackPlatforms: $0.trackPlatforms.map(PlatformSummary.init)
+                    )
                 },
                 final.stations, name
             )
@@ -72,7 +75,11 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                     nodes: model.networkNodes.keys.sorted().map { WorldSummary.NetworkSummary.NodeSummary(id: $0, x: model.networkNodes[$0]!.x, y: model.networkNodes[$0]!.y, z: model.networkNodes[$0]!.z) },
                     edges: model.networkEdges.keys.sorted().map {
                         let edge = model.networkEdges[$0]!
-                        return WorldSummary.NetworkSummary.EdgeSummary(id: $0, from: edge.from, to: edge.to, curve: CurveSummary(edge.curve), length: edge.length)
+                        return WorldSummary.NetworkSummary.EdgeSummary(
+                            id: $0, from: edge.from, to: edge.to, curve: CurveSummary(edge.curve), length: edge.length,
+                            profile: ProfileSummary(TrackProfile(startTransition: edge.startTransition, endTransition: edge.endTransition)),
+                            structure: StructureName(edge.structure)
+                        )
                     }
                 ),
                 final.network, name
@@ -119,10 +126,13 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .resume: model.resume()
         case .advance(let ticks): error = model.advance(ticks: ticks)
         case .buildTrackNode(let position): error = model.buildNetworkNode(at: position)
-        case .buildTrackEdge(let from, let to, let curve): error = model.buildNetworkEdge(from: from, to: to, curve: curve)
+        case .buildTrackEdge(let from, let to, let curve, let profile, let structure):
+            error = model.buildNetworkEdge(from: from, to: to, curve: curve, profile: profile, structure: structure)
         case .removeTrackEdge(let edge): error = model.removeNetworkEdge(edge)
         case .removeTrackNode(let node): error = model.removeNetworkNode(node)
         case .setTrainPath(let id, let path): error = model.setContinuation(id, along: path)
+        case .addTrackPlatform(let station, let edge, let start, let end): error = model.addTrackPlatform(station, on: edge, from: start, to: end)
+        case .removeTrackPlatform(let station, let edge, let start): error = model.removeTrackPlatform(station, on: edge, from: start)
         }
         return error.map { .rejected($0) } ?? .ok
     }
@@ -189,6 +199,17 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .path(model.networkRoute(from: start, to: node))
         case .bodyPath(let id):
             return .points(model.trains.first { $0.id == id.rawValue }.map(model.networkBodyPath) ?? [])
+        case .edgePose(let traversal, let distance):
+            return .pose(model.networkLocation(traversal, offset: distance).map(PoseSummary.init))
+        case .edgeAlignment(let id):
+            guard case .edge(let number) = id, let edge = model.networkEdges[number] else { return .alignment(nil) }
+            return .alignment(AlignmentSummary(model.alignment(of: edge)))
+        case .tunnelPortals:
+            return .nodes(model.tunnelPortals)
+        case .trackPlatformsAlongTrain(let id):
+            return .trackPlatforms(model.trackPlatformsAlong(id).map(StationPlatformSummary.init))
+        case .platformLevels(let id):
+            return .levels(model.platformLevels(of: id).map { PlatformLevelSummary(platform: $0.0, height: $0.1, structure: $0.2) })
         }
     }
 

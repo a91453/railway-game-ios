@@ -274,6 +274,11 @@ final class GoldenScenarioTests: XCTestCase {
         var longRouteCount = 0
         var wholeTrainCount = 0
         var platformTrackCount = 0
+        var gradeCount = 0
+        var curveAlignmentCount = 0
+        var portalCount = 0
+        var wholePlatformCount = 0
+        var levelCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -328,6 +333,11 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .routeToStation(_, _, let cars) = observation, cars > 2, case .route(let nodes?) = expect, !nodes.isEmpty { longRouteCount += 1 }
                 if case .wholeTrainStops = observation, case .stations(let stations) = expect, !stations.isEmpty { wholeTrainCount += 1 }
                 if case .platformTracks(let tracks) = expect, tracks.count > 1, tracks.contains(where: { $0.count > 1 }) { platformTrackCount += 1 }
+                if case .pose(let pose?) = expect, pose.rise != 0, pose.z != 0 { gradeCount += 1 }
+                if case .alignment(let alignment?) = expect, alignment.segments.contains(where: { $0.kind == "transition" }) { curveAlignmentCount += 1 }
+                if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
+                if case .trackPlatforms(let platforms) = expect, !platforms.isEmpty { wholePlatformCount += 1 }
+                if case .levels(let levels) = expect, levels.contains(where: { $0.height != 0 }) { levelCount += 1 }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -357,6 +367,11 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(longRouteCount, 0, "No fixture pins a route for a long train")
         XCTAssertGreaterThan(wholeTrainCount, 0, "No fixture pins a train beside a station with its whole length")
         XCTAssertGreaterThan(platformTrackCount, 0, "No fixture pins two platform tracks, one of several tiles")
+        XCTAssertGreaterThan(gradeCount, 0, "No fixture pins a pose on a slope")
+        XCTAssertGreaterThan(curveAlignmentCount, 0, "No fixture pins a vertical curve")
+        XCTAssertGreaterThan(portalCount, 0, "No fixture pins a tunnel portal")
+        XCTAssertGreaterThan(wholePlatformCount, 0, "No fixture pins a whole train along a platform on the network")
+        XCTAssertGreaterThan(levelCount, 0, "No fixture pins a platform off the ground")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -511,7 +526,62 @@ final class GoldenScenarioTests: XCTestCase {
             var wrong: [ObservationAnswer] = [.points(points + [WorldCoordinate(x: 0, y: 0)])]
             if let first = points.first {
                 wrong.append(.points([WorldCoordinate(x: first.x + 1, y: first.y, z: first.z)] + points.dropFirst()))
+                wrong.append(.points([WorldCoordinate(x: first.x, y: first.y, z: first.z + 1)] + points.dropFirst()))
                 wrong.append(.points(Array(points.dropFirst())))
+            }
+            return wrong
+        case .pose(nil):
+            return [.pose(PoseSummary(TrackLocation(position: WorldCoordinate(x: 0, y: 0), direction: PlanVector(dx: 1, dy: 0))))]
+        case .pose(let pose?):
+            var raised = pose
+            raised.z += 1
+            var steeper = pose
+            steeper.rise += 1
+            var turned = pose
+            turned.dx = -turned.dx
+            return [.pose(nil), .pose(raised), .pose(steeper), .pose(turned)]
+        case .alignment(nil):
+            return [.alignment(AlignmentSummary(structure: .surface, segments: [], steepest: .level))]
+        case .alignment(let alignment?):
+            var wrong: [ObservationAnswer] = [.alignment(nil)]
+            var changed = alignment
+            changed.structure = StructureName(alignment.structure.structure == .tunnel ? .surface : .tunnel)
+            wrong.append(.alignment(changed))
+            changed = alignment
+            changed.steepest.rise += 1
+            wrong.append(.alignment(changed))
+            changed = alignment
+            changed.segments = Array(alignment.segments.dropLast())
+            wrong.append(.alignment(changed))
+            if let first = alignment.segments.first {
+                changed = alignment
+                changed.segments[0].end = first.end + 1
+                wrong.append(.alignment(changed))
+            }
+            return wrong
+        case .nodes(let nodes):
+            var wrong: [ObservationAnswer] = [.nodes(nodes + [99])]
+            if !nodes.isEmpty { wrong.append(.nodes(Array(nodes.dropLast()))) }
+            return wrong
+        case .trackPlatforms(let platforms):
+            var wrong: [ObservationAnswer] = [.trackPlatforms(platforms + [platforms.first ?? StationPlatformSummary(StationPlatform(station: StationID(rawValue: 99), platform: TrackPlatform(edge: .edge(1), start: 0, end: 1)))])]
+            if let first = platforms.first {
+                var changed = first
+                changed.end += 1
+                wrong.append(.trackPlatforms([changed] + platforms.dropFirst()))
+                wrong.append(.trackPlatforms(Array(platforms.dropFirst())))
+            }
+            return wrong
+        case .levels(let levels):
+            var wrong: [ObservationAnswer] = [.levels(levels + [PlatformLevelSummary(platform: TrackPlatform(edge: .edge(99), start: 0, end: 1), height: 0, structure: .surface)])]
+            if let first = levels.first {
+                var changed = first
+                changed.height += 1
+                wrong.append(.levels([changed] + levels.dropFirst()))
+                changed = first
+                changed.structure = StructureName(first.structure.structure == .tunnel ? .elevated : .tunnel)
+                wrong.append(.levels([changed] + levels.dropFirst()))
+                wrong.append(.levels(Array(levels.dropFirst())))
             }
             return wrong
         }
@@ -552,7 +622,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 16,
+              "schemaVersion": 17,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -603,7 +673,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -666,6 +736,16 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"type": "startTrainService"}"#,
             #"{"type": "stopTrainService", "train": "1"}"#,
             #"{"type": "execution", "train": 1}"#,
+            // Schema 17: a profile needs both transitions, a structure its
+            // name, a platform its station, edge and ends.
+            #"{"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}, "profile": {"startTransition": 1}}"#,
+            #"{"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}, "profile": null}"#,
+            #"{"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}, "structure": "floating"}"#,
+            #"{"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}, "structure": null}"#,
+            #"{"type": "addTrackPlatform", "station": 1, "edge": 1, "start": 0}"#,
+            #"{"type": "addTrackPlatform", "edge": 1, "start": 0, "end": 5}"#,
+            #"{"type": "removeTrackPlatform", "station": 1, "start": 0}"#,
+            #"{"type": "platformLevels", "station": 1}"#,
         ]
         for json in commands {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
@@ -674,6 +754,10 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownTrain"}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation"}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation", "station": "Alpha"}"#.utf8)))
+        // Schema 17: a conflict and a platform on an edge name the edge.
+        for result in ["trackConflict", "trackEdgeHasPlatform"] {
+            XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "\#(result)"}"#.utf8)), result)
+        }
         for result in ["trainServiceActive", "trainServiceNotActive", "noTimetable", "trainNotAtFirstStop"] {
             XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "\#(result)"}"#.utf8)), result)
         }
@@ -723,6 +807,16 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "pathToNode", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "bodyPath", "train": 1}, "expect": {"points": [{"x": 1, "y": 2}]}}"#,
             #"{"observe": {"type": "occupancy", "train": 1}, "expect": {"resources": [{"type": "networkSpan", "edge": 1}]}}"#,
+            // Schema 17: the vertical railway's observations too.
+            #"{"observe": {"type": "edgePose", "edge": 1, "direction": "forward", "distance": 0}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "edgePose", "edge": 1, "direction": "forward", "distance": 0}, "expect": {"found": true, "pose": {"x": 0, "y": 0, "z": 0, "dx": 1, "dy": 0}}}"#,
+            #"{"observe": {"type": "edgePose", "edge": 1, "direction": "forward", "distance": 0}, "expect": {"found": false, "location": {"x": 0, "y": 0, "z": 0, "dx": 1, "dy": 0}}}"#,
+            #"{"observe": {"type": "edgeAlignment", "edge": 1}, "expect": {"found": true, "alignment": {"structure": "floating", "segments": [], "steepest": {"rise": 0, "run": 1}}}}"#,
+            #"{"observe": {"type": "edgeAlignment", "edge": 1}, "expect": {"found": true, "alignment": {"structure": "surface", "segments": []}}}"#,
+            #"{"observe": {"type": "tunnelPortals"}, "expect": {"nodes": [], "found": true}}"#,
+            #"{"observe": {"type": "trackPlatformsAlongTrain"}, "expect": {"trackPlatforms": []}}"#,
+            #"{"observe": {"type": "trackPlatformsAlongTrain", "train": 1}, "expect": {"trackPlatforms": [{"station": 1, "edge": 1, "start": 0}]}}"#,
+            #"{"observe": {"type": "platformLevels", "station": 1}, "expect": {"levels": [{"edge": 1, "start": 0, "end": 1, "height": 0, "structure": null}]}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "connected": true}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "position": {"type": "unplaced"}}}"#,
             // A route is answered by "found", with "route" exactly when found.

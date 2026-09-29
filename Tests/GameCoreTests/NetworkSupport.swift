@@ -33,8 +33,27 @@ extension TrackResource {
 }
 
 enum NetworkInvariants {
+    private struct LineKey: Hashable {
+        var from: PlanPoint
+        var to: PlanPoint
+        var curve: TrackCurve
+    }
+
+    /// The reference model's centre lines, kept once worked out: checking
+    /// clearance on every step of a campaign would otherwise sample every
+    /// edge again each time. Tests run one at a time.
+    nonisolated(unsafe) private static var lines: [LineKey: (points: [PlanPoint], distances: [Int64])?] = [:]
+
+    private static func centreLine(_ from: PlanPoint, _ to: PlanPoint, _ curve: TrackCurve) -> (points: [PlanPoint], distances: [Int64])? {
+        let key = LineKey(from: from, to: to, curve: curve)
+        if let line = lines[key] { return line }
+        let line = ReferenceWorld.centreLine(from, to, curve)
+        lines[key] = line
+        return line
+    }
+
     /// Every documented invariant of the network a world reachable through
-    /// commands keeps (decision 29), from its public state only.
+    /// commands keeps (decisions 29 and 30), from its public state only.
     static func violations(in world: GameWorld) -> [String] {
         var problems: [String] = []
         let network = world.network
@@ -51,10 +70,13 @@ enum NetworkInvariants {
         func overMap(_ x: Int64, _ y: Int64) -> Bool { x >= 0 && y >= 0 && x < limitX && y < limitY }
         if Set(network.nodes.map(\.position)).count != network.nodes.count { problems.append("two track nodes at one point") }
         for node in network.nodes {
-            if node.position.z != 0 || !overMap(node.position.x, node.position.y) {
-                problems.append("track node \(node.id.number) at \(node.position) is off the map or the ground")
+            if abs(node.position.z) > 4_096 || !overMap(node.position.x, node.position.y) {
+                problems.append("track node \(node.id.number) at \(node.position) is off the map or beyond 4096 of the ground")
             }
         }
+        // Decision 30: heights, grades, structures and clearance, checked
+        // with the reference model's own sampling and rules.
+        var referenceEdges: [(Int, ReferenceWorld.NetworkEdge)] = []
         for edge in network.edges {
             // Stage S3A: the spans cover the edge end to end, none longer
             // than a tile, as few as that allows.
@@ -70,8 +92,58 @@ enum NetworkInvariants {
             if case .cubic(let c1, let c2) = edge.curve, !overMap(c1.x, c1.y) || !overMap(c2.x, c2.y) {
                 problems.append("track edge \(edge.id.number)'s curve leaves the map")
             }
-            if TrackGeometry(from: from.position, to: to.position, curve: edge.curve)?.length != edge.length {
+            if TrackGeometry(from: from.position, to: to.position, curve: edge.curve, profile: edge.profile)?.length != edge.length {
                 problems.append("track edge \(edge.id.number)'s length is not its centre line's")
+            }
+            guard let line = centreLine(from.position.plan, to.position.plan, edge.curve) else {
+                problems.append("track edge \(edge.id.number) has no centre line")
+                continue
+            }
+            let rise = to.position.z - from.position.z
+            let (t0, t1) = (edge.profile.startTransition, edge.profile.endTransition)
+            if t0 < 0 || t1 < 0 || t0 + t1 > edge.length || (rise == 0 && (t0 != 0 || t1 != 0)) {
+                problems.append("track edge \(edge.id.number)'s transitions do not fit")
+            }
+            if 2 * abs(rise) * 1_000 > 40 * (2 * edge.length - t0 - t1) { problems.append("track edge \(edge.id.number) is too steep") }
+            for height in [from.position.z, to.position.z] where !ReferenceWorld.carries(edge.structure, height) {
+                problems.append("track edge \(edge.id.number) is \(edge.structure) at height \(height)")
+            }
+            var reference = ReferenceWorld.NetworkEdge(
+                from: edge.from.number, to: edge.to.number, curve: edge.curve, points: line.points, distances: line.distances,
+                leavesFrom: PlanVector(dx: 0, dy: 0), leavesTo: PlanVector(dx: 0, dy: 0)
+            )
+            reference.startHeight = from.position.z
+            reference.endHeight = to.position.z
+            reference.startTransition = t0
+            reference.endTransition = t1
+            reference.structure = edge.structure
+            referenceEdges.append((edge.id.number, reference))
+        }
+        for i in referenceEdges.indices {
+            for j in referenceEdges.indices where j > i && !ReferenceWorld.clear(referenceEdges[i].1, referenceEdges[j].1) {
+                problems.append("track edges \(referenceEdges[i].0) and \(referenceEdges[j].0) meet without clearance")
+            }
+        }
+        // Platforms: in order, on an edge, within it and level, never
+        // overlapping another.
+        var platforms: [TrackPlatform] = []
+        for station in world.stations {
+            if station.trackPlatforms != station.trackPlatforms.sorted() || Set(station.trackPlatforms).count != station.trackPlatforms.count {
+                problems.append("station \(station.id.rawValue)'s platforms are out of order")
+            }
+            for platform in station.trackPlatforms {
+                guard case .edge(let number) = platform.edge, let edge = referenceEdges.first(where: { $0.0 == number })?.1 else {
+                    problems.append("station \(station.id.rawValue) has a platform on an edge that does not exist")
+                    continue
+                }
+                if platform.start < 0 || platform.end <= platform.start || platform.end > edge.length
+                    || ReferenceWorld.height(of: edge, at: platform.start) != ReferenceWorld.height(of: edge, at: platform.end) {
+                    problems.append("station \(station.id.rawValue)'s platform \(platform) does not fit its edge")
+                }
+                if platforms.contains(where: { $0.edge == platform.edge && max($0.start, platform.start) < min($0.end, platform.end) }) {
+                    problems.append("station \(station.id.rawValue)'s platform \(platform) overlaps another")
+                }
+                platforms.append(platform)
             }
         }
         // Each node's ends are the edges ending there, in ascending order,

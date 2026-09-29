@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 16`）
+## Schema（`schemaVersion: 17`）
 
-除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），以及 `routeToStation` 可以省略的 `cars`（見下面「車站設施」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
+除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），以及 `buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `16` |
+| `schemaVersion` | `17` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -81,6 +81,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 曲線（`curve`）：`{ "type": "straight" }`，或 `{ "type": "cubic", "control1": { "x", "y" }, "control2": { "x", "y" } }`（兩個平面控制點，世界座標）。
   - 行進方向（traversal）：`{ "edge", "direction" }`，`direction` 是 `"forward"` 或 `"backward"`。
   - 位置與方向（location）：`{ "x", "y", "z", "dx", "dy" }`，`dx`、`dy` 是沒有正規化的方向。點：`{ "x", "y", "z" }`。
+- **立體鐵路**（schema 17，決策 30）：
+  - 縱斷面（`profile`）：`{ "startTransition", "endTransition" }`，兩端豎曲線的長度（里程，0 是沒有）。`buildTrackEdge` 省略時是兩個 0。
+  - 結構物（`structure`）：`"surface"`、`"elevated"`、`"bridge"` 或 `"tunnel"`。`buildTrackEdge` 省略時是 `"surface"`。
+  - 姿態（pose）：`{ "x", "y", "z", "dx", "dy", "rise", "run" }`，位置、沒有正規化的方向，以及沿這個方向的坡度 `rise / run`（最簡分數，`run` 為正，上坡為正；平坡是 `0 / 1`）。
+  - 縱斷面的分段：`{ "kind", "start", "end" }`，`kind` 是 `"level"`、`"up"`、`"down"` 或 `"transition"`，里程從邊的 `from` 端量起。
+  - 路網上的月台：`{ "edge", "start", "end" }`（邊的編號、從邊的 `from` 端量起的起訖里程）。
 - **線路行程**：`{ "start", "legs", "roundTripMinutes" }`。`start` 是列車位置（`node`）；`legs` 是 `[{ "from", "to", "route", "minutes" }, ...]`，`from`、`to` 是線路 `stops` 的索引，`route` 是 `[{ "x", "y" }, ...]`。
 
 ### 指令（`command.type`）
@@ -124,6 +130,9 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `removeTrackEdge` | `edge` | `removeTrackEdge(_:)` |
 | `removeTrackNode` | `node` | `removeTrackNode(_:)` |
 | `setTrainPath` | `train`、`path`（行進方向的陣列，可為空陣列） | `setTrainContinuation(_:along:)` |
+| `buildTrackEdge`（schema 17） | 另外可加 `profile`、`structure` | `buildTrackEdge(from:to:curve:profile:structure:)` |
+| `addTrackPlatform` | `station`、`edge`、`start`、`end` | `addTrackPlatform(_:on:from:to:)` |
+| `removeTrackPlatform` | `station`、`edge`、`start` | `removeTrackPlatform(_:on:from:)` |
 
 ### 結果（`expect.result`）
 
@@ -167,9 +176,14 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidTrainLength` | — | 節數不在 1…16 |
 | `unknownTrackNode` | `node` | 連續路網沒有這個編號的節點 |
 | `unknownTrackEdge` | `edge` | 連續路網沒有這個編號的邊 |
-| `invalidTrackGeometry` | — | 點不在地圖內或不在地面（`z` 不是 0），該點已有節點，邊的兩端是同一個節點，控制點在地圖外，或曲線不能成為一條邊（控制點與端點重合、取樣後折返） |
+| `invalidTrackGeometry` | — | 點不在地圖內或高度超出 −4096…4096（schema 16 時 `z` 必須是 0），該點已有節點，邊的兩端是同一個節點（或平面上同一點），控制點在地圖外，曲線不能成為一條邊（控制點與端點重合、取樣後折返），或縱斷面不成立（負的豎曲線、兩段合計超過邊長、平坡上有豎曲線） |
 | `trackNodeInUse` | `node` | 還有邊接在這個節點上，要先拆邊 |
 | `trackEdgeInUse` | `edge` | 有已放置列車的車頭或車身在這條邊上，要先取下列車 |
+| `trackTooSteep` | — | 邊的固定坡度超過 40‰（schema 17） |
+| `invalidTrackStructure` | — | 結構物不能在兩端的高度承載鐵軌（schema 17） |
+| `trackConflict` | `edge` | 新邊會在平面上與這條邊相遇（不在共用節點附近），高度差不到 512；是編號最小的一條（schema 17） |
+| `trackEdgeHasPlatform` | `edge` | 有車站的月台在這條邊上，要先移除月台（schema 17） |
+| `invalidPlatform` | — | 月台不在邊內、不是平的、長度不為正、與同一條邊上的月台重疊，或要移除的月台不存在（schema 17） |
 
 ### 觀察（`observe.type`）
 
@@ -204,6 +218,11 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `transitions` | `edge`、`direction` | `{ "transitions": [行進方向, ...] }`，依邊的編號遞增 | `transitions(after:)` |
 | `pathToNode` | `from`（列車位置）、`node` | `{ "found": true, "path": [行進方向, ...] }` 或 `{ "found": false }` | `route(from:to:)`（以 `TrackNodeID` 為目的地） |
 | `bodyPath` | `train` | `{ "points": [點, ...] }`，從車頭到車尾 | `bodyPath(of:)` |
+| `edgePose` | `edge`、`direction`、`distance` | `{ "found": true, "pose": 姿態 }`，與 `edgeLocation` 相同的條件下是 `{ "found": false }` | `trackGeometry(of:)` 的 `location(at:going:)` |
+| `edgeAlignment` | `edge` | `{ "found": true, "alignment": { "structure", "segments": [分段, ...], "steepest": { "rise", "run" } } }` 或 `{ "found": false }`；`steepest` 是朝 `to` 端的最陡坡度 | `trackAlignment(of:)` |
+| `tunnelPortals` | — | `{ "nodes": [編號, ...] }`，依編號遞增 | `isTunnelPortal(_:)` |
+| `trackPlatformsAlongTrain` | `train` | `{ "trackPlatforms": [{ "station", "edge", "start", "end" }, ...] }`，依車站、再依各站的順序 | `trackPlatformsAlongWholeTrain(_:)` |
+| `platformLevels` | `station` | `{ "levels": [{ "edge", "start", "end", "height", "structure" }, ...] }`，依該站的順序 | `railwaySnapshot()` 的 `platforms` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -265,7 +284,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `pathToNode`：從列車所在邊的終點出發、第一次到達 `node` 為止，總長最短；同樣最短時，在每個節點依邊的編號從起點逐步比較，取最先的一條。不會立即折返。起點與終點不是同一種鐵軌（方格與路網）時是 `{ "found": false }`。
 - 車身：`trailEdges` 由放置時從車頭所在邊的起點往回走（分岔時選編號最小、而且能通往前一條邊的邊）得到，移動時跟著車頭走過的邊，反向時車頭移到車尾、車身沿同一段鐵軌往原車頭延伸。
 - 佔用：車頭與車尾之間經過或到達的每個節點，以及車身有一部分嚴格落在其中的每條邊；1 節的列車在節點時是那個節點，在邊的中間時是那條邊。
-- `removeTrackEdge`：`unknownTrackEdge` → `trackEdgeInUse`；`removeTrackNode`：`unknownTrackNode` → `trackNodeInUse`。拆除免費、不退款。
+- `removeTrackEdge`：`unknownTrackEdge` → `trackEdgeInUse` → `trackEdgeHasPlatform`（schema 17）；`removeTrackNode`：`unknownTrackNode` → `trackNodeInUse`。拆除免費、不退款。
+
+立體鐵路規則（schema 17，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 30）：
+
+- 節點的高度 `z` 在 −4096…4096；地面是 0。邊的長度仍是水平里程，移動、路徑與佔用都不讀高度。
+- 高度：R 是兩端的高差、L 是長度、T₀、T₁ 是兩端的豎曲線、D = 2L − T₀ − T₁。從 `from` 端量起 s 處比 `from` 高：`s < T₀` 時 `R·s² / (T₀·D)`；`s > L − T₁` 時 `R·(T₁·D − (L − s)²) / (T₁·D)`；其他 `R·(2s − T₀) / D`；各自四捨五入（一半進位）一次。坡度是這條規則的精確斜率：`2R·s / (T₀·D)`、`2R·(L − s) / (T₁·D)` 或 `2R / D`，約成最簡分數。`edgePose` 的高度與坡度不在取樣點之間內插。
+- `buildTrackEdge` 的檢查順序：`unknownTrackNode` → `invalidTrackGeometry` → `trackTooSteep`（`2|R| × 1000 > 40 × D`）→ `invalidTrackStructure` → `trackConflict` → `idsExhausted` → `insufficientFunds`。費用是鐵軌的費用乘上結構物的係數（地面 1、高架 3、橋 4、隧道 5）再乘上格數。
+- 結構物的高度帶（只看兩端，高度沿邊單調）：`surface` 是 |z| ≤ 128，`elevated`、`bridge` 是 z ≥ 0，`tunnel` 是 z ≤ 0。
+- 淨空：兩條邊在平面上相交、端點落在另一條上或共線重疊的每一處，除了兩條邊共用的節點 1024 以內（兩端各自從那個節點量起），一條邊在相遇點的最低高度必須比另一條的最高高度高至少 512；否則是 `trackConflict`。相遇點在每一段上的里程是那一段兩端里程之間的線性內插，四捨五入（一半進位）。同一高度的交叉要共用節點（平面交叉），那個節點是兩方共用的資源。
+- 隧道口：同時有隧道的邊與非隧道的邊接在上面的節點。
+- 月台：`addTrackPlatform` 的檢查順序 `unknownStation` → `unknownTrackEdge` → `invalidPlatform`（`0 <= start < end <=` 邊長、兩端高度相同、與同一條邊上任何車站的月台不重疊，端點相接可以）；`removeTrackPlatform`：`unknownStation` → `invalidPlatform`。免費。車頭在月台的邊上、車身不離開那條邊，而且車頭到車尾都在月台的起訖之間（含端點）時，`trackPlatformsAlongTrain` 列出它。
 
 時刻表規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 19）：
 
@@ -309,12 +338,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 ### 最終狀態
 
-- `stations`：`{ "id", "name", "x", "y", "annexes" }`，依 ID 遞增；`annexes` 是長出的格（`[{ "x", "y" }, ...]`，依長出的順序），只有一格的車站是 `[]`。
+- `stations`：`{ "id", "name", "x", "y", "annexes", "trackPlatforms" }`，依 ID 遞增；`annexes` 是長出的格（`[{ "x", "y" }, ...]`，依長出的順序），只有一格的車站是 `[]`；`trackPlatforms`（schema 17）是路網上的月台，依邊的編號、再依起點，沒有是 `[]`。
 - `tracks`：`{ "x", "y", "connections", "layout" }`，逐列由北到南、每列由西到東；平面交叉的 `connections` 是四個方向。
 - `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "cars", "trail", "trailEdges" }`，依 ID 遞增；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是方格上的車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），`trailEdges` 是連續路網上車頭所在邊之後車身經過的邊（編號，由近到遠，到車尾所在的那一條為止）；1 節的列車是 `1`、`[]` 與 `[]`。
 - `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
 - `serviceDay`：服務日（形式見上面「服務日」）。
-- `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則。沒有路網是 `{ "nodes": [], "edges": [] }`。
+- `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length", "profile", "structure" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則；`profile` 與 `structure`（schema 17）必填。沒有路網是 `{ "nodes": [], "edges": [] }`。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -344,3 +373,4 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **14**（Phase 4.5 Stage S1）：新增 `buildTurnout`、`buildCrossing` 指令，`exits`、`occupancy`、`conflicts`、`trackSections`、`parallelTracks` 觀察，最終狀態每條鐵軌必填的 `layout`，以及 `track-resources.json`。既有的十三個 fixture 把 `schemaVersion` 從 13 改成 14，並為最終狀態的 85 條鐵軌加上 `"layout": { "type": "open" }`：它們都是一般鐵軌，轉向與路徑規則不變。其他預期值都沒有改變。
 - **15**（Phase 4.5 Stage S2）：新增 `extendStation`、`setTrainCars` 指令，`invalidStationTile`、`invalidTrainLength` 結果，`wholeTrainStops`、`platformTracks` 觀察，`routeToStation` 可以省略的 `cars`，最終狀態每座車站必填的 `annexes`、每台列車必填的 `cars` 與 `trail`，以及 `station-facilities.json`。既有的十四個 fixture 把 `schemaVersion` 從 14 改成 15，並為最終狀態的車站加上 `"annexes": []`、列車加上 `"cars": 1, "trail": []`：它們的車站都只有一格，列車都是 1 節（沒有車身），行為不變。其他預期值都沒有改變。讀取端只接受 15。
 - **16**（Phase 4.5 Stage S3）：新增連續路網：`buildTrackNode`、`buildTrackEdge`、`removeTrackEdge`、`removeTrackNode`、`setTrainPath` 指令，`unknownTrackNode`、`unknownTrackEdge`、`invalidTrackGeometry`、`trackNodeInUse`、`trackEdgeInUse` 結果，`trackEdge`、`edgeLocation`、`transitions`、`pathToNode`、`bodyPath` 觀察，`edge` 列車位置，`networkNode`、`networkSpan` 資源（Stage S3A 把整條邊的資源改成 span，這個 schema 還沒有合併，所以不另加版本），列車移動必填的 `edges`、最終狀態每台列車必填的 `trailEdges` 與必填的 `network`，以及手算的 `continuous-track.json`（曲線的取樣另以獨立的精確分數計算核對）。既有的十五個 fixture 把 `schemaVersion` 從 15 改成 16，並只加上中性的值：86 個列車移動（最終狀態與 `train` 觀察）加上 `"edges": []`，最終狀態的 30 台列車加上 `"trailEdges": []`，最終狀態加上 `"network": { "nodes": [], "edges": [] }`：它們都沒有連續路網，行為不變。其他預期值都沒有改變。
+- **17**（Phase 4.5 Stage S4）：新增立體鐵路：`buildTrackEdge` 可加的 `profile` 與 `structure`，`addTrackPlatform`、`removeTrackPlatform` 指令，`trackTooSteep`、`invalidTrackStructure`、`trackConflict`、`trackEdgeHasPlatform`、`invalidPlatform` 結果，`edgePose`、`edgeAlignment`、`tunnelPortals`、`trackPlatformsAlongTrain`、`platformLevels` 觀察，最終狀態每個車站必填的 `trackPlatforms` 與每條邊必填的 `profile`、`structure`，以及手算的 `vertical-railway.json`（高度與坡度另以獨立的精確分數計算核對）。既有的十六個 fixture 把 `schemaVersion` 從 16 改成 17，並只加上中性的值：最終狀態的 43 個車站加上 `"trackPlatforms": []`，`continuous-track.json` 最終狀態的 6 條邊加上 `"profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface"`。**一個刻意的行為改變**：`continuous-track.json` 的第 7 步原本以 `z: 5` 驗證 S3 的「節點一律在地面」，S4 取消這條規則（5 是合法的高度），所以這一步改成 `z: 5000`（超出 ±4096），預期結果仍是 `invalidTrackGeometry`，說明文字同步更新；其他預期值都沒有改變。

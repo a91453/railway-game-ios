@@ -937,4 +937,79 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 300, "only \(aimed) mutations aimed at the network")
         assertVolume(networkTrainsLoaded > 300, "only \(networkTrainsLoaded) trains on the network loaded")
     }
+
+    /// Stage S4 (decision 30): saves of networks at several levels, with
+    /// profiles, structures and platforms, mutated where the vertical
+    /// railway lives: refused, or loaded as a world that keeps every
+    /// invariant (grades, structures, clearance, platforms), survives saving
+    /// and keeps them under further commands.
+    func testMutatedThreeDimensionalNetworksAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var raisedLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.verticalMutation", cases: 10) { c in
+            let world = try VerticalRailwayPropertyTests.generateWorld(&c, operations: 30)
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.contains("network") || text.contains("trackPlatforms") || text.contains("onEdge")
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["profile", "structure", "trackPlatforms", "z", "network", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                raisedLoaded += loaded.network.nodes.count { $0.position.z != 0 }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = VerticalRailwayPropertyTests.operation(
+                        in: current, using: &c.random, width: current.map.width, height: current.map.height
+                    )
+                    let before = current
+                    if VerticalRailwayPropertyTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.verticalMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at the network and platforms, \(raisedLoaded) raised or sunk nodes loaded")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 100, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 300, "only \(aimed) mutations aimed at the vertical railway")
+        assertVolume(raisedLoaded > 300, "only \(raisedLoaded) nodes off the ground loaded")
+    }
 }

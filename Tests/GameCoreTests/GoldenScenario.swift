@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 16
+    static let schemaVersion = 17
 
     var description: String
     var initialState: InitialState
@@ -145,6 +145,7 @@ extension GoldenScenario.Step: Decodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
+        case pose, alignment, nodes, trackPlatforms, levels
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -261,6 +262,21 @@ extension GoldenScenario.Step: Decodable {
             case .bodyPath:
                 try requireOnly([.points], answering: "bodyPath")
                 self = try .observe(observation, expect: .points(expect.decode([PointSummary].self, forKey: .points).map(\.point)))
+            case .edgePose:
+                try requireOnly([.found, .pose], answering: "edgePose")
+                self = try .observe(observation, expect: .pose(Self.found(expect, .pose, PoseSummary.self)))
+            case .edgeAlignment:
+                try requireOnly([.found, .alignment], answering: "edgeAlignment")
+                self = try .observe(observation, expect: .alignment(Self.found(expect, .alignment, AlignmentSummary.self)))
+            case .tunnelPortals:
+                try requireOnly([.nodes], answering: "tunnelPortals")
+                self = try .observe(observation, expect: .nodes(expect.decode([Int].self, forKey: .nodes)))
+            case .trackPlatformsAlongTrain:
+                try requireOnly([.trackPlatforms], answering: "trackPlatformsAlongTrain")
+                self = try .observe(observation, expect: .trackPlatforms(expect.decode([StationPlatformSummary].self, forKey: .trackPlatforms)))
+            case .platformLevels:
+                try requireOnly([.levels], answering: "platformLevels")
+                self = try .observe(observation, expect: .levels(expect.decode([PlatformLevelSummary].self, forKey: .levels)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -326,10 +342,12 @@ enum ScenarioCommand: Equatable {
     case resume
     case advance(ticks: Int)
     case buildTrackNode(WorldCoordinate)
-    case buildTrackEdge(TrackNodeID, TrackNodeID, TrackCurve)
+    case buildTrackEdge(TrackNodeID, TrackNodeID, TrackCurve, TrackProfile, TrackStructure)
     case removeTrackEdge(TrackEdgeID)
     case removeTrackNode(TrackNodeID)
     case setTrainPath(TrainID, [TrackTraversal])
+    case addTrackPlatform(StationID, TrackEdgeID, start: Int64, end: Int64)
+    case removeTrackPlatform(StationID, TrackEdgeID, start: Int64)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -401,14 +419,18 @@ enum ScenarioCommand: Equatable {
                 try world.advance(ticks: ticks)
             case .buildTrackNode(let position):
                 try world.buildTrackNode(at: position)
-            case .buildTrackEdge(let from, let to, let curve):
-                try world.buildTrackEdge(from: from, to: to, curve: curve)
+            case .buildTrackEdge(let from, let to, let curve, let profile, let structure):
+                try world.buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure)
             case .removeTrackEdge(let edge):
                 try world.removeTrackEdge(edge)
             case .removeTrackNode(let node):
                 try world.removeTrackNode(node)
             case .setTrainPath(let id, let path):
                 try world.setTrainContinuation(id, along: path)
+            case .addTrackPlatform(let station, let edge, let start, let end):
+                try world.addTrackPlatform(station, on: edge, from: start, to: end)
+            case .removeTrackPlatform(let station, let edge, let start):
+                try world.removeTrackPlatform(station, on: edge, from: start)
             }
             return .ok
         } catch {
@@ -422,6 +444,7 @@ extension ScenarioCommand: Decodable {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
+        case profile, structure, start, end
     }
 
     init(from decoder: any Decoder) throws {
@@ -525,9 +548,23 @@ extension ScenarioCommand: Decodable {
                 x: container.decode(Int64.self, forKey: .x), y: container.decode(Int64.self, forKey: .y), z: container.decode(Int64.self, forKey: .z)
             ))
         case "buildTrackEdge":
+            // Schema 17: "profile" and "structure" are absent for a uniform
+            // grade on the surface.
+            let profile = try container.contains(.profile) ? container.decode(ProfileSummary.self, forKey: .profile).profile : .uniform
+            let structure = try container.contains(.structure) ? container.decode(StructureName.self, forKey: .structure).structure : .surface
             self = try .buildTrackEdge(
                 .node(container.decode(Int.self, forKey: .from)), .node(container.decode(Int.self, forKey: .to)),
-                container.decode(CurveSummary.self, forKey: .curve).curve
+                container.decode(CurveSummary.self, forKey: .curve).curve, profile, structure
+            )
+        case "addTrackPlatform":
+            self = try .addTrackPlatform(
+                container.decodeStation(forKey: .station), .edge(container.decode(Int.self, forKey: .edge)),
+                start: container.decode(Int64.self, forKey: .start), end: container.decode(Int64.self, forKey: .end)
+            )
+        case "removeTrackPlatform":
+            self = try .removeTrackPlatform(
+                container.decodeStation(forKey: .station), .edge(container.decode(Int.self, forKey: .edge)),
+                start: container.decode(Int64.self, forKey: .start)
             )
         case "removeTrackEdge":
             self = try .removeTrackEdge(.edge(container.decode(Int.self, forKey: .edge)))
@@ -651,6 +688,16 @@ extension StepOutcome: Codable {
             self = try .rejected(.trackNodeInUse(.node(container.decode(Int.self, forKey: .node))))
         case "trackEdgeInUse":
             self = try .rejected(.trackEdgeInUse(.edge(container.decode(Int.self, forKey: .edge))))
+        case "trackTooSteep":
+            self = .rejected(.trackTooSteep)
+        case "invalidTrackStructure":
+            self = .rejected(.invalidTrackStructure)
+        case "trackConflict":
+            self = try .rejected(.trackConflict(.edge(container.decode(Int.self, forKey: .edge))))
+        case "trackEdgeHasPlatform":
+            self = try .rejected(.trackEdgeHasPlatform(.edge(container.decode(Int.self, forKey: .edge))))
+        case "invalidPlatform":
+            self = .rejected(.invalidPlatform)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -772,6 +819,18 @@ extension StepOutcome: Codable {
         case .rejected(.trackEdgeInUse(let edge)):
             try container.encode("trackEdgeInUse", forKey: .result)
             try encodeEdge(edge)
+        case .rejected(.trackTooSteep):
+            try container.encode("trackTooSteep", forKey: .result)
+        case .rejected(.invalidTrackStructure):
+            try container.encode("invalidTrackStructure", forKey: .result)
+        case .rejected(.trackConflict(let edge)):
+            try container.encode("trackConflict", forKey: .result)
+            try encodeEdge(edge)
+        case .rejected(.trackEdgeHasPlatform(let edge)):
+            try container.encode("trackEdgeHasPlatform", forKey: .result)
+            try encodeEdge(edge)
+        case .rejected(.invalidPlatform):
+            try container.encode("invalidPlatform", forKey: .result)
         }
         // Fixtures name network nodes and edges by number; a grid tile or
         // link cannot reach these results through a fixture's commands, but
@@ -828,6 +887,11 @@ enum ScenarioObservation: Equatable {
     case transitions(TrackTraversal)
     case pathToNode(from: TrainPosition, node: TrackNodeID)
     case bodyPath(TrainID)
+    case edgePose(TrackTraversal, distance: Int64)
+    case edgeAlignment(TrackEdgeID)
+    case tunnelPortals
+    case trackPlatformsAlongTrain(TrainID)
+    case platformLevels(StationID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -887,6 +951,18 @@ enum ScenarioObservation: Equatable {
             .path(world.route(from: start, to: node))
         case .bodyPath(let id):
             .points(world.bodyPath(of: id))
+        case .edgePose(let traversal, let distance):
+            .pose(world.trackGeometry(of: traversal.edge).flatMap { geometry in
+                (0...geometry.length).contains(distance) ? PoseSummary(geometry.location(at: distance, going: traversal.direction)) : nil
+            })
+        case .edgeAlignment(let id):
+            .alignment(world.trackAlignment(of: id).map(AlignmentSummary.init))
+        case .tunnelPortals:
+            .nodes(world.network.nodes.map(\.id).filter(world.isTunnelPortal).map(\.number))
+        case .trackPlatformsAlongTrain(let id):
+            .trackPlatforms(world.trackPlatformsAlongWholeTrain(id).map(StationPlatformSummary.init))
+        case .platformLevels(let id):
+            .levels(world.railwaySnapshot().platforms.filter { $0.station == id }.map(PlatformLevelSummary.init))
         }
     }
 }
@@ -982,6 +1058,17 @@ extension ScenarioObservation: Decodable {
             self = try .pathToNode(from: start, node: .node(container.decode(Int.self, forKey: .node)))
         case "bodyPath":
             self = try .bodyPath(container.decodeTrain(forKey: .train))
+        case "edgePose":
+            let traversal = try TraversalSummary(edge: container.decode(Int.self, forKey: .edge), direction: container.decode(String.self, forKey: .direction))
+            self = try .edgePose(traversal.traversal, distance: container.decode(Int64.self, forKey: .distance))
+        case "edgeAlignment":
+            self = try .edgeAlignment(.edge(container.decode(Int.self, forKey: .edge)))
+        case "tunnelPortals":
+            self = .tunnelPortals
+        case "trackPlatformsAlongTrain":
+            self = try .trackPlatformsAlongTrain(container.decodeTrain(forKey: .train))
+        case "platformLevels":
+            self = try .platformLevels(container.decodeStation(forKey: .station))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1036,6 +1123,11 @@ enum ObservationAnswer: Equatable {
     case transitions([TrackTraversal])
     case path([TrackTraversal]?)
     case points([WorldCoordinate])
+    case pose(PoseSummary?)
+    case alignment(AlignmentSummary?)
+    case nodes([Int])
+    case trackPlatforms([StationPlatformSummary])
+    case levels([PlatformLevelSummary])
 }
 
 extension ObservationAnswer: Encodable {
@@ -1043,6 +1135,7 @@ extension ObservationAnswer: Encodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
+        case pose, alignment, nodes, trackPlatforms, levels
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1097,8 +1190,20 @@ extension ObservationAnswer: Encodable {
         case .path(let path?):
             try container.encode(true, forKey: .found)
             try container.encode(path.map(TraversalSummary.init), forKey: .path)
-        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil):
+        case .pose(let pose?):
+            try container.encode(true, forKey: .found)
+            try container.encode(pose, forKey: .pose)
+        case .alignment(let alignment?):
+            try container.encode(true, forKey: .found)
+            try container.encode(alignment, forKey: .alignment)
+        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil):
             try container.encode(false, forKey: .found)
+        case .nodes(let nodes):
+            try container.encode(nodes, forKey: .nodes)
+        case .trackPlatforms(let platforms):
+            try container.encode(platforms, forKey: .trackPlatforms)
+        case .levels(let levels):
+            try container.encode(levels, forKey: .levels)
         case .transitions(let traversals):
             try container.encode(traversals.map(TraversalSummary.init), forKey: .transitions)
         case .points(let points):
@@ -1178,6 +1283,9 @@ struct WorldSummary: Codable, Equatable {
         var y: Int
         /// The tiles it grew onto, in order; `[]` for one tile.
         var annexes: [PositionSummary]
+        /// Its platforms on the track network, in order (schema 17); `[]`
+        /// for none.
+        var trackPlatforms: [PlatformSummary]
     }
 
     struct TrackSummary: Codable, Equatable {
@@ -1217,18 +1325,26 @@ struct WorldSummary: Codable, Equatable {
         }
 
         /// An edge with its length, which GameCore works out from its end
-        /// nodes and curve: the fixture pins that number.
+        /// nodes and curve: the fixture pins that number. Since schema 17
+        /// also its profile and structure.
         struct EdgeSummary: Codable, Equatable {
             var id: Int
             var from: Int
             var to: Int
             var curve: CurveSummary
             var length: Int64
+            var profile: ProfileSummary
+            var structure: StructureName
         }
 
         init(_ network: RailwayNetwork) {
             nodes = network.nodes.map { NodeSummary(id: $0.id.number, x: $0.position.x, y: $0.position.y, z: $0.position.z) }
-            edges = network.edges.map { EdgeSummary(id: $0.id.number, from: $0.from.number, to: $0.to.number, curve: CurveSummary($0.curve), length: $0.length) }
+            edges = network.edges.map {
+                EdgeSummary(
+                    id: $0.id.number, from: $0.from.number, to: $0.to.number, curve: CurveSummary($0.curve), length: $0.length,
+                    profile: ProfileSummary($0.profile), structure: StructureName($0.structure)
+                )
+            }
         }
 
         init(nodes: [NodeSummary], edges: [EdgeSummary]) {
@@ -1242,7 +1358,12 @@ struct WorldSummary: Codable, Equatable {
         speed = SpeedName(world.clock.speed)
         balance = world.economy.balance.amount
         stations = world.stations
-            .map { StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)) }
+            .map {
+                StationSummary(
+                    id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init),
+                    trackPlatforms: $0.trackPlatforms.map(PlatformSummary.init)
+                )
+            }
             .sorted { $0.id < $1.id }
         tracks = world.tracks
             .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections), layout: LayoutSummary($0.layout)) }
@@ -2290,5 +2411,170 @@ struct PointSummary: Codable, Equatable {
 
     var point: WorldCoordinate {
         WorldCoordinate(x: x, y: y, z: z)
+    }
+}
+
+// MARK: - Vertical railway (schema 17)
+
+/// A vertical profile as a fixture value: `{"startTransition",
+/// "endTransition"}`, the lengths of the vertical curves at each end in
+/// world units (0 for none). Read as written: whether it fits the edge is
+/// GameCore's decision.
+struct ProfileSummary: Codable, Equatable {
+    var startTransition: Int64
+    var endTransition: Int64
+
+    init(_ profile: TrackProfile) {
+        startTransition = profile.startTransition
+        endTransition = profile.endTransition
+    }
+
+    var profile: TrackProfile {
+        TrackProfile(startTransition: startTransition, endTransition: endTransition)
+    }
+}
+
+/// A structure as a fixture value: `"surface"`, `"elevated"`, `"bridge"` or
+/// `"tunnel"`, spelled out here rather than borrowed from GameCore.
+struct StructureName: Codable, Equatable {
+    var structure: TrackStructure
+
+    init(_ structure: TrackStructure) {
+        self.structure = structure
+    }
+
+    private static let names: [(String, TrackStructure)] = [("surface", .surface), ("elevated", .elevated), ("bridge", .bridge), ("tunnel", .tunnel)]
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let structure = Self.names.first(where: { $0.0 == name })?.1 else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown structure \"\(name)\".")
+        }
+        self.structure = structure
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Self.names.first { $0.1 == structure }!.0)
+    }
+}
+
+/// A grade as a fixture value: `{"rise", "run"}` in lowest terms, the run
+/// positive.
+struct GradeSummary: Codable, Equatable {
+    var rise: Int64
+    var run: Int64
+
+    init(_ grade: TrackGrade) {
+        rise = grade.rise
+        run = grade.run
+    }
+}
+
+/// A point on the track with its heading and grade: `{"x", "y", "z", "dx",
+/// "dy", "rise", "run"}` in world units, the way not normalised and the
+/// grade along it in lowest terms.
+struct PoseSummary: Codable, Equatable {
+    var x: Int64
+    var y: Int64
+    var z: Int64
+    var dx: Int64
+    var dy: Int64
+    var rise: Int64
+    var run: Int64
+
+    init(_ location: TrackLocation) {
+        x = location.position.x
+        y = location.position.y
+        z = location.position.z
+        dx = location.direction.dx
+        dy = location.direction.dy
+        rise = location.grade.rise
+        run = location.grade.run
+    }
+}
+
+/// An edge's vertical alignment: `{"structure", "segments": [{"kind",
+/// "start", "end"}, ...], "steepest": {"rise", "run"}}`, from its `from`
+/// node, the kinds `"level"`, `"up"`, `"down"` and `"transition"`.
+struct AlignmentSummary: Codable, Equatable {
+    struct Segment: Codable, Equatable {
+        var kind: String
+        var start: Int64
+        var end: Int64
+    }
+
+    var structure: StructureName
+    var segments: [Segment]
+    var steepest: GradeSummary
+
+    init(_ alignment: TrackAlignment) {
+        self.init(structure: alignment.edge.structure, segments: alignment.segments, steepest: alignment.steepestGrade)
+    }
+
+    init(structure: TrackStructure, segments: [TrackProfileSegment], steepest: TrackGrade) {
+        self.structure = StructureName(structure)
+        self.segments = segments.map { segment in
+            let kind = switch segment.kind {
+            case .level: "level"
+            case .up: "up"
+            case .down: "down"
+            case .transition: "transition"
+            }
+            return Segment(kind: kind, start: segment.start, end: segment.end)
+        }
+        self.steepest = GradeSummary(steepest)
+    }
+}
+
+/// A platform on the track network: `{"edge", "start", "end"}`, the edge by
+/// number.
+struct PlatformSummary: Codable, Equatable {
+    var edge: Int
+    var start: Int64
+    var end: Int64
+
+    init(_ platform: TrackPlatform) {
+        edge = platform.edge.number
+        start = platform.start
+        end = platform.end
+    }
+}
+
+/// A station's platform on the track network: `{"station", "edge",
+/// "start", "end"}`.
+struct StationPlatformSummary: Codable, Equatable {
+    var station: Int
+    var edge: Int
+    var start: Int64
+    var end: Int64
+
+    init(_ platform: StationPlatform) {
+        station = platform.station.rawValue
+        edge = platform.platform.edge.number
+        start = platform.platform.start
+        end = platform.platform.end
+    }
+}
+
+/// A platform's level: `{"edge", "start", "end", "height", "structure"}`.
+struct PlatformLevelSummary: Codable, Equatable {
+    var edge: Int
+    var start: Int64
+    var end: Int64
+    var height: Int64
+    var structure: StructureName
+
+    init(_ platform: RailwaySnapshot.Platform) {
+        self.init(platform: platform.platform, height: platform.height, structure: platform.structure)
+    }
+
+    init(platform: TrackPlatform, height: Int64, structure: TrackStructure) {
+        edge = platform.edge.number
+        start = platform.start
+        end = platform.end
+        self.height = height
+        self.structure = StructureName(structure)
     }
 }

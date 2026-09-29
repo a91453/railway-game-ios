@@ -46,6 +46,8 @@ struct ReferenceWorld: Equatable {
         var position: GridPosition
         /// Decision 27: the tiles it grew onto, in order.
         var annexes: [GridPosition] = []
+        /// Decision 30: its platforms on the track network, in order.
+        var trackPlatforms: [TrackPlatform] = []
 
         var tiles: [GridPosition] {
             [position] + annexes
