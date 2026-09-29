@@ -49,6 +49,8 @@ final class TrainPositionTests: XCTestCase {
                 Int64(from.x) * 1024 + Int64(to.x - from.x) * offset,
                 Int64(from.y) * 1024 + Int64(to.y - from.y) * offset
             )
+        case .onEdge:
+            preconditionFailure("point(of:) is for positions on the grid")
         }
     }
 

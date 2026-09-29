@@ -59,12 +59,23 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 model.trains.map {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
-                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor),
+                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
-                        execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init)
+                        execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init),
+                        trailEdges: $0.trailEdges
                     )
                 },
                 final.trains, name
+            )
+            XCTAssertEqual(
+                WorldSummary.NetworkSummary(
+                    nodes: model.networkNodes.keys.sorted().map { WorldSummary.NetworkSummary.NodeSummary(id: $0, x: model.networkNodes[$0]!.x, y: model.networkNodes[$0]!.y, z: model.networkNodes[$0]!.z) },
+                    edges: model.networkEdges.keys.sorted().map {
+                        let edge = model.networkEdges[$0]!
+                        return WorldSummary.NetworkSummary.EdgeSummary(id: $0, from: edge.from, to: edge.to, curve: CurveSummary(edge.curve), length: edge.length)
+                    }
+                ),
+                final.network, name
             )
             XCTAssertEqual(model.lines.map(Self.summary), final.lines, name)
             XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
@@ -107,6 +118,11 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .pause: model.pause()
         case .resume: model.resume()
         case .advance(let ticks): error = model.advance(ticks: ticks)
+        case .buildTrackNode(let position): error = model.buildNetworkNode(at: position)
+        case .buildTrackEdge(let from, let to, let curve): error = model.buildNetworkEdge(from: from, to: to, curve: curve)
+        case .removeTrackEdge(let edge): error = model.removeNetworkEdge(edge)
+        case .removeTrackNode(let node): error = model.removeNetworkNode(node)
+        case .setTrainPath(let id, let path): error = model.setContinuation(id, along: path)
         }
         return error.map { .rejected($0) } ?? .ok
     }
@@ -121,7 +137,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .train(model.trains.first { $0.id == id.rawValue }.map {
                 TrainState(
                     position: TrainPositionSummary($0.position),
-                    movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor)
+                    movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges)
                 )
             })
         case .route(let start, let destination):
@@ -162,6 +178,17 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .sections(model.trackSections())
         case .parallelTracks(let a, let b):
             return .tracks(model.parallelTracks(between: a, and: b))
+        case .trackEdge(let id):
+            guard case .edge(let number) = id, let edge = model.networkEdges[number] else { return .edge(nil) }
+            return .edge(EdgeInfoSummary(from: edge.from, to: edge.to, length: edge.length))
+        case .edgeLocation(let traversal, let distance):
+            return .location(model.networkLocation(traversal, offset: distance).map(LocationSummary.init))
+        case .transitions(let traversal):
+            return .transitions(model.networkTransitions(after: traversal))
+        case .pathToNode(let start, let node):
+            return .path(model.networkRoute(from: start, to: node))
+        case .bodyPath(let id):
+            return .points(model.trains.first { $0.id == id.rawValue }.map(model.networkBodyPath) ?? [])
         }
     }
 

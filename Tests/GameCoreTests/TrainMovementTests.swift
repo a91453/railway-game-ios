@@ -61,6 +61,8 @@ final class TrainMovementTests: XCTestCase {
             case .onLink(let from, let to, let offset)?:
                 XCTAssertTrue((1...1023).contains(offset), "\(train.id) offset \(offset)", file: file, line: line)
                 XCTAssertTrue(world.isConnected(from, to: to), "\(train.id)", file: file, line: line)
+            case .onEdge(let traversal, let offset)?:
+                XCTAssertTrue(offset >= 0 && offset <= world.trackEdge(traversal.edge)?.length ?? -1, "\(train.id)", file: file, line: line)
             }
         }
     }

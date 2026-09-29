@@ -99,6 +99,7 @@ final class WorldStateMachineTests: XCTestCase {
                 switch position {
                 case .atNode(let tile, _): return .removeTrack(tile)
                 case .onLink(let from, let to, _): return .removeTrack(random.chance(1, in: 2) ? from : to)
+                case .onEdge: break
                 }
             }
             return .removeTrack(randomTile(in: world, using: &random))

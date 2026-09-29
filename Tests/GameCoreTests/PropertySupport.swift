@@ -234,6 +234,8 @@ func ahead(of position: TrainPosition) -> (node: GridPosition, heading: TrackDir
             preconditionFailure("\(position) is not a link between neighbours")
         }
         return (to, heading)
+    case .onEdge:
+        preconditionFailure("ahead(of:) is for positions on the grid")
     }
 }
 
@@ -500,6 +502,7 @@ enum ReferenceMovement {
         switch start {
         case .atNode(let tile, let heading): place = .node(tile, heading)
         case .onLink(let from, let to, let offset): place = .link(from, to, offset)
+        case .onEdge: preconditionFailure("ReferenceMovement is for positions on the grid")
         }
         var cursor = startCursor
         var remaining = distance
@@ -556,6 +559,8 @@ enum ReferenceRoute {
         case .onLink(let from, let to, let offset):
             guard (1...1023).contains(offset), world.isConnected(from, to: to), let heading = stepDirection(from: from, to: to) else { return nil }
             startState = State(node: to, heading: heading)
+        case .onEdge:
+            return nil
         }
         guard world.track(at: destination) != nil else { return nil }
 
@@ -696,6 +701,8 @@ enum WorldInvariants {
                 }
             }
         }
+        // Decision 29: the track network.
+        problems += NetworkInvariants.violations(in: world)
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
             problems.append("service day starts \(starts)")
@@ -735,6 +742,10 @@ enum WorldInvariants {
             case .onLink(let from, let to, let offset):
                 if !(1...1023).contains(offset) { problems.append("train \(train.id.rawValue) offset \(offset)") }
                 if !world.isConnected(from, to: to) { problems.append("train \(train.id.rawValue) link \(from)->\(to) not joined") }
+            case .onEdge:
+                // Decision 29: checked with the network's own invariants.
+                problems += NetworkInvariants.trainViolations(of: train, in: world)
+                continue
             }
             if movement.rate < 0 { problems.append("train \(train.id.rawValue) negative rate") }
             let count = movement.continuation.count
@@ -794,6 +805,9 @@ enum WorldInvariants {
             }
             spine = [to]
             distance = offset
+        case .onEdge:
+            if !train.trail.isEmpty { problems.append("train \(id) on the track network has a grid trail") }
+            return problems
         }
         // The distances of the nodes: each must be short of the tail but
         // the last, which must reach it.

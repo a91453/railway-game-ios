@@ -54,6 +54,8 @@ final class RoutePropertyTests: XCTestCase {
         case .onLink(let from, let to, let offset):
             guard (1...1023).contains(offset), world.isConnected(from, to: to), let way = stepDirection(from: from, to: to) else { return nil }
             return State(node: to, heading: way)
+        case .onEdge:
+            return nil
         }
     }
 

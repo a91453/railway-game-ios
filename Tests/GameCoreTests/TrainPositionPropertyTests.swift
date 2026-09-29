@@ -163,6 +163,7 @@ final class TrainPositionPropertyTests: XCTestCase {
                 switch position {
                 case .atNode(let tile, _): [tile]
                 case .onLink(let from, let to, _): [from, to]
+                case .onEdge: []
                 }
             }()
             for track in placed.tracks {

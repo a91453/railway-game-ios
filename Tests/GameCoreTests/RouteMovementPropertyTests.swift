@@ -43,6 +43,8 @@ final class RouteMovementPropertyTests: XCTestCase {
             }
             guard entered <= route.count, nodes[entered - 1] == from, nodes[entered] == to else { return nil }
             return toFirstNode + TrainPosition.linkLength * Int64(entered - 1) + offset
+        case .onEdge:
+            return nil
         }
     }
 

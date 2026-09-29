@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 15
+    static let schemaVersion = 16
 
     var description: String
     var initialState: InitialState
@@ -144,6 +144,7 @@ extension GoldenScenario.Step: Decodable {
     fileprivate enum AnswerKeys: String, CodingKey, CaseIterable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
+        case edge, location, transitions, path, points
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -245,6 +246,21 @@ extension GoldenScenario.Step: Decodable {
                 try requireOnly([.platformTracks], answering: "platformTracks")
                 let tracks = try expect.decode([[PositionSummary]].self, forKey: .platformTracks)
                 self = .observe(observation, expect: .platformTracks(tracks.map { $0.map(\.position) }))
+            case .trackEdge:
+                try requireOnly([.found, .edge], answering: "trackEdge")
+                self = try .observe(observation, expect: .edge(Self.found(expect, .edge, EdgeInfoSummary.self)))
+            case .edgeLocation:
+                try requireOnly([.found, .location], answering: "edgeLocation")
+                self = try .observe(observation, expect: .location(Self.found(expect, .location, LocationSummary.self)))
+            case .transitions:
+                try requireOnly([.transitions], answering: "transitions")
+                self = try .observe(observation, expect: .transitions(expect.decode([TraversalSummary].self, forKey: .transitions).map(\.traversal)))
+            case .pathToNode:
+                try requireOnly([.found, .path], answering: "pathToNode")
+                self = try .observe(observation, expect: .path(Self.found(expect, .path, [TraversalSummary].self)?.map(\.traversal)))
+            case .bodyPath:
+                try requireOnly([.points], answering: "bodyPath")
+                self = try .observe(observation, expect: .points(expect.decode([PointSummary].self, forKey: .points).map(\.point)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -309,6 +325,11 @@ enum ScenarioCommand: Equatable {
     case pause
     case resume
     case advance(ticks: Int)
+    case buildTrackNode(WorldCoordinate)
+    case buildTrackEdge(TrackNodeID, TrackNodeID, TrackCurve)
+    case removeTrackEdge(TrackEdgeID)
+    case removeTrackNode(TrackNodeID)
+    case setTrainPath(TrainID, [TrackTraversal])
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -378,6 +399,16 @@ enum ScenarioCommand: Equatable {
                 world.resume()
             case .advance(let ticks):
                 try world.advance(ticks: ticks)
+            case .buildTrackNode(let position):
+                try world.buildTrackNode(at: position)
+            case .buildTrackEdge(let from, let to, let curve):
+                try world.buildTrackEdge(from: from, to: to, curve: curve)
+            case .removeTrackEdge(let edge):
+                try world.removeTrackEdge(edge)
+            case .removeTrackNode(let node):
+                try world.removeTrackNode(node)
+            case .setTrainPath(let id, let path):
+                try world.setTrainContinuation(id, along: path)
             }
             return .ok
         } catch {
@@ -390,6 +421,7 @@ extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
+        case z, from, to, curve, edge, node, path
     }
 
     init(from decoder: any Decoder) throws {
@@ -485,6 +517,25 @@ extension ScenarioCommand: Decodable {
             self = .pause
         case "resume":
             self = .resume
+        // Track network commands are read as written: whether a point lies
+        // on the map, a curve makes an edge or a path can be taken is
+        // GameCore's decision.
+        case "buildTrackNode":
+            self = try .buildTrackNode(WorldCoordinate(
+                x: container.decode(Int64.self, forKey: .x), y: container.decode(Int64.self, forKey: .y), z: container.decode(Int64.self, forKey: .z)
+            ))
+        case "buildTrackEdge":
+            self = try .buildTrackEdge(
+                .node(container.decode(Int.self, forKey: .from)), .node(container.decode(Int.self, forKey: .to)),
+                container.decode(CurveSummary.self, forKey: .curve).curve
+            )
+        case "removeTrackEdge":
+            self = try .removeTrackEdge(.edge(container.decode(Int.self, forKey: .edge)))
+        case "removeTrackNode":
+            self = try .removeTrackNode(.node(container.decode(Int.self, forKey: .node)))
+        case "setTrainPath":
+            let path = try container.decode([TraversalSummary].self, forKey: .path).map(\.traversal)
+            self = try .setTrainPath(container.decodeTrain(forKey: .train), path)
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -509,7 +560,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern
+        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge
     }
 
     init(from decoder: any Decoder) throws {
@@ -590,6 +641,16 @@ extension StepOutcome: Codable {
             self = try .rejected(.invalidStationTile(container.decodePosition(x: .x, y: .y)))
         case "invalidTrainLength":
             self = .rejected(.invalidTrainLength)
+        case "unknownTrackNode":
+            self = try .rejected(.unknownTrackNode(.node(container.decode(Int.self, forKey: .node))))
+        case "unknownTrackEdge":
+            self = try .rejected(.unknownTrackEdge(.edge(container.decode(Int.self, forKey: .edge))))
+        case "invalidTrackGeometry":
+            self = .rejected(.invalidTrackGeometry)
+        case "trackNodeInUse":
+            self = try .rejected(.trackNodeInUse(.node(container.decode(Int.self, forKey: .node))))
+        case "trackEdgeInUse":
+            self = try .rejected(.trackEdgeInUse(.edge(container.decode(Int.self, forKey: .edge))))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -697,6 +758,35 @@ extension StepOutcome: Codable {
             try encode(position)
         case .rejected(.invalidTrainLength):
             try container.encode("invalidTrainLength", forKey: .result)
+        case .rejected(.unknownTrackNode(let node)):
+            try container.encode("unknownTrackNode", forKey: .result)
+            try encodeNode(node)
+        case .rejected(.unknownTrackEdge(let edge)):
+            try container.encode("unknownTrackEdge", forKey: .result)
+            try encodeEdge(edge)
+        case .rejected(.invalidTrackGeometry):
+            try container.encode("invalidTrackGeometry", forKey: .result)
+        case .rejected(.trackNodeInUse(let node)):
+            try container.encode("trackNodeInUse", forKey: .result)
+            try encodeNode(node)
+        case .rejected(.trackEdgeInUse(let edge)):
+            try container.encode("trackEdgeInUse", forKey: .result)
+            try encodeEdge(edge)
+        }
+        // Fixtures name network nodes and edges by number; a grid tile or
+        // link cannot reach these results through a fixture's commands, but
+        // is written as positions so that a failure report never traps.
+        func encodeNode(_ node: TrackNodeID) throws {
+            switch node {
+            case .node(let number): try container.encode(number, forKey: .node)
+            case .tile(let tile): try encode(tile)
+            }
+        }
+        func encodeEdge(_ edge: TrackEdgeID) throws {
+            switch edge {
+            case .edge(let number): try container.encode(number, forKey: .edge)
+            case .link(let a, _): try encode(a)
+            }
         }
     }
 }
@@ -733,6 +823,11 @@ enum ScenarioObservation: Equatable {
     case conflicts
     case trackSections
     case parallelTracks(StationID, StationID)
+    case trackEdge(TrackEdgeID)
+    case edgeLocation(TrackTraversal, distance: Int64)
+    case transitions(TrackTraversal)
+    case pathToNode(from: TrainPosition, node: TrackNodeID)
+    case bodyPath(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -780,6 +875,18 @@ enum ScenarioObservation: Equatable {
             .sections(world.trackSections())
         case .parallelTracks(let a, let b):
             .tracks(world.parallelTracks(between: a, and: b))
+        case .trackEdge(let id):
+            .edge(world.trackEdge(id).map(EdgeInfoSummary.init))
+        case .edgeLocation(let traversal, let distance):
+            .location(world.trackGeometry(of: traversal.edge).flatMap { geometry in
+                (0...geometry.length).contains(distance) ? LocationSummary(geometry.location(at: distance, going: traversal.direction)) : nil
+            })
+        case .transitions(let traversal):
+            .transitions(world.transitions(after: traversal))
+        case .pathToNode(let start, let node):
+            .path(world.route(from: start, to: node))
+        case .bodyPath(let id):
+            .points(world.bodyPath(of: id))
         }
     }
 }
@@ -787,6 +894,7 @@ enum ScenarioObservation: Equatable {
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, from, to, train, station, line, gameMinutes, level, pattern, heading, cars
+        case edge, direction, distance, node
     }
 
     init(from decoder: any Decoder) throws {
@@ -859,6 +967,21 @@ extension ScenarioObservation: Decodable {
             self = try .parallelTracks(
                 StationID(rawValue: container.decode(Int.self, forKey: .from)), StationID(rawValue: container.decode(Int.self, forKey: .to))
             )
+        case "trackEdge":
+            self = try .trackEdge(.edge(container.decode(Int.self, forKey: .edge)))
+        case "edgeLocation":
+            let traversal = try TraversalSummary(edge: container.decode(Int.self, forKey: .edge), direction: container.decode(String.self, forKey: .direction))
+            self = try .edgeLocation(traversal.traversal, distance: container.decode(Int64.self, forKey: .distance))
+        case "transitions":
+            let traversal = try TraversalSummary(edge: container.decode(Int.self, forKey: .edge), direction: container.decode(String.self, forKey: .direction))
+            self = .transitions(traversal.traversal)
+        case "pathToNode":
+            guard let start = try container.decode(TrainPositionSummary.self, forKey: .from).position else {
+                throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A path starts from a train position.")
+            }
+            self = try .pathToNode(from: start, node: .node(container.decode(Int.self, forKey: .node)))
+        case "bodyPath":
+            self = try .bodyPath(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -908,12 +1031,18 @@ enum ObservationAnswer: Equatable {
     case sections([TrackSection])
     case tracks(Int)
     case platformTracks([[GridPosition]])
+    case edge(EdgeInfoSummary?)
+    case location(LocationSummary?)
+    case transitions([TrackTraversal])
+    case path([TrackTraversal]?)
+    case points([WorldCoordinate])
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
+        case edge, location, transitions, path, points
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -959,8 +1088,21 @@ extension ObservationAnswer: Encodable {
         case .loads(let loads?):
             try container.encode(true, forKey: .found)
             try container.encode(loads, forKey: .loads)
-        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil):
+        case .edge(let edge?):
+            try container.encode(true, forKey: .found)
+            try container.encode(edge, forKey: .edge)
+        case .location(let location?):
+            try container.encode(true, forKey: .found)
+            try container.encode(location, forKey: .location)
+        case .path(let path?):
+            try container.encode(true, forKey: .found)
+            try container.encode(path.map(TraversalSummary.init), forKey: .path)
+        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil):
             try container.encode(false, forKey: .found)
+        case .transitions(let traversals):
+            try container.encode(traversals.map(TraversalSummary.init), forKey: .transitions)
+        case .points(let points):
+            try container.encode(points.map(PointSummary.init), forKey: .points)
         case .exits(let positions):
             try container.encode(positions.map(PositionSummary.init), forKey: .exits)
         case .resources(let resources):
@@ -1027,6 +1169,7 @@ struct WorldSummary: Codable, Equatable {
     var trains: [TrainSummary]
     var lines: [LineSummary]
     var serviceDay: [BandSummary]
+    var network: NetworkSummary
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1056,6 +1199,42 @@ struct WorldSummary: Codable, Equatable {
         /// and `[]` for a train of one car.
         var cars: Int
         var trail: [PositionSummary]
+        /// On the track network (schema 16): the edges its body lies over
+        /// behind its head's edge, nearest first, by number.
+        var trailEdges: [Int]
+    }
+
+    /// The track network (schema 16): nodes and edges in ID order.
+    struct NetworkSummary: Codable, Equatable {
+        var nodes: [NodeSummary]
+        var edges: [EdgeSummary]
+
+        struct NodeSummary: Codable, Equatable {
+            var id: Int
+            var x: Int64
+            var y: Int64
+            var z: Int64
+        }
+
+        /// An edge with its length, which GameCore works out from its end
+        /// nodes and curve: the fixture pins that number.
+        struct EdgeSummary: Codable, Equatable {
+            var id: Int
+            var from: Int
+            var to: Int
+            var curve: CurveSummary
+            var length: Int64
+        }
+
+        init(_ network: TrackNetwork) {
+            nodes = network.nodes.map { NodeSummary(id: $0.id.number, x: $0.position.x, y: $0.position.y, z: $0.position.z) }
+            edges = network.edges.map { EdgeSummary(id: $0.id.number, from: $0.from.number, to: $0.to.number, curve: CurveSummary($0.curve), length: $0.length) }
+        }
+
+        init(nodes: [NodeSummary], edges: [EdgeSummary]) {
+            self.nodes = nodes
+            self.edges = edges
+        }
     }
 
     init(_ world: GameWorld) {
@@ -1074,12 +1253,13 @@ struct WorldSummary: Codable, Equatable {
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
                     repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution),
-                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init)
+                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number)
                 )
             }
             .sorted { $0.id < $1.id }
         lines = world.lines.map(LineSummary.init).sorted { $0.id < $1.id }
         serviceDay = world.serviceDay.bands.map(BandSummary.init)
+        network = NetworkSummary(world.network)
     }
 }
 
@@ -1469,7 +1649,7 @@ struct TrainPositionSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
-        case type, x, y, heading, from, to, offset
+        case type, x, y, heading, from, to, offset, edge, direction
     }
 
     init(from decoder: any Decoder) throws {
@@ -1491,6 +1671,18 @@ struct TrainPositionSummary: Codable, Equatable {
             position = try .onLink(
                 from: container.decode(PositionSummary.self, forKey: .from).position,
                 to: container.decode(PositionSummary.self, forKey: .to).position,
+                offset: container.decode(Int64.self, forKey: .offset)
+            )
+        case "edge":
+            fields = [.edge, .direction, .offset]
+            let direction: TrackEdgeDirection
+            switch try container.decode(String.self, forKey: .direction) {
+            case "forward": direction = .forward
+            case "backward": direction = .backward
+            case let name: throw DecodingError.dataCorruptedError(forKey: .direction, in: container, debugDescription: "Unknown edge direction \"\(name)\".")
+            }
+            position = try .onEdge(
+                TrackTraversal(edge: .edge(container.decode(Int.self, forKey: .edge)), direction: direction),
                 offset: container.decode(Int64.self, forKey: .offset)
             )
         default:
@@ -1516,6 +1708,11 @@ struct TrainPositionSummary: Codable, Equatable {
             try container.encode(PositionSummary(from), forKey: .from)
             try container.encode(PositionSummary(to), forKey: .to)
             try container.encode(offset, forKey: .offset)
+        case .onEdge(let traversal, let offset)?:
+            try container.encode("edge", forKey: .type)
+            try container.encode(traversal.edge.networkNumberForFixture, forKey: .edge)
+            try container.encode(traversal.direction == .forward ? "forward" : "backward", forKey: .direction)
+            try container.encode(offset, forKey: .offset)
         }
     }
 }
@@ -1530,15 +1727,19 @@ struct TrainMovementSummary: Codable, Equatable {
     var rate: Int64
     var continuation: [PositionSummary]
     var cursor: Int
+    /// On the track network (schema 16): the edges the train enters, by
+    /// number; `[]` on the grid.
+    var edges: [Int]
 
-    init(rate: Int64, continuation: [GridPosition], cursor: Int) {
+    init(rate: Int64, continuation: [GridPosition], cursor: Int, edges: [Int] = []) {
         self.rate = rate
         self.continuation = continuation.map(PositionSummary.init)
         self.cursor = cursor
+        self.edges = edges
     }
 
     init(_ movement: TrainMovement) {
-        self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor)
+        self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor, edges: movement.edges.map(\.number))
     }
 }
 
@@ -1841,18 +2042,22 @@ struct ResourceSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to
+        case type, x, y, from, to, node, edge
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         switch try container.decode(String.self, forKey: .type) {
         case "node":
-            resource = .node(try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y)))
+            resource = .tile(try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y)))
         case "link":
-            resource = .link(
+            resource = .edge(.link(
                 try container.decode(PositionSummary.self, forKey: .from).position, try container.decode(PositionSummary.self, forKey: .to).position
-            )
+            ))
+        case "networkNode":
+            resource = .node(.node(try container.decode(Int.self, forKey: .node)))
+        case "networkEdge":
+            resource = .edge(.edge(try container.decode(Int.self, forKey: .edge)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "A resource is a node or a link.")
         }
@@ -1861,14 +2066,20 @@ struct ResourceSummary: Codable, Equatable {
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch resource {
-        case .node(let position):
+        case .node(.tile(let position)):
             try container.encode("node", forKey: .type)
             try container.encode(position.x, forKey: .x)
             try container.encode(position.y, forKey: .y)
-        case .link(let from, let to):
+        case .edge(.link(let from, let to)):
             try container.encode("link", forKey: .type)
             try container.encode(PositionSummary(from), forKey: .from)
             try container.encode(PositionSummary(to), forKey: .to)
+        case .node(.node(let number)):
+            try container.encode("networkNode", forKey: .type)
+            try container.encode(number, forKey: .node)
+        case .edge(.edge(let number)):
+            try container.encode("networkEdge", forKey: .type)
+            try container.encode(number, forKey: .edge)
         }
     }
 }
@@ -1924,5 +2135,144 @@ struct SectionSummary: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(section.nodes.map(PositionSummary.init), forKey: .nodes)
         try container.encode(section.isLoop, forKey: .loop)
+    }
+}
+
+// MARK: - Track network (schema 16)
+
+/// A curve as a fixture value, tagged by `"type"`: `{"type": "straight"}` or
+/// `{"type": "cubic", "control1": {"x", "y"}, "control2": {"x", "y"}}`, in
+/// world units. Read as written: whether it makes an edge is GameCore's
+/// decision.
+struct CurveSummary: Codable, Equatable {
+    var curve: TrackCurve
+
+    init(_ curve: TrackCurve) {
+        self.curve = curve
+    }
+
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case type, control1, control2
+    }
+
+    private struct Point: Codable, Equatable {
+        var x: Int64
+        var y: Int64
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "straight":
+            for key in [CodingKeys.control1, .control2] where container.contains(key) {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "A straight curve has no control points.")
+            }
+            curve = .straight
+        case "cubic":
+            let c1 = try container.decode(Point.self, forKey: .control1)
+            let c2 = try container.decode(Point.self, forKey: .control2)
+            curve = .cubic(PlanPoint(x: c1.x, y: c1.y), PlanPoint(x: c2.x, y: c2.y))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown curve type \"\(type)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch curve {
+        case .straight:
+            try container.encode("straight", forKey: .type)
+        case .cubic(let c1, let c2):
+            try container.encode("cubic", forKey: .type)
+            try container.encode(Point(x: c1.x, y: c1.y), forKey: .control1)
+            try container.encode(Point(x: c2.x, y: c2.y), forKey: .control2)
+        }
+    }
+}
+
+/// A network edge travelled one way, as a fixture value:
+/// `{"edge", "direction"}`, the edge's number and `"forward"` (from its
+/// `from` node to its `to` node) or `"backward"`.
+struct TraversalSummary: Codable, Equatable {
+    var edge: Int
+    var direction: String
+
+    init(_ traversal: TrackTraversal) {
+        switch traversal.edge {
+        case .edge(let number): edge = number
+        case .link: edge = 0
+        }
+        direction = traversal.direction == .forward ? "forward" : "backward"
+    }
+
+    init(edge: Int, direction: String) throws {
+        guard direction == "forward" || direction == "backward" else {
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Unknown direction \"\(direction)\"."))
+        }
+        self.edge = edge
+        self.direction = direction
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(edge: container.decode(Int.self, forKey: .edge), direction: container.decode(String.self, forKey: .direction))
+    }
+
+    var traversal: TrackTraversal {
+        TrackTraversal(edge: .edge(edge), direction: direction == "forward" ? .forward : .backward)
+    }
+}
+
+/// An edge as the graph sees it: `{"from", "to", "length"}`, node numbers
+/// and its length in world units.
+struct EdgeInfoSummary: Codable, Equatable {
+    var from: Int
+    var to: Int
+    var length: Int64
+
+    init(_ edge: TrackEdge) {
+        self.init(from: edge.from.number, to: edge.to.number, length: edge.length)
+    }
+
+    init(from: Int, to: Int, length: Int64) {
+        self.from = from
+        self.to = to
+        self.length = length
+    }
+}
+
+/// A point on the track and the way it runs there: `{"x", "y", "z", "dx",
+/// "dy"}` in world units; the way is not normalised.
+struct LocationSummary: Codable, Equatable {
+    var x: Int64
+    var y: Int64
+    var z: Int64
+    var dx: Int64
+    var dy: Int64
+
+    init(_ location: TrackLocation) {
+        x = location.position.x
+        y = location.position.y
+        z = location.position.z
+        dx = location.direction.dx
+        dy = location.direction.dy
+    }
+}
+
+/// A world point: `{"x", "y", "z"}` in world units.
+struct PointSummary: Codable, Equatable {
+    var x: Int64
+    var y: Int64
+    var z: Int64
+
+    init(_ point: WorldCoordinate) {
+        x = point.x
+        y = point.y
+        z = point.z
+    }
+
+    var point: WorldCoordinate {
+        WorldCoordinate(x: x, y: y, z: z)
     }
 }

@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 16,
+  "description": "Continuous track (Phase 4.5 Stage S3). Nodes are points in world units (1024 a tile) on the map at ground level; edges run between two nodes, straight or along a cubic curve with two control points, and cost track per tile of length, rounded up. A line runs east A(512,1536) - B - C - D(4608,1536) with edges of 1024, 2560 and 512; a spur leaves D north at a right angle and joins nothing, since only edge ends leaving a node in opposite ways (to within 1 in 16) join. The curve from (8192,8192) to (8448,8448) is sampled at eighths and measures 396; it arrives heading south and joins the straight edge on to R. An edge at a 3-4-5 slope measures 5120 exactly. Long (3 cars, 2048 units) cannot stand at offset 0 with a body; at 1500 on B-C its body reaches back 548 onto A-B. It runs to D, turns round (its head goes to where its tail was, 1536 back along B-C from C), and runs back onto A-B. Short (2 cars) stands 700 down the straight after the curve, its body back along the curve. Trains occupy the nodes their centre line reaches or passes and the edges it lies strictly inside; the edge under a body and the node an edge ends at cannot be removed.",
+  "initialState": {
+    "mapWidth": 16,
+    "mapHeight": 16,
+    "balance": 100000,
+    "costs": { "track": 100, "station": 1000, "train": 500 },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrackNode", "x": 512, "y": 1536, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 1536, "y": 1536, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 4096, "y": 1536, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 4608, "y": 1536, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 4608, "y": 512, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 16384, "y": 0, "z": 0 },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 4608, "y": 1536, "z": 0 },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 100, "y": 100, "z": 5 },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 1, "to": 2, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 2, "to": 3, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 3, "to": 4, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 4, "to": 5, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 1, "to": 1, "curve": { "type": "straight" } },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 9, "to": 1, "curve": { "type": "straight" } },
+      "expect": { "result": "unknownTrackNode", "node": 9 }
+    },
+    {
+      "observe": { "type": "transitions", "edge": 1, "direction": "forward" },
+      "expect": { "transitions": [{ "edge": 2, "direction": "forward" }] }
+    },
+    {
+      "observe": { "type": "transitions", "edge": 3, "direction": "forward" },
+      "expect": { "transitions": [] }
+    },
+    {
+      "observe": { "type": "transitions", "edge": 2, "direction": "backward" },
+      "expect": { "transitions": [{ "edge": 1, "direction": "backward" }] }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8192, "y": 8192, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8448, "y": 8448, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8448, "y": 10496, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 6, "to": 7, "curve": { "type": "cubic", "control1": { "x": 8320, "y": 8192 }, "control2": { "x": 8448, "y": 8320 } } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 7, "to": 8, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "trackEdge", "edge": 5 },
+      "expect": { "found": true, "edge": { "from": 6, "to": 7, "length": 396 } }
+    },
+    {
+      "observe": { "type": "edgeLocation", "edge": 5, "direction": "forward", "distance": 24 },
+      "expect": { "found": true, "location": { "x": 8216, "y": 8195, "z": 0, "dx": 48, "dy": 6 } }
+    },
+    {
+      "observe": { "type": "edgeLocation", "edge": 5, "direction": "backward", "distance": 0 },
+      "expect": { "found": true, "location": { "x": 8448, "y": 8448, "z": 0, "dx": -6, "dy": -48 } }
+    },
+    {
+      "observe": { "type": "edgeLocation", "edge": 5, "direction": "forward", "distance": 397 },
+      "expect": { "found": false }
+    },
+    {
+      "observe": { "type": "transitions", "edge": 5, "direction": "forward" },
+      "expect": { "transitions": [{ "edge": 6, "direction": "forward" }] }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 10240, "y": 1024, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 13312, "y": 5120, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 9, "to": 10, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "trackEdge", "edge": 7 },
+      "expect": { "found": true, "edge": { "from": 9, "to": 10, "length": 5120 } }
+    },
+    {
+      "observe": { "type": "edgeLocation", "edge": 7, "direction": "forward", "distance": 1024 },
+      "expect": { "found": true, "location": { "x": 10854, "y": 1843, "z": 0, "dx": 3072, "dy": 4096 } }
+    },
+    {
+      "observe": { "type": "trackEdge", "edge": 99 },
+      "expect": { "found": false }
+    },
+    {
+      "command": { "type": "removeTrackEdge", "edge": 99 },
+      "expect": { "result": "unknownTrackEdge", "edge": 99 }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Long" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Short" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainCars", "train": 1, "cars": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "edge", "edge": 2, "direction": "forward", "offset": 0 } },
+      "expect": { "result": "invalidTrainPosition" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "edge", "edge": 2, "direction": "forward", "offset": 1500 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "networkNode", "node": 2 }, { "type": "networkEdge", "edge": 1 }, { "type": "networkEdge", "edge": 2 }] }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 1 },
+      "expect": { "points": [{ "x": 3036, "y": 1536, "z": 0 }, { "x": 1536, "y": 1536, "z": 0 }, { "x": 988, "y": 1536, "z": 0 }] }
+    },
+    {
+      "observe": { "type": "pathToNode", "from": { "type": "edge", "edge": 2, "direction": "forward", "offset": 1500 }, "node": 4 },
+      "expect": { "found": true, "path": [{ "edge": 3, "direction": "forward" }] }
+    },
+    {
+      "command": { "type": "setTrainPath", "train": 1, "path": [{ "edge": 3, "direction": "forward" }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1000 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 2, "direction": "forward", "offset": 1500 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [3] } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 2, "direction": "forward", "offset": 2500 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [3] } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 512 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] } }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "networkNode", "node": 3 }, { "type": "networkNode", "node": 4 }, { "type": "networkEdge", "edge": 2 }, { "type": "networkEdge", "edge": 3 }] }
+    },
+    {
+      "command": { "type": "setTrainPath", "train": 1, "path": [{ "edge": 4, "direction": "forward" }] },
+      "expect": { "result": "invalidContinuation" }
+    },
+    {
+      "observe": { "type": "pathToNode", "from": { "type": "edge", "edge": 3, "direction": "forward", "offset": 512 }, "node": 5 },
+      "expect": { "found": false }
+    },
+    {
+      "command": { "type": "removeTrackEdge", "edge": 2 },
+      "expect": { "result": "trackEdgeInUse", "edge": 2 }
+    },
+    {
+      "command": { "type": "removeTrackNode", "node": 5 },
+      "expect": { "result": "trackNodeInUse", "node": 5 }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 2, "direction": "backward", "offset": 1536 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] } }
+    },
+    {
+      "command": { "type": "setTrainPath", "train": 1, "path": [{ "edge": 1, "direction": "backward" }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 1, "direction": "backward", "offset": 976 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] } }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "networkNode", "node": 2 }, { "type": "networkEdge", "edge": 1 }, { "type": "networkEdge", "edge": 2 }] }
+    },
+    {
+      "command": { "type": "setTrainCars", "train": 2, "cars": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "edge", "edge": 6, "direction": "forward", "offset": 700 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 2 },
+      "expect": { "resources": [{ "type": "networkNode", "node": 7 }, { "type": "networkEdge", "edge": 5 }, { "type": "networkEdge", "edge": 6 }] }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 2 },
+      "expect": { "points": [{ "x": 8448, "y": 9148, "z": 0 }, { "x": 8448, "y": 8448, "z": 0 }, { "x": 8442, "y": 8400, "z": 0 }, { "x": 8426, "y": 8354, "z": 0 }, { "x": 8401, "y": 8311, "z": 0 }, { "x": 8368, "y": 8272, "z": 0 }, { "x": 8329, "y": 8239, "z": 0 }, { "x": 8286, "y": 8214, "z": 0 }, { "x": 8263, "y": 8206, "z": 0 }] }
+    },
+    {
+      "observe": { "type": "conflicts" },
+      "expect": { "conflicts": [] }
+    },
+    {
+      "command": { "type": "removeTrackEdge", "edge": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "removeTrackNode", "node": 5 },
+      "expect": { "result": "ok" }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 4,
+    "speed": "normal",
+    "balance": 97600,
+    "stations": [],
+    "tracks": [],
+    "trains": [
+      { "id": 1, "name": "Long", "position": { "type": "edge", "edge": 1, "direction": "backward", "offset": 976 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 3, "trail": [], "trailEdges": [2] },
+      { "id": 2, "name": "Short", "position": { "type": "edge", "edge": 6, "direction": "forward", "offset": 700 }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 2, "trail": [], "trailEdges": [5] }
+    ],
+    "lines": [],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
+    "network": {
+      "nodes": [
+        { "id": 1, "x": 512, "y": 1536, "z": 0 },
+        { "id": 2, "x": 1536, "y": 1536, "z": 0 },
+        { "id": 3, "x": 4096, "y": 1536, "z": 0 },
+        { "id": 4, "x": 4608, "y": 1536, "z": 0 },
+        { "id": 6, "x": 8192, "y": 8192, "z": 0 },
+        { "id": 7, "x": 8448, "y": 8448, "z": 0 },
+        { "id": 8, "x": 8448, "y": 10496, "z": 0 },
+        { "id": 9, "x": 10240, "y": 1024, "z": 0 },
+        { "id": 10, "x": 13312, "y": 5120, "z": 0 }
+      ],
+      "edges": [
+        { "id": 1, "from": 1, "to": 2, "curve": { "type": "straight" }, "length": 1024 },
+        { "id": 2, "from": 2, "to": 3, "curve": { "type": "straight" }, "length": 2560 },
+        { "id": 3, "from": 3, "to": 4, "curve": { "type": "straight" }, "length": 512 },
+        { "id": 5, "from": 6, "to": 7, "curve": { "type": "cubic", "control1": { "x": 8320, "y": 8192 }, "control2": { "x": 8448, "y": 8320 } }, "length": 396 },
+        { "id": 6, "from": 7, "to": 8, "curve": { "type": "straight" }, "length": 2048 },
+        { "id": 7, "from": 9, "to": 10, "curve": { "type": "straight" }, "length": 5120 }
+      ]
+    }
+  }
+}

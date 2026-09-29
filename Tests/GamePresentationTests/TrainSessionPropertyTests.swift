@@ -225,6 +225,7 @@ final class TrainSessionPropertyTests: XCTestCase {
                     let onTrack: Bool = switch position {
                     case .atNode(let tile, _): session.world.track(at: tile) != nil
                     case .onLink(let from, let to, let offset): (1...1023).contains(offset) && session.world.isConnected(from, to: to)
+                    case .onEdge(let traversal, let offset): offset >= 0 && offset <= session.world.trackEdge(traversal.edge)?.length ?? -1
                     }
                     if !onTrack { problems.append("train \(train.id.rawValue) is off the track at \(position)") }
                     if train.positionText != position.displayText { problems.append("position text is not derived") }

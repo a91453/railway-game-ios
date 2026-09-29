@@ -263,6 +263,7 @@ final class KernelDifferentialTests: XCTestCase {
                 switch position {
                 case .atNode(let tile, _): return .removeTrack(tile)
                 case .onLink(let from, let to, _): return .removeTrack(random.chance(1, in: 2) ? from : to)
+                case .onEdge: break
                 }
             }
             if random.chance(1, in: 2), !world.stations.isEmpty {
