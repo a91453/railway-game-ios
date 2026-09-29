@@ -11,7 +11,10 @@ web transport game. Its logic may be ported by rewriting it in Swift under
 GameCore's rules (integers, determinism). Never commit the snapshot, its
 JavaScript or its assets: this repository is public, and the owner does not
 want them downloadable from it. Third-party code and assets in it are never
-ported.
+ported. `docs/TIMETABLE_DATA_STUDY.md` maps concepts from real railway
+timetables to stages: raw timetable data stays out of the repository (only
+converted scenario data, with attribution), and live data never feeds the
+simulation.
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
