@@ -260,6 +260,38 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].movement.cursor = 0
     }
 
+    // MARK: - Timetables
+
+    /// Replaces a train's timetable with `stops`, in order (see
+    /// ``ScheduledStop``). An empty list clears it. Free, and the train may
+    /// be placed or not.
+    ///
+    /// The whole list is checked before anything changes: its times never go
+    /// back in time, starting from minute 0 (`0 <= arrival <= departure` at
+    /// every stop, and each departure no later than the next stop's
+    /// arrival), and every stop names a station of this world. Equal times,
+    /// repeated stations, stations without platforms and times the clock has
+    /// already passed are all allowed; whether the train could keep to the
+    /// timetable (a route between the stations, the travel time, where the
+    /// train is now) is not checked.
+    ///
+    /// Only the timetable changes. Setting one never places, moves, routes
+    /// or stops the train: nothing in the simulation reads a timetable yet.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/invalidTimetable``, or ``GameError/unknownStation(_:)``
+    ///   naming the first stop, in timetable order, whose station does not
+    ///   exist.
+    public mutating func setTrainTimetable(_ id: TrainID, to stops: [ScheduledStop]) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard ScheduledStop.isTimetable(stops) else { throw .invalidTimetable }
+        if let stop = stops.first(where: { station(id: $0.station) == nil }) {
+            throw .unknownStation(stop.station)
+        }
+
+        trains[index].timetable = stops
+    }
+
     // MARK: - Time
 
     public mutating func pause() {
@@ -291,6 +323,9 @@ public struct GameWorld: Equatable, Sendable {
     /// every later step tries that same link again; once it is rebuilt the
     /// train carries on with that step's distance. Distance a train cannot
     /// use is dropped, so a train never catches up.
+    ///
+    /// Timetables play no part: a train at a scheduled stop does not wait
+    /// or leave because of it, and time passing never changes a timetable.
     ///
     /// When a whole step changes no train, no later step of this call can
     /// either (the map and every train's inputs stay the same until the next
@@ -407,7 +442,8 @@ extension GameWorld: Codable {
     /// (station tiles and station records must agree; IDs must be unique and
     /// below the next ID to allocate; every placed train must be on this
     /// map's track, as ``placeTrain(_:at:)`` requires; every continuation
-    /// node must lie inside the map).
+    /// node must lie inside the map; every timetable stop must name one of
+    /// this world's stations, as ``setTrainTimetable(_:to:)`` requires).
     ///
     /// A continuation's links are not required to exist: track ahead of a
     /// train may have been removed after the continuation was set, and a
@@ -461,6 +497,9 @@ extension GameWorld: Codable {
             // when the continuation was set still is.
             guard train.movement.continuation.allSatisfy(map.contains) else {
                 return "Train \(train.id.rawValue)'s continuation leaves the map."
+            }
+            if let stop = train.timetable.first(where: { station(id: $0.station) == nil }) {
+                return "Train \(train.id.rawValue)'s timetable names station \(stop.station.rawValue), which does not exist."
             }
         }
         return nil

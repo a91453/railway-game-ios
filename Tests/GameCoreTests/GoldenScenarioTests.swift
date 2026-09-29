@@ -62,7 +62,7 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(wrongTime.differences().count, 1, name)
 
             var extraTrain = committed
-            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle)))
+            extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: []))
             XCTAssertEqual(extraTrain.differences().count, 1, name)
         }
     }
@@ -96,6 +96,49 @@ final class GoldenScenarioTests: XCTestCase {
             }
         }
         XCTAssertGreaterThan(movingCount, 0, "No fixture expects a train with a rate")
+    }
+
+    /// A train's expected timetable is compared exactly, in order: an extra,
+    /// missing or repeated stop, another station, a time one minute off, or
+    /// the same stops in another order is reported once.
+    func testChangedTrainTimetableExpectationsAreReported() throws {
+        var scheduledCount = 0
+        for url in try GoldenScenarioFixtures.urls() {
+            let name = url.lastPathComponent
+            let committed = try GoldenScenario.decode(Data(contentsOf: url))
+            for (index, train) in committed.expectedFinalState.trains.enumerated() {
+                if train.timetable.count > 1 {
+                    scheduledCount += 1
+                }
+                for wrong in Self.wrongTimetables(for: train.timetable) {
+                    var scenario = committed
+                    scenario.expectedFinalState.trains[index].timetable = wrong
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) expecting \(wrong)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(scheduledCount, 0, "No fixture expects a train with a timetable of more than one stop")
+    }
+
+    /// Timetables that differ from `stops` in one way each.
+    private static func wrongTimetables(for stops: [StopSummary]) -> [[StopSummary]] {
+        var wrong: [[StopSummary]] = [stops + [StopSummary(ScheduledStop(station: StationID(rawValue: 99), arrival: .zero, departure: .zero))]]
+        guard let first = stops.first else { return wrong }
+        wrong.append(Array(stops.dropLast()))
+        wrong.append([first] + stops)
+        var changed = stops
+        changed[0].station += 1
+        wrong.append(changed)
+        changed = stops
+        changed[0].arrival += 1
+        wrong.append(changed)
+        changed = stops
+        changed[stops.count - 1].departure += 1
+        wrong.append(changed)
+        if stops.count > 1 {
+            wrong.append(stops.reversed())
+        }
+        return wrong
     }
 
     /// A train's expected position is compared exactly: unplaced instead of
@@ -140,6 +183,7 @@ final class GoldenScenarioTests: XCTestCase {
         var platformAnswerCount = 0
         var stationRouteCount = 0
         var sharedStopCount = 0
+        var timetableAnswerCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -164,6 +208,9 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .stations(let stations) = expect, stations.count > 1 {
                     sharedStopCount += 1
                 }
+                if case .timetable(let stops?) = expect, stops.count > 1 {
+                    timetableAnswerCount += 1
+                }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -180,6 +227,7 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(platformAnswerCount, 0, "No fixture pins a station's platforms")
         XCTAssertGreaterThan(stationRouteCount, 0, "No fixture pins a route to a station of more than one node")
         XCTAssertGreaterThan(sharedStopCount, 0, "No fixture pins a train stopped at more than one station")
+        XCTAssertGreaterThan(timetableAnswerCount, 0, "No fixture pins a timetable of more than one stop")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -231,6 +279,10 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.stations(stations.reversed()))
             }
             return wrong
+        case .timetable(nil):
+            return []
+        case .timetable(let stops?):
+            return [.timetable(nil)] + wrongTimetables(for: stops.map(StopSummary.init)).map { .timetable($0.map(\.stop)) }
         }
     }
 
@@ -264,7 +316,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 7,
+              "schemaVersion": 8,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -309,7 +361,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 8] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 9] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -342,12 +394,26 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"type": "setTrainContinuation", "train": 1, "continuation": ["east"]}"#,
             // Observations are not commands.
             #"{"type": "train", "train": 1}"#,
+            #"{"type": "timetable", "train": 1}"#,
+            // A timetable needs a train and stops with a station and two
+            // integer times each.
+            #"{"type": "setTrainTimetable", "train": 1}"#,
+            #"{"type": "setTrainTimetable", "timetable": []}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0}]}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"arrival": 0, "departure": 0}]}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": "Alpha", "arrival": 0, "departure": 0}]}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": "08:00", "departure": 0}]}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 1, "arrival": 0.5, "departure": 1}]}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": {"station": 1, "arrival": 0, "departure": 0}}"#,
+            #"{"type": "setTrainTimetable", "train": 1, "timetable": null}"#,
         ]
         for json in commands {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
         }
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "maybe"}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownTrain"}"#.utf8)))
+        XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation"}"#.utf8)))
+        XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation", "station": "Alpha"}"#.utf8)))
 
         let negativeCost = #"{"track": -1, "station": 0, "train": 0}"#
         XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Costs.self, from: Data(negativeCost.utf8)))
@@ -411,6 +477,14 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "stationStops", "train": 1}, "expect": {"platforms": []}}"#,
             #"{"observe": {"type": "stationStops", "train": 1}, "expect": {"stations": ["Central"]}}"#,
             #"{"observe": {"type": "stationStops", "train": 1}, "expect": {"stations": [], "found": false}}"#,
+            // A timetable is answered by its stops, and by nothing else.
+            #"{"observe": {"type": "timetable"}, "expect": {"timetable": []}}"#,
+            #"{"observe": {"type": "timetable", "train": 1}, "expect": {}}"#,
+            #"{"observe": {"type": "timetable", "train": 1}, "expect": {"stations": []}}"#,
+            #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [], "stations": []}}"#,
+            #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [{"station": 1, "arrival": 0}]}}"#,
+            #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": null}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}, "timetable": []}}"#,
         ]
         for json in steps {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
@@ -468,6 +542,20 @@ final class GoldenScenarioTests: XCTestCase {
             .observe(.stationStops(TrainID(rawValue: 3)), expect: .stations([StationID(rawValue: 1), StationID(rawValue: 4)]))
         )
 
+        let timetable = #"{"observe": {"type": "timetable", "train": 2}, "expect": {"timetable": [{"station": 3, "arrival": 0, "departure": 0}, {"station": 1, "arrival": 1440, "departure": 1450}]}}"#
+        let emptyTimetable = #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": []}}"#
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(timetable.utf8)),
+            .observe(.timetable(TrainID(rawValue: 2)), expect: .timetable([
+                ScheduledStop(station: StationID(rawValue: 3), arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+                ScheduledStop(station: StationID(rawValue: 1), arrival: GameTime(minutes: 1440), departure: GameTime(minutes: 1450)),
+            ]))
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(emptyTimetable.utf8)),
+            .observe(.timetable(TrainID(rawValue: 1)), expect: .timetable([]))
+        )
+
         let train = #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}, "offset": 532}, "movement": {"rate": 1300, "continuation": [{"x": 3, "y": 1}, {"x": 4, "y": 1}], "cursor": 1}}}"#
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(train.utf8)),
@@ -495,6 +583,16 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"type": "setTrainContinuation", "train": 1, "continuation": [{"x": 3, "y": 1}, {"x": 3, "y": 2}]}"#,
              .setTrainContinuation(TrainID(rawValue: 1), [GridPosition(x: 3, y: 1), GridPosition(x: 3, y: 2)])),
             (#"{"type": "setTrainContinuation", "train": 1, "continuation": []}"#, .setTrainContinuation(TrainID(rawValue: 1), [])),
+            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 2, "arrival": 20, "departure": 25}, {"station": 2, "arrival": 25, "departure": 25}]}"#,
+             .setTrainTimetable(TrainID(rawValue: 1), [
+                ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 20), departure: GameTime(minutes: 25)),
+                ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 25), departure: GameTime(minutes: 25)),
+             ])),
+            (#"{"type": "setTrainTimetable", "train": 3, "timetable": []}"#, .setTrainTimetable(TrainID(rawValue: 3), [])),
+            // Read as written: rejecting a negative time, a departure before
+            // the arrival or an unknown station is GameCore's decision.
+            (#"{"type": "setTrainTimetable", "train": 1, "timetable": [{"station": 0, "arrival": -1, "departure": -5}]}"#,
+             .setTrainTimetable(TrainID(rawValue: 1), [ScheduledStop(station: StationID(rawValue: 0), arrival: GameTime(minutes: -1), departure: GameTime(minutes: -5))])),
         ]
         for (json, expected) in commands {
             XCTAssertEqual(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), expected, json)
@@ -510,6 +608,8 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"result": "invalidContinuation"}"#, .rejected(.invalidContinuation)),
             (#"{"result": "clockOverflow"}"#, .rejected(.clockOverflow)),
             (#"{"result": "idsExhausted"}"#, .rejected(.idsExhausted)),
+            (#"{"result": "invalidTimetable"}"#, .rejected(.invalidTimetable)),
+            (#"{"result": "unknownStation", "station": 4}"#, .rejected(.unknownStation(StationID(rawValue: 4)))),
         ]
         for (json, expected) in results {
             XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)

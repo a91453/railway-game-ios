@@ -603,6 +603,15 @@ enum WorldInvariants {
             problems.append("station \(station.id.rawValue) does not match its tile")
         }
         for train in world.trains {
+            // Decision 19: times never go back from minute 0, and every stop
+            // is at a station the world has, placed or not.
+            let times = train.timetable.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
+            if times.contains(where: { $0 < 0 }) || zip(times, times.dropFirst()).contains(where: { $0 > $1 }) {
+                problems.append("train \(train.id.rawValue) timetable goes back in time: \(times)")
+            }
+            for stop in train.timetable where world.station(id: stop.station) == nil {
+                problems.append("train \(train.id.rawValue) timetable names unknown station \(stop.station.rawValue)")
+            }
             let movement = train.movement
             guard let position = train.position else {
                 if movement != .idle { problems.append("unplaced train \(train.id.rawValue) is not idle") }

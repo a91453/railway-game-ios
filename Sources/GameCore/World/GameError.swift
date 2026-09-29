@@ -49,4 +49,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// so the last one it can allocate is `Int.max - 1`. Nothing was built
     /// or bought, and nothing was charged.
     case idsExhausted
+    /// A timetable's times go back in time: at every stop they must satisfy
+    /// `0 <= arrival <= departure`, and each departure must be no later than
+    /// the next stop's arrival.
+    case invalidTimetable
+    /// No station with this ID exists.
+    case unknownStation(StationID)
 }

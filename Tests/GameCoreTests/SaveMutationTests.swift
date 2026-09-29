@@ -59,7 +59,12 @@ final class SaveMutationTests: XCTestCase {
     }
 
     /// A changed value of the same general kind, or something else entirely.
-    private static func mutation(of value: Any, using random: inout SplitMix64) -> (Any?, String) {
+    /// An object may get one of `addedKeys` added.
+    private static func mutation(
+        of value: Any,
+        addedKeys: [String] = ["onLink", "atNode", "movement", "position", "extra"],
+        using random: inout SplitMix64
+    ) -> (Any?, String) {
         if let number = value as? NSNumber, !(value is Bool) {
             let int = number.int64Value
             let choices: [(Any, String)] = [
@@ -101,7 +106,7 @@ final class SaveMutationTests: XCTestCase {
                 object[key] = nil
                 return (object, "object: removed \"\(key)\"")
             }
-            let key = random.element(of: ["onLink", "atNode", "movement", "position", "extra"])
+            let key = random.element(of: addedKeys)
             object[key] = random.chance(1, in: 2) ? NSNull() : ["tile": ["x": 0, "y": 0], "heading": "north"]
             return (object, "object: set \"\(key)\"")
         }
@@ -169,5 +174,88 @@ final class SaveMutationTests: XCTestCase {
         print("[volume] save.mutation \(accepted) mutated saves loaded, \(refused) refused, \(commandsOnLoaded) commands on loaded worlds")
         assertVolume(refused > 1_000, "only \(refused) mutated saves were refused")
         assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
+    }
+
+    /// The same for timetables (decision 19), with most mutations inside
+    /// them: a stop's station or time changed, a stop dropped, repeated or
+    /// swapped with another, a key removed, a timetable emptied, nulled or
+    /// added. Whatever loads keeps every stop at a station the world has,
+    /// with times that never go back, and further commands (timetable
+    /// replacements included) stay atomic.
+    func testMutatedTimetablesAreRefusedOrLoadWithEveryStopAtAKnownStation() throws {
+        var accepted = 0
+        var refused = 0
+        var timetableMutations = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.timetableMutation", cases: 30) { c in
+            let (setup, operations) = try TimetablePropertyTests.generate(&c, operations: 50)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            // Every train gets a timetable (none without stations).
+            for train in world.trains {
+                try world.setTrainTimetable(train.id, to: TimetableGenerator.valid(in: world, using: &c.random))
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let inTimetables = all.filter { $0.map(\.description).joined().contains(".timetable") }
+            let trainObjects = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.hasPrefix(".trains[") && path.count == 2
+            }
+            for _ in 0..<40 {
+                // Half inside timetables, a quarter at whole trains (to add
+                // or remove a "timetable" key), the rest anywhere but tiles.
+                let path: [Step]
+                let roll = c.random.below(4)
+                if roll < 2, !inTimetables.isEmpty {
+                    path = c.random.element(of: inTimetables)
+                    timetableMutations += 1
+                } else if roll == 2, !trainObjects.isEmpty {
+                    path = c.random.element(of: trainObjects)
+                } else {
+                    path = c.random.element(of: outsideTiles)
+                }
+                var described = ""
+                let mutated = Self.replacing(path[...], in: json) { value in
+                    let (result, text) = Self.mutation(of: value, addedKeys: ["timetable", "extra"], using: &c.random)
+                    described = text
+                    return result
+                }
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<10 {
+                    let operation = c.random.chance(1, in: 2)
+                        ? TimetablePropertyTests.nextTimetable(in: current, using: &c.random)
+                        : KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.timetableMutation \(accepted) mutated saves loaded, \(refused) refused, \(timetableMutations) inside timetables")
+        assertVolume(refused > 1_000, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
+        assertVolume(timetableMutations > 1_000, "only \(timetableMutations) mutations inside timetables")
     }
 }

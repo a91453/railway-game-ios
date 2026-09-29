@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–N) written a second time, straight
-/// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18; the rules summary), for differential testing.
+/// The whole GameCore kernel (Stages I–O) written a second time, straight
+/// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16, 18
+/// and 19; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -34,6 +34,7 @@ struct ReferenceWorld: Equatable {
         var rate: Int64 = 0
         var continuation: [GridPosition] = []
         var cursor = 0
+        var timetable: [ScheduledStop] = []
     }
 
     let width: Int
@@ -209,7 +210,8 @@ struct ReferenceWorld: Equatable {
         switch placed(id) {
         case .failure(let error): return error
         case .success(let i):
-            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil)
+            // Position and movement go; the timetable is plan data and stays.
+            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable)
             return nil
         }
     }
@@ -269,6 +271,27 @@ struct ReferenceWorld: Equatable {
             guard passable(nodes[...], from: node, heading: heading).count == nodes.count else { return .invalidContinuation }
             trains[i].continuation = nodes
             trains[i].cursor = 0
+            return nil
+        }
+    }
+
+    /// Decision 19: the train must exist; then all the times, arrival and
+    /// departure of each stop in turn, must be non-negative and never fall;
+    /// then every station must exist, the first missing one in timetable
+    /// order being reported. Placement does not matter.
+    mutating func setTimetable(_ id: TrainID, _ stops: [ScheduledStop]) -> GameError? {
+        switch index(id) {
+        case .failure(let error): return error
+        case .success(let i):
+            let times = stops.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
+            guard times.allSatisfy({ $0 >= 0 }), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
+                return .invalidTimetable
+            }
+            let known = Set(stations.map(\.id))
+            if let missing = stops.first(where: { !known.contains($0.station.rawValue) }) {
+                return .unknownStation(missing.station)
+            }
+            trains[i].timetable = stops
             return nil
         }
     }
