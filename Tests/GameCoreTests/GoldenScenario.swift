@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 15
+    static let schemaVersion = 16
 
     var description: String
     var initialState: InitialState
@@ -229,8 +229,8 @@ extension GoldenScenario.Step: Decodable {
             case .exits:
                 try requireOnly([.exits], answering: "exits")
                 self = try .observe(observation, expect: .exits(expect.decode([PositionSummary].self, forKey: .exits).map(\.position)))
-            case .occupancy:
-                try requireOnly([.resources], answering: "occupancy")
+            case .occupancy, .reservation:
+                try requireOnly([.resources], answering: "a train's track")
                 self = try .observe(observation, expect: .resources(expect.decode([ResourceSummary].self, forKey: .resources).map(\.resource)))
             case .conflicts:
                 try requireOnly([.conflicts], answering: "conflicts")
@@ -285,6 +285,7 @@ enum ScenarioCommand: Equatable {
     case extendStation(StationID, GridPosition)
     case purchaseTrain(name: String)
     case setTrainCars(TrainID, Int)
+    case setTrafficControl(Bool)
     case placeTrain(TrainID, TrainPosition)
     case unplaceTrain(TrainID)
     case reverseTrain(TrainID)
@@ -330,6 +331,8 @@ enum ScenarioCommand: Equatable {
                 try world.purchaseTrain(named: name)
             case .setTrainCars(let id, let cars):
                 try world.setTrainCars(id, to: cars)
+            case .setTrafficControl(let enabled):
+                try world.setTrafficControl(enabled)
             case .placeTrain(let id, let position):
                 try world.placeTrain(id, at: position)
             case .unplaceTrain(let id):
@@ -389,7 +392,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
+        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars, enabled
     }
 
     init(from decoder: any Decoder) throws {
@@ -414,6 +417,8 @@ extension ScenarioCommand: Decodable {
             self = try .extendStation(container.decodeStation(forKey: .station), container.decodePosition(x: .x, y: .y))
         case "purchaseTrain":
             self = try .purchaseTrain(name: container.decode(String.self, forKey: .name))
+        case "setTrafficControl":
+            self = try .setTrafficControl(container.decode(Bool.self, forKey: .enabled))
         case "setTrainCars":
             // Read as written: rejecting a count outside 0...16 is GameCore's decision.
             self = try .setTrainCars(container.decodeTrain(forKey: .train), container.decode(Int.self, forKey: .cars))
@@ -509,7 +514,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern
+        case result, x, y, width, height, required, available, train, station, line, pattern, other
     }
 
     init(from decoder: any Decoder) throws {
@@ -590,6 +595,10 @@ extension StepOutcome: Codable {
             self = try .rejected(.invalidStationTile(container.decodePosition(x: .x, y: .y)))
         case "invalidTrainLength":
             self = .rejected(.invalidTrainLength)
+        case "trackReserved":
+            self = try .rejected(.trackReserved(container.decodeTrain(forKey: .train)))
+        case "trainsShareTrack":
+            self = try .rejected(.trainsShareTrack(container.decodeTrain(forKey: .train), container.decodeTrain(forKey: .other)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -697,6 +706,13 @@ extension StepOutcome: Codable {
             try encode(position)
         case .rejected(.invalidTrainLength):
             try container.encode("invalidTrainLength", forKey: .result)
+        case .rejected(.trackReserved(let id)):
+            try container.encode("trackReserved", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainsShareTrack(let first, let second)):
+            try container.encode("trainsShareTrack", forKey: .result)
+            try container.encode(first.rawValue, forKey: .train)
+            try container.encode(second.rawValue, forKey: .other)
         }
     }
 }
@@ -730,6 +746,7 @@ enum ScenarioObservation: Equatable {
     case lineSegmentLoads(LineID, ServiceLevel)
     case exits(GridPosition, facing: TrackDirection)
     case occupancy(TrainID)
+    case reservation(TrainID)
     case conflicts
     case trackSections
     case parallelTracks(StationID, StationID)
@@ -774,6 +791,8 @@ enum ScenarioObservation: Equatable {
             .exits(world.exits(from: position, facing: heading))
         case .occupancy(let id):
             .resources(world.occupiedResources(of: id))
+        case .reservation(let id):
+            .resources(world.reservedResources(of: id))
         case .conflicts:
             .conflicts(world.occupancyConflicts())
         case .trackSections:
@@ -851,6 +870,8 @@ extension ScenarioObservation: Decodable {
             self = try .exits(container.decodePosition(x: .x, y: .y), facing: heading)
         case "occupancy":
             self = try .occupancy(container.decodeTrain(forKey: .train))
+        case "reservation":
+            self = try .reservation(container.decodeTrain(forKey: .train))
         case "conflicts":
             self = .conflicts
         case "trackSections":
@@ -1013,7 +1034,8 @@ struct PositionSummary: Codable, Equatable {
 /// The externally meaningful state of a world: time, money, what has been
 /// built or bought (each station with the tiles it grew onto), where each
 /// train is and how it moves, each train's timetable, how it repeats, and
-/// service, its cars and its body, the service lines and the service day.
+/// service, its cars and its body, the service lines, the service day, and
+/// whether traffic control is on.
 /// Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
@@ -1027,6 +1049,7 @@ struct WorldSummary: Codable, Equatable {
     var trains: [TrainSummary]
     var lines: [LineSummary]
     var serviceDay: [BandSummary]
+    var trafficControl: Bool
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1080,6 +1103,7 @@ struct WorldSummary: Codable, Equatable {
             .sorted { $0.id < $1.id }
         lines = world.lines.map(LineSummary.init).sorted { $0.id < $1.id }
         serviceDay = world.serviceDay.bands.map(BandSummary.init)
+        trafficControl = world.trafficControl
     }
 }
 

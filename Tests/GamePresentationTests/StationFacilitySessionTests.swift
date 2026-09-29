@@ -112,3 +112,67 @@ final class StationFacilitySessionTests: XCTestCase {
         XCTAssertEqual(points.map(\.x), [37.5, 35, 25, 17.5])
     }
 }
+
+/// Traffic control through the session (Stage T): turning it on and off,
+/// and a service waiting for held track says which train it waits for.
+final class TrafficControlSessionTests: XCTestCase {
+    private static func p(_ x: Int, _ y: Int) -> GridPosition {
+        GridPosition(x: x, y: y)
+    }
+
+    private static func makeLine() throws -> GameWorld {
+        var world = try GameWorld(width: 8, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        try world.buildTrack(at: p(0, 1), connections: .east)
+        for x in 1...6 {
+            try world.buildTrack(at: p(x, 1), connections: [.east, .west])
+        }
+        try world.buildTrack(at: p(7, 1), connections: .west)
+        try world.buildStation(named: "A", at: p(1, 0))
+        try world.buildStation(named: "B", at: p(6, 0))
+        return world
+    }
+
+    func testTrafficControlIsTurnedOnAndOffThroughTheWorld() async throws {
+        var world = try Self.makeLine()
+        let one = try world.purchaseTrain(named: "One").id
+        let two = try world.purchaseTrain(named: "Two").id
+        try world.placeTrain(one, at: .atNode(Self.p(3, 1), heading: .east))
+        try world.placeTrain(two, at: .atNode(Self.p(3, 1), heading: .west))
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.setTrafficControl(true)
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Trains #1 and #2 stand on the same track. Move one of them before turning traffic control on."))
+            XCTAssertFalse(session.world.trafficControl)
+            session.selectTrain(two)
+            session.unplaceSelectedTrain()
+            session.setTrafficControl(true)
+            XCTAssertTrue(session.world.trafficControl)
+            XCTAssertEqual(
+                session.message,
+                StatusMessage(kind: .success, text: "Traffic control is on: each train holds its route and waits while another train holds track on it.")
+            )
+            session.setTrafficControl(false)
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Traffic control is off: trains pass through each other."))
+        }
+    }
+
+    func testAServiceWaitingForTrackNamesTheTrainHoldingIt() throws {
+        var world = try Self.makeLine()
+        try world.setTrafficControl(true)
+        let one = try world.purchaseTrain(named: "One").id
+        try world.placeTrain(one, at: .atNode(Self.p(1, 1), heading: .east))
+        try world.setTrainMovementRate(one, to: 1_024)
+        try world.setTrainTimetable(one, to: [
+            ScheduledStop(station: StationID(rawValue: 1), arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: StationID(rawValue: 2), arrival: GameTime(minutes: 10), departure: GameTime(minutes: 10)),
+        ])
+        try world.startTrainService(one)
+        let blocker = try world.purchaseTrain(named: "Blocker").id
+        try world.placeTrain(blocker, at: .atNode(Self.p(4, 1), heading: .west))
+        XCTAssertEqual(world.trainServiceStatus(of: one)?.stopText, "At A, leaves 00:01")
+
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.trainHoldingRoute(of: one), blocker)
+        XCTAssertEqual(world.trainServiceStatus(of: one)?.stopText, "At A, waiting for Blocker to clear the track")
+    }
+}

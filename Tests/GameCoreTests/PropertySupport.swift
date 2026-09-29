@@ -623,6 +623,22 @@ enum WorldInvariants {
                 earlier.append(annex)
             }
         }
+        // Decision 28: under traffic control no two trains hold the same
+        // track, so none stand on the same track either.
+        if world.trafficControl {
+            var held: [TrackResource: TrainID] = [:]
+            for train in world.trains {
+                for resource in world.reservedResources(of: train.id) {
+                    if let other = held[resource] {
+                        problems.append("trains \(other.rawValue) and \(train.id.rawValue) both hold \(resource)")
+                    }
+                    held[resource] = train.id
+                }
+            }
+            if !world.occupancyConflicts().isEmpty {
+                problems.append("trains share track under traffic control: \(world.occupancyConflicts())")
+            }
+        }
         let stationTiles = world.map.tiles.filter { if case .station = $0.type { true } else { false } }.count
         if stationTiles != world.stations.reduce(0, { $0 + 1 + $1.annexes.count }) {
             problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")

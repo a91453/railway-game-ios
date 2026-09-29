@@ -124,9 +124,20 @@ private struct ToolOptions: View {
     var body: some View {
         switch session.tool {
         case .select:
-            Label("Choose Track, Station or Remove to build. Selecting only inspects.", systemImage: "info.circle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Choose Track, Station or Remove to build. Selecting only inspects.", systemImage: "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Toggle(isOn: Binding(get: { session.world.trafficControl }, set: { session.setTrafficControl($0) })) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Traffic control")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Each train holds its route and waits for track another train holds.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         case .buildTrack:
             TrackPieceEditor(session: session)
         case .buildStation:

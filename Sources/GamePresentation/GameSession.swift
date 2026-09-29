@@ -143,6 +143,20 @@ public final class GameSession {
         trackConnections = trackConnections.rotatedClockwise
     }
 
+    // MARK: - Traffic control
+
+    /// Turns traffic control on or off through
+    /// `GameWorld.setTrafficControl(_:)`; GameCore refuses to turn it on
+    /// while two trains share track.
+    public func setTrafficControl(_ enabled: Bool) {
+        perform { world throws(GameError) in
+            try world.setTrafficControl(enabled)
+            return enabled
+                ? "Traffic control is on: each train holds its route and waits while another train holds track on it."
+                : "Traffic control is off: trains pass through each other."
+        }
+    }
+
     // MARK: - Speed
 
     /// Changes the game speed through the world's clock, the only record of it.

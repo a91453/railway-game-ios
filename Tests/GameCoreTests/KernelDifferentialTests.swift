@@ -71,6 +71,9 @@ final class KernelDifferentialTests: XCTestCase {
         /// The train tool's send to a station for a train with cars: the
         /// route that pulls it along the platforms.
         case sendWholeTrainToStation(TrainID, StationID)
+        /// Only the traffic-control campaign (`TrafficControlPropertyTests`)
+        /// draws this.
+        case setTrafficControl(Bool)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -112,6 +115,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .extendStation(let id, let p): ".extendStation(\(id.rawValue), \(p))"
             case .setCars(let id, let cars): ".setCars(\(id.rawValue), \(cars))"
             case .sendWholeTrainToStation(let id, let station): ".sendWholeTrainToStation(\(id.rawValue), \(station.rawValue))"
+            case .setTrafficControl(let enabled): ".setTrafficControl(\(enabled))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
@@ -329,6 +333,7 @@ final class KernelDifferentialTests: XCTestCase {
                       let route = world.route(from: position, toStation: station, length: train.length)
                 else { return nil }
                 try world.setTrainContinuation(id, to: route)
+            case .setTrafficControl(let enabled): try world.setTrafficControl(enabled)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -394,6 +399,7 @@ final class KernelDifferentialTests: XCTestCase {
                   let route = model.route(from: position, toStation: station, length: ReferenceWorld.length(train))
             else { return nil }
             return model.setContinuation(id, route)
+        case .setTrafficControl(let enabled): return model.setTrafficControl(enabled)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -417,6 +423,7 @@ final class KernelDifferentialTests: XCTestCase {
         check(world.clock.speed == model.speed, "speed \(world.clock.speed) vs \(model.speed)")
         check(world.economy.balance.amount == model.balance, "balance \(world.economy.balance.amount) vs \(model.balance)")
         check(world.map.width == model.width && world.map.height == model.height, "map size")
+        check(world.trafficControl == model.trafficControl, "traffic control \(world.trafficControl) vs \(model.trafficControl)")
         for tile in world.map.tiles {
             let expected: TileType = switch model.tiles[tile.position] {
             case nil: .empty
@@ -439,6 +446,13 @@ final class KernelDifferentialTests: XCTestCase {
             // Decision 27: its cars and body.
             check(train.cars == expected.cars, "train \(expected.id) cars \(train.cars) vs \(expected.cars)")
             check(train.trail == expected.trail, "train \(expected.id) trail \(train.trail) vs \(expected.trail)")
+            // Decision 28: the track it holds.
+            let held = world.reservedResources(of: train.id)
+            check(held == model.reservedResources(of: train.id), "train \(expected.id) holds \(held) vs \(model.reservedResources(of: train.id))")
+            check(
+                world.trainHoldingRoute(of: train.id) == model.trainHoldingRoute(of: train.id),
+                "train \(expected.id) waits for \(String(describing: world.trainHoldingRoute(of: train.id))) vs \(String(describing: model.trainHoldingRoute(of: train.id)))"
+            )
             check(train.movement.rate == expected.rate, "train \(expected.id) rate \(train.movement.rate) vs \(expected.rate)")
             check(
                 train.movement.continuation == expected.continuation && train.movement.cursor == expected.cursor,

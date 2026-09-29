@@ -192,8 +192,9 @@ public struct TrainServiceStatus: Hashable, Sendable {
     /// its own.
     public let serviceName: String?
     /// Where it is in its timetable: "At Beta, leaves 08:35", "Next: Gamma,
-    /// due 08:40", or, for a line's train between trips, "Waiting to be
-    /// sent out".
+    /// due 08:40", "At Beta, waiting for Local 2 to clear the track" (see
+    /// ``GameWorld/trainHoldingRoute(of:)``), or, for a line's train
+    /// between trips, "Waiting to be sent out".
     public let stopText: String
     public let punctuality: Punctuality?
 
@@ -231,7 +232,10 @@ extension GameWorld {
         case .waitingAtStop:
             let punctuality: Punctuality = now > departure ? .late(minutes: now - departure) : now < arrival ? .early(minutes: arrival - now) : .onTime
             let isLast = train.timetablePeriod == nil && execution.stop == train.timetable.count - 1
-            let text = isLast ? "At \(name), last stop" : "At \(name), leaves \(clockText(minuteOfDay: Int(departure % 1440)))"
+            var text = isLast ? "At \(name), last stop" : "At \(name), leaves \(clockText(minuteOfDay: Int(departure % 1440)))"
+            if let holder = trainHoldingRoute(of: id) {
+                text = "At \(name), waiting for \(self.train(id: holder)?.name ?? "#\(holder.rawValue)") to clear the track"
+            }
             return TrainServiceStatus(serviceName: serviceName, stopText: text, punctuality: punctuality)
         case .travellingToStop:
             let punctuality: Punctuality = now > arrival ? .late(minutes: now - arrival) : .onTime

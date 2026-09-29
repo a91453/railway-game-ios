@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–S2) written a second time, straight
+/// The whole GameCore kernel (Stages I–T) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–27; the rules summary), for differential testing.
+/// 18–28; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -94,6 +94,8 @@ struct ReferenceWorld: Equatable {
     var lines: [Line] = []
     var nextLineID = 1
     var serviceDay: [(start: Int, level: ServiceLevel)] = [(0, .low), (420, .peak), (600, .offPeak), (960, .peak), (1200, .offPeak), (1260, .low)]
+    /// Decision 28: whether trains hold their track.
+    var trafficControl = false
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -171,6 +173,7 @@ struct ReferenceWorld: Equatable {
             && lhs.speed == rhs.speed && lhs.resumeSpeed == rhs.resumeSpeed && lhs.nextStationID == rhs.nextStationID
             && lhs.nextTrainID == rhs.nextTrainID && lhs.lines == rhs.lines && lhs.nextLineID == rhs.nextLineID
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
+            && lhs.trafficControl == rhs.trafficControl
     }
 
     // MARK: - Geometry
@@ -325,6 +328,10 @@ struct ReferenceWorld: Equatable {
             }
         }
         guard !supports else { return .trackInUse(p) }
+        // Decision 28: nor a train's route ahead.
+        if trafficControl, trains.contains(where: { reservedResources(of: TrainID(rawValue: $0.id)).contains(.node(p)) }) {
+            return .trackInUse(p)
+        }
         tiles[p] = nil
         return nil
     }
@@ -397,6 +404,9 @@ struct ReferenceWorld: Equatable {
         case .success(let i):
             guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
             guard isOnTrack(position), let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
+            if let holder = holder(of: held(position, body, length: Self.length(trains[i]), ahead: []), except: trains[i].id) {
+                return .trackReserved(TrainID(rawValue: holder))
+            }
             trains[i].position = position
             trains[i].trail = body
             return nil
@@ -418,7 +428,11 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
-            (trains[i].position, trains[i].trail) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
+            let (turned, body) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
+            if let holder = holder(of: held(turned, body, length: Self.length(trains[i]), ahead: []), except: trains[i].id) {
+                return .trackReserved(TrainID(rawValue: holder))
+            }
+            (trains[i].position, trains[i].trail) = (turned, body)
             trains[i].continuation = []
             trains[i].cursor = 0
             return nil
@@ -470,6 +484,9 @@ struct ReferenceWorld: Equatable {
         case .success(let i):
             let (node, heading) = Self.ahead(trains[i].position!)
             guard passable(nodes[...], from: node, heading: heading).count == nodes.count else { return .invalidContinuation }
+            if let holder = holder(of: held(trains[i].position!, trains[i].trail, length: Self.length(trains[i]), ahead: nodes), except: trains[i].id) {
+                return .trackReserved(TrainID(rawValue: holder))
+            }
             trains[i].continuation = nodes
             trains[i].cursor = 0
             return nil
@@ -657,6 +674,8 @@ struct ReferenceWorld: Equatable {
                 continue
             }
             guard let route else { return }
+            // Decision 28: the whole route must be free, or the train waits.
+            if holder(of: held(start, body, length: length, ahead: route), except: trains[i].id) != nil { return }
             trains[i].position = start
             trains[i].trail = body
             trains[i].continuation = route

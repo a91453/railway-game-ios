@@ -223,6 +223,10 @@ extension GameError {
             "A station can only grow onto an empty tile beside one of its tiles, not \(position)."
         case .invalidTrainLength:
             "A train has \(Train.minimumCars) to \(Train.maximumCars) cars."
+        case .trackReserved(let id):
+            "Train #\(id.rawValue) holds track on the way. Wait until it has passed, or choose another way."
+        case .trainsShareTrack(let first, let second):
+            "Trains #\(first.rawValue) and #\(second.rawValue) stand on the same track. Move one of them before turning traffic control on."
         }
     }
 }

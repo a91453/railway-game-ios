@@ -865,4 +865,83 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 300, "only \(aimed) mutations aimed at annexes, cars and bodies")
         assertVolume(piecesLoaded > 300, "only \(piecesLoaded) grown stations and bodies loaded")
     }
+
+    /// Decision 28: saves under traffic control, mutated mostly in the
+    /// flag and in trains' places, bodies and continuations, are refused or
+    /// load into worlds that keep every invariant (no two trains holding
+    /// the same track while it is on) and keep running without breaking
+    /// one.
+    func testMutatedTrafficIsRefusedOrLoadsWithTrainsApart() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var piecesLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.trafficMutation", cases: 10) { c in
+            let (setup, operations) = try TrafficControlPropertyTests.generate(&c, operations: 30)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.contains("trafficControl") || text.contains("position") || text.contains("continuation") || text.contains("trail")
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["trafficControl", "continuation", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                piecesLoaded += loaded.trafficControl ? loaded.trains.count { $0.position != nil } : 0
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = c.random.chance(1, in: 2)
+                        ? KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                        : .advance(c.random.below(20))
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.trafficMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at traffic and trains, \(piecesLoaded) placed trains loaded under traffic control")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 100, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 300, "only \(aimed) mutations aimed at traffic and trains")
+        assertVolume(piecesLoaded > 300, "only \(piecesLoaded) placed trains loaded under traffic control")
+    }
 }

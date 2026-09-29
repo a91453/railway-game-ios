@@ -39,15 +39,18 @@ struct RailwayGameApp: App {
 }
 
 extension GameWorld {
-    /// The world a new game starts with, running at 1×.
+    /// The world a new game starts with, running at 1×, with traffic
+    /// control on so trains keep off each other's track.
     static func newGame() -> GameWorld {
         do {
-            return try GameWorld(
+            var world = try GameWorld(
                 width: 32,
                 height: 24,
                 economy: GameEconomy(balance: 1_000_000),
                 clock: GameClock(speed: .normal)
             )
+            try world.setTrafficControl(true)
+            return world
         } catch {
             // The size is a constant within GridMap's limits, so failing here is a programming error.
             preconditionFailure("Could not create the new-game world: \(error)")

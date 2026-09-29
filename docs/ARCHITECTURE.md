@@ -723,6 +723,61 @@ Stage S2 讓車站可以佔多格、列車可以有多節車廂，停站也開�
   - 月台的分配與股道指定（Stage V）。
   - 列車之間的阻擋（Phase 4.6）。
 
+### 28. 進路預約與交通控制（Phase 4.6 Stage T）
+
+Stage T 讓列車在出發前預約要走的鐵軌，預約範圍涵蓋整列車。概念參考真實時刻表研究的「整列車的資源預約」（[TIMETABLE_DATA_STUDY.md](TIMETABLE_DATA_STUDY.md)）：依實體路徑對整列車預約它會經過的資源，不讓兩車互穿。
+
+- **交通控制**
+  - `GameWorld.trafficControl`：新世界預設關閉，所以既有的存檔、golden 與所有 property digest 都不變。App 的新遊戲會開啟它。
+  - `setTrafficControl(_:)`：關閉一定成功。開啟時，任兩台列車持有的資源不能重疊，否則拒絕並回報 `trainsShareTrack`（第一台和前面某台重疊的列車，以及與它重疊的最早那一台）。
+- **列車持有的資源**（`reservedResources(of:)`）
+  - 包含：列車站在的資源（決策 26、27，含車身）、前方節點（所在節點，或所在連結的 `to`），以及剩下 continuation 經過的每個連結與節點。
+  - 由位置、車身與 continuation 推導，這三者本來就存檔，所以預約本身不需要額外的狀態，也就不會有第二份權威資料。Stage U 讓預約變成部分預約之後，它才需要自己的狀態。
+- **規則**（只在交通控制開啟時）
+  - 任兩台列車持有的資源不重疊，所以兩車也永遠不會站在同一段鐵軌上。
+  - `placeTrain`、`reverseTrain`、`setTrainContinuation` 若需要別的列車持有的資源，會在原有的檢查之後以 `trackReserved`（最小的持有者 ID）拒絕。在連結上的列車反向時，需要的是另一端的節點。
+  - `removeTrack` 不能拆別的列車前方路徑上的節點（`trackInUse`）。
+  - 服務出發時，整條到下一站的路徑都要沒有被其他列車持有。否則列車留在原站等待，而且不折返，之後的每一步都重試。和沒有路的情況不同，這個結果不能在同一次 `advance` 裡記住，因為其他列車移動後會釋放鐵軌。
+  - 列車只沿著自己持有的路徑前進，所以移動本身不需要任何改變。
+- **避免死結的最小規則**
+  - 列車一次預約到下一個停靠站的整條路，要嘛全部拿到，要嘛不出發，並一直持有到 continuation 走完或被替換。
+  - 仍然可能死結：兩台列車各自等對方站著的鐵軌，就會一直等下去。決定誰在哪裡等誰，是 Stage V dispatcher 的工作。
+  - Stage U 會讓列車通過後就釋放鐵軌，後車可以更早跟上。
+- **查詢**
+  - `trainHoldingRoute(of:)`：過了出發時刻仍在等待的服務，列出持有它路徑的最小列車 ID。
+  - GamePresentation 用這個查詢把列車狀態顯示成「At A, waiting for Local 2 to clear the track」。
+- **存檔**
+  - 只有開啟交通控制時才寫入 `"trafficControl": true`，沒有這個 key 的存檔讀成關閉，明確的 `null` 會被拒絕。
+  - 開啟時，任兩台列車持有的資源重疊的存檔會被拒絕。
+- **Golden scenarios**
+  - schema v16 新增：
+    - `setTrafficControl` 指令；
+    - `trackReserved`、`trainsShareTrack` 結果；
+    - `reservation` 觀察；
+    - 最終狀態必填的 `trafficControl`。
+  - 既有的 15 個 fixture 只改版本，並加上 `"trafficControl": false`。
+  - 新增手算的 `traffic-control.json`，第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過。
+- **驗證**
+  - `TrafficControlTests`（手算）：
+    - 持有的資源；
+    - 開啟時的檢查；
+    - 各指令的拒絕與拆軌；
+    - 連結上的反向；
+    - 等待路徑的服務；
+    - 存檔。
+  - `TrafficControlPropertyTests`（`traffic.reservation`）在 GameCore 與 `ReferenceWorld` 上同時執行，每步比較所有狀態、每台列車持有的資源與 `trainHoldingRoute`，並檢查交通控制下任兩台列車都不持有、也不站在同一段鐵軌上。
+    - 產生的操作包括：開關交通控制、放置、送往格子與車站、反向、取下再放回、在前方路徑上拆軌，以及線路與服務。
+    - `ReferenceWorld` 的寫法不同：持有者是逐一檢查每台其他列車的資源求得，重疊則逐對檢查。
+  - `SaveMutationTests` 新增 `save.trafficMutation`。
+  - 刻意讓預約漏掉前方節點、或讓出發忽略預約時，campaign 在前幾個 case 就失敗（驗證後還原）。
+  - Stage I–S2 的 property digest 在修改前後相同。
+- **GamePresentation / App**
+  - 新遊戲開啟交通控制。
+  - Select 工具的選項裡有開關。
+  - 被拒絕時顯示持有鐵軌的列車。
+  - 等待路徑的服務會說明在等哪一台。
+- **本 Stage 不做**：通過後釋放與部分預約（Stage U）、決定在哪裡等待、交會與待避（Stage V）、行駛曲線（Stage W）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -737,6 +792,7 @@ Stage S2 讓車站可以佔多格、列車可以有多節車廂，停站也開�
 - 車站或列車的 ID 已配發到最後一個（`Int.max − 1`）時，建站或購車被拒絕（`idsExhausted`），不扣款（決策 6）。
 - `route(from:to:)` 回傳到目的地鐵軌格的最短、不折返的 continuation（同長時依北、東、南、西順序），或 `nil`；它是唯讀查詢，不會自己設定列車的 continuation（決策 16）。
 - 車站的月台是它每一格正北、正東、正南、正西的鐵軌格；`route(from:toStation:)` 回傳到第一個到達的月台的最短、不折返 continuation。列車在月台格中心、沒有剩下的 continuation 時停在該站（`stationsStoppedAt(by:)`）；停站由狀態推導，不另存（決策 18）。
+- 交通控制開啟時（決策 28），每台列車持有它站在的資源、前方節點與剩下的 continuation；任兩台列車持有的資源不重疊。需要別的列車持有的鐵軌的放置、反向與 continuation 會被拒絕（`trackReserved`），服務要等整條路空出來才出發。新世界預設關閉，App 的新遊戲會開啟。
 - 車站可以長到它某一格旁邊的空格（`extendStation`，收一座車站的費用）。列車有 1 到 16 節，每節一格，只能在不在軌道上時設定；車頭後方的車身沿鐵軌記錄在 `trail`，移動時跟著走，反向時車頭移到車尾。車身下的鐵軌不能拆。長列車到站時沿月台延伸，整列都在月台邊時才算整列停妥（`stationsBesideWholeTrain`，決策 27）。
 - 列車的時刻表是依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），時間從分鐘 0 起不倒流、每站都是存在的車站；`setTrainTimetable` 整份原子替換、`[]` 清除、免費。時刻表是計畫資料：放置、取下、反向、移動指令與時間都保留它；只有明確啟動的服務會讀它（決策 19、20）。
 - 時刻表可以每隔固定的分鐘數重複（`setTrainTimetable(_:to:repeatingEvery:)`），停靠可以標記在離開時折返；週期至少 1 分鐘，而且重新開始時時間不倒流（決策 21）。

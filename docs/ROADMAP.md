@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）與 Stage S2（車站設施）已實作，Phase 4.5 到此告一段落；下一步是 Phase 4.6 的 Stage T（進路預約）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）與 Stage S2（車站設施）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作，下一步是 Stage U（movement authority）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -279,11 +279,21 @@ Q 把前者展開成後者：服務模式產生具體、有限的班次，交給
 
 參考遊戲沒有號誌、閉塞或待避站，快慢車也彼此「看不見」。要讓多台列車真正共用鐵軌、待避與交會，就需要這一層，這也是與《A列車》的深度差距最大的地方。
 
-### Stage T — 進路預約
+### Stage T — 進路預約 ✅
 
-- 出發或設定 continuation 時，列車向 GameCore 預約前方的資源。預約是整列車的，包含列車長度。
-- 預約是權威狀態，要存檔。
-- 避免死結的最小規則在 T 決定，例如一次只預約到下一個停靠站，或下一個可以停車的地方。
+- **交通控制**（`setTrafficControl`）
+  - 新世界預設關閉，所以既有存檔、golden 與 property digest 都不變。App 的新遊戲會開啟。
+  - 開啟時，兩車不能共用鐵軌。
+- **持有的資源**：列車站在的資源（含車身）、前方節點，以及剩下的 continuation。
+  - 由位置、車身與 continuation 推導。這三者本來就存檔，所以預約不需要第二份狀態。
+- **規則**
+  - 需要別的列車持有的鐵軌時，放置、反向、設定 continuation 會被拒絕（`trackReserved`）。
+  - 前方路徑上的鐵軌不能拆。
+  - 服務要等整條到下一站的路空出來才出發，每一步都重試。
+  - 任兩台列車永遠不會站在同一段鐵軌上。
+- **避免死結的最小規則**：一次預約到下一個停靠站的整條路，全部拿到才出發。兩車互等對方站著的鐵軌時仍會死結，留給 Stage V。
+- **畫面**：Select 工具裡有交通控制的開關。等待的服務會顯示「waiting for Local 2 to clear the track」。
+- 之前所有 Stage 的 property digest 不變；golden scenario schema v16 新增 `traffic-control.json`（ARCHITECTURE 決策 28）。
 
 ### Stage U — Movement authority
 

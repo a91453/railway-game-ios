@@ -202,9 +202,8 @@ extension GameWorld {
 
     /// The track a train covers beyond its head's own tile or link: the
     /// links its body lies over, and the nodes it passes or reaches.
-    func bodyResources(of train: Train) -> [TrackResource] {
-        guard let position = train.position, !train.trail.isEmpty else { return [] }
-        let length = train.length
+    func bodyResources(at position: TrainPosition, trail: [GridPosition], length: Int64) -> [TrackResource] {
+        guard !trail.isEmpty else { return [] }
         var resources: [TrackResource] = []
         var previous: GridPosition
         switch position {
@@ -213,7 +212,7 @@ extension GameWorld {
         case .onLink(let from, _, _):
             previous = from
         }
-        for (index, node) in train.trail.enumerated() {
+        for (index, node) in trail.enumerated() {
             let distance = Train.distanceBehind(index, at: position)
             if case .onLink = position, index == 0 {
                 // The head's own link is already its resource.

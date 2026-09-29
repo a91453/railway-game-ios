@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 16,
+  "description": "Route reservation under traffic control. Row 1 is plain track from dead end (0,1) to dead end (7,1); A(1,0) has platform (1,1) and B(6,0) platform (6,1). A train holds what it stands on, the node ahead of it (its own node, or the far end of its link) and every link and node of the rest of its continuation. Traffic control cannot be turned on while two trains hold the same track: T1 on the link into (3,1) holds (3,1), where T2 stands. Under it, placing a train, setting a continuation or turning round is refused when another train holds track it needs, naming the lowest such train, and track on a route ahead cannot be removed. T3's service is due to leave A at minute 1, but its whole route to B must be free: it waits while T1 stands at (3,1), then while T2 stands at (4,1), and leaves at minute 4, the first step after both are gone. Standing at B, it holds only its node; its service ends there at minute 12.",
+  "initialState": {
+    "mapWidth": 8,
+    "mapHeight": 2,
+    "balance": 1000000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 0, "y": 1, "connections": ["east"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 6, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 7, "y": 1, "connections": ["west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "A", "x": 1, "y": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "B", "x": 6, "y": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T1" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T2" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "T3" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "link", "from": { "x": 2, "y": 1 }, "to": { "x": 3, "y": 1 }, "offset": 512 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 3, "y": 1, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrafficControl", "enabled": true },
+      "expect": { "result": "trainsShareTrack", "train": 1, "other": 2 }
+    },
+    {
+      "observe": { "type": "reservation", "train": 1 },
+      "expect": { "resources": [{ "type": "node", "x": 3, "y": 1 }, { "type": "link", "from": { "x": 2, "y": 1 }, "to": { "x": 3, "y": 1 } }] }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrafficControl", "enabled": true },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 3, "y": 1, "heading": "east" } },
+      "expect": { "result": "trackReserved", "train": 1 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 5, "y": 1, "heading": "west" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "node", "x": 3, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }] },
+      "expect": { "result": "trackReserved", "train": 2 }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 2, "continuation": [{ "x": 4, "y": 1 }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "reservation", "train": 2 },
+      "expect": { "resources": [{ "type": "node", "x": 4, "y": 1 }, { "type": "node", "x": 5, "y": 1 }, { "type": "link", "from": { "x": 4, "y": 1 }, "to": { "x": 5, "y": 1 } }] }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 4, "y": 1 }] },
+      "expect": { "result": "trackReserved", "train": 2 }
+    },
+    {
+      "command": { "type": "removeTrack", "x": 4, "y": 1 },
+      "expect": { "result": "trackInUse", "x": 4, "y": 1 }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 3, "position": { "type": "node", "x": 1, "y": 1, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 3, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainTimetable", "train": 3, "timetable": [{ "station": 1, "arrival": 0, "departure": 1, "reverse": false }, { "station": 2, "arrival": 12, "departure": 12, "reverse": false }], "repeat": { "type": "once" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "startTrainService", "train": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 3 },
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
+    },
+    {
+      "observe": { "type": "train", "train": 2 },
+      "expect": { "position": { "type": "node", "x": 4, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 } }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 3 },
+      "expect": { "execution": { "type": "waiting", "stop": 0, "cycle": 0 } }
+    },
+    {
+      "command": { "type": "unplaceTrain", "train": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 3 },
+      "expect": { "position": { "type": "node", "x": 2, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }, { "x": 4, "y": 1 }, { "x": 5, "y": 1 }, { "x": 6, "y": 1 }], "cursor": 1 } }
+    },
+    {
+      "observe": { "type": "reservation", "train": 3 },
+      "expect": { "resources": [{ "type": "node", "x": 2, "y": 1 }, { "type": "node", "x": 3, "y": 1 }, { "type": "node", "x": 4, "y": 1 }, { "type": "node", "x": 5, "y": 1 }, { "type": "node", "x": 6, "y": 1 }, { "type": "link", "from": { "x": 2, "y": 1 }, "to": { "x": 3, "y": 1 } }, { "type": "link", "from": { "x": 3, "y": 1 }, "to": { "x": 4, "y": 1 } }, { "type": "link", "from": { "x": 4, "y": 1 }, "to": { "x": 5, "y": 1 } }, { "type": "link", "from": { "x": 5, "y": 1 }, "to": { "x": 6, "y": 1 } }] }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 5, "y": 1, "heading": "east" } },
+      "expect": { "result": "trackReserved", "train": 3 }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 7, "y": 1, "heading": "west" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 6, "y": 1 }] },
+      "expect": { "result": "trackReserved", "train": 3 }
+    },
+    {
+      "command": { "type": "advance", "ticks": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 3 },
+      "expect": { "execution": { "type": "waiting", "stop": 1, "cycle": 0 } }
+    },
+    {
+      "observe": { "type": "reservation", "train": 3 },
+      "expect": { "resources": [{ "type": "node", "x": 6, "y": 1 }] }
+    },
+    {
+      "command": { "type": "setTrainContinuation", "train": 1, "continuation": [{ "x": 6, "y": 1 }] },
+      "expect": { "result": "trackReserved", "train": 3 }
+    },
+    {
+      "command": { "type": "advance", "ticks": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 3 },
+      "expect": { "execution": { "type": "inactive" } }
+    },
+    {
+      "observe": { "type": "conflicts" },
+      "expect": { "conflicts": [] }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 13,
+    "speed": "normal",
+    "balance": 292000,
+    "stations": [
+      { "id": 1, "name": "A", "x": 1, "y": 0, "annexes": [] },
+      { "id": 2, "name": "B", "x": 6, "y": 0, "annexes": [] }
+    ],
+    "tracks": [
+      { "x": 0, "y": 1, "connections": ["east"], "layout": { "type": "open" } },
+      { "x": 1, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 2, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 6, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 7, "y": 1, "connections": ["west"], "layout": { "type": "open" } }
+    ],
+    "trains": [
+      { "id": 1, "name": "T1", "position": { "type": "node", "x": 7, "y": 1, "heading": "west" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] },
+      { "id": 2, "name": "T2", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] },
+      { "id": 3, "name": "T3", "position": { "type": "node", "x": 6, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 1, "reverse": false }, { "station": 2, "arrival": 12, "departure": 12, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [] }
+    ],
+    "lines": [],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
+    "trafficControl": true
+  }
+}

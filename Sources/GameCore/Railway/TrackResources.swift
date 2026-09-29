@@ -91,17 +91,21 @@ extension GameWorld {
     /// every link its body lies over and every node it reaches or passes.
     /// Empty for an unplaced train or an unknown ID.
     public func occupiedResources(of id: TrainID) -> [TrackResource] {
-        guard let train = train(id: id) else { return [] }
-        let head: [TrackResource]
-        switch train.position {
-        case nil:
-            return []
-        case .atNode(let tile, _)?:
-            head = [.node(tile)]
-        case .onLink(let from, let to, _)?:
-            head = [.link(between: from, and: to)]
+        guard let train = train(id: id), let position = train.position else { return [] }
+        return occupiedResources(at: position, trail: train.trail, length: train.length)
+    }
+
+    /// What a train `length` long at `position` with `trail` stands on, in
+    /// resource order (see ``occupiedResources(of:)``).
+    func occupiedResources(at position: TrainPosition, trail: [GridPosition], length: Int64) -> [TrackResource] {
+        let head: TrackResource
+        switch position {
+        case .atNode(let tile, _):
+            head = .node(tile)
+        case .onLink(let from, let to, _):
+            head = .link(between: from, and: to)
         }
-        return Array(Set(head + bodyResources(of: train))).sorted()
+        return Array(Set([head] + bodyResources(at: position, trail: trail, length: length))).sorted()
     }
 
     /// Every resource two trains or more occupy, in resource order, each

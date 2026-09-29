@@ -68,6 +68,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             )
             XCTAssertEqual(model.lines.map(Self.summary), final.lines, name)
             XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
+            XCTAssertEqual(model.trafficControl, final.trafficControl, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -83,6 +84,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .extendStation(let id, let p): error = model.extendStation(id, to: p)
         case .purchaseTrain(let name): error = model.purchaseTrain(named: name)
         case .setTrainCars(let id, let cars): error = model.setCars(id, cars)
+        case .setTrafficControl(let enabled): error = model.setTrafficControl(enabled)
         case .placeTrain(let id, let position): error = model.placeTrain(id, at: position)
         case .unplaceTrain(let id): error = model.unplaceTrain(id)
         case .reverseTrain(let id): error = model.reverseTrain(id)
@@ -156,6 +158,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .exits(model.neighbors(of: p).filter { model.mayTurn(at: p, facing: heading, to: stepDirection(from: p, to: $0)!) })
         case .occupancy(let id):
             return .resources(model.occupiedResources(of: id))
+        case .reservation(let id):
+            return .resources(model.reservedResources(of: id))
         case .conflicts:
             return .conflicts(model.occupancyConflicts())
         case .trackSections:

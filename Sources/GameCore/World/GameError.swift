@@ -105,4 +105,10 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidStationTile(GridPosition)
     /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.
     case invalidTrainLength
+    /// Under traffic control, track this needs is held by that train (the
+    /// lowest such ID).
+    case trackReserved(TrainID)
+    /// Traffic control cannot be turned on while these two trains hold the
+    /// same track (the lowest such pair).
+    case trainsShareTrack(TrainID, TrainID)
 }

@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 15`）
+## Schema（`schemaVersion: 16`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），以及 `routeToStation` 可以省略的 `cars`（見下面「車站設施」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `15` |
+| `schemaVersion` | `16` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -87,6 +87,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `extendStation` | `station`、`x`、`y` | `extendStation(_:to:)` |
 | `purchaseTrain` | `name` | `purchaseTrain(named:)` |
 | `setTrainCars` | `train`、`cars` | `setTrainCars(_:to:)` |
+| `setTrafficControl` | `enabled`（`true` / `false`） | `setTrafficControl(_:)` |
 | `placeTrain` | `train`、`position`（`node` 或 `link`） | `placeTrain(_:at:)` |
 | `unplaceTrain` | `train` | `unplaceTrain(_:)` |
 | `reverseTrain` | `train` | `reverseTrain(_:)` |
@@ -152,6 +153,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `unknownLinePattern` | `pattern` | 線路沒有這個索引的服務模式 |
 | `invalidStationTile` | `x`、`y` | 車站要長到的格不在它任何一格的正北、正東、正南、正西 |
 | `invalidTrainLength` | — | 節數不在 1…16 |
+| `trackReserved` | `train` | 交通控制下，需要的鐵軌由這台列車持有（持有者中最小的 ID） |
+| `trainsShareTrack` | `train`、`other` | 開啟交通控制時，這兩台列車持有同一段鐵軌（`other` 是第一台與前面某台重疊的列車，`train` 是與它重疊的最早那一台） |
 
 ### 觀察（`observe.type`）
 
@@ -167,6 +170,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `routeToStation` | `from`（列車位置，`node` 或 `link`）、`station`（車站 ID），可加 `cars`（1…16，省略是 1） | 與 `route` 相同 | `route(from:toStation:length:)`（`length` = (`cars` − 1) × 1024） |
 | `stationStops` | `train` | `{ "stations": [id, ...] }` | `stationsStoppedAt(by:)` |
 | `wholeTrainStops` | `train` | `{ "stations": [id, ...] }` | `stationsBesideWholeTrain(_:)` |
+| `reservation` | `train` | `{ "resources": [...] }`（形式同 `occupancy`） | `reservedResources(of:)` |
 | `platformTracks` | `station` | `{ "platformTracks": [[{ "x", "y" }, ...], ...] }` | `platformTracks(of:)` |
 | `timetable` | `train` | `{ "timetable": [{ "station", "arrival", "departure" }, ...] }` | `train(id:)?.timetable` |
 | `execution` | `train` | `{ "execution": { "type", ... } }`（見上面「服務」） | `train(id:)?.execution` |
@@ -231,6 +235,16 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `routeToStation` 加上 `cars` 時，到達第一個月台後再沿月台往前，每多一節多走一格（選北、東、南、西第一個是該站月台的出口），月台走完就停。服務與線路的出發、線路列車的行程都用列車自己的節數。
 - `wholeTrainStops`：停在該站，而且車身經過的每一格都是該站的月台。
 
+交通控制規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 28）：
+
+- 新世界的交通控制是關閉的。`reservation` 不論開關都回答：列車站在的資源（同 `occupancy`）、前方節點（所在的節點，或所在連結的 `to`），以及剩下 continuation 的每個連結與節點，依資源順序。未知或未放置的列車是空陣列。
+- `setTrafficControl` 關閉一定成功。開啟時，依 ID 順序找第一台與前面某台持有同一資源的列車，回報 `trainsShareTrack`。
+- 開啟時：
+  - `placeTrain`、`reverseTrain`、`setTrainContinuation` 在原有的檢查之後，若需要別的列車持有的資源，回報 `trackReserved`（持有者中最小的 ID）。
+  - `removeTrack` 若該節點在別的列車持有的資源裡，回報 `trackInUse`。
+  - 服務出發時，若整條路徑（含折返後的位置）有別的列車持有的資源，就不出發、不折返，留在原站等待，下一步再試。
+- 列車只沿著自己持有的路徑移動，所以交通控制下任兩台列車不會站在同一段鐵軌上。
+
 時刻表規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 19）：
 
 - 新購列車的時刻表是 `[]`。`setTrainTimetable` 整份替換，`[]` 清除；免費，列車放置與否都可以。
@@ -278,6 +292,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "cars", "trail" }`，依 ID 遞增；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），1 節的列車是 `1` 與 `[]`。
 - `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
 - `serviceDay`：服務日（形式見上面「服務日」）。
+- `trafficControl`：交通控制是否開啟（`true` / `false`）。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -305,4 +320,5 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，線路必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓線路派車，但只派指派給線路的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條線路加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。
 - **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，線路必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條線路加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。
 - **14**（Phase 4.5 Stage S1）：新增 `buildTurnout`、`buildCrossing` 指令，`exits`、`occupancy`、`conflicts`、`trackSections`、`parallelTracks` 觀察，最終狀態每條鐵軌必填的 `layout`，以及 `track-resources.json`。既有的十三個 fixture 把 `schemaVersion` 從 13 改成 14，並為最終狀態的 85 條鐵軌加上 `"layout": { "type": "open" }`：它們都是一般鐵軌，轉向與路徑規則不變。其他預期值都沒有改變。
-- **15**（Phase 4.5 Stage S2）：新增 `extendStation`、`setTrainCars` 指令，`invalidStationTile`、`invalidTrainLength` 結果，`wholeTrainStops`、`platformTracks` 觀察，`routeToStation` 可以省略的 `cars`，最終狀態每座車站必填的 `annexes`、每台列車必填的 `cars` 與 `trail`，以及 `station-facilities.json`。既有的十四個 fixture 把 `schemaVersion` 從 14 改成 15，並為最終狀態的車站加上 `"annexes": []`、列車加上 `"cars": 1, "trail": []`：它們的車站都只有一格，列車都是 1 節（沒有車身），行為不變。其他預期值都沒有改變。讀取端只接受 15。
+- **15**（Phase 4.5 Stage S2）：新增 `extendStation`、`setTrainCars` 指令，`invalidStationTile`、`invalidTrainLength` 結果，`wholeTrainStops`、`platformTracks` 觀察，`routeToStation` 可以省略的 `cars`，最終狀態每座車站必填的 `annexes`、每台列車必填的 `cars` 與 `trail`，以及 `station-facilities.json`。既有的十四個 fixture 把 `schemaVersion` 從 14 改成 15，並為最終狀態的車站加上 `"annexes": []`、列車加上 `"cars": 1, "trail": []`：它們的車站都只有一格，列車都是 1 節（沒有車身），行為不變。其他預期值都沒有改變。
+- **16**（Phase 4.6 Stage T）：新增 `setTrafficControl` 指令，`trackReserved`、`trainsShareTrack` 結果，`reservation` 觀察，最終狀態必填的 `trafficControl`，以及 `traffic-control.json`。既有的十五個 fixture 把 `schemaVersion` 從 15 改成 16，並在最終狀態加上 `"trafficControl": false`：它們從未開啟交通控制，行為不變。其他預期值都沒有改變。讀取端只接受 16。

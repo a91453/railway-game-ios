@@ -19,6 +19,10 @@ public struct GameWorld: Equatable, Sendable {
     public private(set) var serviceDay: ServiceDay
     public private(set) var clock: GameClock
     public private(set) var economy: GameEconomy
+    /// Whether trains reserve the track they will use and keep off track
+    /// another train holds (Phase 4.6 Stage T; see
+    /// ``setTrafficControl(_:)``). Off in a new world.
+    public internal(set) var trafficControl: Bool
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -43,6 +47,7 @@ public struct GameWorld: Equatable, Sendable {
         self.serviceDay = .standard
         self.clock = clock
         self.economy = economy
+        self.trafficControl = false
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -156,7 +161,9 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// Track that a placed train rests on (its node, either end of its
     /// link, or a node its body lies over) cannot be removed while the train
-    /// is there; unplace the train first. Any other track can be removed, including track next to a train.
+    /// is there; unplace the train first. Under traffic control, neither
+    /// can track on a train's route ahead (see ``reservedResources(of:)``).
+    /// Any other track can be removed, including track next to a train.
     /// Checking scans every train once (O(trains)); no occupancy index is kept.
     ///
     /// - Throws: ``GameError/outOfBounds(_:)``,
@@ -167,6 +174,10 @@ public struct GameWorld: Equatable, Sendable {
         guard map.contains(position) else { throw .outOfBounds(position) }
         guard track(at: position) != nil else { throw .noTrackToRemove(position) }
         guard !trains.contains(where: { $0.position?.isSupported(by: position) == true || $0.trail.contains(position) }) else {
+            throw .trackInUse(position)
+        }
+        // Under traffic control, a train's route ahead is locked too.
+        guard !trafficControl || !trains.contains(where: { reservation(of: $0).contains(.node(position)) }) else {
             throw .trackInUse(position)
         }
 
@@ -254,11 +265,14 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
-    ///   train), or ``GameError/invalidTrainPosition``.
+    ///   train), ``GameError/invalidTrainPosition``, or, under traffic
+    ///   control, ``GameError/trackReserved(_:)`` when another train holds
+    ///   track the train would stand on or run to.
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
         guard isOnTrack(position), let trail = trailBehind(position, length: trains[index].length) else { throw .invalidTrainPosition }
+        try requireTrackFree(reservation(at: position, trail: trail, length: trains[index].length, ahead: []), for: id)
 
         trains[index].position = position
         trains[index].trail = trail
@@ -285,9 +299,11 @@ public struct GameWorld: Equatable, Sendable {
     /// continuation), so placing it again never resumes an old journey.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/trainNotPlaced(_:)``, or
+    ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (stop the service first).
+    ///   timetable (stop the service first), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)`` when the train turned round would
+    ///   need track another train holds (the node ahead of it on a link).
     public mutating func unplaceTrain(_ id: TrainID) throws(GameError) {
         let (index, _) = try manuallyControlledTrain(id)
 
@@ -314,8 +330,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   timetable (stop the service first).
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
+        let (turned, trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
+        try requireTrackFree(reservation(at: turned, trail: trail, length: trains[index].length, ahead: []), for: id)
 
-        (trains[index].position, trains[index].trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
+        (trains[index].position, trains[index].trail) = (turned, trail)
         trains[index].movement.continuation = []
         trains[index].movement.cursor = 0
     }
@@ -360,14 +378,18 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (the service owns the continuation; stop it first), or
-    ///   ``GameError/invalidContinuation``.
+    ///   timetable (the service owns the continuation; stop it first),
+    ///   ``GameError/invalidContinuation``, or, under traffic control,
+    ///   ``GameError/trackReserved(_:)`` when another train holds track on
+    ///   the way (see ``reservedResources(of:)``).
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         let (node, heading) = position.ahead
         guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
             throw .invalidContinuation
         }
+        let train = trains[index]
+        try requireTrackFree(reservation(at: position, trail: train.trail, length: train.length, ahead: nodes[...]), for: id)
 
         trains[index].movement.continuation = nodes
         trains[index].movement.cursor = 0
@@ -808,13 +830,19 @@ public struct GameWorld: Equatable, Sendable {
     /// first call; when it runs more, only trains waiting there can go. A
     /// train late back makes the next one leave late, never early.
     ///
+    /// Under traffic control (Stage T), a service leaves only when the whole
+    /// route to its next stop is free (see ``reservedResources(of:)``);
+    /// otherwise it waits, not turned round, and tries again at every
+    /// step.
+    ///
     /// When a whole step changes nothing (no train moves, no service leaves,
     /// arrives or ends, and no line sends a train out), no later step of
     /// this call can change anything before the next scheduled departure of
     /// a waiting service, or the next minute at which a line's service with
     /// a ready train might send it out (the map and every train's inputs
     /// stay the same until the next command, a departure that found no
-    /// route finds none later in the call, and a line's window, level and
+    /// route finds none later in the call, one whose route is held finds
+    /// it held until a train moves, and a line's window, level and
     /// headways change only at known minutes), so the clock moves on at once to that minute,
     /// or to the end of the batch. This is an exact shortcut, not an
     /// approximation.
@@ -1026,6 +1054,13 @@ public struct GameWorld: Equatable, Sendable {
                     unroutable.insert(train.id)
                     break
                 }
+                // Under traffic control the whole route must be free: if
+                // another train holds some of it, the train waits (not
+                // turned round) and tries again at the next step, since
+                // trains move and free track within the call.
+                if trafficControl, reservationHolder(of: reservation(at: start, trail: startTrail, length: train.length, ahead: route[...]), except: train.id) != nil {
+                    break
+                }
                 changed = true
                 trains[index].position = start
                 trains[index].trail = startTrail
@@ -1193,7 +1228,7 @@ extension GameWorld {
 
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
-        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID
+        case map, stations, trains, lines, serviceDay, clock, economy, trafficControl, nextStationID, nextTrainID, nextLineID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1225,6 +1260,7 @@ extension GameWorld: Codable {
         lines = container.contains(.lines) ? try container.decode([ServiceLine].self, forKey: .lines) : []
         nextLineID = container.contains(.nextLineID) ? try container.decode(Int.self, forKey: .nextLineID) : 1
         serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
+        trafficControl = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
 
         if let problem = invariantViolation() {
             throw DecodingError.dataCorrupted(
@@ -1237,8 +1273,9 @@ extension GameWorld: Codable {
     /// that never had a line no `"nextLineID"`, and one with the standard
     /// service day no `"serviceDay"`: such worlds save exactly as before
     /// lines existed, and those saves read as having none, handing out line
-    /// IDs from 1, with the standard day. An explicit `null` for any of them
-    /// is rejected.
+    /// IDs from 1, with the standard day. A world without traffic control
+    /// has no `"trafficControl"` key, and saves without one read as having
+    /// it off. An explicit `null` for any of them is rejected.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(map, forKey: .map)
@@ -1252,6 +1289,9 @@ extension GameWorld: Codable {
         }
         try container.encode(clock, forKey: .clock)
         try container.encode(economy, forKey: .economy)
+        if trafficControl {
+            try container.encode(trafficControl, forKey: .trafficControl)
+        }
         try container.encode(nextStationID, forKey: .nextStationID)
         try container.encode(nextTrainID, forKey: .nextTrainID)
         if nextLineID != 1 {
@@ -1325,6 +1365,9 @@ extension GameWorld: Codable {
             if let problem = serviceProblem(of: train) {
                 return problem
             }
+        }
+        if trafficControl, let (earlier, later) = firstSharedTrack() {
+            return "Trains \(earlier.rawValue) and \(later.rawValue) hold the same track under traffic control."
         }
         return nil
     }
