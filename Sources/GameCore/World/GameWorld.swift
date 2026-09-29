@@ -299,11 +299,9 @@ public struct GameWorld: Equatable, Sendable {
     /// continuation), so placing it again never resumes an old journey.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/trainNotPlaced(_:)``,
+    ///   ``GameError/trainNotPlaced(_:)``, or
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (stop the service first), or, under traffic control,
-    ///   ``GameError/trackReserved(_:)`` when the train turned round would
-    ///   need track another train holds (the node ahead of it on a link).
+    ///   timetable (stop the service first).
     public mutating func unplaceTrain(_ id: TrainID) throws(GameError) {
         let (index, _) = try manuallyControlledTrain(id)
 
@@ -325,9 +323,11 @@ public struct GameWorld: Equatable, Sendable {
     /// given a new continuation.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/trainNotPlaced(_:)``, or
+    ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (stop the service first).
+    ///   timetable (stop the service first), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)`` when the train turned round would
+    ///   need track another train holds (the node ahead of it on a link).
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         let (turned, trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
