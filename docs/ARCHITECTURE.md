@@ -28,7 +28,7 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`）、時刻表服務（`TimetableExecution`、`Train.execution`） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -352,6 +352,86 @@ Stage P 回答決策 19 留下的問題：「這台列車現在是否該出發�
 - **日後的 dispatcher 接點**：出發時的 `route(from:toStation:)` 將來可以換成向 dispatcher 請求 movement authority。「沒有路就等待、之後再試」與「拿不到 authority 就等待」語義相同，時刻表與執行進度的契約不需要重寫。月台、股道、待避線與號誌屬於之後的交通資源模型，不放進 `Station` 或 `ScheduledStop`。
 - **本 Stage 不做**：循環或每日重複的服務、自動折返或反向、複製服務、班距調整、乘客上下車、依時刻表控速、誤點追趕、列車碰撞、軌道佔用、月台容量、進路預約、movement authority、號誌、聯鎖、dispatcher 優先順序、真正的待避／越行決策，以及時刻表畫面（Stage R）。
 
+### 21. 折返與重複的時刻表（Phase 4 Stage Q1）
+
+Stage Q1 回答決策 20 留下的兩個問題：服務只跑一次，而且停在死路終點站的列車無法往回開（`route` 不會原地掉頭，決策 16）。它在時刻表加入兩項計畫資料，在執行進度加入一個計數。Stage I–P 的資料模型、指令與契約都沒有重寫。
+
+- **為什麼這樣做**（[網頁參考研究](WEB_REFERENCE_STUDY.md)）：
+  - 參考遊戲的高鐵模式用逐班的時刻表，並配對回程；地鐵模式的列車在交路終點折返，整天來回。
+  - 本決策採用「在指定的停靠站折返」與「同一份時刻表週而復始」。
+  - **不**採用「沒有路時自動掉頭」：這會改變決策 20「沒有路就等待、不反向」的規則，也可能讓被擋住的列車在錯誤的地方掉頭。
+  - 也還不採用參考地鐵「由列車數推導班距」的做法，那屬於 Q2。
+- **資料模型**
+  - `ScheduledStop.reverses: Bool`（預設 `false`）：服務離開這一站時，先讓列車在原地折返，再求路到下一個停靠。位置的變換與 `reverseTrain` 相同。
+  - `Train.timetablePeriod: Int64?`：`nil` 表示只跑一次，否則每 `period` 分鐘重複。
+    - 時刻表仍只記錄第 0 輪的時刻。
+    - 第 `k` 輪的時刻是記錄的時刻加上 `k × period`，由規則推導，不展開、不存檔。
+  - `TimetableExecution` 的兩種狀態都加上 `cycle: Int64`（預設 0），表示目前在第幾輪。只跑一次的時刻表永遠是 0。
+  - 週期放在列車上，而不是另一個「服務模式」物件：Q1 只讓一台列車重複自己的時刻表。多台列車共用的線路服務屬於 Q2，屆時由它設定每台列車的時刻表。
+- **指令**
+  - `setTrainTimetable(_:to:repeatingEvery:)`
+    - `period` 預設 `nil`，所以 Stage O 的呼叫方式不變。
+    - 時間照決策 19 檢查。有週期時另外要求：至少一站、`period >= 1`，而且重新開始時時間不倒流，也就是 `最後一站的 departure − 第一站的 arrival <= period`。
+    - 兩者相等也可以：下一輪會在上一輪最後一站離開的那一分鐘，到達第一站。這裡用減法比較，兩個時間都 ≥ 0，所以不會溢位。
+    - 錯誤順序不變：`unknownTrain` → `trainServiceActive` → `invalidTimetable`（時間或週期）→ `unknownStation`。沒有新的錯誤。
+    - 設定時刻表時同時設定週期；`[]`（不帶週期）同時清除兩者。
+  - `startTrainService`
+    - 只跑一次的時刻表照決策 20，從第 0 輪開始。
+    - 重複的時刻表從第一站出發時刻不早於現在的第一輪開始（等於現在也算）。列車因此準時出發，不會把過去的每一輪都補跑一遍。
+    - 如果連時刻放得下的最後一輪都已經過去，就從那一輪開始，也就是晚點出發。
+    - 仍然從第 0 站開始，不會從一輪的中間加入。
+  - `stopTrainService`、放置、取下、反向與時間都保留週期。週期和時刻表一樣是計畫資料。
+- **一個基本步長**：決策 20 的四段不變，只有出發這一段擴充。`.waitingAtStop(i, cycle: k)` 在 `departure(i) + k × period <= T` 時離開：
+  1. 第 `i` 站標記 `reverses` 時，先在原地折返。等待中的列車一定停在節點上、沒有剩下的 continuation，所以只改變朝向。
+  2. 決定下一個停靠：
+     - 通常是同一輪的第 `i + 1` 站。
+     - 最後一站之後，重複的時刻表接第 `k + 1` 輪的第 0 站，前提是那一輪的時刻都放得下：`最後一站的 departure + (k + 1) × period <= Int64.max`。
+  3. 沒有下一個停靠時服務完成，列車留在原地（有折返就已折返）。這發生在只跑一次的時刻表的最後一站，以及重複時刻表最後一輪的最後一站。
+  4. 否則照決策 20 求路到下一個停靠的車站：
+     - 空路徑是零距離到達；
+     - 非空路徑成為 continuation；
+     - **沒有路時整次出發都不發生，列車也不折返**。之後的步長再試，屆時會先再折返一次。所以求路失敗不會讓列車停在反方向，也不會每分鐘來回轉向。
+- **零距離到達的連鎖**
+  - 在決策 20，連鎖最多到時刻表的最後一站。
+  - 重複的時刻表如果所有停靠都在同一個車站（或共用的月台），而且列車晚點，連鎖可以一直繞下去。
+  - 所以每台列車在一個出發段**最多離開時刻表站數那麼多站**：
+    - 只跑一次的時刻表不受影響，它本來最多就離開這麼多站；
+    - 重複的時刻表最多走一整輪，剩下的在下一步繼續。
+  - 這樣 `advance` 一定會結束，「有改變就不快轉」的捷徑也仍然精確。
+- **到達**照決策 20，帶著同一個 cycle。
+- **核心規則不變**：每一輪都照決策 20 執行：不早於排定出發離開、不另加停留、每步最多移動一次、不跳站。晚點的列車也不跳過輪次，而是靠時刻表的餘裕追回（`TrainRepeatTests` 有逐分鐘的例子）。
+- **事件感知的快轉**：下一個出發時刻改用該輪的時刻（`departure + cycle × period`）。其他推論與決策 20 相同：一步沒有任何改變時，下一個出發時刻之前也不會有改變。
+- **存檔（Swift `Codable`）**
+  - 只在用到時寫入：列車有週期時寫 `"period"`，停靠要折返時寫 `"reverse": true`，服務到了第 1 輪以後寫 `"cycle"`。
+  - 因此沒有用到這些功能的世界，存檔與 Stage Q1 之前逐位元相同；舊存檔讀成只跑一次、不折返、第 0 輪。
+  - 一律拒絕：明確的 `null`、非整數或負數的週期與輪次，以及非布林值的 `reverse`。
+  - `Train` 解碼檢查：
+    - 時刻表與週期必須合法，規則同 `setTrainTimetable`；
+    - 輪次大於 0 時必須有週期，而且那一輪的時刻放得下；
+    - 前往第 0 站的 `travelling` 只允許在第 1 輪以後，也就是從上一輪最後一站回到第一站的行程。
+  - `GameWorld` 解碼照決策 20：等待中的列車停在該站的車站；行駛中的列車，行程終點緊鄰該站的車站格。
+  - 壞資料一律拒絕，不修正週期、輪次或折返。仍不建立存檔版本或 migration。
+- **Golden scenarios**：schema v10 新增：
+  - 停靠的 `reverse`；
+  - `setTrainTimetable` 與最終狀態的 `repeat`（`once` 或 `every`）；
+  - 服務的 `cycle`；
+  - `train-repeat.json`。
+
+  既有的 9 個 fixture 只加上中性的值：`"reverse": false`、`"repeat": { "type": "once" }` 與 `"cycle": 0`。其他預期值都沒有改變。
+- **驗證**
+  - `TrainRepeatTests` 以手算的預期值，驗證折返、重複、開始的輪次、最後一輪、連鎖的上限、批次推進與存檔。
+  - `ServicePropertyTests` 新增 `service.repeating`：產生的時刻表部分停靠會折返、多數會重複，也有不合法的週期。每一步都在 GameCore 與 `ReferenceWorld` 上比較，並檢查整批推進與逐 tick、2× 與 1× 的結果相同。`ReferenceWorld` 用加法而非減法檢查週期，每次用到時都重新計算該輪的時刻。
+  - `SaveMutationTests` 新增 `save.repeatMutation`。
+  - Stage I–P 的 property digest（`kernel.differential`、`timetable.differential`、`service.differential`、`route.reference`、`stationStop.routes` 等）在修改前後相同。
+- **GamePresentation**：只更新 `invalidTimetable` 的訊息。App 沒有修改，因為還沒有時刻表的畫面（Stage R）。
+- **已知限制**
+  - 週期是整數分鐘，沒有日曆，也不分平日與週末。
+  - 時段、班距與多台列車的線路服務屬於 Q2；交路與快慢車屬於 Q3。
+  - 晚點超過一個週期的列車會照順序把每一輪跑完，不會取消班次。之後若需要取消落後的班次，再另外決定。
+  - 停止服務後重新啟動，只能從第 0 站開始。
+  - 列車之間仍然互不阻擋，要到 Phase 4.5 才處理。
+- **本 Stage 不做**：自動折返、服務模式與線路（Q2）、交路與停站模式（Q3）、取消班次、時刻表畫面（Stage R）、車廠，以及佔用與進路（Phase 4.5）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -366,6 +446,7 @@ Stage P 回答決策 19 留下的問題：「這台列車現在是否該出發�
 - `route(from:to:)` 回傳到目的地鐵軌格的最短、不折返的 continuation（同長時依北、東、南、西順序），或 `nil`；它是唯讀查詢，不會自己設定列車的 continuation（決策 16）。
 - 車站的月台是它正北、正東、正南、正西的鐵軌格；`route(from:toStation:)` 回傳到第一個到達的月台的最短、不折返 continuation。列車在月台格中心、沒有剩下的 continuation 時停在該站（`stationsStoppedAt(by:)`）；停站由狀態推導，不另存（決策 18）。
 - 列車的時刻表是依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），時間從分鐘 0 起不倒流、每站都是存在的車站；`setTrainTimetable` 整份原子替換、`[]` 清除、免費。時刻表是計畫資料：放置、取下、反向、移動指令與時間都保留它；只有明確啟動的服務會讀它（決策 19、20）。
-- `startTrainService` 讓停在第一站車站的列車依時刻表執行一次服務（`execution` 記錄目前是第幾個停靠，存檔）。每個基本步長先處理出發、再移動、再推進時鐘、最後判定到達：列車不會早於排定出發時刻離開、不另加停留時間、每步最多移動一次；已停在下一站的車站時零距離到達；沒有路就等待；最後一站停到排定出發才結束服務。服務執行中不能手動設定 continuation、反向、取下或換時刻表（`trainServiceActive`），rate 仍可調整；`stopTrainService` 只結束自動化（決策 20）。
+- 時刻表可以每隔固定的分鐘數重複（`setTrainTimetable(_:to:repeatingEvery:)`），停靠可以標記在離開時折返；週期至少 1 分鐘，而且重新開始時時間不倒流（決策 21）。
+- `startTrainService` 讓停在第一站車站的列車依時刻表執行服務：只跑一次，或一輪接一輪重複（`execution` 記錄目前是第幾輪的第幾個停靠，存檔；重複的時刻表從下一個準時的輪次開始）。每個基本步長先處理出發、再移動、再推進時鐘、最後判定到達：列車不會早於排定出發時刻離開、不另加停留時間、每步最多移動一次；已停在下一站的車站時零距離到達；沒有路就等待；最後一站停到排定出發才結束服務，重複的時刻表則接著下一輪。服務執行中不能手動設定 continuation、反向、取下或換時刻表（`trainServiceActive`），rate 仍可調整；`stopTrainService` 只結束自動化（決策 20）。標記折返的停靠在出發時先讓列車原地反向，找不到路時不反向（決策 21）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。

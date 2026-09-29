@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–P) written a second time, straight
+/// The whole GameCore kernel (Stages I–Q1) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–20; the rules summary), for differential testing.
+/// 18–21; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -13,10 +13,13 @@ import GameCore
 ///   shortcut for steps where nothing moves: every minute is stepped;
 /// - routes come from distances relaxed until nothing changes followed by a
 ///   greedy walk, not from a breadth-first search;
-/// - a service is a stop index and a flag, not an enum; every departure
-///   looks its route up again (no memory of routes that were not found),
-///   and a train already stopped at the next stop's station is recognised
-///   by being stopped there, not by an empty route.
+/// - a service is a stop index, a flag and a cycle, not an enum; every
+///   departure looks its route up again (no memory of routes that were not
+///   found), and a train already stopped at the next stop's station is
+///   recognised by being stopped there, not by an empty route;
+/// - a repeating timetable is checked by adding the period to the first
+///   arrival, not by subtracting, and a scheduled time is the stored time
+///   plus the cycle times the period, recomputed at every use.
 ///
 /// Only for small maps: routes cost O(states²).
 struct ReferenceWorld: Equatable {
@@ -39,16 +42,19 @@ struct ReferenceWorld: Equatable {
         var continuation: [GridPosition] = []
         var cursor = 0
         var timetable: [ScheduledStop] = []
+        var period: Int64?
         var service: Service?
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
+    /// Decision 21: and the cycle of a repeating timetable it is in.
     struct Service: Equatable {
         var stop: Int
         var waiting: Bool
+        var cycle: Int64 = 0
 
         var execution: TimetableExecution {
-            waiting ? .waitingAtStop(stop) : .travellingToStop(stop)
+            waiting ? .waitingAtStop(stop, cycle: cycle) : .travellingToStop(stop, cycle: cycle)
         }
     }
 
@@ -232,7 +238,7 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             // Position and movement go; the timetable is plan data and stays.
-            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable)
+            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable, period: trains[i].period)
             return nil
         }
     }
@@ -241,15 +247,18 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
-            switch trains[i].position! {
-            case .atNode(let tile, let heading):
-                trains[i].position = .atNode(tile, heading: heading.opposite)
-            case .onLink(let from, let to, let offset):
-                trains[i].position = .onLink(from: to, to: from, offset: Self.linkLength - offset)
-            }
+            trains[i].position = Self.turned(trains[i].position!)
             trains[i].continuation = []
             trains[i].cursor = 0
             return nil
+        }
+    }
+
+    /// Decision 14: the same place, facing the other way.
+    static func turned(_ position: TrainPosition) -> TrainPosition {
+        switch position {
+        case .atNode(let tile, let heading): .atNode(tile, heading: heading.opposite)
+        case .onLink(let from, let to, let offset): .onLink(from: to, to: from, offset: linkLength - offset)
         }
     }
 
@@ -300,8 +309,11 @@ struct ReferenceWorld: Equatable {
     /// departure of each stop in turn, must be non-negative and never fall;
     /// then every station must exist, the first missing one in timetable
     /// order being reported. Placement does not matter. Decision 20: not
-    /// while a service runs, checked right after the train.
-    mutating func setTimetable(_ id: TrainID, _ stops: [ScheduledStop]) -> GameError? {
+    /// while a service runs, checked right after the train. Decision 21: a
+    /// period needs a stop, is a minute or more, and the first arrival one
+    /// period later is no earlier than the last departure; checked with the
+    /// times.
+    mutating func setTimetable(_ id: TrainID, _ stops: [ScheduledStop], period: Int64? = nil) -> GameError? {
         switch index(id) {
         case .failure(let error): return error
         case .success(let i):
@@ -310,13 +322,34 @@ struct ReferenceWorld: Equatable {
             guard times.allSatisfy({ $0 >= 0 }), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
                 return .invalidTimetable
             }
+            if let period {
+                guard period >= 1, let first = stops.first, let last = stops.last else { return .invalidTimetable }
+                let (again, overflow) = first.arrival.minutes.addingReportingOverflow(period)
+                // Past the largest minute is later than any departure.
+                guard overflow || last.departure.minutes <= again else { return .invalidTimetable }
+            }
             let known = Set(stations.map(\.id))
             if let missing = stops.first(where: { !known.contains($0.station.rawValue) }) {
                 return .unknownStation(missing.station)
             }
             trains[i].timetable = stops
+            trains[i].period = period
             return nil
         }
+    }
+
+    /// Decision 21: the scheduled departure from entry `stop` in `cycle`, or
+    /// `nil` if it does not fit in a game minute.
+    static func departure(_ train: Train, stop: Int, cycle: Int64) -> Int64? {
+        let (shift, overflow) = cycle.multipliedReportingOverflow(by: train.period ?? 0)
+        guard !overflow else { return nil }
+        let (time, late) = train.timetable[stop].departure.minutes.addingReportingOverflow(shift)
+        return late ? nil : time
+    }
+
+    /// Decision 21: whether every time of `cycle` fits in a game minute.
+    static func fits(_ train: Train, cycle: Int64) -> Bool {
+        departure(train, stop: train.timetable.count - 1, cycle: cycle) != nil
     }
 
     /// Decision 20: in the order train, no service yet, a timetable, placed,
@@ -330,9 +363,21 @@ struct ReferenceWorld: Equatable {
             if train.timetable.isEmpty { return .noTimetable(id) }
             if train.position == nil { return .trainNotPlaced(id) }
             if !stationsStoppedAt(by: id).contains(train.timetable[0].station) { return .trainNotAtFirstStop(id) }
-            trains[i].service = Service(stop: 0, waiting: true)
+            trains[i].service = Service(stop: 0, waiting: true, cycle: startingCycle(train))
             return nil
         }
+    }
+
+    /// Decision 21: 0 without a period; otherwise the first cycle that
+    /// leaves the first stop at the current minute or later, but never past
+    /// the last cycle that fits.
+    private func startingCycle(_ train: Train) -> Int64 {
+        guard let period = train.period else { return 0 }
+        let first = train.timetable[0].departure.minutes
+        let last = (Int64.max - train.timetable[train.timetable.count - 1].departure.minutes) / period
+        guard minutes > first else { return 0 }
+        let wanted = (minutes - first - 1) / period + 1
+        return min(wanted, last)
     }
 
     mutating func stopService(_ id: TrainID) -> GameError? {
@@ -380,7 +425,7 @@ struct ReferenceWorld: Equatable {
                 guard let service = trains[i].service, !service.waiting else { continue }
                 let target = trains[i].timetable[service.stop].station
                 if stationsStoppedAt(by: TrainID(rawValue: trains[i].id)).contains(target) {
-                    trains[i].service = Service(stop: service.stop, waiting: true)
+                    trains[i].service = Service(stop: service.stop, waiting: true, cycle: service.cycle)
                 }
             }
         }
@@ -390,24 +435,39 @@ struct ReferenceWorld: Equatable {
     /// Decision 20's departures at the current minute for one train: from
     /// each stop whose departure has come, finish at the last stop, arrive
     /// at once where the train already is stopped at the next stop's
-    /// station, or set off along a route; wait if there is none.
+    /// station, or set off along a route; wait if there is none. Decision
+    /// 21: turn the train first at a stop marked to, but only if it then
+    /// finishes, arrives at once or finds a route; after the last stop of a
+    /// repeating timetable go on to the first stop of the next cycle while
+    /// its times fit; leave at most as many stops as the timetable has.
     private mutating func depart(_ i: Int) {
         let id = TrainID(rawValue: trains[i].id)
-        while let service = trains[i].service, service.waiting, trains[i].timetable[service.stop].departure.minutes <= minutes {
-            let next = service.stop + 1
-            if next == trains[i].timetable.count {
-                trains[i].service = nil
-                return
+        var left = 0
+        while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
+              Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
+            left += 1
+            let stop = trains[i].timetable[service.stop]
+            let start = stop.reverses ? Self.turned(trains[i].position!) : trains[i].position!
+            var next = (stop: service.stop + 1, cycle: service.cycle)
+            if next.stop == trains[i].timetable.count {
+                next = (0, service.cycle + 1)
+                if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
+                    trains[i].position = start
+                    trains[i].service = nil
+                    return
+                }
             }
-            let target = trains[i].timetable[next].station
+            let target = trains[i].timetable[next.stop].station
             if stationsStoppedAt(by: id).contains(target) {
-                trains[i].service = Service(stop: next, waiting: true)
+                trains[i].position = start
+                trains[i].service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
                 continue
             }
-            guard let route = route(from: trains[i].position!, toStation: target) else { return }
+            guard let route = route(from: start, toStation: target) else { return }
+            trains[i].position = start
             trains[i].continuation = route
             trains[i].cursor = 0
-            trains[i].service = Service(stop: next, waiting: false)
+            trains[i].service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
         }
     }
 

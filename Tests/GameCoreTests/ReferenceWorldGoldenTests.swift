@@ -49,7 +49,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor),
-                        timetable: $0.timetable.map(StopSummary.init),
+                        timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
                         execution: ExecutionSummary($0.service?.execution)
                     )
                 },
@@ -71,7 +71,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .reverseTrain(let id): error = model.reverseTrain(id)
         case .setTrainMovementRate(let id, let rate): error = model.setRate(id, rate)
         case .setTrainContinuation(let id, let nodes): error = model.setContinuation(id, nodes)
-        case .setTrainTimetable(let id, let stops): error = model.setTimetable(id, stops)
+        case .setTrainTimetable(let id, let stops, let period): error = model.setTimetable(id, stops, period: period)
         case .startTrainService(let id): error = model.startService(id)
         case .stopTrainService(let id): error = model.stopService(id)
         case .setSpeed(let speed): model.setSpeed(speed)

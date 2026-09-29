@@ -179,7 +179,7 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Takes a placed train off the track. The train keeps its ID, name and
-    /// timetable; its movement becomes ``TrainMovement/idle`` (rate 0, no
+    /// timetable (and its period); its movement becomes ``TrainMovement/idle`` (rate 0, no
     /// continuation), so placing it again never resumes an old journey.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
@@ -273,58 +273,69 @@ public struct GameWorld: Equatable, Sendable {
     // MARK: - Timetables
 
     /// Replaces a train's timetable with `stops`, in order (see
-    /// ``ScheduledStop``). An empty list clears it. Free, and the train may
-    /// be placed or not.
+    /// ``ScheduledStop``), running once or, with a `period`, repeating every
+    /// `period` minutes (see ``Train/timetablePeriod``). An empty list
+    /// without a period clears it. Free, and the train may be placed or not.
     ///
     /// The whole list is checked before anything changes: its times never go
     /// back in time, starting from minute 0 (`0 <= arrival <= departure` at
     /// every stop, and each departure no later than the next stop's
-    /// arrival), and every stop names a station of this world. Equal times,
-    /// repeated stations, stations without platforms and times the clock has
-    /// already passed are all allowed; whether the train could keep to the
-    /// timetable (a route between the stations, the travel time, where the
-    /// train is now) is not checked.
+    /// arrival), and every stop names a station of this world. A repeating
+    /// timetable also needs a stop and a period of at least one minute, and
+    /// its times must not go back when it starts again: the last departure
+    /// no later than the first arrival one period later. Equal times,
+    /// repeated stations, stations without platforms, turning round at any
+    /// stop and times the clock has already passed are all allowed; whether
+    /// the train could keep to the timetable (a route between the stations,
+    /// the travel time, where the train is now, the last stop leading back
+    /// to the first) is not checked.
     ///
-    /// Only the timetable changes. Setting one never places, moves, routes
-    /// or stops the train, and never starts a service: only a service
-    /// started with ``startTrainService(_:)`` reads the timetable. While a
-    /// service runs, its timetable cannot be replaced: an index into the old
-    /// timetable has no meaning in a new one. Stop the service, set the
-    /// timetable, and start the service again.
+    /// Only the timetable and its period change. Setting one never places,
+    /// moves, routes or stops the train, and never starts a service: only a
+    /// service started with ``startTrainService(_:)`` reads the timetable.
+    /// While a service runs, its timetable cannot be replaced: an index into
+    /// the old timetable has no meaning in a new one. Stop the service, set
+    /// the timetable, and start the service again.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainServiceActive(_:)``,
-    ///   ``GameError/invalidTimetable``, or ``GameError/unknownStation(_:)``
-    ///   naming the first stop, in timetable order, whose station does not
-    ///   exist.
-    public mutating func setTrainTimetable(_ id: TrainID, to stops: [ScheduledStop]) throws(GameError) {
+    ///   ``GameError/invalidTimetable`` (for the times or the period), or
+    ///   ``GameError/unknownStation(_:)`` naming the first stop, in
+    ///   timetable order, whose station does not exist.
+    public mutating func setTrainTimetable(
+        _ id: TrainID,
+        to stops: [ScheduledStop],
+        repeatingEvery period: Int64? = nil
+    ) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].execution == nil else { throw .trainServiceActive(id) }
-        guard ScheduledStop.isTimetable(stops) else { throw .invalidTimetable }
+        guard ScheduledStop.isTimetable(stops, period: period) else { throw .invalidTimetable }
         if let stop = stops.first(where: { station(id: $0.station) == nil }) {
             throw .unknownStation(stop.station)
         }
 
         trains[index].timetable = stops
+        trains[index].timetablePeriod = period
     }
 
     // MARK: - Timetable services
 
-    /// Starts running the train's timetable as a service: once, stop by stop
-    /// in timetable order, from the first stop to the last.
+    /// Starts running the train's timetable as a service, stop by stop in
+    /// timetable order, from the first stop to the last: once, or cycle
+    /// after cycle for a repeating timetable (see ``Train/timetablePeriod``).
     ///
     /// The train must be stopped at the first stop's station (see
     /// ``stationsStoppedAt(by:)``; a platform shared with other stations is
     /// fine). It then waits there as if it had just arrived
-    /// (``TimetableExecution/waitingAtStop(_:)`` with index 0). A service
-    /// always starts from the first stop, however late it is: a timetable
-    /// whose times have all passed runs from its first stop too, leaving
-    /// every stop as soon as it can. Starting changes nothing else; nothing
+    /// (``TimetableExecution/waitingAtStop(_:cycle:)`` with index 0). A
+    /// service always starts from the first stop, however late it is. A
+    /// timetable that runs once starts in its only cycle, so if its times
+    /// have all passed it leaves every stop as soon as it can. A repeating
+    /// timetable starts in the first cycle whose first departure is not
+    /// before now, so the train leaves on time; a cycle that has begun
+    /// already is not joined halfway. Starting changes nothing else; nothing
     /// moves until time passes (see ``advance(ticks:)`` for how a service
-    /// runs).
-    ///
-    /// A service runs its timetable once. It does not repeat, turn the train
-    /// round at the end, or start another trip.
+    /// runs, turns trains round and starts a timetable again).
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` if a service is already
@@ -339,7 +350,7 @@ public struct GameWorld: Equatable, Sendable {
         guard train.position != nil else { throw .trainNotPlaced(id) }
         guard isStopped(train, at: first.station) else { throw .trainNotAtFirstStop(id) }
 
-        trains[index].execution = .waitingAtStop(0)
+        trains[index].execution = .waitingAtStop(0, cycle: train.startingCycle(at: clock.now))
     }
 
     /// Stops the train's service, wherever it has got to. Only the
@@ -379,6 +390,8 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// 1. **Departures at `T`.** Every train whose service waits at a stop
     ///    with a scheduled departure of `T` or earlier leaves it (see below).
+    ///    Departures are those of the service's cycle: the timetable's
+    ///    times shifted by whole periods.
     /// 2. **Movement.** Every train travels up to its rate (see
     ///    ``TrainMovement``).
     /// 3. The clock moves on to `T + 1`.
@@ -407,22 +420,31 @@ public struct GameWorld: Equatable, Sendable {
     /// arrives at or after its departure leaves in the next step. Leaving
     /// stop `i`:
     ///
-    /// - At the last stop the service is complete: it ends, and the train
-    ///   stays where it is, keeping its timetable and rate.
+    /// - A stop marked ``ScheduledStop/reverses`` first turns the train
+    ///   round where it stands, as ``reverseTrain(_:)`` would, and the rest
+    ///   of the departure starts from there.
+    /// - At the last stop of a timetable that runs once, or of the last
+    ///   cycle whose times fit, the service is complete: it ends, and the
+    ///   train stays where it is, keeping its timetable and rate.
     /// - Otherwise the service gives the train the continuation
-    ///   ``route(from:toStation:)`` finds to the next stop's station, and the
-    ///   train travels to stop `i + 1`. It never reverses or turns the train,
-    ///   and never sets the rate: a train with rate 0 gets its continuation
-    ///   and stays where it is.
+    ///   ``route(from:toStation:)`` finds to the station of the next call,
+    ///   and the train travels there. The next call is stop `i + 1`; after
+    ///   the last stop of a repeating timetable it is stop 0 of the next
+    ///   cycle. The service never turns the train except at a stop marked
+    ///   to, and never sets the rate: a train with rate 0 gets its
+    ///   continuation and stays where it is.
     /// - An empty route means the train is already stopped at the next
-    ///   stop's station (a repeated station, or a platform both share). It
-    ///   arrives there at once, and leaves it too in the same phase if that
-    ///   departure has also come. Each stop is left at most once, so this
-    ///   ends within the timetable.
-    /// - Without a route the train waits at its stop, and later steps try
-    ///   again: after a command changes the map, a route may appear. Within
-    ///   one call the map cannot change, so the route is looked up at most
-    ///   once per call.
+    ///   call's station (a repeated station, a platform both share, or a
+    ///   repeating timetable that ends where it starts). It arrives there at
+    ///   once, and leaves it too in the same phase if that departure has
+    ///   also come. In one phase a service leaves at most as many stops as
+    ///   its timetable has: every stop of a timetable that runs once, and at
+    ///   most one whole cycle of a repeating one, which carries on in the
+    ///   next step.
+    /// - Without a route the train waits at its stop, not turned round, and
+    ///   later steps try again, turning it first again: after a command
+    ///   changes the map, a route may appear. Within one call the map cannot
+    ///   change, so the route is looked up at most once per call.
     ///
     /// A travelling train follows its continuation like any other; if track
     /// ahead is removed it waits for that track, and no new route is looked
@@ -468,32 +490,42 @@ public struct GameWorld: Equatable, Sendable {
         var changed = false
         let now = clock.now
         for index in trains.indices {
-            // Every pass leaves one stop for a later one, so the loop ends
-            // within the timetable.
-            while case .waitingAtStop(let stop)? = trains[index].execution,
-                  trains[index].timetable[stop].departure <= now,
-                  !unroutable.contains(trains[index].id) {
-                let timetable = trains[index].timetable
-                guard stop + 1 < timetable.count else {
+            // Every pass leaves one stop. A timetable that runs once ends
+            // within its stops; a repeating one could go round forever when
+            // it is late and calls at one station only, so each train leaves
+            // at most one whole cycle of stops per phase.
+            var passes = 0
+            while passes < trains[index].timetable.count,
+                  case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
+                  trains[index].scheduledDeparture(of: stop, cycle: cycle) <= now,
+                  !unroutable.contains(trains[index].id),
+                  let position = trains[index].position {
+                passes += 1
+                let train = trains[index]
+                // A waiting train stands at a node with no continuation
+                // left, so turning it round needs nothing else.
+                let start = train.timetable[stop].reverses ? position.reversed : position
+                guard let next = train.call(after: stop, cycle: cycle) else {
                     // The last stop's departure: the service is complete.
+                    trains[index].position = start
                     trains[index].execution = nil
                     changed = true
                     break
                 }
-                guard let position = trains[index].position,
-                      let route = route(from: position, toStation: timetable[stop + 1].station)
-                else {
-                    unroutable.insert(trains[index].id)
+                guard let route = route(from: start, toStation: train.timetable[next.stop].station) else {
+                    // Nothing changes: the train is not turned round either.
+                    unroutable.insert(train.id)
                     break
                 }
                 changed = true
+                trains[index].position = start
                 if route.isEmpty {
-                    // Already stopped at the next stop's station.
-                    trains[index].execution = .waitingAtStop(stop + 1)
+                    // Already stopped at the next call's station.
+                    trains[index].execution = .waitingAtStop(next.stop, cycle: next.cycle)
                 } else {
                     trains[index].movement.continuation = route
                     trains[index].movement.cursor = 0
-                    trains[index].execution = .travellingToStop(stop + 1)
+                    trains[index].execution = .travellingToStop(next.stop, cycle: next.cycle)
                 }
             }
         }
@@ -506,17 +538,18 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func recordArrivals() -> Bool {
         var arrived = false
         for index in trains.indices {
-            guard case .travellingToStop(let stop)? = trains[index].execution,
+            guard case .travellingToStop(let stop, let cycle)? = trains[index].execution,
                   isStopped(trains[index], at: trains[index].timetable[stop].station)
             else { continue }
-            trains[index].execution = .waitingAtStop(stop)
+            trains[index].execution = .waitingAtStop(stop, cycle: cycle)
             arrived = true
         }
         return arrived
     }
 
-    /// The basic steps from now until the earliest scheduled departure, at
-    /// or after now, of a waiting service, or `nil` if there is none.
+    /// The basic steps from now until the earliest scheduled departure (in
+    /// its service's cycle), at or after now, of a waiting service, or `nil`
+    /// if there is none.
     /// Departures already past are left out: after a step that changed
     /// nothing, each of those found no route. The clock may be before minute
     /// 0, so a gap too large for an `Int64` is given as `Int64.max`, which
@@ -524,8 +557,8 @@ public struct GameWorld: Equatable, Sendable {
     private func basicStepsUntilNextDeparture() -> Int64? {
         let now = clock.now.minutes
         return trains.compactMap { train -> Int64? in
-            guard case .waitingAtStop(let stop)? = train.execution else { return nil }
-            let departure = train.timetable[stop].departure.minutes
+            guard case .waitingAtStop(let stop, let cycle)? = train.execution else { return nil }
+            let departure = train.scheduledDeparture(of: stop, cycle: cycle).minutes
             guard departure >= now else { return nil }
             let (gap, overflow) = departure.subtractingReportingOverflow(now)
             return overflow ? .max : gap
@@ -634,8 +667,9 @@ extension GameWorld: Codable {
     /// below the next ID to allocate; every placed train must be on this
     /// map's track, as ``placeTrain(_:at:)`` requires; every continuation
     /// node must lie inside the map; every timetable stop must name one of
-    /// this world's stations, as ``setTrainTimetable(_:to:)`` requires; a
-    /// waiting service's train must be stopped at its stop's station, and a
+    /// this world's stations, as
+    /// ``setTrainTimetable(_:to:repeatingEvery:)`` requires; a waiting
+    /// service's train must be stopped at its stop's station, and a
     /// travelling service's journey must end beside the station of the stop
     /// it travels to, as a route from the service would).
     ///

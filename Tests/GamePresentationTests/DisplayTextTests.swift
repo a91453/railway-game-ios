@@ -67,7 +67,7 @@ final class ErrorMessageTests: XCTestCase {
             .clockOverflow: "Game time cannot advance any further.",
             .idsExhausted: "This game has no IDs left for anything more of this kind.",
             .invalidTimetable:
-                "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives.",
+                "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives. A repeating timetable needs a stop, and a period long enough to start again without going back.",
             .unknownStation(StationID(rawValue: 3)): "There is no station #3.",
             .trainServiceActive(TrainID(rawValue: 3)): "Train #3 is running its timetable. Stop its service first.",
             .trainServiceNotActive(TrainID(rawValue: 3)): "Train #3 is not running a timetable.",

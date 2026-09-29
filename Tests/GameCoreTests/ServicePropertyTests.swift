@@ -22,12 +22,17 @@ import XCTest
 ///
 /// A failing sequence is shrunk before it is reported, with its seed and
 /// case; `PROPERTY_REPLAY=service.differential@<seed>@<case>` runs one case.
+///
+/// Decision 21 adds a second campaign, `service.repeating`, whose generated
+/// timetables turn trains round at some stops and mostly repeat: the same
+/// checks, with its own volume of turns and new cycles. The first campaign
+/// draws exactly as before, so its digest is unchanged.
 final class ServicePropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
     /// A mix of Stage I–N operations and service operations, drawn with the
     /// world stepped along so that operations fit the state they meet.
-    static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
+    static func generate(_ c: inout PropertyCase, operations count: Int, repeating: Bool = false) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         // Mostly networks with loops, where a train can reach most stations
         // whichever way it faces, so that services run far.
         let setup = KernelDifferentialTests.makeSetup(shapes: [.loopWithTails, .loopWithTails, .grid, .grid, .ladder, .ladder, .random, .line, .twoComponents], using: &c.random)
@@ -35,11 +40,11 @@ final class ServicePropertyTests: XCTestCase {
         var operations: [Operation] = []
         for _ in 0..<count {
             if c.random.chance(1, in: 16) {
-                operations += scriptedService(in: &world, using: &c.random)
+                operations += scriptedService(in: &world, repeating: repeating, using: &c.random)
                 continue
             }
             let operation = c.random.chance(3, in: 5)
-                ? nextServiceOperation(in: world, using: &c.random)
+                ? nextServiceOperation(in: world, repeating: repeating, using: &c.random)
                 : KernelDifferentialTests.nextOperation(in: world, using: &c.random)
             operations.append(operation)
             _ = KernelDifferentialTests.apply(operation, to: &world)
@@ -52,7 +57,7 @@ final class ServicePropertyTests: XCTestCase {
     /// stopped at a station, a rate, a timetable from there that it can
     /// mostly drive, the start, and time to run it. The operations drawn
     /// after it may still interrupt the service.
-    static func scriptedService(in world: inout GameWorld, using random: inout SplitMix64) -> [Operation] {
+    static func scriptedService(in world: inout GameWorld, repeating: Bool = false, using random: inout SplitMix64) -> [Operation] {
         var operations: [Operation] = []
         func run(_ operation: Operation) {
             operations.append(operation)
@@ -74,7 +79,7 @@ final class ServicePropertyTests: XCTestCase {
         }
         run(.setRate(id, random.element(of: [256, 700, 1024, 1024, 1500, 3000, 4096])))
         guard let train = world.train(id: id), let from = world.stationsStoppedAt(by: id).first else { return operations }
-        run(.setTimetable(id, ServiceGenerator.timetable(for: train, from: from, in: world, using: &random)))
+        run(ServiceGenerator.setTimetable(for: train, from: from, in: world, repeating: repeating, using: &random))
         run(.startService(id))
         if world.clock.isPaused {
             run(.setSpeed(random.element(of: [.normal, .double])))
@@ -87,7 +92,7 @@ final class ServicePropertyTests: XCTestCase {
     /// that starts where a train is stopped and leads to stations it can
     /// reach, starting it and giving it a rate; sometimes a stop, and
     /// advances long enough for services to run.
-    static func nextServiceOperation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
+    static func nextServiceOperation(in world: GameWorld, repeating: Bool = false, using random: inout SplitMix64) -> Operation {
         let trains = world.trains
         let unknown = TrainID(rawValue: random.element(of: [0, -1, trains.count + 1, Int.max]))
         func anyTrain() -> TrainID {
@@ -105,7 +110,7 @@ final class ServicePropertyTests: XCTestCase {
             guard !ready.isEmpty else { return .setTimetable(anyTrain(), TimetableGenerator.valid(in: world, using: &random)) }
             let train = random.element(of: ready)
             let from = random.element(of: world.stationsStoppedAt(by: train.id))
-            return .setTimetable(train.id, ServiceGenerator.timetable(for: train, from: from, in: world, using: &random))
+            return ServiceGenerator.setTimetable(for: train, from: from, in: world, repeating: repeating, using: &random)
         case 7..<11:
             // Mostly a train that could start.
             let ready = trains.filter { train in
@@ -139,12 +144,39 @@ final class ServicePropertyTests: XCTestCase {
     // MARK: - The campaign
 
     func testServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
+        let counts = try runServiceCampaign("service.differential", repeating: false)
+        let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
+        for (event, least) in [
+            ("startService", 500), ("stopService", 40), ("trainNotAtFirstStop", 70), ("trainServiceActive", 150),
+            ("trainServiceNotActive", 80), ("noTimetable", 60), ("unknownTrain", 300), ("refused while running", 280),
+            ("departures", 120), ("arrivals", 45), ("further without moving", 400), ("completed", 400), ("waits without a route", 400),
+        ] {
+            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
+        }
+    }
+
+    /// Decision 21: services that turn trains round and repeat, under the
+    /// same checks.
+    func testRepeatingServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
+        let counts = try runServiceCampaign("service.repeating", repeating: true)
+        let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
+        for (event, least) in [
+            ("startService", 400), ("invalidTimetable", 40), ("departures", 100), ("arrivals", 40),
+            ("turned round", 150), ("new cycles", 150), ("started late in a later cycle", 20), ("completed", 100),
+            ("waits without a route", 150),
+        ] {
+            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
+        }
+    }
+
+    /// Runs one service campaign and returns how often each event happened.
+    private func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
         var counts: [String: Int] = [:]
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let ran = try runCampaign("service.differential", cases: 30) { c in
-            let (setup, operations) = try Self.generate(&c, operations: 120)
+        let ran = try runCampaign(name, cases: 30) { c in
+            let (setup, operations) = try Self.generate(&c, operations: 120, repeating: repeating)
             c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), minute \(setup.minutes), \(setup.speed)")
 
             // Every outcome and all state, against the reference model.
@@ -160,10 +192,16 @@ final class ServicePropertyTests: XCTestCase {
                 let error = KernelDifferentialTests.apply(operation, to: &world)
                 let at = "step \(index) \(operation)"
                 switch operation {
-                case .startService, .stopService:
+                case .startService(let id), .stopService(let id):
                     let accepted = if case .startService = operation { "startService" } else { "stopService" }
                     counts[error.map { String("\($0)".prefix { $0 != "(" }) } ?? accepted, default: 0] += 1
-                case .setContinuation, .reverse, .unplace, .setTimetable, .sendToTile, .sendToStation:
+                    if case .startService = operation, error == nil, let cycle = world.train(id: id)?.execution?.cycle, cycle > 0 {
+                        counts["started late in a later cycle", default: 0] += 1
+                    }
+                case .setTimetable:
+                    if case .trainServiceActive? = error { counts["refused while running", default: 0] += 1 }
+                    if repeating, case .invalidTimetable? = error { counts["invalidTimetable", default: 0] += 1 }
+                case .setContinuation, .reverse, .unplace, .sendToTile, .sendToStation:
                     if case .trainServiceActive? = error { counts["refused while running", default: 0] += 1 }
                 case .advance(let ticks):
                     if error == nil {
@@ -189,15 +227,9 @@ final class ServicePropertyTests: XCTestCase {
             digest.add(String(decoding: data, as: UTF8.self))
         }
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
-        print("[digest] service.differential \(digest.hex) (\(summary))")
+        print("[digest] \(name) \(digest.hex) (\(summary))")
         assertVolume(ran == 30 * PropertySeeds.active.count, "every case should run")
-        for (event, least) in [
-            ("startService", 500), ("stopService", 40), ("trainNotAtFirstStop", 70), ("trainServiceActive", 150),
-            ("trainServiceNotActive", 80), ("noTimetable", 60), ("unknownTrain", 300), ("refused while running", 280),
-            ("departures", 120), ("arrivals", 45), ("further without moving", 400), ("completed", 400), ("waits without a route", 400),
-        ] {
-            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
-        }
+        return counts
     }
 
     /// Counts what an accepted advance did to the services that ran in it:
@@ -206,28 +238,38 @@ final class ServicePropertyTests: XCTestCase {
     /// further without moving (a station reached at once, or the last stop
     /// left: "further without moving"), finished ("completed"), or still
     /// wait after a departure that passed before the last step ("waits
-    /// without a route").
+    /// without a route"; the last stop of a repeating timetable included).
+    /// Decision 21 adds services that left a stop marked to turn the train
+    /// ("turned round") and services in a later cycle than before ("new
+    /// cycles").
     static func countEvents(before: GameWorld, after: GameWorld, into counts: inout [String: Int]) {
         // A paused clock runs no step.
         guard after.clock.now > before.clock.now else { return }
         for (old, new) in zip(before.trains, after.trains) {
             guard let was = old.execution else { continue }
             let moved = old.position != new.position
-            // Waiting at stop i is 2i, travelling to it 2i - 1, done 2 * count.
-            func progress(_ execution: TimetableExecution?) -> Int {
+            // Waiting at stop i is 2i, travelling to it 2i - 1, done 2 * count,
+            // within a cycle; each later cycle is 2 * count further on.
+            let count = old.timetable.count
+            func progress(_ execution: TimetableExecution?) -> (cycle: Int64, step: Int) {
                 switch execution {
-                case .waitingAtStop(let stop)?: 2 * stop
-                case .travellingToStop(let stop)?: 2 * stop - 1
-                case nil: 2 * old.timetable.count
+                case .waitingAtStop(let stop, let cycle)?: (cycle, 2 * stop)
+                case .travellingToStop(let stop, let cycle)?: (cycle, 2 * stop - 1)
+                case nil: (was.cycle, 2 * count)
                 }
             }
-            let gained = progress(new.execution) - progress(was)
+            let (from, to) = (progress(was), progress(new.execution))
+            let gained = Int(to.cycle - from.cycle) * 2 * count + to.step - from.step
             if case .waitingAtStop = was, moved { counts["departures", default: 0] += 1 }
             if gained >= 1, moved, case .waitingAtStop? = new.execution { counts["arrivals", default: 0] += 1 }
             if gained >= 2, !moved { counts["further without moving", default: 0] += 1 }
             if new.execution == nil { counts["completed", default: 0] += 1 }
-            if gained == 0, case .waitingAtStop(let stop) = was, stop + 1 < old.timetable.count,
-               old.timetable[stop].departure < after.clock.now {
+            if to.cycle > from.cycle { counts["new cycles", default: 0] += 1 }
+            if gained >= 1, case .waitingAtStop(let stop, _) = was, old.timetable[stop].reverses {
+                counts["turned round", default: 0] += 1
+            }
+            if gained == 0, case .waitingAtStop(let stop, let cycle) = was, stop + 1 < count || old.timetablePeriod != nil,
+               old.timetable[stop].departure.minutes + cycle * (old.timetablePeriod ?? 0) < after.clock.now.minutes {
                 counts["waits without a route", default: 0] += 1
             }
         }
@@ -279,6 +321,44 @@ final class ServicePropertyTests: XCTestCase {
 // MARK: - Generated service timetables
 
 enum ServiceGenerator {
+    /// A timetable operation for `train` from `station`: the Stage P
+    /// timetable, drawn exactly as before, unless `repeating`. Then some
+    /// stops turn the train round (and the stations after them are drawn
+    /// from where the train would face), and the timetable mostly repeats:
+    /// usually back at the first station and with a period that fits,
+    /// sometimes with one that is too short or not positive.
+    static func setTimetable(
+        for train: Train,
+        from station: StationID,
+        in world: GameWorld,
+        repeating: Bool,
+        using random: inout SplitMix64
+    ) -> KernelDifferentialTests.Operation {
+        guard repeating else { return .setTimetable(train.id, timetable(for: train, from: station, in: world, using: &random)) }
+        var stops = timetable(for: train, from: station, in: world, turning: true, using: &random)
+        if random.chance(2, in: 3), let first = stops.first, let last = stops.last, last.station != first.station,
+           let departure = Optional(last.departure.minutes), departure < .max {
+            // Back to the first station: the wrap is then a journey home,
+            // or no journey at all when the last stop turns round there.
+            stops.append(ScheduledStop(
+                station: first.station, arrival: GameTime(minutes: departure), departure: GameTime(minutes: departure),
+                reverses: random.chance(1, in: 2)
+            ))
+        }
+        guard random.chance(5, in: 6), let first = stops.first, let last = stops.last else {
+            return .setTimetable(train.id, stops)
+        }
+        let span = last.departure.minutes - first.arrival.minutes
+        let period: Int64 = switch random.below(12) {
+        case 0: random.element(of: [0, -1, -60, .min])
+        case 1: max(0, span - random.int64(in: 1...5))
+        case 2: span
+        case 3: .max
+        default: span.addingReportingOverflow(random.int64(in: 1...30)).overflow ? .max : span + random.int64(in: 1...30)
+        }
+        return .setTimetable(train.id, stops, period: period)
+    }
+
     /// A valid timetable for `train` that starts at `station`: then up to
     /// four more stops, each mostly at a station the train could reach from
     /// where the route to the stop before would leave it (so that most
@@ -290,6 +370,7 @@ enum ServiceGenerator {
         for train: Train,
         from station: StationID,
         in world: GameWorld,
+        turning: Bool = false,
         using random: inout SplitMix64
     ) -> [ScheduledStop] {
         let all = world.stations.map(\.id)
@@ -324,7 +405,14 @@ enum ServiceGenerator {
                 time = later(time, by: random.chance(1, in: 3) ? 0 : random.int64(in: 1...20))
             }
             let departure = later(time, by: random.chance(1, in: 3) ? 0 : random.int64(in: 1...10))
-            stops.append(ScheduledStop(station: current, arrival: GameTime(minutes: time), departure: GameTime(minutes: departure)))
+            // Only drawn when turning, so Stage P's timetables are as before.
+            let reverses = turning && random.chance(1, in: 3)
+            if reverses {
+                position = position.map(ReferenceWorld.turned)
+            }
+            stops.append(ScheduledStop(
+                station: current, arrival: GameTime(minutes: time), departure: GameTime(minutes: departure), reverses: reverses
+            ))
             time = departure
         }
         return stops
