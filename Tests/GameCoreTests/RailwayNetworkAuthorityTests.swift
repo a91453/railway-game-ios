@@ -121,7 +121,8 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
         // Three parts of 2560: ⌊2560 ÷ 3⌋ = 853, ⌊5120 ÷ 3⌋ = 1706.
         XCTAssertEqual(bounds(2_560), [853, 1_706, 2_560])
         XCTAssertEqual(bounds(5_120), [1_024, 2_048, 3_072, 4_096, 5_120])
-        XCTAssertEqual(RailwayNetwork.spans(of: edge, length: 2_000_000).count, 1_954, "2 km is 1954 spans of 1023 or 1024")
+        // 2 km at 64 units a metre is 128000: 125 spans of 1024.
+        XCTAssertEqual(RailwayNetwork.spans(of: edge, length: 128_000), (0..<125).map { TrackSpan(edge: edge, start: $0 * 1_024, end: ($0 + 1) * 1_024) })
 
         for length in Int64(1)...5_000 {
             let spans = RailwayNetwork.spans(of: edge, length: length)
