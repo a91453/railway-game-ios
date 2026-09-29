@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 11
+    static let schemaVersion = 12
 
     var description: String
     var initialState: InitialState
@@ -274,6 +274,9 @@ enum ScenarioCommand: Equatable {
     case setLineServiceWindow(LineID, ServiceWindow)
     case setLineTrainsInService(LineID, TrainsInService)
     case setServiceDay(ServiceDay)
+    case setLineTargetHeadways(LineID, TargetHeadways)
+    case assignTrain(TrainID, LineID)
+    case unassignTrain(TrainID)
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -321,6 +324,12 @@ enum ScenarioCommand: Equatable {
                 try world.setLineTrainsInService(id, to: trains)
             case .setServiceDay(let day):
                 try world.setServiceDay(day)
+            case .setLineTargetHeadways(let id, let headways):
+                try world.setLineTargetHeadways(id, to: headways)
+            case .assignTrain(let id, let line):
+                try world.assignTrain(id, to: line)
+            case .unassignTrain(let id):
+                try world.unassignTrain(id)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -340,7 +349,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands
+        case line, stops, window, trains, bands, targetHeadways
     }
 
     init(from decoder: any Decoder) throws {
@@ -404,6 +413,13 @@ extension ScenarioCommand: Decodable {
         case "setServiceDay":
             let bands = try container.decode([BandSummary].self, forKey: .bands)
             self = .setServiceDay(ServiceDay(bands: bands.map(\.band)))
+        case "setLineTargetHeadways":
+            let headways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways).headways
+            self = try .setLineTargetHeadways(container.decodeLine(forKey: .line), headways)
+        case "assignTrain":
+            self = try .assignTrain(container.decodeTrain(forKey: .train), container.decodeLine(forKey: .line))
+        case "unassignTrain":
+            self = try .unassignTrain(container.decodeTrain(forKey: .train))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -501,6 +517,12 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidTrainsInService)
         case "invalidServiceDay":
             self = .rejected(.invalidServiceDay)
+        case "invalidHeadway":
+            self = .rejected(.invalidHeadway)
+        case "trainOnLine":
+            self = try .rejected(.trainOnLine(container.decodeTrain(forKey: .train)))
+        case "trainNotOnLine":
+            self = try .rejected(.trainNotOnLine(container.decodeTrain(forKey: .train)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -590,6 +612,14 @@ extension StepOutcome: Codable {
             try container.encode("invalidTrainsInService", forKey: .result)
         case .rejected(.invalidServiceDay):
             try container.encode("invalidServiceDay", forKey: .result)
+        case .rejected(.invalidHeadway):
+            try container.encode("invalidHeadway", forKey: .result)
+        case .rejected(.trainOnLine(let id)):
+            try container.encode("trainOnLine", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainNotOnLine(let id)):
+            try container.encode("trainNotOnLine", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
         }
     }
 }
@@ -890,7 +920,9 @@ struct WorldSummary: Codable, Equatable {
 // MARK: - Service lines
 
 /// A service line as a fixture value: `{"id", "name", "stops", "rate",
-/// "window", "trainsInService"}` (see `ServiceLine`).
+/// "window", "trainsInService", "targetHeadways", "trains",
+/// "lastDispatch"}` (see `ServiceLine`). Every field is required;
+/// `lastDispatch` is `null` for a line that never sent a train out.
 struct LineSummary: Codable, Equatable {
     var id: Int
     var name: String
@@ -898,14 +930,23 @@ struct LineSummary: Codable, Equatable {
     var rate: Int64
     var window: WindowSummary
     var trainsInService: TrainsSummary
+    var targetHeadways: TargetHeadwaysSummary
+    var trains: [Int]
+    var lastDispatch: Int64?
 
-    init(id: Int, name: String, stops: [Int], rate: Int64, window: WindowSummary, trainsInService: TrainsSummary) {
+    init(
+        id: Int, name: String, stops: [Int], rate: Int64, window: WindowSummary, trainsInService: TrainsSummary,
+        targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?
+    ) {
         self.id = id
         self.name = name
         self.stops = stops
         self.rate = rate
         self.window = window
         self.trainsInService = trainsInService
+        self.targetHeadways = targetHeadways
+        self.trains = trains
+        self.lastDispatch = lastDispatch
     }
 
     init(_ line: ServiceLine) {
@@ -915,6 +956,80 @@ struct LineSummary: Codable, Equatable {
         rate = line.rate
         window = WindowSummary(line.window)
         trainsInService = TrainsSummary(line.trainsInService)
+        targetHeadways = TargetHeadwaysSummary(line.targetHeadways)
+        trains = line.trains.map(\.rawValue)
+        lastDispatch = line.lastDispatch?.minutes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        stops = try container.decode([Int].self, forKey: .stops)
+        rate = try container.decode(Int64.self, forKey: .rate)
+        window = try container.decode(WindowSummary.self, forKey: .window)
+        trainsInService = try container.decode(TrainsSummary.self, forKey: .trainsInService)
+        targetHeadways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways)
+        trains = try container.decode([Int].self, forKey: .trains)
+        // Required: a missing key is an error, not a line that never
+        // dispatched.
+        lastDispatch = try container.decodeNil(forKey: .lastDispatch) ? nil : container.decode(Int64.self, forKey: .lastDispatch)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(stops, forKey: .stops)
+        try container.encode(rate, forKey: .rate)
+        try container.encode(window, forKey: .window)
+        try container.encode(trainsInService, forKey: .trainsInService)
+        try container.encode(targetHeadways, forKey: .targetHeadways)
+        try container.encode(trains, forKey: .trains)
+        if let lastDispatch {
+            try container.encode(lastDispatch, forKey: .lastDispatch)
+        } else {
+            try container.encodeNil(forKey: .lastDispatch)
+        }
+    }
+}
+
+/// Target headways as a fixture value: `{"peak", "offPeak", "low"}`, each
+/// minutes or `null` at a level without a target (see `TargetHeadways`).
+/// All three keys are required. Read as written: whether a target fits is
+/// GameCore's decision.
+struct TargetHeadwaysSummary: Codable, Equatable {
+    var headways: TargetHeadways
+
+    init(_ headways: TargetHeadways) {
+        self.headways = headways
+    }
+
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case peak, offPeak, low
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func target(_ key: CodingKeys) throws -> Int64? {
+            try container.decodeNil(forKey: key) ? nil : container.decode(Int64.self, forKey: key)
+        }
+        headways = try TargetHeadways(peak: target(.peak), offPeak: target(.offPeak), low: target(.low))
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        for (key, target) in zip(CodingKeys.allCases, [headways.peak, headways.offPeak, headways.low]) {
+            if let target {
+                try container.encode(target, forKey: key)
+            } else {
+                try container.encodeNil(forKey: key)
+            }
+        }
     }
 }
 

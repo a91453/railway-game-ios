@@ -51,6 +51,11 @@ final class KernelDifferentialTests: XCTestCase {
         case setLineWindow(LineID, ServiceWindow)
         case setLineTrains(LineID, TrainsInService)
         case setServiceDay(ServiceDay)
+        /// Never drawn by ``nextOperation(in:using:)`` or the line campaign;
+        /// the dispatch campaign (`LineDispatchPropertyTests`) adds them.
+        case setLineTargets(LineID, TargetHeadways)
+        case assign(TrainID, LineID)
+        case unassign(TrainID)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -81,6 +86,10 @@ final class KernelDifferentialTests: XCTestCase {
             case .setLineWindow(let id, let window): ".setLineWindow(\(id.rawValue), \(window))"
             case .setLineTrains(let id, let trains): ".setLineTrains(\(id.rawValue), \(trains.peak)/\(trains.offPeak)/\(trains.low))"
             case .setServiceDay(let day): ".setServiceDay(\(day.bands.map { "\($0.start):\($0.level)" }))"
+            case .setLineTargets(let id, let targets):
+                ".setLineTargets(\(id.rawValue), \([targets.peak, targets.offPeak, targets.low].map { $0.map(String.init) ?? "-" }.joined(separator: "/")))"
+            case .assign(let id, let line): ".assign(\(id.rawValue), \(line.rawValue))"
+            case .unassign(let id): ".unassign(\(id.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
             case .pause: ".pause"
@@ -277,6 +286,9 @@ final class KernelDifferentialTests: XCTestCase {
             case .setLineWindow(let id, let window): try world.setLineServiceWindow(id, to: window)
             case .setLineTrains(let id, let trains): try world.setLineTrainsInService(id, to: trains)
             case .setServiceDay(let day): try world.setServiceDay(day)
+            case .setLineTargets(let id, let targets): try world.setLineTargetHeadways(id, to: targets)
+            case .assign(let id, let line): try world.assignTrain(id, to: line)
+            case .unassign(let id): try world.unassignTrain(id)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -328,6 +340,9 @@ final class KernelDifferentialTests: XCTestCase {
         case .setLineWindow(let id, let window): return model.setLineWindow(id, window)
         case .setLineTrains(let id, let trains): return model.setLineTrains(id, trains)
         case .setServiceDay(let day): return model.setServiceDay(day)
+        case .setLineTargets(let id, let targets): return model.setLineTargets(id, targets)
+        case .assign(let id, let line): return model.assign(id, to: line)
+        case .unassign(let id): return model.unassign(id)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -338,8 +353,11 @@ final class KernelDifferentialTests: XCTestCase {
 
     // MARK: - Comparing
 
-    /// Every observable difference between the world and the model.
-    static func differences(_ world: GameWorld, _ model: ReferenceWorld) -> [String] {
+    /// Every observable difference between the world and the model. Without
+    /// `lineAnswers`, what is derived for each line (its levels, journey,
+    /// trains and headways) is left out: the line campaign compares it, and
+    /// the reference drives every line from scratch to answer it.
+    static func differences(_ world: GameWorld, _ model: ReferenceWorld, lineAnswers: Bool = true) -> [String] {
         var found: [String] = []
         func check(_ ok: Bool, _ what: @autoclosure () -> String) {
             if !ok { found.append(what()) }
@@ -381,19 +399,23 @@ final class KernelDifferentialTests: XCTestCase {
             )
         }
         // Decision 22: lines and the service day, and what is derived for
-        // each line (and an unknown one) at the current minute.
+        // each line (and an unknown one) at the current minute. Decision 23:
+        // each line's targets, trains and last dispatch.
         check(
             world.lines.map { [$0.id.rawValue] } == model.lines.map { [$0.id] }
                 && world.lines.map(\.name) == model.lines.map(\.name) && world.lines.map(\.stops) == model.lines.map(\.stops)
                 && world.lines.map(\.rate) == model.lines.map(\.rate) && world.lines.map(\.window) == model.lines.map(\.window)
-                && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService),
+                && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService)
+                && world.lines.map(\.targetHeadways) == model.lines.map(\.targetHeadways)
+                && world.lines.map { $0.trains.map(\.rawValue) } == model.lines.map(\.roster)
+                && world.lines.map { $0.lastDispatch?.minutes } == model.lines.map(\.lastDispatch),
             "lines \(world.lines) vs \(model.lines)"
         )
         check(
             world.serviceDay.bands.map(\.start) == model.serviceDay.map(\.start) && world.serviceDay.bands.map(\.level) == model.serviceDay.map(\.level),
             "service day \(world.serviceDay) vs \(model.serviceDay)"
         )
-        for raw in world.lines.map(\.id.rawValue) + [0, Int.max] {
+        for raw in world.lines.map(\.id.rawValue) + [0, Int.max] where lineAnswers {
             let id = LineID(rawValue: raw)
             for offset: Int64 in [0, 1, 700] {
                 let (time, overflow) = world.clock.now.minutes.addingReportingOverflow(offset)
@@ -436,7 +458,8 @@ final class KernelDifferentialTests: XCTestCase {
 
     /// Decision 18's transitions: whose stop an operation may begin or end.
     /// Decision 20 adds one: `advance` may move a stopped train, and so end
-    /// its stop, when a service was running it.
+    /// its stop, when a service was running it. Decision 23 another: when
+    /// the train is on a line, which may send it out.
     static func stopTransitionProblems(
         _ operation: Operation,
         before: GameWorld,
@@ -447,7 +470,7 @@ final class KernelDifferentialTests: XCTestCase {
         for train in after.trains {
             let was = before.stationsStoppedAt(by: train.id)
             let now = after.stationsStoppedAt(by: train.id)
-            let wasInService = before.train(id: train.id)?.execution != nil
+            let wasInService = before.train(id: train.id)?.execution != nil || before.assignedLine(of: train.id) != nil
             if case .advance = operation, !was.isEmpty, !wasInService, let old = before.train(id: train.id),
                old.position != train.position || old.movement != train.movement {
                 found.append("advance moved train \(train.id.rawValue), stopped at \(was)")
@@ -475,10 +498,10 @@ final class KernelDifferentialTests: XCTestCase {
 
     /// Runs `operations` from `setup`; returns the first problem and the
     /// step it happened at, or `nil`.
-    static func firstProblem(_ setup: Setup, _ operations: [Operation]) -> (step: Int, problem: String)? {
+    static func firstProblem(_ setup: Setup, _ operations: [Operation], lineAnswers: Bool = true) -> (step: Int, problem: String)? {
         guard let built = try? setup.build() else { return (-1, "the setup did not build") }
         var (world, model) = built
-        let initial = differences(world, model)
+        let initial = differences(world, model, lineAnswers: lineAnswers)
         if !initial.isEmpty { return (-1, "initial: \(initial)") }
         for (index, operation) in operations.enumerated() {
             let before = world
@@ -493,7 +516,7 @@ final class KernelDifferentialTests: XCTestCase {
             if case .saveAndLoad = operation, world != before {
                 return (index, "the world did not survive saving and loading")
             }
-            let found = differences(world, model) + stopTransitionProblems(operation, before: before, after: world, refused: error != nil)
+            let found = differences(world, model, lineAnswers: lineAnswers) + stopTransitionProblems(operation, before: before, after: world, refused: error != nil)
             if !found.isEmpty {
                 return (index, "after \(operation): " + found.prefix(4).joined(separator: "; "))
             }
@@ -525,10 +548,10 @@ final class KernelDifferentialTests: XCTestCase {
     }
 
     /// The failing prefix of `operations`, shrunk.
-    static func minimalFailure(_ setup: Setup, _ operations: [Operation]) -> [Operation] {
-        guard let failure = firstProblem(setup, operations) else { return operations }
+    static func minimalFailure(_ setup: Setup, _ operations: [Operation], lineAnswers: Bool = true) -> [Operation] {
+        guard let failure = firstProblem(setup, operations, lineAnswers: lineAnswers) else { return operations }
         let prefix = Array(operations.prefix(max(0, failure.step) + 1))
-        return shrink(prefix) { firstProblem(setup, $0) != nil }
+        return shrink(prefix) { firstProblem(setup, $0, lineAnswers: lineAnswers) != nil }
     }
 
     /// Generates one case's setup and operations (the world is stepped

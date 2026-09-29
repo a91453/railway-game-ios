@@ -188,6 +188,12 @@ extension GameError {
             "A line cannot run a negative number of trains."
         case .invalidServiceDay:
             "The day's service levels must start at 00:00 and change at later times within the day."
+        case .invalidHeadway:
+            "A target headway must be between 2 minutes and 24 hours."
+        case .trainOnLine(let id):
+            "Train #\(id.rawValue) runs for a line. Take it off the line first."
+        case .trainNotOnLine(let id):
+            "Train #\(id.rawValue) is not on a line."
         }
     }
 }

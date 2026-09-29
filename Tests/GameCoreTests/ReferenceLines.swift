@@ -1,7 +1,7 @@
 import GameCore
 
-/// Decision 22, written a second time for ``ReferenceWorld``: service lines,
-/// the service day, and what is derived from them. Written from the rules,
+/// Decisions 22 and 23, written a second time for ``ReferenceWorld``:
+/// service lines, the service day, what is derived from them, and dispatch. Written from the rules,
 /// not from GameCore, and differently where it can be: windows as one or
 /// two ranges of the day, levels found by scanning the day's bands from the
 /// start, leg minutes as `(units - 1) / rate + 1`, and every start of a
@@ -100,38 +100,38 @@ extension ReferenceWorld {
 
     func lineJourney(_ id: LineID) -> LineJourney? {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
-        let n = line.stops.count
         var best: LineJourney?
         for platform in platforms(of: line.stops[0]) {
             for heading in TrackDirection.allCases {
-                let start = TrainPosition.atNode(platform, heading: heading)
-                var position = start
-                var legs: [LineLeg] = []
-                var drivable = true
-                // Out: 0 -> n-1, then back: n-1 -> 0, turning at the far end.
-                var pairs: [(Int, Int)] = (0..<(n - 1)).map { ($0, $0 + 1) }
-                pairs += (1..<n).reversed().map { ($0, $0 - 1) }
-                for (from, to) in pairs {
-                    if from == n - 1 { position = Self.turned(position) }
-                    guard let route = route(from: position, toStation: line.stops[to]) else {
-                        drivable = false
-                        break
-                    }
-                    let units = Int64(route.count) * Self.linkLength
-                    legs.append(LineLeg(from: from, to: to, route: route, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
-                    if route.count >= 1 {
-                        let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
-                        position = .atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
-                    }
-                }
-                guard drivable else { continue }
-                let total = legs.reduce(Int64(0)) { $0 + $1.minutes } + 2 * 2 + Int64(2 * (n - 2)) * 1
-                if best.map({ total < $0.roundTripMinutes }) ?? true {
-                    best = LineJourney(start: start, legs: legs, roundTripMinutes: total)
+                guard let journey = journey(of: line, from: .atNode(platform, heading: heading)) else { continue }
+                if best.map({ journey.roundTripMinutes < $0.roundTripMinutes }) ?? true {
+                    best = journey
                 }
             }
         }
         return best
+    }
+
+    /// The line driven once from `start`: out 0 -> n-1, turning at the far
+    /// end, back n-1 -> 0; `nil` if a leg has no route.
+    func journey(of line: Line, from start: TrainPosition) -> LineJourney? {
+        let n = line.stops.count
+        var position = start
+        var legs: [LineLeg] = []
+        var pairs: [(Int, Int)] = (0..<(n - 1)).map { ($0, $0 + 1) }
+        pairs += (1..<n).reversed().map { ($0, $0 - 1) }
+        for (from, to) in pairs {
+            if from == n - 1 { position = Self.turned(position) }
+            guard let route = route(from: position, toStation: line.stops[to]) else { return nil }
+            let units = Int64(route.count) * Self.linkLength
+            legs.append(LineLeg(from: from, to: to, route: route, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
+            if route.count >= 1 {
+                let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
+                position = .atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
+            }
+        }
+        let total = legs.reduce(Int64(0)) { $0 + $1.minutes } + 2 * 2 + Int64(2 * (n - 2)) * 1
+        return LineJourney(start: start, legs: legs, roundTripMinutes: total)
     }
 
     /// Everything derived for a line, from one drive of its journey:
@@ -150,15 +150,30 @@ extension ReferenceWorld {
         let maximum = Self.maximumTrains(roundTrip: journey.roundTripMinutes)
         var answers = LineAnswers(journey: journey, maximum: maximum, trains: [:], headways: [:])
         for level in ServiceLevel.allCases {
-            let wanted = line.trains[level]!
-            let count = wanted < maximum ? wanted : maximum
+            let (count, headway) = Self.plan(line, at: level, roundTrip: journey.roundTripMinutes, maximum: maximum)
             answers.trains[level] = count
-            if count > 0 {
-                let roundTrip = journey.roundTripMinutes
-                answers.headways[level] = roundTrip == 0 ? 0 : (roundTrip - 1) / Int64(count) + 1
-            }
+            answers.headways[level] = headway
         }
         return answers
+    }
+
+    /// Decisions 22 and 23: the trains a line runs at `level` and the
+    /// headway, `nil` without trains. With a target: enough trains that
+    /// their share of the round trip is no longer than it (but no more than
+    /// the maximum), and the target or that share, whichever is longer.
+    static func plan(_ line: Line, at level: ServiceLevel, roundTrip: Int64, maximum: Int) -> (trains: Int, headway: Int64?) {
+        let count: Int
+        if let target = line.targets[level] {
+            let enough = Int((roundTrip - 1) / target + 1)
+            count = enough < maximum ? enough : maximum
+        } else {
+            let wanted = line.trains[level]!
+            count = wanted < maximum ? wanted : maximum
+        }
+        guard count > 0 else { return (0, nil) }
+        let share = (roundTrip - 1) / Int64(count) + 1
+        guard let target = line.targets[level] else { return (count, share) }
+        return (count, share > target ? share : target)
     }
 
     /// As the web reference finds it: one if even a single train is closer
@@ -189,5 +204,114 @@ extension ReferenceWorld {
 
     func lineHeadway(_ id: LineID, at level: ServiceLevel) -> Int64? {
         lineAnswers(id).headways[level]
+    }
+}
+
+// MARK: - Dispatch (decision 23)
+
+extension ReferenceWorld {
+    func onLine(_ id: TrainID) -> Bool {
+        lines.contains { $0.roster.contains(id.rawValue) }
+    }
+
+    mutating func setLineTargets(_ id: LineID, _ targets: TargetHeadways) -> GameError? {
+        guard let index = lines.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownLine(id) }
+        var byLevel: [ServiceLevel: Int64] = [:]
+        for level in ServiceLevel.allCases {
+            guard let target = targets[level] else { continue }
+            guard target >= 2, target <= 1440 else { return .invalidHeadway }
+            byLevel[level] = target
+        }
+        lines[index].targets = byLevel
+        return nil
+    }
+
+    /// The train, then the line, then not on a line, then no service.
+    mutating func assign(_ id: TrainID, to line: LineID) -> GameError? {
+        guard let train = trains.first(where: { $0.id == id.rawValue }) else { return .unknownTrain(id) }
+        guard let index = lines.firstIndex(where: { $0.id == line.rawValue }) else { return .unknownLine(line) }
+        if onLine(id) { return .trainOnLine(id) }
+        if train.service != nil { return .trainServiceActive(id) }
+        lines[index].roster = (lines[index].roster + [id.rawValue]).sorted()
+        return nil
+    }
+
+    mutating func unassign(_ id: TrainID) -> GameError? {
+        guard trains.contains(where: { $0.id == id.rawValue }) else { return .unknownTrain(id) }
+        guard let index = lines.firstIndex(where: { $0.roster.contains(id.rawValue) }) else { return .trainNotOnLine(id) }
+        lines[index].roster.removeAll { $0 == id.rawValue }
+        return nil
+    }
+
+    /// What stays the same within one call of `advance`.
+    struct DispatchMemo {
+        var journeys: [Int: LineJourney?] = [:]
+        /// Trips found from a train's place: `(turned, journey)`, or none.
+        var trips: [TrainPosition: [Int: (Bool, LineJourney)?]] = [:]
+    }
+
+    /// One line's dispatch at the current minute: from minute 0, window
+    /// open, a level with trains on a drivable journey, a headway since the
+    /// last dispatch, fewer trains in service than the level runs; then
+    /// the first of its trains, by ID, without a service, placed, moving at
+    /// some rate and stopped at the first stop, that can drive the round
+    /// trip from there (turned round only if that is shorter or the only
+    /// way) leaves on it now.
+    mutating func dispatch(_ l: Int, memo: inout DispatchMemo) {
+        let line = lines[l]
+        guard !line.roster.isEmpty, minutes >= 0,
+              let level = serviceLevel(of: LineID(rawValue: line.id), at: GameTime(minutes: minutes))
+        else { return }
+        if memo.journeys[line.id] == nil {
+            memo.journeys[line.id] = .some(lineJourney(LineID(rawValue: line.id)))
+        }
+        guard let journey = memo.journeys[line.id]! else { return }
+        let maximum = Self.maximumTrains(roundTrip: journey.roundTripMinutes)
+        let (count, headway) = Self.plan(line, at: level, roundTrip: journey.roundTripMinutes, maximum: maximum)
+        guard count > 0, let headway else { return }
+        if let last = line.lastDispatch, minutes - last < headway { return }
+        let busy = trains.filter { line.roster.contains($0.id) && $0.service != nil }.count
+        guard busy < count else { return }
+        for id in line.roster {
+            guard let i = trains.firstIndex(where: { $0.id == id }) else { continue }
+            let train = trains[i]
+            guard train.service == nil, let position = train.position, train.rate > 0,
+                  stationsStoppedAt(by: TrainID(rawValue: id)).contains(line.stops[0])
+            else { continue }
+            if memo.trips[position]?[line.id] == nil {
+                let straight = self.journey(of: line, from: position)
+                let turned = self.journey(of: line, from: Self.turned(position))
+                let pick: (Bool, LineJourney)? = switch (straight, turned) {
+                case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
+                case (let s?, nil): (false, s)
+                case (nil, let t?): (true, t)
+                case (nil, nil): nil
+                }
+                memo.trips[position, default: [:]][line.id] = .some(pick)
+            }
+            guard let (turn, trip) = memo.trips[position]![line.id]! else { continue }
+            // The timetable: leave now; each call the leg's minutes after
+            // the one before; stay 1 between the ends, 2 at the far end
+            // (turning), and finish on arrival back at the first stop
+            // (turning).
+            var timetable = [ScheduledStop(station: line.stops[0], arrival: GameTime(minutes: minutes), departure: GameTime(minutes: minutes), reverses: turn)]
+            var clock = minutes
+            for (k, leg) in trip.legs.enumerated() {
+                let final = k == trip.legs.count - 1
+                let far = leg.to == line.stops.count - 1
+                let stay: Int64 = final ? 0 : far ? 2 : 1
+                guard clock <= Int64.max - leg.minutes - stay else { return }
+                let arrival = clock + leg.minutes
+                clock = arrival + stay
+                timetable.append(ScheduledStop(
+                    station: line.stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: clock), reverses: final || far
+                ))
+            }
+            trains[i].timetable = timetable
+            trains[i].period = nil
+            trains[i].service = Service(stop: 0, waiting: true)
+            lines[l].lastDispatch = minutes
+            return
+        }
     }
 }

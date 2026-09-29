@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–Q2a) written a second time, straight
+/// The whole GameCore kernel (Stages I–Q2b) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–22; the rules summary), for differential testing.
+/// 18–23; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -22,7 +22,10 @@ import GameCore
 ///   plus the cycle times the period, recomputed at every use;
 /// - a line's window is an optional pair (none for all day) checked as one
 ///   or two ranges of the day, and a leg's minutes are `(units - 1) / rate
-///   + 1` rather than a quotient and a remainder.
+///   + 1` rather than a quotient and a remainder;
+/// - a line's targets are a dictionary by level, a headway is checked by
+///   subtracting the last dispatch from the minute, and a trip's timetable
+///   is built from dwells looked up per call.
 ///
 /// Only for small maps: routes cost O(states²).
 struct ReferenceWorld: Equatable {
@@ -77,7 +80,8 @@ struct ReferenceWorld: Equatable {
     var nextLineID = 1
     var serviceDay: [(start: Int, level: ServiceLevel)] = [(0, .low), (420, .peak), (600, .offPeak), (960, .peak), (1200, .offPeak), (1260, .low)]
 
-    /// Decision 22: a service line; `hours` is `nil` all day.
+    /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
+    /// its targets by level, the IDs of its trains and its last dispatch.
     struct Line: Equatable {
         var id: Int
         var name: String
@@ -85,10 +89,18 @@ struct ReferenceWorld: Equatable {
         var rate: Int64 = 1024
         var hours: (open: Int, close: Int)? = (360, 1440)
         var trains: [ServiceLevel: Int] = [.peak: 0, .offPeak: 0, .low: 0]
+        var targets: [ServiceLevel: Int64] = [:]
+        var roster: [Int] = []
+        var lastDispatch: Int64?
 
         static func == (lhs: Line, rhs: Line) -> Bool {
             lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.rate == rhs.rate
                 && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
+                && lhs.targets == rhs.targets && lhs.roster == rhs.roster && lhs.lastDispatch == rhs.lastDispatch
+        }
+
+        var targetHeadways: TargetHeadways {
+            TargetHeadways(peak: targets[.peak], offPeak: targets[.offPeak], low: targets[.low])
         }
 
         var window: ServiceWindow {
@@ -347,6 +359,8 @@ struct ReferenceWorld: Equatable {
         switch index(id) {
         case .failure(let error): return error
         case .success(let i):
+            // Decision 23: a line's train takes its timetables from the line.
+            if onLine(id) { return .trainOnLine(id) }
             guard trains[i].service == nil else { return .trainServiceActive(id) }
             let times = stops.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
             guard times.allSatisfy({ $0 >= 0 }), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
@@ -389,6 +403,7 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             let train = trains[i]
+            if onLine(id) { return .trainOnLine(id) }
             if train.service != nil { return .trainServiceActive(id) }
             if train.timetable.isEmpty { return .noTimetable(id) }
             if train.position == nil { return .trainNotPlaced(id) }
@@ -414,6 +429,7 @@ struct ReferenceWorld: Equatable {
         switch index(id) {
         case .failure(let error): return error
         case .success(let i):
+            if onLine(id) { return .trainOnLine(id) }
             if trains[i].service == nil { return .trainServiceNotActive(id) }
             trains[i].service = nil
             return nil
@@ -434,7 +450,8 @@ struct ReferenceWorld: Equatable {
     }
 
     /// Decisions 3, 15 and 20: checked first, then every minute is stepped:
-    /// departures at the minute, travel, the clock, then arrivals.
+    /// departures at the minute, travel, the clock, then arrivals. Decision
+    /// 23: each line's dispatch comes before the departures.
     mutating func advance(ticks: Int) -> GameError? {
         let perTick: Int64 = switch speed {
         case .paused: 0
@@ -443,7 +460,13 @@ struct ReferenceWorld: Equatable {
         }
         let (steps, overflow) = Int64(ticks).multipliedReportingOverflow(by: perTick)
         guard !overflow, !minutes.addingReportingOverflow(steps).overflow else { return .clockOverflow }
+        // Decision 23: within one call the map cannot change, so a line's
+        // journey, and a trip from an idle train's place, stay the same.
+        var memo = DispatchMemo()
         for _ in 0..<steps {
+            for l in lines.indices {
+                dispatch(l, memo: &memo)
+            }
             for i in trains.indices {
                 depart(i)
             }
