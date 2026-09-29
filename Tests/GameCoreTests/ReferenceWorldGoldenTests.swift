@@ -55,6 +55,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 },
                 final.trains, name
             )
+            XCTAssertEqual(model.lines.map(Self.summary), final.lines, name)
+            XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -74,6 +76,13 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setTrainTimetable(let id, let stops, let period): error = model.setTimetable(id, stops, period: period)
         case .startTrainService(let id): error = model.startService(id)
         case .stopTrainService(let id): error = model.stopService(id)
+        case .createLine(let name, let stops): error = model.createLine(named: name, stops: stops)
+        case .removeLine(let id): error = model.removeLine(id)
+        case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
+        case .setLineRate(let id, let rate): error = model.setLineRate(id, rate)
+        case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
+        case .setLineTrainsInService(let id, let trains): error = model.setLineTrains(id, trains)
+        case .setServiceDay(let day): error = model.setServiceDay(day)
         case .setSpeed(let speed): model.setSpeed(speed)
         case .pause: model.pause()
         case .resume: model.resume()
@@ -107,6 +116,21 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .timetable(model.trains.first { $0.id == id.rawValue }?.timetable)
         case .execution(let id):
             return .execution(model.trains.first { $0.id == id.rawValue }.map { ExecutionSummary($0.service?.execution) })
+        case .serviceLevel(let id, let time):
+            return .level(model.serviceLevel(of: id, at: time))
+        case .lineJourney(let id):
+            return .journey(model.lineJourney(id).map(JourneySummary.init))
+        case .lineMaximumTrains(let id):
+            return .trains(model.lineMaximumTrains(id))
+        case .lineTrainsInService(let id, let level):
+            return .trains(model.lineTrainsInService(id, at: level))
+        case .lineHeadway(let id, let level):
+            return .minutes(model.lineHeadway(id, at: level))
         }
+    }
+
+    private static func summary(_ line: ReferenceWorld.Line) -> LineSummary {
+        LineSummary(id: line.id, name: line.name, stops: line.stops.map(\.rawValue), rate: line.rate,
+                    window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService))
     }
 }

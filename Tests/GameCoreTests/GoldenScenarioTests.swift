@@ -223,6 +223,8 @@ final class GoldenScenarioTests: XCTestCase {
         var sharedStopCount = 0
         var timetableAnswerCount = 0
         var executionAnswerCount = 0
+        var journeyAnswerCount = 0
+        var headwayAnswerCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -253,6 +255,12 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .execution(let execution?) = expect, execution.execution != nil {
                     executionAnswerCount += 1
                 }
+                if case .journey(let journey?) = expect, journey.legs.count > 2 {
+                    journeyAnswerCount += 1
+                }
+                if case .minutes(let minutes?) = expect, minutes > 0 {
+                    headwayAnswerCount += 1
+                }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -271,6 +279,8 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(sharedStopCount, 0, "No fixture pins a train stopped at more than one station")
         XCTAssertGreaterThan(timetableAnswerCount, 0, "No fixture pins a timetable of more than one stop")
         XCTAssertGreaterThan(executionAnswerCount, 0, "No fixture observes an active service")
+        XCTAssertGreaterThan(journeyAnswerCount, 0, "No fixture pins a line journey of more than two legs")
+        XCTAssertGreaterThan(headwayAnswerCount, 0, "No fixture pins a line's headway")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -330,6 +340,34 @@ final class GoldenScenarioTests: XCTestCase {
             return []
         case .execution(let execution?):
             return [.execution(nil)] + wrongExecutions(for: execution.execution).map { .execution(ExecutionSummary($0)) }
+        case .level(let level):
+            return ([nil] + ServiceLevel.allCases.map(Optional.some)).filter { $0 != level }.map { .level($0) }
+        case .journey(nil):
+            return []
+        case .journey(let journey?):
+            var wrong: [ObservationAnswer] = [.journey(nil)]
+            var changed = journey
+            changed.roundTripMinutes += 1
+            wrong.append(.journey(changed))
+            changed = journey
+            changed.legs = Array(journey.legs.dropLast())
+            wrong.append(.journey(changed))
+            if let leg = journey.legs.first {
+                changed = journey
+                changed.legs[0].minutes = leg.minutes + 1
+                wrong.append(.journey(changed))
+                changed = journey
+                changed.legs[0].route = leg.route + [PositionSummary(GridPosition(x: 99, y: 99))]
+                wrong.append(.journey(changed))
+            }
+            changed = journey
+            changed.start = TrainPositionSummary(.atNode(GridPosition(x: 99, y: 99), heading: .north))
+            wrong.append(.journey(changed))
+            return wrong
+        case .trains(let trains):
+            return trains.map { [.trains(nil), .trains($0 + 1)] } ?? [.trains(0)]
+        case .minutes(let minutes):
+            return minutes.map { [.minutes(nil), .minutes($0 + 1)] } ?? [.minutes(0)]
         }
     }
 
@@ -363,7 +401,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 10,
+              "schemaVersion": 11,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -394,7 +432,12 @@ final class GoldenScenarioTests: XCTestCase {
                   { "x": 0, "y": 0, "connections": ["east"] },
                   { "x": 1, "y": 0, "connections": ["north"] }
                 ],
-                "trains": []
+                "trains": [],
+                "lines": [],
+                "serviceDay": [
+                  { "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" },
+                  { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }
+                ]
               }
             }
             """#
@@ -408,7 +451,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -727,6 +770,92 @@ final class GoldenScenarioTests: XCTestCase {
         ]
         for (json, expected) in results {
             XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)
+        }
+    }
+
+    func testLineCommandsObservationsAndResultsDecode() throws {
+        let line = LineID(rawValue: 2)
+        let commands: [(String, ScenarioCommand)] = [
+            (#"{"type": "createLine", "name": "Main", "stops": [1, 2, 3]}"#,
+             .createLine(name: "Main", stops: [1, 2, 3].map(StationID.init(rawValue:)))),
+            // Read as written: rejecting too few stops or a blank name is GameCore's decision.
+            (#"{"type": "createLine", "name": " ", "stops": []}"#, .createLine(name: " ", stops: [])),
+            (#"{"type": "removeLine", "line": 2}"#, .removeLine(line)),
+            (#"{"type": "setLineStops", "line": 2, "stops": [4, 1]}"#, .setLineStops(line, [4, 1].map(StationID.init(rawValue:)))),
+            (#"{"type": "setLineRate", "line": 2, "rate": 0}"#, .setLineRate(line, 0)),
+            (#"{"type": "setLineServiceWindow", "line": 2, "window": {"type": "allDay"}}"#, .setLineServiceWindow(line, .allDay)),
+            (#"{"type": "setLineServiceWindow", "line": 2, "window": {"type": "hours", "open": 900, "close": 100}}"#,
+             .setLineServiceWindow(line, .hours(open: 900, close: 100))),
+            (#"{"type": "setLineTrainsInService", "line": 2, "trains": {"peak": 6, "offPeak": -1, "low": 0}}"#,
+             .setLineTrainsInService(line, TrainsInService(peak: 6, offPeak: -1, low: 0))),
+            (#"{"type": "setServiceDay", "bands": [{"start": 0, "level": "low"}, {"start": 420, "level": "peak"}]}"#,
+             .setServiceDay(ServiceDay(bands: [ServiceDay.Band(start: 0, level: .low), ServiceDay.Band(start: 420, level: .peak)]))),
+            (#"{"type": "setServiceDay", "bands": []}"#, .setServiceDay(ServiceDay(bands: []))),
+        ]
+        for (json, expected) in commands {
+            XCTAssertEqual(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), expected, json)
+        }
+
+        let results: [(String, StepOutcome)] = [
+            (#"{"result": "unknownLine", "line": 4}"#, .rejected(.unknownLine(LineID(rawValue: 4)))),
+            (#"{"result": "invalidLineStops"}"#, .rejected(.invalidLineStops)),
+            (#"{"result": "invalidLineRate"}"#, .rejected(.invalidLineRate)),
+            (#"{"result": "invalidServiceWindow"}"#, .rejected(.invalidServiceWindow)),
+            (#"{"result": "invalidTrainsInService"}"#, .rejected(.invalidTrainsInService)),
+            (#"{"result": "invalidServiceDay"}"#, .rejected(.invalidServiceDay)),
+        ]
+        for (json, expected) in results {
+            XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)
+        }
+
+        let observations: [(String, GoldenScenario.Step)] = [
+            (#"{"observe": {"type": "serviceLevel", "line": 2, "gameMinutes": 420}, "expect": {"level": "peak"}}"#,
+             .observe(.serviceLevel(line, at: GameTime(minutes: 420)), expect: .level(.peak))),
+            (#"{"observe": {"type": "serviceLevel", "line": 2, "gameMinutes": -5}, "expect": {"level": "closed"}}"#,
+             .observe(.serviceLevel(line, at: GameTime(minutes: -5)), expect: .level(nil))),
+            (#"{"observe": {"type": "lineJourney", "line": 2}, "expect": {"found": false}}"#,
+             .observe(.lineJourney(line), expect: .journey(nil))),
+            (#"{"observe": {"type": "lineMaximumTrains", "line": 2}, "expect": {"found": true, "trains": 7}}"#,
+             .observe(.lineMaximumTrains(line), expect: .trains(7))),
+            (#"{"observe": {"type": "lineTrainsInService", "line": 2, "level": "offPeak"}, "expect": {"found": false}}"#,
+             .observe(.lineTrainsInService(line, .offPeak), expect: .trains(nil))),
+            (#"{"observe": {"type": "lineHeadway", "line": 2, "level": "low"}, "expect": {"found": true, "minutes": 14}}"#,
+             .observe(.lineHeadway(line, .low), expect: .minutes(14))),
+        ]
+        for (json, expected) in observations {
+            XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
+        }
+    }
+
+    func testMalformedLineStepsAreRejectedRatherThanGuessed() {
+        let steps = [
+            #"{"command": {"type": "createLine", "stops": [1, 2]}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "createLine", "name": "L"}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "createLine", "name": "L", "stops": ["Alpha"]}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "removeLine"}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineRate", "line": 1, "rate": 1.5}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "allDay", "open": 0}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "hours", "open": 0}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "always"}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": "allDay"}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineTrainsInService", "line": 1, "trains": {"peak": 1, "offPeak": 1}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setServiceDay", "bands": [{"start": 0, "level": "rush"}]}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setServiceDay", "bands": [{"start": 0}]}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "removeLine", "line": 1}, "expect": {"result": "unknownLine"}}"#,
+            #"{"observe": {"type": "serviceLevel", "line": 1}, "expect": {"level": "peak"}}"#,
+            #"{"observe": {"type": "serviceLevel", "line": 1, "gameMinutes": 0}, "expect": {"level": "rush"}}"#,
+            #"{"observe": {"type": "serviceLevel", "line": 1, "gameMinutes": 0}, "expect": {"level": null}}"#,
+            #"{"observe": {"type": "serviceLevel", "line": 1, "gameMinutes": 0}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "lineJourney", "line": 1}, "expect": {"found": false, "journey": {}}}"#,
+            #"{"observe": {"type": "lineJourney", "line": 1}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "lineMaximumTrains", "line": 1}, "expect": {"found": true, "minutes": 3}}"#,
+            #"{"observe": {"type": "lineTrainsInService", "line": 1}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "lineTrainsInService", "line": 1, "level": "rush"}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "lineHeadway", "line": 1, "level": "peak"}, "expect": {"found": false, "minutes": 3}}"#,
+            #"{"observe": {"type": "lineHeadway", "line": 1, "level": "peak"}, "expect": {"found": true, "trains": 3}}"#,
+        ]
+        for json in steps {
+            XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
         }
     }
 

@@ -13,13 +13,18 @@ public struct GameWorld: Equatable, Sendable {
     public private(set) var stations: [Station]
     /// All trains, ordered by ascending ``TrainID``.
     public private(set) var trains: [Train]
+    /// All service lines, ordered by ascending ``LineID``.
+    public private(set) var lines: [ServiceLine]
+    /// Which service level each minute of the day has, for every line.
+    public private(set) var serviceDay: ServiceDay
     public private(set) var clock: GameClock
     public private(set) var economy: GameEconomy
 
-    /// The next ID to hand out to a station or a train (see
+    /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
     private var nextStationID: Int
     private var nextTrainID: Int
+    private var nextLineID: Int
 
     /// Creates an empty world.
     ///
@@ -34,10 +39,13 @@ public struct GameWorld: Equatable, Sendable {
         self.map = try GridMap(width: width, height: height)
         self.stations = []
         self.trains = []
+        self.lines = []
+        self.serviceDay = .standard
         self.clock = clock
         self.economy = economy
         self.nextStationID = 1
         self.nextTrainID = 1
+        self.nextLineID = 1
     }
 
     // MARK: - Queries
@@ -368,6 +376,98 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].execution = nil
     }
 
+    // MARK: - Service lines
+
+    /// The line with `id`, or `nil` if there is none.
+    public func line(id: LineID) -> ServiceLine? {
+        lines.first { $0.id == id }
+    }
+
+    /// Creates a service line calling at `stops`, in order, with the
+    /// standard window (06:00 to midnight), the default rate (one link a
+    /// minute) and no trains in service. Free.
+    ///
+    /// A line is plan data: it never moves, routes or schedules a train.
+    /// Whether its stations are joined by track is not checked; what its
+    /// journey would take is derived by ``lineJourney(_:)``.
+    ///
+    /// - Throws, checked in this order: ``GameError/invalidName``,
+    ///   ``GameError/invalidLineStops`` (fewer than two, or a station twice
+    ///   in a row), ``GameError/unknownStation(_:)`` naming the first stop
+    ///   whose station does not exist, or ``GameError/idsExhausted``.
+    @discardableResult
+    public mutating func createLine(named name: String, stops: [StationID]) throws(GameError) -> ServiceLine {
+        guard Self.isValidName(name) else { throw .invalidName }
+        try requireLineStops(stops)
+        let (id, nextID) = try Self.allocateID(from: nextLineID)
+
+        let line = ServiceLine(id: LineID(rawValue: id), name: name, stops: stops)
+        nextLineID = nextID
+        lines.append(line)
+        return line
+    }
+
+    /// Removes a line. Its ID is never handed out again.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func removeLine(_ id: LineID) throws(GameError) {
+        let index = try lineIndex(of: id)
+        lines.remove(at: index)
+    }
+
+    /// Replaces a line's stops with `stops`, in order.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
+    ///   ``GameError/invalidLineStops``, or ``GameError/unknownStation(_:)``
+    ///   naming the first stop whose station does not exist.
+    public mutating func setLineStops(_ id: LineID, to stops: [StationID]) throws(GameError) {
+        let index = try lineIndex(of: id)
+        try requireLineStops(stops)
+        lines[index].stops = stops
+    }
+
+    /// Sets the rate, in logical units per game minute, that a line's
+    /// journey times are worked out at (see ``lineJourney(_:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidLineRate`` for a rate below 1.
+    public mutating func setLineRate(_ id: LineID, to rate: Int64) throws(GameError) {
+        let index = try lineIndex(of: id)
+        guard rate >= 1 else { throw .invalidLineRate }
+        lines[index].rate = rate
+    }
+
+    /// Sets when a line runs during the day (see ``ServiceWindow``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidServiceWindow``.
+    public mutating func setLineServiceWindow(_ id: LineID, to window: ServiceWindow) throws(GameError) {
+        let index = try lineIndex(of: id)
+        guard window.isValid else { throw .invalidServiceWindow }
+        lines[index].window = window
+    }
+
+    /// Sets how many trains a line is to run at each service level. Any
+    /// count of 0 or more is kept as it is; how many the line can run is
+    /// derived (see ``lineTrainsInService(_:at:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidTrainsInService`` for a negative count.
+    public mutating func setLineTrainsInService(_ id: LineID, to trains: TrainsInService) throws(GameError) {
+        let index = try lineIndex(of: id)
+        guard trains.isValid else { throw .invalidTrainsInService }
+        lines[index].trainsInService = trains
+    }
+
+    /// Sets which service level each minute of the day has, for every line.
+    ///
+    /// - Throws: ``GameError/invalidServiceDay`` unless the bands start at
+    ///   minute 0 and strictly increase within the day.
+    public mutating func setServiceDay(_ day: ServiceDay) throws(GameError) {
+        guard day.isValid else { throw .invalidServiceDay }
+        serviceDay = day
+    }
+
     // MARK: - Time
 
     public mutating func pause() {
@@ -605,6 +705,18 @@ public struct GameWorld: Equatable, Sendable {
         name.contains { !$0.isWhitespace }
     }
 
+    private func lineIndex(of id: LineID) throws(GameError) -> Int {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        return index
+    }
+
+    private func requireLineStops(_ stops: [StationID]) throws(GameError) {
+        guard ServiceLine.isStopList(stops) else { throw .invalidLineStops }
+        if let missing = stops.first(where: { station(id: $0) == nil }) {
+            throw .unknownStation(missing)
+        }
+    }
+
     private func trainIndex(of id: TrainID) throws(GameError) -> Int {
         guard let index = trains.firstIndex(where: { $0.id == id }) else { throw .unknownTrain(id) }
         return index
@@ -659,7 +771,7 @@ extension GameWorld {
 
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
-        case map, stations, trains, clock, economy, nextStationID, nextTrainID
+        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -685,11 +797,40 @@ extension GameWorld: Codable {
         economy = try container.decode(GameEconomy.self, forKey: .economy)
         nextStationID = try container.decode(Int.self, forKey: .nextStationID)
         nextTrainID = try container.decode(Int.self, forKey: .nextTrainID)
+        lines = container.contains(.lines) ? try container.decode([ServiceLine].self, forKey: .lines) : []
+        nextLineID = container.contains(.nextLineID) ? try container.decode(Int.self, forKey: .nextLineID) : 1
+        serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
 
         if let problem = invariantViolation() {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(codingPath: decoder.codingPath, debugDescription: problem)
             )
+        }
+    }
+
+    /// Encodes the world. A world without lines has no `"lines"` key, one
+    /// that never had a line no `"nextLineID"`, and one with the standard
+    /// service day no `"serviceDay"`: such worlds save exactly as before
+    /// lines existed, and those saves read as having none, handing out line
+    /// IDs from 1, with the standard day. An explicit `null` for any of them
+    /// is rejected.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(map, forKey: .map)
+        try container.encode(stations, forKey: .stations)
+        try container.encode(trains, forKey: .trains)
+        if !lines.isEmpty {
+            try container.encode(lines, forKey: .lines)
+        }
+        if serviceDay != .standard {
+            try container.encode(serviceDay, forKey: .serviceDay)
+        }
+        try container.encode(clock, forKey: .clock)
+        try container.encode(economy, forKey: .economy)
+        try container.encode(nextStationID, forKey: .nextStationID)
+        try container.encode(nextTrainID, forKey: .nextTrainID)
+        if nextLineID != 1 {
+            try container.encode(nextLineID, forKey: .nextLineID)
         }
     }
 
@@ -700,6 +841,15 @@ extension GameWorld: Codable {
         }
         guard Self.isStrictlyIncreasing(trains.map(\.id.rawValue), below: nextTrainID) else {
             return "Train IDs must be unique, ascending and below nextTrainID."
+        }
+        guard Self.isStrictlyIncreasing(lines.map(\.id.rawValue), below: nextLineID) else {
+            return "Line IDs must be unique, ascending and below nextLineID."
+        }
+        for line in lines {
+            guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }
+            if let missing = line.stops.first(where: { station(id: $0) == nil }) {
+                return "Line \(line.id.rawValue) calls at station \(missing.rawValue), which does not exist."
+            }
         }
         for station in stations {
             guard Self.isValidName(station.name) else { return "Station \(station.id.rawValue) has an invalid name." }

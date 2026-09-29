@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–Q1) written a second time, straight
+/// The whole GameCore kernel (Stages I–Q2a) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–21; the rules summary), for differential testing.
+/// 18–22; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -19,7 +19,10 @@ import GameCore
 ///   recognised by being stopped there, not by an empty route;
 /// - a repeating timetable is checked by adding the period to the first
 ///   arrival, not by subtracting, and a scheduled time is the stored time
-///   plus the cycle times the period, recomputed at every use.
+///   plus the cycle times the period, recomputed at every use;
+/// - a line's window is an optional pair (none for all day) checked as one
+///   or two ranges of the day, and a leg's minutes are `(units - 1) / rate
+///   + 1` rather than a quotient and a remainder.
 ///
 /// Only for small maps: routes cost O(states²).
 struct ReferenceWorld: Equatable {
@@ -70,6 +73,32 @@ struct ReferenceWorld: Equatable {
     var resumeSpeed: GameSpeed
     var nextStationID = 1
     var nextTrainID = 1
+    var lines: [Line] = []
+    var nextLineID = 1
+    var serviceDay: [(start: Int, level: ServiceLevel)] = [(0, .low), (420, .peak), (600, .offPeak), (960, .peak), (1200, .offPeak), (1260, .low)]
+
+    /// Decision 22: a service line; `hours` is `nil` all day.
+    struct Line: Equatable {
+        var id: Int
+        var name: String
+        var stops: [StationID]
+        var rate: Int64 = 1024
+        var hours: (open: Int, close: Int)? = (360, 1440)
+        var trains: [ServiceLevel: Int] = [.peak: 0, .offPeak: 0, .low: 0]
+
+        static func == (lhs: Line, rhs: Line) -> Bool {
+            lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.rate == rhs.rate
+                && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
+        }
+
+        var window: ServiceWindow {
+            hours.map { .hours(open: $0.open, close: $0.close) } ?? .allDay
+        }
+
+        var trainsInService: TrainsInService {
+            TrainsInService(peak: trains[.peak]!, offPeak: trains[.offPeak]!, low: trains[.low]!)
+        }
+    }
 
     static let linkLength: Int64 = 1024
 
@@ -87,7 +116,8 @@ struct ReferenceWorld: Equatable {
         lhs.width == rhs.width && lhs.height == rhs.height && lhs.tiles == rhs.tiles && lhs.stations == rhs.stations
             && lhs.trains == rhs.trains && lhs.balance == rhs.balance && lhs.costs == rhs.costs && lhs.minutes == rhs.minutes
             && lhs.speed == rhs.speed && lhs.resumeSpeed == rhs.resumeSpeed && lhs.nextStationID == rhs.nextStationID
-            && lhs.nextTrainID == rhs.nextTrainID
+            && lhs.nextTrainID == rhs.nextTrainID && lhs.lines == rhs.lines && lhs.nextLineID == rhs.nextLineID
+            && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
     }
 
     // MARK: - Geometry

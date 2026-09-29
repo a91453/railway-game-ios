@@ -69,4 +69,19 @@ public enum GameError: Error, Hashable, Sendable {
     /// must be stopped at that stop's station (see
     /// ``GameWorld/stationsStoppedAt(by:)``).
     case trainNotAtFirstStop(TrainID)
+    /// No service line with this ID exists.
+    case unknownLine(LineID)
+    /// A line calls at two stations or more, and never at the same station
+    /// twice in a row.
+    case invalidLineStops
+    /// A line's rate, the speed its journeys are planned at, is at least 1.
+    case invalidLineRate
+    /// A line's service window opens at a minute of the day (`0...1439`) and
+    /// closes after it, no later than 06:00 the next morning (`1800`).
+    case invalidServiceWindow
+    /// A line cannot be set to run a negative number of trains.
+    case invalidTrainsInService
+    /// A service day's bands start at minute 0 of the day and strictly
+    /// increase within the day.
+    case invalidServiceDay
 }

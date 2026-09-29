@@ -176,6 +176,18 @@ extension GameError {
             "Train #\(id.rawValue) has no timetable to run."
         case .trainNotAtFirstStop(let id):
             "Train #\(id.rawValue) must be stopped at its timetable's first station to start its service."
+        case .unknownLine(let id):
+            "There is no line #\(id.rawValue)."
+        case .invalidLineStops:
+            "A line calls at two stations or more, and not at the same station twice in a row."
+        case .invalidLineRate:
+            "A line's speed must be at least 1."
+        case .invalidServiceWindow:
+            "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning."
+        case .invalidTrainsInService:
+            "A line cannot run a negative number of trains."
+        case .invalidServiceDay:
+            "The day's service levels must start at 00:00 and change at later times within the day."
         }
     }
 }

@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 10
+    static let schemaVersion = 11
 
     var description: String
     var initialState: InitialState
@@ -141,8 +141,9 @@ extension GoldenScenario.Step: Decodable {
         case command, observe, expect
     }
 
-    private enum AnswerKeys: String, CodingKey, CaseIterable {
+    fileprivate enum AnswerKeys: String, CodingKey, CaseIterable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
+        case level, journey, trains, minutes
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -206,6 +207,22 @@ extension GoldenScenario.Step: Decodable {
             case .execution:
                 try requireOnly([.execution], answering: "execution")
                 self = try .observe(observation, expect: .execution(expect.decode(ExecutionSummary.self, forKey: .execution)))
+            case .serviceLevel:
+                try requireOnly([.level], answering: "serviceLevel")
+                let name = try expect.decode(String.self, forKey: .level)
+                guard name == "closed" || ServiceLevel(rawValue: name) != nil else {
+                    throw DecodingError.dataCorruptedError(forKey: .level, in: expect, debugDescription: "Unknown service level \"\(name)\".")
+                }
+                self = .observe(observation, expect: .level(ServiceLevel(rawValue: name)))
+            case .lineJourney:
+                try requireOnly([.found, .journey], answering: "lineJourney")
+                self = try .observe(observation, expect: .journey(Self.found(expect, .journey, JourneySummary.self)))
+            case .lineMaximumTrains, .lineTrainsInService:
+                try requireOnly([.found, .trains], answering: "a line's trains")
+                self = try .observe(observation, expect: .trains(Self.found(expect, .trains, Int.self)))
+            case .lineHeadway:
+                try requireOnly([.found, .minutes], answering: "lineHeadway")
+                self = try .observe(observation, expect: .minutes(Self.found(expect, .minutes, Int64.self)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -213,6 +230,24 @@ extension GoldenScenario.Step: Decodable {
                 debugDescription: "A step needs exactly one of \"command\" and \"observe\"."
             ))
         }
+    }
+}
+
+extension GoldenScenario.Step {
+    /// A `{"found": true, key: value}` / `{"found": false}` answer: the value
+    /// is required when found and absent when not.
+    private static func found<T: Decodable>(
+        _ expect: KeyedDecodingContainer<AnswerKeys>,
+        _ key: AnswerKeys,
+        _ type: T.Type
+    ) throws -> T? {
+        if try expect.decode(Bool.self, forKey: .found) {
+            return try expect.decode(T.self, forKey: key)
+        }
+        guard !expect.contains(key) else {
+            throw DecodingError.dataCorruptedError(forKey: key, in: expect, debugDescription: "An answer that is not found has no \"\(key.stringValue)\".")
+        }
+        return nil
     }
 }
 
@@ -232,6 +267,13 @@ enum ScenarioCommand: Equatable {
     case setTrainTimetable(TrainID, [ScheduledStop], period: Int64?)
     case startTrainService(TrainID)
     case stopTrainService(TrainID)
+    case createLine(name: String, stops: [StationID])
+    case removeLine(LineID)
+    case setLineStops(LineID, [StationID])
+    case setLineRate(LineID, Int64)
+    case setLineServiceWindow(LineID, ServiceWindow)
+    case setLineTrainsInService(LineID, TrainsInService)
+    case setServiceDay(ServiceDay)
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -265,6 +307,20 @@ enum ScenarioCommand: Equatable {
                 try world.startTrainService(id)
             case .stopTrainService(let id):
                 try world.stopTrainService(id)
+            case .createLine(let name, let stops):
+                try world.createLine(named: name, stops: stops)
+            case .removeLine(let id):
+                try world.removeLine(id)
+            case .setLineStops(let id, let stops):
+                try world.setLineStops(id, to: stops)
+            case .setLineRate(let id, let rate):
+                try world.setLineRate(id, to: rate)
+            case .setLineServiceWindow(let id, let window):
+                try world.setLineServiceWindow(id, to: window)
+            case .setLineTrainsInService(let id, let trains):
+                try world.setLineTrainsInService(id, to: trains)
+            case .setServiceDay(let day):
+                try world.setServiceDay(day)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -284,6 +340,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
+        case line, stops, window, trains, bands
     }
 
     init(from decoder: any Decoder) throws {
@@ -327,6 +384,26 @@ extension ScenarioCommand: Decodable {
             self = try .startTrainService(container.decodeTrain(forKey: .train))
         case "stopTrainService":
             self = try .stopTrainService(container.decodeTrain(forKey: .train))
+        // Line commands are read as written: rejecting too few stops, a rate
+        // below 1, a window, counts or a day that do not fit is GameCore's
+        // decision.
+        case "createLine":
+            let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
+            self = try .createLine(name: container.decode(String.self, forKey: .name), stops: stops)
+        case "removeLine":
+            self = try .removeLine(container.decodeLine(forKey: .line))
+        case "setLineStops":
+            let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
+            self = try .setLineStops(container.decodeLine(forKey: .line), stops)
+        case "setLineRate":
+            self = try .setLineRate(container.decodeLine(forKey: .line), container.decode(Int64.self, forKey: .rate))
+        case "setLineServiceWindow":
+            self = try .setLineServiceWindow(container.decodeLine(forKey: .line), container.decode(WindowSummary.self, forKey: .window).window)
+        case "setLineTrainsInService":
+            self = try .setLineTrainsInService(container.decodeLine(forKey: .line), container.decode(TrainsSummary.self, forKey: .trains).trains)
+        case "setServiceDay":
+            let bands = try container.decode([BandSummary].self, forKey: .bands)
+            self = .setServiceDay(ServiceDay(bands: bands.map(\.band)))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -357,7 +434,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station
+        case result, x, y, width, height, required, available, train, station, line
     }
 
     init(from decoder: any Decoder) throws {
@@ -412,6 +489,18 @@ extension StepOutcome: Codable {
             self = try .rejected(.noTimetable(container.decodeTrain(forKey: .train)))
         case "trainNotAtFirstStop":
             self = try .rejected(.trainNotAtFirstStop(container.decodeTrain(forKey: .train)))
+        case "unknownLine":
+            self = try .rejected(.unknownLine(container.decodeLine(forKey: .line)))
+        case "invalidLineStops":
+            self = .rejected(.invalidLineStops)
+        case "invalidLineRate":
+            self = .rejected(.invalidLineRate)
+        case "invalidServiceWindow":
+            self = .rejected(.invalidServiceWindow)
+        case "invalidTrainsInService":
+            self = .rejected(.invalidTrainsInService)
+        case "invalidServiceDay":
+            self = .rejected(.invalidServiceDay)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -488,6 +577,19 @@ extension StepOutcome: Codable {
         case .rejected(.trainNotAtFirstStop(let id)):
             try container.encode("trainNotAtFirstStop", forKey: .result)
             try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.unknownLine(let id)):
+            try container.encode("unknownLine", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
+        case .rejected(.invalidLineStops):
+            try container.encode("invalidLineStops", forKey: .result)
+        case .rejected(.invalidLineRate):
+            try container.encode("invalidLineRate", forKey: .result)
+        case .rejected(.invalidServiceWindow):
+            try container.encode("invalidServiceWindow", forKey: .result)
+        case .rejected(.invalidTrainsInService):
+            try container.encode("invalidTrainsInService", forKey: .result)
+        case .rejected(.invalidServiceDay):
+            try container.encode("invalidServiceDay", forKey: .result)
         }
     }
 }
@@ -497,9 +599,10 @@ extension StepOutcome: Codable {
 /// A read-only query as a scenario step, tagged by `"type"`: track topology,
 /// one train's position and movement, a route to a tile or a station, a
 /// station's platforms, the stations a train is stopped at, one train's
-/// timetable, or how far its timetable service has got. Observations
-/// are not commands: they ask the world through its public queries and never
-/// change it.
+/// timetable, how far its timetable service has got, or what is derived
+/// for a service line (its level at a time, its journey, how many trains it
+/// can and does run, and its headway). Observations are not commands: they
+/// ask the world through its public queries and never change it.
 enum ScenarioObservation: Equatable {
     case connectedNeighbors(GridPosition)
     case isConnected(GridPosition, to: GridPosition)
@@ -510,6 +613,11 @@ enum ScenarioObservation: Equatable {
     case stationStops(TrainID)
     case timetable(TrainID)
     case execution(TrainID)
+    case serviceLevel(LineID, at: GameTime)
+    case lineJourney(LineID)
+    case lineMaximumTrains(LineID)
+    case lineTrainsInService(LineID, ServiceLevel)
+    case lineHeadway(LineID, ServiceLevel)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -531,13 +639,23 @@ enum ScenarioObservation: Equatable {
             .timetable(world.train(id: id)?.timetable)
         case .execution(let id):
             .execution(world.train(id: id).map { ExecutionSummary($0.execution) })
+        case .serviceLevel(let id, let time):
+            .level(world.serviceLevel(of: id, at: time))
+        case .lineJourney(let id):
+            .journey(world.lineJourney(id).map(JourneySummary.init))
+        case .lineMaximumTrains(let id):
+            .trains(world.lineMaximumTrains(id))
+        case .lineTrainsInService(let id, let level):
+            .trains(world.lineTrainsInService(id, at: level))
+        case .lineHeadway(let id, let level):
+            .minutes(world.lineHeadway(id, at: level))
         }
     }
 }
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, train, station
+        case type, x, y, from, to, train, station, line, gameMinutes, level
     }
 
     init(from decoder: any Decoder) throws {
@@ -573,6 +691,17 @@ extension ScenarioObservation: Decodable {
             self = try .timetable(container.decodeTrain(forKey: .train))
         case "execution":
             self = try .execution(container.decodeTrain(forKey: .train))
+        case "serviceLevel":
+            let time = try GameTime(minutes: container.decode(Int64.self, forKey: .gameMinutes))
+            self = try .serviceLevel(container.decodeLine(forKey: .line), at: time)
+        case "lineJourney":
+            self = try .lineJourney(container.decodeLine(forKey: .line))
+        case "lineMaximumTrains":
+            self = try .lineMaximumTrains(container.decodeLine(forKey: .line))
+        case "lineTrainsInService":
+            self = try .lineTrainsInService(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
+        case "lineHeadway":
+            self = try .lineHeadway(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -586,9 +715,14 @@ extension ScenarioObservation: Decodable {
 /// station, `{"platforms": [{"x", "y"}, ...]}` in the order the query
 /// returned them, `{"stations": [id, ...]}` for the stations a train is
 /// stopped at, `{"timetable": [{"station", "arrival", "departure"}, ...]}`
-/// for a train's timetable in its order, or `{"execution": {"type", ...}}`
-/// for its service. A train the world does not have answers `{}` to
-/// `train`, `timetable` and `execution`, which no fixture can expect.
+/// for a train's timetable in its order, `{"execution": {"type", ...}}`
+/// for its service, `{"level": "peak" | "offPeak" | "low" | "closed"}` for
+/// a line's service level, `{"found": true, "journey": {...}}` /
+/// `{"found": false}` for its journey, `{"found": true, "trains": n}` /
+/// `{"found": false}` for how many trains it can or does run, and
+/// `{"found": true, "minutes": n}` / `{"found": false}` for its headway. A
+/// train the world does not have answers `{}` to `train`, `timetable` and
+/// `execution`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
     case neighbors([GridPosition])
     case connected(Bool)
@@ -598,11 +732,16 @@ enum ObservationAnswer: Equatable {
     case stations([StationID])
     case timetable([ScheduledStop]?)
     case execution(ExecutionSummary?)
+    case level(ServiceLevel?)
+    case journey(JourneySummary?)
+    case trains(Int?)
+    case minutes(Int64?)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
+        case level, journey, trains, minutes
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -634,6 +773,19 @@ extension ObservationAnswer: Encodable {
             try container.encode(execution, forKey: .execution)
         case .execution(nil):
             break
+        case .level(let level):
+            try container.encode(level?.rawValue ?? "closed", forKey: .level)
+        case .journey(let journey?):
+            try container.encode(true, forKey: .found)
+            try container.encode(journey, forKey: .journey)
+        case .trains(let trains?):
+            try container.encode(true, forKey: .found)
+            try container.encode(trains, forKey: .trains)
+        case .minutes(let minutes?):
+            try container.encode(true, forKey: .found)
+            try container.encode(minutes, forKey: .minutes)
+        case .journey(nil), .trains(nil), .minutes(nil):
+            try container.encode(false, forKey: .found)
         }
     }
 }
@@ -672,8 +824,9 @@ struct PositionSummary: Codable, Equatable {
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money, what has been
-/// built or bought, where each train is and how it moves, and each train's
-/// timetable, how it repeats, and service. Lists are in
+/// built or bought, where each train is and how it moves, each train's
+/// timetable, how it repeats, and service, the service lines and the
+/// service day. Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
 /// inherited from how GameCore stores them.
@@ -684,6 +837,8 @@ struct WorldSummary: Codable, Equatable {
     var stations: [StationSummary]
     var tracks: [TrackSummary]
     var trains: [TrainSummary]
+    var lines: [LineSummary]
+    var serviceDay: [BandSummary]
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -727,6 +882,138 @@ struct WorldSummary: Codable, Equatable {
                 )
             }
             .sorted { $0.id < $1.id }
+        lines = world.lines.map(LineSummary.init).sorted { $0.id < $1.id }
+        serviceDay = world.serviceDay.bands.map(BandSummary.init)
+    }
+}
+
+// MARK: - Service lines
+
+/// A service line as a fixture value: `{"id", "name", "stops", "rate",
+/// "window", "trainsInService"}` (see `ServiceLine`).
+struct LineSummary: Codable, Equatable {
+    var id: Int
+    var name: String
+    var stops: [Int]
+    var rate: Int64
+    var window: WindowSummary
+    var trainsInService: TrainsSummary
+
+    init(id: Int, name: String, stops: [Int], rate: Int64, window: WindowSummary, trainsInService: TrainsSummary) {
+        self.id = id
+        self.name = name
+        self.stops = stops
+        self.rate = rate
+        self.window = window
+        self.trainsInService = trainsInService
+    }
+
+    init(_ line: ServiceLine) {
+        id = line.id.rawValue
+        name = line.name
+        stops = line.stops.map(\.rawValue)
+        rate = line.rate
+        window = WindowSummary(line.window)
+        trainsInService = TrainsSummary(line.trainsInService)
+    }
+}
+
+/// A service window as a fixture value, tagged by `"type"`: `{"type":
+/// "allDay"}` or `{"type": "hours", "open", "close"}`, minutes of the day
+/// (see `ServiceWindow`). Read as written: whether a window fits is
+/// GameCore's decision. A field that belongs to another type is rejected.
+struct WindowSummary: Codable, Equatable {
+    var window: ServiceWindow
+
+    init(_ window: ServiceWindow) {
+        self.window = window
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, open, close
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "allDay":
+            for key in [CodingKeys.open, .close] where container.contains(key) {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "An \"allDay\" window has no \"\(key.stringValue)\".")
+            }
+            window = .allDay
+        case "hours":
+            window = try .hours(open: container.decode(Int.self, forKey: .open), close: container.decode(Int.self, forKey: .close))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown window type \"\(type)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch window {
+        case .allDay:
+            try container.encode("allDay", forKey: .type)
+        case .hours(let open, let close):
+            try container.encode("hours", forKey: .type)
+            try container.encode(open, forKey: .open)
+            try container.encode(close, forKey: .close)
+        }
+    }
+}
+
+/// Trains in service as a fixture value: `{"peak", "offPeak", "low"}`.
+/// Read as written: rejecting a negative count is GameCore's decision.
+struct TrainsSummary: Codable, Equatable {
+    var peak: Int
+    var offPeak: Int
+    var low: Int
+
+    init(_ trains: TrainsInService) {
+        peak = trains.peak
+        offPeak = trains.offPeak
+        low = trains.low
+    }
+
+    var trains: TrainsInService {
+        TrainsInService(peak: peak, offPeak: offPeak, low: low)
+    }
+}
+
+/// A band of the service day as a fixture value: `{"start", "level"}`, a
+/// minute of the day and `"peak"`, `"offPeak"` or `"low"`.
+struct BandSummary: Codable, Equatable {
+    var start: Int
+    var level: ServiceLevel
+
+    init(_ band: ServiceDay.Band) {
+        start = band.start
+        level = band.level
+    }
+
+    var band: ServiceDay.Band {
+        ServiceDay.Band(start: start, level: level)
+    }
+}
+
+/// A line's journey as a fixture value: `{"start", "legs": [{"from", "to",
+/// "route", "minutes"}, ...], "roundTripMinutes"}` (see `LineJourney`).
+struct JourneySummary: Codable, Equatable {
+    struct Leg: Codable, Equatable {
+        var from: Int
+        var to: Int
+        var route: [PositionSummary]
+        var minutes: Int64
+    }
+
+    var start: TrainPositionSummary
+    var legs: [Leg]
+    var roundTripMinutes: Int64
+
+    init(_ journey: LineJourney) {
+        start = TrainPositionSummary(journey.start)
+        legs = journey.legs.map { Leg(from: $0.from, to: $0.to, route: $0.route.map(PositionSummary.init), minutes: $0.minutes) }
+        roundTripMinutes = journey.roundTripMinutes
     }
 }
 
@@ -1054,6 +1341,11 @@ extension KeyedDecodingContainer {
     /// A station ID stored as a plain integer.
     fileprivate func decodeStation(forKey key: Key) throws -> StationID {
         try StationID(rawValue: decode(Int.self, forKey: key))
+    }
+
+    /// A line ID stored as a plain integer.
+    fileprivate func decodeLine(forKey key: Key) throws -> LineID {
+        try LineID(rawValue: decode(Int.self, forKey: key))
     }
 }
 
