@@ -18,8 +18,8 @@ public struct WorldCoordinate: Hashable, Sendable {
     public let x: Int64
     /// South.
     public let y: Int64
-    /// Up. Every point of the track network is at 0 (ground level) until
-    /// Stage S4 adds elevation.
+    /// Up. The ground is at 0 (there is no terrain yet); the track network
+    /// stands within ``RailwayNetwork/heightRange`` of it (Stage S4).
     public let z: Int64
 
     public init(x: Int64, y: Int64, z: Int64 = 0) {
