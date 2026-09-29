@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "description": "Timetables on a line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1) with dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) has platform d, and Gamma(5,2) has no platform. A timetable is a train's ordered list of stops, each a station with a scheduled arrival and departure in game minutes since the start (the clock's scale). setTrainTimetable replaces the whole list and [] clears it; it is free and the train may be unplaced. Times must never go back from minute 0: 0 <= arrival <= departure at every stop, and each departure <= the next arrival; equal times, repeated stations, stations without platforms and times the clock has passed are allowed. Checks, in the order unknownTrain, invalidTimetable, unknownStation (the first missing station in timetable order): new trains have none (also after another train got one), one-stop and multi-stop timetables, zero dwell and equal boundaries, replacing and clearing, rejected commands leave the timetable as it was; the timetable survives place, rate, continuation, advance, reverse, unplace and a second place, and setting one keeps the train's continuation and rate; and it is inert: it never places, moves, routes or stops a train, a train stopped at a scheduled station stays there after its departure time has passed, and time passing every scheduled minute leaves the timetable as it was.",
   "initialState": {
     "mapWidth": 6,
@@ -274,6 +274,8 @@
     "trains": [
       { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 3, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },
       { "id": 2, "name": "Local 2", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [{ "station": 3, "arrival": 0, "departure": 0, "reverse": false }, { "station": 1, "arrival": 1440, "departure": 1450, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" } }
-    ]
+    ],
+    "lines": [],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }]
   }
 }

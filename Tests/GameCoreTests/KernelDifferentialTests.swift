@@ -42,6 +42,15 @@ final class KernelDifferentialTests: XCTestCase {
         case sendToTile(TrainID, GridPosition)
         /// The train tool's send to a station.
         case sendToStation(TrainID, StationID)
+        /// Never drawn by ``nextOperation(in:using:)``; the line campaign
+        /// (`ServiceLinePropertyTests`) adds them.
+        case createLine(String, [StationID])
+        case removeLine(LineID)
+        case setLineStops(LineID, [StationID])
+        case setLineRate(LineID, Int64)
+        case setLineWindow(LineID, ServiceWindow)
+        case setLineTrains(LineID, TrainsInService)
+        case setServiceDay(ServiceDay)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -65,6 +74,13 @@ final class KernelDifferentialTests: XCTestCase {
             case .stopService(let id): ".stopService(\(id.rawValue))"
             case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
             case .sendToStation(let id, let station): ".sendToStation(\(id.rawValue), \(station.rawValue))"
+            case .createLine(let name, let stops): ".createLine(\"\(name)\", \(stops.map(\.rawValue)))"
+            case .removeLine(let id): ".removeLine(\(id.rawValue))"
+            case .setLineStops(let id, let stops): ".setLineStops(\(id.rawValue), \(stops.map(\.rawValue)))"
+            case .setLineRate(let id, let rate): ".setLineRate(\(id.rawValue), \(rate))"
+            case .setLineWindow(let id, let window): ".setLineWindow(\(id.rawValue), \(window))"
+            case .setLineTrains(let id, let trains): ".setLineTrains(\(id.rawValue), \(trains.peak)/\(trains.offPeak)/\(trains.low))"
+            case .setServiceDay(let day): ".setServiceDay(\(day.bands.map { "\($0.start):\($0.level)" }))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
             case .pause: ".pause"
@@ -254,6 +270,13 @@ final class KernelDifferentialTests: XCTestCase {
             case .sendToStation(let id, let station):
                 guard let position = world.train(id: id)?.position, let route = world.route(from: position, toStation: station) else { return nil }
                 try world.setTrainContinuation(id, to: route)
+            case .createLine(let name, let stops): try world.createLine(named: name, stops: stops)
+            case .removeLine(let id): try world.removeLine(id)
+            case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
+            case .setLineRate(let id, let rate): try world.setLineRate(id, to: rate)
+            case .setLineWindow(let id, let window): try world.setLineServiceWindow(id, to: window)
+            case .setLineTrains(let id, let trains): try world.setLineTrainsInService(id, to: trains)
+            case .setServiceDay(let day): try world.setServiceDay(day)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -298,6 +321,13 @@ final class KernelDifferentialTests: XCTestCase {
                   let route = model.route(from: position, toStation: station)
             else { return nil }
             return model.setContinuation(id, route)
+        case .createLine(let name, let stops): return model.createLine(named: name, stops: stops)
+        case .removeLine(let id): return model.removeLine(id)
+        case .setLineStops(let id, let stops): return model.setLineStops(id, stops)
+        case .setLineRate(let id, let rate): return model.setLineRate(id, rate)
+        case .setLineWindow(let id, let window): return model.setLineWindow(id, window)
+        case .setLineTrains(let id, let trains): return model.setLineTrains(id, trains)
+        case .setServiceDay(let day): return model.setServiceDay(day)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -349,6 +379,38 @@ final class KernelDifferentialTests: XCTestCase {
                 train.execution == expected.service?.execution,
                 "train \(expected.id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))"
             )
+        }
+        // Decision 22: lines and the service day, and what is derived for
+        // each line (and an unknown one) at the current minute.
+        check(
+            world.lines.map { [$0.id.rawValue] } == model.lines.map { [$0.id] }
+                && world.lines.map(\.name) == model.lines.map(\.name) && world.lines.map(\.stops) == model.lines.map(\.stops)
+                && world.lines.map(\.rate) == model.lines.map(\.rate) && world.lines.map(\.window) == model.lines.map(\.window)
+                && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService),
+            "lines \(world.lines) vs \(model.lines)"
+        )
+        check(
+            world.serviceDay.bands.map(\.start) == model.serviceDay.map(\.start) && world.serviceDay.bands.map(\.level) == model.serviceDay.map(\.level),
+            "service day \(world.serviceDay) vs \(model.serviceDay)"
+        )
+        for raw in world.lines.map(\.id.rawValue) + [0, Int.max] {
+            let id = LineID(rawValue: raw)
+            for offset: Int64 in [0, 1, 700] {
+                let (time, overflow) = world.clock.now.minutes.addingReportingOverflow(offset)
+                guard !overflow else { continue }
+                check(
+                    world.serviceLevel(of: id, at: GameTime(minutes: time)) == model.serviceLevel(of: id, at: GameTime(minutes: time)),
+                    "level of line \(raw) at \(time)"
+                )
+            }
+            // The reference drives each line once and derives the rest.
+            let expected = model.lineAnswers(id)
+            check(world.lineJourney(id) == expected.journey, "journey of line \(raw): \(String(describing: world.lineJourney(id))) vs \(String(describing: expected.journey))")
+            check(world.lineMaximumTrains(id) == expected.maximum, "maximum trains of line \(raw)")
+            for level in ServiceLevel.allCases {
+                check(world.lineTrainsInService(id, at: level) == expected.trains[level], "trains of line \(raw) at \(level)")
+                check(world.lineHeadway(id, at: level) == expected.headways[level], "headway of line \(raw) at \(level)")
+            }
         }
         // Derived answers: connectivity (a ring outside the map included),
         // platforms and stops, for known and unknown IDs.

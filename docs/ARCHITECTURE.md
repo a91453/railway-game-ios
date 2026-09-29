@@ -28,7 +28,7 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`lineJourney(_:)` 等推導查詢） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -432,6 +432,81 @@ Stage Q1 回答決策 20 留下的兩個問題：服務只跑一次，而且停�
   - 列車之間仍然互不阻擋，要到 Phase 4.5 才處理。
 - **本 Stage 不做**：自動折返、服務模式與線路（Q2）、交路與停站模式（Q3）、取消班次、時刻表畫面（Stage R）、車廠，以及佔用與進路（Phase 4.5）。
 
+### 22. 服務線路：資料與推導（Phase 4 Stage Q2a）
+
+Stage Q2 把網頁參考遊戲地鐵模式的營運方式移植過來：時段 × 上線列車數，班距由系統推導（[網頁參考研究](WEB_REFERENCE_STUDY.md)）。
+
+和 Stage O、P 一樣拆成兩步：
+- **Q2a（本決策）**：只建立線路的資料契約與推導查詢，線路不派車、不影響任何列車。
+- **Q2b**：自動派車。
+
+Stage I–Q1 的契約都不變。
+
+- **移植的規則**（整數分鐘；「參考」指參考遊戲的做法）：
+  - **時段**：參考把一天分成三個等級。尖峰 07:00–10:00 與 16:00–20:00；低峰 00:00–07:00 與 21:00 起；其他是離峰。
+    - 這成為新世界的 `ServiceDay.standard`，存在世界裡，可以用 `setServiceDay` 改。
+    - 研究文件列為「不採用」的是寫死在核心的時段，所以這裡讓它可以修改。
+  - **營運時間**：參考預設 06:00 開始、24:00 結束，最晚可以到次日 06:00（`1800`）。開始時間之前的分鐘算作隔天的。這成為 `ServiceWindow`；新線路是 06:00–24:00，也可以全天營運。
+  - **來回時間**：參考的公式是「各區間行駛時間 × 2 + 中間站停留 × 2 × (站數 − 2) + 終點停留 × 2」，停留是 36 秒與 42 秒。
+    - 這裡的區間行駛時間由實際路徑推導：連結數 × 1024 ÷ 線路的 `rate`，無條件進位成整數分鐘。去程與回程分開求路，所以兩者可以不同。
+    - 停留改成整數分鐘：中間站 1 分鐘，終點站 2 分鐘（多 1 分鐘給折返）。
+  - **最多列車數**：參考的最短班距是 1.5 分鐘，並以二分搜尋找出「來回時間 ÷ 列車數 ≥ 最短班距」的最大列車數；來回時間連一台都不夠時是 1。
+    - 這裡的最短班距取整數 2 分鐘，最多列車數化簡成 `max(1, 來回時間 / 2)`。`ReferenceWorld` 保留參考的二分搜尋寫法，交叉驗證兩者相同。
+  - **實際列車數與班距**：一個等級實際跑的列車數是設定的數量，但不超過最多列車數。班距是 `來回時間 ÷ 列車數`，無條件進位；沒有列車就沒有班距。
+- **資料模型**
+  - `ServiceLine`（`LineID`，世界依序配發，刪除後不再使用）包含：
+    - `name`；
+    - `stops`：至少兩站，同一個車站不連續出現；
+    - `rate`：至少 1，新線路是 1024，也就是每分鐘一個連結；
+    - `window`；
+    - `trainsInService`：各等級的列車數，不可為負。
+  - `GameWorld.serviceDay`：所有線路共用，由一段一段組成，從分鐘 0 開始、嚴格遞增。
+- **推導**：都不存檔，每次由地圖重新推導，與連通、路徑、停站一樣。
+  - `serviceLevel(of:at:)`
+  - `lineJourney(_:)`
+  - `lineMaximumTrains(_:)`
+  - `lineTrainsInService(_:at:)`
+  - `lineHeadway(_:at:)`
+- **行程（`lineJourney`）**
+  - 參考遊戲的線路是一條幾何折線，但這裡的線路只是車站的順序，列車實際怎麼走要由地圖決定。
+  - 所以行程的定義是「列車會怎麼開」：從第一站的月台出發，依序以 `route(from:toStation:)` 求路；到最後一站原地折返（決策 14 的反向），再依相反順序回到第一站。
+  - 起點會試遍第一站的每個月台與四個朝向，取來回時間最短的，同樣短時取最先的。
+  - 任何一段沒有路時沒有行程。之後的查詢也都沒有答案，而不是回傳 0。
+- **為什麼折返是固定的**：去回兩端一律原地折返，這是網頁參考非環狀線的行為。環狀線（不折返、繞一圈）留到之後。
+- **指令**：都免費。
+  - `createLine(named:stops:)` 的檢查順序：`invalidName` → `invalidLineStops` → `unknownStation`（第一個不存在的車站）→ `idsExhausted`。
+  - `removeLine`、`setLineStops`、`setLineRate`、`setLineServiceWindow`、`setLineTrainsInService` 先檢查 `unknownLine`，再檢查自己的值。
+  - `setServiceDay` 只會丟出 `invalidServiceDay`。
+  - 設定的列車數照原樣保存，即使超過最多列車數，所以之後地圖變動讓行程變長時，設定仍然有效。
+- **存檔**
+  - 只在有值時寫入：
+    - `"lines"`：有線路時；
+    - `"nextLineID"`：建立過線路時（即使全部刪除了，也要記住，避免 ID 重複使用）；
+    - `"serviceDay"`：不是標準的服務日時。
+  - 因此沒有線路的世界，存檔與之前逐位元相同；舊存檔讀成沒有線路、ID 從 1 開始、標準的服務日。
+  - 一律拒絕：明確的 `null`，以及不合法的線路、營運時間、列車數或服務日。
+  - 世界解碼另外確認：線路 ID 唯一、遞增、小於 `nextLineID`；名稱合法；每一站都存在。
+- **Golden scenarios**：schema v11 新增：
+  - 7 個指令、6 個結果、5 個觀察；
+  - 最終狀態必填的 `lines` 與 `serviceDay`；
+  - `service-line.json`。
+
+  既有的 10 個 fixture 只加上 `"lines": []` 與標準的服務日。
+- **驗證**
+  - `ServiceLineTests` 以手算的預期值驗證指令、服務等級、行程（包括「最先的起點不是最短時，選最短的」）、列車數、班距與存檔。
+  - `ServiceLinePropertyTests`（`line.differential`）讓產生的指令序列同時在 GameCore 與 `ReferenceWorld` 上執行：
+    - 指令是鋪軌、拆軌與列車操作，混合線路指令，其中刻意包含不合法的值；
+    - 每一步比較所有線路的等級、行程、列車數與班距；
+    - `ReferenceWorld` 另外寫成：營運時間分成一段或兩段檢查，時段從頭掃描，每段分鐘數用 `(單位 − 1) / rate + 1` 計算，最多列車數用參考的二分搜尋。
+  - Stage I–Q1 的 property digest 在修改前後相同。
+- **GamePresentation**：只為六個新錯誤加上 `playerMessage`。App 沒有修改，線路畫面屬於 Stage R。
+- **已知限制**
+  - 環狀線、交路、快車（Q3）還沒有做。
+  - 平日與週末不分，也沒有日曆。
+  - 行程是規劃值：實際列車的 rate 可能不同，晚點由 Stage P 的規則吸收。
+  - 行程查詢每次要求路最多 16 × 2 ×（站數 − 1）次；還沒有快取，畫面若頻繁詢問，之後量測後再考慮。
+- **本 Stage 不做**：派車、把列車指派給線路、依時段增減列車、到終點才退出（Q2b），以及線路畫面（Stage R）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -448,5 +523,6 @@ Stage Q1 回答決策 20 留下的兩個問題：服務只跑一次，而且停�
 - 列車的時刻表是依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），時間從分鐘 0 起不倒流、每站都是存在的車站；`setTrainTimetable` 整份原子替換、`[]` 清除、免費。時刻表是計畫資料：放置、取下、反向、移動指令與時間都保留它；只有明確啟動的服務會讀它（決策 19、20）。
 - 時刻表可以每隔固定的分鐘數重複（`setTrainTimetable(_:to:repeatingEvery:)`），停靠可以標記在離開時折返；週期至少 1 分鐘，而且重新開始時時間不倒流（決策 21）。
 - `startTrainService` 讓停在第一站車站的列車依時刻表執行服務：只跑一次，或一輪接一輪重複（`execution` 記錄目前是第幾輪的第幾個停靠，存檔；重複的時刻表從下一個準時的輪次開始）。每個基本步長先處理出發、再移動、再推進時鐘、最後判定到達：列車不會早於排定出發時刻離開、不另加停留時間、每步最多移動一次；已停在下一站的車站時零距離到達；沒有路就等待；最後一站停到排定出發才結束服務，重複的時刻表則接著下一輪。服務執行中不能手動設定 continuation、反向、取下或換時刻表（`trainServiceActive`），rate 仍可調整；`stopTrainService` 只結束自動化（決策 20）。標記折返的停靠在出發時先讓列車原地反向，找不到路時不反向（決策 21）。
+- 服務線路是計畫資料：依序的車站、計算行程用的 rate、營運時間與各服務等級的列車數；服務日決定一天中每分鐘的等級。行程、最多列車數（最短班距 2 分鐘）、實際列車數與班距由地圖推導，不存檔；線路不影響任何列車（決策 22）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。

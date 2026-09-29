@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4 Stage Q1（折返與重複的時刻表）.**
+**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4 Stage Q2a（服務線路的資料與推導）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），以及在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，還沒有時刻表或服務的畫面。**尚未**有多台列車共用的線路服務模式（班距、時段）、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），以及服務線路的資料與推導（Phase 4 Stage Q2a）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，還沒有時刻表或服務的畫面。**尚未**有依線路自動派車（Stage Q2b）、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -31,6 +31,7 @@ GameCore 目前能做到：
 - 時刻表：每台列車有依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），以 `setTrainTimetable` 整份替換；時間不倒流、車站必須存在。時刻表本身是計畫資料，只有明確啟動的服務會讀它
 - 時刻表服務：`startTrainService` 讓停在第一站的列車依時刻表跑一次（`stopTrainService` 結束）。列車不會早於排定出發時刻離開，也不另加停留時間；已停在下一站時零距離到達，沒有路就等待，最後一站停到排定出發才結束。執行進度（第幾個停靠）是存檔的權威狀態；執行中不能手動改路、反向、取下或換時刻表
 - 折返與重複：停靠可以標記「在這站折返」，服務離開時先讓列車原地反向（找不到路時不反向），讓列車能從死路的終點站往回開。時刻表可以每隔固定週期重複（`setTrainTimetable(_:to:repeatingEvery:)`），一輪接一輪執行，執行進度同時記錄第幾輪；重複的服務從下一個準時的輪次開始
+- 服務線路：依序的車站、營運時間與尖峰／離峰／低峰各跑幾台列車；世界的服務日決定每分鐘是哪個等級。由地圖推導線路的來回行程、最多列車數（最短班距 2 分鐘）、實際列車數與班距。線路目前只是計畫資料，還不會派車
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼

@@ -74,6 +74,12 @@ final class ErrorMessageTests: XCTestCase {
             .noTimetable(TrainID(rawValue: 3)): "Train #3 has no timetable to run.",
             .trainNotAtFirstStop(TrainID(rawValue: 3)):
                 "Train #3 must be stopped at its timetable's first station to start its service.",
+            .unknownLine(LineID(rawValue: 3)): "There is no line #3.",
+            .invalidLineStops: "A line calls at two stations or more, and not at the same station twice in a row.",
+            .invalidLineRate: "A line's speed must be at least 1.",
+            .invalidServiceWindow: "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
+            .invalidTrainsInService: "A line cannot run a negative number of trains.",
+            .invalidServiceDay: "The day's service levels must start at 00:00 and change at later times within the day.",
         ]
 
         for (error, message) in messages {

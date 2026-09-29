@@ -470,4 +470,85 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(repeatMutations > 1_000, "only \(repeatMutations) mutations aimed at repeats")
         assertVolume(loadedRepeats > 500, "only \(loadedRepeats) repeating timetables loaded")
     }
+
+    /// The same for service lines (decision 22), with many mutations aimed
+    /// at the lines, the next line ID and the service day. Whatever loads
+    /// keeps every line consistent with the world's stations and the rules
+    /// for stops, rates, windows, counts and days, survives another save,
+    /// and stays so under further commands, which never trap.
+    func testMutatedLinesAreRefusedOrLoadWithConsistentLines() throws {
+        var accepted = 0
+        var refused = 0
+        var lineMutations = 0
+        var loadedLines = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.lineMutation", cases: 30) { c in
+            let (setup, operations) = try ServiceLinePropertyTests.generate(&c, operations: 60)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let inLines = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.hasPrefix(".lines") || text.hasPrefix(".serviceDay") || text.hasPrefix(".nextLineID")
+            }
+            for _ in 0..<40 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !inLines.isEmpty {
+                    path = c.random.element(of: inLines)
+                    lineMutations += 1
+                } else {
+                    path = c.random.element(of: outsideTiles)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(of: value, addedKeys: ["lines", "serviceDay", "nextLineID", "window", "extra"], using: &c.random)
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                loadedLines += loaded.lines.count
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<10 {
+                    let operation = c.random.chance(1, in: 2)
+                        ? ServiceLinePropertyTests.nextLineOperation(in: current, using: &c.random)
+                        : KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    for line in current.lines {
+                        _ = current.lineHeadway(line.id, at: .peak)
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.lineMutation \(accepted) mutated saves loaded, \(refused) refused, \(lineMutations) aimed at lines, \(loadedLines) lines loaded")
+        assertVolume(refused > 1_000, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
+        assertVolume(lineMutations > 1_000, "only \(lineMutations) mutations aimed at lines")
+        assertVolume(loadedLines > 500, "only \(loadedLines) lines loaded")
+    }
 }

@@ -602,6 +602,34 @@ enum WorldInvariants {
         for station in world.stations where world.map.tile(at: station.position)?.type != .station(id: station.id) {
             problems.append("station \(station.id.rawValue) does not match its tile")
         }
+        // Decision 22: lines in ID order, each with two stops or more (none
+        // twice in a row) at known stations, a rate of 1 or more, a window
+        // that opens within the day and closes after it by 06:00 the next
+        // morning, and no negative count; a day that starts at minute 0 and
+        // strictly increases within the day.
+        let lineIDs = world.lines.map(\.id.rawValue)
+        if lineIDs != lineIDs.sorted() || Set(lineIDs).count != lineIDs.count || lineIDs.contains(where: { $0 < 1 }) {
+            problems.append("line IDs not unique, positive and ascending: \(lineIDs)")
+        }
+        for line in world.lines {
+            let id = line.id.rawValue
+            if line.stops.count < 2 || zip(line.stops, line.stops.dropFirst()).contains(where: { $0 == $1 }) {
+                problems.append("line \(id) stops \(line.stops)")
+            }
+            for stop in line.stops where world.station(id: stop) == nil {
+                problems.append("line \(id) calls at unknown station \(stop.rawValue)")
+            }
+            if line.rate < 1 { problems.append("line \(id) rate \(line.rate)") }
+            if case .hours(let open, let close) = line.window, !(open >= 0 && open < 1440 && close > open && close <= 1800) {
+                problems.append("line \(id) window \(open)-\(close)")
+            }
+            let trains = line.trainsInService
+            if min(trains.peak, trains.offPeak, trains.low) < 0 { problems.append("line \(id) negative trains") }
+        }
+        let starts = world.serviceDay.bands.map(\.start)
+        if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
+            problems.append("service day starts \(starts)")
+        }
         for train in world.trains {
             // Decision 19: times never go back from minute 0, and every stop
             // is at a station the world has, placed or not.
