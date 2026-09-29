@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）已實作，下一步是 Stage P（到達、停留、出發）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）與 Stage P（依時刻表到達、停留、出發的一次性服務）已實作，下一步是 Stage Q（重複的服務與服務模式）。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -141,16 +141,26 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - Golden scenario schema v8：`setTrainTimetable` 指令、`invalidTimetable` / `unknownStation` 結果、`timetable` 觀察、最終狀態的列車 `timetable`，以及 `train-timetable.json`（ARCHITECTURE 決策 19）
 - GamePresentation 只加上兩個新錯誤的訊息；App 沒有修改
 
-### Stage P — Dwell / Arrival / Departure
+### Stage P — Dwell / Arrival / Departure ✅
 
-- 把時刻表接上停站（決策 18）與時鐘：怎樣算到達、停留到排定的離開時刻、出發
-- 早到、誤點、錯過排定出發時刻時的處理
-- 執行進度（目前在第幾站）是否成為權威狀態，以及它的存檔
+- `Train.execution: TimetableExecution?`：執行進度是權威狀態，`.waitingAtStop(i)` / `.travellingToStop(i)`，`i` 是時刻表索引（不是車站 ID，因為車站可以重複）
+- `startTrainService(_:)`：明確啟動，列車必須停在第一站的車站；從第 0 站開始，不依時間跳站；錯誤依序 `unknownTrain` → `trainServiceActive` → `noTimetable` → `trainNotPlaced` → `trainNotAtFirstStop`。`stopTrainService(_:)` 只結束自動化（`unknownTrain` → `trainServiceNotActive`），不清時刻表、不改位置、rate 或 continuation
+- 一次、有限的服務：依時刻表順序跑到最後一站一次；不循環、不折返、不產生下一班
+- 每個基本步長：`T` 的出發 → 移動 → 時鐘 `T + 1` → `T + 1` 的到達；每步最多移動一次
+- 排定出發時刻是閘門：可以晚走，不會早走；不加最短停留，零停留合法，晚到的列車下一步就走；arrival 不是閘門
+- 已停在下一站的車站（重複的車站、共用月台）時零距離到達；沒有路就等待並在之後重試；最後一站停到排定出發才結束
+- 服務擁有 continuation：`setTrainContinuation`、`reverseTrain`、`unplaceTrain`、`setTrainTimetable` 在執行中是 `trainServiceActive`；`setTrainMovementRate` 仍可用
+- `advance` 的捷徑改為事件感知：沒有變化時只跳到下一個服務出發時刻；`advance(n)` 仍等於 n 次 `advance(1)`
+- 存檔：有服務時寫 `"execution"`，沒有時不寫（舊存檔讀成沒有服務）；壞資料一律拒絕，不修正
+- Golden scenario schema v9：服務指令、四個新結果、`execution` 觀察、最終狀態的列車 `execution`，以及 `train-service.json`（ARCHITECTURE 決策 20）
+- GamePresentation 只加上四個新錯誤的訊息；App 沒有修改
 
 ### Stage Q — Service Pattern / Automatic Dispatch
 
-- 依序執行服務：車站 → 停留 → `route(from:toStation:)` → continuation → 下一站
-- 循環或每日重複的班次，以及它們的時間表示
+- Stage P 已能依時刻表執行一次有限的服務；Q 建立在它的執行進度之上
+- 循環或每日重複的班次，以及它們的時間表示（一天中的分鐘 + 週期，或由服務模式展開成絕對時間）
+- 自動折返、反覆的往返、服務模式的複製與展開
+- 停止後從指定站續跑是否需要
 
 ### Stage R — Timetable UI
 
