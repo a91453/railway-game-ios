@@ -952,7 +952,7 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 
 ### 30. 立體鐵路與結構物（Phase 4.5 Stage S4）——設計決策
 
-這一段是 S4 開工前的架構審查，回答 S4 的 12 個問題；實作與驗證的細節完成後補在同一節的後半。S4 只加 geometry，不改 S3 的 topology：節點上的轉向、路徑、移動與佔用的規則都不變。
+這一段是 S4 開工前的架構審查，回答 S4 的 12 個問題；實作與驗證的細節完成後補在同一節的後半。S4 只加 geometry，不改 S3 的 topology：節點上的轉向、路徑、移動與佔用的規則都不變；唯一碰到資源的是月台的兩端切開 span（第 7 點），佔用的規則本身不變。
 
 **1. 高程如何表示？**
 - 節點的 `WorldCoordinate.z` 就是軌面高度，單位與 x、y 相同（名目上 1/64 公尺）。地面是 z = 0；地形之後才有，在那之前「地面」處處是 0。
@@ -1018,7 +1018,7 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 **8. 3D 的位置與車身？**
 - `TrackLocation` 多一個 `grade`：沿行進方向的坡度（pitch）；`direction` 是平面方向（yaw）；位置的 z 由縱斷面精確算出，不在取樣點之間內插。橫向傾斜（cant、roll）留給之後。
 - 車身路徑（`bodyPath(of:)`）的每一點都有縱斷面的高度，所以跨越隧道口、坡道、高架的長列車會畫在正確的高度。
-- 佔用只看 topology：車頭在隧道裡、車尾在外面的列車，佔用的就是它經過的邊與節點。
+- 佔用只看 topology：車頭在隧道裡、車尾在外面的列車，佔用的就是它經過的節點與 span（S3A），與高度無關。
 
 **9. 給 renderer 的查詢？**
 - `railwaySnapshot()` 一次回傳路網的唯讀快照：節點（位置、是否隧道口）、邊（兩端、長度、曲線、縱斷面、結構物、取樣中心線與里程、縱斷面的分段、最陡的坡度）、月台（`TrackPlatform`：車站、邊、起訖；加上高度、結構物、中心線）與每台已放置列車的車頭位置、方向、坡度與車身路徑。
@@ -1084,14 +1084,17 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
     - 高度以「坡度形狀下的面積」計算、分段的邊界取另一側；
     - 以相減求最大公因數；
     - 交點以同時解兩個參數求得，共線時沿較長的軸比較；
-    - 淨空逐對檢查。
-- `SaveMutationTests` 新增 `save.verticalMutation`；`NetworkInvariants` 以參考模型自己的取樣與規則檢查坡度、高度帶、淨空與月台。
+    - 淨空逐對檢查；
+    - span 在月台端點逐一切開等分的段（GameCore 是把所有分界排序後相接）。
+  - digest `3668E75DCD0A98F8`（160 個 case、14,219 個操作，結束時共有 332 個月台；在這個容器的 debug build 約 142 秒）。
+- `SaveMutationTests` 新增 `save.verticalMutation`；`NetworkInvariants` 以參考模型自己的取樣與規則檢查坡度、高度帶、淨空與月台（沿鐵軌的順序、車站存在、兩端是 span 的分界）。
 - 刻意植入的錯誤都在前幾個 case 被抓到，驗證後還原：
   - 淨空要求嚴格大於 512；
   - 固定坡度段的高度改成無條件捨去；
-  - 路堤的高度帶不含 ±128。
+  - 路堤的高度帶不含 ±128；
+  - 月台的兩端不切開 span（`vertical.differential` 在第 0 個 case 由不變量、第 1 個 case 由佔用與參考模型不一致抓到，`testPlatformEndsCutTheEdgesSpans` 也失敗）。
 - S3 的 `network.differential` 在 S4 的 digest 從 `D1E85EA30C734274` 變成 `92FA34EF016602C6`：它產生的路網裡有 217 次同一高度、沒有共用節點的交叉，S4 依第 5 點拒絕（GameCore 與參考模型一致）。Stage I–S2 的 14 個 digest 不變。
-- Golden schema v17 與手算的 `vertical-railway.json`（75 步），第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過。S3 的 `continuous-track.json` 第 7 步從 `z: 5` 改成 `z: 5000`：它原本驗證的是 S3「一律在地面」的規則，S4 取消了這條規則。
+- Golden schema v17 與手算的 `vertical-railway.json`（75 步），第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過。建立在 S3A 之上之後，它的三個佔用預期改成手算的 span（例如 12800 的邊是 13 段，分界 ⌊k × 12800 ÷ 13⌋），同樣在兩邊都通過；月台改存在路網後，最終狀態的月台從車站移到 `network.platforms`，數值不變。S3 的 `continuous-track.json` 第 7 步從 `z: 5` 改成 `z: 5000`：它原本驗證的是 S3「一律在地面」的規則，S4 取消了這條規則。
 
 #### GamePresentation / App
 
