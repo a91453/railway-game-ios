@@ -718,4 +718,67 @@ final class ContinuousTrackTests: XCTestCase {
         XCTAssertEqual(world.bodyPath(of: second), [])
         XCTAssertNil(world.location(of: .onEdge(forward(.edge(9)), offset: 0)))
     }
+
+    // MARK: - Cost
+
+    /// What the geometry costs, printed for the record rather than asserted
+    /// (timings depend on the machine): sampling happens when an edge is
+    /// built or loaded, a point lookup is a binary search, and a step of
+    /// movement reads only lengths.
+    func testGeometryCostIsPaidOnceAndLookupsAreCheap() throws {
+        let clock = ContinuousClock()
+        var sampled = 0
+        let sampling = clock.measure {
+            for k in 0..<500 {
+                let geometry = TrackGeometry(
+                    from: WorldCoordinate(x: 0, y: Int64(k)), to: WorldCoordinate(x: 65_536, y: 65_536),
+                    curve: .cubic(PlanPoint(x: 40_000, y: Int64(k)), PlanPoint(x: 65_536, y: 20_000))
+                )
+                sampled += geometry?.points.count ?? 0
+            }
+        }
+        XCTAssertEqual(sampled, 500 * 1_025, "long curves are sampled into 1024 pieces")
+        let geometry = try XCTUnwrap(TrackGeometry(
+            from: WorldCoordinate(x: 0, y: 0), to: WorldCoordinate(x: 65_536, y: 65_536),
+            curve: .cubic(PlanPoint(x: 40_000, y: 0), PlanPoint(x: 65_536, y: 20_000))
+        ))
+        var checksum: Int64 = 0
+        let lookups = clock.measure {
+            for k in 0..<100_000 {
+                checksum &+= geometry.location(at: Int64(k) * 7 % geometry.length).position.x
+            }
+        }
+        XCTAssertNotEqual(checksum, 0)
+
+        // Forty trains of three cars chasing round a loop of four curves.
+        var world = try makeWorld()
+        let r: Int64 = 3_072
+        let h: Int64 = r * 5_523 / 10_000
+        let (cx, cy): (Int64, Int64) = (8_192, 8_192)
+        let top = try node(cx, cy - r, in: &world)
+        let right = try node(cx + r, cy, in: &world)
+        let bottom = try node(cx, cy + r, in: &world)
+        let left = try node(cx - r, cy, in: &world)
+        let loop = [
+            try world.buildTrackEdge(from: top, to: right, curve: .cubic(PlanPoint(x: cx + h, y: cy - r), PlanPoint(x: cx + r, y: cy - h))),
+            try world.buildTrackEdge(from: right, to: bottom, curve: .cubic(PlanPoint(x: cx + r, y: cy + h), PlanPoint(x: cx + h, y: cy + r))),
+            try world.buildTrackEdge(from: bottom, to: left, curve: .cubic(PlanPoint(x: cx - h, y: cy + r), PlanPoint(x: cx - r, y: cy + h))),
+            try world.buildTrackEdge(from: left, to: top, curve: .cubic(PlanPoint(x: cx - r, y: cy - h), PlanPoint(x: cx - h, y: cy - r))),
+        ]
+        let lap = (1...4).map { forward(loop[$0 % 4]) }
+        for k in 1...40 {
+            try world.purchaseTrain(named: "T\(k)")
+            let id = TrainID(rawValue: k)
+            try world.setTrainCars(id, to: 3)
+            try world.placeTrain(id, at: .onEdge(forward(loop[0]), offset: 2_048 + Int64(k)))
+            try world.setTrainContinuation(id, along: Array(repeating: lap, count: 30).flatMap { $0 })
+            try world.setTrainMovementRate(id, to: 900)
+        }
+        let movement = try clock.measure {
+            try world.advance(ticks: 500)
+        }
+        XCTAssertEqual(world.trains.count { !$0.trailEdges.isEmpty || $0.cars == 3 }, 40)
+        XCTAssertTrue(world.trains.allSatisfy { NetworkInvariants.trainViolations(of: $0, in: world).isEmpty })
+        print("[timing] 500 long curves sampled in \(sampling); 100000 point lookups in \(lookups); 40 trains × 500 minutes on curves in \(movement)")
+    }
 }
