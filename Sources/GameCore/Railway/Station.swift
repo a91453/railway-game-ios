@@ -14,8 +14,8 @@ public struct StationID: RawRepresentable, Hashable, Comparable, Codable, Sendab
     }
 }
 
-/// A station: the tile it was built on, and the tiles it has grown onto
-/// since (Phase 4.5 Stage S2).
+/// A station: the tile it was built on, the tiles it has grown onto since
+/// (Phase 4.5 Stage S2), and its platforms on the track network (Stage S4).
 public struct Station: Identifiable, Hashable, Sendable {
     public let id: StationID
     public let name: String
@@ -25,12 +25,17 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// ``GameWorld/extendStation(_:to:)``): each beside one of the
     /// station's tiles before it. Empty for a station of one tile.
     public internal(set) var annexes: [GridPosition]
+    /// The station's platforms on the track network, in order (see
+    /// ``TrackPlatform``). The grid tiles beside its tiles are platforms
+    /// too (see ``GameWorld/platforms(of:)``).
+    public internal(set) var trackPlatforms: [TrackPlatform]
 
-    public init(id: StationID, name: String, position: GridPosition, annexes: [GridPosition] = []) {
+    public init(id: StationID, name: String, position: GridPosition, annexes: [GridPosition] = [], trackPlatforms: [TrackPlatform] = []) {
         self.id = id
         self.name = name
         self.position = position
         self.annexes = annexes
+        self.trackPlatforms = trackPlatforms
     }
 
     /// Every tile of the station: the one it was built on, then its
@@ -53,23 +58,32 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes
+        case id, name, position, annexes, trackPlatforms
     }
 
     /// Decodes a station. A station of one tile has no `"annexes"` key,
     /// which is also how stations saved before they could grow read; an
     /// explicit `null` is rejected, and so are annexes that are not each
-    /// beside an earlier tile or that repeat a tile. That the tiles are the
-    /// station's on the map is checked by the ``GameWorld`` decoder.
+    /// beside an earlier tile or that repeat a tile. A station without
+    /// platforms on the track network has no `"trackPlatforms"` key (Stage
+    /// S4); an explicit `null` is rejected, and so are platforms out of
+    /// order. That the tiles are the station's on the map, and that the
+    /// platforms fit their edges, is checked by the ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(StationID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         position = try container.decode(GridPosition.self, forKey: .position)
         annexes = container.contains(.annexes) ? try container.decode([GridPosition].self, forKey: .annexes) : []
+        trackPlatforms = container.contains(.trackPlatforms) ? try container.decode([TrackPlatform].self, forKey: .trackPlatforms) : []
         guard isConnected else {
             throw DecodingError.dataCorruptedError(
                 forKey: .annexes, in: container, debugDescription: "Station \(id.rawValue)'s tiles must each be beside an earlier one, once each."
+            )
+        }
+        guard zip(trackPlatforms, trackPlatforms.dropFirst()).allSatisfy({ $0 < $1 }) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .trackPlatforms, in: container, debugDescription: "Station \(id.rawValue)'s platforms must be in order, once each."
             )
         }
     }
@@ -81,6 +95,9 @@ extension Station: Codable {
         try container.encode(position, forKey: .position)
         if !annexes.isEmpty {
             try container.encode(annexes, forKey: .annexes)
+        }
+        if !trackPlatforms.isEmpty {
+            try container.encode(trackPlatforms, forKey: .trackPlatforms)
         }
     }
 }

@@ -1,9 +1,11 @@
-// Track geometry (Phase 4.5 Stage S3, ARCHITECTURE decision 29). An edge of
-// the track network is shaped in plan by a TrackCurve between its two end
-// nodes. Everything else, the sampled centre line, the length and where a
+// Track geometry (Phase 4.5 Stages S3 and S4, ARCHITECTURE decisions 29 and
+// 30). An edge of the track network is shaped in plan by a TrackCurve between
+// its two end nodes, and in height by a TrackProfile. Everything else, the
+// sampled centre line, the length, the height and grade along it and where a
 // distance along the edge lies, is derived from those integers by the fixed
 // rules below, so every platform and every port gets the same numbers. The
-// derived values are never saved: only the end nodes and the curve are.
+// derived values are never saved: only the end nodes, the curve and the
+// profile are.
 
 /// The shape of an edge seen from above, between its two end nodes.
 ///
@@ -28,28 +30,35 @@ extension TrackCurve {
     }
 }
 
-/// A point on the track and the way the track runs there, seen from above.
+/// A point on the track and the way the track runs there: its heading seen
+/// from above (yaw) and its grade (pitch).
 public struct TrackLocation: Hashable, Sendable {
     public let position: WorldCoordinate
     /// The way along the track, not normalised (see ``PlanVector``).
     public let direction: PlanVector
+    /// The grade along ``direction``: positive when the track climbs that
+    /// way (Stage S4).
+    public let grade: TrackGrade
 
-    public init(position: WorldCoordinate, direction: PlanVector) {
+    public init(position: WorldCoordinate, direction: PlanVector, grade: TrackGrade = .level) {
         self.position = position
         self.direction = direction
+        self.grade = grade
     }
 }
 
 /// The centre line of an edge: sampled points from its `from` node to its
-/// `to` node, with the distance along the line to each.
+/// `to` node, with the distance along the line to each, and its height
+/// along the line.
 ///
-/// Derived from the end nodes and the ``TrackCurve`` by exact integer rules
-/// (see ``init(from:to:curve:)``). An edge never changes once built and its
-/// ID is never reused, so a renderer can keep an edge's geometry for as
-/// long as the edge exists.
+/// Derived from the end nodes, the ``TrackCurve`` and the ``TrackProfile``
+/// by exact integer rules (see ``init(from:to:curve:profile:)``). An edge
+/// never changes once built and its ID is never reused, so a renderer can
+/// keep an edge's geometry for as long as the edge exists.
 public struct TrackGeometry: Hashable, Sendable {
     /// The sampled centre line: the `from` node first, the `to` node last,
-    /// no two neighbours equal.
+    /// no two neighbours equal in plan. Each point's height is the
+    /// profile's height at its distance (see ``height(at:)``).
     public let points: [WorldCoordinate]
     /// The distance along the line to each point, in world units: 0 first,
     /// the edge's length last, strictly increasing.
@@ -58,6 +67,11 @@ public struct TrackGeometry: Hashable, Sendable {
     public let startDirection: PlanVector
     /// The way the track leaves the `to` node, back along the edge.
     public let endDirection: PlanVector
+    /// The heights of the `from` and `to` nodes.
+    public let startHeight: Int64
+    public let endHeight: Int64
+    /// How the height changes between them (Stage S4).
+    public let profile: TrackProfile
 
     /// The length of the edge: the length of the sampled centre line,
     /// measured in plan (horizontal chainage). This is the distance a train
@@ -74,8 +88,16 @@ public struct TrackGeometry: Hashable, Sendable {
     static let maximumSamples: Int64 = 1024
     static let sampleSpacing: Int64 = 64
 
-    /// The centre line of an edge from `start` to `end` shaped by `curve`,
-    /// or `nil` if that is not an edge a train can run along.
+    /// The largest rise and length a sloping edge may have, so the height
+    /// rules never overflow: `rise × distance²` stays within 2^61 (Stage
+    /// S4). A world's track is far within both: heights span 8192 and maps
+    /// are at most 2^20 units a side.
+    static let maximumRise: Int64 = 1 << 13
+    static let maximumSlopingLength: Int64 = 1 << 24
+
+    /// The centre line of an edge from `start` to `end` shaped by `curve` in
+    /// plan and by `profile` in height, or `nil` if that is not an edge a
+    /// train can run along.
     ///
     /// - A straight edge is the two end points; its length is
     ///   `round(√(dx² + dy²))`.
@@ -86,16 +108,20 @@ public struct TrackGeometry: Hashable, Sendable {
     ///   power of two from 8 to 1024 with `64 N` at least the length of the
     ///   control polygon (the sum of `|c1 − p0|`, `|c2 − c1|` and
     ///   `|p3 − c2|`, each rounded). Repeated points are dropped, and the
-    ///   length is the sum of each piece's `round(√(dx² + dy²))`.
+    ///   length is the sum of each piece's `round(√(dx² + dy²))`: the
+    ///   horizontal chainage, whatever the heights.
+    /// - The height is worked out along the chainage (see ``height(at:)``).
     ///
     /// Returns `nil` when a point lies beyond ``WorldCoordinate/limit``,
-    /// the ends are at different heights (every edge is level until Stage
-    /// S4) or at the same place in plan, a control point sits on its end
-    /// (the curve would leave that end in no direction), or the sampled
-    /// line doubles back on itself (a cusp: consecutive pieces at 90° or
-    /// more).
-    public init?(from start: WorldCoordinate, to end: WorldCoordinate, curve: TrackCurve) {
-        guard start.isWithinLimits, end.isWithinLimits, start.z == end.z, start.plan != end.plan else { return nil }
+    /// the ends are at the same place in plan (whatever their heights), a
+    /// control point sits on its end (the curve would leave that end in no
+    /// direction), or the sampled line doubles back on itself (a cusp:
+    /// consecutive pieces at 90° or more). Also when the profile does not
+    /// fit: a negative transition, transitions longer together than the
+    /// edge, a transition on a level edge (it would change nothing), or a
+    /// sloping edge that rises more than 2^13 or is longer than 2^24.
+    public init?(from start: WorldCoordinate, to end: WorldCoordinate, curve: TrackCurve, profile: TrackProfile = .uniform) {
+        guard start.isWithinLimits, end.isWithinLimits, start.plan != end.plan else { return nil }
         let p0 = start.plan
         let p3 = end.plan
         var plan: [PlanPoint]
@@ -119,8 +145,22 @@ public struct TrackGeometry: Hashable, Sendable {
             }
             distances.append(distances[index - 1] + piece.length)
         }
-        self.points = plan.map { WorldCoordinate(x: $0.x, y: $0.y, z: start.z) }
+        let length = distances[distances.count - 1]
+        let rise = end.z - start.z
+        let (t0, t1) = (profile.startTransition, profile.endTransition)
+        guard t0 >= 0, t1 >= 0, t0 <= length, t1 <= length - t0 else { return nil }
+        if rise == 0 {
+            guard t0 == 0, t1 == 0 else { return nil }
+        } else {
+            guard abs(rise) <= Self.maximumRise, length <= Self.maximumSlopingLength else { return nil }
+        }
+        self.startHeight = start.z
+        self.endHeight = end.z
+        self.profile = profile
         self.distances = distances
+        self.points = zip(plan, distances).map { point, distance in
+            WorldCoordinate(x: point.x, y: point.y, z: Self.height(at: distance, length: length, from: start.z, to: end.z, profile: profile))
+        }
     }
 
     /// The sampled points of the cubic curve `p0`, `c1`, `c2`, `p3` (see
@@ -160,6 +200,8 @@ public struct TrackGeometry: Hashable, Sendable {
     ///
     /// The point lies on the sampled line: between two samples it is
     /// interpolated along the piece, rounded to the nearest unit, halves up.
+    /// Its height and grade are the profile's at `distance` exactly (see
+    /// ``height(at:)`` and ``grade(at:)``), not interpolated between samples.
     /// At a sample the way is that of the piece after it (at the `to` node,
     /// the last piece). Binary search: O(log n) in the number of samples.
     ///
@@ -183,9 +225,9 @@ public struct TrackGeometry: Hashable, Sendable {
         let position = WorldCoordinate(
             x: a.x + FixedPoint.roundedDivision((b.x - a.x) * along, by: piece),
             y: a.y + FixedPoint.roundedDivision((b.y - a.y) * along, by: piece),
-            z: a.z
+            z: height(at: distance)
         )
-        return TrackLocation(position: position, direction: b.plan.vector(from: a.plan))
+        return TrackLocation(position: position, direction: b.plan.vector(from: a.plan), grade: grade(at: distance))
     }
 
     /// Where the point `distance` along a traversal of the edge lies, and
@@ -200,8 +242,139 @@ public struct TrackGeometry: Hashable, Sendable {
             return location(at: distance)
         case .backward:
             let location = location(at: length - distance)
-            return TrackLocation(position: location.position, direction: location.direction.reversed)
+            return TrackLocation(position: location.position, direction: location.direction.reversed, grade: location.grade.reversed)
         }
+    }
+
+    // MARK: - The vertical profile (Stage S4)
+
+    /// The height of the track `distance` along the edge from its `from`
+    /// node. With `R` the rise from the `from` node to the `to` node, `L`
+    /// the length, `T₀` and `T₁` the transitions and `D = 2L − T₀ − T₁`, the
+    /// height above the `from` node is, rounded to the nearest unit, halves
+    /// up:
+    ///
+    /// - `R·s² / (T₀·D)` in the first transition (`s < T₀`), where the
+    ///   grade grows evenly from 0;
+    /// - `R·(2s − T₀) / D` between the transitions, at the steady grade
+    ///   `2R / D`;
+    /// - `R·(T₁·D − (L − s)²) / (T₁·D)` in the last transition
+    ///   (`s > L − T₁`), where the grade falls evenly to 0.
+    ///
+    /// With no transitions that is `R·s / L`: one grade. The height never
+    /// turns back (it only climbs, or only falls, along an edge), so an
+    /// edge's highest and lowest points are its ends. Every product stays
+    /// within 2^62 for the bounds ``init(from:to:curve:profile:)`` checks.
+    ///
+    /// - Precondition: `0 <= distance <= length`.
+    public func height(at distance: Int64) -> Int64 {
+        precondition(distance >= 0 && distance <= length, "height(at:) needs a distance along the edge")
+        return Self.height(at: distance, length: length, from: startHeight, to: endHeight, profile: profile)
+    }
+
+    /// ``height(at:)`` for an edge `length` long from height `start` to
+    /// height `end` with `profile`, which fit (see
+    /// ``init(from:to:curve:profile:)``).
+    private static func height(at distance: Int64, length: Int64, from start: Int64, to end: Int64, profile: TrackProfile) -> Int64 {
+        let rise = end - start
+        guard rise != 0 else { return start }
+        let t0 = profile.startTransition
+        let t1 = profile.endTransition
+        let steady = 2 * length - t0 - t1
+        if distance < t0 {
+            return start + FixedPoint.roundedDivision(rise * distance * distance, by: t0 * steady)
+        }
+        if distance > length - t1 {
+            let back = length - distance
+            return start + FixedPoint.roundedDivision(rise * (t1 * steady - back * back), by: t1 * steady)
+        }
+        return start + FixedPoint.roundedDivision(rise * (2 * distance - t0), by: steady)
+    }
+
+    /// The grade of the track `distance` along the edge, measured toward
+    /// its `to` node: the exact slope of ``height(at:)``'s rule there
+    /// (`2R·s / (T₀·D)`, `2R / D` or `2R·(L − s) / (T₁·D)`), in lowest terms.
+    /// Level at an end with a transition.
+    ///
+    /// - Precondition: `0 <= distance <= length`.
+    public func grade(at distance: Int64) -> TrackGrade {
+        precondition(distance >= 0 && distance <= length, "grade(at:) needs a distance along the edge")
+        let rise = endHeight - startHeight
+        guard rise != 0 else { return .level }
+        let (t0, t1, steady) = transitions
+        if distance < t0 {
+            return TrackGrade(rise: 2 * rise * distance, run: t0 * steady)
+        }
+        if distance > length - t1 {
+            return TrackGrade(rise: 2 * rise * (length - distance), run: t1 * steady)
+        }
+        return TrackGrade(rise: 2 * rise, run: steady)
+    }
+
+    /// The steepest grade anywhere on the edge, toward its `to` node: the
+    /// steady grade `2R / D` between the transitions.
+    public var steepestGrade: TrackGrade {
+        let rise = endHeight - startHeight
+        return rise == 0 ? .level : TrackGrade(rise: 2 * rise, run: transitions.steady)
+    }
+
+    /// The profile's stretches from the `from` node to the `to` node: one
+    /// level stretch for a level edge; otherwise the first transition (if
+    /// any), the steady climb or fall (if the transitions leave room for
+    /// it) and the last transition (if any).
+    public var segments: [TrackProfileSegment] {
+        let rise = endHeight - startHeight
+        guard rise != 0 else { return [TrackProfileSegment(kind: .level, start: 0, end: length)] }
+        let (t0, t1, _) = transitions
+        var segments: [TrackProfileSegment] = []
+        if t0 > 0 {
+            segments.append(TrackProfileSegment(kind: .transition, start: 0, end: t0))
+        }
+        if length - t1 > t0 {
+            segments.append(TrackProfileSegment(kind: rise > 0 ? .up : .down, start: t0, end: length - t1))
+        }
+        if t1 > 0 {
+            segments.append(TrackProfileSegment(kind: .transition, start: length - t1, end: length))
+        }
+        return segments
+    }
+
+    /// The two transitions and `D = 2L − T₀ − T₁`, which is at least the
+    /// length and so positive.
+    private var transitions: (start: Int64, end: Int64, steady: Int64) {
+        (profile.startTransition, profile.endTransition, 2 * length - profile.startTransition - profile.endTransition)
+    }
+
+    /// The centre line from `start` to `end` along the edge, with the
+    /// distance to each point: the point at `start`, every sample strictly
+    /// between, and the point at `end`, leaving out a point that falls on
+    /// the one before it in plan.
+    ///
+    /// - Precondition: `0 <= start < end <= length`.
+    func stretch(from start: Int64, to end: Int64) -> (points: [WorldCoordinate], distances: [Int64]) {
+        precondition(start >= 0 && start < end && end <= length, "stretch(from:to:) needs a stretch of the edge")
+        var points = [location(at: start).position]
+        var distances = [start]
+        func add(_ point: WorldCoordinate, at distance: Int64) {
+            if point.plan != points[points.count - 1].plan {
+                points.append(point)
+                distances.append(distance)
+            }
+        }
+        for index in self.distances.indices where self.distances[index] > start && self.distances[index] < end {
+            add(self.points[index], at: self.distances[index])
+        }
+        add(location(at: end).position, at: end)
+        return (points, distances)
+    }
+
+    /// The centre line from `start` to `end` along the edge, in world
+    /// coordinates: for renderers, a platform or part of an edge (see
+    /// ``stretch(from:to:)``).
+    ///
+    /// - Precondition: `0 <= start < end <= length`.
+    public func points(from start: Int64, to end: Int64) -> [WorldCoordinate] {
+        stretch(from: start, to: end).points
     }
 }
 

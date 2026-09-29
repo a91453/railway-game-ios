@@ -112,10 +112,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// not an edge of the network.
     case unknownTrackEdge(TrackEdgeID)
     /// The track network cannot have that geometry (Stage S3): a point
-    /// outside the map or above or below ground, a node where one already
-    /// stands, an edge from a node to itself, or a curve that does not make
+    /// outside the map or, since Stage S4, outside
+    /// ``RailwayNetwork/heightRange``, a node where one already stands, an
+    /// edge from a node to itself, or a curve or profile that does not make
     /// an edge a train can run along (see
-    /// ``TrackGeometry/init(from:to:curve:)``).
+    /// ``TrackGeometry/init(from:to:curve:profile:)``).
     case invalidTrackGeometry
     /// Edges of the track network still end at the node, so it cannot be
     /// removed; remove them first (Stage S3).
@@ -123,4 +124,21 @@ public enum GameError: Error, Hashable, Sendable {
     /// A placed train's head or body is on the edge, so it cannot be
     /// removed; unplace the train first (Stage S3).
     case trackEdgeInUse(TrackEdgeID)
+    /// The edge would be steeper than ``TrackProfile/maximumGrade``
+    /// somewhere (Stage S4).
+    case trackTooSteep
+    /// The edge's structure cannot carry track at the heights of its ends
+    /// (Stage S4; see ``TrackStructure/allows(height:)``).
+    case invalidTrackStructure
+    /// The edge would meet this edge in plan, away from a node they share,
+    /// with less than ``TrackStructure/clearance`` between them (Stage S4).
+    /// A level crossing needs a node both edges end at.
+    case trackConflict(TrackEdgeID)
+    /// A station has a platform on the edge, so it cannot be removed;
+    /// remove the platform first (Stage S4).
+    case trackEdgeHasPlatform(TrackEdgeID)
+    /// A platform on the track network must lie within its edge, be level,
+    /// and not overlap another platform on the edge; one to remove must
+    /// exist (Stage S4).
+    case invalidPlatform
 }

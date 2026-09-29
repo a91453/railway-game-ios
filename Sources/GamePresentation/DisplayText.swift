@@ -256,11 +256,21 @@ extension GameError {
         case .unknownTrackEdge(let edge):
             "\(edge.displayText) is not an edge of the track network."
         case .invalidTrackGeometry:
-            "Track can't be built there: it must stay on the map at ground level, start and end at different nodes, and run smoothly."
+            "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different nodes, and run smoothly."
         case .trackNodeInUse(let node):
             "Track still ends at \(node.displayText.lowercased()). Remove that track first."
         case .trackEdgeInUse(let edge):
             "A train is on \(edge.displayText.lowercased()). Take the train off the track first."
+        case .trackTooSteep:
+            "That track would be too steep. Track may climb or fall at most 40 in 1000; make it longer or the height difference smaller."
+        case .invalidTrackStructure:
+            "That structure can't carry track at those heights: surface track stays within 2 m of the ground, viaducts and bridges above it, tunnels below it."
+        case .trackConflict(let edge):
+            "That track would cross \(edge.displayText.lowercased()) without 8 m between them. Pass over or under it, or cross at a shared node."
+        case .trackEdgeHasPlatform(let edge):
+            "A station has a platform on \(edge.displayText.lowercased()). Remove the platform first."
+        case .invalidPlatform:
+            "A platform must lie on a level stretch of one edge and not overlap another platform."
         }
     }
 }

@@ -60,4 +60,31 @@ enum FixedPoint {
         // value that does not divide exactly.
         return doubled < 0 && quotient * divisor != doubled ? quotient - 1 : quotient
     }
+
+    /// `a × b / c` rounded to the nearest integer, halves up, with the
+    /// product worked out in 128 bits (the standard library's full-width
+    /// multiply and divide) so it never overflows (Stage S4).
+    ///
+    /// - Precondition: `a >= 0`, `b >= 0`, `c > 0` and the result fits in an
+    ///   `Int64`.
+    static func roundedProduct(_ a: Int64, times b: Int64, over c: Int64) -> Int64 {
+        precondition(a >= 0 && b >= 0 && c > 0, "roundedProduct(_:times:over:) needs non-negative factors and a positive divisor")
+        let divisor = UInt64(c)
+        let (quotient, remainder) = divisor.dividingFullWidth(UInt64(a).multipliedFullWidth(by: UInt64(b)))
+        // Halves up: add one when the remainder is at least half the divisor.
+        return Int64(quotient) + (remainder >= divisor - remainder ? 1 : 0)
+    }
+
+    /// The greatest common divisor of `|a|` and `|b|`; 0 only when both are
+    /// 0.
+    ///
+    /// - Precondition: neither is `Int64.min`.
+    static func greatestCommonDivisor(_ a: Int64, _ b: Int64) -> Int64 {
+        var x = abs(a)
+        var y = abs(b)
+        while y != 0 {
+            (x, y) = (y, x % y)
+        }
+        return x
+    }
 }

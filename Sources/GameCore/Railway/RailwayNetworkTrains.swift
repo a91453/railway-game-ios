@@ -48,13 +48,14 @@ extension GameWorld {
         }
     }
 
-    /// The centre line of edge `id` (see ``TrackGeometry``), or `nil` if
-    /// there is no such edge. Worked out on each call from the edge's
-    /// integers: an edge never changes and its ID is never reused, so a
-    /// renderer can keep the result for as long as the edge exists.
+    /// The centre line of edge `id` (see ``TrackGeometry``), with its
+    /// heights, or `nil` if there is no such edge. Worked out on each call
+    /// from the edge's integers: an edge never changes and its ID is never
+    /// reused, so a renderer can keep the result for as long as the edge
+    /// exists.
     public func trackGeometry(of id: TrackEdgeID) -> TrackGeometry? {
         guard let edge = trackEdge(id), let from = trackNodePosition(edge.from), let to = trackNodePosition(edge.to) else { return nil }
-        return TrackGeometry(from: from, to: to, curve: edge.curve)
+        return TrackGeometry(from: from, to: to, curve: edge.curve, profile: edge.profile)
     }
 
     /// Where node `id` stands, or `nil` if there is no such node.

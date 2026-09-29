@@ -19,6 +19,12 @@
 // gives plain track, turnouts (one end joining two or more), diamond
 // crossings (two pairs that do not join each other) and slips. Routes,
 // movement and occupancy read only the result, never the geometry.
+//
+// Stage S4 (ARCHITECTURE decision 30) gives nodes heights and edges a
+// vertical profile and a structure. Joining is unchanged: it reads the way
+// ends leave a node in plan. Where two edges meet in plan away from a node
+// they share, their heights must differ by the clearance (see
+// TrackClearance), so trains that share no node or edge never meet.
 
 /// A node of the track network: a point where edges end and meet.
 public struct TrackNode: Hashable, Sendable {
@@ -71,6 +77,24 @@ public struct TrackEdge: Hashable, Sendable {
     /// when the edge is built or loaded, never saved. A grid link is
     /// ``TrainPosition/linkLength`` long.
     public let length: Int64
+    /// How the height changes between the end nodes (Stage S4); uniform for
+    /// a grid link.
+    public let profile: TrackProfile
+    /// What carries the track (Stage S4); surface for a grid link.
+    public let structure: TrackStructure
+
+    init(
+        id: TrackEdgeID, from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, length: Int64,
+        profile: TrackProfile = .uniform, structure: TrackStructure = .surface
+    ) {
+        self.id = id
+        self.from = from
+        self.to = to
+        self.curve = curve
+        self.length = length
+        self.profile = profile
+        self.structure = structure
+    }
 
     /// The node a traversal of this edge ends at.
     public func end(of direction: TrackEdgeDirection) -> TrackNodeID {
@@ -114,6 +138,16 @@ public struct RailwayNetwork: Hashable, Sendable {
         nextNodeNumber = 1
         nextEdgeNumber = 1
     }
+
+    /// The heights a node may stand at in a world (Stage S4): 4096 units
+    /// (64 m) above or below the ground.
+    public static let heightRange: ClosedRange<Int64> = -4_096...4_096
+
+    /// How far from a node two edges that end there may meet in plan at
+    /// any height (Stage S4): 1024 units, one tile. Branches of a turnout
+    /// leave a node side by side, so this stretch is the turnout and the
+    /// space it needs, not a crossing (see ``TrackClearance``).
+    public static let junctionZone: Int64 = 1_024
 
     /// Whether the continuous network has no nodes and has never handed out
     /// a number, so a world saves it by leaving it out. Grid track does not
@@ -213,6 +247,22 @@ public struct RailwayNetwork: Hashable, Sendable {
         nodes.contains { $0.position == position }
     }
 
+    /// Whether node `id` is a tunnel portal (Stage S4): a tunnel edge and
+    /// an edge that is not a tunnel both end there, so trains pass between
+    /// underground and the open there. Derived from the edges, never saved.
+    public func isTunnelPortal(_ id: TrackNodeID) -> Bool {
+        guard let node = node(id) else { return false }
+        let structures = node.ends.compactMap { edge($0.edge)?.structure }
+        return structures.contains(.tunnel) && structures.contains { $0 != .tunnel }
+    }
+
+    /// The centre line of edge `id` (see ``TrackGeometry``), or `nil` if
+    /// there is no such edge.
+    func geometry(of id: TrackEdgeID) -> TrackGeometry? {
+        guard let edge = edge(id), let from = node(edge.from), let to = node(edge.to) else { return nil }
+        return TrackGeometry(from: from.position, to: to.position, curve: edge.curve, profile: edge.profile)
+    }
+
     // MARK: - Changes
 
     /// Adds a node at `position` with the next number, which the caller
@@ -225,11 +275,14 @@ public struct RailwayNetwork: Hashable, Sendable {
     }
 
     /// Adds an edge with the next number between two existing nodes, with
-    /// `geometry` already worked out from them and `curve`; the caller has
-    /// checked the number can be handed out. Updates the ends of both nodes.
-    mutating func addEdge(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, geometry: TrackGeometry, next: Int) -> TrackEdgeID {
+    /// `geometry` already worked out from them, `curve` and `profile`; the
+    /// caller has checked the number can be handed out. Updates the ends of
+    /// both nodes.
+    mutating func addEdge(
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, geometry: TrackGeometry, next: Int
+    ) -> TrackEdgeID {
         let id = TrackEdgeID.edge(nextEdgeNumber)
-        edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length))
+        edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure))
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
         attach(id, direction: geometry.endDirection, at: to)
@@ -287,20 +340,25 @@ extension RailwayNetwork: Codable {
     }
 
     private enum EdgeKeys: String, CodingKey {
-        case id, from, to, curve
+        case id, from, to, curve, profile, structure
     }
 
     /// Decodes `{"nodes", "edges", "nextNodeID", "nextEdgeID"}`: nodes as
-    /// `{"id", "x", "y", "z"}` and edges as `{"id", "from", "to", "curve"}`,
-    /// both in ascending ID order, IDs from 1 and below the next ID. Every
-    /// derived value (each edge's length, each node's ends) is worked out
-    /// again, not read. Rejects, rather than repairing: an ID out of order,
-    /// repeated or not below the next one; a coordinate beyond
+    /// `{"id", "x", "y", "z"}` and edges as `{"id", "from", "to", "curve"}`
+    /// with, since Stage S4, `"profile"` when it has transitions and
+    /// `"structure"` when it is not surface track (a Stage S3 edge has
+    /// neither and reads as uniform surface track). Both lists are in
+    /// ascending ID order, IDs from 1 and below the next ID. Every derived
+    /// value (each edge's length, each node's ends) is worked out again, not
+    /// read. Rejects, rather than repairing: an ID out of order, repeated or
+    /// not below the next one; a coordinate beyond
     /// ``WorldCoordinate/limit``; two nodes at one point; an edge whose end
-    /// nodes do not exist or are the same node; and a curve that does not
-    /// make an edge between its nodes (see
-    /// ``TrackGeometry/init(from:to:curve:)``). Whether the network lies on
-    /// the world's map is checked by the ``GameWorld`` decoder.
+    /// nodes do not exist or are the same node; a curve or profile that does
+    /// not make an edge between its nodes (see
+    /// ``TrackGeometry/init(from:to:curve:profile:)``); an unknown
+    /// structure; and an explicit `null`. The world's rules (the map,
+    /// heights, grades, structures and clearance) are checked by the
+    /// ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         func corrupt(_ description: String) -> DecodingError {
@@ -332,6 +390,8 @@ extension RailwayNetwork: Codable {
             let from = TrackNodeID.node(try edge.decode(Int.self, forKey: .from))
             let to = TrackNodeID.node(try edge.decode(Int.self, forKey: .to))
             let curve = try edge.decode(TrackCurve.self, forKey: .curve)
+            let profile = edge.contains(.profile) ? try edge.decode(TrackProfile.self, forKey: .profile) : .uniform
+            let structure = edge.contains(.structure) ? try edge.decode(TrackStructure.self, forKey: .structure) : .surface
             guard number >= 1, number < nextEdgeNumber, number > lastEdge else {
                 throw corrupt("Track edge IDs must be ascending, from 1 and below nextEdgeID.")
             }
@@ -339,11 +399,11 @@ extension RailwayNetwork: Codable {
             guard let start = node(from), let end = node(to), from != to else {
                 throw corrupt("Track edge \(number) does not join two different nodes of the network.")
             }
-            guard let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve) else {
-                throw corrupt("Track edge \(number)'s curve does not make an edge between its nodes.")
+            guard let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile) else {
+                throw corrupt("Track edge \(number)'s curve or profile does not make an edge between its nodes.")
             }
             let id = TrackEdgeID.edge(number)
-            edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length))
+            edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure))
             attach(id, direction: geometry.startDirection, at: from)
             attach(id, direction: geometry.endDirection, at: to)
         }
@@ -366,6 +426,12 @@ extension RailwayNetwork: Codable {
             try entry.encode(edge.from.networkNumber, forKey: .from)
             try entry.encode(edge.to.networkNumber, forKey: .to)
             try entry.encode(edge.curve, forKey: .curve)
+            if edge.profile != .uniform {
+                try entry.encode(edge.profile, forKey: .profile)
+            }
+            if edge.structure != .surface {
+                try entry.encode(edge.structure, forKey: .structure)
+            }
         }
         try container.encode(nextNodeNumber, forKey: .nextNodeID)
         try container.encode(nextEdgeNumber, forKey: .nextEdgeID)
