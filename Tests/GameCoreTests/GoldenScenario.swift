@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 12
+    static let schemaVersion = 13
 
     var description: String
     var initialState: InitialState
@@ -143,7 +143,7 @@ extension GoldenScenario.Step: Decodable {
 
     fileprivate enum AnswerKeys: String, CodingKey, CaseIterable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes
+        case level, journey, trains, minutes, loads
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -223,6 +223,9 @@ extension GoldenScenario.Step: Decodable {
             case .lineHeadway:
                 try requireOnly([.found, .minutes], answering: "lineHeadway")
                 self = try .observe(observation, expect: .minutes(Self.found(expect, .minutes, Int64.self)))
+            case .lineSegmentLoads:
+                try requireOnly([.found, .loads], answering: "lineSegmentLoads")
+                self = try .observe(observation, expect: .loads(Self.found(expect, .loads, [Int].self)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -272,11 +275,13 @@ enum ScenarioCommand: Equatable {
     case setLineStops(LineID, [StationID])
     case setLineRate(LineID, Int64)
     case setLineServiceWindow(LineID, ServiceWindow)
-    case setLineTrainsInService(LineID, TrainsInService)
+    case setLineTrainsInService(LineID, TrainsInService, pattern: Int?)
     case setServiceDay(ServiceDay)
-    case setLineTargetHeadways(LineID, TargetHeadways)
-    case assignTrain(TrainID, LineID)
+    case setLineTargetHeadways(LineID, TargetHeadways, pattern: Int?)
+    case assignTrain(TrainID, LineID, pattern: Int?)
     case unassignTrain(TrainID)
+    case addLinePattern(LineID, calls: [Int])
+    case removeLinePattern(LineID, pattern: Int)
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -320,16 +325,20 @@ enum ScenarioCommand: Equatable {
                 try world.setLineRate(id, to: rate)
             case .setLineServiceWindow(let id, let window):
                 try world.setLineServiceWindow(id, to: window)
-            case .setLineTrainsInService(let id, let trains):
-                try world.setLineTrainsInService(id, to: trains)
+            case .setLineTrainsInService(let id, let trains, let pattern):
+                try world.setLineTrainsInService(id, to: trains, pattern: pattern)
             case .setServiceDay(let day):
                 try world.setServiceDay(day)
-            case .setLineTargetHeadways(let id, let headways):
-                try world.setLineTargetHeadways(id, to: headways)
-            case .assignTrain(let id, let line):
-                try world.assignTrain(id, to: line)
+            case .setLineTargetHeadways(let id, let headways, let pattern):
+                try world.setLineTargetHeadways(id, to: headways, pattern: pattern)
+            case .assignTrain(let id, let line, let pattern):
+                try world.assignTrain(id, to: line, pattern: pattern)
             case .unassignTrain(let id):
                 try world.unassignTrain(id)
+            case .addLinePattern(let id, let calls):
+                try world.addLinePattern(id, calling: calls)
+            case .removeLinePattern(let id, let pattern):
+                try world.removeLinePattern(id, at: pattern)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -349,7 +358,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands, targetHeadways
+        case line, stops, window, trains, bands, targetHeadways, pattern, calls
     }
 
     init(from decoder: any Decoder) throws {
@@ -409,17 +418,24 @@ extension ScenarioCommand: Decodable {
         case "setLineServiceWindow":
             self = try .setLineServiceWindow(container.decodeLine(forKey: .line), container.decode(WindowSummary.self, forKey: .window).window)
         case "setLineTrainsInService":
-            self = try .setLineTrainsInService(container.decodeLine(forKey: .line), container.decode(TrainsSummary.self, forKey: .trains).trains)
+            let trains = try container.decode(TrainsSummary.self, forKey: .trains).trains
+            self = try .setLineTrainsInService(container.decodeLine(forKey: .line), trains, pattern: container.decodePattern(forKey: .pattern))
         case "setServiceDay":
             let bands = try container.decode([BandSummary].self, forKey: .bands)
             self = .setServiceDay(ServiceDay(bands: bands.map(\.band)))
         case "setLineTargetHeadways":
             let headways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways).headways
-            self = try .setLineTargetHeadways(container.decodeLine(forKey: .line), headways)
+            self = try .setLineTargetHeadways(container.decodeLine(forKey: .line), headways, pattern: container.decodePattern(forKey: .pattern))
         case "assignTrain":
-            self = try .assignTrain(container.decodeTrain(forKey: .train), container.decodeLine(forKey: .line))
+            let line = try container.decodeLine(forKey: .line)
+            self = try .assignTrain(container.decodeTrain(forKey: .train), line, pattern: container.decodePattern(forKey: .pattern))
         case "unassignTrain":
             self = try .unassignTrain(container.decodeTrain(forKey: .train))
+        case "addLinePattern":
+            // Read as written: whether the calls fit the line is GameCore's decision.
+            self = try .addLinePattern(container.decodeLine(forKey: .line), calls: container.decode([Int].self, forKey: .calls))
+        case "removeLinePattern":
+            self = try .removeLinePattern(container.decodeLine(forKey: .line), pattern: container.decode(Int.self, forKey: .pattern))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -450,7 +466,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line
+        case result, x, y, width, height, required, available, train, station, line, pattern
     }
 
     init(from decoder: any Decoder) throws {
@@ -523,6 +539,10 @@ extension StepOutcome: Codable {
             self = try .rejected(.trainOnLine(container.decodeTrain(forKey: .train)))
         case "trainNotOnLine":
             self = try .rejected(.trainNotOnLine(container.decodeTrain(forKey: .train)))
+        case "invalidLinePattern":
+            self = .rejected(.invalidLinePattern)
+        case "unknownLinePattern":
+            self = try .rejected(.unknownLinePattern(container.decode(Int.self, forKey: .pattern)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -620,6 +640,11 @@ extension StepOutcome: Codable {
         case .rejected(.trainNotOnLine(let id)):
             try container.encode("trainNotOnLine", forKey: .result)
             try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.invalidLinePattern):
+            try container.encode("invalidLinePattern", forKey: .result)
+        case .rejected(.unknownLinePattern(let pattern)):
+            try container.encode("unknownLinePattern", forKey: .result)
+            try container.encode(pattern, forKey: .pattern)
         }
     }
 }
@@ -644,10 +669,11 @@ enum ScenarioObservation: Equatable {
     case timetable(TrainID)
     case execution(TrainID)
     case serviceLevel(LineID, at: GameTime)
-    case lineJourney(LineID)
-    case lineMaximumTrains(LineID)
-    case lineTrainsInService(LineID, ServiceLevel)
-    case lineHeadway(LineID, ServiceLevel)
+    case lineJourney(LineID, pattern: Int?)
+    case lineMaximumTrains(LineID, pattern: Int?)
+    case lineTrainsInService(LineID, ServiceLevel, pattern: Int?)
+    case lineHeadway(LineID, ServiceLevel, pattern: Int?)
+    case lineSegmentLoads(LineID, ServiceLevel)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -671,21 +697,23 @@ enum ScenarioObservation: Equatable {
             .execution(world.train(id: id).map { ExecutionSummary($0.execution) })
         case .serviceLevel(let id, let time):
             .level(world.serviceLevel(of: id, at: time))
-        case .lineJourney(let id):
-            .journey(world.lineJourney(id).map(JourneySummary.init))
-        case .lineMaximumTrains(let id):
-            .trains(world.lineMaximumTrains(id))
-        case .lineTrainsInService(let id, let level):
-            .trains(world.lineTrainsInService(id, at: level))
-        case .lineHeadway(let id, let level):
-            .minutes(world.lineHeadway(id, at: level))
+        case .lineJourney(let id, let pattern):
+            .journey(world.lineJourney(id, pattern: pattern).map(JourneySummary.init))
+        case .lineMaximumTrains(let id, let pattern):
+            .trains(world.lineMaximumTrains(id, pattern: pattern))
+        case .lineTrainsInService(let id, let level, let pattern):
+            .trains(world.lineTrainsInService(id, at: level, pattern: pattern))
+        case .lineHeadway(let id, let level, let pattern):
+            .minutes(world.lineHeadway(id, at: level, pattern: pattern))
+        case .lineSegmentLoads(let id, let level):
+            .loads(world.lineSegmentLoads(id, at: level))
         }
     }
 }
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, train, station, line, gameMinutes, level
+        case type, x, y, from, to, train, station, line, gameMinutes, level, pattern
     }
 
     init(from decoder: any Decoder) throws {
@@ -725,13 +753,17 @@ extension ScenarioObservation: Decodable {
             let time = try GameTime(minutes: container.decode(Int64.self, forKey: .gameMinutes))
             self = try .serviceLevel(container.decodeLine(forKey: .line), at: time)
         case "lineJourney":
-            self = try .lineJourney(container.decodeLine(forKey: .line))
+            self = try .lineJourney(container.decodeLine(forKey: .line), pattern: container.decodePattern(forKey: .pattern))
         case "lineMaximumTrains":
-            self = try .lineMaximumTrains(container.decodeLine(forKey: .line))
+            self = try .lineMaximumTrains(container.decodeLine(forKey: .line), pattern: container.decodePattern(forKey: .pattern))
         case "lineTrainsInService":
-            self = try .lineTrainsInService(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
+            let level = try container.decode(ServiceLevel.self, forKey: .level)
+            self = try .lineTrainsInService(container.decodeLine(forKey: .line), level, pattern: container.decodePattern(forKey: .pattern))
         case "lineHeadway":
-            self = try .lineHeadway(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
+            let level = try container.decode(ServiceLevel.self, forKey: .level)
+            self = try .lineHeadway(container.decodeLine(forKey: .line), level, pattern: container.decodePattern(forKey: .pattern))
+        case "lineSegmentLoads":
+            self = try .lineSegmentLoads(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -750,7 +782,9 @@ extension ScenarioObservation: Decodable {
 /// a line's service level, `{"found": true, "journey": {...}}` /
 /// `{"found": false}` for its journey, `{"found": true, "trains": n}` /
 /// `{"found": false}` for how many trains it can or does run, and
-/// `{"found": true, "minutes": n}` / `{"found": false}` for its headway. A
+/// `{"found": true, "minutes": n}` / `{"found": false}` for its headway, and
+/// `{"found": true, "loads": [n, ...]}` / `{"found": false}` for the load on
+/// each of its segments. A
 /// train the world does not have answers `{}` to `train`, `timetable` and
 /// `execution`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
@@ -766,12 +800,13 @@ enum ObservationAnswer: Equatable {
     case journey(JourneySummary?)
     case trains(Int?)
     case minutes(Int64?)
+    case loads([Int]?)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes
+        case level, journey, trains, minutes, loads
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -814,7 +849,10 @@ extension ObservationAnswer: Encodable {
         case .minutes(let minutes?):
             try container.encode(true, forKey: .found)
             try container.encode(minutes, forKey: .minutes)
-        case .journey(nil), .trains(nil), .minutes(nil):
+        case .loads(let loads?):
+            try container.encode(true, forKey: .found)
+            try container.encode(loads, forKey: .loads)
+        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil):
             try container.encode(false, forKey: .found)
         }
     }
@@ -921,8 +959,9 @@ struct WorldSummary: Codable, Equatable {
 
 /// A service line as a fixture value: `{"id", "name", "stops", "rate",
 /// "window", "trainsInService", "targetHeadways", "trains",
-/// "lastDispatch"}` (see `ServiceLine`). Every field is required;
-/// `lastDispatch` is `null` for a line that never sent a train out.
+/// "lastDispatch", "patterns"}` (see `ServiceLine`). Every field is
+/// required; `lastDispatch` is `null` for a line that never sent a train
+/// out, and `patterns` is `[]` for a line without any.
 struct LineSummary: Codable, Equatable {
     var id: Int
     var name: String
@@ -933,10 +972,11 @@ struct LineSummary: Codable, Equatable {
     var targetHeadways: TargetHeadwaysSummary
     var trains: [Int]
     var lastDispatch: Int64?
+    var patterns: [PatternSummary]
 
     init(
         id: Int, name: String, stops: [Int], rate: Int64, window: WindowSummary, trainsInService: TrainsSummary,
-        targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?
+        targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?, patterns: [PatternSummary] = []
     ) {
         self.id = id
         self.name = name
@@ -947,6 +987,7 @@ struct LineSummary: Codable, Equatable {
         self.targetHeadways = targetHeadways
         self.trains = trains
         self.lastDispatch = lastDispatch
+        self.patterns = patterns
     }
 
     init(_ line: ServiceLine) {
@@ -959,10 +1000,11 @@ struct LineSummary: Codable, Equatable {
         targetHeadways = TargetHeadwaysSummary(line.targetHeadways)
         trains = line.trains.map(\.rawValue)
         lastDispatch = line.lastDispatch?.minutes
+        patterns = line.patterns.map(PatternSummary.init)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch
+        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
     }
 
     init(from decoder: any Decoder) throws {
@@ -978,6 +1020,7 @@ struct LineSummary: Codable, Equatable {
         // Required: a missing key is an error, not a line that never
         // dispatched.
         lastDispatch = try container.decodeNil(forKey: .lastDispatch) ? nil : container.decode(Int64.self, forKey: .lastDispatch)
+        patterns = try container.decode([PatternSummary].self, forKey: .patterns)
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -987,6 +1030,61 @@ struct LineSummary: Codable, Equatable {
         try container.encode(stops, forKey: .stops)
         try container.encode(rate, forKey: .rate)
         try container.encode(window, forKey: .window)
+        try container.encode(trainsInService, forKey: .trainsInService)
+        try container.encode(targetHeadways, forKey: .targetHeadways)
+        try container.encode(trains, forKey: .trains)
+        if let lastDispatch {
+            try container.encode(lastDispatch, forKey: .lastDispatch)
+        } else {
+            try container.encodeNil(forKey: .lastDispatch)
+        }
+        try container.encode(patterns, forKey: .patterns)
+    }
+}
+
+/// A line's pattern as a fixture value: `{"calls", "trainsInService",
+/// "targetHeadways", "trains", "lastDispatch"}` (see `LinePattern`), every
+/// field required as on a line; `lastDispatch` is `null` for a pattern
+/// that never sent a train out.
+struct PatternSummary: Codable, Equatable {
+    var calls: [Int]
+    var trainsInService: TrainsSummary
+    var targetHeadways: TargetHeadwaysSummary
+    var trains: [Int]
+    var lastDispatch: Int64?
+
+    init(calls: [Int], trainsInService: TrainsSummary, targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?) {
+        self.calls = calls
+        self.trainsInService = trainsInService
+        self.targetHeadways = targetHeadways
+        self.trains = trains
+        self.lastDispatch = lastDispatch
+    }
+
+    init(_ pattern: LinePattern) {
+        calls = pattern.calls
+        trainsInService = TrainsSummary(pattern.trainsInService)
+        targetHeadways = TargetHeadwaysSummary(pattern.targetHeadways)
+        trains = pattern.trains.map(\.rawValue)
+        lastDispatch = pattern.lastDispatch?.minutes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case calls, trainsInService, targetHeadways, trains, lastDispatch
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        calls = try container.decode([Int].self, forKey: .calls)
+        trainsInService = try container.decode(TrainsSummary.self, forKey: .trainsInService)
+        targetHeadways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways)
+        trains = try container.decode([Int].self, forKey: .trains)
+        lastDispatch = try container.decodeNil(forKey: .lastDispatch) ? nil : container.decode(Int64.self, forKey: .lastDispatch)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(calls, forKey: .calls)
         try container.encode(trainsInService, forKey: .trainsInService)
         try container.encode(targetHeadways, forKey: .targetHeadways)
         try container.encode(trains, forKey: .trains)
@@ -1461,6 +1559,14 @@ extension KeyedDecodingContainer {
     /// A line ID stored as a plain integer.
     fileprivate func decodeLine(forKey key: Key) throws -> LineID {
         try LineID(rawValue: decode(Int.self, forKey: key))
+    }
+
+    /// A line's pattern index where the step names one, or `nil` for the
+    /// line's own service when the key is absent. Read as written: whether
+    /// the line has that pattern is GameCore's decision. An explicit `null`
+    /// is rejected.
+    fileprivate func decodePattern(forKey key: Key) throws -> Int? {
+        contains(key) ? try decode(Int.self, forKey: key) : nil
     }
 }
 

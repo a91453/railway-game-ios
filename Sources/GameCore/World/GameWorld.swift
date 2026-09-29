@@ -398,7 +398,7 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// A line is plan data: it never moves, routes or schedules a train.
     /// Whether its stations are joined by track is not checked; what its
-    /// journey would take is derived by ``lineJourney(_:)``.
+    /// journey would take is derived by ``lineJourney(_:pattern:)``.
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
     ///   ``GameError/invalidLineStops`` (fewer than two, or a station twice
@@ -426,19 +426,25 @@ public struct GameWorld: Equatable, Sendable {
         lines.remove(at: index)
     }
 
-    /// Replaces a line's stops with `stops`, in order.
+    /// Replaces a line's stops with `stops`, in order. Its patterns keep
+    /// their calls, as indices into the new stops.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
-    ///   ``GameError/invalidLineStops``, or ``GameError/unknownStation(_:)``
-    ///   naming the first stop whose station does not exist.
+    ///   ``GameError/invalidLineStops``, ``GameError/unknownStation(_:)``
+    ///   naming the first stop whose station does not exist, or
+    ///   ``GameError/invalidLinePattern`` if a pattern would call past the
+    ///   new last stop (remove it first).
     public mutating func setLineStops(_ id: LineID, to stops: [StationID]) throws(GameError) {
         let index = try lineIndex(of: id)
         try requireLineStops(stops)
+        guard lines[index].patterns.allSatisfy({ LinePattern.isCallList($0.calls, stopCount: stops.count) }) else {
+            throw .invalidLinePattern
+        }
         lines[index].stops = stops
     }
 
     /// Sets the rate, in logical units per game minute, that a line's
-    /// journey times are worked out at (see ``lineJourney(_:)``).
+    /// journey times are worked out at (see ``lineJourney(_:pattern:)``).
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
     ///   ``GameError/invalidLineRate`` for a rate below 1.
@@ -458,16 +464,22 @@ public struct GameWorld: Equatable, Sendable {
         lines[index].window = window
     }
 
-    /// Sets how many trains a line is to run at each service level. Any
-    /// count of 0 or more is kept as it is; how many the line can run is
-    /// derived (see ``lineTrainsInService(_:at:)``).
+    /// Sets how many trains a line's own service, or its pattern at index
+    /// `pattern`, is to run at each service level. Any count of 0 or more
+    /// is kept as it is; how many it can run is derived (see
+    /// ``lineTrainsInService(_:at:pattern:)``).
     ///
-    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
+    ///   ``GameError/unknownLinePattern(_:)``, or
     ///   ``GameError/invalidTrainsInService`` for a negative count.
-    public mutating func setLineTrainsInService(_ id: LineID, to trains: TrainsInService) throws(GameError) {
-        let index = try lineIndex(of: id)
+    public mutating func setLineTrainsInService(_ id: LineID, to trains: TrainsInService, pattern: Int? = nil) throws(GameError) {
+        let (index, service) = try lineService(id, pattern: pattern)
         guard trains.isValid else { throw .invalidTrainsInService }
-        lines[index].trainsInService = trains
+        if service == 0 {
+            lines[index].trainsInService = trains
+        } else {
+            lines[index].patterns[service - 1].trainsInService = trains
+        }
     }
 
     /// Sets which service level each minute of the day has, for every line.
@@ -479,56 +491,111 @@ public struct GameWorld: Equatable, Sendable {
         serviceDay = day
     }
 
-    /// Sets the minutes a line aims to keep between its trains, at the
-    /// levels with a target; the other levels run the count set by
-    /// ``setLineTrainsInService(_:to:)`` (see ``TargetHeadways``).
+    /// Sets the minutes a line's own service, or its pattern at index
+    /// `pattern`, aims to keep between its trains, at the levels with a
+    /// target; the other levels run the count set by
+    /// ``setLineTrainsInService(_:to:pattern:)`` (see ``TargetHeadways``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
+    ///   ``GameError/unknownLinePattern(_:)``, or
+    ///   ``GameError/invalidHeadway`` for a target outside `2...1440`.
+    public mutating func setLineTargetHeadways(_ id: LineID, to headways: TargetHeadways, pattern: Int? = nil) throws(GameError) {
+        let (index, service) = try lineService(id, pattern: pattern)
+        guard headways.isValid else { throw .invalidHeadway }
+        if service == 0 {
+            lines[index].targetHeadways = headways
+        } else {
+            lines[index].patterns[service - 1].targetHeadways = headways
+        }
+    }
+
+    /// Adds a pattern to a line, calling at `calls` (indices into the
+    /// line's stops), after its other patterns, with no trains in service,
+    /// no target headways and no trains; returns its index. Free.
+    ///
+    /// Calls that are a run of neighbouring stops make a short working;
+    /// calls that leave stops out make an express, which passes them.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
-    ///   ``GameError/invalidHeadway`` for a target outside `2...1440`.
-    public mutating func setLineTargetHeadways(_ id: LineID, to headways: TargetHeadways) throws(GameError) {
+    ///   ``GameError/invalidLinePattern`` unless there are two calls or
+    ///   more, strictly increasing, each an index of one of the line's
+    ///   stops.
+    @discardableResult
+    public mutating func addLinePattern(_ id: LineID, calling calls: [Int]) throws(GameError) -> Int {
         let index = try lineIndex(of: id)
-        guard headways.isValid else { throw .invalidHeadway }
-        lines[index].targetHeadways = headways
+        guard LinePattern.isCallList(calls, stopCount: lines[index].stops.count) else { throw .invalidLinePattern }
+        lines[index].patterns.append(LinePattern(calls: calls))
+        return lines[index].patterns.count - 1
+    }
+
+    /// Removes a line's pattern at index `pattern`; the patterns after it
+    /// move down one index. Its trains are no longer assigned to a line: a
+    /// train on a round trip keeps its timetable and finishes the trip as
+    /// an ordinary service, as when a line is removed.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/unknownLinePattern(_:)``.
+    public mutating func removeLinePattern(_ id: LineID, at pattern: Int) throws(GameError) {
+        let (index, service) = try lineService(id, pattern: pattern)
+        lines[index].patterns.remove(at: service - 1)
     }
 
     /// The line train `id` is assigned to, or `nil` if it is on none (or
     /// does not exist).
     public func assignedLine(of id: TrainID) -> LineID? {
-        lines.first { $0.trains.contains(id) }?.id
+        lines.first { line in (0..<line.serviceCount).contains { line.trains(ofService: $0).contains(id) } }?.id
     }
 
-    /// Assigns a train to a line, which from then on runs its timetable and
-    /// service: it sends the train out on round trips from its first stop
+    /// The index of the pattern train `id` is assigned to, or `nil` if it
+    /// is assigned to a line's own service, or to no line.
+    public func assignedPattern(of id: TrainID) -> Int? {
+        for line in lines {
+            if let pattern = line.patterns.firstIndex(where: { $0.trains.contains(id) }) { return pattern }
+        }
+        return nil
+    }
+
+    /// Assigns a train to a line's own service, or to its pattern at index
+    /// `pattern`, which from then on runs the train's timetable and
+    /// service: it sends the train out on round trips from its first call
     /// (see ``advance(ticks:)``). Free, and the train may be placed or not,
-    /// anywhere; only a train stopped at the line's first stop can be sent
-    /// out. Nothing else changes until the line sends the train out.
+    /// anywhere; only a train stopped at the first call can be sent out.
+    /// Nothing else changes until the service sends the train out.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/unknownLine(_:)``, ``GameError/trainOnLine(_:)`` if it
-    ///   is on a line already (this one included), or
-    ///   ``GameError/trainServiceActive(_:)`` while it runs a service of
-    ///   its own (stop it first).
-    public mutating func assignTrain(_ id: TrainID, to line: LineID) throws(GameError) {
+    ///   ``GameError/unknownLine(_:)``, ``GameError/unknownLinePattern(_:)``,
+    ///   ``GameError/trainOnLine(_:)`` if it is on a line already (this one
+    ///   included), or ``GameError/trainServiceActive(_:)`` while it runs a
+    ///   service of its own (stop it first).
+    public mutating func assignTrain(_ id: TrainID, to line: LineID, pattern: Int? = nil) throws(GameError) {
         let index = try trainIndex(of: id)
-        let target = try lineIndex(of: line)
+        let (target, service) = try lineService(line, pattern: pattern)
         guard assignedLine(of: id) == nil else { throw .trainOnLine(id) }
         guard trains[index].execution == nil else { throw .trainServiceActive(id) }
 
-        let at = lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count
-        lines[target].trains.insert(id, at: at)
+        if service == 0 {
+            lines[target].trains.insert(id, at: lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count)
+        } else {
+            let roster = lines[target].patterns[service - 1].trains
+            lines[target].patterns[service - 1].trains.insert(id, at: roster.firstIndex { $0 > id } ?? roster.count)
+        }
     }
 
-    /// Takes a train off its line. Only the assignment ends: a train on a
-    /// round trip keeps its timetable and finishes the trip as an ordinary
-    /// service, which can then be stopped like any other.
+    /// Takes a train off its line, whichever of the line's services it is
+    /// on. Only the assignment ends: a train on a round trip keeps its
+    /// timetable and finishes the trip as an ordinary service, which can
+    /// then be stopped like any other.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
     ///   ``GameError/trainNotOnLine(_:)``.
     public mutating func unassignTrain(_ id: TrainID) throws(GameError) {
         _ = try trainIndex(of: id)
-        guard let index = lines.firstIndex(where: { $0.trains.contains(id) }) else { throw .trainNotOnLine(id) }
+        guard let index = lines.firstIndex(where: { $0.id == assignedLine(of: id) }) else { throw .trainNotOnLine(id) }
 
         lines[index].trains.removeAll { $0 == id }
+        for pattern in lines[index].patterns.indices {
+            lines[index].patterns[pattern].trains.removeAll { $0 == id }
+        }
     }
 
     // MARK: - Time
@@ -617,40 +684,43 @@ public struct GameWorld: Equatable, Sendable {
     /// up. The timetable's arrival times are not read: they are the plan the
     /// train is measured against, not a limit.
     ///
-    /// **Dispatch** (see ``assignTrain(_:to:)``). A line sends a train out
-    /// at `T` when all of these hold:
+    /// **Dispatch** (see ``assignTrain(_:to:pattern:)``). Each service of a
+    /// line (its own, then its patterns in order) sends a train out at `T`
+    /// when all of these hold:
     ///
-    /// - `T` is minute 0 or later, the line's window is open, its journey
-    ///   can be driven (see ``lineJourney(_:)``), and at the level of `T` it
-    ///   runs trains (see ``lineTrainsInService(_:at:)``);
-    /// - that level's headway (see ``lineHeadway(_:at:)``) has passed since
-    ///   the line last sent a train out;
-    /// - fewer of its trains run a service than that level runs; and
+    /// - `T` is minute 0 or later, the line's window is open, the
+    ///   service's journey can be driven (see ``lineJourney(_:pattern:)``),
+    ///   and at the level of `T` it runs trains beside the services before
+    ///   it (see ``lineTrainsInService(_:at:pattern:)``);
+    /// - that headway (see ``lineHeadway(_:at:pattern:)``) has passed since
+    ///   the service last sent a train out;
+    /// - fewer of its trains run a service than it runs then; and
     /// - one of its trains is ready: without a service, placed, with a rate
-    ///   above 0, stopped at the first stop's station (see
+    ///   above 0, stopped at the first call's station (see
     ///   ``stationsStoppedAt(by:)``), and able to drive the whole round trip
     ///   from there as it faces or turned round, whichever is shorter (as it
     ///   faces when they are equal).
     ///
     /// The first ready train in ID order gets a timetable for one round trip
-    /// leaving at `T`, and its service starts at the first stop: it leaves
+    /// leaving at `T`, and its service starts at the first call: it leaves
     /// in phase 1 of the same step. The times come from that trip at the
-    /// line's rate, with the dwells of ``ServiceLine``: out to the last stop,
-    /// where it turns round, and back to the first, where it turns round and
-    /// the service ends. The train then waits there until the line sends it
-    /// out again. So a line never runs more trains than its level runs: when
-    /// the level runs fewer, the trains coming back wait at the first stop;
-    /// when it runs more, only trains waiting there can go. A train late
-    /// back makes the next one leave late, never early.
+    /// line's rate, with the dwells of ``ServiceLine``: out to the last
+    /// call, where it turns round, and back to the first, where it turns
+    /// round and the service ends; stops a pattern does not call at are
+    /// not in the timetable. The train then waits there until its service
+    /// sends it out again. So a service never runs more trains than it runs
+    /// at its level: when it runs fewer, the trains coming back wait at the
+    /// first call; when it runs more, only trains waiting there can go. A
+    /// train late back makes the next one leave late, never early.
     ///
     /// When a whole step changes nothing (no train moves, no service leaves,
     /// arrives or ends, and no line sends a train out), no later step of
     /// this call can change anything before the next scheduled departure of
-    /// a waiting service, or the next minute at which a line with a ready
-    /// train might send it out (the map and every train's inputs stay the
-    /// same until the next command, a departure that found no route finds
-    /// none later in the call, and a line's window, level and headway change
-    /// only at known minutes), so the clock moves on at once to that minute,
+    /// a waiting service, or the next minute at which a line's service with
+    /// a ready train might send it out (the map and every train's inputs
+    /// stay the same until the next command, a departure that found no
+    /// route finds none later in the call, and a line's window, level and
+    /// headways change only at known minutes), so the clock moves on at once to that minute,
     /// or to the end of the batch. This is an exact shortcut, not an
     /// approximation.
     ///
@@ -682,84 +752,97 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// What dispatching works out once per call of ``advance(ticks:)``:
-    /// no command can come within a call, so the map, the lines' stops and
-    /// rates and an idle train's position stay the same, and so do these.
+    /// no command can come within a call, so the map, the lines' stops,
+    /// patterns and rates and an idle train's position stay the same, and
+    /// so do these.
     private struct DispatchMemo {
-        /// Each line's journey (see ``lineJourney(_:)``), once looked up.
-        var journeys: [LineID: LineJourney?] = [:]
+        /// Each service's journey (see ``lineJourney(_:pattern:)``), by line
+        /// and service (see ``ServiceLine/serviceCount``), once looked up.
+        var journeys: [LineID: [Int: LineJourney?]] = [:]
         /// Each train's round trip from where it stood idle when it was
         /// looked up, or `nil` if it had none.
         var trips: [TrainID: (from: TrainPosition, trip: LineTrip?)] = [:]
     }
 
-    /// Phase 0 of a basic step: each line, in ascending ID order, sends
+    /// Phase 0 of a basic step: each line, in ascending ID order, and on it
+    /// each service, its own first and then its patterns in order, sends
     /// out at most one of its trains (see ``advance(ticks:)``). Returns
     /// whether any did.
     private mutating func dispatchTrains(memo: inout DispatchMemo) -> Bool {
         let now = clock.now
         var dispatched = false
-        for index in lines.indices where !lines[index].trains.isEmpty {
-            let line = lines[index]
-            guard isDispatchDue(line, at: now, memo: &memo),
-                  let (ready, trip) = readyTrain(of: line, memo: &memo),
-                  let timetable = trip.timetable(calling: line.stops, leavingAt: now)
-            else { continue }
-            trains[ready].timetable = timetable
-            trains[ready].timetablePeriod = nil
-            trains[ready].execution = .waitingAtStop(0)
-            lines[index].lastDispatch = now
-            dispatched = true
+        for index in lines.indices {
+            for service in 0..<lines[index].serviceCount where !lines[index].trains(ofService: service).isEmpty {
+                let line = lines[index]
+                guard isDispatchDue(line, service, at: now, memo: &memo),
+                      let (ready, trip) = readyTrain(of: line, service, memo: &memo),
+                      let timetable = trip.timetable(calling: line.stops, leavingAt: now)
+                else { continue }
+                trains[ready].timetable = timetable
+                trains[ready].timetablePeriod = nil
+                trains[ready].execution = .waitingAtStop(0)
+                lines[index].recordDispatch(ofService: service, at: now)
+                dispatched = true
+            }
         }
         return dispatched
     }
 
-    /// Whether `line` sends a train out at `now` if one is ready: not
-    /// before minute 0; its window is open and its level then runs trains
-    /// on its journey; a headway of that level has passed since its last
-    /// dispatch; and fewer of its trains run a service than that level
-    /// runs.
-    private func isDispatchDue(_ line: ServiceLine, at now: GameTime, memo: inout DispatchMemo) -> Bool {
-        guard now.minutes >= 0, let service = plannedService(of: line, at: now, memo: &memo) else { return false }
-        if let last = line.lastDispatch {
-            let (due, overflow) = last.minutes.addingReportingOverflow(service.headway)
+    /// Whether `line`'s service `service` sends a train out at `now` if one
+    /// is ready: not before minute 0; the line's window is open and the
+    /// service runs trains then (see ``plannedService(of:_:at:memo:)``); a
+    /// headway of that level has passed since the service's last dispatch;
+    /// and fewer of its trains run a service than it runs then.
+    private func isDispatchDue(_ line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> Bool {
+        guard now.minutes >= 0, let planned = plannedService(of: line, service, at: now, memo: &memo) else { return false }
+        if let last = line.lastDispatch(ofService: service) {
+            let (due, overflow) = last.minutes.addingReportingOverflow(planned.headway)
             guard !overflow, due <= now.minutes else { return false }
         }
-        let running = line.trains.count { id in train(id: id)?.execution != nil }
-        return running < service.trains
+        let running = line.trains(ofService: service).count { id in train(id: id)?.execution != nil }
+        return running < planned.trains
     }
 
-    /// The trains `line` runs at `now` and the headway between them, or
-    /// `nil` when its window is closed, its level runs none, or its journey
+    /// The trains `line`'s service `service` runs at `now` and the headway
+    /// between them, beside the services before it (see
+    /// ``ServiceLine/services(at:roundTrips:)``), or `nil` when the line's
+    /// window is closed, or the service runs none then or its journey
     /// cannot be driven.
-    private func plannedService(of line: ServiceLine, at now: GameTime, memo: inout DispatchMemo) -> (trains: Int, headway: Int64)? {
+    private func plannedService(of line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> (trains: Int, headway: Int64)? {
         guard line.window.contains(minuteOfDay: now.minuteOfDay) else { return nil }
-        let journey: LineJourney?
-        if let known = memo.journeys[line.id] {
-            journey = known
-        } else {
-            journey = lineJourney(line.id)
-            memo.journeys[line.id] = journey
+        var roundTrips: [Int64?] = []
+        for earlier in 0...service {
+            let journey: LineJourney?
+            if let known = memo.journeys[line.id]?[earlier] {
+                journey = known
+            } else {
+                journey = self.journey(of: line, service: earlier)
+                memo.journeys[line.id, default: [:]][earlier] = journey
+            }
+            roundTrips.append(journey?.roundTripMinutes)
         }
-        guard let journey else { return nil }
-        return line.service(at: serviceDay.level(atMinuteOfDay: now.minuteOfDay), roundTrip: journey.roundTripMinutes)
+        guard roundTrips[service] != nil else { return nil }
+        return line.services(at: serviceDay.level(atMinuteOfDay: now.minuteOfDay), roundTrips: roundTrips).plans[service]
     }
 
-    /// The first of `line`'s trains, in ID order, that it can send out: one
-    /// without a service, placed, with a rate above 0, stopped at the first
-    /// stop's station, and able to drive the whole round trip from there
-    /// (see ``trip(of:from:)``); with its index and that trip.
-    private func readyTrain(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
-        for id in line.trains {
+    /// The first of the trains of `line`'s service `service`, in ID order,
+    /// that it can send out: one without a service, placed, with a rate
+    /// above 0, stopped at the first call's station, and able to drive the
+    /// whole round trip from there (see ``trip(of:service:from:)``); with
+    /// its index and that trip.
+    private func readyTrain(of line: ServiceLine, _ service: Int, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+        let first = line.stops[line.calls(ofService: service)[0]]
+        for id in line.trains(ofService: service) {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
             guard train.execution == nil, let position = train.position, train.movement.rate > 0,
-                  isStopped(train, at: line.stops[0])
+                  isStopped(train, at: first)
             else { continue }
             let trip: LineTrip?
             if let known = memo.trips[id], known.from == position {
                 trip = known.trip
             } else {
-                trip = self.trip(of: line, from: position)
+                trip = self.trip(of: line, service: service, from: position)
                 memo.trips[id] = (position, trip)
             }
             if let trip { return (index, trip) }
@@ -768,40 +851,43 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// The basic steps from now until the first minute, at or after now,
-    /// at which some line might send a train out, or `nil` if none can in
-    /// this call.
+    /// at which some service might send a train out, or `nil` if none can
+    /// in this call.
     ///
-    /// Only a line with a train ready counts: a train becomes ready only by
-    /// arriving or finishing a service, which is a change, so after a step
-    /// that changed nothing no other line can send one out before the next
-    /// command. For such a line the answer is now if it is due now;
-    /// otherwise the first of minute 0, the minute a headway since its
-    /// last dispatch has passed, and the next minute its window opens or
-    /// closes or the day's level changes. Until then nothing that decides
-    /// whether it is due can change, so this is exact. A gap too large for
-    /// an `Int64` is given as `Int64.max`.
+    /// Only a service with a train ready counts: a train becomes ready only
+    /// by arriving or finishing a service, which is a change, so after a
+    /// step that changed nothing no other service can send one out before
+    /// the next command. For such a service the answer is now if it is due
+    /// now; otherwise the first of minute 0, the minute a headway since its
+    /// last dispatch has passed, and the next minute its line's window
+    /// opens or closes or the day's level changes. Until then nothing that
+    /// decides whether it is due can change (what the services before it
+    /// run changes only at those same minutes), so this is exact. A gap too
+    /// large for an `Int64` is given as `Int64.max`.
     private func basicStepsUntilNextDispatch(memo: inout DispatchMemo) -> Int64? {
         let now = clock.now
         var soonest: Int64?
-        for line in lines where !line.trains.isEmpty {
-            guard readyTrain(of: line, memo: &memo) != nil else { continue }
-            var wake: Int64?
-            if now.minutes < 0 {
-                wake = 0
-            } else if isDispatchDue(line, at: now, memo: &memo) {
-                wake = now.minutes
-            } else {
-                wake = line.nextChange(after: now, in: serviceDay)?.minutes
-                if let last = line.lastDispatch, let service = plannedService(of: line, at: now, memo: &memo) {
-                    let (due, overflow) = last.minutes.addingReportingOverflow(service.headway)
-                    if !overflow, due > now.minutes {
-                        wake = min(wake ?? due, due)
+        for line in lines {
+            for service in 0..<line.serviceCount where !line.trains(ofService: service).isEmpty {
+                guard readyTrain(of: line, service, memo: &memo) != nil else { continue }
+                var wake: Int64?
+                if now.minutes < 0 {
+                    wake = 0
+                } else if isDispatchDue(line, service, at: now, memo: &memo) {
+                    wake = now.minutes
+                } else {
+                    wake = line.nextChange(after: now, in: serviceDay)?.minutes
+                    if let last = line.lastDispatch(ofService: service), let planned = plannedService(of: line, service, at: now, memo: &memo) {
+                        let (due, overflow) = last.minutes.addingReportingOverflow(planned.headway)
+                        if !overflow, due > now.minutes {
+                            wake = min(wake ?? due, due)
+                        }
                     }
                 }
+                guard let wake else { continue }
+                let (gap, overflow) = wake.subtractingReportingOverflow(now.minutes)
+                soonest = min(soonest ?? .max, overflow ? .max : gap)
             }
-            guard let wake else { continue }
-            let (gap, overflow) = wake.subtractingReportingOverflow(now.minutes)
-            soonest = min(soonest ?? .max, overflow ? .max : gap)
         }
         return soonest
     }
@@ -928,6 +1014,14 @@ public struct GameWorld: Equatable, Sendable {
         name.contains { !$0.isWhitespace }
     }
 
+    /// The index of line `id` and the service `pattern` names on it (see
+    /// ``ServiceLine/serviceCount``).
+    private func lineService(_ id: LineID, pattern: Int?) throws(GameError) -> (index: Int, service: Int) {
+        let index = try lineIndex(of: id)
+        guard let service = lines[index].service(pattern) else { throw .unknownLinePattern(pattern ?? 0) }
+        return (index, service)
+    }
+
     private func lineIndex(of id: LineID) throws(GameError) -> Int {
         guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
         return index
@@ -1007,9 +1101,9 @@ extension GameWorld: Codable {
     /// service's train must be stopped at its stop's station, and a
     /// travelling service's journey must end beside the station of the stop
     /// it travels to, as a route from the service would; every line's
-    /// trains must exist and be on that line only, none of them may run a
-    /// repeating timetable, and no line may have sent a train out after the
-    /// current minute, as ``assignTrain(_:to:)`` and dispatching require).
+    /// and patterns' trains must exist and be on that service only, none of
+    /// them may run a repeating timetable, and no service may have sent a
+    /// train out after the current minute, as ``assignTrain(_:to:pattern:)`` and dispatching require).
     ///
     /// A continuation's links are not required to exist: track ahead of a
     /// train may have been removed after the continuation was set, and a
@@ -1077,17 +1171,19 @@ extension GameWorld: Codable {
             if let missing = line.stops.first(where: { station(id: $0) == nil }) {
                 return "Line \(line.id.rawValue) calls at station \(missing.rawValue), which does not exist."
             }
-            for id in line.trains {
-                guard let train = train(id: id) else { return "Line \(line.id.rawValue) has train \(id.rawValue), which does not exist." }
-                guard assigned.insert(id).inserted else { return "Train \(id.rawValue) is assigned to two lines." }
-                // A line sends its trains out on trips that run once, and
-                // no other service can start while a train is on a line.
-                guard train.execution == nil || train.timetablePeriod == nil else {
-                    return "Line \(line.id.rawValue)'s train \(id.rawValue) runs a repeating timetable."
+            for service in 0..<line.serviceCount {
+                for id in line.trains(ofService: service) {
+                    guard let train = train(id: id) else { return "Line \(line.id.rawValue) has train \(id.rawValue), which does not exist." }
+                    guard assigned.insert(id).inserted else { return "Train \(id.rawValue) is assigned to two lines or services." }
+                    // A line sends its trains out on trips that run once, and
+                    // no other service can start while a train is on a line.
+                    guard train.execution == nil || train.timetablePeriod == nil else {
+                        return "Line \(line.id.rawValue)'s train \(id.rawValue) runs a repeating timetable."
+                    }
                 }
-            }
-            if let last = line.lastDispatch, last > clock.now {
-                return "Line \(line.id.rawValue) sent a train out after the current minute."
+                if let last = line.lastDispatch(ofService: service), last > clock.now {
+                    return "Line \(line.id.rawValue) sent a train out after the current minute."
+                }
             }
         }
         for station in stations {

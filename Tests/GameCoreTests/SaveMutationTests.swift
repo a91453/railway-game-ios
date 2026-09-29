@@ -630,4 +630,83 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 800, "only \(aimed) mutations aimed at lines and services")
         assertVolume(assignedLoaded > 300, "only \(assignedLoaded) assigned trains loaded")
     }
+
+    /// Decision 24: saves of lines with patterns, mutated mostly in the
+    /// patterns (their calls, counts, targets, trains and last dispatch),
+    /// are refused or load into worlds that keep every invariant and keep
+    /// dispatching without breaking one.
+    func testMutatedPatternsAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var patternsLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.patternMutation", cases: 10) { c in
+            let (setup, operations) = try LinePatternPropertyTests.generate(&c, operations: 30)
+            var world = try setup.build().0
+            for operation in operations {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return text.contains("patterns") || (text.hasPrefix(".lines") && text.contains("stops"))
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: outsideTiles)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["patterns", "calls", "trains", "lastDispatch", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                patternsLoaded += loaded.lines.reduce(0) { $0 + $1.patterns.count }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = c.random.chance(1, in: 2)
+                        ? LinePatternPropertyTests.nextPatternOperation(in: current, using: &c.random)
+                        : .advance(c.random.below(120))
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.patternMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at patterns and stops, \(patternsLoaded) patterns loaded")
+        assertVolume(refused > 150, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 150, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 400, "only \(aimed) mutations aimed at patterns and stops")
+        assertVolume(patternsLoaded > 150, "only \(patternsLoaded) patterns loaded")
+    }
 }
