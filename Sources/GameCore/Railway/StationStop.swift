@@ -71,7 +71,9 @@ extension GameWorld {
     /// A train is stopped at a station when it stands at the centre of one
     /// of the station's platforms (``TrainPosition/atNode(_:heading:)``,
     /// facing either way) with no continuation left, whatever its rate. Its
-    /// journey ends there, and it stays until a command changes that:
+    /// journey ends there, and it stays until a command changes that, or
+    /// its timetable service gives it a route when a departure comes (see
+    /// ``advance(ticks:)``):
     ///
     /// - A train that passes a platform, one given a new continuation there
     ///   (even while its rate is 0), and one waiting there for removed track

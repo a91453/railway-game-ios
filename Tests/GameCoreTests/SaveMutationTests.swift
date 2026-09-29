@@ -261,6 +261,7 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
         assertVolume(timetableMutations > 1_000, "only \(timetableMutations) mutations inside timetables")
     }
+
     /// The same for services (decision 20), with many mutations aimed at
     /// them: a phase or stop changed, a service removed, or one written onto
     /// a train (most of them plausible: a known phase and a small stop).

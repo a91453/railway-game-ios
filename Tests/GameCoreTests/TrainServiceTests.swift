@@ -513,6 +513,20 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(batch, single)
     }
 
+    /// A step that changes nothing may end the minute before a departure:
+    /// the shortcut then skips nothing, and the next step leaves. Here the
+    /// train reaches Beta at 2 and leaves at 3, all inside one batch.
+    func testADepartureTheMinuteAfterAnIdleStepIsMetInsideOneBatch() throws {
+        var world = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 2, 3), stop(gamma, 10, 10)])
+
+        try world.advance(ticks: 5)
+
+        // 0: leaves Alpha; 1: d, Beta at 2; 2: waits; 3: leaves; 4: f, Gamma at 5.
+        XCTAssertEqual(world.clock.now.minutes, 5)
+        XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(2))
+        XCTAssertEqual(try position(of: first, in: world), .atNode(f, heading: .east))
+    }
+
     /// Idle time is still skipped at once, and a departure far ahead is met
     /// exactly: a train at 1 unit a minute is exactly 100 units along 100
     /// minutes after it left.

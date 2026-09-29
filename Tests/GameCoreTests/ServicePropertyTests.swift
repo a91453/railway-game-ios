@@ -16,7 +16,9 @@ import XCTest
 ///   twice the ticks at 1x: the results must be equal (apart from the speed
 ///   itself), so the event-aware shortcut never skips a departure.
 /// - **Invariants.** Every world reached keeps them, a service's included
-///   (``WorldInvariants/serviceViolations(of:in:)``), and loads back equal.
+///   (``WorldInvariants/serviceViolations(of:in:)``). The world each case
+///   ends in loads back equal and saves to the same bytes, as do the worlds
+///   at its generated save-and-load steps.
 ///
 /// A failing sequence is shrunk before it is reported, with its seed and
 /// case; `PROPERTY_REPLAY=service.differential@<seed>@<case>` runs one case.
