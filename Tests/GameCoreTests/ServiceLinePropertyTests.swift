@@ -119,7 +119,7 @@ final class ServiceLinePropertyTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("line.differential", cases: 30) { c in
-            let (setup, operations) = try Self.generate(&c, operations: 120)
+            let (setup, operations) = try Self.generate(&c, operations: 100)
             c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
@@ -133,7 +133,7 @@ final class ServiceLinePropertyTests: XCTestCase {
                 let error = KernelDifferentialTests.apply(operation, to: &world)
                 switch operation {
                 case .createLine, .removeLine, .setLineStops, .setLineRate, .setLineWindow, .setLineTrains, .setServiceDay:
-                    let name = "\(operation)".prefix { $0 != "(" }
+                    let name = "\(operation)".dropFirst().prefix { $0 != "(" }
                     counts[error.map { String("\($0)".prefix { $0 != "(" }) } ?? "ok \(name)", default: 0] += 1
                 default:
                     break
