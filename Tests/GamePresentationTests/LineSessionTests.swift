@@ -23,7 +23,7 @@ final class LineSessionTests: XCTestCase {
     private static let main = LineID(rawValue: 1)
     private static let first = TrainID(rawValue: 1)
 
-    private func makeStationWorld(minute: Int64 = 480) throws -> GameWorld {
+    private static func makeStationWorld(minute: Int64 = 480) throws -> GameWorld {
         var world = try GameWorld(
             width: 9, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
@@ -42,7 +42,7 @@ final class LineSessionTests: XCTestCase {
     /// Line 1 calls at every station; 5 / 2 / 0 trains; a short working
     /// Beta-Gamma (4 / 1 / 1, 20 minutes apart at low) and an express
     /// Alpha-Delta (2 / 1 / 0). Round trips 20, 8 and 16 minutes.
-    private func makeLineWorld() throws -> GameWorld {
+    private static func makeLineWorld() throws -> GameWorld {
         var world = try makeStationWorld()
         try world.createLine(named: "Main", stops: [Self.stationA, Self.stationB, Self.stationC, Self.stationD])
         try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 5, offPeak: 2, low: 0))
@@ -73,7 +73,7 @@ final class LineSessionTests: XCTestCase {
     /// Each service with its kind, ends, calls, and at every level what it
     /// runs beside the services before it (Stage Q3's shared room).
     func testServicesAreSummarisedAsTheyRun() throws {
-        let world = try makeLineWorld()
+        let world = try Self.makeLineWorld()
         let summaries = world.lineServiceSummaries(Self.main)
         XCTAssertEqual(summaries.map(\.pattern), [nil, 0, 1])
         XCTAssertEqual(summaries.map(\.title), ["All stops Alpha–Delta", "Short working Beta–Gamma", "Express Alpha–Delta"])
@@ -100,7 +100,7 @@ final class LineSessionTests: XCTestCase {
     /// A train on a service: which one, where it is in its trip and whether
     /// it is early or late, derived from the timetable and the clock.
     func testATrainsServiceShowsWhereItIsAndHowLate() throws {
-        var world = try makeLineWorld()
+        var world = try Self.makeLineWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
         try world.placeTrain(shuttle, at: .atNode(Self.b, heading: .east))
         XCTAssertNil(world.trainServiceStatus(of: shuttle), "no line, no service")
@@ -146,123 +146,126 @@ final class LineSessionTests: XCTestCase {
 
     /// A new line: stations picked on the map, in order, then created
     /// through `createLine`, which GameCore checks.
-    @MainActor
-    func testANewLineIsPickedFromTheMapAndCreatedByGameCore() throws {
-        let start = try makeStationWorld()
-        let session = GameSession(world: start)
-        XCTAssertNil(session.selectedLineID)
+    func testANewLineIsPickedFromTheMapAndCreatedByGameCore() async throws {
+        try await MainActor.run {
+            let start = try Self.makeStationWorld()
+            let session = GameSession(world: start)
+            XCTAssertNil(session.selectedLineID)
 
-        session.addSelectedStationToLineDraft()
-        XCTAssertEqual(session.message?.kind, .failure, "nothing selected")
-        session.select(GridPosition(x: 2, y: 1))
-        session.addSelectedStationToLineDraft()
-        XCTAssertEqual(session.message?.text, "Select a station on the map to add it to the new line.")
-        session.select(GridPosition(x: 1, y: 0))
-        session.addSelectedStationToLineDraft()
-        session.addSelectedStationToLineDraft()
-        XCTAssertEqual(session.message?.kind, .failure, "the same station twice in a row")
-        XCTAssertEqual(session.lineDraft, [Self.stationA])
+            session.addSelectedStationToLineDraft()
+            XCTAssertEqual(session.message?.kind, .failure, "nothing selected")
+            session.select(GridPosition(x: 2, y: 1))
+            session.addSelectedStationToLineDraft()
+            XCTAssertEqual(session.message?.text, "Select a station on the map to add it to the new line.")
+            session.select(GridPosition(x: 1, y: 0))
+            session.addSelectedStationToLineDraft()
+            session.addSelectedStationToLineDraft()
+            XCTAssertEqual(session.message?.kind, .failure, "the same station twice in a row")
+            XCTAssertEqual(session.lineDraft, [Self.stationA])
 
-        // One stop is refused by GameCore, and the draft is kept.
-        session.createLineFromDraft()
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidLineStops.playerMessage))
-        XCTAssertEqual(session.world, start)
-        XCTAssertEqual(session.lineDraft, [Self.stationA])
+            // One stop is refused by GameCore, and the draft is kept.
+            session.createLineFromDraft()
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidLineStops.playerMessage))
+            XCTAssertEqual(session.world, start)
+            XCTAssertEqual(session.lineDraft, [Self.stationA])
 
-        session.select(GridPosition(x: 5, y: 0))
-        session.addSelectedStationToLineDraft()
-        session.createLineFromDraft()
-        var expected = start
-        try expected.createLine(named: "Line 1", stops: [Self.stationA, Self.stationC])
-        XCTAssertEqual(session.world, expected)
-        XCTAssertEqual(session.selectedLineID, Self.main)
-        XCTAssertEqual(session.lineDraft, [])
-        XCTAssertEqual(session.message?.kind, .success)
+            session.select(GridPosition(x: 5, y: 0))
+            session.addSelectedStationToLineDraft()
+            session.createLineFromDraft()
+            var expected = start
+            try expected.createLine(named: "Line 1", stops: [Self.stationA, Self.stationC])
+            XCTAssertEqual(session.world, expected)
+            XCTAssertEqual(session.selectedLineID, Self.main)
+            XCTAssertEqual(session.lineDraft, [])
+            XCTAssertEqual(session.message?.kind, .success)
 
-        session.addSelectedStationToLineDraft()
-        session.removeLastLineDraftStop()
-        XCTAssertEqual(session.lineDraft, [])
+            session.addSelectedStationToLineDraft()
+            session.removeLastLineDraftStop()
+            XCTAssertEqual(session.lineDraft, [])
+        }
     }
 
     /// Counts, targets, windows and patterns each go through one GameCore
     /// command, changing one level and keeping the others.
-    @MainActor
-    func testLineSettingsGoThroughGameCore() throws {
-        var expected = try makeLineWorld()
-        let session = GameSession(world: expected)
-        XCTAssertEqual(session.selectedLineID, Self.main, "the first line is selected")
+    func testLineSettingsGoThroughGameCore() async throws {
+        try await MainActor.run {
+            var expected = try Self.makeLineWorld()
+            let session = GameSession(world: expected)
+            XCTAssertEqual(session.selectedLineID, Self.main, "the first line is selected")
 
-        session.setSelectedLineTrains(3, at: .offPeak)
-        try expected.setLineTrainsInService(Self.main, to: TrainsInService(peak: 5, offPeak: 3, low: 0))
-        session.setSelectedLineTrains(0, at: .peak, pattern: 1)
-        try expected.setLineTrainsInService(Self.main, to: TrainsInService(peak: 0, offPeak: 1, low: 0), pattern: 1)
-        session.setSelectedLineTargetHeadway(15, at: .peak, pattern: 0)
-        try expected.setLineTargetHeadways(Self.main, to: TargetHeadways(peak: 15, low: 20), pattern: 0)
-        session.setSelectedLineTargetHeadway(nil, at: .low, pattern: 0)
-        try expected.setLineTargetHeadways(Self.main, to: TargetHeadways(peak: 15), pattern: 0)
-        session.setSelectedLineAllDay(true)
-        try expected.setLineServiceWindow(Self.main, to: .allDay)
-        session.addPatternToSelectedLine(from: 0, to: 2, express: false)
-        try expected.addLinePattern(Self.main, calling: [0, 1, 2])
-        XCTAssertEqual(session.message?.text, "Added Short working Alpha–Gamma to Main as pattern 3.")
-        session.addPatternToSelectedLine(from: 1, to: 3, express: true)
-        try expected.addLinePattern(Self.main, calling: [1, 3])
-        session.removePatternFromSelectedLine(0)
-        try expected.removeLinePattern(Self.main, at: 0)
-        XCTAssertEqual(session.world, expected)
+            session.setSelectedLineTrains(3, at: .offPeak)
+            try expected.setLineTrainsInService(Self.main, to: TrainsInService(peak: 5, offPeak: 3, low: 0))
+            session.setSelectedLineTrains(0, at: .peak, pattern: 1)
+            try expected.setLineTrainsInService(Self.main, to: TrainsInService(peak: 0, offPeak: 1, low: 0), pattern: 1)
+            session.setSelectedLineTargetHeadway(15, at: .peak, pattern: 0)
+            try expected.setLineTargetHeadways(Self.main, to: TargetHeadways(peak: 15, low: 20), pattern: 0)
+            session.setSelectedLineTargetHeadway(nil, at: .low, pattern: 0)
+            try expected.setLineTargetHeadways(Self.main, to: TargetHeadways(peak: 15), pattern: 0)
+            session.setSelectedLineAllDay(true)
+            try expected.setLineServiceWindow(Self.main, to: .allDay)
+            session.addPatternToSelectedLine(from: 0, to: 2, express: false)
+            try expected.addLinePattern(Self.main, calling: [0, 1, 2])
+            XCTAssertEqual(session.message?.text, "Added Short working Alpha–Gamma to Main as pattern 3.")
+            session.addPatternToSelectedLine(from: 1, to: 3, express: true)
+            try expected.addLinePattern(Self.main, calling: [1, 3])
+            session.removePatternFromSelectedLine(0)
+            try expected.removeLinePattern(Self.main, at: 0)
+            XCTAssertEqual(session.world, expected)
 
-        // Refusals are GameCore's, and change nothing.
-        session.setSelectedLineTrains(-1, at: .low)
-        XCTAssertEqual(session.message?.text, GameError.invalidTrainsInService.playerMessage)
-        session.setSelectedLineTargetHeadway(1, at: .low)
-        XCTAssertEqual(session.message?.text, GameError.invalidHeadway.playerMessage)
-        session.addPatternToSelectedLine(from: 2, to: 1, express: true)
-        XCTAssertEqual(session.message?.text, GameError.invalidLinePattern.playerMessage)
-        session.removePatternFromSelectedLine(9)
-        XCTAssertEqual(session.message?.text, GameError.unknownLinePattern(9).playerMessage)
-        XCTAssertEqual(session.world, expected)
+            // Refusals are GameCore's, and change nothing.
+            session.setSelectedLineTrains(-1, at: .low)
+            XCTAssertEqual(session.message?.text, GameError.invalidTrainsInService.playerMessage)
+            session.setSelectedLineTargetHeadway(1, at: .low)
+            XCTAssertEqual(session.message?.text, GameError.invalidHeadway.playerMessage)
+            session.addPatternToSelectedLine(from: 2, to: 1, express: true)
+            XCTAssertEqual(session.message?.text, GameError.invalidLinePattern.playerMessage)
+            session.removePatternFromSelectedLine(9)
+            XCTAssertEqual(session.message?.text, GameError.unknownLinePattern(9).playerMessage)
+            XCTAssertEqual(session.world, expected)
 
-        session.removeSelectedLine()
-        try expected.removeLine(Self.main)
-        XCTAssertEqual(session.world, expected)
-        XCTAssertNil(session.selectedLineID)
-        session.setSelectedLineTrains(1, at: .peak)
-        XCTAssertEqual(session.message?.text, "Create or choose a line first.")
+            session.removeSelectedLine()
+            try expected.removeLine(Self.main)
+            XCTAssertEqual(session.world, expected)
+            XCTAssertNil(session.selectedLineID)
+            session.setSelectedLineTrains(1, at: .peak)
+            XCTAssertEqual(session.message?.text, "Create or choose a line first.")
+        }
     }
 
     /// Assigning the selected train, taking it off, and running or
     /// stopping a train's own timetable, each through GameCore.
-    @MainActor
-    func testTrainServiceCommandsGoThroughGameCore() throws {
-        var expected = try makeLineWorld()
-        try expected.purchaseTrain(named: "Blue")
-        try expected.placeTrain(Self.first, at: .atNode(Self.a, heading: .east))
-        let session = GameSession(world: expected)
+    func testTrainServiceCommandsGoThroughGameCore() async throws {
+        try await MainActor.run {
+            var expected = try Self.makeLineWorld()
+            try expected.purchaseTrain(named: "Blue")
+            try expected.placeTrain(Self.first, at: .atNode(Self.a, heading: .east))
+            let session = GameSession(world: expected)
 
-        session.assignSelectedTrainToSelectedLine(pattern: 1)
-        try expected.assignTrain(Self.first, to: Self.main, pattern: 1)
-        XCTAssertEqual(session.message?.text, "Blue now runs for Main · Express Alpha–Delta. It leaves once it waits at the first stop.")
-        session.assignSelectedTrainToSelectedLine()
-        XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
-        session.startSelectedTrainService()
-        XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
-        session.unassignSelectedTrain()
-        try expected.unassignTrain(Self.first)
-        XCTAssertEqual(session.world, expected)
+            session.assignSelectedTrainToSelectedLine(pattern: 1)
+            try expected.assignTrain(Self.first, to: Self.main, pattern: 1)
+            XCTAssertEqual(session.message?.text, "Blue now runs for Main · Express Alpha–Delta. It leaves once it waits at the first stop.")
+            session.assignSelectedTrainToSelectedLine()
+            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
+            session.startSelectedTrainService()
+            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
+            session.unassignSelectedTrain()
+            try expected.unassignTrain(Self.first)
+            XCTAssertEqual(session.world, expected)
 
-        session.startSelectedTrainService()
-        XCTAssertEqual(session.message?.text, GameError.noTimetable(Self.first).playerMessage)
-        let stop = ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 480), departure: GameTime(minutes: 490))
-        try expected.setTrainTimetable(Self.first, to: [stop])
-        let withTimetable = expected
-        let second = GameSession(world: withTimetable)
-        second.startSelectedTrainService()
-        try expected.startTrainService(Self.first)
-        XCTAssertEqual(second.world, expected)
-        second.stopSelectedTrainService()
-        try expected.stopTrainService(Self.first)
-        XCTAssertEqual(second.world, expected)
-        second.stopSelectedTrainService()
-        XCTAssertEqual(second.message?.text, GameError.trainServiceNotActive(Self.first).playerMessage)
+            session.startSelectedTrainService()
+            XCTAssertEqual(session.message?.text, GameError.noTimetable(Self.first).playerMessage)
+            let stop = ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 480), departure: GameTime(minutes: 490))
+            try expected.setTrainTimetable(Self.first, to: [stop])
+            let withTimetable = expected
+            let second = GameSession(world: withTimetable)
+            second.startSelectedTrainService()
+            try expected.startTrainService(Self.first)
+            XCTAssertEqual(second.world, expected)
+            second.stopSelectedTrainService()
+            try expected.stopTrainService(Self.first)
+            XCTAssertEqual(second.world, expected)
+            second.stopSelectedTrainService()
+            XCTAssertEqual(second.message?.text, GameError.trainServiceNotActive(Self.first).playerMessage)
+        }
     }
 }
