@@ -83,6 +83,8 @@ final class ErrorMessageTests: XCTestCase {
             .invalidHeadway: "A target headway must be between 2 minutes and 24 hours.",
             .trainOnLine(TrainID(rawValue: 3)): "Train #3 runs for a line. Take it off the line first.",
             .trainNotOnLine(TrainID(rawValue: 3)): "Train #3 is not on a line.",
+            .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order.",
+            .unknownLinePattern(2): "The line has no pattern #3.",
         ]
 
         for (error, message) in messages {

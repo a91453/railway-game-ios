@@ -623,31 +623,46 @@ enum WorldInvariants {
             if case .hours(let open, let close) = line.window, !(open >= 0 && open < 1440 && close > open && close <= 1800) {
                 problems.append("line \(id) window \(open)-\(close)")
             }
-            let trains = line.trainsInService
-            if min(trains.peak, trains.offPeak, trains.low) < 0 { problems.append("line \(id) negative trains") }
-            // Decision 23: targets of 2 to 1440 minutes; trains in ID order,
-            // known, and on this line only; a last dispatch from minute 0
-            // to now; a line's train in service runs a trip that is not
-            // repeated.
-            for level in ServiceLevel.allCases {
-                if let target = line.targetHeadways[level], !(2...1440).contains(target) {
-                    problems.append("line \(id) target \(target) at \(level)")
+            // No negative count. Decision 23: targets of 2 to 1440 minutes;
+            // trains in ID order, known, and on this line only; a last
+            // dispatch from minute 0 to now; a line's train in service runs
+            // a trip that is not repeated. Decision 24: the same for each
+            // pattern, whose calls are two or more of the line's stops,
+            // rising; no train on two services.
+            let services: [(name: String, counts: TrainsInService, targets: TargetHeadways, trains: [TrainID], last: GameTime?)] =
+                [("line \(id)", line.trainsInService, line.targetHeadways, line.trains, line.lastDispatch)]
+                + line.patterns.enumerated().map { ("line \(id) pattern \($0)", $1.trainsInService, $1.targetHeadways, $1.trains, $1.lastDispatch) }
+            for pattern in line.patterns {
+                let calls = pattern.calls
+                if calls.count < 2 || calls[0] < 0 || calls[calls.count - 1] >= line.stops.count || zip(calls, calls.dropFirst()).contains(where: { $0 >= $1 }) {
+                    problems.append("line \(id) pattern calls \(calls) for \(line.stops.count) stops")
                 }
             }
-            if zip(line.trains, line.trains.dropFirst()).contains(where: { $0 >= $1 }) {
-                problems.append("line \(id) trains \(line.trains) not ascending")
-            }
-            for train in line.trains {
-                if world.train(id: train) == nil { problems.append("line \(id) has unknown train \(train.rawValue)") }
-                if world.lines.filter({ $0.trains.contains(train) }).count > 1 {
-                    problems.append("train \(train.rawValue) is on two lines")
+            for service in services {
+                if min(service.counts.peak, service.counts.offPeak, service.counts.low) < 0 { problems.append("\(service.name) negative trains") }
+                for level in ServiceLevel.allCases {
+                    if let target = service.targets[level], !(2...1440).contains(target) {
+                        problems.append("\(service.name) target \(target) at \(level)")
+                    }
                 }
-                if let running = world.train(id: train), running.execution != nil, running.timetablePeriod != nil {
-                    problems.append("line \(id)'s train \(train.rawValue) runs a repeating timetable")
+                if zip(service.trains, service.trains.dropFirst()).contains(where: { $0 >= $1 }) {
+                    problems.append("\(service.name) trains \(service.trains) not ascending")
                 }
-            }
-            if let last = line.lastDispatch, last.minutes < 0 || last > world.clock.now {
-                problems.append("line \(id) last dispatch \(last.minutes) at minute \(world.clock.now.minutes)")
+                for train in service.trains {
+                    if world.train(id: train) == nil { problems.append("\(service.name) has unknown train \(train.rawValue)") }
+                    let homes = world.lines.reduce(0) { count, other in
+                        count + (other.trains.contains(train) ? 1 : 0) + other.patterns.filter { $0.trains.contains(train) }.count
+                    }
+                    if homes > 1 {
+                        problems.append("train \(train.rawValue) is on two lines or services")
+                    }
+                    if let running = world.train(id: train), running.execution != nil, running.timetablePeriod != nil {
+                        problems.append("\(service.name)'s train \(train.rawValue) runs a repeating timetable")
+                    }
+                }
+                if let last = service.last, last.minutes < 0 || last > world.clock.now {
+                    problems.append("\(service.name) last dispatch \(last.minutes) at minute \(world.clock.now.minutes)")
+                }
             }
         }
         let starts = world.serviceDay.bands.map(\.start)

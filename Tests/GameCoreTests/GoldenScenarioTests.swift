@@ -225,6 +225,8 @@ final class GoldenScenarioTests: XCTestCase {
         var executionAnswerCount = 0
         var journeyAnswerCount = 0
         var headwayAnswerCount = 0
+        var sharedLoadCount = 0
+        var patternAnswerCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -261,6 +263,17 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .minutes(let minutes?) = expect, minutes > 0 {
                     headwayAnswerCount += 1
                 }
+                // A segment carrying two services, and one a later service
+                // was cut back on.
+                if case .loads(let loads?) = expect, loads.contains(where: { $0 > 0 && $0 < ServiceLine.segmentCapacity }), loads.contains(ServiceLine.segmentCapacity) {
+                    sharedLoadCount += 1
+                }
+                switch observation {
+                case .lineJourney(_, pattern: _?), .lineTrainsInService(_, _, pattern: _?), .lineHeadway(_, _, pattern: _?):
+                    patternAnswerCount += 1
+                default:
+                    break
+                }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -281,6 +294,8 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(executionAnswerCount, 0, "No fixture observes an active service")
         XCTAssertGreaterThan(journeyAnswerCount, 0, "No fixture pins a line journey of more than two legs")
         XCTAssertGreaterThan(headwayAnswerCount, 0, "No fixture pins a line's headway")
+        XCTAssertGreaterThan(sharedLoadCount, 0, "No fixture pins a line's segments filled by several services")
+        XCTAssertGreaterThan(patternAnswerCount, 0, "No fixture observes a pattern")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -368,6 +383,14 @@ final class GoldenScenarioTests: XCTestCase {
             return trains.map { [.trains(nil), .trains($0 + 1)] } ?? [.trains(0)]
         case .minutes(let minutes):
             return minutes.map { [.minutes(nil), .minutes($0 + 1)] } ?? [.minutes(0)]
+        case .loads(nil):
+            return [.loads([])]
+        case .loads(let loads?):
+            var wrong: [ObservationAnswer] = [.loads(nil), .loads(loads + [0])]
+            if let first = loads.first {
+                wrong.append(.loads([first + 1] + loads.dropFirst()))
+            }
+            return wrong
         }
     }
 
@@ -401,7 +424,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 12,
+              "schemaVersion": 13,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -451,7 +474,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -787,7 +810,15 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"type": "setLineServiceWindow", "line": 2, "window": {"type": "hours", "open": 900, "close": 100}}"#,
              .setLineServiceWindow(line, .hours(open: 900, close: 100))),
             (#"{"type": "setLineTrainsInService", "line": 2, "trains": {"peak": 6, "offPeak": -1, "low": 0}}"#,
-             .setLineTrainsInService(line, TrainsInService(peak: 6, offPeak: -1, low: 0))),
+             .setLineTrainsInService(line, TrainsInService(peak: 6, offPeak: -1, low: 0), pattern: nil)),
+            (#"{"type": "setLineTrainsInService", "line": 2, "pattern": 1, "trains": {"peak": 1, "offPeak": 0, "low": 0}}"#,
+             .setLineTrainsInService(line, TrainsInService(peak: 1, offPeak: 0, low: 0), pattern: 1)),
+            (#"{"type": "setLineTargetHeadways", "line": 2, "pattern": 0, "targetHeadways": {"peak": 5, "offPeak": null, "low": null}}"#,
+             .setLineTargetHeadways(line, TargetHeadways(peak: 5), pattern: 0)),
+            (#"{"type": "assignTrain", "train": 3, "line": 2, "pattern": -1}"#, .assignTrain(TrainID(rawValue: 3), line, pattern: -1)),
+            // Read as written: whether the calls fit the line is GameCore's decision.
+            (#"{"type": "addLinePattern", "line": 2, "calls": [3, 1]}"#, .addLinePattern(line, calls: [3, 1])),
+            (#"{"type": "removeLinePattern", "line": 2, "pattern": 4}"#, .removeLinePattern(line, pattern: 4)),
             (#"{"type": "setServiceDay", "bands": [{"start": 0, "level": "low"}, {"start": 420, "level": "peak"}]}"#,
              .setServiceDay(ServiceDay(bands: [ServiceDay.Band(start: 0, level: .low), ServiceDay.Band(start: 420, level: .peak)]))),
             (#"{"type": "setServiceDay", "bands": []}"#, .setServiceDay(ServiceDay(bands: []))),
@@ -803,6 +834,8 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"result": "invalidServiceWindow"}"#, .rejected(.invalidServiceWindow)),
             (#"{"result": "invalidTrainsInService"}"#, .rejected(.invalidTrainsInService)),
             (#"{"result": "invalidServiceDay"}"#, .rejected(.invalidServiceDay)),
+            (#"{"result": "invalidLinePattern"}"#, .rejected(.invalidLinePattern)),
+            (#"{"result": "unknownLinePattern", "pattern": 2}"#, .rejected(.unknownLinePattern(2))),
         ]
         for (json, expected) in results {
             XCTAssertEqual(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), expected, json)
@@ -814,13 +847,21 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"observe": {"type": "serviceLevel", "line": 2, "gameMinutes": -5}, "expect": {"level": "closed"}}"#,
              .observe(.serviceLevel(line, at: GameTime(minutes: -5)), expect: .level(nil))),
             (#"{"observe": {"type": "lineJourney", "line": 2}, "expect": {"found": false}}"#,
-             .observe(.lineJourney(line), expect: .journey(nil))),
+             .observe(.lineJourney(line, pattern: nil), expect: .journey(nil))),
+            (#"{"observe": {"type": "lineJourney", "line": 2, "pattern": 0}, "expect": {"found": false}}"#,
+             .observe(.lineJourney(line, pattern: 0), expect: .journey(nil))),
             (#"{"observe": {"type": "lineMaximumTrains", "line": 2}, "expect": {"found": true, "trains": 7}}"#,
-             .observe(.lineMaximumTrains(line), expect: .trains(7))),
+             .observe(.lineMaximumTrains(line, pattern: nil), expect: .trains(7))),
             (#"{"observe": {"type": "lineTrainsInService", "line": 2, "level": "offPeak"}, "expect": {"found": false}}"#,
-             .observe(.lineTrainsInService(line, .offPeak), expect: .trains(nil))),
+             .observe(.lineTrainsInService(line, .offPeak, pattern: nil), expect: .trains(nil))),
             (#"{"observe": {"type": "lineHeadway", "line": 2, "level": "low"}, "expect": {"found": true, "minutes": 14}}"#,
-             .observe(.lineHeadway(line, .low), expect: .minutes(14))),
+             .observe(.lineHeadway(line, .low, pattern: nil), expect: .minutes(14))),
+            (#"{"observe": {"type": "lineHeadway", "line": 2, "pattern": 3, "level": "low"}, "expect": {"found": true, "minutes": 9}}"#,
+             .observe(.lineHeadway(line, .low, pattern: 3), expect: .minutes(9))),
+            (#"{"observe": {"type": "lineSegmentLoads", "line": 2, "level": "peak"}, "expect": {"found": true, "loads": [720, 360]}}"#,
+             .observe(.lineSegmentLoads(line, .peak), expect: .loads([720, 360]))),
+            (#"{"observe": {"type": "lineSegmentLoads", "line": 2, "level": "low"}, "expect": {"found": false}}"#,
+             .observe(.lineSegmentLoads(line, .low), expect: .loads(nil))),
         ]
         for (json, expected) in observations {
             XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
@@ -853,6 +894,15 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "lineTrainsInService", "line": 1, "level": "rush"}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "lineHeadway", "line": 1, "level": "peak"}, "expect": {"found": false, "minutes": 3}}"#,
             #"{"observe": {"type": "lineHeadway", "line": 1, "level": "peak"}, "expect": {"found": true, "trains": 3}}"#,
+            #"{"observe": {"type": "lineHeadway", "line": 1, "pattern": null, "level": "peak"}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "lineSegmentLoads", "line": 1}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "lineSegmentLoads", "line": 1, "level": "peak"}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "lineSegmentLoads", "line": 1, "level": "peak"}, "expect": {"found": true, "trains": 3}}"#,
+            #"{"command": {"type": "assignTrain", "train": 1, "line": 1, "pattern": null}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "addLinePattern", "line": 1}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "addLinePattern", "line": 1, "calls": 2}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "removeLinePattern", "line": 1}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "removeLine", "line": 1}, "expect": {"result": "unknownLinePattern"}}"#,
         ]
         for json in steps {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)

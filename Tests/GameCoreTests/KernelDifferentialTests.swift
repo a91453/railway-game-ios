@@ -49,13 +49,17 @@ final class KernelDifferentialTests: XCTestCase {
         case setLineStops(LineID, [StationID])
         case setLineRate(LineID, Int64)
         case setLineWindow(LineID, ServiceWindow)
-        case setLineTrains(LineID, TrainsInService)
+        case setLineTrains(LineID, TrainsInService, pattern: Int? = nil)
         case setServiceDay(ServiceDay)
         /// Never drawn by ``nextOperation(in:using:)`` or the line campaign;
         /// the dispatch campaign (`LineDispatchPropertyTests`) adds them.
-        case setLineTargets(LineID, TargetHeadways)
-        case assign(TrainID, LineID)
+        case setLineTargets(LineID, TargetHeadways, pattern: Int? = nil)
+        case assign(TrainID, LineID, pattern: Int? = nil)
         case unassign(TrainID)
+        /// Only the pattern campaign (`LinePatternPropertyTests`) draws these,
+        /// and a pattern for the three above.
+        case addPattern(LineID, [Int])
+        case removePattern(LineID, Int)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -84,11 +88,14 @@ final class KernelDifferentialTests: XCTestCase {
             case .setLineStops(let id, let stops): ".setLineStops(\(id.rawValue), \(stops.map(\.rawValue)))"
             case .setLineRate(let id, let rate): ".setLineRate(\(id.rawValue), \(rate))"
             case .setLineWindow(let id, let window): ".setLineWindow(\(id.rawValue), \(window))"
-            case .setLineTrains(let id, let trains): ".setLineTrains(\(id.rawValue), \(trains.peak)/\(trains.offPeak)/\(trains.low))"
+            case .setLineTrains(let id, let trains, let pattern):
+                ".setLineTrains(\(id.rawValue), \(trains.peak)/\(trains.offPeak)/\(trains.low)\(pattern.map { ", pattern \($0)" } ?? ""))"
             case .setServiceDay(let day): ".setServiceDay(\(day.bands.map { "\($0.start):\($0.level)" }))"
-            case .setLineTargets(let id, let targets):
-                ".setLineTargets(\(id.rawValue), \([targets.peak, targets.offPeak, targets.low].map { $0.map(String.init) ?? "-" }.joined(separator: "/")))"
-            case .assign(let id, let line): ".assign(\(id.rawValue), \(line.rawValue))"
+            case .setLineTargets(let id, let targets, let pattern):
+                ".setLineTargets(\(id.rawValue), \([targets.peak, targets.offPeak, targets.low].map { $0.map(String.init) ?? "-" }.joined(separator: "/"))\(pattern.map { ", pattern \($0)" } ?? ""))"
+            case .assign(let id, let line, let pattern): ".assign(\(id.rawValue), \(line.rawValue)\(pattern.map { ", pattern \($0)" } ?? ""))"
+            case .addPattern(let id, let calls): ".addPattern(\(id.rawValue), \(calls))"
+            case .removePattern(let id, let pattern): ".removePattern(\(id.rawValue), \(pattern))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
@@ -284,11 +291,13 @@ final class KernelDifferentialTests: XCTestCase {
             case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
             case .setLineRate(let id, let rate): try world.setLineRate(id, to: rate)
             case .setLineWindow(let id, let window): try world.setLineServiceWindow(id, to: window)
-            case .setLineTrains(let id, let trains): try world.setLineTrainsInService(id, to: trains)
+            case .setLineTrains(let id, let trains, let pattern): try world.setLineTrainsInService(id, to: trains, pattern: pattern)
             case .setServiceDay(let day): try world.setServiceDay(day)
-            case .setLineTargets(let id, let targets): try world.setLineTargetHeadways(id, to: targets)
-            case .assign(let id, let line): try world.assignTrain(id, to: line)
+            case .setLineTargets(let id, let targets, let pattern): try world.setLineTargetHeadways(id, to: targets, pattern: pattern)
+            case .assign(let id, let line, let pattern): try world.assignTrain(id, to: line, pattern: pattern)
             case .unassign(let id): try world.unassignTrain(id)
+            case .addPattern(let id, let calls): try world.addLinePattern(id, calling: calls)
+            case .removePattern(let id, let pattern): try world.removeLinePattern(id, at: pattern)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -338,11 +347,13 @@ final class KernelDifferentialTests: XCTestCase {
         case .setLineStops(let id, let stops): return model.setLineStops(id, stops)
         case .setLineRate(let id, let rate): return model.setLineRate(id, rate)
         case .setLineWindow(let id, let window): return model.setLineWindow(id, window)
-        case .setLineTrains(let id, let trains): return model.setLineTrains(id, trains)
+        case .setLineTrains(let id, let trains, let pattern): return model.setLineTrains(id, trains, pattern: pattern)
         case .setServiceDay(let day): return model.setServiceDay(day)
-        case .setLineTargets(let id, let targets): return model.setLineTargets(id, targets)
-        case .assign(let id, let line): return model.assign(id, to: line)
+        case .setLineTargets(let id, let targets, let pattern): return model.setLineTargets(id, targets, pattern: pattern)
+        case .assign(let id, let line, let pattern): return model.assign(id, to: line, pattern: pattern)
         case .unassign(let id): return model.unassign(id)
+        case .addPattern(let id, let calls): return model.addPattern(id, calls)
+        case .removePattern(let id, let pattern): return model.removePattern(id, pattern)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -411,6 +422,15 @@ final class KernelDifferentialTests: XCTestCase {
                 && world.lines.map { $0.lastDispatch?.minutes } == model.lines.map(\.lastDispatch),
             "lines \(world.lines) vs \(model.lines)"
         )
+        // Decision 24: each line's patterns.
+        check(
+            world.lines.map { $0.patterns.map(\.calls) } == model.lines.map { $0.patterns.map(\.calls) }
+                && world.lines.map { $0.patterns.map(\.trainsInService) } == model.lines.map { $0.patterns.map(\.trainsInService) }
+                && world.lines.map { $0.patterns.map(\.targetHeadways) } == model.lines.map { $0.patterns.map(\.targetHeadways) }
+                && world.lines.map { $0.patterns.map { $0.trains.map(\.rawValue) } } == model.lines.map { $0.patterns.map(\.roster) }
+                && world.lines.map { $0.patterns.map { $0.lastDispatch?.minutes } } == model.lines.map { $0.patterns.map(\.lastDispatch) },
+            "patterns \(world.lines.map(\.patterns)) vs \(model.lines.map(\.patterns))"
+        )
         check(
             world.serviceDay.bands.map(\.start) == model.serviceDay.map(\.start) && world.serviceDay.bands.map(\.level) == model.serviceDay.map(\.level),
             "service day \(world.serviceDay) vs \(model.serviceDay)"
@@ -425,13 +445,25 @@ final class KernelDifferentialTests: XCTestCase {
                     "level of line \(raw) at \(time)"
                 )
             }
-            // The reference drives each line once and derives the rest.
-            let expected = model.lineAnswers(id)
-            check(world.lineJourney(id) == expected.journey, "journey of line \(raw): \(String(describing: world.lineJourney(id))) vs \(String(describing: expected.journey))")
-            check(world.lineMaximumTrains(id) == expected.maximum, "maximum trains of line \(raw)")
-            for level in ServiceLevel.allCases {
-                check(world.lineTrainsInService(id, at: level) == expected.trains[level], "trains of line \(raw) at \(level)")
-                check(world.lineHeadway(id, at: level) == expected.headways[level], "headway of line \(raw) at \(level)")
+            // The reference drives each service once and derives the rest.
+            let patterns = world.line(id: id)?.patterns.count ?? 0
+            let all = model.allLineAnswers(id)
+            let none = ReferenceWorld.LineAnswers(journey: nil, maximum: nil, trains: [:], headways: [:])
+            for pattern in [nil] + (0...patterns).map(Optional.some) {
+                let service = pattern.map { $0 + 1 } ?? 0
+                let expected = all.flatMap { service < $0.services.count ? $0.services[service] : nil } ?? none
+                let name = "line \(raw)\(pattern.map { " pattern \($0)" } ?? "")"
+                let journey = world.lineJourney(id, pattern: pattern)
+                check(journey == expected.journey, "journey of \(name): \(String(describing: journey)) vs \(String(describing: expected.journey))")
+                check(world.lineMaximumTrains(id, pattern: pattern) == expected.maximum, "maximum trains of \(name)")
+                for level in ServiceLevel.allCases {
+                    check(world.lineTrainsInService(id, at: level, pattern: pattern) == expected.trains[level], "trains of \(name) at \(level)")
+                    check(world.lineHeadway(id, at: level, pattern: pattern) == expected.headways[level], "headway of \(name) at \(level)")
+                }
+            }
+            for level in ServiceLevel.allCases where patterns > 0 || raw == 0 {
+                let loads = world.lineSegmentLoads(id, at: level)
+                check(loads == all?.loads[level], "segment loads of line \(raw) at \(level): \(String(describing: loads)) vs \(String(describing: all?.loads[level]))")
             }
         }
         // Derived answers: connectivity (a ring outside the map included),

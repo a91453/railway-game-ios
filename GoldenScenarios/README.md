@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 12`）
+## Schema（`schemaVersion: 13`）
 
-除了每個步驟在 `command` 與 `observe` 之間擇一，所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
+除了每個步驟在 `command` 與 `observe` 之間擇一，以及線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `12` |
+| `schemaVersion` | `13` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -55,7 +55,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - `stop` 是從 0 開始的**時刻表索引**，不是車站 ID（時刻表可以重複同一個車站）。
   - `cycle` 是重複的時刻表已經重新開始的次數，從 0 起；第 `k` 輪的每個時刻是時刻表記錄的時刻加上 `k × minutes`。只跑一次的時刻表永遠是 0。
 - **服務等級**：`"peak"`、`"offPeak"`、`"low"`（尖峰、離峰、低峰）。
-- **線路**：`{ "id", "name", "stops", "rate", "window", "trainsInService", "targetHeadways", "trains", "lastDispatch" }`，九個欄位都必填：
+- **線路**：`{ "id", "name", "stops", "rate", "window", "trainsInService", "targetHeadways", "trains", "lastDispatch", "patterns" }`，十個欄位都必填：
   - `id`：線路 ID，世界依序配發，從 1 開始、失敗的指令不消耗 ID、刪除的線路 ID 不再使用。指令、結果與觀察以 `line` 欄位寫線路 ID。
   - `stops`：依序停靠的車站 ID 陣列。列車從第一站開到最後一站再折返回來。
   - `rate`：計算行程時間用的速度（每分鐘的邏輯單位）。
@@ -64,7 +64,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - `targetHeadways`：`{ "peak", "offPeak", "low" }`，三個 key 都必填；各等級的目標班距（分鐘），沒有目標的等級是 `null`，由 `trainsInService` 決定。
   - `trains`：指派給這條線路的列車 ID，依 ID 遞增；沒有是 `[]`。
   - `lastDispatch`：線路上次從第一站派出列車的遊戲分鐘；從未派車是 `null`。
+  - `patterns`：線路的服務模式陣列，順序就是分配容量的順序；沒有是 `[]`。
   - 指令裡的線路值照原樣讀取、不檢查，是否合法由 GameCore 判定。
+- **服務模式（pattern）**：`{ "calls", "trainsInService", "targetHeadways", "trains", "lastDispatch" }`，五個欄位都必填：
+  - `calls`：停靠的站，是線路 `stops` 的索引（從 0 起）、嚴格遞增；連續的索引是交路，跳過的索引是快車通過的站。
+  - 其他四個欄位的形式與意義和線路的相同，只是屬於這個模式；`lastDispatch` 是它上次從第一個停靠站派車的分鐘。
+  - 模式以在 `patterns` 裡的索引（從 0 起）指定。`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以加上整數的 `pattern`；沒有這個 key 就是線路自己的服務（停靠每一站），不可寫 `null`。
 - **服務日**：`[{ "start", "level" }, ...]`，每一段從一天中的某分鐘開始，到下一段開始為止。
 - **線路行程**：`{ "start", "legs", "roundTripMinutes" }`。`start` 是列車位置（`node`）；`legs` 是 `[{ "from", "to", "route", "minutes" }, ...]`，`from`、`to` 是線路 `stops` 的索引，`route` 是 `[{ "x", "y" }, ...]`。
 
@@ -89,11 +94,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setLineStops` | `line`、`stops` | `setLineStops(_:to:)` |
 | `setLineRate` | `line`、`rate` | `setLineRate(_:to:)` |
 | `setLineServiceWindow` | `line`、`window` | `setLineServiceWindow(_:to:)` |
-| `setLineTrainsInService` | `line`、`trains`（`{ "peak", "offPeak", "low" }`） | `setLineTrainsInService(_:to:)` |
+| `setLineTrainsInService` | `line`、`trains`（`{ "peak", "offPeak", "low" }`），可加 `pattern` | `setLineTrainsInService(_:to:pattern:)` |
 | `setServiceDay` | `bands`（`[{ "start", "level" }, ...]`） | `setServiceDay(_:)` |
-| `setLineTargetHeadways` | `line`、`targetHeadways`（`{ "peak", "offPeak", "low" }`，分鐘或 `null`） | `setLineTargetHeadways(_:to:)` |
-| `assignTrain` | `train`、`line` | `assignTrain(_:to:)` |
+| `setLineTargetHeadways` | `line`、`targetHeadways`（`{ "peak", "offPeak", "low" }`，分鐘或 `null`），可加 `pattern` | `setLineTargetHeadways(_:to:pattern:)` |
+| `assignTrain` | `train`、`line`，可加 `pattern` | `assignTrain(_:to:pattern:)` |
 | `unassignTrain` | `train` | `unassignTrain(_:)` |
+| `addLinePattern` | `line`、`calls`（整數陣列） | `addLinePattern(_:calling:)` |
+| `removeLinePattern` | `line`、`pattern` | `removeLinePattern(_:at:)` |
 | `setSpeed` | `speed` | `setSpeed(_:)` |
 | `pause` | — | `pause()` |
 | `resume` | — | `resume()` |
@@ -135,6 +142,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidHeadway` | — | 某個等級的目標班距不在 2…1440 分鐘 |
 | `trainOnLine` | `train` | 列車屬於一條線路：由線路設定它的時刻表、啟動它的服務，不能手動設定時刻表、啟動或停止服務，也不能再指派一次，要先取回 |
 | `trainNotOnLine` | `train` | 列車不屬於任何線路，沒有可以取回的 |
+| `invalidLinePattern` | — | 服務模式的 `calls` 少於兩個、沒有嚴格遞增，或不是線路的站的索引；或新的站數會讓某個模式停靠超出最後一站 |
+| `unknownLinePattern` | `pattern` | 線路沒有這個索引的服務模式 |
 
 ### 觀察（`observe.type`）
 
@@ -152,10 +161,11 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `timetable` | `train` | `{ "timetable": [{ "station", "arrival", "departure" }, ...] }` | `train(id:)?.timetable` |
 | `execution` | `train` | `{ "execution": { "type", ... } }`（見上面「服務」） | `train(id:)?.execution` |
 | `serviceLevel` | `line`、`gameMinutes` | `{ "level": "peak" }`，停止營運或沒有這條線路時是 `"closed"` | `serviceLevel(of:at:)` |
-| `lineJourney` | `line` | `{ "found": true, "journey": {...} }` 或 `{ "found": false }` | `lineJourney(_:)` |
-| `lineMaximumTrains` | `line` | `{ "found": true, "trains": n }` 或 `{ "found": false }` | `lineMaximumTrains(_:)` |
-| `lineTrainsInService` | `line`、`level` | 與 `lineMaximumTrains` 相同 | `lineTrainsInService(_:at:)` |
-| `lineHeadway` | `line`、`level` | `{ "found": true, "minutes": n }` 或 `{ "found": false }` | `lineHeadway(_:at:)` |
+| `lineJourney` | `line`，可加 `pattern` | `{ "found": true, "journey": {...} }` 或 `{ "found": false }` | `lineJourney(_:pattern:)` |
+| `lineMaximumTrains` | `line`，可加 `pattern` | `{ "found": true, "trains": n }` 或 `{ "found": false }` | `lineMaximumTrains(_:pattern:)` |
+| `lineTrainsInService` | `line`、`level`，可加 `pattern` | 與 `lineMaximumTrains` 相同 | `lineTrainsInService(_:at:pattern:)` |
+| `lineHeadway` | `line`、`level`，可加 `pattern` | `{ "found": true, "minutes": n }` 或 `{ "found": false }` | `lineHeadway(_:at:pattern:)` |
+| `lineSegmentLoads` | `line`、`level` | `{ "found": true, "loads": [n, ...] }` 或 `{ "found": false }` | `lineSegmentLoads(_:at:)` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -225,6 +235,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `lineMaximumTrains`：來回時間 ÷ 2（最短班距 2 分鐘），無條件捨去，至少 1。
 - `lineTrainsInService`：該等級設定的列車數，但不超過 `lineMaximumTrains`。該等級有目標班距時，是來回時間 ÷ 目標班距（無條件進位），同樣不超過 `lineMaximumTrains`。
 - `lineHeadway`：來回時間 ÷ 該等級的列車數，無條件進位；有目標班距時是目標班距，但不短於前者。沒有列車時是 `{ "found": false }`。
+- 服務模式（完整說明見決策 24）：
+  - 模式的行程和線路相同，只是依 `calls` 停靠：從第一個停靠站出發、在最後一個折返；`legs` 的 `from`、`to` 仍是線路 `stops` 的索引。兩端之間的停靠站去回各停 1 分鐘，兩端各 2 分鐘，通過的站不停。
+  - 區段 `i` 是線路第 `i` 站到第 `i + 1` 站，每天每個方向最多 720 班。一個服務以 `⌈1440 ÷ 班距⌉` 佔用它從第一個停靠站到最後一個停靠站之間的每一段。
+  - 各服務依序取得容量：線路自己的服務最先，再依 `patterns` 的順序。每個服務先照上面的規則算出單獨時的列車數，再取不超過它、而且每一段加上前面服務的負載都不超過 720 的最多列車數；一台都放不下時是 0。班距用減少後的列車數重算。
+  - `lineSegmentLoads`：每一段的負載，依區段順序；為 0 的區段在該等級沒有列車經過。
+  - 派車時，每條線路依序處理自己的服務與每個模式；模式的列車從它的第一個停靠站派出，時刻表只列出停靠的車站。
 
 ### 最終狀態
 
@@ -257,4 +273,5 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **9**（Phase 4 Stage P）：新增 `startTrainService`、`stopTrainService` 指令，`trainServiceActive`、`trainServiceNotActive`、`noTimetable`、`trainNotAtFirstStop` 結果，`execution` 觀察，最終狀態每台列車新增必填的 `execution`，以及 `train-service.json`。既有的八個 fixture 把 `schemaVersion` 從 8 改成 9，並為最終狀態的 14 台列車（`build-starter-line.json` 1 台、`station-stop.json` 2 台、`train-movement.json` 3 台、`train-position.json` 4 台、`train-route.json` 2 台、`train-timetable.json` 2 台）加上 `"execution": { "type": "inactive" }`：這些列車從未啟動服務，新購列車沒有服務。它們的指令、結果、觀察、時間、金額、軌道、車站、ID、位置、movement 與時刻表預期值都沒有改變（`train-timetable.json` 裡停在排定車站、時間超過出發時刻仍不動的列車，因為沒有啟動服務，行為不變）。
 - **10**（Phase 4 Stage Q1）：時刻表的每一站新增必填的 `reverse`，`setTrainTimetable` 指令與最終狀態每台列車新增必填的 `repeat`，`waiting`、`travelling` 服務新增必填的 `cycle`，`invalidTimetable` 也涵蓋不合法的週期，以及 `train-repeat.json`。既有的九個 fixture 把 `schemaVersion` 從 9 改成 10，並只加上中性的值：`train-service.json` 與 `train-timetable.json` 裡每個停靠（指令、`timetable` 觀察與最終狀態）加上 `"reverse": false`，22 個 `setTrainTimetable` 指令加上 `"repeat": { "type": "once" }`，最終狀態的 16 台列車加上 `"repeat": { "type": "once" }`，`train-service.json` 裡 15 個 `waiting` / `travelling` 服務（觀察與最終狀態）加上 `"cycle": 0`。這些值就是 Stage Q1 之前唯一的行為（不折返、只跑一次、第 0 輪），所以其他預期值都沒有改變。
 - **11**（Phase 4 Stage Q2a）：新增 `createLine`、`removeLine`、`setLineStops`、`setLineRate`、`setLineServiceWindow`、`setLineTrainsInService`、`setServiceDay` 指令，`unknownLine`、`invalidLineStops`、`invalidLineRate`、`invalidServiceWindow`、`invalidTrainsInService`、`invalidServiceDay` 結果，`serviceLevel`、`lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察，最終狀態必填的 `lines` 與 `serviceDay`，以及 `service-line.json`。既有的十個 fixture 把 `schemaVersion` 從 10 改成 11，並在最終狀態加上 `"lines": []` 與新世界的服務日：它們從未建立線路，也沒有改變服務日。其他預期值都沒有改變。
-- **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，線路必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓線路派車，但只派指派給線路的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條線路加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。讀取端只接受 12。
+- **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，線路必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓線路派車，但只派指派給線路的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條線路加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。
+- **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，線路必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條線路加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。讀取端只接受 13。

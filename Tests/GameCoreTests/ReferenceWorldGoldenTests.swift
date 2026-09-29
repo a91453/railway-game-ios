@@ -81,11 +81,13 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
         case .setLineRate(let id, let rate): error = model.setLineRate(id, rate)
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
-        case .setLineTrainsInService(let id, let trains): error = model.setLineTrains(id, trains)
+        case .setLineTrainsInService(let id, let trains, let pattern): error = model.setLineTrains(id, trains, pattern: pattern)
         case .setServiceDay(let day): error = model.setServiceDay(day)
-        case .setLineTargetHeadways(let id, let headways): error = model.setLineTargets(id, headways)
-        case .assignTrain(let id, let line): error = model.assign(id, to: line)
+        case .setLineTargetHeadways(let id, let headways, let pattern): error = model.setLineTargets(id, headways, pattern: pattern)
+        case .assignTrain(let id, let line, let pattern): error = model.assign(id, to: line, pattern: pattern)
         case .unassignTrain(let id): error = model.unassign(id)
+        case .addLinePattern(let id, let calls): error = model.addPattern(id, calls)
+        case .removeLinePattern(let id, let pattern): error = model.removePattern(id, pattern)
         case .setSpeed(let speed): model.setSpeed(speed)
         case .pause: model.pause()
         case .resume: model.resume()
@@ -121,14 +123,16 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .execution(model.trains.first { $0.id == id.rawValue }.map { ExecutionSummary($0.service?.execution) })
         case .serviceLevel(let id, let time):
             return .level(model.serviceLevel(of: id, at: time))
-        case .lineJourney(let id):
-            return .journey(model.lineJourney(id).map(JourneySummary.init))
-        case .lineMaximumTrains(let id):
-            return .trains(model.lineMaximumTrains(id))
-        case .lineTrainsInService(let id, let level):
-            return .trains(model.lineTrainsInService(id, at: level))
-        case .lineHeadway(let id, let level):
-            return .minutes(model.lineHeadway(id, at: level))
+        case .lineJourney(let id, let pattern):
+            return .journey(model.lineJourney(id, pattern: pattern).map(JourneySummary.init))
+        case .lineMaximumTrains(let id, let pattern):
+            return .trains(model.lineMaximumTrains(id, pattern: pattern))
+        case .lineTrainsInService(let id, let level, let pattern):
+            return .trains(model.lineTrainsInService(id, at: level, pattern: pattern))
+        case .lineHeadway(let id, let level, let pattern):
+            return .minutes(model.lineHeadway(id, at: level, pattern: pattern))
+        case .lineSegmentLoads(let id, let level):
+            return .loads(model.lineSegmentLoads(id, at: level))
         }
     }
 
@@ -136,7 +140,13 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         LineSummary(
             id: line.id, name: line.name, stops: line.stops.map(\.rawValue), rate: line.rate,
             window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService),
-            targetHeadways: TargetHeadwaysSummary(line.targetHeadways), trains: line.roster, lastDispatch: line.lastDispatch
+            targetHeadways: TargetHeadwaysSummary(line.targetHeadways), trains: line.roster, lastDispatch: line.lastDispatch,
+            patterns: line.patterns.map {
+                PatternSummary(
+                    calls: $0.calls, trainsInService: TrainsSummary($0.trainsInService),
+                    targetHeadways: TargetHeadwaysSummary($0.targetHeadways), trains: $0.roster, lastDispatch: $0.lastDispatch
+                )
+            }
         )
     }
 }

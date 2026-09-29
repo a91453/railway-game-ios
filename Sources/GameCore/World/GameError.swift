@@ -94,4 +94,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// The train is not assigned to a line, so there is none to take it
     /// off.
     case trainNotOnLine(TrainID)
+    /// A line's pattern calls at two of the line's stops or more, in the
+    /// line's order (strictly increasing indices into its stops). Also
+    /// thrown when new stops for a line would leave a pattern calling past
+    /// its last stop.
+    case invalidLinePattern
+    /// The line has no pattern at this index.
+    case unknownLinePattern(Int)
 }

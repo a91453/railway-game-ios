@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–Q2b) written a second time, straight
+/// The whole GameCore kernel (Stages I–Q3) written a second time, straight
 /// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
-/// 18–23; the rules summary), for differential testing.
+/// 18–24; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -25,7 +25,10 @@ import GameCore
 ///   + 1` rather than a quotient and a remainder;
 /// - a line's targets are a dictionary by level, a headway is checked by
 ///   subtracting the last dispatch from the minute, and a trip's timetable
-///   is built from dwells looked up per call.
+///   is built from dwells looked up per call;
+/// - a line's patterns (decision 24) take room on each segment by summing
+///   what every earlier service's plan puts there, recomputed per segment,
+///   and find their trains by counting down, not by a binary search.
 ///
 /// Only for small maps: routes cost O(states²).
 struct ReferenceWorld: Equatable {
@@ -82,6 +85,7 @@ struct ReferenceWorld: Equatable {
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
+    /// Decision 24: its patterns.
     struct Line: Equatable {
         var id: Int
         var name: String
@@ -92,11 +96,13 @@ struct ReferenceWorld: Equatable {
         var targets: [ServiceLevel: Int64] = [:]
         var roster: [Int] = []
         var lastDispatch: Int64?
+        var patterns: [Pattern] = []
 
         static func == (lhs: Line, rhs: Line) -> Bool {
             lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.rate == rhs.rate
                 && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
                 && lhs.targets == rhs.targets && lhs.roster == rhs.roster && lhs.lastDispatch == rhs.lastDispatch
+                && lhs.patterns == rhs.patterns
         }
 
         var targetHeadways: TargetHeadways {
@@ -105,6 +111,29 @@ struct ReferenceWorld: Equatable {
 
         var window: ServiceWindow {
             hours.map { .hours(open: $0.open, close: $0.close) } ?? .allDay
+        }
+
+        var trainsInService: TrainsInService {
+            TrainsInService(peak: trains[.peak]!, offPeak: trains[.offPeak]!, low: trains[.low]!)
+        }
+
+        /// Service `k`: the line's own (every stop) for 0, pattern `k - 1`
+        /// after it, as one shape.
+        func service(_ k: Int) -> Pattern {
+            k == 0 ? Pattern(calls: Array(0..<stops.count), trains: trains, targets: targets, roster: roster, lastDispatch: lastDispatch) : patterns[k - 1]
+        }
+    }
+
+    /// Decision 24: a further service of a line.
+    struct Pattern: Equatable {
+        var calls: [Int]
+        var trains: [ServiceLevel: Int] = [.peak: 0, .offPeak: 0, .low: 0]
+        var targets: [ServiceLevel: Int64] = [:]
+        var roster: [Int] = []
+        var lastDispatch: Int64?
+
+        var targetHeadways: TargetHeadways {
+            TargetHeadways(peak: targets[.peak], offPeak: targets[.offPeak], low: targets[.low])
         }
 
         var trainsInService: TrainsInService {

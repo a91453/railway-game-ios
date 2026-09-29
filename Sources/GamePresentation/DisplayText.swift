@@ -194,6 +194,10 @@ extension GameError {
             "Train #\(id.rawValue) runs for a line. Take it off the line first."
         case .trainNotOnLine(let id):
             "Train #\(id.rawValue) is not on a line."
+        case .invalidLinePattern:
+            "A pattern calls at two of its line's stops or more, in the line's order."
+        case .unknownLinePattern(let index):
+            "The line has no pattern #\(index + 1)."
         }
     }
 }
