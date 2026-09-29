@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "description": "Builds a short line between two stations with a branch, then checks the construction and purchase rejections (occupied tiles, out of bounds, empty connections, blank names, removing a non-track tile, insufficient funds) and the order in which those checks apply. Rejected commands must leave the world unchanged, removal is free and not refunded, and failed commands consume no station or train IDs.",
   "initialState": {
     "mapWidth": 12,
@@ -129,10 +129,10 @@
       { "id": 3, "name": "North", "x": 4, "y": 0 }
     ],
     "tracks": [
-      { "x": 2, "y": 3, "connections": ["east", "west"] },
-      { "x": 3, "y": 3, "connections": ["east", "west"] },
-      { "x": 4, "y": 3, "connections": ["east", "south", "west"] },
-      { "x": 5, "y": 3, "connections": ["east", "west"] }
+      { "x": 2, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 3, "connections": ["east", "south", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } }
     ],
     "trains": [
       { "id": 1, "name": "Local 1", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } }

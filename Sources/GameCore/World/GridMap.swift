@@ -104,6 +104,16 @@ extension GridMap: Codable {
                 debugDescription: "Track tiles must have at least one connection."
             )
         }
+        let hasBadTurnout = tiles.contains { tile in
+            if case .turnout(let connections, let stem) = tile { return !GameWorld.isTurnout(connections, stem: stem) }
+            return false
+        }
+        guard !hasBadTurnout else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .tiles, in: container,
+                debugDescription: "A turnout needs three exits or more, its stem among them."
+            )
+        }
         self.width = width
         self.height = height
         self.storage = tiles

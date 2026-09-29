@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 13`）
+## Schema（`schemaVersion: 14`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，以及線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `13` |
+| `schemaVersion` | `14` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -71,6 +71,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 其他四個欄位的形式與意義和線路的相同，只是屬於這個模式；`lastDispatch` 是它上次從第一個停靠站派車的分鐘。
   - 模式以在 `patterns` 裡的索引（從 0 起）指定。`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以加上整數的 `pattern`；沒有這個 key 就是線路自己的服務（停靠每一站），不可寫 `null`。
 - **服務日**：`[{ "start", "level" }, ...]`，每一段從一天中的某分鐘開始，到下一段開始為止。
+- **鐵軌的 layout**：以 `type` 區分：`{ "type": "open" }`（一般鐵軌，每個出口互通）、`{ "type": "turnout", "stem" }`（道岔：stem 接到每條支線，支線只接到 stem）、`{ "type": "crossing" }`（平面交叉：只能直行，四個出口）。
+- **軌道資源**：`{ "type": "node", "x", "y" }`，或 `{ "type": "link", "from": { "x", "y" }, "to": { "x", "y" } }`，`from` 是逐列由北到南、每列由西到東較前面的一格。資源的順序是先所有節點再所有連結，各自依位置排序（見決策 26）。
 - **線路行程**：`{ "start", "legs", "roundTripMinutes" }`。`start` 是列車位置（`node`）；`legs` 是 `[{ "from", "to", "route", "minutes" }, ...]`，`from`、`to` 是線路 `stops` 的索引，`route` 是 `[{ "x", "y" }, ...]`。
 
 ### 指令（`command.type`）
@@ -79,6 +81,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | --- | --- | --- |
 | `buildTrack` | `x`、`y`、`connections` | `buildTrack(at:connections:)` |
 | `removeTrack` | `x`、`y` | `removeTrack(at:)` |
+| `buildTurnout` | `x`、`y`、`connections`、`stem`（方向名稱） | `buildTurnout(at:connections:stem:)` |
+| `buildCrossing` | `x`、`y` | `buildCrossing(at:)` |
 | `buildStation` | `name`、`x`、`y` | `buildStation(named:at:)` |
 | `purchaseTrain` | `name` | `purchaseTrain(named:)` |
 | `placeTrain` | `train`、`position`（`node` 或 `link`） | `placeTrain(_:at:)` |
@@ -166,6 +170,11 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `lineTrainsInService` | `line`、`level`，可加 `pattern` | 與 `lineMaximumTrains` 相同 | `lineTrainsInService(_:at:pattern:)` |
 | `lineHeadway` | `line`、`level`，可加 `pattern` | `{ "found": true, "minutes": n }` 或 `{ "found": false }` | `lineHeadway(_:at:pattern:)` |
 | `lineSegmentLoads` | `line`、`level` | `{ "found": true, "loads": [n, ...] }` 或 `{ "found": false }` | `lineSegmentLoads(_:at:)` |
+| `exits` | `x`、`y`、`heading` | `{ "exits": [{ "x", "y" }, ...] }`，依北、東、南、西 | `exits(from:facing:)` |
+| `occupancy` | `train` | `{ "resources": [資源, ...] }` | `occupiedResources(of:)` |
+| `conflicts` | — | `{ "conflicts": [{ "resource", "trains": [id, ...] }, ...] }` | `occupancyConflicts()` |
+| `trackSections` | — | `{ "sections": [{ "nodes": [{ "x", "y" }, ...], "loop": true / false }, ...] }` | `trackSections()` |
+| `parallelTracks` | `from`、`to`（車站 ID） | `{ "tracks": n }` | `parallelTracks(between:and:)` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -245,7 +254,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 ### 最終狀態
 
 - `stations`：`{ "id", "name", "x", "y" }`，依 ID 遞增。
-- `tracks`：`{ "x", "y", "connections" }`，逐列由北到南、每列由西到東。
+- `tracks`：`{ "x", "y", "connections", "layout" }`，逐列由北到南、每列由西到東；平面交叉的 `connections` 是四個方向。
 - `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution" }`，依 ID 遞增；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」。
 - `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
 - `serviceDay`：服務日（形式見上面「服務日」）。
@@ -274,4 +283,5 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **10**（Phase 4 Stage Q1）：時刻表的每一站新增必填的 `reverse`，`setTrainTimetable` 指令與最終狀態每台列車新增必填的 `repeat`，`waiting`、`travelling` 服務新增必填的 `cycle`，`invalidTimetable` 也涵蓋不合法的週期，以及 `train-repeat.json`。既有的九個 fixture 把 `schemaVersion` 從 9 改成 10，並只加上中性的值：`train-service.json` 與 `train-timetable.json` 裡每個停靠（指令、`timetable` 觀察與最終狀態）加上 `"reverse": false`，22 個 `setTrainTimetable` 指令加上 `"repeat": { "type": "once" }`，最終狀態的 16 台列車加上 `"repeat": { "type": "once" }`，`train-service.json` 裡 15 個 `waiting` / `travelling` 服務（觀察與最終狀態）加上 `"cycle": 0`。這些值就是 Stage Q1 之前唯一的行為（不折返、只跑一次、第 0 輪），所以其他預期值都沒有改變。
 - **11**（Phase 4 Stage Q2a）：新增 `createLine`、`removeLine`、`setLineStops`、`setLineRate`、`setLineServiceWindow`、`setLineTrainsInService`、`setServiceDay` 指令，`unknownLine`、`invalidLineStops`、`invalidLineRate`、`invalidServiceWindow`、`invalidTrainsInService`、`invalidServiceDay` 結果，`serviceLevel`、`lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察，最終狀態必填的 `lines` 與 `serviceDay`，以及 `service-line.json`。既有的十個 fixture 把 `schemaVersion` 從 10 改成 11，並在最終狀態加上 `"lines": []` 與新世界的服務日：它們從未建立線路，也沒有改變服務日。其他預期值都沒有改變。
 - **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，線路必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓線路派車，但只派指派給線路的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條線路加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。
-- **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，線路必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條線路加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。讀取端只接受 13。
+- **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，線路必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條線路加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。
+- **14**（Phase 4.5 Stage S1）：新增 `buildTurnout`、`buildCrossing` 指令，`exits`、`occupancy`、`conflicts`、`trackSections`、`parallelTracks` 觀察，最終狀態每條鐵軌必填的 `layout`，以及 `track-resources.json`。既有的十三個 fixture 把 `schemaVersion` 從 13 改成 14，並為最終狀態的 85 條鐵軌加上 `"layout": { "type": "open" }`：它們都是一般鐵軌，轉向與路徑規則不變。其他預期值都沒有改變。讀取端只接受 14。

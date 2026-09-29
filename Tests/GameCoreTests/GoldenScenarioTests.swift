@@ -227,6 +227,10 @@ final class GoldenScenarioTests: XCTestCase {
         var headwayAnswerCount = 0
         var sharedLoadCount = 0
         var patternAnswerCount = 0
+        var turnoutExitCount = 0
+        var sectionAnswerCount = 0
+        var conflictAnswerCount = 0
+        var doubleTrackCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -274,6 +278,10 @@ final class GoldenScenarioTests: XCTestCase {
                 default:
                     break
                 }
+                if case .exits(let exits) = expect, exits.count > 1 { turnoutExitCount += 1 }
+                if case .sections(let sections) = expect, sections.count > 2 { sectionAnswerCount += 1 }
+                if case .conflicts(let conflicts) = expect, !conflicts.isEmpty { conflictAnswerCount += 1 }
+                if case .tracks(let count) = expect, count >= 2 { doubleTrackCount += 1 }
                 for wrong in Self.wrongAnswers(for: expect) {
                     var changed = committed
                     changed.steps[index] = .observe(observation, expect: wrong)
@@ -296,6 +304,10 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(headwayAnswerCount, 0, "No fixture pins a line's headway")
         XCTAssertGreaterThan(sharedLoadCount, 0, "No fixture pins a line's segments filled by several services")
         XCTAssertGreaterThan(patternAnswerCount, 0, "No fixture observes a pattern")
+        XCTAssertGreaterThan(turnoutExitCount, 0, "No fixture pins exits of more than one tile")
+        XCTAssertGreaterThan(sectionAnswerCount, 0, "No fixture pins three sections or more")
+        XCTAssertGreaterThan(conflictAnswerCount, 0, "No fixture pins a conflict")
+        XCTAssertGreaterThan(doubleTrackCount, 0, "No fixture pins double track")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -391,6 +403,30 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.loads([first + 1] + loads.dropFirst()))
             }
             return wrong
+        case .exits(let exits):
+            var wrong: [ObservationAnswer] = [.exits(exits + [GridPosition(x: 99, y: 99)])]
+            if !exits.isEmpty { wrong.append(.exits(Array(exits.dropLast()))) }
+            if exits.count > 1 { wrong.append(.exits(exits.reversed())) }
+            return wrong
+        case .resources(let resources):
+            var wrong: [ObservationAnswer] = [.resources(resources + [.node(GridPosition(x: 99, y: 99))])]
+            if !resources.isEmpty { wrong.append(.resources([])) }
+            return wrong
+        case .conflicts(let conflicts):
+            var wrong: [ObservationAnswer] = [.conflicts(conflicts + [TrackConflict(resource: .node(GridPosition(x: 99, y: 99)), trains: [])])]
+            if let first = conflicts.first {
+                wrong.append(.conflicts([TrackConflict(resource: first.resource, trains: first.trains.dropLast())] + conflicts.dropFirst()))
+            }
+            return wrong
+        case .sections(let sections):
+            var wrong: [ObservationAnswer] = [.sections(Array(sections.dropLast()))]
+            if let first = sections.first {
+                wrong.append(.sections([TrackSection(nodes: first.nodes.reversed(), isLoop: first.isLoop)] + sections.dropFirst()))
+                wrong.append(.sections([TrackSection(nodes: first.nodes, isLoop: !first.isLoop)] + sections.dropFirst()))
+            }
+            return wrong
+        case .tracks(let count):
+            return [.tracks(count + 1)]
         }
     }
 
@@ -424,7 +460,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 13,
+              "schemaVersion": 14,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -452,8 +488,8 @@ final class GoldenScenarioTests: XCTestCase {
               "expectedFinalState": {
                 "gameMinutes": 0, "speed": "paused", "balance": 0, "stations": [],
                 "tracks": [
-                  { "x": 0, "y": 0, "connections": ["east"] },
-                  { "x": 1, "y": 0, "connections": ["north"] }
+                  { "x": 0, "y": 0, "connections": ["east"], "layout": { "type": "open" } },
+                  { "x": 1, "y": 0, "connections": ["north"], "layout": { "type": "open" } }
                 ],
                 "trains": [],
                 "lines": [],
@@ -474,7 +510,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -865,6 +901,50 @@ final class GoldenScenarioTests: XCTestCase {
         ]
         for (json, expected) in observations {
             XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
+        }
+    }
+
+    func testTrackResourceStepsDecode() throws {
+        let p = { (x: Int, y: Int) in GridPosition(x: x, y: y) }
+        let steps: [(String, GoldenScenario.Step)] = [
+            (#"{"command": {"type": "buildTurnout", "x": 2, "y": 1, "connections": ["east", "west"], "stem": "north"}, "expect": {"result": "ok"}}"#,
+             .command(.buildTurnout(p(2, 1), [.east, .west], stem: .north), expect: .ok)),
+            (#"{"command": {"type": "buildCrossing", "x": 3, "y": 1}, "expect": {"result": "outOfBounds", "x": 3, "y": 1}}"#,
+             .command(.buildCrossing(p(3, 1)), expect: .rejected(.outOfBounds(p(3, 1))))),
+            (#"{"observe": {"type": "exits", "x": 2, "y": 2, "heading": "south"}, "expect": {"exits": [{"x": 3, "y": 2}]}}"#,
+             .observe(.exits(p(2, 2), facing: .south), expect: .exits([p(3, 2)]))),
+            (#"{"observe": {"type": "occupancy", "train": 2}, "expect": {"resources": [{"type": "link", "from": {"x": 1, "y": 0}, "to": {"x": 2, "y": 0}}]}}"#,
+             .observe(.occupancy(TrainID(rawValue: 2)), expect: .resources([.link(p(1, 0), p(2, 0))]))),
+            (#"{"observe": {"type": "conflicts"}, "expect": {"conflicts": [{"resource": {"type": "node", "x": 4, "y": 2}, "trains": [1, 2]}]}}"#,
+             .observe(.conflicts, expect: .conflicts([TrackConflict(resource: .node(p(4, 2)), trains: [TrainID(rawValue: 1), TrainID(rawValue: 2)])]))),
+            (#"{"observe": {"type": "trackSections"}, "expect": {"sections": [{"nodes": [{"x": 0, "y": 0}], "loop": false}]}}"#,
+             .observe(.trackSections, expect: .sections([TrackSection(nodes: [p(0, 0)], isLoop: false)]))),
+            (#"{"observe": {"type": "parallelTracks", "from": 1, "to": 2}, "expect": {"tracks": 2}}"#,
+             .observe(.parallelTracks(StationID(rawValue: 1), StationID(rawValue: 2)), expect: .tracks(2))),
+        ]
+        for (json, expected) in steps {
+            XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
+        }
+        let layouts: [(String, TrackLayout)] = [
+            (#"{"type": "open"}"#, .open), (#"{"type": "crossing"}"#, .crossing), (#"{"type": "turnout", "stem": "east"}"#, .turnout(stem: .east)),
+        ]
+        for (json, expected) in layouts {
+            XCTAssertEqual(try JSONDecoder().decode(LayoutSummary.self, from: Data(json.utf8)).layout, expected, json)
+        }
+        let malformed = [
+            #"{"command": {"type": "buildTurnout", "x": 2, "y": 1, "connections": ["east", "west"]}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "buildTurnout", "x": 2, "y": 1, "connections": ["east", "west"], "stem": "up"}, "expect": {"result": "ok"}}"#,
+            #"{"observe": {"type": "exits", "x": 2, "y": 2}, "expect": {"exits": []}}"#,
+            #"{"observe": {"type": "exits", "x": 2, "y": 2, "heading": "south"}, "expect": {"resources": []}}"#,
+            #"{"observe": {"type": "occupancy", "train": 2}, "expect": {"resources": [{"type": "tile", "x": 1, "y": 0}]}}"#,
+            #"{"observe": {"type": "trackSections"}, "expect": {"sections": [{"nodes": []}]}}"#,
+            #"{"observe": {"type": "parallelTracks", "from": 1}, "expect": {"tracks": 2}}"#,
+        ]
+        for json in malformed {
+            XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
+        }
+        for json in [#"{"type": "open", "stem": "east"}"#, #"{"type": "turnout"}"#, #"{"type": "switch"}"#] {
+            XCTAssertThrowsError(try JSONDecoder().decode(LayoutSummary.self, from: Data(json.utf8)), json)
         }
     }
 

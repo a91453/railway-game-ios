@@ -50,14 +50,17 @@ extension TrackConnections {
 }
 
 extension GameWorld {
-    /// What is on the tile at `position`, such as "Empty", "Track · Straight N–S"
-    /// or "Station · Central".
+    /// What is on the tile at `position`, such as "Empty", "Track · Straight N–S",
+    /// "Turnout · E–S–W, stem W", "Level crossing · N–S over E–W" or
+    /// "Station · Central".
     public func tileSummary(at position: GridPosition) -> String {
         switch map.tile(at: position)?.type {
         case nil: "Outside the map"
         case .empty?: "Empty"
         case .track(let connections)?: "Track · \(connections.summary)"
         case .station(let id)?: "Station · \(station(id: id)?.name ?? "#\(id.rawValue)")"
+        case .turnout(let connections, let stem)?: "Turnout · \(connections.abbreviation), stem \(stem.abbreviation)"
+        case .crossing?: "Level crossing · N–S over E–W"
         }
     }
 }

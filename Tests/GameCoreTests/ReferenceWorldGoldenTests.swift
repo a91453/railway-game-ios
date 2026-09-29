@@ -40,8 +40,17 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 final.stations, name
             )
             let tracks = model.tiles.compactMap { position, tile -> WorldSummary.TrackSummary? in
-                guard case .track(let mask) = tile else { return nil }
-                return WorldSummary.TrackSummary(x: position.x, y: position.y, connections: Directions(TrackConnections(rawValue: mask)))
+                let layout: TrackLayout
+                switch tile {
+                case .track: layout = .open
+                case .turnout(_, let stem): layout = .turnout(stem: stem)
+                case .crossing: layout = .crossing
+                case .station: return nil
+                }
+                let mask = model.mask(at: position)!
+                return WorldSummary.TrackSummary(
+                    x: position.x, y: position.y, connections: Directions(TrackConnections(rawValue: mask)), layout: LayoutSummary(layout)
+                )
             }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
             XCTAssertEqual(tracks, final.tracks, name)
             XCTAssertEqual(
@@ -65,6 +74,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         var error: GameError?
         switch command {
         case .buildTrack(let p, let connections): error = model.buildTrack(at: p, mask: connections.rawValue)
+        case .buildTurnout(let p, let connections, let stem): error = model.buildTurnout(at: p, mask: connections.rawValue, stem: stem)
+        case .buildCrossing(let p): error = model.buildCrossing(at: p)
         case .removeTrack(let p): error = model.removeTrack(at: p)
         case .buildStation(let name, let p): error = model.buildStation(named: name, at: p)
         case .purchaseTrain(let name): error = model.purchaseTrain(named: name)
@@ -133,6 +144,16 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .minutes(model.lineHeadway(id, at: level, pattern: pattern))
         case .lineSegmentLoads(let id, let level):
             return .loads(model.lineSegmentLoads(id, at: level))
+        case .exits(let p, let heading):
+            return .exits(model.neighbors(of: p).filter { model.mayTurn(at: p, facing: heading, to: stepDirection(from: p, to: $0)!) })
+        case .occupancy(let id):
+            return .resources(model.occupiedResources(of: id))
+        case .conflicts:
+            return .conflicts(model.occupancyConflicts())
+        case .trackSections:
+            return .sections(model.trackSections())
+        case .parallelTracks(let a, let b):
+            return .tracks(model.parallelTracks(between: a, and: b))
         }
     }
 

@@ -60,6 +60,10 @@ final class KernelDifferentialTests: XCTestCase {
         /// and a pattern for the three above.
         case addPattern(LineID, [Int])
         case removePattern(LineID, Int)
+        /// Only the track-resource campaign (`TrackResourcePropertyTests`)
+        /// draws these.
+        case buildTurnout(GridPosition, UInt8, TrackDirection)
+        case buildCrossing(GridPosition)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -96,6 +100,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .assign(let id, let line, let pattern): ".assign(\(id.rawValue), \(line.rawValue)\(pattern.map { ", pattern \($0)" } ?? ""))"
             case .addPattern(let id, let calls): ".addPattern(\(id.rawValue), \(calls))"
             case .removePattern(let id, let pattern): ".removePattern(\(id.rawValue), \(pattern))"
+            case .buildTurnout(let p, let mask, let stem): ".buildTurnout(\(p), \(mask), stem \(stem))"
+            case .buildCrossing(let p): ".buildCrossing(\(p))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
@@ -140,6 +146,12 @@ final class KernelDifferentialTests: XCTestCase {
                     let name = "S\(spec.position.x)-\(spec.position.y)"
                     try world.buildStation(named: name, at: spec.position)
                     guard model.buildStation(named: name, at: spec.position) == nil else { throw SetupError.modelRefused }
+                case .turnout(let connections, let stem):
+                    try world.buildTurnout(at: spec.position, connections: connections, stem: stem)
+                    guard model.buildTurnout(at: spec.position, mask: connections.rawValue, stem: stem) == nil else { throw SetupError.modelRefused }
+                case .crossing:
+                    try world.buildCrossing(at: spec.position)
+                    guard model.buildCrossing(at: spec.position) == nil else { throw SetupError.modelRefused }
                 }
             }
             return (world, model)
@@ -298,6 +310,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .unassign(let id): try world.unassignTrain(id)
             case .addPattern(let id, let calls): try world.addLinePattern(id, calling: calls)
             case .removePattern(let id, let pattern): try world.removeLinePattern(id, at: pattern)
+            case .buildTurnout(let p, let mask, let stem): try world.buildTurnout(at: p, connections: TrackConnections(rawValue: mask), stem: stem)
+            case .buildCrossing(let p): try world.buildCrossing(at: p)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -354,6 +368,8 @@ final class KernelDifferentialTests: XCTestCase {
         case .unassign(let id): return model.unassign(id)
         case .addPattern(let id, let calls): return model.addPattern(id, calls)
         case .removePattern(let id, let pattern): return model.removePattern(id, pattern)
+        case .buildTurnout(let p, let mask, let stem): return model.buildTurnout(at: p, mask: mask, stem: stem)
+        case .buildCrossing(let p): return model.buildCrossing(at: p)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -382,6 +398,8 @@ final class KernelDifferentialTests: XCTestCase {
             case nil: .empty
             case .track(let mask)?: .track(connections: TrackConnections(rawValue: mask))
             case .station(let id)?: .station(id: StationID(rawValue: id))
+            case .turnout(let mask, let stem)?: .turnout(connections: TrackConnections(rawValue: mask), stem: stem)
+            case .crossing?: .crossing
             }
             check(tile.type == expected, "tile \(tile.position): \(tile.type) vs \(expected)")
         }

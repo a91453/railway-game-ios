@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "description": "Route finding on a line a(1,3)-b-c(3,3)-d(4,3) with a loop c-f(3,2)-e(4,2)-d, a separate square S(1,5)-N(1,4)-D(2,4)-E(2,5), an isolated track (6,5) and a station east of d. A route is the fewest links from the node ahead of the train (its node, or the end of its link) to a track tile, never turning straight back; among equally short routes the one whose exit directions come first in north, east, south, west order. Checks: a direct route, the 7-link loop route to a tile behind the train, no route when facing a dead end, routes from a link, the empty route when the node ahead is the destination, no route to a station, empty, off-map or unreachable tile or from an invalid start, the north-first tie-break and the heading ruling it out; then trains follow the routes as continuations, and a train reversed at a dead end gets a route again.",
   "initialState": {
     "mapWidth": 8,
@@ -199,17 +199,17 @@
       { "id": 1, "name": "Yard", "x": 5, "y": 3 }
     ],
     "tracks": [
-      { "x": 3, "y": 2, "connections": ["east", "south"] },
-      { "x": 4, "y": 2, "connections": ["south", "west"] },
-      { "x": 1, "y": 3, "connections": ["east"] },
-      { "x": 2, "y": 3, "connections": ["east", "west"] },
-      { "x": 3, "y": 3, "connections": ["north", "east", "west"] },
-      { "x": 4, "y": 3, "connections": ["north", "west"] },
-      { "x": 1, "y": 4, "connections": ["east", "south"] },
-      { "x": 2, "y": 4, "connections": ["south", "west"] },
-      { "x": 1, "y": 5, "connections": ["north", "east"] },
-      { "x": 2, "y": 5, "connections": ["north", "west"] },
-      { "x": 6, "y": 5, "connections": ["north"] }
+      { "x": 3, "y": 2, "connections": ["east", "south"], "layout": { "type": "open" } },
+      { "x": 4, "y": 2, "connections": ["south", "west"], "layout": { "type": "open" } },
+      { "x": 1, "y": 3, "connections": ["east"], "layout": { "type": "open" } },
+      { "x": 2, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 3, "connections": ["north", "east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 3, "connections": ["north", "west"], "layout": { "type": "open" } },
+      { "x": 1, "y": 4, "connections": ["east", "south"], "layout": { "type": "open" } },
+      { "x": 2, "y": 4, "connections": ["south", "west"], "layout": { "type": "open" } },
+      { "x": 1, "y": 5, "connections": ["north", "east"], "layout": { "type": "open" } },
+      { "x": 2, "y": 5, "connections": ["north", "west"], "layout": { "type": "open" } },
+      { "x": 6, "y": 5, "connections": ["north"], "layout": { "type": "open" } }
     ],
     "trains": [
       { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 4, "y": 3, "heading": "east" }, "movement": { "rate": 7168, "continuation": [], "cursor": 0 }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" } },

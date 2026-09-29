@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 13
+    static let schemaVersion = 14
 
     var description: String
     var initialState: InitialState
@@ -143,7 +143,7 @@ extension GoldenScenario.Step: Decodable {
 
     fileprivate enum AnswerKeys: String, CodingKey, CaseIterable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes, loads
+        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -226,6 +226,21 @@ extension GoldenScenario.Step: Decodable {
             case .lineSegmentLoads:
                 try requireOnly([.found, .loads], answering: "lineSegmentLoads")
                 self = try .observe(observation, expect: .loads(Self.found(expect, .loads, [Int].self)))
+            case .exits:
+                try requireOnly([.exits], answering: "exits")
+                self = try .observe(observation, expect: .exits(expect.decode([PositionSummary].self, forKey: .exits).map(\.position)))
+            case .occupancy:
+                try requireOnly([.resources], answering: "occupancy")
+                self = try .observe(observation, expect: .resources(expect.decode([ResourceSummary].self, forKey: .resources).map(\.resource)))
+            case .conflicts:
+                try requireOnly([.conflicts], answering: "conflicts")
+                self = try .observe(observation, expect: .conflicts(expect.decode([ConflictSummary].self, forKey: .conflicts).map(\.conflict)))
+            case .trackSections:
+                try requireOnly([.sections], answering: "trackSections")
+                self = try .observe(observation, expect: .sections(expect.decode([SectionSummary].self, forKey: .sections).map(\.section)))
+            case .parallelTracks:
+                try requireOnly([.tracks], answering: "parallelTracks")
+                self = try .observe(observation, expect: .tracks(expect.decode(Int.self, forKey: .tracks)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -259,6 +274,8 @@ extension GoldenScenario.Step {
 /// A `GameWorld` command as a scenario step, tagged by `"type"`.
 enum ScenarioCommand: Equatable {
     case buildTrack(GridPosition, TrackConnections)
+    case buildTurnout(GridPosition, TrackConnections, stem: TrackDirection)
+    case buildCrossing(GridPosition)
     case removeTrack(GridPosition)
     case buildStation(name: String, GridPosition)
     case purchaseTrain(name: String)
@@ -293,6 +310,10 @@ enum ScenarioCommand: Equatable {
             switch self {
             case .buildTrack(let position, let connections):
                 try world.buildTrack(at: position, connections: connections)
+            case .buildTurnout(let position, let connections, let stem):
+                try world.buildTurnout(at: position, connections: connections, stem: stem)
+            case .buildCrossing(let position):
+                try world.buildCrossing(at: position)
             case .removeTrack(let position):
                 try world.removeTrack(at: position)
             case .buildStation(let name, let position):
@@ -358,7 +379,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands, targetHeadways, pattern, calls
+        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem
     }
 
     init(from decoder: any Decoder) throws {
@@ -368,6 +389,13 @@ extension ScenarioCommand: Decodable {
         case "buildTrack":
             let connections = try container.decode(Directions.self, forKey: .connections)
             self = try .buildTrack(container.decodePosition(x: .x, y: .y), connections.connections)
+        case "buildTurnout":
+            // Read as written: whether the exits make a turnout is GameCore's decision.
+            let connections = try container.decode(Directions.self, forKey: .connections)
+            let stem = try container.decode(DirectionName.self, forKey: .stem).direction
+            self = try .buildTurnout(container.decodePosition(x: .x, y: .y), connections.connections, stem: stem)
+        case "buildCrossing":
+            self = try .buildCrossing(container.decodePosition(x: .x, y: .y))
         case "removeTrack":
             self = try .removeTrack(container.decodePosition(x: .x, y: .y))
         case "buildStation":
@@ -674,6 +702,11 @@ enum ScenarioObservation: Equatable {
     case lineTrainsInService(LineID, ServiceLevel, pattern: Int?)
     case lineHeadway(LineID, ServiceLevel, pattern: Int?)
     case lineSegmentLoads(LineID, ServiceLevel)
+    case exits(GridPosition, facing: TrackDirection)
+    case occupancy(TrainID)
+    case conflicts
+    case trackSections
+    case parallelTracks(StationID, StationID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -707,13 +740,23 @@ enum ScenarioObservation: Equatable {
             .minutes(world.lineHeadway(id, at: level, pattern: pattern))
         case .lineSegmentLoads(let id, let level):
             .loads(world.lineSegmentLoads(id, at: level))
+        case .exits(let position, let heading):
+            .exits(world.exits(from: position, facing: heading))
+        case .occupancy(let id):
+            .resources(world.occupiedResources(of: id))
+        case .conflicts:
+            .conflicts(world.occupancyConflicts())
+        case .trackSections:
+            .sections(world.trackSections())
+        case .parallelTracks(let a, let b):
+            .tracks(world.parallelTracks(between: a, and: b))
         }
     }
 }
 
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, from, to, train, station, line, gameMinutes, level, pattern
+        case type, x, y, from, to, train, station, line, gameMinutes, level, pattern, heading
     }
 
     init(from decoder: any Decoder) throws {
@@ -764,6 +807,19 @@ extension ScenarioObservation: Decodable {
             self = try .lineHeadway(container.decodeLine(forKey: .line), level, pattern: container.decodePattern(forKey: .pattern))
         case "lineSegmentLoads":
             self = try .lineSegmentLoads(container.decodeLine(forKey: .line), container.decode(ServiceLevel.self, forKey: .level))
+        case "exits":
+            let heading = try container.decode(DirectionName.self, forKey: .heading).direction
+            self = try .exits(container.decodePosition(x: .x, y: .y), facing: heading)
+        case "occupancy":
+            self = try .occupancy(container.decodeTrain(forKey: .train))
+        case "conflicts":
+            self = .conflicts
+        case "trackSections":
+            self = .trackSections
+        case "parallelTracks":
+            self = try .parallelTracks(
+                StationID(rawValue: container.decode(Int.self, forKey: .from)), StationID(rawValue: container.decode(Int.self, forKey: .to))
+            )
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -784,7 +840,10 @@ extension ScenarioObservation: Decodable {
 /// `{"found": false}` for how many trains it can or does run, and
 /// `{"found": true, "minutes": n}` / `{"found": false}` for its headway, and
 /// `{"found": true, "loads": [n, ...]}` / `{"found": false}` for the load on
-/// each of its segments. A
+/// each of its segments; and for track resources `{"exits": [{"x", "y"},
+/// ...]}`, `{"resources": [...]}` for what a train occupies, `{"conflicts":
+/// [{"resource", "trains"}, ...]}`, `{"sections": [{"nodes", "loop"}, ...]}`
+/// and `{"tracks": n}` for the parallel tracks between two stations. A
 /// train the world does not have answers `{}` to `train`, `timetable` and
 /// `execution`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
@@ -801,12 +860,17 @@ enum ObservationAnswer: Equatable {
     case trains(Int?)
     case minutes(Int64?)
     case loads([Int]?)
+    case exits([GridPosition])
+    case resources([TrackResource])
+    case conflicts([TrackConflict])
+    case sections([TrackSection])
+    case tracks(Int)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
-        case level, journey, trains, minutes, loads
+        case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -854,6 +918,16 @@ extension ObservationAnswer: Encodable {
             try container.encode(loads, forKey: .loads)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil):
             try container.encode(false, forKey: .found)
+        case .exits(let positions):
+            try container.encode(positions.map(PositionSummary.init), forKey: .exits)
+        case .resources(let resources):
+            try container.encode(resources.map(ResourceSummary.init), forKey: .resources)
+        case .conflicts(let conflicts):
+            try container.encode(conflicts.map(ConflictSummary.init), forKey: .conflicts)
+        case .sections(let sections):
+            try container.encode(sections.map(SectionSummary.init), forKey: .sections)
+        case .tracks(let count):
+            try container.encode(count, forKey: .tracks)
         }
     }
 }
@@ -919,6 +993,7 @@ struct WorldSummary: Codable, Equatable {
         var x: Int
         var y: Int
         var connections: Directions
+        var layout: LayoutSummary
     }
 
     struct TrainSummary: Codable, Equatable {
@@ -939,7 +1014,7 @@ struct WorldSummary: Codable, Equatable {
             .map { StationSummary(id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y) }
             .sorted { $0.id < $1.id }
         tracks = world.tracks
-            .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections)) }
+            .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections), layout: LayoutSummary($0.layout)) }
             .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
         trains = world.trains
             .map {
@@ -1653,4 +1728,148 @@ private func compactJSON(_ value: some Encodable) -> String {
     encoder.outputFormatting = [.sortedKeys]
     guard let data = try? encoder.encode(value) else { return "\(value)" }
     return String(decoding: data, as: UTF8.self)
+}
+
+// MARK: - Track resources (schema 14)
+
+/// A track piece's layout as a fixture value, tagged by `"type"`:
+/// `{"type": "open"}`, `{"type": "turnout", "stem"}` or `{"type":
+/// "crossing"}` (see `TrackLayout`). A field that belongs to another type is
+/// rejected.
+struct LayoutSummary: Codable, Equatable {
+    var layout: TrackLayout
+
+    init(_ layout: TrackLayout) {
+        self.layout = layout
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, stem
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "open", "crossing":
+            guard !container.contains(.stem) else {
+                throw DecodingError.dataCorruptedError(forKey: .stem, in: container, debugDescription: "Only a turnout has a stem.")
+            }
+            layout = type == "open" ? .open : .crossing
+        case "turnout":
+            layout = .turnout(stem: try container.decode(DirectionName.self, forKey: .stem).direction)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown track layout \"\(type)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch layout {
+        case .open:
+            try container.encode("open", forKey: .type)
+        case .turnout(let stem):
+            try container.encode("turnout", forKey: .type)
+            try container.encode(DirectionName(stem), forKey: .stem)
+        case .crossing:
+            try container.encode("crossing", forKey: .type)
+        }
+    }
+}
+
+/// A track resource as a fixture value: `{"type": "node", "x", "y"}` or
+/// `{"type": "link", "from": {"x", "y"}, "to": {"x", "y"}}`, `from` first
+/// in row-major order (see `TrackResource`).
+struct ResourceSummary: Codable, Equatable {
+    var resource: TrackResource
+
+    init(_ resource: TrackResource) {
+        self.resource = resource
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, x, y, from, to
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(String.self, forKey: .type) {
+        case "node":
+            resource = .node(try GridPosition(x: container.decode(Int.self, forKey: .x), y: container.decode(Int.self, forKey: .y)))
+        case "link":
+            resource = .link(
+                try container.decode(PositionSummary.self, forKey: .from).position, try container.decode(PositionSummary.self, forKey: .to).position
+            )
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "A resource is a node or a link.")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch resource {
+        case .node(let position):
+            try container.encode("node", forKey: .type)
+            try container.encode(position.x, forKey: .x)
+            try container.encode(position.y, forKey: .y)
+        case .link(let from, let to):
+            try container.encode("link", forKey: .type)
+            try container.encode(PositionSummary(from), forKey: .from)
+            try container.encode(PositionSummary(to), forKey: .to)
+        }
+    }
+}
+
+/// `{"resource", "trains": [id, ...]}` (see `TrackConflict`).
+struct ConflictSummary: Codable, Equatable {
+    var conflict: TrackConflict
+
+    init(_ conflict: TrackConflict) {
+        self.conflict = conflict
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case resource, trains
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        conflict = TrackConflict(
+            resource: try container.decode(ResourceSummary.self, forKey: .resource).resource,
+            trains: try container.decode([Int].self, forKey: .trains).map(TrainID.init(rawValue:))
+        )
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(ResourceSummary(conflict.resource), forKey: .resource)
+        try container.encode(conflict.trains.map(\.rawValue), forKey: .trains)
+    }
+}
+
+/// `{"nodes": [{"x", "y"}, ...], "loop": true | false}` (see `TrackSection`).
+struct SectionSummary: Codable, Equatable {
+    var section: TrackSection
+
+    init(_ section: TrackSection) {
+        self.section = section
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case nodes, loop
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        section = TrackSection(
+            nodes: try container.decode([PositionSummary].self, forKey: .nodes).map(\.position),
+            isLoop: try container.decode(Bool.self, forKey: .loop)
+        )
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(section.nodes.map(PositionSummary.init), forKey: .nodes)
+        try container.encode(section.isLoop, forKey: .loop)
+    }
 }

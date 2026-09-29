@@ -632,12 +632,43 @@ Stage R 讓玩家在 App 裡看到並操作 Stage O–Q3 的時刻表、服務�
 - **驗證**：`LineSessionTests` 以手算的文字與世界比較驗證推導與每個 session 指令；`MapScaleTests` 驗證細節分級。SwiftUI 畫面只能在 macOS CI（`ios-build.yml`）編譯與建置，無法在 Linux 驗證。
 - **留給之後**：逐站編輯時刻表的畫面、班次預覽的時刻列表、拖曳時隱藏覆蓋層。
 
+### 26. 軌道資源：道岔、平面交叉、佔用、區段與股道數（Phase 4.5 Stage S1）
+
+Stage S1 讓鐵軌成為列車可以佔用的資源，並補上真實道岔的轉向規則。概念參考真實時刻表研究的「實體鐵路層」（[TIMETABLE_DATA_STUDY.md](TIMETABLE_DATA_STUDY.md)）：路網由節點與邊組成、道岔不能從一支線倒車轉進另一支線、平面交叉只能直行、每段邊是一個資源、單雙線由平行的正線判定。
+
+- **新的鐵軌種類**（`TileType` 新增兩個 case，`TrackLayout` 描述轉向規則）
+  - `turnout(connections:stem:)`：三個以上的出口，其中一個是 `stem`。從 stem 可以走到任一支線，從支線只能走到 stem，支線之間不互通。四個出口時是三向道岔。
+  - `crossing`：四個出口，每個出口只接到正對面：兩條直線交叉而不相接。
+  - 原本的 `track(connections:)` 就是 `TrackLayout.open`：每個出口都接到其他出口（只禁止原地掉頭）。**既有的鐵軌、存檔、路徑與 golden 值都不變。**
+  - `buildTurnout(at:connections:stem:)`：`invalidTrackConnections`（少於三個出口、有四個方向以外的位元、或 stem 不在出口中）→ `outOfBounds` → `tileOccupied` → `insufficientFunds`；`buildCrossing(at:)`：`outOfBounds` → `tileOccupied` → `insufficientFunds`。兩者都收鐵軌的費用，並以 `removeTrack` 拆除。
+  - `Track` 新增 `layout`；`track(at:)`、`tracks` 與相接的判定把三種都當成鐵軌。
+- **轉向規則**：`exits(from:facing:)` 回傳列車在某節點、朝某方向時可以前往的相接格，依北、東、南、西排列。規則是：不能原地掉頭，而且該格的 layout 要允許「從列車身後的那一邊進來、從那個出口出去」。列車身後不是該格的出口時（例如放置時朝向沒有出口的一側），不套用 layout 的規則。
+  - 路徑搜尋（`route(from:to:)`、`route(from:toStation:)`）、`setTrainContinuation` 的檢查與移動（`TrainMovement.travel`）都改用同一條規則；對 `open` 的鐵軌，答案和之前完全相同。
+  - 列車沿著 continuation 前進時，遇到不允許的轉向就停在該節點等待，和前方鐵軌被拆掉時相同（決策 15）。
+- **佔用資源**（推導，不存檔）
+  - `TrackResource`：`node`（鐵軌格；平面交叉是一格，兩個方向共用它）或 `link`（相鄰兩格之間的連結，較北、同列較西的格在前）。
+  - `occupiedResources(of:)`：列車站在的格，或所在的連結。列車還沒有長度（Stage S2），所以每台列車佔用一個資源。
+  - `occupancyConflicts()`：兩台以上列車佔用同一資源的清單。列車之間仍然互不阻擋，這只是唯讀的查詢，給 Phase 4.6 的進路預約與 movement authority 使用。
+- **區段**：`trackSections()`。區段是兩個分岔點之間的一串連結，內部的格都是只接兩格的一般鐵軌；分岔點是道岔、平面交叉，或相接格數不是 2 的一般鐵軌（包括端點）。每條連結恰好屬於一個區段。沒有分岔點的環狀線是一個 `isLoop` 的區段。順序見 API 文件，只由地圖決定。
+- **股道數**：`parallelTracks(between:and:)` 是兩站月台之間不共用任何連結的路徑最多幾條（最大流，每條連結容量 1），忽略轉向規則與列車：0 是不相連，1 是單線，2 以上是雙線或更多。`lineTrackCounts(_:)` 回傳線路相鄰兩站之間的股道數，Stage V 修正線路容量時使用（決策 22 的已知限制）。
+- **存檔**：`TileType` 的新 case 以既有的方式編碼（`{"turnout": {"connections", "stem"}}`、`{"crossing": {}}`），沒有新種類的存檔逐位元不變。地圖解碼拒絕不合規則的道岔。
+- **Golden scenarios**：schema v14 新增 `buildTurnout`、`buildCrossing` 指令，`exits`、`occupancy`、`conflicts`、`trackSections`、`parallelTracks` 觀察，最終狀態的鐵軌必填 `layout`，以及手算的 `track-resources.json`。既有的 13 個 fixture 把版本改成 14，85 條鐵軌加上中性的 `"layout": { "type": "open" }`。
+- **驗證**
+  - `TrackResourceTests` 以手算的預期值驗證：建造的錯誤順序與費用、道岔與平面交叉的轉向、路徑與 continuation、改成道岔後停在道岔等待的列車、佔用與衝突、區段（包括環狀線）、股道數，以及存檔與拒絕。
+  - `TrackResourcePropertyTests`（`track.resources`）：把產生的路網中的分岔隨機改成道岔或平面交叉，讓列車穿過它們，同時在 GameCore 與 `ReferenceWorld` 上執行，每步比較所有狀態，以及每格每個方向的出口、佔用、衝突、區段與每對車站的股道數。`ReferenceWorld` 另外寫成：轉向規則是允許的（進、出）配對表，區段由連結的 union-find 得到，股道數用深度優先的增廣路徑。另外檢查每條連結恰好在一個區段、區段內部都是一般鐵軌。
+  - `SaveMutationTests` 新增 `save.trackMutation`。
+  - 刻意把道岔改成支線互通時，campaign 在前幾個 case 就失敗（驗證後還原）。
+  - Stage I–Q3 的 property digest 在修改前後相同。
+- **GamePresentation / App**：格子說明加上道岔與平面交叉；地圖畫出道岔（在 stem 那一側加一條橫槓）與平面交叉（中央一個方塊，兩條直線不相接）。建造道岔的畫面留待之後。
+- **本 Stage 不做**：阻擋、進路預約與 movement authority（Phase 4.6）、列車長度與月台（S2）、依股道數修正線路容量（Stage V）、建造道岔與平面交叉的畫面。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
 - 鋪軌與建站只能在空格；車站不能與鐵軌重疊。
 - 鐵軌的連接方向至少一個、只能是北、東、南、西；鋪設時不要求與鄰格相接。
 - 兩格鐵軌只有在相鄰且各自有朝向對方的出口時才相接；車站不是鐵軌（決策 10）。
+- 鐵軌分為一般鐵軌、道岔與平面交叉。一般鐵軌每個出口都互通（只禁止原地掉頭）；道岔的 stem 接到每條支線，支線只接到 stem；平面交叉只能直行。路徑、continuation 與移動都遵守同一條轉向規則（決策 26）。
 - 拆軌只接受鐵軌格；空格與車站會被拒絕。有列車停在該格、或以該格為所在連結的一端時也會被拒絕（`trackInUse`，決策 14）。拆除免費且**不退款**。
 - 新購列車未放置。列車可以放在鐵軌格的中心（任何朝向），或兩格相接鐵軌之間 `0 < offset < 1024` 的位置；放置、取下、反向都免費。
 - 已放置的列車以非負整數 rate（每遊戲分鐘的邏輯單位）沿明確的 continuation 移動；沒有 continuation 時只走到目前連結的端點。前方被拆的鐵軌讓列車在最後一個可達節點等待，補回後自動續行，等待的距離不累積（決策 15）。

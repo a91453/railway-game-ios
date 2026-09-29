@@ -38,6 +38,17 @@ enum TileArt {
                 drawStation(in: rect, context: context)
             case (.station, .overview):
                 context.fill(Path(rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.1)), with: .color(Palette.station))
+            case (.turnout(let connections, let stem), .full):
+                drawTrack(connections, in: rect, context: context)
+                drawStemMark(stem, in: rect, context: context)
+            case (.turnout(let connections, _), .overview):
+                drawTrackLine(connections, in: rect, context: context)
+            case (.crossing, .full):
+                drawTrack([.north, .south], in: rect, context: context)
+                drawTrack([.east, .west], in: rect, context: context)
+                drawCrossingMark(in: rect, context: context)
+            case (.crossing, .overview):
+                drawTrackLine([.north, .east, .south, .west], in: rect, context: context)
             }
         }
 
@@ -106,6 +117,35 @@ enum TileArt {
             }
             context.stroke(bar, with: .color(Palette.rail), style: StrokeStyle(lineWidth: railWidth * 1.4, lineCap: .round))
         }
+    }
+
+    /// A turnout's stem: a short bar across the rails at the stem's edge,
+    /// so the piece is told apart from a plain junction by shape.
+    static func drawStemMark(_ stem: TrackDirection, in rect: CGRect, context: GraphicsContext) {
+        let edge = edgeMidpoint(stem, of: rect)
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        // A third of the way from the edge toward the centre.
+        let at = CGPoint(x: edge.x + (center.x - edge.x) / 3, y: edge.y + (center.y - edge.y) / 3)
+        let half = rect.width * 0.2
+        var bar = Path()
+        switch stem {
+        case .north, .south:
+            bar.move(to: CGPoint(x: at.x - half, y: at.y))
+            bar.addLine(to: CGPoint(x: at.x + half, y: at.y))
+        case .east, .west:
+            bar.move(to: CGPoint(x: at.x, y: at.y - half))
+            bar.addLine(to: CGPoint(x: at.x, y: at.y + half))
+        }
+        context.stroke(bar, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1.5, rect.width * 0.08), lineCap: .round))
+    }
+
+    /// A crossing: an open square in the middle, where the two tracks pass
+    /// over each other without joining.
+    static func drawCrossingMark(in rect: CGRect, context: GraphicsContext) {
+        let side = rect.width * 0.3
+        let square = CGRect(x: rect.midX - side / 2, y: rect.midY - side / 2, width: side, height: side)
+        context.fill(Path(square), with: .color(Palette.ballast))
+        context.stroke(Path(square), with: .color(Palette.rail), lineWidth: max(1, rect.width * 0.05))
     }
 
     /// Track as one thin line along its connections, for the overview.

@@ -29,6 +29,11 @@ final class DisplayTextTests: XCTestCase {
         XCTAssertEqual(world.tileSummary(at: GridPosition(x: 1, y: 0)), "Track · Straight E–W")
         XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0)), "Station · Central")
         XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0)), "Outside the map")
+
+        try world.buildTurnout(at: GridPosition(x: 3, y: 1), connections: [.east, .south, .west], stem: .west)
+        try world.buildCrossing(at: GridPosition(x: 4, y: 1))
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 3, y: 1)), "Turnout · E–S–W, stem W")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 4, y: 1)), "Level crossing · N–S over E–W")
     }
 
     func testNetworkSummaryCountsStationsAndTrackTiles() throws {
