@@ -98,4 +98,26 @@ public enum MapScale {
     private static func step(from start: Int, to end: Int) -> Double {
         end > start ? 1 : end < start ? -1 : 0
     }
+
+    /// Below this tile size the map is drawn as an overview (see
+    /// ``detail(forTileSize:)``).
+    public static let overviewBelow = 20.0
+
+    /// How much of the map to draw at `tileSize` (Stage R's levels of
+    /// detail): ``MapDetail/overview`` for small tiles, where only the lines
+    /// of track, the stations as marks and the trains stay readable, and
+    /// ``MapDetail/full`` otherwise.
+    public static func detail(forTileSize tileSize: Double) -> MapDetail {
+        tileSize < overviewBelow ? .overview : .full
+    }
+}
+
+/// How much of the map is drawn. Presentation only.
+public enum MapDetail: Hashable, Sendable {
+    /// Track as thin lines, stations as plain marks, trains; no grid, no
+    /// rail detail and no station symbols.
+    case overview
+    /// Everything: grid, ballast and rails, buffer stops, station badges
+    /// with their symbol, and trains.
+    case full
 }
