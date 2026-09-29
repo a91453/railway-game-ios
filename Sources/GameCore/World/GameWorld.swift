@@ -259,7 +259,7 @@ public struct GameWorld: Equatable, Sendable {
             if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
             return train.trailEdges.contains(id)
         }) else { throw .trackEdgeInUse(id) }
-        guard !stations.contains(where: { $0.trackPlatforms.contains { $0.edge == id } }) else { throw .trackEdgeHasPlatform(id) }
+        guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
 
         network.removeEdge(id)
     }
@@ -276,12 +276,13 @@ public struct GameWorld: Equatable, Sendable {
         network.removeNode(id)
     }
 
-    /// Adds a platform to station `id` along edge `edge` of the track
-    /// network, from `start` to `end` measured from the edge's `from` node
+    /// Adds a platform to the railway network for station `id`, along edge
+    /// `edge` from `start` to `end` measured from the edge's `from` node
     /// (Phase 4.5 Stage S4). Free: the station has been paid for. A station
-    /// may have platforms at different levels (surface, elevated,
-    /// underground); each platform's level is its edge's height and
-    /// structure there.
+    /// may have any number of platforms, straight or curved, at different
+    /// levels (surface, elevated, underground); each platform's level is its
+    /// edge's height and structure there. Its ends cut the edge's resource
+    /// spans (see ``trackSpans(of:)``).
     ///
     /// The stretch must lie within the edge (`0 <= start < end <= length`),
     /// be level (the edge's height at `start` and at `end` is the same, and
@@ -292,16 +293,14 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/unknownTrackEdge(_:)`` (a grid link has its own
     ///   platforms); or ``GameError/invalidPlatform``.
     public mutating func addTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64, to end: Int64) throws(GameError) {
-        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        guard station(id: id) != nil else { throw .unknownStation(id) }
         guard network.edge(edge) != nil else { throw .unknownTrackEdge(edge) }
-        let platform = TrackPlatform(edge: edge, start: start, end: end)
-        guard isValidPlatform(platform), !stations.contains(where: { $0.trackPlatforms.contains { $0.overlaps(platform) } }) else {
+        let platform = TrackPlatform(station: id, edge: edge, start: start, end: end)
+        guard isValidPlatform(platform), !network.platforms.contains(where: { $0.overlaps(platform) }) else {
             throw .invalidPlatform
         }
 
-        var platforms = stations[index].trackPlatforms
-        platforms.insert(platform, at: platforms.firstIndex { platform < $0 } ?? platforms.count)
-        stations[index].trackPlatforms = platforms
+        network.addPlatform(platform)
     }
 
     /// Removes station `id`'s platform on edge `edge` that starts at `start`
@@ -310,12 +309,19 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
     ///   ``GameError/invalidPlatform`` when the station has no such platform.
     public mutating func removeTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64) throws(GameError) {
-        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
-        guard let platform = stations[index].trackPlatforms.firstIndex(where: { $0.edge == edge && $0.start == start }) else {
+        guard station(id: id) != nil else { throw .unknownStation(id) }
+        guard let index = network.platforms.firstIndex(where: { $0.station == id && $0.edge == edge && $0.start == start }) else {
             throw .invalidPlatform
         }
 
-        stations[index].trackPlatforms.remove(at: platform)
+        network.removePlatform(at: index)
+    }
+
+    /// The platforms of station `id` on the track network, in order along
+    /// the track (Stage S4); empty for none or an unknown station. Its grid
+    /// platforms are ``platforms(of:)``.
+    public func trackPlatforms(of id: StationID) -> [TrackPlatform] {
+        network.platforms(of: id)
     }
 
     /// Whether `platform` fits its edge: the edge exists, the stretch lies
@@ -1771,16 +1777,14 @@ extension GameWorld: Codable {
         if let (a, b) = network.firstConflictingPair(geometries: geometries) {
             return "Track edges \(a) and \(b) meet without clearance."
         }
-        var seen: [TrackPlatform] = []
-        for station in stations {
-            for platform in station.trackPlatforms {
-                guard isValidPlatform(platform) else {
-                    return "Station \(station.id.rawValue) has a platform that does not fit its edge."
-                }
-                guard !seen.contains(where: { $0.overlaps(platform) }) else {
-                    return "Station \(station.id.rawValue) has a platform that overlaps another."
-                }
-                seen.append(platform)
+        // The network's decoder has checked the platforms are in order and
+        // do not overlap.
+        for platform in network.platforms {
+            guard station(id: platform.station) != nil else {
+                return "A platform belongs to station \(platform.station.rawValue), which does not exist."
+            }
+            guard isValidPlatform(platform) else {
+                return "Station \(platform.station.rawValue) has a platform that does not fit its edge."
             }
         }
         return nil

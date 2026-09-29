@@ -242,7 +242,7 @@ extension ReferenceWorld {
     mutating func addTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64, to end: Int64) -> GameError? {
         guard let i = stations.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownStation(id) }
         guard case .edge(let number) = edge, networkEdges[number] != nil else { return .unknownTrackEdge(edge) }
-        let platform = TrackPlatform(edge: edge, start: start, end: end)
+        let platform = TrackPlatform(station: id, edge: edge, start: start, end: end)
         let overlapping = stations.flatMap(\.trackPlatforms).contains { $0.edge == edge && max($0.start, start) < min($0.end, end) }
         guard fits(platform), !overlapping else { return .invalidPlatform }
         stations[i].trackPlatforms.append(platform)
@@ -257,9 +257,15 @@ extension ReferenceWorld {
         return stations[i].trackPlatforms.count == before ? .invalidPlatform : nil
     }
 
+    /// Decision 30: every station's platforms, by edge and then along it.
+    var allTrackPlatforms: [TrackPlatform] {
+        stations.flatMap(\.trackPlatforms).sorted { ($0.edge, $0.start) < ($1.edge, $1.start) }
+    }
+
     /// Decision 30: the platforms a whole train stands along: its head and
-    /// its whole body on the platform's edge, between its ends.
-    func trackPlatformsAlong(_ id: TrainID) -> [StationPlatform] {
+    /// its whole body on the platform's edge, between its ends; by where
+    /// they start.
+    func trackPlatformsAlong(_ id: TrainID) -> [TrackPlatform] {
         guard let train = trains.first(where: { $0.id == id.rawValue }), case .onEdge(let traversal, let offset)? = train.position,
               case .edge(let number) = traversal.edge, let edge = networkEdges[number]
         else { return [] }
@@ -268,15 +274,15 @@ extension ReferenceWorld {
         guard offset >= length else { return [] }
         let head = traversal.direction == .forward ? offset : edge.length - offset
         let tail = traversal.direction == .forward ? offset - length : edge.length - offset + length
-        var found: [StationPlatform] = []
-        for station in stations.sorted(by: { $0.id < $1.id }) {
+        var found: [TrackPlatform] = []
+        for station in stations {
             for platform in station.trackPlatforms where platform.edge == traversal.edge {
                 if platform.start <= min(head, tail), max(head, tail) <= platform.end {
-                    found.append(StationPlatform(station: StationID(rawValue: station.id), platform: platform))
+                    found.append(platform)
                 }
             }
         }
-        return found
+        return found.sorted { $0.start < $1.start }
     }
 
     /// Decision 30: each platform of a station with the height and structure

@@ -256,7 +256,7 @@
     "speed": "paused",
     "balance": 42000,
     "stations": [
-      { "id": 1, "name": "Depot", "x": 5, "y": 2, "annexes": [], "trackPlatforms": [] }
+      { "id": 1, "name": "Depot", "x": 5, "y": 2, "annexes": [] }
     ],
     "tracks": [
       { "x": 1, "y": 2, "connections": ["east"], "layout": { "type": "open" } },
@@ -274,6 +274,6 @@
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

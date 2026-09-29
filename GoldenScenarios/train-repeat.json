@@ -196,9 +196,9 @@
     "speed": "normal",
     "balance": 443000,
     "stations": [
-      { "id": 1, "name": "Alpha", "x": 1, "y": 0, "annexes": [], "trackPlatforms": [] },
-      { "id": 2, "name": "Beta", "x": 3, "y": 0, "annexes": [], "trackPlatforms": [] },
-      { "id": 3, "name": "Gamma", "x": 5, "y": 0, "annexes": [], "trackPlatforms": [] }
+      { "id": 1, "name": "Alpha", "x": 1, "y": 0, "annexes": [] },
+      { "id": 2, "name": "Beta", "x": 3, "y": 0, "annexes": [] },
+      { "id": 3, "name": "Gamma", "x": 5, "y": 0, "annexes": [] }
     ],
     "tracks": [
       { "x": 0, "y": 1, "connections": ["east"], "layout": { "type": "open" } },
@@ -215,6 +215,6 @@
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

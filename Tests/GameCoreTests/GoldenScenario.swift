@@ -273,7 +273,7 @@ extension GoldenScenario.Step: Decodable {
                 self = try .observe(observation, expect: .nodes(expect.decode([Int].self, forKey: .nodes)))
             case .trackPlatformsAlongTrain:
                 try requireOnly([.trackPlatforms], answering: "trackPlatformsAlongTrain")
-                self = try .observe(observation, expect: .trackPlatforms(expect.decode([StationPlatformSummary].self, forKey: .trackPlatforms)))
+                self = try .observe(observation, expect: .trackPlatforms(expect.decode([PlatformSummary].self, forKey: .trackPlatforms)))
             case .platformLevels:
                 try requireOnly([.levels], answering: "platformLevels")
                 self = try .observe(observation, expect: .levels(expect.decode([PlatformLevelSummary].self, forKey: .levels)))
@@ -960,9 +960,9 @@ enum ScenarioObservation: Equatable {
         case .tunnelPortals:
             .nodes(world.network.nodes.map(\.id).filter(world.isTunnelPortal).map(\.number))
         case .trackPlatformsAlongTrain(let id):
-            .trackPlatforms(world.trackPlatformsAlongWholeTrain(id).map(StationPlatformSummary.init))
+            .trackPlatforms(world.trackPlatformsAlongWholeTrain(id).map(PlatformSummary.init))
         case .platformLevels(let id):
-            .levels(world.railwaySnapshot().platforms.filter { $0.station == id }.map(PlatformLevelSummary.init))
+            .levels(world.railwaySnapshot().platforms.filter { $0.platform.station == id }.map(PlatformLevelSummary.init))
         }
     }
 }
@@ -1126,7 +1126,7 @@ enum ObservationAnswer: Equatable {
     case pose(PoseSummary?)
     case alignment(AlignmentSummary?)
     case nodes([Int])
-    case trackPlatforms([StationPlatformSummary])
+    case trackPlatforms([PlatformSummary])
     case levels([PlatformLevelSummary])
 }
 
@@ -1283,9 +1283,6 @@ struct WorldSummary: Codable, Equatable {
         var y: Int
         /// The tiles it grew onto, in order; `[]` for one tile.
         var annexes: [PositionSummary]
-        /// Its platforms on the track network, in order (schema 17); `[]`
-        /// for none.
-        var trackPlatforms: [PlatformSummary]
     }
 
     struct TrackSummary: Codable, Equatable {
@@ -1316,6 +1313,8 @@ struct WorldSummary: Codable, Equatable {
     struct NetworkSummary: Codable, Equatable {
         var nodes: [NodeSummary]
         var edges: [EdgeSummary]
+        /// The stations' platforms, in order along the track (schema 17).
+        var platforms: [PlatformSummary]
 
         struct NodeSummary: Codable, Equatable {
             var id: Int
@@ -1345,11 +1344,13 @@ struct WorldSummary: Codable, Equatable {
                     profile: ProfileSummary($0.profile), structure: StructureName($0.structure)
                 )
             }
+            platforms = network.platforms.map(PlatformSummary.init)
         }
 
-        init(nodes: [NodeSummary], edges: [EdgeSummary]) {
+        init(nodes: [NodeSummary], edges: [EdgeSummary], platforms: [PlatformSummary]) {
             self.nodes = nodes
             self.edges = edges
+            self.platforms = platforms
         }
     }
 
@@ -1360,8 +1361,7 @@ struct WorldSummary: Codable, Equatable {
         stations = world.stations
             .map {
                 StationSummary(
-                    id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init),
-                    trackPlatforms: $0.trackPlatforms.map(PlatformSummary.init)
+                    id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)
                 )
             }
             .sorted { $0.id < $1.id }
@@ -2528,33 +2528,18 @@ struct AlignmentSummary: Codable, Equatable {
     }
 }
 
-/// A platform on the track network: `{"edge", "start", "end"}`, the edge by
-/// number.
+/// A platform on the track network: `{"station", "edge", "start", "end"}`.
 struct PlatformSummary: Codable, Equatable {
-    var edge: Int
-    var start: Int64
-    var end: Int64
-
-    init(_ platform: TrackPlatform) {
-        edge = platform.edge.number
-        start = platform.start
-        end = platform.end
-    }
-}
-
-/// A station's platform on the track network: `{"station", "edge",
-/// "start", "end"}`.
-struct StationPlatformSummary: Codable, Equatable {
     var station: Int
     var edge: Int
     var start: Int64
     var end: Int64
 
-    init(_ platform: StationPlatform) {
+    init(_ platform: TrackPlatform) {
         station = platform.station.rawValue
-        edge = platform.platform.edge.number
-        start = platform.platform.start
-        end = platform.platform.end
+        edge = platform.edge.number
+        start = platform.start
+        end = platform.end
     }
 }
 

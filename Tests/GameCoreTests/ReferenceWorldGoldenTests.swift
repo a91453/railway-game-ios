@@ -38,8 +38,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(
                 model.stations.map {
                     WorldSummary.StationSummary(
-                        id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init),
-                        trackPlatforms: $0.trackPlatforms.map(PlatformSummary.init)
+                        id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)
                     )
                 },
                 final.stations, name
@@ -80,7 +79,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                             profile: ProfileSummary(TrackProfile(startTransition: edge.startTransition, endTransition: edge.endTransition)),
                             structure: StructureName(edge.structure)
                         )
-                    }
+                    },
+                    platforms: model.allTrackPlatforms.map(PlatformSummary.init)
                 ),
                 final.network, name
             )
@@ -207,7 +207,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .tunnelPortals:
             return .nodes(model.tunnelPortals)
         case .trackPlatformsAlongTrain(let id):
-            return .trackPlatforms(model.trackPlatformsAlong(id).map(StationPlatformSummary.init))
+            return .trackPlatforms(model.trackPlatformsAlong(id).map(PlatformSummary.init))
         case .platformLevels(let id):
             return .levels(model.platformLevels(of: id).map { PlatformLevelSummary(platform: $0.0, height: $0.1, structure: $0.2) })
         }

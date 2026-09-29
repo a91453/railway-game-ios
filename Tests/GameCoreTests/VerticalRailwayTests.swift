@@ -444,10 +444,13 @@ final class VerticalRailwayTests: XCTestCase {
         try world.addTrackPlatform(hub, on: tunnel, from: 2_048, to: 6_144)
         try world.addTrackPlatform(hub, on: surface, from: 1_024, to: 5_120)
         try world.addTrackPlatform(hub, on: viaduct, from: 1_024, to: 5_120)
-        XCTAssertEqual(world.station(id: hub)?.trackPlatforms, [
-            TrackPlatform(edge: surface, start: 1_024, end: 5_120), TrackPlatform(edge: viaduct, start: 1_024, end: 5_120),
-            TrackPlatform(edge: tunnel, start: 2_048, end: 6_144),
+        // Kept by the railway network, in order along the track.
+        XCTAssertEqual(world.trackPlatforms(of: hub), [
+            TrackPlatform(station: hub, edge: surface, start: 1_024, end: 5_120), TrackPlatform(station: hub, edge: viaduct, start: 1_024, end: 5_120),
+            TrackPlatform(station: hub, edge: tunnel, start: 2_048, end: 6_144),
         ])
+        XCTAssertEqual(world.network.platforms, world.trackPlatforms(of: hub))
+        XCTAssertEqual(world.trackPlatforms(of: annex), [])
         // Touching the end of another platform is fine; overlapping is not.
         try world.addTrackPlatform(annex, on: surface, from: 5_120, to: 7_168)
         refused(.invalidPlatform, in: world) { try $0.addTrackPlatform(annex, on: surface, from: 5_000, to: 5_200) }
@@ -466,7 +469,7 @@ final class VerticalRailwayTests: XCTestCase {
         refused(.trackEdgeHasPlatform(surface), in: world) { try $0.removeTrackEdge(surface) }
 
         // Each platform's level comes from its edge.
-        let levels = world.railwaySnapshot().platforms.filter { $0.station == hub }.map { ($0.height, $0.structure) }
+        let levels = world.railwaySnapshot().platforms.filter { $0.platform.station == hub }.map { ($0.height, $0.structure) }
         XCTAssertEqual(levels.map(\.0), [0, 512, -512])
         XCTAssertEqual(levels.map(\.1), [.surface, .elevated, .tunnel])
         XCTAssertEqual(world.railwaySnapshot().platforms.first?.points, [WorldCoordinate(x: 3_072, y: 20_480), WorldCoordinate(x: 7_168, y: 20_480)])
@@ -475,7 +478,7 @@ final class VerticalRailwayTests: XCTestCase {
         try world.purchaseTrain(named: "Deep")
         try world.setTrainCars(first, to: 2)
         try world.placeTrain(first, at: .onEdge(forward(tunnel), offset: 4_096))
-        XCTAssertEqual(world.trackPlatformsAlongWholeTrain(first), [StationPlatform(station: hub, platform: TrackPlatform(edge: tunnel, start: 2_048, end: 6_144))])
+        XCTAssertEqual(world.trackPlatformsAlongWholeTrain(first), [TrackPlatform(station: hub, edge: tunnel, start: 2_048, end: 6_144)])
         try world.unplaceTrain(first)
         try world.placeTrain(first, at: .onEdge(backward(tunnel), offset: 3_072))
         XCTAssertEqual(world.trackPlatformsAlongWholeTrain(first).map(\.station), [hub], "from 5120 back to 6144: the far end, exactly")
@@ -490,6 +493,28 @@ final class VerticalRailwayTests: XCTestCase {
         try world.removeTrackPlatform(hub, on: surface, from: 1_024)
         try world.removeTrackPlatform(annex, on: surface, from: 5_120)
         XCTAssertNoThrow(try world.removeTrackEdge(surface))
+    }
+
+    func testPlatformEndsCutTheEdgesSpans() throws {
+        let (stationWorld, _, _, tunnel, _) = try makeStations()
+        var world = stationWorld
+        let hub = StationID(rawValue: 1)
+        // The tunnel (8192) is 8 spans of 1024; a platform from 2500 to 6000
+        // cuts it there too.
+        try world.addTrackPlatform(hub, on: tunnel, from: 2_500, to: 6_000)
+        XCTAssertEqual(world.trackSpans(of: tunnel).map(\.end), [1_024, 2_048, 2_500, 3_072, 4_096, 5_120, 6_000, 6_144, 7_168, 8_192])
+        // A train of two cars (1024) from 4876 to 5900, wholly along the
+        // platform, holds only spans within it.
+        try world.purchaseTrain(named: "Deep")
+        try world.setTrainCars(first, to: 2)
+        try world.placeTrain(first, at: .onEdge(forward(tunnel), offset: 5_900))
+        XCTAssertEqual(world.trackPlatformsAlongWholeTrain(first), [TrackPlatform(station: hub, edge: tunnel, start: 2_500, end: 6_000)])
+        XCTAssertEqual(world.occupiedResources(of: first), [span(tunnel, 4_096, 5_120), span(tunnel, 5_120, 6_000)])
+        // Without the platform the edge is in equal parts again, and the
+        // same train holds 5120 to 6144.
+        try world.removeTrackPlatform(hub, on: tunnel, from: 2_500)
+        XCTAssertEqual(world.trackSpans(of: tunnel).map(\.end), [1_024, 2_048, 3_072, 4_096, 5_120, 6_144, 7_168, 8_192])
+        XCTAssertEqual(world.occupiedResources(of: first), [span(tunnel, 4_096, 5_120), span(tunnel, 5_120, 6_144)])
     }
 
     // MARK: - Saves
@@ -522,9 +547,12 @@ final class VerticalRailwayTests: XCTestCase {
         let profile = try XCTUnwrap(edges[eased.number - 1]["profile"] as? [String: Any])
         XCTAssertEqual(profile["startTransition"] as? Int, 2_048)
         XCTAssertEqual(profile["endTransition"] as? Int, 1_024)
+        // Platforms are the railway network's, not the stations'.
+        let platforms = try XCTUnwrap((object["network"] as? [String: Any])?["platforms"] as? [[String: Any]])
+        XCTAssertEqual(platforms.count, 1)
+        XCTAssertEqual(platforms[0]["station"] as? Int, 1)
         let stations = try XCTUnwrap(object["stations"] as? [[String: Any]])
-        XCTAssertNotNil(stations[0]["trackPlatforms"])
-        XCTAssertNil(stations[1]["trackPlatforms"])
+        XCTAssertTrue(stations.allSatisfy { $0["trackPlatforms"] == nil && $0["platforms"] == nil })
 
         // A Stage S3 save (no heights, profiles or structures) reads as
         // level surface track, and is written back unchanged.
@@ -534,7 +562,7 @@ final class VerticalRailwayTests: XCTestCase {
         _ = try flat.buildTrackEdge(from: p, to: q, curve: .cubic(PlanPoint(x: 2_048, y: 2_048), PlanPoint(x: 4_096, y: 0)))
         let flatData = try encoder.encode(flat)
         let s3 = String(decoding: flatData, as: UTF8.self)
-        XCTAssertFalse(s3.contains("profile") || s3.contains("structure") || s3.contains("trackPlatforms"))
+        XCTAssertFalse(s3.contains("profile") || s3.contains("structure") || s3.contains("platforms"))
         XCTAssertEqual(try encoder.encode(JSONDecoder().decode(GameWorld.self, from: flatData)), flatData)
     }
 
@@ -569,14 +597,14 @@ final class VerticalRailwayTests: XCTestCase {
                 object["network"] = network
             }
         }
-        func station(_ field: String, _ value: Any) -> (inout [String: Any]) -> Void {
+        func platforms(_ value: Any) -> (inout [String: Any]) -> Void {
             { object in
-                var stations = object["stations"] as! [[String: Any]]
-                stations[0][field] = value
-                object["stations"] = stations
+                var network = object["network"] as! [String: Any]
+                network["platforms"] = value
+                object["network"] = network
             }
         }
-        let platform: [String: Any] = ["edge": tunnel.number, "start": 2_048, "end": 6_144]
+        let platform: [String: Any] = ["station": 1, "edge": tunnel.number, "start": 2_048, "end": 6_144]
         refused(network("nodes", 0, "z", 4_097), "beyond the heights track may have")
         refused(network("edges", 0, "structure", "floating"), "an unknown structure")
         refused(network("edges", 0, "structure", NSNull()), "an explicit null structure")
@@ -595,18 +623,16 @@ final class VerticalRailwayTests: XCTestCase {
             network("nodes", 10, "z", 256)(&object)
             network("edges", 5, "structure", "elevated")(&object)
         }, "two viaducts crossing 256 apart")
-        refused(station("trackPlatforms", NSNull()), "explicit null platforms")
-        refused(station("trackPlatforms", [["edge": tunnel.number, "start": 2_048, "end": 9_000]]), "a platform beyond its edge")
-        refused(station("trackPlatforms", [["edge": 4, "start": 0, "end": 1_000]]), "a platform on a ramp")
-        refused(station("trackPlatforms", [["edge": 99, "start": 0, "end": 1_000]]), "a platform on an unknown edge")
-        refused(station("trackPlatforms", [["edge": 0, "start": 0, "end": 1_000]]), "edge 0")
-        refused(station("trackPlatforms", [platform, platform]), "the same platform twice")
-        refused(station("trackPlatforms", [["edge": tunnel.number, "start": 3_000, "end": 4_000], platform]), "overlapping, and out of order")
-        refused({ object in
-            var stations = object["stations"] as! [[String: Any]]
-            stations[1]["trackPlatforms"] = [["edge": tunnel.number, "start": 6_000, "end": 7_000]]
-            object["stations"] = stations
-        }, "another station's platform overlapping")
+        refused(platforms(NSNull()), "explicit null platforms")
+        refused(platforms([["station": 1, "edge": tunnel.number, "start": 2_048, "end": 9_000]]), "a platform beyond its edge")
+        refused(platforms([["station": 1, "edge": 4, "start": 0, "end": 1_000]]), "a platform on a ramp")
+        refused(platforms([["station": 1, "edge": 99, "start": 0, "end": 1_000]]), "a platform on an unknown edge")
+        refused(platforms([["station": 1, "edge": 0, "start": 0, "end": 1_000]]), "edge 0")
+        refused(platforms([["station": 9, "edge": tunnel.number, "start": 2_048, "end": 6_144]]), "a platform of an unknown station")
+        refused(platforms([["edge": tunnel.number, "start": 2_048, "end": 6_144]]), "a platform of no station")
+        refused(platforms([platform, platform]), "the same platform twice")
+        refused(platforms([["station": 1, "edge": tunnel.number, "start": 3_000, "end": 4_000], platform]), "overlapping, and out of order")
+        refused(platforms([platform, ["station": 2, "edge": tunnel.number, "start": 6_000, "end": 7_000]]), "another station's platform overlapping")
     }
 
     // MARK: - The renderer snapshot

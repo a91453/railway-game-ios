@@ -564,7 +564,7 @@ final class GoldenScenarioTests: XCTestCase {
             if !nodes.isEmpty { wrong.append(.nodes(Array(nodes.dropLast()))) }
             return wrong
         case .trackPlatforms(let platforms):
-            var wrong: [ObservationAnswer] = [.trackPlatforms(platforms + [platforms.first ?? StationPlatformSummary(StationPlatform(station: StationID(rawValue: 99), platform: TrackPlatform(edge: .edge(1), start: 0, end: 1)))])]
+            var wrong: [ObservationAnswer] = [.trackPlatforms(platforms + [platforms.first ?? PlatformSummary(TrackPlatform(station: StationID(rawValue: 99), edge: .edge(1), start: 0, end: 1))])]
             if let first = platforms.first {
                 var changed = first
                 changed.end += 1
@@ -573,7 +573,7 @@ final class GoldenScenarioTests: XCTestCase {
             }
             return wrong
         case .levels(let levels):
-            var wrong: [ObservationAnswer] = [.levels(levels + [PlatformLevelSummary(platform: TrackPlatform(edge: .edge(99), start: 0, end: 1), height: 0, structure: .surface)])]
+            var wrong: [ObservationAnswer] = [.levels(levels + [PlatformLevelSummary(platform: TrackPlatform(station: StationID(rawValue: 1), edge: .edge(99), start: 0, end: 1), height: 0, structure: .surface)])]
             if let first = levels.first {
                 var changed = first
                 changed.height += 1
@@ -659,7 +659,7 @@ final class GoldenScenarioTests: XCTestCase {
                   { "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" },
                   { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }
                 ],
-                "network": { "nodes": [], "edges": [] }
+                "network": { "nodes": [], "edges": [], "platforms": [] }
               }
             }
             """#

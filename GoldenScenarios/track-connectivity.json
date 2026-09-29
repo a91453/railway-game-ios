@@ -132,7 +132,7 @@
     "speed": "paused",
     "balance": 143000,
     "stations": [
-      { "id": 1, "name": "East", "x": 4, "y": 2, "annexes": [], "trackPlatforms": [] }
+      { "id": 1, "name": "East", "x": 4, "y": 2, "annexes": [] }
     ],
     "tracks": [
       { "x": 2, "y": 1, "connections": ["south"], "layout": { "type": "open" } },
@@ -144,6 +144,6 @@
     "trains": [],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

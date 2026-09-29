@@ -300,11 +300,11 @@
     "speed": "normal",
     "balance": 344000,
     "stations": [
-      { "id": 1, "name": "Central", "x": 2, "y": 1, "annexes": [], "trackPlatforms": [] },
-      { "id": 2, "name": "Market", "x": 4, "y": 1, "annexes": [], "trackPlatforms": [] },
-      { "id": 3, "name": "Hill", "x": 4, "y": 3, "annexes": [], "trackPlatforms": [] },
-      { "id": 4, "name": "Field", "x": 7, "y": 5, "annexes": [], "trackPlatforms": [] },
-      { "id": 5, "name": "Annex", "x": 2, "y": 3, "annexes": [], "trackPlatforms": [] }
+      { "id": 1, "name": "Central", "x": 2, "y": 1, "annexes": [] },
+      { "id": 2, "name": "Market", "x": 4, "y": 1, "annexes": [] },
+      { "id": 3, "name": "Hill", "x": 4, "y": 3, "annexes": [] },
+      { "id": 4, "name": "Field", "x": 7, "y": 5, "annexes": [] },
+      { "id": 5, "name": "Annex", "x": 2, "y": 3, "annexes": [] }
     ],
     "tracks": [
       { "x": 1, "y": 2, "connections": ["east"], "layout": { "type": "open" } },
@@ -320,6 +320,6 @@
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

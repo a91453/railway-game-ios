@@ -956,7 +956,7 @@ final class SaveMutationTests: XCTestCase {
             let all = Self.paths(in: json)
             let targeted = all.filter { path in
                 let text = path.map(\.description).joined()
-                return text.contains("network") || text.contains("trackPlatforms") || text.contains("onEdge")
+                return text.contains("network") || text.contains("platforms") || text.contains("onEdge")
             }
             for _ in 0..<30 {
                 let path: [Step]
@@ -970,7 +970,7 @@ final class SaveMutationTests: XCTestCase {
                     var text = ""
                     let result = Self.replacing(path[...], in: json) { value in
                         let (changed, what) = Self.mutation(
-                            of: value, addedKeys: ["profile", "structure", "trackPlatforms", "z", "network", "extra"], using: &c.random
+                            of: value, addedKeys: ["profile", "structure", "platforms", "station", "z", "network", "extra"], using: &c.random
                         )
                         text = what
                         return changed

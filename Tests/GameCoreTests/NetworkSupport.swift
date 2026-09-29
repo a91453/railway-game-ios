@@ -79,10 +79,14 @@ enum NetworkInvariants {
         var referenceEdges: [(Int, ReferenceWorld.NetworkEdge)] = []
         for edge in network.edges {
             // Stage S3A: the spans cover the edge end to end, none longer
-            // than a tile, as few as that allows.
+            // than a tile; their boundaries are the fewest equal parts' and,
+            // since Stage S4, the ends of the platforms on the edge.
             let spans = world.trackSpans(of: edge.id)
+            let equal = RailwayNetwork.spans(of: edge.id, length: edge.length).map(\.start)
+            let cuts = network.platforms.filter { $0.edge == edge.id }.flatMap { [$0.start, $0.end] }
             if spans.first?.start != 0 || spans.last?.end != edge.length || zip(spans, spans.dropFirst()).contains(where: { $0.end != $1.start })
-                || spans.contains(where: { $0.edge != edge.id || $0.length <= 0 || $0.length > 1_024 }) || Int64(spans.count) != (edge.length + 1_023) / 1_024 {
+                || spans.contains(where: { $0.edge != edge.id || $0.length <= 0 || $0.length > 1_024 })
+                || Set(spans.map(\.start) + [edge.length]) != Set(equal + cuts + [edge.length]) {
                 problems.append("track edge \(edge.id.number)'s spans do not cover it: \(spans.map { ($0.start, $0.end) })")
             }
             guard let from = network.node(edge.from), let to = network.node(edge.to), edge.from != edge.to else {
@@ -124,26 +128,30 @@ enum NetworkInvariants {
                 problems.append("track edges \(referenceEdges[i].0) and \(referenceEdges[j].0) meet without clearance")
             }
         }
-        // Platforms: in order, on an edge, within it and level, never
-        // overlapping another.
-        var platforms: [TrackPlatform] = []
-        for station in world.stations {
-            if station.trackPlatforms != station.trackPlatforms.sorted() || Set(station.trackPlatforms).count != station.trackPlatforms.count {
-                problems.append("station \(station.id.rawValue)'s platforms are out of order")
+        // Platforms (Stage S4, kept by the railway network): in order along
+        // the track, each a known station's, on an edge, within it and
+        // level, never overlapping another; every end of one is a span
+        // boundary of its edge.
+        let platforms = network.platforms
+        if platforms != platforms.sorted(by: { ($0.edge, $0.start) < ($1.edge, $1.start) }) || Set(platforms).count != platforms.count {
+            problems.append("platforms out of order along the track")
+        }
+        for (index, platform) in platforms.enumerated() {
+            if world.station(id: platform.station) == nil { problems.append("platform \(platform) of an unknown station") }
+            guard case .edge(let number) = platform.edge, let edge = referenceEdges.first(where: { $0.0 == number })?.1 else {
+                problems.append("platform \(platform) on an edge that does not exist")
+                continue
             }
-            for platform in station.trackPlatforms {
-                guard case .edge(let number) = platform.edge, let edge = referenceEdges.first(where: { $0.0 == number })?.1 else {
-                    problems.append("station \(station.id.rawValue) has a platform on an edge that does not exist")
-                    continue
-                }
-                if platform.start < 0 || platform.end <= platform.start || platform.end > edge.length
-                    || ReferenceWorld.height(of: edge, at: platform.start) != ReferenceWorld.height(of: edge, at: platform.end) {
-                    problems.append("station \(station.id.rawValue)'s platform \(platform) does not fit its edge")
-                }
-                if platforms.contains(where: { $0.edge == platform.edge && max($0.start, platform.start) < min($0.end, platform.end) }) {
-                    problems.append("station \(station.id.rawValue)'s platform \(platform) overlaps another")
-                }
-                platforms.append(platform)
+            if platform.start < 0 || platform.end <= platform.start || platform.end > edge.length
+                || ReferenceWorld.height(of: edge, at: platform.start) != ReferenceWorld.height(of: edge, at: platform.end) {
+                problems.append("platform \(platform) does not fit its edge")
+            }
+            if platforms[..<index].contains(where: { $0.edge == platform.edge && max($0.start, platform.start) < min($0.end, platform.end) }) {
+                problems.append("platform \(platform) overlaps another")
+            }
+            let boundaries = Set(world.trackSpans(of: platform.edge).flatMap { [$0.start, $0.end] })
+            if !boundaries.contains(platform.start) || !boundaries.contains(platform.end) {
+                problems.append("platform \(platform)'s ends do not cut its edge's spans")
             }
         }
         // Each node's ends are the edges ending there, in ascending order,

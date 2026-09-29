@@ -447,7 +447,7 @@ extension ReferenceWorld {
             if tail <= span.start && span.start <= head { found.insert(.node(.node(startNode(run)))) }
             if tail <= span.end && span.end <= head { found.insert(.node(.node(endNode(run)))) }
             let length = span.end - span.start
-            for piece in Self.resourceSpans(length: length) {
+            for piece in resourceSpans(of: run.edge, length: length) {
                 // The piece's place along the path, whichever way it is run.
                 let (a, b) = run.forward ? (span.start + piece.start, span.start + piece.end) : (span.end - piece.end, span.end - piece.start)
                 let low = max(tail, a)
@@ -463,6 +463,20 @@ extension ReferenceWorld {
     /// S3A: an edge `length` long in equal parts of at most 1024: as many
     /// as 1024 goes into it, rounded up, the `k`-th ending at `k × length ÷
     /// parts` rounded down.
+    /// S4: the equal parts of edge `number`, each part holding a platform
+    /// end strictly inside it split there, one end at a time.
+    func resourceSpans(of number: Int, length: Int64) -> [(start: Int64, end: Int64)] {
+        var pieces = Self.resourceSpans(length: length)
+        for platform in stations.flatMap(\.trackPlatforms) where platform.edge == .edge(number) {
+            for cut in [platform.start, platform.end] {
+                guard let i = pieces.firstIndex(where: { $0.start < cut && cut < $0.end }) else { continue }
+                let piece = pieces[i]
+                pieces.replaceSubrange(i...i, with: [(piece.start, cut), (cut, piece.end)])
+            }
+        }
+        return pieces
+    }
+
     static func resourceSpans(length: Int64) -> [(start: Int64, end: Int64)] {
         var parts: Int64 = 1
         while parts * 1_024 < length {

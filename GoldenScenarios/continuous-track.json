@@ -310,7 +310,8 @@
         { "id": 5, "from": 6, "to": 7, "curve": { "type": "cubic", "control1": { "x": 8320, "y": 8192 }, "control2": { "x": 8448, "y": 8320 } }, "length": 396, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" },
         { "id": 6, "from": 7, "to": 8, "curve": { "type": "straight" }, "length": 2048, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" },
         { "id": 7, "from": 9, "to": 10, "curve": { "type": "straight" }, "length": 5120, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" }
-      ]
+      ],
+      "platforms": []
     }
   }
 }

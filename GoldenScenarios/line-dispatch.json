@@ -316,11 +316,11 @@
     "speed": "normal",
     "balance": 143000,
     "stations": [
-      { "id": 1, "name": "Alpha", "x": 1, "y": 0, "annexes": [], "trackPlatforms": [] },
-      { "id": 2, "name": "Beta", "x": 3, "y": 0, "annexes": [], "trackPlatforms": [] },
-      { "id": 3, "name": "Gamma", "x": 5, "y": 0, "annexes": [], "trackPlatforms": [] },
-      { "id": 4, "name": "Delta", "x": 5, "y": 2, "annexes": [], "trackPlatforms": [] },
-      { "id": 5, "name": "Far", "x": 7, "y": 3, "annexes": [], "trackPlatforms": [] }
+      { "id": 1, "name": "Alpha", "x": 1, "y": 0, "annexes": [] },
+      { "id": 2, "name": "Beta", "x": 3, "y": 0, "annexes": [] },
+      { "id": 3, "name": "Gamma", "x": 5, "y": 0, "annexes": [] },
+      { "id": 4, "name": "Delta", "x": 5, "y": 2, "annexes": [] },
+      { "id": 5, "name": "Far", "x": 7, "y": 3, "annexes": [] }
     ],
     "tracks": [
       { "x": 0, "y": 1, "connections": ["east"], "layout": { "type": "open" } },
@@ -340,6 +340,6 @@
       { "id": 1, "name": "Main", "stops": [1, 3], "rate": 1024, "window": { "type": "allDay" }, "trainsInService": { "peak": 2, "offPeak": 2, "low": 2 }, "targetHeadways": { "peak": null, "offPeak": null, "low": 20 }, "trains": [2], "lastDispatch": 46, "patterns": [] }
     ],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

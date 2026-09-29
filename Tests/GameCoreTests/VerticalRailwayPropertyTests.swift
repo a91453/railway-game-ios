@@ -181,9 +181,9 @@ final class VerticalRailwayPropertyTests: XCTestCase {
             let end = random.chance(1, in: 6) ? random.int64(in: -1...(length + 1)) : min(length, start + random.int64(in: 1...2_048))
             return .addPlatform(anyStation(), edge, start, end)
         case 22..<25:
-            let platforms = world.stations.flatMap { station in station.trackPlatforms.map { (station.id, $0) } }
-            if let (station, platform) = platforms.isEmpty || random.chance(1, in: 5) ? nil : random.element(of: platforms) {
-                return .removePlatform(station, platform.edge, platform.start)
+            let platforms = world.network.platforms
+            if let platform = platforms.isEmpty || random.chance(1, in: 5) ? nil : random.element(of: platforms) {
+                return .removePlatform(platform.station, platform.edge, platform.start)
             }
             return .removePlatform(anyStation(), anyEdge(), random.int64(in: 0...2_048))
         case 25..<27:
@@ -304,8 +304,9 @@ final class VerticalRailwayPropertyTests: XCTestCase {
         let snapshot = world.railwaySnapshot()
         for station in world.stations {
             guard let expected = model.stations.first(where: { $0.id == station.id.rawValue }) else { continue }
-            if station.trackPlatforms != expected.trackPlatforms { problems.append("station \(station.id.rawValue) platforms \(station.trackPlatforms) vs \(expected.trackPlatforms)") }
-            let levels = snapshot.platforms.filter { $0.station == station.id }.map { "\($0.platform) \($0.height) \($0.structure)" }
+            let platforms = world.trackPlatforms(of: station.id)
+            if platforms != expected.trackPlatforms { problems.append("station \(station.id.rawValue) platforms \(platforms) vs \(expected.trackPlatforms)") }
+            let levels = snapshot.platforms.filter { $0.platform.station == station.id }.map { "\($0.platform) \($0.height) \($0.structure)" }
             if levels != model.platformLevels(of: station.id).map({ "\($0.0) \($0.1) \($0.2)" }) { problems.append("station \(station.id.rawValue) platform levels") }
         }
         if world.trains.map(\.id.rawValue) != model.trains.map(\.id) { problems.append("train IDs") }
@@ -443,7 +444,7 @@ final class VerticalRailwayPropertyTests: XCTestCase {
                 if let problem = WorldInvariants.roundTripProblem(of: world) { return testCase.fail(problem) }
             }
             tally["portals at the end", default: 0] += world.network.nodes.filter { world.isTunnelPortal($0.id) }.count
-            tally["platforms at the end", default: 0] += world.stations.reduce(0) { $0 + $1.trackPlatforms.count }
+            tally["platforms at the end", default: 0] += world.network.platforms.count
             tally["levels at the end", default: 0] += Set(world.network.nodes.map(\.position.z)).count
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]

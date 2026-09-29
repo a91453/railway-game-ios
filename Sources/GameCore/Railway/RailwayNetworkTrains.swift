@@ -230,7 +230,7 @@ extension GameWorld {
             let (low, high) = stretch.traversal.direction == .forward
                 ? (stretch.from, stretch.to)
                 : (edge.length - stretch.to, edge.length - stretch.from)
-            for span in RailwayNetwork.spans(of: edge.id, length: edge.length) {
+            for span in network.spans(of: edge.id, length: edge.length) {
                 let a = max(low, span.start)
                 let b = min(high, span.end)
                 // Some point of both, strictly between the edge's ends.
@@ -244,11 +244,12 @@ extension GameWorld {
 
     /// The spans of edge `id` of the railway graph, from its `from` node to
     /// its `to` node (see ``RailwayNetwork/spans(of:length:)``): one for a
-    /// grid link, one for every tile's length or less of a network edge.
-    /// Empty if there is no such edge.
+    /// grid link, one for every tile's length or less of a network edge,
+    /// cut again at the ends of its platforms (Stage S4). Empty if there is
+    /// no such edge.
     public func trackSpans(of id: TrackEdgeID) -> [TrackSpan] {
         guard let edge = trackEdge(id) else { return [] }
-        return RailwayNetwork.spans(of: id, length: edge.length)
+        return network.spans(of: id, length: edge.length)
     }
 
     /// The traversals train `id` will enter after the one it is on, in
