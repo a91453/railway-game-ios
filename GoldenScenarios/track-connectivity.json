@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "description": "Derived track connectivity: two orthogonally adjacent track tiles are joined only when each has an exit toward the other. Builds a four-way junction whose exits all dangle, then neighbors in west, south, north, east order, and observes them listed north, east, south, west. A one-sided exit, the same tile, a diagonal tile, a tile off the map, an empty tile and a station are never joined. Removing and rebuilding the junction changes the answers at once, and the neighbors keep the exits they were built with.",
   "initialState": {
     "mapWidth": 5,

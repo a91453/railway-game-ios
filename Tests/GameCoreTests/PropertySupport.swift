@@ -625,6 +625,30 @@ enum WorldInvariants {
             }
             let trains = line.trainsInService
             if min(trains.peak, trains.offPeak, trains.low) < 0 { problems.append("line \(id) negative trains") }
+            // Decision 23: targets of 2 to 1440 minutes; trains in ID order,
+            // known, and on this line only; a last dispatch from minute 0
+            // to now; a line's train in service runs a trip that is not
+            // repeated.
+            for level in ServiceLevel.allCases {
+                if let target = line.targetHeadways[level], !(2...1440).contains(target) {
+                    problems.append("line \(id) target \(target) at \(level)")
+                }
+            }
+            if zip(line.trains, line.trains.dropFirst()).contains(where: { $0 >= $1 }) {
+                problems.append("line \(id) trains \(line.trains) not ascending")
+            }
+            for train in line.trains {
+                if world.train(id: train) == nil { problems.append("line \(id) has unknown train \(train.rawValue)") }
+                if world.lines.filter({ $0.trains.contains(train) }).count > 1 {
+                    problems.append("train \(train.rawValue) is on two lines")
+                }
+                if let running = world.train(id: train), running.execution != nil, running.timetablePeriod != nil {
+                    problems.append("line \(id)'s train \(train.rawValue) runs a repeating timetable")
+                }
+            }
+            if let last = line.lastDispatch, last.minutes < 0 || last > world.clock.now {
+                problems.append("line \(id) last dispatch \(last.minutes) at minute \(world.clock.now.minutes)")
+            }
         }
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {

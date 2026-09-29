@@ -80,6 +80,9 @@ final class ErrorMessageTests: XCTestCase {
             .invalidServiceWindow: "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
             .invalidTrainsInService: "A line cannot run a negative number of trains.",
             .invalidServiceDay: "The day's service levels must start at 00:00 and change at later times within the day.",
+            .invalidHeadway: "A target headway must be between 2 minutes and 24 hours.",
+            .trainOnLine(TrainID(rawValue: 3)): "Train #3 runs for a line. Take it off the line first.",
+            .trainNotOnLine(TrainID(rawValue: 3)): "Train #3 is not on a line.",
         ]
 
         for (error, message) in messages {

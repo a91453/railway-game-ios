@@ -83,6 +83,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
         case .setLineTrainsInService(let id, let trains): error = model.setLineTrains(id, trains)
         case .setServiceDay(let day): error = model.setServiceDay(day)
+        case .setLineTargetHeadways(let id, let headways): error = model.setLineTargets(id, headways)
+        case .assignTrain(let id, let line): error = model.assign(id, to: line)
+        case .unassignTrain(let id): error = model.unassign(id)
         case .setSpeed(let speed): model.setSpeed(speed)
         case .pause: model.pause()
         case .resume: model.resume()
@@ -130,7 +133,10 @@ final class ReferenceWorldGoldenTests: XCTestCase {
     }
 
     private static func summary(_ line: ReferenceWorld.Line) -> LineSummary {
-        LineSummary(id: line.id, name: line.name, stops: line.stops.map(\.rawValue), rate: line.rate,
-                    window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService))
+        LineSummary(
+            id: line.id, name: line.name, stops: line.stops.map(\.rawValue), rate: line.rate,
+            window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService),
+            targetHeadways: TargetHeadwaysSummary(line.targetHeadways), trains: line.roster, lastDispatch: line.lastDispatch
+        )
     }
 }

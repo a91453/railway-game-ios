@@ -108,6 +108,44 @@ public struct TrainsInService: Hashable, Sendable {
     }
 }
 
+/// The minutes a line aims to keep between its trains at each
+/// ``ServiceLevel``, or `nil` at a level where the count in
+/// ``TrainsInService`` sets the service instead (as at every level of a new
+/// line).
+///
+/// A target is at least ``ServiceLine/minimumHeadwayMinutes`` and at most a
+/// day (``GameTime/minutesPerDay``). At a level with a target the line runs
+/// as few trains as keep to it, and a train that is back early waits at the
+/// first stop (see ``GameWorld/lineTrainsInService(_:at:)``).
+public struct TargetHeadways: Hashable, Sendable {
+    public var peak: Int64?
+    public var offPeak: Int64?
+    public var low: Int64?
+
+    public init(peak: Int64? = nil, offPeak: Int64? = nil, low: Int64? = nil) {
+        self.peak = peak
+        self.offPeak = offPeak
+        self.low = low
+    }
+
+    /// No target at any level, as on a new line.
+    public static let none = TargetHeadways()
+
+    public subscript(level: ServiceLevel) -> Int64? {
+        switch level {
+        case .peak: peak
+        case .offPeak: offPeak
+        case .low: low
+        }
+    }
+
+    var isValid: Bool {
+        [peak, offPeak, low].allSatisfy { target in
+            target.map { (ServiceLine.minimumHeadwayMinutes...GameTime.minutesPerDay).contains($0) } ?? true
+        }
+    }
+}
+
 /// Which ``ServiceLevel`` each minute of the day has, for every line of a
 /// world: a list of bands, each starting at a minute of the day and lasting
 /// until the next band starts (the last until midnight).
@@ -161,11 +199,14 @@ public struct ServiceDay: Hashable, Sendable {
 
 /// A service line: the stations its trains call at, in order, out from the
 /// first and back from the last; the rate it plans its journeys at; when it
-/// runs; and how many trains it is to run at each level.
+/// runs; how many trains it is to run at each level, or how far apart; and
+/// the trains assigned to it.
 ///
-/// A line is plan data. It never moves, routes or schedules a train; what
-/// its trains would take, and how often they could run, is derived by
-/// ``GameWorld/lineJourney(_:)`` and the queries beside it.
+/// The plan itself never moves or routes a train; what its trains would
+/// take, and how often they could run, is derived by
+/// ``GameWorld/lineJourney(_:)`` and the queries beside it. A line sends
+/// out only the trains assigned to it, one round trip at a time (see
+/// ``GameWorld/advance(ticks:)``).
 public struct ServiceLine: Identifiable, Hashable, Sendable {
     public let id: LineID
     public internal(set) var name: String
@@ -178,6 +219,18 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     public internal(set) var rate: Int64
     public internal(set) var window: ServiceWindow
     public internal(set) var trainsInService: TrainsInService
+    /// The minutes the line aims to keep between trains, at the levels
+    /// where it has a target; the other levels run
+    /// ``trainsInService``.
+    public internal(set) var targetHeadways: TargetHeadways
+    /// The trains assigned to the line, in ascending ID order. A train is
+    /// assigned to one line at most, and the line runs its timetable and
+    /// service (see ``GameWorld/assignTrain(_:to:)``).
+    public internal(set) var trains: [TrainID]
+    /// The minute the line last sent a train out from its first stop, or
+    /// `nil` if it never has. The next train leaves a headway later at the
+    /// earliest.
+    public internal(set) var lastDispatch: GameTime?
 
     /// The rate of a new line: one link a minute.
     public static let defaultRate: Int64 = TrainPosition.linkLength
@@ -189,8 +242,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// trains than its round trip allows at this headway.
     public static let minimumHeadwayMinutes: Int64 = 2
 
-    /// Creates a line with the standard window, the default rate and no
-    /// trains in service.
+    /// Creates a line with the standard window, the default rate, no trains
+    /// in service, no target headways and no trains assigned.
     public init(id: LineID, name: String, stops: [StationID]) {
         self.id = id
         self.name = name
@@ -198,12 +251,65 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         self.rate = Self.defaultRate
         self.window = .standard
         self.trainsInService = .none
+        self.targetHeadways = .none
+        self.trains = []
+        self.lastDispatch = nil
     }
 
     /// Whether `stops` can be a line's stops, judged without a world: at
     /// least two, and no station twice in a row.
     static func isStopList(_ stops: [StationID]) -> Bool {
         stops.count >= 2 && zip(stops, stops.dropFirst()).allSatisfy { $0 != $1 }
+    }
+
+    /// How many trains the line runs at `level`, and the minutes between
+    /// them, for a round trip of `roundTrip` minutes; `nil` when it runs
+    /// none then.
+    ///
+    /// Never more trains than keep ``minimumHeadwayMinutes`` apart, and at
+    /// least one: `max(1, roundTrip / 2)`. Without a target the count is
+    /// the one set for the level, and the headway the round trip shared
+    /// between the trains, rounded up. With a target the count is the
+    /// fewest trains that keep to it (the round trip divided by the target,
+    /// rounded up), and the headway the target, or longer when even that
+    /// many trains is more than the line can run.
+    ///
+    /// - Precondition: `roundTrip >= 1`, as every journey's is (it includes
+    ///   a dwell at both ends).
+    func service(at level: ServiceLevel, roundTrip: Int64) -> (trains: Int, headway: Int64)? {
+        let maximum = Int(clamping: max(1, roundTrip / Self.minimumHeadwayMinutes))
+        let count: Int
+        if let target = targetHeadways[level] {
+            count = min(Int(clamping: Self.dividedRoundingUp(roundTrip, by: target)), maximum)
+        } else {
+            count = min(trainsInService[level], maximum)
+        }
+        guard count > 0 else { return nil }
+        let shared = Self.dividedRoundingUp(roundTrip, by: Int64(count))
+        return (count, max(targetHeadways[level] ?? shared, shared))
+    }
+
+    /// `value / divisor`, rounded up. Both are positive.
+    static func dividedRoundingUp(_ value: Int64, by divisor: Int64) -> Int64 {
+        value / divisor + (value % divisor == 0 ? 0 : 1)
+    }
+
+    /// The first minute after `now` at which this line's window opens or
+    /// closes or a band of `day` starts, whichever comes first; `nil` if
+    /// none of them fits in a ``GameTime``. Between two such minutes the
+    /// line's window and level stay the same.
+    func nextChange(after now: GameTime, in day: ServiceDay) -> GameTime? {
+        var minutesOfDay = day.bands.map(\.start)
+        if case .hours(let open, let close) = window {
+            minutesOfDay += [open, close % Int(GameTime.minutesPerDay)]
+        }
+        let today = Int64(now.minuteOfDay)
+        return minutesOfDay.compactMap { minute -> GameTime? in
+            // Always a whole day ahead at the most, never now itself.
+            let ahead = (Int64(minute) - today + GameTime.minutesPerDay - 1) % GameTime.minutesPerDay + 1
+            let (time, overflow) = now.minutes.addingReportingOverflow(ahead)
+            return overflow ? nil : GameTime(minutes: time)
+        }.min()
     }
 }
 
@@ -275,6 +381,35 @@ extension TrainsInService: Codable {
     }
 }
 
+extension TargetHeadways: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case peak, offPeak, low
+    }
+
+    /// Decodes `{"peak", "offPeak", "low"}`, each present only at a level
+    /// with a target. An explicit `null`, or a target outside `2...1440`,
+    /// is rejected.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func target(_ key: CodingKeys) throws -> Int64? {
+            container.contains(key) ? try container.decode(Int64.self, forKey: key) : nil
+        }
+        self.init(peak: try target(.peak), offPeak: try target(.offPeak), low: try target(.low))
+        guard isValid else {
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: container.codingPath, debugDescription: "A target headway is 2 to 1440 minutes."
+            ))
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(peak, forKey: .peak)
+        try container.encodeIfPresent(offPeak, forKey: .offPeak)
+        try container.encodeIfPresent(low, forKey: .low)
+    }
+}
+
 extension ServiceDay: Codable {
     /// Decodes a list of `{"start", "level"}`, rejecting a day whose bands
     /// do not start at minute 0 or do not strictly increase within the day.
@@ -298,12 +433,18 @@ extension ServiceDay.Band: Codable {}
 
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, rate, window, trainsInService
+        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch
     }
 
-    /// Decodes a line, rejecting stops, a rate, a window or train counts no
-    /// line can have rather than repairing them. That the stations exist is
-    /// checked by the ``GameWorld`` decoder.
+    /// Decodes a line, rejecting stops, a rate, a window, train counts or
+    /// target headways no line can have, trains listed out of order or
+    /// twice, or a dispatch before minute 0, rather than repairing them.
+    /// A line without targets has no `"targetHeadways"` key, one without
+    /// trains no `"trains"`, and one that never sent a train out no
+    /// `"lastDispatch"`, which is also how lines saved before they could
+    /// dispatch read; an explicit `null` is rejected. That the stations and
+    /// trains exist, that no train is on two lines and that the dispatch is
+    /// not after the clock are checked by the ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(LineID.self, forKey: .id)
@@ -312,6 +453,9 @@ extension ServiceLine: Codable {
         rate = try container.decode(Int64.self, forKey: .rate)
         window = try container.decode(ServiceWindow.self, forKey: .window)
         trainsInService = try container.decode(TrainsInService.self, forKey: .trainsInService)
+        targetHeadways = container.contains(.targetHeadways) ? try container.decode(TargetHeadways.self, forKey: .targetHeadways) : .none
+        trains = container.contains(.trains) ? try container.decode([TrainID].self, forKey: .trains) : []
+        lastDispatch = container.contains(.lastDispatch) ? try container.decode(GameTime.self, forKey: .lastDispatch) : nil
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -319,6 +463,16 @@ extension ServiceLine: Codable {
         }
         guard rate >= 1 else {
             throw DecodingError.dataCorruptedError(forKey: .rate, in: container, debugDescription: "Line \(id.rawValue)'s rate must be at least 1.")
+        }
+        guard zip(trains, trains.dropFirst()).allSatisfy({ $0 < $1 }) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .trains, in: container, debugDescription: "Line \(id.rawValue)'s trains must be listed once each, in ascending order."
+            )
+        }
+        guard (lastDispatch?.minutes ?? 0) >= 0 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .lastDispatch, in: container, debugDescription: "Line \(id.rawValue) cannot have sent a train out before minute 0."
+            )
         }
     }
 
@@ -330,5 +484,12 @@ extension ServiceLine: Codable {
         try container.encode(rate, forKey: .rate)
         try container.encode(window, forKey: .window)
         try container.encode(trainsInService, forKey: .trainsInService)
+        if targetHeadways != .none {
+            try container.encode(targetHeadways, forKey: .targetHeadways)
+        }
+        if !trains.isEmpty {
+            try container.encode(trains, forKey: .trains)
+        }
+        try container.encodeIfPresent(lastDispatch, forKey: .lastDispatch)
     }
 }

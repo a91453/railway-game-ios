@@ -49,6 +49,48 @@ public struct LineJourney: Hashable, Sendable {
     }
 }
 
+/// One round trip a line sends a train on (Stage Q2b): whether the train
+/// turns round before it leaves the first stop, and the journey it drives
+/// from there.
+struct LineTrip: Hashable, Sendable {
+    let turnsFirst: Bool
+    let journey: LineJourney
+
+    /// The trip's timetable, calling at `stops` (the line's), leaving the
+    /// first stop at `departure`, or `nil` if a time would pass the largest
+    /// minute.
+    ///
+    /// One call per stop: the first stop (arrival and departure at
+    /// `departure`, turning round first if the trip does), then each leg's
+    /// call, arriving the leg's minutes after the call before it left. A
+    /// call between the ends stays ``ServiceLine/dwellMinutes``; the last
+    /// stop stays ``ServiceLine/terminalDwellMinutes`` and turns the train
+    /// round; back at the first stop the train arrives, turns round and
+    /// the trip is over, the train waiting there for the rest of its
+    /// terminal dwell. So a train on time is back ready to leave
+    /// `roundTripMinutes` after it left.
+    ///
+    /// - Precondition: `departure` is minute 0 or later.
+    func timetable(calling stops: [StationID], leavingAt departure: GameTime) -> [ScheduledStop]? {
+        var timetable = [ScheduledStop(station: stops[0], arrival: departure, departure: departure, reverses: turnsFirst)]
+        var time = departure.minutes
+        for (index, leg) in journey.legs.enumerated() {
+            let isLast = index == journey.legs.count - 1
+            let isFarEnd = leg.to == stops.count - 1
+            let dwell = isLast ? 0 : isFarEnd ? ServiceLine.terminalDwellMinutes : ServiceLine.dwellMinutes
+            let (arrival, late) = time.addingReportingOverflow(leg.minutes)
+            let (leaving, later) = arrival.addingReportingOverflow(dwell)
+            guard !late, !later else { return nil }
+            timetable.append(ScheduledStop(
+                station: stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: leaving),
+                reverses: isLast || isFarEnd
+            ))
+            time = leaving
+        }
+        return timetable
+    }
+}
+
 extension GameWorld {
     /// The service level of line `id` at `time`: the world's
     /// ``serviceDay`` at that minute of the day, if the line's window is
@@ -98,28 +140,41 @@ extension GameWorld {
     }
 
     /// How many trains line `id` runs at `level`: the count set for that
-    /// level, but no more than ``lineMaximumTrains(_:)``. `nil` if the line
+    /// level, or at a level with a target headway the fewest trains that
+    /// keep to it (its round trip divided by the target, rounded up); in
+    /// both cases no more than ``lineMaximumTrains(_:)``. `nil` if the line
     /// does not exist or its journey cannot be driven.
     public func lineTrainsInService(_ id: LineID, at level: ServiceLevel) -> Int? {
-        guard let line = line(id: id), let maximum = lineMaximumTrains(id) else { return nil }
-        return min(line.trainsInService[level], maximum)
+        guard let line = line(id: id), let roundTrip = lineJourney(id)?.roundTripMinutes else { return nil }
+        return line.service(at: level, roundTrip: roundTrip)?.trains ?? 0
     }
 
     /// The minutes between two trains of line `id` at `level`: its round
-    /// trip shared between the trains it runs then, rounded up. `nil` if the
-    /// line does not exist, its journey cannot be driven, or it runs no
-    /// trains at that level.
+    /// trip shared between the trains it runs then, rounded up, or at a
+    /// level with a target headway the target, unless the trains the line
+    /// can run need longer. `nil` if the line does not exist, its journey
+    /// cannot be driven, or it runs no trains at that level.
     public func lineHeadway(_ id: LineID, at level: ServiceLevel) -> Int64? {
-        guard let trains = lineTrainsInService(id, at: level), trains > 0,
-              let roundTrip = lineJourney(id)?.roundTripMinutes
-        else { return nil }
-        let count = Int64(trains)
-        return roundTrip / count + (roundTrip % count == 0 ? 0 : 1)
+        guard let line = line(id: id), let roundTrip = lineJourney(id)?.roundTripMinutes else { return nil }
+        return line.service(at: level, roundTrip: roundTrip)?.headway
+    }
+
+    /// The round trip line `line`'s train would make from `position`,
+    /// where it stands at the first stop: as it faces, or turned round
+    /// first when only that can be driven or its round trip is shorter.
+    /// `nil` if neither can be driven.
+    func trip(of line: ServiceLine, from position: TrainPosition) -> LineTrip? {
+        let ahead = drive(line, from: position)
+        let turned = drive(line, from: position.reversed)
+        if let turned, ahead.map({ turned.roundTripMinutes < $0.roundTripMinutes }) ?? true {
+            return LineTrip(turnsFirst: true, journey: turned)
+        }
+        return ahead.map { LineTrip(turnsFirst: false, journey: $0) }
     }
 
     /// The round trip of `line` driven from `start`, or `nil` if a leg has
     /// no route (or, beyond any real map, the minutes would overflow).
-    private func drive(_ line: ServiceLine, from start: TrainPosition) -> LineJourney? {
+    func drive(_ line: ServiceLine, from start: TrainPosition) -> LineJourney? {
         let stops = line.stops
         let calls = Array(stops.indices) + stops.indices.dropLast().reversed()
         var position = start

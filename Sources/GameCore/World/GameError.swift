@@ -84,4 +84,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// A service day's bands start at minute 0 of the day and strictly
     /// increase within the day.
     case invalidServiceDay
+    /// A target headway is 2 to 1440 minutes (see ``TargetHeadways``).
+    case invalidHeadway
+    /// The train is assigned to a line, which runs its timetable and
+    /// service: it cannot be given another timetable, have a service
+    /// started or stopped, or be assigned again. Take it off the line
+    /// first.
+    case trainOnLine(TrainID)
+    /// The train is not assigned to a line, so there is none to take it
+    /// off.
+    case trainNotOnLine(TrainID)
 }
