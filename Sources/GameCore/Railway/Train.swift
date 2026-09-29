@@ -14,9 +14,9 @@ public struct TrainID: RawRepresentable, Hashable, Comparable, Codable, Sendable
 /// A train owned by the player.
 ///
 /// A train has an identity, a name, a timetable (the stops it is scheduled
-/// to make, which does not drive it yet) and, once placed, a position on the
-/// track and a movement (rate and continuation). Routes and consists are not
-/// modelled yet.
+/// to make), whether it is running that timetable as a service and how far
+/// it has got, and, once placed, a position on the track and a movement
+/// (rate and continuation). Consists are not modelled yet.
 public struct Train: Identifiable, Hashable, Sendable {
     public let id: TrainID
     public let name: String
@@ -36,24 +36,35 @@ public struct Train: Identifiable, Hashable, Sendable {
     ///
     /// Plan data, independent of where the train is and how it moves:
     /// placing, unplacing, reversing, the movement commands and time leave
-    /// it as it is, and nothing reads it to move the train. Only
-    /// ``GameWorld`` changes it, through
-    /// ``GameWorld/setTrainTimetable(_:to:)``.
+    /// it as it is. Only an active service (``execution``) reads it to move
+    /// the train. Only ``GameWorld`` changes it, through
+    /// ``GameWorld/setTrainTimetable(_:to:)``, which is refused while a
+    /// service is active.
     public internal(set) var timetable: [ScheduledStop]
+    /// How far the train's timetable service has got, or `nil` while no
+    /// service is active (as for every newly bought train).
+    ///
+    /// Only ``GameWorld`` changes it, through
+    /// ``GameWorld/startTrainService(_:)``,
+    /// ``GameWorld/stopTrainService(_:)`` and ``GameWorld/advance(ticks:)``.
+    /// While it is set, the service owns the train's continuation (see
+    /// ``TimetableExecution``).
+    public internal(set) var execution: TimetableExecution?
 
-    /// Creates an unplaced, idle train without a timetable.
+    /// Creates an unplaced, idle train without a timetable or a service.
     public init(id: TrainID, name: String) {
         self.id = id
         self.name = name
         self.position = nil
         self.movement = .idle
         self.timetable = []
+        self.execution = nil
     }
 }
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable
+        case id, name, position, movement, timetable, execution
     }
 
     /// Decodes a train.
@@ -62,11 +73,17 @@ extension Train: Codable {
     /// saved before positions existed read. An idle train has no `"movement"`
     /// key, which is also how trains saved before movement existed read. A
     /// train without a timetable has no `"timetable"` key, which is also how
-    /// trains saved before timetables existed read. An explicit `null` for
-    /// any of them is rejected, and so is a malformed value, a movement that
-    /// does not fit the position (see ``TrainMovement/fits(_:)``), or a
-    /// timetable whose times go backwards: none is ever read as unplaced,
-    /// idle or without a timetable, and no timetable is sorted or trimmed.
+    /// trains saved before timetables existed read. A train without an
+    /// active service has no `"execution"` key, which is also how trains
+    /// saved before services existed read. An explicit `null` for any of
+    /// them is rejected, and so is a malformed value, a movement that does
+    /// not fit the position (see ``TrainMovement/fits(_:)``), a timetable
+    /// whose times go backwards, or an execution that does not fit the
+    /// timetable, position and movement (see
+    /// ``TimetableExecution/fits(timetable:position:movement:)``): none is
+    /// ever read as unplaced, idle, without a timetable or without a
+    /// service, no timetable is sorted or trimmed, and no execution is
+    /// moved to another stop or dropped.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -80,6 +97,9 @@ extension Train: Codable {
         timetable = container.contains(.timetable)
             ? try container.decode([ScheduledStop].self, forKey: .timetable)
             : []
+        execution = container.contains(.execution)
+            ? try container.decode(TimetableExecution.self, forKey: .execution)
+            : nil
         guard movement.fits(position) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .movement, in: container,
@@ -90,6 +110,12 @@ extension Train: Codable {
             throw DecodingError.dataCorruptedError(
                 forKey: .timetable, in: container,
                 debugDescription: "Train \(id.rawValue)'s timetable goes back in time."
+            )
+        }
+        if let execution, !execution.fits(timetable: timetable, position: position, movement: movement) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .execution, in: container,
+                debugDescription: "Train \(id.rawValue)'s service does not fit its timetable, position and movement."
             )
         }
     }
@@ -105,5 +131,6 @@ extension Train: Codable {
         if !timetable.isEmpty {
             try container.encode(timetable, forKey: .timetable)
         }
+        try container.encodeIfPresent(execution, forKey: .execution)
     }
 }

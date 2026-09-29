@@ -5,8 +5,10 @@
 /// A timetable is an ordered list of stops (``Train/timetable``); the order
 /// of the list is the order of the stops. It is plan data only: it says which
 /// stations the train is scheduled to be at and when, never whether the
-/// train should leave now. Nothing in the simulation reads it yet, so a
-/// train moves exactly as it would without one.
+/// train should leave now. Only a service started with
+/// ``GameWorld/startTrainService(_:)`` reads it, and decides that from the
+/// scheduled departures (see ``GameWorld/advance(ticks:)``); without one, a
+/// train moves exactly as it would without a timetable.
 ///
 /// Times are ``GameTime`` values: whole game minutes since the game began,
 /// the same absolute scale as ``GameClock/now``, with no calendar or time

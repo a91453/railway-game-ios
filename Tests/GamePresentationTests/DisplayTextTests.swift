@@ -69,6 +69,11 @@ final class ErrorMessageTests: XCTestCase {
             .invalidTimetable:
                 "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives.",
             .unknownStation(StationID(rawValue: 3)): "There is no station #3.",
+            .trainServiceActive(TrainID(rawValue: 3)): "Train #3 is running its timetable. Stop its service first.",
+            .trainServiceNotActive(TrainID(rawValue: 3)): "Train #3 is not running a timetable.",
+            .noTimetable(TrainID(rawValue: 3)): "Train #3 has no timetable to run.",
+            .trainNotAtFirstStop(TrainID(rawValue: 3)):
+                "Train #3 must be stopped at its timetable's first station to start its service.",
         ]
 
         for (error, message) in messages {

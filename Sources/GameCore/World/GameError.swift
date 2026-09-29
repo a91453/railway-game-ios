@@ -55,4 +55,18 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidTimetable
     /// No station with this ID exists.
     case unknownStation(StationID)
+    /// The train is running its timetable, and the service owns its
+    /// continuation and timetable: it cannot be given a path, reversed,
+    /// taken off the track, given another timetable or started again. Stop
+    /// the service first.
+    case trainServiceActive(TrainID)
+    /// The train is not running a timetable service, so there is none to
+    /// stop.
+    case trainServiceNotActive(TrainID)
+    /// The train has no timetable, so there is no service to start.
+    case noTimetable(TrainID)
+    /// A service starts from the first stop of the timetable, so the train
+    /// must be stopped at that stop's station (see
+    /// ``GameWorld/stationsStoppedAt(by:)``).
+    case trainNotAtFirstStop(TrainID)
 }

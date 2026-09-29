@@ -1,8 +1,8 @@
 import GameCore
 
-/// The whole GameCore kernel (Stages I–O) written a second time, straight
-/// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16, 18
-/// and 19; the rules summary), for differential testing.
+/// The whole GameCore kernel (Stages I–P) written a second time, straight
+/// from the documented rules (ARCHITECTURE decisions 3, 5, 6, 10, 14–16 and
+/// 18–20; the rules summary), for differential testing.
 ///
 /// It shares no code with GameCore beyond the plain value types used for
 /// inputs and outputs, and it is written differently on purpose:
@@ -12,7 +12,11 @@ import GameCore
 ///   division), not by GameCore's link-by-link loop, and there is no
 ///   shortcut for steps where nothing moves: every minute is stepped;
 /// - routes come from distances relaxed until nothing changes followed by a
-///   greedy walk, not from a breadth-first search.
+///   greedy walk, not from a breadth-first search;
+/// - a service is a stop index and a flag, not an enum; every departure
+///   looks its route up again (no memory of routes that were not found),
+///   and a train already stopped at the next stop's station is recognised
+///   by being stopped there, not by an empty route.
 ///
 /// Only for small maps: routes cost O(states²).
 struct ReferenceWorld: Equatable {
@@ -35,6 +39,17 @@ struct ReferenceWorld: Equatable {
         var continuation: [GridPosition] = []
         var cursor = 0
         var timetable: [ScheduledStop] = []
+        var service: Service?
+    }
+
+    /// Decision 20: the timetable entry a service is at or heading for.
+    struct Service: Equatable {
+        var stop: Int
+        var waiting: Bool
+
+        var execution: TimetableExecution {
+            waiting ? .waitingAtStop(stop) : .travellingToStop(stop)
+        }
     }
 
     let width: Int
@@ -195,6 +210,12 @@ struct ReferenceWorld: Equatable {
         index(id).flatMap { trains[$0].position == nil ? .failure(.trainNotPlaced(id)) : .success($0) }
     }
 
+    /// Decision 20: a placed train without a service, for the commands that
+    /// would take the continuation or the train away from a service.
+    private func manual(_ id: TrainID) -> Result<Int, GameError> {
+        placed(id).flatMap { trains[$0].service == nil ? .success($0) : .failure(.trainServiceActive(id)) }
+    }
+
     mutating func placeTrain(_ id: TrainID, at position: TrainPosition) -> GameError? {
         switch index(id) {
         case .failure(let error): return error
@@ -207,7 +228,7 @@ struct ReferenceWorld: Equatable {
     }
 
     mutating func unplaceTrain(_ id: TrainID) -> GameError? {
-        switch placed(id) {
+        switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
             // Position and movement go; the timetable is plan data and stays.
@@ -217,7 +238,7 @@ struct ReferenceWorld: Equatable {
     }
 
     mutating func reverseTrain(_ id: TrainID) -> GameError? {
-        switch placed(id) {
+        switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
             switch trains[i].position! {
@@ -264,7 +285,7 @@ struct ReferenceWorld: Equatable {
     }
 
     mutating func setContinuation(_ id: TrainID, _ nodes: [GridPosition]) -> GameError? {
-        switch placed(id) {
+        switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
             let (node, heading) = Self.ahead(trains[i].position!)
@@ -278,11 +299,13 @@ struct ReferenceWorld: Equatable {
     /// Decision 19: the train must exist; then all the times, arrival and
     /// departure of each stop in turn, must be non-negative and never fall;
     /// then every station must exist, the first missing one in timetable
-    /// order being reported. Placement does not matter.
+    /// order being reported. Placement does not matter. Decision 20: not
+    /// while a service runs, checked right after the train.
     mutating func setTimetable(_ id: TrainID, _ stops: [ScheduledStop]) -> GameError? {
         switch index(id) {
         case .failure(let error): return error
         case .success(let i):
+            guard trains[i].service == nil else { return .trainServiceActive(id) }
             let times = stops.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
             guard times.allSatisfy({ $0 >= 0 }), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
                 return .invalidTimetable
@@ -292,6 +315,32 @@ struct ReferenceWorld: Equatable {
                 return .unknownStation(missing.station)
             }
             trains[i].timetable = stops
+            return nil
+        }
+    }
+
+    /// Decision 20: in the order train, no service yet, a timetable, placed,
+    /// stopped at the first stop's station; then waiting at stop 0.
+    mutating func startService(_ id: TrainID) -> GameError? {
+        switch index(id) {
+        case .failure(let error): return error
+        case .success(let i):
+            let train = trains[i]
+            if train.service != nil { return .trainServiceActive(id) }
+            if train.timetable.isEmpty { return .noTimetable(id) }
+            if train.position == nil { return .trainNotPlaced(id) }
+            if !stationsStoppedAt(by: id).contains(train.timetable[0].station) { return .trainNotAtFirstStop(id) }
+            trains[i].service = Service(stop: 0, waiting: true)
+            return nil
+        }
+    }
+
+    mutating func stopService(_ id: TrainID) -> GameError? {
+        switch index(id) {
+        case .failure(let error): return error
+        case .success(let i):
+            if trains[i].service == nil { return .trainServiceNotActive(id) }
+            trains[i].service = nil
             return nil
         }
     }
@@ -309,7 +358,8 @@ struct ReferenceWorld: Equatable {
         speed = resumeSpeed
     }
 
-    /// Decision 3 and 15: checked first, then every minute is stepped.
+    /// Decisions 3, 15 and 20: checked first, then every minute is stepped:
+    /// departures at the minute, travel, the clock, then arrivals.
     mutating func advance(ticks: Int) -> GameError? {
         let perTick: Int64 = switch speed {
         case .paused: 0
@@ -319,12 +369,46 @@ struct ReferenceWorld: Equatable {
         let (steps, overflow) = Int64(ticks).multipliedReportingOverflow(by: perTick)
         guard !overflow, !minutes.addingReportingOverflow(steps).overflow else { return .clockOverflow }
         for _ in 0..<steps {
+            for i in trains.indices {
+                depart(i)
+            }
             for i in trains.indices where trains[i].position != nil && trains[i].rate > 0 {
                 trains[i] = stepped(trains[i])
             }
             minutes += 1
+            for i in trains.indices {
+                guard let service = trains[i].service, !service.waiting else { continue }
+                let target = trains[i].timetable[service.stop].station
+                if stationsStoppedAt(by: TrainID(rawValue: trains[i].id)).contains(target) {
+                    trains[i].service = Service(stop: service.stop, waiting: true)
+                }
+            }
         }
         return nil
+    }
+
+    /// Decision 20's departures at the current minute for one train: from
+    /// each stop whose departure has come, finish at the last stop, arrive
+    /// at once where the train already is stopped at the next stop's
+    /// station, or set off along a route; wait if there is none.
+    private mutating func depart(_ i: Int) {
+        let id = TrainID(rawValue: trains[i].id)
+        while let service = trains[i].service, service.waiting, trains[i].timetable[service.stop].departure.minutes <= minutes {
+            let next = service.stop + 1
+            if next == trains[i].timetable.count {
+                trains[i].service = nil
+                return
+            }
+            let target = trains[i].timetable[next].station
+            if stationsStoppedAt(by: id).contains(target) {
+                trains[i].service = Service(stop: next, waiting: true)
+                continue
+            }
+            guard let route = route(from: trains[i].position!, toStation: target) else { return }
+            trains[i].continuation = route
+            trains[i].cursor = 0
+            trains[i].service = Service(stop: next, waiting: false)
+        }
     }
 
     /// One basic step for one train, in closed form: the train first needs

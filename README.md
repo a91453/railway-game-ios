@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4 Stage O（時刻表資料）.**
+**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4 Stage P（依時刻表到達、停留、出發）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，以及每台列車的時刻表資料（Phase 4 Stage O：排定的停靠，還不會控制列車），App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車；**尚未**有依時刻表運行、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），以及依時刻表執行一次服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，還沒有時刻表或服務的畫面。**尚未**有重複的班次、乘客或城市模擬。
 
 App 目前能做到：
 
@@ -28,7 +28,8 @@ GameCore 目前能做到：
 - 列車移動：設定 rate（每遊戲分鐘的邏輯單位）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行
 - 路徑搜尋：`route(from:to:)` 找出到目的地鐵軌格的最短、不折返路徑（同長時依北、東、南、西順序），結果可直接交給 `setTrainContinuation`；只查詢、不改變世界
 - 停站：車站旁（正北、東、南、西）的鐵軌格是月台（`platforms(of:)`）；`route(from:toStation:)` 找出到最近月台的路徑；列車在月台格中心、行程結束時停在該站（`stationsStoppedAt(by:)`）。都由狀態推導，不另存
-- 時刻表：每台列車有依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），以 `setTrainTimetable` 整份替換；時間不倒流、車站必須存在。只是計畫資料：模擬不讀它，列車不會因此出發或停留
+- 時刻表：每台列車有依序的停靠（車站、排定的到達與離開，開局以來的遊戲分鐘），以 `setTrainTimetable` 整份替換；時間不倒流、車站必須存在。時刻表本身是計畫資料，只有明確啟動的服務會讀它
+- 時刻表服務：`startTrainService` 讓停在第一站的列車依時刻表跑一次（`stopTrainService` 結束）。列車不會早於排定出發時刻離開，也不另加停留時間；已停在下一站時零距離到達，沒有路就等待，最後一站停到排定出發才結束。執行進度（第幾個停靠）是存檔的權威狀態；執行中不能手動改路、反向、取下或換時刻表
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -73,7 +74,7 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
@@ -162,6 +163,7 @@ GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案
 
 - `KernelDifferentialTests`：同一串產生的指令同時交給 GameCore 與另外重寫的整個核心（`ReferenceWorld`：格子存在字典裡、每一步的移動以除法一次算出且每分鐘都逐步執行、路徑以鬆弛法求出），每個指令之後比對結果（包括錯誤種類與檢查順序）與所有可觀察的狀態（時間、金額、每一格、車站、列車、連通、月台、停站），並檢查停站只因決策 18 列出的指令開始或結束。失敗時先把指令序列縮到仍會失敗的最少指令，再連同 seed 與 case 回報。參考模型本身也要通過所有 golden scenario（`ReferenceWorldGoldenTests`）。
 - `SaveMutationTests`：把產生的世界存檔後改掉 JSON 裡的一個值（數字、名稱、key、陣列元素、`null`），壞資料必須被拒絕；讀得進來的世界必須維持所有不變量、能再次存讀，之後的指令也維持原子性。另一組優先改動時刻表裡的值（沒有車站或列車的世界沒有時刻表可改）。
+- `ServicePropertyTests`：在上面的指令序列中混入從停靠車站開始的時刻表、服務的啟動與停止與長短不一的推進，同時與參考模型比對（參考模型逐分鐘步進、沒有快轉、每次出發都重新求路），並檢查每次 `advance(n)` 等於 n 次 `advance(1)`、2× 等於兩倍的 1×，以及服務的不變量。`SaveMutationTests` 另有一組專門改動或寫入 `execution` 的變異存檔。
 - `TimetablePropertyTests`：在上面的指令序列中混入合法與不合法的時刻表，同時與參考模型比對（錯誤種類與順序、被拒絕時世界不變、只改變該列車的時刻表），並讓同一串指令在從不設定時刻表的雙胞胎世界上執行：清除時刻表後兩者必須完全相同，證明時刻表不影響移動、路徑、停站、資金、時間與 ID。
 
 ```sh

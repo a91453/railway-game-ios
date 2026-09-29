@@ -8,7 +8,8 @@
 // station's platforms: it stands at the centre of the platform tile with no
 // continuation left. The movement kernel never moves such a train by itself
 // (see TrainMovement), so it stays stopped until a command gives it
-// somewhere to go or takes it off the track. Being stopped is derived from
+// somewhere to go or takes it off the track, or its timetable service gives
+// it a route when a departure comes. Being stopped is derived from
 // the train's position and movement and the map, like being blocked; it is
 // not stored.
 
@@ -70,7 +71,9 @@ extension GameWorld {
     /// A train is stopped at a station when it stands at the centre of one
     /// of the station's platforms (``TrainPosition/atNode(_:heading:)``,
     /// facing either way) with no continuation left, whatever its rate. Its
-    /// journey ends there, and it stays until a command changes that:
+    /// journey ends there, and it stays until a command changes that, or
+    /// its timetable service gives it a route when a departure comes (see
+    /// ``advance(ticks:)``):
     ///
     /// - A train that passes a platform, one given a new continuation there
     ///   (even while its rate is 0), and one waiting there for removed track
@@ -96,5 +99,16 @@ extension GameWorld {
             else { return nil }
             return station
         }.sorted()
+    }
+
+    /// Whether `train` is stopped at the station `id`: whether
+    /// ``stationsStoppedAt(by:)`` would list `id` for it. Takes the train by
+    /// value, so services can ask about the train they are updating.
+    func isStopped(_ train: Train, at id: StationID) -> Bool {
+        guard case .atNode(let tile, _)? = train.position,
+              train.movement.remainingContinuation.isEmpty,
+              let station = station(id: id)
+        else { return false }
+        return TrackDirection(from: tile, to: station.position) != nil
     }
 }
