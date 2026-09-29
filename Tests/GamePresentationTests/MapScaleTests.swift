@@ -48,4 +48,14 @@ final class MapScaleTests: XCTestCase {
     func testPointsLeftOfOrAboveTheMapAreOutside() {
         XCTAssertEqual(MapScale.position(atX: -0.5, y: -0.5, tileSize: 30), GridPosition(x: -1, y: -1))
     }
+
+    /// Small tiles draw an overview; the compact phone size and larger draw
+    /// everything.
+    func testSmallTilesDrawAnOverview() {
+        XCTAssertEqual(MapScale.detail(forTileSize: 8), .overview)
+        XCTAssertEqual(MapScale.detail(forTileSize: 19.9), .overview)
+        XCTAssertEqual(MapScale.detail(forTileSize: 20), .full)
+        XCTAssertEqual(MapScale.detail(forTileSize: MapScale.compactSize), .full)
+        XCTAssertEqual(MapScale.detail(forTileSize: MapScale.largestSize), .full)
+    }
 }

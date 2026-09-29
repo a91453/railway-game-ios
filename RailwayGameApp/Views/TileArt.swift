@@ -6,7 +6,9 @@ import SwiftUI
 /// preview, so a piece looks the same before and after it is built.
 ///
 /// Tile kinds differ in shape, not only colour: track is drawn as rails,
-/// a station as a badge with a train symbol, a train as a disc.
+/// a station as a badge with a train symbol, a train as a disc. Zoomed out
+/// (``MapDetail/overview``), track is a thin line and a station a plain
+/// square, without the grid.
 enum TileArt {
     static func drawMap(
         _ map: GridMap,
@@ -16,19 +18,26 @@ enum TileArt {
         tileSize: Double,
         in context: GraphicsContext
     ) {
+        let detail = MapScale.detail(forTileSize: tileSize)
         let bounds = CGRect(x: 0, y: 0, width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         context.fill(Path(bounds), with: .color(Palette.land))
-        drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
+        if detail == .full {
+            drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
+        }
 
         for tile in map.tiles {
             let rect = rect(for: tile.position, tileSize: tileSize)
-            switch tile.type {
-            case .empty:
+            switch (tile.type, detail) {
+            case (.empty, _):
                 break
-            case .track(let connections):
+            case (.track(let connections), .full):
                 drawTrack(connections, in: rect, context: context)
-            case .station:
+            case (.track(let connections), .overview):
+                drawTrackLine(connections, in: rect, context: context)
+            case (.station, .full):
                 drawStation(in: rect, context: context)
+            case (.station, .overview):
+                context.fill(Path(rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.1)), with: .color(Palette.station))
             }
         }
 
@@ -97,6 +106,15 @@ enum TileArt {
             }
             context.stroke(bar, with: .color(Palette.rail), style: StrokeStyle(lineWidth: railWidth * 1.4, lineCap: .round))
         }
+    }
+
+    /// Track as one thin line along its connections, for the overview.
+    static func drawTrackLine(_ connections: TrackConnections, in rect: CGRect, context: GraphicsContext) {
+        guard !connections.isEmpty else { return }
+        context.stroke(
+            trackPath(connections, in: rect), with: .color(Palette.rail),
+            style: StrokeStyle(lineWidth: max(1, rect.width * 0.2), lineCap: .round, lineJoin: .round)
+        )
     }
 
     static func drawStation(in rect: CGRect, context: GraphicsContext) {

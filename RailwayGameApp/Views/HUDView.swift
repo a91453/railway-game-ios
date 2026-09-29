@@ -2,10 +2,12 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Cash, game time and speed controls. Everything shown is read from the
-/// world, so it updates as soon as a command or a tick changes it.
+/// Cash, game time, speed controls and the button that opens the lines
+/// panel. Everything shown is read from the world, so it updates as soon as
+/// a command or a tick changes it.
 struct HUDView: View {
     let session: GameSession
+    @State private var showsLines = false
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time stack.
@@ -14,6 +16,7 @@ struct HUDView: View {
                 cash
                 time
                 Spacer(minLength: 12)
+                linesButton
                 SpeedControl(session: session)
             }
             HStack(spacing: 12) {
@@ -22,12 +25,33 @@ struct HUDView: View {
                     time
                 }
                 Spacer(minLength: 8)
+                linesButton
                 SpeedControl(session: session)
             }
         }
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .sheet(isPresented: $showsLines) {
+            LinesPanel(session: session)
+                .presentationDetents([.medium, .large])
+                // The map stays usable behind the half-height sheet, so
+                // stations can be selected for a new line.
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        }
+    }
+
+    private var linesButton: some View {
+        Button {
+            showsLines = true
+        } label: {
+            Image(systemName: "point.3.connected.trianglepath.dotted")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 44, height: 32)
+        }
+        .buttonStyle(SelectableButtonStyle(isActive: showsLines))
+        .accessibilityLabel("Lines")
+        .accessibilityHint("Shows the service lines and their timetables.")
     }
 
     private var cash: some View {

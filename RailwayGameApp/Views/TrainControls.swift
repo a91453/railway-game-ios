@@ -90,8 +90,32 @@ struct TrainControls: View {
                         .font(.footnote.weight(.semibold))
                 }
             }
+            if let service = session.world.trainServiceStatus(of: train.id) {
+                serviceStatus(service)
+            }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// The line or timetable the train runs, where it is in it and whether
+    /// it is early or late, derived from the schedule and the clock.
+    private func serviceStatus(_ service: TrainServiceStatus) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if let name = service.serviceName {
+                Label(name, systemImage: "point.3.connected.trianglepath.dotted")
+                    .font(.footnote.weight(.semibold))
+            }
+            HStack(spacing: 6) {
+                Text(service.stopText)
+                if let punctuality = service.punctuality {
+                    Text(punctuality.text)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(punctuality == .onTime ? Color.green : Color.orange)
+                }
+            }
+            .font(.footnote)
+            .monospacedDigit()
+        }
     }
 
     /// The heading an unplaced train will get when it is placed.
@@ -131,7 +155,41 @@ struct TrainControls: View {
                     .font(.subheadline)
             }
             .accessibilityLabel("Take the train off the track")
+            serviceCommand
         }
         .buttonStyle(.bordered)
+    }
+
+    /// Takes a line's train off its line, or starts or stops a train's own
+    /// timetable. GameCore decides whether the command is allowed.
+    @ViewBuilder
+    private var serviceCommand: some View {
+        if let train = session.selectedTrain {
+            if session.world.assignedLine(of: train.id) != nil {
+                Button {
+                    session.unassignSelectedTrain()
+                } label: {
+                    Label("Off Line", systemImage: "minus.circle")
+                        .font(.subheadline)
+                }
+                .accessibilityLabel("Take the train off its line")
+            } else if train.execution != nil {
+                Button {
+                    session.stopSelectedTrainService()
+                } label: {
+                    Label("Stop", systemImage: "stop.circle")
+                        .font(.subheadline)
+                }
+                .accessibilityLabel("Stop the train's timetable")
+            } else if !train.timetable.isEmpty {
+                Button {
+                    session.startSelectedTrainService()
+                } label: {
+                    Label("Run", systemImage: "play.circle")
+                        .font(.subheadline)
+                }
+                .accessibilityLabel("Run the train's timetable")
+            }
+        }
     }
 }
