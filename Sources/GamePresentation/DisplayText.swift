@@ -164,6 +164,10 @@ extension GameError {
             "Game time cannot advance any further."
         case .idsExhausted:
             "This game has no IDs left for anything more of this kind."
+        case .invalidTimetable:
+            "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives."
+        case .unknownStation(let id):
+            "There is no station #\(id.rawValue)."
         }
     }
 }

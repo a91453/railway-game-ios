@@ -48,7 +48,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 model.trains.map {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
-                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor)
+                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor),
+                        timetable: $0.timetable.map(StopSummary.init)
                     )
                 },
                 final.trains, name
@@ -69,6 +70,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .reverseTrain(let id): error = model.reverseTrain(id)
         case .setTrainMovementRate(let id, let rate): error = model.setRate(id, rate)
         case .setTrainContinuation(let id, let nodes): error = model.setContinuation(id, nodes)
+        case .setTrainTimetable(let id, let stops): error = model.setTimetable(id, stops)
         case .setSpeed(let speed): model.setSpeed(speed)
         case .pause: model.pause()
         case .resume: model.resume()
@@ -98,6 +100,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .route(model.route(from: start, toStation: station))
         case .stationStops(let train):
             return .stations(model.stationsStoppedAt(by: train))
+        case .timetable(let id):
+            return .timetable(model.trains.first { $0.id == id.rawValue }?.timetable)
         }
     }
 }

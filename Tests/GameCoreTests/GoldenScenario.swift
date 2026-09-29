@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 7
+    static let schemaVersion = 8
 
     var description: String
     var initialState: InitialState
@@ -142,7 +142,7 @@ extension GoldenScenario.Step: Decodable {
     }
 
     private enum AnswerKeys: String, CodingKey, CaseIterable {
-        case neighbors, connected, position, movement, found, route, platforms, stations
+        case neighbors, connected, position, movement, found, route, platforms, stations, timetable
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -199,6 +199,10 @@ extension GoldenScenario.Step: Decodable {
                 try requireOnly([.stations], answering: "stationStops")
                 let stations = try expect.decode([Int].self, forKey: .stations)
                 self = .observe(observation, expect: .stations(stations.map(StationID.init(rawValue:))))
+            case .timetable:
+                try requireOnly([.timetable], answering: "timetable")
+                let stops = try expect.decode([StopSummary].self, forKey: .timetable)
+                self = .observe(observation, expect: .timetable(stops.map(\.stop)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -222,6 +226,7 @@ enum ScenarioCommand: Equatable {
     case reverseTrain(TrainID)
     case setTrainMovementRate(TrainID, Int64)
     case setTrainContinuation(TrainID, [GridPosition])
+    case setTrainTimetable(TrainID, [ScheduledStop])
     case setSpeed(GameSpeed)
     case pause
     case resume
@@ -249,6 +254,8 @@ enum ScenarioCommand: Equatable {
                 try world.setTrainMovementRate(id, to: rate)
             case .setTrainContinuation(let id, let nodes):
                 try world.setTrainContinuation(id, to: nodes)
+            case .setTrainTimetable(let id, let stops):
+                try world.setTrainTimetable(id, to: stops)
             case .setSpeed(let speed):
                 world.setSpeed(speed)
             case .pause:
@@ -267,7 +274,7 @@ enum ScenarioCommand: Equatable {
 
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case type, x, y, connections, name, train, position, rate, continuation, speed, ticks
+        case type, x, y, connections, name, train, position, rate, continuation, timetable, speed, ticks
     }
 
     init(from decoder: any Decoder) throws {
@@ -301,6 +308,11 @@ extension ScenarioCommand: Decodable {
         case "setTrainContinuation":
             let nodes = try container.decode([PositionSummary].self, forKey: .continuation)
             self = try .setTrainContinuation(container.decodeTrain(forKey: .train), nodes.map(\.position))
+        case "setTrainTimetable":
+            // Read as written: rejecting negative or backward times and
+            // unknown stations is GameCore's decision.
+            let stops = try container.decode([StopSummary].self, forKey: .timetable)
+            self = try .setTrainTimetable(container.decodeTrain(forKey: .train), stops.map(\.stop))
         case "setSpeed":
             self = try .setSpeed(container.decode(SpeedName.self, forKey: .speed).speed)
         case "pause":
@@ -331,7 +343,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train
+        case result, x, y, width, height, required, available, train, station
     }
 
     init(from decoder: any Decoder) throws {
@@ -374,6 +386,10 @@ extension StepOutcome: Codable {
             self = .rejected(.clockOverflow)
         case "idsExhausted":
             self = .rejected(.idsExhausted)
+        case "invalidTimetable":
+            self = .rejected(.invalidTimetable)
+        case "unknownStation":
+            self = try .rejected(.unknownStation(container.decodeStation(forKey: .station)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -433,6 +449,11 @@ extension StepOutcome: Codable {
             try container.encode("clockOverflow", forKey: .result)
         case .rejected(.idsExhausted):
             try container.encode("idsExhausted", forKey: .result)
+        case .rejected(.invalidTimetable):
+            try container.encode("invalidTimetable", forKey: .result)
+        case .rejected(.unknownStation(let id)):
+            try container.encode("unknownStation", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
         }
     }
 }
@@ -441,7 +462,8 @@ extension StepOutcome: Codable {
 
 /// A read-only query as a scenario step, tagged by `"type"`: track topology,
 /// one train's position and movement, a route to a tile or a station, a
-/// station's platforms, or the stations a train is stopped at. Observations
+/// station's platforms, the stations a train is stopped at, or one train's
+/// timetable. Observations
 /// are not commands: they ask the world through its public queries and never
 /// change it.
 enum ScenarioObservation: Equatable {
@@ -452,6 +474,7 @@ enum ScenarioObservation: Equatable {
     case platforms(StationID)
     case routeToStation(from: TrainPosition, station: StationID)
     case stationStops(TrainID)
+    case timetable(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -469,6 +492,8 @@ enum ScenarioObservation: Equatable {
             .route(world.route(from: start, toStation: station))
         case .stationStops(let train):
             .stations(world.stationsStoppedAt(by: train))
+        case .timetable(let id):
+            .timetable(world.train(id: id)?.timetable)
         }
     }
 }
@@ -507,6 +532,8 @@ extension ScenarioObservation: Decodable {
             self = try .routeToStation(from: start, station: container.decodeStation(forKey: .station))
         case "stationStops":
             self = try .stationStops(container.decodeTrain(forKey: .train))
+        case "timetable":
+            self = try .timetable(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -518,9 +545,10 @@ extension ScenarioObservation: Decodable {
 /// `{"position", "movement"}` for a train, `{"found": true, "route":
 /// [{"x", "y"}, ...]}` / `{"found": false}` for a route to a tile or a
 /// station, `{"platforms": [{"x", "y"}, ...]}` in the order the query
-/// returned them, or `{"stations": [id, ...]}` for the stations a train is
-/// stopped at. A train the world does not have answers `{}`, which no
-/// fixture can expect.
+/// returned them, `{"stations": [id, ...]}` for the stations a train is
+/// stopped at, or `{"timetable": [{"station", "arrival", "departure"}, ...]}`
+/// for a train's timetable in its order. A train the world does not have
+/// answers `{}` to `train` and `timetable`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
     case neighbors([GridPosition])
     case connected(Bool)
@@ -528,11 +556,12 @@ enum ObservationAnswer: Equatable {
     case route([GridPosition]?)
     case platforms([GridPosition])
     case stations([StationID])
+    case timetable([ScheduledStop]?)
 }
 
 extension ObservationAnswer: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case neighbors, connected, position, movement, found, route, platforms, stations
+        case neighbors, connected, position, movement, found, route, platforms, stations, timetable
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -556,6 +585,10 @@ extension ObservationAnswer: Encodable {
             try container.encode(positions.map(PositionSummary.init), forKey: .platforms)
         case .stations(let ids):
             try container.encode(ids.map(\.rawValue), forKey: .stations)
+        case .timetable(let stops?):
+            try container.encode(stops.map(StopSummary.init), forKey: .timetable)
+        case .timetable(nil):
+            break
         }
     }
 }
@@ -594,7 +627,8 @@ struct PositionSummary: Codable, Equatable {
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money, what has been
-/// built or bought, and where each train is and how it moves. Lists are in
+/// built or bought, where each train is and how it moves, and each train's
+/// timetable. Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
 /// inherited from how GameCore stores them.
@@ -624,6 +658,7 @@ struct WorldSummary: Codable, Equatable {
         var name: String
         var position: TrainPositionSummary
         var movement: TrainMovementSummary
+        var timetable: [StopSummary]
     }
 
     init(_ world: GameWorld) {
@@ -637,7 +672,12 @@ struct WorldSummary: Codable, Equatable {
             .map { TrackSummary(x: $0.position.x, y: $0.position.y, connections: Directions($0.connections)) }
             .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
         trains = world.trains
-            .map { TrainSummary(id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position), movement: TrainMovementSummary($0.movement)) }
+            .map {
+                TrainSummary(
+                    id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
+                    movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init)
+                )
+            }
             .sorted { $0.id < $1.id }
     }
 }
@@ -823,6 +863,26 @@ struct TrainMovementSummary: Codable, Equatable {
 
     init(_ movement: TrainMovement) {
         self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor)
+    }
+}
+
+/// A timetable stop as a fixture value: `{"station", "arrival", "departure"}`,
+/// a station ID and two game minutes (see `ScheduledStop`). Read as written,
+/// not checked: whether a timetable is valid is GameCore's decision, so a
+/// fixture can expect a negative time to be rejected.
+struct StopSummary: Codable, Equatable {
+    var station: Int
+    var arrival: Int64
+    var departure: Int64
+
+    init(_ stop: ScheduledStop) {
+        station = stop.station.rawValue
+        arrival = stop.arrival.minutes
+        departure = stop.departure.minutes
+    }
+
+    var stop: ScheduledStop {
+        ScheduledStop(station: StationID(rawValue: station), arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure))
     }
 }
 

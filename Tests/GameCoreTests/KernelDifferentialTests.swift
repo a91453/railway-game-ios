@@ -28,6 +28,10 @@ final class KernelDifferentialTests: XCTestCase {
         case reverse(TrainID)
         case setRate(TrainID, Int64)
         case setContinuation(TrainID, [GridPosition])
+        /// Never drawn by ``nextOperation(in:using:)``, so the Stage I–N
+        /// campaigns and their digests are as before; the timetable
+        /// campaigns (`TimetablePropertyTests`) add it.
+        case setTimetable(TrainID, [ScheduledStop])
         /// The train tool's send to a tile: route from where the train is,
         /// committed unchanged.
         case sendToTile(TrainID, GridPosition)
@@ -50,6 +54,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .reverse(let id): ".reverse(\(id.rawValue))"
             case .setRate(let id, let rate): ".setRate(\(id.rawValue), \(rate))"
             case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
+            case .setTimetable(let id, let stops):
+                ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.minutes)-\($0.departure.minutes)" }.joined(separator: ", "))])"
             case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
             case .sendToStation(let id, let station): ".sendToStation(\(id.rawValue), \(station.rawValue))"
             case .advance(let ticks): ".advance(\(ticks))"
@@ -229,6 +235,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .reverse(let id): try world.reverseTrain(id)
             case .setRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
             case .setContinuation(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
+            case .setTimetable(let id, let stops): try world.setTrainTimetable(id, to: stops)
             case .sendToTile(let id, let p):
                 guard let position = world.train(id: id)?.position, let route = world.route(from: position, to: p) else { return nil }
                 try world.setTrainContinuation(id, to: route)
@@ -266,6 +273,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .reverse(let id): return model.reverseTrain(id)
         case .setRate(let id, let rate): return model.setRate(id, rate)
         case .setContinuation(let id, let nodes): return model.setContinuation(id, nodes)
+        case .setTimetable(let id, let stops): return model.setTimetable(id, stops)
         case .sendToTile(let id, let p):
             guard let position = model.trains.first(where: { $0.id == id.rawValue })?.position,
                   let route = model.route(from: position, to: p)
@@ -318,6 +326,7 @@ final class KernelDifferentialTests: XCTestCase {
                 train.movement.continuation == expected.continuation && train.movement.cursor == expected.cursor,
                 "train \(expected.id) continuation \(train.movement.continuation)@\(train.movement.cursor) vs \(expected.continuation)@\(expected.cursor)"
             )
+            check(train.timetable == expected.timetable, "train \(expected.id) timetable \(train.timetable) vs \(expected.timetable)")
         }
         // Derived answers: connectivity (a ring outside the map included),
         // platforms and stops, for known and unknown IDs.

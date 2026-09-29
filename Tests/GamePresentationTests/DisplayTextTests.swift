@@ -66,6 +66,9 @@ final class ErrorMessageTests: XCTestCase {
             .invalidContinuation: "The train cannot follow that path: each step must lead to joined track, without turning back.",
             .clockOverflow: "Game time cannot advance any further.",
             .idsExhausted: "This game has no IDs left for anything more of this kind.",
+            .invalidTimetable:
+                "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives.",
+            .unknownStation(StationID(rawValue: 3)): "There is no station #3.",
         ]
 
         for (error, message) in messages {

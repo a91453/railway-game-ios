@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落，下一步是 Phase 4（時刻表）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）已實作，下一步是 Stage P（到達、停留、出發）。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -128,9 +128,33 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
 ## Phase 4 — Timetable
 
-- departure / arrival
-- dwell time
-- service pattern
+和 Phase 3 一樣拆成依序進行的小 Stage，每個 Stage 一個可 review 的 PR。先確立時刻表是什麼資料（O），再讓它控制列車（P、Q），最後才做畫面（R）。
+
+### Stage O — Timetable Foundation ✅
+
+- `Train.timetable`：依序的 `ScheduledStop`（車站、排定的到達與離開）；陣列順序就是停靠順序，新購列車是空的
+- 時間是開局以來的絕對遊戲分鐘（`GameTime`，與時鐘同一尺度）；沒有日曆、時區或字串時間
+- 驗證：時間從分鐘 0 起不倒流（`0 ≤ arrival ≤ departure ≤ 下一站的 arrival`），每站都是存在的車站；允許停留 0 分鐘、相等的邊界、重複的車站與已過去的時間；不檢查路線、行駛時間或列車位置
+- `setTrainTimetable(_:to:)`：整份原子替換、`[]` 清除、免費；錯誤依序 `unknownTrain` → `invalidTimetable` → `unknownStation`（第一個不存在的車站）
+- 放置、取下、反向、移動指令與時間都保留時刻表；**不執行**：`advance` 不讀它，不發車、不求路、不改 rate，Stage I–N 的行為與 property digest 不變
+- 存檔：空時刻表不寫 key（舊存檔讀成空、沒有時刻表的存檔格式不變）；壞資料一律拒絕，不排序或修正
+- Golden scenario schema v8：`setTrainTimetable` 指令、`invalidTimetable` / `unknownStation` 結果、`timetable` 觀察、最終狀態的列車 `timetable`，以及 `train-timetable.json`（ARCHITECTURE 決策 19）
+- GamePresentation 只加上兩個新錯誤的訊息；App 沒有修改
+
+### Stage P — Dwell / Arrival / Departure
+
+- 把時刻表接上停站（決策 18）與時鐘：怎樣算到達、停留到排定的離開時刻、出發
+- 早到、誤點、錯過排定出發時刻時的處理
+- 執行進度（目前在第幾站）是否成為權威狀態，以及它的存檔
+
+### Stage Q — Service Pattern / Automatic Dispatch
+
+- 依序執行服務：車站 → 停留 → `route(from:toStation:)` → continuation → 下一站
+- 循環或每日重複的班次，以及它們的時間表示
+
+### Stage R — Timetable UI
+
+- 最小的服務／時刻表顯示與編輯畫面（屆時再決定是否需要單一停靠的編輯指令）
 
 ## Phase 5 — Passenger simulation
 
