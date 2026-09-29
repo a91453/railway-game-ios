@@ -178,8 +178,8 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].position = position
     }
 
-    /// Takes a placed train off the track. The train keeps its ID and name;
-    /// its movement becomes ``TrainMovement/idle`` (rate 0, no
+    /// Takes a placed train off the track. The train keeps its ID, name and
+    /// timetable; its movement becomes ``TrainMovement/idle`` (rate 0, no
     /// continuation), so placing it again never resumes an old journey.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or

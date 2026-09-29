@@ -279,21 +279,29 @@ final class TrainTimetableTests: XCTestCase {
     // MARK: - Isolation
 
     /// Setting a timetable changes that train's timetable and nothing else:
-    /// not its position or movement, other trains, the map, stations, money,
-    /// time or the IDs handed out next.
+    /// not its position or movement (a journey under way keeps its progress),
+    /// other trains, the map, stations, money, time or the IDs handed out
+    /// next.
     func testATimetableChangesOnlyThatTrainsTimetable() throws {
         var world = try makeLineWorld(trainCount: 3)
-        try world.placeTrain(first, at: .onLink(from: a, to: b, offset: 300))
-        try world.setTrainMovementRate(first, to: 200)
-        try world.setTrainContinuation(first, to: [c])
-        try world.placeTrain(second, at: .atNode(d, heading: .west))
+        try world.placeTrain(first, at: .atNode(a, heading: .east))
+        try world.setTrainMovementRate(first, to: 1500)
+        try world.setTrainContinuation(first, to: [b, c, d])
+        try world.placeTrain(second, at: .atNode(e, heading: .west))
         try world.setTrainTimetable(third, to: [stop(gamma, 1, 2)])
+        // 1500 units from a: 1024 to b, then 476 along b -> c, so two of the
+        // three entries have been entered.
         try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: first)?.position, .onLink(from: b, to: c, offset: 476))
+        XCTAssertEqual(world.train(id: first)?.movement.cursor, 2)
         let before = world
 
-        try world.setTrainTimetable(second, to: fiveStops)
+        try world.setTrainTimetable(first, to: fiveStops)
 
-        XCTAssertEqual(try timetable(of: second, in: world), fiveStops)
+        XCTAssertEqual(try timetable(of: first, in: world), fiveStops)
+        XCTAssertEqual(world.train(id: first)?.position, .onLink(from: b, to: c, offset: 476))
+        XCTAssertEqual(world.train(id: first)?.movement, before.train(id: first)?.movement)
+        XCTAssertEqual(world.train(id: first)?.movement.cursor, 2)
         XCTAssertEqual(world.map, before.map)
         XCTAssertEqual(world.stations, before.stations)
         XCTAssertEqual(world.clock, before.clock)
@@ -303,14 +311,14 @@ final class TrainTimetableTests: XCTestCase {
             XCTAssertEqual(train.name, old.name)
             XCTAssertEqual(train.position, old.position)
             XCTAssertEqual(train.movement, old.movement)
-            if train.id != second {
+            if train.id != first {
                 XCTAssertEqual(train.timetable, old.timetable)
             }
         }
         // Putting the old timetable back gives back the same world, private
         // ID counters included.
         var restored = world
-        try restored.setTrainTimetable(second, to: [])
+        try restored.setTrainTimetable(first, to: [])
         XCTAssertEqual(restored, before)
         // The next IDs are the ones that were due.
         XCTAssertEqual(try world.purchaseTrain(named: "Local 4").id, TrainID(rawValue: 4))

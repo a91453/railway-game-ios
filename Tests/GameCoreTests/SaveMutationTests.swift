@@ -176,8 +176,9 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(accepted > 500, "only \(accepted) mutated saves loaded")
     }
 
-    /// The same for timetables (decision 19), with most mutations inside
-    /// them: a stop's station or time changed, a stop dropped, repeated or
+    /// The same for timetables (decision 19), with many mutations aimed
+    /// inside them (worlds without stations or trains have none to aim at):
+    /// a stop's station or time changed, a stop dropped, repeated or
     /// swapped with another, a key removed, a timetable emptied, nulled or
     /// added. Whatever loads keeps every stop at a station the world has,
     /// with times that never go back, and further commands (timetable
@@ -207,8 +208,10 @@ final class SaveMutationTests: XCTestCase {
                 return text.hasPrefix(".trains[") && path.count == 2
             }
             for _ in 0..<40 {
-                // Half inside timetables, a quarter at whole trains (to add
-                // or remove a "timetable" key), the rest anywhere but tiles.
+                // Half aimed inside timetables and a quarter at whole trains
+                // (to add or remove a "timetable" key), when the world has
+                // them; the rest, and any aim that has no target, anywhere
+                // but tiles.
                 let path: [Step]
                 let roll = c.random.below(4)
                 if roll < 2, !inTimetables.isEmpty {
