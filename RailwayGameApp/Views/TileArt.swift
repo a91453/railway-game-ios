@@ -72,36 +72,59 @@ enum TileArt {
         }
     }
 
-    /// The continuous track network (Stage S3) seen from above: each
-    /// edge's sampled centre line (see `GameWorld.trackGeometry(of:)`), as
-    /// ballast and rail at full detail or a thin line zoomed out, and each
+    /// The continuous track network (Stages S3 and S4) seen from above:
+    /// each edge's sampled centre line (see `GameWorld.trackGeometry(of:)`),
+    /// as ballast and rail at full detail or a thin line zoomed out, and each
     /// node a small dot. A top-down debug projection until a real renderer
-    /// (Phase 8): heights are not shown, and the centre lines are worked out
-    /// again whenever the map is redrawn.
+    /// (Phase 8): heights show only in the drawing order and the structure's
+    /// style, and the centre lines are worked out again whenever the map is
+    /// redrawn.
     static func drawNetwork(_ world: GameWorld, detail: MapDetail, tileSize: Double, in context: GraphicsContext) {
         guard !world.network.edges.isEmpty || !world.network.nodes.isEmpty else { return }
-        var lines = Path()
-        for edge in world.network.edges {
-            guard let geometry = world.trackGeometry(of: edge.id), let first = geometry.points.first else { continue }
+        // Seen from above, what runs higher is drawn over what runs lower:
+        // edges by their mean height (Stage S4), then by ID.
+        let edges = world.network.edges.compactMap { edge in world.trackGeometry(of: edge.id).map { (edge, $0) } }
+            .sorted { ($0.1.startHeight + $0.1.endHeight, $0.0.id) < ($1.1.startHeight + $1.1.endHeight, $1.0.id) }
+        for (edge, geometry) in edges {
+            guard let first = geometry.points.first else { continue }
+            var line = Path()
             let start = MapScale.center(of: first, tileSize: tileSize)
-            lines.move(to: CGPoint(x: start.x, y: start.y))
+            line.move(to: CGPoint(x: start.x, y: start.y))
             for point in geometry.points.dropFirst() {
                 let next = MapScale.center(of: point, tileSize: tileSize)
-                lines.addLine(to: CGPoint(x: next.x, y: next.y))
+                line.addLine(to: CGPoint(x: next.x, y: next.y))
             }
-        }
-        switch detail {
-        case .full:
-            context.stroke(lines, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .round, lineJoin: .round))
-            context.stroke(lines, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1.5, tileSize * 0.1), lineCap: .round, lineJoin: .round))
-        case .overview:
-            context.stroke(lines, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, tileSize * 0.12), lineCap: .round, lineJoin: .round))
+            drawEdge(line, structure: edge.structure, detail: detail, tileSize: tileSize, in: context)
         }
         let radius = max(1.5, tileSize * 0.08)
         for node in world.network.nodes {
             let centre = MapScale.center(of: node.position, tileSize: tileSize)
             let dot = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
             context.fill(Path(ellipseIn: dot), with: .color(Palette.rail))
+            // A tunnel portal gets a ring round its node.
+            if world.isTunnelPortal(node.id) {
+                context.stroke(Path(ellipseIn: dot.insetBy(dx: -radius * 1.5, dy: -radius * 1.5)), with: .color(Palette.rail), lineWidth: max(1, radius * 0.6))
+            }
+        }
+    }
+
+    /// One edge of the debug projection, styled by what carries it: a
+    /// tunnel as dashed rails without ballast, surface track as on the
+    /// grid, and a viaduct or bridge with a shadow under its deck.
+    private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, tileSize: Double, in context: GraphicsContext) {
+        let rail = StrokeStyle(lineWidth: max(1.5, tileSize * 0.1), lineCap: .round, lineJoin: .round)
+        switch (structure, detail) {
+        case (.tunnel, _):
+            context.stroke(line, with: .color(Palette.rail.opacity(0.55)), style: StrokeStyle(lineWidth: rail.lineWidth, lineCap: .butt, lineJoin: .round, dash: [tileSize * 0.3, tileSize * 0.2]))
+        case (_, .overview):
+            context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, tileSize * 0.12), lineCap: .round, lineJoin: .round))
+        case (.surface, .full):
+            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.rail), style: rail)
+        case (.elevated, .full), (.bridge, .full):
+            context.stroke(line, with: .color(Palette.rail.opacity(0.35)), style: StrokeStyle(lineWidth: tileSize * 0.58, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.rail), style: rail)
         }
     }
 
