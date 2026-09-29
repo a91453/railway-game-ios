@@ -24,6 +24,14 @@ jobs:
         # 6.2.4 is the iPad / Swift Playgrounds compatibility target;
         # 6.4 is the current stable release.
         swift: ["6.0", "6.2.4", "6.4"]
+        # The property campaigns (generated sequences checked against the
+        # reference models and saves) take most of the test time and check
+        # logic, which does not depend on the compiler: they run on the
+        # current release only. Every version still builds all targets and
+        # tests with warnings as errors and runs every other test.
+        include:
+          - swift: "6.4"
+            campaigns: true
     container: swift:${{ matrix.swift }}-noble
     steps:
       - uses: actions/checkout@v5
@@ -35,4 +43,9 @@ jobs:
         run: swift build --build-tests -Xswiftc -warnings-as-errors
 
       - name: Test
+        if: matrix.campaigns
         run: swift test
+
+      - name: Test (without the property campaigns)
+        if: ${{ !matrix.campaigns }}
+        run: swift test --skip 'PropertyTests|KernelDifferentialTests|SaveMutationTests'

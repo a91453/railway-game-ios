@@ -26,8 +26,8 @@ simulation.
   the `.xcodeproj`.
 - `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
-- `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.2.4 / 6.4),
-  `ios-build.yml` (committed-project drift check and Xcode Simulator build on
+- `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.2.4 / 6.4;
+  the property campaigns run on 6.4 only), `ios-build.yml` (committed-project drift check and Xcode Simulator build on
   macOS), `visual-smoke.yml` (manual Simulator screenshots),
   `release-archive.yml` (unsigned Release device archive; manual, and on PRs
   that change project settings or app resources), `testflight.yml` (signed
