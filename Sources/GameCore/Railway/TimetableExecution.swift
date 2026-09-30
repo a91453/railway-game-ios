@@ -54,6 +54,14 @@ extension TimetableExecution {
     /// a link, or has continuation left). Whether the stations and platforms
     /// agree is checked by the ``GameWorld`` decoder.
     ///
+    /// On the track network (Stage S5) the journey has ended when no edges
+    /// are left and the head is where the path ends. Without the map that
+    /// is known only for a path that ends part of the way along the train's
+    /// edge (``TrainMovement/end``); for one that runs to the end of the
+    /// edge, whether the head is there is checked by the ``GameWorld``
+    /// decoder. So a waiting train has no edges left and is at its path's
+    /// end if it has one, and a travelling train is not known to be there.
+    ///
     /// - Precondition: `timetable` and `period` form a timetable (see
     ///   ``ScheduledStop/isTimetable(_:period:)``).
     func fits(timetable: [ScheduledStop], period: Int64?, position: TrainPosition?, movement: TrainMovement) -> Bool {
@@ -61,10 +69,21 @@ extension TimetableExecution {
         if cycle > 0 {
             guard let period, cycle <= ScheduledStop.lastCycle(of: timetable, period: period) else { return false }
         }
-        let hasEnded: Bool = if case .atNode = position { movement.remainingContinuation.isEmpty } else { false }
+        // Whether the journey may have ended, and whether it has for certain.
+        let (mayHaveEnded, hasEnded): (Bool, Bool)
+        switch position {
+        case .atNode:
+            let ended = movement.remainingContinuation.isEmpty
+            (mayHaveEnded, hasEnded) = (ended, ended)
+        case .onLink:
+            (mayHaveEnded, hasEnded) = (false, false)
+        case .onEdge(_, let offset):
+            let spent = movement.remainingEdges.isEmpty
+            (mayHaveEnded, hasEnded) = (spent && (movement.end ?? offset) == offset, spent && movement.end == offset)
+        }
         switch self {
         case .waitingAtStop:
-            return hasEnded
+            return mayHaveEnded
         case .travellingToStop(let stop, let cycle):
             return (stop >= 1 || cycle >= 1) && !hasEnded
         }

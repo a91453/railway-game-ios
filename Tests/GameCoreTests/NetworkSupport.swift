@@ -173,10 +173,13 @@ enum NetworkInvariants {
     }
 
     /// Decision 29 for a train on the network: on an edge, within it; a
-    /// body at offset 0 only for a train of one car; no grid trail, grid
-    /// continuation or service; the body edges joined as a train could
-    /// have come, just reaching the tail; its continuation's edges built
-    /// once (below the next number, even if removed since).
+    /// body at offset 0 only for a train of one car; no grid trail or grid
+    /// continuation; the body edges joined as a train could have come, just
+    /// reaching the tail; its continuation's edges built once (below the
+    /// next number, even if removed since). Decision 31: where its path
+    /// ends lies inside the last edge (when that edge is still there),
+    /// after its start while edges are left, and not behind the train
+    /// once none are.
     static func trainViolations(of train: Train, in world: GameWorld) -> [String] {
         guard case .onEdge(let traversal, let offset)? = train.position else { return [] }
         let id = train.id.rawValue
@@ -187,7 +190,13 @@ enum NetworkInvariants {
         if length > 0, offset == 0 { problems.append("train \(id) with a body stands at offset 0") }
         if !train.trail.isEmpty { problems.append("train \(id) on the network has a grid trail") }
         if !train.movement.continuation.isEmpty { problems.append("train \(id) on the network has a grid continuation") }
-        if train.execution != nil { problems.append("train \(id) on the network runs a service") }
+        if let end = train.movement.end {
+            let left = train.movement.remainingEdges
+            if left.isEmpty ? end < offset : end < 1 { problems.append("train \(id)'s path ends at \(end), behind it or at the start of its last edge") }
+            if let last = world.trackEdge(left.last ?? traversal.edge), end >= last.length {
+                problems.append("train \(id)'s path ends at \(end), beyond its last edge (\(last.length))")
+            }
+        }
         if train.movement.rate < 0 { problems.append("train \(id) negative rate") }
         let count = train.movement.edges.count
         if !(count == 0 && train.movement.cursor == 0) && !(0..<count).contains(train.movement.cursor) {

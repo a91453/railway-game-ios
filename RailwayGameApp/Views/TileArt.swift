@@ -74,8 +74,8 @@ enum TileArt {
 
     /// The continuous track network (Stages S3 and S4) seen from above:
     /// each edge's sampled centre line (see `GameWorld.trackGeometry(of:)`),
-    /// as ballast and rail at full detail or a thin line zoomed out, and each
-    /// node a small dot. A top-down debug projection until a real renderer
+    /// as ballast and rail at full detail or a thin line zoomed out, over
+    /// its stations' platforms, and each node a small dot. A top-down debug projection until a real renderer
     /// (Phase 8): heights show only in the drawing order and the structure's
     /// style, and the centre lines are worked out again whenever the map is
     /// redrawn.
@@ -85,6 +85,20 @@ enum TileArt {
         // edges by their mean height (Stage S4), then by ID.
         let edges = world.network.edges.compactMap { edge in world.trackGeometry(of: edge.id).map { (edge, $0) } }
             .sorted { ($0.1.startHeight + $0.1.endHeight, $0.0.id) < ($1.1.startHeight + $1.1.endHeight, $1.0.id) }
+        // Station platforms (Stages S4 and S5) under the rails: a band in
+        // the station colour along each platform's stretch of its edge.
+        let geometries = Dictionary(uniqueKeysWithValues: edges.map { ($0.0.id, $0.1) })
+        for platform in world.network.platforms {
+            guard let points = geometries[platform.edge]?.points(from: platform.start, to: platform.end), let first = points.first else { continue }
+            var band = Path()
+            let start = MapScale.center(of: first, tileSize: tileSize)
+            band.move(to: CGPoint(x: start.x, y: start.y))
+            for point in points.dropFirst() {
+                let next = MapScale.center(of: point, tileSize: tileSize)
+                band.addLine(to: CGPoint(x: next.x, y: next.y))
+            }
+            context.stroke(band, with: .color(Palette.station.opacity(0.85)), style: StrokeStyle(lineWidth: max(3, tileSize * 0.75), lineCap: .butt, lineJoin: .round))
+        }
         for (edge, geometry) in edges {
             guard let first = geometry.points.first else { continue }
             var line = Path()

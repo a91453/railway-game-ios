@@ -61,7 +61,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 model.trains.map {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
-                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges),
+                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
                         execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init),
                         trailEdges: $0.trailEdges
@@ -130,7 +130,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             error = model.buildNetworkEdge(from: from, to: to, curve: curve, profile: profile, structure: structure)
         case .removeTrackEdge(let edge): error = model.removeNetworkEdge(edge)
         case .removeTrackNode(let node): error = model.removeNetworkNode(node)
-        case .setTrainPath(let id, let path): error = model.setContinuation(id, along: path)
+        case .setTrainPath(let id, let path, let end): error = model.setContinuation(id, along: path, stoppingAt: end)
         case .addTrackPlatform(let station, let edge, let start, let end): error = model.addTrackPlatform(station, on: edge, from: start, to: end)
         case .removeTrackPlatform(let station, let edge, let start): error = model.removeTrackPlatform(station, on: edge, from: start)
         }
@@ -147,7 +147,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .train(model.trains.first { $0.id == id.rawValue }.map {
                 TrainState(
                     position: TrainPositionSummary($0.position),
-                    movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges)
+                    movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end)
                 )
             })
         case .route(let start, let destination):
@@ -210,6 +210,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .trackPlatforms(model.trackPlatformsAlong(id).map(PlatformSummary.init))
         case .platformLevels(let id):
             return .levels(model.platformLevels(of: id).map { PlatformLevelSummary(platform: $0.0, height: $0.1, structure: $0.2) })
+        case .pathToStation(let start, let station, let cars):
+            return .trainPath(model.pathToStation(from: start, station: station, length: ReferenceWorld.length(cars: cars)).map(PathSummary.init))
         }
     }
 

@@ -288,12 +288,17 @@ extension ReferenceWorld {
 
     /// A continuation of traversals: on the network each must be a run the
     /// train may take after the one before; on the grid, links from the node
-    /// ahead, each checked as a grid continuation.
-    mutating func setContinuation(_ id: TrainID, along traversals: [TrackTraversal]) -> GameError? {
+    /// ahead, each checked as a grid continuation. Decision 31: on the
+    /// network it may stop at `end` along its last run (the train's own
+    /// when there are none): short of that run's end, not at its very start
+    /// once a run is entered, and not behind the train on its own run; never
+    /// on the grid.
+    mutating func setContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) -> GameError? {
         guard let i = trains.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownTrain(id) }
         guard let position = trains[i].position else { return .trainNotPlaced(id) }
         guard trains[i].service == nil else { return .trainServiceActive(id) }
-        guard case .onEdge(let traversal, _) = position else {
+        guard case .onEdge(let traversal, let offset) = position else {
+            if end != nil { return .invalidContinuation }
             var node = Self.ahead(position).0
             var nodes: [GridPosition] = []
             for next in traversals {
@@ -312,8 +317,13 @@ extension ReferenceWorld {
             numbers.append(wanted.edge)
             run = wanted
         }
+        if let end {
+            let lowest = traversals.isEmpty ? offset : 1
+            guard lowest <= end, end < networkEdges[run.edge]!.length else { return .invalidContinuation }
+        }
         trains[i].edges = numbers
         trains[i].cursor = 0
+        trains[i].end = end
         return nil
     }
 
@@ -385,6 +395,8 @@ extension ReferenceWorld {
         var remaining = train.rate
         var entered: [Run] = []
         while remaining > 0 {
+            // Decision 31: on the last run of the path, its end holds the train.
+            if train.cursor == train.edges.count, let end = train.end, offset == end { break }
             if offset < networkEdges[run.edge]!.length {
                 offset += 1
                 remaining -= 1

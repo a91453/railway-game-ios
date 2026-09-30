@@ -87,7 +87,7 @@ struct TrainControls: View {
                 .font(.subheadline)
                 .monospacedDigit()
             if train.position != nil {
-                Text(train.movement.pathText)
+                Text(train.pathText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()

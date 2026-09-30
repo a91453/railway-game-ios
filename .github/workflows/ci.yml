@@ -16,7 +16,9 @@ jobs:
   test:
     name: Swift ${{ matrix.swift }} (Linux)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The full suite with every property campaign takes about 25 minutes
+    # since Stage S5; the limit leaves room for the stages after it.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:

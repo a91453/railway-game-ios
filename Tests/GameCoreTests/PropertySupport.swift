@@ -848,7 +848,10 @@ enum WorldInvariants {
     /// travelling one heads for an entry after the service's first, has not
     /// ended its journey, and ends it next to that entry's station.
     /// Decision 21: the cycle is 0 unless the timetable repeats, and then
-    /// its latest time still fits in a game minute.
+    /// its latest time still fits in a game minute. Decision 31: on the
+    /// track network a travelling train's path is not spent and ends at the
+    /// far end, the way it travels, of a platform of that station no shorter
+    /// than the train.
     static func serviceViolations(of train: Train, in world: GameWorld) -> [String] {
         guard let execution = train.execution else { return [] }
         let id = train.id.rawValue
@@ -872,6 +875,9 @@ enum WorldInvariants {
         case .travellingToStop(let stop, let cycle):
             var problems: [String] = []
             if stop < 1, cycle < 1 { problems.append("train \(id) travels to the service's first stop") }
+            if case .onEdge(let traversal, let offset) = position {
+                return problems + networkServiceViolations(of: train, at: traversal, offset: offset, to: target, in: world)
+            }
             let remaining = train.movement.remainingContinuation
             if case .atNode = position, remaining.isEmpty { problems.append("train \(id) travels but its journey has ended") }
             let end = remaining.last ?? ahead(of: position).node
@@ -881,6 +887,25 @@ enum WorldInvariants {
             }
             return problems
         }
+    }
+
+    /// Decision 31: a travelling train on the network has path left and
+    /// ends it at a berth of `target` it fits: followed along its edges to
+    /// the last where it can be, otherwise one way or the other on its last
+    /// edge.
+    static func networkServiceViolations(of train: Train, at traversal: TrackTraversal, offset: Int64, to target: StationID, in world: GameWorld) -> [String] {
+        let id = train.id.rawValue
+        let left = train.movement.remainingEdges
+        guard let lastEdge = world.trackEdge(left.last ?? traversal.edge) else { return ["train \(id) travels along a path whose last edge is gone"] }
+        let end = train.movement.end ?? lastEdge.length
+        if left.isEmpty, offset == end { return ["train \(id) travels but its path is spent"] }
+        let ahead = world.pathAhead(of: train.id)
+        let lastWay: TrackEdgeDirection? = left.isEmpty ? traversal.direction : ahead.count == left.count ? ahead.last?.direction : nil
+        let length = Int64(train.cars - 1) * 1024
+        let fits = world.trackPlatforms(of: target).filter { $0.edge == lastEdge.id && $0.end - $0.start >= length }
+        let berths = fits.flatMap { platform -> [(TrackEdgeDirection, Int64)] in [(.forward, platform.end), (.backward, lastEdge.length - platform.start)] }
+        let ends = berths.contains { berth in berth.1 == end && (lastWay == nil || berth.0 == lastWay) }
+        return ends ? [] : ["train \(id) travels to station \(target.rawValue) on a path that ends at \(end) on \(lastEdge.id), no berth of it"]
     }
 
     /// The world survives a save and load unchanged: the decoder accepts

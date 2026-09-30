@@ -148,6 +148,12 @@ extension ReferenceWorld {
     /// platform of the station.
     func stationsBesideWholeTrain(_ id: TrainID) -> [StationID] {
         guard let train = trains.first(where: { $0.id == id.rawValue }) else { return [] }
+        if case .onEdge? = train.position {
+            // Decision 31: stopped there, the whole body along one platform
+            // of the station.
+            let alongside = trackPlatformsAlong(id).map(\.station)
+            return stationsStoppedAt(by: id).filter(alongside.contains)
+        }
         let length = Self.length(train)
         var reached: [GridPosition] = []
         var distance = Self.linkLength
