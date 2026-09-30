@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作；下一步是 Stage U（movement authority）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：先做 Phase 4.7 的 W1（行駛曲線的計算核心），再做 U、W2、V。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -330,7 +330,21 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
 
 ## Phase 4.6 — Traffic control
 
-參考遊戲沒有號誌、閉塞或待避站，快慢車也彼此「看不見」。要讓多台列車真正共用鐵軌、待避與交會，就需要這一層，這也是與《A列車》的深度差距最大的地方。
+要讓多台列車真正共用鐵軌、待避與交會，就需要這一層，這也是與《A列車》的深度差距最大的地方。兩個參考網站要分開看（2026-09 對私有 repo 重新確認，細節見 [RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）：
+
+- `Ci/` 的交通經營遊戲沒有號誌、閉塞或待避站，快慢車也彼此「看不見」。
+- `Railway/` 的股道網站沒有號誌或固定閉塞，但有這些：
+  - 同向待避與單線交會（在瀏覽器裡對時刻表推估）；
+  - 排定的等待（`scheduled-hold`，由建置腳本事先算好）；
+  - 股道與月台的指派；
+  - 同股道的跟車距離。
+
+**之後的實作順序**（依實際的相依關係，不是字母順序；T 已實作）：
+
+1. W1：行駛曲線的計算核心，照 `buildProfile` 翻譯。參考最完整，也不依賴其他 Stage。
+2. U：movement authority。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。
+3. W2：把曲線接到線路的行程與移動。有兩件事要作者先決定（見對照文件的 gap 分析）。
+4. V：待避與交會。它的推估要用 W 的曲線；實際放行由 T、U 保證。
 
 ### Stage T — 進路預約 ✅
 
@@ -367,6 +381,11 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 ## Phase 4.7 — Train dynamics
 
 ### Stage W — 行駛曲線
+
+參考：`Railway/` 網站的 `buildProfile`、`profTimeToProg`、`profProgToTime` 與車種性能表（[對照](RAILWAY_REFERENCE_MAPPING.md#stage-w行駛曲線)）。拆成兩步：
+
+- **W1**：翻譯曲線本身，是純計算，不改變任何既有行為。
+- **W2**：把曲線接到行程與移動。
 
 - 站間不再等速：加速、定速、惰行、煞車組成的梯形曲線，加上速度上限；曲線半徑與坡度之後再考慮。
 - 全部用整數計算，deterministic，和現在的 rate 一樣以每分鐘的單位數表示。
