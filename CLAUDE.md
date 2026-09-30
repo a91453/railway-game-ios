@@ -6,18 +6,41 @@ Instructions for Claude Code sessions in this repository.
 
 A native iPhone / iPad railway and city management game (long-term goal: gameplay
 depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
-Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md).
-Port it faithfully: translate the owner's JavaScript function by function into
-Swift, keeping its formulas, constants, balance values, data tables, names and
-control flow. Do not redesign what the reference already does. GameCore's rules
-apply only as a mechanical conversion: decimals become fixed-point integers at a
-stated scale (e.g. money × 100), randomness becomes the seeded random in
-GameWorld; the formula stays the same. The owner's own code, data and text may
-be copied or committed here (e.g. under Reference/). Third-party code and assets
-(libraries, map tiles, fonts, icons, analytics) are never committed or ported.
-Where the reference has nothing for a feature, list it in the PR and ask the
-owner, or mark it as a gap. Raw timetable data stays out; live data never feeds
-the simulation.
+Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md)
+and may also absorb implementation and data from the owner's
+`a91453/railway-reference-private` repository. Treat both `Ci/` and
+`Railway/` there as authorized implementation sources, not reference-only
+material.
+
+Port and reuse faithfully. When useful, directly copy, vendor, adapt, translate,
+wrap, bundle, or import source code, data, text, configuration, algorithms,
+schemas, UI behavior, and assets from the owner's projects. This explicitly
+includes JavaScript/CSS/HTML, images, fonts, icons, station/network/service data,
+raw timetables, live or real-time data and feeds, routing/operational logic,
+balance values, constants, and complete feature implementations.
+
+Do not reject a useful source feature merely because it was previously labeled
+"reference", "research", "not adopted", "later stage", or because an older
+roadmap expected a clean-room rewrite. Swift translation is required only where
+the target layer actually needs Swift (especially GameCore); otherwise direct
+reuse or an adapter is allowed. Existing Stage/Phase boundaries are sequencing
+guidance, not gates: when a reusable feature spans several stages, its required
+dependencies may be ported together.
+
+Preserve source behavior and data semantics unless a deliberate project change
+is documented. GameCore's platform-independent/deterministic rules still apply
+to authoritative GameCore behavior; adapt only what those rules or the target
+platform genuinely require.
+
+Assume content supplied by the owner in these reference repositories is
+authorized for project use. Do not invent a blanket third-party prohibition.
+When a particular embedded dependency or asset carries an explicit license or
+attribution requirement, preserve and comply with that requirement; replace it
+only when its actual terms require replacement. Secrets, credentials and
+personal data remain excluded from source control.
+
+Where the reference has nothing for a feature, list the gap in the PR and
+implement the missing behavior as needed.
 
 Reference check (every new Stage): attach a91453/railway-reference-private
 read-only, read the files the Stage ports, and put a mapping table in the PR
