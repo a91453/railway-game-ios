@@ -28,8 +28,7 @@ simulation.
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
 - `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.4; the
   property campaigns run on 6.4 only), `ios-build.yml` (committed-project drift check and Xcode Simulator build on
-  macOS), `visual-smoke.yml` (manual Simulator screenshots),
-  `release-archive.yml` (unsigned Release device archive; manual, and on PRs
+  macOS), `release-archive.yml` (unsigned Release device archive; manual, and on PRs
   that change project settings or app resources), `testflight.yml` (signed
   archive → IPA → App Store Connect; `workflow_dispatch` from `main` only,
   secrets in the `testflight` environment), `testflight-checks.yml` (tests
@@ -68,9 +67,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   from swift.org. Xcode, `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are
   **not** available there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
-  `visual-smoke.yml`, `release-archive.yml`, `testflight-checks.yml`). The
-  unsigned archive and the dry run do not prove signing, upload or
-  TestFlight; only a real `testflight.yml` run with the Apple account can,
+  `release-archive.yml`, `testflight-checks.yml`). The unsigned archive and
+  the dry run do not prove signing, upload or TestFlight; only a real `testflight.yml` run with the Apple account can,
   and it proves at most the upload, not TestFlight installation.
 - Never run `testflight.yml` or add a trigger to it, and never let pull
   requests reach its secrets; the user starts releases.

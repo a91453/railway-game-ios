@@ -259,7 +259,6 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 | `ios-build.yml` 的漂移檢查、archivable product 檢查 | 保留 | 不取代：Xcode Cloud 不檢查專案是否與 `project.yml` 一致 |
 | `ios-build.yml` 的 Simulator build | 保留 | 可取代，條件見下 |
 | `release-archive.yml`（未簽章） | 保留 | Workflow 2 成功後可只留手動觸發 |
-| `visual-smoke.yml`（截圖） | 保留 | 不取代：Xcode Cloud 沒有等價的截圖流程 |
 
 `ios-build.yml` 的 Simulator build 可以退場的條件（全部成立）：
 
