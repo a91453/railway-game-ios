@@ -815,7 +815,7 @@ enum WorldInvariants {
                 problems.append("station \(id) queue out of order")
             }
             for group in record.waiting {
-                if group.count < 1 || group.since > world.clock.now { problems.append("station \(id) has a group \(group)") }
+                if group.count < 1 || group.since >= world.clock.now { problems.append("station \(id) has a group \(group)") }
                 let line = world.lines.first { $0.id == group.line }
                 let from = line?.stops.firstIndex(of: record.station)
                 let to = line?.stops.firstIndex(of: group.destination)

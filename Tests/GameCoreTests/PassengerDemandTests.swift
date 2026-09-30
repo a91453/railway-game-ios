@@ -378,6 +378,11 @@ final class PassengerDemandTests: XCTestCase {
             ("a group the line takes the other way", firstGroup { $0["direction"] = "inbound" }),
             ("a group for its own station", firstGroup { $0["destination"] = 1 }),
             ("a group from the future", firstGroup { $0["since"] = 501 }),
+            ("a group from a minute not yet released", mutated { records in
+                var groups = records[0]["waiting"] as! [[String: Any]]
+                groups[groups.count - 1]["since"] = 500
+                records[0]["waiting"] = groups
+            }),
             ("groups out of order", mutated { records in
                 let groups = records[0]["waiting"] as! [[String: Any]]
                 records[0]["waiting"] = Array(groups.reversed())

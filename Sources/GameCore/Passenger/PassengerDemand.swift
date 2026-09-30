@@ -353,7 +353,7 @@ extension GameWorld {
     ///
     /// Records are by ascending station, each of an existing station; every
     /// group waits for an existing line that takes its trip that way, and
-    /// was released no later than now; every remainder is for another
+    /// was released before now; every remainder is for another
     /// existing station.
     func passengerProblem() -> String? {
         guard zip(passengers, passengers.dropFirst()).allSatisfy({ $0.station < $1.station }) else {
@@ -366,7 +366,8 @@ extension GameWorld {
                 guard isServed(group, at: record.station) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."
                 }
-                guard group.since <= clock.now else { return "Passengers at station \(id) were released after the current minute." }
+                // The step from minute T releases at T and ends at T + 1.
+                guard group.since < clock.now else { return "Passengers at station \(id) were released at or after the current minute." }
             }
             for remainder in record.remainders {
                 guard remainder.destination != record.station, station(id: remainder.destination) != nil else {
