@@ -8,7 +8,12 @@ import GameCore
 /// rather than breadth-first ones (the most paths is the same either way).
 extension ReferenceWorld {
     func occupiedResources(of id: TrainID) -> [TrackResource] {
-        guard let train = trains.first(where: { $0.id == id.rawValue }), let position = train.position else { return [] }
+        guard let train = trains.first(where: { $0.id == id.rawValue }) else { return [] }
+        return occupied(train)
+    }
+
+    func occupied(_ train: Train) -> [TrackResource] {
+        guard let position = train.position else { return [] }
         let head: TrackResource
         switch position {
         case .atNode(let tile, _):

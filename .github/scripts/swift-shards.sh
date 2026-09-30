@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-4   the long property, differential and mutation
+#   campaigns-1 .. campaigns-5   the long property, differential and mutation
 #                                campaigns, named below; Swift 6.4 only
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -44,10 +44,11 @@ classes_of() {
     campaigns-2) echo "SaveMutationTests LinePatternPropertyTests" ;;
     campaigns-3) echo "ServicePropertyTests ContinuousTrackPropertyTests StationFacilityPropertyTests" ;;
     campaigns-4) echo "VerticalRailwayPropertyTests LineDispatchPropertyTests TimetablePropertyTests" ;;
+    campaigns-5) echo "TrafficControlPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 # The long-standing Swift 6.0 exclusion: the campaigns check logic, which does
 # not depend on the compiler, so only the current release runs them.
