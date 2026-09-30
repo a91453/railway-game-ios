@@ -714,6 +714,7 @@ enum WorldInvariants {
         problems += NetworkInvariants.violations(in: world)
         // Decision 32: traffic control.
         problems += trafficViolations(in: world)
+        problems += passengerViolations(in: world)
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
             problems.append("service day starts \(starts)")
@@ -782,6 +783,46 @@ enum WorldInvariants {
             }
             if !movement.continuation.allSatisfy(world.map.contains) {
                 problems.append("train \(train.id.rawValue) continuation leaves the map")
+            }
+        }
+        return problems
+    }
+
+    /// Decision 34: every passenger released at a station is accounted
+    /// for (released = waiting + overflowed + abandoned), no station holds
+    /// more than its capacity, groups wait in the order they came, no later
+    /// than now, for a trip the world still has; records are by station,
+    /// each of an existing station, and none says nothing.
+    static func passengerViolations(in world: GameWorld) -> [String] {
+        var problems: [String] = []
+        let stations = world.passengers.map(\.station)
+        if stations != stations.sorted() || Set(stations).count != stations.count {
+            problems.append("passenger records not by ascending station")
+        }
+        for record in world.passengers {
+            let id = record.station.rawValue
+            if world.station(id: record.station) == nil { problems.append("passengers at station \(id), which does not exist") }
+            let waiting = record.waiting.reduce(Int64(0)) { $0 + $1.count }
+            let ledger = world.passengerLedger(of: record.station)
+            if ledger.waiting != waiting { problems.append("station \(id) counts \(ledger.waiting) waiting in \(waiting)") }
+            if ledger.released != waiting + ledger.overflowed + ledger.abandoned || ledger.overflowed < 0 || ledger.abandoned < 0 {
+                problems.append("station \(id) does not account for its passengers: \(ledger)")
+            }
+            if waiting > StationPassengers.capacity { problems.append("station \(id) holds \(waiting) waiting") }
+            if record.demand == nil, record.released == 0, record.remainders.isEmpty { problems.append("station \(id) keeps an empty record") }
+            for (earlier, later) in zip(record.waiting, record.waiting.dropFirst()) where later.since < earlier.since {
+                problems.append("station \(id) queue out of order")
+            }
+            for group in record.waiting {
+                if group.count < 1 || group.since > world.clock.now { problems.append("station \(id) has a group \(group)") }
+                let line = world.lines.first { $0.id == group.line }
+                let from = line?.stops.firstIndex(of: record.station)
+                let to = line?.stops.firstIndex(of: group.destination)
+                if let from, let to, from != to, (to > from ? LineDirection.outbound : .inbound) == group.direction { continue }
+                problems.append("station \(id) has a group whose line does not take it that way")
+            }
+            for remainder in record.remainders where !(1..<3600).contains(remainder.value) || remainder.destination == record.station {
+                problems.append("station \(id) keeps remainder \(remainder)")
             }
         }
         return problems

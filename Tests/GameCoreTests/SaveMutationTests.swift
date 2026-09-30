@@ -1174,4 +1174,72 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(flipped > 5, "only \(flipped) flags flipped")
         assertVolume(reservationsLoaded > 30, "only \(reservationsLoaded) worlds with reservations loaded")
     }
+
+    /// G1a (decision 34): a save's passengers either fail to load or load
+    /// into a world where every passenger is accounted for, every group
+    /// waits for a trip a line still takes, and play goes on keeping it so.
+    func testMutatedPassengersAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var passengersLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.passengerMutation", cases: 12) { c in
+            let world = try PassengerPropertyTests.generateWorld(&c, operations: 30)
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return ["passengers", "lines", "stations", "clock"].contains { text.contains($0) }
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                var described = ""
+                let mutated = Self.replacing(path[...], in: json) { value in
+                    let (changed, what) = Self.mutation(
+                        of: value, addedKeys: ["passengers", "demand", "waiting", "remainders", "released", "extra"], using: &c.random
+                    )
+                    described = what
+                    return changed
+                }
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                if loaded.passengers.contains(where: { $0.waitingCount > 0 }) { passengersLoaded += 1 }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = PassengerPropertyTests.operation(in: current, using: &c.random)
+                    let before = current
+                    if PassengerPropertyTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.passengerMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at passengers, lines, stations and the clock, \(passengersLoaded) loaded with passengers waiting")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 50, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 200, "only \(aimed) mutations aimed at passengers")
+        assertVolume(passengersLoaded > 30, "only \(passengersLoaded) worlds with passengers waiting loaded")
+    }
 }

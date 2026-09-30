@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.6 Stage T（進路預約）.**
+**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.6 Stage T（進路預約）；G1a（車站需求與乘客）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及與方格並存的連續軌道路網：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3），高程、坡度、地面／高架／橋／隧道等結構物、立體交叉的淨空、隧道口與多層月台（Phase 4.5 Stage S4），以及路網上的停站、時刻表、線路與自動派車：列車停在路網月台的末端、以整數的實際距離計算行程，方格與路網共用同一套營運規則（Phase 4.5 Stage S5），以及交通控制下的進路預約：列車出發前一次取得整條路的節點與 span，拿不到就等待（Phase 4.6 Stage T）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有 movement authority、待避與交會、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及與方格並存的連續軌道路網：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3），高程、坡度、地面／高架／橋／隧道等結構物、立體交叉的淨空、隧道口與多層月台（Phase 4.5 Stage S4），以及路網上的停站、時刻表、線路與自動派車：列車停在路網月台的末端、以整數的實際距離計算行程，方格與路網共用同一套營運規則（Phase 4.5 Stage S5），以及交通控制下的進路預約：列車出發前一次取得整條路的節點與 span，拿不到就等待（Phase 4.6 Stage T），以及車站的需求、每分鐘以整數釋出的乘客、車站的排隊與乘客守恆的稽核（G1a）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有 movement authority、待避與交會、乘客上下車、票價或城市模擬。
 
 目前的地圖畫面是 **prototype**：SwiftUI Canvas 畫出方格，加上連續路網的俯視 debug 投影（沿取樣的中心線畫出邊與路網上的列車；高度只表現在由低到高的繪製順序與結構物的樣式：隧道是虛線、高架有陰影）。真正的 3D renderer、建造連續軌道的畫面與 spline 編輯器都還沒有開始；GameCore 只提供給 renderer 讀取的整數幾何查詢（`railwaySnapshot()`、`trackAlignment(of:)`、`trackGeometry(of:)`、`location(of:)`、`bodyPath(of:)`），它們是未來 3D renderer 的權威輸入。
 
@@ -39,6 +39,7 @@ GameCore 目前能做到：
 - 立體鐵路（Phase 4.5 Stage S4）：節點可以在地面上下 64 公尺（4096 單位）以內；邊沿水平里程有縱斷面（固定坡度，或兩端的拋物線豎曲線），最陡 40‰；結構物（地面、高架、橋、隧道）決定可以蓋的高度與費用。兩條鐵軌在平面上相遇時要相差 8 公尺以上（立體交叉，不共用資源），同一高度的交叉必須共用節點（平面交叉）。隧道口由邊推導；車站可以在路網上平坦的一段邊上有地面、高架或地下的月台（`addTrackPlatform`）。位置帶坡度（pitch），車身路徑是 3D 的
 - 路網上的營運（Phase 4.5 Stage S5）：停站、時刻表（折返與重複）、線路、自動派車、交路與快車都能在路網上運作，方格與路網是同一套規則。以車站為目的地的路（`path(from:toStation:length:)`，`TrainPath`）停在行進方向上月台的末端，只找放得下整列車的月台，距離是整數的實際里程；列車的路可以停在邊的中段（`setTrainContinuation(_:along:stoppingAt:)`）。服務正在使用的月台不能拆
 - 進路預約（Phase 4.6 Stage T）：交通控制開啟時（`setTrafficControl`，App 的新遊戲預設開啟），列車出發、被派車或拿到新的路之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（`reservedResources(of:)`）；被其他列車持有（`heldResources(of:)`）時整個不取得，服務原地等待並每步重試（`trainHoldingRoute(of:)` 回答在等哪一台）。經過道岔與平面交叉的進路在共用節點衝突，停在交會點附近的列車也持有它，立體交叉互不衝突；預約中的鐵軌不能拆或改月台。預約存檔，走完路時釋放
+- 車站需求與乘客（G1a）：`setStationDemand` 設定車站的類型（住宅、辦公、商業、景點）與每天的旅次。每天的旅次分給同一條線路能到的車站，再依一天的形狀與兩端類型的曲線（移植自作者的 `Ci/` 網站）分到 24 小時；每分鐘以整數釋出，任何連續 24 小時正好是一天的量。乘客在起點依線路、方向、迄點成組排隊（先來的在前，一站最多 4000 人，放不下的記為溢出）；線路改變而不再載他們時記為放棄。每一站 `released = 等車 + 溢出 + 放棄`（`passengerLedger(of:)`）。還沒有上下車
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼

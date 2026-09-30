@@ -40,7 +40,7 @@ set -euo pipefail
 # of this table.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "NetworkServicePropertyTests TrackResourcePropertyTests" ;;
+    campaigns-1) echo "NetworkServicePropertyTests TrackResourcePropertyTests PassengerPropertyTests" ;;
     campaigns-2) echo "SaveMutationTests" ;;
     campaigns-3) echo "ServicePropertyTests ContinuousTrackPropertyTests StationFacilityPropertyTests" ;;
     campaigns-4) echo "VerticalRailwayPropertyTests LineDispatchPropertyTests TimetablePropertyTests" ;;

@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 19
+    static let schemaVersion = 20
 
     var description: String
     var initialState: InitialState
@@ -146,6 +146,7 @@ extension GoldenScenario.Step: Decodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
+        case trip, daily, hourly, groups, ledger
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -286,6 +287,22 @@ extension GoldenScenario.Step: Decodable {
             case .routeHolder:
                 try requireOnly([.found, .train], answering: "routeHolder")
                 self = try .observe(observation, expect: .holder(Self.found(expect, .train, Int.self).map(TrainID.init(rawValue:))))
+            case .passengerTrip:
+                try requireOnly([.found, .trip], answering: "passengerTrip")
+                self = try .observe(observation, expect: .trip(Self.found(expect, .trip, TripSummary.self)))
+            case .demand:
+                try requireOnly([.daily, .hourly], answering: "demand")
+                let hourly = try expect.decode([Int64].self, forKey: .hourly)
+                guard hourly.count == 24 else {
+                    throw DecodingError.dataCorruptedError(forKey: .hourly, in: expect, debugDescription: "A day has 24 hours.")
+                }
+                self = try .observe(observation, expect: .demand(daily: expect.decode(Int64.self, forKey: .daily), hourly: hourly))
+            case .waitingPassengers:
+                try requireOnly([.groups], answering: "waitingPassengers")
+                self = try .observe(observation, expect: .groups(expect.decode([WaitingGroupSummary].self, forKey: .groups)))
+            case .passengerLedger:
+                try requireOnly([.ledger], answering: "passengerLedger")
+                self = try .observe(observation, expect: .ledger(expect.decode(LedgerSummary.self, forKey: .ledger)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -358,6 +375,7 @@ enum ScenarioCommand: Equatable {
     case addTrackPlatform(StationID, TrackEdgeID, start: Int64, end: Int64)
     case removeTrackPlatform(StationID, TrackEdgeID, start: Int64)
     case setTrafficControl(Bool)
+    case setStationDemand(StationID, StationDemand?)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -443,6 +461,8 @@ enum ScenarioCommand: Equatable {
                 try world.removeTrackPlatform(station, on: edge, from: start)
             case .setTrafficControl(let enabled):
                 try world.setTrafficControl(enabled)
+            case .setStationDemand(let id, let demand):
+                try world.setStationDemand(id, to: demand)
             }
             return .ok
         } catch {
@@ -456,7 +476,7 @@ extension ScenarioCommand: Decodable {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
-        case profile, structure, start, end, enabled
+        case profile, structure, start, end, enabled, demand
     }
 
     init(from decoder: any Decoder) throws {
@@ -591,6 +611,14 @@ extension ScenarioCommand: Decodable {
         case "setTrafficControl":
             // Schema 19: traffic control on or off.
             self = try .setTrafficControl(container.decode(Bool.self, forKey: .enabled))
+        case "setStationDemand":
+            // Schema 20: "demand" is required; `null` clears it. Read as
+            // written: whether the trips are valid is GameCore's decision.
+            guard container.contains(.demand) else {
+                throw DecodingError.keyNotFound(CodingKeys.demand, DecodingError.Context(codingPath: container.codingPath, debugDescription: "setStationDemand needs \"demand\"."))
+            }
+            let demand = try container.decodeNil(forKey: .demand) ? nil : container.decode(DemandSummary.self, forKey: .demand).demand
+            self = try .setStationDemand(container.decodeStation(forKey: .station), demand)
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -724,6 +752,8 @@ extension StepOutcome: Codable {
                 throw DecodingError.dataCorruptedError(forKey: .trains, in: container, debugDescription: "trainsShareTrack names two trains.")
             }
             self = .rejected(.trainsShareTrack(TrainID(rawValue: ids[0]), TrainID(rawValue: ids[1])))
+        case "invalidStationDemand":
+            self = .rejected(.invalidStationDemand)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -863,6 +893,8 @@ extension StepOutcome: Codable {
         case .rejected(.trainsShareTrack(let first, let second)):
             try container.encode("trainsShareTrack", forKey: .result)
             try container.encode([first.rawValue, second.rawValue], forKey: .trains)
+        case .rejected(.invalidStationDemand):
+            try container.encode("invalidStationDemand", forKey: .result)
         }
         // Fixtures name network nodes and edges by number; a grid tile or
         // link cannot reach these results through a fixture's commands, but
@@ -928,6 +960,10 @@ enum ScenarioObservation: Equatable {
     case reservation(TrainID)
     case heldResources(TrainID)
     case routeHolder(TrainID)
+    case passengerTrip(from: StationID, to: StationID)
+    case demand(from: StationID, to: StationID)
+    case waitingPassengers(StationID)
+    case passengerLedger(StationID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1007,6 +1043,14 @@ enum ScenarioObservation: Equatable {
             .resources(world.heldResources(of: id))
         case .routeHolder(let id):
             .holder(world.trainHoldingRoute(of: id))
+        case .passengerTrip(let origin, let destination):
+            .trip(world.passengerTrip(from: origin, to: destination).map(TripSummary.init))
+        case .demand(let origin, let destination):
+            .demand(daily: world.dailyDemand(from: origin, to: destination), hourly: world.hourlyDemand(from: origin, to: destination))
+        case .waitingPassengers(let id):
+            .groups(world.waitingPassengers(at: id).map(WaitingGroupSummary.init))
+        case .passengerLedger(let id):
+            .ledger(LedgerSummary(world.passengerLedger(of: id)))
         }
     }
 }
@@ -1133,6 +1177,15 @@ extension ScenarioObservation: Decodable {
             self = try .heldResources(container.decodeTrain(forKey: .train))
         case "routeHolder":
             self = try .routeHolder(container.decodeTrain(forKey: .train))
+        // Schema 20: passengers (G1a).
+        case "passengerTrip":
+            self = try .passengerTrip(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+        case "demand":
+            self = try .demand(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+        case "waitingPassengers":
+            self = try .waitingPassengers(container.decodeStation(forKey: .station))
+        case "passengerLedger":
+            self = try .passengerLedger(container.decodeStation(forKey: .station))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1197,6 +1250,10 @@ enum ObservationAnswer: Equatable {
     case levels([PlatformLevelSummary])
     case trainPath(PathSummary?)
     case holder(TrainID?)
+    case trip(TripSummary?)
+    case demand(daily: Int64, hourly: [Int64])
+    case groups([WaitingGroupSummary])
+    case ledger(LedgerSummary)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1205,6 +1262,7 @@ extension ObservationAnswer: Encodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
+        case trip, daily, hourly, groups, ledger
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1271,8 +1329,18 @@ extension ObservationAnswer: Encodable {
         case .holder(let id?):
             try container.encode(true, forKey: .found)
             try container.encode(id.rawValue, forKey: .train)
+        case .trip(let trip?):
+            try container.encode(true, forKey: .found)
+            try container.encode(trip, forKey: .trip)
+        case .demand(let daily, let hourly):
+            try container.encode(daily, forKey: .daily)
+            try container.encode(hourly, forKey: .hourly)
+        case .groups(let groups):
+            try container.encode(groups, forKey: .groups)
+        case .ledger(let ledger):
+            try container.encode(ledger, forKey: .ledger)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
-             .holder(nil):
+             .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
         case .nodes(let nodes):
             try container.encode(nodes, forKey: .nodes)
@@ -1354,6 +1422,9 @@ struct WorldSummary: Codable, Equatable {
     var network: NetworkSummary
     /// Whether traffic control is on (schema 19).
     var trafficControl: Bool
+    /// The passengers of every station with demand or with passengers ever
+    /// released there, by ascending station (schema 20).
+    var passengers: [PassengerSummary]
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1465,6 +1536,175 @@ struct WorldSummary: Codable, Equatable {
         serviceDay = world.serviceDay.bands.map(BandSummary.init)
         network = NetworkSummary(world.network)
         trafficControl = world.isTrafficControlEnabled
+        passengers = world.passengers
+            .filter { $0.demand != nil || $0.released > 0 }
+            .map(PassengerSummary.init)
+            .sorted { $0.station < $1.station }
+    }
+}
+
+// MARK: - Passengers
+
+/// A station's demand as a fixture value (schema 20): `{"kind",
+/// "dailyTrips"}`, the kind `"residential"`, `"office"`, `"shopping"` or
+/// `"scenic"`.
+struct DemandSummary: Codable, Equatable {
+    var kind: String
+    var dailyTrips: Int64
+
+    private static let kinds: [(String, StationDemandKind)] = [
+        ("residential", .residential), ("office", .office), ("shopping", .shopping), ("scenic", .scenic),
+    ]
+
+    init(_ demand: StationDemand) {
+        kind = Self.kinds.first { $0.1 == demand.kind }!.0
+        dailyTrips = demand.dailyTrips
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, dailyTrips
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(String.self, forKey: .kind)
+        dailyTrips = try container.decode(Int64.self, forKey: .dailyTrips)
+        guard Self.kinds.contains(where: { $0.0 == kind }) else {
+            throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown demand kind \"\(kind)\".")
+        }
+    }
+
+    var demand: StationDemand {
+        StationDemand(kind: Self.kinds.first { $0.0 == kind }!.1, dailyTrips: dailyTrips)
+    }
+}
+
+/// A direction along a line: `"outbound"` or `"inbound"`.
+struct DirectionAlongLine: Codable, Equatable {
+    var direction: LineDirection
+
+    init(_ direction: LineDirection) {
+        self.direction = direction
+    }
+
+    private static let names: [(String, LineDirection)] = [("outbound", .outbound), ("inbound", .inbound)]
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let direction = Self.names.first(where: { $0.0 == name })?.1 else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown direction along a line \"\(name)\".")
+        }
+        self.direction = direction
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Self.names.first { $0.1 == direction }!.0)
+    }
+}
+
+/// The trip between two stations: `{"line", "direction"}`.
+struct TripSummary: Codable, Equatable {
+    var line: Int
+    var direction: DirectionAlongLine
+
+    init(_ trip: PassengerTrip) {
+        line = trip.line.rawValue
+        direction = DirectionAlongLine(trip.direction)
+    }
+}
+
+/// A waiting group: `{"line", "direction", "destination", "since",
+/// "count"}`.
+struct WaitingGroupSummary: Codable, Equatable {
+    var line: Int
+    var direction: DirectionAlongLine
+    var destination: Int
+    var since: Int64
+    var count: Int64
+
+    init(_ group: WaitingGroup) {
+        line = group.line.rawValue
+        direction = DirectionAlongLine(group.direction)
+        destination = group.destination.rawValue
+        since = group.since.minutes
+        count = group.count
+    }
+}
+
+/// A station's conservation audit: `{"released", "waiting", "overflowed",
+/// "abandoned"}`.
+struct LedgerSummary: Codable, Equatable {
+    var released: Int64
+    var waiting: Int64
+    var overflowed: Int64
+    var abandoned: Int64
+
+    init(_ ledger: PassengerLedger) {
+        released = ledger.released
+        waiting = ledger.waiting
+        overflowed = ledger.overflowed
+        abandoned = ledger.abandoned
+    }
+}
+
+/// A station's passengers in the final state: `{"station", "demand",
+/// "waiting", "released", "overflowed", "abandoned"}`, every field required;
+/// `demand` is `null` for a station without demand.
+struct PassengerSummary: Codable, Equatable {
+    var station: Int
+    var demand: DemandSummary?
+    var waiting: [WaitingGroupSummary]
+    var released: Int64
+    var overflowed: Int64
+    var abandoned: Int64
+
+    init(station: Int, demand: DemandSummary?, waiting: [WaitingGroupSummary], released: Int64, overflowed: Int64, abandoned: Int64) {
+        self.station = station
+        self.demand = demand
+        self.waiting = waiting
+        self.released = released
+        self.overflowed = overflowed
+        self.abandoned = abandoned
+    }
+
+    init(_ record: StationPassengers) {
+        self.init(
+            station: record.station.rawValue, demand: record.demand.map(DemandSummary.init), waiting: record.waiting.map(WaitingGroupSummary.init),
+            released: record.released, overflowed: record.overflowed, abandoned: record.abandoned
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case station, demand, waiting, released, overflowed, abandoned
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        station = try container.decode(Int.self, forKey: .station)
+        guard container.contains(.demand) else {
+            throw DecodingError.keyNotFound(CodingKeys.demand, DecodingError.Context(codingPath: container.codingPath, debugDescription: "\"demand\" is required; null for none."))
+        }
+        demand = try container.decodeNil(forKey: .demand) ? nil : container.decode(DemandSummary.self, forKey: .demand)
+        waiting = try container.decode([WaitingGroupSummary].self, forKey: .waiting)
+        released = try container.decode(Int64.self, forKey: .released)
+        overflowed = try container.decode(Int64.self, forKey: .overflowed)
+        abandoned = try container.decode(Int64.self, forKey: .abandoned)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(station, forKey: .station)
+        if let demand {
+            try container.encode(demand, forKey: .demand)
+        } else {
+            try container.encodeNil(forKey: .demand)
+        }
+        try container.encode(waiting, forKey: .waiting)
+        try container.encode(released, forKey: .released)
+        try container.encode(overflowed, forKey: .overflowed)
+        try container.encode(abandoned, forKey: .abandoned)
     }
 }
 

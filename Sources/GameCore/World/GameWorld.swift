@@ -32,6 +32,12 @@ public struct GameWorld: Equatable, Sendable {
     /// ``reservedResources(of:)``). Off in a new world, so every rule of the
     /// stages before it holds unchanged; a new game in the app turns it on.
     public private(set) var isTrafficControlEnabled: Bool
+    /// The passengers of every station that has any (G1a, ARCHITECTURE
+    /// decision 34): its demand, the groups waiting there and the
+    /// conservation audit, by ascending ``StationID``. Empty in a new world,
+    /// where no station has demand. Set by the passenger rules
+    /// (`PassengerDemand.swift`) only.
+    public internal(set) var passengers: [StationPassengers]
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -58,6 +64,7 @@ public struct GameWorld: Equatable, Sendable {
         self.economy = economy
         self.network = RailwayNetwork()
         self.isTrafficControlEnabled = false
+        self.passengers = []
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -972,6 +979,7 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func removeLine(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
         lines.remove(at: index)
+        abandonUnservedPassengers()
     }
 
     /// Replaces a line's stops with `stops`, in order. Its patterns keep
@@ -989,6 +997,7 @@ public struct GameWorld: Equatable, Sendable {
             throw .invalidLinePattern
         }
         lines[index].stops = stops
+        abandonUnservedPassengers()
     }
 
     /// Sets the rate, in logical units per game minute, that a line's
@@ -1163,10 +1172,21 @@ public struct GameWorld: Equatable, Sendable {
     /// Advances the simulation by `ticks` ticks at the current speed.
     ///
     /// A tick runs one basic step at 1x, two at 2x and none while paused. A
-    /// basic step from minute `T` to `T + 1` has five phases, each taking
+    /// basic step from minute `T` to `T + 1` has six phases, each taking
     /// the lines in ascending ``LineID`` order and the trains in ascending
     /// ``TrainID`` order:
     ///
+    /// - **Passengers at `T`** (G1a). Every pair of stations with trips
+    ///   (see ``hourlyDemand(from:to:)``), by ascending origin and then
+    ///   destination, releases its share of minute `T` at the origin, where
+    ///   the passengers wait for their trip (see
+    ///   ``passengerTrip(from:to:)``) or, when the station is full, leave at
+    ///   once (see ``StationPassengers/capacity``). A pair's share of a
+    ///   minute is its trips of the hour, and of the next hour, weighted by
+    ///   how far into the hour the minute is: `((60 − m)·R_h + m·R_{h+1}) /
+    ///   3600` at minute `m` of hour `h`, with the fraction kept for the next
+    ///   minute. So a pair releases exactly its daily trips over any 1440
+    ///   minutes in a row. This phase reads no train and changes none.
     /// 0. **Dispatch at `T`.** Each line sends out at most one of its
     ///    trains on a round trip (see below), and that train leaves its
     ///    first call at once, as phase 1 would have it leave.
@@ -1281,7 +1301,7 @@ public struct GameWorld: Equatable, Sendable {
     /// first call; when it runs more, only trains waiting there can go. A
     /// train late back makes the next one leave late, never early.
     ///
-    /// When a whole step changes nothing (no train moves, no service leaves,
+    /// When a whole step changes no train (no train moves, no service leaves,
     /// arrives or ends, and no line sends a train out), no later step of
     /// this call can change anything before the next scheduled departure of
     /// a waiting service, or the next minute at which a line's service with
@@ -1290,7 +1310,8 @@ public struct GameWorld: Equatable, Sendable {
     /// route finds none later in the call, one whose route is held finds
     /// it held until some train moves, and a line's window, level and
     /// headways change only at known minutes), so the clock moves on at once to that minute,
-    /// or to the end of the batch. This is an exact shortcut, not an
+    /// or to the end of the batch, releasing each skipped minute's
+    /// passengers on the way. This is an exact shortcut, not an
     /// approximation.
     ///
     /// - Throws: ``GameError/clockOverflow`` if game time would pass the
@@ -1304,7 +1325,13 @@ public struct GameWorld: Equatable, Sendable {
         // looking again would give the same answer.
         var unroutable: Set<TrainID> = []
         var memo = DispatchMemo()
+        // Worked out only when the call steps at all: a paused game's calls
+        // cost nothing.
+        var release = remaining > 0 ? passengerRelease() : nil
         while remaining > 0 {
+            if release != nil {
+                releasePassengers(at: clock.now, &release!)
+            }
             let dispatched = dispatchTrains(memo: &memo, unroutable: &unroutable)
             let departed = departTrains(unroutable: &unroutable)
             let moved = moveTrainsOneStep()
@@ -1314,9 +1341,19 @@ public struct GameWorld: Equatable, Sendable {
             if !dispatched, !departed, !moved, !arrived {
                 let wake = [basicStepsUntilNextDeparture(), basicStepsUntilNextDispatch(memo: &memo)].compactMap { $0 }.min()
                 let idle = min(remaining, wake ?? remaining)
+                if release != nil {
+                    // Releasing passengers changes no train (G1a), so the
+                    // steps skipped still release theirs, minute by minute.
+                    for step in 0..<idle {
+                        releasePassengers(at: GameTime(minutes: clock.now.minutes + step), &release!)
+                    }
+                }
                 clock.advance(basicSteps: idle)
                 remaining -= idle
             }
+        }
+        if let release {
+            keepRemainders(of: release)
         }
     }
 
@@ -1830,6 +1867,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
+        case passengers
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1871,6 +1909,7 @@ extension GameWorld: Codable {
         serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
         network = container.contains(.network) ? try container.decode(RailwayNetwork.self, forKey: .network) : RailwayNetwork()
         isTrafficControlEnabled = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
+        passengers = container.contains(.passengers) ? try container.decode([StationPassengers].self, forKey: .passengers) : []
         for track in saved.tracks {
             network.lay(track)
         }
@@ -1915,6 +1954,9 @@ extension GameWorld: Codable {
         }
         if isTrafficControlEnabled {
             try container.encode(true, forKey: .trafficControl)
+        }
+        if !passengers.isEmpty {
+            try container.encode(passengers, forKey: .passengers)
         }
     }
 
@@ -2110,7 +2152,7 @@ extension GameWorld: Codable {
                 return problem
             }
         }
-        return trafficProblem()
+        return trafficProblem() ?? passengerProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

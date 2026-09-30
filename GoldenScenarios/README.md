@@ -12,17 +12,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 19`）
+## Schema（`schemaVersion: 20`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），以及 `setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `19` |
+| `schemaVersion` | `20` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
-| `expectedFinalState` | `gameMinutes`、`speed`、`balance`、`stations`、`tracks`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl` |
+| `expectedFinalState` | `gameMinutes`、`speed`、`balance`、`stations`、`tracks`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl`、`passengers` |
 
 ### 值的表示
 
@@ -90,6 +90,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 路網上的月台：`{ "edge", "start", "end" }`（邊的編號、從邊的 `from` 端量起的起訖里程）。
 - **路徑**（schema 18，決策 31）：`{ "traversals": [行進方向, ...], "end", "distance" }`：列車在車頭所在的邊之後依序進入的行進方向、車頭停在最後一條（沒有時是車頭所在的那一條）的哪裡（沿行進方向量起；走到終點時不寫 `end`），以及車頭從現在的位置走到那裡的精確距離。
 - **線路行程**：`{ "start", "legs", "roundTripMinutes" }`。`start` 是列車位置（方格是 `node`，路網是 `edge` 的停車位置）；`legs` 是 `[{ "from", "to", "route", "minutes" }, ...]`，`from`、`to` 是線路 `stops` 的索引，`route` 是 `[{ "x", "y" }, ...]`。從路網出發的行程（schema 18）每一段以 `path`（上面的「路徑」）取代 `route`：一段只有其中一個。
+- **乘客**（schema 20，決策 34）：
+  - 需求（`demand`）：`{ "kind", "dailyTrips" }`，`kind` 是 `"residential"`、`"office"`、`"shopping"` 或 `"scenic"`，`dailyTrips` 是整數；指令裡照原樣讀取，是否合法由 GameCore 判定。
+  - 沿線路的方向：`"outbound"`（往線路 `stops` 的後面）或 `"inbound"`（往前面）。
+  - 旅次（`trip`）：`{ "line", "direction" }`。
+  - 等車的一組（`groups` 的一項、最終狀態的 `waiting`）：`{ "line", "direction", "destination", "since", "count" }`：要坐的線路與方向、迄點車站、釋出的遊戲分鐘與人數，依排隊的順序（先來的在前）。
+  - 守恆稽核（`ledger`）：`{ "released", "waiting", "overflowed", "abandoned" }`。
 
 ### 指令（`command.type`）
 
@@ -136,6 +142,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `addTrackPlatform` | `station`、`edge`、`start`、`end` | `addTrackPlatform(_:on:from:to:)` |
 | `removeTrackPlatform` | `station`、`edge`、`start` | `removeTrackPlatform(_:on:from:)` |
 | `setTrafficControl`（schema 19） | `enabled`（布林值） | `setTrafficControl(_:)` |
+| `setStationDemand`（schema 20） | `station`、`demand`（需求，或 `null` 清除；key 必填） | `setStationDemand(_:to:)` |
 
 ### 結果（`expect.result`）
 
@@ -189,6 +196,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidPlatform` | — | 月台不在邊內、不是平的、長度不為正、與同一條邊上的月台重疊，或要移除的月台不存在（schema 17） |
 | `trackReserved` | `train` | 交通控制開啟時，這台列車（編號最小的一台）持有指令需要的軌道：新的路或放置要取得的預約範圍，或要拆除、改變的鐵軌（schema 19） |
 | `trainsShareTrack` | `trains`（`[a, b]`） | 開啟交通控制時，兩台列車需要同一段軌道：`b` 是依 ID 第一台與前面某台相交的列車，`a` 是與它相交的最小編號（schema 19） |
+| `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
 
 ### 觀察（`observe.type`）
 
@@ -232,6 +240,10 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `reservation`（schema 19） | `train` | `{ "resources": [資源, ...] }` | `reservedResources(of:)` |
 | `heldResources`（schema 19） | `train` | `{ "resources": [資源, ...] }` | `heldResources(of:)` |
 | `routeHolder`（schema 19） | `train` | `{ "found": true, "train": id }` 或 `{ "found": false }` | `trainHoldingRoute(of:)` |
+| `passengerTrip`（schema 20） | `from`、`to`（車站 ID） | `{ "found": true, "trip": 旅次 }` 或 `{ "found": false }` | `passengerTrip(from:to:)` |
+| `demand`（schema 20） | `from`、`to`（車站 ID） | `{ "daily": n, "hourly": [24 個整數，0 時起] }` | `dailyDemand(from:to:)`、`hourlyDemand(from:to:)` |
+| `waitingPassengers`（schema 20） | `station` | `{ "groups": [等車的一組, ...] }` | `waitingPassengers(at:)` |
+| `passengerLedger`（schema 20） | `station` | `{ "ledger": 守恆稽核 }` | `passengerLedger(of:)` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -328,6 +340,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `setTrafficControl` 開啟時依 ID 為每台已放置的列車算出它應有的持有，任兩台相交就是 `trainsShareTrack`，世界不變；關閉一定成功並清除所有預約。
 - `routeHolder`：服務停在某站、排定出發已到時，或線路的列車就緒只差預約、線路該派車時，第一個出發的預約範圍被哪台列車持有（編號最小的一台）；其他情況（包括交通控制關閉）是 `{ "found": false }`。
 
+車站需求與乘客規則（schema 20，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 34）：
+
+- 新世界的車站都沒有需求，行為與 schema 19 完全相同。`setStationDemand` 免費，檢查順序 `unknownStation` → `invalidStationDemand`；`null` 清除需求，已經在等的人留下。
+- 旅次（`passengerTrip`）：編號最小、同時停起點與迄點的線路；方向依兩站在它的 `stops` 裡第一次出現的索引（迄點在後是 `outbound`）。同一站或沒有這樣的線路是 `{ "found": false }`。
+- 每天的旅次（`daily`）：起點的 `dailyTrips` 分給它有旅次可到、而且 `dailyTrips` 大於 0 的車站，比例是那些車站的 `dailyTrips`，用最大餘數法（整數部分，剩下的依餘數由大到小各加 1，平手給站號小的）。
+- 每小時的旅次（`hourly`）：一天的旅次依權重 `P[h] × D_o[h] × A_d[h]` 以最大餘數法分到 24 小時（平手給較早的小時）。`P` 是 `100, 100, 100, 100, 100, 100, 720, 1500, 1800, 1500, 800, 820, 840, 860, 880, 900, 1500, 1500, 1800, 1500, 1000, 1020, 1040, 100`；`D_o` 是起點類型的出發曲線、`A_d` 是迄點類型的到達曲線，都是 `1 + a·exp(−½((h − μ)/σ)²)` 乘上 24 ÷ 一天的合計、再乘 1000 四捨五入（`Math.round`）：住宅出發與辦公到達 `a = 0.6, μ = 8, σ = 1.15`；住宅到達與辦公出發 `μ = 18`；商業出發 `0.42·g(14, 2.4) + 0.5·g(19, 1.8)`、到達 `0.42·g(13, 2.4) + 0.5·g(18, 1.8)`；景點出發 `0.75·g(16, 2.1)`、到達 `0.75·g(11, 2.1)`。
+- 釋出：每個基本步長（從分鐘 `T` 到 `T + 1`）一開始、在派車之前，每一對依起點、再依迄點的順序，把 `(60 − m)·R_h + m·R_{h+1}` 加到自己的餘數（`h`、`m` 是 `T` 在一天中的小時與分，`R_{h+1}` 在 23 時是 0 時的），餘數整除 3600 的人數在這一分鐘釋出，其餘留下。
+- 排隊：釋出的人在起點成為一組（這一分鐘、這個迄點、坐的線路與方向），排在最後；車站等車的總數最多 4000，放不下的離開（`overflowed`）。
+- 線路刪除或改停靠後，線路不再以那個方向載去迄點的組離開（`abandoned`），其他組的順序不變。
+- 每一站 `released = waiting + overflowed + abandoned`。
+
 時刻表規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 19）：
 
 - 新購列車的時刻表是 `[]`。`setTrainTimetable` 整份替換，`[]` 清除；免費，列車放置與否都可以。
@@ -377,6 +400,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `serviceDay`：服務日（形式見上面「服務日」）。
 - `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length", "profile", "structure" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則；`profile` 與 `structure`（schema 17）必填；`platforms`（schema 17）必填：`[{ "station", "edge", "start", "end" }, ...]`，沿鐵軌的順序（依邊的編號、再依起點）。沒有路網是 `{ "nodes": [], "edges": [], "platforms": [] }`。
 - `trafficControl`（schema 19）：交通控制是否開啟，布林值。
+- `passengers`（schema 20）：有需求、或曾經釋出過乘客的車站，依車站 ID 遞增：`{ "station", "demand", "waiting", "released", "overflowed", "abandoned" }`，六個欄位都必填；`demand` 沒有時是 `null`，`waiting` 是等車的各組（依排隊的順序）。還沒有乘客時是 `[]`。尚未釋出的不到一人的餘數是內部狀態，不列入。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -409,3 +433,4 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **17**（Phase 4.5 Stage S4）：新增立體鐵路：`buildTrackEdge` 可加的 `profile` 與 `structure`，`addTrackPlatform`、`removeTrackPlatform` 指令，`trackTooSteep`、`invalidTrackStructure`、`trackConflict`、`trackEdgeHasPlatform`、`invalidPlatform` 結果，`edgePose`、`edgeAlignment`、`tunnelPortals`、`trackPlatformsAlongTrain`、`platformLevels` 觀察，最終狀態 `network` 必填的 `platforms`（月台屬於鐵路網，見決策 30）與每條邊必填的 `profile`、`structure`，以及手算的 `vertical-railway.json`（高度與坡度另以獨立的精確分數計算核對）。既有的十六個 fixture 把 `schemaVersion` 從 16 改成 17，並只加上中性的值：最終狀態的 `network` 加上 `"platforms": []`，`continuous-track.json` 最終狀態的 6 條邊加上 `"profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface"`。**一個刻意的行為改變**：`continuous-track.json` 的第 7 步原本以 `z: 5` 驗證 S3 的「節點一律在地面」，S4 取消這條規則（5 是合法的高度），所以這一步改成 `z: 5000`（超出 ±4096），預期結果仍是 `invalidTrackGeometry`，說明文字同步更新；其他預期值都沒有改變。
 - **18**（Phase 4.5 Stage S5）：路網上的營運：`setTrainPath` 可加的 `end`，列車移動只在有值時出現的 `end`，`pathToStation` 觀察（回答 `trainPath`），路網出發的 `lineJourney` 每一段以 `path` 取代 `route`，`removeTrackPlatform` 的 `trainServiceActive`，以及手算的 `network-service.json`（彎道、隧道與地下月台的距離另以獨立的精確分數計算核對）。既有的十七個 fixture 只把 `schemaVersion` 從 17 改成 18：它們的路網上沒有服務、沒有停在邊中段的路，所以沒有 `end`，方格的行程仍以 `route` 表示；其他預期值都沒有改變。
 - **19**（Phase 4.6 Stage T）：交通控制與進路預約：`setTrafficControl` 指令，`trackReserved`、`trainsShareTrack` 結果，`reservation`、`heldResources`、`routeHolder` 觀察，最終狀態每台列車必填的 `reservation` 與必填的 `trafficControl`，以及手算的 `traffic-reservation.json`（道岔的限界、單線上的等待與放行、span 分界上的車尾與停車位置、立體交叉互不衝突、預約中的邊不能加月台或拆除）。既有的十八個 fixture 把 `schemaVersion` 從 18 改成 19，並只加上中性的值：最終狀態的 37 台列車加上 `"reservation": []`，最終狀態加上 `"trafficControl": false`：它們從未開啟交通控制，新世界的交通控制是關閉的，所以行為不變。其他預期值都沒有改變。
+- **20**（G1a）：車站需求與乘客：`setStationDemand` 指令，`invalidStationDemand` 結果，`passengerTrip`、`demand`、`waitingPassengers`、`passengerLedger` 觀察，最終狀態必填的 `passengers`，以及手算的 `station-demand.json`（一天一個旅次在 08:59 釋出、百萬旅次在兩分鐘內讓車站滿、溢出、線路改停靠後放棄等車，每一站都守恆；預期值另以獨立的 Python 實作依規則計算）。既有的十九個 fixture 把 `schemaVersion` 從 19 改成 20，並只在最終狀態加上 `"passengers": []`：它們的車站都沒有需求，新世界的車站沒有需求，所以沒有人被釋出。其他預期值都沒有改變。

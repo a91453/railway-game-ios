@@ -95,6 +95,7 @@ final class ErrorMessageTests: XCTestCase {
             .trackReserved(TrainID(rawValue: 3)): "Train #3 holds that track under traffic control. Wait for it to clear the route.",
             .trainsShareTrack(TrainID(rawValue: 2), TrainID(rawValue: 3)):
                 "Trains #2 and #3 need the same track, so traffic control can't be turned on. Move one of them first.",
+            .invalidStationDemand: "A station starts 0 to 1,000,000 trips a day.",
         ]
 
         for (error, message) in messages {
