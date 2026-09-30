@@ -252,9 +252,11 @@ extension ReferenceWorld {
 
     mutating func removeTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64) -> GameError? {
         guard let i = stations.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownStation(id) }
-        let before = stations[i].trackPlatforms.count
-        stations[i].trackPlatforms.removeAll { $0.edge == edge && $0.start == start }
-        return stations[i].trackPlatforms.count == before ? .invalidPlatform : nil
+        guard let platform = stations[i].trackPlatforms.first(where: { $0.edge == edge && $0.start == start }) else { return .invalidPlatform }
+        // Decision 31: not while a service needs it.
+        if let train = serviceNeeding(platform) { return .trainServiceActive(train) }
+        stations[i].trackPlatforms.removeAll { $0 == platform }
+        return nil
     }
 
     /// Decision 30: every station's platforms, by edge and then along it.
