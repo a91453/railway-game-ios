@@ -1821,7 +1821,16 @@ G1 的第二步：列車離開一站時讓到站的人下車，再依容量讓�
 
 #### 驗證
 
-VERIFICATION_PLACEHOLDER
+- `BoardingTests`（手算，10 個）：容量（320／352 與輛數）、離站時上車與到迄點下車（在 Beta 停站期間還在車上）、下車站遠的先上與同一迄點先來的先上、放不下的那一組部分上車並保留分鐘、`refused`、滿載時全部被拒絕直到有人下車、遠端折返後載回程、只載自己的線路與方向與前方停靠的人、pattern 不停的站的人繼續等、離開線路的列車照舊載到迄點但不載新的人、停止服務時放棄車上的人、一天的營運逐分鐘守恆而且一次推進與逐分鐘相同、存讀與 11 種壞掉的存檔。
+- `StationDwellTests`（11 個）：每一個預期值都是參考的 JavaScript（原樣抽出）在 Node 執行同一組 case 的結果；第一次執行就全部一致。
+- `ReferencePassengers`：`ReferenceWorld` 另外寫一次決策 35，而且寫得不同：每次離站**立刻**處理（證明先記下、之後依序處理的結果相同）、車上的人是依列車、起點、迄點的字典、逐一挑最遠而且最早的組而不是排序、容量寫成 `輛數 × 320 × 11 / 10`。每個 golden scenario 都在它上面重跑。
+- `BoardingPropertyTests`（`boarding.differential`，16 個 case × 4 個種子 × 70 個操作，digest `B105FCE7743F269F`，CI shard `campaigns-1`）：派車 campaign 的小路網、線路與列車，加上各種大小的需求、2 到 3 輛的列車、離開線路後停止服務，同時在 GameCore 與 `ReferenceWorld` 上執行，每一步比較所有狀態（包括每一站的排隊、帳本與每台列車的乘客）；每次推進也逐 tick 重跑。量（逐 tick 計數）：到達 4,673、上下車 4,434、滿載 4,461、被拒絕 1,417、2 輛以上載客 142、多個迄點 281、停止服務而放棄乘客 26。
+- `SaveMutationTests` 新增 `save.riderMutation`（10 個 case × 4 個種子，每個 30 次變異）：載入 386、拒絕 814、瞄準乘客與服務的變異 890、載入後有列車載客的世界 95。
+- `WorldInvariants` 在每個 campaign 的每一步檢查擴充後的守恆與車上乘客的規則（另外寫一次）。
+- Golden schema v21 與手算的 `boarding.json`（預期值另以獨立的 Python 實作依規則算出），在 GameCore 與 `ReferenceWorld` 上都通過；既有 fixture 的預期值沒有改變。
+- 刻意植入的錯誤，各自單獨植入到 `Sources` 的複本、驗證後丟棄：下車站近的先上、空位不扣車上的人、不下車、遠端的方向算錯、不記拒絕、停止服務不放棄乘客。六個都被手算測試、golden（含 `ReferenceWorld`）與 `boarding.differential` 第一個種子抓到。
+- 完整測試（本機 Linux Swift 6.4，六個 shard，521 個測試）全部通過；18 個既有的 property digest 與 `main` 完全相同，`passenger.differential` 與 G1a 相同（`62042B9B922FCE2C`）。
+- **不變的**：沒有需求時決策 1–34 的行為與存檔。
 
 #### 已知限制與留給之後
 
