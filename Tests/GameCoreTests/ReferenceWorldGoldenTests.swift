@@ -64,7 +64,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
                         execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init),
-                        trailEdges: $0.trailEdges
+                        trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init)
                     )
                 },
                 final.trains, name
@@ -86,6 +86,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             )
             XCTAssertEqual(model.lines.map(Self.summary), final.lines, name)
             XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
+            XCTAssertEqual(model.trafficControl, final.trafficControl, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -133,6 +134,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setTrainPath(let id, let path, let end): error = model.setContinuation(id, along: path, stoppingAt: end)
         case .addTrackPlatform(let station, let edge, let start, let end): error = model.addTrackPlatform(station, on: edge, from: start, to: end)
         case .removeTrackPlatform(let station, let edge, let start): error = model.removeTrackPlatform(station, on: edge, from: start)
+        case .setTrafficControl(let enabled): error = model.setTrafficControl(enabled)
         }
         return error.map { .rejected($0) } ?? .ok
     }
@@ -212,6 +214,12 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .levels(model.platformLevels(of: id).map { PlatformLevelSummary(platform: $0.0, height: $0.1, structure: $0.2) })
         case .pathToStation(let start, let station, let cars):
             return .trainPath(model.pathToStation(from: start, station: station, length: ReferenceWorld.length(cars: cars)).map(PathSummary.init))
+        case .reservation(let id):
+            return .resources(model.reservedResources(of: id))
+        case .heldResources(let id):
+            return .resources(model.heldResources(of: id))
+        case .routeHolder(let id):
+            return .holder(model.trainHoldingRoute(of: id))
         }
     }
 

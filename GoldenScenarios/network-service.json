@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "description": "Services on the track network (Phase 4.5 Stage S5, ARCHITECTURE decision 31). Surface Harbour (e1, 2048 to 6144), a curve (e2, 6346), a ramp down 1024 in a tunnel (e3, 32768, 1 in 32; node 3 is a tunnel portal) and underground Deep on a curve (e4, 6346; 1024 to 4096). A train stops with its head at the far end of a platform the way it travels (end going forward, L - start going backward), only at platforms no shorter than it; its path to a station is the least exact distance: the rest of its edge, every edge between and the stretch into the last. A leg takes that distance at the line's rate, rounded up. Mole (3 cars, 2048 a minute) repeats Harbour, Deep, Harbour every 70 minutes: out 2048 + 6346 + 32768 + 4096 = 45258 (23 minutes), turned at Deep with its head where its tail was (4298 along e4 backward), back 2048 + 32768 + 6346 + 6144 = 47306 (24 minutes), turned at Harbour (4096 facing east) and pulled up 2048 to the berth it started from. Line Tube sends Shuttle (1 car) out every 52 minutes: its journey from Harbour's berth as one car is 23 + 25 minutes and 2 at each end.",
   "initialState": {
     "mapWidth": 64,
@@ -329,8 +329,8 @@
     ],
     "tracks": [],
     "trains": [
-      { "id": 1, "name": "Mole", "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [], "end": 6144 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 25, "departure": 30, "reverse": true }, { "station": 1, "arrival": 60, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 70 }, "execution": { "type": "waiting", "stop": 0, "cycle": 1 }, "cars": 3, "trail": [], "trailEdges": [] },
-      { "id": 2, "name": "Shuttle", "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 12086 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 }, "timetable": [{ "station": 1, "arrival": 52, "departure": 52, "reverse": false }, { "station": 2, "arrival": 77, "departure": 79, "reverse": true }, { "station": 1, "arrival": 104, "departure": 104, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "travelling", "stop": 1, "cycle": 0 }, "cars": 1, "trail": [], "trailEdges": [] }
+      { "id": 1, "name": "Mole", "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [], "end": 6144 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 25, "departure": 30, "reverse": true }, { "station": 1, "arrival": 60, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 70 }, "execution": { "type": "waiting", "stop": 0, "cycle": 1 }, "cars": 3, "trail": [], "trailEdges": [], "reservation": [] },
+      { "id": 2, "name": "Shuttle", "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 12086 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 }, "timetable": [{ "station": 1, "arrival": 52, "departure": 52, "reverse": false }, { "station": 2, "arrival": 77, "departure": 79, "reverse": true }, { "station": 1, "arrival": 104, "departure": 104, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "travelling", "stop": 1, "cycle": 0 }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
     ],
     "lines": [
       { "id": 1, "name": "Tube", "stops": [1, 2], "rate": 2048, "window": { "type": "allDay" }, "trainsInService": { "peak": 1, "offPeak": 1, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [2], "lastDispatch": 52, "patterns": [] }
@@ -351,6 +351,7 @@
         { "id": 4, "from": 4, "to": 5, "curve": { "type": "cubic", "control1": { "x": 16384, "y": 43008 }, "control2": { "x": 14336, "y": 45056 } }, "length": 6346, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "tunnel" }
       ],
       "platforms": [{ "station": 1, "edge": 1, "start": 2048, "end": 6144 }, { "station": 2, "edge": 4, "start": 1024, "end": 4096 }]
-    }
+    },
+    "trafficControl": false
   }
 }
