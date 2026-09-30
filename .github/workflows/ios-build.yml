@@ -2,8 +2,8 @@ name: iOS App Build
 
 # Compile-only validation of the native app against the real Apple SDK, and a
 # check that the committed Xcode project still matches project.yml.
-# GameCore tests stay in ci.yml (Linux). Screenshots live in visual-smoke.yml;
-# the unsigned Release device archive lives in release-archive.yml.
+# GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
+# lives in release-archive.yml.
 
 on:
   pull_request:

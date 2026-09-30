@@ -2,13 +2,13 @@
 import GameCore
 import GamePresentation
 
-/// A small prebuilt layout for Simulator screenshots, opened only by Debug
-/// builds launched with ``launchArgument`` (see visual-smoke.yml).
+/// A small prebuilt layout for looking at the map by eye, opened only by
+/// Debug builds launched with ``launchArgument``.
 ///
 /// Not a shortcut: it starts from a normal new game and builds everything
 /// with ordinary `GameWorld` commands that charge their usual costs. Its
 /// train is bought, placed, given a rate and sent the way a player would, so
-/// the screenshots show the train tool and a train the game loop is moving.
+/// the layout shows the train tool and a train the game loop is moving.
 enum DemoLayout {
     static let launchArgument = "-demo-layout"
 

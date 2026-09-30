@@ -97,7 +97,7 @@ RailwayGameApp/
   project.yml   XcodeGen spec（專案設定的唯一來源）
   RailwayGame.xcodeproj  由 project.yml 產生並提交（Xcode Cloud 需要），不要手改
   Resources/    Assets.xcassets（App Icon）
-  App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，截圖用）
+  App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，用 `-demo-layout` 啟動參數開啟的示範配置）
   Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor、TrainControls
 ```
 
@@ -106,18 +106,17 @@ RailwayGameApp/
 不需要自己的 Mac，也不依賴 Swift Playgrounds：
 
 ```
-Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator) → 截圖 artifact → 在 iPhone / iPad 上檢視
+Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS 以 Xcode 編譯）→ 內部 TestFlight → 在 iPhone / iPad 實機上檢視
 ```
 
 | 層 | 在哪裡跑 | 驗證什麼 |
 | --- | --- | --- |
 | 1. Claude Code Cloud | Linux 容器 | 原始碼開發；GameCore `swift build` / `swift test`。**沒有** Xcode、Simulator、SwiftUI / UIKit |
-| 2. Linux CI（`ci.yml`） | 每次 push / PR | GameCore 與 GamePresentation 在 Swift 6.0、6.4 的 build（warnings as errors）與 test；property 測試只在 6.4 執行 |
+| 2. Linux CI（`ci.yml`） | 每次 push 到 `main` 與手動執行；PR 只在改到會影響 Swift package 的檔案時（`Package.swift`、`Sources/`、`Tests/`、`GoldenScenarios/`、`ci.yml`、`swift-shards.sh`）才跑 Swift job，`Swift CI (gate)` 一定回報 | Swift 6.0（最低相容版本）：warnings as errors 的 build 與除了長 campaign 以外的全部測試。Swift 6.4（目前的完整正確性驗證）：同樣的 build 與**全部**測試，包含 property / differential / mutation campaign（不減量，分成 5 個平行 shard） |
 | 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；不需簽章 |
-| 4. Visual Smoke（`visual-smoke.yml`） | macOS runner，**手動**觸發 | 在 iPhone 與 iPad Simulator 啟動 App、確認沒有閃退、截圖並上傳為 artifact（新遊戲畫面，以及 Debug 限定的 `-demo-layout` 示範配置） |
-| 5. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
-| 6. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
-| 7. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | Archive（預設 `adhoc`）→ App Store distribution 簽章匯出 IPA → 檢查 → 上傳 App Store Connect（**已在真實執行驗證**）；需要 environment `testflight` 的 secrets |
+| 4. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
+| 5. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
+| 6. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | Archive（預設 `adhoc`）→ App Store distribution 簽章匯出 IPA → 檢查 → 上傳 App Store Connect（**已在真實執行驗證**）；需要 environment `testflight` 的 secrets |
 
 - **Swift Playgrounds**：可選，不是必要的開發或驗證環境。
 - **TestFlight / 實機安裝**：以 GitHub Actions（`testflight.yml`）Archive、簽章、上傳，發佈到**內部** TestFlight，不需要 Mac。
@@ -125,14 +124,11 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
   - 簽章以 App Store Connect API key 自動完成；repository 不含、也不提交任何憑證、描述檔或金鑰。
   - Xcode Cloud 暫緩（[docs/XCODE_CLOUD_ONBOARDING.md](docs/XCODE_CLOUD_ONBOARDING.md)）。
 
-### 在 iPhone / iPad 上查看截圖
+### 在 iPhone / iPad 上查看 App
 
-1. GitHub → **Actions** → 左側選 **Visual Smoke** → **Run workflow**（選擇分支）→ **Run workflow**
-2. 等待執行完成
-3. 打開該次執行的 Summary 頁面 → **Artifacts** → 下載 **visual-smoke**
-4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，用 Train 工具購買、放置並送出、正在行駛的一台列車，東側由四段曲線組成的連續軌道環線與在上面行駛的三節列車、跨越環線的高架，以及南側從地面經隧道口駛入隧道的三節列車；iPhone 的畫面只看得到地圖的西側）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
+畫面由專案擁有者以**人工**在實機檢查：`testflight.yml`（手動、只能從 `main`）上傳的 build 經內部 TestFlight 安裝到 iPhone / iPad 後自行查看。這是人工檢視，**不是**自動化的回歸測試：CI 不比對畫面，也沒有 Simulator 截圖；曾有的 Visual Smoke（手動 Simulator 截圖 artifact）已移除。
 
-Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow 或其腳本的 PR，每次推送都會自動執行。
+Debug build（例如在本機 Xcode 執行）可以用啟動參數 `-demo-layout` 開啟 Debug 限定的示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站、正在行駛的列車、東側的連續軌道環線與跨越它的高架、南側的隧道。Release 與 TestFlight build 不含它。
 
 ## Building
 
@@ -165,7 +161,11 @@ xcodegen generate --spec RailwayGameApp/project.yml
 swift test
 ```
 
-`swift test` 會執行 GameCore 與 GamePresentation 的測試。兩者都只使用 Swift 標準函式庫（GamePresentation 另用標準函式庫的 `Observation`），因此可在 macOS、iOS 與 Linux 上建置。CI 在 Linux 上以 Swift 6.0（最低版本）與 6.4（目前穩定版）執行 build 與 test。佔去大部分測試時間的 property 測試（`*PropertyTests`、`KernelDifferentialTests`、`SaveMutationTests`）只在 6.4 執行：它們檢查的是邏輯，不因編譯器版本而不同。6.0 仍會編譯所有測試，並執行其餘的測試（包括 golden scenario）。
+`swift test` 會執行 GameCore 與 GamePresentation 的測試。兩者都只使用 Swift 標準函式庫（GamePresentation 另用標準函式庫的 `Observation`），因此可在 macOS、iOS 與 Linux 上建置。CI 在 Linux 上以 Swift 6.0（最低版本）與 6.4（目前穩定版）建置（warnings as errors）並測試：
+
+- **Swift 6.0**：最低相容版本。編譯所有測試，並執行除了長 campaign（`*PropertyTests`、`KernelDifferentialTests`、`SaveMutationTests`）以外的全部測試，包括 golden scenario。這些 campaign 檢查的是邏輯，不因編譯器版本而不同。
+- **Swift 6.4**：目前的完整正確性驗證，執行**全部**測試，包含所有 campaign。campaign 的 seed、case 數與指令數都沒有減少；它們只是被分到 5 個平行 job（shard），等待時間是最慢的 shard，而不是全部相加。分法與「每個測試恰好在某一個 shard 跑過一次」的證明在 `.github/scripts/swift-shards.sh`：每個 shard 先確認各 shard 的選擇剛好切分 `swift test list` 的結果，跑完再確認實際執行的測試與選擇的完全相同。新增的測試類別不必改 CI，會落在 `rest` shard。
+- 只改文件、App 或 TestFlight 檔案的 PR 不會啟動這些 Swift job（`Swift CI (gate)` 仍會回報）；推到 `main` 與手動執行一律全部跑。
 
 GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案中手寫的預期結果比對。測試只讀取 fixture、從不寫回；預期值改變代表遊戲行為改變，必須在 PR 中說明。
 
