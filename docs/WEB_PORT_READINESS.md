@@ -1,0 +1,98 @@
+# 網頁版移植準備
+
+目的：讓同一份 Swift GameCore 未來能在瀏覽器執行，由 Babylon.js 繪製 3D 世界。這是準備規格，尚未實作 Web App、Wasm bridge 或 renderer，也尚未證明 Wasm 可以編譯與執行本專案。
+
+## 已有的基礎
+
+- `Sources/GameCore/` 不依賴 Apple UI 或 rendering framework；`GameWorld` 是唯一權威狀態。
+- `GameSession` 與 `TickAccumulator` 將真實時間換算成整數 tick；瀏覽器需要自己的宿主，不直接移植 SwiftUI 或 Observation。
+- S3/S4 已完成任意方向的曲線、縱斷面、高架、橋、隧道和路網月台。
+- `RailwaySnapshot` 已有節點、帶幾何的邊、月台、列車車頭與車身路徑；`railwaySnapshot()`、`trackAlignment(of:)`、`location(of:)`、`bodyPath(of:)` 是繪圖輸入。不要再建立第二份權威世界。
+- `GoldenScenarios/` 是跨平台的行為驗收資料；Swift Codable 存檔不是跨語言的公開契約。
+
+相關決策：[ARCHITECTURE](ARCHITECTURE.md) 13、28–30；開發順序仍以 [ROADMAP](ROADMAP.md) 為準。本準備不取代下一步 Stage T。
+
+## 預定執行邊界
+
+```text
+瀏覽器輸入 → 型別化指令 → Web Worker → Swift GameCore.wasm
+                                         │ 唯讀查詢
+                                         ▼
+HUD / 選取 ← 查詢結果       Babylon.js ← 可傳輸的繪圖資料
+```
+
+Worker 內只保有一份 GameWorld。主執行緒的選取、鏡頭、模型與動畫都是暫時或推導資料。建設、路徑、金額、佔用、時刻表與派車仍由 GameCore 決定。Renderer 不修改列車位置或依碰撞引擎決定遊戲結果。
+
+先驗證核心執行，再加入 renderer；Wasm 探針不需要 Babylon.js。首次 bridge 只服務實際驗證使用的指令與查詢，避免一次包裝全部 API。
+
+## 工具與依賴
+
+| 項目 | 用途與準備條件 |
+| --- | --- |
+| 原生 Swift toolchain | 執行目前的參考實作與 golden scenarios；保留 Swift 6.0 相容性與既有 6.0 / 6.4 CI |
+| 相容的 Swift WebAssembly SDK / runtime | 先確認可用版本、目標、授權、下載來源與 checksum，再固定 compiler / SDK 組合；Linux 能編譯不代表 Wasm 能編譯 |
+| Node.js LTS、TypeScript、Vite | Wasm 可行性成立後，建立 Web shell、開發與靜態打包；版本與 lockfile 一起固定 |
+| Babylon.js | 首個真正 3D renderer 的候選；WebGPU 為可選，提供 WebGL2 路徑並實測 Safari |
+| 瀏覽器自動化 | 核心與瀏覽器連接後驗證載入、指令、Worker、暫停與存讀；工具候選為 Playwright |
+| 靜態 HTTPS hosting | 發布 HTML、JS、模型與 Wasm；需正確的 `application/wasm` MIME type，不預設需要後端或資料庫 |
+
+不在準備階段加入 npm 依賴或修改根目錄 Swift Package。實作時 Web shell 可放 `Web/`，bridge 可獨立成套件，依賴根目錄 GameCore，避免把瀏覽器 SDK 加進原生核心。
+
+## 第一個必須通過的關卡：Swift → Wasm
+
+1. 固定 compiler、SDK、target triple、runtime 及精確建置命令，在乾淨環境可重現；不預先假設 `wasm32` 或 `wasm64` 與現有 API 完全相容。
+2. 只編譯 GameCore 與最小 executable bridge：建立世界、成功與失敗各一個指令、推進 tick、讀取幾何；在瀏覽器 Worker 中真正執行。
+3. 驗證 `Int` 位寬。ID、容量、錯誤邊界與 `Int.max` 語義可能在 32-bit target 改變；若有差異，記錄差異並決定 target 或明確相容策略，不能宣稱與原生完全一致。
+4. 驗證 `Int64`、溢位檢查與 `UInt64.multipliedFullWidth` / `dividingFullWidth`。S4 幾何依賴完整寬度乘除；不可換成 JavaScript 浮點數計算以求通過。
+5. 驗證 typed throws、Sendable、Codable、配置器與選定 runtime 的限制。GameCore 沒有 Foundation，但 JSON bridge 仍需確認可用的 encoder / decoder。
+6. 執行相同 golden scenarios 並比較每一步結果、錯誤順序與最終狀態；測試工具不能透過 JS `Number` 解析大型整數後再比較。
+7. 記錄 bundle 大小、載入時間、tick 與 snapshot 耗時、記憶體；未實測前不承諾效能或離線能力。
+
+如果關卡失敗，先記錄實際 compiler / runtime 錯誤。是否改用伺服器 Swift 或逐子系統重寫另行決策；不能靜默改成第二份 TypeScript 核心。
+
+## Bridge 的最低契約（實作前確認）
+
+- 每個請求有 protocol version、request ID、command 名稱與型別化參數；回覆區分成功、GameError、無效傳輸格式及 runtime failure。
+- 指令按序執行，回覆帶單調遞增的 revision；revision 是宿主的排序標記，不是遊戲時間。主執行緒丟棄過期結果。
+- 失敗的遊戲指令維持 GameCore 的原子性。新世界、載入存檔或重新開始使用新的 session 標記，舊回覆不能套用。
+- 跨 JS 邊界的 Int64、金額、時間及可能超出安全範圍的 ID 使用十進位字串或明確的 BigInt binary 協定。禁止經過 `JSON.parse` 的 Number 再轉回 Int64；BigInt 也不能直接 `JSON.stringify`。
+- 第一版可使用 UTF-8 JSON bridge；明確定義 buffer 所有權、配置、長度、釋放與錯誤。不要把 Swift struct 記憶體 layout 當穩定 ABI。
+- `RailwaySnapshot` 目前是 Swift 值型別，沒有直接的 Web wire encoding。首次 renderer 實作時由 adapter 匯出需要的資料，不必改寫核心模擬型別或直接暴露整個 Train。
+- HUD 與線路查詢獨立於繪圖資料。未實作的地形、號誌、乘客與城市資料不先填假值，亦不當成目前功能。
+
+## 3D 座標與動畫
+
+GameCore 座標：x 向東、y 向南、z 向上；一格 1024 單位，名義上 16 公尺。採 Babylon 左手座標時，可明確映射為 `(X, Y, Z) = (x, z, y) / 64`，並用方向向量及 grade 推導姿態；不要把 north/east 等文字當成連續路網的方向。
+
+車身由 `bodyPath(of:)` 或 snapshot 的 body 沿軌道定位；彎道上不能只把整列車視為一個剛體沿車頭直線延伸。車節數等模型所需資料，實作時透過最小唯讀查詢補充。
+
+模擬 tick 與 `requestAnimationFrame` 分開。Renderer 只在已有狀態之間插值；換世界、讀檔、反向或不連續位置變化時重設動畫。跨曲線的插值沿軌道幾何進行，不讓列車切彎穿越場景。精確的時間戳與插值延遲在首個 renderer PR 定義。
+
+`visibilitychange` 隱藏時停止累積 tick，恢復時重設宿主時間基準，不補跑背景時間；Worker 計時器也可能被瀏覽器節流。重負載時降低畫面品質，不改變模擬規則或偷偷丟掉已提交 tick。
+
+先量測 snapshot；靜態幾何可按 edge ID 快取，但每次完整快照仍需處理拆除的邊、月台改動與換世界。刪除的列車模型也須清理。增量更新等優化等量測後再做。
+
+## 存檔與發布
+
+Swift 存檔由核心相容的 codec 匯出為不透明 bytes，在瀏覽器可用 IndexedDB 保存，並提供檔案匯入 / 匯出。外層 envelope 記錄版本；載入先在候選世界完整驗證，成功才替換目前世界。瀏覽器儲存可能被清除，不能當成唯一永久備份。
+
+最小版本不要求帳號、雲端同步、SharedArrayBuffer 或多執行緒 Wasm。若所選 runtime 確實需要 cross-origin isolation，才加入 COOP / COEP 並驗證 hosting 與資產來源。PWA 與 Service Worker 留待載入和升級策略成立後實作。
+
+原網頁參考遊戲的 ZIP、JavaScript、圖片、字型與第三方素材不得收進公開 repo；沿用 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md) 的規範。首版使用自製簡單幾何素材。
+
+## 分批交付與驗收
+
+| 批次 | 可 review 的結果 | 通過條件 |
+| --- | --- | --- |
+| W0：Wasm 可行性 | 獨立 executable 探針、固定 toolchain、可重現命令與結果 | 瀏覽器 Worker 真正執行 GameCore；整數邊界、原子性與相關 golden scenarios 一致 |
+| W1：Web shell | 型別化 bridge、Worker session、基本 HUD 與 tick | 暫停 / 1× / 2×、背景不補跑、失敗指令世界不變、過期訊息無法污染新世界 |
+| W2：3D renderer | Babylon 場景、軌道 / 月台 / 多節列車、鏡頭控制 | 曲線、高架、隧道與坡道可繪製；只讀核心；WebGL2 與可用時的 WebGPU 路徑實測 |
+| W3：可玩原型 | 工具、列車操作、存讀與發布建置 | 手機與桌面操作、坏存檔拒絕、匯出 / 匯入還原、Safari / Chromium / Firefox 實測 |
+
+首版連續路網的列車不能宣稱已有完整服務與自動派車：S4 的路網月台仍是資料與查詢，路網服務整合等待 T/V；方格服務與路網展示須明確區分。
+
+## 此次準備的驗證狀態
+
+- 已靜態核對：GameCore / Presentation 分層、S4 snapshot、座標定義、完整寬度整數運算與 golden scenario 契約。
+- **UNVERIFIED**：Swift → Wasm 編譯、bridge、瀏覽器執行、Babylon rendering、效能與存檔。準備工作區目前沒有 Swift compiler，未執行 Swift build / test。
+- 本文件不改變核心、原生 App、既有 golden 預期或發布管線；上述關卡通過後才可標記為 VERIFIED。
