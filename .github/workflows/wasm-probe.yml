@@ -51,6 +51,11 @@ jobs:
           --checksum f07b7be3c586d92d7a07051fc6d303b87ebea67eadc40640ba59d5a8b79aa86d
       - name: Install locked browser dependencies
         run: npm ci --ignore-scripts
+      - name: Set container home ownership for Firefox
+        # GitHub mounts the home directory with the host runner's UID, while
+        # this container runs as root. Firefox requires the current user's
+        # home directory to belong to that user; keep its path unchanged.
+        run: chown "$(id -u):$(id -g)" "$HOME"
       - name: Install test browsers
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Build native and Wasm probes
