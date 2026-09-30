@@ -351,6 +351,7 @@ final class PassengerDemandTests: XCTestCase {
         var world = try makeCorridor()
         try world.setStationDemand(a, to: demand(.residential, 30_000))
         try world.setStationDemand(b, to: demand(.office, 30_000))
+        try world.setStationDemand(c, to: demand(.office, 30_000))
         try world.advance(ticks: 500)
         let saved = try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as! [String: Any]
         XCTAssertNoThrow(try decode(saved))
@@ -381,6 +382,22 @@ final class PassengerDemandTests: XCTestCase {
                 let groups = records[0]["waiting"] as! [[String: Any]]
                 records[0]["waiting"] = Array(groups.reversed())
             }),
+            ("groups of one minute out of order", mutated { records in
+                var groups = records[0]["waiting"] as! [[String: Any]]
+                let pair = groups.indices.dropLast().first { groups[$0]["since"] as! Int == groups[$0 + 1]["since"] as! Int }!
+                groups.swapAt(pair, pair + 1)
+                records[0]["waiting"] = groups
+            }),
+            ("a group twice in one minute", mutated { records in
+                var groups = records[0]["waiting"] as! [[String: Any]]
+                groups.insert(groups[0], at: 1)
+                records[0]["released"] = (records[0]["released"] as! Int) + (groups[0]["count"] as! Int)
+                records[0]["waiting"] = groups
+            }),
+            ("more released than a station can count", mutated { records in
+                records[0]["released"] = (records[0]["released"] as! Int) - (records[0]["overflowed"] as! Int) + (1 << 62)
+                records[0]["overflowed"] = 1 << 62
+            }),
             ("a remainder of a whole passenger", mutated { $0[0]["remainders"] = [["destination": 2, "value": 3_600]] }),
             ("a remainder for itself", mutated { $0[0]["remainders"] = [["destination": 1, "value": 5]] }),
             ("a remainder for a missing station", mutated { $0[0]["remainders"] = [["destination": 9, "value": 5]] }),
@@ -394,6 +411,44 @@ final class PassengerDemandTests: XCTestCase {
         for (name, json) in broken {
             XCTAssertThrowsError(try decode(json), name)
         }
+    }
+
+    /// The plan kept between calls is always the one the world would work
+    /// out now: every command that changes demand or lines forgets it.
+    func testTheKeptPlanFollowsEveryChange() throws {
+        var world = try makeCorridor()
+        func expectCurrent(_ step: String, file: StaticString = #filePath, line: UInt = #line) {
+            let kept = world.passengerPlan.plan.flatMap { $0 }
+            let fresh = world.makePassengerPlan()
+            XCTAssertEqual(kept?.flows.map(\.destination), fresh?.flows.map(\.destination), step, file: file, line: line)
+            XCTAssertEqual(kept?.flows.map(\.trip), fresh?.flows.map(\.trip), step, file: file, line: line)
+            XCTAssertEqual(kept?.flows.map(\.record), fresh?.flows.map(\.record), step, file: file, line: line)
+            XCTAssertEqual(kept?.hourly, fresh?.hourly, step, file: file, line: line)
+        }
+        try world.setStationDemand(a, to: demand(.residential, 5_000))
+        try world.setStationDemand(b, to: demand(.office, 3_000))
+        try world.advance(ticks: 30)
+        expectCurrent("demand")
+        try world.setStationDemand(d, to: demand(.scenic, 2_000))
+        try world.advance(ticks: 30)
+        expectCurrent("demand of a station on no line")
+        try world.createLine(named: "Spur", stops: [b, d])
+        try world.advance(ticks: 30)
+        expectCurrent("a new line")
+        try world.setLineStops(LineID(rawValue: 2), to: [d, a])
+        try world.advance(ticks: 30)
+        expectCurrent("new stops")
+        try world.removeLine(LineID(rawValue: 1))
+        try world.advance(ticks: 30)
+        expectCurrent("a removed line")
+        try world.setStationDemand(a, to: nil)
+        try world.advance(ticks: 30)
+        expectCurrent("demand cleared")
+        // A world that keeps a plan equals one that does not, and a loaded
+        // world works its own out.
+        let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        XCTAssertTrue(loaded.passengerPlan.plan == nil)
+        XCTAssertEqual(loaded, world)
     }
 
     private func decode(_ json: [String: Any]) throws -> GameWorld {

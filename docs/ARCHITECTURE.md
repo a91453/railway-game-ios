@@ -1660,7 +1660,7 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 
 **4. 每分鐘釋出**：基本步長從 `T` 到 `T + 1` 的第一個階段（在派車之前）。在一天中第 `h` 小時第 `m` 分，每一對把 `(60 − m)·R_h + m·R_{h+1}` 加到自己的餘數，整除 3600 的部分就是這一分鐘釋出的人數，餘數留到下一分鐘。每個小時的旅次在自己與前一個小時裡合計被算 1830 + 1770 = 3600 次，所以任何連續 1440 分鐘，每一對正好釋出一天的旅次，餘數回到原來的值。同一分鐘依（起點、迄點）的順序釋出。
 - 這一階段不讀、也不改任何列車。`advance` 跳過沒有列車變化的步長時，照樣逐分鐘釋出被跳過的那幾分鐘，結果和逐步推進完全相同。
-- 一次 `advance` 呼叫裡指令不會插進來，所以每一對的每小時旅次在呼叫開始時算一次（`PassengerRelease`），餘數在呼叫結束時寫回。
+- 每一對的每小時旅次只由需求與線路的停靠推導，算好的計畫（`PassengerPlan`）留在世界裡，跨 `advance` 呼叫沿用；`setStationDemand`、`createLine`、`setLineStops`、`removeLine` 與讀檔時丟掉，下一次推進時重算。它不是遊戲狀態：不存檔，也不影響兩個世界是否相等。餘數在每次呼叫開始時讀出、結束時寫回。
 
 **5. 排隊**：釋出的人在起點排隊，一分鐘、一個迄點一組（`WaitingGroup { line, direction, destination, since, count }`），依釋出的順序排在最後，所以先來的在前（ROADMAP 5D 的先進先出；參考只有依 key 加總的人數，沒有順序）。車站等車的總數最多 4000：放得下的部分成為一組，其餘立刻離開，記進 `overflowed`。
 
@@ -1672,7 +1672,8 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 
 **9. 存檔**：`"passengers"` 只在有乘客紀錄時寫；每一筆是 `{ station, demand?, waiting, released, overflowed, abandoned, remainders }`，依車站排序。沒有需求、從未釋出、也沒有餘數的車站沒有紀錄。解碼拒絕：
 - 數不合（`released` ≠ 等車 + `overflowed` + `abandoned`）、負數、超過容量；
-- 組不照來的順序、組的人數小於 1、釋出時間晚於現在、組的線路不存在或不再以那個方向載他們；
+- 組不照來的順序（依釋出的分鐘，同一分鐘依迄點遞增，不重複）、組的人數小於 1、釋出時間晚於現在、組的線路不存在或不再以那個方向載他們；
+- `released` 超過 2⁶²（一站一天最多釋出一百萬人，從這個數要幾百萬年才會溢位）；
 - 餘數不在 1…3599、重複或沒有排序、給自己或不存在的車站；
 - 紀錄沒有排序、屬於不存在的車站、或什麼都沒有；`"demand": null`。
 
@@ -1688,19 +1689,20 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 
 - `Passenger/StationDemand.swift`（新目錄）：`StationDemandKind` 與四組曲線、`StationDemand`、`dayShape`。
 - `Passenger/StationPassengers.swift`：`LineDirection`、`PassengerTrip`、`WaitingGroup`、`DemandRemainder`、`PassengerLedger`、`StationPassengers`（等車人數的總和與組一起維護），以及各自的 `Codable`。
-- `Passenger/PassengerDemand.swift`：`setStationDemand(_:to:)`；查詢 `stationDemand(of:)`、`waitingPassengers(at:)`、`passengerLedger(of:)`、`passengerTrip(from:to:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`；推導、最大餘數法、釋出（`PassengerRelease`）、線路改變時的放棄與存檔驗證。
+- `Passenger/PassengerDemand.swift`：`setStationDemand(_:to:)`；查詢 `stationDemand(of:)`、`waitingPassengers(at:)`、`passengerLedger(of:)`、`passengerTrip(from:to:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`；推導、最大餘數法、釋出的計畫（`PassengerPlan`，每條線路的第一次停靠只查一次，24 小時的旅次存成一個連續陣列）與它的快取（`PassengerPlanCache`）、每次呼叫的釋出（`PassengerRelease`）、線路改變時的放棄與存檔驗證。
 - `GameWorld`：`passengers`（`internal(set)`，只由乘客的規則寫入）、`advance` 的乘客階段、`removeLine`／`setLineStops` 之後的放棄、`Codable`；`GameError.invalidStationDemand` 與玩家的文字。
 
 #### 驗證
 
-- `PassengerDemandTests`（手算，17 個）：
+- `PassengerDemandTests`（手算，18 個）：
   - 曲線表與 `dayShape` 由參考的公式（Foundation 的 `exp`、正規化、`Math.round`）逐格重算；
   - 指令的檢查順序、清除需求時丟掉空的紀錄；線路的選擇（編號最小、第一次停靠、方向）；最大餘數法的平手；
   - 每天的分配（1000 → 750 : 250 等）、沒有需求的車站不吸引旅次；一天一個旅次落在 8 時（或回程的 18 時）；
   - 一天一個旅次在 08:59（第 539 分鐘）釋出：07:00–07:59 累加 1770，08:00–08:58 再加 1829，第 539 分鐘補滿 3600；
   - 從第 0、777、1439 分鐘起的任何 1440 分鐘都正好釋出一天的量、餘數回到原值；
   - 排隊的順序、容量 4000 與溢出（一百萬旅次的一天：等車 4000、溢出 996,000）、一次推進與逐分鐘推進的世界相同（也跨 2x）；
-  - 線路改停靠、反向、刪除時的放棄與保留、清除需求時等車的人留下；存讀、沒有乘客的存檔沒有 `"passengers"`、17 種壞掉的存檔都被拒絕。
+  - 線路改停靠、反向、刪除時的放棄與保留、清除需求時等車的人留下；存讀、沒有乘客的存檔沒有 `"passengers"`、20 種壞掉的存檔都被拒絕（包括同一分鐘的組順序顛倒或重複、`released` 超過 2⁶²）；
+  - 跨呼叫保留的計畫在每個改變需求或線路的指令之後都和重算的相同，讀檔的世界沒有計畫、而且和原來的世界相等。
 - `ReferencePassengers`：`ReferenceWorld` 另外寫一次決策 34，而且寫得不同：曲線每次由 `exp` 算出、每分鐘重新找旅次（不保留一次呼叫的計畫）、最大餘數法逐一挑最大的餘數而不是排序、一分鐘的份寫成 `60·R_h + m·(R_{h+1} − R_h)`、等車人數需要時才加總。每個 golden scenario 都在它上面重跑。
 - `PassengerPropertyTests`（`passenger.differential`，20 個 case × 4 個種子 × 50 個操作 = 4,000 個操作，digest `62042B9B922FCE2C`，CI shard `campaigns-1`）：3 到 6 座車站，從隨機的分鐘（也有第 0 分鐘以前）開始，執行各種大小的需求（含最大值與不合法的值）、建立、改停靠與刪除線路、各種速度與長短的時間，同時在 GameCore 與 `ReferenceWorld` 上執行。沒有鐵軌與列車，所以 GameCore 的每一步都可能被當成閒置跳過，被跳過的分鐘的釋出因此也和逐分鐘推進的參考比對。每一步比較結果、每一站的排隊、數與餘數、每一對的旅次與每小時的旅次，並檢查不變量與存讀。量：釋出 61,314,671 人；有釋出的站次 1,188、溢出 675、放棄 158；不合法的需求 93、不存在的車站 69、刪除線路 142、改停靠 225。
 - `SaveMutationTests` 新增 `save.passengerMutation`（12 個 case × 4 個種子，每個 30 次變異）：載入 506、拒絕 934、瞄準乘客、線路、車站與時鐘的變異 1,053、載入後有人在等的世界 189；載入的世界都保持不變量、可以存讀，之後的指令也保持一致。

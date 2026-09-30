@@ -39,6 +39,7 @@ extension GameWorld {
     public mutating func setStationDemand(_ id: StationID, to demand: StationDemand?) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard demand?.isValid ?? true else { throw .invalidStationDemand }
+        passengerPlan = PassengerPlanCache()
 
         if let index = passengers.firstIndex(where: { $0.station == id }) {
             passengers[index].demand = demand
@@ -182,40 +183,110 @@ extension GameWorld {
 
     // MARK: - Release
 
-    /// Every trip that releases passengers, worked out once per call of
-    /// ``advance(ticks:)``: no command can come within a call, so the
-    /// demands, the lines' stops and hence every pair's hourly trips stay
-    /// the same. `nil` when no pair has trips.
-    struct PassengerRelease {
-        struct Flow {
-            /// The origin's index in ``GameWorld/passengers``, which no
-            /// release inserts into or removes from.
+    /// Every trip that releases passengers: the flows, by ascending origin
+    /// and then destination (the order passengers released in the same
+    /// minute join their queues), and their hourly trips. Derived from the
+    /// demands and the lines' stops only, so it is kept between calls of
+    /// ``advance(ticks:)`` (see ``PassengerPlanCache``) and worked out again
+    /// after a command changes either.
+    struct PassengerPlan: Sendable {
+        struct Flow: Sendable {
+            /// The origin's index in ``GameWorld/passengers``: only
+            /// ``setStationDemand(_:to:)`` inserts or removes records, and
+            /// it forgets the plan.
             let record: Int
             let destination: StationID
             let trip: PassengerTrip
-            let hourly: [Int64]
-            /// The part still to be released, in 1/3600ths.
-            var remainder: Int64
         }
 
-        /// By ascending origin, then destination: the order passengers
-        /// released in the same minute join their queues.
-        var flows: [Flow]
+        let flows: [Flow]
+        /// Each flow's trips in each hour of the day: 24 entries a flow, in
+        /// the order of ``flows``.
+        let hourly: [Int64]
     }
 
-    func passengerRelease() -> PassengerRelease? {
-        var flows: [PassengerRelease.Flow] = []
+    /// The plan the world last worked out, if it is still current. Not game
+    /// state: it is never saved, and two worlds compare equal whatever
+    /// their caches hold.
+    struct PassengerPlanCache: Equatable, Sendable {
+        /// `nil` until worked out; then the plan, `nil` inside when no pair
+        /// has trips.
+        var plan: PassengerPlan??
+
+        static func == (_: Self, _: Self) -> Bool {
+            true
+        }
+    }
+
+    /// Worked out from scratch (see ``dailyDemand(from:to:)`` and
+    /// ``hourlyDemand(from:to:)``, which it agrees with), looking each
+    /// line's first calls up once.
+    func makePassengerPlan() -> PassengerPlan? {
+        let firstCalls = lines.map { line in
+            var calls: [StationID: Int] = [:]
+            for (index, stop) in line.stops.enumerated() where calls[stop] == nil {
+                calls[stop] = index
+            }
+            return calls
+        }
+        func trip(from origin: StationID, to destination: StationID) -> PassengerTrip? {
+            guard origin != destination else { return nil }
+            for (index, calls) in firstCalls.enumerated() {
+                if let from = calls[origin], let to = calls[destination] {
+                    return PassengerTrip(line: lines[index].id, direction: to > from ? .outbound : .inbound)
+                }
+            }
+            return nil
+        }
+        let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }
+        var flows: [PassengerPlan.Flow] = []
+        var hourly: [Int64] = []
         for (index, record) in passengers.enumerated() {
-            guard let origin = record.demand else { continue }
-            for (destination, trips, trip) in dailyDemand(from: record.station) {
-                let kind = stationDemand(of: destination)!.kind
-                flows.append(PassengerRelease.Flow(
-                    record: index, destination: destination, trip: trip,
-                    hourly: Self.hourly(trips, from: origin.kind, to: kind), remainder: record.remainder(for: destination)
-                ))
+            guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
+            let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
+            let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
+            for ((destination, trip), trips) in zip(reached, shares) where trips > 0 {
+                flows.append(PassengerPlan.Flow(record: index, destination: destination.station, trip: trip))
+                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
             }
         }
-        return flows.isEmpty ? nil : PassengerRelease(flows: flows)
+        return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
+    }
+
+    /// One call's release: the plan, and each flow's remainder, loaded from
+    /// the records at the start of the call and kept at its end.
+    struct PassengerRelease {
+        let plan: PassengerPlan
+        var remainders: [Int64]
+    }
+
+    /// The release for a call of ``advance(ticks:)``, or `nil` when no pair
+    /// has trips; works the plan out first if no current one is kept.
+    mutating func passengerRelease() -> PassengerRelease? {
+        if passengerPlan.plan == nil {
+            passengerPlan.plan = .some(makePassengerPlan())
+        }
+        guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
+        var remainders = Array(repeating: Int64(0), count: plan.flows.count)
+        // A record's flows are together, by ascending destination, like its
+        // remainders: one walk through both.
+        var index = 0
+        while index < plan.flows.count {
+            let record = plan.flows[index].record
+            let kept = passengers[record].remainders
+            var next = 0
+            while index < plan.flows.count, plan.flows[index].record == record {
+                let destination = plan.flows[index].destination
+                while next < kept.count, kept[next].destination < destination {
+                    next += 1
+                }
+                if next < kept.count, kept[next].destination == destination {
+                    remainders[index] = kept[next].value
+                }
+                index += 1
+            }
+        }
+        return PassengerRelease(plan: plan, remainders: remainders)
     }
 
     /// The release phase of the basic step from `now` to the next minute:
@@ -223,7 +294,7 @@ extension GameWorld {
     /// between this hour's and the next hour's (the reference's
     /// `(1 − f)·R_h + f·R_{h+1}` per hour with `f` the minute's part of the
     /// hour, divided by 60), to its remainder; each whole passenger in it is
-    /// released at the origin, pair by pair in ``PassengerRelease/flows``
+    /// released at the origin, pair by pair in ``PassengerPlan/flows``
     /// order (see ``StationPassengers/release(_:to:along:at:)``).
     ///
     /// Over any 1440 minutes in a row a pair releases exactly its daily
@@ -233,23 +304,33 @@ extension GameWorld {
     mutating func releasePassengers(at now: GameTime, _ release: inout PassengerRelease) {
         let minute = now.minuteOfDay
         let hour = minute / 60
+        let next = (hour + 1) % 24
         let into = Int64(minute % 60)
-        for index in release.flows.indices {
-            let flow = release.flows[index]
-            let share = (60 - into) * flow.hourly[hour] + into * flow.hourly[(hour + 1) % 24]
-            let total = flow.remainder + share
-            release.flows[index].remainder = total % Self.releaseUnit
+        let plan = release.plan
+        for index in plan.flows.indices {
+            let share = (60 - into) * plan.hourly[24 * index + hour] + into * plan.hourly[24 * index + next]
+            let total = release.remainders[index] + share
+            release.remainders[index] = total % Self.releaseUnit
             let count = total / Self.releaseUnit
             if count > 0 {
+                let flow = plan.flows[index]
                 passengers[flow.record].release(count, to: flow.destination, along: flow.trip, at: now)
             }
         }
     }
 
-    /// Keeps the remainders `release` ended the call with.
+    /// Keeps the remainders `release` ended the call with, record by record.
     mutating func keepRemainders(of release: PassengerRelease) {
-        for flow in release.flows {
-            passengers[flow.record].setRemainder(flow.remainder, for: flow.destination)
+        var index = 0
+        let flows = release.plan.flows
+        while index < flows.count {
+            let record = flows[index].record
+            var updates: [DemandRemainder] = []
+            while index < flows.count, flows[index].record == record {
+                updates.append(DemandRemainder(destination: flows[index].destination, value: release.remainders[index]))
+                index += 1
+            }
+            passengers[record].updateRemainders(updates)
         }
     }
 
@@ -257,6 +338,7 @@ extension GameWorld {
     /// for a trip no line takes that way any more leaves its station (see
     /// ``PassengerLedger/abandoned``).
     mutating func abandonUnservedPassengers() {
+        passengerPlan = PassengerPlanCache()
         let world = self
         for index in passengers.indices {
             let station = passengers[index].station

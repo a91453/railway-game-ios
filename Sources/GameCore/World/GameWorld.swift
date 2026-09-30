@@ -38,6 +38,10 @@ public struct GameWorld: Equatable, Sendable {
     /// where no station has demand. Set by the passenger rules
     /// (`PassengerDemand.swift`) only.
     public internal(set) var passengers: [StationPassengers]
+    /// The trips that release passengers, derived from the demands and the
+    /// lines' stops and kept between calls of ``advance(ticks:)``; not game
+    /// state (see ``PassengerPlanCache``).
+    var passengerPlan = PassengerPlanCache()
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -968,6 +972,7 @@ public struct GameWorld: Equatable, Sendable {
         let line = ServiceLine(id: LineID(rawValue: id), name: name, stops: stops)
         nextLineID = nextID
         lines.append(line)
+        passengerPlan = PassengerPlanCache()
         return line
     }
 

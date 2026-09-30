@@ -109,6 +109,12 @@ public struct StationPassengers: Hashable, Sendable {
     /// at once (see ``PassengerLedger/overflowed``).
     public static let capacity: Int64 = 4_000
 
+    /// The most passengers a save may say were ever released at a station.
+    /// A station releases at most a million a day, so play from any count
+    /// below it would take millions of years to overflow an `Int64`, and
+    /// no count can overflow before then.
+    static let maximumReleased: Int64 = 1 << 62
+
     init(station: StationID) {
         self.station = station
         self.demand = nil
@@ -154,23 +160,28 @@ public struct StationPassengers: Hashable, Sendable {
         abandoned += left
     }
 
-    /// The remainder kept for `destination`, 0 if none.
-    func remainder(for destination: StationID) -> Int64 {
-        remainders.first { $0.destination == destination }?.value ?? 0
-    }
-
-    /// Keeps `value` as the remainder for `destination`; 0 drops it.
-    mutating func setRemainder(_ value: Int64, for destination: StationID) {
-        let index = remainders.firstIndex { $0.destination >= destination } ?? remainders.count
-        if index < remainders.count, remainders[index].destination == destination {
-            if value == 0 {
-                remainders.remove(at: index)
-            } else {
-                remainders[index] = DemandRemainder(destination: destination, value: value)
+    /// Replaces the remainders for the destinations of `updates` (by
+    /// ascending destination) with theirs; a value of 0 drops one. The
+    /// remainders for other destinations stay.
+    mutating func updateRemainders(_ updates: [DemandRemainder]) {
+        var merged: [DemandRemainder] = []
+        var next = 0
+        for kept in remainders {
+            while next < updates.count, updates[next].destination < kept.destination {
+                if updates[next].value != 0 { merged.append(updates[next]) }
+                next += 1
             }
-        } else if value != 0 {
-            remainders.insert(DemandRemainder(destination: destination, value: value), at: index)
+            if next < updates.count, updates[next].destination == kept.destination {
+                if updates[next].value != 0 { merged.append(updates[next]) }
+                next += 1
+            } else {
+                merged.append(kept)
+            }
         }
+        for update in updates[next...] where update.value != 0 {
+            merged.append(update)
+        }
+        remainders = merged
     }
 }
 
@@ -258,10 +269,13 @@ extension StationPassengers: Codable {
         }
         let total = waiting.reduce(Int64(0)) { $0 + $1.count }
         guard total <= Self.capacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
-        guard zip(waiting, waiting.dropFirst()).allSatisfy({ $0.since <= $1.since }) else {
+        // Released minute by minute, one group per destination a minute, by
+        // ascending destination.
+        guard zip(waiting, waiting.dropFirst()).allSatisfy({ $0.since < $1.since || ($0.since == $1.since && $0.destination < $1.destination) }) else {
             throw corrupt(.waiting, "waiting groups must be in the order they came.")
         }
         guard released >= 0, overflowed >= 0, abandoned >= 0 else { throw corrupt(.released, "counts cannot be negative.") }
+        guard released <= Self.maximumReleased else { throw corrupt(.released, "more passengers released than a station can count.") }
         let (accounted, overflow) = overflowed.addingReportingOverflow(abandoned)
         guard !overflow, accounted <= Int64.max - total, accounted + total == released else {
             throw corrupt(.released, "every passenger released must be waiting, overflowed or abandoned.")

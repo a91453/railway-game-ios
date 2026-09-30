@@ -810,7 +810,8 @@ enum WorldInvariants {
             }
             if waiting > StationPassengers.capacity { problems.append("station \(id) holds \(waiting) waiting") }
             if record.demand == nil, record.released == 0, record.remainders.isEmpty { problems.append("station \(id) keeps an empty record") }
-            for (earlier, later) in zip(record.waiting, record.waiting.dropFirst()) where later.since < earlier.since {
+            for (earlier, later) in zip(record.waiting, record.waiting.dropFirst())
+            where later.since < earlier.since || (later.since == earlier.since && later.destination <= earlier.destination) {
                 problems.append("station \(id) queue out of order")
             }
             for group in record.waiting {
