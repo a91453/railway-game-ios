@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 17
+    static let schemaVersion = 18
 
     var description: String
     var initialState: InitialState
@@ -145,7 +145,7 @@ extension GoldenScenario.Step: Decodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
-        case pose, alignment, nodes, trackPlatforms, levels
+        case pose, alignment, nodes, trackPlatforms, levels, trainPath
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -277,6 +277,9 @@ extension GoldenScenario.Step: Decodable {
             case .platformLevels:
                 try requireOnly([.levels], answering: "platformLevels")
                 self = try .observe(observation, expect: .levels(expect.decode([PlatformLevelSummary].self, forKey: .levels)))
+            case .pathToStation:
+                try requireOnly([.found, .trainPath], answering: "pathToStation")
+                self = try .observe(observation, expect: .trainPath(Self.found(expect, .trainPath, PathSummary.self)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -345,7 +348,7 @@ enum ScenarioCommand: Equatable {
     case buildTrackEdge(TrackNodeID, TrackNodeID, TrackCurve, TrackProfile, TrackStructure)
     case removeTrackEdge(TrackEdgeID)
     case removeTrackNode(TrackNodeID)
-    case setTrainPath(TrainID, [TrackTraversal])
+    case setTrainPath(TrainID, [TrackTraversal], end: Int64?)
     case addTrackPlatform(StationID, TrackEdgeID, start: Int64, end: Int64)
     case removeTrackPlatform(StationID, TrackEdgeID, start: Int64)
 
@@ -425,8 +428,8 @@ enum ScenarioCommand: Equatable {
                 try world.removeTrackEdge(edge)
             case .removeTrackNode(let node):
                 try world.removeTrackNode(node)
-            case .setTrainPath(let id, let path):
-                try world.setTrainContinuation(id, along: path)
+            case .setTrainPath(let id, let path, let end):
+                try world.setTrainContinuation(id, along: path, stoppingAt: end)
             case .addTrackPlatform(let station, let edge, let start, let end):
                 try world.addTrackPlatform(station, on: edge, from: start, to: end)
             case .removeTrackPlatform(let station, let edge, let start):
@@ -572,7 +575,10 @@ extension ScenarioCommand: Decodable {
             self = try .removeTrackNode(.node(container.decode(Int.self, forKey: .node)))
         case "setTrainPath":
             let path = try container.decode([TraversalSummary].self, forKey: .path).map(\.traversal)
-            self = try .setTrainPath(container.decodeTrain(forKey: .train), path)
+            // Schema 18: "end" is absent for a path that runs to the end of
+            // its last edge.
+            let end = try container.contains(.end) ? container.decode(Int64.self, forKey: .end) : nil
+            self = try .setTrainPath(container.decodeTrain(forKey: .train), path, end: end)
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -892,6 +898,7 @@ enum ScenarioObservation: Equatable {
     case tunnelPortals
     case trackPlatformsAlongTrain(TrainID)
     case platformLevels(StationID)
+    case pathToStation(from: TrainPosition, station: StationID, cars: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -963,6 +970,8 @@ enum ScenarioObservation: Equatable {
             .trackPlatforms(world.trackPlatformsAlongWholeTrain(id).map(PlatformSummary.init))
         case .platformLevels(let id):
             .levels(world.railwaySnapshot().platforms.filter { $0.platform.station == id }.map(PlatformLevelSummary.init))
+        case .pathToStation(let start, let station, let cars):
+            .trainPath(world.path(from: start, toStation: station, length: Int64(cars - 1) * Train.carLength).map(PathSummary.init))
         }
     }
 }
@@ -1069,6 +1078,19 @@ extension ScenarioObservation: Decodable {
             self = try .trackPlatformsAlongTrain(container.decodeTrain(forKey: .train))
         case "platformLevels":
             self = try .platformLevels(container.decodeStation(forKey: .station))
+        case "pathToStation":
+            // Schema 18: the network's way to a station; its start is on an
+            // edge ("routeToStation" is the grid's).
+            guard case .onEdge? = try container.decode(TrainPositionSummary.self, forKey: .from).position,
+                  let start = try container.decode(TrainPositionSummary.self, forKey: .from).position
+            else {
+                throw DecodingError.dataCorruptedError(forKey: .from, in: container, debugDescription: "A path to a station starts from an \"edge\" position.")
+            }
+            let cars = try container.contains(.cars) ? container.decode(Int.self, forKey: .cars) : 1
+            guard (Train.minimumCars...Train.maximumCars).contains(cars) else {
+                throw DecodingError.dataCorruptedError(forKey: .cars, in: container, debugDescription: "A path is for 1 to \(Train.maximumCars) cars.")
+            }
+            self = try .pathToStation(from: start, station: container.decodeStation(forKey: .station), cars: cars)
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1128,6 +1150,7 @@ enum ObservationAnswer: Equatable {
     case nodes([Int])
     case trackPlatforms([PlatformSummary])
     case levels([PlatformLevelSummary])
+    case trainPath(PathSummary?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1135,7 +1158,7 @@ extension ObservationAnswer: Encodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
-        case pose, alignment, nodes, trackPlatforms, levels
+        case pose, alignment, nodes, trackPlatforms, levels, trainPath
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1196,7 +1219,10 @@ extension ObservationAnswer: Encodable {
         case .alignment(let alignment?):
             try container.encode(true, forKey: .found)
             try container.encode(alignment, forKey: .alignment)
-        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil):
+        case .trainPath(let path?):
+            try container.encode(true, forKey: .found)
+            try container.encode(path, forKey: .trainPath)
+        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil):
             try container.encode(false, forKey: .found)
         case .nodes(let nodes):
             try container.encode(nodes, forKey: .nodes)
@@ -1641,10 +1667,13 @@ struct BandSummary: Codable, Equatable {
 /// A line's journey as a fixture value: `{"start", "legs": [{"from", "to",
 /// "route", "minutes"}, ...], "roundTripMinutes"}` (see `LineJourney`).
 struct JourneySummary: Codable, Equatable {
+    /// A leg: on the grid its `"route"` (the tiles its links lead to), on
+    /// the track network (schema 18) its `"path"`; one of the two.
     struct Leg: Codable, Equatable {
         var from: Int
         var to: Int
-        var route: [PositionSummary]
+        var route: [PositionSummary]?
+        var path: PathSummary?
         var minutes: Int64
     }
 
@@ -1654,8 +1683,31 @@ struct JourneySummary: Codable, Equatable {
 
     init(_ journey: LineJourney) {
         start = TrainPositionSummary(journey.start)
-        legs = journey.legs.map { Leg(from: $0.from, to: $0.to, route: $0.route.map(PositionSummary.init), minutes: $0.minutes) }
+        let onNetwork = if case .onEdge = journey.start { true } else { false }
+        legs = journey.legs.map { leg in
+            Leg(
+                from: leg.from, to: leg.to,
+                route: onNetwork ? nil : leg.route.map(PositionSummary.init), path: onNetwork ? PathSummary(leg.path) : nil,
+                minutes: leg.minutes
+            )
+        }
         roundTripMinutes = journey.roundTripMinutes
+    }
+}
+
+/// A path on the track network (schema 18): `{"traversals": [{"edge",
+/// "direction"}, ...], "end", "distance"}`, the edges entered after the
+/// train's own, where the head stops on the last (absent at its end) and
+/// how far that is.
+struct PathSummary: Codable, Equatable {
+    var traversals: [TraversalSummary]
+    var end: Int64?
+    var distance: Int64
+
+    init(_ path: TrainPath) {
+        traversals = path.traversals.map(TraversalSummary.init)
+        end = path.end
+        distance = path.distance
     }
 }
 
@@ -1851,16 +1903,20 @@ struct TrainMovementSummary: Codable, Equatable {
     /// On the track network (schema 16): the edges the train enters, by
     /// number; `[]` on the grid.
     var edges: [Int]
+    /// On the track network (schema 18): where the path stops on its last
+    /// edge; absent when it runs to that edge's end, and on the grid.
+    var end: Int64?
 
-    init(rate: Int64, continuation: [GridPosition], cursor: Int, edges: [Int] = []) {
+    init(rate: Int64, continuation: [GridPosition], cursor: Int, edges: [Int] = [], end: Int64? = nil) {
         self.rate = rate
         self.continuation = continuation.map(PositionSummary.init)
         self.cursor = cursor
         self.edges = edges
+        self.end = end
     }
 
     init(_ movement: TrainMovement) {
-        self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor, edges: movement.edges.map(\.number))
+        self.init(rate: movement.rate, continuation: movement.continuation, cursor: movement.cursor, edges: movement.edges.map(\.number), end: movement.end)
     }
 }
 

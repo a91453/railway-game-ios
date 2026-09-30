@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 17,
+  "schemaVersion": 18,
   "description": "Station stops on a line a(1,2)-b-c-d-e-f(6,2) with dead ends at both ends. Stations are not track: a station's platforms are the track tiles directly north, east, south and west of it, with no exit toward the station needed. Central(2,1) has platform b(2,2); Market(4,1) and Hill(4,3) share platform d(4,2); Field(7,5) has none. A route to a station is the route (fewest links, then north, east, south, west) to the first platform reached; it is empty when the node ahead is a platform. A train is stopped at a station when it stands at the centre of a platform with no continuation left. Checks: platforms (order, diagonal and shared tiles, none, unknown station), station routes from nodes and links (found, empty, no platform, unknown, behind a dead end), passing a platform is not a stop, arrival stops at both stations of a shared platform, stopped trains stay stopped as time passes and cannot lose their track, reversing at a platform keeps the stop, a new continuation ends it even at rate 0, a train on a link is not stopped until it reaches the platform, a station built beside a stopped train counts at once, placing on a platform stops a train, and unplacing ends the stop.",
   "initialState": {
     "mapWidth": 8,
