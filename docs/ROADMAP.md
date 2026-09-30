@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）與 Stage S2（車站設施）已實作，Phase 4.5 到此告一段落；下一步是 Phase 4.6 的 Stage T（進路預約）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）與 Stage S3（連續軌道幾何）已實作；下一步是 Stage S4（立體鐵路與結構物），之後才是 Phase 4.6 的 Stage T（進路預約）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -20,6 +20,14 @@
 - Phase 4.7：列車動態（W 行駛曲線）。
 
 順序不變：先完成 Phase 4 的 Q3 與 R，再進 Phase 4.5。
+
+S2 之後確定了產品方向：「以 deterministic 模擬核心為基礎的 360° 3D 鐵道城市建造遊戲」。交通控制若建立在北東南西的方格上，之後換成任意方向的鐵軌與立體交叉時就要重寫，所以先把鐵路核心拆成 topology、geometry、rendering 三層（ARCHITECTURE 決策 28），在 Phase 4.5 補上兩個 Stage：
+
+- Phase 4.5：S1 ✅ 軌道資源、S2 ✅ 車站設施、S3 ✅ 連續軌道幾何、S4 立體鐵路與結構物；
+- Phase 4.6：T 進路預約、U movement authority、V dispatcher；
+- Phase 4.7：W 行駛曲線。
+
+舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，先暫停；新的 T 在 S4 之後改寫成泛用的 topology（見 Stage T）。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -275,13 +283,38 @@ Q 把前者展開成後者：服務模式產生具體、有限的班次，交給
 - 之前所有 Stage 的 property digest 不變；golden scenario schema v15 新增 `station-facilities.json`（ARCHITECTURE 決策 27）。
 - **移到 5A**：依車站等級決定規模的預設值。這屬於把真實時刻表轉成情境的工具，不在 GameCore 裡。
 
+### Stage S3 — 連續軌道幾何 ✅
+
+S3 分成兩個里程碑：S3A 讓 `RailwayNetwork` 成為唯一的鐵路資料與資源的基礎，S3B 在它上面加上連續幾何（ARCHITECTURE 決策 29）。
+
+- **S3A 唯一的鐵路權威**：所有鐵軌（方格的鐵軌格與連續路網）只記在 `RailwayNetwork`；`GridMap` 只剩土地（空地與車站）。舊存檔讀檔時把鐵軌格移進路網，存檔時再寫回同樣的格式，只有方格的存檔逐位元不變。沒有雙向同步。
+- **S3A 資源是 span**：資源是節點或邊上的一段里程（`TrackSpan`）。邊切成不超過一格長的等分，方格的連結恰好是一個 span，所以方格的佔用不變；長邊上的列車只佔用它所在的 span。佔用只讀整數里程，不讀畫面的取樣。泛用查詢 `pathAhead(of:)` 給之後的交通控制讀列車前方的路。
+- **世界座標**：方格與連續路網共用一個整數的世界座標系（x 東、y 南、z 上），一格 1024 單位；方格 (x, y) 的中心是 (1024x + 512, 1024y + 512, 0)。
+- **路網**：與方格並存的節點與邊。邊是直線或整數控制點的三次 Bézier；取樣、長度（水平里程）、位置與切線都由固定的整數演算法在建造或解碼時推導一次，之後每個 tick 只用整數長度。
+- **泛用的身分**：`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`（節點與 span）同時表示方格（`tile`、`link`）與路網（`node`、`edge`）。節點上的轉向由切線推導（兩端方向相反、誤差 1:16 以內才相通），道岔、菱形平面交叉與雙交分道岔都由此成立；只有共用節點才相接，平面上交叉但不共用節點的兩條邊互不相干。
+- **列車**：新增位置 `onEdge`，移動 kernel 支援任意邊長；車身是車頭後方經過的邊（`trailEdges`），列車長度與格數脫鉤，反向兩次一定還原。
+- **路徑搜尋**：方格與路網共用同一個最短路徑搜尋；方格的結果不變。
+- **畫面**：地圖以俯視的除錯投影畫出路網與上面的列車；示範地圖有一條四段曲線組成的環線。沒有建造路網的畫面。
+- 之前所有 Stage 的 property digest 不變，只有方格的存檔逐位元不變；新增獨立參考模型的差分 campaign、存檔變異測試，golden scenario schema v16 新增 `continuous-track.json`（ARCHITECTURE 決策 29）。
+- **留給之後**：高程與結構物（S4）、路網上的月台與服務（S4 之後）、spline 編輯器與建造畫面、3D renderer。
+
+### Stage S4 — 立體鐵路與結構物
+
+- **高程**：節點有高度，邊沿里程有縱斷面（平坡、上坡、下坡、豎曲線），坡度以整數表示並有最大坡度；長度仍是水平里程。
+- **結構物**：地面、高架、橋、隧道；影響建造規則、費用與畫面資訊。隧道口是 topology 的節點。
+- **交叉**：平面上交叉的兩條鐵軌，高度差足夠時是立體交叉，不共用任何資源；高度相同時必須共用節點，成為 S1 語義的平面交叉。
+- **多層車站**：月台綁定在路網的一條邊上的一段區間（邊、起訖距離、層），整列車都在區間內才算停妥；層留給 Phase 5F 的步行轉乘成本。
+- **畫面查詢**：3D 的車身與唯讀的幾何快照，renderer 只讀、不回寫。
+
 ## Phase 4.6 — Traffic control
 
 參考遊戲沒有號誌、閉塞或待避站，快慢車也彼此「看不見」。要讓多台列車真正共用鐵軌、待避與交會，就需要這一層，這也是與《A列車》的深度差距最大的地方。
 
 ### Stage T — 進路預約
 
-- 出發或設定 continuation 時，列車向 GameCore 預約前方的資源。預約是整列車的，包含列車長度。
+舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，暫停、不合併。新的 T 在 S4 之後，沿 `TrackTraversal` 的路徑預約泛用的 `TrackResource`，不依賴北東南西、格子或畫面；可以保留的語義與測試見 ARCHITECTURE 決策 29 的第 12 點。
+
+- 出發或設定 continuation 時，列車向 GameCore 預約前方的資源（節點與 span，不是整條邊）。預約是整列車的，包含列車長度。
 - 預約是權威狀態，要存檔。
 - 避免死結的最小規則在 T 決定，例如一次只預約到下一個停靠站，或下一個可以停車的地方。
 
@@ -370,6 +403,8 @@ Q 把前者展開成後者：服務模式產生具體、有限的班次，交給
 - 是否採用參考遊戲的建設配額制，在這裡決定；在此之前維持現金經濟
 
 ## Phase 8 — Advanced rendering
+
+目前的 SwiftUI Canvas 地圖是原型：方格加上連續路網的俯視除錯投影。最終的 360° 3D renderer 只讀 GameCore 的幾何查詢（世界座標、邊上的位置與切線、車身路徑，S4 起加上高程與結構物），不回寫，也不讓 mesh、相機或插值進入模擬。
 
 依實際地圖大小與列車數量的效能量測，評估 SwiftUI、SpriteKit、Metal。不預先鎖定 Metal。
 

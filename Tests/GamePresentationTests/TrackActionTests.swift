@@ -19,7 +19,7 @@ final class TrackActionTests: XCTestCase {
 
             XCTAssertEqual(session.world, expected, "the session applies exactly the GameCore command")
             XCTAssertEqual(session.world.economy.balance, 9_900)
-            XCTAssertEqual(session.selectedTile?.type, .track(connections: [.south, .east]))
+            XCTAssertEqual(session.selectedTrack, Track(position: session.selection!, connections: [.south, .east]))
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built curve track at (3, 2)."))
         }
     }

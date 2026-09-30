@@ -234,6 +234,8 @@ func ahead(of position: TrainPosition) -> (node: GridPosition, heading: TrackDir
             preconditionFailure("\(position) is not a link between neighbours")
         }
         return (to, heading)
+    case .onEdge:
+        preconditionFailure("ahead(of:) is for positions on the grid")
     }
 }
 
@@ -500,6 +502,7 @@ enum ReferenceMovement {
         switch start {
         case .atNode(let tile, let heading): place = .node(tile, heading)
         case .onLink(let from, let to, let offset): place = .link(from, to, offset)
+        case .onEdge: preconditionFailure("ReferenceMovement is for positions on the grid")
         }
         var cursor = startCursor
         var remaining = distance
@@ -556,6 +559,8 @@ enum ReferenceRoute {
         case .onLink(let from, let to, let offset):
             guard (1...1023).contains(offset), world.isConnected(from, to: to), let heading = stepDirection(from: from, to: to) else { return nil }
             startState = State(node: to, heading: heading)
+        case .onEdge:
+            return nil
         }
         guard world.track(at: destination) != nil else { return nil }
 
@@ -627,6 +632,15 @@ enum WorldInvariants {
         if stationTiles != world.stations.reduce(0, { $0 + 1 + $1.annexes.count }) {
             problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")
         }
+        // Decision 29 (S3A): the railway network holds the grid's track, one
+        // piece a tile, in row-major order, each on the map's empty land.
+        let positions = world.tracks.map(\.position)
+        if positions != positions.sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) }) || Set(positions).count != positions.count {
+            problems.append("grid track not one piece a tile in row-major order")
+        }
+        for track in world.tracks where world.map.tile(at: track.position)?.type != .empty || world.track(at: track.position) != track {
+            problems.append("grid track at \(track.position) is not on empty land or not found there")
+        }
         // Decision 26: a turnout has three exits or more, its stem among them.
         for track in world.tracks {
             if case .turnout(let stem) = track.layout, track.connections.directions.count < 3 || !track.connections.contains(TrackConnections(stem)) {
@@ -696,6 +710,8 @@ enum WorldInvariants {
                 }
             }
         }
+        // Decision 29: the track network.
+        problems += NetworkInvariants.violations(in: world)
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
             problems.append("service day starts \(starts)")
@@ -735,6 +751,10 @@ enum WorldInvariants {
             case .onLink(let from, let to, let offset):
                 if !(1...1023).contains(offset) { problems.append("train \(train.id.rawValue) offset \(offset)") }
                 if !world.isConnected(from, to: to) { problems.append("train \(train.id.rawValue) link \(from)->\(to) not joined") }
+            case .onEdge:
+                // Decision 29: checked with the network's own invariants.
+                problems += NetworkInvariants.trainViolations(of: train, in: world)
+                continue
             }
             if movement.rate < 0 { problems.append("train \(train.id.rawValue) negative rate") }
             let count = movement.continuation.count
@@ -794,6 +814,9 @@ enum WorldInvariants {
             }
             spine = [to]
             distance = offset
+        case .onEdge:
+            if !train.trail.isEmpty { problems.append("train \(id) on the track network has a grid trail") }
+            return problems
         }
         // The distances of the nodes: each must be short of the tail but
         // the last, which must reach it.

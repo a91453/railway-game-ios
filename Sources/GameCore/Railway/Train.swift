@@ -70,6 +70,13 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// Empty for a train of one car or unplaced. Only ``GameWorld``
     /// changes it, as the head moves.
     public internal(set) var trail: [GridPosition]
+    /// On the track network (Stage S3), the edges the train's body lies
+    /// over behind the edge its head is on, nearest first: every edge the
+    /// body reaches into, up to and including the one its tail is on.
+    /// Empty for a train of one car, for a train whose body fits on its
+    /// head's edge, and on the grid. Only ``GameWorld`` changes it, as the
+    /// head moves.
+    public internal(set) var trailEdges: [TrackEdgeID]
 
     /// Creates an unplaced, idle train of one car without a timetable or a
     /// service.
@@ -83,6 +90,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.execution = nil
         self.cars = 1
         self.trail = []
+        self.trailEdges = []
     }
 }
 
@@ -131,7 +139,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, cars, trail
+        case id, name, position, movement, timetable, period, execution, cars, trail, trailEdges
     }
 
     /// Decodes a train.
@@ -160,6 +168,16 @@ extension Train: Codable {
     /// fit the length and position (see ``isTrail(_:length:at:)``), are
     /// rejected. That the trail is on this map's track is checked by the
     /// ``GameWorld`` decoder.
+    ///
+    /// A train on the track network (Stage S3) has `"trailEdges"` (edge
+    /// numbers) instead of `"trail"` when its body reaches beyond its head's
+    /// edge; without the key, which is also how trains saved before Stage S3
+    /// read, it has none, and an explicit `null` is rejected. A train on the
+    /// network with a grid trail, one on the grid with trail edges, one on
+    /// the network with a body at offset 0 (see ``TrainPosition``), and one
+    /// on the network with a service (stations serve the grid only until
+    /// Stage S4) are rejected; whether its edges exist and its body fits
+    /// them is checked by the ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -181,15 +199,31 @@ extension Train: Codable {
             : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
         trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
+        trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
         guard (Self.minimumCars...Self.maximumCars).contains(cars) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .cars, in: container, debugDescription: "Train \(id.rawValue) has \(cars) cars; a train has \(Self.minimumCars) to \(Self.maximumCars)."
             )
         }
-        guard Self.isTrail(trail, length: length, at: position) else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .trail, in: container, debugDescription: "Train \(id.rawValue)'s trail does not fit its length and position."
-            )
+        if case .onEdge(_, let offset)? = position {
+            guard trail.isEmpty, length == 0 || offset > 0, execution == nil else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .position, in: container,
+                    debugDescription: "Train \(id.rawValue) on the track network has a grid trail, a body at offset 0 or a service."
+                )
+            }
+            guard trailEdges.allSatisfy({ ($0.networkNumber ?? 0) >= 1 }) else {
+                throw DecodingError.dataCorruptedError(forKey: .trailEdges, in: container, debugDescription: "Train \(id.rawValue)'s trail edges must be numbered from 1.")
+            }
+        } else {
+            guard trailEdges.isEmpty else {
+                throw DecodingError.dataCorruptedError(forKey: .trailEdges, in: container, debugDescription: "Train \(id.rawValue) has trail edges but is not on the track network.")
+            }
+            guard Self.isTrail(trail, length: length, at: position) else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .trail, in: container, debugDescription: "Train \(id.rawValue)'s trail does not fit its length and position."
+                )
+            }
         }
         guard movement.fits(position) else {
             throw DecodingError.dataCorruptedError(
@@ -235,6 +269,9 @@ extension Train: Codable {
         }
         if !trail.isEmpty {
             try container.encode(trail, forKey: .trail)
+        }
+        if !trailEdges.isEmpty {
+            try container.encode(trailEdges.map { $0.networkNumber }, forKey: .trailEdges)
         }
     }
 }

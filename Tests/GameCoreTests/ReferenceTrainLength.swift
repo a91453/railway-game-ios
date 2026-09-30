@@ -26,6 +26,7 @@ extension ReferenceWorld {
         switch position {
         case .atNode: linkLength
         case .onLink(_, _, let offset): offset
+        case .onEdge: preconditionFailure("the grid reference is for positions on the grid")
         }
     }
 
@@ -51,6 +52,7 @@ extension ReferenceWorld {
         switch position {
         case .atNode(let tile, _): head = (tile, 0)
         case .onLink(_, let to, let offset): head = (to, offset - linkLength)
+        case .onEdge: preconditionFailure("the grid reference is for positions on the grid")
         }
         var distance = firstDistance(position)
         var result = [head]
@@ -76,6 +78,8 @@ extension ReferenceWorld {
             (nodes, node, walking) = ([behind], behind, heading.opposite)
         case .onLink(let from, let to, _):
             (nodes, node, walking) = ([from], from, stepDirection(from: to, to: from)!)
+        case .onEdge:
+            preconditionFailure("the grid reference is for positions on the grid")
         }
         while Self.cut(nodes, at: position, length: length) == nil {
             guard let way = TrackDirection.allCases.first(where: { joined(node, step(node, $0)) && mayTurn(at: node, facing: walking, to: $0) }) else {
@@ -186,10 +190,10 @@ extension ReferenceWorld {
         let points = Self.points(position, train.trail)
         var found: [TrackResource] = []
         for k in points.indices.dropFirst() {
-            if points[k].distance <= length { found.append(.node(points[k].node)) }
+            if points[k].distance <= length { found.append(.node(.tile(points[k].node))) }
             if points[k - 1].distance < length {
                 let (p, q) = (points[k - 1].node, points[k].node)
-                found.append((p.y, p.x) < (q.y, q.x) ? .link(p, q) : .link(q, p))
+                found.append(.wholeLink((p.y, p.x) < (q.y, q.x) ? .link(p, q) : .link(q, p)))
             }
         }
         return found

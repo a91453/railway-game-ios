@@ -12,10 +12,12 @@ extension ReferenceWorld {
         let head: TrackResource
         switch position {
         case .atNode(let tile, _):
-            head = .node(tile)
+            head = .node(.tile(tile))
         case .onLink(let from, let to, _):
             let first = (from.y, from.x) < (to.y, to.x)
-            head = .link(first ? from : to, first ? to : from)
+            head = .wholeLink(.link(first ? from : to, first ? to : from))
+        case .onEdge:
+            return networkResources(of: train)
         }
         // Decision 27: and the body's.
         return Set([head] + bodyResources(of: train)).sorted()

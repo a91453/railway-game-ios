@@ -55,13 +55,18 @@ extension GameWorld {
     /// "Station · Central" or, for a station grown onto more tiles,
     /// "Station · Central · 3 tiles".
     public func tileSummary(at position: GridPosition) -> String {
+        // The railway first (Stage S3A: it is not on the map), then the land.
+        if let track = track(at: position) {
+            switch track.layout {
+            case .open: return "Track · \(track.connections.summary)"
+            case .turnout(let stem): return "Turnout · \(track.connections.abbreviation), stem \(stem.abbreviation)"
+            case .crossing: return "Level crossing · N–S over E–W"
+            }
+        }
         switch map.tile(at: position)?.type {
-        case nil: "Outside the map"
-        case .empty?: "Empty"
-        case .track(let connections)?: "Track · \(connections.summary)"
-        case .station(let id)?: stationSummary(id)
-        case .turnout(let connections, let stem)?: "Turnout · \(connections.abbreviation), stem \(stem.abbreviation)"
-        case .crossing?: "Level crossing · N–S over E–W"
+        case nil: return "Outside the map"
+        case .empty?: return "Empty"
+        case .station(let id)?: return stationSummary(id)
         }
     }
 }
@@ -104,13 +109,36 @@ extension GameWorld {
 extension TrainPosition {
     /// Where a train is, exactly as GameCore records it: "At (3, 2), facing
     /// East" at a node, or "(3, 2) → (4, 2), 256 / 1024" on a link (the
-    /// offset from the first tile, out of ``TrainPosition/linkLength``).
+    /// offset from the first tile, out of ``TrainPosition/linkLength``); on
+    /// the track network, "Edge #3 forward, 256 units along".
     public var displayText: String {
         switch self {
         case .atNode(let tile, let heading):
             "At \(tile), facing \(heading.name)"
         case .onLink(let from, let to, let offset):
             "\(from) → \(to), \(offset) / \(TrainPosition.linkLength)"
+        case .onEdge(let traversal, let offset):
+            "\(traversal.edge.displayText) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along"
+        }
+    }
+}
+
+extension TrackNodeID {
+    /// "Node #3" on the track network, or "Tile (3, 2)" on the grid.
+    public var displayText: String {
+        switch self {
+        case .tile(let tile): "Tile \(tile)"
+        case .node(let number): "Node #\(number)"
+        }
+    }
+}
+
+extension TrackEdgeID {
+    /// "Edge #3" on the track network, or "Link (3, 2)–(4, 2)" on the grid.
+    public var displayText: String {
+        switch self {
+        case .link(let a, let b): "Link \(a)–\(b)"
+        case .edge(let number): "Edge #\(number)"
         }
     }
 }
@@ -223,6 +251,16 @@ extension GameError {
             "A station can only grow onto an empty tile beside one of its tiles, not \(position)."
         case .invalidTrainLength:
             "A train has \(Train.minimumCars) to \(Train.maximumCars) cars."
+        case .unknownTrackNode(let node):
+            "\(node.displayText) is not a node of the track network."
+        case .unknownTrackEdge(let edge):
+            "\(edge.displayText) is not an edge of the track network."
+        case .invalidTrackGeometry:
+            "Track can't be built there: it must stay on the map at ground level, start and end at different nodes, and run smoothly."
+        case .trackNodeInUse(let node):
+            "Track still ends at \(node.displayText.lowercased()). Remove that track first."
+        case .trackEdgeInUse(let edge):
+            "A train is on \(edge.displayText.lowercased()). Take the train off the track first."
         }
     }
 }

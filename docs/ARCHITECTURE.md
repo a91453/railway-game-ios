@@ -28,7 +28,8 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段） |
+| `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -723,6 +724,232 @@ Stage S2 讓車站可以佔多格、列車可以有多節車廂，停站也開�
   - 月台的分配與股道指定（Stage V）。
   - 列車之間的阻擋（Phase 4.6）。
 
+### 28. Topology ≠ Geometry ≠ Rendering（Phase 4.5 起的鐵路核心分層）
+
+產品方向是「以 deterministic 模擬核心為基礎的 360° 3D 鐵道城市建造遊戲」：任意方向的鐵軌、平滑曲線、真正的道岔、高架、地下與立體交叉，列車沿著 3D 鐵軌連續行駛。Stage I–S2 的鐵路是方格：節點是格子、連結是相鄰兩格、方向是北東南西，這三件事綁在一起。從 Stage S3 起把它們拆成三層，每一層只依賴下面那一層：
+
+| 層 | 內容 | 權威資料 | 誰可以讀 |
+| --- | --- | --- | --- |
+| **Topology** | 節點與邊的身分、相接、節點上允許的轉向（道岔、平面交叉）、路徑搜尋、佔用與預約的資源身分、月台的綁定點 | GameCore（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`） | 路徑、移動、佔用；之後的 T 進路預約、U movement authority、V dispatcher |
+| **Geometry** | 世界座標、任意方向、曲線、長度、之後的縱斷面與結構物、平面上的交叉與淨空 | GameCore（整數的 `WorldCoordinate` 與 `TrackCurve`；取樣、長度、切線都是由整數規則推導） | 建造時的驗證、長度、畫面查詢 |
+| **Rendering** | mesh、相機、LOD、插值、動畫 | 不屬於 GameCore；只讀 GameCore 的查詢結果 | 畫面 |
+
+- 交通控制（T/U/V）只讀 topology 與整數長度，**不得**依賴北東南西方向、格子、Canvas、3D 引擎或相機。方格的北東南西只存在於舊的方格 adapter 裡。
+- Geometry 在**建造與解碼時**推導一次 topology 需要的東西（邊的長度、節點上哪兩個邊端可以通行），之後的每一個 tick 都不再碰幾何：移動只用整數長度，路徑只用轉向表。
+- Rendering 不回寫 GameCore。浮點數只出現在畫面換算。
+- 權威資料一律是整數；取樣點、長度、切線是由固定的整數演算法推導出來的值，不存檔（存檔只存端點與控制點），因此不會出現第二份真相。
+
+### 29. 連續軌道幾何（Phase 4.5 Stage S3）——設計決策
+
+這一段是 S3 開工前的架構審查（review gate），回答 12 個問題；實作與驗證的細節完成後補在同一節的後半。
+
+**S3 的兩個里程碑。** S3 分成兩層，後一層只建立在前一層上：
+
+- **S3A — 鐵路網的權威**：`RailwayNetwork` 是唯一的鐵路資料；泛用的節點、邊、行進方向、節點上的轉向規則、資源（span）與查詢介面；方格鐵軌遷移進 `RailwayNetwork`，在它上面得到與以前相同的行為。
+- **S3B — 連續幾何**：任意方向、任意長度、平滑曲線與 S 曲線的邊，以及給 renderer 的幾何。
+
+S3B 的實作先寫成（第一版 PR），S3A 的「唯一權威」與 span 在之後的架構要求中補上；兩者的分層以下面的回答為準，驗證也分開列出。
+
+**S3A-1. 鐵路的權威在哪裡？** `GameWorld` 的狀態分成：
+
+- `GridMap`：土地（空地、車站所在的格），之後的地形、分區與粗略的空間索引。它**不再**表示鐵路：`TileType` 只剩 `empty` 與 `station`。
+- `RailwayNetwork`：所有鐵軌。方格時代的鐵軌是錨定在格上的節點（`TrackNodeID.tile(p)`，保存它的出口與配置：一般、道岔、平面交叉），連續路網是編號的節點與邊。兩者都只存在這裡。
+- 車站、列車、線路照舊。
+
+**S3A-2. 舊存檔何時轉成 `RailwayNetwork`？轉換點在哪裡？** 只有兩個轉換點，都是單向的：
+
+- 讀檔：`GameWorld` 的解碼器讀入存檔的 `map.tiles`，土地放進 `GridMap`，鐵軌格變成 `RailwayNetwork` 的方格節點。之後執行期的 `GridMap` 裡沒有鐵路。
+- 存檔：`GameWorld` 的編碼器把 `GridMap` 的土地與 `RailwayNetwork` 的方格節點合成存檔裡的 `map.tiles`（相容的序列化格式），所以只有方格的存檔逐位元不變。這是由權威資料推導出的投影，不是第二份資料。
+
+**S3A-3. 指令修改哪一份資料？** 鋪軌、道岔、平面交叉、拆軌（方格的舊指令）與建造、拆除節點和邊（路網的指令）都只修改 `RailwayNetwork`；建站、車站長大只修改 `GridMap` 的土地與車站。「格上已經有東西」由兩者一起判斷：方格節點與車站不能在同一格（舊規則），連續路網不佔用任何格（見決策 30 的淨空）。
+
+**S3A-4. 如何避免兩份資料不一致？** 型別上就不可能：`TileType` 沒有鐵路的 case，`GridMap` 無法表示鐵軌；存檔的鐵軌格只在解碼時讀一次、編碼時由網路產生。沒有任何雙向同步。
+
+**S3A-5. 方格節點的身分。** 方格節點的 ID 是 `TrackNodeID.tile(p)`：錨點 `p` 是這個節點不變的名字（方格的鐵軌不會移動，一格最多一個方格節點）。泛用層（路徑、佔用、之後的 T/U/V）把 `TrackNodeID` 當成不透明的值，不讀格子、不讀北東南西；新的建造只產生 `TrackNodeID.node(n)`。
+
+**S3A-6. 邊與資源的身分。**
+
+- 邊（`TrackEdgeID`）是拓撲上的連接：兩端的節點、幾何與整數長度。方格的連結是 `.link(a, b)`，由兩個方格節點互相朝向對方的出口推導；路網的邊是 `.edge(n)`。
+- 資源（`TrackResource`）是 `.node(TrackNodeID)` 或 `.span(TrackSpan)`。`TrackSpan` 是一條邊上的一段里程區間（邊、`start`、`end`）。
+- **一條邊可以有很多個 span**：預設把邊等分成最少段、每段不超過 `RailwayNetwork.spanLength`（1024，一格）：段數 n = ⌈L ÷ 1024⌉，第 k 個分界在 ⌊k·L ÷ n⌋。方格的連結恰好是一個 span，所以 S1 的資源不變；一條 2 公里的邊是 125 個 span，第一台列車不會鎖住整條邊。
+- 之後的分界可以來自道岔、平面交叉、月台端點（S4）、號誌與閉塞、營運區段；T 只要加分界，不必改幾何或邊。
+- 佔用與預約只讀邊的整數里程與分界，不讀 renderer 的取樣：列車佔用它車頭到車尾之間經過或到達的節點，以及有一點嚴格落在區間內的 span。
+
+**S3A-7. 路徑。** 路徑的成本是整數的長度總和（不是邊數），同長時依出口順序決定；結果是 `TrackTraversal` 的序列，不含控制點。方格上每條連結都是 1024，所以結果與舊的廣度優先搜尋相同。交通狀態、限速與道岔的額外成本留給 V/W。
+
+**S3A-8. 列車。** 方格上的列車保留舊的位置與 continuation（`atNode`、`onLink`、`[GridPosition]`），它們是方格節點上的相容表示，不是鐵路的第二份資料；路網上的列車用 `onEdge` 與邊的序列。泛用查詢讓交通控制不必分辨兩者：`occupiedResources(of:)`（資源）與 `pathAhead(of:)`（列車之後要進入的 `TrackTraversal`）。把方格列車也改成 `onEdge` 需要重寫 J–S2 的行為與參考模型，不在 S3 做。
+
+**1. 權威的幾何表示是什麼？**
+連續路網（`RailwayNetwork`）與舊的方格並存。一條邊（edge）的權威資料只有：起點節點、終點節點，以及 `TrackCurve`：`straight`（直線），或 `cubic(control1, control2)`（兩個整數平面控制點的三次 Bézier）。節點的權威資料只有位置（`WorldCoordinate`）。其餘一切（取樣折線、長度、某個距離的位置與切線、節點上的轉向）都由固定的整數演算法推導。S3 只有水平線形；S4 另外加上沿里程的縱斷面，不改變水平線形。
+
+**2. 為什麼不選其他候選？**（8 項準則）
+
+| 準則 | A 浮點 spline | B 純整數折線 | C 圓曲線＋緩和曲線 | D 方格／固定零件 | **E 整數控制點 Bézier（採用）** |
+| --- | --- | --- | --- | --- | --- |
+| 1. 跨平台逐位元相同 | ✗ | ✓ | △（需要定點三角函數） | ✓ | ✓ |
+| 2. 整數存檔、可移植 fixture | ✗ | ✓ | △ | ✓ | ✓ |
+| 3. 360° 任意方向 | ✓ | ✓ | ✓ | ✗（8 或 16 方向） | ✓ |
+| 4. 平滑曲線與一段內的 S 曲線 | ✓ | ✗（只有折角，曲線要很多節點） | ✓（曲率最好） | △ | ✓（切線連續，一段就能反曲） |
+| 5. 長度確定、位置查詢便宜 | ✗ | ✓ | △（弧長公式要超越函數） | ✓ | ✓（建造時取樣一次，查詢 O(log n)） |
+| 6. 之後的 spline 編輯器與 mesh | ✓ | △ | △ | ✗ | ✓（Bézier 是編輯器與 renderer 的共通語言） |
+| 7. 移植到其他語言／引擎 | ✗ | ✓ | ✗ | ✓ | ✓（整數 Bernstein 多項式與整數平方根，數十行） |
+| 8. 溢位安全、驗證簡單 | △ | ✓ | ✗ | ✓ | ✓（座標有界，Int64 範圍可證明） |
+
+E 的弱點是曲率不固定，行駛曲線（Stage W）的曲線限速要由取樣推導；需要時再給 `TrackCurve` 加一個整數的圓弧 case，topology 不受影響。
+
+**3. 定點刻度？**
+- 1 單位＝既有的邏輯單位（`rate`、`offset` 用的單位），一格邊長 1024 單位；名目上 1 單位 = 1/64 公尺（一格 16 公尺），只給 renderer 與坡度換算用，模擬不依賴公尺。
+- 軸向：x 向東、y 向南（與方格相同）、z 向上。方格 (x, y) 的中心是世界座標 (1024x + 512, 1024y + 512, 0)，所以方格與連續路網共用同一個世界座標系。
+- 型別層級：每個分量的絕對值不超過 2^29（`WorldCoordinate.limit`）；世界層級：路網的點都在地圖範圍內（0 ≤ x < 寬 × 1024，0 ≤ y < 高 × 1024）；S3 的 z 一律是 0。
+- 可證明的界限：差值 ≤ 2^30、平方 ≤ 2^60、三個平方的和 < 2^62、Bernstein 加權和 ≤ 2^30 × 2^29 = 2^59，全部在 `Int64` 內，不需要 `Int128`。
+
+**4. 邊的長度如何確定？**
+- 直線：`round(√(dx² + dy²))`，以整數平方根計算。
+- 三次曲線：取樣數 N 是 2 的冪次，不小於控制多邊形長度 ÷ 64（無條件進位），限制在 8…1024；第 i 個取樣點是 Σ Bernstein 權重 × 控制點 ÷ N³ 的精確整數值，以四捨五入（half up）取整；連續相同的點去掉；長度是各段 `round(√(dx² + dy²))` 的總和。
+- 長度與取樣都在建造與解碼時推導，不存檔；golden fixture 釘住數值，其他語言必須得到同樣的整數。
+- 長度是水平里程（chainage），這也是移動用的權威長度；S4 的坡度不改變它（坡度 3.5% 時與 3D 弧長相差不到千分之一）。
+
+**5. 列車的前進如何表示？**
+- 不刪除 `TrainPosition`：新增 `onEdge(TrackTraversal, offset:)`，`TrackTraversal` 是一條邊加上行進方向（`forward` 從 `from` 到 `to`，`backward` 相反），`offset` 是從這個方向起點量起的距離，`0 ≤ offset ≤ 長度`。舊的 `atNode`、`onLink` 完全不變。
+- 路網上的 continuation 是依序要進入的邊（`TrainMovement` 新增的 `edges`），cursor 與方格共用同一個欄位與規則。
+- 移動 kernel 只用整數長度；邊不假設是 1024。移動永遠不會停在 offset 0。
+- 唯一表示：有車身的列車 offset 一定大於 0（在節點時寫成「沿著剛走完的邊到達終點」），所以反向兩次一定還原。只有一節的列車可以停在 offset 0（面向一條邊的起點，例如在盡頭反向後）。
+
+**6. 車身如何跨越多條邊？**
+- 以路徑歷史表示：`Train.trailEdges` 是車頭所在邊之後、車身經過的邊，由近到遠，恰好到車尾所在的那一條為止（最少的邊數）。存的是邊而不是節點，所以兩個節點之間的平行邊不會有歧義。
+- 車尾位置、車身區間、佔用資源都由邊長推導；反向時車頭移到車尾，車身沿同一段鐵軌往原車頭延伸，反向兩次還原。
+- 列車長度（`Train.length`，車頭到車尾的中心距離）是實體長度，不再等於「格數」：路網上的車尾可以落在一條邊的任何位置。方格仍維持每節 1024（決策 27）。
+
+**7. 舊方格怎麼接上？**
+- 方格的鐵軌遷移進 `RailwayNetwork`（S3A）：錨定在格上的節點保存出口與配置，S1/S2 的規則照舊由它們推導。
+- 泛用的身分把方格當成一個 adapter：`TrackNodeID.tile(p)`、`TrackEdgeID.link(a, b)`（長 1024，幾何是兩格中心之間的直線，轉向用 `exits(from:facing:)`）；連續路網是 `TrackNodeID.node(n)`、`TrackEdgeID.edge(n)`。
+- 泛用查詢（邊的資訊、`transitions(after:)`、到節點的路徑、佔用資源、車身路徑）同時接受兩種。
+- 方格的路徑搜尋改用與路網同一個最短路徑搜尋；方格的結果不變，由既有的 property digest 證明。
+- 只有方格的存檔逐位元不變。
+
+**8. 月台如何從「格子旁邊」轉到路網？**
+S2 的月台（車站格旁的鐵軌格）照舊服務方格。S4 讓車站在路網上綁定月台：一條邊上的一段區間（邊、起訖距離、長度、層），整列車都在區間內才算停妥；層（level）留給 Phase 5F 的步行轉乘成本。S3 不做月台綁定，路網上的列車只能手動操作。
+
+**9. 交叉與相接如何區分？**
+- 只有**共用的節點**會相接。兩條邊在平面上交叉、但沒有共用節點，就不相接、不共用資源、路徑也不會從一條轉到另一條（S4 再決定這種交叉在同一高度是否允許，以及立體交叉的淨空）。
+- 節點上哪兩個邊端可以通行，在建造與解碼時由邊端的切線推導一次，存成 topology：兩個邊端離開節點的方向相反、夾角誤差在 1:16（約 3.6°）以內才相通。道岔（一個邊端通往兩個以上）、菱形平面交叉（兩組互不相通的直行）與雙交分道岔都由此自然成立，不需要另外的道岔旗標，也不會因為拆掉某條邊而讓其他邊的設定失效。
+- 路徑、移動與之後的交通控制只讀這張轉向表，不讀切線。
+- 兩條線共用一個節點就是平面交叉：那個節點是一個資源，兩個方向的列車共用它，與 S1 相同。
+
+**10. 高程與坡度？**
+S3 的 z 一律是 0（地面）。S4 加入：節點的高程、沿里程的縱斷面（平坡、上坡、下坡、拋物線的豎曲線）、以整數（千分比或有理數）表示的坡度與最大坡度、結構物（地面、高架、橋、隧道，隧道口是 topology 的節點）。長度仍是水平里程，S3 的存檔與長度在 S4 不變。
+
+**11. 存檔相容？**
+- 新的 key 只在用到時寫入：世界的 `network`、移動的 `edges`、列車的 `trailEdges`、位置的 `onEdge`。
+- 方格節點照舊寫在 `map.tiles`（S3A-2 的相容序列化），不另外寫一份。
+- S2 的存檔照常讀入；只有方格的存檔逐位元不變，所以 14 個 property digest 都不變。
+- 壞的幾何（超出範圍、退化的控制點、尖點、自環、重疊的節點、未知的節點或邊）一律拒絕、不修補；明確的 `null` 拒絕。
+- 陣列依 ID 排序，推導值不存檔，所以來回存讀是 deterministic。
+
+**12. PR #31（舊的 Stage T）將來如何移植？**
+PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。新的 Stage T 在 S3/S4 之後重寫：
+- 保留的語義：
+  - 交通控制旗標，新世界預設關閉，舊存檔與 digest 不變；
+  - 預約由位置、車身與前方路徑推導，不另存第二份真相；
+  - 一次預約到下一個停靠站的整條路；
+  - `trackReserved` 的拒絕；
+  - 路被佔用時服務在原站等待、每步重試；
+  - `trainHoldingRoute`。
+- 要重寫的實作：沿 `[GridPosition]` 走出 `.link` / `.node` 的預約，改成走泛用的 `TrackTraversal` 與 `TrackResource`；參考模型改成泛用資源。
+- 可以沿用的測試：方格上的手算情境，以及 `traffic.reservation` campaign 的結構。
+- 新的 T 依賴：`TrackResource`（`.node(TrackNodeID)` / `.span(TrackSpan)`）、`pathAhead(of:)` 的 `TrackTraversal`、`occupiedResources(of:)`，以及「平面交叉共用節點、立體交叉不共用任何資源」這條規則（決策 30）。預約的範圍是 span，不是整條邊。
+
+**PR #31 的遷移檢查**（逐項對照它的程式碼，唯讀檢視，不修改 PR #31）
+
+| PR #31 依賴的方格表示 | 在哪裡 | 新的 T 改成 |
+| --- | --- | --- |
+| `GridPosition`：`.node(tile)` 資源、拆軌保護 `reservation(of:).contains(.node(position))` | `reservation(at:trail:length:ahead:)`、`removeTrack(at:)` | `TrackNodeID` 與 `TrackSpan`；拆軌、拆邊都查「有沒有被預約的節點或 span」 |
+| `TrackDirection`：`position.ahead` 回傳（格、朝向），預約從那一格開始 | `reservation(at:…)`、`reverseTrain` | `pathAhead(of:)` 的第一個 `TrackTraversal`；折返後的前方由 `reversedOnNetwork` / 方格的 `reversed` 推導 |
+| 固定 1024 的連結：`.link(between:and:)` 就是整條連結 | `reservation(at:…)` 逐格加 `.link` | 每條走過的 traversal 的 span（方格連結恰好一個 span，長邊是很多個） |
+| `[GridPosition]` continuation 與 `route(from:toStation:length:)` 的格序列 | `setTrainContinuation(_:to:)`、`trainHoldingRoute(of:)`、派車階段 | `[TrackTraversal]`（`route(from:to:)`、`pathAhead(of:)`），方格與路網同一個型別 |
+| 節點與連結的 `TrackResource` | 整個 `TrackReservation.swift` | `.node` / `.span`；`Set<TrackResource>` 的比較方式不變 |
+| 以格為單位的車身 `trail: [GridPosition]` 與 `Train.distanceBehind` | `occupiedResources(at:trail:length:)`、`bodyResources` | `occupiedResources(of:)`（泛用，路網用 `trailEdges` 與里程），不另寫車身資源 |
+
+- **可以直接沿用的語義**：一次預約到下一個停靠站的整條路（最小的防死結規則）；整批原子取得（任何一個資源被佔就整個拒絕，世界不變）；路被佔時服務在原站等待、每步重試，不折返；衝突回報取編號最小的列車（`reservationHolder`、`firstSharedTrack` 依 ID 順序）；`trafficControl` 旗標只在開啟時寫入存檔、舊存檔讀成關閉；`trackReserved`、`trainsShareTrack` 兩個錯誤；預約由位置、車身與前方路徑推導、不另存第二份真相。
+- **可以沿用的測試意圖**：`TrafficControlTests` 的手算情境（持有的資源、開啟時的檢查、各指令的拒絕與拆軌、連結上的反向、等待路徑的服務、存檔）、`traffic.reservation` campaign 的結構與參考模型的寫法（持有者逐一檢查每台其他列車、重疊逐對檢查）、`save.trafficMutation`，以及它的兩個刻意植入的錯誤（預約漏掉前方節點、出發忽略預約）。
+- **要重新評估的設計**：
+  - 資源身分：span 由邊長與月台推導，新增或移除月台會改變 span（決策 30）；T 存的預約應是邊上的里程區間，或在有預約時拒絕改動月台，不能假設 span 永遠不變。
+  - 路徑表示：預約沿 `[TrackTraversal]`；列車所在的邊只預約車頭之後的 span。
+  - 拆除保護：方格的 `trackInUse` 與路網的 `trackEdgeInUse` 都要看預約，而且以 span 為單位回報。
+  - 預約範圍：到下一個停靠站（或 U 之後的下一個號誌）；長邊不再整條鎖住。
+  - 車身資源：一律用 `occupiedResources(of:)` 推導，方格與路網同一條規則。
+
+**S3 不做**：進路預約、movement authority、dispatcher、renderer、行駛動態、城市、乘客、完整的 spline 編輯器與建造畫面；GameCore 只提供最小的開發者 API。
+
+#### 實作
+
+- **型別**（`Sources/GameCore/Geometry/`、`Railway/TrackGraph.swift`、`RailwayNetwork.swift`、`RailwayNetworkTrains.swift`）
+  - `WorldCoordinate`（x、y、z）、`PlanPoint`（平面的點，控制點用）、`PlanVector`（沒有正規化的方向）。解碼拒絕超過 `WorldCoordinate.limit` 的值。
+  - `TrackCurve`（`straight` / `cubic`）與 `TrackGeometry`（取樣點、到每一點的距離、兩端的切線、`location(at:)` 與 `location(at:going:)`）。
+  - `TrackNodeID`（`tile` / `node`）、`TrackEdgeID`（`link` / `edge`）、`TrackEdgeDirection`、`TrackTraversal`。`TrackResource` 改成 `.node(TrackNodeID)` / `.span(TrackSpan)`（S3A）；方格的連結是一個完整的 span，所以方格的資源與順序不變（`.tile(p)`、`.link(between:and:)` 是方便的寫法）。
+  - `RailwayNetwork`（S3A，原本的 `TrackNetwork`）：方格的鐵軌（依格位置保存的 `Track`，`track(at:)`、`tracks`），以及依 ID 排序的 `TrackNode`（位置與推導出的 `ends`：每個邊端的方向與可以通往的邊）與 `TrackEdge`（兩端、曲線、推導出的長度），二分搜尋查找。`GridMap` 與 `TileType` 只剩土地（`empty`、`station`）。
+  - `TrackSpan`（邊、`start`、`end`）與 `RailwayNetwork.spans(of:length:)`：n = ⌈L ÷ 1024⌉ 段，第 k 個分界 ⌊k·L ÷ n⌋，只由整數長度推導。
+- **指令**（都在 `GameWorld`；失敗時世界不變）
+  - `buildTrackNode(at:)`：`invalidTrackGeometry`（地圖外、不在地面、已有節點）→ `idsExhausted`。免費。
+  - `buildTrackEdge(from:to:curve:)`：`unknownTrackNode`（先 `from` 再 `to`）→ `invalidTrackGeometry`（同一個節點、控制點在地圖外、曲線不成立）→ `idsExhausted` → `insufficientFunds`。費用是每格鐵軌的費用乘上長度的格數（無條件進位，至少 1）；乘積放不進 `Money` 時以 `insufficientFunds(required: Int64.max)` 拒絕。
+  - `removeTrackEdge(_:)`：`unknownTrackEdge` → `trackEdgeInUse`（有列車的車頭或車身在上面）。`removeTrackNode(_:)`：`unknownTrackNode` → `trackNodeInUse`（還有邊）。免費、不退款。ID 永不重用，所以 continuation 指向已拆除的邊的列車會停在那條邊之前的節點等待，直到換上新的 continuation。
+  - `setTrainContinuation(_:along:)`：方格與路網共用的 continuation 指令，檢查順序同 `setTrainContinuation(_:to:)`。路網上的列車對 `setTrainContinuation(_:to:)` 只接受空陣列（清除）。
+  - `placeTrain`、`reverseTrain`、`unplaceTrain`、`setTrainMovementRate`、`advance` 都接受路網上的列車。
+- **轉向**：`transitions(after:)` 對方格是 `exits(from:facing:)`，對路網是建造時推導的 `TrackNodeEnd.exits`，依邊的編號遞增；兩者都不讀幾何。
+- **路徑**：`TrainRoute.shortest` 是唯一的搜尋：先依距離（Dijkstra）找出最近的目的地距離，再倒著標出能以最短距離到達目的地的狀態，最後從起點每一步取第一個這樣的出口。結果只由規則決定：總長最短，同長時出口序列依各節點的順序逐步比較取最先。方格的每條連結都是 1024，所以與舊的廣度優先搜尋完全相同（`route.reference`、`stationStop.routes` 與所有服務、線路的 digest 不變）。`route(from:to:)` 對 `TrackNodeID` 回傳 `[TrackTraversal]`。
+- **移動**：`TrainMovement.travel(along:offset:length:distance:edges:cursor:enter:)` 與方格的 kernel 規則相同，但每條邊用自己的長度；恰好走到終點停下、不看下一項；不可進入時停在終點等待。
+- **車身**：放置時從車頭所在邊的起點往回走，分岔時選編號最小、能通往前一條邊的邊；移動時由路徑歷史裁切；反向時車頭移到車尾（`reversedOnNetwork`），車身沿同一段鐵軌往原車頭延伸。
+- **佔用**：車頭到車尾之間經過或到達的每個節點，以及與列車有一個共同點、而且那一點不在邊的兩端的每個 span（`networkResources(of:)`）：碰到兩個 span 分界的列車同時佔用兩個。方格的連結只有一個 span，所以方格的結果不變。
+- **S3A 查詢**：`trackSpans(of:)`（一條邊的 span，方格連結是一個）與 `pathAhead(of:)`（列車之後要進入的 `TrackTraversal`：方格是 continuation 中剩下的連結，不論現在是否鋪著；路網是剩下的邊，到第一條進不去的為止）。
+- **存檔（S3A）**：`GameWorld` 的私有 `SavedMap` 在讀檔時把 `map.tiles` 分成土地（`GridMap`）與方格鐵軌（`RailwayNetwork`），存檔時再合成同樣的格式；鐵軌格的驗證（至少一個出口、道岔的規則）從 `GridMap` 移到這裡。`GameWorld` 的不變量另外確認方格的鐵軌只在地圖內的空地上。
+- **Renderer 查詢**（唯讀，給畫面用，不寫回）：`trackNode(_:)`、`trackEdge(_:)`、`trackGeometry(of:)`（方格的連結是兩格中心之間的直線）、`location(of:)`、`bodyPath(of:)`。邊建好後不再改變、ID 不重用，所以 renderer 可以依邊的 ID 快取幾何。
+- **存檔**：世界只在路網用過時寫 `"network"`（`nodes`、`edges`、`nextNodeID`、`nextEdgeID`），移動只在有路網 continuation 時寫 `"edges"`，列車只在有路網車身時寫 `"trailEdges"`，位置寫成 `{"onEdge": {"edge", "direction", "offset"}}`。長度、取樣與節點的 ends 都不存，解碼時重新推導。解碼拒絕：
+  - 超過範圍的座標、同一點的兩個節點、未知的端點、自環、不成立的曲線、ID 未遞增或不小於下一個 ID、明確的 `null`；
+  - 路網上的列車帶方格車身、方格 continuation、服務，或有車身卻在 offset 0；
+  - 超出邊的 offset、接不上或多一條、少一條的車身，連續兩次同一條邊的 continuation，從未建過的邊。
+  - `GameWorld` 另外確認路網在地圖內、在地面。
+- **效能**：模擬的每一步只讀整數長度與建造時推導的轉向表，不做取樣。在這個 Linux 容器的 debug build 上量測（`testGeometryCostIsPaidOnceAndLookupsAreCheap`，只印出不斷言）：取樣 500 條 1024 段的長曲線約 0.2 秒（每條約 0.4 毫秒，只在建造與讀檔時發生）；十萬次位置查詢約 0.06 秒；40 台三節列車在曲線環線上跑 500 分鐘約 0.05 秒。因此 GameCore 只快取長度與轉向表，不快取取樣點；畫面需要時自己依邊的 ID 快取。
+
+#### 驗證
+
+- `ContinuousTrackTests`（手算）：
+  - 任意方向的直線（3-4-5 的邊長 5120、45° 的邊長 1448）與位置；
+  - 以八分之一取樣、長 396 的四分之一曲線（每個取樣點與每段長度都手算）；
+  - 等距控制點的曲線、S 曲線、不合法的幾何與溢位邊界、整數平方根；
+  - 指令的錯誤順序與費用；
+  - 沒有共用節點的交叉、平面交叉、道岔、折角、平行的邊；
+  - 方格的 adapter（道岔、平面交叉的轉向與 `exits(from:facing:)` 一致，路徑與 continuation 兩種寫法相同）；
+  - 在不同長度的邊上前進、等待被拆的邊、長列車跨越多條邊、反向兩次還原、放置的唯一表示、長度不等於邊數或格數；
+  - 存檔、只有方格的存檔逐位元不變、壞存檔被拒絕、renderer 查詢。
+- `ContinuousTrackPropertyTests`（`network.differential`）：產生共線節點的直線、沿節點方向的曲線與任意曲線組成的路網，放上 2 到 4 台 1 到 4 節的列車，再執行隨機的建造、拆除、放置、反向、路徑、速率與時間推進，同時在 GameCore 與 `ReferenceWorld` 上執行。每一步比較結果、整個狀態、每條邊的長度與取樣點、每個行進方向的轉向、每台列車的位置、移動、車身、佔用與世界座標，以及到抽樣節點的路徑；並檢查不變量與存讀。`ReferenceWorld` 另外寫成：字典、以 de Casteljau 在放大的整數上取樣、二分搜尋平方根、逐單位移動、以沿路徑的絕對距離表示車身、鬆弛法求路。
+- `SaveMutationTests` 新增 `save.networkMutation`，`WorldInvariants` 加上 `NetworkInvariants`。
+- `RailwayNetworkAuthorityTests`（S3A，手算）：地圖只有土地、鋪軌不改變地圖；方格鐵軌與車站仍各佔一格；以 Stage I 以來的格式寫成的存檔，鐵軌讀進 `RailwayNetwork`、再逐位元寫回；壞的鐵軌格被拒絕；span 的切法（1、396、1024、1025、2048、2560、5120 與 1…5000 的每個長度：首尾相接、每段不超過 1024、長度相差最多 1）；方格連結是一個 span；列車只佔用它所在的 span、在分界上同時佔用兩個；同一條長邊上的兩台列車只在共用 span 時衝突；span 只由長度推導，不看取樣；兩種鐵軌上的 `pathAhead(of:)`。
+- S3A 讓 `continuous-track.json` 的四個佔用預期從 `networkEdge` 改成 `networkSpan`，數值手算（見 GoldenScenarios README 的 schema 16）；`ContinuousTrackTests` 的佔用預期也改成 span。
+- 刻意植入的錯誤都在前幾個 case 被抓到，驗證後還原：
+  - 讓同方向的邊端也相接；
+  - 車身多保留一條邊；
+  - 長度改用無條件捨去的平方根。
+- Stage I–S2 的 14 個 property digest 在修改前後完全相同，所有既有的 golden 預期值不變。
+- Golden schema v16 與手算的 `continuous-track.json`，第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過。
+
+#### GamePresentation / App
+
+- `MapScale` 把世界座標換算成地圖座標（一格 1024 單位）；列車的位置、朝向與車身線可以帶入世界，路網上的列車沿中心線畫出。
+- 顯示文字：路網上的位置（「Edge #2 forward, 1024 units along」）與新錯誤的訊息。
+- 地圖在方格之上畫出路網的俯視 debug 投影（每條邊的取樣中心線與節點），不畫高度；這是 prototype，不是 renderer。
+- Debug 的示範配置在東側加上一條由四段曲線組成的環線與一台在上面行駛的三節列車，供 Visual Smoke 截圖。
+
+#### 已知限制與留給之後
+
+- 高程、坡度、結構物、立體交叉的淨空、隧道口與路網上的月台（Stage S4）。
+- 路網與方格不相接，也不做空間衝突檢查：路網的節點可以蓋在任何格上。
+- 平面上交叉、同一高度而沒有共用節點的邊目前允許，彼此不影響；S4 決定它們是否需要立體交叉。
+- 曲率不固定，曲線限速留給 Stage W。
+- 路網上的列車還不能停站、跑時刻表或線路（S4 的月台綁定之後）。
+- 真正的 renderer、建造連續軌道的畫面與 spline 編輯器。
+- 方格上的列車仍用 `atNode`、`onLink` 與 `[GridPosition]` 的相容表示（S3A-8）；泛用的交通控制只經過 `occupiedResources(of:)` 與 `pathAhead(of:)` 讀它們。
+- span 目前只有等分的分界；月台端點（S4）、號誌與閉塞（T 之後）再加分界。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -744,5 +971,6 @@ Stage S2 讓車站可以佔多格、列車可以有多節車廂，停站也開�
 - 服務線路是計畫資料：依序的車站、計算行程用的 rate、營運時間，以及各服務等級的列車數或目標班距；服務日決定一天中每分鐘的等級。行程、最多列車數（最短班距 2 分鐘）、實際列車數與班距由地圖推導，不存檔（決策 22、23）。
 - 指派給線路的列車由線路派出：每分鐘在出發之前，營運中、該等級有列車、距上次派車已過一個班距、跑車中的列車少於該等級的列車數時，線路讓第一台停在第一站、rate 大於 0、能開完來回的列車跑一趟來回（產生該趟的時刻表並啟動服務，必要時先折返）。列車回到第一站後折返等待；線路的列車不能手動設定時刻表或啟停服務（`trainOnLine`，決策 23）。
 - 線路可以另有交路與快車等服務模式：停靠線路部分的站（站的索引、嚴格遞增），各有自己的列車數或目標班距與列車，從自己的第一個停靠站派車。每段鐵軌每天每個方向最多 720 班；各服務依序（線路自己的服務最先）以 `⌈1440 ÷ 班距⌉` 佔用它經過的每一段，放不下的服務減少列車數（決策 24）。
+- 連續軌道（決策 29）：節點是地圖內、地面上的整數世界座標點（一格 1024 單位），邊是兩個節點之間的直線或整數控制點的三次曲線，長度由固定的整數取樣規則推導、以每格鐵軌的費用計價。只有共用節點的邊才相接，而且只在兩個邊端離開節點的方向相反（誤差 1/16 以內）時互通；平面上交叉但沒有共用節點的邊互不相干。路網上的列車在邊上，`0 <= offset <=` 邊長，有車身時 `offset > 0`；它沿 `edges` 移動，車身記錄在 `trailEdges`，反向時車頭移到車尾。方格與路網共用同一個最短路徑搜尋與同一套資源身分：節點，以及邊上不超過一格長的 span（S3A）。所有鐵軌只記在 `RailwayNetwork`，地圖只有土地。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。

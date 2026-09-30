@@ -1,11 +1,11 @@
-/// A read-only snapshot of the track piece on one tile.
+/// A grid track piece: the track anchored to one tile.
 ///
-/// Tracks are stored in the map as ``TileType/track(connections:)``,
-/// ``TileType/turnout(connections:stem:)`` or ``TileType/crossing``; this
-/// type is a convenient view for callers. Connections are the tile's own
+/// Pieces are kept in the ``RailwayNetwork`` (Stage S3A), the one record
+/// of the railway; the map holds only land. Connections are the tile's own
 /// exits, and the layout says which of them join (see ``TrackLayout``).
-/// Whether a neighbouring tile is actually joined is derived from the map on
-/// demand by ``GameWorld/connectedNeighbors(of:)``; no graph is stored.
+/// Whether a neighbouring tile is actually joined is derived from the
+/// pieces on demand by ``GameWorld/connectedNeighbors(of:)``: the grid's
+/// links are not stored.
 public struct Track: Hashable, Sendable {
     public let position: GridPosition
     public let connections: TrackConnections

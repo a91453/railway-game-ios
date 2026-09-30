@@ -86,9 +86,15 @@ public final class GameSession {
 
     // MARK: - Selection
 
-    /// The current contents of the selected tile, read from the world.
+    /// The land of the selected tile, read from the world.
     public var selectedTile: MapTile? {
         selection.flatMap { world.map.tile(at: $0) }
+    }
+
+    /// The grid track on the selected tile, read from the world's railway
+    /// network (Stage S3A: track is not on the map).
+    public var selectedTrack: Track? {
+        selection.flatMap { world.track(at: $0) }
     }
 
     /// Selects the tile at `position`; positions outside the map are ignored.
@@ -344,6 +350,9 @@ public final class GameSession {
         switch position {
         case .atNode(let tile, _): start = tile
         case .onLink(_, let to, _): start = to
+        // A train on the track network has no route to a tile: `found` is
+        // nil above, so this is never reached.
+        case .onEdge: return
         }
         // For a station, name it and the platform the route ends at.
         let target = station.map { "\($0.name), platform \(route.last ?? start)" } ?? "\(destination)"

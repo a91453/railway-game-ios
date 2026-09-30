@@ -65,6 +65,10 @@ struct ReferenceWorld: Equatable {
         /// Decision 27: its cars, and the nodes its body lies over.
         var cars = 1
         var trail: [GridPosition] = []
+        /// Decision 29: on the track network, the edges it enters next and
+        /// the edges its body lies over behind its head's edge.
+        var edges: [Int] = []
+        var trailEdges: [Int] = []
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
@@ -94,6 +98,11 @@ struct ReferenceWorld: Equatable {
     var lines: [Line] = []
     var nextLineID = 1
     var serviceDay: [(start: Int, level: ServiceLevel)] = [(0, .low), (420, .peak), (600, .offPeak), (960, .peak), (1200, .offPeak), (1260, .low)]
+    /// Decision 29: the track network, in dictionaries by number.
+    var networkNodes: [Int: WorldCoordinate] = [:]
+    var networkEdges: [Int: NetworkEdge] = [:]
+    var nextNetworkNode = 1
+    var nextNetworkEdge = 1
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -171,6 +180,8 @@ struct ReferenceWorld: Equatable {
             && lhs.speed == rhs.speed && lhs.resumeSpeed == rhs.resumeSpeed && lhs.nextStationID == rhs.nextStationID
             && lhs.nextTrainID == rhs.nextTrainID && lhs.lines == rhs.lines && lhs.nextLineID == rhs.nextLineID
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
+            && lhs.networkNodes == rhs.networkNodes && lhs.networkEdges == rhs.networkEdges
+            && lhs.nextNetworkNode == rhs.nextNetworkNode && lhs.nextNetworkEdge == rhs.nextNetworkEdge
     }
 
     // MARK: - Geometry
@@ -240,6 +251,8 @@ struct ReferenceWorld: Equatable {
             return mask(at: tile) != nil
         case .onLink(let from, let to, let offset):
             return offset > 0 && offset < Self.linkLength && joined(from, to)
+        case .onEdge(let traversal, let offset):
+            return isOnNetwork(traversal, offset)
         }
     }
 
@@ -282,7 +295,7 @@ struct ReferenceWorld: Equatable {
         return tiles[p] == nil ? nil : .tileOccupied(p)
     }
 
-    private func funds(_ cost: Int64) -> GameError? {
+    func funds(_ cost: Int64) -> GameError? {
         balance >= cost ? nil : .insufficientFunds(required: Money(cost), available: Money(balance))
     }
 
@@ -321,7 +334,7 @@ struct ReferenceWorld: Equatable {
             switch train.position {
             case .atNode(let tile, _)?: return tile == p
             case .onLink(let from, let to, _)?: return from == p || to == p
-            case nil: return false
+            case .onEdge?, nil: return false
             }
         }
         guard !supports else { return .trackInUse(p) }
@@ -396,7 +409,17 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
-            guard isOnTrack(position), let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
+            guard isOnTrack(position) else { return .invalidTrainPosition }
+            if case .onEdge(let traversal, let offset) = position {
+                let length = Self.length(trains[i])
+                guard length == 0 || offset > 0, let body = networkBody(behind: traversal, offset: offset, length: length) else {
+                    return .invalidTrainPosition
+                }
+                trains[i].position = position
+                trains[i].trailEdges = body
+                return nil
+            }
+            guard let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
             trains[i].position = position
             trains[i].trail = body
             return nil
@@ -418,8 +441,13 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
-            (trains[i].position, trains[i].trail) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
+            if case .onEdge? = trains[i].position {
+                trains[i] = turnedOnNetwork(trains[i])
+            } else {
+                (trains[i].position, trains[i].trail) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
+            }
             trains[i].continuation = []
+            trains[i].edges = []
             trains[i].cursor = 0
             return nil
         }
@@ -430,6 +458,7 @@ struct ReferenceWorld: Equatable {
         switch position {
         case .atNode(let tile, let heading): .atNode(tile, heading: heading.opposite)
         case .onLink(let from, let to, let offset): .onLink(from: to, to: from, offset: linkLength - offset)
+        case .onEdge: preconditionFailure("turned(_:) is for positions on the grid")
         }
     }
 
@@ -448,6 +477,7 @@ struct ReferenceWorld: Equatable {
         switch position {
         case .atNode(let tile, let heading): (tile, heading)
         case .onLink(let from, let to, _): (to, stepDirection(from: from, to: to)!)
+        case .onEdge: preconditionFailure("ahead(_:) is for positions on the grid")
         }
     }
 
@@ -468,6 +498,14 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
+            if case .onEdge? = trains[i].position {
+                // Decision 29: a train on the network follows edges; an
+                // empty list still clears.
+                guard nodes.isEmpty else { return .invalidContinuation }
+                trains[i].edges = []
+                trains[i].cursor = 0
+                return nil
+            }
             let (node, heading) = Self.ahead(trains[i].position!)
             guard passable(nodes[...], from: node, heading: heading).count == nodes.count else { return .invalidContinuation }
             trains[i].continuation = nodes
@@ -600,7 +638,11 @@ struct ReferenceWorld: Equatable {
                 depart(i)
             }
             for i in trains.indices where trains[i].position != nil && trains[i].rate > 0 {
-                trains[i] = stepped(trains[i])
+                if case .onEdge? = trains[i].position {
+                    trains[i] = steppedOnNetwork(trains[i])
+                } else {
+                    trains[i] = stepped(trains[i])
+                }
             }
             minutes += 1
             for i in trains.indices {

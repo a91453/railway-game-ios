@@ -139,7 +139,7 @@ final class StationFacilityTests: XCTestCase {
         try world.placeTrain(id, at: .atNode(p(2, 1), heading: .east))
         XCTAssertEqual(try train(world, id).trail, [p(1, 1), p(0, 1)])
         XCTAssertEqual(world.occupiedResources(of: id), [
-            .node(p(0, 1)), .node(p(1, 1)), .node(p(2, 1)), .link(p(0, 1), p(1, 1)), .link(p(1, 1), p(2, 1)),
+            .tile(p(0, 1)), .tile(p(1, 1)), .tile(p(2, 1)), .wholeLink(.link(p(0, 1), p(1, 1))), .wholeLink(.link(p(1, 1), p(2, 1))),
         ])
         XCTAssertThrowsGameError(try world.removeTrack(at: p(0, 1)), .trackInUse(p(0, 1)))
 
@@ -149,7 +149,7 @@ final class StationFacilityTests: XCTestCase {
         try world.placeTrain(id, at: .onLink(from: p(3, 1), to: p(4, 1), offset: 256))
         XCTAssertEqual(try train(world, id).trail, [p(3, 1), p(2, 1), p(1, 1)])
         XCTAssertEqual(world.occupiedResources(of: id), [
-            .node(p(2, 1)), .node(p(3, 1)), .link(p(1, 1), p(2, 1)), .link(p(2, 1), p(3, 1)), .link(p(3, 1), p(4, 1)),
+            .tile(p(2, 1)), .tile(p(3, 1)), .wholeLink(.link(p(1, 1), p(2, 1))), .wholeLink(.link(p(2, 1), p(3, 1))), .wholeLink(.link(p(3, 1), p(4, 1))),
         ])
         // (0,1) is free again; (1,1) is under the tail's link.
         try world.removeTrack(at: p(0, 1))

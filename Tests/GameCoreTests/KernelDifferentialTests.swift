@@ -263,6 +263,7 @@ final class KernelDifferentialTests: XCTestCase {
                 switch position {
                 case .atNode(let tile, _): return .removeTrack(tile)
                 case .onLink(let from, let to, _): return .removeTrack(random.chance(1, in: 2) ? from : to)
+                case .onEdge: break
                 }
             }
             if random.chance(1, in: 2), !world.stations.isEmpty {
@@ -417,16 +418,23 @@ final class KernelDifferentialTests: XCTestCase {
         check(world.clock.speed == model.speed, "speed \(world.clock.speed) vs \(model.speed)")
         check(world.economy.balance.amount == model.balance, "balance \(world.economy.balance.amount) vs \(model.balance)")
         check(world.map.width == model.width && world.map.height == model.height, "map size")
+        // Stage S3A: the land holds stations; the railway network holds the
+        // grid's track pieces.
         for tile in world.map.tiles {
             let expected: TileType = switch model.tiles[tile.position] {
-            case nil: .empty
-            case .track(let mask)?: .track(connections: TrackConnections(rawValue: mask))
             case .station(let id)?: .station(id: StationID(rawValue: id))
-            case .turnout(let mask, let stem)?: .turnout(connections: TrackConnections(rawValue: mask), stem: stem)
-            case .crossing?: .crossing
+            default: .empty
             }
             check(tile.type == expected, "tile \(tile.position): \(tile.type) vs \(expected)")
+            let track: Track? = switch model.tiles[tile.position] {
+            case .track(let mask)?: Track(position: tile.position, connections: TrackConnections(rawValue: mask))
+            case .turnout(let mask, let stem)?: Track(position: tile.position, connections: TrackConnections(rawValue: mask), layout: .turnout(stem: stem))
+            case .crossing?: Track(position: tile.position, connections: [.north, .east, .south, .west], layout: .crossing)
+            default: nil
+            }
+            check(world.track(at: tile.position) == track, "track \(tile.position): \(String(describing: world.track(at: tile.position))) vs \(String(describing: track))")
         }
+        check(world.tracks.count == model.tiles.values.count { if case .station = $0 { false } else { true } }, "track count")
         check(
             world.stations.map { [$0.id.rawValue, $0.position.x, $0.position.y] } == model.stations.map { [$0.id, $0.position.x, $0.position.y] }
                 && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.annexes) == model.stations.map(\.annexes),

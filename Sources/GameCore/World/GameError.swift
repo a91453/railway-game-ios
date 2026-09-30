@@ -105,4 +105,22 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidStationTile(GridPosition)
     /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.
     case invalidTrainLength
+    /// No node of the track network has this ID (Stage S3). A grid tile is
+    /// not a node of the network.
+    case unknownTrackNode(TrackNodeID)
+    /// No edge of the track network has this ID (Stage S3). A grid link is
+    /// not an edge of the network.
+    case unknownTrackEdge(TrackEdgeID)
+    /// The track network cannot have that geometry (Stage S3): a point
+    /// outside the map or above or below ground, a node where one already
+    /// stands, an edge from a node to itself, or a curve that does not make
+    /// an edge a train can run along (see
+    /// ``TrackGeometry/init(from:to:curve:)``).
+    case invalidTrackGeometry
+    /// Edges of the track network still end at the node, so it cannot be
+    /// removed; remove them first (Stage S3).
+    case trackNodeInUse(TrackNodeID)
+    /// A placed train's head or body is on the edge, so it cannot be
+    /// removed; unplace the train first (Stage S3).
+    case trackEdgeInUse(TrackEdgeID)
 }
