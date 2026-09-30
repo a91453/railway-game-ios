@@ -26,13 +26,20 @@ simulation.
   the `.xcodeproj`.
 - `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
-- `.github/workflows/` — `ci.yml` (GameCore on Linux, Swift 6.0 / 6.4; the
-  property campaigns run on 6.4 only), `ios-build.yml` (committed-project drift check and Xcode Simulator build on
-  macOS), `release-archive.yml` (unsigned Release device archive; manual, and on PRs
-  that change project settings or app resources), `testflight.yml` (signed
-  archive → IPA → App Store Connect; `workflow_dispatch` from `main` only,
-  secrets in the `testflight` environment), `testflight-checks.yml` (tests
-  of the release scripts with fake values and a macOS dry run; no secrets).
+- `.github/workflows/` — `ci.yml` (the Swift package on Linux: Swift 6.0 is
+  the minimum-compatibility job, every test except the long property /
+  differential / mutation campaigns; Swift 6.4 is the full correctness suite,
+  every test with the campaigns not reduced, split into parallel shards by
+  `.github/scripts/swift-shards.sh`, which also proves each shard ran exactly
+  its tests; pull requests that change nothing the package builds or tests
+  skip the Swift jobs, and the `Swift CI (gate)` job always reports),
+  `ios-build.yml` (committed-project drift check and Xcode Simulator build on
+  macOS), `release-archive.yml` (unsigned Release device archive; manual, and
+  on PRs that change project settings or app resources), `testflight.yml`
+  (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
+  only, secrets in the `testflight` environment), `testflight-checks.yml`
+  (tests of the release scripts with fake values and a macOS dry run; no
+  secrets).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
@@ -68,8 +75,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   **not** available there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
   `release-archive.yml`, `testflight-checks.yml`). The unsigned archive and
-  the dry run do not prove signing, upload or TestFlight; only a real `testflight.yml` run with the Apple account can,
-  and it proves at most the upload, not TestFlight installation.
+  the dry run do not prove signing, upload or TestFlight; only a real
+  `testflight.yml` run with the Apple account can, and it proves at most the
+  upload, not TestFlight installation.
 - Never run `testflight.yml` or add a trigger to it, and never let pull
   requests reach its secrets; the user starts releases.
 - Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
@@ -90,6 +98,15 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   together.
 - Whenever GameCore changes, run `swift build` and `swift test`, and keep
   warnings-as-errors clean (`swift build --build-tests -Xswiftc -warnings-as-errors`).
+  CI splits the suite across shards and runs each after
+  `swift build --build-tests -Xswiftc -warnings-as-errors` with
+  `swift test --skip-build` (plain `swift test` would rebuild everything);
+  `.github/scripts/swift-shards.sh run <shard>` runs one shard the same way. A
+  new test class needs no CI change: the `rest` shard runs everything the
+  campaign shards do not name. Move a long campaign to another shard in
+  `classes_of` in that script when the shard timings drift apart.
+- Real-device visual checks are manual (internal TestFlight); CI has no
+  screenshot or UI regression test.
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.
