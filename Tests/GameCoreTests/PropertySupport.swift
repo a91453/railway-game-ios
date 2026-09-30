@@ -712,6 +712,8 @@ enum WorldInvariants {
         }
         // Decision 29: the track network.
         problems += NetworkInvariants.violations(in: world)
+        // Decision 32: traffic control.
+        problems += trafficViolations(in: world)
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
             problems.append("service day starts \(starts)")
@@ -781,6 +783,57 @@ enum WorldInvariants {
             if !movement.continuation.allSatisfy(world.map.contains) {
                 problems.append("train \(train.id.rawValue) continuation leaves the map")
             }
+        }
+        return problems
+    }
+
+    /// Decision 32: without traffic control nothing is reserved. With it,
+    /// no two trains hold the same track; a reservation is in resource
+    /// order without repeats, belongs to a placed train and holds what the
+    /// train stands on; a train plainly standing (at a node with nothing
+    /// left to enter, or at the end of its path on its own edge) has none,
+    /// and one plainly on its way (on a grid link, with grid steps left, or
+    /// short of where its path ends on its own edge) has one.
+    static func trafficViolations(in world: GameWorld) -> [String] {
+        guard world.isTrafficControlEnabled else {
+            return world.trains.contains { !$0.reservation.isEmpty } ? ["a reservation while traffic control is off"] : []
+        }
+        var problems: [String] = []
+        let placed = world.trains.filter { $0.position != nil }
+        for (index, train) in placed.enumerated() {
+            let held = Set(world.heldResources(of: train.id))
+            for other in placed[..<index] where !held.isDisjoint(with: world.heldResources(of: other.id)) {
+                problems.append("trains \(other.id.rawValue) and \(train.id.rawValue) hold the same track")
+            }
+        }
+        for train in world.trains {
+            let id = train.id.rawValue
+            let reservation = train.reservation
+            if zip(reservation, reservation.dropFirst()).contains(where: { $0 >= $1 }) {
+                problems.append("train \(id)'s reservation is not in resource order without repeats")
+            }
+            if world.reservedResources(of: train.id) != reservation { problems.append("train \(id)'s reservation reads differently") }
+            guard let position = train.position else {
+                if !reservation.isEmpty { problems.append("unplaced train \(id) has a reservation") }
+                continue
+            }
+            if !reservation.isEmpty, !Set(world.occupiedResources(of: train.id)).isSubset(of: reservation) {
+                problems.append("train \(id)'s reservation does not hold what it stands on")
+            }
+            let movement = train.movement
+            var stands: Bool?
+            switch position {
+            case .atNode:
+                stands = movement.remainingContinuation.isEmpty
+            case .onLink:
+                stands = false
+            case .onEdge(let traversal, let offset):
+                if movement.cursor == movement.edges.count, let length = world.trackEdge(traversal.edge)?.length {
+                    stands = offset == (movement.end ?? length)
+                }
+            }
+            if stands == true, !reservation.isEmpty { problems.append("standing train \(id) has a reservation") }
+            if stands == false, reservation.isEmpty { problems.append("train \(id) on its way has no reservation") }
         }
         return problems
     }

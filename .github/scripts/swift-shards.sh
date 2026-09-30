@@ -41,10 +41,10 @@ set -euo pipefail
 classes_of() {
   case "$1" in
     campaigns-1) echo "NetworkServicePropertyTests TrackResourcePropertyTests" ;;
-    campaigns-2) echo "SaveMutationTests LinePatternPropertyTests" ;;
+    campaigns-2) echo "SaveMutationTests" ;;
     campaigns-3) echo "ServicePropertyTests ContinuousTrackPropertyTests StationFacilityPropertyTests" ;;
     campaigns-4) echo "VerticalRailwayPropertyTests LineDispatchPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "TrafficControlPropertyTests" ;;
+    campaigns-5) echo "TrafficControlPropertyTests LinePatternPropertyTests" ;;
     *) return 1 ;;
   esac
 }

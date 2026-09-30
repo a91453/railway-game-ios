@@ -597,26 +597,15 @@ final class TrafficControlPropertyTests: XCTestCase {
         return problems
     }
 
-    /// Decision 32: under traffic control no two trains hold the same
-    /// track, a train with a way to go has a reservation holding what it
-    /// stands on, and one that stands has none; without it nothing is
-    /// reserved.
-    static func trafficViolations(in world: GameWorld) -> [String] {
-        guard world.isTrafficControlEnabled else {
-            return world.trains.contains { !$0.reservation.isEmpty } ? ["a reservation while traffic control is off"] : []
+    /// A world of this campaign's layouts after `operations` generated
+    /// operations, and whether it is laid on the grid; for the save
+    /// mutation campaign.
+    static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> (world: GameWorld, grid: Bool) {
+        var (world, _, grid) = try Self.begin(&testCase)
+        for _ in 0..<operations {
+            _ = Self.apply(Self.operation(in: world, grid: grid, using: &testCase.random), to: &world)
         }
-        var problems: [String] = []
-        let trains = world.trains.filter { $0.position != nil }
-        for (index, train) in trains.enumerated() {
-            let held = Set(world.heldResources(of: train.id))
-            for other in trains[..<index] where !held.isDisjoint(with: world.heldResources(of: other.id)) {
-                problems.append("trains \(other.id.rawValue) and \(train.id.rawValue) hold the same track")
-            }
-            if !train.reservation.isEmpty, !Set(world.occupiedResources(of: train.id)).isSubset(of: train.reservation) {
-                problems.append("train \(train.id.rawValue)'s reservation does not hold what it stands on")
-            }
-        }
-        return problems
+        return (world, grid)
     }
 
     func testRouteReservationMatchesTheReferenceAtEveryStep() throws {
@@ -663,7 +652,7 @@ final class TrafficControlPropertyTests: XCTestCase {
                         if case .waitingAtStop? = old.execution, new.execution != old.execution { tally["service departures", default: 0] += 1 }
                     }
                 }
-                let problems = Self.differences(world, model, tally: &tally) + WorldInvariants.violations(in: world) + Self.trafficViolations(in: world)
+                let problems = Self.differences(world, model, tally: &tally) + WorldInvariants.violations(in: world)
                 guard problems.isEmpty else { return testCase.fail(problems.joined(separator: "\n")) }
                 if let problem = WorldInvariants.roundTripProblem(of: world) { return testCase.fail(problem) }
             }
