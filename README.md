@@ -4,11 +4,11 @@
 
 ## 目前狀態
 
-**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.5 Stage S3（連續軌道幾何）.**
+**Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.5 Stage S4（立體鐵路與結構物）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及與方格並存的連續軌道路網：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有號誌與待避、乘客或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及與方格並存的連續軌道路網：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3），以及高程、坡度、地面／高架／橋／隧道等結構物、立體交叉的淨空、隧道口與多層月台（Phase 4.5 Stage S4）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有號誌與待避、乘客或城市模擬。
 
-目前的地圖畫面是 **prototype**：SwiftUI Canvas 畫出方格，加上連續路網的俯視 debug 投影（沿取樣的中心線畫出邊與路網上的列車，不畫高度）。真正的 3D renderer、建造連續軌道的畫面與 spline 編輯器都還沒有開始；GameCore 只提供給 renderer 讀取的整數幾何查詢（`trackGeometry(of:)`、`location(of:)`、`bodyPath(of:)`）。
+目前的地圖畫面是 **prototype**：SwiftUI Canvas 畫出方格，加上連續路網的俯視 debug 投影（沿取樣的中心線畫出邊與路網上的列車；高度只表現在由低到高的繪製順序與結構物的樣式：隧道是虛線、高架有陰影）。真正的 3D renderer、建造連續軌道的畫面與 spline 編輯器都還沒有開始；GameCore 只提供給 renderer 讀取的整數幾何查詢（`railwaySnapshot()`、`trackAlignment(of:)`、`trackGeometry(of:)`、`location(of:)`、`bodyPath(of:)`），它們是未來 3D renderer 的權威輸入。
 
 App 目前能做到：
 
@@ -36,6 +36,7 @@ GameCore 目前能做到：
 - 服務線路：依序的車站、營運時間，以及尖峰／離峰／低峰各跑幾台列車或目標班距；世界的服務日決定每分鐘是哪個等級。由地圖推導線路的來回行程、最多列車數（最短班距 2 分鐘）、實際列車數與班距
 - 自動派車：用 `assignTrain` 把列車交給線路後，線路每分鐘檢查一次：營運中、這個等級有車要跑、距上次發車已過一個班距、跑車中的列車少於該等級的列車數時，就讓停在第一站的列車跑一個來回（產生該趟的時刻表並啟動服務）。列車回到第一站後原地折返等待，減車時多出的列車就停在那裡；線路的列車不能手動設定時刻表或啟停服務
 - 連續軌道（Phase 4.5 Stage S3）：以整數世界座標（一格 1024 單位）建造節點，節點之間以直線或兩個整數控制點的三次曲線建造邊（`buildTrackNode`、`buildTrackEdge`）；長度與取樣由固定的整數規則推導。只有共用節點的邊才會相接，離開節點方向相反的邊端互通，所以道岔、平面交叉自然成立，平面上交叉但沒有共用節點的邊互不相干。列車可以放在邊上、沿邊移動（`setTrainContinuation(_:along:)`）、反向，車身跨越多條邊；同一個最短路徑搜尋同時服務方格與路網
+- 立體鐵路（Phase 4.5 Stage S4）：節點可以在地面上下 64 公尺（4096 單位）以內；邊沿水平里程有縱斷面（固定坡度，或兩端的拋物線豎曲線），最陡 40‰；結構物（地面、高架、橋、隧道）決定可以蓋的高度與費用。兩條鐵軌在平面上相遇時要相差 8 公尺以上（立體交叉，不共用資源），同一高度的交叉必須共用節點（平面交叉）。隧道口由邊推導；車站可以在路網上平坦的一段邊上有地面、高架或地下的月台（`addTrackPlatform`）。位置帶坡度（pitch），車身路徑是 3D 的
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -81,8 +82,8 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 ```
 Sources/GameCore/
   World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
-  Geometry/  WorldCoordinate / PlanPoint / PlanVector（整數世界座標）、TrackCurve 與 TrackGeometry（曲線的取樣、長度、位置）、FixedPoint（整數平方根等）
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、TrackGraph（TrackNodeID、TrackEdgeID、TrackTraversal）、RailwayNetwork（連續路網）、RailwayNetworkTrains（路網上的列車與 renderer 查詢）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
+  Geometry/  WorldCoordinate / PlanPoint / PlanVector（整數世界座標）、TrackCurve 與 TrackGeometry（曲線的取樣、長度、位置、高度與坡度）、TrackProfile（縱斷面、坡度、結構物）、TrackClearance（立體交叉的淨空）、FixedPoint（整數平方根等）
+  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、TrackGraph（TrackNodeID、TrackEdgeID、TrackTraversal）、RailwayNetwork（連續路網）、RailwayNetworkTrains（路網上的列車與 renderer 查詢）、TrackPlatform（路網上的月台）、RailwaySnapshot（給 renderer 的唯讀快照）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
@@ -128,7 +129,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 1. GitHub → **Actions** → 左側選 **Visual Smoke** → **Run workflow**（選擇分支）→ **Run workflow**
 2. 等待執行完成
 3. 打開該次執行的 Summary 頁面 → **Artifacts** → 下載 **visual-smoke**
-4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，用 Train 工具購買、放置並送出、正在行駛的一台列車，以及東側由四段曲線組成的連續軌道環線與在上面行駛的三節列車；iPhone 的畫面只看得到地圖的西側）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
+4. zip 內含 `iphone.png`、`ipad.png`（新遊戲）、`iphone-demo.png`、`ipad-demo.png`（示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站，用 Train 工具購買、放置並送出、正在行駛的一台列車，東側由四段曲線組成的連續軌道環線與在上面行駛的三節列車、跨越環線的高架，以及南側從地面經隧道口駛入隧道的三節列車；iPhone 的畫面只看得到地圖的西側）、`simulator.log`、`xcodebuild.log`、`simulators.txt` 與 App 的 stderr（`*-app-stderr.log`）；失敗時另附 crash report
 
 Artifact 只保留 7 天。只有在 workflow 檔已經存在於 `main` 時，GitHub 才會顯示 **Run workflow** 按鈕；修改 Visual Smoke workflow 或其腳本的 PR，每次推送都會自動執行。
 

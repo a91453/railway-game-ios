@@ -95,6 +95,35 @@ enum DemoLayout {
         try world.buildTrack(at: GridPosition(x: 5, y: 5), connections: [.north, .west])
 
         try buildLoop(in: &world)
+        try buildStructures(in: &world)
+    }
+
+    /// Track off the ground (Phase 4.5 Stage S4): a viaduct 512 up (8 m)
+    /// across the loop, and in the south a line that runs from the ground
+    /// through a portal into a tunnel falling at 1 in 25 to 512 down, with
+    /// surface track crossing over the deep part. A three-car train heads
+    /// into the tunnel.
+    private static func buildStructures(in world: inout GameWorld) throws(GameError) {
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 12 * 1_024, y: 7_680, z: 512))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 22 * 1_024, y: 7_680, z: 512))
+        try world.buildTrackEdge(from: west, to: east, structure: .elevated)
+
+        let start = try world.buildTrackNode(at: WorldCoordinate(x: 2 * 1_024, y: 16 * 1_024))
+        let portal = try world.buildTrackNode(at: WorldCoordinate(x: 8 * 1_024, y: 16 * 1_024))
+        let deep = try world.buildTrackNode(at: WorldCoordinate(x: 8 * 1_024 + 12_800, y: 16 * 1_024, z: -512))
+        let end = try world.buildTrackNode(at: WorldCoordinate(x: 28 * 1_024 + 512, y: 16 * 1_024, z: -512))
+        let approach = try world.buildTrackEdge(from: start, to: portal)
+        let falling = try world.buildTrackEdge(from: portal, to: deep, structure: .tunnel)
+        let level = try world.buildTrackEdge(from: deep, to: end, structure: .tunnel)
+        let north = try world.buildTrackNode(at: WorldCoordinate(x: 25 * 1_024, y: 13 * 1_024))
+        let south = try world.buildTrackNode(at: WorldCoordinate(x: 25 * 1_024, y: 20 * 1_024))
+        try world.buildTrackEdge(from: north, to: south)
+
+        let train = try world.purchaseTrain(named: "Mole")
+        try world.setTrainCars(train.id, to: 3)
+        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: approach, direction: .forward), offset: 4_096))
+        try world.setTrainContinuation(train.id, along: [falling, level].map { TrackTraversal(edge: $0, direction: .forward) })
+        try world.setTrainMovementRate(train.id, to: 256)
     }
 }
 #endif

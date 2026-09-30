@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 17,
+  "description": "Vertical railway (Phase 4.5 Stage S4). Node heights are z in world units (64 a metre), within 4096 of the ground (0). An edge's height follows its chainage: with no transitions one grade, R*s/L; with vertical curves T0 and T1, D = 2L - T0 - T1 and R*s^2/(T0*D), R*(2s - T0)/D, R*(T1*D - (L-s)^2)/(T1*D), each rounded half up. The steepest grade is 2R/D, at most 40 in 1000. Surface track stays within 128 of the ground, viaducts and bridges at or above it, tunnels at or below it; track costs 1, 3, 4 or 5 times the track price a tile. The ramp 1 (0 to 512 over 12800) is exactly 1 in 25; 513 is too steep. The eased ramp 2 (512 over 16384, curves of 2048) is 9 high 1024 along, 256 in the middle and 503 1024 from the end, 1 in 56 and 1 in 28. Where tracks meet in plan away from a shared node, one must be at least 512 above the other: surface track under ramp 1 (246 there) is refused; the tunnel at -512 passes 758 below it and 695 below ramp 2 (183 there), and surface track exactly 512 above the tunnel is allowed. Node 11 is a tunnel portal. Station Deep has a platform 1024 to 5120 along the level tunnel 6, at -512; platforms belong to the railway network, and their ends cut the edge's spans, but these two already fall on boundaries of edge 6 (7168, seven spans of 1024). Mole (3 cars) stands 1024 into the falling tunnel (-41) with its body over the portal, runs 15 minutes at 1000 to 3224 along the platform tunnel, whole along the platform, and turns round. High on ramp 1 at (8192, 4096, 246) stands right over Low in the tunnel at -512: they share no resource. Resources are nodes and spans of edges (Stage S3A): edges 1 and 5 (12800) are 13 spans, with boundaries at floor(k * 12800 / 13): 984, 1969, 2953, 3938, 4923, 5907, 6892 and on; edge 4 (4096) is four spans of 1024. Mole placed with its tail at 3072 on edge 4 touches a boundary and holds both spans there; at 3024 on edge 5 it covers 976 to 3024, four spans; High at 6144 holds 5907-6892.",
+  "initialState": {
+    "mapWidth": 32,
+    "mapHeight": 32,
+    "balance": 1000000,
+    "costs": { "track": 100, "station": 1000, "train": 500 },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrackNode", "x": 2048, "y": 4096, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 14848, "y": 4096, "z": 512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 14848, "y": 4096, "z": 513 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 100, "y": 100, "z": 4097 },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 1, "to": 3, "curve": { "type": "straight" }, "structure": "elevated" },
+      "expect": { "result": "trackTooSteep" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 1, "to": 2, "curve": { "type": "straight" }, "structure": "tunnel" },
+      "expect": { "result": "invalidTrackStructure" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 1, "to": 2, "curve": { "type": "straight" }, "structure": "elevated" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "edgeAlignment", "edge": 1 },
+      "expect": { "found": true, "alignment": { "structure": "elevated", "segments": [{ "kind": "up", "start": 0, "end": 12800 }], "steepest": { "rise": 1, "run": 25 } } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 1, "direction": "forward", "distance": 6400 },
+      "expect": { "found": true, "pose": { "x": 8448, "y": 4096, "z": 256, "dx": 12800, "dy": 0, "rise": 1, "run": 25 } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 1, "direction": "backward", "distance": 6400 },
+      "expect": { "found": true, "pose": { "x": 8448, "y": 4096, "z": 256, "dx": -12800, "dy": 0, "rise": -1, "run": 25 } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 1, "direction": "forward", "distance": 12801 },
+      "expect": { "found": false }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 2048, "y": 6144, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 18432, "y": 6144, "z": 512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 4, "to": 5, "curve": { "type": "straight" }, "profile": { "startTransition": 8192, "endTransition": 8193 }, "structure": "elevated" },
+      "expect": { "result": "invalidTrackGeometry" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 4, "to": 5, "curve": { "type": "straight" }, "profile": { "startTransition": 4096, "endTransition": 4096 }, "structure": "elevated" },
+      "expect": { "result": "trackTooSteep" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 4, "to": 5, "curve": { "type": "straight" }, "profile": { "startTransition": 2048, "endTransition": 2048 }, "structure": "elevated" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "edgeAlignment", "edge": 2 },
+      "expect": { "found": true, "alignment": { "structure": "elevated", "segments": [{ "kind": "transition", "start": 0, "end": 2048 }, { "kind": "up", "start": 2048, "end": 14336 }, { "kind": "transition", "start": 14336, "end": 16384 }], "steepest": { "rise": 1, "run": 28 } } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 2, "direction": "forward", "distance": 1024 },
+      "expect": { "found": true, "pose": { "x": 3072, "y": 6144, "z": 9, "dx": 16384, "dy": 0, "rise": 1, "run": 56 } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 2, "direction": "forward", "distance": 8192 },
+      "expect": { "found": true, "pose": { "x": 10240, "y": 6144, "z": 256, "dx": 16384, "dy": 0, "rise": 1, "run": 28 } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 2, "direction": "forward", "distance": 15360 },
+      "expect": { "found": true, "pose": { "x": 17408, "y": 6144, "z": 503, "dx": 16384, "dy": 0, "rise": 1, "run": 56 } }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8192, "y": 2048, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8192, "y": 14336, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8192, "y": 2048, "z": -512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 8192, "y": 14336, "z": -512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 6, "to": 7, "curve": { "type": "straight" } },
+      "expect": { "result": "trackConflict", "edge": 1 }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 8, "to": 9, "curve": { "type": "straight" }, "structure": "tunnel" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "edgeAlignment", "edge": 3 },
+      "expect": { "found": true, "alignment": { "structure": "tunnel", "segments": [{ "kind": "level", "start": 0, "end": 12288 }], "steepest": { "rise": 0, "run": 1 } } }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 2048, "y": 20480, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 6144, "y": 20480, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 18944, "y": 20480, "z": -512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 26112, "y": 20480, "z": -512 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 10, "to": 11, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 11, "to": 12, "curve": { "type": "straight" }, "structure": "tunnel" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 12, "to": 13, "curve": { "type": "straight" }, "structure": "tunnel" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "tunnelPortals" },
+      "expect": { "nodes": [11] }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 5, "direction": "forward", "distance": 12800 },
+      "expect": { "found": true, "pose": { "x": 18944, "y": 20480, "z": -512, "dx": 12800, "dy": 0, "rise": -1, "run": 25 } }
+    },
+    {
+      "observe": { "type": "edgePose", "edge": 5, "direction": "backward", "distance": 0 },
+      "expect": { "found": true, "pose": { "x": 18944, "y": 20480, "z": -512, "dx": -12800, "dy": 0, "rise": 1, "run": 25 } }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 4096, "y": 10240, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackNode", "x": 12288, "y": 10240, "z": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrackEdge", "from": 14, "to": 15, "curve": { "type": "straight" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Deep", "x": 0, "y": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "addTrackPlatform", "station": 1, "edge": 5, "start": 0, "end": 1024 },
+      "expect": { "result": "invalidPlatform" }
+    },
+    {
+      "command": { "type": "addTrackPlatform", "station": 1, "edge": 99, "start": 0, "end": 1024 },
+      "expect": { "result": "unknownTrackEdge", "edge": 99 }
+    },
+    {
+      "command": { "type": "addTrackPlatform", "station": 1, "edge": 6, "start": 1024, "end": 5120 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "addTrackPlatform", "station": 1, "edge": 6, "start": 5000, "end": 6000 },
+      "expect": { "result": "invalidPlatform" }
+    },
+    {
+      "command": { "type": "removeTrackPlatform", "station": 1, "edge": 6, "start": 1025 },
+      "expect": { "result": "invalidPlatform" }
+    },
+    {
+      "command": { "type": "removeTrackEdge", "edge": 6 },
+      "expect": { "result": "trackEdgeHasPlatform", "edge": 6 }
+    },
+    {
+      "observe": { "type": "platformLevels", "station": 1 },
+      "expect": { "levels": [{ "edge": 6, "start": 1024, "end": 5120, "height": -512, "structure": "tunnel" }] }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Mole" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainCars", "train": 1, "cars": 3 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "edge", "edge": 5, "direction": "forward", "offset": 1024 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "networkNode", "node": 11 }, { "type": "networkSpan", "edge": 4, "start": 2048, "end": 3072 }, { "type": "networkSpan", "edge": 4, "start": 3072, "end": 4096 }, { "type": "networkSpan", "edge": 5, "start": 0, "end": 984 }, { "type": "networkSpan", "edge": 5, "start": 984, "end": 1969 }] }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 1 },
+      "expect": { "points": [{ "x": 7168, "y": 20480, "z": -41 }, { "x": 6144, "y": 20480, "z": 0 }, { "x": 5120, "y": 20480, "z": 0 }] }
+    },
+    {
+      "command": { "type": "setTrainPath", "train": 1, "path": [{ "edge": 6, "direction": "forward" }] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1000 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 5, "direction": "forward", "offset": 3024 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [6] } }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 1 },
+      "expect": { "resources": [{ "type": "networkSpan", "edge": 5, "start": 0, "end": 984 }, { "type": "networkSpan", "edge": 5, "start": 984, "end": 1969 }, { "type": "networkSpan", "edge": 5, "start": 1969, "end": 2953 }, { "type": "networkSpan", "edge": 5, "start": 2953, "end": 3938 }] }
+    },
+    {
+      "observe": { "type": "trackPlatformsAlongTrain", "train": 1 },
+      "expect": { "trackPlatforms": [] }
+    },
+    {
+      "command": { "type": "advance", "ticks": 13 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 6, "direction": "forward", "offset": 3224 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] } }
+    },
+    {
+      "observe": { "type": "trackPlatformsAlongTrain", "train": 1 },
+      "expect": { "trackPlatforms": [{ "station": 1, "edge": 6, "start": 1024, "end": 5120 }] }
+    },
+    {
+      "command": { "type": "reverseTrain", "train": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "train", "train": 1 },
+      "expect": { "position": { "type": "edge", "edge": 6, "direction": "backward", "offset": 5992 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] } }
+    },
+    {
+      "observe": { "type": "trackPlatformsAlongTrain", "train": 1 },
+      "expect": { "trackPlatforms": [{ "station": 1, "edge": 6, "start": 1024, "end": 5120 }] }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 1 },
+      "expect": { "points": [{ "x": 20120, "y": 20480, "z": -512 }, { "x": 22168, "y": 20480, "z": -512 }] }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "High" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Low" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 3, "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 2048 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 2 },
+      "expect": { "points": [{ "x": 8192, "y": 4096, "z": 246 }] }
+    },
+    {
+      "observe": { "type": "bodyPath", "train": 3 },
+      "expect": { "points": [{ "x": 8192, "y": 4096, "z": -512 }] }
+    },
+    {
+      "observe": { "type": "occupancy", "train": 2 },
+      "expect": { "resources": [{ "type": "networkSpan", "edge": 1, "start": 5907, "end": 6892 }] }
+    },
+    {
+      "observe": { "type": "conflicts" },
+      "expect": { "conflicts": [] }
+    },
+    {
+      "observe": { "type": "trackPlatformsAlongTrain", "train": 2 },
+      "expect": { "trackPlatforms": [] }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 15,
+    "speed": "normal",
+    "balance": 971600,
+    "stations": [
+      { "id": 1, "name": "Deep", "x": 0, "y": 0, "annexes": [] }
+    ],
+    "tracks": [],
+    "trains": [
+      { "id": 1, "name": "Mole", "position": { "type": "edge", "edge": 6, "direction": "backward", "offset": 5992 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 3, "trail": [], "trailEdges": [] },
+      { "id": 2, "name": "High", "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [] },
+      { "id": 3, "name": "Low", "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 2048 }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [] }
+    ],
+    "lines": [],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
+    "network": {
+      "nodes": [
+        { "id": 1, "x": 2048, "y": 4096, "z": 0 },
+        { "id": 2, "x": 14848, "y": 4096, "z": 512 },
+        { "id": 3, "x": 14848, "y": 4096, "z": 513 },
+        { "id": 4, "x": 2048, "y": 6144, "z": 0 },
+        { "id": 5, "x": 18432, "y": 6144, "z": 512 },
+        { "id": 6, "x": 8192, "y": 2048, "z": 0 },
+        { "id": 7, "x": 8192, "y": 14336, "z": 0 },
+        { "id": 8, "x": 8192, "y": 2048, "z": -512 },
+        { "id": 9, "x": 8192, "y": 14336, "z": -512 },
+        { "id": 10, "x": 2048, "y": 20480, "z": 0 },
+        { "id": 11, "x": 6144, "y": 20480, "z": 0 },
+        { "id": 12, "x": 18944, "y": 20480, "z": -512 },
+        { "id": 13, "x": 26112, "y": 20480, "z": -512 },
+        { "id": 14, "x": 4096, "y": 10240, "z": 0 },
+        { "id": 15, "x": 12288, "y": 10240, "z": 0 }
+      ],
+      "edges": [
+        { "id": 1, "from": 1, "to": 2, "curve": { "type": "straight" }, "length": 12800, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "elevated" },
+        { "id": 2, "from": 4, "to": 5, "curve": { "type": "straight" }, "length": 16384, "profile": { "startTransition": 2048, "endTransition": 2048 }, "structure": "elevated" },
+        { "id": 3, "from": 8, "to": 9, "curve": { "type": "straight" }, "length": 12288, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "tunnel" },
+        { "id": 4, "from": 10, "to": 11, "curve": { "type": "straight" }, "length": 4096, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" },
+        { "id": 5, "from": 11, "to": 12, "curve": { "type": "straight" }, "length": 12800, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "tunnel" },
+        { "id": 6, "from": 12, "to": 13, "curve": { "type": "straight" }, "length": 7168, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "tunnel" },
+        { "id": 7, "from": 14, "to": 15, "curve": { "type": "straight" }, "length": 8192, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" }
+      ],
+      "platforms": [{ "station": 1, "edge": 6, "start": 1024, "end": 5120 }]
+    }
+  }
+}

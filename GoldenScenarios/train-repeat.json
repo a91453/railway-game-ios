@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "description": "Turning round and repeating timetables on a line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1)-g(6,1) with dead ends at both ends, where a route never turns straight back. Alpha(1,0) has platform b, Beta(3,0) d, Gamma(5,0) f. A stop with reverse true turns the train round as the service leaves it, before the route to the next call is looked up. A repeating timetable runs its stops cycle after cycle, cycle k shifted k periods later; after its last stop the next call is stop 0 of the next cycle. A period must be at least 1 and no shorter than the span from the first arrival to the last departure, and needs a stop; it is checked with the times, before the stations. Shuttle (rate 1024, one link a minute) runs Alpha 0-0, Gamma 4-6 turning, Alpha 10-12 turning, every 12 minutes: at Gamma at 4, leaves at 6 facing west, at Alpha at 10; leaving Alpha at 12 turns it east, reaches stop 0 of cycle 1 at once (it is already at Alpha) and leaves it in the same step; at minute 1000 = 83 x 12 + 4 cycle 83 has just reached Gamma, and by 1011 cycle 84 has left Alpha at 1008 and is at e. While it runs, setTrainTimetable is refused. Late is placed at Beta facing east at minute 1000 and runs Beta 0-5 turning, Alpha 7-9 turning, every 20: a repeating service starts in the first cycle whose first departure is not before now, cycle 50 (Beta left at 1005); it reaches Alpha at 1007, leaves at 1009 turned east, and travels to stop 0 of cycle 51, reaching Beta at 1011.",
   "initialState": {
     "mapWidth": 8,
@@ -215,6 +215,6 @@
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

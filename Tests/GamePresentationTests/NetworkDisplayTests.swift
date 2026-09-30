@@ -2,7 +2,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Stage S3: the continuous track network on the prototype map, a
+/// Stages S3 and S4: the continuous track network on the prototype map, a
 /// top-down projection of GameCore's world coordinates, and its messages.
 final class NetworkDisplayTests: XCTestCase {
     /// A west–east edge of 2048 along row 1 and a three-car train on it.
@@ -41,6 +41,19 @@ final class NetworkDisplayTests: XCTestCase {
         XCTAssertTrue(MapScale.facing(of: position) == (1, 0))
     }
 
+    func testTrainsOffTheGroundAreDrawnWhereTheyAreSeenFromAbove() throws {
+        var world = try makeWorld(width: 8, height: 6, balance: 1_000_000)
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536, z: 512))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 6_656, y: 1_536, z: 512))
+        let viaduct = try world.buildTrackEdge(from: a, to: b, structure: .elevated)
+        let train = try world.purchaseTrain(named: "High")
+        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: viaduct, direction: .forward), offset: 1_024))
+        let position = try XCTUnwrap(world.train(id: train.id)?.position)
+        // Height does not move a point seen from above.
+        XCTAssertTrue(MapScale.center(of: position, in: world, tileSize: 32) == (48, 48))
+        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 1_536, z: 512), tileSize: 32) == (48, 48))
+    }
+
     func testNetworkPositionsAndRefusalsReadInWords() throws {
         let (world, _, id) = try makeNetworkWorld()
         XCTAssertEqual(world.train(id: id)?.positionText, "Edge #2 forward, 1024 units along")
@@ -49,6 +62,12 @@ final class NetworkDisplayTests: XCTestCase {
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage, "Track still ends at node #2. Remove that track first.")
         XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage, "A train is on edge #2. Take the train off the track first.")
         XCTAssertFalse(GameError.invalidTrackGeometry.playerMessage.isEmpty)
+        // Stage S4: grades, structures, clearance and platforms.
+        XCTAssertEqual(GameError.trackConflict(.edge(4)).playerMessage, "That track would cross edge #4 without 8 m between them. Pass over or under it, or cross at a shared node.")
+        XCTAssertEqual(GameError.trackEdgeHasPlatform(.edge(5)).playerMessage, "A station has a platform on edge #5. Remove the platform first.")
+        for error in [GameError.trackTooSteep, .invalidTrackStructure, .invalidPlatform] {
+            XCTAssertFalse(error.playerMessage.isEmpty)
+        }
         XCTAssertEqual(TrackNodeID.tile(GridPosition(x: 1, y: 2)).displayText, "Tile (1, 2)")
         XCTAssertEqual(TrackEdgeID.link(GridPosition(x: 1, y: 2), GridPosition(x: 2, y: 2)).displayText, "Link (1, 2)–(2, 2)")
     }

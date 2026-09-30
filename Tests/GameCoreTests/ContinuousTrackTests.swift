@@ -126,7 +126,10 @@ final class ContinuousTrackTests: XCTestCase {
         let p = WorldCoordinate(x: 0, y: 0)
         let q = WorldCoordinate(x: 1_024, y: 0)
         XCTAssertNil(TrackGeometry(from: p, to: p, curve: .straight), "no length")
-        XCTAssertNil(TrackGeometry(from: p, to: WorldCoordinate(x: 1_024, y: 0, z: 64), curve: .straight), "not level (Stage S4)")
+        // Stage S4: ends at different heights make a slope; ends at one place
+        // in plan make no edge, whatever their heights.
+        XCTAssertEqual(TrackGeometry(from: p, to: WorldCoordinate(x: 1_024, y: 0, z: 64), curve: .straight)?.length, 1_024)
+        XCTAssertNil(TrackGeometry(from: p, to: WorldCoordinate(x: 0, y: 0, z: 512), curve: .straight), "straight up")
         XCTAssertNil(TrackGeometry(from: p, to: q, curve: .cubic(PlanPoint(x: 0, y: 0), PlanPoint(x: 512, y: 0))), "leaves in no direction")
         XCTAssertNil(TrackGeometry(from: p, to: q, curve: .cubic(PlanPoint(x: 512, y: 0), PlanPoint(x: 1_024, y: 0))), "arrives from no direction")
         // Handles pointing back make the line double back: a cusp.
@@ -180,7 +183,9 @@ final class ContinuousTrackTests: XCTestCase {
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 512, y: 512)) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 0)) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: -1, y: 0)) }
-        refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: 1)) }
+        // Stage S4: 4096 above or below the ground at most.
+        refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: 4_097)) }
+        refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -4_097)) }
         refused(.unknownTrackNode(.node(9))) { _ = try $0.buildTrackEdge(from: .node(9), to: .node(8)) }
         refused(.unknownTrackNode(.node(8))) { _ = try $0.buildTrackEdge(from: a, to: .node(8)) }
         refused(.unknownTrackNode(.tile(GridPosition(x: 0, y: 0)))) { _ = try $0.buildTrackEdge(from: a, to: .tile(GridPosition(x: 0, y: 0))) }
@@ -218,13 +223,18 @@ final class ContinuousTrackTests: XCTestCase {
 
     func testEdgesThatCrossInPlanWithoutANodeNeverMeet() throws {
         var world = try makeWorld()
-        // An X: west–east and north–south, crossing at (4096, 4096).
-        let w = try node(2_048, 4_096, in: &world)
-        let e = try node(6_144, 4_096, in: &world)
+        // An X: west–east and north–south, crossing at (4096, 4096). Since
+        // Stage S4 two tracks may only cross that way one over the other
+        // (decision 30): at one height it is refused.
         let n = try node(4_096, 2_048, in: &world)
         let s = try node(4_096, 6_144, in: &world)
-        let we = try world.buildTrackEdge(from: w, to: e)
         let ns = try world.buildTrackEdge(from: n, to: s)
+        let lowWest = try node(2_048, 4_096, in: &world)
+        let lowEast = try node(6_144, 4_096, in: &world)
+        XCTAssertThrowsError(try world.buildTrackEdge(from: lowWest, to: lowEast)) { XCTAssertEqual($0 as? GameError, .trackConflict(ns)) }
+        let w = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 4_096, z: 512))
+        let e = try world.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 4_096, z: 512))
+        let we = try world.buildTrackEdge(from: w, to: e, structure: .elevated)
         XCTAssertEqual(world.transitions(after: forward(we)), [])
         XCTAssertEqual(world.transitions(after: forward(ns)), [])
         try world.purchaseTrain(named: "A")
@@ -677,7 +687,7 @@ final class ContinuousTrackTests: XCTestCase {
         }
         refused({ $0["network"] = NSNull() }, "an explicit null network")
         refused(node(0, "x", 16_384), "off the map")
-        refused(node(0, "z", 1), "off the ground")
+        refused(node(0, "z", 4_097), "beyond the heights track may have (Stage S4)")
         refused(node(0, "x", Int64(1) << 40), "beyond the limit")
         refused(node(1, "x", 512), "two nodes at one point")
         refused(node(1, "id", 1), "IDs not ascending")

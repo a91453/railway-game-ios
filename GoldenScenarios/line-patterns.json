@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "description": "Patterns on the line a(0,1)-...-i(8,1), dead ends at both ends; A(1,0) has platform (1,1), B(3,0) (3,1), C(5,0) (5,1), D(7,0) (7,1). Main calls at A, B, C, D, one link a minute: round trip 12 minutes of travel, 1 at B and C each way and 2 at each end, 20; peak 5 trains 4 apart, off-peak 2 (10 apart), low none. Pattern 0 is a short working B-C (round trip 8, at most 4 trains); pattern 1 an express A-D that passes B and C (6 minutes each way, round trip 16, at most 8). addLinePattern needs two calls or more, rising, each a stop of the line; setLineStops may not leave a pattern calling past the new last stop. A segment carries at most 720 trains a day each way (one every 2 minutes); a service puts a day's trains at its headway, rounded up, on each segment from its first call to its last, and the services claim room in order, the line's own first. At peak Main puts 360 on every segment; pattern 0 would run 4 trains 2 apart (720) on B-C, but only 360 is left there, so it runs 2, 4 apart; nothing is left on B-C for the express, which runs none. Off-peak: Main 144, pattern 0 one train 8 apart (180), the express one train 16 apart (90). Low: Main runs none; pattern 0 keeps a 20-minute target, one train (72), so A-B and C-D are not covered. Shuttle, at B facing east on pattern 0, leaves at 480 and every 7 minutes (a 6-minute trip, its service ending on its return, sent out again the next minute) until 599. The express waits through the peak and leaves A at 600, off-peak, with a timetable calling only at A and D. Removing pattern 0 at 601 takes Shuttle off the line; it finishes its trip as an ordinary service at 605. The express becomes pattern 0.",
   "initialState": {
     "mapWidth": 9,
@@ -337,6 +337,6 @@
       { "id": 1, "name": "Main", "stops": [1, 2, 3, 4], "rate": 1024, "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 5, "offPeak": 2, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [{ "calls": [0, 3], "trainsInService": { "peak": 2, "offPeak": 1, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [2], "lastDispatch": 600 }] }
     ],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [] }
+    "network": { "nodes": [], "edges": [], "platforms": [] }
   }
 }

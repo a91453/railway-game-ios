@@ -182,10 +182,10 @@ public struct GameWorld: Equatable, Sendable {
     /// in order from 1 and never reused.
     ///
     /// The node must lie on the map (`0 <= x < width × 1024` and
-    /// `0 <= y < height × 1024`; see ``WorldCoordinate``), at ground level
-    /// (`z == 0`: elevation comes with Stage S4), where no node stands yet.
-    /// The network does not interact with the grid: a node can stand over
-    /// any tile.
+    /// `0 <= y < height × 1024`; see ``WorldCoordinate``), at a height in
+    /// ``RailwayNetwork/heightRange`` (Stage S4; 0 is the ground), where no
+    /// node stands yet. The network does not interact with the grid: a
+    /// node can stand over any tile.
     ///
     /// - Throws, checked in this order: ``GameError/invalidTrackGeometry``
     ///   or ``GameError/idsExhausted``.
@@ -198,34 +198,48 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Builds an edge of the track network from node `from` to node `to`,
-    /// shaped in plan by `curve` (Phase 4.5 Stage S3), and charges
-    /// ``ConstructionCosts/track`` for every tile of its length (1024 units),
-    /// rounded up. Returns the new edge's ID, ``TrackEdgeID/edge(_:)``,
-    /// numbered in order from 1 and never reused.
+    /// shaped in plan by `curve` (Phase 4.5 Stage S3) and in height by
+    /// `profile`, carried by `structure` (Stage S4), and charges
+    /// ``ConstructionCosts/track`` times the structure's
+    /// ``TrackStructure/costFactor`` for every tile of its length (1024
+    /// units), rounded up. Returns the new edge's ID,
+    /// ``TrackEdgeID/edge(_:)``, numbered in order from 1 and never reused.
     ///
-    /// The edge's length and centre line are worked out from its end nodes
-    /// and curve (see ``TrackGeometry``); its control points must lie on the
-    /// map. Which edges it joins at each end follows from the way it leaves
-    /// the node (see ``TrackNodeEnd``): an edge that meets others at an
-    /// angle joins none of them there. Edges that cross in plan without a
-    /// shared node never join. Several edges may join the same two nodes.
+    /// The edge's length, centre line and heights are worked out from its
+    /// end nodes, curve and profile (see ``TrackGeometry``); its control
+    /// points must lie on the map. Which edges it joins at each end follows
+    /// from the way it leaves the node (see ``TrackNodeEnd``): an edge that
+    /// meets others at an angle joins none of them there. Edges that cross
+    /// in plan without a shared node never join, and must pass one over the
+    /// other (see ``TrackClearance``). Several edges may join the same two
+    /// nodes.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)``
     ///   for `from`, then for `to`; ``GameError/invalidTrackGeometry`` (the
-    ///   same node twice, a control point off the map, or a curve that does
-    ///   not make an edge); ``GameError/idsExhausted``; or
+    ///   same node twice, a control point off the map, or a curve or profile
+    ///   that does not make an edge); ``GameError/trackTooSteep``;
+    ///   ``GameError/invalidTrackStructure``;
+    ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
+    ///   would meet without clearance; ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
-    public mutating func buildTrackEdge(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight) throws(GameError) -> TrackEdgeID {
+    public mutating func buildTrackEdge(
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface
+    ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
         guard from != to, curve.controlPoints.allSatisfy(isOnMap),
-              let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve)
+              let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
+        guard structure.allows(height: start.position.z), structure.allows(height: end.position.z) else { throw .invalidTrackStructure }
+        if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
+            throw .trackConflict(other)
+        }
         let (_, next) = try Self.allocateID(from: network.nextEdgeNumber)
-        try economy.spend(try edgeCost(length: geometry.length))
+        try economy.spend(try edgeCost(length: geometry.length, structure: structure))
 
-        return network.addEdge(from: from, to: to, curve: curve, geometry: geometry, next: next)
+        return network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
     }
 
     /// Removes edge `id` of the track network (Stage S3). Removal is free and
@@ -234,15 +248,18 @@ public struct GameWorld: Equatable, Sendable {
     /// and waits there: IDs are never reused, so give that train a new
     /// continuation.
     ///
-    /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``
-    ///   or ``GameError/trackEdgeInUse(_:)`` while a placed train's head or
-    ///   body is on it (unplace the train first).
+    /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
+    ///   ``GameError/trackEdgeInUse(_:)`` while a placed train's head or
+    ///   body is on it (unplace the train first); or
+    ///   ``GameError/trackEdgeHasPlatform(_:)`` while a station has a
+    ///   platform on it (Stage S4).
     public mutating func removeTrackEdge(_ id: TrackEdgeID) throws(GameError) {
         guard network.edge(id) != nil else { throw .unknownTrackEdge(id) }
         guard !trains.contains(where: { train in
             if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
             return train.trailEdges.contains(id)
         }) else { throw .trackEdgeInUse(id) }
+        guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
 
         network.removeEdge(id)
     }
@@ -259,9 +276,66 @@ public struct GameWorld: Equatable, Sendable {
         network.removeNode(id)
     }
 
-    /// Whether a node at `position` would lie on the map, at ground level.
+    /// Adds a platform to the railway network for station `id`, along edge
+    /// `edge` from `start` to `end` measured from the edge's `from` node
+    /// (Phase 4.5 Stage S4). Free: the station has been paid for. A station
+    /// may have any number of platforms, straight or curved, at different
+    /// levels (surface, elevated, underground); each platform's level is its
+    /// edge's height and structure there. Its ends cut the edge's resource
+    /// spans (see ``trackSpans(of:)``).
+    ///
+    /// The stretch must lie within the edge (`0 <= start < end <= length`),
+    /// be level (the edge's height at `start` and at `end` is the same, and
+    /// heights never turn back along an edge), and not overlap another
+    /// platform on the edge, of this station or another.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   ``GameError/unknownTrackEdge(_:)`` (a grid link has its own
+    ///   platforms); or ``GameError/invalidPlatform``.
+    public mutating func addTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64, to end: Int64) throws(GameError) {
+        guard station(id: id) != nil else { throw .unknownStation(id) }
+        guard network.edge(edge) != nil else { throw .unknownTrackEdge(edge) }
+        let platform = TrackPlatform(station: id, edge: edge, start: start, end: end)
+        guard isValidPlatform(platform), !network.platforms.contains(where: { $0.overlaps(platform) }) else {
+            throw .invalidPlatform
+        }
+
+        network.addPlatform(platform)
+    }
+
+    /// Removes station `id`'s platform on edge `edge` that starts at `start`
+    /// (Stage S4). Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
+    ///   ``GameError/invalidPlatform`` when the station has no such platform.
+    public mutating func removeTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64) throws(GameError) {
+        guard station(id: id) != nil else { throw .unknownStation(id) }
+        guard let index = network.platforms.firstIndex(where: { $0.station == id && $0.edge == edge && $0.start == start }) else {
+            throw .invalidPlatform
+        }
+
+        network.removePlatform(at: index)
+    }
+
+    /// The platforms of station `id` on the track network, in order along
+    /// the track (Stage S4); empty for none or an unknown station. Its grid
+    /// platforms are ``platforms(of:)``.
+    public func trackPlatforms(of id: StationID) -> [TrackPlatform] {
+        network.platforms(of: id)
+    }
+
+    /// Whether `platform` fits its edge: the edge exists, the stretch lies
+    /// within it and is level.
+    private func isValidPlatform(_ platform: TrackPlatform) -> Bool {
+        guard let geometry = network.geometry(of: platform.edge) else { return false }
+        return 0 <= platform.start && platform.start < platform.end && platform.end <= geometry.length
+            && geometry.height(at: platform.start) == geometry.height(at: platform.end)
+    }
+
+    /// Whether a node at `position` would lie on the map, at a height in
+    /// ``RailwayNetwork/heightRange``.
     private func isOnMap(_ position: WorldCoordinate) -> Bool {
-        position.z == 0 && isOnMap(position.plan)
+        RailwayNetwork.heightRange.contains(position.z) && isOnMap(position.plan)
     }
 
     /// Whether `point` lies over the map: `0 <= x < width × 1024` and
@@ -270,16 +344,19 @@ public struct GameWorld: Equatable, Sendable {
         point.x >= 0 && point.y >= 0 && point.x < Int64(map.width) * WorldCoordinate.tileSize && point.y < Int64(map.height) * WorldCoordinate.tileSize
     }
 
-    /// What an edge `length` long costs: ``ConstructionCosts/track`` for
-    /// every tile of its length, rounded up, and at least one.
+    /// What an edge `length` long on `structure` costs:
+    /// ``ConstructionCosts/track`` times the structure's
+    /// ``TrackStructure/costFactor`` for every tile of its length, rounded
+    /// up, and at least one.
     ///
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
     ///   the price does not even fit in a ``Money``, so no balance could pay
     ///   it; `required` is then the largest amount there is.
-    private func edgeCost(length: Int64) throws(GameError) -> Money {
+    private func edgeCost(length: Int64, structure: TrackStructure) throws(GameError) -> Money {
         let tiles = max(1, (length + WorldCoordinate.tileSize - 1) / WorldCoordinate.tileSize)
-        let (price, overflow) = economy.costs.track.amount.multipliedReportingOverflow(by: tiles)
-        guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+        let (units, overflowFactor) = tiles.multipliedReportingOverflow(by: structure.costFactor)
+        let (price, overflow) = economy.costs.track.amount.multipliedReportingOverflow(by: units)
+        guard !overflowFactor, !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
         return Money(price)
     }
 
@@ -1639,12 +1716,16 @@ extension GameWorld: Codable {
         guard network.tracks.allSatisfy({ map.tile(at: $0.position)?.type == .empty }) else {
             return "Grid track lies off the map or on a station."
         }
-        // Stage S3: the network lies over the map, at ground level.
+        // Stage S3: the network lies over the map; Stage S4: at the heights
+        // a world allows.
         guard network.nodes.allSatisfy({ isOnMap($0.position) }) else {
-            return "A track node lies off the map or off the ground."
+            return "A track node lies off the map or beyond the heights track may have."
         }
         guard network.edges.allSatisfy({ $0.curve.controlPoints.allSatisfy(isOnMap) }) else {
             return "A track edge's curve leaves the map."
+        }
+        if let problem = networkRuleProblem() {
+            return problem
         }
         for train in trains {
             if let position = train.position, !isOnTrack(position) {
@@ -1672,6 +1753,38 @@ extension GameWorld: Codable {
             }
             if let problem = serviceProblem(of: train) {
                 return problem
+            }
+        }
+        return nil
+    }
+
+    /// Why the track network breaks a Stage S4 rule, or `nil`: an edge
+    /// steeper than the maximum grade or on a structure that cannot carry it
+    /// at its heights, two edges meeting without clearance, or a platform
+    /// that does not fit its edge or overlaps another.
+    private func networkRuleProblem() -> String? {
+        var geometries: [TrackGeometry] = []
+        for edge in network.edges {
+            guard let geometry = network.geometry(of: edge.id) else { return "Track edge \(edge.id) has no geometry." }
+            geometries.append(geometry)
+            guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else {
+                return "Track edge \(edge.id) is steeper than the maximum grade."
+            }
+            guard edge.structure.allows(height: geometry.startHeight), edge.structure.allows(height: geometry.endHeight) else {
+                return "Track edge \(edge.id)'s structure cannot carry it at its heights."
+            }
+        }
+        if let (a, b) = network.firstConflictingPair(geometries: geometries) {
+            return "Track edges \(a) and \(b) meet without clearance."
+        }
+        // The network's decoder has checked the platforms are in order and
+        // do not overlap.
+        for platform in network.platforms {
+            guard station(id: platform.station) != nil else {
+                return "A platform belongs to station \(platform.station.rawValue), which does not exist."
+            }
+            guard isValidPlatform(platform) else {
+                return "Station \(platform.station.rawValue) has a platform that does not fit its edge."
             }
         }
         return nil

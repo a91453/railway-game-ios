@@ -48,13 +48,14 @@ extension GameWorld {
         }
     }
 
-    /// The centre line of edge `id` (see ``TrackGeometry``), or `nil` if
-    /// there is no such edge. Worked out on each call from the edge's
-    /// integers: an edge never changes and its ID is never reused, so a
-    /// renderer can keep the result for as long as the edge exists.
+    /// The centre line of edge `id` (see ``TrackGeometry``), with its
+    /// heights, or `nil` if there is no such edge. Worked out on each call
+    /// from the edge's integers: an edge never changes and its ID is never
+    /// reused, so a renderer can keep the result for as long as the edge
+    /// exists.
     public func trackGeometry(of id: TrackEdgeID) -> TrackGeometry? {
         guard let edge = trackEdge(id), let from = trackNodePosition(edge.from), let to = trackNodePosition(edge.to) else { return nil }
-        return TrackGeometry(from: from, to: to, curve: edge.curve)
+        return TrackGeometry(from: from, to: to, curve: edge.curve, profile: edge.profile)
     }
 
     /// Where node `id` stands, or `nil` if there is no such node.
@@ -229,7 +230,7 @@ extension GameWorld {
             let (low, high) = stretch.traversal.direction == .forward
                 ? (stretch.from, stretch.to)
                 : (edge.length - stretch.to, edge.length - stretch.from)
-            for span in RailwayNetwork.spans(of: edge.id, length: edge.length) {
+            for span in network.spans(of: edge.id, length: edge.length) {
                 let a = max(low, span.start)
                 let b = min(high, span.end)
                 // Some point of both, strictly between the edge's ends.
@@ -243,11 +244,12 @@ extension GameWorld {
 
     /// The spans of edge `id` of the railway graph, from its `from` node to
     /// its `to` node (see ``RailwayNetwork/spans(of:length:)``): one for a
-    /// grid link, one for every tile's length or less of a network edge.
-    /// Empty if there is no such edge.
+    /// grid link, one for every tile's length or less of a network edge,
+    /// cut again at the ends of its platforms (Stage S4). Empty if there is
+    /// no such edge.
     public func trackSpans(of id: TrackEdgeID) -> [TrackSpan] {
         guard let edge = trackEdge(id) else { return [] }
-        return RailwayNetwork.spans(of: id, length: edge.length)
+        return network.spans(of: id, length: edge.length)
     }
 
     /// The traversals train `id` will enter after the one it is on, in

@@ -33,6 +33,13 @@ extension ReferenceWorld {
         /// The way the edge leaves its `from` node, and its `to` node.
         var leavesFrom: PlanVector
         var leavesTo: PlanVector
+        /// Decision 30: the heights of its ends, its vertical curves and
+        /// what carries it.
+        var startHeight: Int64 = 0
+        var endHeight: Int64 = 0
+        var startTransition: Int64 = 0
+        var endTransition: Int64 = 0
+        var structure: TrackStructure = .surface
 
         var length: Int64 {
             distances[distances.count - 1]
@@ -193,14 +200,19 @@ extension ReferenceWorld {
     // MARK: - Commands
 
     mutating func buildNetworkNode(at position: WorldCoordinate) -> GameError? {
-        guard position.z == 0, overMap(position.plan), !networkNodes.values.contains(position) else { return .invalidTrackGeometry }
+        // Decision 30: 4096 above or below the ground.
+        guard position.z >= -4_096, position.z <= 4_096, overMap(position.plan), !networkNodes.values.contains(position) else {
+            return .invalidTrackGeometry
+        }
         guard nextNetworkNode != Int.max else { return .idsExhausted }
         networkNodes[nextNetworkNode] = position
         nextNetworkNode += 1
         return nil
     }
 
-    mutating func buildNetworkEdge(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve) -> GameError? {
+    mutating func buildNetworkEdge(
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile = TrackProfile(), structure: TrackStructure = .surface
+    ) -> GameError? {
         guard case .node(let a) = from, let start = networkNodes[a] else { return .unknownTrackNode(from) }
         guard case .node(let b) = to, let end = networkNodes[b] else { return .unknownTrackNode(to) }
         let controls: [PlanPoint]
@@ -208,11 +220,37 @@ extension ReferenceWorld {
         case .straight: controls = []
         case .cubic(let c1, let c2): controls = [c1, c2]
         }
-        guard a != b, controls.allSatisfy(overMap), let line = Self.centreLine(start.plan, end.plan, curve) else { return .invalidTrackGeometry }
+        guard a != b, start.plan != end.plan, controls.allSatisfy(overMap), let line = Self.centreLine(start.plan, end.plan, curve) else {
+            return .invalidTrackGeometry
+        }
+        let length = line.distances.last!
+        let (t0, t1) = (profile.startTransition, profile.endTransition)
+        let rise = end.z - start.z
+        // Decision 30: transitions fit within the edge, and a level edge has
+        // none.
+        guard t0 >= 0, t1 >= 0, t0 + t1 <= length, rise != 0 || (t0 == 0 && t1 == 0) else { return .invalidTrackGeometry }
+        // The steady grade 2R / (2L − T₀ − T₁) is at most 40 / 1000.
+        guard 2 * abs(rise) * 1_000 <= 40 * (2 * length - t0 - t1) else { return .trackTooSteep }
+        guard Self.carries(structure, start.z), Self.carries(structure, end.z) else { return .invalidTrackStructure }
+        var edge = NetworkEdge(from: a, to: b, curve: curve, points: line.points, distances: line.distances, leavesFrom: PlanVector(dx: 0, dy: 0), leavesTo: PlanVector(dx: 0, dy: 0))
+        edge.startHeight = start.z
+        edge.endHeight = end.z
+        edge.startTransition = t0
+        edge.endTransition = t1
+        edge.structure = structure
+        if let other = networkEdges.keys.sorted().first(where: { !Self.clear(edge, networkEdges[$0]!) }) {
+            return .trackConflict(.edge(other))
+        }
         guard nextNetworkEdge != Int.max else { return .idsExhausted }
-        let tiles = max(1, (line.distances.last! + 1023) / 1024)
-        if let error = funds(costs.track * tiles) { return error }
-        balance -= costs.track * tiles
+        let factor: Int64 = switch structure {
+        case .surface: 1
+        case .elevated: 3
+        case .bridge: 4
+        case .tunnel: 5
+        }
+        let price = costs.track * factor * max(1, (length + 1023) / 1024)
+        if let error = funds(price) { return error }
+        balance -= price
         let (leavesFrom, leavesTo): (PlanVector, PlanVector)
         switch curve {
         case .straight:
@@ -222,9 +260,9 @@ extension ReferenceWorld {
             leavesFrom = PlanVector(dx: c1.x - start.x, dy: c1.y - start.y)
             leavesTo = PlanVector(dx: c2.x - end.x, dy: c2.y - end.y)
         }
-        networkEdges[nextNetworkEdge] = NetworkEdge(
-            from: a, to: b, curve: curve, points: line.points, distances: line.distances, leavesFrom: leavesFrom, leavesTo: leavesTo
-        )
+        edge.leavesFrom = leavesFrom
+        edge.leavesTo = leavesTo
+        networkEdges[nextNetworkEdge] = edge
         nextNetworkEdge += 1
         return nil
     }
@@ -236,6 +274,7 @@ extension ReferenceWorld {
             return train.trailEdges.contains(number)
         }
         guard !used else { return .trackEdgeInUse(id) }
+        guard !stations.contains(where: { $0.trackPlatforms.contains { $0.edge == id } }) else { return .trackEdgeHasPlatform(id) }
         networkEdges[number] = nil
         return nil
     }
@@ -408,7 +447,7 @@ extension ReferenceWorld {
             if tail <= span.start && span.start <= head { found.insert(.node(.node(startNode(run)))) }
             if tail <= span.end && span.end <= head { found.insert(.node(.node(endNode(run)))) }
             let length = span.end - span.start
-            for piece in Self.resourceSpans(length: length) {
+            for piece in resourceSpans(of: run.edge, length: length) {
                 // The piece's place along the path, whichever way it is run.
                 let (a, b) = run.forward ? (span.start + piece.start, span.start + piece.end) : (span.end - piece.end, span.end - piece.start)
                 let low = max(tail, a)
@@ -424,6 +463,20 @@ extension ReferenceWorld {
     /// S3A: an edge `length` long in equal parts of at most 1024: as many
     /// as 1024 goes into it, rounded up, the `k`-th ending at `k × length ÷
     /// parts` rounded down.
+    /// S4: the equal parts of edge `number`, each part holding a platform
+    /// end strictly inside it split there, one end at a time.
+    func resourceSpans(of number: Int, length: Int64) -> [(start: Int64, end: Int64)] {
+        var pieces = Self.resourceSpans(length: length)
+        for platform in stations.flatMap(\.trackPlatforms) where platform.edge == .edge(number) {
+            for cut in [platform.start, platform.end] {
+                guard let i = pieces.firstIndex(where: { $0.start < cut && cut < $0.end }) else { continue }
+                let piece = pieces[i]
+                pieces.replaceSubrange(i...i, with: [(piece.start, cut), (cut, piece.end)])
+            }
+        }
+        return pieces
+    }
+
     static func resourceSpans(length: Int64) -> [(start: Int64, end: Int64)] {
         var parts: Int64 = 1
         while parts * 1_024 < length {
@@ -447,7 +500,7 @@ extension ReferenceWorld {
     }
 
     /// The point `offset` along a run and the way it goes, by a linear scan
-    /// of the samples.
+    /// of the samples; its height and grade from decision 30.
     func networkLocation(_ traversal: TrackTraversal, offset: Int64) -> TrackLocation? {
         guard let run = Run(traversal), let edge = networkEdges[run.edge], offset >= 0, offset <= edge.length else { return nil }
         let along = run.forward ? offset : edge.length - offset
@@ -458,9 +511,13 @@ extension ReferenceWorld {
         let (a, b) = (edge.points[k], edge.points[k + 1])
         let piece = edge.distances[k + 1] - edge.distances[k]
         let into = along - edge.distances[k]
-        let point = WorldCoordinate(x: a.x + Self.nearestQuotient((b.x - a.x) * into, piece), y: a.y + Self.nearestQuotient((b.y - a.y) * into, piece))
+        let point = WorldCoordinate(
+            x: a.x + Self.nearestQuotient((b.x - a.x) * into, piece), y: a.y + Self.nearestQuotient((b.y - a.y) * into, piece),
+            z: Self.height(of: edge, at: along)
+        )
         let way = run.forward ? PlanVector(dx: b.x - a.x, dy: b.y - a.y) : PlanVector(dx: a.x - b.x, dy: a.y - b.y)
-        return TrackLocation(position: point, direction: way)
+        let slope = Self.slope(of: edge, at: along)
+        return TrackLocation(position: point, direction: way, grade: TrackGrade(rise: run.forward ? slope.rise : -slope.rise, run: slope.run))
     }
 
     /// Decision 29: the least total length from the end of the train's edge
@@ -538,7 +595,7 @@ extension ReferenceWorld {
             let edge = networkEdges[run.edge]!
             for (point, distance) in zip(edge.points, edge.distances) {
                 let at = span.start + (run.forward ? distance : edge.length - distance)
-                if at > tailAt, at < headAt { between[at] = WorldCoordinate(x: point.x, y: point.y) }
+                if at > tailAt, at < headAt { between[at] = WorldCoordinate(x: point.x, y: point.y, z: Self.height(of: edge, at: distance)) }
             }
         }
         let tailRun = spans.indices.first { spans[$0].start <= tailAt && tailAt < spans[$0].end }!

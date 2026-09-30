@@ -28,8 +28,8 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29） |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3） |
+| `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -943,12 +943,173 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 
 - 高程、坡度、結構物、立體交叉的淨空、隧道口與路網上的月台（Stage S4）。
 - 路網與方格不相接，也不做空間衝突檢查：路網的節點可以蓋在任何格上。
-- 平面上交叉、同一高度而沒有共用節點的邊目前允許，彼此不影響；S4 決定它們是否需要立體交叉。
+- 平面上交叉、同一高度而沒有共用節點的邊目前允許，彼此不影響；S4 決定它們是否需要立體交叉（S4 的決定：必須相差 512 以上，見決策 30）。
 - 曲率不固定，曲線限速留給 Stage W。
 - 路網上的列車還不能停站、跑時刻表或線路（S4 的月台綁定之後）。
 - 真正的 renderer、建造連續軌道的畫面與 spline 編輯器。
 - 方格上的列車仍用 `atNode`、`onLink` 與 `[GridPosition]` 的相容表示（S3A-8）；泛用的交通控制只經過 `occupiedResources(of:)` 與 `pathAhead(of:)` 讀它們。
-- span 目前只有等分的分界；月台端點（S4）、號誌與閉塞（T 之後）再加分界。
+- span 的分界是等分與月台端點（S4，決策 30）；號誌與閉塞（T 之後）再加分界。
+
+### 30. 立體鐵路與結構物（Phase 4.5 Stage S4）——設計決策
+
+這一段是 S4 開工前的架構審查，回答 S4 的 12 個問題；實作與驗證的細節完成後補在同一節的後半。S4 只加 geometry，不改 S3 的 topology：節點上的轉向、路徑、移動與佔用的規則都不變；唯一碰到資源的是月台的兩端切開 span（第 7 點），佔用的規則本身不變。
+
+**1. 高程如何表示？**
+- 節點的 `WorldCoordinate.z` 就是軌面高度，單位與 x、y 相同（名目上 1/64 公尺）。地面是 z = 0；地形之後才有，在那之前「地面」處處是 0。
+- 世界層級：節點高度在 `RailwayNetwork.heightRange`（−4096…4096，約 ±64 公尺）之內。S3 的「一律在地面」改成這個範圍。
+- 邊沒有自己的高度欄位：兩端的高度由節點給出，中間由縱斷面推導。
+
+**2. 縱斷面怎麼表示？**
+- 每條邊的權威資料多一個 `TrackProfile`：起點與終點的**豎曲線長度** `startTransition`、`endTransition`（整數里程，預設都是 0）。
+- 高度沿水平里程 s（0…L）推導，R 是兩端的高差，D = 2L − T₀ − T₁：
+  - 起點的豎曲線 0 ≤ s < T₀：z = z₀ + R·s² / (T₀·D)（坡度從 0 均勻變到 g）；
+  - 中間：z = z₀ + R·(2s − T₀) / D（固定坡度 g = 2R / D）；
+  - 終點的豎曲線 L − T₁ < s ≤ L：z = z₀ + R − R·(L − s)² / (T₁·D)。
+  - 每一段都是精確的整數分數，四捨五入（half up）一次。
+- 兩個豎曲線長度都是 0 時是固定坡度（高差 0 就是平坡）；大於 0 時那一端是平的，拋物線過渡到固定坡度。所以平坡、上坡、下坡與過渡（豎曲線）都是同一個公式的特例，就像 S3 的道岔由轉向規則自然成立。
+- 限制：T₀、T₁ ≥ 0、T₀ + T₁ ≤ L；平坡的邊沒有豎曲線（唯一表示）。
+- 高度沿一條邊單調（坡度不變號），四捨五入也保持單調，所以一條邊的最高點與最低點一定在兩端。
+- 長度仍是 S3 的水平里程，移動、路徑與佔用都不讀高度。坡度對行駛的影響屬於 Stage W。
+
+**3. 坡度？**
+- `TrackGrade` 是約分後的有理數 rise / run（run > 0），不用浮點數比較。沿行進方向取號：上坡為正。
+- 最陡的坡度是中間段的 |2R| / D。**最大坡度**是 GameCore 的遊戲參數 `TrackProfile.maximumGrade` = 40‰（1/25），不代表真實鐵路的普遍值；超過就拒絕（`trackTooSteep`）。比較用交叉相乘，全是整數。
+- 溢位：型別層級上有坡度的邊要求 |R| ≤ 2¹³、L ≤ 2²⁴，否則 `TrackGeometry` 不成立；此時 R·s² ≤ 2⁶¹、R·T·D ≤ 2⁶²。世界層級的高差最多 8192（= 2¹³）、邊長小於 2²³，遠在界限內。零長度的邊在 S3 就不成立（兩端平面上重合、只差高度的「垂直鐵軌」也不成立）。
+
+**4. 結構物？**
+- 每條邊一個 `TrackStructure`：`surface`（地面，含路堤與路塹）、`elevated`（高架）、`bridge`（橋）、`tunnel`（隧道），預設 `surface`。整條邊同一種結構物，結構物改變的地方一定是節點。
+- 建造規則（高度帶，沿邊單調所以只查兩端）：
+  - `surface`：|z| ≤ 128（約 2 公尺的路堤或路塹）；
+  - `elevated`、`bridge`：z ≥ 0；
+  - `tunnel`：z ≤ 0。
+  - 不符合時拒絕（`invalidTrackStructure`）。
+- 費用的 hook：每格的鐵軌費用乘上結構物的係數（地面 1、高架 3、橋 4、隧道 5，都是暫定的遊戲參數）。地面是 1，所以 S3 的費用不變。
+- Renderer metadata：邊的結構物、隧道口、縱斷面的分段（平坡、上坡、下坡、過渡）。GameCore 不存橋墩、隧道壁或 mesh。
+- `elevated` 與 `bridge` 目前的差別只有費用與 metadata；跨越水面等差異等地形之後再加。
+
+**5. 立體交叉與平面交叉？**
+- 平面上兩條中心線相交或重疊的地方，兩條邊在那裡的高度差必須至少 `TrackStructure.clearance` = 512（約 8 公尺，軌面到軌面）。有足夠高差就是**立體交叉**：不共用任何資源、不互相阻擋、路徑不會從一條轉到另一條。
+- 高差不夠、又沒有共用節點，就是在同一高度穿過另一條鐵軌，建造時拒絕（`trackConflict`，指出編號最小的那條邊）。真正的**平面交叉**必須是共用的節點（S3 的菱形交叉），那個節點是兩個方向共用的資源，與 S1 相同。
+- 加上第 4 點的高度帶，上下關係自然成立：地面的鐵軌之間高差不到 512，不能互相跨越；地面下方只能是隧道；高架或橋下方可以是地面、隧道或較低的高架。
+- **共用節點附近**：在同一個節點相接的兩條邊（道岔的兩條支線、平行的邊）在節點附近本來就重疊（取樣點的四捨五入也會讓相切的支線在一開始重合）。所以對共用節點的兩條邊，離那個節點 `RailwayNetwork.junctionZone` = 1024（一格）以內的部分不檢查；更遠的地方照常檢查。這一格相當於道岔與它的限界範圍，之後由 T/U 的資源處理。
+- 精確的整數規則（取樣折線對取樣折線）：
+  - 用方向的外積判斷兩段相交、端點落在另一段上或共線重疊。
+  - 交點在每一段上的里程是兩端里程之間的線性內插，四捨五入；以 64×64 → 128 位元的標準庫乘除計算，不溢位。
+  - 共線重疊時取重疊兩端的點。兩條邊的高度都沿各自的邊單調，所以比較「一條邊在這些點的最低高度」與「另一條邊的最高高度」是否相差至少 512。
+- 只在建造與讀檔時計算：先用端點與控制點的外框（Bézier 在控制點的凸包內）篩選，只有外框重疊的邊才取樣比較。每個 tick 都不碰它。
+- 路網與方格仍是互不相干的兩層（S3 的限制不變）。
+
+**6. 隧道？**
+- 隧道是一般的邊：路徑、位置、移動、佔用、月台與之後的預約全部照常。
+- **隧道口**是 topology 的節點：一個節點同時有隧道的邊與非隧道的邊，就是隧道口（由邊推導、不存檔，`isTunnelPortal`）。列車穿過隧道口就是從一條邊進入下一條邊，沒有特殊規則。
+- 地下的線形由高度帶（z ≤ 0）與縱斷面保證；地質、照明與隧道壁都不模擬。
+
+**7. 多層車站與月台？**
+- S2 的方格月台（車站格旁的鐵軌格）完全不變。
+- 車站另外可以有**路網上的月台**（`TrackPlatform`）：車站（`StationID`）、一條路網邊、起訖里程 `start < end`（從邊的 `from` 端量起），長度是 `end − start`。邊可以是曲線，所以月台也可以是彎的；一個車站可以有任意多條月台股道。規則：
+  - 區間在邊內，而且整段是平的（兩端高度相同；高度單調，所以中間也相同）；
+  - 同一條邊上的月台彼此不重疊（不論屬於哪個車站）。
+- 月台的**層**由它所在的邊推導：高度（軌面高度）與結構物（地面、高架、橋、隧道）。同一個車站可以有不同高度的月台，Phase 5F 的步行轉乘成本可以直接用月台之間的高差與距離。
+- **月台是鐵路網的基礎設施**（S3A 的「唯一權威」）：存在 `RailwayNetwork.platforms`（沿鐵軌的順序：依邊、再依起點），不存在 `Station` 裡；車站只是它指向的對象。`trackPlatforms(of:)` 列出一個車站的月台（與 S2 的方格月台 `platforms(of:)` 區分）。有月台的邊不能拆（`trackEdgeHasPlatform`）。新增與移除月台是免費的 `GameWorld` 指令（`addTrackPlatform`、`removeTrackPlatform`）。
+- **月台的兩端切開 span**：一條邊的 span 是 S3A 的等分，再在每個月台的起點與終點切開（`trackSpans(of:)`），所以月台恰好是整數個 span；整列停在月台上的列車只佔用月台內的 span，不會多佔月台外的軌道。span 由當下的月台推導，新增或移除月台會改變那條邊的 span；Stage T 的預約要存的是邊上的里程區間（或在有預約時拒絕改動月台），不能假設 span 永遠不變。
+- S2 的方格月台照舊由車站格與鐵軌推導，不遷移成路網月台：方格沒有邊上的里程，那是 S3A-8 的相容表示；等方格列車改成 `onEdge` 時再一起遷移。
+- 整列車都在某個月台的區間內時，查詢 `trackPlatformsAlongWholeTrain(_:)` 會列出它。路網上的列車仍然不能跑服務（服務與派車在 T/V 之後才上路網），S4 只提供資料與查詢。
+
+**8. 3D 的位置與車身？**
+- `TrackLocation` 多一個 `grade`：沿行進方向的坡度（pitch）；`direction` 是平面方向（yaw）；位置的 z 由縱斷面精確算出，不在取樣點之間內插。橫向傾斜（cant、roll）留給之後。
+- 車身路徑（`bodyPath(of:)`）的每一點都有縱斷面的高度，所以跨越隧道口、坡道、高架的長列車會畫在正確的高度。
+- 佔用只看 topology：車頭在隧道裡、車尾在外面的列車，佔用的就是它經過的節點與 span（S3A），與高度無關。
+
+**9. 給 renderer 的查詢？**
+- `railwaySnapshot()` 一次回傳路網的唯讀快照：節點（位置、是否隧道口）、邊（兩端、長度、曲線、縱斷面、結構物、取樣中心線與里程、縱斷面的分段、最陡的坡度）、月台（`TrackPlatform`：車站、邊、起訖；加上高度、結構物、中心線）與每台已放置列車的車頭位置、方向、坡度與車身路徑。
+- 另有逐條邊的 `trackAlignment(of:)`。邊建好後不再改變、ID 不重用，renderer 可以依 ID 快取；快照每次呼叫時重新計算，GameCore 不另存。
+- Renderer 可以自由轉成浮點數或 SIMD，但不寫回。
+
+**10. 存檔相容？**（7 點）
+1. S2 的存檔照常讀入，逐位元不變（沒有路網）。
+2. 只有方格的存檔語義不變；14 個 Stage I–S2 的 property digest 不變。
+3. S3 的路網存檔照常讀入：新 key 只在用到時寫入（邊的 `"profile"` 只在有豎曲線時、`"structure"` 只在不是地面時、路網的 `"platforms"` 只在有月台時），所以在地面的 S3 路網存檔讀入再寫出逐位元不變。**唯一的例外**：S3 允許同一高度、沒有共用節點的交叉，S4 拒絕它（兩列車會互相穿過卻不共用資源）。S3 的決策 29 第 9 點本來就把這個決定留給 S4；S3 沒有進 `main`，App 也不存檔，所以沒有玩家的存檔受影響。
+4. S4 的立體路網存檔可以來回存讀。
+5. 壞的幾何一律拒絕、不修補：高度超出範圍、負的或過長的豎曲線、平坡上的豎曲線、超過最大坡度、不符合結構物的高度帶、沒有足夠淨空的交叉、不在邊內、不是平的或互相重疊的月台、未知的結構物。
+6. 明確的 `null` 拒絕，與 S3 相同。
+7. 陣列依 ID 排序、推導值不存檔，所以來回存讀是 deterministic。
+
+**11. 效能？**
+- 縱斷面的高度與坡度是 O(1) 的公式，位置查詢仍是二分搜尋 O(log n)。
+- 淨空檢查只在建造（一條新邊對所有邊，先比外框）與讀檔（所有邊兩兩比外框）時做；先量測，再決定是否需要空間索引。
+
+**12. 對 Stage T 的意義？**
+新的 T 只讀 topology：`TrackResource`、`TrackTraversal` 的路徑、`occupiedResources(of:)` 與月台綁定。S4 保證「兩條鐵軌在空間上相遇的地方，要嘛共用一個節點（一個資源），要嘛高差至少 512（沒有共用資源也安全）」，所以 T 不需要讀高度或幾何，也不需要另外的「空間衝突資源」。共用節點附近一格內的限界（fouling）由 T/U 的預約範圍處理。
+
+**S4 不做**：進路預約、movement authority、dispatcher、行駛動態（坡度對速度的影響）、最終的 3D renderer、隧道照明、橋梁素材、地形、完整的建造畫面與地下模式的畫面。
+
+#### 實作
+
+- **型別**
+  - `Geometry/TrackProfile.swift`：`TrackGrade`（約分的 rise / run，以 128 位元的交叉相乘比較陡度）、`TrackProfile`（兩端的豎曲線長度；`uniform` 與 `maximumGrade`）、`TrackProfileSegment`、`TrackStructure`（高度帶 `allows(height:)`、`clearance`、`embankment`、費用的 `costFactor`）。
+  - `TrackGeometry` 多了兩端高度與縱斷面：`height(at:)`、`grade(at:)`、`steepestGrade`、`segments`、`points(from:to:)`；取樣點帶縱斷面的高度，`location(at:)` 的 z 與坡度精確計算。`TrackLocation` 多了 `grade`。
+  - `Geometry/TrackClearance.swift`：`ClearanceShape`（兩端、控制點外框、幾何）與 `TrackClearance.isClear`；`RailwayNetwork.firstConflict` 與 `firstConflictingPair(geometries:)`。
+  - `TrackEdge` 多了 `profile`、`structure`；`RailwayNetwork` 多了 `heightRange`、`junctionZone`、`isTunnelPortal(_:)`。
+  - `Railway/TrackPlatform.swift`：`TrackPlatform`（車站、邊、起訖、長度）。`RailwayNetwork` 多了 `platforms`、`platforms(on:)`、`platforms(of:)` 與把月台兩端切進 span 的 `spans(of:length:)`；`GameWorld.trackPlatforms(of:)`。
+  - `Railway/RailwaySnapshot.swift`：`TrackAlignment`、`RailwaySnapshot`（節點、邊、月台、列車）與 `GameWorld` 的 `trackAlignment(of:)`、`isTunnelPortal(_:)`、`trackPlatformsAlongWholeTrain(_:)`、`railwaySnapshot()`。
+  - `FixedPoint`：`roundedProduct(_:times:over:)`（標準庫的 64×64 → 128 位元乘除）與 `greatestCommonDivisor`。
+- **指令**（失敗時世界不變）
+  - `buildTrackNode(at:)`：高度在 −4096…4096，否則 `invalidTrackGeometry`。
+  - `buildTrackEdge(from:to:curve:profile:structure:)`：`unknownTrackNode` → `invalidTrackGeometry` → `trackTooSteep` → `invalidTrackStructure` → `trackConflict(編號最小的邊)` → `idsExhausted` → `insufficientFunds`。費用 = 每格鐵軌費用 × 結構物係數 × 格數。
+  - `removeTrackEdge`：`unknownTrackEdge` → `trackEdgeInUse` → `trackEdgeHasPlatform`。
+  - `addTrackPlatform(_:on:from:to:)`：`unknownStation` → `unknownTrackEdge`（方格的連結也是）→ `invalidPlatform`。`removeTrackPlatform(_:on:from:)`：`unknownStation` → `invalidPlatform`。
+- **淨空**：共用節點的兩條邊各自去掉離那個節點 1024 以內的部分，剩下的取樣折線逐段比較；先比兩條邊的外框（控制點）與高度範圍，再只比落在對方外框內的段。
+- **存檔**：邊只在有豎曲線時寫 `"profile"`（`startTransition`、`endTransition`），只在不是地面時寫 `"structure"`；路網只在有月台時寫 `"platforms"`（`[{ "station", "edge", "start", "end" }]`，沿鐵軌的順序）。`RailwayNetwork` 的解碼器檢查形狀（縱斷面是否成立、結構物名稱、月台的順序、不重疊、邊存在），`GameWorld` 的解碼器檢查世界規則（高度範圍、最大坡度、高度帶、淨空、月台在邊內而且平、車站存在）；讀檔時每條邊的幾何只算一次，供規則與淨空共用。
+- **效能**：模擬的每一步仍只讀整數長度與轉向表。淨空只在建造與讀檔時計算。在這個 Linux 容器的 debug build 上，`vertical.differential` 一開始把約 7 毫秒花在每次讀檔的淨空檢查；只比對方外框內的段之後降到約 4 毫秒（其中大部分是 JSON 解碼），所以目前不加空間索引。
+
+#### 驗證
+
+- `VerticalRailwayTests`（手算，14 個）：
+  - 固定坡度的坡道（上、下、平）與高度的四捨五入；
+  - 豎曲線（9、37、256、503 與 1/56、1/28）；
+  - 溢位的邊界（2¹³、2²⁴、128 位元的乘除與坡度比較）；
+  - 最大坡度、結構物的高度帶、費用與錯誤順序；
+  - 同一高度的交叉被拒絕、差 511 被拒絕、恰好 512 可以、隧道在地面下、兩層高架、沿同一條線的高架差 256 被拒絕；
+  - 坡道跨越隧道時只看交叉點的高度；
+  - 共用節點附近可以相碰、遠處不行、端點落在別的邊上被拒絕；
+  - 隧道口、一半在地下的長列車、在坡道上折返與反向兩次還原；
+  - 多層車站的月台與它們的錯誤；
+  - 存讀與新 key、S3 存檔、壞存檔被拒絕；
+  - renderer 快照。
+- `VerticalRailwayPropertyTests`（`vertical.differential`，40 個 case × 4 個種子）：
+  - 產生不同高度的直線、坡道（有時太陡）、豎曲線、各種結構物、曲線、月台與列車，同時在 GameCore 與 `ReferenceWorld` 上執行；
+  - 每一步比較結果、節點高度、邊的縱斷面與結構物、3D 的中心線、兩個方向隨機距離的姿態、縱斷面分段、隧道口、月台與層、列車的位置、佔用、姿態與 3D 車身，以及整列在月台上的查詢與路徑；
+  - 並檢查不變量與存讀。
+  - `ReferenceWorld` 另外寫成：
+    - 高度以「坡度形狀下的面積」計算、分段的邊界取另一側；
+    - 以相減求最大公因數；
+    - 交點以同時解兩個參數求得，共線時沿較長的軸比較；
+    - 淨空逐對檢查；
+    - span 在月台端點逐一切開等分的段（GameCore 是把所有分界排序後相接）。
+  - digest `3668E75DCD0A98F8`（160 個 case、14,219 個操作，結束時共有 332 個月台；在這個容器的 debug build 約 142 秒）。
+- `SaveMutationTests` 新增 `save.verticalMutation`；`NetworkInvariants` 以參考模型自己的取樣與規則檢查坡度、高度帶、淨空與月台（沿鐵軌的順序、車站存在、兩端是 span 的分界）。
+- 刻意植入的錯誤都在前幾個 case 被抓到，驗證後還原：
+  - 淨空要求嚴格大於 512；
+  - 固定坡度段的高度改成無條件捨去；
+  - 路堤的高度帶不含 ±128；
+  - 月台的兩端不切開 span（`vertical.differential` 在第 0 個 case 由不變量、第 1 個 case 由佔用與參考模型不一致抓到，`testPlatformEndsCutTheEdgesSpans` 也失敗）。
+- S3 的 `network.differential` 在 S4 的 digest 從 `D1E85EA30C734274` 變成 `92FA34EF016602C6`：它產生的路網裡有 217 次同一高度、沒有共用節點的交叉，S4 依第 5 點拒絕（GameCore 與參考模型一致）。Stage I–S2 的 14 個 digest 不變。
+- Golden schema v17 與手算的 `vertical-railway.json`（75 步），第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過。建立在 S3A 之上之後，它的三個佔用預期改成手算的 span（例如 12800 的邊是 13 段，分界 ⌊k × 12800 ÷ 13⌋），同樣在兩邊都通過；月台改存在路網後，最終狀態的月台從車站移到 `network.platforms`，數值不變。S3 的 `continuous-track.json` 第 7 步從 `z: 5` 改成 `z: 5000`：它原本驗證的是 S3「一律在地面」的規則，S4 取消了這條規則。
+
+#### GamePresentation / App
+
+- 新錯誤的玩家訊息（坡度、結構物、淨空、月台）。
+- 俯視 debug 投影依平均高度由低到高畫：隧道是虛線、高架與橋有陰影，隧道口的節點加一圈。仍不是 renderer。
+- 示範配置加上跨越環線的高架（512）、從地面經隧道口下到 −512 的隧道，隧道上方的地面交叉，以及一台駛入隧道的三節列車。
+
+#### 已知限制與留給之後
+
+- 沒有地形：「地面」處處是 0，結構物的高度帶以 0 為準；地形之後改成相對地表。
+- 路網與方格仍然互不相干，也不做兩者之間的空間檢查。
+- 淨空只看中心線，不看軌道的寬度與側向間距；共用節點 1024 以內的道岔區由 T/U 的資源處理。
+- 節點上的坡度變化不受限制（豎曲線是玩家的選擇）；坡度對行駛的影響與曲線限速屬於 Stage W。
+- 路網上的月台只有資料與查詢；路網上的列車還不能跑服務或線路。
+- 橫向傾斜（cant）、橋墩、隧道壁、照明、真正的 3D renderer、建造畫面與地下模式都還沒有。
 
 ## 目前規則摘要
 
@@ -971,6 +1132,7 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 - 服務線路是計畫資料：依序的車站、計算行程用的 rate、營運時間，以及各服務等級的列車數或目標班距；服務日決定一天中每分鐘的等級。行程、最多列車數（最短班距 2 分鐘）、實際列車數與班距由地圖推導，不存檔（決策 22、23）。
 - 指派給線路的列車由線路派出：每分鐘在出發之前，營運中、該等級有列車、距上次派車已過一個班距、跑車中的列車少於該等級的列車數時，線路讓第一台停在第一站、rate 大於 0、能開完來回的列車跑一趟來回（產生該趟的時刻表並啟動服務，必要時先折返）。列車回到第一站後折返等待；線路的列車不能手動設定時刻表或啟停服務（`trainOnLine`，決策 23）。
 - 線路可以另有交路與快車等服務模式：停靠線路部分的站（站的索引、嚴格遞增），各有自己的列車數或目標班距與列車，從自己的第一個停靠站派車。每段鐵軌每天每個方向最多 720 班；各服務依序（線路自己的服務最先）以 `⌈1440 ÷ 班距⌉` 佔用它經過的每一段，放不下的服務減少列車數（決策 24）。
-- 連續軌道（決策 29）：節點是地圖內、地面上的整數世界座標點（一格 1024 單位），邊是兩個節點之間的直線或整數控制點的三次曲線，長度由固定的整數取樣規則推導、以每格鐵軌的費用計價。只有共用節點的邊才相接，而且只在兩個邊端離開節點的方向相反（誤差 1/16 以內）時互通；平面上交叉但沒有共用節點的邊互不相干。路網上的列車在邊上，`0 <= offset <=` 邊長，有車身時 `offset > 0`；它沿 `edges` 移動，車身記錄在 `trailEdges`，反向時車頭移到車尾。方格與路網共用同一個最短路徑搜尋與同一套資源身分：節點，以及邊上不超過一格長的 span（S3A）。所有鐵軌只記在 `RailwayNetwork`，地圖只有土地。
+- 連續軌道（決策 29）：節點是地圖內的整數世界座標點（一格 1024 單位），邊是兩個節點之間的直線或整數控制點的三次曲線，長度由固定的整數取樣規則推導、以每格鐵軌的費用計價。只有共用節點的邊才相接，而且只在兩個邊端離開節點的方向相反（誤差 1/16 以內）時互通；平面上交叉但沒有共用節點的邊互不相干。路網上的列車在邊上，`0 <= offset <=` 邊長，有車身時 `offset > 0`；它沿 `edges` 移動，車身記錄在 `trailEdges`，反向時車頭移到車尾。方格與路網共用同一個最短路徑搜尋與同一套資源身分：節點，以及邊上不超過一格長的 span（S3A）。所有鐵軌只記在 `RailwayNetwork`，地圖只有土地。
+- 立體鐵路（決策 30）：節點的高度在地面（0）上下 4096 以內；邊的高度沿水平里程依縱斷面變化（固定坡度，或兩端的拋物線豎曲線），最陡 40‰。結構物決定高度帶（地面 ±128、高架與橋 ≥ 0、隧道 ≤ 0）與費用倍數（1、3、4、5）。兩條邊在平面上相遇（共用節點 1024 以內除外）時高度差至少 512，否則拒絕；同一高度的交叉必須共用節點。隧道口是隧道與非隧道的邊相接的節點。車站可以在路網上平坦的一段邊上有月台；月台屬於鐵路網，同一條邊上的月台不重疊，兩端切開那條邊的 span，有月台的邊不能拆。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。
