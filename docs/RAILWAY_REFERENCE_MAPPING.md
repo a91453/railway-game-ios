@@ -178,7 +178,7 @@ V 交會與待避的推估 → W1（buildProfile、v/b）、S1 的單雙線，�
 V 實際放行 → T、U（保證不互穿）
 ```
 
-1. **W1**：翻譯 `buildProfile`、`profTimeToProg`、`profProgToTime` 與性能表。純計算，golden 與 property digest 都不變。
+1. **W1** ✅（ARCHITECTURE 決策 33）：翻譯 `buildProfile`、`profTimeToProg`、`profProgToTime` 與性能表。純計算，golden 與 property digest 都不變。
 2. **U**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 3. **W2**：先請作者決定 gap 1、2。
 4. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
