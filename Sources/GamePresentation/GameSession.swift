@@ -313,6 +313,11 @@ public final class GameSession {
     /// never be stale or reach another train. The session never finds or
     /// edits a path itself.
     ///
+    /// A train on the track network (Stage S5) goes only to a station: to
+    /// where it stops at one of the station's platforms on the network that
+    /// it fits, along `GameWorld.path(from:toStation:length:)`, committed
+    /// unchanged with `GameWorld.setTrainContinuation(_:along:stoppingAt:)`.
+    ///
     /// Without a route (the tile is neither track nor a station with track
     /// beside it, or the train cannot get there without turning straight
     /// back) nothing changes, and the train keeps the continuation it had.
@@ -328,6 +333,10 @@ public final class GameSession {
         }
         // A station is not track: the train goes to one of its platforms.
         let station = world.station(at: destination)
+        if case .onEdge = position {
+            send(train, from: position, to: station, at: destination)
+            return
+        }
         let found: [GridPosition]?
         if let station {
             found = world.route(from: position, toStation: station.id, length: train.length)
@@ -350,8 +359,7 @@ public final class GameSession {
         switch position {
         case .atNode(let tile, _): start = tile
         case .onLink(_, let to, _): start = to
-        // A train on the track network has no route to a tile: `found` is
-        // nil above, so this is never reached.
+        // A train on the track network was sent above.
         case .onEdge: return
         }
         // For a station, name it and the platform the route ends at.
@@ -362,6 +370,32 @@ public final class GameSession {
             let sent = route.isEmpty
                 ? "\(train.name) stops at \(target)."
                 : "Sent \(train.name) to \(target), \(links) from \(start)."
+            return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
+        }
+    }
+
+    /// ``sendSelectedTrain()`` for `train` at `position` on the track
+    /// network: to `station`, the station at `destination` if there is one.
+    private func send(_ train: Train, from position: TrainPosition, to station: Station?, at destination: GridPosition) {
+        guard let station else {
+            message = StatusMessage(
+                kind: .failure,
+                text: "No route for \(train.name) to \(destination): a train on the track network goes only to a station. Its path is unchanged."
+            )
+            return
+        }
+        guard let path = world.path(from: position, toStation: station.id, length: train.length) else {
+            message = StatusMessage(
+                kind: .failure,
+                text: "No route for \(train.name) to \(station.name): it needs a platform on the track network as long as the train, that it can reach without turning back. Its path is unchanged."
+            )
+            return
+        }
+        perform { world throws(GameError) in
+            try world.setTrainContinuation(train.id, along: path.traversals, stoppingAt: path.end)
+            let sent = path.distance == 0
+                ? "\(train.name) stops at \(station.name)."
+                : "Sent \(train.name) to \(station.name), \(path.distance) units along the track."
             return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
         }
     }
