@@ -23,6 +23,26 @@
 - **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額）與地圖縮放換算。它只依賴 GameCore 與 Swift 標準函式庫的 `Observation`，不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
 - **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有唯一一個 `GameSession`，畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
 
+### GameCore 內部的依賴方向（2026-09 決定）
+
+GameCore 裡的經營層（Passenger、City、Economy）不得依賴鐵路的物理層：
+
+```
+鐵路的物理層：軌道、預約、movement authority、dispatcher、行駛曲線（S1–S5、T、U、V、W）
+        ↓ 只經過穩定的查詢
+車站、線路、服務與停站：哪台車停在哪一站、服務的執行進度、線路的行程與班距
+        ↓
+乘客（Passenger）→ 經營（Economy）
+        ↑
+城市的需求（City）
+```
+
+- 乘客、城市與經營**不讀**這些：`TrackTraversal`、`TrackResource`、`TrackSpan`、`Train.reservation`、movement authority、`TrainMovement`、列車在邊上的位置與里程。
+- 它們也**不改**：時刻表的執行進度、列車的移動或預約。
+- 它們只透過這些取得資訊：車站與月台的身分、線路與服務的身分、停站的查詢（例如 `stationsStoppedAt(by:)`）、服務的執行進度，以及線路的行程與班距。
+- 為什麼：V（誰先走、在哪裡交會）與 W（怎麼加減速）之後還會改變鐵路的物理層。守住這條規則，那些改變只會讓乘客「晚幾分鐘到」，不必重寫乘客、城市或經營的資料模型。
+- 沒有事件匯流排（決策 13）：上下車等經營的規則在 `advance` 每個基本步長的固定階段裡執行，只讀上面的查詢，所以結果仍然 deterministic，存檔也不依賴處理順序。
+
 ## GameCore 模組
 
 | 目錄 | 內容 |
