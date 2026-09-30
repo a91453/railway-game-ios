@@ -1,0 +1,6 @@
+Generated/
+.artifacts/
+.build-wasm/
+node_modules/
+test-results/
+playwright-report/

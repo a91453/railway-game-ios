@@ -1,6 +1,6 @@
 # 網頁版移植準備
 
-目的：讓同一份 Swift GameCore 未來能在瀏覽器執行，由 Babylon.js 繪製 3D 世界。這是準備規格，尚未實作 Web App、Wasm bridge 或 renderer，也尚未證明 Wasm 可以編譯與執行本專案。
+目的：讓同一份 Swift GameCore 未來能在瀏覽器執行，由 Babylon.js 繪製 3D 世界。這是準備規格，已加入 [最小 Wasm 探針](../Web/WasmProbe/README.md)，驗證核心編譯與瀏覽器 Worker 執行；尚未實作可玩的 Web App、持續執行的指令 bridge 或 renderer。
 
 ## 已有的基礎
 
@@ -94,5 +94,7 @@ Swift 存檔由核心相容的 codec 匯出為不透明 bytes，在瀏覽器可�
 ## 此次準備的驗證狀態
 
 - 已靜態核對：GameCore / Presentation 分層、S4 snapshot、座標定義、完整寬度整數運算與 golden scenario 契約。
-- **UNVERIFIED**：Swift → Wasm 編譯、bridge、瀏覽器執行、Babylon rendering、效能與存檔。準備工作區目前沒有 Swift compiler，未執行 Swift build / test。
+- **VERIFIED，本地**：Swift 6.4.0 原生及 wasm32 release 探針建置、Node WASI、Chromium / Firefox Worker 的 17 個 golden scenarios 與 6 個 Swift 檢查，包括 Codable 存讀。根目錄 warnings-as-errors build 及 36 個相關原生測試通過。可重現命令與限制見 [探針 README](../Web/WasmProbe/README.md)。
+- **已確認差異**：wasm32 的 Int 為 32 位元，原生為 64 位元；ID 與大 ID 存檔邊界仍需相容策略。W0 的基本執行可行性已確認，完整相容性關卡尚未全部完成。
+- **UNVERIFIED**：本地 WebKit（缺 shared libraries）、真正 Safari、持續 command bridge、Babylon rendering、效能與瀏覽器持久存檔。CI 將安裝三種 browser engines 的依賴執行探針。
 - 本文件不改變核心、原生 App、既有 golden 預期或發布管線；上述關卡通過後才可標記為 VERIFIED。

@@ -1,0 +1,17 @@
+{
+  "name": "railway-wasm-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:sources": "node prepare.mjs",
+    "build": "node build.mjs",
+    "test": "node verify.mjs",
+    "serve": "node serve.mjs"
+  },
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "0.4.2"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
