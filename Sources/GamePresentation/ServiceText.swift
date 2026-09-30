@@ -241,3 +241,13 @@ extension GameWorld {
         }
     }
 }
+
+extension GameWorld {
+    /// Under traffic control, "Waiting for Express to clear the route"
+    /// while train `id` is due to leave on a route another train holds
+    /// (see ``trainHoldingRoute(of:)``), naming that train; `nil` otherwise.
+    public func routeWaitText(of id: TrainID) -> String? {
+        guard let holder = trainHoldingRoute(of: id) else { return nil }
+        return "Waiting for \(train(id: holder)?.name ?? "#\(holder.rawValue)") to clear the route"
+    }
+}

@@ -6,7 +6,8 @@ import SwiftUI
 /// the selected line, each of its services (its own and its patterns) with
 /// the trains it is set to run at each level, what it can run and how far
 /// apart, its trains, and stretches no service covers; adding patterns and
-/// assigning the selected train; and picking stations for a new line.
+/// assigning the selected train; and picking stations for a new line. At the
+/// top, the traffic control switch (Phase 4.6 Stage T).
 ///
 /// Shown in a sheet that leaves the map usable at half height, so stations
 /// can be selected for a new line while it is open. Everything shown is
@@ -25,6 +26,7 @@ struct LinesPanel: View {
     var body: some View {
         NavigationStack {
             Form {
+                trafficSection
                 linesSection
                 if let line = session.selectedLine {
                     lineSection(line)
@@ -52,6 +54,22 @@ struct LinesPanel: View {
 
     private func name(of station: StationID) -> String {
         session.world.station(id: station)?.name ?? "#\(station.rawValue)"
+    }
+
+    // MARK: - Traffic control
+
+    /// Traffic control, read from the world. Turning it on is refused while
+    /// two trains need the same track: the status banner says which, and
+    /// the switch stays off.
+    private var trafficSection: some View {
+        Section {
+            Toggle("Traffic control", isOn: Binding(
+                get: { session.world.isTrafficControlEnabled },
+                set: { session.setTrafficControl($0) }
+            ))
+        } footer: {
+            Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
+        }
     }
 
     // MARK: - Lines

@@ -39,17 +39,23 @@ struct RailwayGameApp: App {
 }
 
 extension GameWorld {
-    /// The world a new game starts with, running at 1×.
+    /// The world a new game starts with, running at 1×, with traffic
+    /// control on (Phase 4.6 Stage T): trains take their whole route before
+    /// they leave. GameCore's own new worlds start with it off.
     static func newGame() -> GameWorld {
         do {
-            return try GameWorld(
+            var world = try GameWorld(
                 width: 32,
                 height: 24,
                 economy: GameEconomy(balance: 1_000_000),
                 clock: GameClock(speed: .normal)
             )
+            try world.setTrafficControl(true)
+            return world
         } catch {
-            // The size is a constant within GridMap's limits, so failing here is a programming error.
+            // The size is a constant within GridMap's limits and an empty
+            // world has no trains to share track, so failing here is a
+            // programming error.
             preconditionFailure("Could not create the new-game world: \(error)")
         }
     }

@@ -141,4 +141,12 @@ public enum GameError: Error, Hashable, Sendable {
     /// and not overlap another platform on the edge; one to remove must
     /// exist (Stage S4).
     case invalidPlatform
+    /// Under traffic control (Phase 4.6 Stage T), this train holds track
+    /// the command needs: it stands on it, or has reserved it for its
+    /// route. The lowest numbered such train.
+    case trackReserved(TrainID)
+    /// Traffic control cannot be turned on while these two trains need the
+    /// same track (Stage T): the first train, in ID order, whose track meets
+    /// an earlier train's, and the earliest train it meets.
+    case trainsShareTrack(TrainID, TrainID)
 }

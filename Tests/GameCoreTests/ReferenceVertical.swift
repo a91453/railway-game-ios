@@ -245,6 +245,8 @@ extension ReferenceWorld {
         let platform = TrackPlatform(station: id, edge: edge, start: start, end: end)
         let overlapping = stations.flatMap(\.trackPlatforms).contains { $0.edge == edge && max($0.start, start) < min($0.end, end) }
         guard fits(platform), !overlapping else { return .invalidPlatform }
+        // Decision 32: no new cut in spans a train holds.
+        if let holder = holderOfSpans(on: edge) { return .trackReserved(TrainID(rawValue: holder)) }
         stations[i].trackPlatforms.append(platform)
         stations[i].trackPlatforms.sort { ($0.edge, $0.start) < ($1.edge, $1.start) }
         return nil
@@ -255,6 +257,7 @@ extension ReferenceWorld {
         guard let platform = stations[i].trackPlatforms.first(where: { $0.edge == edge && $0.start == start }) else { return .invalidPlatform }
         // Decision 31: not while a service needs it.
         if let train = serviceNeeding(platform) { return .trainServiceActive(train) }
+        if let holder = holderOfSpans(on: edge) { return .trackReserved(TrainID(rawValue: holder)) }
         stations[i].trackPlatforms.removeAll { $0 == platform }
         return nil
     }

@@ -156,6 +156,21 @@ public final class GameSession {
         world.setSpeed(speed)
     }
 
+    // MARK: - Traffic control
+
+    /// Turns traffic control on or off through
+    /// `GameWorld.setTrafficControl(_:)`. With it on, a train takes its whole
+    /// route before it leaves and others wait for it; turning it on is
+    /// refused while two trains need the same track.
+    public func setTrafficControl(_ enabled: Bool) {
+        perform { world throws(GameError) in
+            try world.setTrafficControl(enabled)
+            return enabled
+                ? "Traffic control is on. Trains take their whole route before they leave."
+                : "Traffic control is off. Trains no longer wait for each other."
+        }
+    }
+
     // MARK: - Game loop
 
     /// Whether the real-time loop is currently advancing the world.

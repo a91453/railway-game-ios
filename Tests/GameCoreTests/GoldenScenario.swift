@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 18
+    static let schemaVersion = 19
 
     var description: String
     var initialState: InitialState
@@ -145,7 +145,7 @@ extension GoldenScenario.Step: Decodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
-        case pose, alignment, nodes, trackPlatforms, levels, trainPath
+        case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -280,6 +280,12 @@ extension GoldenScenario.Step: Decodable {
             case .pathToStation:
                 try requireOnly([.found, .trainPath], answering: "pathToStation")
                 self = try .observe(observation, expect: .trainPath(Self.found(expect, .trainPath, PathSummary.self)))
+            case .reservation, .heldResources:
+                try requireOnly([.resources], answering: "a train's track")
+                self = try .observe(observation, expect: .resources(expect.decode([ResourceSummary].self, forKey: .resources).map(\.resource)))
+            case .routeHolder:
+                try requireOnly([.found, .train], answering: "routeHolder")
+                self = try .observe(observation, expect: .holder(Self.found(expect, .train, Int.self).map(TrainID.init(rawValue:))))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -351,6 +357,7 @@ enum ScenarioCommand: Equatable {
     case setTrainPath(TrainID, [TrackTraversal], end: Int64?)
     case addTrackPlatform(StationID, TrackEdgeID, start: Int64, end: Int64)
     case removeTrackPlatform(StationID, TrackEdgeID, start: Int64)
+    case setTrafficControl(Bool)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -434,6 +441,8 @@ enum ScenarioCommand: Equatable {
                 try world.addTrackPlatform(station, on: edge, from: start, to: end)
             case .removeTrackPlatform(let station, let edge, let start):
                 try world.removeTrackPlatform(station, on: edge, from: start)
+            case .setTrafficControl(let enabled):
+                try world.setTrafficControl(enabled)
             }
             return .ok
         } catch {
@@ -447,7 +456,7 @@ extension ScenarioCommand: Decodable {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
-        case profile, structure, start, end
+        case profile, structure, start, end, enabled
     }
 
     init(from decoder: any Decoder) throws {
@@ -579,6 +588,9 @@ extension ScenarioCommand: Decodable {
             // its last edge.
             let end = try container.contains(.end) ? container.decode(Int64.self, forKey: .end) : nil
             self = try .setTrainPath(container.decodeTrain(forKey: .train), path, end: end)
+        case "setTrafficControl":
+            // Schema 19: traffic control on or off.
+            self = try .setTrafficControl(container.decode(Bool.self, forKey: .enabled))
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -603,7 +615,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge
+        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, trains
     }
 
     init(from decoder: any Decoder) throws {
@@ -704,6 +716,14 @@ extension StepOutcome: Codable {
             self = try .rejected(.trackEdgeHasPlatform(.edge(container.decode(Int.self, forKey: .edge))))
         case "invalidPlatform":
             self = .rejected(.invalidPlatform)
+        case "trackReserved":
+            self = try .rejected(.trackReserved(container.decodeTrain(forKey: .train)))
+        case "trainsShareTrack":
+            let ids = try container.decode([Int].self, forKey: .trains)
+            guard ids.count == 2 else {
+                throw DecodingError.dataCorruptedError(forKey: .trains, in: container, debugDescription: "trainsShareTrack names two trains.")
+            }
+            self = .rejected(.trainsShareTrack(TrainID(rawValue: ids[0]), TrainID(rawValue: ids[1])))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -837,6 +857,12 @@ extension StepOutcome: Codable {
             try encodeEdge(edge)
         case .rejected(.invalidPlatform):
             try container.encode("invalidPlatform", forKey: .result)
+        case .rejected(.trackReserved(let id)):
+            try container.encode("trackReserved", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainsShareTrack(let first, let second)):
+            try container.encode("trainsShareTrack", forKey: .result)
+            try container.encode([first.rawValue, second.rawValue], forKey: .trains)
         }
         // Fixtures name network nodes and edges by number; a grid tile or
         // link cannot reach these results through a fixture's commands, but
@@ -899,6 +925,9 @@ enum ScenarioObservation: Equatable {
     case trackPlatformsAlongTrain(TrainID)
     case platformLevels(StationID)
     case pathToStation(from: TrainPosition, station: StationID, cars: Int)
+    case reservation(TrainID)
+    case heldResources(TrainID)
+    case routeHolder(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -972,6 +1001,12 @@ enum ScenarioObservation: Equatable {
             .levels(world.railwaySnapshot().platforms.filter { $0.platform.station == id }.map(PlatformLevelSummary.init))
         case .pathToStation(let start, let station, let cars):
             .trainPath(world.path(from: start, toStation: station, length: Int64(cars - 1) * Train.carLength).map(PathSummary.init))
+        case .reservation(let id):
+            .resources(world.reservedResources(of: id))
+        case .heldResources(let id):
+            .resources(world.heldResources(of: id))
+        case .routeHolder(let id):
+            .holder(world.trainHoldingRoute(of: id))
         }
     }
 }
@@ -1091,6 +1126,13 @@ extension ScenarioObservation: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .cars, in: container, debugDescription: "A path is for 1 to \(Train.maximumCars) cars.")
             }
             self = try .pathToStation(from: start, station: container.decodeStation(forKey: .station), cars: cars)
+        // Schema 19: route reservation under traffic control.
+        case "reservation":
+            self = try .reservation(container.decodeTrain(forKey: .train))
+        case "heldResources":
+            self = try .heldResources(container.decodeTrain(forKey: .train))
+        case "routeHolder":
+            self = try .routeHolder(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1117,7 +1159,10 @@ extension ScenarioObservation: Decodable {
 /// and `{"tracks": n}` for the parallel tracks between two stations; for
 /// station facilities `{"stations": [id, ...]}` for the stations a train
 /// stands beside with its whole length, and `{"platformTracks": [[{"x",
-/// "y"}, ...], ...]}` for a station's platform tracks. A
+/// "y"}, ...], ...]}` for a station's platform tracks; under traffic
+/// control (schema 19) `{"resources": [...]}` for what a train has reserved
+/// or holds, and `{"found": true, "train": id}` / `{"found": false}` for the
+/// train holding the route another waits for. A
 /// train the world does not have answers `{}` to `train`, `timetable` and
 /// `execution`, which no fixture can expect.
 enum ObservationAnswer: Equatable {
@@ -1151,6 +1196,7 @@ enum ObservationAnswer: Equatable {
     case trackPlatforms([PlatformSummary])
     case levels([PlatformLevelSummary])
     case trainPath(PathSummary?)
+    case holder(TrainID?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1158,7 +1204,7 @@ extension ObservationAnswer: Encodable {
         case neighbors, connected, position, movement, found, route, platforms, stations, timetable, execution
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
-        case pose, alignment, nodes, trackPlatforms, levels, trainPath
+        case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1222,7 +1268,11 @@ extension ObservationAnswer: Encodable {
         case .trainPath(let path?):
             try container.encode(true, forKey: .found)
             try container.encode(path, forKey: .trainPath)
-        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil):
+        case .holder(let id?):
+            try container.encode(true, forKey: .found)
+            try container.encode(id.rawValue, forKey: .train)
+        case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
+             .holder(nil):
             try container.encode(false, forKey: .found)
         case .nodes(let nodes):
             try container.encode(nodes, forKey: .nodes)
@@ -1286,7 +1336,8 @@ struct PositionSummary: Codable, Equatable {
 /// The externally meaningful state of a world: time, money, what has been
 /// built or bought (each station with the tiles it grew onto), where each
 /// train is and how it moves, each train's timetable, how it repeats, and
-/// service, its cars and its body, the service lines and the service day.
+/// service, its cars, its body and its reservation, the service lines, the
+/// service day, the track network and whether traffic control is on.
 /// Lists are in
 /// the contract's canonical order (stations and trains by ascending ID,
 /// tracks row by row from the north-west corner), sorted here rather than
@@ -1301,6 +1352,8 @@ struct WorldSummary: Codable, Equatable {
     var lines: [LineSummary]
     var serviceDay: [BandSummary]
     var network: NetworkSummary
+    /// Whether traffic control is on (schema 19).
+    var trafficControl: Bool
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1333,6 +1386,9 @@ struct WorldSummary: Codable, Equatable {
         /// On the track network (schema 16): the edges its body lies over
         /// behind its head's edge, nearest first, by number.
         var trailEdges: [Int]
+        /// Under traffic control (schema 19): the track it has reserved,
+        /// in resource order; `[]` for none.
+        var reservation: [ResourceSummary]
     }
 
     /// The track network (schema 16): nodes and edges in ID order.
@@ -1400,13 +1456,15 @@ struct WorldSummary: Codable, Equatable {
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
                     repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution),
-                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number)
+                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number),
+                    reservation: $0.reservation.map(ResourceSummary.init)
                 )
             }
             .sorted { $0.id < $1.id }
         lines = world.lines.map(LineSummary.init).sorted { $0.id < $1.id }
         serviceDay = world.serviceDay.bands.map(BandSummary.init)
         network = NetworkSummary(world.network)
+        trafficControl = world.isTrafficControlEnabled
     }
 }
 
