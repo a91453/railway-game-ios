@@ -49,6 +49,69 @@ public enum TrackResource: Hashable, Comparable, Sendable {
     }
 }
 
+extension TrackResource: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case tile, node, link, edge, start, end
+    }
+
+    /// Decodes a resource a train reserves (Phase 4.6 Stage T), in exactly
+    /// one of four forms: a grid tile `{"tile": {"x", "y"}}`, a node of the
+    /// track network `{"node": n}`, a grid link `{"link": [a, b]}` (its one
+    /// span, the whole link; `a` before `b` in row-major order, the two
+    /// tiles orthogonal neighbours) or a span of a network edge
+    /// `{"edge": n, "start", "end"}` (`0 <= start < end`). Numbers start at
+    /// 1. Rejects no tag or more than one, and any shape a resource cannot
+    /// have, rather than repairing it; whether the resource exists in a
+    /// world is checked by the ``GameWorld`` decoder.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let tags = [CodingKeys.tile, .node, .link, .edge].filter(container.contains)
+        func corrupt(_ description: String) -> DecodingError {
+            DecodingError.dataCorrupted(DecodingError.Context(codingPath: container.codingPath, debugDescription: description))
+        }
+        guard tags.count == 1 else { throw corrupt("A track resource is exactly one of a tile, a node, a link or an edge's span.") }
+        switch tags[0] {
+        case .tile:
+            self = .tile(try container.decode(GridPosition.self, forKey: .tile))
+        case .node:
+            let number = try container.decode(Int.self, forKey: .node)
+            guard number >= 1 else { throw corrupt("Track node numbers start at 1.") }
+            self = .node(.node(number))
+        case .link:
+            let tiles = try container.decode([GridPosition].self, forKey: .link)
+            guard tiles.count == 2, TrackEdgeID.precedes(tiles[0], tiles[1]), TrackDirection(from: tiles[0], to: tiles[1]) != nil else {
+                throw corrupt("A link is two neighbouring tiles, the one further north or west first.")
+            }
+            self = .span(TrackSpan(edge: .link(tiles[0], tiles[1]), start: 0, end: TrainPosition.linkLength))
+        default:
+            let number = try container.decode(Int.self, forKey: .edge)
+            let start = try container.decode(Int64.self, forKey: .start)
+            let end = try container.decode(Int64.self, forKey: .end)
+            guard number >= 1, start >= 0, start < end else { throw corrupt("A span lies along an edge numbered from 1, from 0 or more to further on.") }
+            self = .span(TrackSpan(edge: .edge(number), start: start, end: end))
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .node(.tile(let position)):
+            try container.encode(position, forKey: .tile)
+        case .node(.node(let number)):
+            try container.encode(number, forKey: .node)
+        case .span(let span):
+            switch span.edge {
+            case .link(let a, let b):
+                try container.encode([a, b], forKey: .link)
+            case .edge(let number):
+                try container.encode(number, forKey: .edge)
+                try container.encode(span.start, forKey: .start)
+                try container.encode(span.end, forKey: .end)
+            }
+        }
+    }
+}
+
 /// A stretch of an edge's chainage, from `start` to `end` (measured from the
 /// edge's `from` node): the unit of track a train occupies along an edge
 /// and, from Stage T, reserves (Stage S3A).
@@ -133,6 +196,13 @@ extension GameWorld {
     /// ``networkResources(of:)``).
     public func occupiedResources(of id: TrainID) -> [TrackResource] {
         guard let train = train(id: id) else { return [] }
+        return occupied(train)
+    }
+
+    /// The track `train` occupies (see ``occupiedResources(of:)``). Takes
+    /// the train by value, so traffic control can ask about a train as a
+    /// command would leave it.
+    func occupied(_ train: Train) -> [TrackResource] {
         let head: [TrackResource]
         switch train.position {
         case nil:

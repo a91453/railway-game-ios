@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落；下一步依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)），先做 Phase 4.7 的 W1（行駛曲線的計算核心），再做 Phase 4.6 的 T、U、V。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：先做 Phase 4.7 的 W1（行駛曲線的計算核心），再做 U、W2、V。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -24,10 +24,10 @@
 S2 之後確定了產品方向：「以 deterministic 模擬核心為基礎的 360° 3D 鐵道城市建造遊戲」。交通控制若建立在北東南西的方格上，之後換成任意方向的鐵軌與立體交叉時就要重寫，所以先把鐵路核心拆成 topology、geometry、rendering 三層（ARCHITECTURE 決策 28），在 Phase 4.5 補上兩個 Stage（S3、S4），之後再加上 S5，把既有的營運系統接到新的路網上：
 
 - Phase 4.5：S1 ✅ 軌道資源、S2 ✅ 車站設施、S3 ✅ 連續軌道幾何、S4 ✅ 立體鐵路與結構物、S5 ✅ 路網上的營運；
-- Phase 4.6：T 進路預約、U movement authority、V dispatcher；
+- Phase 4.6：T ✅ 進路預約、U movement authority、V dispatcher；
 - Phase 4.7：W 行駛曲線。
 
-舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，先暫停；新的 T 在 S5 之後改寫成泛用的 topology（見 Stage T）。
+舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，暫停、不合併；新的 T 在 S5 之後重新寫在泛用的 topology 上（見 Stage T），概念上取代了 PR #31。
 
 S5 是 S3/S4 與既有 O–Q 營運系統（operational system）之間的 bridge：停站、時刻表、折返與重複、線路、派車與服務模式都在路網上運作，而且方格與路網是同一套程式。T 之後不需要重新處理時刻表、線路與月台的 grid-specific migration。
 
@@ -339,31 +339,37 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
   - 股道與月台的指派；
   - 同股道的跟車距離。
 
-**建議的實作順序**（依實際的相依關係，不是字母順序）：
+**之後的實作順序**（依實際的相依關係，不是字母順序；T 已實作）：
 
 1. W1：行駛曲線的計算核心，照 `buildProfile` 翻譯。參考最完整，也不依賴其他 Stage。
-2. W2：把曲線接到線路的行程與移動。有兩件事要作者先決定（見對照文件的 gap 分析）。
-3. T、U：進路預約與 movement authority。參考只有結果、沒有演算法，所以大部分是 gap，要自己設計，或請作者補上建置腳本。
+2. U：movement authority。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。
+3. W2：把曲線接到線路的行程與移動。有兩件事要作者先決定（見對照文件的 gap 分析）。
 4. V：待避與交會。它的推估要用 W 的曲線；實際放行由 T、U 保證。
 
-### Stage T — 進路預約
+### Stage T — 進路預約 ✅
 
-舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，暫停、不合併。新的 T 在 S5 之後，沿 `TrackTraversal` 的路徑預約泛用的 `TrackResource`，不依賴北東南西、格子或畫面；可以保留的語義與測試見 ARCHITECTURE 決策 29 的第 12 點。
+T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversal`、`TrackResource`（節點與 span）與 `TrackPlatform` 上，方格與路網是同一套程式（ARCHITECTURE 決策 32）。舊的 Stage T（PR #31）建立在方格上，沒有合併；新的 T 保留了它的語義，但沒有沿用它的程式，概念上取代了它。
 
-T 直接使用 S5 統一好的服務路徑 `TrainPath`（canonical route）、`TrackTraversal`、`pathAhead(of:)`、`occupiedResources(of:)` 與 span、`TrackPlatform` 與停車位置，以及車身的佔用；路網上以車站為目的地的路、路網的時刻表與 LineJourney 的遷移都已在 S5 完成，不屬於 T（決策 31 第 21 點）。
-
-- 出發或設定 continuation 時，列車向 GameCore 預約前方的資源（節點與 span，不是整條邊）。預約是整列車的，包含列車長度。
-- 預約是權威狀態，要存檔。
-- 避免死結的最小規則在 T 決定，例如一次只預約到下一個停靠站，或下一個可以停車的地方。
+- **交通控制**：`GameWorld` 的開關。GameCore 的新世界預設關閉（之前所有 Stage 的行為與存檔不變），App 的新遊戲開啟。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`），關閉一定成功並清除所有預約。
+- **整條進路一次取得**：列車出發（服務、線路派車）或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span；拿不到就一點都不拿（`trackReserved`，阻擋者是編號最小的列車）。預約存檔，是權威狀態；走到路的終點時釋放。
+- **span 的分界**：與佔用是同一條規則，落在分界上時兩邊都算，所以停在分界上的列車與它的預約之間沒有縫。長列車從車尾預約，停車位置在邊的中段時只預約到那裡。
+- **交會點與限界**：經過道岔、平面交叉的進路在共用的節點衝突；停在交會點 1024 以內的列車也持有那個節點；立體交叉不共用資源，互不衝突。
+- **服務與派車**：路被佔用時服務原地等待（不折返），每步重試；線路的列車取不到路時不派出、不改上次派車；派出的列車同一步就出發。`trainHoldingRoute(of:)` 回答它在等哪一台列車。
+- **基礎設施**：預約中的鐵軌不能拆，持有的邊不能加減月台（span 的切法不變），被持有的交會點不能加邊；不相干的建設照常。
+- **畫面**：線路面板有交通控制的開關，列車面板顯示「Waiting for <列車> to clear the route」，示範配置讓 Local 在 Hill 等主線上的列車讓出路。
+- 新增 `traffic.reservation` 差分 campaign（新的 CI shard）與 `save.trafficMutation`，每個 campaign 都檢查交通控制的不變量；golden scenario schema v19 新增 `traffic-reservation.json`。
+- **留給之後**：通過後逐段釋放與 movement authority（U）；單線上兩端互等、時刻表造成的循環等待、繞路、待避、交會、月台分配與快車優先（V）。
 
 ### Stage U — Movement authority
 
 - 列車只能進入預約到的資源，通過後釋放。
+- T 已經準備好：存檔的 `Train.reservation`（依資源順序）、`pathAhead(of:)`、`TrackSpan`、佔用與限界的 helper，以及移動之後釋放走完的路的那一處（決策 32 第 16 點）。U 只加上授權的檢查與逐段釋放，不需要重新設計預約、路、月台或存檔。
 - 決策 20 已經預留了接點：「沒有路就等待、之後再試」與「拿不到 authority 就等待」語義相同，所以時刻表與執行進度的契約不需要重寫。
 
 ### Stage V — Dispatcher：待避、交會與月台分配
 
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。
+- **T 留下的死結**：T 只保證不會「拿一半、等另一半」；單線上兩端的列車各自等對方、時刻表造成的循環等待、兩台站著的列車各自擋住對方，都由 V 解決（決策 32 第 15 點）。
 - **待避站的選擇**：後車追上前車之前，往回找一個安全間隔足夠的車站讓前車待避。
 - **單線交會**：等對向車到站再開。
 - **月台分配**：例如停站的列車走月台線，通過的列車走正線。

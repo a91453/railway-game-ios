@@ -74,6 +74,8 @@ struct ReferenceWorld: Equatable {
         /// Decision 31: where on the last edge of its path it stops, `nil`
         /// at that edge's end.
         var end: Int64?
+        /// Decision 32: the track it has reserved, in resource order.
+        var reservation: [TrackResource] = []
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
@@ -108,6 +110,8 @@ struct ReferenceWorld: Equatable {
     var networkEdges: [Int: NetworkEdge] = [:]
     var nextNetworkNode = 1
     var nextNetworkEdge = 1
+    /// Decision 32: traffic control.
+    var trafficControl = false
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -187,6 +191,7 @@ struct ReferenceWorld: Equatable {
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
             && lhs.networkNodes == rhs.networkNodes && lhs.networkEdges == rhs.networkEdges
             && lhs.nextNetworkNode == rhs.nextNetworkNode && lhs.nextNetworkEdge == rhs.nextNetworkEdge
+            && lhs.trafficControl == rhs.trafficControl
     }
 
     // MARK: - Geometry
@@ -347,6 +352,8 @@ struct ReferenceWorld: Equatable {
             }
         }
         guard !supports else { return .trackInUse(p) }
+        // Decision 32: nor track a train has reserved.
+        if trafficControl, let holder = reserves(tile: p) { return .trackReserved(TrainID(rawValue: holder)) }
         tiles[p] = nil
         return nil
     }
@@ -419,19 +426,21 @@ struct ReferenceWorld: Equatable {
         case .success(let i):
             guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
             guard isOnTrack(position) else { return .invalidTrainPosition }
+            var placed = trains[i]
             if case .onEdge(let traversal, let offset) = position {
                 let length = Self.length(trains[i])
                 guard length == 0 || offset > 0, let body = networkBody(behind: traversal, offset: offset, length: length) else {
                     return .invalidTrainPosition
                 }
-                trains[i].position = position
-                trains[i].trailEdges = body
-                return nil
+                placed.position = position
+                placed.trailEdges = body
+            } else {
+                guard let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
+                placed.position = position
+                placed.trail = body
             }
-            guard let body = body(behind: position, length: Self.length(trains[i])) else { return .invalidTrainPosition }
-            trains[i].position = position
-            trains[i].trail = body
-            return nil
+            // Decision 32: and what it would stand on and run on to.
+            return admit(placed, at: i)
         }
     }
 
@@ -450,16 +459,17 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
-            if case .onEdge? = trains[i].position {
-                trains[i] = turnedOnNetwork(trains[i])
+            var turned = trains[i]
+            if case .onEdge? = turned.position {
+                turned = turnedOnNetwork(turned)
             } else {
-                (trains[i].position, trains[i].trail) = Self.turnedWithBody(trains[i].position!, trains[i].trail, length: Self.length(trains[i]))
+                (turned.position, turned.trail) = Self.turnedWithBody(turned.position!, turned.trail, length: Self.length(turned))
             }
-            trains[i].continuation = []
-            trains[i].edges = []
-            trains[i].cursor = 0
-            trains[i].end = nil
-            return nil
+            turned.continuation = []
+            turned.edges = []
+            turned.cursor = 0
+            turned.end = nil
+            return admit(turned, at: i)
         }
     }
 
@@ -508,20 +518,22 @@ struct ReferenceWorld: Equatable {
         switch manual(id) {
         case .failure(let error): return error
         case .success(let i):
+            var sent = trains[i]
             if case .onEdge? = trains[i].position {
                 // Decision 29: a train on the network follows edges; an
                 // empty list still clears (decision 31: where it stops too).
                 guard nodes.isEmpty else { return .invalidContinuation }
-                trains[i].edges = []
-                trains[i].cursor = 0
-                trains[i].end = nil
-                return nil
+                sent.edges = []
+                sent.cursor = 0
+                sent.end = nil
+                return admit(sent, at: i)
             }
             let (node, heading) = Self.ahead(trains[i].position!)
             guard passable(nodes[...], from: node, heading: heading).count == nodes.count else { return .invalidContinuation }
-            trains[i].continuation = nodes
-            trains[i].cursor = 0
-            return nil
+            sent.continuation = nodes
+            sent.cursor = 0
+            // Decision 32: the whole of it, or nothing.
+            return admit(sent, at: i)
         }
     }
 
@@ -646,11 +658,7 @@ struct ReferenceWorld: Equatable {
                 dispatch(l, memo: &memo)
             }
             for i in trains.indices {
-                if case .onEdge? = trains[i].position {
-                    departOnNetwork(i)
-                } else {
-                    depart(i)
-                }
+                depart(i)
             }
             for i in trains.indices where trains[i].position != nil && trains[i].rate > 0 {
                 if case .onEdge? = trains[i].position {
@@ -658,6 +666,8 @@ struct ReferenceWorld: Equatable {
                 } else {
                     trains[i] = stepped(trains[i])
                 }
+                // Decision 32: a route that has come to its end is released.
+                releaseIfArrived(i)
             }
             minutes += 1
             for i in trains.indices {
@@ -672,54 +682,71 @@ struct ReferenceWorld: Equatable {
     }
 
     /// Decision 20's departures at the current minute for one train: from
-    /// each stop whose departure has come, finish at the last stop, arrive
-    /// at once where the train already is stopped at the next stop's
-    /// station (decision 27: and needs no pull along its platforms), or set
-    /// off along a route; wait if there is none. Decision
-    /// 21: turn the train first at a stop marked to, but only if it then
-    /// finishes, arrives at once or finds a route; after the last stop of a
-    /// repeating timetable go on to the first stop of the next cycle while
-    /// its times fit; leave at most as many stops as the timetable has.
-    private mutating func depart(_ i: Int) {
+    /// each stop whose departure has come, one pass after another while the
+    /// train arrives at once; decision 21: at most as many stops as the
+    /// timetable has.
+    mutating func depart(_ i: Int) {
         var left = 0
         while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
               Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
             left += 1
-            let stop = trains[i].timetable[service.stop]
-            // Decision 27: a train with cars turns round with its head at
-            // its tail.
-            let length = Self.length(trains[i])
-            let (start, body) = stop.reverses
-                ? Self.turnedWithBody(trains[i].position!, trains[i].trail, length: length)
-                : (trains[i].position!, trains[i].trail)
-            var next = (stop: service.stop + 1, cycle: service.cycle)
-            if next.stop == trains[i].timetable.count {
-                next = (0, service.cycle + 1)
-                if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
-                    trains[i].position = start
-                    trains[i].trail = body
-                    trains[i].service = nil
-                    return
-                }
-            }
-            let target = trains[i].timetable[next.stop].station
-            // Decision 27: the route pulls a train with cars along the
-            // platforms; one already stopped there that needs no pull is
-            // there at once.
-            let route = route(from: start, toStation: target, length: length)
-            if case .atNode(let tile, _) = start, stations(beside: tile).contains(target), route == [] {
-                trains[i].position = start
-                trains[i].trail = body
-                trains[i].service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
-                continue
-            }
-            guard let route else { return }
-            trains[i].position = start
-            trains[i].trail = body
-            trains[i].continuation = route
-            trains[i].cursor = 0
-            trains[i].service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
+            guard departOnce(i) else { return }
         }
+    }
+
+    /// One departure of train `i` from the stop its service waits at, on
+    /// either kind of track; `true` when it arrived at once at the next
+    /// stop, so the next one may be left too.
+    mutating func departOnce(_ i: Int) -> Bool {
+        if case .onEdge? = trains[i].position { return departOnNetwork(i) }
+        return departOnGrid(i)
+    }
+
+    /// One departure on the grid: finish at the last stop, arrive at once
+    /// where the train already is stopped at the next stop's station
+    /// (decision 27: and needs no pull along its platforms), or set off
+    /// along a route; wait if there is none. Decision 21: turn the train
+    /// first at a stop marked to, but only if it then finishes, arrives at
+    /// once or finds a route; after the last stop of a repeating timetable
+    /// go on to the first stop of the next cycle while its times fit.
+    /// Decision 32: under traffic control, only if the train can take what
+    /// that needs.
+    private mutating func departOnGrid(_ i: Int) -> Bool {
+        let service = trains[i].service!
+        let stop = trains[i].timetable[service.stop]
+        // Decision 27: a train with cars turns round with its head at
+        // its tail.
+        let length = Self.length(trains[i])
+        let (start, body) = stop.reverses
+            ? Self.turnedWithBody(trains[i].position!, trains[i].trail, length: length)
+            : (trains[i].position!, trains[i].trail)
+        var leaving = trains[i]
+        leaving.position = start
+        leaving.trail = body
+        var next = (stop: service.stop + 1, cycle: service.cycle)
+        if next.stop == trains[i].timetable.count {
+            next = (0, service.cycle + 1)
+            if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
+                leaving.service = nil
+                _ = admit(leaving, at: i)
+                return false
+            }
+        }
+        let target = trains[i].timetable[next.stop].station
+        // Decision 27: the route pulls a train with cars along the
+        // platforms; one already stopped there that needs no pull is
+        // there at once.
+        let route = route(from: start, toStation: target, length: length)
+        if case .atNode(let tile, _) = start, stations(beside: tile).contains(target), route == [] {
+            leaving.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            return admit(leaving, at: i) == nil
+        }
+        guard let route else { return false }
+        leaving.continuation = route
+        leaving.cursor = 0
+        leaving.service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
+        _ = admit(leaving, at: i)
+        return false
     }
 
     /// One basic step for one train, in closed form: the train first needs

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "description": "Continuous track (Phase 4.5 Stage S3). Nodes are points in world units (1024 a tile) on the map (since Stage S4 within 4096 of the ground: a node at height 5000 is refused); edges run between two nodes, straight or along a cubic curve with two control points, and cost track per tile of length, rounded up. A line runs east A(512,1536) - B - C - D(4608,1536) with edges of 1024, 2560 and 512; a spur leaves D north at a right angle and joins nothing, since only edge ends leaving a node in opposite ways (to within 1 in 16) join. The curve from (8192,8192) to (8448,8448) is sampled at eighths and measures 396; it arrives heading south and joins the straight edge on to R. An edge at a 3-4-5 slope measures 5120 exactly. Long (3 cars, 2048 units) cannot stand at offset 0 with a body; at 1500 on B-C its body reaches back 548 onto A-B. It runs to D, turns round (its head goes to where its tail was, 1536 back along B-C from C), and runs back onto A-B. Short (2 cars) stands 700 down the straight after the curve, its body back along the curve. Trains occupy the nodes their centre line reaches or passes and the spans of edge it lies strictly inside (Stage S3A): an edge is cut into ceil(length / 1024) spans with boundaries at floor(k * length / n), so B-C (2560) has spans 0-853, 853-1706 and 1706-2560, the straight after the curve (2048) has 0-1024 and 1024-2048, and every other edge here is one span; the edge under a body and the node an edge ends at cannot be removed.",
   "initialState": {
     "mapWidth": 16,
@@ -286,8 +286,8 @@
     "stations": [],
     "tracks": [],
     "trains": [
-      { "id": 1, "name": "Long", "position": { "type": "edge", "edge": 1, "direction": "backward", "offset": 976 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 3, "trail": [], "trailEdges": [2] },
-      { "id": 2, "name": "Short", "position": { "type": "edge", "edge": 6, "direction": "forward", "offset": 700 }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 2, "trail": [], "trailEdges": [5] }
+      { "id": 1, "name": "Long", "position": { "type": "edge", "edge": 1, "direction": "backward", "offset": 976 }, "movement": { "rate": 1000, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 3, "trail": [], "trailEdges": [2], "reservation": [] },
+      { "id": 2, "name": "Short", "position": { "type": "edge", "edge": 6, "direction": "forward", "offset": 700 }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 2, "trail": [], "trailEdges": [5], "reservation": [] }
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
@@ -312,6 +312,7 @@
         { "id": 7, "from": 9, "to": 10, "curve": { "type": "straight" }, "length": 5120, "profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface" }
       ],
       "platforms": []
-    }
+    },
+    "trafficControl": false
   }
 }

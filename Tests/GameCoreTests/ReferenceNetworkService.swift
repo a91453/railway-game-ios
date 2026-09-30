@@ -180,38 +180,39 @@ extension ReferenceWorld {
     // MARK: - Services
 
     /// Decision 20's departures (with decision 21's turning and repeats) for
-    /// a train on the network: turned first where the stop says so, but
-    /// only if it then finishes, is already at a berth of the next call's
-    /// station, or finds a way there; then standing, or setting off.
-    mutating func departOnNetwork(_ i: Int) {
-        var left = 0
-        while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
-              Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
-            left += 1
-            let stop = trains[i].timetable[service.stop]
-            let start = stop.reverses ? turnedOnNetwork(trains[i]) : trains[i]
-            var next = (stop: service.stop + 1, cycle: service.cycle)
-            if next.stop == trains[i].timetable.count {
-                next = (0, service.cycle + 1)
-                if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
-                    trains[i] = standing(start)
-                    trains[i].service = nil
-                    return
-                }
+    /// a train on the network, one at a time: turned first where the stop
+    /// says so, but only if it then finishes, is already at a berth of the
+    /// next call's station, or finds a way there; then standing, or setting
+    /// off. Decision 32: under traffic control, only if the train can take
+    /// what that needs. `true` when it arrived at once.
+    mutating func departOnNetwork(_ i: Int) -> Bool {
+        let service = trains[i].service!
+        let stop = trains[i].timetable[service.stop]
+        let start = stop.reverses ? turnedOnNetwork(trains[i]) : trains[i]
+        var next = (stop: service.stop + 1, cycle: service.cycle)
+        if next.stop == trains[i].timetable.count {
+            next = (0, service.cycle + 1)
+            if trains[i].period == nil || !Self.fits(trains[i], cycle: next.cycle) {
+                var done = standing(start)
+                done.service = nil
+                _ = admit(done, at: i)
+                return false
             }
-            let target = trains[i].timetable[next.stop].station
-            if isAtBerth(start, of: target) {
-                trains[i] = standing(start)
-                trains[i].service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
-                continue
-            }
-            guard let path = networkPathToStation(from: start.position!, station: target, length: Self.length(start)) else { return }
-            trains[i] = standing(start)
-            trains[i].edges = path.traversals.map { Run($0)!.edge }
-            trains[i].cursor = 0
-            trains[i].end = path.end
-            trains[i].service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
         }
+        let target = trains[i].timetable[next.stop].station
+        if isAtBerth(start, of: target) {
+            var there = standing(start)
+            there.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            return admit(there, at: i) == nil
+        }
+        guard let path = networkPathToStation(from: start.position!, station: target, length: Self.length(start)) else { return false }
+        var off = standing(start)
+        off.edges = path.traversals.map { Run($0)!.edge }
+        off.cursor = 0
+        off.end = path.end
+        off.service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
+        _ = admit(off, at: i)
+        return false
     }
 
     /// Decision 31: whether removing `platform` would take a platform from

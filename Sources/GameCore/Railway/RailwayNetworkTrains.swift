@@ -211,33 +211,11 @@ extension GameWorld {
     /// boundary between two spans holds both. A train of one car holds the
     /// node it stands at, or the span (or two) at its point of an edge.
     func networkResources(of train: Train) -> [TrackResource] {
-        guard case .onEdge(let traversal, let offset)? = train.position, network.edge(traversal.edge) != nil else { return [] }
         // The stretch of each edge the train covers, measured along the way
-        // it is travelled: the head's edge, then its body's, nearest first.
-        var stretches = [(traversal: traversal, from: max(0, offset - train.length), to: offset)]
-        var remaining = train.length - offset
-        for behind in trailTraversals(behind: traversal, trail: train.trailEdges) ?? [] where remaining > 0 {
-            let length = network.edge(behind.edge)!.length
-            stretches.append((behind, max(0, length - remaining), length))
-            remaining -= length
-        }
-        var resources: [TrackResource] = []
-        for stretch in stretches {
-            let edge = network.edge(stretch.traversal.edge)!
-            if stretch.from == 0 { resources.append(.node(edge.start(of: stretch.traversal.direction))) }
-            if stretch.to == edge.length { resources.append(.node(edge.end(of: stretch.traversal.direction))) }
-            // The stretch in the edge's own chainage, from its `from` node.
-            let (low, high) = stretch.traversal.direction == .forward
-                ? (stretch.from, stretch.to)
-                : (edge.length - stretch.to, edge.length - stretch.from)
-            for span in network.spans(of: edge.id, length: edge.length) {
-                let a = max(low, span.start)
-                let b = min(high, span.end)
-                // Some point of both, strictly between the edge's ends.
-                if a < b || (a == b && a > 0 && a < edge.length) { resources.append(.span(span)) }
-            }
-        }
-        return resources
+        // it is travelled: the head's edge, then its body's, nearest first
+        // (see bodyStretches(of:)); the rule that reads their track is the
+        // one route reservation uses too (Stage T).
+        resources(covering: bodyStretches(of: train))
     }
 
     // MARK: - The resources along an edge (Stage S3A)
@@ -264,7 +242,14 @@ extension GameWorld {
     ///
     /// Empty for an unplaced train, one with nothing ahead, or an unknown ID.
     public func pathAhead(of id: TrainID) -> [TrackTraversal] {
-        guard let train = train(id: id), let position = train.position else { return [] }
+        guard let train = train(id: id) else { return [] }
+        return pathAhead(of: train)
+    }
+
+    /// The traversals `train` will enter after the one it is on (see
+    /// ``pathAhead(of:)``), for a train as a command would leave it.
+    func pathAhead(of train: Train) -> [TrackTraversal] {
+        guard let position = train.position else { return [] }
         var path: [TrackTraversal] = []
         switch position {
         case .onEdge(let traversal, _):

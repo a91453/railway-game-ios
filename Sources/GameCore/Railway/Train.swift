@@ -77,6 +77,17 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// head's edge, and on the grid. Only ``GameWorld`` changes it, as the
     /// head moves.
     public internal(set) var trailEdges: [TrackEdgeID]
+    /// The track this train has reserved for its route under traffic control
+    /// (Phase 4.6 Stage T, ARCHITECTURE decision 32), in resource order,
+    /// each once: everything its whole length covers from where its tail
+    /// was when it took the route to where the route ends. Empty while
+    /// traffic control is off, and for a train with no way left to go.
+    ///
+    /// Authoritative, and saved: it holds track the train has passed as well
+    /// as track ahead, which its position alone could not tell. Only
+    /// ``GameWorld`` changes it, as it gives the train a route or the route
+    /// ends; its route itself stays in ``movement``.
+    public internal(set) var reservation: [TrackResource]
 
     /// Creates an unplaced, idle train of one car without a timetable or a
     /// service.
@@ -91,6 +102,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.cars = 1
         self.trail = []
         self.trailEdges = []
+        self.reservation = []
     }
 }
 
@@ -139,7 +151,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, cars, trail, trailEdges
+        case id, name, position, movement, timetable, period, execution, cars, trail, trailEdges, reservation
     }
 
     /// Decodes a train.
@@ -178,6 +190,13 @@ extension Train: Codable {
     /// rejected; whether its edges exist and its body fits them is checked
     /// by the ``GameWorld`` decoder. Since Stage S5 a train on the network
     /// may run a service.
+    ///
+    /// A train without a reservation (Stage T) has no `"reservation"` key,
+    /// which is also how trains saved before traffic control read; an
+    /// explicit `null`, resources out of order or repeated, and a
+    /// reservation on an unplaced train are rejected. Whether the resources
+    /// exist and fit the train's route is checked by the ``GameWorld``
+    /// decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -200,6 +219,13 @@ extension Train: Codable {
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
         trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
         trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
+        reservation = container.contains(.reservation) ? try container.decode([TrackResource].self, forKey: .reservation) : []
+        guard zip(reservation, reservation.dropFirst()).allSatisfy({ $0 < $1 }), position != nil || reservation.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .reservation, in: container,
+                debugDescription: "Train \(id.rawValue)'s reservation must be in resource order without repeats, and only on a placed train."
+            )
+        }
         guard (Self.minimumCars...Self.maximumCars).contains(cars) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .cars, in: container, debugDescription: "Train \(id.rawValue) has \(cars) cars; a train has \(Self.minimumCars) to \(Self.maximumCars)."
@@ -272,6 +298,9 @@ extension Train: Codable {
         }
         if !trailEdges.isEmpty {
             try container.encode(trailEdges.map { $0.networkNumber }, forKey: .trailEdges)
+        }
+        if !reservation.isEmpty {
+            try container.encode(reservation, forKey: .reservation)
         }
     }
 }

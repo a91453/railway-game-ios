@@ -1093,4 +1093,85 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(servicesLoaded > 100, "only \(servicesLoaded) services on the network loaded")
         assertVolume(endsLoaded > 100, "only \(endsLoaded) paths ending part of the way along an edge loaded")
     }
+
+    /// Decision 32: traffic control and reservations in saves. Mutations
+    /// aim at the flag, the reservations, the resources in them and what a
+    /// route is read from (positions, movements, bodies, services, platforms
+    /// and edges); the flag is also flipped. Whatever loads must keep every
+    /// invariant, traffic control's among them (no two trains hold the same
+    /// track, a train on its way has a reservation, one standing has none).
+    func testMutatedTrafficControlIsRefusedOrLoadsConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var flipped = 0
+        var reservationsLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.trafficMutation", cases: 12) { c in
+            let (world, grid) = try TrafficControlPropertyTests.generateWorld(&c, operations: 40)
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return ["reservation", "trafficControl", "movement", "position", "trail", "execution", "platforms", "edges"].contains { text.contains($0) }
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        if let flag = value as? Bool, c.random.chance(1, in: 2) {
+                            text = "flag \(flag) -> \(!flag)"
+                            flipped += 1
+                            return !flag
+                        }
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["reservation", "trafficControl", "tile", "node", "link", "edge", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                if loaded.trains.contains(where: { !$0.reservation.isEmpty }) { reservationsLoaded += 1 }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = TrafficControlPropertyTests.operation(in: current, grid: grid, using: &c.random)
+                    let before = current
+                    if TrafficControlPropertyTests.apply(operation, to: &current) != nil, !operation.isCompound {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.trafficMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at traffic control and routes, \(flipped) flags flipped, \(reservationsLoaded) loaded with reservations")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 50, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 200, "only \(aimed) mutations aimed at traffic control and routes")
+        assertVolume(flipped > 5, "only \(flipped) flags flipped")
+        assertVolume(reservationsLoaded > 30, "only \(reservationsLoaded) worlds with reservations loaded")
+    }
 }

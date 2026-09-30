@@ -242,6 +242,13 @@ extension ReferenceWorld {
             return .trackConflict(.edge(other))
         }
         guard nextNetworkEdge != Int.max else { return .idsExhausted }
+        // Decision 32: not at a junction a train holds, or holds track
+        // close to.
+        if trafficControl, let holder = trains.sorted(by: { $0.id < $1.id }).first(where: { train in
+            held(train).contains { nearJunction($0, a) || nearJunction($0, b) }
+        }) {
+            return .trackReserved(TrainID(rawValue: holder.id))
+        }
         let factor: Int64 = switch structure {
         case .surface: 1
         case .elevated: 3
@@ -275,6 +282,12 @@ extension ReferenceWorld {
         }
         guard !used else { return .trackEdgeInUse(id) }
         guard !stations.contains(where: { $0.trackPlatforms.contains { $0.edge == id } }) else { return .trackEdgeHasPlatform(id) }
+        // Decision 32: nor an edge a train has reserved some of.
+        if trafficControl, let holder = trains.sorted(by: { $0.id < $1.id }).first(where: { train in
+            train.reservation.contains { if case .span(let span) = $0 { span.edge == id } else { false } }
+        }) {
+            return .trackReserved(TrainID(rawValue: holder.id))
+        }
         networkEdges[number] = nil
         return nil
     }
@@ -321,10 +334,12 @@ extension ReferenceWorld {
             let lowest = traversals.isEmpty ? offset : 1
             guard lowest <= end, end < networkEdges[run.edge]!.length else { return .invalidContinuation }
         }
-        trains[i].edges = numbers
-        trains[i].cursor = 0
-        trains[i].end = end
-        return nil
+        var sent = trains[i]
+        sent.edges = numbers
+        sent.cursor = 0
+        sent.end = end
+        // Decision 32: the whole path, or nothing.
+        return admit(sent, at: i)
     }
 
     // MARK: - Trains

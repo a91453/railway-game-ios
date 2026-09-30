@@ -429,13 +429,44 @@ extension ReferenceWorld {
     /// its trains in service than it runs; then the first of its trains, by
     /// ID, without a service, placed, moving at some rate and stopped at its
     /// first call, that can drive the round trip from there (turned round
-    /// only if that is shorter or the only way) leaves on it now.
+    /// only if that is shorter or the only way) leaves on it now. Decision
+    /// 32: under traffic control, only if its first departure can take its
+    /// route; and it leaves at once.
     mutating func dispatch(_ l: Int, service k: Int, memo: inout DispatchMemo) {
+        guard isDue(l, service: k, memo: &memo) else { return }
+        for id in lines[l].service(k).roster {
+            guard let i = trains.firstIndex(where: { $0.id == id }) else { continue }
+            switch tripTimetable(i, l, service: k, memo: &memo) {
+            case .notReady:
+                continue
+            case .overflow:
+                return
+            case .ready(let timetable):
+                var sent = trains[i]
+                sent.timetable = timetable
+                sent.period = nil
+                sent.service = Service(stop: 0, waiting: true)
+                if trafficControl, let leaving = firstLeaving(sent), holder(of: needs(leaving).resources, except: sent.id) != nil { continue }
+                trains[i] = sent
+                if k == 0 {
+                    lines[l].lastDispatch = minutes
+                } else {
+                    lines[l].patterns[k - 1].lastDispatch = minutes
+                }
+                depart(i)
+                return
+            }
+        }
+    }
+
+    /// Whether service `k` of line `l` sends a train out now if one is
+    /// ready.
+    func isDue(_ l: Int, service k: Int, memo: inout DispatchMemo) -> Bool {
         let line = lines[l]
         let service = line.service(k)
         guard !service.roster.isEmpty, minutes >= 0,
               let level = serviceLevel(of: LineID(rawValue: line.id), at: GameTime(minutes: minutes))
-        else { return }
+        else { return false }
         var journeys: [LineJourney?] = []
         for earlier in 0...k {
             let key = ServiceKey(line: line.id, service: earlier)
@@ -446,68 +477,81 @@ extension ReferenceWorld {
         }
         guard journeys[k] != nil, let plan = Self.plans(line, at: level, journeys: journeys)[k], plan.trains > 0,
               let headway = plan.headway
-        else { return }
-        if let last = service.lastDispatch, minutes - last < headway { return }
+        else { return false }
+        if let last = service.lastDispatch, minutes - last < headway { return false }
         let busy = trains.filter { service.roster.contains($0.id) && $0.service != nil }.count
-        guard busy < plan.trains else { return }
+        return busy < plan.trains
+    }
+
+    enum TripTimetable {
+        case notReady
+        case overflow
+        case ready([ScheduledStop])
+    }
+
+    /// The timetable train `i` would be sent out on by service `k` of line
+    /// `l` now: none unless it has no service, is placed, moves at some
+    /// rate, stands at the first call and can drive the round trip.
+    func tripTimetable(_ i: Int, _ l: Int, service k: Int, memo: inout DispatchMemo) -> TripTimetable {
+        let line = lines[l]
+        let service = line.service(k)
         let first = line.stops[service.calls[0]]
+        let train = trains[i]
+        guard train.service == nil, let position = train.position, train.rate > 0,
+              stationsStoppedAt(by: TrainID(rawValue: train.id)).contains(first)
+        else { return .notReady }
+        let place = Place(position: position, trail: train.trail, trailEdges: train.trailEdges)
+        let length = Self.length(train)
         let key = ServiceKey(line: line.id, service: k)
-        for id in service.roster {
-            guard let i = trains.firstIndex(where: { $0.id == id }) else { continue }
-            let train = trains[i]
-            guard train.service == nil, let position = train.position, train.rate > 0,
-                  stationsStoppedAt(by: TrainID(rawValue: id)).contains(first)
-            else { continue }
-            let place = Place(position: position, trail: train.trail, trailEdges: train.trailEdges)
-            let length = Self.length(train)
-            if memo.trips[place]?[key] == nil {
-                let straight: LineJourney?
-                let turned: LineJourney?
-                if case .onEdge = position {
-                    // Decision 31: on the network, from its place and body.
-                    straight = networkJourney(of: line, calling: service.calls, from: position, trailEdges: train.trailEdges, length: length)
-                    let back = turnedOnNetwork(train)
-                    turned = networkJourney(of: line, calling: service.calls, from: back.position!, trailEdges: back.trailEdges, length: length)
-                } else {
-                    straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
-                    let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
-                    turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
-                }
-                let pick: (Bool, LineJourney)? = switch (straight, turned) {
-                case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
-                case (let s?, nil): (false, s)
-                case (nil, let t?): (true, t)
-                case (nil, nil): nil
-                }
-                memo.trips[place, default: [:]][key] = .some(pick)
-            }
-            guard let (turn, trip) = memo.trips[place]![key]! else { continue }
-            // The timetable: leave now; each call the leg's minutes after
-            // the one before; stay 1 between the ends, 2 at the far end
-            // (turning), and finish on arrival back at the first call
-            // (turning).
-            var timetable = [ScheduledStop(station: first, arrival: GameTime(minutes: minutes), departure: GameTime(minutes: minutes), reverses: turn)]
-            var clock = minutes
-            for (n, leg) in trip.legs.enumerated() {
-                let final = n == trip.legs.count - 1
-                let far = leg.to == service.calls.last!
-                let stay: Int64 = final ? 0 : far ? 2 : 1
-                guard clock <= Int64.max - leg.minutes - stay else { return }
-                let arrival = clock + leg.minutes
-                clock = arrival + stay
-                timetable.append(ScheduledStop(
-                    station: line.stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: clock), reverses: final || far
-                ))
-            }
-            trains[i].timetable = timetable
-            trains[i].period = nil
-            trains[i].service = Service(stop: 0, waiting: true)
-            if k == 0 {
-                lines[l].lastDispatch = minutes
+        if memo.trips[place]?[key] == nil {
+            let straight: LineJourney?
+            let turned: LineJourney?
+            if case .onEdge = position {
+                // Decision 31: on the network, from its place and body.
+                straight = networkJourney(of: line, calling: service.calls, from: position, trailEdges: train.trailEdges, length: length)
+                let back = turnedOnNetwork(train)
+                turned = networkJourney(of: line, calling: service.calls, from: back.position!, trailEdges: back.trailEdges, length: length)
             } else {
-                lines[l].patterns[k - 1].lastDispatch = minutes
+                straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
+                let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
+                turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
             }
-            return
+            let pick: (Bool, LineJourney)? = switch (straight, turned) {
+            case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
+            case (let s?, nil): (false, s)
+            case (nil, let t?): (true, t)
+            case (nil, nil): nil
+            }
+            memo.trips[place, default: [:]][key] = .some(pick)
         }
+        guard let (turn, trip) = memo.trips[place]![key]! else { return .notReady }
+        // The timetable: leave now; each call the leg's minutes after
+        // the one before; stay 1 between the ends, 2 at the far end
+        // (turning), and finish on arrival back at the first call
+        // (turning).
+        var timetable = [ScheduledStop(station: first, arrival: GameTime(minutes: minutes), departure: GameTime(minutes: minutes), reverses: turn)]
+        var clock = minutes
+        for (n, leg) in trip.legs.enumerated() {
+            let final = n == trip.legs.count - 1
+            let far = leg.to == service.calls.last!
+            let stay: Int64 = final ? 0 : far ? 2 : 1
+            guard clock <= Int64.max - leg.minutes - stay else { return .overflow }
+            let arrival = clock + leg.minutes
+            clock = arrival + stay
+            timetable.append(ScheduledStop(
+                station: line.stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: clock), reverses: final || far
+            ))
+        }
+        return .ready(timetable)
+    }
+
+    /// Decision 32: the timetable train `train` would be sent out on now by
+    /// its line, if the line is due and the train ready (routes aside).
+    func readyTrip(of train: Train, line l: Int, service k: Int) -> [ScheduledStop]? {
+        var memo = DispatchMemo()
+        guard isDue(l, service: k, memo: &memo), let i = trains.firstIndex(where: { $0.id == train.id }),
+              case .ready(let timetable) = tripTimetable(i, l, service: k, memo: &memo)
+        else { return nil }
+        return timetable
     }
 }
