@@ -1,0 +1,75 @@
+name: Wasm Probe
+
+on:
+  pull_request:
+    paths:
+      - 'Web/WasmProbe/**'
+      - 'Sources/GameCore/**'
+      - 'GoldenScenarios/**'
+      - 'Tests/GameCoreTests/GoldenScenario.swift'
+      - 'Tests/GameCoreTests/NetworkSupport.swift'
+      - 'Package.swift'
+      - '.github/workflows/wasm-probe.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Web/WasmProbe/**'
+      - 'Sources/GameCore/**'
+      - 'GoldenScenarios/**'
+      - 'Tests/GameCoreTests/GoldenScenario.swift'
+      - 'Tests/GameCoreTests/NetworkSupport.swift'
+      - 'Package.swift'
+      - '.github/workflows/wasm-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wasm-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    container: swift:6.4.0-noble
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Web/WasmProbe
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Web/WasmProbe/package-lock.json
+      - name: Install matching Swift Wasm SDK
+        run: >-
+          swift sdk install
+          https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz
+          --checksum f07b7be3c586d92d7a07051fc6d303b87ebea67eadc40640ba59d5a8b79aa86d
+      - name: Install locked browser dependencies
+        run: npm ci --ignore-scripts
+      - name: Set container home ownership for Firefox
+        # GitHub mounts the home directory with the host runner's UID, while
+        # this container runs as root. Firefox requires the current user's
+        # home directory to belong to that user; keep its path unchanged.
+        run: chown "$(id -u):$(id -g)" "$HOME"
+      - name: Install test browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Build native and Wasm probes
+        run: npm run build
+      - name: Compare native, Node WASI and browser Workers
+        env:
+          PROBE_BROWSERS: chromium,firefox,webkit
+        run: npm test
+      - name: Keep reports and Wasm executable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-probe
+          path: Web/WasmProbe/.artifacts/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
