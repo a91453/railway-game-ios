@@ -28,7 +28,10 @@ enum DemoLayout {
     /// A loop of continuous track east of the grid lines (Phase 4.5 Stage
     /// S3): four nodes around a circle of three tiles' radius, joined by
     /// cubic quarter curves that leave and arrive along the circle, so each
-    /// joins the next. A three-car train runs round it for many laps.
+    /// joins the next. Harbor, which has a platform on the grid, gets a
+    /// second one on the loop's north-west curve, and North Gate one on its
+    /// north-east curve; line Circle (Stage S5) sends a three-car train back
+    /// and forth between them, turning round at each end.
     private static func buildLoop(in world: inout GameWorld) throws(GameError) {
         let radius: Int64 = 3 * 1_024
         // Bézier handles of 0.5523 × the radius make a close quarter circle.
@@ -44,12 +47,23 @@ enum DemoLayout {
             try world.buildTrackEdge(from: bottom, to: left, curve: .cubic(PlanPoint(x: cx - handle, y: cy + radius), PlanPoint(x: cx - radius, y: cy + handle))),
             try world.buildTrackEdge(from: left, to: top, curve: .cubic(PlanPoint(x: cx - radius, y: cy - handle), PlanPoint(x: cx - handle, y: cy - radius))),
         ]
+        // Each quarter is 4830 long; the platforms are 2560 of it.
+        guard let harbor = world.station(at: GridPosition(x: 11, y: 6)) else { preconditionFailure("Harbor is built first") }
+        let northGate = try world.buildStation(named: "North Gate", at: GridPosition(x: 20, y: 4))
+        try world.addTrackPlatform(harbor.id, on: quarters[3], from: 512, to: 3_072)
+        try world.addTrackPlatform(northGate.id, on: quarters[0], from: 1_024, to: 3_584)
+        // The train stands at Harbor going clockwise, its head at the
+        // platform's far end, and the line sends it out.
         let train = try world.purchaseTrain(named: "Loop")
         try world.setTrainCars(train.id, to: 3)
-        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: quarters[0], direction: .forward), offset: 2_048))
-        let lap = [quarters[1], quarters[2], quarters[3], quarters[0]].map { TrackTraversal(edge: $0, direction: .forward) }
-        try world.setTrainContinuation(train.id, along: Array(repeating: lap, count: 50).flatMap { $0 })
-        try world.setTrainMovementRate(train.id, to: 384)
+        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: quarters[3], direction: .forward), offset: 3_072))
+        try world.setTrainContinuation(train.id, along: [], stoppingAt: 3_072)
+        try world.setTrainMovementRate(train.id, to: 512)
+        let circle = try world.createLine(named: "Circle", stops: [harbor.id, northGate.id]).id
+        try world.setLineServiceWindow(circle, to: .allDay)
+        try world.setLineRate(circle, to: 512)
+        try world.setLineTrainsInService(circle, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(train.id, to: circle)
     }
 
     /// Buys a train, places it at the west end of the main line facing east,
