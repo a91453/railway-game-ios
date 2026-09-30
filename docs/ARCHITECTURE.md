@@ -29,7 +29,7 @@
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
 | `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30） |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -1513,6 +1513,61 @@ U 只需要加上：movement authority 的檢查、只能進入已預約的資�
 
 **19. 與舊 PR #31 的關係。** 保留的語義：交通控制旗標（新世界關閉、App 開啟、只在開啟時存檔）、一次預約到下一個停靠點的整條路、整批原子取得、路被佔時服務原地等待並每步重試、不折返、阻擋者取最小編號、`trackReserved` 與 `trainsShareTrack`、`trainHoldingRoute`。改變的設計：預約改成**存檔的權威狀態**（PR #31 由位置與 continuation 即時推導，無法表示 U 之後的部分預約，也無法保存已經走過、尚未釋放的軌道）；資源改成泛用的節點與 span；路改成 `pathAhead(of:)` 與 `TrainPath`；加上路網的限界規則、月台與加邊的保護。沒有沿用 PR #31 的程式。
 
+#### 實作
+
+- **錯誤**（`GameError`）：`trackReserved(TrainID)`、`trainsShareTrack(TrainID, TrainID)`；玩家看到的文字在 `DisplayText`。
+- **資源的存檔**（`TrackResources.swift`）：`TrackResource` 的 `Codable`（第 14 點的四種 tag 與形狀檢查）。佔用的推導抽成 `occupied(_ train:)`，交通控制與 `occupiedResources(of:)` 共用。
+- **列車**（`Train.swift`）：`reservation`（`internal(set)`，公開讀取），只在非空時存檔；解碼拒絕沒有排序、重複、未放置的列車有預約。
+- **預約**（`RouteReservation.swift`，新檔）：
+  - `TrackStretch`（一條邊或方格連結上沿行進方向的一段里程）；`routeStretches(of:)`（車頭自己會走完的路，第 3 點）、`bodyStretches(of:)`（車頭到車尾）。
+  - `resources(covering:)`：佔用與預約共用的逐點規則（第 4 點）；路網的 `networkResources(of:)` 改成以它計算車身，結果不變。`foulingNodes(covering:)` 與 `isFoulingEnd(of:at:)`（第 5 點）。
+  - `routeEnvelope(of:)`（佔用 ∪ 路的資源 ∪ 車身與路的限界，以及路是否還有距離）、`held(_:)`、`holder(of:except:)`（依 ID 第一台）、`reserving(_:)`（`granted` 或 `held(by:)`）。
+  - 公開查詢：`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`（服務用出發的同一個 `leaving(_:stop:cycle:)`；線路用派車的 `readyTrip(of:on:_:memo:)` 與 `firstDeparture(of:on:calling:)`）。
+- **指令**（`GameWorld`；失敗時世界不變）：
+  - `setTrafficControl(_:)`（第 8 點）。
+  - `placeTrain`、`reverseTrain`、`setTrainContinuation` 兩種先算出候選的列車，交給 `admit(_:at:)` 一次寫入位置、移動與預約；`unplaceTrain` 清除預約。
+  - `removeTrack`、`removeTrackEdge`、`add/removeTrackPlatform`（`requireSpansUnheld(on:)`）、`buildTrackEdge`（在 `idsExhausted` 之後、扣款之前）的保護（第 13 點）。
+- **`advance`**：
+  - 派車段的 `readyTrain` 在交通控制下跳過第一個出發被持有的列車；被派出的列車由 `departService(_:unroutable:)` 在同一段出發（第 10 點）。
+  - 出發段把每一次離站寫成 `Leaving`（`completes`、`arrives`、`setsOff`、`noRoute`），由 `leaving(_:stop:cycle:)` 在不改世界的情況下算出，再交給 `reserving(_:)`；被持有時什麼都不寫、也不記進「找不到路」。
+  - 移動之後 `releaseEndedRoute(_:)` 清除走完的路的預約（U 的接點）。
+- **存檔與驗證**（`GameWorld` 的 `Codable`）：`"trafficControl"` 只在開啟時寫；`trafficProblem()` 與 `resourceExists(_:)` 檢查第 14 點的每一條（包括方格等待修復的例外），不修正、不刪除。
+- **效能**：本輪沒有做效能量測。取得與查詢都是對每台列車算一次持有（第 17 點），沒有索引或快取。`traffic.reservation` 在 debug build 上跑 12,800 個操作約 2.5 分鐘，其中大部分是參考模型與逐步的整個狀態比較，不是效能數字。
+
+#### 驗證
+
+- `TrafficControlTests`（手算，27 個）：
+  - 關閉時與之前相同；開關；開啟時共用與相遇的路被拒絕；方格的整條路、連結跑到 `to` 端與反向、長列車從車尾預約、後車等前車走完整條路、平面交叉與道岔是一格；
+  - 服務在站等待且不折返、`trainHoldingRoute`、線路不派出等不到路的列車且不改上次派車、等待修復的方格路；
+  - 路網的 span：只取需要的 span、第一條與最後一條邊的一部分、停在分界上兩邊都取、長列車從車尾；彎道（7 段，906…5439）、高架與地下月台（月台切開的 span、兩個方向的停車位置）；
+  - 道岔在節點相遇、停在支線限界內的列車持有交會點而 stem 上的不持有、兩條支線都在限界內時不能開啟、持有的交會點不能加邊；平面交叉共用節點、立體交叉互不相干；
+  - 持有的邊不能加減月台、預約的邊不能拆；路網的服務等待並只在能走時折返；存讀、壞掉的存檔被拒絕（多預約的資源可以讀）。
+- `ReferenceWorld`（`ReferenceTrafficControl.swift` 等）另外寫一次決策 32，而且盡量寫得不同：列車需要的軌道由整條來路與去路上的一個絕對距離區間讀出，限界端每次查詢時掃描每條邊，阻擋者逐台比較，開啟時逐對檢查，線路是否就緒、出發會拿什麼在世界的複本上實際執行一次。
+- `TrafficControlPropertyTests`（`traffic.reservation`，40 個 case × 4 個種子 × 80 個操作 = 12,800 個操作，digest `C6419E59862453C5`，新的 CI shard `campaigns-5`）：方格（道岔、平面交叉、兩格的車站）與路網（直線、S 曲線、坡道、高架、隧道、支線，有時有菱形平面交叉與 1024 高的立體交叉，每站兩三個月台）上的 3 到 4 台 1 到 4 節的列車，執行交通控制的開關、放置與取下、手動的路與到車站的路、反向、時刻表、線路與服務模式、拆建鐵軌、邊與月台、在節點加支線與時間，同時在 GameCore 與 `ReferenceWorld` 上執行。每一步比較結果與整個狀態，以及每台列車的預約、持有、佔用與 `trainHoldingRoute`；並檢查不變量與存讀。量：取得的預約 787、被拒絕的取得 258、出發與派車取得 162、服務出發 622、服務等待 2,501、線路派車等待 203、方格衝突 126、路網 span 衝突 234、長列車的預約 523、停在邊中段的預約 240、開啟被拒絕 115、基礎設施被拒絕 102、走完路釋放 342。
+- `SaveMutationTests` 新增 `save.trafficMutation`（12 個 case × 4 個種子，每個 30 次變異，也翻轉布林值）：載入 516、拒絕 924、瞄準交通控制與路的變異 1,098、翻轉 77、載入的有預約的世界 134；載入的世界都保持不變量、可以存讀，之後的指令也保持一致。
+- `WorldInvariants` 在每個 campaign 的每一步檢查決策 32：關閉時沒有預約；開啟時任兩台列車的持有不相交，預約依資源順序、屬於已放置的列車、包含它站著的軌道，明顯站著的列車沒有預約、明顯在路上的有。
+- Golden schema v19 與手算的 `traffic-reservation.json`（72 步：道岔 J 的限界讓開啟被拒絕；Up 與 Down 在第 1 分鐘爭同一段單線，Up 先取得從車尾（2048，分界）到 East 停車位置的整條路，Down 等待；Freight 移到立體交叉上並預約兩條邊；Up 在第 9 分鐘那一步到站並釋放，Down 在第 10 分鐘那一步出發，停在 West 的後退停車位置（里程 1024，分界）；預約中的邊不能加月台或拆除），第一次執行就在 GameCore 與 `ReferenceWorld` 上都通過；既有的 18 個 fixture 只加上中性的值。
+- 刻意植入的錯誤，各自單獨植入到 `Sources` 的複本、驗證後丟棄（主工作目錄的 `Sources` 從未改動）；四個都在 `traffic.reservation` 第一個種子的 case 0 被抓到，golden 也都失敗：
+  - 路中間相接的節點沒有預約（立體交叉上的 node 6 也漏掉）：case 0 的第 7 步，另有 12 個手算測試失敗；
+  - 只預約車頭的路、不含車身：case 0 的第 38 步，另有 7 個手算測試與 1 個 GamePresentation 測試失敗；
+  - 服務出發不看預約：case 0 的第 3 步，另有 3 個手算測試失敗；
+  - 路的最後一條邊少算 1（停在分界上時漏掉另一邊的 span）：case 0 的第 49 步，另有 1 個手算測試失敗。
+
+#### GamePresentation / App
+
+- `GameSession.setTrafficControl(_:)` 套用同一個指令並回報結果；被拒絕的路與開啟以玩家的文字說明是哪台列車。
+- `routeWaitText(of:)` 由 `trainHoldingRoute(of:)` 即時推導「Waiting for <列車> to clear the route」，不存檔。
+- App 的新遊戲開啟交通控制；線路面板有開關（開啟被拒絕時開關回到關閉、狀態列說明原因）；列車面板顯示等待。
+- Debug 的示範配置讓 Local 在 Hill 等主線上的列車讓出四向交叉；新遊戲的資金只夠三台列車，所以 Local 取代了隧道裡的 Mole（隧道、高架與交叉的鐵軌仍在）。以原樣的 `DemoLayout.swift` 在 Linux 上編譯並模擬 130 分鐘：Local 從第 1 分鐘等到第 95 分鐘，第 96 分鐘出發，之後照時刻表往返。
+
+#### 已知限制與留給之後
+
+- 容量比真實的號誌低：後車要等前車走完整條路才能出發，通過的軌道不逐段釋放（U）。
+- 死結不解決：單線上兩端的列車各自等對方、時刻表造成的循環等待、兩台站著的列車各自擋住對方（V）。`traffic.reservation` 的量也因此偏低。
+- 不繞路、不換月台、不讓快車先走（V）；規劃查詢（`lineJourney` 等）不讀預約。
+- 限界範圍固定是節點 1024 以內，只看邊端的相通關係與里程、不讀幾何：分岔角度很小、1024 以外仍然很靠近的兩條邊（S4 只檢查平面上的相交，還沒有軌道寬度的側向淨空）不受保護；側向淨空屬於之後的幾何工作。
+- 交通控制下沒有「強制」的操作：玩家要先讓持有軌道的列車離開、取下它，或關閉交通控制。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -1537,5 +1592,6 @@ U 只需要加上：movement authority 的檢查、只能進入已預約的資�
 - 連續軌道（決策 29）：節點是地圖內的整數世界座標點（一格 1024 單位），邊是兩個節點之間的直線或整數控制點的三次曲線，長度由固定的整數取樣規則推導、以每格鐵軌的費用計價。只有共用節點的邊才相接，而且只在兩個邊端離開節點的方向相反（誤差 1/16 以內）時互通；平面上交叉但沒有共用節點的邊互不相干。路網上的列車在邊上，`0 <= offset <=` 邊長，有車身時 `offset > 0`；它沿 `edges` 移動，車身記錄在 `trailEdges`，反向時車頭移到車尾。方格與路網共用同一個最短路徑搜尋與同一套資源身分：節點，以及邊上不超過一格長的 span（S3A）。所有鐵軌只記在 `RailwayNetwork`，地圖只有土地。
 - 立體鐵路（決策 30）：節點的高度在地面（0）上下 4096 以內；邊的高度沿水平里程依縱斷面變化（固定坡度，或兩端的拋物線豎曲線），最陡 40‰。結構物決定高度帶（地面 ±128、高架與橋 ≥ 0、隧道 ≤ 0）與費用倍數（1、3、4、5）。兩條邊在平面上相遇（共用節點 1024 以內除外）時高度差至少 512，否則拒絕；同一高度的交叉必須共用節點。隧道口是隧道與非隧道的邊相接的節點。車站可以在路網上平坦的一段邊上有月台；月台屬於鐵路網，同一條邊上的月台不重疊，兩端切開那條邊的 span，有月台的邊不能拆。
 - 路網上的營運（決策 31）：停站、時刻表、折返與重複、線路、派車與服務模式在方格與路網上是同一套規則，只有找月台、找路與交給移動依鐵軌種類分開。以車站為目的地的路（`TrainPath`：行進方向、停在最後一條的哪裡、精確距離）在路網上停在行進方向上月台的末端（停車位置），只考慮不比列車短的月台；總距離最短，同樣短時依邊的編號逐步決定。一段的分鐘數是距離 ÷ rate 無條件進位。路網上列車的路可以停在最後一條邊的中段（`end`，只在有值時存檔）；路走完、車頭在該站月台上（車頭所在的邊）時停在該站，整列都在同一個月台上時整列停妥。服務正在使用的月台不能拆（`trainServiceActive`）。
+- 交通控制與進路預約（決策 32）：`GameWorld` 的新世界關閉交通控制，行為與之前完全相同；App 的新遊戲開啟。開啟時，列車出發、被派車或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（與佔用同一條規則，落在 span 分界上時兩邊都算），以及它接近的交會點（在交會點 1024 以內、而那裡另有不相通的邊）；任何一個被其他列車持有（佔用、限界或預約）就整個不取得，指令以 `trackReserved` 拒絕，服務原地等待（不折返）、每步重試，線路不派出那台列車。預約存檔，走到路的終點時釋放；`unplaceTrain` 與關閉交通控制也清除它。立體交叉不共用資源。預約中的鐵軌不能拆，持有的邊不能加減月台，持有的交會點不能加邊。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。
