@@ -1,51 +1,171 @@
 name: CI
 
+# The Swift package (GameCore, GamePresentation and their tests) on Linux.
+#
+# - Swift 6.0 is the minimum Package.swift declares (swift-tools-version: 6.0):
+#   every target and test builds with warnings as errors, and every test runs
+#   except the long campaigns, whose logic does not depend on the compiler.
+# - Swift 6.4 is the current release and the full correctness suite: the same
+#   build, and every test, campaigns included. The campaigns are not reduced;
+#   they are split across parallel jobs (shards) so the wait is the slowest
+#   shard, not their sum.
+#
+# The shards, the proof that together they run every test exactly once, and the
+# path filter live in .github/scripts/swift-shards.sh. The matrix below comes
+# from that script, so a shard defined there always has a job. Releases
+# between 6.0 and 6.4 (such as the iPad Swift Playgrounds' 6.2) are not built
+# separately.
+#
+# The workflow always starts, so the "Swift CI (gate)" check always reports:
+# on a pull request that changes nothing the package builds or tests (only
+# docs, the app, the release workflows), the Swift jobs are skipped and the
+# gate passes. A required status check should name the gate, not the jobs
+# behind it. Pushes to main and manual runs always run everything.
+
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# A newer push to a pull request cancels its older run. Every commit on main
+# keeps its own complete run: a later merge never cancels or replaces it.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  test:
-    name: Swift ${{ matrix.swift }} (Linux)
+  changes:
+    name: Changes (does the Swift package need testing?)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        # 6.0 is the minimum declared by Package.swift (swift-tools-version: 6.0);
-        # 6.4 is the current stable release. Releases between them (such as
-        # the iPad Swift Playgrounds' 6.2) are not built separately.
-        swift: ["6.0", "6.4"]
-        # The property campaigns (generated sequences checked against the
-        # reference models and saves) take most of the test time and check
-        # logic, which does not depend on the compiler: they run on the
-        # current release only. 6.0 still builds all targets and tests with
-        # warnings as errors and runs every other test.
-        include:
-          - swift: "6.4"
-            campaigns: true
-    container: swift:${{ matrix.swift }}-noble
+    timeout-minutes: 5
+    outputs:
+      swift: ${{ steps.detect.outputs.swift }}
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      # Depth 2 is enough: on a pull request the checkout is the pull request
+      # merged into its base, whose two parents are both fetched.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Detect Swift-relevant changes
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          swift=true
+          if [[ "$EVENT" == pull_request ]]; then
+            # The first parent of the merge commit is the base, so this is
+            # what the pull request changes. If it cannot be read, test.
+            if files="$(git diff --name-only HEAD^1 HEAD)"; then
+              echo "Changed files:"
+              echo "$files"
+              swift="$(.github/scripts/swift-shards.sh relevant <<<"$files")"
+            else
+              echo "::warning::Could not list the changed files; running the Swift jobs."
+            fi
+          fi
+          echo "swift=$swift" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(.github/scripts/swift-shards.sh matrix)" >> "$GITHUB_OUTPUT"
+          if [[ "$swift" == true ]]; then
+            echo "Swift jobs: run (event: $EVENT)." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Swift jobs: skipped, no changed file can change what the package builds or tests." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # The shard script is what proves the Swift jobs ran every test once;
+      # this shows, without Swift, that its checks fail when they should.
+      - name: Self-test the shard script
+        if: steps.detect.outputs.swift == 'true'
+        run: .github/scripts/swift-shards-selftest.sh
+
+  swift-min:
+    name: Swift 6.0 (Linux)
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: swift:6.0-noble
     steps:
       - uses: actions/checkout@v5
 
       - name: Swift version
         run: swift --version
 
-      - name: Build
+      - name: Build (warnings as errors)
         run: swift build --build-tests -Xswiftc -warnings-as-errors
 
-      - name: Test
-        if: matrix.campaigns
-        run: swift test
+      # Not `swift test`: that would rebuild everything, because the build
+      # above passed a flag it does not. --skip-build runs what was just built.
+      - name: Test (everything except the campaigns)
+        run: .github/scripts/swift-shards.sh run light
 
-      - name: Test (without the property campaigns)
-        if: ${{ !matrix.campaigns }}
-        run: swift test --skip 'PropertyTests|KernelDifferentialTests|SaveMutationTests'
+  swift-current:
+    name: Swift 6.4 (Linux) / ${{ matrix.shard }}
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-24.04
+    # The slowest shard takes about 5 minutes; the limit leaves room for
+    # campaigns to grow before a shard is split further.
+    timeout-minutes: 20
+    container: swift:6.4-noble
+    strategy:
+      # The shards are independent: let every one finish so a failing run
+      # shows all its failures at once.
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build (warnings as errors)
+        run: swift build --build-tests -Xswiftc -warnings-as-errors
+
+      # Runs this shard's tests and fails unless exactly those tests ran.
+      - name: Test (shard ${{ matrix.shard }})
+        run: .github/scripts/swift-shards.sh run "$SHARD"
+        env:
+          SHARD: ${{ matrix.shard }}
+
+  gate:
+    name: Swift CI (gate)
+    needs: [changes, swift-min, swift-current]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check the Swift jobs
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
+          MINIMUM: ${{ needs.swift-min.result }}
+          CURRENT: ${{ needs.swift-current.result }}
+        run: |
+          echo "changes: $CHANGES; Swift needed: $SWIFT_NEEDED; Swift 6.0: $MINIMUM; Swift 6.4: $CURRENT"
+          if [[ "$CHANGES" != success ]]; then
+            echo "::error::The change detection did not succeed."
+            exit 1
+          fi
+          if [[ "$SWIFT_NEEDED" == true ]]; then
+            if [[ "$MINIMUM" != success || "$CURRENT" != success ]]; then
+              echo "::error::A Swift job did not succeed (Swift 6.0: $MINIMUM, Swift 6.4: $CURRENT)."
+              exit 1
+            fi
+            echo "Swift 6.0 and every Swift 6.4 shard passed."
+          else
+            if [[ "$MINIMUM" != skipped || "$CURRENT" != skipped ]]; then
+              echo "::error::The Swift jobs were not needed but did not skip (Swift 6.0: $MINIMUM, Swift 6.4: $CURRENT)."
+              exit 1
+            fi
+            echo "No file that can change the Swift package changed; the Swift jobs were skipped."
+          fi

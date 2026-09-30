@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 17,
+  "schemaVersion": 18,
   "description": "Train movement on a line A(1,1)-B-C-D(4,1)-E-I(6,1), a branch south from D through F(4,2) to H(4,3), then east to J and K(6,3), and a station east of I. Every basic step (one game minute) a train travels its rate: to the end of its link, then into the explicit continuation, one link after another; exact arrival is a node and does not consume the next entry; partial arrival is a link. Checks: the 256 + 1300 / 124 / 1148 units case (cursor 1, then spent), exact arrival and no route choice without a continuation, rejected rates and continuations (U-turns, gaps, a station, unplaced and unknown trains), a continuation blocked by removed track ahead (the train waits at the last node without saving distance, a one-sided rebuild does not unblock it, the true rebuild resumes it with only that step's distance), a second train moving while the first waits, rate 0 and pause holding a train, two basic steps per tick at 2x, and reverse and unplace clearing the continuation.",
   "initialState": {
     "mapWidth": 8,

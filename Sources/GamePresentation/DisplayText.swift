@@ -153,6 +153,24 @@ extension Train {
     public var carsText: String {
         cars == 1 ? "1 car" : "\(cars) cars"
     }
+
+    /// The path the train has left. On the grid, ``TrainMovement/pathText``.
+    /// On the track network: "No path ahead", "Path: 1 more edge, Edge #4",
+    /// "Path: 3 more edges, ending on Edge #9", with ", stopping 3000 units
+    /// along it" when it stops part of the way along the last (Stage S5),
+    /// or "Path: stops 1024 units ahead" on the edge it is on.
+    public var pathText: String {
+        guard case .onEdge(_, let offset)? = position else { return movement.pathText }
+        let edges = movement.remainingEdges
+        guard let last = edges.last else {
+            guard let end = movement.end, end > offset else { return "No path ahead" }
+            return "Path: stops \(end - offset) units ahead"
+        }
+        let stop = movement.end.map { ", stopping \($0) units along it" } ?? ""
+        return edges.count == 1
+            ? "Path: 1 more edge, \(last.displayText)\(stop)"
+            : "Path: \(edges.count) more edges, ending on \(last.displayText)\(stop)"
+    }
 }
 
 extension TrainMovement {
@@ -164,7 +182,8 @@ extension TrainMovement {
 
     /// The continuation entries the train has not entered yet, such as
     /// "No path ahead", "Path: 1 more node, (4, 2)" or "Path: 5 more nodes,
-    /// ending at (8, 3)".
+    /// ending at (8, 3)": the grid's path (see ``Train/pathText`` for the
+    /// track network's).
     public var pathText: String {
         let remaining = remainingContinuation
         guard let last = remaining.last else { return "No path ahead" }

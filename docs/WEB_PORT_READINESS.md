@@ -10,7 +10,7 @@
 - `RailwaySnapshot` 已有節點、帶幾何的邊、月台、列車車頭與車身路徑；`railwaySnapshot()`、`trackAlignment(of:)`、`location(of:)`、`bodyPath(of:)` 是繪圖輸入。不要再建立第二份權威世界。
 - `GoldenScenarios/` 是跨平台的行為驗收資料；Swift Codable 存檔不是跨語言的公開契約。
 
-相關決策：[ARCHITECTURE](ARCHITECTURE.md) 13、28–30；開發順序仍以 [ROADMAP](ROADMAP.md) 為準。本準備不取代下一步 Stage T。
+相關決策：[ARCHITECTURE](ARCHITECTURE.md) 13、28–31；開發順序仍以 [ROADMAP](ROADMAP.md) 為準。本準備不取代下一步 Stage T。
 
 ## 預定執行邊界
 
@@ -33,10 +33,10 @@ Worker 內只保有一份 GameWorld。主執行緒的選取、鏡頭、模型與
 | 相容的 Swift WebAssembly SDK / runtime | 先確認可用版本、目標、授權、下載來源與 checksum，再固定 compiler / SDK 組合；Linux 能編譯不代表 Wasm 能編譯 |
 | Node.js LTS、TypeScript、Vite | Wasm 可行性成立後，建立 Web shell、開發與靜態打包；版本與 lockfile 一起固定 |
 | Babylon.js | 首個真正 3D renderer 的候選；WebGPU 為可選，提供 WebGL2 路徑並實測 Safari |
-| 瀏覽器自動化 | 核心與瀏覽器連接後驗證載入、指令、Worker、暫停與存讀；工具候選為 Playwright |
+| 瀏覽器自動化 | W0 已使用 Playwright 驗證 Worker 與探針的成功 / 載入失敗路徑；暫停、持續指令及瀏覽器存讀留給後續階段 |
 | 靜態 HTTPS hosting | 發布 HTML、JS、模型與 Wasm；需正確的 `application/wasm` MIME type，不預設需要後端或資料庫 |
 
-不在準備階段加入 npm 依賴或修改根目錄 Swift Package。實作時 Web shell 可放 `Web/`，bridge 可獨立成套件，依賴根目錄 GameCore，避免把瀏覽器 SDK 加進原生核心。
+Web/npm dependencies 不引入 repository root、GameCore 或 native App；根目錄 Swift Package 保持不受 browser tooling 污染。W0 專用的 `@bjorn3/browser_wasi_shim`、Playwright 與精確固定的 `package.json` / `package-lock.json` 隔離在 `Web/WasmProbe/`。未來正式 Web shell 再獨立管理 TypeScript、Vite 與 Babylon.js dependencies；bridge 可獨立成套件，依賴根目錄 GameCore。
 
 ## 第一個必須通過的關卡：Swift → Wasm
 
@@ -89,12 +89,16 @@ Swift 存檔由核心相容的 codec 匯出為不透明 bytes，在瀏覽器可�
 | W2：3D renderer | Babylon 場景、軌道 / 月台 / 多節列車、鏡頭控制 | 曲線、高架、隧道與坡道可繪製；只讀核心；WebGL2 與可用時的 WebGPU 路徑實測 |
 | W3：可玩原型 | 工具、列車操作、存讀與發布建置 | 手機與桌面操作、坏存檔拒絕、匯出 / 匯入還原、Safari / Chromium / Firefox 實測 |
 
-首版連續路網的列車不能宣稱已有完整服務與自動派車：S4 的路網月台仍是資料與查詢，路網服務整合等待 T/V；方格服務與路網展示須明確區分。
+最新 main 的 S5 已將時刻表服務、停站與線路派車整合到連續路網，探針會自動納入相應 committed scenarios。交通控制 T/U/V 仍依 ROADMAP 發展；核心已有功能不代表 W0 已提供可玩的 Web 介面。
+
+**W1 前置決策：ID / counter fixed-width compatibility strategy。** 目前 native Int = 64-bit、wasm32 Int = 32-bit；部分 ID / counter 使用 Int。W0 只發現、測試與記錄差異，之後以獨立 PR 處理固定寬度與存檔相容性策略；本 PR 不修改 GameCore ID 型別或 save schema，不 clamp、不在 JS 掩蓋差異，也不改 golden expected values。
 
 ## 此次準備的驗證狀態
 
 - 已靜態核對：GameCore / Presentation 分層、S4 snapshot、座標定義、完整寬度整數運算與 golden scenario 契約。
-- **VERIFIED，本地**：Swift 6.4.0 原生及 wasm32 release 探針建置、Node WASI、Chromium / Firefox Worker 的 17 個 golden scenarios 與 6 個 Swift 檢查，包括 Codable 存讀。根目錄 warnings-as-errors build 及 36 個相關原生測試通過。可重現命令與限制見 [探針 README](../Web/WasmProbe/README.md)。
+- **VERIFIED，歷史 CI run（2026-09-30）**：[Wasm Probe run 36669222490](https://github.com/a91453/railway-game-ios/actions/runs/36669222490) 完成原生及 wasm32 release 建置、Node WASI、Chromium / Firefox / Playwright WebKit 的 Web Worker、該 run 的全部 committed golden scenarios、6 個 Swift 檢查及 HTTP 503 failure path。測試資料自動掃描並與當下 fixtures 比對，不固定數量；每個提交的驗證以對應 CI report 為準。
+- **VERIFIED，歷史本地執行（2026-09-30）**：Swift 6.4.0 原生及 wasm32 release 探針、Node WASI、Chromium / Firefox Worker；另完成根目錄 warnings-as-errors build 及 36 個相關原生測試。可重現命令與限制見 [探針 README](../Web/WasmProbe/README.md)。
 - **已確認差異**：wasm32 的 Int 為 32 位元，原生為 64 位元；ID 與大 ID 存檔邊界仍需相容策略。W0 的基本執行可行性已確認，完整相容性關卡尚未全部完成。
-- **UNVERIFIED**：本地 WebKit（缺 shared libraries）、真正 Safari、持續 command bridge、Babylon rendering、效能與瀏覽器持久存檔。CI 將安裝三種 browser engines 的依賴執行探針。
+- **UNVERIFIED，本地 WebKit**：Debian 工作區缺 shared libraries，無法直接執行；CI 中 Playwright WebKit 已成功執行探針。
+- **UNVERIFIED，後續範圍**：真正 iPhone / iPad Safari、persistent command bridge、renderer、效能 / final Wasm size 與瀏覽器持久存檔。Playwright WebKit 不等於 Safari 實機驗證。
 - 本文件不改變核心、原生 App、既有 golden 預期或發布管線；上述關卡通過後才可標記為 VERIFIED。

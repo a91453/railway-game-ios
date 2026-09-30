@@ -203,11 +203,11 @@ final class ServiceLineTests: XCTestCase {
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         let journey = try XCTUnwrap(world.lineJourney(first))
         XCTAssertEqual(journey.start, .atNode(b, heading: .north))
-        XCTAssertEqual(journey.legs, [
-            LineLeg(from: 0, to: 1, route: [c, d], minutes: 2),
-            LineLeg(from: 1, to: 2, route: [e, f], minutes: 2),
-            LineLeg(from: 2, to: 1, route: [e, d], minutes: 2),
-            LineLeg(from: 1, to: 0, route: [c, b], minutes: 2),
+        XCTAssertEqual(gridLegs(journey), [
+            GridLeg(from: 0, to: 1, route: [c, d], minutes: 2),
+            GridLeg(from: 1, to: 2, route: [e, f], minutes: 2),
+            GridLeg(from: 2, to: 1, route: [e, d], minutes: 2),
+            GridLeg(from: 1, to: 0, route: [c, b], minutes: 2),
         ])
         XCTAssertEqual(journey.roundTripMinutes, 14)
 
@@ -225,7 +225,7 @@ final class ServiceLineTests: XCTestCase {
         // Stations sharing a platform: no travel, only the ends.
         try world.setLineStops(first, to: [gamma, delta])
         let shared = try XCTUnwrap(world.lineJourney(first))
-        XCTAssertEqual(shared.legs, [LineLeg(from: 0, to: 1, route: [], minutes: 0), LineLeg(from: 1, to: 0, route: [], minutes: 0)])
+        XCTAssertEqual(gridLegs(shared), [GridLeg(from: 0, to: 1, route: [], minutes: 0), GridLeg(from: 1, to: 0, route: [], minutes: 0)])
         XCTAssertEqual(shared.roundTripMinutes, 4)
         XCTAssertEqual(shared.start, .atNode(f, heading: .north))
     }
@@ -280,9 +280,9 @@ final class ServiceLineTests: XCTestCase {
         // may leave south: three links each way.
         let journey = try XCTUnwrap(world.lineJourney(first))
         XCTAssertEqual(journey.start, .atNode(GridPosition(x: 1, y: 2), heading: .east))
-        XCTAssertEqual(journey.legs, [
-            LineLeg(from: 0, to: 1, route: [GridPosition(x: 1, y: 3), GridPosition(x: 2, y: 3), GridPosition(x: 3, y: 3)], minutes: 3),
-            LineLeg(from: 1, to: 0, route: [GridPosition(x: 2, y: 3), GridPosition(x: 1, y: 3), GridPosition(x: 1, y: 2)], minutes: 3),
+        XCTAssertEqual(gridLegs(journey), [
+            GridLeg(from: 0, to: 1, route: [GridPosition(x: 1, y: 3), GridPosition(x: 2, y: 3), GridPosition(x: 3, y: 3)], minutes: 3),
+            GridLeg(from: 1, to: 0, route: [GridPosition(x: 2, y: 3), GridPosition(x: 1, y: 3), GridPosition(x: 1, y: 2)], minutes: 3),
         ])
         XCTAssertEqual(journey.roundTripMinutes, 10)
     }
@@ -438,4 +438,18 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertEqual(try world.createLine(named: "Last", stops: [alpha, beta]).id, LineID(rawValue: .max - 1))
         XCTAssertThrowsGameError(try world.createLine(named: "L", stops: [alpha, beta]), .idsExhausted)
     }
+}
+
+/// A leg of a journey on the grid as these tests read it (Stage S5 keeps the
+/// leg's path as a ``TrainPath``; on the grid its route is the tiles the
+/// links lead to).
+private struct GridLeg: Equatable {
+    let from: Int
+    let to: Int
+    let route: [GridPosition]
+    let minutes: Int64
+}
+
+private func gridLegs(_ journey: LineJourney) -> [GridLeg] {
+    journey.legs.map { GridLeg(from: $0.from, to: $0.to, route: $0.route, minutes: $0.minutes) }
 }

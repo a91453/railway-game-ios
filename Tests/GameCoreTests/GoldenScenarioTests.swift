@@ -447,9 +447,19 @@ final class GoldenScenarioTests: XCTestCase {
                 changed = journey
                 changed.legs[0].minutes = leg.minutes + 1
                 wrong.append(.journey(changed))
-                changed = journey
-                changed.legs[0].route = leg.route + [PositionSummary(GridPosition(x: 99, y: 99))]
-                wrong.append(.journey(changed))
+                if let route = leg.route {
+                    changed = journey
+                    changed.legs[0].route = route + [PositionSummary(GridPosition(x: 99, y: 99))]
+                    wrong.append(.journey(changed))
+                }
+                if let path = leg.path {
+                    changed = journey
+                    changed.legs[0].path?.distance = path.distance + 1
+                    wrong.append(.journey(changed))
+                    changed = journey
+                    changed.legs[0].path?.end = path.end.map { $0 + 1 } ?? 1
+                    wrong.append(.journey(changed))
+                }
             }
             changed = journey
             changed.start = TrainPositionSummary(.atNode(GridPosition(x: 99, y: 99), heading: .north))
@@ -584,6 +594,20 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.levels(Array(levels.dropFirst())))
             }
             return wrong
+        case .trainPath(nil):
+            return [.trainPath(PathSummary(TrainPath(traversals: [], end: nil, distance: 0)))]
+        case .trainPath(let path?):
+            var wrong: [ObservationAnswer] = [.trainPath(nil)]
+            var changed = path
+            changed.distance += 1
+            wrong.append(.trainPath(changed))
+            changed = path
+            changed.end = path.end.map { $0 + 1 } ?? 1
+            wrong.append(.trainPath(changed))
+            changed = path
+            changed.traversals.append(TraversalSummary(TrackTraversal(edge: .edge(99), direction: .forward)))
+            wrong.append(.trainPath(changed))
+            return wrong
         }
     }
 
@@ -614,6 +638,9 @@ final class GoldenScenarioTests: XCTestCase {
         changed = state
         changed.movement.edges.append(99)
         wrong.append(changed)
+        changed = state
+        changed.movement.end = state.movement.end.map { $0 + 1 } ?? 1
+        wrong.append(changed)
         return wrong
     }
 
@@ -622,7 +649,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 17,
+              "schemaVersion": 18,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -673,7 +700,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -746,6 +773,10 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"type": "addTrackPlatform", "edge": 1, "start": 0, "end": 5}"#,
             #"{"type": "removeTrackPlatform", "station": 1, "start": 0}"#,
             #"{"type": "platformLevels", "station": 1}"#,
+            // Schema 18: a path's end is a number, or absent.
+            #"{"type": "setTrainPath", "train": 1, "path": [], "end": null}"#,
+            #"{"type": "setTrainPath", "train": 1, "path": [], "end": "berth"}"#,
+            #"{"type": "pathToStation", "station": 1}"#,
         ]
         for json in commands {
             XCTAssertThrowsError(try JSONDecoder().decode(ScenarioCommand.self, from: Data(json.utf8)), json)
@@ -817,6 +848,15 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "trackPlatformsAlongTrain"}, "expect": {"trackPlatforms": []}}"#,
             #"{"observe": {"type": "trackPlatformsAlongTrain", "train": 1}, "expect": {"trackPlatforms": [{"station": 1, "edge": 1, "start": 0}]}}"#,
             #"{"observe": {"type": "platformLevels", "station": 1}, "expect": {"levels": [{"edge": 1, "start": 0, "end": 1, "height": 0, "structure": null}]}}"#,
+            // Schema 18: a path to a station starts on an edge and answers in
+            // its own shape.
+            #"{"observe": {"type": "pathToStation", "from": {"type": "node", "x": 0, "y": 0, "heading": "east"}, "station": 1}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1, "cars": 17}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": false, "trainPath": {"traversals": [], "distance": 0}}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": true, "trainPath": {"traversals": []}}}"#,
+            #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": true, "path": []}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "connected": true}}"#,
             #"{"observe": {"type": "connectedNeighbors", "x": 0, "y": 0}, "expect": {"neighbors": [], "position": {"type": "unplaced"}}}"#,
             // A route is answered by "found", with "route" exactly when found.

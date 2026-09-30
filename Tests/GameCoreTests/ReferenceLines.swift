@@ -126,6 +126,13 @@ extension ReferenceWorld {
                 }
             }
         }
+        // Decision 31: then from every berth on the network, a train of one car.
+        for start in journeyStarts(onNetworkOf: line.stops[calls[0]]) {
+            guard let journey = networkJourney(of: line, calling: calls, from: start, trailEdges: [], length: 0) else { continue }
+            if best.map({ journey.roundTripMinutes < $0.roundTripMinutes }) ?? true {
+                best = journey
+            }
+        }
         return best
     }
 
@@ -145,7 +152,14 @@ extension ReferenceWorld {
             if from == calls[n - 1] { (position, body) = Self.turnedWithBody(position, body, length: length) }
             guard let route = route(from: position, toStation: line.stops[to], length: length) else { return nil }
             let units = Int64(route.count) * Self.linkLength
-            legs.append(LineLeg(from: from, to: to, route: route, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
+            // Decision 31: a leg keeps its path as links from the node ahead.
+            var node = Self.ahead(position).0
+            let links = route.map { next -> TrackTraversal in
+                defer { node = next }
+                return TrackTraversal.link(from: node, to: next)
+            }
+            let path = TrainPath(traversals: links, end: nil, distance: units)
+            legs.append(LineLeg(from: from, to: to, path: path, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
             if route.count >= 1 {
                 let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
                 let arrived = TrainPosition.atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
@@ -398,6 +412,7 @@ extension ReferenceWorld {
     struct Place: Hashable {
         var position: TrainPosition
         var trail: [GridPosition]
+        var trailEdges: [Int]
     }
 
     /// Every service of one line, its own first, dispatching at the current
@@ -443,12 +458,21 @@ extension ReferenceWorld {
             guard train.service == nil, let position = train.position, train.rate > 0,
                   stationsStoppedAt(by: TrainID(rawValue: id)).contains(first)
             else { continue }
-            let place = Place(position: position, trail: train.trail)
+            let place = Place(position: position, trail: train.trail, trailEdges: train.trailEdges)
             let length = Self.length(train)
             if memo.trips[place]?[key] == nil {
-                let straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
-                let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
-                let turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
+                let straight: LineJourney?
+                let turned: LineJourney?
+                if case .onEdge = position {
+                    // Decision 31: on the network, from its place and body.
+                    straight = networkJourney(of: line, calling: service.calls, from: position, trailEdges: train.trailEdges, length: length)
+                    let back = turnedOnNetwork(train)
+                    turned = networkJourney(of: line, calling: service.calls, from: back.position!, trailEdges: back.trailEdges, length: length)
+                } else {
+                    straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
+                    let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
+                    turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
+                }
                 let pick: (Bool, LineJourney)? = switch (straight, turned) {
                 case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
                 case (let s?, nil): (false, s)

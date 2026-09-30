@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）與 Stage S4（立體鐵路與結構物）已實作，Phase 4.5 到此告一段落；下一步是 Phase 4.6 的 Stage T（進路預約）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落；下一步是 Phase 4.6 的 Stage T（進路預約）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -21,13 +21,15 @@
 
 順序不變：先完成 Phase 4 的 Q3 與 R，再進 Phase 4.5。
 
-S2 之後確定了產品方向：「以 deterministic 模擬核心為基礎的 360° 3D 鐵道城市建造遊戲」。交通控制若建立在北東南西的方格上，之後換成任意方向的鐵軌與立體交叉時就要重寫，所以先把鐵路核心拆成 topology、geometry、rendering 三層（ARCHITECTURE 決策 28），在 Phase 4.5 補上兩個 Stage：
+S2 之後確定了產品方向：「以 deterministic 模擬核心為基礎的 360° 3D 鐵道城市建造遊戲」。交通控制若建立在北東南西的方格上，之後換成任意方向的鐵軌與立體交叉時就要重寫，所以先把鐵路核心拆成 topology、geometry、rendering 三層（ARCHITECTURE 決策 28），在 Phase 4.5 補上兩個 Stage（S3、S4），之後再加上 S5，把既有的營運系統接到新的路網上：
 
-- Phase 4.5：S1 ✅ 軌道資源、S2 ✅ 車站設施、S3 ✅ 連續軌道幾何、S4 ✅ 立體鐵路與結構物；
+- Phase 4.5：S1 ✅ 軌道資源、S2 ✅ 車站設施、S3 ✅ 連續軌道幾何、S4 ✅ 立體鐵路與結構物、S5 ✅ 路網上的營運；
 - Phase 4.6：T 進路預約、U movement authority、V dispatcher；
 - Phase 4.7：W 行駛曲線。
 
-舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，先暫停；新的 T 在 S4 之後改寫成泛用的 topology（見 Stage T）。
+舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，先暫停；新的 T 在 S5 之後改寫成泛用的 topology（見 Stage T）。
+
+S5 是 S3/S4 與既有 O–Q 營運系統（operational system）之間的 bridge：停站、時刻表、折返與重複、線路、派車與服務模式都在路網上運作，而且方格與路網是同一套程式。T 之後不需要重新處理時刻表、線路與月台的 grid-specific migration。
 
 ## Phase 1 — GameCore foundation ✅
 
@@ -41,15 +43,15 @@ S2 之後確定了產品方向：「以 deterministic 模擬核心為基礎的 3
 原本假設 Phase 2 以 M4 iPad 上的 Swift Playgrounds 為主要開發環境，但目前使用的 Swift Playgrounds 環境在執行專案程式碼之前的 prewarm / runtime 階段就會失敗，因此改為不需要 Mac、也不依賴 Swift Playgrounds 的流程：
 
 ```
-Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator) → 截圖 / log artifact → 在 iPhone / iPad 上檢視
+Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS 以 Xcode 編譯）→ 內部 TestFlight → 在 iPhone / iPad 實機上檢視
 ```
 
 驗證分層：
 
 1. Claude Code Cloud（Linux）：原始碼開發、GameCore `swift build` / `swift test`
-2. Linux CI：GameCore 在 Swift 6.0、6.4 的相容性
+2. Linux CI：Swift 6.0 是最低相容版本（warnings as errors 的 build 與除了長 campaign 以外的測試）；Swift 6.4 是目前的完整正確性驗證（全部測試，campaign 不減量、分成平行 shard）
 3. macOS CI：XcodeGen 產生專案，以真正的 Xcode / Apple SDK 編譯原生 SwiftUI App
-4. 手動 Visual Smoke：iPhone / iPad Simulator 截圖，以 GitHub artifact 在手機或平板上檢視
+4. 實機人工檢視：內部 TestFlight（原本的手動 Visual Smoke Simulator 截圖已移除；人工檢視不是自動化的回歸測試）
 
 Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
@@ -59,7 +61,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - 最小原生 SwiftUI App（iPhone / iPad、iOS 17+），連結 GameCore 並顯示地圖尺寸、現金、遊戲時間與速度
 - XcodeGen spec（`RailwayGameApp/project.yml`），產生的 `.xcodeproj` 當時不進版控（Xcode Cloud onboarding 起改為提交，見下）
 - macOS 自動編譯驗證（`ios-build.yml`），不需簽章
-- 手動 Visual Smoke workflow（`visual-smoke.yml`）：iPhone / iPad Simulator 截圖
+- 手動 Visual Smoke workflow（`visual-smoke.yml`，iPhone / iPad Simulator 截圖）：當時加入，之後已移除（改由內部 TestFlight 在實機人工檢視）
 
 ### Phase 2B — Prototype UI ✅
 
@@ -69,7 +71,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - 所有建設都經由 `GameWorld` 指令；`GameError` 在 Presentation 層轉成玩家看得懂的訊息
 - HUD：現金、遊戲時間（`Day 1 · 08:30`，只是顯示換算）、暫停 / 1× / 2×
 - `GameSession`（新的 `GamePresentation` target）持有唯一的 `GameWorld`，並把真實時間換算成整數 tick 呼叫 `advance(ticks:)`；背景時停止、不補跑
-- iPhone 直向 / iPad 直向版面已以 Visual Smoke 截圖確認；橫向版面（側邊欄）只經過編譯
+- iPhone 直向 / iPad 直向版面當時已以 Visual Smoke 截圖確認（該 workflow 已移除）；橫向版面（側邊欄）只經過編譯
 - GameCore 未修改：時間顯示換算放在 Presentation 層；拆除車站延後（見下）
 
 延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查（Phase 3 Stage I 已提供唯讀的連通查詢；鋪設時仍不要求相接）、存檔。
@@ -82,11 +84,12 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
   - XcodeGen 產生的 Xcode 專案與 shared scheme 提交進版控，`ios-build.yml` 檢查它與 `project.yml` 一致；
   - Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon；
   - 未簽章的 Release 裝置 Archive（`release-archive.yml`）。
-- **GitHub Actions → 內部 TestFlight 基礎設施：已實作，dry run 驗證**：
-  - `testflight.yml`：只能從 `main` 手動觸發；preflight → 簽章 Archive → 匯出 IPA → 檢查 → 上傳；
+- **GitHub Actions → 內部 TestFlight 基礎設施：已實作，真實執行驗證到上傳 App Store Connect**：
+  - `testflight.yml`：只能從 `main` 手動觸發；preflight → Archive（預設 `adhoc`）→ App Store distribution 匯出 IPA → 檢查 → 上傳；
   - `testflight-checks.yml`：只用假值的腳本測試、macOS dry run、合成 IPA 檢查。
   - 手冊：[TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
-- **真實 Apple 簽章與上傳：blocked**，等待 Apple Developer Program 生效、API 存取與 Team API key；第一次執行同時驗證雲端簽章在 GitHub runner 上的行為。
+- **真實 Apple 簽章與上傳：VERIFIED（到上傳為止）**：Apple Developer Program、Team API key 與 environment 已就緒。第 1 次真實執行（`automatic`）在 Archive 失敗，因為新團隊沒有已註冊裝置、Apple 無法產生開發描述檔；第 2 次（`adhoc`）Archive、App Store distribution 匯出、IPA 檢查、上傳與清理全部成功，所以預設改為 `adhoc`。細節與 run 網址見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
+- **尚未驗證**：App Store Connect processing、Missing Compliance 與 TestFlight 安裝到裝置（沒有 repository 層級的證據）。
 - **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
 - **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 
@@ -296,7 +299,7 @@ S3 分成兩個里程碑：S3A 讓 `RailwayNetwork` 成為唯一的鐵路資料�
 - **路徑搜尋**：方格與路網共用同一個最短路徑搜尋；方格的結果不變。
 - **畫面**：地圖以俯視的除錯投影畫出路網與上面的列車；示範地圖有一條四段曲線組成的環線。沒有建造路網的畫面。
 - 之前所有 Stage 的 property digest 不變，只有方格的存檔逐位元不變；新增獨立參考模型的差分 campaign、存檔變異測試，golden scenario schema v16 新增 `continuous-track.json`（ARCHITECTURE 決策 29）。
-- **留給之後**：高程與結構物（S4 ✅）、路網上的服務（月台綁定在 S4）、spline 編輯器與建造畫面、3D renderer。
+- **留給之後**：高程與結構物（S4 ✅）、路網上的服務（S5 ✅）、spline 編輯器與建造畫面、3D renderer。
 
 ### Stage S4 — 立體鐵路與結構物 ✅
 
@@ -308,7 +311,22 @@ S3 分成兩個里程碑：S3A 讓 `RailwayNetwork` 成為唯一的鐵路資料�
 - **畫面查詢**：3D 的姿態（位置、方向、坡度）、3D 車身與唯讀的 `railwaySnapshot()`；renderer 只讀、不回寫。
 - **畫面**：俯視 debug 投影依高度由低到高畫，隧道是虛線、高架有陰影、隧道口加圈；示範配置有跨越環線的高架與駛入隧道的列車。
 - Stage I–S2 的 14 個 property digest 不變；S3 的 `network.differential` 因為同一高度的交叉被拒絕而改變（刻意的）。新增 `vertical.differential`、`save.verticalMutation`，golden scenario schema v17 新增 `vertical-railway.json`（ARCHITECTURE 決策 30）。
-- **留給之後**：地形（目前地面處處是 0）、路網與方格之間的空間檢查、軌道寬度的側向淨空、路網上的服務與派車、橫向傾斜、3D renderer、建造與地下模式的畫面。
+- **留給之後**：地形（目前地面處處是 0）、路網與方格之間的空間檢查、軌道寬度的側向淨空、路網上的服務與派車（S5 ✅）、橫向傾斜、3D renderer、建造與地下模式的畫面。
+
+### Stage S5 — 路網上的營運 ✅
+
+S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3）之間的橋（ARCHITECTURE 決策 31）。
+
+- **一套營運語義**：時刻表的狀態機、線路的行程、派車與服務模式只有一份實作；只在最底層依鐵軌種類分成找月台、找路、交給移動與車身幾個小 adapter。沒有方格與路網各一份的時刻表引擎。
+- **服務路徑**：`TrainPath`（依序進入的行進方向、停在最後一條的哪裡、精確的整數距離）是方格與路網共用的路。存檔的仍然只有列車的移動；路網的移動多一個 `end`，路可以停在邊的中段。
+- **月台與停車位置**：路網上的停站只看 `TrackPlatform`：車頭停在行進方向上月台的末端，車身向後；只有不比列車短的月台才算，所以到站時整列車都在同一個月台上。彎道、高架與地下的月台規則相同。
+- **以車站為目的地**：到停車位置的最短精確距離，同樣短時依邊的編號逐步決定，與建造順序、字典或記憶體位置無關。
+- **精確距離**：一段的分鐘數是整數距離除以線路的速度、無條件進位（例如 8,300 + 21,470 + 3,200 = 32,970，而不是 3 × 1024）。
+- **N、P、Q1、Q2a、Q2b、Q3 都在路網上運作**：停站與整列停妥、時刻表的到達停留出發、終點折返與重複、線路的行程與容量、自動派車、交路與快車。長列車折返時車頭移到車尾，仍在同一個月台上。
+- **拆除月台**：服務正在使用的月台不能拆（`trainServiceActive`）。
+- **畫面**：列車工具可以把路網上的列車送往車站；列車面板顯示路網上的路；地圖畫出路網上的月台；示範配置的環線有兩個月台，線路 Circle 在兩站之間往返派車。
+- 之前的 16 個 property digest 全部不變，只有方格的世界與 S3、S4 的路網存檔逐位元不變。新增 `service.network` 差分 campaign 與 `save.networkServiceMutation`，golden scenario schema v18 新增 `network-service.json`（ARCHITECTURE 決策 31）。
+- **留給之後**：列車之間的阻擋、進路預約、movement authority 與 dispatcher（T、U、V）；行駛曲線（W）；方格與路網之間的連接；建造路網、月台與線路的畫面。
 
 ## Phase 4.6 — Traffic control
 
@@ -316,7 +334,9 @@ S3 分成兩個里程碑：S3A 讓 `RailwayNetwork` 成為唯一的鐵路資料�
 
 ### Stage T — 進路預約
 
-舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，暫停、不合併。新的 T 在 S4 之後，沿 `TrackTraversal` 的路徑預約泛用的 `TrackResource`，不依賴北東南西、格子或畫面；可以保留的語義與測試見 ARCHITECTURE 決策 29 的第 12 點。
+舊的 Stage T（PR #31）建立在 S3/S4 之前的方格上，暫停、不合併。新的 T 在 S5 之後，沿 `TrackTraversal` 的路徑預約泛用的 `TrackResource`，不依賴北東南西、格子或畫面；可以保留的語義與測試見 ARCHITECTURE 決策 29 的第 12 點。
+
+T 直接使用 S5 統一好的服務路徑 `TrainPath`（canonical route）、`TrackTraversal`、`pathAhead(of:)`、`occupiedResources(of:)` 與 span、`TrackPlatform` 與停車位置，以及車身的佔用；路網上以車站為目的地的路、路網的時刻表與 LineJourney 的遷移都已在 S5 完成，不屬於 T（決策 31 第 21 點）。
 
 - 出發或設定 continuation 時，列車向 GameCore 預約前方的資源（節點與 span，不是整條邊）。預約是整列車的，包含列車長度。
 - 預約是權威狀態，要存檔。

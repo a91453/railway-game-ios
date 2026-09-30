@@ -306,15 +306,44 @@ public struct GameWorld: Equatable, Sendable {
     /// Removes station `id`'s platform on edge `edge` that starts at `start`
     /// (Stage S4). Free.
     ///
-    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
-    ///   ``GameError/invalidPlatform`` when the station has no such platform.
+    /// A platform a timetable service needs cannot be removed (Stage S5):
+    /// one where a service waits at this station with the train's head on
+    /// the platform, or one on the edge where a service travelling to this
+    /// station ends its path. Stop the service first (for a line's train,
+    /// take it off the line). So a waiting service is always stopped at its
+    /// station, and a travelling one always has a platform to arrive at.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   ``GameError/invalidPlatform`` when the station has no such
+    ///   platform; or ``GameError/trainServiceActive(_:)`` naming the
+    ///   lowest numbered train whose service needs it.
     public mutating func removeTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard let index = network.platforms.firstIndex(where: { $0.station == id && $0.edge == edge && $0.start == start }) else {
             throw .invalidPlatform
         }
+        let platform = network.platforms[index]
+        if let train = trains.first(where: { serviceNeeds($0, platform) }) {
+            throw .trainServiceActive(train.id)
+        }
 
         network.removePlatform(at: index)
+    }
+
+    /// Whether `train`'s service needs `platform` (Stage S5): it waits at
+    /// the platform's station with its head on the platform, or travels to
+    /// that station along a path whose last edge is the platform's.
+    private func serviceNeeds(_ train: Train, _ platform: TrackPlatform) -> Bool {
+        guard let execution = train.execution, train.timetable[execution.stop].station == platform.station,
+              case .onEdge(let traversal, let offset)? = train.position, let edge = network.edge(traversal.edge)
+        else { return false }
+        switch execution {
+        case .waitingAtStop:
+            let chainage = traversal.direction == .forward ? offset : edge.length - offset
+            return traversal.edge == platform.edge && platform.start <= chainage && chainage <= platform.end
+        case .travellingToStop:
+            return (train.movement.remainingEdges.last ?? traversal.edge) == platform.edge
+        }
     }
 
     /// The platforms of station `id` on the track network, in order along
@@ -530,6 +559,7 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].movement.continuation = []
         trains[index].movement.edges = []
         trains[index].movement.cursor = 0
+        trains[index].movement.end = nil
     }
 
     // MARK: - Train movement
@@ -576,14 +606,16 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidContinuation``.
     ///
     /// A train on the track network follows edges, not tiles: an empty list
-    /// clears its continuation, and any other list is refused (see
-    /// ``setTrainContinuation(_:along:)``).
+    /// clears its continuation, including where it stops (``TrainMovement/end``),
+    /// so it runs on to the end of its edge; any other list is refused (see
+    /// ``setTrainContinuation(_:along:stoppingAt:)``).
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         guard let (node, heading) = position.ahead else {
             guard nodes.isEmpty else { throw .invalidContinuation }
             trains[index].movement.edges = []
             trains[index].movement.cursor = 0
+            trains[index].movement.end = nil
             return
         }
         guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
@@ -606,14 +638,27 @@ public struct GameWorld: Equatable, Sendable {
     /// kept as the nodes the links lead to (``TrainMovement/continuation``),
     /// on the network as its edges (``TrainMovement/edges``).
     ///
+    /// On the network the path may stop part of the way along its last edge
+    /// (Stage S5): `end` is how far along it the head stops, measured the
+    /// way the train travels it (see ``TrainMovement/end``); `nil`, the
+    /// default, runs to the end of that edge. The last edge is the last
+    /// traversal, or the train's own edge when there are none. `end` must be
+    /// below that edge's length, above 0 after a traversal, and not behind
+    /// the train on its own edge; with no traversals and `end` where the
+    /// head is, the train stands where it is. A path from
+    /// ``path(from:toStation:length:)`` goes in unchanged, as
+    /// `along: path.traversals, stoppingAt: path.end`.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)``, or
-    ///   ``GameError/invalidContinuation`` (a step a train may not take, or
-    ///   the other kind of track).
-    public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal]) throws(GameError) {
+    ///   ``GameError/invalidContinuation`` (a step a train may not take, the
+    ///   other kind of track, or an `end` that does not fit; on the grid,
+    ///   any `end`).
+    public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
-        guard case .onEdge(let traversal, _) = position else {
+        guard case .onEdge(let traversal, let offset) = position else {
+            guard end == nil else { throw .invalidContinuation }
             // On the grid: the node each link leads to, from the node ahead.
             var node = position.ahead!.node
             var nodes: [GridPosition] = []
@@ -632,9 +677,13 @@ public struct GameWorld: Equatable, Sendable {
             guard transitions(after: arrival).contains(next) else { throw .invalidContinuation }
             arrival = next
         }
+        if let end {
+            guard end < network.edge(arrival.edge)!.length, end >= (traversals.isEmpty ? offset : 1) else { throw .invalidContinuation }
+        }
 
         trains[index].movement.edges = traversals.map(\.edge)
         trains[index].movement.cursor = 0
+        trains[index].movement.end = end
     }
 
     // MARK: - Timetables
@@ -1018,21 +1067,26 @@ public struct GameWorld: Equatable, Sendable {
     /// - At the last stop of a timetable that runs once, or of the last
     ///   cycle whose times fit, the service is complete: it ends, and the
     ///   train stays where it is, keeping its timetable and rate.
-    /// - Otherwise the service gives the train the continuation
-    ///   ``route(from:toStation:)`` finds to the station of the next call,
-    ///   and the train travels there. The next call is stop `i + 1`; after
-    ///   the last stop of a repeating timetable it is stop 0 of the next
-    ///   cycle. The service never turns the train except at a stop marked
-    ///   to, and never sets the rate: a train with rate 0 gets its
-    ///   continuation and stays where it is.
-    /// - An empty route means the train is already stopped at the next
-    ///   call's station (a repeated station, a platform both share, or a
-    ///   repeating timetable that ends where it starts). It arrives there at
-    ///   once, and leaves it too in the same phase if that departure has
+    /// - Otherwise the service gives the train the path
+    ///   ``path(from:toStation:length:)`` finds to where it stops for the
+    ///   station of the next call (on the track network, a berth of one of
+    ///   the station's platforms that the train fits; Stage S5), and the
+    ///   train travels there. The next call is stop `i + 1`; after the last
+    ///   stop of a repeating timetable it is stop 0 of the next cycle. The
+    ///   service never turns the train except at a stop marked to, and never
+    ///   sets the rate: a train with rate 0 gets its continuation and stays
+    ///   where it is.
+    /// - A path of no distance means the train is already stopped at the
+    ///   next call's station (a repeated station, a platform both share, or
+    ///   a repeating timetable that ends where it starts). It arrives there
+    ///   at once, and leaves it too in the same phase if that departure has
     ///   also come. In one phase a service leaves at most as many stops as
     ///   its timetable has: every stop of a timetable that runs once, and at
     ///   most one whole cycle of a repeating one, which carries on in the
     ///   next step.
+    /// - A train the service turns round, or leaves at its last stop, stands
+    ///   where it is: on the track network its path now ends there (see
+    ///   ``TrainMovement/end``), so it does not run on along its edge.
     /// - Without a route the train waits at its stop, not turned round, and
     ///   later steps try again, turning it first again: after a command
     ///   changes the map, a route may appear. Within one call the map cannot
@@ -1119,8 +1173,9 @@ public struct GameWorld: Equatable, Sendable {
         /// and service (see ``ServiceLine/serviceCount``), once looked up.
         var journeys: [LineID: [Int: LineJourney?]] = [:]
         /// Each train's round trip from where it stood idle (its position
-        /// and trail) when it was looked up, or `nil` if it had none.
-        var trips: [TrainID: (from: TrainPosition, trail: [GridPosition], trip: LineTrip?)] = [:]
+        /// and body, on the grid or the network) when it was looked up, or
+        /// `nil` if it had none.
+        var trips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
@@ -1194,15 +1249,15 @@ public struct GameWorld: Equatable, Sendable {
         for id in line.trains(ofService: service) {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
-            guard train.execution == nil, let position = train.position, train.movement.rate > 0,
+            guard train.execution == nil, let placement = train.placement, train.movement.rate > 0,
                   isStopped(train, at: first)
             else { continue }
             let trip: LineTrip?
-            if let known = memo.trips[id], known.from == position, known.trail == train.trail {
+            if let known = memo.trips[id], known.from == placement {
                 trip = known.trip
             } else {
                 trip = self.trip(of: line, service: service, for: train)
-                memo.trips[id] = (position, train.trail, trip)
+                memo.trips[id] = (placement, trip)
             }
             if let trip { return (index, trip) }
         }
@@ -1267,43 +1322,69 @@ public struct GameWorld: Equatable, Sendable {
                   case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
                   trains[index].scheduledDeparture(of: stop, cycle: cycle) <= now,
                   !unroutable.contains(trains[index].id),
-                  let position = trains[index].position {
+                  let placement = trains[index].placement {
                 passes += 1
                 let train = trains[index]
-                // A waiting train stands at a node with no continuation
-                // left, so turning it round needs nothing else. A train of
-                // several cars turns round with its head where its tail was,
-                // at a node again (see reversed(_:trail:length:)).
-                let (start, startTrail) = train.timetable[stop].reverses
-                    ? Self.reversed(position, trail: train.trail, length: train.length)
-                    : (position, train.trail)
+                // A waiting train is stopped with its path spent, so turning
+                // it round needs nothing else. A train of several cars turns
+                // round with its head where its tail was (see turnedRound),
+                // on the grid at a node again.
+                let start = train.timetable[stop].reverses ? turnedRound(placement) : placement
                 guard let next = train.call(after: stop, cycle: cycle) else {
                     // The last stop's departure: the service is complete.
-                    trains[index].position = start
-                    trains[index].trail = startTrail
+                    stand(index, at: start)
                     trains[index].execution = nil
                     changed = true
                     break
                 }
-                guard let route = route(from: start, toStation: train.timetable[next.stop].station, length: train.length) else {
+                guard let path = path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
                     // Nothing changes: the train is not turned round either.
                     unroutable.insert(train.id)
                     break
                 }
                 changed = true
-                trains[index].position = start
-                trains[index].trail = startTrail
-                if route.isEmpty {
+                stand(index, at: start)
+                if path.distance == 0 {
                     // Already stopped at the next call's station.
                     trains[index].execution = .waitingAtStop(next.stop, cycle: next.cycle)
                 } else {
-                    trains[index].movement.continuation = route
-                    trains[index].movement.cursor = 0
+                    follow(path, train: index)
                     trains[index].execution = .travellingToStop(next.stop, cycle: next.cycle)
                 }
             }
         }
         return changed
+    }
+
+    // The service adapters that change a train (Stage S5; the others are in
+    // ServicePath.swift): `trains` can only be set in this file.
+
+    /// Gives train `index` `path` as its continuation, from the start: the
+    /// tiles its links lead to on the grid, its edges and where it stops on
+    /// the network. The rest of its movement stays.
+    private mutating func follow(_ path: TrainPath, train index: Int) {
+        if case .onEdge = trains[index].position {
+            trains[index].movement.edges = path.traversals.map(\.edge)
+            trains[index].movement.end = path.end
+        } else {
+            trains[index].movement.continuation = path.traversals.compactMap(\.tileAhead)
+        }
+        trains[index].movement.cursor = 0
+    }
+
+    /// Puts train `index` where `placement` says and leaves it standing
+    /// there: on the grid a train at a node with nothing left to enter
+    /// stays anyway; on the network its path now ends where its head is
+    /// (see ``TrainMovement/end``), so it stays until it is given a path.
+    private mutating func stand(_ index: Int, at placement: TrainPlacement) {
+        trains[index].position = placement.position
+        trains[index].trail = placement.trail
+        trains[index].trailEdges = placement.trailEdges
+        if case .onEdge(let traversal, let offset) = placement.position {
+            trains[index].movement.edges = []
+            trains[index].movement.cursor = 0
+            trains[index].movement.end = offset < network.edge(traversal.edge)!.length ? offset : nil
+        }
     }
 
     /// Phase 4 of a basic step: every travelling service whose train is now
@@ -1351,7 +1432,7 @@ public struct GameWorld: Equatable, Sendable {
                 // it is (Stage S3).
                 let travel = TrainMovement.travel(
                     along: traversal, offset: offset, length: network.edge(traversal.edge)!.length,
-                    distance: movement.rate, edges: movement.edges, cursor: movement.cursor,
+                    distance: movement.rate, edges: movement.edges, cursor: movement.cursor, end: movement.end,
                     enter: { networkEntry(after: $0, into: $1) }
                 )
                 guard travel.position != position || travel.cursor != movement.cursor,
@@ -1364,6 +1445,8 @@ public struct GameWorld: Equatable, Sendable {
                 trains[index].position = travel.position
                 if travel.cursor == movement.edges.count {
                     // Every edge has been entered: the continuation is spent.
+                    // Where the path ends (Stage S5) is now on the train's
+                    // own edge, and stays.
                     trains[index].movement.edges = []
                     trains[index].movement.cursor = 0
                 } else {
@@ -1743,6 +1826,12 @@ extension GameWorld: Codable {
             guard train.movement.edges.allSatisfy({ ($0.networkNumber ?? .max) < network.nextEdgeNumber }) else {
                 return "Train \(train.id.rawValue)'s continuation names an edge that was never built."
             }
+            // Stage S5: a path that stops part of the way along its last edge
+            // stops inside it (checked while that edge is still there).
+            if let end = train.movement.end, case .onEdge(let traversal, _)? = train.position,
+               let last = network.edge(train.movement.edges.last ?? traversal.edge), end >= last.length {
+                return "Train \(train.id.rawValue)'s path stops beyond the end of its last edge."
+            }
             // The map's size never changes, so a node that was on the map
             // when the continuation was set still is.
             guard train.movement.continuation.allSatisfy(map.contains) else {
@@ -1792,16 +1881,24 @@ extension GameWorld: Codable {
 
     /// Why a train's service does not fit this world's stations, or `nil`.
     /// ``Train``'s decoder has already checked that the service fits the
-    /// timetable, position and movement.
+    /// timetable, position and movement as far as it can without the map.
     ///
     /// A waiting train is stopped at its stop's station. A travelling train
-    /// ends its journey (the last node of its continuation, or the end of
-    /// its link once that is spent) next to the station of the stop it
-    /// travels to, as every route from the service does; stations never
-    /// move, so it arrives there even if track on the way was removed and
-    /// rebuilt. Being next to the station is checked rather than being on a
-    /// platform, because that last track tile may be removed and rebuilt
-    /// before the train gets there.
+    /// on the grid ends its journey (the last node of its continuation, or
+    /// the end of its link once that is spent) next to the station of the
+    /// stop it travels to, as every route from the service does; stations
+    /// never move, so it arrives there even if track on the way was removed
+    /// and rebuilt. Being next to the station is checked rather than being
+    /// on a platform, because that last track tile may be removed and
+    /// rebuilt before the train gets there.
+    ///
+    /// On the track network (Stage S5) a travelling train's path is not
+    /// spent, and it ends at a berth of a platform of that station that the
+    /// train fits, as every path from the service does; such a platform
+    /// cannot be removed while the service needs it (see
+    /// ``removeTrackPlatform(_:on:from:)``). Where an edge on the way was
+    /// removed, so the path can no longer be followed to its last edge, that
+    /// edge still has such a berth, one way or the other, where it ends.
     private func serviceProblem(of train: Train) -> String? {
         guard let execution = train.execution, let position = train.position,
               let station = station(id: train.timetable[execution.stop].station)
@@ -1812,13 +1909,39 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service waits at a station the train is not stopped at."
             }
         case .travellingToStop:
-            guard let ahead = position.ahead else { return "Train \(train.id.rawValue) runs a service on the track network." }
-            let end = train.movement.continuation.last ?? ahead.node
+            if case .onEdge = position {
+                guard standingPoint(of: train) == nil else {
+                    return "Train \(train.id.rawValue)'s service travels, but its path is spent."
+                }
+                guard pathEndsAtBerth(of: train, for: station.id) else {
+                    return "Train \(train.id.rawValue)'s service travels on a path that does not end at its next stop."
+                }
+                return nil
+            }
+            let end = train.movement.continuation.last ?? position.ahead!.node
             guard station.tiles.contains(where: { TrackDirection(from: end, to: $0) != nil }) else {
                 return "Train \(train.id.rawValue)'s service travels on a journey that does not end at its next stop."
             }
         }
         return nil
+    }
+
+    /// Whether the path of `train`, on the track network, ends at a berth
+    /// of station `id` for its length (Stage S5; see ``berths(of:length:)``):
+    /// followed along its edges to the last, exactly; when an edge on the
+    /// way no longer exists, at a berth on the last edge either way.
+    private func pathEndsAtBerth(of train: Train, for id: StationID) -> Bool {
+        guard case .onEdge(let traversal, _)? = train.position else { return false }
+        let lastEdge = train.movement.remainingEdges.last ?? traversal.edge
+        guard let length = network.edge(lastEdge)?.length else { return false }
+        let end = train.movement.end ?? length
+        let berths = berths(of: id, length: train.length)
+        var last: TrackTraversal? = traversal
+        for edge in train.movement.remainingEdges {
+            last = last.flatMap { arrival in transitions(after: arrival).first { $0.edge == edge } }
+        }
+        guard let last else { return berths.contains { $0.traversal.edge == lastEdge && $0.offset == end } }
+        return berths.contains(Berth(traversal: last, offset: end))
     }
 
     private static func isStrictlyIncreasing(_ ids: [Int], below limit: Int) -> Bool {

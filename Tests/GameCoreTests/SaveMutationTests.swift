@@ -1012,4 +1012,85 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 300, "only \(aimed) mutations aimed at the vertical railway")
         assertVolume(raisedLoaded > 300, "only \(raisedLoaded) nodes off the ground loaded")
     }
+
+    /// Stage S5 (decision 31): saves of services, lines and paths on the
+    /// track network, mutated where they live (a path's edges, cursor and
+    /// end, a service's phase, stop and cycle, a timetable, a line's
+    /// patterns, platforms): refused, or loaded as a world that keeps every
+    /// invariant (a travelling service's path ends where it stops for its
+    /// next call, a waiting one stands at its station), survives saving
+    /// and keeps them under further commands.
+    func testMutatedNetworkServicesAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var servicesLoaded = 0
+        var endsLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.networkServiceMutation", cases: 10) { c in
+            let world = try NetworkServicePropertyTests.generateWorld(&c, operations: 40)
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return ["movement", "execution", "timetable", "period", "onEdge", "trailEdges", "platforms", "lines"].contains { text.contains($0) }
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["end", "edges", "execution", "movement", "cycle", "period", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                for train in loaded.trains {
+                    guard case .onEdge? = train.position else { continue }
+                    if train.execution != nil { servicesLoaded += 1 }
+                    if train.movement.end != nil { endsLoaded += 1 }
+                }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = NetworkServicePropertyTests.operation(in: current, using: &c.random)
+                    let before = current
+                    if NetworkServicePropertyTests.apply(operation, to: &current) != nil, !operation.isCompound {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.networkServiceMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at services, paths, lines and platforms, \(servicesLoaded) services on the network loaded, \(endsLoaded) paths ending part of the way along an edge loaded")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 100, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 300, "only \(aimed) mutations aimed at services on the network")
+        assertVolume(servicesLoaded > 100, "only \(servicesLoaded) services on the network loaded")
+        assertVolume(endsLoaded > 100, "only \(endsLoaded) paths ending part of the way along an edge loaded")
+    }
 }

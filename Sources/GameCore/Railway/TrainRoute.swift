@@ -131,8 +131,10 @@ enum TrainRoute {
     /// `nil` when none can be reached.
     ///
     /// `next` lists the states a state leads to, in the order that breaks
-    /// ties, each with the length of the step (always positive). The result
-    /// is defined by the rules alone, not by how the search runs:
+    /// ties, each with the length of the step: never negative, and 0 only
+    /// for a step from `start` (Stage S5: a train already where it stops for
+    /// a station, or at the end of its edge). The result is defined by the
+    /// rules alone, not by how the search runs:
     ///
     /// - it has the least total length;
     /// - among routes of that length, it is the one whose choices come first
@@ -146,8 +148,11 @@ enum TrainRoute {
     /// stops once that distance is passed; a pass back over those states,
     /// in reverse order, that marks which lead to a destination by steps
     /// that keep to the shortest distance; and a walk from `start` that takes
-    /// the first such step each time. Time O(n log n) and memory O(n) in the
-    /// number of those states; nothing is kept between calls.
+    /// the first such step each time. `start` is settled first, so a step
+    /// of 0 from it still leads to a state settled later, and the pass back
+    /// sees every step's target before its source. Time O(n log n) and
+    /// memory O(n) in the number of those states; nothing is kept between
+    /// calls.
     static func shortest<Place: Hashable>(
         from start: Place,
         isDestination: (Place) -> Bool,

@@ -71,6 +71,9 @@ struct ReferenceWorld: Equatable {
         /// the edges its body lies over behind its head's edge.
         var edges: [Int] = []
         var trailEdges: [Int] = []
+        /// Decision 31: where on the last edge of its path it stops, `nil`
+        /// at that edge's end.
+        var end: Int64?
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
@@ -279,8 +282,12 @@ struct ReferenceWorld: Equatable {
     }
 
     func stationsStoppedAt(by id: TrainID) -> [StationID] {
-        guard let train = trains.first(where: { $0.id == id.rawValue }),
-              case .atNode(let tile, _)? = train.position,
+        guard let train = trains.first(where: { $0.id == id.rawValue }) else { return [] }
+        if case .onEdge? = train.position {
+            // Decision 31: see networkStops(of:).
+            return networkStops(of: train)
+        }
+        guard case .atNode(let tile, _)? = train.position,
               train.cursor >= train.continuation.count
         else { return [] }
         return stations(beside: tile)
@@ -451,6 +458,7 @@ struct ReferenceWorld: Equatable {
             trains[i].continuation = []
             trains[i].edges = []
             trains[i].cursor = 0
+            trains[i].end = nil
             return nil
         }
     }
@@ -502,10 +510,11 @@ struct ReferenceWorld: Equatable {
         case .success(let i):
             if case .onEdge? = trains[i].position {
                 // Decision 29: a train on the network follows edges; an
-                // empty list still clears.
+                // empty list still clears (decision 31: where it stops too).
                 guard nodes.isEmpty else { return .invalidContinuation }
                 trains[i].edges = []
                 trains[i].cursor = 0
+                trains[i].end = nil
                 return nil
             }
             let (node, heading) = Self.ahead(trains[i].position!)
@@ -637,7 +646,11 @@ struct ReferenceWorld: Equatable {
                 dispatch(l, memo: &memo)
             }
             for i in trains.indices {
-                depart(i)
+                if case .onEdge? = trains[i].position {
+                    departOnNetwork(i)
+                } else {
+                    depart(i)
+                }
             }
             for i in trains.indices where trains[i].position != nil && trains[i].rate > 0 {
                 if case .onEdge? = trains[i].position {

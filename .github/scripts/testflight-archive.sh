@@ -3,16 +3,22 @@
 # the export options: one to export the signed IPA that is checked, one to
 # upload the same archive to App Store Connect.
 #
-#   testflight-archive.sh automatic   the release default: automatic signing
-#                                     for the real team, with the App Store
-#                                     Connect API key and
-#                                     -allowProvisioningUpdates, as Apple
-#                                     documents for headless xcodebuild
-#   testflight-archive.sh adhoc       release alternative: sign the archive
+#   testflight-archive.sh adhoc       the release default: sign the archive
 #                                     ad hoc ("-") so no development
-#                                     certificate or profile is needed; the
-#                                     distribution signature is still applied
-#                                     at export
+#                                     certificate or profile is needed (a
+#                                     team with no registered device cannot
+#                                     get a development profile). The IPA is
+#                                     not ad hoc: the App Store distribution
+#                                     signature and profile are applied at
+#                                     export, and testflight-verify-ipa.sh
+#                                     checks them
+#   testflight-archive.sh automatic   release alternative: automatic
+#                                     development signing for the real team,
+#                                     with the App Store Connect API key and
+#                                     -allowProvisioningUpdates, as Apple
+#                                     documents for headless xcodebuild; needs
+#                                     a development profile, so it fails for
+#                                     a team with no registered device
 #   testflight-archive.sh unsigned    dry run: no team, no key, no signing
 #
 # Always: Release configuration, generic iOS device, the committed project
@@ -22,7 +28,7 @@
 # macOS only; run after `testflight-signing.sh setup`. Inputs (environment):
 #   ARCHIVE_PATH, EXPORT_OPTIONS,
 #   UPLOAD_OPTIONS                    from testflight-signing.sh
-#   APPLE_TEAM_ID                     automatic, adhoc
+#   APPLE_TEAM_ID                     adhoc, automatic
 #   BUILD_NUMBER                      optional: CFBundleVersion of this build
 #   ASC_KEY_PATH, ASC_KEY_ID, ASC_ISSUER_ID   automatic
 set -euo pipefail
