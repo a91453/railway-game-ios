@@ -78,7 +78,7 @@ Swift 存檔由核心相容的 codec 匯出為不透明 bytes，在瀏覽器可�
 
 最小版本不要求帳號、雲端同步、SharedArrayBuffer 或多執行緒 Wasm。若所選 runtime 確實需要 cross-origin isolation，才加入 COOP / COEP 並驗證 hosting 與資產來源。PWA 與 Service Worker 留待載入和升級策略成立後實作。
 
-原網頁參考遊戲的 ZIP、JavaScript、圖片、字型與第三方素材不得收進公開 repo；沿用 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md) 的規範。首版使用自製簡單幾何素材。
+原網頁參考遊戲是可直接重用的實作來源。ZIP 中的 JavaScript、CSS、HTML、資料、圖片、字型、圖示與其他資源，只要專案有權使用，就可以直接收進 repo、Web bundle 或 App resources，不要求先重製成自製替代品。若個別外部元件帶有明確授權／attribution 義務，保留並遵守該義務即可。沿用 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md) 的 direct-port 規則。
 
 ## 分批交付與驗收
 
