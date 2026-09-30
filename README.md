@@ -117,11 +117,11 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions macOS (Xcode / Simulator
 | 4. Visual Smoke（`visual-smoke.yml`） | macOS runner，**手動**觸發 | 在 iPhone 與 iPad Simulator 啟動 App、確認沒有閃退、截圖並上傳為 artifact（新遊戲畫面，以及 Debug 限定的 `-demo-layout` 示範配置） |
 | 5. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
 | 6. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
-| 7. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | 簽章 Archive → 匯出 IPA → 檢查 → 上傳 App Store Connect → 內部 TestFlight；需要 environment `testflight` 的 secrets |
+| 7. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | Archive（預設 `adhoc`）→ App Store distribution 簽章匯出 IPA → 檢查 → 上傳 App Store Connect（**已在真實執行驗證**）；需要 environment `testflight` 的 secrets |
 
 - **Swift Playgrounds**：可選，不是必要的開發或驗證環境。
 - **TestFlight / 實機安裝**：以 GitHub Actions（`testflight.yml`）Archive、簽章、上傳，發佈到**內部** TestFlight，不需要 Mac。
-  - Workflow 與不需帳號的驗證已完成；真實簽章與上傳要等 Apple Developer Program 生效、設定 API key 後才能執行。步驟與狀態見 [docs/TESTFLIGHT_GITHUB_ACTIONS.md](docs/TESTFLIGHT_GITHUB_ACTIONS.md)。
+  - 真實執行已驗證：Release Archive、App Store distribution 簽章匯出、IPA 檢查與上傳到 App Store Connect 都成功；沒有已註冊裝置的新團隊，`automatic` archive 會失敗，所以預設 `adhoc`。App Store Connect processing 與 TestFlight 安裝尚未有證據。步驟與狀態見 [docs/TESTFLIGHT_GITHUB_ACTIONS.md](docs/TESTFLIGHT_GITHUB_ACTIONS.md)。
   - 簽章以 App Store Connect API key 自動完成；repository 不含、也不提交任何憑證、描述檔或金鑰。
   - Xcode Cloud 暫緩（[docs/XCODE_CLOUD_ONBOARDING.md](docs/XCODE_CLOUD_ONBOARDING.md)）。
 

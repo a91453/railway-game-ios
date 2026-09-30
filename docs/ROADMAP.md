@@ -84,11 +84,12 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
   - XcodeGen 產生的 Xcode 專案與 shared scheme 提交進版控，`ios-build.yml` 檢查它與 `project.yml` 一致；
   - Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon；
   - 未簽章的 Release 裝置 Archive（`release-archive.yml`）。
-- **GitHub Actions → 內部 TestFlight 基礎設施：已實作，dry run 驗證**：
-  - `testflight.yml`：只能從 `main` 手動觸發；preflight → 簽章 Archive → 匯出 IPA → 檢查 → 上傳；
+- **GitHub Actions → 內部 TestFlight 基礎設施：已實作，真實執行驗證到上傳 App Store Connect**：
+  - `testflight.yml`：只能從 `main` 手動觸發；preflight → Archive（預設 `adhoc`）→ App Store distribution 匯出 IPA → 檢查 → 上傳；
   - `testflight-checks.yml`：只用假值的腳本測試、macOS dry run、合成 IPA 檢查。
   - 手冊：[TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
-- **真實 Apple 簽章與上傳：blocked**，等待 Apple Developer Program 生效、API 存取與 Team API key；第一次執行同時驗證雲端簽章在 GitHub runner 上的行為。
+- **真實 Apple 簽章與上傳：VERIFIED（到上傳為止）**：Apple Developer Program、Team API key 與 environment 已就緒。第 1 次真實執行（`automatic`）在 Archive 失敗，因為新團隊沒有已註冊裝置、Apple 無法產生開發描述檔；第 2 次（`adhoc`）Archive、App Store distribution 匯出、IPA 檢查、上傳與清理全部成功，所以預設改為 `adhoc`。細節與 run 網址見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
+- **尚未驗證**：App Store Connect processing、Missing Compliance 與 TestFlight 安裝到裝置（沒有 repository 層級的證據）。
 - **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
 - **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 

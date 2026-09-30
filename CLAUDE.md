@@ -35,9 +35,12 @@ simulation.
   secrets in the `testflight` environment), `testflight-checks.yml` (tests
   of the release scripts with fake values and a macOS dry run; no secrets).
 - Distribution: GitHub Actions → internal TestFlight
-  (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). Real signing and upload are blocked
-  until the Apple Developer Program membership and API key exist. Xcode Cloud
-  is deferred (`docs/XCODE_CLOUD_ONBOARDING.md`).
+  (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
+  Release archive, the App Store distribution export, the IPA check and the
+  upload to App Store Connect (archive signing `adhoc`, the default: a team
+  with no registered device cannot make the development profile `automatic`
+  needs). App Store Connect processing and TestFlight installation are not
+  verified. Xcode Cloud is deferred (`docs/XCODE_CLOUD_ONBOARDING.md`).
 
 ## Architecture rules
 
@@ -67,7 +70,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
   `visual-smoke.yml`, `release-archive.yml`, `testflight-checks.yml`). The
   unsigned archive and the dry run do not prove signing, upload or
-  TestFlight; only a real `testflight.yml` run with the Apple account can.
+  TestFlight; only a real `testflight.yml` run with the Apple account can,
+  and it proves at most the upload, not TestFlight installation.
 - Never run `testflight.yml` or add a trigger to it, and never let pull
   requests reach its secrets; the user starts releases.
 - Whenever `RailwayGameApp/project.yml` or the app's file layout changes,
@@ -103,8 +107,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,
   certificates, provisioning profiles, tokens, `.env` files, personal data).
-  Signing is automatic through the App Store Connect API key; the key, Team
-  ID and app ID live only in the GitHub environment `testflight`, never in
-  the repository, logs or artifacts. Apple account steps (agreements, App
+  Distribution signing is automatic through the App Store Connect API key.
+  The key and its IDs are secrets in the GitHub environment `testflight`,
+  never in the repository, logs or artifacts. The Team ID and app ID are
+  variables there and never written into the repository; GitHub does not
+  mask variables, so they appear in the public workflow logs (they are
+  public identifiers). Apple account steps (agreements, App
   Store Connect, API key, testers) are the user's; never ask for passwords,
   2FA codes or private keys.
