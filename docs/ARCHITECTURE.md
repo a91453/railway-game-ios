@@ -28,8 +28,8 @@
 | 目錄 | 內容 |
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
-| `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30） |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T） |
+| `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30）；128 位元的整數運算（`WideInteger`，Stage W1，決策 33） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T）；行駛曲線與車種性能（`RunningCurve`、`TrainPerformance`，Stage W1，決策 33） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -1567,6 +1567,49 @@ U 只需要加上：movement authority 的檢查、只能進入已預約的資�
 - 不繞路、不換月台、不讓快車先走（V）；規劃查詢（`lineJourney` 等）不讀預約。
 - 限界範圍固定是節點 1024 以內，只看邊端的相通關係與里程、不讀幾何：分岔角度很小、1024 以外仍然很靠近的兩條邊（S4 只檢查平面上的相交，還沒有軌道寬度的側向淨空）不受保護；側向淨空屬於之後的幾何工作。
 - 交通控制下沒有「強制」的操作：玩家要先讓持有軌道的列車離開、取下它，或關閉交通控制。
+
+### 33. 行駛曲線的計算核心（Phase 4.7 Stage W1）
+
+W1 照原樣移植作者 `Railway/` 網站的跑段曲線，還不接到任何列車：決策 1–32 的行為、存檔、golden 與 property digest 都不變。
+
+- **翻譯的對象**（私有 repo `b52f05c` 的 `Railway/site_archive_clean/index.html`）：
+  - `buildProfile` → `RunningCurve.init?(length:duration:acceleration:braking:topSpeed:coast:)`；
+  - `assignRunProfiles` 裡依序改用 `bAlt`、`aAlt` 的三次嘗試 → `RunningCurve.init?(length:duration:performance:)`；
+  - `profTimeToProg` × L → `distance(at:)`；
+  - `profProgToTime` → `time(atDistance:)`；
+  - `PERF_DEFAULT`、`PERF_HSR`、`PERF_DR1000`、`PERF_RULES`、`PERF_BY_TYPE` 的數值 → `TrainPerformance` 的預設值。
+- **照原樣保留的**（faithful）：
+  - 公式：D = 1/(2a) + (1 − ρ)²/(2c) + ρ(2 − ρ)/(2b)，vc 是 D·v² − T·v + L = 0 的較小根；
+  - 四段：加速、定速、惰行、煞車；
+  - 沒有曲線的條件：判別式為負、vc ≤ 0、定速時間為負、超過最高速；
+  - 惰行：先試 ρ₀，超速時在 [ρ₀, 1] 二分 14 次，保留最後一個合格的；
+  - 改用備用性能的順序，以及所有性能數值。
+- **機械換算**（公式不變）：
+  - 距離用世界單位（1/64 公尺），時間用毫秒；
+  - 加速度、煞車與惰行減速用千分之一 km/h/s（參考的值最多三位小數），最高速用 km/h；
+  - ρ 用千分之一；二分在分母 1000 × 2¹⁴ 上進行，參考的 14 次二分因此都是精確的；
+  - 內部刻度：D × 2²⁴、速度（每毫秒的單位）× 2³²、時間與距離 × 2¹⁶，其餘一律無條件捨去；
+  - 平方根改成整數平方根；
+  - vc 以等價的 2L ÷ (T + √(T² − 4DL)) 計算，避免整數相減的精度損失；
+  - 超速的解在 `solve` 裡就捨棄：參考的每個呼叫端都會丟掉它，這樣也讓之後的乘積留在 128 位元內；
+  - 參考的梯形分支不夾住結果，整數結果可能差一個單位，所以 `distance(at:)` 夾在 `0...length`、`time(atDistance:)` 夾在 `0...duration`。
+- **128 位元**：`WideInteger` 只用標準函式庫的 `multipliedFullWidth` 與 `dividingFullWidth`。不用 `UInt128`，因為 App 支援的 iOS 17 沒有它。
+- **範圍**：長度 ≤ 2⁴⁰ 單位、時間 ≤ 2³² 毫秒、各率 ≤ 2²⁰；超出範圍或不為正時沒有曲線，就像參考遇到非正值時回傳 `null`。
+- **這次沒有移植的**（之後的 W，或等作者決定）：
+  - 通過實測時刻的曲線（`buildObsProfile`）；
+  - 限速區段（`SPEED_ZONES` 與相關函式）；
+  - 依車名選車種性能（`resolvePerf`）：遊戲的列車還沒有車名或車種；
+  - 由性能反推時刻表的時間，以及秒與分鐘的解析度（留給 W2）。
+- **驗證**：
+  - `RunningCurveTests` 的手算案例：2 km、105.25 秒、a = 2.5、b = 3，判別式是 22,750² 的完全平方，vc 正好是每毫秒 2 單位；每一段的時間與距離，以及抽樣的距離與時間都是精確整數。
+  - 沒有曲線的案例、備用性能的順序、無效的惰行、極端值不溢位。
+  - 所有預設值與參考的數值相同。
+  - 差分：`ReferenceRunningProfile` 在測試裡把 JavaScript 逐行寫成 `Double`，4,000 個案例涵蓋所有預設值、200 m 到 80 km、從最快時間的 0.9 倍到 4 倍。
+    - 有沒有曲線、惰行的 ρ 都一致；
+    - 距離相差不到 2 個單位（3 公分），時間相差不到 2 毫秒；只有接近停車、參考的平方根本身病態的地方，依當時的速度放寬。
+  - `WideIntegerTests` 對照 64 位元的結果與全寬的邊界。
+  - 刻意植入的錯誤都被抓到，驗證後還原：二分 13 次、定速段用了煞車速度、忽略惰行的 ρ₀、備用性能的順序錯誤。
+- **不變的**：沒有新的指令、錯誤、存檔欄位或 golden schema；既有的 golden 預期值與 property digest 全部不變。
 
 ## 目前規則摘要
 
