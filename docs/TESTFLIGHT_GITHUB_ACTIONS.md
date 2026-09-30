@@ -18,11 +18,12 @@
 | --- | --- |
 | Workflow、腳本、暫存 keychain 與清理、build number、本手冊 | **已完成** |
 | 不需帳號的驗證（腳本測試、macOS dry run、合成 IPA 檢查） | **VERIFIED**（見〈驗證狀態〉） |
-| 在 GitHub macOS runner 上以 API key 自動簽章與雲端管理的發佈憑證 | **UNVERIFIED**：官方文件支持這個流程，但這個 repository 尚未實際執行過 |
-| Apple Developer Program、API 存取、Team API key、App record、GitHub environment | **BLOCKED**：會員審核中；生效後由你在瀏覽器完成（下方步驟 1–7） |
-| 真實簽章 Archive、匯出、上傳、App Store Connect processing、TestFlight 安裝 | **BLOCKED**：需要會員與 API key |
+| Apple Developer Program、Team API key、GitHub environment、真實 Apple 驗證 | **VERIFIED**（見〈真實執行紀錄〉） |
+| 真實 Release Archive（`adhoc`）、App Store 發佈簽章匯出、IPA 檢查、上傳到 App Store Connect、清理 | **VERIFIED**：第 2 次執行全部成功 |
+| `automatic` Archive | 在沒有已註冊裝置的新團隊**失敗**（已觀察）；仍保留為選項 |
+| App Store Connect processing、TestFlight 安裝到裝置 | **UNVERIFIED**：repository 與 workflow log 裡沒有證據 |
 
-`release-archive.yml` 的未簽章 Archive，以及 `testflight-checks.yml` 的 dry run 與合成 IPA 測試，都**不能**證明真實簽章、上傳或 TestFlight 會成功。
+`release-archive.yml` 的未簽章 Archive，以及 `testflight-checks.yml` 的 dry run 與合成 IPA 測試，仍然**不能**證明真實簽章；真實簽章與上傳的證據只來自〈真實執行紀錄〉的兩次執行。
 
 ## 流程
 
@@ -35,9 +36,9 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
        再檢查一次設定，並依這次執行的 attempt 決定 build number
        → 暫存 keychain + API key 檔（權限 600）
        → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
-         自動簽章 + 真實 Team + API key + -allowProvisioningUpdates
+         真實 Team；預設 `adhoc` 簽章（`automatic` 為選項，見下）
        → 匯出 IPA：xcodebuild -exportArchive，App Store Connect 發佈，
-         `testFlightInternalTestingOnly=true`，自動簽章
+         `testFlightInternalTestingOnly=true`，自動簽章 + API key
          （本機沒有發佈憑證時使用 Apple 雲端管理的發佈憑證）
        → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
          發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
@@ -59,8 +60,9 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
 
 - **只允許一個發佈同時進行**：`concurrency: testflight-release`，而且不取消進行中的上傳。執行中再按一次會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。
 - **Archive 簽章方式**（Run workflow 的 `archive_signing` 選項）：
-  - `automatic`（預設）：照 Apple 對無人操作環境 xcodebuild 的說明做自動簽章。archive 階段需要開發簽章，Xcode 可能在每次執行時自動建立一張 Apple Development 憑證（UNVERIFIED），它會存進暫存 keychain，並隨清理刪除。
-  - `adhoc`：以 ad hoc（`-`）簽章封存，不需要開發憑證或描述檔；發佈簽章一樣在匯出時完成。這是 automatic 失敗時的替代方案，例如團隊沒有已註冊的裝置而無法產生開發描述檔時。兩者都要等第一次真實執行才能確認。
+  - `adhoc`（預設，第一個選項）：以 ad hoc（`-`）簽章封存，不需要開發憑證或開發描述檔。適合 CI 與沒有已註冊開發裝置的新團隊。
+    - **它不是最後輸出的 IPA 類型**：最後的 IPA 仍在匯出階段以 App Store distribution 憑證與 App Store 描述檔簽章，IPA 檢查會驗證這一點（真實執行的 log 顯示「App Store distribution build」）。
+  - `automatic`：對 archive 做自動開發簽章（API key + `-allowProvisioningUpdates`）。需要可用的開發描述檔，而 Apple 只有在團隊至少註冊一台裝置時才會產生；沒有裝置時 archive 會失敗（見〈真實執行紀錄〉）。團隊註冊裝置之後才有意義；保留作為選項，不需要時不必使用。
 
 ## 需要的設定
 
@@ -108,7 +110,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
    - **Environment secrets**：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY`（貼上 `.p8` 全文，換行保持原樣即可）。
    - **Environment variables**：`APPLE_TEAM_ID`、`ASC_APP_ID`；`BUILD_NUMBER_OFFSET` 選填。
 7. **內部測試群組**：App Store Connect → 你的 App → TestFlight → Internal Testing「+」→ 群組 `Internal`，加入自己，勾「Enable automatic distribution」。Apple 說明中必須手動加入群組的是 Xcode Cloud 的 build；若新 build 沒有自動出現，在群組頁按 Add Builds 手動加入。
-8. **發佈**：GitHub → Actions → **TestFlight (internal)** → Run workflow → Branch 選 `main`，`archive_signing` 維持 `automatic` → Run workflow。
+8. **發佈**：GitHub → Actions → **TestFlight (internal)** → Run workflow → Branch 選 `main`，`archive_signing` 維持預設的 `adhoc` → Run workflow。
 9. **上傳之後**：
    - App Store Connect 會先處理（processing），通常數分鐘到數十分鐘。
    - TestFlight 若顯示 **Missing Compliance**，依實際情況回答出口合規問題（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉；本專案不替你預設答案）。
@@ -129,6 +131,28 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - Apple 舊技術文件（TN2420）另寫明：同一版本內 build number 要遞增。所以同一版本已上傳較新的 build 之後，**不要重跑更舊的執行**，改按一次新的 Run workflow。
 - **需要跳號時**設定 `BUILD_NUMBER_OFFSET`，例如 workflow 改名讓 run number 從 1 重新起算，或曾用其他方式上傳過較大的 build。Offset 與 run number 相加後必須 ≤ 9999；若此 workflow 真正累積到 10,000 次手動發佈，需要先改 build-number 編碼方案。
 
+## 真實執行紀錄
+
+第一次與第二次真實執行，都從 `main` 手動觸發，同一個 commit `3924f23`（PR #34 的 merge），`macos-26` runner（macOS 26.6.2、Xcode 26.6、iOS SDK 26.5）。以下都從 GitHub Actions 的 job 與 log 讀取確認，不是口述。
+
+| 執行 | `archive_signing` | 結果 | 網址 |
+| --- | --- | --- | --- |
+| #1（attempt 1，build `1.1`） | `automatic` | **失敗**於 Archive | https://github.com/a91453/railway-game-ios/actions/runs/36674350344 |
+| #2（attempt 1，build `2.1`） | `adhoc` | **成功**（含上傳） | https://github.com/a91453/railway-game-ios/actions/runs/36674626548 |
+
+**#1 `automatic`**：Preflight 與設定檢查、build number、Toolchain、暫存 keychain 與 API key 檔都成功；Archive 失敗（exit 65），匯出、IPA 檢查與上傳因此略過，清理仍執行且成功（刪除 keychain、key 檔與 archive）。Apple／Xcode 的錯誤：
+
+- `Communication with Apple failed: Your team has no devices from which to generate a provisioning profile.`
+- `No profiles for '<bundle id>' were found: Xcode couldn't find any iOS App Development provisioning profiles`
+
+原因：這個新的 Apple Developer Team 沒有已註冊的裝置，Apple 無法產生 iOS App Development 描述檔，而 `automatic` 的 archive 需要它。Apple 的回應本身證明 API key 驗證是通的。
+
+**#2 `adhoc`**：Preflight、Toolchain、暫存 keychain、Archive（約 60 秒）、Sign and export the IPA、Check the IPA、Upload to App Store Connect、Clean up 全部成功。log 的重點：
+
+- IPA 檢查：bundle ID 正確、版本 `0.1.0 (2.1)`、簽章為 distribution 憑證、有此 Team 與 App 的 App Store 描述檔、結構完整，結論「The IPA is an App Store distribution build」。
+- 上傳：xcodebuild 回報 `Upload succeeded`、`Uploaded package is processing`。
+- 清理：暫存 keychain 已刪除、這次新增的 1 份描述檔已移除、key 檔／archive／IPA 已移除。
+
 ## 安全設計
 
 - **Secrets 的範圍**：secrets 只在 environment `testflight`，只有從 `main` 手動觸發的發佈 job 拿得到。一般 PR、fork 的 PR、`testflight-checks.yml` 都拿不到，也不會發佈。preflight 另外會擋下非 `main` 或非手動的觸發。
@@ -144,6 +168,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - 腳本只印出「是否存在、格式是否正確、yes/no、版本資訊」，不印秘密，也不印含帳號持有人姓名的憑證或描述檔名稱。
   - GitHub 會自動遮蔽 secrets，但官方說明遮蔽不保證完整，所以腳本本身就不輸出它們。
   - 簽章 Archive、IPA export 與 upload 都以 `xcodebuild -quiet` 執行，降低公開 log 出現 signing identity 的機會；Apple 工具的錯誤訊息仍可能提到憑證名稱。
+- **公開 log 裡看得到的識別碼**（真實執行 #1、#2 的 log 實際檢查）：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY` 與 key 檔名都被遮蔽為 `***`，`.p8` 內容、憑證與簽章者姓名都沒有出現。`APPLE_TEAM_ID` 與 `ASC_APP_ID` 是 **variables**，GitHub 不遮蔽 variables，所以它們會出現在每個步驟的 `env:` 區塊。這兩個是公開識別碼（Team ID 本來就在每個簽章的 App 與描述檔裡，App 的 Apple ID 在 App Store 網址裡），不能用來驗證或簽章；本 repository 仍不把它們的值寫進檔案。若想讓它們也不出現在 log，可以改放 environment secrets（要同步改 workflow 的 `vars.` 為 `secrets.`，這是另一個小改動）。
 - **寫入權限**：有 repository 寫入權限的人都能讀取 secrets，不要把寫入權限給不信任的人。
 
 ## 驗證狀態
@@ -156,8 +181,15 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | Archive 指令三種模式的參數與 ExportOptions；已提交的專案能以未簽章方式 archive | VERIFIED | macOS dry run ＋ 本機 stub |
 | Xcode 26 提供需要的 `xcodebuild` 選項（`-exportArchive`、`-allowProvisioningUpdates`、`-authenticationKey*`）、ExportOptions 鍵、`app-store-connect` 方法與 `testFlightInternalTestingOnly`；匯出與上傳兩份設定只差在 `destination`，且兩者都限制為 internal TestFlight | VERIFIED | macOS dry run |
 | IPA 檢查：正確的發佈 IPA 通過；build number 不符、開發描述檔、有裝置清單、缺描述檔、開發憑證簽章都擋下；不輸出姓名 | VERIFIED | macOS dry run（自簽的一次性憑證、合成 IPA）＋ 本機 stub |
-| 在 GitHub runner 上以 API key 自動簽章（archive）與雲端管理發佈憑證（export） | **UNVERIFIED** | 官方文件支持；尚未實際執行 |
-| 真實 preflight（有 secrets）、簽章 Archive、匯出、上傳、processing、TestFlight 安裝 | **BLOCKED** | 需要會員、API 存取與 key |
+| 真實 Apple 驗證：Team API key（Admin）與 GitHub environment `testflight` 的 secrets／variables 讀取、preflight 通過；不需要 `.p12`、Apple 密碼或雙重認證 | VERIFIED | 真實執行 #1、#2 |
+| 沒有已註冊裝置的新團隊：`automatic` archive 失敗（沒有開發描述檔）；cleanup 在失敗後仍成功 | VERIFIED（觀察到的失敗） | 真實執行 #1 |
+| `adhoc` 真實 Release Archive | VERIFIED | 真實執行 #2 |
+| App Store distribution 簽章與描述檔的匯出（API key，雲端管理的發佈憑證）；IPA 檢查（distribution 憑證、App Store 描述檔、bundle ID、版本、build number、結構） | VERIFIED | 真實執行 #2 |
+| 上傳到 App Store Connect（`Upload succeeded`） | VERIFIED（App Store Connect upload） | 真實執行 #2 |
+| 清理（成功後與失敗後）；log 沒有 key、Key ID、Issuer ID、簽章者姓名 | VERIFIED | 真實執行 #1、#2 |
+| App Store Connect processing 完成、Missing Compliance、TestFlight 安裝到裝置 | **UNVERIFIED** | repository 沒有證據；由你在 App Store Connect 與 TestFlight App 確認 |
+| 取消時的清理（`if: always()`） | 由 macOS dry run 的失敗步驟驗證；**尚未**在真實執行中取消過 | — |
+| `automatic` archive 在已註冊裝置的團隊上能否成功 | **UNVERIFIED** | 尚未有裝置可試 |
 
 ## 如果真實執行失敗
 
@@ -165,7 +197,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | --- | --- |
 | Preflight 列出缺少的設定 | 依〈需要的設定〉在 environment `testflight` 補上。注意是 environment，不是 repository secrets |
 | 「Branch … is not allowed to deploy to testflight」 | 只能從 `main` 執行；Run workflow 時選 `main` |
-| Archive 時出現 no devices / 無法產生開發描述檔 | 以 `archive_signing: adhoc` 重新執行，或在 Devices 註冊一台裝置 |
+| 選了 `automatic` 而 Archive 出現 no devices / 無法產生開發描述檔 | 改用預設的 `archive_signing: adhoc` 重新執行，或在 Devices 註冊一台裝置 |
 | 匯出時出現 `…_Managed is unknown` 或權限錯誤 | 確認 key 是 **Team** key、角色是 **Admin**；見下方〈備案〉 |
 | 找不到 App 或 Bundle ID | 先完成步驟 2、3；Bundle ID 必須與 `project.yml` 相同 |
 | IPA 檢查失敗 | 看錯誤列出的項目；IPA 不會被上傳 |

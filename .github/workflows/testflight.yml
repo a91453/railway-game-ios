@@ -1,10 +1,11 @@
 name: TestFlight (internal)
 
-# Archives the committed project on a GitHub-hosted macOS runner, signs it
-# through App Store Connect with the team's API key, exports an IPA and
-# checks it, then uploads the archive, signed the same way, to App Store
-# Connect for internal TestFlight testing. Every Apple step uses xcodebuild
-# with the API key.
+# Archives the committed project on a GitHub-hosted macOS runner, exports an
+# App Store distribution IPA signed through App Store Connect with the
+# team's API key, checks it, then uploads the archive, exported the same
+# way, to App Store Connect for internal TestFlight testing. Export and
+# upload use xcodebuild with the API key; the archive is signed ad hoc by
+# default (see archive_signing).
 #
 # Started only by hand (Actions -> TestFlight (internal) -> Run workflow) and
 # only from main. Pull requests never run it; its secrets live in the
@@ -18,15 +19,20 @@ on:
     inputs:
       archive_signing:
         description: >-
-          How the archive is signed before export. "automatic" (default):
-          automatic signing with the API key. "adhoc": no development
-          certificate or profile; try it if automatic signing fails, for
-          example because the team has no registered devices.
+          How the archive is signed before export. "adhoc" (default): the
+          archive is signed ad hoc, so it needs no development certificate
+          or provisioning profile; use it for a CI or new team with no
+          registered development device. It is not the type of the final
+          IPA: the App Store distribution signing and profile are still
+          applied when the archive is exported, and the IPA check verifies
+          them. "automatic": automatic development signing with the API key
+          at archive time; it needs a development provisioning profile,
+          which Apple can create only if the team has a registered device.
         type: choice
         options:
-          - automatic
           - adhoc
-        default: automatic
+          - automatic
+        default: adhoc
 
 permissions:
   contents: read

@@ -18,8 +18,8 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 | --- | --- | --- |
 | Repository readiness | 已完成（PR #8；macOS 部分由 GitHub Actions 驗證） | 已提交的 Xcode 專案與 shared scheme、Release Archive 設定、App Icon、自動簽章設定、漂移檢查 |
 | Apple 帳號 onboarding | **尚未開始，需要你操作** | Developer Program、Team ID、Bundle ID、App Store Connect app record、測試群組 |
-| 簽章 Archive 與上傳 | **尚未執行** | 只能由 Xcode Cloud 在 onboarding 後完成；GitHub 上的 Archive 是**未簽章**的，不能證明簽章或上傳 |
-| TestFlight 安裝 | **尚未執行** | 需要上面兩項都完成 |
+| 簽章 Archive 與上傳（Xcode Cloud） | **尚未執行**（Xcode Cloud 暫緩） | `release-archive.yml` 的 Archive 是**未簽章**的，不能證明簽章或上傳。GitHub Actions 的 `testflight.yml` 已經真實簽章並上傳到 App Store Connect（見 TESTFLIGHT_GITHUB_ACTIONS.md），但那不是 Xcode Cloud |
+| TestFlight 安裝 | **尚未有證據** | 需要 processing 完成與安裝 |
 
 ## 先知道的限制
 
