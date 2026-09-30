@@ -25,6 +25,13 @@ public struct GameWorld: Equatable, Sendable {
     /// grid's track pieces and the continuous network's nodes and edges.
     /// Empty in a new world.
     public private(set) var network: RailwayNetwork
+    /// Whether traffic control is on (Phase 4.6 Stage T, ARCHITECTURE
+    /// decision 32): every train takes the whole of a route before it starts
+    /// along it, no two trains hold the same track, and a service or a line
+    /// whose route is held waits for it (see ``setTrafficControl(_:)`` and
+    /// ``reservedResources(of:)``). Off in a new world, so every rule of the
+    /// stages before it holds unchanged; a new game in the app turns it on.
+    public private(set) var isTrafficControlEnabled: Bool
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -50,6 +57,7 @@ public struct GameWorld: Equatable, Sendable {
         self.clock = clock
         self.economy = economy
         self.network = RailwayNetwork()
+        self.isTrafficControlEnabled = false
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -163,12 +171,26 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws: ``GameError/outOfBounds(_:)``,
     ///   ``GameError/noTrackToRemove(_:)`` if the tile is empty or a station,
     ///   or ``GameError/trackInUse(_:)``. Turnouts and crossings are track
-    ///   and are removed the same way.
+    ///   and are removed the same way. Under traffic control (Stage T), then
+    ///   ``GameError/trackReserved(_:)`` while a train has reserved the tile
+    ///   or a link to it for its route.
     public mutating func removeTrack(at position: GridPosition) throws(GameError) {
         guard map.contains(position) else { throw .outOfBounds(position) }
         guard track(at: position) != nil else { throw .noTrackToRemove(position) }
         guard !trains.contains(where: { $0.position?.isSupported(by: position) == true || $0.trail.contains(position) }) else {
             throw .trackInUse(position)
+        }
+        // Stage T: nor may track a train has reserved for its route: the
+        // tile, or a link to it.
+        if isTrafficControlEnabled, let train = trains.first(where: { $0.reservation.contains { resource in
+            switch resource {
+            case .node(let node): return node == .tile(position)
+            case .span(let span):
+                guard case .link(let a, let b) = span.edge else { return false }
+                return a == position || b == position
+            }
+        } }) {
+            throw .trackReserved(train.id)
         }
 
         network.removeTrack(at: position)
@@ -220,7 +242,11 @@ public struct GameWorld: Equatable, Sendable {
     ///   that does not make an edge); ``GameError/trackTooSteep``;
     ///   ``GameError/invalidTrackStructure``;
     ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
-    ///   would meet without clearance; ``GameError/idsExhausted``; or
+    ///   would meet without clearance; ``GameError/idsExhausted``; under
+    ///   traffic control (Stage T), ``GameError/trackReserved(_:)`` when a
+    ///   train holds either end node, or track within
+    ///   ``RailwayNetwork/junctionZone`` of it, since a new edge there may
+    ///   change which trains foul that junction; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildTrackEdge(
@@ -237,6 +263,11 @@ public struct GameWorld: Equatable, Sendable {
             throw .trackConflict(other)
         }
         let (_, next) = try Self.allocateID(from: network.nextEdgeNumber)
+        if isTrafficControlEnabled, let train = trains.first(where: { train in
+            held(train).contains { resource in [from, to].contains { isWithinJunctionZone(resource, of: $0) } }
+        }) {
+            throw .trackReserved(train.id)
+        }
         try economy.spend(try edgeCost(length: geometry.length, structure: structure))
 
         return network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
@@ -252,7 +283,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trackEdgeInUse(_:)`` while a placed train's head or
     ///   body is on it (unplace the train first); or
     ///   ``GameError/trackEdgeHasPlatform(_:)`` while a station has a
-    ///   platform on it (Stage S4).
+    ///   platform on it (Stage S4); or, under traffic control (Stage T),
+    ///   ``GameError/trackReserved(_:)`` while a train has reserved some of
+    ///   it for its route.
     public mutating func removeTrackEdge(_ id: TrackEdgeID) throws(GameError) {
         guard network.edge(id) != nil else { throw .unknownTrackEdge(id) }
         guard !trains.contains(where: { train in
@@ -260,6 +293,9 @@ public struct GameWorld: Equatable, Sendable {
             return train.trailEdges.contains(id)
         }) else { throw .trackEdgeInUse(id) }
         guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
+        if isTrafficControlEnabled, let train = trains.first(where: { $0.reservation.contains { $0.isSpan(of: id) } }) {
+            throw .trackReserved(train.id)
+        }
 
         network.removeEdge(id)
     }
@@ -291,7 +327,10 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
     ///   ``GameError/unknownTrackEdge(_:)`` (a grid link has its own
-    ///   platforms); or ``GameError/invalidPlatform``.
+    ///   platforms); ``GameError/invalidPlatform``; or, under traffic
+    ///   control (Stage T), ``GameError/trackReserved(_:)`` while a train
+    ///   holds a span of the edge, whose spans the platform's ends would
+    ///   cut.
     public mutating func addTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64, to end: Int64) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard network.edge(edge) != nil else { throw .unknownTrackEdge(edge) }
@@ -299,6 +338,7 @@ public struct GameWorld: Equatable, Sendable {
         guard isValidPlatform(platform), !network.platforms.contains(where: { $0.overlaps(platform) }) else {
             throw .invalidPlatform
         }
+        try requireSpansUnheld(on: edge)
 
         network.addPlatform(platform)
     }
@@ -315,8 +355,11 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
     ///   ``GameError/invalidPlatform`` when the station has no such
-    ///   platform; or ``GameError/trainServiceActive(_:)`` naming the
-    ///   lowest numbered train whose service needs it.
+    ///   platform; ``GameError/trainServiceActive(_:)`` naming the
+    ///   lowest numbered train whose service needs it; or, under traffic
+    ///   control (Stage T), ``GameError/trackReserved(_:)`` while a train
+    ///   holds a span of the edge, which removing the platform's ends would
+    ///   join to its neighbours.
     public mutating func removeTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard let index = network.platforms.firstIndex(where: { $0.station == id && $0.edge == edge && $0.start == start }) else {
@@ -326,6 +369,7 @@ public struct GameWorld: Equatable, Sendable {
         if let train = trains.first(where: { serviceNeeds($0, platform) }) {
             throw .trainServiceActive(train.id)
         }
+        try requireSpansUnheld(on: edge)
 
         network.removePlatform(at: index)
     }
@@ -344,6 +388,15 @@ public struct GameWorld: Equatable, Sendable {
         case .travellingToStop:
             return (train.movement.remainingEdges.last ?? traversal.edge) == platform.edge
         }
+    }
+
+    /// Under traffic control (Stage T), refuses a change to the spans of
+    /// `edge` while a train holds any of them (it stands on them or has
+    /// reserved them): a reserved span must keep its meaning, and two trains
+    /// in neighbouring spans must not end up sharing one.
+    private func requireSpansUnheld(on edge: TrackEdgeID) throws(GameError) {
+        guard isTrafficControlEnabled, let train = trains.first(where: { held($0).contains { $0.isSpan(of: edge) } }) else { return }
+        throw .trackReserved(train.id)
     }
 
     /// The platforms of station `id` on the track network, in order along
@@ -475,26 +528,34 @@ public struct GameWorld: Equatable, Sendable {
     /// body is laid back from the start of its edge the way a train could
     /// have come, the lowest numbered edge first where the track branches.
     ///
+    /// Under traffic control (Stage T) the train must also be able to take
+    /// the track it would stand on, the junctions it would foul, and the
+    /// way it would run by itself: to the end of its link, or on the track
+    /// network to the end of its edge (see ``reservedResources(of:)``).
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
-    ///   train), or ``GameError/invalidTrainPosition``.
+    ///   train), ``GameError/invalidTrainPosition``, or, under traffic
+    ///   control, ``GameError/trackReserved(_:)``.
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
         guard isOnTrack(position) else { throw .invalidTrainPosition }
-        let length = trains[index].length
+        var train = trains[index]
+        let length = train.length
         if case .onEdge(let traversal, let offset) = position {
             guard length == 0 || offset > 0, let trail = networkTrailBehind(traversal, offset: offset, length: length) else {
                 throw .invalidTrainPosition
             }
-            trains[index].position = position
-            trains[index].trailEdges = trail
-            return
+            train.position = position
+            train.trailEdges = trail
+        } else {
+            guard let trail = trailBehind(position, length: length) else { throw .invalidTrainPosition }
+            train.position = position
+            train.trail = trail
         }
-        guard let trail = trailBehind(position, length: length) else { throw .invalidTrainPosition }
 
-        trains[index].position = position
-        trains[index].trail = trail
+        try admit(train, at: index)
     }
 
     /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2), one
@@ -528,6 +589,7 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].movement = .idle
         trains[index].trail = []
         trains[index].trailEdges = []
+        trains[index].reservation = []
     }
 
     /// Turns a placed train around where it stands, without moving it.
@@ -542,24 +604,30 @@ public struct GameWorld: Equatable, Sendable {
     /// to the end of that link (now its `to`) and stops there until it is
     /// given a new continuation.
     ///
+    /// Under traffic control (Stage T) the train's reservation goes with its
+    /// path. A reversed train stands on the same track as before, but one on
+    /// a link or along a network edge then runs to its end by itself, and
+    /// must be able to take that way.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/trainNotPlaced(_:)``, or
+    ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (stop the service first).
+    ///   timetable (stop the service first), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)``.
     public mutating func reverseTrain(_ id: TrainID) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
+        var train = trains[index]
 
         if case .onEdge(let traversal, let offset) = position {
-            (trains[index].position, trains[index].trailEdges) = reversedOnNetwork(
-                traversal, offset: offset, trail: trains[index].trailEdges, length: trains[index].length
-            )
+            (train.position, train.trailEdges) = reversedOnNetwork(traversal, offset: offset, trail: train.trailEdges, length: train.length)
         } else {
-            (trains[index].position, trains[index].trail) = Self.reversed(position, trail: trains[index].trail, length: trains[index].length)
+            (train.position, train.trail) = Self.reversed(position, trail: train.trail, length: train.length)
         }
-        trains[index].movement.continuation = []
-        trains[index].movement.edges = []
-        trains[index].movement.cursor = 0
-        trains[index].movement.end = nil
+        train.movement.continuation = []
+        train.movement.edges = []
+        train.movement.cursor = 0
+        train.movement.end = nil
+        try admit(train, at: index)
     }
 
     // MARK: - Train movement
@@ -599,11 +667,17 @@ public struct GameWorld: Equatable, Sendable {
     /// it: a train on a link still runs to the end of that link at its rate
     /// (set the rate to 0 to hold it where it is).
     ///
+    /// Under traffic control (Stage T) the train takes its whole new route
+    /// at once, with everything its whole length covers on the way (see
+    /// ``reservedResources(of:)``), in place of its old reservation; if
+    /// another train holds any of it, nothing changes.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
-    ///   timetable (the service owns the continuation; stop it first), or
-    ///   ``GameError/invalidContinuation``.
+    ///   timetable (the service owns the continuation; stop it first),
+    ///   ``GameError/invalidContinuation``, or, under traffic control,
+    ///   ``GameError/trackReserved(_:)``.
     ///
     /// A train on the track network follows edges, not tiles: an empty list
     /// clears its continuation, including where it stops (``TrainMovement/end``),
@@ -611,19 +685,22 @@ public struct GameWorld: Equatable, Sendable {
     /// ``setTrainContinuation(_:along:stoppingAt:)``).
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
+        var train = trains[index]
         guard let (node, heading) = position.ahead else {
             guard nodes.isEmpty else { throw .invalidContinuation }
-            trains[index].movement.edges = []
-            trains[index].movement.cursor = 0
-            trains[index].movement.end = nil
+            train.movement.edges = []
+            train.movement.cursor = 0
+            train.movement.end = nil
+            try admit(train, at: index)
             return
         }
         guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
             throw .invalidContinuation
         }
 
-        trains[index].movement.continuation = nodes
-        trains[index].movement.cursor = 0
+        train.movement.continuation = nodes
+        train.movement.cursor = 0
+        try admit(train, at: index)
     }
 
     /// Replaces a placed train's continuation with the path `traversals`
@@ -649,12 +726,16 @@ public struct GameWorld: Equatable, Sendable {
     /// ``path(from:toStation:length:)`` goes in unchanged, as
     /// `along: path.traversals, stoppingAt: path.end`.
     ///
+    /// Under traffic control (Stage T) the train takes the whole path at
+    /// once, as ``setTrainContinuation(_:to:)`` does.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``,
-    ///   ``GameError/trainServiceActive(_:)``, or
+    ///   ``GameError/trainServiceActive(_:)``,
     ///   ``GameError/invalidContinuation`` (a step a train may not take, the
     ///   other kind of track, or an `end` that does not fit; on the grid,
-    ///   any `end`).
+    ///   any `end`), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)``.
     public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         guard case .onEdge(let traversal, let offset) = position else {
@@ -681,9 +762,68 @@ public struct GameWorld: Equatable, Sendable {
             guard end < network.edge(arrival.edge)!.length, end >= (traversals.isEmpty ? offset : 1) else { throw .invalidContinuation }
         }
 
-        trains[index].movement.edges = traversals.map(\.edge)
-        trains[index].movement.cursor = 0
-        trains[index].movement.end = end
+        var train = trains[index]
+        train.movement.edges = traversals.map(\.edge)
+        train.movement.cursor = 0
+        train.movement.end = end
+        try admit(train, at: index)
+    }
+
+    /// Puts `candidate`, train `index` with a new place or path, into the
+    /// world: under traffic control (Stage T) with the reservation of its
+    /// route, in place of its old one, only if no other train holds track
+    /// it needs (see ``reserving(_:)``); otherwise nothing changes.
+    ///
+    /// - Throws: ``GameError/trackReserved(_:)`` naming the lowest numbered
+    ///   train holding such track.
+    private mutating func admit(_ candidate: Train, at index: Int) throws(GameError) {
+        switch reserving(candidate) {
+        case .granted(let train): trains[index] = train
+        case .held(let holder): throw .trackReserved(holder)
+        }
+    }
+
+    // MARK: - Traffic control
+
+    /// Turns traffic control on or off (Phase 4.6 Stage T, ARCHITECTURE
+    /// decision 32; see ``isTrafficControlEnabled``).
+    ///
+    /// Turning it on works out, for every placed train in ID order, the
+    /// track it needs now: what it stands on and the junctions it fouls
+    /// (see ``heldResources(of:)``), and for a train with a way left to go
+    /// the whole of it (see ``reservedResources(of:)``). If two trains need
+    /// the same track nothing changes; otherwise every train takes its
+    /// reservation and traffic control is on, all at once. Turning it on
+    /// again changes nothing.
+    ///
+    /// Turning it off always succeeds: every reservation is dropped, and
+    /// trains keep their positions, paths, timetables, services and lines,
+    /// passing through each other again as before.
+    ///
+    /// - Throws: ``GameError/trainsShareTrack(_:_:)`` when turning it on:
+    ///   the first train, in ID order, that needs track an earlier train
+    ///   needs, and the earliest such train.
+    public mutating func setTrafficControl(_ enabled: Bool) throws(GameError) {
+        guard enabled else {
+            isTrafficControlEnabled = false
+            for index in trains.indices {
+                trains[index].reservation = []
+            }
+            return
+        }
+        guard !isTrafficControlEnabled else { return }
+        var needs: [(index: Int, resources: Set<TrackResource>, moves: Bool)] = []
+        for index in trains.indices where trains[index].position != nil {
+            let envelope = routeEnvelope(of: trains[index])
+            if let earlier = needs.first(where: { !$0.resources.isDisjoint(with: envelope.resources) }) {
+                throw .trainsShareTrack(trains[earlier.index].id, trains[index].id)
+            }
+            needs.append((index, envelope.resources, envelope.moves))
+        }
+        isTrafficControlEnabled = true
+        for need in needs where need.moves {
+            trains[need.index].reservation = need.resources.sorted()
+        }
     }
 
     // MARK: - Timetables
@@ -1028,7 +1168,8 @@ public struct GameWorld: Equatable, Sendable {
     /// ``TrainID`` order:
     ///
     /// 0. **Dispatch at `T`.** Each line sends out at most one of its
-    ///    trains on a round trip (see below).
+    ///    trains on a round trip (see below), and that train leaves its
+    ///    first call at once, as phase 1 would have it leave.
     /// 1. **Departures at `T`.** Every train whose service waits at a stop
     ///    with a scheduled departure of `T` or earlier leaves it (see below).
     ///    Departures are those of the service's cycle: the timetable's
@@ -1040,8 +1181,8 @@ public struct GameWorld: Equatable, Sendable {
     ///    a stop and that is now stopped at that stop's station (see
     ///    ``stationsStoppedAt(by:)``) waits at that stop.
     ///
-    /// Trains do not interact, so the order only fixes when each is updated.
-    /// A train moves at most once per step: one that arrives in phase 4
+    /// Without traffic control trains do not interact, so the order only
+    /// fixes when each is updated. A train moves at most once per step: one that arrives in phase 4
     /// leaves in phase 1 of the next step at the earliest, even when its
     /// scheduled departure is the minute it arrived. Whenever the clock can
     /// hold the whole batch, `advance(ticks: n)` is the same as `n` calls of
@@ -1097,6 +1238,20 @@ public struct GameWorld: Equatable, Sendable {
     /// up. The timetable's arrival times are not read: they are the plan the
     /// train is measured against, not a limit.
     ///
+    /// **Traffic control** (Stage T, see ``setTrafficControl(_:)``). A
+    /// departure takes its whole route to the next call at once, turned
+    /// round first where the stop says so (see ``reservedResources(of:)``);
+    /// where another train holds some of it, nothing changes (the train is
+    /// not turned round either) and the service tries again at the next
+    /// step. A line's train is ready only if its first departure can take
+    /// its route; one that cannot is not sent out, and the line's last
+    /// dispatch stays as it was. Earlier departures in a step take their
+    /// routes first: the lines' in phase 0, in line order, then the
+    /// services' in phase 1, in train ID order. A train's reservation is
+    /// released when it comes to the end of its route, in phase 2. Trains
+    /// move as they always have: the whole route was theirs before they
+    /// set off.
+    ///
     /// **Dispatch** (see ``assignTrain(_:to:pattern:)``). Each service of a
     /// line (its own, then its patterns in order) sends a train out at `T`
     /// when all of these hold:
@@ -1132,7 +1287,8 @@ public struct GameWorld: Equatable, Sendable {
     /// a waiting service, or the next minute at which a line's service with
     /// a ready train might send it out (the map and every train's inputs
     /// stay the same until the next command, a departure that found no
-    /// route finds none later in the call, and a line's window, level and
+    /// route finds none later in the call, one whose route is held finds
+    /// it held until some train moves, and a line's window, level and
     /// headways change only at known minutes), so the clock moves on at once to that minute,
     /// or to the end of the batch. This is an exact shortcut, not an
     /// approximation.
@@ -1149,7 +1305,7 @@ public struct GameWorld: Equatable, Sendable {
         var unroutable: Set<TrainID> = []
         var memo = DispatchMemo()
         while remaining > 0 {
-            let dispatched = dispatchTrains(memo: &memo)
+            let dispatched = dispatchTrains(memo: &memo, unroutable: &unroutable)
             let departed = departTrains(unroutable: &unroutable)
             let moved = moveTrainsOneStep()
             clock.advance(basicSteps: 1)
@@ -1168,7 +1324,7 @@ public struct GameWorld: Equatable, Sendable {
     /// no command can come within a call, so the map, the lines' stops,
     /// patterns and rates and an idle train's position stay the same, and
     /// so do these.
-    private struct DispatchMemo {
+    struct DispatchMemo {
         /// Each service's journey (see ``lineJourney(_:pattern:)``), by line
         /// and service (see ``ServiceLine/serviceCount``), once looked up.
         var journeys: [LineID: [Int: LineJourney?]] = [:]
@@ -1180,9 +1336,17 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
     /// each service, its own first and then its patterns in order, sends
-    /// out at most one of its trains (see ``advance(ticks:)``). Returns
-    /// whether any did.
-    private mutating func dispatchTrains(memo: inout DispatchMemo) -> Bool {
+    /// out at most one of its trains (see ``advance(ticks:)``), which leaves
+    /// its first call at once, as phase 1 would have it leave. Returns
+    /// whether any was sent out.
+    ///
+    /// Leaving at once changes nothing without traffic control: departures
+    /// do not interact, and no later dispatch reads where the train is.
+    /// Under traffic control (Stage T) it makes sending a train out and
+    /// taking its route one step: the train is sent out only when it can
+    /// take its route (see ``readyTrain(of:_:memo:)``), and no departure in
+    /// between can take it first.
+    private mutating func dispatchTrains(memo: inout DispatchMemo, unroutable: inout Set<TrainID>) -> Bool {
         let now = clock.now
         var dispatched = false
         for index in lines.indices {
@@ -1197,6 +1361,7 @@ public struct GameWorld: Equatable, Sendable {
                 trains[ready].execution = .waitingAtStop(0)
                 lines[index].recordDispatch(ofService: service, at: now)
                 dispatched = true
+                departService(ready, unroutable: &unroutable)
             }
         }
         return dispatched
@@ -1207,7 +1372,7 @@ public struct GameWorld: Equatable, Sendable {
     /// service runs trains then (see ``plannedService(of:_:at:memo:)``); a
     /// headway of that level has passed since the service's last dispatch;
     /// and fewer of its trains run a service than it runs then.
-    private func isDispatchDue(_ line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> Bool {
+    func isDispatchDue(_ line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> Bool {
         guard now.minutes >= 0, let planned = plannedService(of: line, service, at: now, memo: &memo) else { return false }
         if let last = line.lastDispatch(ofService: service) {
             let (due, overflow) = last.minutes.addingReportingOverflow(planned.headway)
@@ -1243,25 +1408,51 @@ public struct GameWorld: Equatable, Sendable {
     /// that it can send out: one without a service, placed, with a rate
     /// above 0, stopped at the first call's station, and able to drive the
     /// whole round trip from there (see ``trip(of:service:for:)``); with
-    /// its index and that trip.
+    /// its index and that trip. Under traffic control (Stage T) it must
+    /// also be able to take the route of its first departure now; one whose
+    /// route is held is not ready, and tries again at the next step.
     private func readyTrain(of line: ServiceLine, _ service: Int, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
-        let first = line.stops[line.calls(ofService: service)[0]]
         for id in line.trains(ofService: service) {
-            guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
-            let train = trains[index]
-            guard train.execution == nil, let placement = train.placement, train.movement.rate > 0,
-                  isStopped(train, at: first)
+            guard let index = trains.firstIndex(where: { $0.id == id }),
+                  let trip = readyTrip(of: trains[index], on: line, service, memo: &memo)
             else { continue }
-            let trip: LineTrip?
-            if let known = memo.trips[id], known.from == placement {
-                trip = known.trip
-            } else {
-                trip = self.trip(of: line, service: service, for: train)
-                memo.trips[id] = (placement, trip)
+            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+               case .held = reserving(leaving) {
+                continue
             }
-            if let trip { return (index, trip) }
+            return (index, trip)
         }
         return nil
+    }
+
+    /// The round trip `line`'s service `service` would send `train` on now,
+    /// without traffic control: `nil` unless the train has no service, is
+    /// placed, has a rate above 0, is stopped at the service's first call
+    /// and can drive the whole round trip from there (see
+    /// ``trip(of:service:for:)``). Each trip is looked up once per call of
+    /// ``advance(ticks:)`` for where the train stands.
+    func readyTrip(of train: Train, on line: ServiceLine, _ service: Int, memo: inout DispatchMemo) -> LineTrip? {
+        let first = line.stops[line.calls(ofService: service)[0]]
+        guard train.execution == nil, let placement = train.placement, train.movement.rate > 0,
+              isStopped(train, at: first)
+        else { return nil }
+        if let known = memo.trips[train.id], known.from == placement { return known.trip }
+        let trip = self.trip(of: line, service: service, for: train)
+        memo.trips[train.id] = (placement, trip)
+        return trip
+    }
+
+    /// `train` sent out now on `trip` (calling at the line's `stops`), as
+    /// it would be once it has left the first call: turned round first if
+    /// the trip says so, on its way along the first leg. `nil` if the
+    /// trip's times would not fit.
+    func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID]) -> Train? {
+        guard let timetable = trip.timetable(calling: stops, leavingAt: clock.now) else { return nil }
+        var sent = train
+        sent.timetable = timetable
+        sent.timetablePeriod = nil
+        sent.execution = .waitingAtStop(0)
+        return leaving(sent, stop: 0, cycle: 0).train
     }
 
     /// The basic steps from now until the first minute, at or after now,
@@ -1311,79 +1502,132 @@ public struct GameWorld: Equatable, Sendable {
     /// whether any service changed.
     private mutating func departTrains(unroutable: inout Set<TrainID>) -> Bool {
         var changed = false
-        let now = clock.now
-        for index in trains.indices {
-            // Every pass leaves one stop. A timetable that runs once ends
-            // within its stops; a repeating one could go round forever when
-            // it is late and calls at one station only, so each train leaves
-            // at most one whole cycle of stops per phase.
-            var passes = 0
-            while passes < trains[index].timetable.count,
-                  case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
-                  trains[index].scheduledDeparture(of: stop, cycle: cycle) <= now,
-                  !unroutable.contains(trains[index].id),
-                  let placement = trains[index].placement {
-                passes += 1
-                let train = trains[index]
-                // A waiting train is stopped with its path spent, so turning
-                // it round needs nothing else. A train of several cars turns
-                // round with its head where its tail was (see turnedRound),
-                // on the grid at a node again.
-                let start = train.timetable[stop].reverses ? turnedRound(placement) : placement
-                guard let next = train.call(after: stop, cycle: cycle) else {
-                    // The last stop's departure: the service is complete.
-                    stand(index, at: start)
-                    trains[index].execution = nil
-                    changed = true
-                    break
-                }
-                guard let path = path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
-                    // Nothing changes: the train is not turned round either.
-                    unroutable.insert(train.id)
-                    break
-                }
-                changed = true
-                stand(index, at: start)
-                if path.distance == 0 {
-                    // Already stopped at the next call's station.
-                    trains[index].execution = .waitingAtStop(next.stop, cycle: next.cycle)
-                } else {
-                    follow(path, train: index)
-                    trains[index].execution = .travellingToStop(next.stop, cycle: next.cycle)
-                }
-            }
+        for index in trains.indices where departService(index, unroutable: &unroutable) {
+            changed = true
         }
         return changed
     }
 
-    // The service adapters that change a train (Stage S5; the others are in
-    // ServicePath.swift): `trains` can only be set in this file.
-
-    /// Gives train `index` `path` as its continuation, from the start: the
-    /// tiles its links lead to on the grid, its edges and where it stops on
-    /// the network. The rest of its movement stays.
-    private mutating func follow(_ path: TrainPath, train index: Int) {
-        if case .onEdge = trains[index].position {
-            trains[index].movement.edges = path.traversals.map(\.edge)
-            trains[index].movement.end = path.end
-        } else {
-            trains[index].movement.continuation = path.traversals.compactMap(\.tileAhead)
+    /// The departures of train `index`'s service at the current minute:
+    /// from each stop whose scheduled departure has come, one after another
+    /// (see ``leaving(_:stop:cycle:)``). Returns whether the service changed.
+    ///
+    /// Under traffic control (Stage T) each departure takes the whole route
+    /// to the next call at once (see ``reserving(_:)``). Where another train
+    /// holds some of it, nothing changes: the train is not turned round
+    /// either, and the service tries again at the next step. Unlike a
+    /// departure without a route, this is not remembered for the rest of
+    /// the call: trains move and free track within one.
+    @discardableResult
+    private mutating func departService(_ index: Int, unroutable: inout Set<TrainID>) -> Bool {
+        var changed = false
+        let now = clock.now
+        // Every pass leaves one stop. A timetable that runs once ends
+        // within its stops; a repeating one could go round forever when
+        // it is late and calls at one station only, so each train leaves
+        // at most one whole cycle of stops per phase.
+        var passes = 0
+        while passes < trains[index].timetable.count,
+              case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
+              trains[index].scheduledDeparture(of: stop, cycle: cycle) <= now,
+              !unroutable.contains(trains[index].id),
+              trains[index].placement != nil {
+            passes += 1
+            let departure = leaving(trains[index], stop: stop, cycle: cycle)
+            guard let moved = departure.train else {
+                // Nothing changes: the train is not turned round either.
+                unroutable.insert(trains[index].id)
+                break
+            }
+            guard case .granted(let train) = reserving(moved) else { break }
+            trains[index] = train
+            changed = true
+            if case .completes = departure { break }
         }
-        trains[index].movement.cursor = 0
+        return changed
     }
 
-    /// Puts train `index` where `placement` says and leaves it standing
-    /// there: on the grid a train at a node with nothing left to enter
-    /// stays anyway; on the network its path now ends where its head is
-    /// (see ``TrainMovement/end``), so it stays until it is given a path.
-    private mutating func stand(_ index: Int, at placement: TrainPlacement) {
-        trains[index].position = placement.position
-        trains[index].trail = placement.trail
-        trains[index].trailEdges = placement.trailEdges
+    /// What leaving stop `stop` (of cycle `cycle`) does to `train`, whose
+    /// service waits there: one pass of phase 1, worked out without
+    /// changing the world.
+    enum Leaving {
+        /// The service is complete: the train stands where it is.
+        case completes(Train)
+        /// It is already stopped at the next call's station, and waits
+        /// there at once.
+        case arrives(Train)
+        /// It sets off along the path to the next call.
+        case setsOff(Train)
+        /// There is no path to the next call: nothing changes.
+        case noRoute
+
+        /// The train as the departure leaves it; `nil` without a route.
+        var train: Train? {
+            switch self {
+            case .completes(let train), .arrives(let train), .setsOff(let train): train
+            case .noRoute: nil
+            }
+        }
+    }
+
+    /// See ``Leaving``. A waiting train is stopped with its path spent, so
+    /// turning it round (at a stop marked to) needs nothing else; a train
+    /// of several cars turns round with its head where its tail was (see
+    /// ``turnedRound(_:)``), on the grid at a node again. A train turned
+    /// round stands there: on the network its path ends where its head is.
+    /// Without a path, the train is not turned round either.
+    func leaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving {
+        guard let placement = train.placement else { return .noRoute }
+        let start = train.timetable[stop].reverses ? turnedRound(placement) : placement
+        var moved = train
+        guard let next = train.call(after: stop, cycle: cycle) else {
+            // The last stop's departure: the service is complete.
+            stand(&moved, at: start)
+            moved.execution = nil
+            return .completes(moved)
+        }
+        guard let path = path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
+            return .noRoute
+        }
+        stand(&moved, at: start)
+        if path.distance == 0 {
+            // Already stopped at the next call's station.
+            moved.execution = .waitingAtStop(next.stop, cycle: next.cycle)
+            return .arrives(moved)
+        }
+        follow(path, &moved)
+        moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
+        return .setsOff(moved)
+    }
+
+    // The service adapters that change a train (Stage S5; the others are in
+    // ServicePath.swift).
+
+    /// Gives `train` `path` as its continuation, from the start: the tiles
+    /// its links lead to on the grid, its edges and where it stops on the
+    /// network. The rest of its movement stays.
+    private func follow(_ path: TrainPath, _ train: inout Train) {
+        if case .onEdge = train.position {
+            train.movement.edges = path.traversals.map(\.edge)
+            train.movement.end = path.end
+        } else {
+            train.movement.continuation = path.traversals.compactMap(\.tileAhead)
+        }
+        train.movement.cursor = 0
+    }
+
+    /// Puts `train` where `placement` says and leaves it standing there: on
+    /// the grid a train at a node with nothing left to enter stays anyway;
+    /// on the network its path now ends where its head is (see
+    /// ``TrainMovement/end``), so it stays until it is given a path.
+    private func stand(_ train: inout Train, at placement: TrainPlacement) {
+        train.position = placement.position
+        train.trail = placement.trail
+        train.trailEdges = placement.trailEdges
         if case .onEdge(let traversal, let offset) = placement.position {
-            trains[index].movement.edges = []
-            trains[index].movement.cursor = 0
-            trains[index].movement.end = offset < network.edge(traversal.edge)!.length ? offset : nil
+            train.movement.edges = []
+            train.movement.cursor = 0
+            train.movement.end = offset < network.edge(traversal.edge)!.length ? offset : nil
         }
     }
 
@@ -1452,6 +1696,7 @@ public struct GameWorld: Equatable, Sendable {
                 } else {
                     trains[index].movement.cursor = travel.cursor
                 }
+                releaseEndedRoute(index)
                 moved = true
                 continue
             }
@@ -1476,9 +1721,20 @@ public struct GameWorld: Equatable, Sendable {
             } else {
                 trains[index].movement.cursor = travel.cursor
             }
+            releaseEndedRoute(index)
             moved = true
         }
         return moved
+    }
+
+    /// Stage T: once train `index` has come to the end of its route (it
+    /// stands, with no distance left to go; see
+    /// ``routeStretches(of:)``), its reservation is released. What it stands
+    /// on stays held as long as it stands there. Stage U will release track
+    /// behind a train as it goes, here in the movement step.
+    private mutating func releaseEndedRoute(_ index: Int) {
+        guard !trains[index].reservation.isEmpty, !routeStretches(of: trains[index]).moves else { return }
+        trains[index].reservation = []
     }
 
     // MARK: - Validation
@@ -1573,7 +1829,7 @@ extension GameWorld {
 
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
-        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network
+        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1593,6 +1849,10 @@ extension GameWorld: Codable {
     /// A continuation's links are not required to exist: track ahead of a
     /// train may have been removed after the continuation was set, and a
     /// world where a train waits for that track to be rebuilt is valid.
+    ///
+    /// Under traffic control (Stage T) every reservation must fit its train
+    /// and this world, and no two trains may hold the same track (see
+    /// `trafficProblem()`); without it, no train may have a reservation.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         // Stage S3A: the saved tiles hold the land and the grid's track
@@ -1610,6 +1870,7 @@ extension GameWorld: Codable {
         nextLineID = container.contains(.nextLineID) ? try container.decode(Int.self, forKey: .nextLineID) : 1
         serviceDay = container.contains(.serviceDay) ? try container.decode(ServiceDay.self, forKey: .serviceDay) : .standard
         network = container.contains(.network) ? try container.decode(RailwayNetwork.self, forKey: .network) : RailwayNetwork()
+        isTrafficControlEnabled = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
         for track in saved.tracks {
             network.lay(track)
         }
@@ -1627,8 +1888,10 @@ extension GameWorld: Codable {
     /// lines existed, and those saves read as having none, handing out line
     /// IDs from 1, with the standard day. Likewise a world whose track
     /// network never had a node or an edge has no `"network"` key (Stage
-    /// S3), and a save without one reads as an empty network. An explicit
-    /// `null` for any of them is rejected.
+    /// S3), and a save without one reads as an empty network; and a world
+    /// with traffic control off has no `"trafficControl"` key (Stage T),
+    /// which is also how saves made before it read. An explicit `null` for
+    /// any of them is rejected.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(SavedMap(land: map, tracks: network.tracks), forKey: .map)
@@ -1649,6 +1912,9 @@ extension GameWorld: Codable {
         }
         if !network.isPristine {
             try container.encode(network, forKey: .network)
+        }
+        if isTrafficControlEnabled {
+            try container.encode(true, forKey: .trafficControl)
         }
     }
 
@@ -1844,7 +2110,63 @@ extension GameWorld: Codable {
                 return problem
             }
         }
+        return trafficProblem()
+    }
+
+    /// Why the trains' reservations break a Stage T rule (ARCHITECTURE
+    /// decision 32, point 14), or `nil`. ``Train``'s decoder has checked
+    /// each reservation is in order without repeats, and only on a placed
+    /// train.
+    ///
+    /// Without traffic control no train has a reservation. With it, a train
+    /// with a way left to go has one holding at least everything the rest of
+    /// its route needs, and a train that stands has none; every reserved
+    /// resource exists (a node, a link, or a span of an edge as its
+    /// platforms cut it now), except grid track on the train's own way
+    /// ahead, where a train may wait for removed track to be rebuilt; and no
+    /// two trains hold the same track. A reservation may hold more than the
+    /// route still needs (track the train has passed, which Stage T does not
+    /// release): that is a lock, not an error.
+    private func trafficProblem() -> String? {
+        guard isTrafficControlEnabled else {
+            guard trains.allSatisfy({ $0.reservation.isEmpty }) else { return "A train has a reservation while traffic control is off." }
+            return nil
+        }
+        var held: [(id: TrainID, resources: Set<TrackResource>)] = []
+        for train in trains where train.position != nil {
+            let id = train.id.rawValue
+            let envelope = routeEnvelope(of: train)
+            guard envelope.moves != train.reservation.isEmpty else {
+                return envelope.moves
+                    ? "Train \(id) has a way left to go under traffic control but no reservation."
+                    : "Train \(id) stands but keeps a reservation."
+            }
+            if envelope.moves, !envelope.resources.isSubset(of: Set(train.reservation)) {
+                return "Train \(id)'s reservation does not hold the rest of its route."
+            }
+            for resource in train.reservation where !resourceExists(resource) && !envelope.resources.contains(resource) {
+                return "Train \(id) has reserved \(resource), which is not track of this world."
+            }
+            let resources = self.held(train)
+            if let other = held.first(where: { !$0.resources.isDisjoint(with: resources) }) {
+                return "Trains \(other.id.rawValue) and \(id) hold the same track under traffic control."
+            }
+            held.append((train.id, resources))
+        }
         return nil
+    }
+
+    /// Whether `resource` is track of this world now: a grid tile with
+    /// track, a joined grid link, a node of the track network, or a span of
+    /// a network edge as its platforms cut it now (see
+    /// ``trackSpans(of:)``).
+    private func resourceExists(_ resource: TrackResource) -> Bool {
+        switch resource {
+        case .node(let node):
+            return trackNode(node) != nil
+        case .span(let span):
+            return trackSpans(of: span.edge).contains(span)
+        }
     }
 
     /// Why the track network breaks a Stage S4 rule, or `nil`: an edge

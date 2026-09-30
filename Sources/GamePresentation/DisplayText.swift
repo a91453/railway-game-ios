@@ -290,6 +290,10 @@ extension GameError {
             "A station has a platform on \(edge.displayText.lowercased()). Remove the platform first."
         case .invalidPlatform:
             "A platform must lie on a level stretch of one edge and not overlap another platform."
+        case .trackReserved(let id):
+            "Train #\(id.rawValue) holds that track under traffic control. Wait for it to clear the route."
+        case .trainsShareTrack(let first, let second):
+            "Trains #\(first.rawValue) and #\(second.rawValue) need the same track, so traffic control can't be turned on. Move one of them first."
         }
     }
 }

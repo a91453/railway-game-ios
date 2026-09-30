@@ -603,7 +603,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge
+        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, trains
     }
 
     init(from decoder: any Decoder) throws {
@@ -704,6 +704,14 @@ extension StepOutcome: Codable {
             self = try .rejected(.trackEdgeHasPlatform(.edge(container.decode(Int.self, forKey: .edge))))
         case "invalidPlatform":
             self = .rejected(.invalidPlatform)
+        case "trackReserved":
+            self = try .rejected(.trackReserved(container.decodeTrain(forKey: .train)))
+        case "trainsShareTrack":
+            let ids = try container.decode([Int].self, forKey: .trains)
+            guard ids.count == 2 else {
+                throw DecodingError.dataCorruptedError(forKey: .trains, in: container, debugDescription: "trainsShareTrack names two trains.")
+            }
+            self = .rejected(.trainsShareTrack(TrainID(rawValue: ids[0]), TrainID(rawValue: ids[1])))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -837,6 +845,12 @@ extension StepOutcome: Codable {
             try encodeEdge(edge)
         case .rejected(.invalidPlatform):
             try container.encode("invalidPlatform", forKey: .result)
+        case .rejected(.trackReserved(let id)):
+            try container.encode("trackReserved", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.trainsShareTrack(let first, let second)):
+            try container.encode("trainsShareTrack", forKey: .result)
+            try container.encode([first.rawValue, second.rawValue], forKey: .trains)
         }
         // Fixtures name network nodes and edges by number; a grid tile or
         // link cannot reach these results through a fixture's commands, but
