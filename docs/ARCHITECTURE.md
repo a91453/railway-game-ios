@@ -49,8 +49,8 @@ GameCore 裡的經營層（Passenger、City、Economy）不得依賴鐵路的物
 | --- | --- |
 | `World` | `GameWorld`（狀態協調點與指令入口）、`GridMap`、`GridPosition`、`MapTile` / `TileType`、`GameError` |
 | `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30）；128 位元的整數運算（`WideInteger`，Stage W1，決策 33） |
-| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T）；行駛曲線與車種性能（`RunningCurve`、`TrainPerformance`，Stage W1，決策 33） |
-| `Passenger` | 車站需求（`StationDemand`、`StationDemandKind`）、乘客與守恆稽核（`StationPassengers`、`WaitingGroup`、`PassengerLedger`）、每對車站的旅次與每分鐘的釋出（`passengerTrip(from:to:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`，`advance(ticks:)` 的乘客階段）（G1a，決策 34） |
+| `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T）；行駛曲線與車種性能（`RunningCurve`、`TrainPerformance`，Stage W1，決策 33）；停站時間的純計算（`StationDwell`，G1b，決策 35） |
+| `Passenger` | 車站需求（`StationDemand`、`StationDemandKind`）、乘客與守恆稽核（`StationPassengers`、`WaitingGroup`、`PassengerLedger`）、每對車站的旅次與每分鐘的釋出（`passengerTrip(from:to:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`，`advance(ticks:)` 的乘客階段）（G1a，決策 34）；上下車與容量（`TrainRiders`、`RidingGroup`、`Train.capacity`、`riders(of:)`，`advance(ticks:)` 的上下車階段）（G1b，決策 35） |
 | `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
@@ -1666,7 +1666,7 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 
 **6. 線路改變**：`removeLine` 或 `setLineStops` 之後，等的線路已經不再以那個方向載他們去迄點的組離開車站，記進 `abandoned`；其他組保持原來的順序。參考裡刪除線路時連同那條線路的車站物件一起刪掉，等車的人也跟著消失；這裡把他們記下來，讓守恆可以稽核。新增線路不影響已經在等的人（他們仍等原來的線路）。
 
-**7. 守恆稽核**：每一站 `released = waiting + overflowed + abandoned`（`PassengerLedger`）。G1b 會加上上車的人。
+**7. 守恆稽核**：每一站 `released = waiting + overflowed + abandoned`（`PassengerLedger`）。G1b 加上車上與到達的人（決策 35）。
 
 **8. 依賴方向**：乘客只讀車站的身分、線路的停靠與編號，以及時間；不讀 `TrackTraversal`、`TrackResource`、預約或 `TrainMovement`，也不改列車。
 
@@ -1718,10 +1718,117 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 
 #### 已知限制與留給之後
 
-- 還沒有人上車：列車到站不會帶走任何人（G1b）。在那之前車站很快就會滿，之後的人都記進 `overflowed`。
+- 還沒有人上車：列車到站不會帶走任何人（G1b，決策 35 已補上）。在那之前車站很快就會滿，之後的人都記進 `overflowed`。
 - 每天的旅次是自訂的比例分配，不是城市模擬（Phase 6）。
 - 只坐同一條線路；同時停兩站的線路不只一條時，一律坐編號最小的那條。
 - 一天之內的旅次不因營運時間或班距改變：營運時間之外也會有人來等。參考的釋出同樣不看營運時間。
+
+### 35. 上下車與容量（G1b）
+
+G1 的第二步：列車離開一站時讓到站的人下車，再依容量讓等車的人上車；上不去的記下來。車上的人記在列車上，每一站的守恆稽核加上車上與到達的人。還沒有票價與帳本（G1c）。沒有需求就沒有乘客，所以沒有需求時決策 1–34 的行為、存檔、既有 golden 的預期值與 property digest 都不變。
+
+**來源**：作者的 `Ci/` 網站（私有 repo 的 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，minified，以 prettier 展開後閱讀）。
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `updateTrainAtStation(train, station, line)`：到站那一刻一次先下車、再上車 | `GameWorld.serve(_:)`：`advance` 的上下車階段，列車每離開一站處理一次 | 順序與「一次完成」faithful；在到站還是離站處理是**過渡**做法（第 3 點），W2 取代 |
+| `metroResolveTrainAlighting`：下車 = `paxBuckets[這一站]`；非環狀線在路段兩端（`releaseAll`）全員下車 | 迄點是這一站的人下車（`arrived`）；在折返或服務結束的一站，還在車上的人也下車 | faithful；後者在這裡永遠沒有人（第 4 點） |
+| `getMetroTrainRatedCap`（`{cars: 6, cap: 1920}`） | `Train.ratedCapacityPerCar = 320`、`ratedCapacity` = 輛數 × 320 | 機械換算（1920 ÷ 6） |
+| `getMetroTrainOperationalCap`、`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1`（高鐵以外） | `Train.capacityPerCar = 352`、`capacity` = 輛數 × 352 | 機械換算（320 × 1.1 = 352，剛好整除）；還沒有高鐵，所以一律 × 1.1 |
+| 空位 `max(0, floor(operationalCap − pax))` | `capacity − riderCount(of:)` | faithful |
+| 上車方向：列車的 `dir`，在路段起點強制往前、終點強制往回 | 由來回時刻表的位置決定：遠端之前是 `outbound`，遠端起是 `inbound` | 機械換算 |
+| `metroCollectRawTargetsForBoarding`、`isValidTargetForLeg`（依快慢車種類與路段篩選） | 同一條線、同一方向，而且迄點是這班車到下一次折返之前會停的站；pattern 不停的站的人繼續等 | faithful；分支線共用段的轉乘（`metroSharedBranchBoardingTarget`）是 gap，G1 沒有轉乘 |
+| `allocateSeats`：依下車站由遠到近排序，依序填滿空位，最後一組部分上車 | 同樣由遠到近；同一迄點先來的先上 | faithful；同一迄點的先後是 G1a 的先進先出 |
+| `metroDeductBoardingPlanFromTransferQueues` | `StationPassengers.board(_:)`：從組裡扣掉，扣完的組離開，其餘保持順序與釋出的分鐘 | faithful |
+| `paxBuckets` / `paxBucketDest`（依下車站的人數） | `TrainRiders { train, groups }`、`RidingGroup { origin, destination, count }` | 機械換算：多記起點，讓每一站的守恆可以稽核 |
+| `flow.off`、`exitSumToday`、`hourlyOut` | 起點帳本的 `arrived` | 總數 faithful；每小時的統計留給 G1c 的畫面 |
+| （沒有） | 起點帳本的 `refused` | gap，照 ROADMAP 5E 補上 |
+| 停站時間、車門、上車速度（見下面「停站時間」） | `Railway/StationDwell.swift`（純計算，還沒接到 `advance`） | faithful＋機械換算（十分之一秒）；接到遊戲時間是 W2 |
+
+**1. 容量**：`Train.capacity` = 輛數 × 352，`ratedCapacity` = 輛數 × 320。輛數只能在列車不在軌道上時改，所以跑車中的容量不會變。
+
+**2. 誰上車**：列車必須指派在一條線路上（`assignedLine(of:)`）。線路的列車只跑線路派出的來回，所以時刻表的形狀固定：第一站、往遠端的各站、遠端（折返）、回程的各站、回到第一站（折返，服務結束）。離開第 `i` 站時：
+- 方向：`i < (停靠數 − 1) ÷ 2` 是 `outbound`，其餘是 `inbound`；
+- 可以上車的組：那一站等車、線路與方向相同、迄點是第 `i + 1` 站到下一個折返站（含）之間某一站的組；
+- 順序：迄點第一次出現的停靠越遠越先，同樣遠（同一迄點）的依排隊的順序；
+- 依序整組上車，放不下的那一組部分上車（剩下的保留原來的分鐘與位置），之後的組都上不去；
+- 可以上車卻沒上去的人數加進那一站的 `refused`。這是次數，同一個人可能被好幾班車拒絕，所以不在守恆式裡，累加到 2⁶² 為止。
+
+**3. 時機（過渡做法，W2 取代）**：`Ci/` 的遊戲在列車**到站**那一刻一次讓所有人下車、上車（`_stationCallGuard` 讓同一幀只處理一次），然後固定停 36 秒（終點 42 秒），停站時間與人數無關（見下面「停站時間」）。GameCore 目前以分鐘為步長、停站時間是整數分鐘，所以暫時改在列車**離開**一站的那一刻處理：先下車、再上車。停站期間來的人都搭得上，結果也不依停站被切成幾段而改變。這**不是永久的語義**：W2 會把「到站 → 開門 → 上下車 → 關門 → 發車」以已移植的秒級停站規則接到遊戲時間、`RunningCurve` 與行程上，取代這個時機；誰上車、順序與容量（第 1、2、4、5 點）不變。
+- 派車（階段 0）與出發（階段 1）把每一次離站依發生的順序記下來，兩個階段結束後依序處理（新的「上下車」階段，在移動之前）。上下車只讀列車、只改乘客，而出發不讀乘客，所以先記下再處理，和每次離站立刻處理的結果相同。`ReferenceWorld` 刻意用後者，驗證了這一點。
+- 代價：下車的時間記在離站那一刻，比實際到站晚一個停站時間。
+- 閒置跳步仍然精確：離站本來就算「有變化」，沒有離站的步長沒有上下車。
+
+**4. 下車**：離開第 `i` 站時，迄點是這一站的人下車，加進起點的 `arrived`。在折返或最後一站，還在車上的人也下車（參考的 `releaseAll`）；因為沒有人會搭到下一個折返站之後，這種人永遠不存在，這一條只是保險，記進 `abandoned`。
+
+**5. 服務提早結束**：
+- 行程中被 `unassignTrain` 拿掉、或線路被 `removeLine` 刪掉的列車，照舊把車上的人載到迄點，但不再有人上車。
+- 這樣的列車之後被 `stopTrainService` 停掉時，車上的人記進起點的 `abandoned`。線路上的列車不能被停掉（`trainOnLine`），所以這是唯一會丟下乘客的路。
+- `setLineStops` 不影響車上的人：時刻表在派車時就固定了。
+
+**6. 守恆稽核**：每一站 `released = waiting + riding + arrived + overflowed + abandoned`（`PassengerLedger` 新增 `riding`、`arrived`、`refused`）。`riding` 由各列車的 `RidingGroup` 加總，不另存。
+
+**7. 依賴方向**：上下車讀線路的指派、列車的時刻表、執行進度（`TimetableExecution`）與輛數；不讀 `TrackTraversal`、`TrackResource`、預約或 `TrainMovement`，也不改列車。
+
+**8. 存檔**：
+- `"riders"` 只在有列車載客時寫；每一筆是 `{ train, groups: [{ origin, destination, count }] }`，依列車排序，組依（起點、迄點）排序、不重複。
+- 車站紀錄的 `"arrived"`、`"refused"` 只在不是 0 時寫，所以 G1a 的存檔照舊能讀，沒有乘客的世界存檔完全不變。
+- 解碼拒絕：
+  - 沒有組、組的人數不在 1 到 16 × 352、起點等於迄點、組沒有排序或重複；
+  - 列車重複、沒有排序、不存在或沒有在跑服務，載客超過容量；
+  - 起點沒有乘客紀錄；迄點不是列車從目前（或正要去）的一站到下一個折返站之間會停的站；
+  - 車站的數：`arrived`、`refused` 是負數，`refused` 超過 2⁶²，`waiting + arrived + overflowed + abandoned` 超過 `released`，或加上車上的人不等於 `released`。
+
+**9. 停站時間（純計算，W2 接到遊戲時間）**：`Ci/` 與 `Railway/` 兩邊找到的所有停站、車門與上車速度的規則，都在 `Railway/StationDwell.swift` 移植成純整數函式（單位是十分之一秒，讓 8.3 秒、10.2 秒、半個週期都精確）。G1b 還沒有把它們接進 `advance`、時刻表或線路的行程。兩邊都**沒有**依乘客人數、上下車速度、車門數或車門容量計算停站時間的規則：唯一的候選是 `Ci/` 的 `PARAMS.BOARDING_RATE`（2，沒有單位）與 `PARAMS.TRAIN_DWELL_TIME`（44 秒），兩者都只有定義、從來沒有被讀取。它們以原值保留成常數（`referenceBoardingRate`、`referenceTrainDwellTime`），不另外發明公式。這是 reference gap。
+
+| 參考 | Swift（`StationDwell`） | 分類 |
+| --- | --- | --- |
+| `Ci` `DWELL_GAME_SEC = 36`、`DWELL_TERMINAL_GAME_SEC = 42`；`_advanceTrainOneStep` 到站時設定：關閉的車站 0（通過）、環狀線一律 36、路段終點 42、其餘 36 | `metroDwell`、`metroTerminalDwell`、`metroDwell(isServed:isRing:isTerminal:)` | faithful；終點的判定（`_isTrainRouteLegTerminalMove`，快車、路段）由 W2 的呼叫端提供 |
+| `Ci` 停站的消耗：`remain = max(0, remain − step)`，到 0 才能發車，發車的那一步不帶剩餘時間 | `remainingDwell(_:after:)` | faithful |
+| `Ci` 停站到 0 後，共用軌道的班距未清空時繼續等（`metroSharedTrackHeadwayClearance`） | 不在這裡 | 屬於運轉控制（Stage T 之後），W2 |
+| `Ci` `metroHeadwayRoundTripMinutes`：線狀 `2·行駛 + 2·(站數 − 2)·36 + 2·42`，環狀 `行駛 + 站數·36`（÷ 60 成分鐘） | `metroRoundTrip(travel:stops:isRing:)`（不除以 60） | faithful |
+| `Ci` `metroHeadwaySegmentTravelSeconds`（加速 1.1、減速 1.3 的梯形／三角形） | 不在這裡 | 行駛時間，不是停站；和 W1 的 `RunningCurve` 一起在 W2 處理 |
+| `Ci` 路徑搜尋同一線路續乘時加的 `36`、時刻表建構的 36／42 | 同上的常數 | faithful（呼叫端在 W2） |
+| `Ci` `bootstrap-lazy` 的 `Bt`（地鐵：開門 8 秒、剩 8.3 秒關門）、`Ta`（高鐵：7 秒、9 秒）；總時間至少 1 秒，剩餘時間夾在 0…總時間 | `doorPhase(total:remaining:opening:closing:)`、`metroDoorOpening`／`Closing`、`highSpeedDoorOpening`／`Closing` | faithful（參考裡是聲音與畫面用的；這裡只是純計算） |
+| `Ci` `METRO_TRAIN_DOOR_CLOSE_REAL_SEC = 10.2`（真實秒 × max(1, 速度)，預備發車的關門警告） | `metroDoorCloseWarning(speed:)` | faithful |
+| `Ci` `PARAMS.BOARDING_RATE 2`、`PARAMS.TRAIN_DWELL_TIME 44`、`DWELL_SEC 60`、`LONG_DWELL_DEBUG_SEC 45` | 前兩個保留為常數；後兩個不移植 | 參考裡都沒有被讀取（`LONG_DWELL_DEBUG_SEC` 讀的 `_longDwellDebug` 從未被設定） |
+| `Ci` 高鐵：`hsrTrainDetailDwell` 等（離站 − 到站，負的加一天）、實際時刻匯入（端點 0，否則 `max(0, (離 − 到 + 1440) % 1440)`）、沒有停站時間時的估計（列出的區間時間 − 離站到下一站的分鐘，1…60 才採用）、插入的停靠 2 分鐘 | `stopMinutes`、`importedStopMinutes`、`estimatedStopMinutes`、`insertedStopMinutes` | faithful；插入停靠之後的 `GuangdongHsrSchedule.recalcService` 不在快照裡（gap） |
+| `Railway` `DWELL_SEC = 25`、`trtcOfficialDwellAt`（車站自己的 `dwell` → 線路的 `dwellSec[i]` → 25，非正數視為沒有） | `defaultDwell`、`stationDwell(own:line:)` | faithful |
+| `Railway` `trtcOfficialCoastCycle`（週期：給定的 → 最近兩次到站的間隔 → 行駛 + 25；停站 = 週期 − 行駛，至少 15、至多半個週期） | `coastCycle(given:lastArrivalGap:run:)`、`minimumCoastDwell` | faithful（整數秒的輸入完全精確） |
+| `Railway` `buildLineSchedule`（沒有時刻表的週期性運行：第一站 → 最後一站 → 第一站，環狀線繞一圈；每站停自己的 dwell 或 25；起點在週期兩端各停一次） | `periodicTimetable(dwells:runs:isLoop:)` | faithful；缺行駛時間時以距離 ÷ 速度補的部分由呼叫端提供 |
+| `Railway` 由倒數看板觀測的線路停站（每段相鄰站的觀測，8 個以上取中位數（偶數取上面那個）；有行駛時間時 0 < 中位數 < 180，否則第一段行駛 + 中位數在 40…240）、`TRTC_BR_DWELL_FALLBACK = 29` | `observedLineDwell(samples:hasRunningTimes:firstRun:)`、`observedDwellFallback` | faithful（收集觀測的部分依即時資料，不移植） |
+| `Railway` `retimeLoopTrains`（環島列車：08:00 發、12 小時、起點與中間每個停靠站停 120 秒，其餘依區間長度分配，四捨五入到秒） | `loopTimetable(lengths:stops:)`、`loopDeparture`、`loopDuration`、`loopDwell` | faithful |
+| `Railway` `HSR_DEP_MID_SEC = 30`（分鐘精度的高鐵資料，除了最後一站都在該分鐘的中間發車） | `highSpeedDepartureOffset` | faithful |
+| `Railway` 的真實停站資料：`data/trtc.json`、`krtc.json`、`tmrt.json`、`sanying.json` 每站的 `dwell` 與線路的 `dwellSec[]`（秒）；`tra_schedule_dense.json`、`api/thsr-schedule.json`、`afr_schedule_dense.json` 的 `depSec − arrSec`；`*_times.json` 隱含的停站 | 還沒有匯入 | 資料；真實藍本情境的轉換工具（Phase 6）匯入時用 `stationDwell(own:line:)` 與 `periodicTimetable` |
+| `Railway` 台鐵的待避停站（`planSameDirectionOvertakes`：`OVERTAKE_CLEAR_SEC 30`、`OVERTAKE_MAX_WAIT_SEC 600`）與交會推定（`inferMeetRun`：`MEET_HEADWAY_SEC 300`）、`rail-3d` 的 `dispatch.json` 發車保留 | 不在這裡 | 依賴 `buildProfile` 的可行性與台鐵的行駛曲線，屬於 W2／待避與交會；產生 `dispatch.json` 的程式不在封存裡（gap） |
+| `Railway` 畫面用的門檻（剩餘 > 3 秒且總停站 ≥ 20 秒才顯示停站中、≥ 180 秒標為長停站、看板的 30 秒寬限） | 不在 GameCore | 畫面；G1c 的畫面需要時移植到 `GamePresentation` |
+
+**Gap（參考沒有，這裡補上）**：`refused`（第 2 點）、起點的守恆（第 6 點）、服務停止時放棄車上的人（第 5 點）。**Reference gap（兩邊都沒有，沒有發明）**：依乘客人數、上下車速度、車門數或車門容量決定停站時間。
+
+**沒有移植的**（之後的 Stage）：
+- 把停站時間接到遊戲時間（第 3、9 點）：W2。
+- 轉乘（5F）：分支線共用段的轉乘目標、下車後在轉乘站重新排隊（`metroUsesGlobalOdPathTransfer` 的路徑）。
+- 環狀線（參考的 `isRing` 不在路段兩端全員下車）：遊戲的線路都是來回。
+- 高鐵不超載（`lineKind === "hsr"`）：還沒有線路種類。
+- 擁擠與滿載的通知（`emitCrowdAndFullTrainNotices`）：畫面在 G1c。
+
+#### 實作
+
+- `Passenger/Boarding.swift`：`RidingGroup`、`TrainRiders`、`Train` 的容量、查詢 `riders(of:)`、`riderCount(of:)`，上下車階段（`StopDeparture`、`serve(_:)`、`board(_:at:)`）、`abandonRiders(of:)`、存檔驗證 `riderProblem()` 與各自的 `Codable`。
+- `Railway/StationDwell.swift`：兩個參考的停站、車門與高鐵停站分鐘的純計算（第 9 點），不讀也不改世界。
+- `Passenger/StationPassengers.swift`：`PassengerLedger` 新增 `riding`、`arrived`、`refused`；`StationPassengers` 新增 `arrived`、`refused`、`board(_:)`、`refuse(_:)`，解碼改為只要求不超過 `released`（車上的人由 `GameWorld` 核對）。
+- `GameWorld`：`riders`（`internal(set)`，只由乘客的規則寫入）、派車與出發記下離站、`advance` 的上下車階段、`stopTrainService` 放棄車上的人、`Codable`。
+
+#### 驗證
+
+VERIFICATION_PLACEHOLDER
+
+#### 已知限制與留給之後
+
+- 上下車在離站那一刻一次完成是過渡做法（第 3 點），W2 以停站規則（第 9 點）取代；下車的時間因此暫時記在離站而不是到站。
+- 只有線路的列車載客；手動時刻表的列車不載客。
+- 同一分鐘同一站的兩班同線車，依派車與列車編號的順序上車。
+- 還沒有票價、收入與畫面（G1c）。
 
 ## 目前規則摘要
 
@@ -1749,5 +1856,6 @@ G1 的第一步：車站有需求，需求推導出每對車站之間每天、�
 - 路網上的營運（決策 31）：停站、時刻表、折返與重複、線路、派車與服務模式在方格與路網上是同一套規則，只有找月台、找路與交給移動依鐵軌種類分開。以車站為目的地的路（`TrainPath`：行進方向、停在最後一條的哪裡、精確距離）在路網上停在行進方向上月台的末端（停車位置），只考慮不比列車短的月台；總距離最短，同樣短時依邊的編號逐步決定。一段的分鐘數是距離 ÷ rate 無條件進位。路網上列車的路可以停在最後一條邊的中段（`end`，只在有值時存檔）；路走完、車頭在該站月台上（車頭所在的邊）時停在該站，整列都在同一個月台上時整列停妥。服務正在使用的月台不能拆（`trainServiceActive`）。
 - 交通控制與進路預約（決策 32）：`GameWorld` 的新世界關閉交通控制，行為與之前完全相同；App 的新遊戲開啟。開啟時，列車出發、被派車或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（與佔用同一條規則，落在 span 分界上時兩邊都算），以及它接近的交會點（在交會點 1024 以內、而那裡另有不相通的邊）；任何一個被其他列車持有（佔用、限界或預約）就整個不取得，指令以 `trackReserved` 拒絕，服務原地等待（不折返）、每步重試，線路不派出那台列車。預約存檔，走到路的終點時釋放；`unplaceTrain` 與關閉交通控制也清除它。立體交叉不共用資源。預約中的鐵軌不能拆，持有的邊不能加減月台，持有的交會點不能加邊。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`）。
 - 車站需求與乘客（決策 34）：車站可以有需求（四種類型之一，每天 0 到 1,000,000 個旅次）。每天的旅次分給同一條線路能到、自己有需求的車站（依它們的旅次，最大餘數法），再依一天的形狀與兩端類型的曲線分到 24 小時。每個基本步長一開始，每一對依這一小時與下一小時內插釋出這一分鐘的份，保留不到一人的餘數；任何連續 1440 分鐘正好釋出一天的旅次。乘客在起點依線路、方向、迄點與釋出的分鐘成組排隊，先來的在前；一站最多 4000 人，放不下的離開（`overflowed`）。線路刪除或改停靠而不再載某一組時，那一組離開（`abandoned`）。每一站 `released = 等車 + overflowed + abandoned`。沒有需求時什麼都不發生。
+- 上下車與容量（決策 35）：列車每離開時刻表的一站，先讓坐到那一站的人下車（`arrived`），再在線路上的列車讓那一站等它的線路、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1），上不去的記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，餘額不會因建設變成負數。

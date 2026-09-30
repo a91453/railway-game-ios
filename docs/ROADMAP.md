@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）已實作，再做 U、V、W2。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）與 G1b（上下車與容量）已實作，再做 U、V、W2。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -342,7 +342,7 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
 **之後的實作順序**（依實際的相依關係，不是字母順序；T 已實作）：
 
 1. W1 ✅：行駛曲線的計算核心，照 `buildProfile` 翻譯。參考最完整，也不依賴其他 Stage。
-2. **G1**：第一個能玩的經營閉環（見下面的 [G1](#g1--第一個能玩的經營閉環)）。G1a ✅，接著 G1b、G1c。
+2. **G1**：第一個能玩的經營閉環（見下面的 [G1](#g1--第一個能玩的經營閉環)）。G1a ✅、G1b ✅，接著 G1c。
    - T 已經保證兩台車不會同時用同一段軌道，乘客不需要 U。
    - `Ci/` 的參考在乘客、需求與票價上最完整。
 3. U-min：movement authority 的最小穩定契約。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。可以和 G1 對調。
@@ -390,6 +390,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 
 - **W1 ✅**：照原樣移植曲線本身（`RunningCurve`、`TrainPerformance`，ARCHITECTURE 決策 33）。純計算，不改變任何既有行為。
 - **W2**：把曲線接到行程與移動。先要作者決定兩件事：時刻表的時間從哪裡來（參考是「給定時間求曲線」），以及秒與分鐘的解析度。
+  - 同時把「到站 → 開門 → 上下車 → 關門 → 發車」接到遊戲時間：用 G1b 已移植的 `StationDwell`（地鐵 36／42 秒、車門 8／8.3 秒、Railway 的每站停站與最短停站等），取代 G1b 在離站時一次完成上下車的過渡做法（ARCHITECTURE 決策 35 第 3、9 點）。
 
 - 站間不再等速：加速、定速、惰行、煞車組成的梯形曲線，加上速度上限；曲線半徑與坡度之後再考慮。
 - 全部用整數計算，deterministic，和現在的 rate 一樣以每分鐘的單位數表示。
@@ -416,7 +417,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 - **參考**：每一部分開工前照規則讀 `Ci/` 的相關程式，PR 附對照表。城市的土地使用與成長是 gap：`Ci/` 的需求來自真實人口資料與伺服器算好的起訖，伺服器的程式不在快照裡。人口資料依 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md#來源與使用方式) 的規則可以匯入，但 G1 先不做。
 - **預計拆成幾個 PR**：
   - G1a ✅：需求、釋出、排隊與守恆（ARCHITECTURE 決策 34）；
-  - G1b：上下車與容量；
+  - G1b ✅：上下車與容量（ARCHITECTURE 決策 35）；
   - G1c：票價、帳本與畫面。
 - **不做**：城市成長、轉乘、路徑選擇、票價彈性、貸款、依等待時間重新選路。
 
@@ -431,6 +432,21 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 - **守恆**：每一站 `released = 等車 + overflowed + abandoned`；線路刪除或改停靠而不再載某一組時，那一組記進 `abandoned`。存檔驗證、每個 campaign 的不變量都檢查。
 - **沒有需求時行為不變**：既有 golden 的預期值與 property digest 不變；golden schema v20 新增 `setStationDemand`、`invalidStationDemand`、四種乘客的觀察、最終狀態的 `passengers`，以及手算的 `station-demand.json`。
 - **還沒有**：上下車（G1b）；票價、帳本與畫面（G1c）。
+
+### G1b — 上下車與容量 ✅
+
+照 `Ci/` 的 `updateTrainAtStation`、`metroResolveTrainAlighting`、`allocateSeats` 與 `getMetroTrainOperationalCap` 移植，全部是整數（ARCHITECTURE 決策 35）。
+
+- **容量**：每輛 352 人（參考 6 輛 1920 人的每輛 320 人 × 營運超載 1.1），`Train.capacity` = 輛數 × 352。
+- **時機（過渡做法）**：列車每離開時刻表的一站處理一次，先下車、再上車；停站期間來的人都搭得上。派車與出發之後、移動之前的固定階段。這不是永久的語義：W2 以已移植的秒級停站規則取代。
+- **停站時間的規則（純計算）**：`Ci/` 與 `Railway/` 兩邊找到的停站、車門、高鐵停站分鐘與觀測停站的規則都移植到 `StationDwell`（地鐵 36 秒、終點 42 秒、車門 8／8.3 秒、預設 25 秒、最短 15 秒等），每一個都和參考的 JavaScript 在 Node 執行的結果比對過；還沒有接到 `advance`。
+- **下車**：坐到這一站的人下車，記進起點的 `arrived`。
+- **上車**：只有線路的列車；那一站等它的線路與方向、迄點是它到下一次折返前會停的站的人，下車站遠的先上，同一迄點先來的先上，最多到容量；上不去的人數記進那一站的 `refused`（次數）。pattern 不停的站的人繼續等。
+- **提早結束**：離開線路的列車照舊載到迄點，但不再載新的人；它的服務被停止時，車上的人記進 `abandoned`。
+- **守恆**：每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`；存檔驗證、每個 campaign 的不變量都檢查。
+- **沒有需求時行為不變**：既有 golden 的預期值與 property digest 不變；golden schema v21 新增 `riders` 觀察、帳本的 `riding`、`arrived`、`refused`、最終狀態的 `riders`，以及手算的 `boarding.json`。
+- **gap**：`refused` 與起點的守恆（參考沒有）；依乘客人數、上下車速度或車門決定停站時間的規則兩邊都沒有（`Ci/` 的 `BOARDING_RATE`、`TRAIN_DWELL_TIME` 只有定義、沒有被讀取，以原值保留）；轉乘（5F）與環狀線不做。
+- **還沒有**：票價、帳本與畫面（G1c）。
 
 ## Phase 5 — Passenger simulation
 

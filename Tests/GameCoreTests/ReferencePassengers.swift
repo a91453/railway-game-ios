@@ -13,6 +13,18 @@ import GameCore
 ///   m·R_{h+1}`;
 /// - the queue is a list of groups per station and how many wait is summed
 ///   whenever it is needed; the counts are dictionaries by station.
+///
+/// G1b (decision 35) likewise:
+///
+/// - a stop is served the moment the train leaves it, not after the
+///   departure phases, so serving them in the order they were left is
+///   checked to change nothing;
+/// - riders are dictionaries of train, origin and destination;
+/// - the next group to board is picked by scanning for the farthest call,
+///   the earliest in the queue among equals, one group at a time, not by
+///   sorting;
+/// - the capacity is `cars × 320 × 11 / 10`, the rated load and the
+///   reference's 1.1 as a fraction.
 struct ReferencePassengers: Equatable {
     struct Demand: Equatable {
         var kind: StationDemandKind
@@ -34,6 +46,10 @@ struct ReferencePassengers: Equatable {
     var abandoned: [Int: Int64] = [:]
     /// By origin, then destination: the 3600ths not yet released; no zeros.
     var fraction: [Int: [Int: Int64]] = [:]
+    /// By train, origin and destination: who rides; no zeros, no empties.
+    var riders: [Int: [Int: [Int: Int64]]] = [:]
+    var arrived: [Int: Int64] = [:]
+    var refused: [Int: Int64] = [:]
 
     static let capacity: Int64 = 4_000
 }
@@ -214,6 +230,78 @@ extension ReferenceWorld {
         }
     }
 
+    // MARK: - Boarding
+
+    /// Train `i` has just left stop `stop` of its timetable (decision 35):
+    /// riders for its station get off, and everyone left at a turn or the
+    /// last stop; then, on a line, it takes on the farthest first.
+    mutating func serveStop(_ i: Int, stop: Int) {
+        let train = trains[i]
+        let station = train.timetable[stop].station.rawValue
+        let last = train.timetable.count - 1
+        if var onBoard = passengers.riders[train.id] {
+            for origin in onBoard.keys.sorted() {
+                for destination in onBoard[origin]!.keys.sorted() {
+                    let count = onBoard[origin]![destination]!
+                    if destination == station {
+                        passengers.arrived[origin, default: 0] += count
+                    } else if train.timetable[stop].reverses || stop == last {
+                        passengers.abandoned[origin, default: 0] += count
+                    } else {
+                        continue
+                    }
+                    onBoard[origin]![destination] = nil
+                }
+                if onBoard[origin]!.isEmpty { onBoard[origin] = nil }
+            }
+            passengers.riders[train.id] = onBoard.isEmpty ? nil : onBoard
+        }
+        guard stop < last, let line = lines.first(where: { $0.roster.contains(train.id) || $0.patterns.contains { $0.roster.contains(train.id) } }),
+              var queue = passengers.queue[station]
+        else { return }
+        let outbound = 2 * stop < last
+        // Each station ahead, and how far: its first call before the train
+        // next turns round.
+        var ahead: [Int: Int] = [:]
+        var call = stop + 1
+        while call <= last {
+            let next = train.timetable[call].station.rawValue
+            if ahead[next] == nil { ahead[next] = call }
+            if train.timetable[call].reverses { break }
+            call += 1
+        }
+        var room = Int64(train.cars) * 320 * 11 / 10 - (passengers.riders[train.id] ?? [:]).values.reduce(0) { $0 + $1.values.reduce(0, +) }
+        var skipped: Set<Int> = []
+        var refused: Int64 = 0
+        while true {
+            var best: Int?
+            for (index, group) in queue.enumerated() where !skipped.contains(index) && group.line == line.id && group.outbound == outbound {
+                guard let far = ahead[group.destination] else { continue }
+                if best == nil || far > ahead[queue[best!].destination]! { best = index }
+            }
+            guard let index = best else { break }
+            skipped.insert(index)
+            let taking = min(room, queue[index].count)
+            refused += queue[index].count - taking
+            if taking > 0 {
+                room -= taking
+                queue[index].count -= taking
+                passengers.riders[train.id, default: [:]][station, default: [:]][queue[index].destination, default: 0] += taking
+            }
+        }
+        queue.removeAll { $0.count == 0 }
+        passengers.queue[station] = queue.isEmpty ? nil : queue
+        if refused > 0 { passengers.refused[station, default: 0] += refused }
+    }
+
+    /// A service stopped with riders on board: they are abandoned.
+    mutating func abandonRiders(_ i: Int) {
+        for (origin, destinations) in passengers.riders[trains[i].id] ?? [:] {
+            passengers.abandoned[origin, default: 0] += destinations.values.reduce(0, +)
+        }
+        passengers.riders[trains[i].id] = nil
+    }
+
     // MARK: - Summaries
 
     func waitingGroups(at station: Int) -> [WaitingGroupSummary] {
@@ -229,9 +317,23 @@ extension ReferenceWorld {
         PassengerLedger(
             released: passengers.released[station] ?? 0,
             waiting: (passengers.queue[station] ?? []).reduce(0) { $0 + $1.count },
+            riding: passengers.riders.values.reduce(0) { $0 + ($1[station]?.values.reduce(0, +) ?? 0) },
+            arrived: passengers.arrived[station] ?? 0,
             overflowed: passengers.overflowed[station] ?? 0,
-            abandoned: passengers.abandoned[station] ?? 0
+            abandoned: passengers.abandoned[station] ?? 0,
+            refused: passengers.refused[station] ?? 0
         )
+    }
+
+    func riders(of train: Int) -> [RidingGroup] {
+        (passengers.riders[train] ?? [:]).flatMap { origin, destinations in
+            destinations.map { RidingGroup(origin: StationID(rawValue: origin), destination: StationID(rawValue: $0.key), count: $0.value) }
+        }.sorted { ($0.origin, $0.destination) < ($1.origin, $1.destination) }
+    }
+
+    /// The final state's riders, by train.
+    var riderSummaries: [RiderSummary] {
+        passengers.riders.keys.sorted().map { RiderSummary(train: $0, groups: riders(of: $0).map(RidingGroupSummary.init)) }
     }
 
     /// The final state's passengers: every station with demand or anyone
@@ -243,7 +345,8 @@ extension ReferenceWorld {
             return PassengerSummary(
                 station: station,
                 demand: passengers.demand[station].map { DemandSummary(StationDemand(kind: $0.kind, dailyTrips: $0.trips)) },
-                waiting: waitingGroups(at: station), released: ledger.released, overflowed: ledger.overflowed, abandoned: ledger.abandoned
+                waiting: waitingGroups(at: station), released: ledger.released, arrived: ledger.arrived,
+                overflowed: ledger.overflowed, abandoned: ledger.abandoned, refused: ledger.refused
             )
         }
     }

@@ -71,9 +71,13 @@ final class GoldenScenarioTests: XCTestCase {
 
             var extraPassengers = committed
             extraPassengers.expectedFinalState.passengers.append(
-                PassengerSummary(station: 99, demand: nil, waiting: [], released: 1, overflowed: 1, abandoned: 0)
+                PassengerSummary(station: 99, demand: nil, waiting: [], released: 1, arrived: 0, overflowed: 1, abandoned: 0, refused: 0)
             )
             XCTAssertEqual(extraPassengers.differences().count, 1, name)
+
+            var extraRiders = committed
+            extraRiders.expectedFinalState.riders.append(RiderSummary(train: 99, groups: []))
+            XCTAssertEqual(extraRiders.differences().count, 1, name)
         }
     }
 
@@ -296,6 +300,9 @@ final class GoldenScenarioTests: XCTestCase {
         var queueCount = 0
         var overflowCount = 0
         var abandonCount = 0
+        var rideCount = 0
+        var refusalCount = 0
+        var riderCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -359,6 +366,9 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .groups(let groups) = expect, Set(groups.map(\.destination)).count > 1, Set(groups.map(\.since)).count > 1 { queueCount += 1 }
                 if case .ledger(let ledger) = expect, ledger.overflowed > 0 { overflowCount += 1 }
                 if case .ledger(let ledger) = expect, ledger.abandoned > 0 { abandonCount += 1 }
+                if case .ledger(let ledger) = expect, ledger.riding > 0, ledger.arrived > 0 { rideCount += 1 }
+                if case .ledger(let ledger) = expect, ledger.refused > 0 { refusalCount += 1 }
+                if case .riders(let riders) = expect, Set(riders.map(\.destination)).count > 1 { riderCount += 1 }
                 if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
                 if case .trackPlatforms(let platforms) = expect, !platforms.isEmpty { wholePlatformCount += 1 }
                 if case .levels(let levels) = expect, levels.contains(where: { $0.height != 0 }) { levelCount += 1 }
@@ -403,6 +413,9 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(queueCount, 0, "No fixture pins a queue of several destinations and minutes")
         XCTAssertGreaterThan(overflowCount, 0, "No fixture pins passengers turned away from a full station")
         XCTAssertGreaterThan(abandonCount, 0, "No fixture pins passengers who lost their line")
+        XCTAssertGreaterThan(rideCount, 0, "No fixture pins passengers riding and arrived")
+        XCTAssertGreaterThan(refusalCount, 0, "No fixture pins passengers refused by a full train")
+        XCTAssertGreaterThan(riderCount, 0, "No fixture pins a train's riders for several destinations")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -569,11 +582,22 @@ final class GoldenScenarioTests: XCTestCase {
             return wrong
         case .ledger(let ledger):
             var wrong: [ObservationAnswer] = []
-            for key in [\LedgerSummary.released, \.waiting, \.overflowed, \.abandoned] {
+            for key in [\LedgerSummary.released, \.waiting, \.riding, \.arrived, \.overflowed, \.abandoned, \.refused] {
                 var changed = ledger
                 changed[keyPath: key] += 1
                 wrong.append(.ledger(changed))
             }
+            return wrong
+        case .riders(let riders):
+            var wrong: [ObservationAnswer] = [.riders(riders + [RidingGroupSummary(RidingGroup(
+                origin: StationID(rawValue: 9), destination: StationID(rawValue: 8), count: 1
+            ))])]
+            if let first = riders.first {
+                var bigger = first
+                bigger.count += 1
+                wrong += [.riders(Array(riders.dropFirst())), .riders([bigger] + riders.dropFirst())]
+            }
+            if riders.count > 1, riders.reversed() != riders { wrong.append(.riders(riders.reversed())) }
             return wrong
         case .platformTracks(let tracks):
             var wrong: [ObservationAnswer] = [.platformTracks(tracks + [[GridPosition(x: 99, y: 99)]])]
@@ -723,7 +747,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 20,
+              "schemaVersion": 21,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -762,7 +786,8 @@ final class GoldenScenarioTests: XCTestCase {
                 ],
                 "network": { "nodes": [], "edges": [], "platforms": [] },
                 "trafficControl": false,
-                "passengers": []
+                "passengers": [],
+                "riders": []
               }
             }
             """#
@@ -776,7 +801,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1368,8 +1393,12 @@ final class GoldenScenarioTests: XCTestCase {
              .observe(.demand(from: station(1), to: station(2)), expect: .demand(daily: 1, hourly: hourly))),
             (#"{"observe": {"type": "waitingPassengers", "station": 2}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 1, "since": 539, "count": 3}]}}"#,
              .observe(.waitingPassengers(station(2)), expect: .groups([WaitingGroupSummary(group)]))),
-            (#"{"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 5, "waiting": 3, "overflowed": 2, "abandoned": 0}}}"#,
-             .observe(.passengerLedger(station(2)), expect: .ledger(LedgerSummary(PassengerLedger(released: 5, waiting: 3, overflowed: 2, abandoned: 0))))),
+            (#"{"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 9, "waiting": 3, "riding": 1, "arrived": 3, "overflowed": 2, "abandoned": 0, "refused": 4}}}"#,
+             .observe(.passengerLedger(station(2)), expect: .ledger(LedgerSummary(PassengerLedger(
+                 released: 9, waiting: 3, riding: 1, arrived: 3, overflowed: 2, abandoned: 0, refused: 4
+             ))))),
+            (#"{"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 2, "destination": 1, "count": 1}]}}"#,
+             .observe(.riders(TrainID(rawValue: 1)), expect: .riders([RidingGroupSummary(RidingGroup(origin: station(2), destination: station(1), count: 1))]))),
         ]
         for (json, expected) in steps {
             XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
@@ -1389,6 +1418,11 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "waitingPassengers", "station": 1}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 2, "since": 0}]}}"#,
             #"{"observe": {"type": "waitingPassengers", "station": 1}, "expect": {"ledger": {"released": 0, "waiting": 0, "overflowed": 0, "abandoned": 0}}}"#,
             #"{"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 0, "waiting": 0, "overflowed": 0}}}"#,
+            // Schema 21: the ledger's new counts are required.
+            #"{"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 0, "waiting": 0, "overflowed": 0, "abandoned": 0}}}"#,
+            #"{"observe": {"type": "riders"}, "expect": {"riders": []}}"#,
+            #"{"observe": {"type": "riders", "train": 1}, "expect": {"groups": []}}"#,
+            #"{"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 1, "destination": 2}]}}"#,
         ]
         for json in malformed {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
@@ -1396,14 +1430,19 @@ final class GoldenScenarioTests: XCTestCase {
         // A station's passengers in the final state spell out "demand",
         // null for none.
         XCTAssertThrowsError(try JSONDecoder().decode(
-            PassengerSummary.self, from: Data(#"{"station": 1, "waiting": [], "released": 0, "overflowed": 0, "abandoned": 0}"#.utf8)
+            PassengerSummary.self, from: Data(#"{"station": 1, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0}"#.utf8)
         ))
         XCTAssertEqual(
             try JSONDecoder().decode(
-                PassengerSummary.self, from: Data(#"{"station": 1, "demand": null, "waiting": [], "released": 0, "overflowed": 0, "abandoned": 0}"#.utf8)
+                PassengerSummary.self,
+                from: Data(#"{"station": 1, "demand": null, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0}"#.utf8)
             ),
-            PassengerSummary(station: 1, demand: nil, waiting: [], released: 0, overflowed: 0, abandoned: 0)
+            PassengerSummary(station: 1, demand: nil, waiting: [], released: 0, arrived: 0, overflowed: 0, abandoned: 0, refused: 0)
         )
+        // Schema 21: every field is required.
+        XCTAssertThrowsError(try JSONDecoder().decode(
+            PassengerSummary.self, from: Data(#"{"station": 1, "demand": null, "waiting": [], "released": 0, "overflowed": 0, "abandoned": 0}"#.utf8)
+        ))
     }
 
     func testMalformedLineStepsAreRejectedRatherThanGuessed() {

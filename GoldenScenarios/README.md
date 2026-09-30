@@ -12,17 +12,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 20`）
+## Schema（`schemaVersion: 21`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），以及 `setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `20` |
+| `schemaVersion` | `21` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
-| `expectedFinalState` | `gameMinutes`、`speed`、`balance`、`stations`、`tracks`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl`、`passengers` |
+| `expectedFinalState` | `gameMinutes`、`speed`、`balance`、`stations`、`tracks`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl`、`passengers`、`riders` |
 
 ### 值的表示
 
@@ -95,7 +95,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 沿線路的方向：`"outbound"`（往線路 `stops` 的後面）或 `"inbound"`（往前面）。
   - 旅次（`trip`）：`{ "line", "direction" }`。
   - 等車的一組（`groups` 的一項、最終狀態的 `waiting`）：`{ "line", "direction", "destination", "since", "count" }`：要坐的線路與方向、迄點車站、釋出的遊戲分鐘與人數，依排隊的順序（先來的在前）。
-  - 守恆稽核（`ledger`）：`{ "released", "waiting", "overflowed", "abandoned" }`。
+  - 守恆稽核（`ledger`）：`{ "released", "waiting", "riding", "arrived", "overflowed", "abandoned", "refused" }`（`riding`、`arrived`、`refused` 自 schema 21，決策 35），七個欄位都必填。
+  - 車上的一組（`riders` 的一項，schema 21）：`{ "origin", "destination", "count" }`：上車的車站、迄點車站與人數，依（起點、迄點）排序。
 
 ### 指令（`command.type`）
 
@@ -244,6 +245,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `demand`（schema 20） | `from`、`to`（車站 ID） | `{ "daily": n, "hourly": [24 個整數，0 時起] }` | `dailyDemand(from:to:)`、`hourlyDemand(from:to:)` |
 | `waitingPassengers`（schema 20） | `station` | `{ "groups": [等車的一組, ...] }` | `waitingPassengers(at:)` |
 | `passengerLedger`（schema 20） | `station` | `{ "ledger": 守恆稽核 }` | `passengerLedger(of:)` |
+| `riders`（schema 21） | `train` | `{ "riders": [車上的一組, ...] }` | `riders(of:)` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -400,7 +402,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `serviceDay`：服務日（形式見上面「服務日」）。
 - `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length", "profile", "structure" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則；`profile` 與 `structure`（schema 17）必填；`platforms`（schema 17）必填：`[{ "station", "edge", "start", "end" }, ...]`，沿鐵軌的順序（依邊的編號、再依起點）。沒有路網是 `{ "nodes": [], "edges": [], "platforms": [] }`。
 - `trafficControl`（schema 19）：交通控制是否開啟，布林值。
-- `passengers`（schema 20）：有需求、或曾經釋出過乘客的車站，依車站 ID 遞增：`{ "station", "demand", "waiting", "released", "overflowed", "abandoned" }`，六個欄位都必填；`demand` 沒有時是 `null`，`waiting` 是等車的各組（依排隊的順序）。還沒有乘客時是 `[]`。尚未釋出的不到一人的餘數是內部狀態，不列入。
+- `passengers`（schema 20）：有需求、或曾經釋出過乘客的車站，依車站 ID 遞增：`{ "station", "demand", "waiting", "released", "arrived", "overflowed", "abandoned", "refused" }`（`arrived`、`refused` 自 schema 21），八個欄位都必填；`demand` 沒有時是 `null`，`waiting` 是等車的各組（依排隊的順序）。還沒有乘客時是 `[]`。尚未釋出的不到一人的餘數是內部狀態，不列入。
+- `riders`（schema 21）：每台載客的列車，依列車 ID 遞增：`{ "train", "groups": [車上的一組, ...] }`。沒有列車載客時是 `[]`。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -434,3 +437,4 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **18**（Phase 4.5 Stage S5）：路網上的營運：`setTrainPath` 可加的 `end`，列車移動只在有值時出現的 `end`，`pathToStation` 觀察（回答 `trainPath`），路網出發的 `lineJourney` 每一段以 `path` 取代 `route`，`removeTrackPlatform` 的 `trainServiceActive`，以及手算的 `network-service.json`（彎道、隧道與地下月台的距離另以獨立的精確分數計算核對）。既有的十七個 fixture 只把 `schemaVersion` 從 17 改成 18：它們的路網上沒有服務、沒有停在邊中段的路，所以沒有 `end`，方格的行程仍以 `route` 表示；其他預期值都沒有改變。
 - **19**（Phase 4.6 Stage T）：交通控制與進路預約：`setTrafficControl` 指令，`trackReserved`、`trainsShareTrack` 結果，`reservation`、`heldResources`、`routeHolder` 觀察，最終狀態每台列車必填的 `reservation` 與必填的 `trafficControl`，以及手算的 `traffic-reservation.json`（道岔的限界、單線上的等待與放行、span 分界上的車尾與停車位置、立體交叉互不衝突、預約中的邊不能加月台或拆除）。既有的十八個 fixture 把 `schemaVersion` 從 18 改成 19，並只加上中性的值：最終狀態的 37 台列車加上 `"reservation": []`，最終狀態加上 `"trafficControl": false`：它們從未開啟交通控制，新世界的交通控制是關閉的，所以行為不變。其他預期值都沒有改變。
 - **20**（G1a）：車站需求與乘客：`setStationDemand` 指令，`invalidStationDemand` 結果，`passengerTrip`、`demand`、`waitingPassengers`、`passengerLedger` 觀察，最終狀態必填的 `passengers`，以及手算的 `station-demand.json`（一天一個旅次在 08:59 釋出、百萬旅次在兩分鐘內讓車站滿、溢出、線路改停靠後放棄等車，每一站都守恆；預期值另以獨立的 Python 實作依規則計算）。既有的十九個 fixture 把 `schemaVersion` 從 19 改成 20，並只在最終狀態加上 `"passengers": []`：它們的車站都沒有需求，新世界的車站沒有需求，所以沒有人被釋出。其他預期值都沒有改變。
+- **21**（G1b）：上下車與容量：`riders` 觀察，守恆稽核加上必填的 `riding`、`arrived`、`refused`，最終狀態車站的乘客加上必填的 `arrived`、`refused`、最終狀態必填的 `riders`，以及手算的 `boarding.json`（1 節列車 352 人的容量、下車站遠的先上、被拒絕的人數、下車、在遠端折返後載回程的人、線路的列車不能停止服務、離開線路後停止服務而放棄車上的人；預期值另以獨立的 Python 實作依規則計算）。既有的二十個 fixture 把 `schemaVersion` 從 20 改成 21，最終狀態加上 `"riders": []`，`station-demand.json` 的守恆稽核與最終狀態的乘客加上值為 0 的新欄位：它們都沒有列車載客。其他預期值都沒有改變。

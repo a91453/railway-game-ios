@@ -1,0 +1,334 @@
+import Foundation
+@testable import GameCore
+import XCTest
+
+/// G1b (ARCHITECTURE decision 35): trains let passengers off at their
+/// destination and take on those waiting for their line and direction, the
+/// farthest first, up to their capacity, as they leave each stop. Every
+/// expectation here is worked out by hand from the rules.
+final class BoardingTests: XCTestCase {
+    // The line of `LineDispatchTests`, dead ends at both ends:
+    //
+    //   Alpha(1,0)  Beta(3,0)  Gamma(5,0)
+    //       |           |          |
+    //   a - b - c - d - e - f - g
+    //
+    // Line 1 calls at Alpha, Beta and Gamma, one link a minute: its round
+    // trip leaving Alpha at 0 is Alpha 0, Beta 2–3, Gamma 5–7 (turning
+    // round), Beta 9–10 and Alpha 12 (turning round; the service ends). The
+    // step from minute T serves the stops left at T, so after
+    // `advance(ticks: n)` every stop whose departure is before `n` has been
+    // served.
+    private let alpha = StationID(rawValue: 1)
+    private let beta = StationID(rawValue: 2)
+    private let gamma = StationID(rawValue: 3)
+    private let main = LineID(rawValue: 1)
+    private let other = LineID(rawValue: 2)
+    private let one = TrainID(rawValue: 1)
+
+    private func makeWorld(cars: Int = 1) throws -> GameWorld {
+        var world = try GameWorld(
+            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
+        for x in 1...5 {
+            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
+        }
+        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
+        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
+        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
+        try world.buildStation(named: "Gamma", at: GridPosition(x: 5, y: 0))
+        try world.createLine(named: "Main", stops: [alpha, beta, gamma])
+        try world.createLine(named: "Other", stops: [alpha, beta, gamma])
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.setTrainCars(train.id, to: cars)
+        try world.placeTrain(train.id, at: .atNode(GridPosition(x: cars, y: 1), heading: .east))
+        try world.setTrainMovementRate(train.id, to: 1024)
+        try world.assignTrain(train.id, to: main)
+        // A record for each station, so passengers can be put in its queue.
+        for station in [alpha, beta, gamma] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 0))
+        }
+        return world
+    }
+
+    /// Puts `count` passengers for `destination` in `station`'s queue, as
+    /// released at minute `since` along `line` in `direction`.
+    private func wait(
+        _ world: inout GameWorld, _ count: Int64, at station: StationID, for destination: StationID,
+        _ direction: LineDirection, line: LineID? = nil, since: Int64 = 0
+    ) {
+        let index = world.passengers.firstIndex { $0.station == station }!
+        world.passengers[index].release(
+            count, to: destination, along: PassengerTrip(line: line ?? main, direction: direction), at: GameTime(minutes: since)
+        )
+    }
+
+    private func riding(_ origin: StationID, _ destination: StationID, _ count: Int64) -> RidingGroup {
+        RidingGroup(origin: origin, destination: destination, count: count)
+    }
+
+    private func assertConserved(_ world: GameWorld, file: StaticString = #filePath, line: UInt = #line) {
+        for record in world.passengers {
+            let ledger = world.passengerLedger(of: record.station)
+            XCTAssertEqual(
+                ledger.released, ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned,
+                "station \(record.station.rawValue)", file: file, line: line
+            )
+        }
+    }
+
+    // MARK: - Capacity
+
+    /// 320 rated and 352 at most a car: the reference's 1,920 for six cars,
+    /// and that × 1.1.
+    func testCapacityIsCarsTimesTheReferencesPerCarLoad() throws {
+        XCTAssertEqual(Train.ratedCapacityPerCar * 6, 1_920)
+        XCTAssertEqual(Train.capacityPerCar * 10, Train.ratedCapacityPerCar * 11)
+        let world = try makeWorld(cars: 3)
+        let train = try XCTUnwrap(world.train(id: one))
+        XCTAssertEqual(train.ratedCapacity, 960)
+        XCTAssertEqual(train.capacity, 1_056)
+    }
+
+    // MARK: - On and off
+
+    /// Leaving Alpha the train takes both groups; each gets off as the train
+    /// leaves its destination.
+    func testPassengersBoardAsTheTrainLeavesAndGetOffAtTheirDestination() throws {
+        var world = try makeWorld()
+        wait(&world, 5, at: alpha, for: beta, .outbound)
+        wait(&world, 7, at: alpha, for: gamma, .outbound)
+
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, beta, 5), riding(alpha, gamma, 7)])
+        XCTAssertEqual(world.riderCount(of: one), 12)
+        XCTAssertEqual(world.waitingPassengers(at: alpha), [])
+        XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, riding: 12, overflowed: 0, abandoned: 0))
+
+        // Still on board while the train stands at Beta (2–3).
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.riderCount(of: one), 12)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 7)])
+        XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 5)
+
+        try world.advance(ticks: 4)
+        XCTAssertEqual(world.riders, [])
+        XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, arrived: 12, overflowed: 0, abandoned: 0))
+        assertConserved(world)
+    }
+
+    /// The farthest destination boards first, and for one destination those
+    /// who came first; the group that does not fit boards in part, keeping
+    /// its minute, and the rest count as refused.
+    func testTheFarthestBoardFirstUpToTheCapacityAndTheRestAreRefused() throws {
+        var world = try makeWorld()
+        try world.advance(ticks: 0)
+        wait(&world, 300, at: alpha, for: beta, .outbound, since: -3)
+        wait(&world, 30, at: alpha, for: gamma, .outbound, since: -2)
+        wait(&world, 40, at: alpha, for: beta, .outbound, since: -1)
+        wait(&world, 50, at: alpha, for: gamma, .outbound, since: -1)
+
+        try world.advance(ticks: 1)
+        // Gamma: 30 + 50; then Beta from the earliest: 272 of 300 fit.
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, beta, 272), riding(alpha, gamma, 80)])
+        XCTAssertEqual(world.riderCount(of: one), 352)
+        XCTAssertEqual(world.waitingPassengers(at: alpha), [
+            WaitingGroup(line: main, direction: .outbound, destination: beta, since: GameTime(minutes: -3), count: 28),
+            WaitingGroup(line: main, direction: .outbound, destination: beta, since: GameTime(minutes: -1), count: 40),
+        ])
+        XCTAssertEqual(world.passengerLedger(of: alpha).refused, 68)
+        assertConserved(world)
+    }
+
+    /// A full train takes no one at Beta, and every one waiting for it is
+    /// refused again; once riders get off there is room.
+    func testAFullTrainRefusesEveryoneUntilRidersGetOff() throws {
+        var world = try makeWorld()
+        wait(&world, 352, at: alpha, for: gamma, .outbound)
+        wait(&world, 10, at: beta, for: gamma, .outbound)
+        wait(&world, 4, at: gamma, for: beta, .inbound)
+        try world.advance(ticks: 4)
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 352)])
+        XCTAssertEqual(world.passengerLedger(of: beta).refused, 10)
+        XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [10])
+
+        // At Gamma the 352 get off, then the train turns round and takes
+        // the 4 going back.
+        try world.advance(ticks: 4)
+        XCTAssertEqual(world.riders(of: one), [riding(gamma, beta, 4)])
+        XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 352)
+        assertConserved(world)
+    }
+
+    /// Only passengers for the train's line, in its direction, for a
+    /// station it calls at before it turns round, board.
+    func testOnlyTheTrainsLineDirectionAndCallsAheadBoard() throws {
+        var world = try makeWorld()
+        wait(&world, 3, at: beta, for: alpha, .inbound)
+        wait(&world, 4, at: beta, for: gamma, .outbound, line: other)
+        wait(&world, 5, at: beta, for: gamma, .outbound)
+        try world.advance(ticks: 4)
+        XCTAssertEqual(world.riders(of: one), [riding(beta, gamma, 5)])
+        XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [3, 4])
+        XCTAssertEqual(world.passengerLedger(of: beta).refused, 0, "passengers the train would not take are not refused")
+
+        // Back through Beta (9–10) it takes the 3 for Alpha, and at Alpha
+        // they get off as the service ends.
+        try world.advance(ticks: 7)
+        XCTAssertEqual(world.riders(of: one), [riding(beta, alpha, 3)])
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.riders, [])
+        XCTAssertEqual(world.passengerLedger(of: beta).arrived, 8)
+        XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [4])
+        assertConserved(world)
+    }
+
+    /// A pattern train takes only those whose destination it calls at:
+    /// those for a skipped stop wait for another train.
+    func testAPatternTrainLeavesThoseForAStopItSkips() throws {
+        var world = try makeWorld()
+        try world.unassignTrain(one)
+        _ = try world.addLinePattern(main, calling: [0, 2])
+        try world.setLineTrainsInService(main, to: .none)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: 0)
+        try world.assignTrain(one, to: main, pattern: 0)
+        wait(&world, 6, at: alpha, for: beta, .outbound)
+        wait(&world, 2, at: alpha, for: gamma, .outbound)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 2)])
+        XCTAssertEqual(world.waitingPassengers(at: alpha).map(\.count), [6])
+    }
+
+    // MARK: - Services that end early
+
+    /// A train taken off its line keeps its riders to their destination but
+    /// takes on no one; stopping its service then abandons those still on
+    /// board.
+    func testATrainOffItsLineCarriesItsRidersButTakesNoOne() throws {
+        var world = try makeWorld()
+        wait(&world, 5, at: alpha, for: beta, .outbound)
+        wait(&world, 7, at: alpha, for: gamma, .outbound)
+        wait(&world, 9, at: beta, for: gamma, .outbound)
+        try world.advance(ticks: 1)
+        try world.unassignTrain(one)
+        try world.advance(ticks: 3)
+        XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 7)])
+        XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [9])
+        XCTAssertEqual(world.passengerLedger(of: beta).refused, 0)
+
+        try world.stopTrainService(one)
+        XCTAssertEqual(world.riders, [])
+        XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, arrived: 5, overflowed: 0, abandoned: 7))
+        assertConserved(world)
+    }
+
+    // MARK: - Whole days
+
+    /// With demand at every station, a day of service in one call is the
+    /// same as minute by minute, and every minute's counts add up.
+    func testADayOfServiceConservesPassengersAndDoesNotDependOnTheBatch() throws {
+        var world = try makeWorld()
+        for (station, kind) in [(alpha, StationDemandKind.residential), (beta, .shopping), (gamma, .office)] {
+            try world.setStationDemand(station, to: StationDemand(kind: kind, dailyTrips: 20_000))
+        }
+        var stepped = world
+        try world.advance(ticks: 1_440)
+        for _ in 0..<1_440 {
+            try stepped.advance(ticks: 1)
+            assertConserved(stepped)
+            XCTAssertLessThanOrEqual(stepped.riderCount(of: one), 352)
+        }
+        XCTAssertEqual(world, stepped)
+        XCTAssertGreaterThan(world.passengerLedger(of: alpha).arrived, 0)
+        XCTAssertGreaterThan(world.passengerLedger(of: alpha).refused, 0)
+    }
+
+    // MARK: - Saving
+
+    func testRidersRoundTripThroughASave() throws {
+        var world = try makeWorld()
+        wait(&world, 5, at: alpha, for: beta, .outbound)
+        wait(&world, 400, at: alpha, for: gamma, .outbound)
+        try world.advance(ticks: 1)
+        let data = try JSONEncoder().encode(world)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual((json["riders"] as? [[String: Any]])?.count, 1)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
+
+        // No riders, no key; no arrivals or refusals, no keys either.
+        var empty = try makeWorld()
+        wait(&empty, 1, at: alpha, for: beta, .outbound)
+        let emptyJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(empty)) as? [String: Any])
+        XCTAssertNil(emptyJSON["riders"])
+        let records = try XCTUnwrap(emptyJSON["passengers"] as? [[String: Any]])
+        XCTAssertTrue(records.allSatisfy { $0["arrived"] == nil && $0["refused"] == nil })
+    }
+
+    func testTheDecoderRejectsRidersThatBreakTheRules() throws {
+        var world = try makeWorld()
+        wait(&world, 5, at: alpha, for: beta, .outbound)
+        wait(&world, 7, at: alpha, for: gamma, .outbound)
+        try world.advance(ticks: 1)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        XCTAssertNoThrow(try decode(json))
+
+        func withRiders(_ change: (inout [[String: Any]]) -> Void) -> [String: Any] {
+            var copy = json
+            var riders = copy["riders"] as! [[String: Any]]
+            change(&riders)
+            copy["riders"] = riders
+            return copy
+        }
+        func withGroups(_ change: @escaping (inout [[String: Any]]) -> Void) -> [String: Any] {
+            withRiders { riders in
+                var groups = riders[0]["groups"] as! [[String: Any]]
+                change(&groups)
+                riders[0]["groups"] = groups
+            }
+        }
+        let broken: [String: [String: Any]] = [
+            "no groups": withGroups { $0 = [] },
+            "zero riders": withGroups { $0[0]["count"] = 0 },
+            "groups out of order": withGroups { $0.reverse() },
+            "riding to where they came from": withGroups { $0[0]["destination"] = 1 },
+            "an unknown train": withRiders { $0[0]["train"] = 9 },
+            "a train twice": withRiders { $0.append($0[0]) },
+            "more than they released": withGroups { $0[0]["count"] = 6 },
+            "fewer than they released": withGroups { $0[0]["count"] = 4 },
+            "an origin without a record": withGroups { $0[0]["origin"] = 2 },
+            "a destination behind the train": withGroups { $0[0]["destination"] = 9 },
+            "no riders at all": {
+                var copy = json
+                copy["riders"] = nil
+                return copy
+            }(),
+        ]
+        for (name, value) in broken {
+            XCTAssertThrowsError(try decode(value), name)
+        }
+
+        // More than the train takes: 353 on one car.
+        var full = try makeWorld()
+        wait(&full, 352, at: alpha, for: gamma, .outbound)
+        try full.advance(ticks: 1)
+        var fullJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(full)) as? [String: Any])
+        var riders = fullJSON["riders"] as! [[String: Any]]
+        var groups = riders[0]["groups"] as! [[String: Any]]
+        groups[0]["count"] = 353
+        riders[0]["groups"] = groups
+        fullJSON["riders"] = riders
+        var records = fullJSON["passengers"] as! [[String: Any]]
+        records[0]["released"] = 353
+        fullJSON["passengers"] = records
+        XCTAssertThrowsError(try decode(fullJSON))
+    }
+
+    private func decode(_ json: [String: Any]) throws -> GameWorld {
+        try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: json))
+    }
+}

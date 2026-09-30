@@ -624,6 +624,7 @@ struct ReferenceWorld: Equatable {
             if onLine(id) { return .trainOnLine(id) }
             if trains[i].service == nil { return .trainServiceNotActive(id) }
             trains[i].service = nil
+            abandonRiders(i)
             return nil
         }
     }
@@ -694,7 +695,13 @@ struct ReferenceWorld: Equatable {
         while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
               Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
             left += 1
-            guard departOnce(i) else { return }
+            // Decision 35: the stop is served as soon as it is left.
+            let leaving = service.stop
+            let atOnce = departOnce(i)
+            if trains[i].service != service {
+                serveStop(i, stop: leaving)
+            }
+            guard atOnce else { return }
         }
     }
 

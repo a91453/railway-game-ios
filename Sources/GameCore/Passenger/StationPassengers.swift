@@ -62,24 +62,40 @@ public struct DemandRemainder: Hashable, Sendable {
 }
 
 /// Where every passenger released at a station has gone: the audit of
-/// passenger conservation. `released` always equals `waiting +
-/// overflowed + abandoned`; G1b adds those who boarded.
+/// passenger conservation. `released` always equals `waiting + riding +
+/// arrived + overflowed + abandoned`.
 public struct PassengerLedger: Hashable, Sendable {
     /// Every passenger ever released at the station.
     public let released: Int64
     /// Those waiting there now.
     public let waiting: Int64
+    /// Those on a train now (G1b).
+    public let riding: Int64
+    /// Those who got off at their destination (G1b).
+    public let arrived: Int64
     /// Those who found the station full when released, and left.
     public let overflowed: Int64
     /// Those whose line stopped serving their trip while they waited, and
-    /// left.
+    /// left; or whose train's service was stopped before it reached their
+    /// destination (G1b).
     public let abandoned: Int64
+    /// How many times a train that would have taken passengers waiting at
+    /// the station left them behind for want of room (G1b). A count of
+    /// refusals, not of passengers: one passenger may be refused by several
+    /// trains, so it is not part of the conservation.
+    public let refused: Int64
 
-    public init(released: Int64, waiting: Int64, overflowed: Int64, abandoned: Int64) {
+    public init(
+        released: Int64, waiting: Int64, riding: Int64 = 0, arrived: Int64 = 0,
+        overflowed: Int64, abandoned: Int64, refused: Int64 = 0
+    ) {
         self.released = released
         self.waiting = waiting
+        self.riding = riding
+        self.arrived = arrived
         self.overflowed = overflowed
         self.abandoned = abandoned
+        self.refused = refused
     }
 
     public static let empty = PassengerLedger(released: 0, waiting: 0, overflowed: 0, abandoned: 0)
@@ -98,6 +114,11 @@ public struct StationPassengers: Hashable, Sendable {
     public internal(set) var released: Int64
     public internal(set) var overflowed: Int64
     public internal(set) var abandoned: Int64
+    /// Passengers from this station who got off at their destination (G1b).
+    public internal(set) var arrived: Int64
+    /// Refusals at this station (G1b, see ``PassengerLedger/refused``), up
+    /// to ``maximumReleased``.
+    public internal(set) var refused: Int64
     /// The remainders of the trips from this station, by ascending
     /// destination.
     public internal(set) var remainders: [DemandRemainder]
@@ -123,11 +144,24 @@ public struct StationPassengers: Hashable, Sendable {
         self.released = 0
         self.overflowed = 0
         self.abandoned = 0
+        self.arrived = 0
+        self.refused = 0
         self.remainders = []
     }
 
-    public var ledger: PassengerLedger {
-        PassengerLedger(released: released, waiting: waitingCount, overflowed: overflowed, abandoned: abandoned)
+    /// The station's audit, given how many of its passengers are `riding`
+    /// trains (see ``GameWorld/riders``).
+    func ledger(riding: Int64) -> PassengerLedger {
+        PassengerLedger(
+            released: released, waiting: waitingCount, riding: riding, arrived: arrived,
+            overflowed: overflowed, abandoned: abandoned, refused: refused
+        )
+    }
+
+    /// Passengers released here who are neither waiting, arrived,
+    /// overflowed nor abandoned: those riding trains.
+    var boardedAndRiding: Int64 {
+        released - waitingCount - arrived - overflowed - abandoned
     }
 
     /// Whether the record says nothing: no demand, no passenger ever
@@ -158,6 +192,31 @@ public struct StationPassengers: Hashable, Sendable {
         waiting.removeAll { !isServed($0) }
         waitingCount -= left
         abandoned += left
+    }
+
+    /// Takes `counts[i]` passengers out of the group at index `i` of
+    /// ``waiting`` for every entry, as they board a train (G1b). A group
+    /// left with none goes; the others keep their order and their minute.
+    mutating func board(_ counts: [Int: Int64]) {
+        var total: Int64 = 0
+        var kept: [WaitingGroup] = []
+        for (index, group) in waiting.enumerated() {
+            let taken = counts[index] ?? 0
+            total += taken
+            if taken < group.count {
+                kept.append(WaitingGroup(
+                    line: group.line, direction: group.direction, destination: group.destination,
+                    since: group.since, count: group.count - taken
+                ))
+            }
+        }
+        waiting = kept
+        waitingCount -= total
+    }
+
+    /// Adds `count` refusals, stopping at ``maximumReleased``.
+    mutating func refuse(_ count: Int64) {
+        refused = min(Self.maximumReleased, refused + count)
     }
 
     /// Replaces the remainders for the destinations of `updates` (by
@@ -238,13 +297,16 @@ extension DemandRemainder: Codable {
 
 extension StationPassengers: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned, remainders
+        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders
     }
 
     /// Decodes a station's passengers. A station without demand has no
-    /// `"demand"` key (an explicit `null` is rejected). Rejects negative
-    /// counts, counts that do not account for every passenger released
-    /// (`released` = waiting + `overflowed` + `abandoned`), more waiting
+    /// `"demand"` key (an explicit `null` is rejected), and one with none
+    /// arrived or refused (G1b) no `"arrived"` or `"refused"`. Rejects
+    /// negative counts, counts that account for more passengers than were
+    /// released (waiting + `arrived` + `overflowed` + `abandoned` at most
+    /// `released`; the rest ride trains, which the ``GameWorld`` decoder
+    /// checks), `refused` above ``maximumReleased``, more waiting
     /// than ``capacity``, groups out of the order they came in, remainders
     /// out of order or twice, and a record with nothing in it (it is never
     /// saved). That the station, lines and destinations exist, and that the
@@ -258,6 +320,8 @@ extension StationPassengers: Codable {
         let released = try container.decode(Int64.self, forKey: .released)
         let overflowed = try container.decode(Int64.self, forKey: .overflowed)
         let abandoned = try container.decode(Int64.self, forKey: .abandoned)
+        let arrived = container.contains(.arrived) ? try container.decode(Int64.self, forKey: .arrived) : 0
+        let refused = container.contains(.refused) ? try container.decode(Int64.self, forKey: .refused) : 0
         let remainders = try container.decode([DemandRemainder].self, forKey: .remainders)
         func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
             DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Station \(station.rawValue): \(description)")
@@ -274,11 +338,17 @@ extension StationPassengers: Codable {
         guard zip(waiting, waiting.dropFirst()).allSatisfy({ $0.since < $1.since || ($0.since == $1.since && $0.destination < $1.destination) }) else {
             throw corrupt(.waiting, "waiting groups must be in the order they came.")
         }
-        guard released >= 0, overflowed >= 0, abandoned >= 0 else { throw corrupt(.released, "counts cannot be negative.") }
+        guard released >= 0, overflowed >= 0, abandoned >= 0, arrived >= 0, refused >= 0 else {
+            throw corrupt(.released, "counts cannot be negative.")
+        }
         guard released <= Self.maximumReleased else { throw corrupt(.released, "more passengers released than a station can count.") }
-        let (accounted, overflow) = overflowed.addingReportingOverflow(abandoned)
-        guard !overflow, accounted <= Int64.max - total, accounted + total == released else {
-            throw corrupt(.released, "every passenger released must be waiting, overflowed or abandoned.")
+        guard refused <= Self.maximumReleased else { throw corrupt(.refused, "more refusals than a station can count.") }
+        // Taken off what was released one at a time, so nothing overflows.
+        guard overflowed <= released, abandoned <= released - overflowed,
+              arrived <= released - overflowed - abandoned,
+              total <= released - overflowed - abandoned - arrived
+        else {
+            throw corrupt(.released, "more passengers are accounted for than were released.")
         }
         guard zip(remainders, remainders.dropFirst()).allSatisfy({ $0.destination < $1.destination }) else {
             throw corrupt(.remainders, "remainders must be listed once each, by ascending destination.")
@@ -293,6 +363,8 @@ extension StationPassengers: Codable {
         self.released = released
         self.overflowed = overflowed
         self.abandoned = abandoned
+        self.arrived = arrived
+        self.refused = refused
         self.remainders = remainders
     }
 
@@ -306,6 +378,12 @@ extension StationPassengers: Codable {
         try container.encode(released, forKey: .released)
         try container.encode(overflowed, forKey: .overflowed)
         try container.encode(abandoned, forKey: .abandoned)
+        if arrived != 0 {
+            try container.encode(arrived, forKey: .arrived)
+        }
+        if refused != 0 {
+            try container.encode(refused, forKey: .refused)
+        }
         try container.encode(remainders, forKey: .remainders)
     }
 }
