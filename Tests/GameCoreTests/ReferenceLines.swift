@@ -37,6 +37,7 @@ extension ReferenceWorld {
     mutating func removeLine(_ id: LineID) -> GameError? {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
         lines.remove(at: index)
+        abandonStrandedPassengers()
         return nil
     }
 
@@ -46,6 +47,7 @@ extension ReferenceWorld {
         // Decision 24: the patterns keep their calls, which must still fit.
         if lines[index].patterns.contains(where: { $0.calls.contains { $0 >= stops.count } }) { return .invalidLinePattern }
         lines[index].stops = stops
+        abandonStrandedPassengers()
         return nil
     }
 

@@ -68,6 +68,12 @@ final class GoldenScenarioTests: XCTestCase {
             var wrongTrafficControl = committed
             wrongTrafficControl.expectedFinalState.trafficControl.toggle()
             XCTAssertEqual(wrongTrafficControl.differences().count, 1, name)
+
+            var extraPassengers = committed
+            extraPassengers.expectedFinalState.passengers.append(
+                PassengerSummary(station: 99, demand: nil, waiting: [], released: 1, overflowed: 1, abandoned: 0)
+            )
+            XCTAssertEqual(extraPassengers.differences().count, 1, name)
         }
     }
 
@@ -285,6 +291,11 @@ final class GoldenScenarioTests: XCTestCase {
         var levelCount = 0
         var reservationCount = 0
         var holderCount = 0
+        var tripCount = 0
+        var demandCount = 0
+        var queueCount = 0
+        var overflowCount = 0
+        var abandonCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -343,6 +354,11 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .alignment(let alignment?) = expect, alignment.segments.contains(where: { $0.kind == "transition" }) { curveAlignmentCount += 1 }
                 if case .reservation = observation, case .resources(let resources) = expect, !resources.isEmpty { reservationCount += 1 }
                 if case .holder(_?) = expect { holderCount += 1 }
+                if case .trip(let trip?) = expect, trip.direction.direction == .inbound { tripCount += 1 }
+                if case .demand(let daily, let hourly) = expect, daily > 0, hourly.filter({ $0 > 0 }).count > 1 { demandCount += 1 }
+                if case .groups(let groups) = expect, Set(groups.map(\.destination)).count > 1, Set(groups.map(\.since)).count > 1 { queueCount += 1 }
+                if case .ledger(let ledger) = expect, ledger.overflowed > 0 { overflowCount += 1 }
+                if case .ledger(let ledger) = expect, ledger.abandoned > 0 { abandonCount += 1 }
                 if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
                 if case .trackPlatforms(let platforms) = expect, !platforms.isEmpty { wholePlatformCount += 1 }
                 if case .levels(let levels) = expect, levels.contains(where: { $0.height != 0 }) { levelCount += 1 }
@@ -382,6 +398,11 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(levelCount, 0, "No fixture pins a platform off the ground")
         XCTAssertGreaterThan(reservationCount, 0, "No fixture pins a reservation")
         XCTAssertGreaterThan(holderCount, 0, "No fixture pins the train holding a route")
+        XCTAssertGreaterThan(tripCount, 0, "No fixture pins an inbound passenger trip")
+        XCTAssertGreaterThan(demandCount, 0, "No fixture pins a pair's trips spread over several hours")
+        XCTAssertGreaterThan(queueCount, 0, "No fixture pins a queue of several destinations and minutes")
+        XCTAssertGreaterThan(overflowCount, 0, "No fixture pins passengers turned away from a full station")
+        XCTAssertGreaterThan(abandonCount, 0, "No fixture pins passengers who lost their line")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -515,6 +536,45 @@ final class GoldenScenarioTests: XCTestCase {
             return [.holder(TrainID(rawValue: 1))]
         case .holder(let id?):
             return [.holder(nil), .holder(TrainID(rawValue: id.rawValue + 1))]
+        case .trip(nil):
+            return [.trip(TripSummary(PassengerTrip(line: LineID(rawValue: 1), direction: .outbound)))]
+        case .trip(let trip?):
+            var otherLine = trip
+            otherLine.line += 1
+            var otherWay = trip
+            otherWay.direction = DirectionAlongLine(trip.direction.direction == .outbound ? .inbound : .outbound)
+            return [.trip(nil), .trip(otherLine), .trip(otherWay)]
+        case .demand(let daily, let hourly):
+            var shifted = hourly
+            shifted.append(shifted.removeFirst())
+            var moved = hourly
+            if let peak = hourly.indices.max(by: { hourly[$0] < hourly[$1] }), hourly[peak] > 0 {
+                moved[peak] -= 1
+                moved[(peak + 1) % 24] += 1
+            }
+            return [.demand(daily: daily + 1, hourly: hourly), .demand(daily: daily, hourly: shifted), .demand(daily: daily, hourly: moved)]
+                .filter { $0 != .demand(daily: daily, hourly: hourly) }
+        case .groups(let groups):
+            var wrong: [ObservationAnswer] = [.groups(groups + [WaitingGroupSummary(WaitingGroup(
+                line: LineID(rawValue: 9), direction: .outbound, destination: StationID(rawValue: 9), since: .zero, count: 1
+            ))])]
+            if let first = groups.first {
+                var bigger = first
+                bigger.count += 1
+                var later = first
+                later.since += 1
+                wrong += [.groups(Array(groups.dropFirst())), .groups([bigger] + groups.dropFirst()), .groups([later] + groups.dropFirst())]
+            }
+            if groups.count > 1, groups.reversed() != groups { wrong.append(.groups(groups.reversed())) }
+            return wrong
+        case .ledger(let ledger):
+            var wrong: [ObservationAnswer] = []
+            for key in [\LedgerSummary.released, \.waiting, \.overflowed, \.abandoned] {
+                var changed = ledger
+                changed[keyPath: key] += 1
+                wrong.append(.ledger(changed))
+            }
+            return wrong
         case .platformTracks(let tracks):
             var wrong: [ObservationAnswer] = [.platformTracks(tracks + [[GridPosition(x: 99, y: 99)]])]
             if let first = tracks.first {
@@ -663,7 +723,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 19,
+              "schemaVersion": 20,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -701,7 +761,8 @@ final class GoldenScenarioTests: XCTestCase {
                   { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }
                 ],
                 "network": { "nodes": [], "edges": [], "platforms": [] },
-                "trafficControl": false
+                "trafficControl": false,
+                "passengers": []
               }
             }
             """#
@@ -715,7 +776,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1282,6 +1343,67 @@ final class GoldenScenarioTests: XCTestCase {
         for json in malformed {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
         }
+    }
+
+    /// Schema 20: station demand, its result, and the passenger
+    /// observations.
+    func testPassengerStepsDecode() throws {
+        let station = { (id: Int) in StationID(rawValue: id) }
+        var hourly = Array(repeating: Int64(0), count: 24)
+        hourly[8] = 1
+        let hourlyJSON = "[" + hourly.map(String.init).joined(separator: ", ") + "]"
+        let group = WaitingGroup(line: LineID(rawValue: 1), direction: .inbound, destination: station(1), since: GameTime(minutes: 539), count: 3)
+        let steps: [(String, GoldenScenario.Step)] = [
+            (#"{"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "residential", "dailyTrips": 1}}, "expect": {"result": "ok"}}"#,
+             .command(.setStationDemand(station(1), StationDemand(kind: .residential, dailyTrips: 1)), expect: .ok)),
+            (#"{"command": {"type": "setStationDemand", "station": 2, "demand": {"kind": "scenic", "dailyTrips": -1}}, "expect": {"result": "invalidStationDemand"}}"#,
+             .command(.setStationDemand(station(2), StationDemand(kind: .scenic, dailyTrips: -1)), expect: .rejected(.invalidStationDemand))),
+            (#"{"command": {"type": "setStationDemand", "station": 2, "demand": null}, "expect": {"result": "ok"}}"#,
+             .command(.setStationDemand(station(2), nil), expect: .ok)),
+            (#"{"observe": {"type": "passengerTrip", "from": 1, "to": 2}, "expect": {"found": true, "trip": {"line": 1, "direction": "outbound"}}}"#,
+             .observe(.passengerTrip(from: station(1), to: station(2)), expect: .trip(TripSummary(PassengerTrip(line: LineID(rawValue: 1), direction: .outbound))))),
+            (#"{"observe": {"type": "passengerTrip", "from": 1, "to": 1}, "expect": {"found": false}}"#,
+             .observe(.passengerTrip(from: station(1), to: station(1)), expect: .trip(nil))),
+            (#"{"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 1, "hourly": \#(hourlyJSON)}}"#,
+             .observe(.demand(from: station(1), to: station(2)), expect: .demand(daily: 1, hourly: hourly))),
+            (#"{"observe": {"type": "waitingPassengers", "station": 2}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 1, "since": 539, "count": 3}]}}"#,
+             .observe(.waitingPassengers(station(2)), expect: .groups([WaitingGroupSummary(group)]))),
+            (#"{"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 5, "waiting": 3, "overflowed": 2, "abandoned": 0}}}"#,
+             .observe(.passengerLedger(station(2)), expect: .ledger(LedgerSummary(PassengerLedger(released: 5, waiting: 3, overflowed: 2, abandoned: 0))))),
+        ]
+        for (json, expected) in steps {
+            XCTAssertEqual(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), expected, json)
+        }
+        let malformed = [
+            #"{"command": {"type": "setStationDemand", "station": 1}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setStationDemand", "demand": null}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "airport", "dailyTrips": 1}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "office"}}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "office", "dailyTrips": 1.5}}, "expect": {"result": "ok"}}"#,
+            #"{"observe": {"type": "passengerTrip", "from": 1}, "expect": {"found": false}}"#,
+            #"{"observe": {"type": "passengerTrip", "from": 1, "to": 2}, "expect": {"found": true}}"#,
+            #"{"observe": {"type": "passengerTrip", "from": 1, "to": 2}, "expect": {"found": false, "trip": {"line": 1, "direction": "outbound"}}}"#,
+            #"{"observe": {"type": "passengerTrip", "from": 1, "to": 2}, "expect": {"found": true, "trip": {"line": 1, "direction": "up"}}}"#,
+            #"{"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 1, "hourly": [1]}}"#,
+            #"{"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 1}}"#,
+            #"{"observe": {"type": "waitingPassengers", "station": 1}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 2, "since": 0}]}}"#,
+            #"{"observe": {"type": "waitingPassengers", "station": 1}, "expect": {"ledger": {"released": 0, "waiting": 0, "overflowed": 0, "abandoned": 0}}}"#,
+            #"{"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 0, "waiting": 0, "overflowed": 0}}}"#,
+        ]
+        for json in malformed {
+            XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
+        }
+        // A station's passengers in the final state spell out "demand",
+        // null for none.
+        XCTAssertThrowsError(try JSONDecoder().decode(
+            PassengerSummary.self, from: Data(#"{"station": 1, "waiting": [], "released": 0, "overflowed": 0, "abandoned": 0}"#.utf8)
+        ))
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                PassengerSummary.self, from: Data(#"{"station": 1, "demand": null, "waiting": [], "released": 0, "overflowed": 0, "abandoned": 0}"#.utf8)
+            ),
+            PassengerSummary(station: 1, demand: nil, waiting: [], released: 0, overflowed: 0, abandoned: 0)
+        )
     }
 
     func testMalformedLineStepsAreRejectedRatherThanGuessed() {

@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），再做 U、V、W2。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）已實作，再做 U、V、W2。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -342,7 +342,7 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
 **之後的實作順序**（依實際的相依關係，不是字母順序；T 已實作）：
 
 1. W1 ✅：行駛曲線的計算核心，照 `buildProfile` 翻譯。參考最完整，也不依賴其他 Stage。
-2. **G1**：第一個能玩的經營閉環（見下面的 [G1](#g1--第一個能玩的經營閉環)）。
+2. **G1**：第一個能玩的經營閉環（見下面的 [G1](#g1--第一個能玩的經營閉環)）。G1a ✅，接著 G1b、G1c。
    - T 已經保證兩台車不會同時用同一段軌道，乘客不需要 U。
    - `Ci/` 的參考在乘客、需求與票價上最完整。
 3. U-min：movement authority 的最小穩定契約。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。可以和 G1 對調。
@@ -415,10 +415,22 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 - **依賴方向**：遵守 ARCHITECTURE 的「GameCore 內部的依賴方向」。乘客只讀車站、線路、服務、停站與執行進度的查詢，不讀軌道、預約或列車的移動。
 - **參考**：每一部分開工前照規則讀 `Ci/` 的相關程式，PR 附對照表。城市的土地使用與成長是 gap：`Ci/` 的需求來自真實人口資料與伺服器算好的起訖，伺服器的程式不在快照裡。人口資料依 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md#來源與使用方式) 的規則可以匯入，但 G1 先不做。
 - **預計拆成幾個 PR**：
-  - G1a：需求、釋出、排隊與守恆；
+  - G1a ✅：需求、釋出、排隊與守恆（ARCHITECTURE 決策 34）；
   - G1b：上下車與容量；
   - G1c：票價、帳本與畫面。
 - **不做**：城市成長、轉乘、路徑選擇、票價彈性、貸款、依等待時間重新選路。
+
+### G1a — 需求、釋出、排隊與守恆 ✅
+
+照 `Ci/` 的 `buildStationFlowPresetCurves`、`metroSpawnPassengersFromDispatchRuntime` 與 `_metroAdmitDispatchPassengers` 移植，全部改成整數（ARCHITECTURE 決策 34）。
+
+- **需求**：`setStationDemand` 設定車站的類型（住宅、辦公、商業、景點）與每天的旅次（0 到 1,000,000），`nil` 清除；免費。
+- **每天與每小時的旅次**：起點一天的旅次分給同一條線路能到、自己有需求的車站，依它們的旅次；再依一天的形狀（參考的 `PEAK_FACTOR`）× 起點的出發曲線 × 迄點的到達曲線分到 24 小時。兩次都用最大餘數法，合計完全精確。參考的基數是伺服器算好的 OD，快照裡沒有，這是 gap。
+- **釋出**：每個基本步長一開始，每一對依這一小時與下一小時內插釋出這一分鐘的份，保留不到一人的餘數（存檔）；任何連續 1440 分鐘正好釋出一天的旅次。同時發生的依（分鐘、起點、迄點）的順序。
+- **排隊**：依線路、方向、迄點與分鐘成組，先來的在前；一站最多 4000 人（參考的 500 × 8），放不下的記進溢出。
+- **守恆**：每一站 `released = 等車 + overflowed + abandoned`；線路刪除或改停靠而不再載某一組時，那一組記進 `abandoned`。存檔驗證、每個 campaign 的不變量都檢查。
+- **沒有需求時行為不變**：既有 golden 的預期值與 property digest 不變；golden schema v20 新增 `setStationDemand`、`invalidStationDemand`、四種乘客的觀察、最終狀態的 `passengers`，以及手算的 `station-demand.json`。
+- **還沒有**：上下車（G1b）；票價、帳本與畫面（G1c）。
 
 ## Phase 5 — Passenger simulation
 

@@ -87,6 +87,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.lines.map(Self.summary), final.lines, name)
             XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
             XCTAssertEqual(model.trafficControl, final.trafficControl, name)
+            XCTAssertEqual(model.passengerSummaries, final.passengers, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -135,6 +136,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .addTrackPlatform(let station, let edge, let start, let end): error = model.addTrackPlatform(station, on: edge, from: start, to: end)
         case .removeTrackPlatform(let station, let edge, let start): error = model.removeTrackPlatform(station, on: edge, from: start)
         case .setTrafficControl(let enabled): error = model.setTrafficControl(enabled)
+        case .setStationDemand(let id, let demand): error = model.setStationDemand(id, demand)
         }
         return error.map { .rejected($0) } ?? .ok
     }
@@ -220,6 +222,19 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .resources(model.heldResources(of: id))
         case .routeHolder(let id):
             return .holder(model.trainHoldingRoute(of: id))
+        case .passengerTrip(let origin, let destination):
+            return .trip(model.passengerTrip(from: origin.rawValue, to: destination.rawValue).map {
+                TripSummary(PassengerTrip(line: LineID(rawValue: $0.line), direction: $0.outbound ? .outbound : .inbound))
+            })
+        case .demand(let origin, let destination):
+            return .demand(
+                daily: model.dailyTrips(from: origin.rawValue, to: destination.rawValue),
+                hourly: model.hourlyTrips(from: origin.rawValue, to: destination.rawValue)
+            )
+        case .waitingPassengers(let id):
+            return .groups(model.waitingGroups(at: id.rawValue))
+        case .passengerLedger(let id):
+            return .ledger(LedgerSummary(model.ledger(of: id.rawValue)))
         }
     }
 

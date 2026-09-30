@@ -149,4 +149,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// same track (Stage T): the first train, in ID order, whose track meets
     /// an earlier train's, and the earliest train it meets.
     case trainsShareTrack(TrainID, TrainID)
+    /// A station starts 0 to ``StationDemand/maximumDailyTrips`` trips a day
+    /// (G1a).
+    case invalidStationDemand
 }

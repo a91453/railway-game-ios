@@ -112,6 +112,8 @@ struct ReferenceWorld: Equatable {
     var nextNetworkEdge = 1
     /// Decision 32: traffic control.
     var trafficControl = false
+    /// Decision 34: the stations' demand, queues and counts.
+    var passengers = ReferencePassengers()
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -191,7 +193,7 @@ struct ReferenceWorld: Equatable {
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
             && lhs.networkNodes == rhs.networkNodes && lhs.networkEdges == rhs.networkEdges
             && lhs.nextNetworkNode == rhs.nextNetworkNode && lhs.nextNetworkEdge == rhs.nextNetworkEdge
-            && lhs.trafficControl == rhs.trafficControl
+            && lhs.trafficControl == rhs.trafficControl && lhs.passengers == rhs.passengers
     }
 
     // MARK: - Geometry
@@ -654,6 +656,8 @@ struct ReferenceWorld: Equatable {
         // journey, and a trip from an idle train's place, stay the same.
         var memo = DispatchMemo()
         for _ in 0..<steps {
+            // Decision 34: passengers first, from the minute's demand.
+            releasePassengers()
             for l in lines.indices {
                 dispatch(l, memo: &memo)
             }

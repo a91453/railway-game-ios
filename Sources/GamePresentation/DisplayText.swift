@@ -294,6 +294,9 @@ extension GameError {
             "Train #\(id.rawValue) holds that track under traffic control. Wait for it to clear the route."
         case .trainsShareTrack(let first, let second):
             "Trains #\(first.rawValue) and #\(second.rawValue) need the same track, so traffic control can't be turned on. Move one of them first."
+        case .invalidStationDemand:
+            // Money's text is only the digits, grouped by thousands.
+            "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day."
         }
     }
 }
