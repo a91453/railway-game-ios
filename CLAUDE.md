@@ -16,6 +16,19 @@ timetables to stages: raw timetable data stays out of the repository (only
 converted scenario data, with attribution), and live data never feeds the
 simulation.
 
+Reference check (every new Stage). The owner's web reference material is
+kept in the private repository `a91453/railway-reference-private` (`Ci/` and
+`Railway/`). At the start of a session, attach it read-only with `add_repo`
+(access `read`) and clone it outside this repository, for example to
+`/home/claude/railway-reference-private`. If it cannot be attached, say so
+and do not guess. Before designing a Stage, read the parts of it that
+concern that Stage (`docs/WEB_REFERENCE_STUDY.md` and
+`docs/TIMETABLE_DATA_STUDY.md` say which subsystems map to which Stage).
+The PR description lists what was taken from which reference file, and what
+is Claude's own design because the reference has nothing on it. Never copy
+anything from it into this repository: no files, code, data, assets or
+quoted contents; Swift rewrites only.
+
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
 - `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project
