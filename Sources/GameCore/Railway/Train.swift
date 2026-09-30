@@ -173,11 +173,11 @@ extension Train: Codable {
     /// numbers) instead of `"trail"` when its body reaches beyond its head's
     /// edge; without the key, which is also how trains saved before Stage S3
     /// read, it has none, and an explicit `null` is rejected. A train on the
-    /// network with a grid trail, one on the grid with trail edges, one on
-    /// the network with a body at offset 0 (see ``TrainPosition``), and one
-    /// on the network with a service (stations serve the grid only until
-    /// Stage S4) are rejected; whether its edges exist and its body fits
-    /// them is checked by the ``GameWorld`` decoder.
+    /// network with a grid trail, one on the grid with trail edges, and one
+    /// on the network with a body at offset 0 (see ``TrainPosition``) are
+    /// rejected; whether its edges exist and its body fits them is checked
+    /// by the ``GameWorld`` decoder. Since Stage S5 a train on the network
+    /// may run a service.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -206,10 +206,10 @@ extension Train: Codable {
             )
         }
         if case .onEdge(_, let offset)? = position {
-            guard trail.isEmpty, length == 0 || offset > 0, execution == nil else {
+            guard trail.isEmpty, length == 0 || offset > 0 else {
                 throw DecodingError.dataCorruptedError(
                     forKey: .position, in: container,
-                    debugDescription: "Train \(id.rawValue) on the track network has a grid trail, a body at offset 0 or a service."
+                    debugDescription: "Train \(id.rawValue) on the track network has a grid trail or a body at offset 0."
                 )
             }
             guard trailEdges.allSatisfy({ ($0.networkNumber ?? 0) >= 1 }) else {

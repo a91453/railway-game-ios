@@ -145,7 +145,14 @@ extension ReferenceWorld {
             if from == calls[n - 1] { (position, body) = Self.turnedWithBody(position, body, length: length) }
             guard let route = route(from: position, toStation: line.stops[to], length: length) else { return nil }
             let units = Int64(route.count) * Self.linkLength
-            legs.append(LineLeg(from: from, to: to, route: route, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
+            // Decision 31: a leg keeps its path as links from the node ahead.
+            var node = Self.ahead(position).0
+            let links = route.map { next -> TrackTraversal in
+                defer { node = next }
+                return TrackTraversal.link(from: node, to: next)
+            }
+            let path = TrainPath(traversals: links, end: nil, distance: units)
+            legs.append(LineLeg(from: from, to: to, path: path, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
             if route.count >= 1 {
                 let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
                 let arrived = TrainPosition.atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)

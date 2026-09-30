@@ -1,6 +1,9 @@
 // Service line journeys (Phase 4 Stage Q2a). A line is plan data; what its
 // trains would take, and how often they could run, is derived here from the
 // map on every query and never stored, like connectivity, routes and stops.
+// Since Phase 4.5 Stage S5 a journey is driven on the grid or on the track
+// network by the same rules: each leg is a TrainPath and takes its exact
+// distance at the line's rate (ARCHITECTURE decision 31).
 // The rules port the web reference's service planning to whole minutes
 // (docs/WEB_REFERENCE_STUDY.md): the round trip is every leg out and back
 // plus a dwell at every call between the ends and a longer one at each end;
@@ -15,19 +18,28 @@ public struct LineLeg: Hashable, Sendable {
     public let from: Int
     /// The index, in the line's stops, of the call the leg reaches.
     public let to: Int
-    /// The continuation the leg takes, as ``GameWorld/route(from:toStation:)``
-    /// gives it from where the previous leg ended; empty when the train is
-    /// already at the next call's station (a platform both share).
-    public let route: [GridPosition]
-    /// Whole minutes the leg takes at the line's rate: its links times
-    /// ``TrainPosition/linkLength`` divided by the rate, rounded up.
+    /// The path the leg takes (Stage S5), as
+    /// ``GameWorld/path(from:toStation:length:)`` gives it from where the
+    /// previous leg ended: links on the grid, edges to a platform's berth on
+    /// the track network. No traversals and no distance when the train is
+    /// already where it stops for the next call (a platform both share).
+    public let path: TrainPath
+    /// Whole minutes the leg takes at the line's rate: the path's distance
+    /// divided by the rate, rounded up.
     public let minutes: Int64
 
-    public init(from: Int, to: Int, route: [GridPosition], minutes: Int64) {
+    public init(from: Int, to: Int, path: TrainPath, minutes: Int64) {
         self.from = from
         self.to = to
-        self.route = route
+        self.path = path
         self.minutes = minutes
+    }
+
+    /// On the grid, the continuation the leg takes: the tiles its links
+    /// lead to, as ``GameWorld/route(from:toStation:length:)`` gives it.
+    /// Empty on the track network.
+    public var route: [GridPosition] {
+        path.traversals.compactMap(\.tileAhead)
     }
 }
 
@@ -37,7 +49,8 @@ public struct LineLeg: Hashable, Sendable {
 /// pattern's calls.
 public struct LineJourney: Hashable, Sendable {
     /// Where the journey starts: at a platform of the first call, facing the
-    /// way it leaves.
+    /// way it leaves; on the track network, at a berth of one of its
+    /// platforms (Stage S5).
     public let start: TrainPosition
     /// The legs out, then the legs back: `2 × (calls − 1)` of them.
     public let legs: [LineLeg]
@@ -111,18 +124,23 @@ extension GameWorld {
     /// index `pattern`, as a train would drive it on this map; `nil` if the
     /// line or pattern does not exist or some leg has no route.
     ///
-    /// The journey starts at a platform of the first call facing one of the
-    /// four directions. From there each leg is the route
-    /// ``route(from:toStation:)`` finds to the next call's station, starting
-    /// where the leg before ended; stops a pattern does not call at are not
-    /// aimed for. At the last call the train turns round where it stands, as
-    /// ``reverseTrain(_:)`` would, and comes back the same way through the
-    /// calls in reverse order. Of the starts (every platform of the first
-    /// call, in ``platforms(of:)`` order, each facing north, east, south and
-    /// west in turn) whose whole round trip can be driven, the one with the
-    /// shortest round trip is chosen, the first in that order among equals.
+    /// The journey starts at a platform of the first call, as a train of one
+    /// car. From there each leg is the path
+    /// ``path(from:toStation:length:)`` finds to the next call's station,
+    /// starting where the leg before ended; stops a pattern does not call at
+    /// are not aimed for. At the last call the train turns round where it
+    /// stands, as ``reverseTrain(_:)`` would, and comes back the same way
+    /// through the calls in reverse order. The starts are every grid
+    /// platform of the first call, in ``platforms(of:)`` order, each facing
+    /// north, east, south and west in turn; then (Stage S5) every platform it
+    /// has on the track network, in order along the track, at its berth going
+    /// forward and then at its berth going back (see ``TrackPlatform``). Of
+    /// those whose whole round trip can be driven, the one with the shortest
+    /// round trip is chosen, the first in that order among equals. A journey
+    /// that starts on the grid stays on the grid, and one on the network on
+    /// the network.
     ///
-    /// Pure. Costs up to sixteen drives of the service, each one route
+    /// Pure. Costs one drive of the service per start, each one route
     /// search per leg (see ``route(from:to:)``).
     public func lineJourney(_ id: LineID, pattern: Int? = nil) -> LineJourney? {
         guard let line = line(id: id), let service = line.service(pattern) else { return nil }
@@ -134,13 +152,16 @@ extension GameWorld {
     /// finds it.
     func journey(of line: ServiceLine, service: Int) -> LineJourney? {
         let calls = line.calls(ofService: service)
+        let first = line.stops[calls[0]]
+        let starts = platforms(of: first).flatMap { platform in TrackDirection.allCases.map { TrainPosition.atNode(platform, heading: $0) } }
+            + berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
         var best: LineJourney?
-        for platform in platforms(of: line.stops[calls[0]]) {
-            for heading in TrackDirection.allCases {
-                guard let journey = drive(line, calling: calls, from: .atNode(platform, heading: heading)) else { continue }
-                if best == nil || journey.roundTripMinutes < best!.roundTripMinutes {
-                    best = journey
-                }
+        for start in starts {
+            guard let journey = drive(line, calling: calls, from: TrainPlacement(position: start, trail: [], trailEdges: [], length: 0)) else {
+                continue
+            }
+            if best == nil || journey.roundTripMinutes < best!.roundTripMinutes {
+                best = journey
             }
         }
         return best
@@ -210,14 +231,15 @@ extension GameWorld {
     /// from where it stands at the first call: as it faces, or turned round
     /// first (with its head where its tail was, for a train of several
     /// cars) when only that can be driven or its round trip is shorter.
-    /// `nil` if neither can be driven, or the train is not placed.
+    /// `nil` if neither can be driven, or the train is not placed. On the
+    /// grid or the track network alike (Stage S5): the train's length
+    /// decides which platforms it can stop at and where its head is once it
+    /// has turned round.
     func trip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
-        guard let position = train.position else { return nil }
+        guard let placement = train.placement else { return nil }
         let calls = line.calls(ofService: service)
-        let length = train.length
-        let ahead = drive(line, calling: calls, from: position, trail: train.trail, length: length)
-        let reversed = Self.reversed(position, trail: train.trail, length: length)
-        let turned = drive(line, calling: calls, from: reversed.position, trail: reversed.trail, length: length)
+        let ahead = drive(line, calling: calls, from: placement)
+        let turned = drive(line, calling: calls, from: turnedRound(placement))
         if let turned, ahead.map({ turned.roundTripMinutes < $0.roundTripMinutes }) ?? true {
             return LineTrip(turnsFirst: true, journey: turned)
         }
@@ -228,38 +250,34 @@ extension GameWorld {
     /// stops), driven from `start`, or `nil` if a leg has no route (or,
     /// beyond any real map, the minutes would overflow).
     ///
-    /// A train `length` long with trail `trail` at `start` (Stage S2) turns
-    /// round with its head where its tail was, and pulls along each
-    /// station's platforms as ``route(from:toStation:length:)`` takes it.
-    /// The start is a node (a train is sent out stopped at a platform), and
-    /// a train's length is whole links, so every leg starts at a node.
-    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPosition, trail: [GridPosition] = [], length: Int64 = 0) -> LineJourney? {
+    /// A train of several cars (Stage S2) turns round with its head where
+    /// its tail was, and each leg takes it where
+    /// ``path(from:toStation:length:)`` stops a train that long: on the grid
+    /// pulled along each station's platforms, on the track network (Stage
+    /// S5) at a berth of a platform it fits. Each leg's minutes are its
+    /// exact distance at the line's rate, rounded up; on the grid every leg
+    /// starts at a node (a train is sent out stopped at a platform, and its
+    /// length is whole links), so that is 1024 a link.
+    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> LineJourney? {
         let stops = line.stops
         let farEnd = calls[calls.count - 1]
         let order = calls + calls.dropLast().reversed()
-        var position = start
-        var trail = trail
+        var placement = start
         var legs: [LineLeg] = []
         var minutes = ServiceLine.terminalDwellMinutes * 2 + ServiceLine.dwellMinutes * Int64(2 * (calls.count - 2))
         for (from, to) in zip(order, order.dropFirst()) {
             if from == farEnd {
                 // The far end: turn round before coming back.
-                (position, trail) = Self.reversed(position, trail: trail, length: length)
+                placement = turnedRound(placement)
             }
-            guard let route = route(from: position, toStation: stops[to], length: length) else { return nil }
-            let distance = Int64(route.count) * TrainPosition.linkLength
-            let legMinutes = distance / line.rate + (distance % line.rate == 0 ? 0 : 1)
+            guard let path = path(from: placement.position, toStation: stops[to], length: placement.length) else { return nil }
+            let legMinutes = path.distance / line.rate + (path.distance % line.rate == 0 ? 0 : 1)
             let (total, overflow) = minutes.addingReportingOverflow(legMinutes)
             guard !overflow else { return nil }
             minutes = total
-            legs.append(LineLeg(from: from, to: to, route: route, minutes: legMinutes))
-            if let last = route.last {
-                let before = route.count >= 2 ? route[route.count - 2] : position.ahead!.node
-                let arrived = TrainPosition.atNode(last, heading: TrackDirection(from: before, to: last)!)
-                trail = Self.trail(after: position, trail: trail, to: arrived, entered: route[...], length: length)
-                position = arrived
-            }
+            legs.append(LineLeg(from: from, to: to, path: path, minutes: legMinutes))
+            placement = self.placement(placement, after: path)
         }
-        return LineJourney(start: start, legs: legs, roundTripMinutes: minutes)
+        return LineJourney(start: start.position, legs: legs, roundTripMinutes: minutes)
     }
 }
