@@ -42,13 +42,13 @@
 | 內容 | 性質 | 移植 |
 | --- | --- | --- |
 | `rail-3d/physical/*.js`，以及 `index.html` 裡的函式與常數 | 作者自己的程式與平衡數值 | 可以，照原樣翻譯 |
-| `network.json`、`metro-network.json` | 從 OpenStreetMap 導出（檔內標示 ODbL-1.0） | 不移植 |
-| `display-profiles.json`、`level-profiles.json` | OSM 加上 DEM 與國土測繪中心的橋隧幾何 | 不移植 |
-| `dispatch.json` | 由 OSM 路徑與真實班表導出的結果 | 資料不移植，只移植格式的語義（`holds`、`lengthM`、`conflictPolicy`） |
-| `data/tra_track_sections.json`、`tra_run_profiles.json`、`tra_pass_obs.json` 等 | 真實路線與觀測資料 | 不移植；觀測資料也不接進模擬 |
+| `network.json`、`metro-network.json` | 從 OpenStreetMap 導出（檔內標示 ODbL-1.0） | 可以使用，遵守 ODbL 的標示與分享義務；這次還沒移植 |
+| `display-profiles.json`、`level-profiles.json` | OSM 加上 DEM 與國土測繪中心的橋隧幾何 | 可以使用，遵守各來源的授權義務；這次還沒移植 |
+| `dispatch.json` | 由 OSM 路徑與真實班表導出的結果 | 可以使用，遵守 ODbL 的義務；V 會先移植格式的語義（`holds`、`lengthM`、`conflictPolicy`） |
+| `data/tra_track_sections.json`、`tra_run_profiles.json`、`tra_pass_obs.json` 等 | 真實路線與觀測資料 | 可以使用；接進模擬時，依 TIMETABLE_DATA_STUDY 的規則在明確時點記錄成世界的輸入；這次還沒移植 |
 | `PERF_RULES` 以車名比對、`SPEED_ZONES`、`AFR_TURNBACKS` | 綁定真實車種或地名的資料表 | 機制可以移植；表的內容對虛擬地圖沒有意義，見 gap |
 
-`dispatch.json` 的統計，只為了說明規模，不移植：
+`dispatch.json` 的統計，用來說明規模：
 
 - 共 1,270 份計畫（台鐵 1,004、高鐵 214、林鐵 52），`conflictPolicy` 是 `"scheduled-hold"`。
 - 有等待的計畫 48 份；非零的出發等待 59 筆，最長 184 秒。
@@ -112,13 +112,13 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- | --- |
 | `index.html` `updateBlockHolds`（8856 行），常數 `BLOCK_GAP_KM = 0.4`、`BLOCK_GAP_MIN_KM = 0.02`、`BLOCK_GAP_GROW = 10/3600`、`BLOCK_CAP_SEC = 120`、`BLOCK_MIN_V = 5/3600`、`BLOCK_AT_STOP_KM = 0.1`、`BLOCK_SNAP_SEC = 300`；`blockClearance3d`：min(0.4 km, 兩車編組長度的平均) | 同線同向的列車依位置排序。後車離前車太近時，它的**顯示時間**延後（最多 120 秒），距離門檻逐步回到 0.4 km；停在站上的車當作障礙物 | 列車互不阻擋 | U：movement authority 用預約的資源；跟車距離可以當作授權終點前的保留距離 | 距離：km × 64000 → 單位；時間：秒 | **呈現** + **gap**：它在畫面每一格執行，結果隨畫格間隔（`dSim`）改變。它延後的是顯示位置，不是模擬。移進 GameCore 就改變了它的角色，要作者決定 |
-| `motion.js` `sample` | 依時間取樣位置：`arrSec + holds[i].arrival`、`depSec + holds[i].departure`；跨午夜；交接班次 | 位置由 `advance` 推進 | 不移植 | — | **呈現**（WEB_PORT_READINESS 已註明：宿主只插值） |
+| `motion.js` `sample` | 依時間取樣位置：`arrSec + holds[i].arrival`、`depSec + holds[i].departure`；跨午夜；交接班次 | 位置由 `advance` 推進 | 不進 GameCore（Web 宿主的畫面可以沿用） | — | **呈現**（WEB_PORT_READINESS 已註明：宿主只插值） |
 
 ### Stage V：待避、交會、月台分配與排定的等待
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- | --- |
-| `dispatch.json` 的 `holds[i] = {arrival, departure}` 與 `departureHolds`；`motion.js` `record` 的套用方式 | 排定的等待：第 i 站的到達與出發各自加上一個秒數，不自動往後傳遞（預設 `arrival` = 前一站的出發等待） | 決策 20 的出發閘門：`departure(i) ≤ now` 才出發 | V：閘門改成 `departure(i) + hold(i)` | 秒 → 分鐘：無條件進位，才不會早走 | faithful（語義）；等待的數值由 V 的規劃產生，參考的資料不移植 |
+| `dispatch.json` 的 `holds[i] = {arrival, departure}` 與 `departureHolds`；`motion.js` `record` 的套用方式 | 排定的等待：第 i 站的到達與出發各自加上一個秒數，不自動往後傳遞（預設 `arrival` = 前一站的出發等待） | 決策 20 的出發閘門：`departure(i) ≤ now` 才出發 | V：閘門改成 `departure(i) + hold(i)` | 秒 → 分鐘：無條件進位，才不會早走 | faithful（語義）；等待的數值由 V 的規劃產生，參考的資料這次沒有移植 |
 | `index.html` `inferMeetPassTimes` / `inferMeetRun`（8435–8563 行），常數 `MEET_HEADWAY_SEC = 300`、`MEET_NEAR_SEC = 1800` | 單線交會：在兩個停靠站之間的一段跑段裡，挪動通過站的通過時刻，讓對向車先到或先開。對向車在站上至少停 30 秒（終點站除外）；安全間隔 m = 30 秒，或 min(30, ⌊停留 ÷ 3⌋)；挪動不超過 300 秒；每段最多 8 輪，依挪動量、再依站序取最小；挪動後用 `reanchorRunProfile` 重建曲線 | 單雙線：`parallelTracks`、`lineTrackCounts`（S1）；時刻表沒有「有時刻的通過站」 | V：`Railway/Dispatcher.swift` 的交會推估 | 秒；距離單位 | faithful（演算法）+ **gap**：我們的時刻表以分鐘計，沒有有時刻的通過站；它依賴 W 的曲線 |
 | `index.html` `planSameDirectionOvertakes`（8642 行）、`overtakeRunBuildable`、`resolveTraTraffic`（8716 行），常數 `OVERTAKE_LOOKAHEAD_KM = 25`、`OVERTAKE_CLEAR_SEC = 30`、`OVERTAKE_MAX_WAIT_SEC = 600` | 同向待避：找出在相鄰兩個共同車站之間先後順序對調的一對車（後車追越前車）。往回 25 km 內找前車的一個通過站，條件是前車領先至少 `30 + v/b` 秒；前車在那裡停到後車出發後 30 秒，最多等 600 秒；兩段曲線都要建得出來。整個流程先做交會，再做最多 8 輪待避 | Q3 的快車與慢車；列車互相穿過 | V：`Railway/Dispatcher.swift` 的待避推估 | 秒；km × 64000 → 單位；v/b 以 W1 的整數性能計算 | faithful；依賴 W1（`buildProfile`） |
 | `plan-binding.js` `createPlanBinding` | 班表綁定實體路徑：完全相同 → 只改時刻 → 同車次改點 → 借同系統別班的路徑 → 分段接力借用（動態規劃：型態不符最少、段數最少、key 穩定）；`templateEligible: false` 的股道不借給別班 | 每次出發都重新求路（S5），同線班次不共用路徑 | V：同一條線路的班次共用各段的路徑 | — | 部分 faithful：「同線共用路徑、限定車種的股道不借」可以移植；比對真實班表改版的部分對虛擬地圖沒有意義，是 **gap** |
@@ -132,7 +132,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `index.html` `profTimeToProg`、`profProgToTime`（8315、8333 行）；`timing.js` `profileProgress`、`segmentTime` | 時間 → 里程與里程 → 時間：分四段的解析式，反解用平方根 | 沒有 | W1：`RunningCurve.distance(at:)`、`RunningCurve.time(at:)` | 同上 | faithful + 機械 |
 | `index.html` `PERF_DEFAULT`、`PERF_HSR`、`PERF_DR1000`、`PERF_BY_TYPE`、`PERF_RULES`、`resolvePerf`、`speedCapOf`（8082–8109 行） | 車種性能：a、b（km/h/s）、v（km/h）、備用的 aAlt、bAlt、惰行 {c, ρ}；依車名或車種選擇 | 只有 rate | W1：`TrainPerformance` 的預設值，數值照抄 | 千分之一 km/h/s、km/h、千分之一 | 數值 faithful；**gap**：我們的列車沒有車名或車種，用哪一組要作者決定 |
 | `index.html` `assignRunProfiles`（8367 行） | 跑段是兩個停靠站之間（通過站不切段）；通過站的時刻由 `profProgToTime` 推導；依序改用 bAlt、aAlt；都建不出來就等速 | 線路的一段 = ⌈距離 ÷ rate⌉ | W2：`LineJourney` 的各段時間 | 秒 → 分鐘 | faithful；**gap**：參考的 T 來自班表，我們的班表由線路推導（見 gap 分析 1） |
-| `index.html` `buildObsProfile`（8247 行） | 通過實測時刻點的單調三次 Hermite 曲線，速度上限 `VS_MID`、`VS_END = 0.85 × VS_MID` | 沒有 | 不移植 | — | **gap**：要用觀測資料，不接進模擬 |
+| `index.html` `buildObsProfile`（8247 行） | 通過實測時刻點的單調三次 Hermite 曲線，速度上限 `VS_MID`、`VS_END = 0.85 × VS_MID` | 沒有 | 之後的 W | — | 可以移植；需要觀測資料，資料要在明確時點記錄成世界的輸入。W1 還沒移植 |
 | `index.html` `SPEED_ZONES`、`runSpeedZones`、`speedZoneKnots`、`zoneProfileOk`、`zoneNatural`（8110–8212 行） | 綁定地名的限速區段；在曲線上插入節點，讓區段內不超速 | 沒有；ARCHITECTURE 決策 29 說曲線限速要由取樣推導 | 之後的 W | km/h | 機制 faithful；**gap**：區段資料是真實地名；我們要由曲率推導區段。`Ci/` 的 `MIN_CURVE_RADIUS_M` 在快照中沒有使用處 |
 | `index.html` `trainSeg`、`segProg`；`motion.js` `runOf`、`runBetween` | 依時間求目前所在的站間與比例 | 移動 kernel 每分鐘走 rate | W2：移動改依曲線 | 毫秒 → 分鐘的取樣 | faithful 的是曲線；逐分鐘推進是 GameCore 的機械換算 |
 
@@ -162,7 +162,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 4. **車種性能怎麼選。** `PERF_RULES` 依真實車名（自強、區間、PP、DR1000 等）比對。遊戲的列車沒有車名或車種。W1 先把數值表照抄成具名的預設，列車帶哪一組要作者決定。
 5. **跟車規則的角色。** `updateBlockHolds` 是畫面層、隨畫格改變的顯示延後。U 若要採用它的距離（0.4 km、兩車長度的平均），要以基本步長重新表達；若 U 只用預約的資源，這組常數就只給畫面用。
 6. **沒有號誌與閉塞。** 兩個網站都沒有號誌機、固定閉塞或聯鎖。U 的授權終點（到下一站、或到下一個可以停車的地方）是 gap，照 ARCHITECTURE 決策 29 第 12 點與 PR #31 的語義處理，並在 PR 裡列出。
-7. **限速區段與觀測曲線。** 參考的限速區段是真實地名，觀測曲線要用實測資料，兩者都不移植。曲率限速要另外由我們的幾何推導，這是 gap。
+7. **限速區段與觀測曲線。** 參考的限速區段綁定真實地名，觀測曲線要用實測資料；兩者都可以移植，W1 還沒做。虛擬地圖上的曲率限速參考沒有，要由我們的幾何推導，這是 gap。
 8. **通過站。** 參考的通過站有推導出的通過時刻，我們的 Q3 快車通過站沒有時刻。V 的交會推估需要它。
 
 ## 建議的實作順序

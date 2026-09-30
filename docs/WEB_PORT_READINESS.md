@@ -5,7 +5,7 @@
 這是把**我們自己的 Swift GameCore** 編譯成 Wasm 的準備，不是移植網站：
 
 - 主要產品是原生的 iPhone／iPad 遊戲。
-- 不用 WKWebView 包作者的網站，也不在 App 或瀏覽器宿主裡執行網站的 JavaScript。
+- 不用 WKWebView 把作者的網站包成 App（作者 2026-09 的決定：要原生地玩遊戲）。
 - 作者網站的邏輯照 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md) 的 faithful-port 規則翻成 Swift，進 GameCore。Web 宿主與原生 App 跑的是同一份核心。
 
 ## 已有的基礎
