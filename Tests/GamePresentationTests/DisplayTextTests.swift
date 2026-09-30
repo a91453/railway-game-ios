@@ -92,6 +92,9 @@ final class ErrorMessageTests: XCTestCase {
             .unknownLinePattern(2): "The line has no pattern #3.",
             .invalidStationTile(GridPosition(x: 4, y: 2)): "A station can only grow onto an empty tile beside one of its tiles, not (4, 2).",
             .invalidTrainLength: "A train has 1 to 16 cars.",
+            .trackReserved(TrainID(rawValue: 3)): "Train #3 holds that track under traffic control. Wait for it to clear the route.",
+            .trainsShareTrack(TrainID(rawValue: 2), TrainID(rawValue: 3)):
+                "Trains #2 and #3 need the same track, so traffic control can't be turned on. Move one of them first.",
         ]
 
         for (error, message) in messages {

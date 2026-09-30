@@ -99,6 +99,12 @@ struct TrainControls: View {
             if let service = session.world.trainServiceStatus(of: train.id) {
                 serviceStatus(service)
             }
+            // Under traffic control: which train holds the route it waits for.
+            if let wait = session.world.routeWaitText(of: train.id) {
+                Label(wait, systemImage: "hourglass")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.orange)
+            }
         }
         .accessibilityElement(children: .combine)
     }

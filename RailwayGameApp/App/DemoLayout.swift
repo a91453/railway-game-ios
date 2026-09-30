@@ -110,13 +110,36 @@ enum DemoLayout {
 
         try buildLoop(in: &world)
         try buildStructures(in: &world)
+        try buildLocal(in: &world)
+    }
+
+    /// Traffic control (Phase 4.6 Stage T): Local stands at Hill's platform
+    /// facing south, due to leave for Central at minute 1 and back every
+    /// hour. The train sent along the main line (see ``sendTrain(in:)``)
+    /// takes its whole route, the four-way junction included, until it
+    /// reaches the buffer stop, so Local waits for it to clear the route and
+    /// its panel says which train it waits for.
+    private static func buildLocal(in world: inout GameWorld) throws(GameError) {
+        guard let hill = world.station(at: GridPosition(x: 5, y: 1)), let central = world.station(at: GridPosition(x: 1, y: 3)) else {
+            preconditionFailure("Hill and Central are built first")
+        }
+        let local = try world.purchaseTrain(named: "Local")
+        try world.placeTrain(local.id, at: .atNode(GridPosition(x: 5, y: 2), heading: .south))
+        try world.setTrainMovementRate(local.id, to: 256)
+        try world.setTrainTimetable(local.id, to: [
+            ScheduledStop(station: hill.id, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: central.id, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 25), reverses: true),
+            ScheduledStop(station: hill.id, arrival: GameTime(minutes: 45), departure: GameTime(minutes: 50), reverses: true),
+        ], repeatingEvery: 60)
+        try world.startTrainService(local.id)
     }
 
     /// Track off the ground (Phase 4.5 Stage S4): a viaduct 512 up (8 m)
     /// across the loop, and in the south a line that runs from the ground
     /// through a portal into a tunnel falling at 1 in 25 to 512 down, with
-    /// surface track crossing over the deep part. A three-car train heads
-    /// into the tunnel.
+    /// surface track crossing over the deep part. The new game's cash buys
+    /// three trains, so the tunnel has none: the third is Local, which shows
+    /// traffic control (see ``buildLocal(in:)``).
     private static func buildStructures(in world: inout GameWorld) throws(GameError) {
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 12 * 1_024, y: 7_680, z: 512))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: 22 * 1_024, y: 7_680, z: 512))
@@ -126,18 +149,12 @@ enum DemoLayout {
         let portal = try world.buildTrackNode(at: WorldCoordinate(x: 8 * 1_024, y: 16 * 1_024))
         let deep = try world.buildTrackNode(at: WorldCoordinate(x: 8 * 1_024 + 12_800, y: 16 * 1_024, z: -512))
         let end = try world.buildTrackNode(at: WorldCoordinate(x: 28 * 1_024 + 512, y: 16 * 1_024, z: -512))
-        let approach = try world.buildTrackEdge(from: start, to: portal)
-        let falling = try world.buildTrackEdge(from: portal, to: deep, structure: .tunnel)
-        let level = try world.buildTrackEdge(from: deep, to: end, structure: .tunnel)
+        try world.buildTrackEdge(from: start, to: portal)
+        try world.buildTrackEdge(from: portal, to: deep, structure: .tunnel)
+        try world.buildTrackEdge(from: deep, to: end, structure: .tunnel)
         let north = try world.buildTrackNode(at: WorldCoordinate(x: 25 * 1_024, y: 13 * 1_024))
         let south = try world.buildTrackNode(at: WorldCoordinate(x: 25 * 1_024, y: 20 * 1_024))
         try world.buildTrackEdge(from: north, to: south)
-
-        let train = try world.purchaseTrain(named: "Mole")
-        try world.setTrainCars(train.id, to: 3)
-        try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: approach, direction: .forward), offset: 4_096))
-        try world.setTrainContinuation(train.id, along: [falling, level].map { TrackTraversal(edge: $0, direction: .forward) })
-        try world.setTrainMovementRate(train.id, to: 256)
     }
 }
 #endif
