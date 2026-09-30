@@ -1,17 +1,20 @@
 // Station stops. A station is not track (see TrackConnectivity.swift), so
-// trains stop beside it: on the track tiles next to the station's tile, its
-// platforms. Like connectivity, platforms are derived from the map on every
-// query and never stored, so the next query sees any track or station built
-// or removed since.
+// trains stop beside it: on the grid, on the track tiles next to the
+// station's tile, its platforms. Like connectivity, platforms are derived
+// from the map on every query and never stored, so the next query sees any
+// track or station built or removed since. On the track network (Stage S5,
+// ARCHITECTURE decision 31) a station's platforms are its TrackPlatforms,
+// stretches of edges kept in the railway network.
 //
 // A train is stopped at a station when its journey ends at one of the
-// station's platforms: it stands at the centre of the platform tile with no
-// continuation left. The movement kernel never moves such a train by itself
-// (see TrainMovement), so it stays stopped until a command gives it
+// station's platforms: on the grid it stands at the centre of the platform
+// tile with no continuation left; on the network its path is spent and its
+// head is on the platform. The movement kernel never moves such a train by
+// itself (see TrainMovement), so it stays stopped until a command gives it
 // somewhere to go or takes it off the track, or its timetable service gives
-// it a route when a departure comes. Being stopped is derived from
-// the train's position and movement and the map, like being blocked; it is
-// not stored.
+// it a route when a departure comes. Being stopped is derived from the
+// train's position and movement and the map, like being blocked; it is not
+// stored.
 
 extension GameWorld {
     /// The track tiles where trains stop for the station `id`: the track
@@ -101,7 +104,9 @@ extension GameWorld {
     /// first). For a train of one car (length 0) that is no further.
     ///
     /// Pure, and costs what ``route(from:to:)`` costs: it explores only track
-    /// reachable from `start`.
+    /// reachable from `start`. For the grid only; services and lines ask
+    /// ``path(from:toStation:length:)``, which gives this route on the grid
+    /// and the route to a platform's berth on the track network (Stage S5).
     public func route(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> [GridPosition]? {
         let platforms = platforms(of: id)
         guard isOnTrack(start), !platforms.isEmpty, let (node, heading) = start.ahead else { return nil }
@@ -139,8 +144,18 @@ extension GameWorld {
     /// A train of several cars that turns round where it stands beside a
     /// station with its whole length has its head at a platform of the
     /// station again; one whose platform is too short has its head off it.
+    ///
+    /// On the track network (Stage S5) its whole body, from head to tail,
+    /// lies on one platform of the station: on the head's edge, within the
+    /// platform's stretch (see ``trackPlatformsAlongWholeTrain(_:)``). A
+    /// train stopped with its head on a platform and its tail beyond it is
+    /// stopped there, but not beside it with its whole length.
     public func stationsBesideWholeTrain(_ id: TrainID) -> [StationID] {
         guard let train = train(id: id) else { return [] }
+        if case .onEdge? = train.position {
+            let alongside = trackPlatformsAlongWholeTrain(id)
+            return stationsStoppedAt(by: id).filter { station in alongside.contains { $0.station == station } }
+        }
         return stationsStoppedAt(by: id).filter { station in
             let platforms = platforms(of: station)
             return train.trail.allSatisfy(platforms.contains)
@@ -169,9 +184,26 @@ extension GameWorld {
     /// Several stations share a platform when their tiles are all next to
     /// it. Empty for an unknown or unplaced train and for a train that is not
     /// stopped at any station. Reads at most five tiles.
+    ///
+    /// On the track network (Stage S5) a train is stopped at a station when
+    /// its path is spent (no edges left, its head where the path ends; see
+    /// ``TrainMovement/end``) and its head is on one of the station's
+    /// platforms on the edge it is on: its distance from the edge's `from`
+    /// node is within the platform's `start...end`, ends included. A train
+    /// at a node is on the edge it arrived along, so a platform that starts
+    /// at that node on the next edge does not count. A train passing a
+    /// platform, or standing on one with its path not spent (it would run on
+    /// to the end of its edge), is not stopped there. Platforms of two
+    /// stations that meet where the head is are both stopped at. Scans the
+    /// platform list once.
     public func stationsStoppedAt(by id: TrainID) -> [StationID] {
-        guard let train = train(id: id),
-              case .atNode(let tile, _)? = train.position,
+        guard let train = train(id: id) else { return [] }
+        if case .onEdge? = train.position {
+            guard let (edge, chainage) = standingPoint(of: train) else { return [] }
+            let stations = network.platforms(on: edge).filter { $0.start <= chainage && chainage <= $0.end }.map(\.station)
+            return Set(stations).sorted()
+        }
+        guard case .atNode(let tile, _)? = train.position,
               train.movement.remainingContinuation.isEmpty
         else { return [] }
         let stations = TrackDirection.allCases.compactMap { direction -> StationID? in
@@ -188,10 +220,25 @@ extension GameWorld {
     /// ``stationsStoppedAt(by:)`` would list `id` for it. Takes the train by
     /// value, so services can ask about the train they are updating.
     func isStopped(_ train: Train, at id: StationID) -> Bool {
+        if case .onEdge? = train.position {
+            guard let (edge, chainage) = standingPoint(of: train) else { return false }
+            return network.platforms(on: edge).contains { $0.station == id && $0.start <= chainage && chainage <= $0.end }
+        }
         guard case .atNode(let tile, _)? = train.position,
               train.movement.remainingContinuation.isEmpty,
               let station = station(id: id)
         else { return false }
         return station.tiles.contains { TrackDirection(from: tile, to: $0) != nil }
+    }
+
+    /// Where a train on the track network stands once its path is spent
+    /// (Stage S5): its edge and its head's distance along it from the
+    /// edge's `from` node. `nil` for a train on the grid or unplaced, and
+    /// for one with edges left or short of where its path ends.
+    func standingPoint(of train: Train) -> (edge: TrackEdgeID, chainage: Int64)? {
+        guard case .onEdge(let traversal, let offset)? = train.position, train.movement.remainingEdges.isEmpty,
+              let edge = network.edge(traversal.edge), offset == (train.movement.end ?? edge.length)
+        else { return nil }
+        return (traversal.edge, traversal.direction == .forward ? offset : edge.length - offset)
     }
 }

@@ -530,6 +530,7 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].movement.continuation = []
         trains[index].movement.edges = []
         trains[index].movement.cursor = 0
+        trains[index].movement.end = nil
     }
 
     // MARK: - Train movement
@@ -576,14 +577,16 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidContinuation``.
     ///
     /// A train on the track network follows edges, not tiles: an empty list
-    /// clears its continuation, and any other list is refused (see
-    /// ``setTrainContinuation(_:along:)``).
+    /// clears its continuation, including where it stops (``TrainMovement/end``),
+    /// so it runs on to the end of its edge; any other list is refused (see
+    /// ``setTrainContinuation(_:along:stoppingAt:)``).
     public mutating func setTrainContinuation(_ id: TrainID, to nodes: [GridPosition]) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         guard let (node, heading) = position.ahead else {
             guard nodes.isEmpty else { throw .invalidContinuation }
             trains[index].movement.edges = []
             trains[index].movement.cursor = 0
+            trains[index].movement.end = nil
             return
         }
         guard TrainMovement.isPath(nodes, from: node, heading: heading, mayPass: { canPass(from: $0, facing: $1, to: $2) }) else {
@@ -606,14 +609,27 @@ public struct GameWorld: Equatable, Sendable {
     /// kept as the nodes the links lead to (``TrainMovement/continuation``),
     /// on the network as its edges (``TrainMovement/edges``).
     ///
+    /// On the network the path may stop part of the way along its last edge
+    /// (Stage S5): `end` is how far along it the head stops, measured the
+    /// way the train travels it (see ``TrainMovement/end``); `nil`, the
+    /// default, runs to the end of that edge. The last edge is the last
+    /// traversal, or the train's own edge when there are none. `end` must be
+    /// below that edge's length, above 0 after a traversal, and not behind
+    /// the train on its own edge; with no traversals and `end` where the
+    /// head is, the train stands where it is. A path from
+    /// ``path(from:toStation:length:)`` goes in unchanged, as
+    /// `along: path.traversals, stoppingAt: path.end`.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``,
     ///   ``GameError/trainServiceActive(_:)``, or
-    ///   ``GameError/invalidContinuation`` (a step a train may not take, or
-    ///   the other kind of track).
-    public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal]) throws(GameError) {
+    ///   ``GameError/invalidContinuation`` (a step a train may not take, the
+    ///   other kind of track, or an `end` that does not fit; on the grid,
+    ///   any `end`).
+    public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
-        guard case .onEdge(let traversal, _) = position else {
+        guard case .onEdge(let traversal, let offset) = position else {
+            guard end == nil else { throw .invalidContinuation }
             // On the grid: the node each link leads to, from the node ahead.
             var node = position.ahead!.node
             var nodes: [GridPosition] = []
@@ -632,9 +648,13 @@ public struct GameWorld: Equatable, Sendable {
             guard transitions(after: arrival).contains(next) else { throw .invalidContinuation }
             arrival = next
         }
+        if let end {
+            guard end < network.edge(arrival.edge)!.length, end >= (traversals.isEmpty ? offset : 1) else { throw .invalidContinuation }
+        }
 
         trains[index].movement.edges = traversals.map(\.edge)
         trains[index].movement.cursor = 0
+        trains[index].movement.end = end
     }
 
     // MARK: - Timetables
@@ -1351,7 +1371,7 @@ public struct GameWorld: Equatable, Sendable {
                 // it is (Stage S3).
                 let travel = TrainMovement.travel(
                     along: traversal, offset: offset, length: network.edge(traversal.edge)!.length,
-                    distance: movement.rate, edges: movement.edges, cursor: movement.cursor,
+                    distance: movement.rate, edges: movement.edges, cursor: movement.cursor, end: movement.end,
                     enter: { networkEntry(after: $0, into: $1) }
                 )
                 guard travel.position != position || travel.cursor != movement.cursor,
@@ -1364,6 +1384,8 @@ public struct GameWorld: Equatable, Sendable {
                 trains[index].position = travel.position
                 if travel.cursor == movement.edges.count {
                     // Every edge has been entered: the continuation is spent.
+                    // Where the path ends (Stage S5) is now on the train's
+                    // own edge, and stays.
                     trains[index].movement.edges = []
                     trains[index].movement.cursor = 0
                 } else {
@@ -1742,6 +1764,12 @@ extension GameWorld: Codable {
             // the next number even after it was removed.
             guard train.movement.edges.allSatisfy({ ($0.networkNumber ?? .max) < network.nextEdgeNumber }) else {
                 return "Train \(train.id.rawValue)'s continuation names an edge that was never built."
+            }
+            // Stage S5: a path that stops part of the way along its last edge
+            // stops inside it (checked while that edge is still there).
+            if let end = train.movement.end, case .onEdge(let traversal, _)? = train.position,
+               let last = network.edge(train.movement.edges.last ?? traversal.edge), end >= last.length {
+                return "Train \(train.id.rawValue)'s path stops beyond the end of its last edge."
             }
             // The map's size never changes, so a node that was on the map
             // when the continuation was set still is.
