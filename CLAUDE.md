@@ -6,28 +6,22 @@ Instructions for Claude Code sessions in this repository.
 
 A native iPhone / iPad railway and city management game (long-term goal: gameplay
 depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
-Later stages draw on `docs/WEB_REFERENCE_STUDY.md`, a study of the owner's
-web transport game. Its logic may be ported by rewriting it in Swift under
-GameCore's rules (integers, determinism). Never commit the snapshot, its
-JavaScript or its assets: this repository is public, and the owner does not
-want them downloadable from it. Third-party code and assets in it are never
-ported. `docs/TIMETABLE_DATA_STUDY.md` maps concepts from real railway
-timetables to stages: raw timetable data stays out of the repository (only
-converted scenario data, with attribution), and live data never feeds the
-simulation.
+Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md).
+Port it faithfully: translate the owner's JavaScript function by function into
+Swift, keeping its formulas, constants, balance values, data tables, names and
+control flow. Do not redesign what the reference already does. GameCore's rules
+apply only as a mechanical conversion: decimals become fixed-point integers at a
+stated scale (e.g. money × 100), randomness becomes the seeded random in
+GameWorld; the formula stays the same. The owner's own code, data and text may
+be copied or committed here (e.g. under Reference/). Third-party code and assets
+(libraries, map tiles, fonts, icons, analytics) are never committed or ported.
+Where the reference has nothing for a feature, list it in the PR and ask the
+owner, or mark it as a gap. Raw timetable data stays out; live data never feeds
+the simulation.
 
-Reference check (every new Stage). The owner's web reference material is
-kept in the private repository `a91453/railway-reference-private` (`Ci/` and
-`Railway/`). At the start of a session, attach it read-only with `add_repo`
-(access `read`) and clone it outside this repository, for example to
-`/home/claude/railway-reference-private`. If it cannot be attached, say so
-and do not guess. Before designing a Stage, read the parts of it that
-concern that Stage (`docs/WEB_REFERENCE_STUDY.md` and
-`docs/TIMETABLE_DATA_STUDY.md` say which subsystems map to which Stage).
-The PR description lists what was taken from which reference file, and what
-is Claude's own design because the reference has nothing on it. Never copy
-anything from it into this repository: no files, code, data, assets or
-quoted contents; Swift rewrites only.
+Reference check (every new Stage): attach a91453/railway-reference-private
+read-only, read the files the Stage ports, and put a mapping table in the PR
+(reference file/function → Swift file/function, with any fixed-point scale).
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
