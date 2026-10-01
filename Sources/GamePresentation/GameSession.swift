@@ -171,6 +171,30 @@ public final class GameSession {
         }
     }
 
+    // MARK: - Economy
+
+    /// Switches the company between free play and management through
+    /// `GameWorld.setEconomyMode(_:)`. Managed, fares are charged and the
+    /// running costs settled every hour and day.
+    public func setEconomyMode(_ mode: EconomyMode) {
+        guard mode != world.accounts.mode else { return }
+        world.setEconomyMode(mode)
+        message = StatusMessage(
+            kind: .success,
+            text: mode == .management
+                ? "The company is managed: fares are charged and running costs settled from the next hour."
+                : "Free play: no fares or running costs."
+        )
+    }
+
+    /// Sets the network's fare rules through `GameWorld.setFareRules(_:)`.
+    public func setFareRules(_ rules: FareRules) {
+        perform { world throws(GameError) in
+            try world.setFareRules(rules)
+            return "Fares: \(rules.displayText)."
+        }
+    }
+
     // MARK: - Game loop
 
     /// Whether the real-time loop is currently advancing the world.

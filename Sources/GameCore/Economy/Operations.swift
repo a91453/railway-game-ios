@@ -1,0 +1,312 @@
+// Fares and running costs on the world (G1c, ARCHITECTURE decision 36),
+// ported from the owner's `Ci/` reference's legacy economy path
+// (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`):
+//
+// - a passenger pays once, as they board, the fare of the straight-line
+//   distance from their origin to their destination
+//   (`updateTrainAtStation`'s `fareTrips`, `metroEconomyAccrueHourlyFare`:
+//   `fareRevenue += Math.round(count × fare)`, in whole dollars);
+// - every departure of a line's train counts, with the distance to its
+//   next stop, the passengers on board and the seats
+//   (`metroEconomyAccrueDeparture`);
+// - each hour is settled into one row (`metroEconomySettleHourlyIfNeeded`):
+//   operating `round(75·departures + 42·train-km + 18·stations)`,
+//   maintenance `round(12·route-km + 9·train-km + 8·trains)`, in dollars;
+// - each day's end writes energy `round(220·route-km + 360·trains)` and
+//   staff `round(620·stations + 480·trains)`
+//   (`metroEconomySettleDailyForEndedDay`), with the balance allowed to go
+//   below zero.
+//
+// Nothing happens in the free economy mode, the default.
+
+extension GameWorld {
+    // MARK: - Commands
+
+    /// Sets the economy mode (see ``EconomyMode``). Becoming managed opens
+    /// the accounts now: the first hour is settled at the next full hour.
+    /// Switching to `free` keeps the accounts as they are; nothing is
+    /// accrued or settled until the mode is `management` again. Free.
+    public mutating func setEconomyMode(_ mode: EconomyMode) {
+        if mode == .management, accounts.mode != .management {
+            accounts.openedAt = clock.now
+        }
+        accounts.mode = mode
+        passengerPlan = PassengerPlanCache()
+    }
+
+    /// Sets the network's fare rules. From then on fares change demand
+    /// (see ``FareRules/demandFactor(fare:)``) while the company is managed.
+    /// Free.
+    ///
+    /// - Throws: ``GameError/invalidFareRules`` for rules
+    ///   ``FareRules/isValid`` refuses.
+    public mutating func setFareRules(_ rules: FareRules) throws(GameError) {
+        guard rules.isValid else { throw .invalidFareRules }
+        accounts.fareRules = rules
+        passengerPlan = PassengerPlanCache()
+    }
+
+    // MARK: - Queries
+
+    /// The fare a passenger from `origin` to `destination` pays: the rule's
+    /// fare for the straight-line distance between the stations, or 5 if
+    /// that is 0 or less. `nil` for the same station or an unknown one.
+    public func tripFare(from origin: StationID, to destination: StationID) -> Money? {
+        guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
+        return FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
+    }
+
+    /// The finance report's statements for `period`: the one containing
+    /// the current day and the one before.
+    public func financeReport(_ period: FinancePeriod) -> (current: FinanceSummary, previous: FinanceSummary) {
+        accounts.report(period, day: CompanyAccounts.floorDivide(clock.now.minutes, GameTime.minutesPerDay))
+    }
+
+    /// The square of the straight-line distance between two stations'
+    /// tiles, in world units (1024 to a tile).
+    func squaredDistance(from origin: StationID, to destination: StationID) -> Int64? {
+        guard let a = station(id: origin), let b = station(id: destination) else { return nil }
+        let dx = Int64(a.position.x - b.position.x) * TrainPosition.linkLength
+        let dy = Int64(a.position.y - b.position.y) * TrainPosition.linkLength
+        return dx * dx + dy * dy
+    }
+
+    /// How much of the pair's demand its fare keeps, in thousandths, or
+    /// `nil` while fares do not change demand: the company is free, or the
+    /// player never set fare rules.
+    func demandFactor(from origin: StationID, to destination: StationID) -> Int64? {
+        guard accounts.mode == .management, accounts.fareRules != nil, origin != destination,
+              let squared = squaredDistance(from: origin, to: destination)
+        else { return nil }
+        // The reference's demand reads the rule's fare, before the minimum.
+        return FareRules.demandFactor(fare: accounts.effectiveFareRules.fare(squaredDistance: squared))
+    }
+
+    // MARK: - Accrual
+
+    /// `count` passengers from `origin` to `destination` boarded: they pay
+    /// the fare now, in whole dollars (`Math.round(count × fare)`).
+    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID) {
+        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination) else { return }
+        accounts.pending.fareRevenue = accounts.pending.fareRevenue + Self.wholeDollars(count * fare.amount)
+        accounts.pending.fareTrips += count
+    }
+
+    /// A line's train left a stop for its next, `distance` world units
+    /// away, with `passengers` on board and `seats` rated.
+    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64) {
+        guard accounts.mode == .management else { return }
+        accounts.pending.departures += 1
+        accounts.pending.trainDistance += distance
+        accounts.pending.passengers += passengers
+        accounts.pending.seats += seats
+    }
+
+    /// `cents` rounded half up to whole dollars, in cents.
+    static func wholeDollars(_ cents: Int64) -> Money {
+        Money(CompanyAccounts.floorDivide(cents + 50, 100) * 100)
+    }
+
+    /// `numerator / denominator` dollars, rounded half up to whole dollars,
+    /// in cents: the reference's `Math.round` on a sum it computed in
+    /// floating point, here exactly.
+    static func roundedDollars(_ numerator: Int64, over denominator: Int64) -> Money {
+        Money(CompanyAccounts.floorDivide(2 * numerator + denominator, 2 * denominator) * 100)
+    }
+
+    // MARK: - Settlement
+
+    /// The network's fixed assets at the moment of a settlement: its
+    /// stations (each once, however many lines call there), its route
+    /// length (each line's own service, out to its far end, in world
+    /// units; 0 for one that cannot be driven) and its trains (each
+    /// service's most at any level).
+    struct FixedAssets {
+        let stations: Int64
+        let routeLength: Int64
+        let trains: Int64
+    }
+
+    func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
+        var stations: Set<StationID> = []
+        var length: Int64 = 0
+        var trains: Int64 = 0
+        for line in lines {
+            stations.formUnion(line.stops)
+            let journey: LineJourney?
+            if let known = memo.journeys[line.id]?[0] {
+                journey = known
+            } else {
+                journey = self.journey(of: line, service: 0)
+                memo.journeys[line.id, default: [:]][0] = journey
+            }
+            if let journey {
+                length += journey.legs.prefix(journey.legs.count / 2).reduce(0) { $0 + $1.path.distance }
+            }
+            for service in 0..<line.serviceCount {
+                let counts = service == 0 ? line.trainsInService : line.patterns[service - 1].trainsInService
+                trains += Int64(max(counts.peak, counts.offPeak, counts.low))
+            }
+        }
+        return FixedAssets(stations: Int64(stations.count), routeLength: length, trains: trains)
+    }
+
+    /// World units in a kilometre.
+    static let unitsPerKilometre: Int64 = 64_000
+
+    /// The settlements due at the start of the step from `now`: the hour
+    /// that ended, if `now` is on the hour, then the day that ended, if
+    /// `now` is midnight (the reference settles the hour before the day).
+    mutating func settleAccounts(at now: GameTime, memo: inout DispatchMemo) {
+        guard accounts.mode == .management, now.minutes % 60 == 0, let opened = accounts.openedAt, opened < now else { return }
+        accounts.openedAt = now
+        let assets = fixedAssets(memo: &memo)
+        settleHour(at: now, assets: assets)
+        if now.minutes % GameTime.minutesPerDay == 0 {
+            settleDay(endingBefore: now, assets: assets)
+        }
+    }
+
+    private mutating func settleHour(at now: GameTime, assets: FixedAssets) {
+        let pending = accounts.pending
+        let km = Self.unitsPerKilometre
+        // 75·departures + 42·train-km + 18·stations, over 64000.
+        let operating = Self.roundedDollars(
+            (75 * pending.departures + 18 * assets.stations) * km + 42 * pending.trainDistance, over: km
+        )
+        let maintenance = Self.roundedDollars(12 * assets.routeLength + 9 * pending.trainDistance + 8 * assets.trains * km, over: km)
+        accounts.pending = .empty
+        guard pending.fareRevenue > .zero || operating > .zero || maintenance > .zero else { return }
+        let breakdown = [
+            LedgerLine(item: .fareRevenue, amount: pending.fareRevenue),
+            LedgerLine(item: .operatingCost, amount: .zero - operating),
+            LedgerLine(item: .maintenanceCost, amount: .zero - maintenance),
+        ]
+        let amount = pending.fareRevenue - operating - maintenance
+        // The hour belongs to the day it ran in: the reference settles the
+        // hour that ends at midnight before the day turns.
+        let day = dayIndex(of: GameTime(minutes: now.minutes - 1))
+        write(LedgerEntry(kind: .hourlyNet, time: now, amount: amount, breakdown: breakdown, crowding: crowding()), day: day)
+    }
+
+    private mutating func settleDay(endingBefore now: GameTime, assets: FixedAssets) {
+        let km = Self.unitsPerKilometre
+        let time = GameTime(minutes: now.minutes - 1)
+        let day = dayIndex(of: time)
+        // Each part is rounded on its own; the total is the rounded sum, as
+        // in the reference, so they may differ by a dollar.
+        let routeEnergy = Self.roundedDollars(220 * assets.routeLength, over: km)
+        let trainEnergy = Money(360 * assets.trains * 100)
+        let energy = Self.roundedDollars(220 * assets.routeLength + 360 * assets.trains * km, over: km)
+        if energy > .zero {
+            write(LedgerEntry(
+                kind: .dailyEnergy, time: time, amount: .zero - energy,
+                breakdown: [LedgerLine(item: .routeEnergy, amount: .zero - routeEnergy), LedgerLine(item: .trainEnergy, amount: .zero - trainEnergy)]
+            ), day: day)
+        }
+        let staff = Money((620 * assets.stations + 480 * assets.trains) * 100)
+        if staff > .zero {
+            write(LedgerEntry(
+                kind: .dailyStaff, time: time, amount: .zero - staff,
+                breakdown: [
+                    LedgerLine(item: .stationStaff, amount: Money(-620 * assets.stations * 100)),
+                    LedgerLine(item: .trainStaff, amount: Money(-480 * assets.trains * 100)),
+                ]
+            ), day: day)
+        }
+    }
+
+    /// Writes `entry` and moves the balance by its amount, which may take
+    /// it below zero (`allowNegativeBalance`).
+    private mutating func write(_ entry: LedgerEntry, day: Int64) {
+        economy.settle(entry.amount)
+        accounts.record(entry, day: day)
+    }
+
+    func dayIndex(of time: GameTime) -> Int64 {
+        CompanyAccounts.floorDivide(time.minutes, GameTime.minutesPerDay)
+    }
+
+    /// The network's crowding now (see ``CrowdingMetrics``).
+    func crowding() -> CrowdingMetrics {
+        let waiting = passengers.map(\.waitingCount)
+        var full: Int64 = 0
+        var load: Int64 = 0
+        for entry in riders {
+            guard let train = train(id: entry.train) else { continue }
+            let count = entry.count
+            if count >= train.ratedCapacity { full += 1 }
+            load = max(load, (2_000 * count + train.ratedCapacity) / (2 * train.ratedCapacity))
+        }
+        return CrowdingMetrics(
+            crowdedStations: Int64(waiting.count { $0 > CrowdingMetrics.crowdedWaiting }), fullTrains: full,
+            maxWaiting: waiting.max() ?? 0, maxLoad: load
+        )
+    }
+
+    // MARK: - Validation
+
+    /// Why the accounts break a G1c rule, or `nil`: counts, amounts and the
+    /// balance are within bounds, rows are not dated after now and are
+    /// shaped as settlements write them, and days are in order, each once.
+    func accountsProblem() -> String? {
+        let pending = accounts.pending
+        let counts = [pending.fareTrips, pending.trainDistance, pending.passengers, pending.seats, pending.fareRevenue.amount]
+        guard counts.allSatisfy({ (0...Self.maximumHourly).contains($0) }), (0...Self.maximumDepartures).contains(pending.departures) else {
+            return "The hour's accrued counts are out of range."
+        }
+        guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
+        guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
+        guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
+        if let opened = accounts.openedAt {
+            guard opened <= clock.now else { return "The accounts cannot open after now." }
+        } else if accounts.mode == .management {
+            return "Managed accounts must say when they opened."
+        }
+        guard accounts.entries.count <= CompanyAccounts.keptEntries, accounts.days.count <= CompanyAccounts.keptDays else {
+            return "The accounts keep more rows or days than they may."
+        }
+        guard zip(accounts.days, accounts.days.dropFirst()).allSatisfy({ $0.day < $1.day }) else {
+            return "Day accounts must be listed once each, by ascending day."
+        }
+        let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
+            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost] }
+        guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
+        guard accounts.days.allSatisfy({ [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost].allSatisfy { $0 >= .zero } }) else {
+            return "Day accounts cannot be negative."
+        }
+        guard accounts.entries.allSatisfy(Self.isWellFormed) else {
+            return "A ledger row must have its kind's items, fares in and costs out, adding up to its amount."
+        }
+        return nil
+    }
+
+    /// Whether `entry` is shaped as settlements write it: its kind's items
+    /// in order, fares 0 or more and costs 0 or less, adding up to its
+    /// amount, with crowding (none of it negative) only on an hourly row.
+    static func isWellFormed(_ entry: LedgerEntry) -> Bool {
+        let items: [LedgerItem] = switch entry.kind {
+        case .hourlyNet: [.fareRevenue, .operatingCost, .maintenanceCost]
+        case .dailyEnergy: [.routeEnergy, .trainEnergy]
+        case .dailyStaff: [.stationStaff, .trainStaff]
+        }
+        guard entry.breakdown.map(\.item) == items,
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
+        else { return false }
+        guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }
+        return entry.kind == .hourlyNet
+            && [crowding.crowdedStations, crowding.fullTrains, crowding.maxWaiting, crowding.maxLoad].allSatisfy { (0...maximumAccrued).contains($0) }
+    }
+
+    /// The largest count or amount a save may hold: far beyond any game.
+    static let maximumAccrued: Int64 = 1 << 50
+    /// The largest an hour's count or fares may be, and its departures:
+    /// small enough that settling the hour, and a day of such hours, stays
+    /// within ``maximumAccrued``.
+    static let maximumHourly: Int64 = 1 << 40
+    static let maximumDepartures: Int64 = 1 << 30
+    /// The largest balance either way a save may hold, so that settling
+    /// can never overflow it.
+    static let maximumBalance: Int64 = 1 << 62
+}

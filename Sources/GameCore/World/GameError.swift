@@ -152,4 +152,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// A station starts 0 to ``StationDemand/maximumDailyTrips`` trips a day
     /// (G1a).
     case invalidStationDemand
+    /// Fare rules out of range, or distance steps that do not cover every
+    /// distance once from 0 with only the last open-ended (G1c; see
+    /// ``FareRules/isValid``).
+    case invalidFareRules
 }

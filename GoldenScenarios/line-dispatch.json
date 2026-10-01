@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "description": "Automatic dispatch on the line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1)-g(6,1), dead ends at both ends; Alpha(1,0) has platform b, Beta(3,0) d, Gamma(5,0) f. Main (Alpha, Gamma) runs all day, 2 trains at every level: round trip 4 + 4 minutes of travel and 2 + 2 at the ends, 12, so 6 minutes apart. assignTrain checks the train, the line, that the train is on no line and runs no service of its own; unassignTrain the train and that it is on a line; setLineTargetHeadways the line and targets of 2 to 1440. A line's train cannot be given a timetable or have a service started or stopped (trainOnLine). Each minute, before departures, a line sends out its first ready train (no service, placed, rate above 0, stopped at the first stop, able to drive the round trip as it faces or turned round, the shorter) when its window is open, its level runs trains, a headway has passed since its last dispatch and fewer of its trains run a service than the level runs. The trip's timetable leaves Alpha now, reaches Gamma 4 later, stays 2 and turns round, is back at Alpha 10 after leaving, turns round and ends there. Blue (facing east) goes at 0; Red (facing west, which cannot reach Gamma) goes at 6, turned round first. At 7 a 20-minute target at low: one train (12 / 20 rounded up), 20 minutes apart; peak keeps its count, 2 trains 6 apart. Blue is back at 10 and Red at 16, both turned east; the next due is 6 + 20 = 26, when Blue goes. Blue is taken off the line at 27 and finishes its trip as an ordinary service at 36; at 46 the line sends Red. Own runs its own service, waiting at Beta until 100, and cannot be assigned.",
   "initialState": {
     "mapWidth": 8,
@@ -343,6 +343,11 @@
     "network": { "nodes": [], "edges": [], "platforms": [] },
     "trafficControl": false,
     "passengers": [],
-    "riders": []
+    "riders": [],
+    "accounts": {
+      "mode": "free", "fareRules": null, "openedAt": null,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [], "days": []
+    }
   }
 }

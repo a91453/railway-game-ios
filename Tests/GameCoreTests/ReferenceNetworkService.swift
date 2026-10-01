@@ -203,9 +203,11 @@ extension ReferenceWorld {
         if isAtBerth(start, of: target) {
             var there = standing(start)
             there.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            departedDistance = 0
             return admit(there, at: i) == nil
         }
         guard let path = networkPathToStation(from: start.position!, station: target, length: Self.length(start)) else { return false }
+        departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
         off.cursor = 0

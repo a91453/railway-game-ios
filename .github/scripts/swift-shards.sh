@@ -44,7 +44,7 @@ classes_of() {
     campaigns-2) echo "SaveMutationTests" ;;
     campaigns-3) echo "ServicePropertyTests ContinuousTrackPropertyTests StationFacilityPropertyTests" ;;
     campaigns-4) echo "VerticalRailwayPropertyTests LineDispatchPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "TrafficControlPropertyTests LinePatternPropertyTests" ;;
+    campaigns-5) echo "TrafficControlPropertyTests LinePatternPropertyTests EconomyPropertyTests" ;;
     *) return 1 ;;
   esac
 }

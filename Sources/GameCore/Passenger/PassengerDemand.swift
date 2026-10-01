@@ -151,8 +151,20 @@ extension GameWorld {
         }
         let shares = Self.apportion(demand.dailyTrips, by: reached.map(\.weight))
         return zip(reached, shares).compactMap { reached, trips in
-            trips > 0 ? (reached.destination, trips, reached.trip) : nil
+            let trips = faredTrips(trips, from: origin, to: reached.destination)
+            return trips > 0 ? (reached.destination, trips, reached.trip) : nil
         }
+    }
+
+    /// `trips` as the fare between the pair leaves them (G1c, ARCHITECTURE
+    /// decision 36): times its ``FareRules/demandFactor(fare:)`` in
+    /// thousandths, rounded half up, while fares change demand (the
+    /// company is managed and the player has set fare rules); unchanged
+    /// otherwise. The reference scales the pair's hourly rate by the same
+    /// factor, so scaling the day scales every hour alike.
+    func faredTrips(_ trips: Int64, from origin: StationID, to destination: StationID) -> Int64 {
+        guard trips > 0, let factor = demandFactor(from: origin, to: destination) else { return trips }
+        return (trips * factor + 500) / 1_000
     }
 
     /// `trips` shared among the 24 hours (see ``hourlyDemand(from:to:)``).
@@ -249,7 +261,9 @@ extension GameWorld {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
             let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
-            for ((destination, trip), trips) in zip(reached, shares) where trips > 0 {
+            for ((destination, trip), shared) in zip(reached, shares) {
+                let trips = faredTrips(shared, from: record.station, to: destination.station)
+                guard trips > 0 else { continue }
                 flows.append(PassengerPlan.Flow(record: index, destination: destination.station, trip: trip))
                 hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
             }

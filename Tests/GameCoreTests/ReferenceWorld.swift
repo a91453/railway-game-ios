@@ -114,6 +114,11 @@ struct ReferenceWorld: Equatable {
     var trafficControl = false
     /// Decision 34: the stations' demand, queues and counts.
     var passengers = ReferencePassengers()
+    /// Decision 36: the company's accounts.
+    var accounts = ReferenceAccounts()
+    /// Decision 36: how far the last departure took its train, `nil` when
+    /// its service ended instead; set by the departures.
+    var departedDistance: Int64?
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -193,7 +198,7 @@ struct ReferenceWorld: Equatable {
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
             && lhs.networkNodes == rhs.networkNodes && lhs.networkEdges == rhs.networkEdges
             && lhs.nextNetworkNode == rhs.nextNetworkNode && lhs.nextNetworkEdge == rhs.nextNetworkEdge
-            && lhs.trafficControl == rhs.trafficControl && lhs.passengers == rhs.passengers
+            && lhs.trafficControl == rhs.trafficControl && lhs.passengers == rhs.passengers && lhs.accounts == rhs.accounts
     }
 
     // MARK: - Geometry
@@ -657,6 +662,8 @@ struct ReferenceWorld: Equatable {
         // journey, and a trip from an idle train's place, stay the same.
         var memo = DispatchMemo()
         for _ in 0..<steps {
+            // Decision 36: the hour and the day that ended are settled first.
+            settle(memo: &memo)
             // Decision 34: passengers first, from the minute's demand.
             releasePassengers()
             for l in lines.indices {
@@ -697,9 +704,14 @@ struct ReferenceWorld: Equatable {
             left += 1
             // Decision 35: the stop is served as soon as it is left.
             let leaving = service.stop
+            departedDistance = nil
             let atOnce = departOnce(i)
             if trains[i].service != service {
                 serveStop(i, stop: leaving)
+                // Decision 36: a line's train counts its departure.
+                if trains[i].service != nil, let distance = departedDistance {
+                    countDeparture(i, distance: distance)
+                }
             }
             guard atOnce else { return }
         }
@@ -750,9 +762,11 @@ struct ReferenceWorld: Equatable {
         let route = route(from: start, toStation: target, length: length)
         if case .atNode(let tile, _) = start, stations(beside: tile).contains(target), route == [] {
             leaving.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            departedDistance = 0
             return admit(leaving, at: i) == nil
         }
         guard let route else { return false }
+        departedDistance = Int64(route.count) * 1024
         leaving.continuation = route
         leaving.cursor = 0
         leaving.service = Service(stop: next.stop, waiting: false, cycle: next.cycle)

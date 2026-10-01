@@ -20,7 +20,7 @@ public struct GameWorld: Equatable, Sendable {
     /// Which service level each minute of the day has, for every line.
     public private(set) var serviceDay: ServiceDay
     public private(set) var clock: GameClock
-    public private(set) var economy: GameEconomy
+    public internal(set) var economy: GameEconomy
     /// The railway (Phase 4.5 Stage S3): the one record of all track, the
     /// grid's track pieces and the continuous network's nodes and edges.
     /// Empty in a new world.
@@ -42,6 +42,10 @@ public struct GameWorld: Equatable, Sendable {
     /// decision 35), by ascending ``TrainID``. Set by the passenger rules
     /// (`Boarding.swift`) only.
     public internal(set) var riders: [TrainRiders]
+    /// The company's accounts (G1c, ARCHITECTURE decision 36): its economy
+    /// mode and fare rules, the hour being accrued and the ledger. Free and
+    /// empty in a new world. Set by the economy rules (`Economy/`) only.
+    public internal(set) var accounts: CompanyAccounts
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -74,6 +78,7 @@ public struct GameWorld: Equatable, Sendable {
         self.isTrafficControlEnabled = false
         self.passengers = []
         self.riders = []
+        self.accounts = CompanyAccounts()
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -1351,6 +1356,7 @@ public struct GameWorld: Equatable, Sendable {
         // cost nothing.
         var release = remaining > 0 ? passengerRelease() : nil
         while remaining > 0 {
+            settleAccounts(at: clock.now, memo: &memo)
             if release != nil {
                 releasePassengers(at: clock.now, &release!)
             }
@@ -1365,11 +1371,16 @@ public struct GameWorld: Equatable, Sendable {
             if !dispatched, !departed, !moved, !arrived {
                 let wake = [basicStepsUntilNextDeparture(), basicStepsUntilNextDispatch(memo: &memo)].compactMap { $0 }.min()
                 let idle = min(remaining, wake ?? remaining)
-                if release != nil {
-                    // Releasing passengers changes no train (G1a), so the
-                    // steps skipped still release theirs, minute by minute.
+                if release != nil || accounts.mode == .management {
+                    // Releasing passengers (G1a) and settling the accounts
+                    // (G1c) change no train, so the steps skipped still do
+                    // theirs, minute by minute.
                     for step in 0..<idle {
-                        releasePassengers(at: GameTime(minutes: clock.now.minutes + step), &release!)
+                        let minute = GameTime(minutes: clock.now.minutes + step)
+                        settleAccounts(at: minute, memo: &memo)
+                        if release != nil {
+                            releasePassengers(at: minute, &release!)
+                        }
                     }
                 }
                 clock.advance(basicSteps: idle)
@@ -1602,7 +1613,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             guard case .granted(let train) = reserving(moved) else { break }
             trains[index] = train
-            departures.append(StopDeparture(train: train.id, stop: stop))
+            departures.append(StopDeparture(train: train.id, stop: stop, distance: departure.distance))
             changed = true
             if case .completes = departure { break }
         }
@@ -1618,16 +1629,27 @@ public struct GameWorld: Equatable, Sendable {
         /// It is already stopped at the next call's station, and waits
         /// there at once.
         case arrives(Train)
-        /// It sets off along the path to the next call.
-        case setsOff(Train)
+        /// It sets off along the path to the next call, `distance` world
+        /// units long.
+        case setsOff(Train, distance: Int64)
         /// There is no path to the next call: nothing changes.
         case noRoute
 
         /// The train as the departure leaves it; `nil` without a route.
         var train: Train? {
             switch self {
-            case .completes(let train), .arrives(let train), .setsOff(let train): train
+            case .completes(let train), .arrives(let train), .setsOff(let train, _): train
             case .noRoute: nil
+            }
+        }
+
+        /// How far the departure takes the train to its next call (G1c):
+        /// `nil` when the service ends instead.
+        var distance: Int64? {
+            switch self {
+            case .arrives: 0
+            case .setsOff(_, let distance): distance
+            case .completes, .noRoute: nil
             }
         }
     }
@@ -1659,7 +1681,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         follow(path, &moved)
         moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
-        return .setsOff(moved)
+        return .setsOff(moved, distance: path.distance)
     }
 
     // The service adapters that change a train (Stage S5; the others are in
@@ -1892,7 +1914,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders
+        case passengers, riders, accounts
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1936,6 +1958,7 @@ extension GameWorld: Codable {
         isTrafficControlEnabled = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
         passengers = container.contains(.passengers) ? try container.decode([StationPassengers].self, forKey: .passengers) : []
         riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
+        accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         for track in saved.tracks {
             network.lay(track)
         }
@@ -1986,6 +2009,9 @@ extension GameWorld: Codable {
         }
         if !riders.isEmpty {
             try container.encode(riders, forKey: .riders)
+        }
+        if !accounts.isPristine {
+            try container.encode(accounts, forKey: .accounts)
         }
     }
 
@@ -2181,7 +2207,7 @@ extension GameWorld: Codable {
                 return problem
             }
         }
-        return trafficProblem() ?? passengerProblem() ?? riderProblem()
+        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

@@ -53,7 +53,7 @@ final class TrackActionTests: XCTestCase {
 
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message?.kind, .failure)
-            XCTAssertEqual(session.message?.text, "Not enough cash: this costs 100 and you have 99.")
+            XCTAssertEqual(session.message?.text, "Not enough cash: this costs $ 1.00 and you have $ 0.99.")
         }
     }
 

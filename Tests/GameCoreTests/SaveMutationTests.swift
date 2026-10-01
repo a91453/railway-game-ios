@@ -1317,4 +1317,79 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 150, "only \(aimed) mutations aimed at riders")
         assertVolume(ridersLoaded > 20, "only \(ridersLoaded) worlds with riders loaded")
     }
+
+    /// G1c (decision 36): saves of managed companies with fare rules, hours
+    /// and days settled, mutated mostly in their accounts: refused, or
+    /// loaded as a world that keeps every invariant (open accounts, whole
+    /// dollars, rows shaped as written, days ascending) and keeps settling
+    /// under further commands without breaking one.
+    func testMutatedAccountsAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var ledgersLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.accountsMutation", cases: 10) { c in
+            let world = try EconomyPropertyTests.generateWorld(&c, operations: 30)
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in path.first.map { "\($0)" } == ".accounts" }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                let (mutated, described) = { () -> (Any?, String) in
+                    var text = ""
+                    let result = Self.replacing(path[...], in: json) { value in
+                        let (changed, what) = Self.mutation(
+                            of: value, addedKeys: ["fareRules", "openedAt", "crowding", "toMeters", "extra"], using: &c.random
+                        )
+                        text = what
+                        return changed
+                    }
+                    return (result, text)
+                }()
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                if !loaded.accounts.entries.isEmpty { ledgersLoaded += 1 }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation: KernelDifferentialTests.Operation = switch c.random.below(4) {
+                    case 0: .advance(c.random.element(of: [1, 59, 60, 61, 1_440]))
+                    case 1: .setFareRules(EconomyPropertyTests.fareRules(using: &c.random))
+                    case 2: .setEconomyMode(c.random.chance(1, in: 4) ? .free : .management)
+                    default: KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                    }
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.accountsMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at the accounts, \(ledgersLoaded) loaded with a ledger")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 50, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 150, "only \(aimed) mutations aimed at the accounts")
+        assertVolume(ledgersLoaded > 30, "only \(ledgersLoaded) worlds with a ledger loaded")
+    }
 }

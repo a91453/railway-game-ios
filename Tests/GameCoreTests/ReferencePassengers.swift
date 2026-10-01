@@ -151,7 +151,11 @@ extension ReferenceWorld {
         guard let own = passengers.demand[origin] else { return [] }
         let ordered = lines.sorted(by: { $0.id < $1.id })
         let reached = passengers.demand.keys.sorted().filter { passengers.demand[$0]!.trips > 0 && Self.trip(on: ordered, from: origin, to: $0) != nil }
-        return Array(zip(reached, Self.largestRemainder(own.trips, reached.map { passengers.demand[$0]!.trips })))
+        // Decision 36: the fare scales each pair's day once fares are set.
+        return zip(reached, Self.largestRemainder(own.trips, reached.map { passengers.demand[$0]!.trips })).map { destination, trips in
+            guard trips > 0, let factor = demandFactor(from: origin, to: destination) else { return (destination, trips) }
+            return (destination, (trips * factor + 500) / 1_000)
+        }
     }
 
     func dailyTrips(from origin: Int, to destination: Int) -> Int64 {
@@ -273,6 +277,7 @@ extension ReferenceWorld {
         var room = Int64(train.cars) * 320 * 11 / 10 - (passengers.riders[train.id] ?? [:]).values.reduce(0) { $0 + $1.values.reduce(0, +) }
         var skipped: Set<Int> = []
         var refused: Int64 = 0
+        var paid: [Int: Int64] = [:]
         while true {
             var best: Int?
             for (index, group) in queue.enumerated() where !skipped.contains(index) && group.line == line.id && group.outbound == outbound {
@@ -287,7 +292,12 @@ extension ReferenceWorld {
                 room -= taking
                 queue[index].count -= taking
                 passengers.riders[train.id, default: [:]][station, default: [:]][queue[index].destination, default: 0] += taking
+                paid[queue[index].destination, default: 0] += taking
             }
+        }
+        // Decision 36: each destination's boarders pay, rounded together.
+        for (destination, count) in paid {
+            chargeFare(count, from: station, to: destination)
         }
         queue.removeAll { $0.count == 0 }
         passengers.queue[station] = queue.isEmpty ? nil : queue

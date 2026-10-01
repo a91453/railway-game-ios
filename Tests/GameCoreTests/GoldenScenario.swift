@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 21
+    static let schemaVersion = 22
 
     var description: String
     var initialState: InitialState
@@ -146,7 +146,7 @@ extension GoldenScenario.Step: Decodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
-        case trip, daily, hourly, groups, ledger, riders
+        case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -306,6 +306,15 @@ extension GoldenScenario.Step: Decodable {
             case .riders:
                 try requireOnly([.riders], answering: "riders")
                 self = try .observe(observation, expect: .riders(expect.decode([RidingGroupSummary].self, forKey: .riders)))
+            case .tripFare:
+                try requireOnly([.found, .fare], answering: "tripFare")
+                self = try .observe(observation, expect: .fare(Self.found(expect, .fare, Int64.self)))
+            case .accounts:
+                try requireOnly([.accounts], answering: "accounts")
+                self = try .observe(observation, expect: .accounts(expect.decode(AccountsSummary.self, forKey: .accounts)))
+            case .financeReport:
+                try requireOnly([.report], answering: "financeReport")
+                self = try .observe(observation, expect: .report(expect.decode(ReportSummary.self, forKey: .report)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -379,6 +388,8 @@ enum ScenarioCommand: Equatable {
     case removeTrackPlatform(StationID, TrackEdgeID, start: Int64)
     case setTrafficControl(Bool)
     case setStationDemand(StationID, StationDemand?)
+    case setEconomyMode(EconomyMode)
+    case setFareRules(FareRules)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -466,6 +477,10 @@ enum ScenarioCommand: Equatable {
                 try world.setTrafficControl(enabled)
             case .setStationDemand(let id, let demand):
                 try world.setStationDemand(id, to: demand)
+            case .setEconomyMode(let mode):
+                world.setEconomyMode(mode)
+            case .setFareRules(let rules):
+                try world.setFareRules(rules)
             }
             return .ok
         } catch {
@@ -479,7 +494,7 @@ extension ScenarioCommand: Decodable {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
-        case profile, structure, start, end, enabled, demand
+        case profile, structure, start, end, enabled, demand, mode, rules
     }
 
     init(from decoder: any Decoder) throws {
@@ -622,6 +637,15 @@ extension ScenarioCommand: Decodable {
             }
             let demand = try container.decodeNil(forKey: .demand) ? nil : container.decode(DemandSummary.self, forKey: .demand).demand
             self = try .setStationDemand(container.decodeStation(forKey: .station), demand)
+        // Schema 22: the economy (G1c).
+        case "setEconomyMode":
+            let mode = try container.decode(String.self, forKey: .mode)
+            guard let value = EconomyMode(rawValue: mode) else {
+                throw DecodingError.dataCorruptedError(forKey: .mode, in: container, debugDescription: "Unknown economy mode \"\(mode)\".")
+            }
+            self = .setEconomyMode(value)
+        case "setFareRules":
+            self = try .setFareRules(container.decode(FareRulesSummary.self, forKey: .rules).rules)
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -757,6 +781,8 @@ extension StepOutcome: Codable {
             self = .rejected(.trainsShareTrack(TrainID(rawValue: ids[0]), TrainID(rawValue: ids[1])))
         case "invalidStationDemand":
             self = .rejected(.invalidStationDemand)
+        case "invalidFareRules":
+            self = .rejected(.invalidFareRules)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -898,6 +924,8 @@ extension StepOutcome: Codable {
             try container.encode([first.rawValue, second.rawValue], forKey: .trains)
         case .rejected(.invalidStationDemand):
             try container.encode("invalidStationDemand", forKey: .result)
+        case .rejected(.invalidFareRules):
+            try container.encode("invalidFareRules", forKey: .result)
         }
         // Fixtures name network nodes and edges by number; a grid tile or
         // link cannot reach these results through a fixture's commands, but
@@ -968,6 +996,9 @@ enum ScenarioObservation: Equatable {
     case waitingPassengers(StationID)
     case passengerLedger(StationID)
     case riders(TrainID)
+    case tripFare(from: StationID, to: StationID)
+    case accounts
+    case financeReport(FinancePeriod)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1057,6 +1088,12 @@ enum ScenarioObservation: Equatable {
             .ledger(LedgerSummary(world.passengerLedger(of: id)))
         case .riders(let id):
             .riders(world.riders(of: id).map(RidingGroupSummary.init))
+        case .tripFare(let origin, let destination):
+            .fare(world.tripFare(from: origin, to: destination)?.amount)
+        case .accounts:
+            .accounts(AccountsSummary(world.accounts))
+        case .financeReport(let period):
+            .report(ReportSummary(world.financeReport(period)))
         }
     }
 }
@@ -1064,7 +1101,7 @@ enum ScenarioObservation: Equatable {
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, from, to, train, station, line, gameMinutes, level, pattern, heading, cars
-        case edge, direction, distance, node
+        case edge, direction, distance, node, period
     }
 
     init(from decoder: any Decoder) throws {
@@ -1195,6 +1232,17 @@ extension ScenarioObservation: Decodable {
         // Schema 21: riders (G1b).
         case "riders":
             self = try .riders(container.decodeTrain(forKey: .train))
+        // Schema 22: the economy (G1c).
+        case "tripFare":
+            self = try .tripFare(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+        case "accounts":
+            self = .accounts
+        case "financeReport":
+            let period = try container.decode(String.self, forKey: .period)
+            guard let value = FinancePeriod(rawValue: period) else {
+                throw DecodingError.dataCorruptedError(forKey: .period, in: container, debugDescription: "Unknown period \"\(period)\".")
+            }
+            self = .financeReport(value)
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1264,6 +1312,9 @@ enum ObservationAnswer: Equatable {
     case groups([WaitingGroupSummary])
     case ledger(LedgerSummary)
     case riders([RidingGroupSummary])
+    case fare(Int64?)
+    case accounts(AccountsSummary)
+    case report(ReportSummary)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1272,7 +1323,7 @@ extension ObservationAnswer: Encodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
-        case trip, daily, hourly, groups, ledger, riders
+        case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1351,6 +1402,15 @@ extension ObservationAnswer: Encodable {
             try container.encode(ledger, forKey: .ledger)
         case .riders(let riders):
             try container.encode(riders, forKey: .riders)
+        case .fare(let fare?):
+            try container.encode(true, forKey: .found)
+            try container.encode(fare, forKey: .fare)
+        case .fare(nil):
+            try container.encode(false, forKey: .found)
+        case .accounts(let accounts):
+            try container.encode(accounts, forKey: .accounts)
+        case .report(let report):
+            try container.encode(report, forKey: .report)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1440,6 +1500,8 @@ struct WorldSummary: Codable, Equatable {
     /// The passengers riding each train that carries any, by ascending
     /// train (schema 21).
     var riders: [RiderSummary]
+    /// The company's accounts (schema 22).
+    var accounts: AccountsSummary
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1558,6 +1620,7 @@ struct WorldSummary: Codable, Equatable {
         riders = world.riders
             .map { RiderSummary(train: $0.train.rawValue, groups: $0.groups.map(RidingGroupSummary.init)) }
             .sorted { $0.train < $1.train }
+        accounts = AccountsSummary(world.accounts)
     }
 }
 
@@ -2972,5 +3035,302 @@ struct PlatformLevelSummary: Codable, Equatable {
         end = platform.end
         self.height = height
         self.structure = StructureName(structure)
+    }
+}
+
+// MARK: - Economy (schema 22)
+
+/// Fare rules as a fixture value (schema 22): `{"mode": "flat", "fare"}` or
+/// `{"mode": "distance", "bands": [{"fromMeters", "toMeters", "fare"}]}`,
+/// `toMeters` `null` for the open-ended step. Read as written: whether the
+/// rules are valid is GameCore's decision.
+struct FareRulesSummary: Codable, Equatable {
+    struct Band: Codable, Equatable {
+        var fromMeters: Int64
+        var toMeters: Int64?
+        var fare: Int64
+
+        init(fromMeters: Int64, toMeters: Int64?, fare: Int64) {
+            self.fromMeters = fromMeters
+            self.toMeters = toMeters
+            self.fare = fare
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case fromMeters, toMeters, fare
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            fromMeters = try container.decode(Int64.self, forKey: .fromMeters)
+            guard container.contains(.toMeters) else {
+                throw DecodingError.keyNotFound(CodingKeys.toMeters, DecodingError.Context(codingPath: container.codingPath, debugDescription: "\"toMeters\" is required; null for none."))
+            }
+            toMeters = try container.decodeNil(forKey: .toMeters) ? nil : container.decode(Int64.self, forKey: .toMeters)
+            fare = try container.decode(Int64.self, forKey: .fare)
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(fromMeters, forKey: .fromMeters)
+            try container.encode(toMeters, forKey: .toMeters)
+            try container.encode(fare, forKey: .fare)
+        }
+    }
+
+    var mode: String
+    var fare: Int64?
+    var bands: [Band]?
+
+    init(_ rules: FareRules) {
+        switch rules {
+        case .flat(let fare):
+            mode = "flat"
+            self.fare = fare.amount
+            bands = nil
+        case .distance(let bands):
+            mode = "distance"
+            fare = nil
+            self.bands = bands.map { Band(fromMeters: $0.fromMeters, toMeters: $0.toMeters, fare: $0.fare.amount) }
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, fare, bands
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try container.decode(String.self, forKey: .mode)
+        switch mode {
+        case "flat":
+            fare = try container.decode(Int64.self, forKey: .fare)
+            bands = nil
+            guard !container.contains(.bands) else { throw DecodingError.dataCorruptedError(forKey: .bands, in: container, debugDescription: "A flat fare has no bands.") }
+        case "distance":
+            bands = try container.decode([Band].self, forKey: .bands)
+            fare = nil
+            guard !container.contains(.fare) else { throw DecodingError.dataCorruptedError(forKey: .fare, in: container, debugDescription: "Distance fares have no single fare.") }
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .mode, in: container, debugDescription: "Unknown fare mode \"\(mode)\".")
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(mode, forKey: .mode)
+        if let fare { try container.encode(fare, forKey: .fare) }
+        if let bands { try container.encode(bands, forKey: .bands) }
+    }
+
+    var rules: FareRules {
+        if let bands {
+            return .distance(bands.map { FareBand(fromMeters: $0.fromMeters, toMeters: $0.toMeters, fare: Money($0.fare)) })
+        }
+        return .flat(Money(fare ?? 0))
+    }
+}
+
+/// The hour being accrued: `{"fareRevenue", "fareTrips", "departures",
+/// "trainDistance", "passengers", "seats"}`.
+struct PendingSummary: Codable, Equatable {
+    var fareRevenue: Int64
+    var fareTrips: Int64
+    var departures: Int64
+    var trainDistance: Int64
+    var passengers: Int64
+    var seats: Int64
+
+    init(fareRevenue: Int64, fareTrips: Int64, departures: Int64, trainDistance: Int64, passengers: Int64, seats: Int64) {
+        self.fareRevenue = fareRevenue
+        self.fareTrips = fareTrips
+        self.departures = departures
+        self.trainDistance = trainDistance
+        self.passengers = passengers
+        self.seats = seats
+    }
+
+    init(_ pending: HourlyAccrual) {
+        self.init(
+            fareRevenue: pending.fareRevenue.amount, fareTrips: pending.fareTrips, departures: pending.departures,
+            trainDistance: pending.trainDistance, passengers: pending.passengers, seats: pending.seats
+        )
+    }
+}
+
+/// A ledger row: `{"kind", "time", "amount", "breakdown": [{"item",
+/// "amount"}], "crowding"}`, `crowding` `{"crowdedStations", "fullTrains",
+/// "maxWaiting", "maxLoad"}` or `null`.
+struct LedgerRowSummary: Codable, Equatable {
+    struct Line: Codable, Equatable {
+        var item: String
+        var amount: Int64
+    }
+
+    struct Crowding: Codable, Equatable {
+        var crowdedStations: Int64
+        var fullTrains: Int64
+        var maxWaiting: Int64
+        var maxLoad: Int64
+    }
+
+    var kind: String
+    var time: Int64
+    var amount: Int64
+    var breakdown: [Line]
+    var crowding: Crowding?
+
+    init(_ entry: LedgerEntry) {
+        kind = entry.kind.rawValue
+        time = entry.time.minutes
+        amount = entry.amount.amount
+        breakdown = entry.breakdown.map { Line(item: $0.item.rawValue, amount: $0.amount.amount) }
+        crowding = entry.crowding.map {
+            Crowding(crowdedStations: $0.crowdedStations, fullTrains: $0.fullTrains, maxWaiting: $0.maxWaiting, maxLoad: $0.maxLoad)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, time, amount, breakdown, crowding
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(String.self, forKey: .kind)
+        time = try container.decode(Int64.self, forKey: .time)
+        amount = try container.decode(Int64.self, forKey: .amount)
+        breakdown = try container.decode([Line].self, forKey: .breakdown)
+        guard container.contains(.crowding) else {
+            throw DecodingError.keyNotFound(CodingKeys.crowding, DecodingError.Context(codingPath: container.codingPath, debugDescription: "\"crowding\" is required; null for none."))
+        }
+        crowding = try container.decodeNil(forKey: .crowding) ? nil : container.decode(Crowding.self, forKey: .crowding)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(time, forKey: .time)
+        try container.encode(amount, forKey: .amount)
+        try container.encode(breakdown, forKey: .breakdown)
+        try container.encode(crowding, forKey: .crowding)
+    }
+}
+
+/// A day's totals: `{"day", "fareRevenue", "operatingCost",
+/// "maintenanceCost", "energyCost", "staffCost"}`.
+struct DaySummary: Codable, Equatable {
+    var day: Int64
+    var fareRevenue: Int64
+    var operatingCost: Int64
+    var maintenanceCost: Int64
+    var energyCost: Int64
+    var staffCost: Int64
+}
+
+/// The company's accounts (schema 22): `{"mode", "fareRules", "openedAt",
+/// "pending", "ledger", "days"}`, every field required; `fareRules` and
+/// `openedAt` `null` for none.
+struct AccountsSummary: Codable, Equatable {
+    var mode: String
+    var fareRules: FareRulesSummary?
+    var openedAt: Int64?
+    var pending: PendingSummary
+    var ledger: [LedgerRowSummary]
+    var days: [DaySummary]
+
+    init(mode: String, fareRules: FareRulesSummary?, openedAt: Int64?, pending: PendingSummary, ledger: [LedgerRowSummary], days: [DaySummary]) {
+        self.mode = mode
+        self.fareRules = fareRules
+        self.openedAt = openedAt
+        self.pending = pending
+        self.ledger = ledger
+        self.days = days
+    }
+
+    init(_ accounts: CompanyAccounts) {
+        self.init(
+            mode: accounts.mode.rawValue, fareRules: accounts.fareRules.map(FareRulesSummary.init), openedAt: accounts.openedAt?.minutes,
+            pending: PendingSummary(accounts.pending), ledger: accounts.entries.map(LedgerRowSummary.init),
+            days: accounts.days.map {
+                DaySummary(
+                    day: $0.day, fareRevenue: $0.fareRevenue.amount, operatingCost: $0.operatingCost.amount,
+                    maintenanceCost: $0.maintenanceCost.amount, energyCost: $0.energyCost.amount, staffCost: $0.staffCost.amount
+                )
+            }
+        )
+    }
+
+    /// A new world's accounts.
+    static let pristine = AccountsSummary(
+        mode: "free", fareRules: nil, openedAt: nil, pending: PendingSummary(HourlyAccrual.empty), ledger: [], days: []
+    )
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, fareRules, openedAt, pending, ledger, days
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        for key in [CodingKeys.fareRules, .openedAt] where !container.contains(key) {
+            throw DecodingError.keyNotFound(key, DecodingError.Context(codingPath: container.codingPath, debugDescription: "\"\(key.stringValue)\" is required; null for none."))
+        }
+        mode = try container.decode(String.self, forKey: .mode)
+        fareRules = try container.decodeNil(forKey: .fareRules) ? nil : container.decode(FareRulesSummary.self, forKey: .fareRules)
+        openedAt = try container.decodeNil(forKey: .openedAt) ? nil : container.decode(Int64.self, forKey: .openedAt)
+        pending = try container.decode(PendingSummary.self, forKey: .pending)
+        ledger = try container.decode([LedgerRowSummary].self, forKey: .ledger)
+        days = try container.decode([DaySummary].self, forKey: .days)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(mode, forKey: .mode)
+        try container.encode(fareRules, forKey: .fareRules)
+        try container.encode(openedAt, forKey: .openedAt)
+        try container.encode(pending, forKey: .pending)
+        try container.encode(ledger, forKey: .ledger)
+        try container.encode(days, forKey: .days)
+    }
+}
+
+/// A period's statement: `{"index", "fareRevenue", "operatingCost",
+/// "maintenanceCost", "energyCost", "staffCost"}`.
+struct PeriodSummary: Codable, Equatable {
+    var index: Int64
+    var fareRevenue: Int64
+    var operatingCost: Int64
+    var maintenanceCost: Int64
+    var energyCost: Int64
+    var staffCost: Int64
+
+    init(index: Int64, fareRevenue: Int64, operatingCost: Int64, maintenanceCost: Int64, energyCost: Int64, staffCost: Int64) {
+        self.index = index
+        self.fareRevenue = fareRevenue
+        self.operatingCost = operatingCost
+        self.maintenanceCost = maintenanceCost
+        self.energyCost = energyCost
+        self.staffCost = staffCost
+    }
+
+    init(_ summary: FinanceSummary) {
+        self.init(
+            index: summary.index, fareRevenue: summary.fareRevenue.amount, operatingCost: summary.operatingCost.amount,
+            maintenanceCost: summary.maintenanceCost.amount, energyCost: summary.energyCost.amount, staffCost: summary.staffCost.amount
+        )
+    }
+}
+
+/// The finance report for a period: `{"current", "previous"}`.
+struct ReportSummary: Codable, Equatable {
+    var current: PeriodSummary
+    var previous: PeriodSummary
+
+    init(current: PeriodSummary, previous: PeriodSummary) {
+        self.current = current
+        self.previous = previous
+    }
+
+    init(_ report: (current: FinanceSummary, previous: FinanceSummary)) {
+        self.init(current: PeriodSummary(report.current), previous: PeriodSummary(report.previous))
     }
 }
