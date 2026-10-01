@@ -1865,7 +1865,7 @@ G1 的最後一步：乘客上車時付票價，線路的列車每次離站記�
 | `metroEconomyMoneyText`：`"$ " + Math.round(dollars)` 加千分位 | `GamePresentation` 的 `Money.moneyText` | faithful |
 | 經濟明細的分類標籤（`economy.ledger.*`、`economy.group.*`，只有 zh-CN） | `LedgerItem.displayName`、`LedgerEntry.Kind.displayName`（英文） | 翻譯 |
 
-**1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）。
+**1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）：一般四捨五入到整美元（`moneyText`），票價與「餘額不足」的訊息精確到美分（`centsText`），以免顯示成「需要 $ 10、只有 $ 10」。
 
 **2. 票價**：`tripFare(from:to:)` 是規則對兩站直線距離的票價，0 以下收 5 美元；距離段 `[from, to)`，正好在終點的距離屬於下一段。沒有設定規則時用 `FareRules.standard`（均一 5 美元）。
 
@@ -1906,14 +1906,16 @@ G1 的最後一步：乘客上車時付票價，線路的列車每次離站記�
 
 #### 驗證
 
-- `EconomyAccountsTests`（手算，9 個）：自由模式不記帳、存檔不變；均一與距離票價、正好在段的終點、0 元收 5 元；票價規則的檢查；60 分的小時列（票價 1500、營運 142800、維修 1400、18 班）；午夜的能源（−37400 = 路線 −1400、列車 −36000）與人事（−234000）、日期與餘額；一次推進與逐步相同；需求影響 1000／1080／487 與表對公式；存檔往返與 12 種壞掉的存檔。
-- `EconomyDisplayTests`（4 個）：金額的四捨五入（含負數與 Int64 的兩端）、票價文字、帳本列與最近一小時、等車與載客率、session 的指令。
+- `EconomyAccountsTests`（手算，10 個）：自由模式不記帳、存檔不變；沒有任何東西在動的世界仍然每小時、每天結算；均一與距離票價、正好在段的終點、0 元收 5 元；票價規則的檢查；60 分的小時列（票價 1500、營運 142800、維修 1400、18 班）；午夜的能源（−37400 = 路線 −1400、列車 −36000）與人事（−234000）、日期與餘額；一次推進與逐步相同；需求影響 1000／1080／487 與表對公式；存檔往返與 12 種壞掉的存檔。
+- `EconomyDisplayTests`（4 個）：金額的四捨五入（含負數與 Int64 的兩端）、精確到美分的金額（票價與「餘額不足」的訊息）、帳本列與最近一小時、等車與載客率、session 的指令。
 - `ReferenceEconomy`：`ReferenceWorld` 另外寫一次決策 36，而且寫得不同：每站離站時立刻收費、以 1/64000 美元累積、票價規則逐步檢查、每日的帳是字典、固定資產以集合計算。每個 golden scenario 都在它上面重跑。
 - `EconomyPropertyTests`（`economy.differential`，12 個 case × 4 個種子 × 60 個操作，digest `C6B29457D984AF1`，CI shard `campaigns-5`）：上下車 campaign 的路網、線路與需求，九成是經營模式，途中設定與被拒絕的票價規則、切換模式、跨小時與跨日的推進，同時在 GameCore 與 `ReferenceWorld` 上執行，每一步比較所有狀態（餘額、帳、四種報表與票價）；每次推進也逐 tick 重跑，2× 與 1× 比較。量：結算的小時 1932、有票價收入的小時 234、結算的日 82、設定的票價規則 241、被拒絕的 30、餘額變成負數 27。
 - `SaveMutationTests` 新增 `save.accountsMutation`（10 個 case × 4 個種子，每個 30 次變異）：載入 418、拒絕 782、瞄準帳的變異 923、載入後有帳本的世界 182。它在第一次執行時找到一個溢位（變異後巨大的班次在結算時溢位），因此加上了每小時與餘額的上限。
 - `WorldInvariants` 在每個 campaign 的每一步檢查帳的規則（另外寫一次）。
 - Golden schema v22（新的指令、觀察與最終狀態的 `accounts`）與 `economy.json`（預期值以獨立的 Python 實作依規則算出），在 GameCore 與 `ReferenceWorld` 上都通過；既有 21 個 fixture 只升級版本並加上初始的 `accounts`，預期值沒有改變。
-- VERIFY_PLACEHOLDER
+- 刻意植入的錯誤，各自單獨植入到 `Sources` 的複本、驗證後丟棄：0 元不收 5 元、收費不四捨五入到整美元、小時記到 `now` 那一天、營運的係數 75 改成 74、閒置跳步不結算、沒有設定票價也影響需求、帳本保留 51 列。七個都被抓到：`economy.differential` 抓到全部七個；手算測試抓到最低票價、日期、係數、閒置跳步與需求（閒置跳步原本只有 campaign 抓到，因此新增了 `testAQuietWorldStillSettlesEveryHour`）；golden 抓到捨入、日期與係數。
+- 完整測試（本機 Linux Swift 6.4，六個 shard）全部通過；18 個既有的 property digest 與 `main` 完全相同，`passenger.differential`（`62042B9B922FCE2C`）與 `boarding.differential`（`B105FCE7743F269F`）也不變。Swift 6.0 的 light shard（592 個測試）通過。
+- **不變的**：自由模式（新世界的預設）下決策 1–35 的行為與存檔。
 
 #### 已知限制與留給之後
 
