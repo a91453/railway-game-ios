@@ -715,6 +715,7 @@ enum WorldInvariants {
         // Decision 32: traffic control.
         problems += trafficViolations(in: world)
         problems += passengerViolations(in: world)
+        problems += accountsViolations(in: world)
         let starts = world.serviceDay.bands.map(\.start)
         if starts.first != 0 || starts.contains(where: { $0 >= 1440 }) || zip(starts, starts.dropFirst()).contains(where: { $0 >= $1 }) {
             problems.append("service day starts \(starts)")
@@ -866,6 +867,50 @@ enum WorldInvariants {
                 if !world.passengers.contains(where: { $0.station == group.origin }) { problems.append("train \(id) riders from a station without a record") }
                 if !ahead.contains(group.destination) { problems.append("train \(id) riders to \(group.destination.rawValue), which it does not call at next") }
             }
+        }
+        return problems
+    }
+
+    /// Decision 36: a managed company's accounts are open, never after
+    /// now; the hour's counts are not negative and its fares whole dollars;
+    /// at most 50 rows, none dated after now, each of its kind's items with
+    /// fares in, costs out and the items adding up to the row; at most 360
+    /// days, once each and ascending, no total negative.
+    static func accountsViolations(in world: GameWorld) -> [String] {
+        var problems: [String] = []
+        let accounts = world.accounts
+        if accounts.mode == .management, accounts.openedAt == nil { problems.append("managed accounts never opened") }
+        if let opened = accounts.openedAt, opened > world.clock.now { problems.append("accounts open at \(opened.minutes), after now") }
+        let pending = accounts.pending
+        if [pending.fareTrips, pending.departures, pending.trainDistance, pending.passengers, pending.seats, pending.fareRevenue.amount].contains(where: { $0 < 0 }) {
+            problems.append("the hour's counts go negative: \(pending)")
+        }
+        if pending.fareRevenue.amount % 100 != 0 { problems.append("the hour's fares \(pending.fareRevenue.amount) are not whole dollars") }
+        if accounts.entries.count > 50 { problems.append("\(accounts.entries.count) ledger rows kept") }
+        for entry in accounts.entries {
+            if entry.time > world.clock.now { problems.append("ledger row dated \(entry.time.minutes), after now") }
+            let expected: [LedgerItem] = switch entry.kind {
+            case .hourlyNet: [.fareRevenue, .operatingCost, .maintenanceCost]
+            case .dailyEnergy: [.routeEnergy, .trainEnergy]
+            case .dailyStaff: [.stationStaff, .trainStaff]
+            }
+            var sum: Int64 = 0
+            for line in entry.breakdown {
+                sum += line.amount.amount
+                if (line.item == .fareRevenue) != (line.amount.amount >= 0) && line.amount.amount != 0 {
+                    problems.append("ledger row \(entry.kind) has \(line.item) of \(line.amount.amount)")
+                }
+            }
+            if entry.breakdown.map(\.item) != expected || sum != entry.amount.amount || (entry.crowding != nil) != (entry.kind == .hourlyNet) {
+                problems.append("ledger row \(entry) is not shaped as settlements write it")
+            }
+        }
+        if accounts.days.count > 360 { problems.append("\(accounts.days.count) days kept") }
+        let days = accounts.days.map(\.day)
+        if days != days.sorted() || Set(days).count != days.count { problems.append("days not once each, ascending: \(days)") }
+        for day in accounts.days {
+            let totals = [day.fareRevenue, day.operatingCost, day.maintenanceCost, day.energyCost, day.staffCost].map(\.amount)
+            if totals.contains(where: { $0 < 0 }) { problems.append("day \(day.day) has a negative total") }
         }
         return problems
     }

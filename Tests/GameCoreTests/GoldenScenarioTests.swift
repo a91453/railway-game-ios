@@ -78,6 +78,10 @@ final class GoldenScenarioTests: XCTestCase {
             var extraRiders = committed
             extraRiders.expectedFinalState.riders.append(RiderSummary(train: 99, groups: []))
             XCTAssertEqual(extraRiders.differences().count, 1, name)
+
+            var otherAccounts = committed
+            otherAccounts.expectedFinalState.accounts.pending.fareTrips += 1
+            XCTAssertEqual(otherAccounts.differences().count, 1, name)
         }
     }
 
@@ -303,6 +307,10 @@ final class GoldenScenarioTests: XCTestCase {
         var rideCount = 0
         var refusalCount = 0
         var riderCount = 0
+        var hourlyRevenueCount = 0
+        var dailyCount = 0
+        var distanceFareCount = 0
+        var reportCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -369,6 +377,10 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .ledger(let ledger) = expect, ledger.riding > 0, ledger.arrived > 0 { rideCount += 1 }
                 if case .ledger(let ledger) = expect, ledger.refused > 0 { refusalCount += 1 }
                 if case .riders(let riders) = expect, Set(riders.map(\.destination)).count > 1 { riderCount += 1 }
+                if case .accounts(let accounts) = expect, accounts.ledger.contains(where: { $0.kind == "hourlyNet" && $0.breakdown[0].amount > 0 }) { hourlyRevenueCount += 1 }
+                if case .accounts(let accounts) = expect, accounts.ledger.contains(where: { $0.kind == "dailyStaff" }) { dailyCount += 1 }
+                if case .fare(let fare?) = expect, fare < 500 { distanceFareCount += 1 }
+                if case .report(let report) = expect, report.previous.fareRevenue > 0 { reportCount += 1 }
                 if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
                 if case .trackPlatforms(let platforms) = expect, !platforms.isEmpty { wholePlatformCount += 1 }
                 if case .levels(let levels) = expect, levels.contains(where: { $0.height != 0 }) { levelCount += 1 }
@@ -416,6 +428,10 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(rideCount, 0, "No fixture pins passengers riding and arrived")
         XCTAssertGreaterThan(refusalCount, 0, "No fixture pins passengers refused by a full train")
         XCTAssertGreaterThan(riderCount, 0, "No fixture pins a train's riders for several destinations")
+        XCTAssertGreaterThan(hourlyRevenueCount, 0, "No fixture pins an hour settled with fares")
+        XCTAssertGreaterThan(dailyCount, 0, "No fixture pins a day's energy and staff")
+        XCTAssertGreaterThan(distanceFareCount, 0, "No fixture pins a distance fare")
+        XCTAssertGreaterThan(reportCount, 0, "No fixture pins a finance report with revenue")
     }
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
@@ -588,6 +604,36 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.ledger(changed))
             }
             return wrong
+        case .fare(let fare?):
+            return [.fare(nil), .fare(fare + 1)]
+        case .fare(nil):
+            return [.fare(500)]
+        case .accounts(let accounts):
+            var wrong: [ObservationAnswer] = []
+            var mode = accounts
+            mode.mode = accounts.mode == "free" ? "management" : "free"
+            var pending = accounts
+            pending.pending.departures += 1
+            wrong += [.accounts(mode), .accounts(pending)]
+            if let first = accounts.ledger.first {
+                var amount = accounts
+                amount.ledger[0].amount = first.amount + 1
+                var dropped = accounts
+                dropped.ledger.removeFirst()
+                wrong += [.accounts(amount), .accounts(dropped)]
+            }
+            if !accounts.days.isEmpty {
+                var day = accounts
+                day.days[0].staffCost += 1
+                wrong.append(.accounts(day))
+            }
+            return wrong
+        case .report(let report):
+            var revenue = report
+            revenue.current.fareRevenue += 1
+            var previous = report
+            previous.previous.index += 1
+            return [.report(revenue), .report(previous)]
         case .riders(let riders):
             var wrong: [ObservationAnswer] = [.riders(riders + [RidingGroupSummary(RidingGroup(
                 origin: StationID(rawValue: 9), destination: StationID(rawValue: 8), count: 1
@@ -747,7 +793,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 21,
+              "schemaVersion": 22,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -787,7 +833,12 @@ final class GoldenScenarioTests: XCTestCase {
                 "network": { "nodes": [], "edges": [], "platforms": [] },
                 "trafficControl": false,
                 "passengers": [],
-                "riders": []
+                "riders": [],
+                "accounts": {
+                  "mode": "free", "fareRules": null, "openedAt": null,
+                  "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+                  "ledger": [], "days": []
+                }
               }
             }
             """#
@@ -801,7 +852,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in

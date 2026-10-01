@@ -115,14 +115,17 @@ extension GameWorld {
     struct StopDeparture {
         let train: TrainID
         let stop: Int
+        /// How far the train runs to its next call, in world units; `nil`
+        /// when its service ends at this stop instead (G1c).
+        let distance: Int64?
     }
 
     /// The boarding phase of a basic step (see ``advance(ticks:)``): serves
     /// every stop left in this step, in the order they were left.
     mutating func serve(_ departures: [StopDeparture]) {
-        // Nothing to do without passengers: worlds without demand pay
-        // nothing.
-        guard !passengers.isEmpty || !riders.isEmpty else { return }
+        // Nothing to do without passengers or accounts: worlds without
+        // demand in the free economy pay nothing.
+        guard !passengers.isEmpty || !riders.isEmpty || accounts.mode == .management else { return }
         for departure in departures {
             serve(departure)
         }
@@ -160,6 +163,11 @@ extension GameWorld {
         if !isLast {
             board(train, at: departure.stop)
         }
+        // A line's train counts its departure, as it leaves with those on
+        // board (G1c).
+        if let distance = departure.distance, assignedLine(of: train.id) != nil {
+            countDeparture(distance: distance, passengers: riderCount(of: train.id), seats: train.ratedCapacity)
+        }
     }
 
     /// `train`, assigned to a line and leaving stop `stop` of its round
@@ -194,6 +202,7 @@ extension GameWorld {
         var taken: [Int: Int64] = [:]
         var left: Int64 = 0
         var boarding = riders.first { $0.train == train.id } ?? TrainRiders(train: train.id, groups: [])
+        var paying: [StationID: Int64] = [:]
         for index in eligible {
             let group = waiting[index]
             let count = min(group.count, room)
@@ -201,8 +210,14 @@ extension GameWorld {
                 taken[index] = count
                 room -= count
                 boarding.add(count, from: passengers[record].station, to: group.destination)
+                paying[group.destination, default: 0] += count
             }
             left += group.count - count
+        }
+        // Each destination's boarders pay together, rounded to whole
+        // dollars (G1c; the reference's fare trips of a boarding plan).
+        for destination in paying.keys.sorted() {
+            chargeFares(paying[destination]!, from: passengers[record].station, to: destination)
         }
         if !taken.isEmpty {
             passengers[record].board(taken)

@@ -2,12 +2,13 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Cash, game time, speed controls and the button that opens the lines
-/// panel. Everything shown is read from the world, so it updates as soon as
+/// Cash (which opens the economy panel), game time, speed controls and the
+/// button that opens the lines panel. Everything shown is read from the world, so it updates as soon as
 /// a command or a tick changes it.
 struct HUDView: View {
     let session: GameSession
     @State private var showsLines = false
+    @State private var showsEconomy = false
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time stack.
@@ -32,6 +33,10 @@ struct HUDView: View {
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .sheet(isPresented: $showsEconomy) {
+            EconomyPanel(session: session)
+                .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $showsLines) {
             LinesPanel(session: session)
                 .presentationDetents([.medium, .large])
@@ -54,10 +59,18 @@ struct HUDView: View {
         .accessibilityHint("Shows the service lines and their timetables.")
     }
 
+    /// The balance in dollars; it opens the economy panel.
     private var cash: some View {
-        let text = session.world.economy.balance.displayText
-        return Label(text, systemImage: "banknote")
-            .accessibilityLabel("Cash \(text)")
+        let text = session.world.economy.balance.moneyText
+        return Button {
+            showsEconomy = true
+        } label: {
+            Label(text, systemImage: "banknote")
+                .foregroundStyle(session.world.economy.balance < .zero ? Color.red : Color.primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cash \(text)")
+        .accessibilityHint("Shows fares, running costs and the ledger.")
     }
 
     private var time: some View {

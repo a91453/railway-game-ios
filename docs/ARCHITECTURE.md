@@ -51,7 +51,7 @@ GameCore 裡的經營層（Passenger、City、Economy）不得依賴鐵路的物
 | `Geometry` | 整數世界座標（`WorldCoordinate`、`PlanPoint`、`PlanVector`）、軌道的曲線與取樣（`TrackCurve`、`TrackGeometry`）、整數運算（`FixedPoint`）（Stage S3，決策 28、29）；縱斷面、坡度與結構物（`TrackProfile`、`TrackGrade`、`TrackStructure`）與淨空（`TrackClearance`）（Stage S4，決策 30）；128 位元的整數運算（`WideInteger`，Stage W1，決策 33） |
 | `Railway` | `TrackDirection` / `TrackConnections`、`Track`（唯讀快照）、軌道連通查詢（`connectedNeighbors(of:)`、`isConnected(_:to:)`，由地圖推導）、`Station` / `StationID`、`Train` / `TrainID`、`TrainPosition`（列車在鐵軌上的位置）、`TrainMovement`（rate、continuation 與移動 kernel）、路徑搜尋（`route(from:to:)`）、停站（`platforms(of:)`、`route(from:toStation:)`、`stationsStoppedAt(by:)`）、時刻表（`ScheduledStop`、`Train.timetable`、`Train.timetablePeriod`）、時刻表服務（`TimetableExecution`、`Train.execution`）、服務線路（`ServiceLine`、`ServiceDay`、`TargetHeadways`、`lineJourney(_:)` 等推導查詢）、自動派車（`assignTrain(_:to:)`、`advance(ticks:)` 的派車階段）、鐵路圖（`TrackNodeID`、`TrackEdgeID`、`TrackTraversal`、`TrackResource`）與連續路網（`RailwayNetwork`、路網上的列車與 renderer 查詢，Stage S3）、路網上的月台（`TrackPlatform`、`Station.trackPlatforms`）與 renderer 的唯讀快照（`RailwaySnapshot`、`TrackAlignment`，Stage S4）、服務路徑（`TrainPath`，Stage S5）、交通控制與進路預約（`Train.reservation`、`reservedResources(of:)`、`heldResources(of:)`、`trainHoldingRoute(of:)`，Stage T）；行駛曲線與車種性能（`RunningCurve`、`TrainPerformance`，Stage W1，決策 33）；停站時間的純計算（`StationDwell`，G1b，決策 35） |
 | `Passenger` | 車站需求（`StationDemand`、`StationDemandKind`）、乘客與守恆稽核（`StationPassengers`、`WaitingGroup`、`PassengerLedger`）、每對車站的旅次與每分鐘的釋出（`passengerTrip(from:to:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`，`advance(ticks:)` 的乘客階段）（G1a，決策 34）；上下車與容量（`TrainRiders`、`RidingGroup`、`Train.capacity`、`riders(of:)`，`advance(ticks:)` 的上下車階段）（G1b，決策 35） |
-| `Economy` | `Money`、`GameEconomy`、`ConstructionCosts` |
+| `Economy` | `Money`、`GameEconomy`、`ConstructionCosts`；經營模式、票價、帳本與結算（`EconomyMode`、`FareRules`、`CompanyAccounts`、`LedgerEntry`、`tripFare(from:to:)`、`financeReport(_:)`，`advance(ticks:)` 每步一開始的結算）（G1c，決策 36） |
 | `Time` | `GameClock`、`GameSpeed`、`GameTime` |
 
 ## 架構決策
@@ -1839,6 +1839,88 @@ G1 的第二步：列車離開一站時讓到站的人下車，再依容量讓�
 - 同一分鐘同一站的兩班同線車，依派車與列車編號的順序上車。
 - 還沒有票價、收入與畫面（G1c）。
 
+### 36. 票價、帳本與經營（G1c）
+
+G1 的最後一步：乘客上車時付票價，線路的列車每次離站記下班次、車公里、載客與座位，每小時結算營運與維修，每天結算能源與人事，寫進帳本與每日的帳；票價設定後也影響需求。新的世界是「自由模式」（`EconomyMode.free`），什麼都不收、不記，所以決策 1–35 的行為、存檔、既有 golden 的預期值與 property digest 都不變；App 的新遊戲是「經營模式」（`management`）。
+
+**來源**：作者的 `Ci/` 網站（`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，minified，以 prettier 展開後閱讀）的地鐵經濟「舊路徑」（`metroEconomy*` 函式）；`window.MetroEconomy` 引擎本身（`economy.js`、`metro_economy_rules.js` 等）不在快照裡。`Railway/` 沒有經濟模型（只有即時資料與時刻表），兩邊都搜尋過。
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `economyMode`（free／management） | `EconomyMode`、`setEconomyMode(_:)`、`CompanyAccounts.openedAt` | faithful；開始經營的那一刻記下 `openedAt`，第一次結算在下一個整點（第 5 點） |
+| `MetroEconomy.setFareRules("metro", …)`、票價編輯器的 `lineInfoFareModeValue`（flat／distance）、`metroFareDefaults().flatFare ?? 5`、`lineInfoFareDefaultDistanceBands`（0／6／12／22／32 km：0.55／0.70／0.85／1.00／1.20） | `FareRules.flat`、`.distance([FareBand])`、`FareRules.standard`（`.flat(500)`）、`standardBands` | faithful＋機械換算（美元 → 美分） |
+| 引擎的票價檢查（1–64 段、從 0 起、首尾相接、只有最後一段沒有終點） | `FareRules.isValid`、`setFareRules(_:)` 的 `invalidFareRules` | faithful；上限（票價 ≤ 1e9 美分、距離 ≤ 1e7 m）是 gap，為了整數不溢位 |
+| `metroEconomyStationDistanceKmByNetIdx`（起迄兩站的大圓距離） | `tripFare(from:to:)`：兩站格子的直線距離（1 格 = 1024 單位 = 16 m），以平方比較，完全精確 | 機械換算（平面地圖沒有經緯度） |
+| `metroEconomyAccrueHourlyFare`：`fare ≤ 0` 收 5；`fareRevenue += Math.round(count × fare)` | `FareRules.charged(_:)`、`chargeFares(_:from:to:)`：每個迄點 `floor((count·fare + 50) ÷ 100) × 100` 美分 | faithful＋機械換算 |
+| `updateTrainAtStation` 的 `fareTrips`（上車時依迄點收） | `board()` 依迄點彙整後收費 | faithful；時機是 G1b 的過渡做法（離站），W2 改到真實的上車 |
+| `metroEconomyAccrueDeparture`（班次、車公里、乘客、座位） | `countDeparture(distance:passengers:seats:)`、`HourlyAccrual` | faithful；距離是派車時到下一站的路徑距離（世界單位），座位是額定容量（輛數 × 320） |
+| `metroEconomySettleHourlyIfNeeded`（`metro.hourly.netSettlement`）：營運 `round(75·班次 + 42·車公里 + 18·車站)`、維修 `round(12·路線公里 + 9·車公里 + 8·列車)` | `settleAccounts(at:memo:)`、`settleHour`：以 1/64000 美元計算再四捨五入到整美元 | faithful＋機械換算（64000 單位 = 1 km） |
+| 小時結算的 `crowdingMetrics`（等車 > 1500 的站、滿載列車、最多等車、最大載客千分比） | `CrowdingMetrics` | faithful；只記錄，不收費 |
+| `metroEconomySettleDailyForEndedDay`：能源 `round(220·路線公里 + 360·列車)`（`metro_route_energy`、`metro_train_energy`）、人事 `620·車站 + 480·列車`（`metro_station_staff`、`metro_train_staff`），`allowNegativeBalance` | `settleDay`、`GameEconomy.settle(_:)` | faithful；各項各自四捨五入，總額是加總後四捨五入（與參考相同，可能差 1 美元） |
+| 固定資產：車站（所有線路的停靠站，不重複）、路線長度、列車 | `fixedAssets(memo:)`：線路自己服務的行程去程各段的路徑距離、各服務各等級列車數的最大值相加 | 機械換算；參考由地圖的線路幾何量，這裡由已推導的行程（決策 22） |
+| 帳本列（`metro_hourly_net`、`metro_daily_energy`、`metro_daily_staff`），保留最後 50 列 | `LedgerEntry`、`CompanyAccounts.entries`（`keptEntries = 50`） | faithful |
+| `FLOW_DASHBOARD_FINANCE_BUCKETS`（日／週／月／年 = 1／7／30／360 天）、`summarizeFinanceForTransport` | `FinancePeriod`、`DayAccount`（保留 360 天）、`financeReport(_:)`（本期與上期） | faithful |
+| `metroFareDemandPenaltyForFare`（相對 `METRO_FARE_DEMAND_BASELINE_USD = 0.75` 的比值的曲線） | `FareRules.demandFactor(fare:)`：每 0.05 一格、95 格的千分比表，線性內插 | 公式 faithful；GameCore 沒有 `exp`，事先算成表（機械換算），測試以 Foundation 逐格重算，誤差 ≤ 1.6‰ |
+| 需求乘上票價的影響 | `dailyDemand(from:)` 與乘客計畫：每對 `(trips × factor + 500) ÷ 1000` | faithful；只在經營模式而且玩家設定過票價時（第 6 點） |
+| `metroEconomyMoneyText`：`"$ " + Math.round(dollars)` 加千分位 | `GamePresentation` 的 `Money.moneyText` | faithful |
+| 經濟明細的分類標籤（`economy.ledger.*`、`economy.group.*`，只有 zh-CN） | `LedgerItem.displayName`、`LedgerEntry.Kind.displayName`（英文） | 翻譯 |
+
+**1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）。
+
+**2. 票價**：`tripFare(from:to:)` 是規則對兩站直線距離的票價，0 以下收 5 美元；距離段 `[from, to)`，正好在終點的距離屬於下一段。沒有設定規則時用 `FareRules.standard`（均一 5 美元）。
+
+**3. 收入**：乘客上車時（G1b 的上下車階段）依迄點收費，進入這一小時的 `pending`；只在經營模式。
+
+**4. 班次**：線路的列車每次離站（`Leaving.setsOff`，帶有到下一站的距離）在上車之後記一次班次、距離、車上人數與座位。手動時刻表的列車不載客也不記。
+
+**5. 結算**：
+- 每個基本步長一開始，經營模式、`now` 是整點、而且 `openedAt < now` 時，結算剛結束的一小時：營運與維修，寫一列（票價、營運、維修三項都是 0 時不寫），餘額加上淨額，`pending` 歸零，`openedAt = now`。
+- 這一小時屬於 `now − 1` 那一天（參考先結算小時，再換日）。
+- `now` 是午夜時，接著寫前一天的能源與人事，時間記為 `now − 1`。
+- 餘額可以變成負數；之後建設仍然需要足夠的餘額（決策 4）。
+- 閒置跳步：經營模式下逐分鐘檢查，不會跳過任何一次結算（一次推進與逐分鐘相同）。
+- 自由模式下什麼都不累積、不結算；切回經營模式時重新從那一刻開始。
+
+**6. 需求**：經營模式而且設定過票價規則時，每對車站每天的旅次乘上票價的影響（基準 0.75 美元時是 1000‰，0 元時 1080‰）。沒有設定過時需求完全不變，所以 G1a、G1b 的 golden 在經營模式下也不變。
+
+**7. 存檔**：
+- `"accounts"` 只在不是初始狀態時寫：`{ mode, fareRules?, pending, openedAt?, entries, days }`。
+- 解碼拒絕：不認得的模式或票價規則、`pending` 是負數或超過上限（每小時的數 ≤ 2⁴⁰、班次 ≤ 2³⁰）、票價收入不是整美元、列的時間晚於現在、經營模式卻沒有 `openedAt`、`openedAt` 晚於現在、超過 50 列或 360 天、日期沒有遞增、金額超過 ±2⁵⁰、每日的合計是負數、列的項目不符種類（順序、正負、加總等於金額、只有小時列有擁擠資料），以及餘額超過 ±2⁶²（讓結算永遠不會溢位）。
+
+**Gap（參考沒有，這裡補上）**：票價與距離的上限（溢位）、`openedAt`（第一次結算的時機）、存檔的上限與驗證、英文標籤。**Reference gap**：開局的資金（在缺少的 `economy.js` 裡），App 沿用之前的 1,000,000（`$ 10,000`），之後平衡時再調整。
+
+**沒有移植的**（之後的 Stage 或需要決定）：
+- 以配額（quota）購買建設：參考的經營模式以配額而不是現金蓋路線與車站，需要使用者決定是否取代現在的建設費用。
+- 高鐵與航空的結算、取消與擁擠的賠償與退票、網路營運費：還沒有這些運具或事件。
+- 貸款與利息：參考的快照裡沒有。
+- 結算的動畫、擁擠與滿載的通知。
+
+#### 實作
+
+- `Economy/Fares.swift`：`EconomyMode`、`FareBand`、`FareRules`（驗證、票價、需求影響的表）與 `Codable`。
+- `Economy/Accounts.swift`：`HourlyAccrual`、`LedgerItem`、`LedgerLine`、`CrowdingMetrics`、`LedgerEntry`、`DayAccount`、`FinancePeriod`、`FinanceSummary`、`CompanyAccounts` 與 `Codable`。
+- `Economy/Operations.swift`：指令、查詢、收費、班次、結算與存檔驗證（`accountsProblem()`）。
+- `GameWorld`：`accounts`、`advance` 每步一開始的結算與逐分鐘的閒置跳步、離站帶距離；`Passenger/Boarding.swift` 收費與記班次；`Passenger/PassengerDemand.swift` 的需求影響。
+- `GamePresentation/EconomyText.swift`：金額、票價、標籤、最近一小時的分項、最近的帳本列、每站依線路方向的等車人數、列車的載客率；`GameSession.setEconomyMode(_:)`、`setFareRules(_:)`。
+- App：HUD 的餘額以美元顯示（負數為紅色），點一下開啟 `EconomyPanel`（餘額、模式、票價、最近一小時、本期與上期的報表、最近 12 列）；檢視器顯示車站的等車、列車控制顯示載客；新遊戲是經營模式；建設費用以美元顯示。
+
+#### 驗證
+
+- `EconomyAccountsTests`（手算，9 個）：自由模式不記帳、存檔不變；均一與距離票價、正好在段的終點、0 元收 5 元；票價規則的檢查；60 分的小時列（票價 1500、營運 142800、維修 1400、18 班）；午夜的能源（−37400 = 路線 −1400、列車 −36000）與人事（−234000）、日期與餘額；一次推進與逐步相同；需求影響 1000／1080／487 與表對公式；存檔往返與 12 種壞掉的存檔。
+- `EconomyDisplayTests`（4 個）：金額的四捨五入（含負數與 Int64 的兩端）、票價文字、帳本列與最近一小時、等車與載客率、session 的指令。
+- `ReferenceEconomy`：`ReferenceWorld` 另外寫一次決策 36，而且寫得不同：每站離站時立刻收費、以 1/64000 美元累積、票價規則逐步檢查、每日的帳是字典、固定資產以集合計算。每個 golden scenario 都在它上面重跑。
+- `EconomyPropertyTests`（`economy.differential`，12 個 case × 4 個種子 × 60 個操作，digest `C6B29457D984AF1`，CI shard `campaigns-5`）：上下車 campaign 的路網、線路與需求，九成是經營模式，途中設定與被拒絕的票價規則、切換模式、跨小時與跨日的推進，同時在 GameCore 與 `ReferenceWorld` 上執行，每一步比較所有狀態（餘額、帳、四種報表與票價）；每次推進也逐 tick 重跑，2× 與 1× 比較。量：結算的小時 1932、有票價收入的小時 234、結算的日 82、設定的票價規則 241、被拒絕的 30、餘額變成負數 27。
+- `SaveMutationTests` 新增 `save.accountsMutation`（10 個 case × 4 個種子，每個 30 次變異）：載入 418、拒絕 782、瞄準帳的變異 923、載入後有帳本的世界 182。它在第一次執行時找到一個溢位（變異後巨大的班次在結算時溢位），因此加上了每小時與餘額的上限。
+- `WorldInvariants` 在每個 campaign 的每一步檢查帳的規則（另外寫一次）。
+- Golden schema v22（新的指令、觀察與最終狀態的 `accounts`）與 `economy.json`（預期值以獨立的 Python 實作依規則算出），在 GameCore 與 `ReferenceWorld` 上都通過；既有 21 個 fixture 只升級版本並加上初始的 `accounts`，預期值沒有改變。
+- VERIFY_PLACEHOLDER
+
+#### 已知限制與留給之後
+
+- 收費的時機跟著 G1b 的過渡做法（離站），W2 改到真實的上車。
+- 參考以地圖的經緯度量距離；這裡是格子的直線距離。
+- 開局資金、配額建設與平衡留給之後（需要決定）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -1866,5 +1948,6 @@ G1 的第二步：列車離開一站時讓到站的人下車，再依容量讓�
 - 交通控制與進路預約（決策 32）：`GameWorld` 的新世界關閉交通控制，行為與之前完全相同；App 的新遊戲開啟。開啟時，列車出發、被派車或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（與佔用同一條規則，落在 span 分界上時兩邊都算），以及它接近的交會點（在交會點 1024 以內、而那裡另有不相通的邊）；任何一個被其他列車持有（佔用、限界或預約）就整個不取得，指令以 `trackReserved` 拒絕，服務原地等待（不折返）、每步重試，線路不派出那台列車。預約存檔，走到路的終點時釋放；`unplaceTrain` 與關閉交通控制也清除它。立體交叉不共用資源。預約中的鐵軌不能拆，持有的邊不能加減月台，持有的交會點不能加邊。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`）。
 - 車站需求與乘客（決策 34）：車站可以有需求（四種類型之一，每天 0 到 1,000,000 個旅次）。每天的旅次分給同一條線路能到、自己有需求的車站（依它們的旅次，最大餘數法），再依一天的形狀與兩端類型的曲線分到 24 小時。每個基本步長一開始，每一對依這一小時與下一小時內插釋出這一分鐘的份，保留不到一人的餘數；任何連續 1440 分鐘正好釋出一天的旅次。乘客在起點依線路、方向、迄點與釋出的分鐘成組排隊，先來的在前；一站最多 4000 人，放不下的離開（`overflowed`）。線路刪除或改停靠而不再載某一組時，那一組離開（`abandoned`）。每一站 `released = 等車 + overflowed + abandoned`。沒有需求時什麼都不發生。
 - 上下車與容量（決策 35）：列車每離開時刻表的一站，先讓坐到那一站的人下車（`arrived`），再在線路上的列車讓那一站等它的線路、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1），上不去的記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
+- 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站直線距離分段，0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·車公里 + 18·車站`、維修 `12·路線公里 + 9·車公里 + 8·列車`），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（360 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求。金額是美分。
 - 車站目前不能拆除（未實作）。
-- 餘額不足時不做任何修改，餘額不會因建設變成負數。
+- 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。

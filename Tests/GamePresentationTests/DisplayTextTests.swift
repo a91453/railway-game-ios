@@ -60,7 +60,7 @@ final class ErrorMessageTests: XCTestCase {
             .invalidTrackConnections: "Choose at least one direction for the track.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
-                "Not enough cash: this costs 50,000 and you have 1,234.",
+                "Not enough cash: this costs $ 500 and you have $ 12.",
             .noTrackToRemove(position): "There is no track to remove at (4, 7).",
             .trackInUse(position): "A train is on the track at (4, 7). Take the train off the track first.",
             .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",

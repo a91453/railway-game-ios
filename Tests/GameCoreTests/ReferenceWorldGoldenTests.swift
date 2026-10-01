@@ -89,6 +89,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.trafficControl, final.trafficControl, name)
             XCTAssertEqual(model.passengerSummaries, final.passengers, name)
             XCTAssertEqual(model.riderSummaries, final.riders, name)
+            XCTAssertEqual(model.accountsSummary, final.accounts, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -138,6 +139,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .removeTrackPlatform(let station, let edge, let start): error = model.removeTrackPlatform(station, on: edge, from: start)
         case .setTrafficControl(let enabled): error = model.setTrafficControl(enabled)
         case .setStationDemand(let id, let demand): error = model.setStationDemand(id, demand)
+        case .setEconomyMode(let mode): model.setEconomyMode(mode)
+        case .setFareRules(let rules): error = model.setFareRules(rules)
         }
         return error.map { .rejected($0) } ?? .ok
     }
@@ -238,6 +241,12 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .ledger(LedgerSummary(model.ledger(of: id.rawValue)))
         case .riders(let id):
             return .riders(model.riders(of: id.rawValue).map(RidingGroupSummary.init))
+        case .tripFare(let origin, let destination):
+            return .fare(model.tripFare(from: origin.rawValue, to: destination.rawValue))
+        case .accounts:
+            return .accounts(model.accountsSummary)
+        case .financeReport(let period):
+            return .report(model.reportSummary(period))
         }
     }
 

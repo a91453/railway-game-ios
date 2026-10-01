@@ -71,11 +71,11 @@ struct TrainControls: View {
             Button {
                 session.purchaseTrain()
             } label: {
-                Label("Buy · \(session.world.economy.costs.train.displayText)", systemImage: "plus.circle")
+                Label("Buy · \(session.world.economy.costs.train.moneyText)", systemImage: "plus.circle")
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
-            .accessibilityLabel("Buy a train for \(session.world.economy.costs.train.displayText)")
+            .accessibilityLabel("Buy a train for \(session.world.economy.costs.train.moneyText)")
         }
     }
 
@@ -94,6 +94,11 @@ struct TrainControls: View {
                 if let stop = session.world.stationStopText(of: train.id) {
                     Text(stop)
                         .font(.footnote.weight(.semibold))
+                }
+                if let load = session.world.loadText(of: train.id) {
+                    Label(load, systemImage: "person.2")
+                        .font(.footnote)
+                        .monospacedDigit()
                 }
             }
             if let service = session.world.trainServiceStatus(of: train.id) {

@@ -109,10 +109,10 @@ private struct ToolPicker: View {
         let costs = session.world.economy.costs
         switch tool {
         case .select: return "Inspect a tile"
-        case .buildTrack: return "Lay a track piece · \(costs.track.displayText)"
-        case .buildStation: return "Build a station · \(costs.station.displayText)"
+        case .buildTrack: return "Lay a track piece · \(costs.track.moneyText)"
+        case .buildStation: return "Build a station · \(costs.station.moneyText)"
         case .removeTrack: return "Remove track · free, no refund"
-        case .train: return "Place and send trains · \(costs.train.displayText) each"
+        case .train: return "Place and send trains · \(costs.train.moneyText) each"
         }
     }
 }
@@ -189,9 +189,9 @@ private struct ActionButton: View {
         let costs = session.world.economy.costs
         switch session.tool {
         case .select: return nil
-        case .buildTrack: return "Build Track · \(costs.track.displayText)"
+        case .buildTrack: return "Build Track · \(costs.track.moneyText)"
         case .buildStation:
-            return session.growsStation ? "Grow Station · \(costs.station.displayText)" : "Build Station · \(costs.station.displayText)"
+            return session.growsStation ? "Grow Station · \(costs.station.moneyText)" : "Build Station · \(costs.station.moneyText)"
         case .removeTrack: return "Remove Track"
         case .train:
             // Placing and sending both act on the selected train.

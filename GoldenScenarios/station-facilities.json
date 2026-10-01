@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "description": "Station facilities and train length. Row 1 is plain track from dead end (0,1) to dead end (8,1); a two-tile siding (3,3)-(4,3) lies south. Central is built at (3,2) and grows east onto (4,2) and (5,2): a station grows only onto an empty tile beside one of its tiles, for the station cost. Its platforms are the track beside each of its tiles, tile by tile, north, east, south, west, each once; they form two platform tracks, three tiles of row 1 and the two-tile siding. West at (1,0) has one platform, (1,1). A train has 1 to 16 cars, one to a tile, set while it is off the track; its body runs back a link per car after the first. Long (3 cars, two links) cannot be placed at (1,1) facing east, since the track behind it ends at (0,1); at (2,1) its body lies back over (1,1) and (0,1), which then cannot be removed. Its route to Central runs on along the platforms until its whole length is beside the station. Turned round, its head goes to where its tail was, a platform again. Short (2 cars) stops with its head at Central's last platform and its tail beyond it, so not with its whole length; turned round there, its head is off the platform. Trains occupy the nodes and links under their bodies; two on one resource conflict. Stopped at West with its body beside plain track, Long is stopped there but not with its whole length.",
   "initialState": {
     "mapWidth": 9,
@@ -305,6 +305,11 @@
     "network": { "nodes": [], "edges": [], "platforms": [] },
     "trafficControl": false,
     "passengers": [],
-    "riders": []
+    "riders": [],
+    "accounts": {
+      "mode": "free", "fareRules": null, "openedAt": null,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [], "days": []
+    }
   }
 }

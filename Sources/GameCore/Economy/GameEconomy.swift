@@ -68,4 +68,11 @@ public struct GameEconomy: Hashable, Codable, Sendable {
         precondition(amount >= .zero, "earn(_:) requires a non-negative amount")
         balance = balance + amount
     }
+
+    /// Moves the balance by a settlement's `amount`, either way; it may go
+    /// below zero (the reference settles running costs with
+    /// `allowNegativeBalance`; G1c, ARCHITECTURE decision 36).
+    mutating func settle(_ amount: Money) {
+        balance = balance + amount
+    }
 }

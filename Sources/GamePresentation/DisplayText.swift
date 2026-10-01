@@ -211,7 +211,7 @@ extension GameError {
         case .invalidName:
             "Enter a name."
         case .insufficientFunds(let required, let available):
-            "Not enough cash: this costs \(required.displayText) and you have \(available.displayText)."
+            "Not enough cash: this costs \(required.moneyText) and you have \(available.moneyText)."
         case .noTrackToRemove(let position):
             "There is no track to remove at \(position)."
         case .trackInUse(let position):
@@ -297,6 +297,8 @@ extension GameError {
         case .invalidStationDemand:
             // Money's text is only the digits, grouped by thousands.
             "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day."
+        case .invalidFareRules:
+            "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end."
         }
     }
 }

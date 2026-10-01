@@ -41,7 +41,8 @@ struct RailwayGameApp: App {
 extension GameWorld {
     /// The world a new game starts with, running at 1×, with traffic
     /// control on (Phase 4.6 Stage T): trains take their whole route before
-    /// they leave. GameCore's own new worlds start with it off.
+    /// they leave, and a managed company (G1c). GameCore's own new worlds
+    /// start with both off.
     static func newGame() -> GameWorld {
         do {
             var world = try GameWorld(
@@ -51,6 +52,9 @@ extension GameWorld {
                 clock: GameClock(speed: .normal)
             )
             try world.setTrafficControl(true)
+            // G1c: a new game is a managed company, so fares are charged
+            // and running costs settled.
+            world.setEconomyMode(.management)
             return world
         } catch {
             // The size is a constant within GridMap's limits and an empty
