@@ -203,13 +203,17 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// reference.
     public internal(set) var entries: [LedgerEntry] = []
     /// The latest days with any ledger row, by ascending day: at most
-    /// ``keptDays``, the year of the report.
+    /// ``keptDays``.
     public internal(set) var days: [DayAccount] = []
 
     /// The economy panel shows the last 12 rows and the last hour's totals;
     /// two days of rows cover both.
     public static let keptEntries = 50
-    public static let keptDays = 360
+    /// Two years of days, so the year report's previous year stays whole:
+    /// the reference keeps its whole ledger (`FLOW_DASHBOARD_FINANCE_BUCKETS`
+    /// reports up to 50 years), and this is the least that keeps both of
+    /// the report's statements exact.
+    public static let keptDays = 720
 
     public init() {}
 

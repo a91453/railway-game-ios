@@ -200,7 +200,7 @@ extension ReferenceWorld {
             added = row.kind == .dailyEnergy ? [0, 0, 0, parts, 0] : [0, 0, 0, 0, parts]
         }
         accounts.days[day] = zip(accounts.days[day] ?? [0, 0, 0, 0, 0], added).map { $0 + $1 }
-        for old in accounts.days.keys where old <= day - 360 {
+        for old in accounts.days.keys where old <= day - 720 {
             accounts.days[old] = nil
         }
     }

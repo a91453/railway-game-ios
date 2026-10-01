@@ -874,7 +874,7 @@ enum WorldInvariants {
     /// Decision 36: a managed company's accounts are open, never after
     /// now; the hour's counts are not negative and its fares whole dollars;
     /// at most 50 rows, none dated after now, each of its kind's items with
-    /// fares in, costs out and the items adding up to the row; at most 360
+    /// fares in, costs out and the items adding up to the row; at most 720
     /// days, once each and ascending, no total negative.
     static func accountsViolations(in world: GameWorld) -> [String] {
         var problems: [String] = []
@@ -905,7 +905,7 @@ enum WorldInvariants {
                 problems.append("ledger row \(entry) is not shaped as settlements write it")
             }
         }
-        if accounts.days.count > 360 { problems.append("\(accounts.days.count) days kept") }
+        if accounts.days.count > 720 { problems.append("\(accounts.days.count) days kept") }
         let days = accounts.days.map(\.day)
         if days != days.sorted() || Set(days).count != days.count { problems.append("days not once each, ascending: \(days)") }
         for day in accounts.days {

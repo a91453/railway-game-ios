@@ -200,6 +200,38 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.economy.balance, balance - Money(24 * 5_400 + 186_000))
     }
 
+    /// The year report's previous year stays whole through the next year:
+    /// two years of days are kept.
+    func testTheYearReportKeepsTheWholePreviousYear() throws {
+        var world = try GameWorld(
+            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+        )
+        for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
+            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+        }
+        try world.createLine(named: "Main", stops: [alpha, beta, gamma])
+        world.setEconomyMode(.management)
+        // To the last minute of day 719, the end of the second year.
+        try world.advance(ticks: 720 * 1_440 - 1)
+        XCTAssertEqual(world.accounts.days.count, 720)
+        let year = world.financeReport(.year)
+        XCTAssertEqual(year.current.index, 1)
+        // A day: 24 hours of 18 × 3 stations, and staff of 620 × 3.
+        XCTAssertEqual(year.previous.operatingCost, Money(360 * 24 * 5_400))
+        XCTAssertEqual(year.previous.staffCost, Money(360 * 186_000))
+        XCTAssertEqual(year.current.staffCost, Money(359 * 186_000), "day 719 has not ended")
+        // Midnight's rows still belong to day 719; day 720's first hour is
+        // settled at 01:00, and then day 0 leaves.
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.accounts.days.first?.day, 0)
+        try world.advance(ticks: 60)
+        XCTAssertEqual(world.accounts.days.count, 720)
+        XCTAssertEqual(world.accounts.days.first?.day, 1)
+        let next = world.financeReport(.year)
+        XCTAssertEqual(next.current.index, 2)
+        XCTAssertEqual(next.previous.staffCost, Money(360 * 186_000), "the second year, whole")
+    }
+
     // MARK: - Demand
 
     func testFaresChangeDemandOnlyOnceTheyAreSet() throws {
