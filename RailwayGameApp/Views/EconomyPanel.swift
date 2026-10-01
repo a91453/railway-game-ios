@@ -67,10 +67,10 @@ struct EconomyPanel: View {
         Section("Fares") {
             LabeledContent("Rules", value: accounts.effectiveFareRules.displayText)
             Stepper(value: $flatFare, in: 0...10_000, step: 25) {
-                Text("Flat fare \(Money(flatFare).fareText)")
+                Text("Flat fare \(Money(flatFare).centsText)")
                     .monospacedDigit()
             }
-            Button("Charge a flat fare of \(Money(flatFare).fareText)") {
+            Button("Charge a flat fare of \(Money(flatFare).centsText)") {
                 session.setFareRules(.flat(Money(flatFare)))
             }
             Button("Charge by distance (standard steps)") {

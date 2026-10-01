@@ -17,8 +17,10 @@ extension Money {
         return "$ " + Money(dollars).displayText
     }
 
-    /// A fare in dollars and cents, such as "$ 0.55" or "$ 5.00".
-    public var fareText: String {
+    /// The exact amount in dollars and cents, such as "$ 0.55" or
+    /// "$ 5.00": for fares, and where rounding to dollars would hide a
+    /// difference (not enough cash).
+    public var centsText: String {
         let cents = amount.magnitude % 100
         return "$ \(amount < 0 ? "-" : "")\(Money(Int64(amount.magnitude / 100)).displayText).\(cents < 10 ? "0" : "")\(cents)"
     }
@@ -89,11 +91,11 @@ extension FareRules {
     /// 5 steps from $ 0.55".
     public var displayText: String {
         switch self {
-        case .flat(let fare): "Flat · \(fare.fareText)"
+        case .flat(let fare): "Flat · \(fare.centsText)"
         case .distance(let bands):
             bands.count == 1
-                ? "By distance · 1 step, \(bands[0].fare.fareText)"
-                : "By distance · \(bands.count) steps from \(bands[0].fare.fareText)"
+                ? "By distance · 1 step, \(bands[0].fare.centsText)"
+                : "By distance · \(bands.count) steps from \(bands[0].fare.centsText)"
         }
     }
 }

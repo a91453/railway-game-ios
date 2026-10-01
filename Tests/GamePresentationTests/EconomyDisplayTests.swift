@@ -16,9 +16,9 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(Money(-49).moneyText, "$ 0")
         XCTAssertEqual(Money(Int64.max).moneyText, "$ 92,233,720,368,547,758")
         XCTAssertEqual(Money(Int64.min).moneyText, "$ -92,233,720,368,547,758")
-        XCTAssertEqual(Money(55).fareText, "$ 0.55")
-        XCTAssertEqual(Money(500).fareText, "$ 5.00")
-        XCTAssertEqual(Money(123_405).fareText, "$ 1,234.05")
+        XCTAssertEqual(Money(55).centsText, "$ 0.55")
+        XCTAssertEqual(Money(500).centsText, "$ 5.00")
+        XCTAssertEqual(Money(123_405).centsText, "$ 1,234.05")
         XCTAssertEqual(FareRules.standard.displayText, "Flat · $ 5.00")
         XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText, "By distance · 5 steps from $ 0.55")
     }

@@ -96,7 +96,7 @@ final class StationActionTests: XCTestCase {
             session.applyTool()
 
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message?.text, "Not enough cash: this costs 1,000 and you have 999.")
+            XCTAssertEqual(session.message?.text, "Not enough cash: this costs $ 10.00 and you have $ 9.99.")
         }
     }
 }

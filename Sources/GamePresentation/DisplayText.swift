@@ -211,7 +211,7 @@ extension GameError {
         case .invalidName:
             "Enter a name."
         case .insufficientFunds(let required, let available):
-            "Not enough cash: this costs \(required.moneyText) and you have \(available.moneyText)."
+            "Not enough cash: this costs \(required.centsText) and you have \(available.centsText)."
         case .noTrackToRemove(let position):
             "There is no track to remove at \(position)."
         case .trackInUse(let position):
