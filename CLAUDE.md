@@ -45,6 +45,9 @@ implement the missing behavior as needed.
 Reference check (every new Stage): attach a91453/railway-reference-private
 read-only, read the files the Stage ports, and put a mapping table in the PR
 (reference file/function → Swift file/function, with any fixed-point scale).
+The references there are `Ci/reference_snapshot/`, `Railway/site_archive_clean/`
+and `Railway/railway_game_reference_clean/` (start with its
+`00_READ_ME_FIRST.md`); check all three.
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
