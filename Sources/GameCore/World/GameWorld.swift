@@ -38,6 +38,10 @@ public struct GameWorld: Equatable, Sendable {
     /// where no station has demand. Set by the passenger rules
     /// (`PassengerDemand.swift`) only.
     public internal(set) var passengers: [StationPassengers]
+    /// The passengers riding each train that carries any (G1b, ARCHITECTURE
+    /// decision 35), by ascending ``TrainID``. Set by the passenger rules
+    /// (`Boarding.swift`) only.
+    public internal(set) var riders: [TrainRiders]
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -69,6 +73,7 @@ public struct GameWorld: Equatable, Sendable {
         self.network = RailwayNetwork()
         self.isTrafficControlEnabled = false
         self.passengers = []
+        self.riders = []
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -942,6 +947,7 @@ public struct GameWorld: Equatable, Sendable {
         guard trains[index].execution != nil else { throw .trainServiceNotActive(id) }
 
         trains[index].execution = nil
+        abandonRiders(of: id)
     }
 
     // MARK: - Service lines
@@ -1199,6 +1205,17 @@ public struct GameWorld: Equatable, Sendable {
     ///    with a scheduled departure of `T` or earlier leaves it (see below).
     ///    Departures are those of the service's cycle: the timetable's
     ///    times shifted by whole periods.
+    ///
+    ///    **Boarding** (G1b). Then every stop left in phases 0 and 1 is
+    ///    served, in the order it was left: those riding the train to that
+    ///    stop's station get off, and a train on a line takes on the
+    ///    passengers waiting there for its line and direction whose
+    ///    destination it calls at before it next turns round, the farthest
+    ///    first, up to its ``Train/capacity`` (see ``riders(of:)`` and
+    ///    ``PassengerLedger``). This reads the trains and changes only the
+    ///    passengers. Serving a stop in one step as the train leaves it is
+    ///    transitional: W2 replaces it with the references' dwell (see
+    ///    ``StationDwell``) on the game's clock.
     /// 2. **Movement.** Every train travels up to its rate (see
     ///    ``TrainMovement``).
     /// 3. The clock moves on to `T + 1`.
@@ -1337,8 +1354,10 @@ public struct GameWorld: Equatable, Sendable {
             if release != nil {
                 releasePassengers(at: clock.now, &release!)
             }
-            let dispatched = dispatchTrains(memo: &memo, unroutable: &unroutable)
-            let departed = departTrains(unroutable: &unroutable)
+            var departures: [StopDeparture] = []
+            let dispatched = dispatchTrains(memo: &memo, unroutable: &unroutable, departures: &departures)
+            let departed = departTrains(unroutable: &unroutable, departures: &departures)
+            serve(departures)
             let moved = moveTrainsOneStep()
             clock.advance(basicSteps: 1)
             let arrived = recordArrivals()
@@ -1388,7 +1407,7 @@ public struct GameWorld: Equatable, Sendable {
     /// taking its route one step: the train is sent out only when it can
     /// take its route (see ``readyTrain(of:_:memo:)``), and no departure in
     /// between can take it first.
-    private mutating func dispatchTrains(memo: inout DispatchMemo, unroutable: inout Set<TrainID>) -> Bool {
+    private mutating func dispatchTrains(memo: inout DispatchMemo, unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
         let now = clock.now
         var dispatched = false
         for index in lines.indices {
@@ -1403,7 +1422,7 @@ public struct GameWorld: Equatable, Sendable {
                 trains[ready].execution = .waitingAtStop(0)
                 lines[index].recordDispatch(ofService: service, at: now)
                 dispatched = true
-                departService(ready, unroutable: &unroutable)
+                departService(ready, unroutable: &unroutable, departures: &departures)
             }
         }
         return dispatched
@@ -1542,9 +1561,9 @@ public struct GameWorld: Equatable, Sendable {
     /// Phase 1 of a basic step: every waiting service whose scheduled
     /// departure has come leaves its stop, in ascending ID order. Returns
     /// whether any service changed.
-    private mutating func departTrains(unroutable: inout Set<TrainID>) -> Bool {
+    private mutating func departTrains(unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
         var changed = false
-        for index in trains.indices where departService(index, unroutable: &unroutable) {
+        for index in trains.indices where departService(index, unroutable: &unroutable, departures: &departures) {
             changed = true
         }
         return changed
@@ -1561,7 +1580,7 @@ public struct GameWorld: Equatable, Sendable {
     /// departure without a route, this is not remembered for the rest of
     /// the call: trains move and free track within one.
     @discardableResult
-    private mutating func departService(_ index: Int, unroutable: inout Set<TrainID>) -> Bool {
+    private mutating func departService(_ index: Int, unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
         var changed = false
         let now = clock.now
         // Every pass leaves one stop. A timetable that runs once ends
@@ -1583,6 +1602,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             guard case .granted(let train) = reserving(moved) else { break }
             trains[index] = train
+            departures.append(StopDeparture(train: train.id, stop: stop))
             changed = true
             if case .completes = departure { break }
         }
@@ -1872,7 +1892,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers
+        case passengers, riders
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -1915,6 +1935,7 @@ extension GameWorld: Codable {
         network = container.contains(.network) ? try container.decode(RailwayNetwork.self, forKey: .network) : RailwayNetwork()
         isTrafficControlEnabled = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
         passengers = container.contains(.passengers) ? try container.decode([StationPassengers].self, forKey: .passengers) : []
+        riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
         for track in saved.tracks {
             network.lay(track)
         }
@@ -1962,6 +1983,9 @@ extension GameWorld: Codable {
         }
         if !passengers.isEmpty {
             try container.encode(passengers, forKey: .passengers)
+        }
+        if !riders.isEmpty {
+            try container.encode(riders, forKey: .riders)
         }
     }
 
@@ -2157,7 +2181,7 @@ extension GameWorld: Codable {
                 return problem
             }
         }
-        return trafficProblem() ?? passengerProblem()
+        return trafficProblem() ?? passengerProblem() ?? riderProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

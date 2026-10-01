@@ -71,6 +71,8 @@ final class KernelDifferentialTests: XCTestCase {
         /// The train tool's send to a station for a train with cars: the
         /// route that pulls it along the platforms.
         case sendWholeTrainToStation(TrainID, StationID)
+        /// Only the boarding campaign (`BoardingPropertyTests`) draws this.
+        case setStationDemand(StationID, StationDemand?)
         case advance(Int)
         case setSpeed(GameSpeed)
         case pause
@@ -113,6 +115,8 @@ final class KernelDifferentialTests: XCTestCase {
             case .setCars(let id, let cars): ".setCars(\(id.rawValue), \(cars))"
             case .sendWholeTrainToStation(let id, let station): ".sendWholeTrainToStation(\(id.rawValue), \(station.rawValue))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
+            case .setStationDemand(let id, let demand):
+                ".setStationDemand(\(id.rawValue), \(demand.map { "\($0.kind) \($0.dailyTrips)" } ?? "none"))"
             case .advance(let ticks): ".advance(\(ticks))"
             case .setSpeed(let speed): ".setSpeed(.\(speed))"
             case .pause: ".pause"
@@ -330,6 +334,7 @@ final class KernelDifferentialTests: XCTestCase {
                       let route = world.route(from: position, toStation: station, length: train.length)
                 else { return nil }
                 try world.setTrainContinuation(id, to: route)
+            case .setStationDemand(let id, let demand): try world.setStationDemand(id, to: demand)
             case .advance(let ticks): try world.advance(ticks: ticks)
             case .setSpeed(let speed): world.setSpeed(speed)
             case .pause: world.pause()
@@ -395,6 +400,7 @@ final class KernelDifferentialTests: XCTestCase {
                   let route = model.route(from: position, toStation: station, length: ReferenceWorld.length(train))
             else { return nil }
             return model.setContinuation(id, route)
+        case .setStationDemand(let id, let demand): return model.setStationDemand(id, demand)
         case .advance(let ticks): return model.advance(ticks: ticks)
         case .setSpeed(let speed): model.setSpeed(speed); return nil
         case .pause: model.pause(); return nil
@@ -484,6 +490,16 @@ final class KernelDifferentialTests: XCTestCase {
                 && world.lines.map { $0.patterns.map { $0.lastDispatch?.minutes } } == model.lines.map { $0.patterns.map(\.lastDispatch) },
             "patterns \(world.lines.map(\.patterns)) vs \(model.lines.map(\.patterns))"
         )
+        // Decisions 34 and 35: every station's passengers and every train's
+        // riders.
+        let passengers = world.passengers.filter { $0.demand != nil || $0.released > 0 }.map(PassengerSummary.init)
+        check(passengers == model.passengerSummaries, "passengers \(passengers) vs \(model.passengerSummaries)")
+        let riders = world.riders.map { RiderSummary(train: $0.train.rawValue, groups: $0.groups.map(RidingGroupSummary.init)) }
+        check(riders == model.riderSummaries, "riders \(riders) vs \(model.riderSummaries)")
+        for station in world.stations {
+            let ledger = world.passengerLedger(of: station.id)
+            check(ledger == model.ledger(of: station.id.rawValue), "ledger of \(station.id.rawValue) \(ledger) vs \(model.ledger(of: station.id.rawValue))")
+        }
         check(
             world.serviceDay.bands.map(\.start) == model.serviceDay.map(\.start) && world.serviceDay.bands.map(\.level) == model.serviceDay.map(\.level),
             "service day \(world.serviceDay) vs \(model.serviceDay)"

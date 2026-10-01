@@ -1242,4 +1242,79 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 200, "only \(aimed) mutations aimed at passengers")
         assertVolume(passengersLoaded > 30, "only \(passengersLoaded) worlds with passengers waiting loaded")
     }
+
+    /// G1b (decision 35): a save's riders either fail to load or load into
+    /// a world where every passenger is accounted for, no train carries
+    /// more than it takes and every rider is bound for a stop ahead, and
+    /// play goes on keeping it so.
+    func testMutatedRidersAreRefusedOrLoadConsistently() throws {
+        var accepted = 0
+        var refused = 0
+        var aimed = 0
+        var ridersLoaded = 0
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try runCampaign("save.riderMutation", cases: 10) { c in
+            var world = try BoardingPropertyTests.generateWorld(&c, operations: 40)
+            // Played on until some train carries riders, if any will.
+            var extra = 0
+            while world.riders.isEmpty, extra < 40, !world.lines.isEmpty {
+                try? world.advance(ticks: 3)
+                extra += 1
+            }
+            let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
+            let all = Self.paths(in: json)
+            let targeted = all.filter { path in
+                let text = path.map(\.description).joined()
+                return ["riders", "passengers", "execution", "timetable", "cars", "lines"].contains { text.contains($0) }
+            }
+            for _ in 0..<30 {
+                let path: [Step]
+                if c.random.chance(3, in: 4), !targeted.isEmpty {
+                    path = c.random.element(of: targeted)
+                    aimed += 1
+                } else {
+                    path = c.random.element(of: all)
+                }
+                var described = ""
+                let mutated = Self.replacing(path[...], in: json) { value in
+                    let (changed, what) = Self.mutation(
+                        of: value, addedKeys: ["riders", "groups", "origin", "destination", "arrived", "refused", "extra"], using: &c.random
+                    )
+                    described = what
+                    return changed
+                }
+                let where_ = path.map(\.description).joined()
+                guard let mutated, JSONSerialization.isValidJSONObject(mutated),
+                      let bytes = try? JSONSerialization.data(withJSONObject: mutated)
+                else { continue }
+                guard let loaded = try? JSONDecoder().decode(GameWorld.self, from: bytes) else {
+                    refused += 1
+                    continue
+                }
+                accepted += 1
+                if !loaded.riders.isEmpty { ridersLoaded += 1 }
+                let problems = WorldInvariants.violations(in: loaded)
+                c.expect(problems.isEmpty, "\(where_) \(described) loaded a world that breaks invariants: \(problems)")
+                if let problem = WorldInvariants.roundTripProblem(of: loaded) {
+                    c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
+                }
+                var current = loaded
+                for step in 0..<6 {
+                    let operation = LineDispatchPropertyTests.nextDispatchOperation(in: current, using: &c.random)
+                    let before = current
+                    if KernelDifferentialTests.apply(operation, to: &current) != nil {
+                        c.expect(current == before, "\(where_) \(described): step \(step) \(operation) was refused but changed the world")
+                    }
+                    let after = WorldInvariants.violations(in: current)
+                    c.expect(after.isEmpty, "\(where_) \(described): after step \(step) \(operation): \(after)")
+                }
+            }
+        }
+        print("[volume] save.riderMutation \(accepted) mutated saves loaded, \(refused) refused, \(aimed) aimed at riders, passengers and services, \(ridersLoaded) loaded with riders")
+        assertVolume(refused > 100, "only \(refused) mutated saves were refused")
+        assertVolume(accepted > 50, "only \(accepted) mutated saves loaded")
+        assertVolume(aimed > 150, "only \(aimed) mutations aimed at riders")
+        assertVolume(ridersLoaded > 20, "only \(ridersLoaded) worlds with riders loaded")
+    }
 }

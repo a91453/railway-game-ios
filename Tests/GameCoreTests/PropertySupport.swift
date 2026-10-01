@@ -805,7 +805,11 @@ enum WorldInvariants {
             let waiting = record.waiting.reduce(Int64(0)) { $0 + $1.count }
             let ledger = world.passengerLedger(of: record.station)
             if ledger.waiting != waiting { problems.append("station \(id) counts \(ledger.waiting) waiting in \(waiting)") }
-            if ledger.released != waiting + ledger.overflowed + ledger.abandoned || ledger.overflowed < 0 || ledger.abandoned < 0 {
+            // Decision 35: and those riding or arrived.
+            let riding = world.riders.flatMap(\.groups).filter { $0.origin == record.station }.reduce(Int64(0)) { $0 + $1.count }
+            if ledger.riding != riding { problems.append("station \(id) counts \(ledger.riding) riding of \(riding)") }
+            if ledger.released != waiting + riding + ledger.arrived + ledger.overflowed + ledger.abandoned
+                || ledger.overflowed < 0 || ledger.abandoned < 0 || ledger.arrived < 0 || ledger.refused < 0 {
                 problems.append("station \(id) does not account for its passengers: \(ledger)")
             }
             if waiting > StationPassengers.capacity { problems.append("station \(id) holds \(waiting) waiting") }
@@ -824,6 +828,43 @@ enum WorldInvariants {
             }
             for remainder in record.remainders where !(1..<3600).contains(remainder.value) || remainder.destination == record.station {
                 problems.append("station \(id) keeps remainder \(remainder)")
+            }
+        }
+        problems += riderViolations(in: world)
+        return problems
+    }
+
+    /// Decision 35: riders are listed once for each train that has any, by
+    /// train; the train runs a service and holds no more than its cars ×
+    /// 352; each group, listed once by origin and destination, came from a
+    /// station with a record and rides to a station the train calls at
+    /// from the stop it is at or heading for up to the next stop where it
+    /// turns round (or its last).
+    static func riderViolations(in world: GameWorld) -> [String] {
+        var problems: [String] = []
+        let trains = world.riders.map(\.train)
+        if trains != trains.sorted() || Set(trains).count != trains.count { problems.append("riders not by ascending train") }
+        for entry in world.riders {
+            let id = entry.train.rawValue
+            guard let train = world.train(id: entry.train), let execution = train.execution else {
+                problems.append("riders on train \(id), which runs no service")
+                continue
+            }
+            let pairs = entry.groups.map { [$0.origin.rawValue, $0.destination.rawValue] }
+            if entry.groups.isEmpty || pairs != pairs.sorted(by: { $0.lexicographicallyPrecedes($1) }) || Set(pairs).count != pairs.count {
+                problems.append("train \(id) riders not listed once each by origin and destination")
+            }
+            let total = entry.groups.reduce(Int64(0)) { $0 + $1.count }
+            if total > Int64(train.cars) * 320 * 11 / 10 { problems.append("train \(id) carries \(total) on \(train.cars) cars") }
+            var ahead: Set<StationID> = []
+            for stop in execution.stop..<train.timetable.count {
+                ahead.insert(train.timetable[stop].station)
+                if train.timetable[stop].reverses { break }
+            }
+            for group in entry.groups {
+                if group.count < 1 { problems.append("train \(id) has an empty group") }
+                if !world.passengers.contains(where: { $0.station == group.origin }) { problems.append("train \(id) riders from a station without a record") }
+                if !ahead.contains(group.destination) { problems.append("train \(id) riders to \(group.destination.rawValue), which it does not call at next") }
             }
         }
         return problems

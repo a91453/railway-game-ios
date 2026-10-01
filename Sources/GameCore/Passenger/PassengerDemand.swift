@@ -69,7 +69,11 @@ extension GameWorld {
     /// The conservation audit of station `id`: every passenger released
     /// there, and where they are now.
     public func passengerLedger(of id: StationID) -> PassengerLedger {
-        passengerRecord(of: id)?.ledger ?? .empty
+        guard let record = passengerRecord(of: id) else { return .empty }
+        let riding = riders.reduce(Int64(0)) { sum, entry in
+            entry.groups.reduce(sum) { $1.origin == id ? $0 + $1.count : $0 }
+        }
+        return record.ledger(riding: riding)
     }
 
     /// The trip from `origin` to `destination`: the lowest-numbered line

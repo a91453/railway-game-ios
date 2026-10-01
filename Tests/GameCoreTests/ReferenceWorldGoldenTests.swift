@@ -88,6 +88,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.serviceDay.map { BandSummary(ServiceDay.Band(start: $0.start, level: $0.level)) }, final.serviceDay, name)
             XCTAssertEqual(model.trafficControl, final.trafficControl, name)
             XCTAssertEqual(model.passengerSummaries, final.passengers, name)
+            XCTAssertEqual(model.riderSummaries, final.riders, name)
         }
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
@@ -235,6 +236,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .groups(model.waitingGroups(at: id.rawValue))
         case .passengerLedger(let id):
             return .ledger(LedgerSummary(model.ledger(of: id.rawValue)))
+        case .riders(let id):
+            return .riders(model.riders(of: id.rawValue).map(RidingGroupSummary.init))
         }
     }
 

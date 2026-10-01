@@ -15,7 +15,7 @@ import GameCore
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 20
+    static let schemaVersion = 21
 
     var description: String
     var initialState: InitialState
@@ -146,7 +146,7 @@ extension GoldenScenario.Step: Decodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
-        case trip, daily, hourly, groups, ledger
+        case trip, daily, hourly, groups, ledger, riders
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -303,6 +303,9 @@ extension GoldenScenario.Step: Decodable {
             case .passengerLedger:
                 try requireOnly([.ledger], answering: "passengerLedger")
                 self = try .observe(observation, expect: .ledger(expect.decode(LedgerSummary.self, forKey: .ledger)))
+            case .riders:
+                try requireOnly([.riders], answering: "riders")
+                self = try .observe(observation, expect: .riders(expect.decode([RidingGroupSummary].self, forKey: .riders)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -964,6 +967,7 @@ enum ScenarioObservation: Equatable {
     case demand(from: StationID, to: StationID)
     case waitingPassengers(StationID)
     case passengerLedger(StationID)
+    case riders(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1051,6 +1055,8 @@ enum ScenarioObservation: Equatable {
             .groups(world.waitingPassengers(at: id).map(WaitingGroupSummary.init))
         case .passengerLedger(let id):
             .ledger(LedgerSummary(world.passengerLedger(of: id)))
+        case .riders(let id):
+            .riders(world.riders(of: id).map(RidingGroupSummary.init))
         }
     }
 }
@@ -1186,6 +1192,9 @@ extension ScenarioObservation: Decodable {
             self = try .waitingPassengers(container.decodeStation(forKey: .station))
         case "passengerLedger":
             self = try .passengerLedger(container.decodeStation(forKey: .station))
+        // Schema 21: riders (G1b).
+        case "riders":
+            self = try .riders(container.decodeTrain(forKey: .train))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown observation type \"\(type)\".")
         }
@@ -1254,6 +1263,7 @@ enum ObservationAnswer: Equatable {
     case demand(daily: Int64, hourly: [Int64])
     case groups([WaitingGroupSummary])
     case ledger(LedgerSummary)
+    case riders([RidingGroupSummary])
 }
 
 extension ObservationAnswer: Encodable {
@@ -1262,7 +1272,7 @@ extension ObservationAnswer: Encodable {
         case level, journey, trains, minutes, loads, exits, resources, conflicts, sections, tracks, platformTracks
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
-        case trip, daily, hourly, groups, ledger
+        case trip, daily, hourly, groups, ledger, riders
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1339,6 +1349,8 @@ extension ObservationAnswer: Encodable {
             try container.encode(groups, forKey: .groups)
         case .ledger(let ledger):
             try container.encode(ledger, forKey: .ledger)
+        case .riders(let riders):
+            try container.encode(riders, forKey: .riders)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1425,6 +1437,9 @@ struct WorldSummary: Codable, Equatable {
     /// The passengers of every station with demand or with passengers ever
     /// released there, by ascending station (schema 20).
     var passengers: [PassengerSummary]
+    /// The passengers riding each train that carries any, by ascending
+    /// train (schema 21).
+    var riders: [RiderSummary]
 
     struct StationSummary: Codable, Equatable {
         var id: Int
@@ -1540,6 +1555,9 @@ struct WorldSummary: Codable, Equatable {
             .filter { $0.demand != nil || $0.released > 0 }
             .map(PassengerSummary.init)
             .sorted { $0.station < $1.station }
+        riders = world.riders
+            .map { RiderSummary(train: $0.train.rawValue, groups: $0.groups.map(RidingGroupSummary.init)) }
+            .sorted { $0.train < $1.train }
     }
 }
 
@@ -1633,51 +1651,86 @@ struct WaitingGroupSummary: Codable, Equatable {
     }
 }
 
-/// A station's conservation audit: `{"released", "waiting", "overflowed",
-/// "abandoned"}`.
+/// A station's conservation audit: `{"released", "waiting", "riding",
+/// "arrived", "overflowed", "abandoned", "refused"}` (`riding`, `arrived`
+/// and `refused` since schema 21).
 struct LedgerSummary: Codable, Equatable {
     var released: Int64
     var waiting: Int64
+    var riding: Int64
+    var arrived: Int64
     var overflowed: Int64
     var abandoned: Int64
+    var refused: Int64
 
     init(_ ledger: PassengerLedger) {
         released = ledger.released
         waiting = ledger.waiting
+        riding = ledger.riding
+        arrived = ledger.arrived
         overflowed = ledger.overflowed
         abandoned = ledger.abandoned
+        refused = ledger.refused
     }
 }
 
+/// Passengers riding a train together (schema 21): `{"origin",
+/// "destination", "count"}`.
+struct RidingGroupSummary: Codable, Equatable {
+    var origin: Int
+    var destination: Int
+    var count: Int64
+
+    init(_ group: RidingGroup) {
+        origin = group.origin.rawValue
+        destination = group.destination.rawValue
+        count = group.count
+    }
+}
+
+/// A train's riders in the final state (schema 21): `{"train", "groups"}`.
+struct RiderSummary: Codable, Equatable {
+    var train: Int
+    var groups: [RidingGroupSummary]
+}
+
 /// A station's passengers in the final state: `{"station", "demand",
-/// "waiting", "released", "overflowed", "abandoned"}`, every field required;
-/// `demand` is `null` for a station without demand.
+/// "waiting", "released", "arrived", "overflowed", "abandoned",
+/// "refused"}` (`arrived` and `refused` since schema 21), every field
+/// required; `demand` is `null` for a station without demand.
 struct PassengerSummary: Codable, Equatable {
     var station: Int
     var demand: DemandSummary?
     var waiting: [WaitingGroupSummary]
     var released: Int64
+    var arrived: Int64
     var overflowed: Int64
     var abandoned: Int64
+    var refused: Int64
 
-    init(station: Int, demand: DemandSummary?, waiting: [WaitingGroupSummary], released: Int64, overflowed: Int64, abandoned: Int64) {
+    init(
+        station: Int, demand: DemandSummary?, waiting: [WaitingGroupSummary], released: Int64, arrived: Int64,
+        overflowed: Int64, abandoned: Int64, refused: Int64
+    ) {
         self.station = station
         self.demand = demand
         self.waiting = waiting
         self.released = released
+        self.arrived = arrived
         self.overflowed = overflowed
         self.abandoned = abandoned
+        self.refused = refused
     }
 
     init(_ record: StationPassengers) {
         self.init(
             station: record.station.rawValue, demand: record.demand.map(DemandSummary.init), waiting: record.waiting.map(WaitingGroupSummary.init),
-            released: record.released, overflowed: record.overflowed, abandoned: record.abandoned
+            released: record.released, arrived: record.arrived, overflowed: record.overflowed, abandoned: record.abandoned, refused: record.refused
         )
     }
 
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned
+        case station, demand, waiting, released, arrived, overflowed, abandoned, refused
     }
 
     init(from decoder: any Decoder) throws {
@@ -1689,8 +1742,10 @@ struct PassengerSummary: Codable, Equatable {
         demand = try container.decodeNil(forKey: .demand) ? nil : container.decode(DemandSummary.self, forKey: .demand)
         waiting = try container.decode([WaitingGroupSummary].self, forKey: .waiting)
         released = try container.decode(Int64.self, forKey: .released)
+        arrived = try container.decode(Int64.self, forKey: .arrived)
         overflowed = try container.decode(Int64.self, forKey: .overflowed)
         abandoned = try container.decode(Int64.self, forKey: .abandoned)
+        refused = try container.decode(Int64.self, forKey: .refused)
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1703,8 +1758,10 @@ struct PassengerSummary: Codable, Equatable {
         }
         try container.encode(waiting, forKey: .waiting)
         try container.encode(released, forKey: .released)
+        try container.encode(arrived, forKey: .arrived)
         try container.encode(overflowed, forKey: .overflowed)
         try container.encode(abandoned, forKey: .abandoned)
+        try container.encode(refused, forKey: .refused)
     }
 }
 

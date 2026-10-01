@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "description": "Services on the track network (Phase 4.5 Stage S5, ARCHITECTURE decision 31). Surface Harbour (e1, 2048 to 6144), a curve (e2, 6346), a ramp down 1024 in a tunnel (e3, 32768, 1 in 32; node 3 is a tunnel portal) and underground Deep on a curve (e4, 6346; 1024 to 4096). A train stops with its head at the far end of a platform the way it travels (end going forward, L - start going backward), only at platforms no shorter than it; its path to a station is the least exact distance: the rest of its edge, every edge between and the stretch into the last. A leg takes that distance at the line's rate, rounded up. Mole (3 cars, 2048 a minute) repeats Harbour, Deep, Harbour every 70 minutes: out 2048 + 6346 + 32768 + 4096 = 45258 (23 minutes), turned at Deep with its head where its tail was (4298 along e4 backward), back 2048 + 32768 + 6346 + 6144 = 47306 (24 minutes), turned at Harbour (4096 facing east) and pulled up 2048 to the berth it started from. Line Tube sends Shuttle (1 car) out every 52 minutes: its journey from Harbour's berth as one car is 23 + 25 minutes and 2 at each end.",
   "initialState": {
     "mapWidth": 64,
@@ -353,6 +353,7 @@
       "platforms": [{ "station": 1, "edge": 1, "start": 2048, "end": 6144 }, { "station": 2, "edge": 4, "start": 1024, "end": 4096 }]
     },
     "trafficControl": false,
-    "passengers": []
+    "passengers": [],
+    "riders": []
   }
 }

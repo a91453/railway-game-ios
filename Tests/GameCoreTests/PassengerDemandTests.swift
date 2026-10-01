@@ -205,7 +205,8 @@ final class PassengerDemandTests: XCTestCase {
                 let daily = [a, b, c].reduce(Int64(0)) { $0 + world.dailyDemand(from: record.station, to: $1) }
                 XCTAssertEqual(record.released - before[index].0, daily, "start \(start), station \(record.station.rawValue)")
                 XCTAssertEqual(record.remainders, before[index].1, "start \(start)")
-                XCTAssertEqual(record.ledger.released, record.ledger.waiting + record.ledger.overflowed + record.ledger.abandoned)
+                let ledger = world.passengerLedger(of: record.station)
+                XCTAssertEqual(ledger.released, ledger.waiting + ledger.overflowed + ledger.abandoned)
             }
             XCTAssertEqual(world.passengers.map(\.released).reduce(0, +) - before.map(\.0).reduce(0, +), 1_800)
         }
