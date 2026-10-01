@@ -63,18 +63,20 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(world.loadText(of: TrainID(rawValue: 1)), "\(riding) riding · \(percent)%")
     }
 
-    @MainActor
-    func testTheSessionSwitchesModeAndSetsFares() throws {
-        let session = GameSession(world: try makeLine())
-        session.setEconomyMode(.management)
-        XCTAssertEqual(session.world.accounts.mode, .management)
-        XCTAssertEqual(session.message?.kind, .success)
-        session.setFareRules(.flat(-1))
-        XCTAssertEqual(session.message?.kind, .failure)
-        XCTAssertNil(session.world.accounts.fareRules)
-        session.setFareRules(.distance(FareRules.standardBands))
-        XCTAssertEqual(session.world.accounts.fareRules, .distance(FareRules.standardBands))
-        XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from $ 0.55.")
+    func testTheSessionSwitchesModeAndSetsFares() async throws {
+        let world = try makeLine()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.setEconomyMode(.management)
+            XCTAssertEqual(session.world.accounts.mode, .management)
+            XCTAssertEqual(session.message?.kind, .success)
+            session.setFareRules(.flat(-1))
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertNil(session.world.accounts.fareRules)
+            session.setFareRules(.distance(FareRules.standardBands))
+            XCTAssertEqual(session.world.accounts.fareRules, .distance(FareRules.standardBands))
+            XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from $ 0.55.")
+        }
     }
 
     /// Alpha(1,0) Beta(3,0) Gamma(5,0) on track (0,1)–(6,1), line Main
