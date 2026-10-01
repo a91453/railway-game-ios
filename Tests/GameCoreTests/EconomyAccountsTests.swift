@@ -182,6 +182,24 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertGreaterThan(world.accounts.days.count, 1)
     }
 
+    /// A world where nothing moves still settles every hour and day, though
+    /// `advance` skips its idle minutes.
+    func testAQuietWorldStillSettlesEveryHour() throws {
+        var world = try GameWorld(
+            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+        )
+        for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
+            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+        }
+        try world.createLine(named: "Main", stops: [alpha, beta, gamma])
+        world.setEconomyMode(.management)
+        let balance = world.economy.balance
+        try world.advance(ticks: 1_441)
+        // 24 hours of 18 × 3 stations, then a day's staff of 620 × 3.
+        XCTAssertEqual(world.accounts.entries.map(\.kind), Array(repeating: .hourlyNet, count: 24) + [.dailyStaff])
+        XCTAssertEqual(world.economy.balance, balance - Money(24 * 5_400 + 186_000))
+    }
+
     // MARK: - Demand
 
     func testFaresChangeDemandOnlyOnceTheyAreSet() throws {
