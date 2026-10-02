@@ -10,6 +10,9 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     case buildTrack
     case buildStation
     case removeTrack
+    /// Builds the track network at any angle, its platforms, and removes
+    /// it (Stage C1; see ``GameSession/networkMode``).
+    case network
     /// Places the selected train on the selected tile, or sends it there
     /// once it is on the track (see ``GameSession/applyTool()``).
     case train
@@ -21,6 +24,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
         case .buildTrack: language.text("Track", "軌道")
         case .buildStation: language.text("Station", "車站")
         case .removeTrack: language.text("Remove", "拆除")
+        case .network: language.text("Network", "路網")
         case .train: language.text("Train", "列車")
         }
     }

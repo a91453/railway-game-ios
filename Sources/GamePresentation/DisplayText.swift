@@ -92,17 +92,21 @@ extension GameWorld {
 }
 
 extension GameWorld {
-    /// How much has been built, such as "3 stations · 17 track tiles".
+    /// How much has been built, such as "3 stations · 17 track tiles", and
+    /// the track network's edges once there are any (Stage C1): "3
+    /// stations · 17 track tiles · 4 edges".
     public func networkSummary(in language: DisplayLanguage) -> String {
         let stationCount = stations.count
         let trackCount = tracks.count
+        let edgeCount = network.edges.count
         switch language {
         case .english:
             let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
             let trackText = trackCount == 1 ? "1 track tile" : "\(trackCount) track tiles"
-            return "\(stationText) · \(trackText)"
+            let edgeText = edgeCount == 1 ? " · 1 edge" : edgeCount > 1 ? " · \(edgeCount) edges" : ""
+            return "\(stationText) · \(trackText)\(edgeText)"
         case .traditionalChinese:
-            return "\(stationCount) 座車站 · \(trackCount) 格軌道"
+            return "\(stationCount) 座車站 · \(trackCount) 格軌道" + (edgeCount > 0 ? " · \(edgeCount) 個軌段" : "")
         }
     }
 }

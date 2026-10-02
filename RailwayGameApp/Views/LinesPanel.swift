@@ -122,6 +122,17 @@ struct LinesPanel: View {
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
+            // Stage C3: the performance its journeys are planned with
+            // (Stage W2c), and the journey that gives.
+            PerformanceMenu(performance: line.performance, language: session.language) { performance in
+                session.setSelectedLinePerformance(performance)
+            }
+            if let journey = session.world.lineJourneyText(line.id, in: session.language) {
+                Text(journey)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
                 if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")

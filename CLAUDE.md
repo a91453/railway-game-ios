@@ -103,9 +103,16 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 ## Environments and validation
 
 - Claude Code cloud sessions run on **Linux**: `swift build` and `swift test`
-  work. If `swift` is missing, install the official Swift toolchain for Linux
-  from swift.org. Xcode, `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are
-  **not** available there.
+  work. The SessionStart hook (`.claude/hooks/session-start.sh`) installs the
+  official swift.org toolchain, Swift 6.4.0 (CI's `swift:6.4-noble`), into
+  `/opt/swift` and puts it on the `PATH`. For anything else, such as Swift
+  6.0.3 for the minimum-compatibility check, use
+  `.github/scripts/install-swift-linux.sh 6.0.3 /opt/swift60` rather than
+  writing a download URL by hand: swift.org names every release with three
+  numbers (`swift-6.4.0-RELEASE`), so a URL built from `6.4` does not exist.
+  When CI moves to a new Swift, update the hook's version with it. Xcode,
+  `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are **not** available
+  there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
   `release-archive.yml`, `testflight-checks.yml`). The unsigned archive and
   the dry run do not prove signing, upload or TestFlight; only a real

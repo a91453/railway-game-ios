@@ -2052,6 +2052,74 @@ GamePresentation／App：`invalidTrainPerformance` 的英文與繁體中文訊�
 
 不做：限速區段與觀測曲線（gap 7）、依車名選性能（列車還沒有車種）、曲率與坡度限速、跟車與號誌（U）、通過站的推導時刻（gap 8）。
 
+### 41. 任意角度的建造畫面（Stage C1）
+
+S3–S5 讓 GameCore 有了任意角度的路網、高程、結構物與路網上的月台，S5 起停站、時刻表、線路與派車都在路網上運作；但 App 只能在方格上鋪軌，Release 版的新遊戲沒有路網（示範地圖只在 Debug）。2026-10-02 作者決定，U-min 之前先補齊已完成核心的操作畫面（ROADMAP 的 Stage C），C1 是第一步：在 App 裡建造路網、月台，並把列車放上去。**GameCore 沒有修改**：golden 與 property digest 都不變。
+
+參考（2026-10-02 檢查三份）：只有 `Ci/reference_snapshot/` 有玩家的建造模式（`app__q_c234188b7c397f91.js`）；`Railway/site_archive_clean/` 是真實路線的地圖，只有結構物的繪製參數，沒有建造工具；`Railway/railway_game_reference_clean/` 是 OpenTTD 的編譯檔與文件，只有建造指令的名稱與「驗證、估價、執行」分開的建議（`01_MIGRATION_MAP.md`）。對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c1任意角度的建造畫面)。
+
+**GamePresentation**（Linux 上測試）：
+
+- `NetworkBuilding.curve(from:leaving:to:leaving:)`：照 `Ci/` 的建造模式。
+  - 位置自由：不對齊格線、角度不限（`Ci/` 沒有吸附）。
+  - `Ci/` 把一條線畫成通過各點的 centripetal Catmull-Rom 曲線（`catmullRom`），端點重複；換成 Bézier，端點的控制點在弦上、弦長的三分之一。`Ci/` 每加一點就重畫整條線；GameCore 的邊建好後不會改，所以接著既有軌道的一端沿那條軌道的方向（控制點同樣在三分之一弦長），自由的一端照 `Ci/` 沿弦。兩端都自由時是直線，與 `Ci/` 相同。
+  - 轉彎超過 90 度拒絕（`Ci/` 的 `_turnAngleDeg` 與 `MIN_TURN_ANGLE_DEG = 90`）：以內積的正負判斷，整數、精確。`Ci/` 以曲線往回 10 公尺的點近似切線（`EXTENSION_TANGENT_LOOKBACK_M`），這裡直接用邊端的方向。
+  - 控制點四捨五入到整數單位，方向的誤差遠小於 GameCore 相接的 1/16，所以接得上。
+- 接到哪一端：節點上每個邊端都是一個可以接的方向（與邊端離開的方向相反）；選最接近目標、而且轉彎不超過 90 度的那個。節點有邊端但都轉太多時拒絕（`Ci/` 的訊息「小於最小轉彎半徑」）。關掉「平順曲線」時一律是直線，不保證相接。
+- 新節點離另一端不到 22 公尺時拒絕（`Ci/` 的 `ANCHOR_MIN_SPACING_M`，訊息「該位置與既有節點過近」）。
+- 點選的範圍：以畫面的 24 點計（`NetworkBuilding.touchRadius`）。`Ci/` 以 50 公尺（`ANCHOR_PICK_RADIUS_M`）在城市地圖上點選；這張地圖畫得近十倍，同樣的公尺數會一次點到好幾格外。
+- `GameSession` 的路網工具（`ConstructionTool.network`）：
+  - 模式：鋪設、月台、拆除（`NetworkToolMode`）。
+  - 草稿（只存在 session，不是權威狀態）：起點與終點（`NetworkAnchor`：既有節點，或新節點的位置）、在軌段上點到的位置（`NetworkEdgePoint`）。
+  - 設定：結構物、新節點的高度（每 2 公尺，地面上下 64 公尺）、平順曲線、緩和坡度（高度不同時兩端各有四分之一長的豎曲線）、月台的節數、月台所屬的車站。
+  - 預覽（`networkPreview`）：在世界的副本上執行建造會用的同一串指令，再丟掉副本；費用是餘額的差，拒絕時顯示 GameCore 的訊息。`Ci/` 的預覽在不能建時變灰（`computePlacePreviewInvalid`），這裡相同。
+  - 建造（`buildNetworkTrack()`）：新的端點先 `buildTrackNode`，再 `buildTrackEdge`；終點變成下一段的起點。
+  - 月台（`addNetworkPlatform()`）：以點到的位置為中心、`節數 × Train.carLength` 長，移到不超出軌段；所屬車站預設是兩格內最近的車站，沒有就在月台中點下方的格子 `buildStation`，再 `addTrackPlatform`。
+  - 拆除（`removeNetworkEdge()`）：`removeTrackEdge`，再拆掉兩端沒有其他軌段的節點。
+  - 列車工具：選到的車站在路網上有月台時，`placeSelectedTrain()` 把列車放到第一個放得下的月台（沒有就最長的），朝向決定行進方向，車頭在月台的遠端，並以沒有路段、停在原地的 continuation 讓它停住。
+  - **原子性**：幾個指令組成的操作都在 `var draft = world` 上執行，全部成功才換掉 session 的世界；任何一步被拒絕，世界完全不變（例如建造被拒時不會留下新節點）。每一步仍是 `GameWorld` 的指令，session 不判斷遊戲規則。
+- 畫面要畫的東西（`NetworkOverlay`）與地圖座標的換算（`MapScale.worldPoint`、`worldDistance`）也在 GamePresentation，可以測試。
+- 文字：英文與繁體中文（軌段、節點、月台、高架、隧道等沿用決策 38 的用語）；`networkSummary` 在有軌段時加上軌段數。
+
+**App**：
+
+- 工具列多了「路網」；它的選項（`NetworkControls`）有模式、結構物、高度、兩個切換與預覽，月台模式有節數、所屬車站與這個軌段上的月台（可以拆）。動作按鈕依模式建造（顯示費用）、設置月台或拆除。
+- 地圖：路網工具的點擊換成世界座標，交給 session；畫出起點（實心圓）、終點（圓環）、可以建的段（實線加光暈）或不能建的段（灰色虛線），以及要拆的軌段（紅色）或月台的範圍（車站色）。形狀不同，不只靠顏色。
+- 檢視列在路網工具下顯示點選了什麼。
+
+**驗證**：`NetworkBuildingSessionTests` 以手算的控制點、長度與費用，比對 session 的世界與直接對 GameCore 執行同一串指令的世界：直線、平順延伸（GameCore 確實把兩段接起來）、太近、轉太多、被拒絕時不留下節點、高架爬升與太陡、豎曲線、月台與新車站、既有車站的月台、依朝向放置列車、拆除與孤立節點、中文。SwiftUI 只能在 macOS CI 編譯，實機的操作要用 TestFlight 檢查。
+
+**已知限制與留給之後**：
+
+- 沒有拖曳：兩次點擊加確認。`Ci/` 每次點擊直接建站或節點、可以復原；這裡沒有復原，所以先預覽再確認。
+- 不能移動或刪除單獨的節點、不能在軌段中間切開接上新的軌段（`Ci/` 有節點的移動與刪除、在線上插站）；GameCore 的邊建好後不變，要加切開的指令。
+- 車站仍然要放在一個方格上（月台中點下方的格子），那一格被方格的鐵軌或其他車站佔用時無法新建車站。
+- 側向淨空（平行的軌道太近時拒絕）是新的 GameCore 規則，不在 C1。
+- VoiceOver 無法在路網工具裡指定任意位置。
+
+### 42. 性能的畫面（Stage C3）
+
+W2c（決策 40）讓每台列車與每條線路都有自己的 `TrainPerformance`，預設 `standard`，由 `setTrainPerformance`、`setLinePerformance` 更換，但留下「選性能的畫面」。W2c 合併之後，作者要求一起做，所以 C3 排在 C2 之前。**GameCore 沒有修改**。
+
+參考（2026-10-02 檢查三份，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c3性能的畫面)）：
+
+- `Railway/site_archive_clean/index.html` 的 `PERF_*`、`PERF_RULES`、`PERF_BY_TYPE`：依真實車名選性能。數值在 W1 已移植成 `TrainPerformance` 的預設；畫面以參考配對的車名命名每個預設。
+- `Ci/reference_snapshot/` 的建線畫面（`game-dom` 的 `#modal-line`）：「設計時速」（`metro.line.design_speed`），選項是 `LINE_SPEED_MAIN_NON_SG`（80、100、120、160）與其他（`LINE_SPEED_EXTRA_NON_SG`），合起來是 `LINE_SPEED_ALL_NON_SG`；車型（`TRAIN_TYPES`）只決定每節的容量。
+- `Railway/railway_game_reference_clean/`：OpenTTD 的 `BuildVehicleWindow` 只有名稱，沒有可以移植的內容。
+
+**GamePresentation**（Linux 上測試）：
+
+- `PerformancePreset`：GameCore 的 14 個預設，依參考的規則命名（區間車、普通車、莒光／復興、自強、EMU3000、推拉式自強、太魯閣、普悠瑪、柴聯自強、DR1000、阿里山林鐵、高鐵），加上標準與捷運（`Ci/` 的地鐵列車）。`init?(matching:)` 找加減速與惰行相同的第一個預設（不看最高速度，因為設計時速只改它）；DR1000 與柴聯自強的數值相同，顯示為先列出的柴聯自強。
+- `PerformancePreset.designSpeeds`：`Ci/` 的 `LINE_SPEED_ALL_NON_SG`，60 到 200 km/h。`TrainPerformance.withTopSpeed(_:)` 只換最高速度。
+- 文字：`displayText(in:)`（「區間車 · 120 km/h · 2.5 / 3 km/h/s」，對不上預設時是「自訂」）、`durationText(seconds:in:)`、線路的 `lineJourneyText(_:in:)`（以線路的性能規劃的各段與來回）、列車的 `trainRunText(of:in:)`（`ServiceTimes.run`：秒數、距離、預計到達）。
+- `GameSession.setSelectedTrainPerformance(_:)`、`setSelectedLinePerformance(_:)`：各呼叫一個 `GameWorld` 指令；行駛中的列車被拒絕（`trainServiceActive`），不合法的性能被拒絕（`invalidTrainPerformance`），世界不變。
+
+**App**：`PerformanceMenu`（現在的性能與一個選單：車種、設計時速），放在列車工具與線路面板；線路面板另外顯示各段與來回的時間，列車工具顯示正在走的行駛。
+
+**驗證**：`PerformanceSessionTests` 以手算的值比對：兩個連結在標準性能是 16 秒、在 1 km/h 是 120 秒（W2c 的手算值），來回加上 480 秒的停站；派車後 08:00:42 出發、08:02:42 到。
+
+**留給之後**：自訂加速度與減速度、依車種的容量（`Ci/` 的 `TRAIN_TYPES`）、指派列車時沿用線路的性能。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。

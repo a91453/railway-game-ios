@@ -61,7 +61,7 @@ public final class GameSession {
 
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another tile or tool.
-    public private(set) var message: StatusMessage?
+    public internal(set) var message: StatusMessage?
 
     /// The line the line panel shows: an ID only, never a copy of the line.
     /// Read the line itself through ``selectedLine``.
@@ -70,6 +70,34 @@ public final class GameSession {
     /// The stations picked, in order, for the next line. Only a draft:
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []
+
+    // The network tool (Stage C1): drafts only, read through GameCore when
+    // used (see NetworkSession.swift).
+
+    /// What a tap does with the network tool.
+    public internal(set) var networkMode: NetworkToolMode = .build
+    /// The ends picked for the next stretch of track: an existing node, or
+    /// a point for a new one. Nothing is built until
+    /// ``buildNetworkTrack()``.
+    public internal(set) var networkStart: NetworkAnchor?
+    public internal(set) var networkEnd: NetworkAnchor?
+    /// What carries the next stretch of track.
+    public var networkStructure: TrackStructure = .surface
+    /// How high a new node goes, in world units (64 to a metre).
+    public var networkHeight: Int64 = 0
+    /// Whether the next stretch continues the track at its ends smoothly
+    /// (the default), or runs straight.
+    public var networkFollowsTrack = true
+    /// Whether a stretch that climbs or falls eases into and out of its
+    /// grade with vertical curves at both ends.
+    public var networkEasesGrade = false
+    /// The place on an edge the platform and remove modes picked.
+    public internal(set) var networkEdgePoint: NetworkEdgePoint?
+    /// How many cars the next platform is long enough for.
+    public var platformCars = 4
+    /// The station the next platform serves; `nil` builds a new station
+    /// named ``stationName`` beside it.
+    public var platformStationID: StationID?
 
     /// Real time per simulation tick. At 600× (``GameSpeed/normal``) a tick
     /// is one game minute, so a game day lasts 144 real seconds; at 1× it is
@@ -327,10 +355,20 @@ public final class GameSession {
     /// Puts the selected train at the centre of the selected tile, facing
     /// ``placementHeading``, through `GameWorld.placeTrain(_:at:)`. GameCore
     /// decides whether the tile can take it.
+    ///
+    /// On a station with platforms on the track network (Stage C1), the
+    /// train goes onto one of them instead (see
+    /// ``place(_:atPlatformOf:)``).
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let tile = selection else {
             message = StatusMessage(kind: .failure, text: language.text("Select a track tile to place \(train.name) on.", "請選擇要放置 \(train.name) 的軌道格。"))
+            return
+        }
+        // Stage C1: a station with platforms on the track network takes
+        // the train at one of them.
+        if let station = world.station(at: tile), !world.trackPlatforms(of: station.id).isEmpty {
+            place(train, atPlatformOf: station)
             return
         }
         let heading = placementHeading
@@ -506,7 +544,7 @@ public final class GameSession {
     }
 
     /// The selected train, or `nil` after reporting that there is none.
-    private func requireSelectedTrain() -> Train? {
+    func requireSelectedTrain() -> Train? {
         guard let id = selectedTrainID else {
             message = StatusMessage(kind: .failure, text: language.text("Buy a train first.", "請先購買列車。"))
             return nil
@@ -772,6 +810,9 @@ public final class GameSession {
                 try world.removeTrack(at: position)
                 return language.text("Removed track at \(position).", "已拆除 \(position) 的軌道。")
             }
+        case .network:
+            // The network tool acts on what its taps picked, not on the tile.
+            return
         case .train:
             // The selected tile is where an unplaced train goes, or where a
             // placed one is sent.
@@ -806,7 +847,7 @@ public final class GameSession {
     /// Runs one command against the world and records its outcome. Returns
     /// whether the command succeeded.
     @discardableResult
-    private func perform(_ command: (inout GameWorld) throws(GameError) -> String) -> Bool {
+    func perform(_ command: (inout GameWorld) throws(GameError) -> String) -> Bool {
         do throws(GameError) {
             message = StatusMessage(kind: .success, text: try command(&world))
             return true
@@ -818,7 +859,7 @@ public final class GameSession {
 
     /// "Station N" (or "車站 N") with the lowest N from the next station
     /// number upward that no existing station uses.
-    private static func suggestedStationName(for world: GameWorld, in language: DisplayLanguage) -> String {
+    static func suggestedStationName(for world: GameWorld, in language: DisplayLanguage) -> String {
         suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: Set(world.stations.map(\.name)))
     }
 

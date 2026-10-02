@@ -61,6 +61,16 @@
         }
       }
     },
+    "Add Platform" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設置月台"
+          }
+        }
+      }
+    },
     "Add Selected Station" : {
       "localizations" : {
         "zh-Hant" : {
@@ -107,6 +117,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建造車站 · %@"
+          }
+        }
+      }
+    },
+    "Build Track" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鋪設軌道"
           }
         }
       }
@@ -211,12 +231,12 @@
         }
       }
     },
-    "Choose Track, Station or Remove to build. Selecting only inspects." : {
+    "Choose Track, Station, Remove or Network to build. Selecting only inspects." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇「軌道」、「車站」或「拆除」來建設。「選取」只會檢視。"
+            "value" : "選擇「軌道」、「車站」、「拆除」或「路網」來建設。「選取」只會檢視。"
           }
         }
       }
@@ -231,6 +251,16 @@
         }
       }
     },
+    "Chooses how it accelerates, brakes and how fast it may run." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇加速、減速與最高速度。"
+          }
+        }
+      }
+    },
     "Chooses the train to control." : {
       "localizations" : {
         "zh-Hant" : {
@@ -241,12 +271,32 @@
         }
       }
     },
+    "Clear" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        }
+      }
+    },
     "Create Line" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立路線"
+          }
+        }
+      }
+    },
+    "Design speed" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設計時速"
           }
         }
       }
@@ -267,6 +317,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成"
+          }
+        }
+      }
+    },
+    "Ease the grade" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "緩和坡度"
           }
         }
       }
@@ -501,6 +561,16 @@
         }
       }
     },
+    "Network mode" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路網模式"
+          }
+        }
+      }
+    },
     "New line" : {
       "localizations" : {
         "zh-Hant" : {
@@ -661,6 +731,16 @@
         }
       }
     },
+    "Performance: %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "性能：%@"
+          }
+        }
+      }
+    },
     "Period" : {
       "localizations" : {
         "zh-Hant" : {
@@ -687,6 +767,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "放置與派送列車 · 每列 %@"
+          }
+        }
+      }
+    },
+    "Platform station" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "月台所屬車站"
+          }
+        }
+      }
+    },
+    "Preset" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車種"
           }
         }
       }
@@ -757,6 +857,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拆除軌道"
+          }
+        }
+      }
+    },
+    "Remove this platform" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拆除這座月台"
           }
         }
       }
@@ -1021,6 +1131,16 @@
         }
       }
     },
+    "Smooth curves" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平順曲線"
+          }
+        }
+      }
+    },
     "Speed: %@" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1081,6 +1201,16 @@
         }
       }
     },
+    "Structure" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結構物"
+          }
+        }
+      }
+    },
     "Take Off" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1121,6 +1251,16 @@
         }
       }
     },
+    "Tap the map first." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先點選地圖。"
+          }
+        }
+      }
+    },
     "This" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1147,6 +1287,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "終點"
+          }
+        }
+      }
+    },
+    "Track at any angle, platforms · %@ a tile" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意角度的軌道與月台 · 每格 %@"
+          }
+        }
+      }
+    },
+    "Track network tool" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路網工具"
           }
         }
       }

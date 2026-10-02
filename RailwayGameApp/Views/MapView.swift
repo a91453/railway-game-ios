@@ -26,6 +26,7 @@ struct MapView: View {
                     world: session.world,
                     selectedTrainID: session.selectedTrainID,
                     selection: session.selection,
+                    network: session.networkOverlay,
                     tileSize: tileSize,
                     session: session
                 )
@@ -83,7 +84,8 @@ struct MapView: View {
 }
 
 /// Draws the whole map, the track network and the placed trains in one
-/// `Canvas` and turns taps into grid positions.
+/// `Canvas` and turns taps into grid positions, or, with the network tool
+/// (Stage C1), into world points with the reach of a fingertip.
 ///
 /// Equatable so that game ticks that change only the world's clock do not
 /// redraw it (only the map, the track network and the trains are drawn); a
@@ -93,6 +95,8 @@ private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
     let selection: GridPosition?
+    /// What the network tool draws; `nil` with another tool.
+    let network: NetworkOverlay?
     let tileSize: Double
     let session: GameSession
 
@@ -102,18 +106,21 @@ private struct MapCanvas: View, Equatable {
             && lhs.world.network == rhs.world.network
             && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.selection == rhs.selection
+            && lhs.network == rhs.network
             && lhs.tileSize == rhs.tileSize
             && lhs.session === rhs.session
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selection = selection, tileSize = tileSize
+        let selection = selection, network = network, tileSize = tileSize
         Canvas { context, _ in
             TileArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
-                selection: selection,
+                // The network tool picks points, not tiles.
+                selection: network == nil ? selection : nil,
+                network: network,
                 tileSize: tileSize,
                 in: context
             )
@@ -121,7 +128,14 @@ private struct MapCanvas: View, Equatable {
         .frame(width: tileSize * Double(world.map.width), height: tileSize * Double(world.map.height))
         .contentShape(Rectangle())
         .onTapGesture { location in
-            session.select(MapScale.position(atX: location.x, y: location.y, tileSize: tileSize))
+            if session.tool == .network {
+                session.tapNetwork(
+                    at: MapScale.worldPoint(atX: location.x, y: location.y, tileSize: tileSize),
+                    reach: MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: tileSize)
+                )
+            } else {
+                session.select(MapScale.position(atX: location.x, y: location.y, tileSize: tileSize))
+            }
         }
     }
 }
