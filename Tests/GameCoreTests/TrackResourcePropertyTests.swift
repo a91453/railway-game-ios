@@ -29,7 +29,7 @@ final class TrackResourcePropertyTests: XCTestCase {
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         var setup = KernelDifferentialTests.makeSetup(shapes: [.grid, .grid, .loopWithTails, .ladder, .ladder, .random, .line], using: &c.random)
-        setup.minutes = c.random.int64(in: 0...10_000)
+        setup.seconds = 60 * (c.random.int64(in: 0...10_000))
         setup.extraBalance = 1_000_000
         // Junctions become turnouts or crossings.
         setup.specs = setup.specs.map { spec in

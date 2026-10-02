@@ -121,9 +121,9 @@ extension GameWorld {
     /// `minutes` game minutes (the reference's panel sums the last 60), in
     /// item order, leaving out items with nothing.
     public func recentLedgerTotals(minutes: Int64 = 60) -> [LedgerTotal] {
-        let since = clock.now.minutes - minutes
+        let since = clock.now.seconds - minutes * GameTime.secondsPerMinute
         var totals: [LedgerItem: Int64] = [:]
-        for entry in accounts.entries where entry.time.minutes > since {
+        for entry in accounts.entries where entry.time.seconds > since {
             for line in entry.breakdown {
                 totals[line.item, default: 0] += line.amount.amount
             }

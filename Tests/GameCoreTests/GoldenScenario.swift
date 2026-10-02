@@ -11,11 +11,47 @@ import GameCore
 // from a GameCore type's Codable form, so changing the Swift save format can
 // never change what a fixture means.
 
+// Fixture times other than the clock are whole minutes, and most tests were
+// written when the basic step was a game minute and still work in them
+// (Stage W2a made it a second): they read times and periods as minutes
+// through these, which refuse a time between minutes. Here, beside the
+// runner, so that the Wasm probe (Web/WasmProbe), which reuses this file
+// alone, has them too.
+extension GameTime {
+    /// This time in whole minutes. A time between two minutes is a failure
+    /// of the test that reads it.
+    var minutes: Int64 {
+        precondition(isWholeMinute, "\(seconds) s is not a whole minute")
+        return minute
+    }
+}
+
+/// `minutes` as a timetable period (``Train/timetablePeriod``), which
+/// counts seconds; a period too large or too small for that is the largest
+/// or smallest there is, so that tests of extreme periods keep meaning one.
+func periodSeconds(_ minutes: Int64?) -> Int64? {
+    minutes.map {
+        let (seconds, overflow) = $0.multipliedReportingOverflow(by: GameTime.secondsPerMinute)
+        return overflow ? ($0 > 0 ? .max : .min) : seconds
+    }
+}
+
+extension Train {
+    /// ``timetablePeriod`` in whole minutes; a period that is not whole
+    /// minutes is a failure of the test that reads it.
+    var timetablePeriodMinutes: Int64? {
+        timetablePeriod.map {
+            precondition($0 % GameTime.secondsPerMinute == 0, "a period of \($0) s is not whole minutes")
+            return $0 / GameTime.secondsPerMinute
+        }
+    }
+}
+
 /// A checked-in scenario: a starting world, steps in order (commands with the
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 22
+    static let schemaVersion = 23
 
     var description: String
     var initialState: InitialState
@@ -27,15 +63,23 @@ struct GoldenScenario: Decodable {
         var mapHeight: Int
         var balance: Int64
         var costs: Costs
-        var gameMinutes: Int64
+        /// The clock, in whole minutes or (schema 23) in seconds: exactly
+        /// one of the two (see ``GoldenScenario/clockSeconds(minutes:seconds:)``).
+        var gameMinutes: Int64?
+        var gameSeconds: Int64?
         var speed: SpeedName
+
+        /// The clock in seconds.
+        var seconds: Int64 {
+            gameSeconds ?? gameMinutes! * GameTime.secondsPerMinute
+        }
 
         func makeWorld() throws(GameError) -> GameWorld {
             try GameWorld(
                 width: mapWidth,
                 height: mapHeight,
                 economy: GameEconomy(balance: Money(balance), costs: costs.constructionCosts),
-                clock: GameClock(now: GameTime(minutes: gameMinutes), speed: speed.speed)
+                clock: GameClock(now: GameTime(seconds: seconds), speed: speed.speed)
             )
         }
     }
@@ -78,6 +122,23 @@ struct GoldenScenario: Decodable {
 
     enum FixtureError: Error, Equatable {
         case unsupportedSchemaVersion(Int)
+        case invalidClock(String)
+    }
+
+    /// Checks a clock written as `gameMinutes` or `gameSeconds` (schema
+    /// 23): exactly one of them, and `gameSeconds` only for a time that is
+    /// not a whole minute, so each time has one way to be written.
+    static func checkClock(minutes: Int64?, seconds: Int64?, in part: String) throws {
+        switch (minutes, seconds) {
+        case (_?, nil):
+            return
+        case (nil, let seconds?) where seconds % GameTime.secondsPerMinute != 0:
+            return
+        case (nil, _?):
+            throw FixtureError.invalidClock("\(part): a whole minute is written as gameMinutes")
+        default:
+            throw FixtureError.invalidClock("\(part): needs exactly one of gameMinutes and gameSeconds")
+        }
     }
 
     /// Decodes a fixture, rejecting schema versions this reader does not know
@@ -88,7 +149,14 @@ struct GoldenScenario: Decodable {
         }
         let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
         guard version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
-        return try JSONDecoder().decode(GoldenScenario.self, from: data)
+        let scenario = try JSONDecoder().decode(GoldenScenario.self, from: data)
+        try checkClock(minutes: scenario.initialState.gameMinutes, seconds: scenario.initialState.gameSeconds, in: "initialState")
+        let final = scenario.expectedFinalState
+        try checkClock(minutes: final.gameMinutes, seconds: final.gameSeconds, in: "expectedFinalState")
+        if let tenths = final.pendingTenths, !(1..<10).contains(tenths) {
+            throw FixtureError.invalidClock("expectedFinalState: pendingTenths is 1 to 9, or left out")
+        }
+        return scenario
     }
 
     /// Runs the scenario on a new world and describes every way the result
@@ -422,7 +490,7 @@ enum ScenarioCommand: Equatable {
             case .setTrainContinuation(let id, let nodes):
                 try world.setTrainContinuation(id, to: nodes)
             case .setTrainTimetable(let id, let stops, let period):
-                try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
+                try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
             case .startTrainService(let id):
                 try world.startTrainService(id)
             case .stopTrainService(let id):
@@ -1483,7 +1551,12 @@ struct PositionSummary: Codable, Equatable {
 /// tracks row by row from the north-west corner), sorted here rather than
 /// inherited from how GameCore stores them.
 struct WorldSummary: Codable, Equatable {
-    var gameMinutes: Int64
+    /// The clock: in whole minutes, or (schema 23) in seconds when it is
+    /// between two minutes; exactly one is written.
+    var gameMinutes: Int64?
+    var gameSeconds: Int64?
+    /// The clock's pending tenths of a second (schema 23), left out when 0.
+    var pendingTenths: Int64?
     var speed: SpeedName
     var balance: Int64
     var stations: [StationSummary]
@@ -1585,7 +1658,10 @@ struct WorldSummary: Codable, Equatable {
     }
 
     init(_ world: GameWorld) {
-        gameMinutes = world.clock.now.minutes
+        let now = world.clock.now
+        gameMinutes = now.isWholeMinute ? now.minute : nil
+        gameSeconds = now.isWholeMinute ? nil : now.seconds
+        pendingTenths = world.clock.pendingTenths == 0 ? nil : world.clock.pendingTenths
         speed = SpeedName(world.clock.speed)
         balance = world.economy.balance.amount
         stations = world.stations
@@ -1603,7 +1679,7 @@ struct WorldSummary: Codable, Equatable {
                 TrainSummary(
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
-                    repeat: RepeatSummary($0.timetablePeriod), execution: ExecutionSummary($0.execution),
+                    repeat: RepeatSummary($0.timetablePeriodMinutes), execution: ExecutionSummary($0.execution),
                     cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number),
                     reservation: $0.reservation.map(ResourceSummary.init)
                 )
@@ -2131,7 +2207,8 @@ struct PathSummary: Codable, Equatable {
 
 // MARK: - Names
 
-/// A game speed as its fixture name: `"paused"`, `"normal"` or `"double"`.
+/// A game speed as its fixture name: `"paused"`, `"x1"`, `"x10"`, `"x60"`
+/// (schema 23), `"normal"` or `"double"`.
 struct SpeedName: Codable, Equatable {
     var speed: GameSpeed
 
@@ -2142,6 +2219,9 @@ struct SpeedName: Codable, Equatable {
     private static func name(of speed: GameSpeed) -> String {
         switch speed {
         case .paused: "paused"
+        case .x1: "x1"
+        case .x10: "x10"
+        case .x60: "x60"
         case .normal: "normal"
         case .double: "double"
         }
@@ -3229,10 +3309,14 @@ struct DaySummary: Codable, Equatable {
 
 /// The company's accounts (schema 22): `{"mode", "fareRules", "openedAt",
 /// "pending", "ledger", "days"}`, every field required; `fareRules` and
-/// `openedAt` `null` for none.
+/// `openedAt` `null` for none. `openedAt` is in minutes in a fixture and
+/// kept here in seconds (Stage W2a), since a company opened between two
+/// minutes has no whole minute to write; such a time is printed in
+/// diagnostics as `"openedAtSeconds"`.
 struct AccountsSummary: Codable, Equatable {
     var mode: String
     var fareRules: FareRulesSummary?
+    /// In seconds.
     var openedAt: Int64?
     var pending: PendingSummary
     var ledger: [LedgerRowSummary]
@@ -3249,7 +3333,7 @@ struct AccountsSummary: Codable, Equatable {
 
     init(_ accounts: CompanyAccounts) {
         self.init(
-            mode: accounts.mode.rawValue, fareRules: accounts.fareRules.map(FareRulesSummary.init), openedAt: accounts.openedAt?.minutes,
+            mode: accounts.mode.rawValue, fareRules: accounts.fareRules.map(FareRulesSummary.init), openedAt: accounts.openedAt?.seconds,
             pending: PendingSummary(accounts.pending), ledger: accounts.entries.map(LedgerRowSummary.init),
             days: accounts.days.map {
                 DaySummary(
@@ -3266,7 +3350,7 @@ struct AccountsSummary: Codable, Equatable {
     )
 
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, openedAt, pending, ledger, days
+        case mode, fareRules, openedAt, openedAtSeconds, pending, ledger, days
     }
 
     init(from decoder: any Decoder) throws {
@@ -3276,7 +3360,7 @@ struct AccountsSummary: Codable, Equatable {
         }
         mode = try container.decode(String.self, forKey: .mode)
         fareRules = try container.decodeNil(forKey: .fareRules) ? nil : container.decode(FareRulesSummary.self, forKey: .fareRules)
-        openedAt = try container.decodeNil(forKey: .openedAt) ? nil : container.decode(Int64.self, forKey: .openedAt)
+        openedAt = try container.decodeNil(forKey: .openedAt) ? nil : container.decode(Int64.self, forKey: .openedAt) * GameTime.secondsPerMinute
         pending = try container.decode(PendingSummary.self, forKey: .pending)
         ledger = try container.decode([LedgerRowSummary].self, forKey: .ledger)
         days = try container.decode([DaySummary].self, forKey: .days)
@@ -3286,7 +3370,11 @@ struct AccountsSummary: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(mode, forKey: .mode)
         try container.encode(fareRules, forKey: .fareRules)
-        try container.encode(openedAt, forKey: .openedAt)
+        if let openedAt, openedAt % GameTime.secondsPerMinute != 0 {
+            try container.encode(openedAt, forKey: .openedAtSeconds)
+        } else {
+            try container.encode(openedAt.map { $0 / GameTime.secondsPerMinute }, forKey: .openedAt)
+        }
         try container.encode(pending, forKey: .pending)
         try container.encode(ledger, forKey: .ledger)
         try container.encode(days, forKey: .days)

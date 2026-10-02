@@ -47,7 +47,7 @@ struct RailwayWasmProbe {
         try world.setTrainMovementRate(train.id, to: 1_024)
         try world.advance(ticks: 8)
         let snapshot = world.railwaySnapshot()
-        try require(world.clock.now.minutes == 8 && snapshot.edges.count == 1 && snapshot.trains.count == 1, "tick or snapshot changed")
+        try require(world.clock.now == GameTime(minutes: 8) && snapshot.edges.count == 1 && snapshot.trains.count == 1, "tick or snapshot changed")
         try require(snapshot.trains[0].head.position == WorldCoordinate(x: 8_192, y: 0, z: 256), "train position changed")
         checks.append("ticks-and-s4-snapshot")
 
@@ -65,7 +65,7 @@ struct RailwayWasmProbe {
         try require(largeBalance == "9007199254735693", "large integer lost precision")
         checks.append("codable-large-integer")
 
-        var clock = GameClock(now: GameTime(minutes: Int64.max), speed: .normal)
+        var clock = GameClock(now: GameTime(seconds: Int64.max), speed: .normal)
         let oldClock = clock
         do {
             try clock.advance(ticks: 1)

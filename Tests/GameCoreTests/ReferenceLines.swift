@@ -96,7 +96,7 @@ extension ReferenceWorld {
 
     func serviceLevel(of id: LineID, at time: GameTime) -> ServiceLevel? {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
-        let minute = Int(((time.minutes % 1440) + 1440) % 1440)
+        let minute = Int(((time.minute % 1440) + 1440) % 1440)
         if let (open, close) = line.hours {
             // One range, or, past midnight, the evening and the next morning.
             let inService = close <= 1440 ? (open..<close).contains(minute) : minute >= open || minute < close - 1440

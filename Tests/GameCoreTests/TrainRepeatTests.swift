@@ -65,7 +65,7 @@ final class TrainRepeatTests: XCTestCase {
         var world = try makeLineWorld(minute: minute)
         try world.placeTrain(first, at: position)
         try world.setTrainMovementRate(first, to: 1024)
-        try world.setTrainTimetable(first, to: stops, repeatingEvery: period)
+        try world.setTrainTimetable(first, to: stops, repeatingEvery: periodSeconds(period))
         try world.startTrainService(first)
         return world
     }
@@ -99,35 +99,35 @@ final class TrainRepeatTests: XCTestCase {
         XCTAssertNil(try train(in: world).timetablePeriod)
     }
 
-    /// A period needs a stop and a minute or more, and the timetable must
+    /// A period needs a stop and a second or more (Stage W2a; these are whole minutes), and the timetable must
     /// not go back when it starts again: the last departure no later than
     /// the first arrival one period later.
     func testAPeriodMustLetTheTimetableStartAgainWithoutGoingBack() throws {
         var world = try makeLineWorld()
         // The shuttle spans 0 to 12, so 12 is the shortest period.
         for period: Int64 in [12, 13, 1440, .max] {
-            try world.setTrainTimetable(first, to: shuttle, repeatingEvery: period)
-            XCTAssertEqual(try train(in: world).timetablePeriod, period)
+            try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(period))
+            XCTAssertEqual(try train(in: world).timetablePeriod, periodSeconds(period))
             XCTAssertEqual(try train(in: world).timetable, shuttle)
         }
         let before = world
         for period: Int64 in [11, 1, 0, -1, -12, .min] {
-            XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: shuttle, repeatingEvery: period), .invalidTimetable)
+            XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(period)), .invalidTimetable)
         }
-        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [], repeatingEvery: 60), .invalidTimetable)
+        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [], repeatingEvery: periodSeconds(60)), .invalidTimetable)
         XCTAssertEqual(world, before, "refused timetables change nothing")
 
         // One stop repeats every period at least its dwell; a later first
         // arrival counts from itself, not from minute 0.
-        try world.setTrainTimetable(first, to: [stop(alpha, 3, 8)], repeatingEvery: 5)
-        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(alpha, 3, 8)], repeatingEvery: 4), .invalidTimetable)
-        try world.setTrainTimetable(first, to: [stop(alpha, 100, 100), stop(beta, 110, 130)], repeatingEvery: 30)
+        try world.setTrainTimetable(first, to: [stop(alpha, 3, 8)], repeatingEvery: periodSeconds(5))
+        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(alpha, 3, 8)], repeatingEvery: periodSeconds(4)), .invalidTimetable)
+        try world.setTrainTimetable(first, to: [stop(alpha, 100, 100), stop(beta, 110, 130)], repeatingEvery: periodSeconds(30))
 
         // Setting a timetable without a period makes it run once; clearing
         // clears the period too.
         try world.setTrainTimetable(first, to: shuttle)
         XCTAssertNil(try train(in: world).timetablePeriod)
-        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: 12)
+        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(12))
         try world.setTrainTimetable(first, to: [])
         XCTAssertEqual(try train(in: world).timetable, [])
         XCTAssertNil(try train(in: world).timetablePeriod)
@@ -138,14 +138,14 @@ final class TrainRepeatTests: XCTestCase {
     func testPeriodChecksRunInTheDocumentedOrder() throws {
         var world = try makeLineWorld()
         let ghost = StationID(rawValue: 99)
-        XCTAssertThrowsGameError(try world.setTrainTimetable(unknown, to: shuttle, repeatingEvery: 0), .unknownTrain(unknown))
-        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(ghost, 0, 0)], repeatingEvery: 0), .invalidTimetable)
-        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(ghost, 0, 0)], repeatingEvery: 1), .unknownStation(ghost))
+        XCTAssertThrowsGameError(try world.setTrainTimetable(unknown, to: shuttle, repeatingEvery: periodSeconds(0)), .unknownTrain(unknown))
+        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(ghost, 0, 0)], repeatingEvery: periodSeconds(0)), .invalidTimetable)
+        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: [stop(ghost, 0, 0)], repeatingEvery: periodSeconds(1)), .unknownStation(ghost))
 
         try world.placeTrain(first, at: .atNode(b, heading: .east))
-        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: 12)
+        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(12))
         try world.startTrainService(first)
-        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: shuttle, repeatingEvery: 0), .trainServiceActive(first))
+        XCTAssertThrowsGameError(try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(0)), .trainServiceActive(first))
     }
 
     // MARK: - Turning round
@@ -252,7 +252,7 @@ final class TrainRepeatTests: XCTestCase {
 
         // The timetable is plan data: it keeps its first cycle's times.
         XCTAssertEqual(try train(in: world).timetable, shuttle)
-        XCTAssertEqual(try train(in: world).timetablePeriod, 12)
+        XCTAssertEqual(try train(in: world).timetablePeriodMinutes, 12)
     }
 
     /// A late train does not skip a stop or a cycle: it leaves each stop as
@@ -262,7 +262,7 @@ final class TrainRepeatTests: XCTestCase {
         var world = try makeLineWorld()
         try world.placeTrain(first, at: .atNode(b, heading: .east))
         try world.setTrainMovementRate(first, to: 1024)
-        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: 12)
+        try world.setTrainTimetable(first, to: shuttle, repeatingEvery: periodSeconds(12))
         try world.startTrainService(first)
         // Held at Alpha until minute 3 with rate 0: it gets its route at 0
         // but does not move.
@@ -346,35 +346,46 @@ final class TrainRepeatTests: XCTestCase {
         try world.advance(ticks: 11)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(2))
         try world.stopTrainService(first)
-        XCTAssertEqual(try train(in: world).timetablePeriod, 12)
+        XCTAssertEqual(try train(in: world).timetablePeriodMinutes, 12)
         try world.startTrainService(first)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1), "cycle 1 leaves Alpha at 12")
 
         // Taken off the track, the train keeps its period too.
         try world.stopTrainService(first)
         try world.unplaceTrain(first)
-        XCTAssertEqual(try train(in: world).timetablePeriod, 12)
+        XCTAssertEqual(try train(in: world).timetablePeriodMinutes, 12)
     }
 
     // MARK: - The last cycle
 
-    /// Cycles whose times would pass the largest minute do not exist: a
+    /// Cycles whose times would pass the largest second do not exist: a
     /// service starts at the last cycle that fits, however late, and ends
-    /// after it instead of starting again.
+    /// after it instead of starting again. (Stage W2a: the times and the
+    /// period are seconds here, near the end of the range.)
     func testTheServiceEndsAfterTheLastCycleWhoseTimesFit() throws {
-        // Cycles 0 and 1 fit: cycle 1 leaves Alpha at 2^62.
+        // Cycles 0 and 1 fit: cycle 1 leaves Alpha at 2^62 seconds, which
+        // is not a whole minute, so the train leaves at the next whole
+        // minute, `leaving`.
         let period = Int64(1) << 62
-        var world = try makeServiceWorld([stop(alpha, 0, 0)], every: period, at: .atNode(b, heading: .east), minute: 1)
+        let leaving = (period + 59) / 60
+        var world = try makeLineWorld(minute: 1)
+        try world.placeTrain(first, at: .atNode(b, heading: .east))
+        try world.setTrainMovementRate(first, to: 1024)
+        try world.setTrainTimetable(first, to: [stop(alpha, 0, 0)], repeatingEvery: period)
+        try world.startTrainService(first)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1))
-        try world.advance(ticks: Int(period - 1))
+        try world.advance(ticks: Int(leaving - 1))
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1))
         try world.advance(ticks: 1)
         XCTAssertNil(try train(in: world).execution, "no cycle 2 to start")
-        XCTAssertEqual(world.clock.now, GameTime(minutes: period + 1))
+        XCTAssertEqual(world.clock.now, GameTime(minutes: leaving + 1))
 
         // Only cycle 0 fits when the period is almost the whole range.
-        let wide = [stop(alpha, 0, 0), stop(beta, .max - 10, .max - 10)]
-        let late = try makeServiceWorld(wide, every: .max - 10, at: .atNode(b, heading: .east), minute: 5)
+        let end = GameTime(seconds: .max - 10)
+        var late = try makeLineWorld(minute: 5)
+        try late.placeTrain(first, at: .atNode(b, heading: .east))
+        try late.setTrainTimetable(first, to: [stop(alpha, 0, 0), ScheduledStop(station: beta, arrival: end, departure: end)], repeatingEvery: .max - 10)
+        try late.startTrainService(first)
         XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0))
     }
 
@@ -402,6 +413,32 @@ final class TrainRepeatTests: XCTestCase {
         XCTAssertEqual(try train(in: batch).position, .atNode(f, heading: .east))
     }
 
+    /// Stage W2a: a departure between two minutes is due at the first whole
+    /// minute after it, and a batch that skips idle minutes stops there as
+    /// single ticks do.
+    func testABatchWakesForADepartureBetweenTwoMinutes() throws {
+        // From second 15 of minute 1, Alpha is left at second 15 of minute
+        // 2 and then every 28 minutes.
+        var start = try makeLineWorld(minute: 1)
+        start.setSpeed(.x1)
+        try start.advance(ticks: 150)
+        start.setSpeed(.normal)
+        let time = GameTime(seconds: 135)
+        try start.placeTrain(first, at: .atNode(b, heading: .east))
+        try start.setTrainTimetable(first, to: [ScheduledStop(station: alpha, arrival: time, departure: time)], repeatingEvery: 28 * 60)
+        try start.startTrainService(first)
+        var batch = start
+        try batch.advance(ticks: 38)
+        var single = start
+        for _ in 0..<38 {
+            try single.advance(ticks: 1)
+        }
+        XCTAssertEqual(batch, single)
+        // Left at minutes 3 and 31; the next leaves at minute 58.
+        XCTAssertEqual(batch.clock.now, GameTime(seconds: 75 + 38 * 60))
+        XCTAssertEqual(try train(in: batch).execution, .waitingAtStop(0, cycle: 2))
+    }
+
     // MARK: - Saving
 
     /// The period, turning round and the cycle are saved only when used,
@@ -410,7 +447,8 @@ final class TrainRepeatTests: XCTestCase {
     func testRepeatsTurnsAndCyclesAreSavedOnlyWhenUsed() throws {
         var world = try makeServiceWorld(shuttle, every: 12, at: .atNode(b, heading: .east))
         var text = String(decoding: try encode(world), as: UTF8.self)
-        XCTAssertTrue(text.contains(#""period":12"#), text)
+        // Stage W2a: the period is saved in seconds.
+        XCTAssertTrue(text.contains(#""period":720"#), text)
         XCTAssertEqual(text.components(separatedBy: #""reverse":true"#).count, 3, "two stops turn the train")
         XCTAssertFalse(text.contains(#""reverse":false"#), text)
         XCTAssertTrue(text.contains(#""execution":{"phase":"waiting","stop":0}"#), text)
@@ -457,8 +495,10 @@ final class TrainRepeatTests: XCTestCase {
             ("null period", { $0["period"] = NSNull() }),
             ("period as a string", { $0["period"] = "12" }),
             ("zero period", { $0["period"] = 0 }),
-            ("negative period", { $0["period"] = -12 }),
-            ("period too short", { $0["period"] = 11 }),
+            ("negative period", { $0["period"] = -720 }),
+            // Stage W2a: periods are saved in seconds, and the shuttle spans
+            // 720 of them.
+            ("period too short", { $0["period"] = 719 }),
             ("cycle without a period", { $0["period"] = nil }),
             ("null reverse", { train in
                 var stops = train["timetable"] as! [[String: Any]]
@@ -473,9 +513,10 @@ final class TrainRepeatTests: XCTestCase {
             ("negative cycle", { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": -1] }),
             ("null cycle", { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": NSNull()] }),
             ("fractional cycle", { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 1.5] }),
-            // The last cycle that fits is (Int64.max - 12) / 12, rounded
-            // down: 768614336404564649. The next one does not fit.
-            ("a cycle past the last that fits", { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 768_614_336_404_564_650] }),
+            // The last cycle that fits is (Int64.max - 720) / 720 in
+            // seconds, rounded down: 12810238940076076. The next one does
+            // not fit.
+            ("a cycle past the last that fits", { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 12_810_238_940_076_077] }),
             // Nothing travels to the service's very first stop.
             ("travelling to stop 0 of cycle 0", { $0["execution"] = ["phase": "travelling", "stop": 0] }),
         ]
@@ -488,7 +529,7 @@ final class TrainRepeatTests: XCTestCase {
         // this one (to f) does not.
         XCTAssertThrowsError(try decode { $0["execution"] = ["phase": "travelling", "stop": 0, "cycle": 1] })
         // The last cycle that fits is a valid cycle.
-        XCTAssertNoThrow(try decode { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 768_614_336_404_564_649] })
+        XCTAssertNoThrow(try decode { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 12_810_238_940_076_076] })
         // Without "cycle", cycle 0: a different but valid service.
         XCTAssertEqual(try train(in: decode { $0["execution"] = ["phase": "travelling", "stop": 1] }).execution, .travellingToStop(1))
     }

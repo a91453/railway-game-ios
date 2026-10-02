@@ -15,7 +15,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             let initial = scenario.initialState
             var model = ReferenceWorld(
                 width: initial.mapWidth, height: initial.mapHeight, balance: initial.balance,
-                costs: initial.costs.constructionCosts, minutes: initial.gameMinutes, speed: initial.speed.speed
+                costs: initial.costs.constructionCosts, seconds: initial.seconds, speed: initial.speed.speed
             )
             for (index, step) in scenario.steps.enumerated() {
                 steps += 1
@@ -32,7 +32,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 }
             }
             let final = scenario.expectedFinalState
-            XCTAssertEqual(model.minutes, final.gameMinutes, name)
+            let finalSeconds = final.gameSeconds ?? final.gameMinutes! * GameTime.secondsPerMinute
+            XCTAssertEqual(model.clockSeconds, finalSeconds, name)
+            XCTAssertEqual(model.pendingTenths, final.pendingTenths ?? 0, name)
             XCTAssertEqual(model.speed, final.speed.speed, name)
             XCTAssertEqual(model.balance, final.balance, name)
             XCTAssertEqual(
@@ -62,7 +64,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end),
-                        timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period),
+                        timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period.map { $0 / GameTime.secondsPerMinute }),
                         execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init),
                         trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init)
                     )
@@ -110,7 +112,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .reverseTrain(let id): error = model.reverseTrain(id)
         case .setTrainMovementRate(let id, let rate): error = model.setRate(id, rate)
         case .setTrainContinuation(let id, let nodes): error = model.setContinuation(id, nodes)
-        case .setTrainTimetable(let id, let stops, let period): error = model.setTimetable(id, stops, period: period)
+        case .setTrainTimetable(let id, let stops, let period): error = model.setTimetable(id, stops, period: periodSeconds(period))
         case .startTrainService(let id): error = model.startService(id)
         case .stopTrainService(let id): error = model.stopService(id)
         case .createLine(let name, let stops): error = model.createLine(named: name, stops: stops)

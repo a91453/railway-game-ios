@@ -130,7 +130,7 @@ enum DemoLayout {
             ScheduledStop(station: hill.id, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
             ScheduledStop(station: central.id, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 25), reverses: true),
             ScheduledStop(station: hill.id, arrival: GameTime(minutes: 45), departure: GameTime(minutes: 50), reverses: true),
-        ], repeatingEvery: 60)
+        ], repeatingEvery: 60 * GameTime.secondsPerMinute)
         try world.startTrainService(local.id)
     }
 

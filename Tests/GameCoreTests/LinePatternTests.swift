@@ -392,7 +392,8 @@ final class LinePatternTests: XCTestCase {
         let data = try encoder.encode(world)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
         let text = String(decoding: data, as: UTF8.self)
-        XCTAssertTrue(text.contains(#""patterns":[{"calls":[1,2],"lastDispatch":480,"targetHeadways":{"low":20},"trains":[1],"#), text)
+        // Stage W2a: saved times are seconds, minute 480 is 28800.
+        XCTAssertTrue(text.contains(#""patterns":[{"calls":[1,2],"lastDispatch":28800,"targetHeadways":{"low":20},"trains":[1],"#), text)
         XCTAssertTrue(text.contains(#"{"calls":[0,3],"trainsInService":{"low":0,"offPeak":1,"peak":2}}"#), "unused keys are left out")
 
         let plain = try encoder.encode(try makeWorld())
@@ -409,8 +410,8 @@ final class LinePatternTests: XCTestCase {
         refused(#""calls":[1,2]"#, #""calls":[-1,2]"#, "a negative call")
         refused(#""trains":[1],"#, #""trains":[7],"#, "an unknown train")
         refused(#""trains":[1],"#, #""trains":[1,1],"#, "a train twice")
-        refused(#""lastDispatch":480"#, #""lastDispatch":900"#, "a dispatch after the clock")
-        refused(#""lastDispatch":480"#, #""lastDispatch":null"#, "an explicit null")
+        refused(#""lastDispatch":28800"#, #""lastDispatch":54000"#, "a dispatch after the clock")
+        refused(#""lastDispatch":28800"#, #""lastDispatch":null"#, "an explicit null")
         refused(#""targetHeadways":{"low":20}"#, #""targetHeadways":{"low":1}"#, "a target below 2")
         refused(#""trainsInService":{"low":0,"offPeak":1,"peak":2}}"#, #""trainsInService":{"low":0,"offPeak":1,"peak":-2}}"#, "a negative count")
         refused(#""patterns":[{"#, #""trains":[1],"patterns":[{"#, "a train on the line and on a pattern")

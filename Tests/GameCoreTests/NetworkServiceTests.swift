@@ -391,7 +391,7 @@ final class NetworkServiceTests: XCTestCase {
             ScheduledStop(station: west, arrival: minutes(0), departure: minutes(0)),
             ScheduledStop(station: terminus, arrival: minutes(20), departure: minutes(25), reverses: true),
             ScheduledStop(station: west, arrival: minutes(50), departure: minutes(52), reverses: true),
-        ], repeatingEvery: 60)
+        ], repeatingEvery: periodSeconds(60))
         let start = try train(world, id)
         try world.startTrainService(id)
 

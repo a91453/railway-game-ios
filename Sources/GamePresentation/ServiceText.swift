@@ -175,6 +175,20 @@ public enum Punctuality: Hashable, Sendable {
     /// Past the time it should have left its stop, or reached the next.
     case late(minutes: Int64)
 
+    /// Late by `seconds`, in whole minutes rounded down: less than a minute
+    /// late is on time.
+    static func late(by seconds: Int64) -> Punctuality {
+        let minutes = seconds / GameTime.secondsPerMinute
+        return minutes > 0 ? .late(minutes: minutes) : .onTime
+    }
+
+    /// Early by `seconds`, in whole minutes rounded down: less than a minute
+    /// early is on time.
+    static func early(by seconds: Int64) -> Punctuality {
+        let minutes = seconds / GameTime.secondsPerMinute
+        return minutes > 0 ? .early(minutes: minutes) : .onTime
+    }
+
     /// "On time", "2 min early" or "5 min late".
     public var text: String {
         switch self {
@@ -213,7 +227,8 @@ extension GameWorld {
     /// scheduled departure once that has passed, and early by the minutes
     /// until its scheduled arrival if it is already there. Travelling, it is
     /// late by the minutes since its scheduled arrival at the next stop once
-    /// that has passed. Scheduled times include the cycle of a repeating
+    /// that has passed. Minutes are whole minutes, rounded down: less than
+    /// a minute either way is on time. Scheduled times include the cycle of a repeating
     /// timetable.
     public func trainServiceStatus(of id: TrainID) -> TrainServiceStatus? {
         guard let train = train(id: id) else { return nil }
@@ -223,20 +238,21 @@ extension GameWorld {
         }
         let stop = train.timetable[execution.stop]
         let offset = (train.timetablePeriod ?? 0) &* execution.cycle
-        let arrival = stop.arrival.minutes &+ offset
-        let departure = stop.departure.minutes &+ offset
-        let now = clock.now.minutes
+        let arrival = GameTime(seconds: stop.arrival.seconds &+ offset)
+        let departure = GameTime(seconds: stop.departure.seconds &+ offset)
+        let now = clock.now
         let name = stationName(stop.station)
         switch execution {
         case .waitingAtStop:
-            let punctuality: Punctuality = now > departure ? .late(minutes: now - departure) : now < arrival ? .early(minutes: arrival - now) : .onTime
+            let punctuality = now > departure ? Punctuality.late(by: now.seconds - departure.seconds)
+                : now < arrival ? .early(by: arrival.seconds - now.seconds) : .onTime
             let isLast = train.timetablePeriod == nil && execution.stop == train.timetable.count - 1
-            let text = isLast ? "At \(name), last stop" : "At \(name), leaves \(clockText(minuteOfDay: Int(departure % 1440)))"
+            let text = isLast ? "At \(name), last stop" : "At \(name), leaves \(departure.clockText)"
             return TrainServiceStatus(serviceName: serviceName, stopText: text, punctuality: punctuality)
         case .travellingToStop:
-            let punctuality: Punctuality = now > arrival ? .late(minutes: now - arrival) : .onTime
+            let punctuality = now > arrival ? Punctuality.late(by: now.seconds - arrival.seconds) : .onTime
             return TrainServiceStatus(
-                serviceName: serviceName, stopText: "Next: \(name), due \(clockText(minuteOfDay: Int(arrival % 1440)))", punctuality: punctuality
+                serviceName: serviceName, stopText: "Next: \(name), due \(arrival.clockText)", punctuality: punctuality
             )
         }
     }

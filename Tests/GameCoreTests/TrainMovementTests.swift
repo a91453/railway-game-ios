@@ -131,6 +131,90 @@ final class TrainMovementTests: XCTestCase {
         XCTAssertEqual(world.clock.now, GameTime(minutes: 3))
     }
 
+    // MARK: - Seconds (Stage W2a)
+
+    /// The seconds of a minute share the rate out: second `s` takes
+    /// `⌊rate·(s + 1)/60⌋ − ⌊rate·s/60⌋`, so a whole minute takes the rate.
+    func testTheSecondsOfAMinuteShareTheRateOut() {
+        XCTAssertEqual(TrainMovement.distance(at: 1300, fromSecond: 0, toSecond: 60), 1300)
+        XCTAssertEqual(TrainMovement.distance(at: 1300, fromSecond: 0, toSecond: 1), 21)
+        XCTAssertEqual(TrainMovement.distance(at: 1300, fromSecond: 1, toSecond: 2), 22)
+        XCTAssertEqual(TrainMovement.distance(at: 1300, fromSecond: 0, toSecond: 30), 650)
+        XCTAssertEqual(TrainMovement.distance(at: 59, fromSecond: 0, toSecond: 1), 0)
+        XCTAssertEqual(TrainMovement.distance(at: 59, fromSecond: 59, toSecond: 60), 1)
+        XCTAssertEqual(TrainMovement.distance(at: 0, fromSecond: 0, toSecond: 60), 0)
+        XCTAssertEqual(TrainMovement.distance(at: .max, fromSecond: 0, toSecond: 60), .max)
+        for rate: Int64 in [0, 1, 7, 59, 60, 61, 256, 1023, 1024, 1300, 4_096, .max - 1, .max] {
+            var total: Int64 = 0
+            for second: Int64 in 0..<60 {
+                let share = TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + 1)
+                XCTAssertGreaterThanOrEqual(share, 0)
+                XCTAssertEqual(TrainMovement.distance(at: rate, fromSecond: 0, toSecond: second + 1), total + share, "rate \(rate) to \(second + 1)")
+                total += share
+            }
+            XCTAssertEqual(total, rate, "rate \(rate)")
+        }
+    }
+
+    /// At real time the train moves every second its share, and after a
+    /// whole minute it stands where a minute at normal speed puts it: the
+    /// worked example's first step.
+    func testATrainMovesEverySecondAndAWholeMinuteMatchesOneMinuteStep() throws {
+        var world = try makeLineWorld(speed: .x1)
+        try world.placeTrain(first, at: .onLink(from: a, to: b, offset: 256))
+        try world.setTrainContinuation(first, to: [c, d])
+        try world.setTrainMovementRate(first, to: 1300)
+
+        // One second: 21 units.
+        try world.advance(ticks: 10)
+        XCTAssertEqual(try train(first, in: world).position, .onLink(from: a, to: b, offset: 277))
+        XCTAssertEqual(world.clock.now, GameTime(seconds: 1))
+
+        // 36 more seconds, ⌊1300·37/60⌋ = 801 units in all: 768 to b, then
+        // 33 into b->c, entering c.
+        try world.advance(ticks: 360)
+        var train = try train(first, in: world)
+        XCTAssertEqual(train.position, .onLink(from: b, to: c, offset: 33))
+        XCTAssertEqual(train.movement.cursor, 1)
+
+        // The rest of the minute: 1300 in all, as one minute step gives.
+        try world.advance(ticks: 230)
+        train = try self.train(first, in: world)
+        XCTAssertEqual(train.position, .onLink(from: b, to: c, offset: 532))
+        XCTAssertEqual(train.movement.cursor, 1)
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 1))
+        XCTAssertEqual(world.clock.pendingTenths, 0)
+    }
+
+    /// The same minutes run at every speed, in batches of any size, leave
+    /// the world the same apart from the speed: the moves of the seconds add
+    /// up to the moves of whole minutes.
+    func testEverySpeedAndBatchGivesTheSameTrainsAtWholeMinutes() throws {
+        func run(_ batches: [(GameSpeed, Int)]) throws -> GameWorld {
+            var world = try makeLineWorld(trainCount: 2)
+            try world.placeTrain(first, at: .onLink(from: a, to: b, offset: 256))
+            try world.setTrainContinuation(first, to: [c, d, s1, s2])
+            try world.setTrainMovementRate(first, to: 401)
+            try world.placeTrain(second, at: .atNode(e, heading: .east))
+            try world.setTrainContinuation(second, to: [f, g])
+            try world.setTrainMovementRate(second, to: 997)
+            for (speed, ticks) in batches {
+                world.setSpeed(speed)
+                try world.advance(ticks: ticks)
+            }
+            world.setSpeed(.normal)
+            return world
+        }
+        // Five minutes each way.
+        let minutes = try run([(.normal, 5)])
+        XCTAssertEqual(try run([(.double, 2), (.normal, 1)]), minutes)
+        XCTAssertEqual(try run([(.x60, 50)]), minutes)
+        XCTAssertEqual(try run([(.x10, 300)]), minutes)
+        // 100 s, 137 s, 3 tenths, 60 s, 7 tenths (one more second), 2 s.
+        XCTAssertEqual(try run([(.x1, 1_000), (.x10, 137), (.x1, 3), (.x60, 10), (.x1, 7), (.x10, 2)]), minutes)
+        XCTAssertEqual(minutes.clock.now, GameTime(minutes: 5))
+    }
+
     func testZeroDistanceChangesNothing() throws {
         var world = try makeLineWorld()
         try world.placeTrain(first, at: .onLink(from: a, to: b, offset: 256))
@@ -687,11 +771,13 @@ final class TrainMovementTests: XCTestCase {
 
     // MARK: - Clock capacity
 
-    private func worldNearTheEndOfTime(minutesLeft: Int64, speed: GameSpeed) throws -> GameWorld {
+    /// A world `secondsLeft` seconds before the largest second a clock can
+    /// hold (Stage W2a: the clock counts seconds).
+    private func worldNearTheEndOfTime(secondsLeft: Int64, speed: GameSpeed) throws -> GameWorld {
         var world = try GameWorld(
             width: 20, height: 20,
             economy: GameEconomy(balance: 100_000, costs: testCosts),
-            clock: GameClock(now: GameTime(minutes: .max - minutesLeft), speed: speed)
+            clock: GameClock(now: GameTime(seconds: .max - secondsLeft), speed: speed)
         )
         try world.buildTrack(at: a, connections: .east)
         try world.buildTrack(at: b, connections: [.east, .west])
@@ -701,38 +787,48 @@ final class TrainMovementTests: XCTestCase {
         return world
     }
 
+    /// The last three minutes of seconds: the clock is not on a whole
+    /// minute there (the largest second is not), so the train moves its
+    /// share of each, 1 + 1 + 1 + 0 units at 1 a minute.
     func testTheLastMinutesCanBeReachedExactly() throws {
-        var world = try worldNearTheEndOfTime(minutesLeft: 3, speed: .normal)
+        var world = try worldNearTheEndOfTime(secondsLeft: 180, speed: .normal)
         try world.advance(ticks: 0)
         try world.advance(ticks: 3)
-        XCTAssertEqual(world.clock.now, GameTime(minutes: .max))
+        XCTAssertEqual(world.clock.now, GameTime(seconds: .max))
         XCTAssertEqual(try train(first, in: world).position, .onLink(from: a, to: b, offset: 4))
 
-        var double = try worldNearTheEndOfTime(minutesLeft: 4, speed: .double)
+        var double = try worldNearTheEndOfTime(secondsLeft: 240, speed: .double)
         try double.advance(ticks: 2)
-        XCTAssertEqual(double.clock.now, GameTime(minutes: .max))
+        XCTAssertEqual(double.clock.now, GameTime(seconds: .max))
+
+        var realTime = try worldNearTheEndOfTime(secondsLeft: 1, speed: .x1)
+        try realTime.advance(ticks: 19)
+        XCTAssertEqual(realTime.clock.now, GameTime(seconds: .max))
+        XCTAssertEqual(realTime.clock.pendingTenths, 9)
     }
 
     func testABatchPastTheEndOfTimeIsRejectedWhole() throws {
-        let cases: [(minutesLeft: Int64, speed: GameSpeed, ticks: Int)] = [
-            (3, .normal, 4), // one step too many
-            (4, .double, 3), // six steps, four left
-            (5, .double, 3), // six steps, five left
-            (.max, .double, .max), // ticks x 2 overflows
-            (.max - 1, .normal, .max), // now + steps overflows
+        let cases: [(secondsLeft: Int64, speed: GameSpeed, ticks: Int)] = [
+            (180, .normal, 4), // one minute too many
+            (240, .double, 3), // six minutes, four left
+            (300, .double, 3), // six minutes, five left
+            (59, .normal, 1), // now + seconds overflows
+            (1, .x1, 20), // two seconds, one left
+            (.max, .double, .max), // ticks x 120 seconds overflows
+            (1_000, .x1, .max), // the seconds fit, but not after now
         ]
-        for (minutesLeft, speed, ticks) in cases {
-            var world = try worldNearTheEndOfTime(minutesLeft: minutesLeft, speed: speed)
+        for (secondsLeft, speed, ticks) in cases {
+            var world = try worldNearTheEndOfTime(secondsLeft: secondsLeft, speed: speed)
             let before = world
 
             XCTAssertThrowsGameError(try world.advance(ticks: ticks), .clockOverflow)
 
-            XCTAssertEqual(world, before, "\(minutesLeft) \(speed) \(ticks): no train or minute moved")
+            XCTAssertEqual(world, before, "\(secondsLeft) \(speed) \(ticks): no train or second moved")
         }
     }
 
     func testPausedBatchesNeverOverflow() throws {
-        var world = try worldNearTheEndOfTime(minutesLeft: 0, speed: .paused)
+        var world = try worldNearTheEndOfTime(secondsLeft: 0, speed: .paused)
         let before = world
 
         try world.advance(ticks: .max)
@@ -741,11 +837,11 @@ final class TrainMovementTests: XCTestCase {
     }
 
     func testTheClockAloneChecksCapacityTheSameWay() throws {
-        var clock = GameClock(now: GameTime(minutes: .max - 2), speed: .double)
+        var clock = GameClock(now: GameTime(seconds: .max - 120), speed: .double)
         XCTAssertThrowsGameError(try clock.advance(ticks: 2), .clockOverflow)
-        XCTAssertEqual(clock.now, GameTime(minutes: .max - 2))
+        XCTAssertEqual(clock.now, GameTime(seconds: .max - 120))
         try clock.advance(ticks: 1)
-        XCTAssertEqual(clock.now, GameTime(minutes: .max))
+        XCTAssertEqual(clock.now, GameTime(seconds: .max))
 
         var fresh = GameClock(speed: .double)
         XCTAssertThrowsGameError(try fresh.advance(ticks: .max), .clockOverflow)

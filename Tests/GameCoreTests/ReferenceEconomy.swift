@@ -33,7 +33,8 @@ extension ReferenceWorld {
     // MARK: - Commands
 
     mutating func setEconomyMode(_ mode: EconomyMode) {
-        if mode == .management, !accounts.managed { accounts.opened = minutes }
+        // Stage W2a: opened in seconds, as the clock may be between minutes.
+        if mode == .management, !accounts.managed { accounts.opened = clockSeconds }
         accounts.managed = mode == .management
     }
 
@@ -115,8 +116,8 @@ extension ReferenceWorld {
     // MARK: - Settlements
 
     mutating func settle(memo: inout DispatchMemo) {
-        guard accounts.managed, minutes % 60 == 0, let opened = accounts.opened, opened < minutes else { return }
-        accounts.opened = minutes
+        guard accounts.managed, clockSeconds % 3600 == 0, let opened = accounts.opened, opened < clockSeconds else { return }
+        accounts.opened = clockSeconds
         var stationSet: Set<Int> = []
         var route: Int64 = 0
         var trainCount: Int64 = 0

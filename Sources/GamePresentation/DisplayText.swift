@@ -322,18 +322,28 @@ extension Money {
 }
 
 extension GameTime {
-    public static let minutesPerDay: Int64 = 24 * 60
-
-    /// Day and time of day, such as "Day 1 · 08:30". Minute 0 is the start of
-    /// day 1. Display only: GameCore has no calendar.
+    /// Day and time of day, such as "Day 1 · 08:30", rounded down to the
+    /// minute. Second 0 is the start of day 1. Display only: GameCore has
+    /// no calendar.
     public var displayText: String {
-        var day = minutes / Self.minutesPerDay
-        var minuteOfDay = minutes % Self.minutesPerDay
+        let (day, minuteOfDay) = dayAndMinute
+        return "Day \(day + 1) · \(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+    }
+
+    /// ``displayText`` with the seconds, such as "Day 1 · 08:30:15".
+    public var displayTextWithSeconds: String {
+        "\(displayText):\(Self.twoDigits(secondOfMinute))"
+    }
+
+    /// The day (from 0) and the minute of that day, also before second 0.
+    private var dayAndMinute: (day: Int64, minuteOfDay: Int64) {
+        var day = minute / Self.minutesPerDay
+        var minuteOfDay = minute % Self.minutesPerDay
         if minuteOfDay < 0 {
             minuteOfDay += Self.minutesPerDay
             day -= 1
         }
-        return "Day \(day + 1) · \(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+        return (day, minuteOfDay)
     }
 
     private static func twoDigits(_ value: Int64) -> String {
@@ -341,13 +351,27 @@ extension GameTime {
     }
 }
 
+extension GameClock {
+    /// The clock as the HUD shows it: ``GameTime/displayText``, with the
+    /// seconds (``GameTime/displayTextWithSeconds``) while they matter, at
+    /// a speed slower than a minute a tick or between whole minutes.
+    public var displayText: String {
+        now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
+            ? now.displayText : now.displayTextWithSeconds
+    }
+}
+
 extension GameSpeed {
-    /// Compact label for the speed controls.
+    /// Compact label for the speed controls: how many times real time it
+    /// runs at, as the host ticks every 100 ms.
     public var label: String {
         switch self {
         case .paused: "Pause"
-        case .normal: "1×"
-        case .double: "2×"
+        case .x1: "1×"
+        case .x10: "10×"
+        case .x60: "60×"
+        case .normal: "600×"
+        case .double: "1200×"
         }
     }
 
@@ -355,8 +379,11 @@ extension GameSpeed {
     public var accessibilityName: String {
         switch self {
         case .paused: "Paused"
-        case .normal: "Normal speed"
-        case .double: "Double speed"
+        case .x1: "Real time"
+        case .x10: "10 times real time"
+        case .x60: "60 times real time"
+        case .normal: "600 times real time"
+        case .double: "1200 times real time"
         }
     }
 }

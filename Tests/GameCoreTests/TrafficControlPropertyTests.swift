@@ -287,7 +287,7 @@ final class TrafficControlPropertyTests: XCTestCase {
         let calls = repeating || random.chance(1, in: 2) ? [here, there, here] : [here, there]
         let turnFirst = train.position.map { world.path(from: $0, toStation: there, length: train.length) == nil } ?? false
         let turns = [turnFirst, true] + (calls.count == 3 ? [repeating ? !turnFirst : random.chance(1, in: 2)] : [])
-        var time = max(0, world.clock.now.minutes) + Int64(random.below(3))
+        var time = max(0, world.clock.now.minute) + Int64(random.below(3))
         var stops: [ScheduledStop] = []
         for (index, station) in calls.enumerated() {
             if index > 0 { time += Int64(4 + random.below(25)) }
@@ -478,7 +478,7 @@ final class TrafficControlPropertyTests: XCTestCase {
             case .gridPath(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
             case .path(let id, let path, let end): try world.setTrainContinuation(id, along: path, stoppingAt: end)
             case .run(let id, let stops, let period):
-                try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
+                try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
                 try world.startTrainService(id)
             case .stop(let id): try world.stopTrainService(id)
             case .line(let stops, let train):
@@ -517,7 +517,7 @@ final class TrafficControlPropertyTests: XCTestCase {
         case .rate(let id, let rate): return model.setRate(id, rate)
         case .gridPath(let id, let nodes): return model.setContinuation(id, nodes)
         case .path(let id, let path, let end): return model.setContinuation(id, along: path, stoppingAt: end)
-        case .run(let id, let stops, let period): return model.setTimetable(id, stops, period: period) ?? model.startService(id)
+        case .run(let id, let stops, let period): return model.setTimetable(id, stops, period: periodSeconds(period)) ?? model.startService(id)
         case .stop(let id): return model.stopService(id)
         case .line(let stops, let train):
             return model.createLine(named: "L", stops: stops) ?? model.setLineWindow(LineID(rawValue: model.nextLineID - 1), .allDay)
@@ -550,7 +550,9 @@ final class TrafficControlPropertyTests: XCTestCase {
     /// Every difference between the world and the model.
     private static func differences(_ world: GameWorld, _ model: ReferenceWorld, tally: inout [String: Int]) -> [String] {
         var problems: [String] = []
-        if world.clock.now.minutes != model.minutes { problems.append("minute \(world.clock.now.minutes) vs \(model.minutes)") }
+        if world.clock.now.seconds != model.clockSeconds || world.clock.pendingTenths != model.pendingTenths {
+            problems.append("second \(world.clock.now.seconds) vs \(model.clockSeconds)")
+        }
         if world.isTrafficControlEnabled != model.trafficControl { problems.append("traffic control \(world.isTrafficControlEnabled) vs \(model.trafficControl)") }
         if world.network.platforms != model.allTrackPlatforms { problems.append("platforms") }
         if world.network.edges.map(\.id.number) != model.networkEdges.keys.sorted() { problems.append("edges") }

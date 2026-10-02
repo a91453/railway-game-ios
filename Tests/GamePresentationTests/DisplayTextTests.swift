@@ -127,8 +127,23 @@ final class GameTimeDisplayTests: XCTestCase {
         XCTAssertEqual(GameTime(minutes: -1).displayText, "Day 0 · 23:59")
     }
 
+    func testTheSecondsShowWhenTheyMatter() {
+        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayTextWithSeconds, "Day 1 · 08:30:15")
+        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayText, "Day 1 · 08:30")
+        XCTAssertEqual(GameTime(seconds: -1).displayTextWithSeconds, "Day 0 · 23:59:59")
+        // The HUD: whole minutes at a minute a tick or more, seconds below
+        // that or between two minutes.
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .normal).displayText, "Day 1 · 01:30")
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .paused).displayText, "Day 1 · 01:30")
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .x60).displayText, "Day 1 · 01:30:00")
+        XCTAssertEqual(GameClock(now: GameTime(seconds: 5_401), speed: .paused).displayText, "Day 1 · 01:30:01")
+    }
+
     func testSpeedLabels() {
-        XCTAssertEqual(GameSpeed.allCases.map(\.label), ["Pause", "1×", "2×"])
-        XCTAssertEqual(GameSpeed.allCases.map(\.accessibilityName), ["Paused", "Normal speed", "Double speed"])
+        XCTAssertEqual(GameSpeed.allCases.map(\.label), ["Pause", "1×", "10×", "60×", "600×", "1200×"])
+        XCTAssertEqual(
+            GameSpeed.allCases.map(\.accessibilityName),
+            ["Paused", "Real time", "10 times real time", "60 times real time", "600 times real time", "1200 times real time"]
+        )
     }
 }

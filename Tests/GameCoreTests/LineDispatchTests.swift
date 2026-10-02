@@ -486,8 +486,9 @@ final class LineDispatchTests: XCTestCase {
             ("a train twice", mutated { $0["trains"] = [1, 1] }),
             ("an unknown train", mutated { $0["trains"] = [1, 2, 7] }),
             ("a null train list", mutated { $0["trains"] = NSNull() }),
-            ("a dispatch before minute 0", mutated { $0["lastDispatch"] = -1 }),
-            ("a dispatch after the clock", mutated { $0["lastDispatch"] = 4 }),
+            ("a dispatch before second 0", mutated { $0["lastDispatch"] = -1 }),
+            // Stage W2a: saved times are seconds; the clock is at 180.
+            ("a dispatch after the clock", mutated { $0["lastDispatch"] = 4 * 60 }),
             ("a null dispatch", mutated { $0["lastDispatch"] = NSNull() }),
             ("a target of 1", mutated { $0["targetHeadways"] = ["peak": 1] }),
             ("a target over a day", mutated { $0["targetHeadways"] = ["low": 1441] }),

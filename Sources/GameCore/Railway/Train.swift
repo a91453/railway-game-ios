@@ -42,7 +42,7 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// ``GameWorld/setTrainTimetable(_:to:repeatingEvery:)``, which is
     /// refused while a service is active.
     public internal(set) var timetable: [ScheduledStop]
-    /// How often the timetable repeats, in whole game minutes, or `nil` for
+    /// How often the timetable repeats, in whole game seconds, or `nil` for
     /// a timetable that runs once (as for every newly bought train).
     ///
     /// A service of a repeating timetable starts it again when it leaves the
@@ -118,7 +118,7 @@ extension Train {
     func scheduledDeparture(of stop: Int, cycle: Int64) -> GameTime {
         let departure = timetable[stop].departure
         guard cycle > 0, let timetablePeriod else { return departure }
-        return GameTime(minutes: departure.minutes + cycle * timetablePeriod)
+        return GameTime(seconds: departure.seconds + cycle * timetablePeriod)
     }
 
     /// The call a service makes after leaving timetable entry `stop` in
@@ -140,10 +140,10 @@ extension Train {
     /// - Precondition: the timetable is not empty.
     func startingCycle(at now: GameTime) -> Int64 {
         guard let timetablePeriod else { return 0 }
-        let departure = timetable[0].departure.minutes
-        guard now.minutes > departure else { return 0 }
+        let departure = timetable[0].departure.seconds
+        guard now.seconds > departure else { return 0 }
         // departure >= 0 and now > departure, so this is positive and fits.
-        let late = now.minutes - departure
+        let late = now.seconds - departure
         let cycles = late / timetablePeriod + (late % timetablePeriod == 0 ? 0 : 1)
         return min(cycles, ScheduledStop.lastCycle(of: timetable, period: timetablePeriod))
     }
@@ -266,7 +266,7 @@ extension Train: Codable {
         guard ScheduledStop.isTimetable(timetable, period: timetablePeriod) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .period, in: container,
-                debugDescription: "Train \(id.rawValue)'s timetable cannot repeat every \(timetablePeriod ?? 0) minutes."
+                debugDescription: "Train \(id.rawValue)'s timetable cannot repeat every \(timetablePeriod ?? 0) seconds."
             )
         }
         if let execution, !execution.fits(timetable: timetable, period: timetablePeriod, position: position, movement: movement) {

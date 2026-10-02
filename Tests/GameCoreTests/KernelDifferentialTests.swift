@@ -31,7 +31,8 @@ final class KernelDifferentialTests: XCTestCase {
         /// Never drawn by ``nextOperation(in:using:)``, so the Stage I–N
         /// campaigns and their digests are as before; the timetable
         /// campaigns (`TimetablePropertyTests`) add it, and the repeating
-        /// service campaign (`ServicePropertyTests`) gives it a period.
+        /// service campaign (`ServicePropertyTests`) gives it a period, in
+        /// seconds (Stage W2a).
         case setTimetable(TrainID, [ScheduledStop], period: Int64? = nil)
         /// Never drawn by ``nextOperation(in:using:)`` either; the service
         /// campaigns (`ServicePropertyTests`) add them.
@@ -94,7 +95,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .setRate(let id, let rate): ".setRate(\(id.rawValue), \(rate))"
             case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
             case .setTimetable(let id, let stops, let period):
-                ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.minutes)-\($0.departure.minutes)\($0.reverses ? "R" : "")" }.joined(separator: ", "))]\(period.map { ", every \($0)" } ?? ""))"
+                ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.seconds)-\($0.departure.seconds)s\($0.reverses ? "R" : "")" }.joined(separator: ", "))]\(period.map { ", every \($0) s" } ?? ""))"
             case .startService(let id): ".startService(\(id.rawValue))"
             case .stopService(let id): ".stopService(\(id.rawValue))"
             case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
@@ -137,7 +138,8 @@ final class KernelDifferentialTests: XCTestCase {
         var width: Int
         var height: Int
         var extraBalance: Int64
-        var minutes: Int64
+        /// The clock, in seconds (Stage W2a).
+        var seconds: Int64
         var speed: GameSpeed
 
         var costs: ConstructionCosts { NetworkGenerator.costs }
@@ -153,9 +155,9 @@ final class KernelDifferentialTests: XCTestCase {
             var world = try GameWorld(
                 width: width, height: height,
                 economy: GameEconomy(balance: Money(balance), costs: costs),
-                clock: GameClock(now: GameTime(minutes: minutes), speed: speed)
+                clock: GameClock(now: GameTime(seconds: seconds), speed: speed)
             )
-            var model = ReferenceWorld(width: width, height: height, balance: balance, costs: costs, minutes: minutes, speed: speed)
+            var model = ReferenceWorld(width: width, height: height, balance: balance, costs: costs, seconds: seconds, speed: speed)
             for spec in specs {
                 switch spec.kind {
                 case .track(let connections):
@@ -197,10 +199,19 @@ final class KernelDifferentialTests: XCTestCase {
             }
         }
         let extra: Int64 = random.chance(1, in: 3) ? random.int64(in: 0...12_000) : 1_000_000
-        // Sometimes near the end of time, so that advancing can overflow.
-        let minutes: Int64 = random.chance(1, in: 8) ? Int64.max - random.int64(in: 0...40) : random.int64(in: 0...100_000)
+        // Sometimes near the end of time, so that advancing can overflow;
+        // otherwise a whole minute, or for a quarter of the minutes a second
+        // between two (Stage W2a). The second comes from the minute rather
+        // than another draw, so the campaigns draw the same cases as before.
+        let seconds: Int64
+        if random.chance(1, in: 8) {
+            seconds = Int64.max - random.int64(in: 0...2_400)
+        } else {
+            let minute = random.int64(in: 0...100_000)
+            seconds = minute * 60 + (minute % 4 == 1 ? minute / 4 % 59 + 1 : 0)
+        }
         let speed = random.element(of: GameSpeed.allCases)
-        return Setup(specs: specs, width: width, height: height, extraBalance: extra, minutes: minutes, speed: speed)
+        return Setup(specs: specs, width: width, height: height, extraBalance: extra, seconds: seconds, speed: speed)
     }
 
     private static func randomTile(_ world: GameWorld, _ random: inout SplitMix64) -> GridPosition {
@@ -429,7 +440,8 @@ final class KernelDifferentialTests: XCTestCase {
         func check(_ ok: Bool, _ what: @autoclosure () -> String) {
             if !ok { found.append(what()) }
         }
-        check(world.clock.now.minutes == model.minutes, "minutes \(world.clock.now.minutes) vs \(model.minutes)")
+        check(world.clock.now.seconds == model.clockSeconds, "seconds \(world.clock.now.seconds) vs \(model.clockSeconds)")
+        check(world.clock.pendingTenths == model.pendingTenths, "pending tenths \(world.clock.pendingTenths) vs \(model.pendingTenths)")
         check(world.clock.speed == model.speed, "speed \(world.clock.speed) vs \(model.speed)")
         check(world.economy.balance.amount == model.balance, "balance \(world.economy.balance.amount) vs \(model.balance)")
         check(world.map.width == model.width && world.map.height == model.height, "map size")
@@ -529,10 +541,10 @@ final class KernelDifferentialTests: XCTestCase {
         for raw in world.lines.map(\.id.rawValue) + [0, Int.max] where lineAnswers {
             let id = LineID(rawValue: raw)
             for offset: Int64 in [0, 1, 700] {
-                let (time, overflow) = world.clock.now.minutes.addingReportingOverflow(offset)
+                let (time, overflow) = world.clock.now.seconds.addingReportingOverflow(offset * 60)
                 guard !overflow else { continue }
                 check(
-                    world.serviceLevel(of: id, at: GameTime(minutes: time)) == model.serviceLevel(of: id, at: GameTime(minutes: time)),
+                    world.serviceLevel(of: id, at: GameTime(seconds: time)) == model.serviceLevel(of: id, at: GameTime(seconds: time)),
                     "level of line \(raw) at \(time)"
                 )
             }
@@ -711,7 +723,7 @@ final class KernelDifferentialTests: XCTestCase {
         var digest = Digest()
         let ran = try runCampaign("kernel.differential", cases: 80) { c in
             let (setup, generated) = try Self.generate(&c, operations: 120)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
             if let failure = Self.firstProblem(setup, generated) {
                 let minimal = Self.minimalFailure(setup, generated)
                 c.fail("step \(failure.step): \(failure.problem)\n  minimal (\(minimal.count) of \(generated.count)): [\(minimal.map(\.description).joined(separator: ", "))]\n  still: \(Self.firstProblem(setup, minimal)?.problem ?? "passes")")

@@ -75,7 +75,7 @@ struct LineTrip: Hashable, Sendable {
 
     /// The trip's timetable, calling at the line's `stops` that the legs
     /// reach, leaving the first call at `departure`, or `nil` if a time
-    /// would pass the largest minute.
+    /// would pass the largest second.
     ///
     /// One call per leg and one to start: the first call (arrival and
     /// departure at `departure`, turning round first if the trip does),
@@ -86,23 +86,24 @@ struct LineTrip: Hashable, Sendable {
     /// at the first call the train arrives, turns round and the trip is
     /// over, the train waiting there for the rest of its terminal dwell. So
     /// a train on time is back ready to leave `roundTripMinutes` after it
-    /// left.
+    /// left. The minutes are whole minutes of game seconds.
     ///
-    /// - Precondition: `departure` is minute 0 or later.
+    /// - Precondition: `departure` is second 0 or later.
     func timetable(calling stops: [StationID], leavingAt departure: GameTime) -> [ScheduledStop]? {
         let legs = journey.legs
         let farEnd = legs[legs.count / 2 - 1].to
         var timetable = [ScheduledStop(station: stops[legs[0].from], arrival: departure, departure: departure, reverses: turnsFirst)]
-        var time = departure.minutes
+        var time = departure.seconds
         for (index, leg) in legs.enumerated() {
             let isLast = index == legs.count - 1
             let isFarEnd = leg.to == farEnd
             let dwell = isLast ? 0 : isFarEnd ? ServiceLine.terminalDwellMinutes : ServiceLine.dwellMinutes
-            let (arrival, late) = time.addingReportingOverflow(leg.minutes)
-            let (leaving, later) = arrival.addingReportingOverflow(dwell)
-            guard !late, !later else { return nil }
+            let (travel, long) = leg.minutes.multipliedReportingOverflow(by: GameTime.secondsPerMinute)
+            let (arrival, late) = time.addingReportingOverflow(travel)
+            let (leaving, later) = arrival.addingReportingOverflow(dwell * GameTime.secondsPerMinute)
+            guard !long, !late, !later else { return nil }
             timetable.append(ScheduledStop(
-                station: stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: leaving),
+                station: stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: leaving),
                 reverses: isLast || isFarEnd
             ))
             time = leaving

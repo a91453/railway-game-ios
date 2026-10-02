@@ -401,13 +401,13 @@ extension ReferenceWorld {
     }
 
     /// One basic step on the network, a unit at a time.
-    func steppedOnNetwork(_ train: Train) -> Train {
+    func steppedOnNetwork(_ train: Train, distance: Int64) -> Train {
         var train = train
         guard case .onEdge(let traversal, let start) = train.position else { return train }
         let before = path(of: train)
         var run = Run(traversal)!
         var offset = start
-        var remaining = train.rate
+        var remaining = distance
         var entered: [Run] = []
         while remaining > 0 {
             // Decision 31: on the last run of the path, its end holds the train.

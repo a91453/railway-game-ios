@@ -140,7 +140,9 @@ final class PassengerPropertyTests: XCTestCase {
     /// How GameCore and the reference differ, if they do.
     private static func differences(_ world: GameWorld, _ model: ReferenceWorld) -> [String] {
         var problems: [String] = []
-        if world.clock.now.minutes != model.minutes { problems.append("minute \(world.clock.now.minutes) vs \(model.minutes)") }
+        if world.clock.now.seconds != model.clockSeconds || world.clock.pendingTenths != model.pendingTenths {
+            problems.append("second \(world.clock.now.seconds) vs \(model.clockSeconds)")
+        }
         let summaries = world.passengers.filter { $0.demand != nil || $0.released > 0 }.map(PassengerSummary.init)
         if summaries != model.passengerSummaries { problems.append("passengers \(summaries) vs reference \(model.passengerSummaries)") }
         var remainders: [Int: [Int: Int64]] = [:]

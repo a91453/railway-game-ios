@@ -35,7 +35,7 @@ final class LineDispatchPropertyTests: XCTestCase {
         var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .loopWithTails, .ladder, .grid], using: &c.random)
         // Near the start of a day, so that windows and levels change within
         // a case; the end of time is left to the other campaigns.
-        setup.minutes = c.random.int64(in: -30...3_000)
+        setup.seconds = 60 * (c.random.int64(in: -30...3_000))
         setup.speed = c.random.element(of: [.normal, .normal, .double, .paused])
         var (world, _) = try setup.build()
         let speed: Operation = .setSpeed(c.random.chance(1, in: 3) ? .double : .normal)
@@ -218,7 +218,7 @@ final class LineDispatchPropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("line.dispatch", cases: 16) { c in
             let (setup, operations) = try Self.generate(&c, operations: 70)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations, lineAnswers: false) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations, lineAnswers: false)

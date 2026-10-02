@@ -58,8 +58,16 @@ final class GoldenScenarioTests: XCTestCase {
             XCTAssertEqual(wrongBalance.differences().count, 1, name)
 
             var wrongTime = committed
-            wrongTime.expectedFinalState.gameMinutes += 1
+            if let minutes = committed.expectedFinalState.gameMinutes {
+                wrongTime.expectedFinalState.gameMinutes = minutes + 1
+            } else {
+                wrongTime.expectedFinalState.gameSeconds! += 1
+            }
             XCTAssertEqual(wrongTime.differences().count, 1, name)
+
+            var wrongTenths = committed
+            wrongTenths.expectedFinalState.pendingTenths = (committed.expectedFinalState.pendingTenths ?? 0) % 9 + 1
+            XCTAssertEqual(wrongTenths.differences().count, 1, name)
 
             var extraTrain = committed
             extraTrain.expectedFinalState.trains.append(.init(id: 99, name: "Ghost", position: TrainPositionSummary(nil), movement: TrainMovementSummary(.idle), timetable: [], repeat: RepeatSummary(nil), execution: ExecutionSummary(nil), cars: 1, trail: [], trailEdges: [], reservation: []))
@@ -793,7 +801,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 22,
+              "schemaVersion": 23,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -852,7 +860,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in

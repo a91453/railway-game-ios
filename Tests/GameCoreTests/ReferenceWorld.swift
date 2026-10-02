@@ -62,6 +62,7 @@ struct ReferenceWorld: Equatable {
         var continuation: [GridPosition] = []
         var cursor = 0
         var timetable: [ScheduledStop] = []
+        /// Stage W2a: in seconds, like the times.
         var period: Int64?
         var service: Service?
         /// Decision 27: its cars, and the nodes its body lies over.
@@ -97,7 +98,10 @@ struct ReferenceWorld: Equatable {
     var trains: [Train] = []
     var balance: Int64
     let costs: (track: Int64, station: Int64, train: Int64)
-    var minutes: Int64
+    /// Stage W2a: the clock counts seconds, and ticks at 1x leave tenths
+    /// of a second pending.
+    var clockSeconds: Int64
+    var pendingTenths: Int64 = 0
     var speed: GameSpeed
     var resumeSpeed: GameSpeed
     var nextStationID = 1
@@ -180,19 +184,30 @@ struct ReferenceWorld: Equatable {
 
     static let linkLength: Int64 = 1024
 
-    init(width: Int, height: Int, balance: Int64, costs: ConstructionCosts, minutes: Int64, speed: GameSpeed) {
+    init(width: Int, height: Int, balance: Int64, costs: ConstructionCosts, seconds: Int64, speed: GameSpeed) {
         self.width = width
         self.height = height
         self.balance = balance
         self.costs = (costs.track.amount, costs.station.amount, costs.train.amount)
-        self.minutes = minutes
+        self.clockSeconds = seconds
         self.speed = speed
         self.resumeSpeed = speed == .paused ? .normal : speed
     }
 
+    init(width: Int, height: Int, balance: Int64, costs: ConstructionCosts, minutes: Int64, speed: GameSpeed) {
+        self.init(width: width, height: height, balance: balance, costs: costs, seconds: minutes * 60, speed: speed)
+    }
+
+    /// The minute the clock is in, rounded down: everything but travel
+    /// happens at whole minutes, where it is the clock in minutes.
+    var minutes: Int64 {
+        clockSeconds >= 0 ? clockSeconds / 60 : -((-clockSeconds + 59) / 60)
+    }
+
     static func == (lhs: ReferenceWorld, rhs: ReferenceWorld) -> Bool {
         lhs.width == rhs.width && lhs.height == rhs.height && lhs.tiles == rhs.tiles && lhs.stations == rhs.stations
-            && lhs.trains == rhs.trains && lhs.balance == rhs.balance && lhs.costs == rhs.costs && lhs.minutes == rhs.minutes
+            && lhs.trains == rhs.trains && lhs.balance == rhs.balance && lhs.costs == rhs.costs
+            && lhs.clockSeconds == rhs.clockSeconds && lhs.pendingTenths == rhs.pendingTenths
             && lhs.speed == rhs.speed && lhs.resumeSpeed == rhs.resumeSpeed && lhs.nextStationID == rhs.nextStationID
             && lhs.nextTrainID == rhs.nextTrainID && lhs.lines == rhs.lines && lhs.nextLineID == rhs.nextLineID
             && lhs.serviceDay.map(\.start) == rhs.serviceDay.map(\.start) && lhs.serviceDay.map(\.level) == rhs.serviceDay.map(\.level)
@@ -549,9 +564,9 @@ struct ReferenceWorld: Equatable {
     /// then every station must exist, the first missing one in timetable
     /// order being reported. Placement does not matter. Decision 20: not
     /// while a service runs, checked right after the train. Decision 21: a
-    /// period needs a stop, is a minute or more, and the first arrival one
-    /// period later is no earlier than the last departure; checked with the
-    /// times.
+    /// period needs a stop, is a second or more (Stage W2a: periods and
+    /// times are seconds), and the first arrival one period later is no
+    /// earlier than the last departure; checked with the times.
     mutating func setTimetable(_ id: TrainID, _ stops: [ScheduledStop], period: Int64? = nil) -> GameError? {
         switch index(id) {
         case .failure(let error): return error
@@ -559,15 +574,15 @@ struct ReferenceWorld: Equatable {
             // Decision 23: a line's train takes its timetables from the line.
             if onLine(id) { return .trainOnLine(id) }
             guard trains[i].service == nil else { return .trainServiceActive(id) }
-            let times = stops.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
+            let times = stops.flatMap { [$0.arrival.seconds, $0.departure.seconds] }
             guard times.allSatisfy({ $0 >= 0 }), zip(times, times.dropFirst()).allSatisfy({ $0 <= $1 }) else {
                 return .invalidTimetable
             }
             if let period {
                 guard period >= 1, let first = stops.first, let last = stops.last else { return .invalidTimetable }
-                let (again, overflow) = first.arrival.minutes.addingReportingOverflow(period)
-                // Past the largest minute is later than any departure.
-                guard overflow || last.departure.minutes <= again else { return .invalidTimetable }
+                let (again, overflow) = first.arrival.seconds.addingReportingOverflow(period)
+                // Past the largest second is later than any departure.
+                guard overflow || last.departure.seconds <= again else { return .invalidTimetable }
             }
             let known = Set(stations.map(\.id))
             if let missing = stops.first(where: { !known.contains($0.station.rawValue) }) {
@@ -579,16 +594,16 @@ struct ReferenceWorld: Equatable {
         }
     }
 
-    /// Decision 21: the scheduled departure from entry `stop` in `cycle`, or
-    /// `nil` if it does not fit in a game minute.
+    /// Decision 21: the scheduled departure from entry `stop` in `cycle`, in
+    /// seconds, or `nil` if it does not fit in a game second.
     static func departure(_ train: Train, stop: Int, cycle: Int64) -> Int64? {
         let (shift, overflow) = cycle.multipliedReportingOverflow(by: train.period ?? 0)
         guard !overflow else { return nil }
-        let (time, late) = train.timetable[stop].departure.minutes.addingReportingOverflow(shift)
+        let (time, late) = train.timetable[stop].departure.seconds.addingReportingOverflow(shift)
         return late ? nil : time
     }
 
-    /// Decision 21: whether every time of `cycle` fits in a game minute.
+    /// Decision 21: whether every time of `cycle` fits in a game second.
     static func fits(_ train: Train, cycle: Int64) -> Bool {
         departure(train, stop: train.timetable.count - 1, cycle: cycle) != nil
     }
@@ -611,14 +626,14 @@ struct ReferenceWorld: Equatable {
     }
 
     /// Decision 21: 0 without a period; otherwise the first cycle that
-    /// leaves the first stop at the current minute or later, but never past
+    /// leaves the first stop at the current second or later, but never past
     /// the last cycle that fits.
     private func startingCycle(_ train: Train) -> Int64 {
         guard let period = train.period else { return 0 }
-        let first = train.timetable[0].departure.minutes
-        let last = (Int64.max - train.timetable[train.timetable.count - 1].departure.minutes) / period
-        guard minutes > first else { return 0 }
-        let wanted = (minutes - first - 1) / period + 1
+        let first = train.timetable[0].departure.seconds
+        let last = (Int64.max - train.timetable[train.timetable.count - 1].departure.seconds) / period
+        guard clockSeconds > first else { return 0 }
+        let wanted = (clockSeconds - first - 1) / period + 1
         return min(wanted, last)
     }
 
@@ -647,41 +662,58 @@ struct ReferenceWorld: Equatable {
         speed = resumeSpeed
     }
 
-    /// Decisions 3, 15 and 20: checked first, then every minute is stepped:
-    /// departures at the minute, travel, the clock, then arrivals. Decision
-    /// 23: each line's dispatch comes before the departures.
+    /// Decisions 3, 15 and 20: checked first, then every second is
+    /// stepped (Stage W2a): at a whole minute, departures at the minute;
+    /// travel, each train its share of its rate per minute for the second;
+    /// the clock; then arrivals. Decision 23: each line's dispatch comes
+    /// before the departures.
     mutating func advance(ticks: Int) -> GameError? {
-        let perTick: Int64 = switch speed {
+        let tenthsPerTick: Int64 = switch speed {
         case .paused: 0
-        case .normal: 1
-        case .double: 2
+        case .x1: 1
+        case .x10: 10
+        case .x60: 60
+        case .normal: 600
+        case .double: 1200
         }
-        let (steps, overflow) = Int64(ticks).multipliedReportingOverflow(by: perTick)
-        guard !overflow, !minutes.addingReportingOverflow(steps).overflow else { return .clockOverflow }
+        // The tenths in full width: ticks × tenths per tick + pending.
+        let product = Int64(ticks).multipliedFullWidth(by: tenthsPerTick)
+        let (low, carry) = product.low.addingReportingOverflow(UInt64(pendingTenths))
+        let total = (high: product.high + (carry ? 1 : 0), low: low)
+        // Too many seconds for an Int64 once divided by 10.
+        guard total.high < 5 else { return .clockOverflow }
+        let (seconds, tenths) = Int64(10).dividingFullWidth(total)
+        guard !clockSeconds.addingReportingOverflow(seconds).overflow else { return .clockOverflow }
+        pendingTenths = tenths
         // Decision 23: within one call the map cannot change, so a line's
         // journey, and a trip from an idle train's place, stay the same.
         var memo = DispatchMemo()
-        for _ in 0..<steps {
-            // Decision 36: the hour and the day that ended are settled first.
-            settle(memo: &memo)
-            // Decision 34: passengers first, from the minute's demand.
-            releasePassengers()
-            for l in lines.indices {
-                dispatch(l, memo: &memo)
+        for _ in 0..<seconds {
+            let second = clockSeconds - minutes * 60
+            if second == 0 {
+                // Decision 36: the hour and the day that ended are settled first.
+                settle(memo: &memo)
+                // Decision 34: passengers first, from the minute's demand.
+                releasePassengers()
+                for l in lines.indices {
+                    dispatch(l, memo: &memo)
+                }
+                for i in trains.indices {
+                    depart(i)
+                }
             }
-            for i in trains.indices {
-                depart(i)
-            }
-            for i in trains.indices where trains[i].position != nil && trains[i].rate > 0 {
+            for i in trains.indices where trains[i].position != nil {
+                let distance = Self.share(of: trains[i].rate, inSecond: second)
+                guard distance > 0 else { continue }
                 if case .onEdge? = trains[i].position {
-                    trains[i] = steppedOnNetwork(trains[i])
+                    trains[i] = steppedOnNetwork(trains[i], distance: distance)
                 } else {
-                    trains[i] = stepped(trains[i])
+                    trains[i] = stepped(trains[i], distance: distance)
                 }
                 // Decision 32: a route that has come to its end is released.
                 releaseIfArrived(i)
             }
-            minutes += 1
+            clockSeconds += 1
             for i in trains.indices {
                 guard let service = trains[i].service, !service.waiting else { continue }
                 let target = trains[i].timetable[service.stop].station
@@ -693,6 +725,16 @@ struct ReferenceWorld: Equatable {
         return nil
     }
 
+    /// Stage W2a: the units a train with `rate` units a minute travels in
+    /// second `second` (from 0) of a minute, `⌊rate·(second + 1)/60⌋ −
+    /// ⌊rate·second/60⌋`, in full-width arithmetic.
+    static func share(of rate: Int64, inSecond second: Int64) -> Int64 {
+        func covered(_ seconds: Int64) -> Int64 {
+            Int64(60).dividingFullWidth(rate.multipliedFullWidth(by: seconds)).quotient
+        }
+        return covered(second + 1) - covered(second)
+    }
+
     /// Decision 20's departures at the current minute for one train: from
     /// each stop whose departure has come, one pass after another while the
     /// train arrives at once; decision 21: at most as many stops as the
@@ -700,7 +742,7 @@ struct ReferenceWorld: Equatable {
     mutating func depart(_ i: Int) {
         var left = 0
         while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
-              Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= minutes {
+              Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= clockSeconds {
             left += 1
             // Decision 35: the stop is served as soon as it is left.
             let leaving = service.stop
@@ -778,19 +820,19 @@ struct ReferenceWorld: Equatable {
     /// the rest of its link, then each whole link is 1024 units; with `q`
     /// whole links and `r` units over, it has entered `q` links and, if
     /// `r > 0` and another link can be entered, is `r` into the next one.
-    private func stepped(_ train: Train) -> Train {
+    private func stepped(_ train: Train, distance: Int64) -> Train {
         // Decision 27: the body follows the head over the nodes it passed.
-        var (moved, passed) = steppedHead(train)
+        var (moved, passed) = steppedHead(train, distance: distance)
         moved.trail = Self.body(after: train.position!, train.trail, to: moved.position!, passed: passed, length: Self.length(train))
         return moved
     }
 
     /// The head's step, and the nodes it entered on the way, in order.
-    private func steppedHead(_ train: Train) -> (Train, [GridPosition]) {
+    private func steppedHead(_ train: Train, distance: Int64) -> (Train, [GridPosition]) {
         var train = train
         let position = train.position!
         let (node, heading) = Self.ahead(position)
-        var distance = train.rate
+        var distance = distance
         if case .onLink(let from, let to, let offset) = position {
             let toEnd = Self.linkLength - offset
             if distance < toEnd {
