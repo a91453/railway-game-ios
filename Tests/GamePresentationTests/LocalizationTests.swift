@@ -98,35 +98,37 @@ final class LocalizationTests: XCTestCase {
     }
 
     /// The session writes its messages and suggests names in its language.
-    @MainActor
-    func testTheSessionSpeaksItsLanguage() throws {
-        var world = try makeWorld(width: 8, height: 4, balance: 100_000)
-        try world.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
-        let session = GameSession(world: world, language: .traditionalChinese)
-        XCTAssertEqual(session.language, .traditionalChinese)
-        XCTAssertEqual(session.stationName, "車站 1")
+    func testTheSessionSpeaksItsLanguage() async throws {
+        var built = try makeWorld(width: 8, height: 4, balance: 100_000)
+        try built.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
+        let world = built
+        await MainActor.run {
+            let session = GameSession(world: world, language: .traditionalChinese)
+            XCTAssertEqual(session.language, .traditionalChinese)
+            XCTAssertEqual(session.stationName, "車站 1")
 
-        session.selectTool(.train)
-        session.purchaseTrain()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇一格軌道放置它。"))
-        session.select(GridPosition(x: 1, y: 1))
-        session.applyTool()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已將 列車 1 放在 (1, 1)，面向東。"))
+            session.selectTool(.train)
+            session.purchaseTrain()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇一格軌道放置它。"))
+            session.select(GridPosition(x: 1, y: 1))
+            session.applyTool()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已將 列車 1 放在 (1, 1)，面向東。"))
 
-        session.selectTool(.buildTrack)
-        session.applyTool()
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "(1, 1) 這一格已經有東西了。"))
-        session.select(GridPosition(x: 2, y: 1))
-        session.applyTool()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (2, 1) 鋪設直線軌道。"))
+            session.selectTool(.buildTrack)
+            session.applyTool()
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "(1, 1) 這一格已經有東西了。"))
+            session.select(GridPosition(x: 2, y: 1))
+            session.applyTool()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (2, 1) 鋪設直線軌道。"))
 
-        session.selectTool(.buildStation)
-        session.select(GridPosition(x: 1, y: 0))
-        session.applyTool()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (1, 0) 建造車站「車站 1」。"))
-        XCTAssertEqual(session.stationName, "車站 2")
+            session.selectTool(.buildStation)
+            session.select(GridPosition(x: 1, y: 0))
+            session.applyTool()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (1, 0) 建造車站「車站 1」。"))
+            XCTAssertEqual(session.stationName, "車站 2")
 
-        // The English session is unchanged.
-        XCTAssertEqual(GameSession(world: world).stationName, "Station 1")
+            // The English session is unchanged.
+            XCTAssertEqual(GameSession(world: world).stationName, "Station 1")
+        }
     }
 }
