@@ -773,7 +773,7 @@ public final class GameSession {
     }
 
     /// The selected line, or `nil` after reporting that there is none.
-    private func requireSelectedLine() -> ServiceLine? {
+    func requireSelectedLine() -> ServiceLine? {
         guard let line = selectedLine else {
             message = StatusMessage(kind: .failure, text: language.text("Create or choose a line first.", "請先建立或選擇一條路線。"))
             return nil
