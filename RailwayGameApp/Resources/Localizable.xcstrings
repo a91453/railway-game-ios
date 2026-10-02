@@ -51,12 +51,52 @@
         }
       }
     },
+    "A minute later or earlier; the stops after it move with it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次加減一分鐘；之後的停靠站一起移動。"
+          }
+        }
+      }
+    },
+    "A minute longer or shorter, never shorter than the timetable." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次加減一分鐘，不會短於整份時刻表。"
+          }
+        }
+      }
+    },
+    "A new stop comes 3 minutes after the last one and waits a minute; move its times with the steppers. Swipe a stop to remove it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的停靠站排在上一站 3 分鐘後，停 1 分鐘；用加減按鈕調整時刻。向左滑可刪除停靠站。"
+          }
+        }
+      }
+    },
     "A preset keeps the station's daily trips. They go to the stations its lines reach that have ridership, shared by their own daily trips." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "預設會保留車站的日客流。旅次分給路線能到、而且有客流的車站，依各站自己的日客流分配。"
+          }
+        }
+      }
+    },
+    "A service starts at the first stop: put the train there and run it. An early train waits for its departure; a late one leaves once boarding is done." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服務從第一站開始：把列車放在那裡再開始。早到的列車等到發車時刻；誤點的列車上下車完就開。"
           }
         }
       }
@@ -91,6 +131,16 @@
         }
       }
     },
+    "Add Stop" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入停靠站"
+          }
+        }
+      }
+    },
     "Add a short working or express" : {
       "localizations" : {
         "zh-Hant" : {
@@ -107,6 +157,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "套用到全線路"
+          }
+        }
+      }
+    },
+    "Arrive" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到站"
           }
         }
       }
@@ -317,6 +377,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除"
+          }
+        }
+      }
+    },
+    "Clear Timetable" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除時刻表"
           }
         }
       }
@@ -591,6 +661,16 @@
         }
       }
     },
+    "Leave" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "發車"
+          }
+        }
+      }
+    },
     "Ledger" : {
       "localizations" : {
         "zh-Hant" : {
@@ -727,6 +807,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "沒有選取格子"
+          }
+        }
+      }
+    },
+    "No timetable yet. Add its first stop below." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有時刻表。請在下方加入第一站。"
+          }
+        }
+      }
+    },
+    "No train yet. Buy one with the train tool." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有列車。請用列車工具購買。"
           }
         }
       }
@@ -1051,6 +1151,16 @@
         }
       }
     },
+    "Repeats" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重複運行"
+          }
+        }
+      }
+    },
     "Report" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1147,6 +1257,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全天營運"
+          }
+        }
+      }
+    },
+    "Run Service" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始服務"
           }
         }
       }
@@ -1321,6 +1441,16 @@
         }
       }
     },
+    "Shows the train's own timetable: its stops, times and whether it repeats." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示列車自己的時刻表：停靠站、時刻與是否重複。"
+          }
+        }
+      }
+    },
     "Smooth curves" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1347,6 +1477,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "人員"
+          }
+        }
+      }
+    },
+    "Start" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起始"
           }
         }
       }
@@ -1391,12 +1531,32 @@
         }
       }
     },
+    "Stop Service" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止服務"
+          }
+        }
+      }
+    },
     "Stop the train's timetable" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止列車的時刻表"
+          }
+        }
+      }
+    },
+    "Stops" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停靠站"
           }
         }
       }
@@ -1461,6 +1621,16 @@
         }
       }
     },
+    "The service is running. Stop it to change the timetable." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服務運行中。請先停止服務再修改時刻表。"
+          }
+        }
+      }
+    },
     "This" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1471,12 +1641,32 @@
         }
       }
     },
+    "This train runs for a line, which writes its timetables. Take it off the line to give it its own." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這列車為路線服務，時刻表由路線產生。移出路線後才能自訂時刻表。"
+          }
+        }
+      }
+    },
     "Tile x %lld, y %lld, %@" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "格子 x %lld，y %lld，%@"
+          }
+        }
+      }
+    },
+    "Timetable" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時刻表"
           }
         }
       }
@@ -1557,6 +1747,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "各小時旅次"
+          }
+        }
+      }
+    },
+    "Turn round here" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此折返"
           }
         }
       }
