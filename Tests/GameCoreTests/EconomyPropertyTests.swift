@@ -82,7 +82,7 @@ final class EconomyPropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("economy.differential", cases: 12) { c in
             let (setup, operations) = try Self.generate(&c, operations: 60)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations, lineAnswers: false) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations, lineAnswers: false)

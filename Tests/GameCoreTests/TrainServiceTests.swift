@@ -38,11 +38,11 @@ final class TrainServiceTests: XCTestCase {
     private let second = TrainID(rawValue: 2)
     private let unknown = TrainID(rawValue: 9)
 
-    private func makeLineWorld(minute: Int64 = 0, trainCount: Int = 1) throws -> GameWorld {
+    private func makeLineWorld(minute: Int64 = 0, seconds: Int64? = nil, trainCount: Int = 1) throws -> GameWorld {
         var world = try GameWorld(
             width: 8, height: 4,
             economy: GameEconomy(balance: 1_000_000, costs: testCosts),
-            clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
+            clock: GameClock(now: seconds.map(GameTime.init(seconds:)) ?? GameTime(minutes: minute), speed: .normal)
         )
         try world.buildTrack(at: a, connections: .east)
         for tile in [b, c, d, e, f] {
@@ -66,9 +66,10 @@ final class TrainServiceTests: XCTestCase {
         _ stops: [ScheduledStop],
         rate: Int64 = 1024,
         at position: TrainPosition? = nil,
-        minute: Int64 = 0
+        minute: Int64 = 0,
+        seconds: Int64? = nil
     ) throws -> GameWorld {
-        var world = try makeLineWorld(minute: minute)
+        var world = try makeLineWorld(minute: minute, seconds: seconds)
         try world.placeTrain(first, at: position ?? .atNode(b, heading: .east))
         try world.setTrainMovementRate(first, to: rate)
         try world.setTrainTimetable(first, to: stops)
@@ -540,15 +541,18 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: 100))
     }
 
-    /// The clock may be before minute 0 (a save can hold one): a departure
+    /// The clock may be before second 0 (a save can hold one): a departure
     /// further away than the largest `Int64` still stops nothing and
-    /// overflows nothing (found by the save mutation campaign).
+    /// overflows nothing (found by the save mutation campaign). The clock
+    /// starts 5 minutes after the first whole minute after `Int64.min`
+    /// seconds.
     func testADepartureFurtherAwayThanAnInt64CanCountIsWaitedFor() throws {
-        var world = try makeServiceWorld([stop(alpha, 0, 10), stop(beta, 20, 20)], minute: .min + 5)
+        let start = Int64.min + 8 + 5 * 60
+        var world = try makeServiceWorld([stop(alpha, 0, 10), stop(beta, 20, 20)], seconds: start)
 
         try world.advance(ticks: 1_000)
 
-        XCTAssertEqual(world.clock.now.minutes, .min + 1_005)
+        XCTAssertEqual(world.clock.now.seconds, start + 1_000 * 60)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(0))
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
     }

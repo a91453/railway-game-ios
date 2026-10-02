@@ -30,7 +30,7 @@ final class StationFacilityPropertyTests: XCTestCase {
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         // Small networks: the reference drives lines from scratch.
         var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .loopWithTails, .ladder, .grid, .random], using: &c.random)
-        setup.minutes = c.random.int64(in: 0...3_000)
+        setup.seconds = 60 * (c.random.int64(in: 0...3_000))
         setup.extraBalance = 10_000_000
         setup.speed = .normal
         // Some junctions become turnouts, so bodies lie through them.

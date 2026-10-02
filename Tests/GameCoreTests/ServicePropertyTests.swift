@@ -177,7 +177,7 @@ final class ServicePropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign(name, cases: 30) { c in
             let (setup, operations) = try Self.generate(&c, operations: 120, repeating: repeating)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
             // Every outcome and all state, against the reference model.
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
@@ -269,7 +269,7 @@ final class ServicePropertyTests: XCTestCase {
                 counts["turned round", default: 0] += 1
             }
             if gained == 0, case .waitingAtStop(let stop, let cycle) = was, stop + 1 < count || old.timetablePeriod != nil,
-               old.timetable[stop].departure.minutes + cycle * (old.timetablePeriod ?? 0) < after.clock.now.minutes {
+               old.timetable[stop].departure.seconds + cycle * (old.timetablePeriod ?? 0) < after.clock.now.seconds {
                 counts["waits without a route", default: 0] += 1
             }
         }
@@ -337,24 +337,26 @@ enum ServiceGenerator {
         guard repeating else { return .setTimetable(train.id, timetable(for: train, from: station, in: world, using: &random)) }
         var stops = timetable(for: train, from: station, in: world, turning: true, using: &random)
         if random.chance(2, in: 3), let first = stops.first, let last = stops.last, last.station != first.station,
-           let departure = Optional(last.departure.minutes), departure < .max {
+           last.departure.seconds < .max {
             // Back to the first station: the wrap is then a journey home,
             // or no journey at all when the last stop turns round there.
             stops.append(ScheduledStop(
-                station: first.station, arrival: GameTime(minutes: departure), departure: GameTime(minutes: departure),
+                station: first.station, arrival: last.departure, departure: last.departure,
                 reverses: random.chance(1, in: 2)
             ))
         }
         guard random.chance(5, in: 6), let first = stops.first, let last = stops.last else {
             return .setTimetable(train.id, stops)
         }
-        let span = last.departure.minutes - first.arrival.minutes
+        // Stage W2a: times and periods are seconds; the gaps are whole
+        // minutes, as before.
+        let span = last.departure.seconds - first.arrival.seconds
         let period: Int64 = switch random.below(12) {
         case 0: random.element(of: [0, -1, -60, .min])
-        case 1: max(0, span - random.int64(in: 1...5))
+        case 1: max(0, span - 60 * random.int64(in: 1...5))
         case 2: span
         case 3: .max
-        default: span.addingReportingOverflow(random.int64(in: 1...30)).overflow ? .max : span + random.int64(in: 1...30)
+        default: span.addingReportingOverflow(60 * random.int64(in: 1...30)).overflow ? .max : span + 60 * random.int64(in: 1...30)
         }
         return .setTimetable(train.id, stops, period: period)
     }
@@ -364,8 +366,9 @@ enum ServiceGenerator {
     /// where the route to the stop before would leave it (so that most
     /// services can run to the end on an unchanged map), sometimes at any
     /// station; the previous station again is common. Times start around
-    /// now, never go back, are often equal, and are clamped at the largest
-    /// minute.
+    /// now, a whole number of minutes from it, never go back, are often
+    /// equal, and are clamped at the largest second (Stage W2a: times are
+    /// seconds).
     static func timetable(
         for train: Train,
         from station: StationID,
@@ -378,7 +381,7 @@ enum ServiceGenerator {
             let (sum, overflow) = time.addingReportingOverflow(gap)
             return overflow ? .max : sum
         }
-        var time = max(0, later(world.clock.now.minutes, by: random.int64(in: -10...10)))
+        var time = max(0, later(world.clock.now.seconds, by: 60 * random.int64(in: -10...10)))
         var stops: [ScheduledStop] = []
         var current = station
         var position = train.position
@@ -402,16 +405,16 @@ enum ServiceGenerator {
                     current = random.element(of: all)
                     position = nil
                 }
-                time = later(time, by: random.chance(1, in: 3) ? 0 : random.int64(in: 1...20))
+                time = later(time, by: random.chance(1, in: 3) ? 0 : 60 * random.int64(in: 1...20))
             }
-            let departure = later(time, by: random.chance(1, in: 3) ? 0 : random.int64(in: 1...10))
+            let departure = later(time, by: random.chance(1, in: 3) ? 0 : 60 * random.int64(in: 1...10))
             // Only drawn when turning, so Stage P's timetables are as before.
             let reverses = turning && random.chance(1, in: 3)
             if reverses {
                 position = position.map(ReferenceWorld.turned)
             }
             stops.append(ScheduledStop(
-                station: current, arrival: GameTime(minutes: time), departure: GameTime(minutes: departure), reverses: reverses
+                station: current, arrival: GameTime(seconds: time), departure: GameTime(seconds: departure), reverses: reverses
             ))
             time = departure
         }

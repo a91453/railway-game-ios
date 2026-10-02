@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 23,
+  "description": "The game clock in seconds (Stage W2a, ARCHITECTURE decision 37) on the line a(1,1)-b(2,1)-c(3,1)-d-e-f(6,1). A tick runs its speed's tenths of a second: x1 1 (real time at the host's 100 ms tick), x10 10, x60 60, normal 600, double 1200; tenths that make no whole second yet wait in pendingTenths, through changes of speed. A train travels its rate per minute shared out over the minute's seconds: second s of a minute (from 0) takes floor(1300(s+1)/60) - floor(1300 s/60) units, so a whole minute takes 1300, exactly as one minute did before W2a. Clock leaves a at second 0 with rate 1300 and continuation b..f. 7 ticks at x1: 0.7 s, nothing moves (pending 7). 5 more: 1.2 s, so one second: floor(1300/60) = 21 units, 21 along a->b (cursor 1), pending 2. x10, 36 ticks: 36 s, to second 37: floor(1300*37/60) = 801 units in all, 801 along a->b. x60, 4 ticks: 24 s to second 61: the rest of minute 0 (499 units, 1300 in all, 276 past b, entering c: cursor 2), then second 0 of minute 1 (21): 297 along b->c. x1, 18 ticks with the 2 pending: 2 s, seconds 1 and 2 of minute 1: floor(1300*3/60) - 21 = 44 more, 341 along b->c, pending 0. 3 more ticks at x1: 0.3 s, nothing moves (pending 3). The clock ends at second 63, between two minutes, so the final state writes gameSeconds (schema 23). Balance 10,000 less 6 tracks at 100 and the train at 5,000.",
+  "initialState": {
+    "mapWidth": 8,
+    "mapHeight": 3,
+    "balance": 10000,
+    "costs": { "track": 100, "station": 1000, "train": 5000 },
+    "gameMinutes": 0,
+    "speed": "x1"
+  },
+  "steps": [
+    {"command": {"type": "buildTrack", "x": 1, "y": 1, "connections": ["east"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "west"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrack", "x": 5, "y": 1, "connections": ["east", "west"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrack", "x": 6, "y": 1, "connections": ["west"]}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Clock"}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeTrain", "train": 1, "position": {"type": "node", "x": 1, "y": 1, "heading": "east"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainMovementRate", "train": 1, "rate": 1300}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainContinuation", "train": 1, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}]}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 7}, "expect": {"result": "ok"}},
+    {"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "node", "x": 1, "y": 1, "heading": "east"}, "movement": {"rate": 1300, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}], "cursor": 0, "edges": []}}},
+    {"command": {"type": "advance", "ticks": 5}, "expect": {"result": "ok"}},
+    {"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 1}, "offset": 21}, "movement": {"rate": 1300, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}], "cursor": 1, "edges": []}}},
+    {"command": {"type": "setSpeed", "speed": "x10"}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 36}, "expect": {"result": "ok"}},
+    {"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 1}, "offset": 801}, "movement": {"rate": 1300, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}], "cursor": 1, "edges": []}}},
+    {"command": {"type": "setSpeed", "speed": "x60"}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 4}, "expect": {"result": "ok"}},
+    {"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "link", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}, "offset": 297}, "movement": {"rate": 1300, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}], "cursor": 2, "edges": []}}},
+    {"command": {"type": "setSpeed", "speed": "x1"}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 18}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 3}, "expect": {"result": "ok"}}
+  ],
+  "expectedFinalState": {"gameSeconds": 63, "pendingTenths": 3, "speed": "x1", "balance": 4400, "stations": [], "tracks": [{"x": 1, "y": 1, "connections": ["east"], "layout": {"type": "open"}}, {"x": 2, "y": 1, "connections": ["east", "west"], "layout": {"type": "open"}}, {"x": 3, "y": 1, "connections": ["east", "west"], "layout": {"type": "open"}}, {"x": 4, "y": 1, "connections": ["east", "west"], "layout": {"type": "open"}}, {"x": 5, "y": 1, "connections": ["east", "west"], "layout": {"type": "open"}}, {"x": 6, "y": 1, "connections": ["west"], "layout": {"type": "open"}}], "trains": [{"id": 1, "name": "Clock", "position": {"type": "link", "from": {"x": 2, "y": 1}, "to": {"x": 3, "y": 1}, "offset": 341}, "movement": {"rate": 1300, "continuation": [{"x": 2, "y": 1}, {"x": 3, "y": 1}, {"x": 4, "y": 1}, {"x": 5, "y": 1}, {"x": 6, "y": 1}], "cursor": 2, "edges": []}, "timetable": [], "repeat": {"type": "once"}, "execution": {"type": "inactive"}, "cars": 1, "trail": [], "trailEdges": [], "reservation": []}], "lines": [], "serviceDay": [{"start": 0, "level": "low"}, {"start": 420, "level": "peak"}, {"start": 600, "level": "offPeak"}, {"start": 960, "level": "peak"}, {"start": 1200, "level": "offPeak"}, {"start": 1260, "level": "low"}], "network": {"nodes": [], "edges": [], "platforms": []}, "trafficControl": false, "passengers": [], "riders": [], "accounts": {"mode": "free", "fareRules": null, "openedAt": null, "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0}, "ledger": [], "days": []}}
+}

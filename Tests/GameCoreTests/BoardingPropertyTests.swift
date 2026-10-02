@@ -30,7 +30,7 @@ final class BoardingPropertyTests: XCTestCase {
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .loopWithTails, .ladder, .grid], using: &c.random)
         // Around the morning peak, and now and then the night.
-        setup.minutes = c.random.chance(1, in: 5) ? c.random.int64(in: -30...300) : c.random.int64(in: 400...1_100)
+        setup.seconds = 60 * (c.random.chance(1, in: 5) ? c.random.int64(in: -30...300) : c.random.int64(in: 400...1_100))
         setup.speed = c.random.element(of: [.normal, .normal, .double, .paused])
         var (world, _) = try setup.build()
         let speed: Operation = .setSpeed(c.random.chance(1, in: 3) ? .double : .normal)
@@ -147,7 +147,7 @@ final class BoardingPropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("boarding.differential", cases: 16) { c in
             let (setup, operations) = try Self.generate(&c, operations: 70)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations, lineAnswers: false) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations, lineAnswers: false)

@@ -59,7 +59,7 @@ extension GameWorld {
     /// The finance report's statements for `period`: the one containing
     /// the current day and the one before.
     public func financeReport(_ period: FinancePeriod) -> (current: FinanceSummary, previous: FinanceSummary) {
-        accounts.report(period, day: CompanyAccounts.floorDivide(clock.now.minutes, GameTime.minutesPerDay))
+        accounts.report(period, day: dayIndex(of: clock.now))
     }
 
     /// The square of the straight-line distance between two stations'
@@ -154,15 +154,15 @@ extension GameWorld {
     /// World units in a kilometre.
     static let unitsPerKilometre: Int64 = 64_000
 
-    /// The settlements due at the start of the step from `now`: the hour
+    /// The settlements due at the start of the minute from `now`: the hour
     /// that ended, if `now` is on the hour, then the day that ended, if
     /// `now` is midnight (the reference settles the hour before the day).
     mutating func settleAccounts(at now: GameTime, memo: inout DispatchMemo) {
-        guard accounts.mode == .management, now.minutes % 60 == 0, let opened = accounts.openedAt, opened < now else { return }
+        guard accounts.mode == .management, now.seconds % GameTime.secondsPerHour == 0, let opened = accounts.openedAt, opened < now else { return }
         accounts.openedAt = now
         let assets = fixedAssets(memo: &memo)
         settleHour(at: now, assets: assets)
-        if now.minutes % GameTime.minutesPerDay == 0 {
+        if now.seconds % GameTime.secondsPerDay == 0 {
             settleDay(endingBefore: now, assets: assets)
         }
     }
@@ -185,13 +185,14 @@ extension GameWorld {
         let amount = pending.fareRevenue - operating - maintenance
         // The hour belongs to the day it ran in: the reference settles the
         // hour that ends at midnight before the day turns.
-        let day = dayIndex(of: GameTime(minutes: now.minutes - 1))
+        let day = dayIndex(of: GameTime(seconds: now.seconds - GameTime.secondsPerMinute))
         write(LedgerEntry(kind: .hourlyNet, time: now, amount: amount, breakdown: breakdown, crowding: crowding()), day: day)
     }
 
     private mutating func settleDay(endingBefore now: GameTime, assets: FixedAssets) {
         let km = Self.unitsPerKilometre
-        let time = GameTime(minutes: now.minutes - 1)
+        // The day's last minute.
+        let time = GameTime(seconds: now.seconds - GameTime.secondsPerMinute)
         let day = dayIndex(of: time)
         // Each part is rounded on its own; the total is the rounded sum, as
         // in the reference, so they may differ by a dollar.
@@ -224,7 +225,7 @@ extension GameWorld {
     }
 
     func dayIndex(of time: GameTime) -> Int64 {
-        CompanyAccounts.floorDivide(time.minutes, GameTime.minutesPerDay)
+        CompanyAccounts.floorDivide(time.seconds, GameTime.secondsPerDay)
     }
 
     /// The network's crowding now (see ``CrowdingMetrics``).

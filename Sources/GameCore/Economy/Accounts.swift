@@ -116,7 +116,7 @@ public struct LedgerEntry: Hashable, Sendable {
 /// One day's totals by item (all non-negative): what the finance report
 /// adds up.
 public struct DayAccount: Hashable, Sendable {
-    /// The day's index: minute ÷ 1440, rounded down.
+    /// The day's index: second ÷ 86400 (minute ÷ 1440), rounded down.
     public let day: Int64
     public internal(set) var fareRevenue: Money = .zero
     public internal(set) var operatingCost: Money = .zero

@@ -70,7 +70,7 @@ final class TimetablePropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("timetable.differential", cases: 60) { c in
             let (setup, operations) = try Self.generate(&c, operations: 120)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
             // Atomicity and every outcome, against the reference model.
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
@@ -223,7 +223,7 @@ final class TimetablePropertyTests: XCTestCase {
     }
 
     private static func isValid(_ stops: [ScheduledStop], in world: GameWorld) -> Bool {
-        let times = stops.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
+        let times = stops.flatMap { [$0.arrival.seconds, $0.departure.seconds] }
         let ordered = times.allSatisfy { $0 >= 0 } && zip(times, times.dropFirst()).allSatisfy { $0 <= $1 }
         return ordered && stops.allSatisfy { stop in world.stations.contains { $0.id == stop.station } }
     }
@@ -231,31 +231,33 @@ final class TimetablePropertyTests: XCTestCase {
 
 // MARK: - Generated timetables
 
+/// Stage W2a: the times are seconds; the gaps the generators draw are whole
+/// minutes, as before, from a clock that may be between two minutes.
 enum TimetableGenerator {
     /// A valid timetable for `world`: up to five stops at its stations
     /// (repeats allowed), with times that never go back, often equal, near
-    /// the clock, at 0 or at the largest minute. Empty without stations.
+    /// the clock, at 0 or at the largest second. Empty without stations.
     static func valid(in world: GameWorld, using random: inout SplitMix64) -> [ScheduledStop] {
         let stations = world.stations.map(\.id)
         guard !stations.isEmpty else { return [] }
         let count = random.below(6)
-        let now = world.clock.now.minutes
+        let now = world.clock.now.seconds
         let times = (0..<(2 * count)).map { _ -> Int64 in
             switch random.below(10) {
-            case 0..<4: return random.int64(in: 0...30)
+            case 0..<4: return 60 * random.int64(in: 0...30)
             case 4, 5:
-                let (near, overflow) = now.addingReportingOverflow(random.int64(in: -20...20))
+                let (near, overflow) = now.addingReportingOverflow(60 * random.int64(in: -20...20))
                 return overflow ? now : max(0, near)
             case 6: return 0
             case 7: return .max
-            default: return random.int64(in: 0...1_000_000)
+            default: return 60 * random.int64(in: 0...1_000_000)
             }
         }.sorted()
         return (0..<count).map { index in
             ScheduledStop(
                 station: random.element(of: stations),
-                arrival: GameTime(minutes: times[2 * index]),
-                departure: GameTime(minutes: times[2 * index + 1])
+                arrival: GameTime(seconds: times[2 * index]),
+                departure: GameTime(seconds: times[2 * index + 1])
             )
         }
     }
@@ -268,22 +270,22 @@ enum TimetableGenerator {
         let stations = world.stations.map(\.id)
         let unknown = StationID(rawValue: random.element(of: [0, -1, (stations.map(\.rawValue).max() ?? 0) + 1, Int.max, Int.min]))
         func make(_ station: StationID, _ arrival: Int64, _ departure: Int64) -> ScheduledStop {
-            ScheduledStop(station: station, arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure))
+            ScheduledStop(station: station, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: departure))
         }
         let anyStation = stations.isEmpty ? unknown : random.element(of: stations)
         for _ in 0..<(1 + random.below(2)) {
             switch random.below(4) {
             case 0:
                 // A negative time.
-                let negative = random.chance(1, in: 4) ? Int64.min : -random.int64(in: 1...30)
+                let negative = random.chance(1, in: 4) ? Int64.min : -60 * random.int64(in: 1...30)
                 if stops.isEmpty || random.chance(1, in: 4) {
-                    stops.insert(make(anyStation, negative, random.chance(1, in: 2) ? negative : 5), at: random.below(stops.count + 1))
+                    stops.insert(make(anyStation, negative, random.chance(1, in: 2) ? negative : 300), at: random.below(stops.count + 1))
                 } else {
                     let index = random.below(stops.count)
                     let old = stops[index]
                     stops[index] = random.chance(1, in: 2)
-                        ? make(old.station, negative, old.departure.minutes)
-                        : make(old.station, old.arrival.minutes, negative)
+                        ? make(old.station, negative, old.departure.seconds)
+                        : make(old.station, old.arrival.seconds, negative)
                 }
             case 1:
                 // A departure before its arrival.
@@ -292,29 +294,29 @@ enum TimetableGenerator {
                     stops.append(make(anyStation, .max, 0))
                 } else {
                     let old = stops[index]
-                    let arrival = max(old.arrival.minutes, 1)
-                    stops[index] = make(old.station, arrival, arrival - 1 - random.int64(in: 0...min(arrival - 1, 10)))
+                    let arrival = max(old.arrival.seconds, 1)
+                    stops[index] = make(old.station, arrival, arrival - 1 - random.int64(in: 0...min(arrival - 1, 600)))
                 }
             case 2:
                 // An arrival before the previous departure.
                 if stops.count >= 2 {
                     let index = 1 + random.below(stops.count - 1)
-                    let previous = stops[index - 1].departure.minutes
+                    let previous = stops[index - 1].departure.seconds
                     let old = stops[index]
                     let arrival = previous > 0 ? previous - 1 : -1
-                    stops[index] = make(old.station, arrival, max(arrival, old.departure.minutes))
+                    stops[index] = make(old.station, arrival, max(arrival, old.departure.seconds))
                 } else {
-                    stops = [make(anyStation, 10, 20), make(anyStation, 5, 30)]
+                    stops = [make(anyStation, 600, 1_200), make(anyStation, 300, 1_800)]
                 }
             default:
                 // A station the world does not have.
                 if stops.isEmpty || random.chance(1, in: 3) {
-                    let last = stops.last?.departure.minutes ?? 0
+                    let last = stops.last?.departure.seconds ?? 0
                     stops.insert(make(unknown, last, last), at: stops.count)
                 } else {
                     let index = random.below(stops.count)
                     let old = stops[index]
-                    stops[index] = make(unknown, old.arrival.minutes, old.departure.minutes)
+                    stops[index] = make(unknown, old.arrival.seconds, old.departure.seconds)
                 }
             }
         }

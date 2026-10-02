@@ -705,8 +705,8 @@ enum WorldInvariants {
                         problems.append("\(service.name)'s train \(train.rawValue) runs a repeating timetable")
                     }
                 }
-                if let last = service.last, last.minutes < 0 || last > world.clock.now {
-                    problems.append("\(service.name) last dispatch \(last.minutes) at minute \(world.clock.now.minutes)")
+                if let last = service.last, last.seconds < 0 || last > world.clock.now {
+                    problems.append("\(service.name) last dispatch \(last.seconds) at second \(world.clock.now.seconds)")
                 }
             }
         }
@@ -723,7 +723,7 @@ enum WorldInvariants {
         for train in world.trains {
             // Decision 19: times never go back from minute 0, and every stop
             // is at a station the world has, placed or not.
-            let times = train.timetable.flatMap { [$0.arrival.minutes, $0.departure.minutes] }
+            let times = train.timetable.flatMap { [$0.arrival.seconds, $0.departure.seconds] }
             if times.contains(where: { $0 < 0 }) || zip(times, times.dropFirst()).contains(where: { $0 > $1 }) {
                 problems.append("train \(train.id.rawValue) timetable goes back in time: \(times)")
             }
@@ -734,8 +734,9 @@ enum WorldInvariants {
             // minute or more, and does not go back when it starts again.
             if let period = train.timetablePeriod {
                 if let first = train.timetable.first, let last = train.timetable.last {
-                    let (again, overflow) = first.arrival.minutes.addingReportingOverflow(period)
-                    if period < 1 || (!overflow && last.departure.minutes > again) {
+                    // Stage W2a: times and periods are seconds.
+                    let (again, overflow) = first.arrival.seconds.addingReportingOverflow(period)
+                    if period < 1 || (!overflow && last.departure.seconds > again) {
                         problems.append("train \(train.id.rawValue) timetable cannot repeat every \(period) minutes")
                     }
                 } else {
@@ -880,7 +881,7 @@ enum WorldInvariants {
         var problems: [String] = []
         let accounts = world.accounts
         if accounts.mode == .management, accounts.openedAt == nil { problems.append("managed accounts never opened") }
-        if let opened = accounts.openedAt, opened > world.clock.now { problems.append("accounts open at \(opened.minutes), after now") }
+        if let opened = accounts.openedAt, opened > world.clock.now { problems.append("accounts open at second \(opened.seconds), after now") }
         let pending = accounts.pending
         if [pending.fareTrips, pending.departures, pending.trainDistance, pending.passengers, pending.seats, pending.fareRevenue.amount].contains(where: { $0 < 0 }) {
             problems.append("the hour's counts go negative: \(pending)")
@@ -888,7 +889,7 @@ enum WorldInvariants {
         if pending.fareRevenue.amount % 100 != 0 { problems.append("the hour's fares \(pending.fareRevenue.amount) are not whole dollars") }
         if accounts.entries.count > 50 { problems.append("\(accounts.entries.count) ledger rows kept") }
         for entry in accounts.entries {
-            if entry.time > world.clock.now { problems.append("ledger row dated \(entry.time.minutes), after now") }
+            if entry.time > world.clock.now { problems.append("ledger row dated second \(entry.time.seconds), after now") }
             let expected: [LedgerItem] = switch entry.kind {
             case .hourlyNet: [.fareRevenue, .operatingCost, .maintenanceCost]
             case .dailyEnergy: [.routeEnergy, .trainEnergy]
@@ -1044,7 +1045,7 @@ enum WorldInvariants {
                 return ["train \(id) service in cycle \(execution.cycle) of a timetable that does not repeat"]
             }
             let (shift, overflow) = execution.cycle.multipliedReportingOverflow(by: period)
-            if overflow || train.timetable.last!.departure.minutes.addingReportingOverflow(shift).overflow {
+            if overflow || train.timetable.last!.departure.seconds.addingReportingOverflow(shift).overflow {
                 return ["train \(id) service in cycle \(execution.cycle), whose times do not fit"]
             }
         }

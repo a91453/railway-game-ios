@@ -29,9 +29,9 @@ extension GameTime {
     public static let minutesPerDay: Int64 = 24 * 60
 
     /// The minute of the day, `0..<1440`, counting from the start of the
-    /// day that contains this minute (also before minute 0).
+    /// day that contains this second (also before second 0).
     public var minuteOfDay: Int {
-        let minute = minutes % Self.minutesPerDay
+        let minute = self.minute % Self.minutesPerDay
         return Int(minute < 0 ? minute + Self.minutesPerDay : minute)
     }
 }
@@ -218,7 +218,7 @@ public struct LinePattern: Hashable, Sendable {
     public internal(set) var targetHeadways: TargetHeadways
     /// The trains assigned to the pattern, in ascending ID order.
     public internal(set) var trains: [TrainID]
-    /// The minute the pattern last sent a train out from its first call,
+    /// When the pattern last sent a train out from its first call,
     /// or `nil` if it never has.
     public internal(set) var lastDispatch: GameTime?
 
@@ -277,7 +277,7 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// assigned to one line at most, and the line runs its timetable and
     /// service (see ``GameWorld/assignTrain(_:to:pattern:)``).
     public internal(set) var trains: [TrainID]
-    /// The minute the line last sent a train out from its first stop, or
+    /// When the line last sent a train out from its first stop, or
     /// `nil` if it never has. The next train leaves a headway later at the
     /// earliest.
     public internal(set) var lastDispatch: GameTime?
@@ -470,10 +470,10 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         value / divisor + (value % divisor == 0 ? 0 : 1)
     }
 
-    /// The first minute after `now` at which this line's window opens or
-    /// closes or a band of `day` starts, whichever comes first; `nil` if
-    /// none of them fits in a ``GameTime``. Between two such minutes the
-    /// line's window and level stay the same.
+    /// The start of the first minute after the one `now` is in at which
+    /// this line's window opens or closes or a band of `day` starts,
+    /// whichever comes first; `nil` if none of them fits in a ``GameTime``.
+    /// Between two such minutes the line's window and level stay the same.
     func nextChange(after now: GameTime, in day: ServiceDay) -> GameTime? {
         var minutesOfDay = day.bands.map(\.start)
         if case .hours(let open, let close) = window {
@@ -483,8 +483,9 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         return minutesOfDay.compactMap { minute -> GameTime? in
             // Always a whole day ahead at the most, never now itself.
             let ahead = (Int64(minute) - today + GameTime.minutesPerDay - 1) % GameTime.minutesPerDay + 1
-            let (time, overflow) = now.minutes.addingReportingOverflow(ahead)
-            return overflow ? nil : GameTime(minutes: time)
+            let (minute, overflow) = now.minute.addingReportingOverflow(ahead)
+            let (time, beyond) = minute.multipliedReportingOverflow(by: GameTime.secondsPerMinute)
+            return overflow || beyond ? nil : GameTime(seconds: time)
         }.min()
     }
 }
@@ -614,7 +615,7 @@ extension ServiceLine: Codable {
 
     /// Decodes a line, rejecting stops, a rate, a window, train counts or
     /// target headways no line can have, trains listed out of order or
-    /// twice, or a dispatch before minute 0, rather than repairing them.
+    /// twice, or a dispatch before second 0, rather than repairing them.
     /// A line without targets has no `"targetHeadways"` key, one without
     /// trains no `"trains"`, and one that never sent a train out no
     /// `"lastDispatch"`, which is also how lines saved before they could
@@ -649,9 +650,9 @@ extension ServiceLine: Codable {
                 forKey: .trains, in: container, debugDescription: "Line \(id.rawValue)'s trains must be listed once each, in ascending order."
             )
         }
-        guard (lastDispatch?.minutes ?? 0) >= 0 else {
+        guard (lastDispatch?.seconds ?? 0) >= 0 else {
             throw DecodingError.dataCorruptedError(
-                forKey: .lastDispatch, in: container, debugDescription: "Line \(id.rawValue) cannot have sent a train out before minute 0."
+                forKey: .lastDispatch, in: container, debugDescription: "Line \(id.rawValue) cannot have sent a train out before second 0."
             )
         }
         guard patterns.allSatisfy({ LinePattern.isCallList($0.calls, stopCount: stops.count) }) else {
@@ -690,7 +691,7 @@ extension LinePattern: Codable {
     /// Decodes a pattern, rejecting calls that are fewer than two or not
     /// strictly increasing from 0 up, train counts or target headways no
     /// service can have, trains listed out of order or twice, or a dispatch
-    /// before minute 0. As on a line, `"targetHeadways"`, `"trains"` and
+    /// before second 0. As on a line, `"targetHeadways"`, `"trains"` and
     /// `"lastDispatch"` are present only when used, and an explicit `null`
     /// is rejected. That the calls fit the line is checked by the line's
     /// decoder.
@@ -711,9 +712,9 @@ extension LinePattern: Codable {
                 forKey: .trains, in: container, debugDescription: "A pattern's trains must be listed once each, in ascending order."
             )
         }
-        guard (lastDispatch?.minutes ?? 0) >= 0 else {
+        guard (lastDispatch?.seconds ?? 0) >= 0 else {
             throw DecodingError.dataCorruptedError(
-                forKey: .lastDispatch, in: container, debugDescription: "A pattern cannot have sent a train out before minute 0."
+                forKey: .lastDispatch, in: container, debugDescription: "A pattern cannot have sent a train out before second 0."
             )
         }
     }

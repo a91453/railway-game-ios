@@ -156,6 +156,16 @@ public final class GameSession {
         world.setSpeed(speed)
     }
 
+    /// Pauses a running game, or resumes a paused one at the speed it ran
+    /// at (see `GameClock.runningSpeed`).
+    public func togglePause() {
+        if world.clock.isPaused {
+            world.resume()
+        } else {
+            world.pause()
+        }
+    }
+
     // MARK: - Traffic control
 
     /// Turns traffic control on or off through

@@ -48,8 +48,18 @@ final class TrainTimetableTests: XCTestCase {
         return world
     }
 
+    /// A stop at whole minutes, except `Int64.max` and `Int64.min`, which
+    /// stand for the largest and smallest times there are (Stage W2a: in
+    /// seconds).
     private func stop(_ station: StationID, _ arrival: Int64, _ departure: Int64) -> ScheduledStop {
-        ScheduledStop(station: station, arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure))
+        func time(_ minutes: Int64) -> GameTime {
+            switch minutes {
+            case .max: GameTime(seconds: .max)
+            case .min: GameTime(seconds: .min)
+            default: GameTime(minutes: minutes)
+            }
+        }
+        return ScheduledStop(station: station, arrival: time(arrival), departure: time(departure))
     }
 
     private func timetable(of id: TrainID, in world: GameWorld) throws -> [ScheduledStop] {
@@ -494,7 +504,8 @@ final class TrainTimetableTests: XCTestCase {
         let text = String(decoding: data, as: UTF8.self)
 
         XCTAssertTrue(
-            text.contains(#""timetable":[{"arrival":20,"departure":20,"station":2},{"arrival":20,"departure":25,"station":1},{"arrival":30,"departure":9223372036854775807,"station":2}]"#),
+            // Stage W2a: saved times are seconds.
+            text.contains(#""timetable":[{"arrival":1200,"departure":1200,"station":2},{"arrival":1200,"departure":1500,"station":1},{"arrival":1800,"departure":9223372036854775807,"station":2}]"#),
             text
         )
         let loaded = try JSONDecoder().decode(GameWorld.self, from: data)
@@ -545,14 +556,18 @@ final class TrainTimetableTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(ScheduledStop.self, from: Data(#"{"station": 1, "arrival": 12, "departure": 10}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(ScheduledStop.self, from: Data(#"{"station": 1, "arrival": -2, "departure": -1}"#.utf8)))
 
-        // The same shapes, in order: accepted as they are.
+        // The same shapes, in order: accepted as they are, in seconds
+        // (Stage W2a).
+        func saved(_ station: StationID, _ arrival: Int64, _ departure: Int64) -> ScheduledStop {
+            ScheduledStop(station: station, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: departure))
+        }
         let valid: [(String, [ScheduledStop])] = [
             ("[]", []),
-            (#"[{"station": 1, "arrival": 0, "departure": 0}]"#, [stop(alpha, 0, 0)]),
+            (#"[{"station": 1, "arrival": 0, "departure": 0}]"#, [saved(alpha, 0, 0)]),
             (#"[{"station": 1, "arrival": 10, "departure": 20}, {"station": 2, "arrival": 20, "departure": 30}, {"station": 1, "arrival": 30, "departure": 30}]"#,
-             [stop(alpha, 10, 20), stop(beta, 20, 30), stop(alpha, 30, 30)]),
+             [saved(alpha, 10, 20), saved(beta, 20, 30), saved(alpha, 30, 30)]),
             // Train decoding does not look up stations: the world does.
-            (#"[{"station": 99, "arrival": 1, "departure": 2}]"#, [stop(StationID(rawValue: 99), 1, 2)]),
+            (#"[{"station": 99, "arrival": 1, "departure": 2}]"#, [saved(StationID(rawValue: 99), 1, 2)]),
         ]
         for (timetable, stops) in valid {
             XCTAssertEqual(try JSONDecoder().decode(Train.self, from: savedTrain(timetable: timetable)).timetable, stops, timetable)
@@ -584,7 +599,7 @@ final class TrainTimetableTests: XCTestCase {
         }
         // Every station the world has is fine, on either train.
         let loaded = try decode { trains in
-            trains[0]["timetable"] = [["station": 3, "arrival": 0, "departure": 0], ["station": 2, "arrival": 0, "departure": 9]]
+            trains[0]["timetable"] = [["station": 3, "arrival": 0, "departure": 0], ["station": 2, "arrival": 0, "departure": 9 * 60]]
         }
         XCTAssertEqual(try timetable(of: first, in: loaded), [stop(gamma, 0, 0), stop(beta, 0, 9)])
     }

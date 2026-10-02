@@ -1,10 +1,12 @@
 /// How a placed train moves: its rate and the explicit path ahead of it.
 ///
-/// A train never chooses a way itself. Each basic step (one game minute) it
-/// travels up to ``rate`` units: first to the end of the link it is on, then
-/// into the links named by ``continuation``, one after another. It stops at a
-/// node when the continuation is used up or the next named link cannot be
-/// entered, and the distance it could not use is dropped, not saved up.
+/// A train never chooses a way itself. Each game minute it travels up to
+/// ``rate`` units, a share of it each basic step (one game second since
+/// Stage W2a; see ``distance(at:fromSecond:toSecond:)``): first to the end
+/// of the link it is on, then into the links named by ``continuation``, one
+/// after another. It stops at a node when the continuation is used up or
+/// the next named link cannot be entered, and the distance it could not use
+/// is dropped, not saved up.
 ///
 /// On the track network (Stage S3) the path ahead is ``edges`` instead of
 /// ``continuation``: the edges the train enters in order, of any length.
@@ -21,11 +23,12 @@
 /// which clear the continuation (unplacing also resets the rate).
 public struct TrainMovement: Hashable, Sendable {
     /// Logical units (``TrainPosition/linkLength`` per link) the train may
-    /// travel in each basic step, that is per game minute. Never negative;
-    /// 0 keeps the train where it is without discarding its continuation.
+    /// travel per game minute, shared out over the minute's seconds (see
+    /// ``distance(at:fromSecond:toSecond:)``). Never negative; 0 keeps the
+    /// train where it is without discarding its continuation.
     ///
     /// Named apart from ``GameSpeed``: the game speed decides how many basic
-    /// steps a tick runs, the rate how far a train goes in one of them.
+    /// steps a tick runs, the rate how far a train goes in them.
     public internal(set) var rate: Int64
 
     /// The nodes the train enters, in order, after the node it is at or the
@@ -95,6 +98,23 @@ public struct TrainMovement: Hashable, Sendable {
         self.edges = edges
         self.cursor = cursor
         self.end = end
+    }
+
+    /// The units a train with `rate` units a minute may travel from second
+    /// `start` to second `end` of a minute (Stage W2a): `⌊rate·end/60⌋ −
+    /// ⌊rate·start/60⌋`. The seconds of a minute share the rate out with
+    /// the remainder at the end of each, so they add up to exactly `rate`
+    /// over the whole minute, and a span takes what its seconds would one
+    /// at a time.
+    ///
+    /// - Precondition: `rate >= 0` and `0 <= start <= end <= 60`.
+    public static func distance(at rate: Int64, fromSecond start: Int64, toSecond end: Int64) -> Int64 {
+        precondition(rate >= 0 && 0 <= start && start <= end && end <= GameTime.secondsPerMinute, "distance(at:fromSecond:toSecond:) needs a rate of 0 or more and seconds within a minute")
+        // ⌊rate·s/60⌋ = q·s + ⌊r·s/60⌋ for rate = 60q + r: no overflow.
+        func covered(by second: Int64) -> Int64 {
+            rate / GameTime.secondsPerMinute * second + rate % GameTime.secondsPerMinute * second / GameTime.secondsPerMinute
+        }
+        return covered(by: end) - covered(by: start)
     }
 }
 

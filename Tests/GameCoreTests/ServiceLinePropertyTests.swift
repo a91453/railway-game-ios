@@ -120,7 +120,7 @@ final class ServiceLinePropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("line.differential", cases: 30) { c in
             let (setup, operations) = try Self.generate(&c, operations: 100)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations)

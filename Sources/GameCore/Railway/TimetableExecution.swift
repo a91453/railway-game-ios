@@ -12,7 +12,7 @@
 ///
 /// `stop` is always an index into ``Train/timetable``, never a station ID.
 /// `cycle` counts whole periods (``Train/timetablePeriod``) since the times
-/// the timetable holds: cycle `k` is scheduled `k × period` minutes later.
+/// the timetable holds: cycle `k` is scheduled `k × period` seconds later.
 /// It is 0 for a timetable that runs once. Nothing else is stored: the
 /// station and times are the timetable's, the route is the train's
 /// continuation, and being stopped is derived from the train's position

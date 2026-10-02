@@ -28,7 +28,7 @@ final class LinePatternPropertyTests: XCTestCase {
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .ladder], using: &c.random)
-        setup.minutes = c.random.int64(in: -30...3_000)
+        setup.seconds = 60 * (c.random.int64(in: -30...3_000))
         setup.speed = c.random.element(of: [.normal, .normal, .double, .paused])
         var (world, _) = try setup.build()
         let speed: Operation = .setSpeed(c.random.chance(1, in: 3) ? .double : .normal)
@@ -181,7 +181,7 @@ final class LinePatternPropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("line.patterns", cases: 6) { c in
             let (setup, operations) = try Self.generate(&c, operations: 45)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, minute \(setup.minutes), \(setup.speed)")
+            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations)

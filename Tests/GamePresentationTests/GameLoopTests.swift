@@ -41,7 +41,7 @@ final class GameLoopTests: XCTestCase {
         let world = try GameWorld(
             width: 8, height: 6,
             economy: GameEconomy(balance: 10_000, costs: testCosts),
-            clock: GameClock(now: GameTime(minutes: .max - 1), speed: .normal)
+            clock: GameClock(now: GameTime(seconds: .max - 60), speed: .normal)
         )
         await MainActor.run {
             let session = GameSession(world: world)
@@ -112,7 +112,7 @@ final class GameLoopTests: XCTestCase {
         _ = try await waitForMinutes(atLeast: 3, in: session, clock: clock)
         await session.stopGameLoop()
         let elapsed = clock.now - start
-        let advanced = await session.world.clock.now.minutes
+        let advanced = await session.world.clock.now.minute
 
         XCTAssertGreaterThanOrEqual(advanced, 3)
         // One loop turns at most the elapsed real time into ticks; a second
@@ -121,7 +121,7 @@ final class GameLoopTests: XCTestCase {
 
         // Once stopped, time stands still.
         try await Task.sleep(for: .milliseconds(300))
-        let afterStop = await session.world.clock.now.minutes
+        let afterStop = await session.world.clock.now.minute
         let isStillRunning = await session.isGameLoopRunning
         XCTAssertEqual(afterStop, advanced)
         XCTAssertFalse(isStillRunning)
@@ -137,7 +137,7 @@ final class GameLoopTests: XCTestCase {
 
         // Time passes while stopped, as when the app is in the background.
         try await Task.sleep(for: .milliseconds(500))
-        let beforeRestart = await session.world.clock.now.minutes
+        let beforeRestart = await session.world.clock.now.minute
         XCTAssertEqual(beforeRestart, firstRun)
 
         let restart = clock.now
@@ -146,7 +146,7 @@ final class GameLoopTests: XCTestCase {
         _ = try await waitForMinutes(atLeast: firstRun + 2, in: session, clock: clock)
         await session.stopGameLoop()
         let sinceRestart = clock.now - restart
-        let total = await session.world.clock.now.minutes
+        let total = await session.world.clock.now.minute
 
         // Only time since the restart counts, and only one loop is ticking.
         XCTAssertLessThanOrEqual(total - firstRun, wholeTicks(in: sinceRestart))
@@ -160,12 +160,12 @@ final class GameLoopTests: XCTestCase {
     ) async throws -> Int64 {
         let deadline = clock.now + .seconds(10)
         while clock.now < deadline {
-            let now = await session.world.clock.now.minutes
+            let now = await session.world.clock.now.minute
             if now >= minutes { return now }
             try await Task.sleep(for: .milliseconds(20))
         }
         XCTFail("The game loop did not reach \(minutes) minutes within ten seconds")
-        return await session.world.clock.now.minutes
+        return await session.world.clock.now.minute
     }
 
     /// Whole 100 ms ticks in `duration`: the most a single loop can produce.

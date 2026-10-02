@@ -147,7 +147,7 @@ final class NetworkServicePropertyTests: XCTestCase {
             let index = random.below(turns.count)
             turns[index].toggle()
         }
-        var time = max(0, world.clock.now.minutes) + Int64(random.below(4))
+        var time = max(0, world.clock.now.minute) + Int64(random.below(4))
         var stops: [ScheduledStop] = []
         for (index, station) in calls.enumerated() {
             if index > 0 { time += Int64(5 + random.below(35)) }
@@ -301,12 +301,12 @@ final class NetworkServicePropertyTests: XCTestCase {
             case .unplace(let id): try world.unplaceTrain(id)
             case .reverse(let id): try world.reverseTrain(id)
             case .rate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
-            case .timetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
+            case .timetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
             case .start(let id): try world.startTrainService(id)
             case .stop(let id): try world.stopTrainService(id)
             case .createLine(let stops): _ = try world.createLine(named: "L", stops: stops)
             case .run(let id, let stops, let period):
-                try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
+                try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
                 try world.startTrainService(id)
             case .line(let stops, let train):
                 let id = try world.createLine(named: "L", stops: stops).id
@@ -344,11 +344,11 @@ final class NetworkServicePropertyTests: XCTestCase {
         case .unplace(let id): model.unplaceTrain(id)
         case .reverse(let id): model.reverseTrain(id)
         case .rate(let id, let rate): model.setRate(id, rate)
-        case .timetable(let id, let stops, let period): model.setTimetable(id, stops, period: period)
+        case .timetable(let id, let stops, let period): model.setTimetable(id, stops, period: periodSeconds(period))
         case .start(let id): model.startService(id)
         case .stop(let id): model.stopService(id)
         case .createLine(let stops): model.createLine(named: "L", stops: stops)
-        case .run(let id, let stops, let period): model.setTimetable(id, stops, period: period) ?? model.startService(id)
+        case .run(let id, let stops, let period): model.setTimetable(id, stops, period: periodSeconds(period)) ?? model.startService(id)
         case .line(let stops, let train):
             model.createLine(named: "L", stops: stops) ?? model.setLineWindow(LineID(rawValue: model.nextLineID - 1), .allDay)
                 ?? model.setLineTrains(LineID(rawValue: model.nextLineID - 1), TrainsInService(peak: 1, offPeak: 1, low: 1))
@@ -383,7 +383,9 @@ final class NetworkServicePropertyTests: XCTestCase {
     /// Every difference between the world and the model.
     private static func differences(_ world: GameWorld, _ model: ReferenceWorld, tally: inout [String: Int]) -> [String] {
         var problems: [String] = []
-        if world.clock.now.minutes != model.minutes { problems.append("minute \(world.clock.now.minutes) vs \(model.minutes)") }
+        if world.clock.now.seconds != model.clockSeconds || world.clock.pendingTenths != model.pendingTenths {
+            problems.append("second \(world.clock.now.seconds) vs \(model.clockSeconds)")
+        }
         if world.network.platforms != model.allTrackPlatforms { problems.append("platforms \(world.network.platforms) vs \(model.allTrackPlatforms)") }
         if world.trains.map(\.id.rawValue) != model.trains.map(\.id) { problems.append("train IDs") }
         for (train, expected) in zip(world.trains, model.trains) {
