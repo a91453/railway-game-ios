@@ -34,6 +34,11 @@ final class ToolbarSmokeTests: XCTestCase {
             XCTAssertTrue(button.isHittable, "Toolbar button cannot be tapped: \(query)")
             button.tap()
 
+            // XCTest's idle check can finish before iOS has rendered the end
+            // of touch feedback and the tool panel's layout change. Only the
+            // test runner sleeps; the app can finish rendering its new state.
+            Thread.sleep(forTimeInterval: 1)
+
             let attachment = XCTAttachment(screenshot: app.screenshot())
             attachment.name = "\(language)-0\(index + 1)-\(tools[index])"
             attachment.lifetime = .keepAlways
