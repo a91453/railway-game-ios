@@ -377,7 +377,8 @@ final class NetworkServiceTests: XCTestCase {
 
     /// West to Terminus and back, every 60 minutes, three cars at 1024:
     ///
-    /// - out: 3072 + 8192 + 8192 = 19456, 19 minutes, arriving at 19 at d;
+    /// - out: 3072 + 8192 + 8192 = 19456, 19 minutes, arriving at 19:42 at
+    ///   d (it dwells 42 s at West first, Stage W2b);
     /// - turned at Terminus its head goes to its tail, 2048 along e3
     ///   backward; back: 6144 + 8192 + 7168 = 21504, 21 minutes from 25;
     /// - at West, at 46, its head is at 1024 (e1 backward at 7168), its body
@@ -395,13 +396,18 @@ final class NetworkServiceTests: XCTestCase {
         let start = try train(world, id)
         try world.startTrainService(id)
 
+        // At 19 it is 716 short (floor(1024 x 42 / 60)).
         try world.advance(ticks: 19)
+        XCTAssertEqual(try train(world, id).execution, .travellingToStop(1))
+        XCTAssertEqual(try train(world, id).position, .onEdge(forward(e3), offset: 7_476))
+        XCTAssertEqual(world.stationsBesideWholeTrain(id), [])
+        try world.advance(ticks: 1)
         XCTAssertEqual(try train(world, id).execution, .waitingAtStop(1))
         XCTAssertEqual(try train(world, id).position, .onEdge(forward(e3), offset: 8_192))
         XCTAssertNil(try train(world, id).movement.end)
         XCTAssertEqual(world.stationsBesideWholeTrain(id), [terminus])
 
-        try world.advance(ticks: 6)
+        try world.advance(ticks: 5)
         XCTAssertEqual(try train(world, id).execution, .waitingAtStop(1))
         // Minute 25: turned, then off along e3 backward.
         try world.advance(ticks: 1)
@@ -478,8 +484,9 @@ final class NetworkServiceTests: XCTestCase {
     /// Three cars at 2048 a minute, Harbour to Deep and back:
     ///
     /// - out: 2048 + 6346 + 32768 + 4096 = 45258, 23 minutes (22 × 2048 =
-    ///   45056 is short); five minutes in (10240) the head is 1846 into the
-    ///   tunnel and the tail still on the curve;
+    ///   45056 is short); it leaves at 0:42 (Stage W2b), so five minutes
+    ///   in (10240 - 1433 = 8807) the head is 413 into the tunnel and the
+    ///   tail still on the curve;
     /// - at Deep the body is 2048...4096 of 1024...4096; turned round, the
     ///   head is where the tail was (6346 − 4096 + 2048 = 4298 along e4
     ///   backward: 2048 from e4's start), still on the platform;
@@ -504,13 +511,13 @@ final class NetworkServiceTests: XCTestCase {
         try world.startTrainService(id)
 
         try world.advance(ticks: 5)
-        XCTAssertEqual(try train(world, id).position, .onEdge(forward(e3), offset: 1_846))
+        XCTAssertEqual(try train(world, id).position, .onEdge(forward(e3), offset: 413))
         XCTAssertEqual(try train(world, id).trailEdges, [e2], "through the portal: the tail is still outside")
         try world.advance(ticks: 5)
-        // 20480 on, 12086 into the ramp: −1024 × 12086 / 32768 = −377.7,
-        // rounded half up to −378.
+        // 20480 - 1433 = 19047 on, 10653 into the ramp: −1024 × 10653 /
+        // 32768 = −332.9, rounded to −333.
         let inTunnel = try XCTUnwrap(world.location(of: try train(world, id).position!))
-        XCTAssertEqual(inTunnel.position.z, -378)
+        XCTAssertEqual(inTunnel.position.z, -333)
 
         try world.advance(ticks: 13)
         var there = try train(world, id)
@@ -636,29 +643,35 @@ final class NetworkServiceTests: XCTestCase {
         try world.assignTrain(first, to: main)
         try world.assignTrain(second, to: main)
 
+        // In seconds: sent out at T, a train leaves West 42 s later (Stage
+        // W2b); the first trip then takes 19 minutes out, 2 at Terminus and
+        // 21 back.
         func times(_ id: TrainID) throws -> [[Int64]] {
-            try train(world, id).timetable.map { [$0.station.rawValue == 1 ? 1 : 4, $0.arrival.minutes, $0.departure.minutes] }
+            try train(world, id).timetable.map { [$0.station.rawValue == 1 ? 1 : 4, $0.arrival.seconds, $0.departure.seconds] }
         }
         try world.advance(ticks: 1)
-        XCTAssertEqual(try times(first), [[1, 0, 0], [4, 19, 21], [1, 42, 42]])
+        XCTAssertEqual(try times(first), [[1, 0, 42], [4, 1_182, 1_302], [1, 2_562, 2_562]])
         XCTAssertEqual(try train(world, first).timetable.map(\.reverses), [false, true, true])
         XCTAssertEqual(world.line(id: main)?.lastDispatch, minutes(0))
         XCTAssertNil(try train(world, second).execution)
 
         try world.advance(ticks: 23)
         XCTAssertEqual(world.line(id: main)?.lastDispatch, minutes(23))
-        XCTAssertEqual(try times(second), [[1, 23, 23], [4, 43, 45], [1, 66, 66]])
+        // From 1024 further back: 20 minutes out.
+        XCTAssertEqual(try times(second), [[1, 1_380, 1_422], [4, 2_622, 2_742], [1, 4_002, 4_002]])
 
-        try world.advance(ticks: 19)
-        // Minute 43: the first is back and turned round, waiting.
+        try world.advance(ticks: 20)
+        // Minute 44: the first is back (42:42), has dwelt there and turned
+        // round (43:24), waiting.
         let back = try train(world, first)
         XCTAssertNil(back.execution)
         XCTAssertEqual(back.position, .onEdge(forward(e1), offset: 3_072))
         XCTAssertEqual(back.movement.end, 3_072)
         XCTAssertEqual(world.stationsStoppedAt(by: first), [west])
-        try world.advance(ticks: 4)
+        try world.advance(ticks: 3)
         XCTAssertEqual(world.line(id: main)?.lastDispatch, minutes(46))
-        XCTAssertEqual(try times(first), [[1, 46, 46], [4, 67, 69], [1, 90, 90]])
+        // From where it was turned round: 21 minutes each way.
+        XCTAssertEqual(try times(first), [[1, 2_760, 2_802], [4, 4_062, 4_182], [1, 5_442, 5_442]])
     }
 
     /// From 06:40, low (one train, every 46 minutes) until 07:00, then peak
@@ -678,7 +691,7 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertNil(try train(world, second).execution)
         try world.advance(ticks: 2)
         XCTAssertEqual(world.line(id: main)?.lastDispatch, minutes(423))
-        XCTAssertEqual(try train(world, second).timetable.first?.departure, minutes(423))
+        XCTAssertEqual(try train(world, second).timetable.first?.departure, GameTime(seconds: 423 * 60 + 42))
     }
 
     /// A line never sends a train out to a platform it does not fit: four
@@ -734,16 +747,17 @@ final class NetworkServiceTests: XCTestCase {
         let fast = try stoppedTrain(1, at: .onEdge(forward(e1), offset: 5_120), in: &world)
         try world.assignTrain(shuttle, to: main, pattern: short)
         try world.assignTrain(fast, to: main, pattern: express)
+        // Each leaves its first call 42 s after it is sent out (Stage W2b).
         try world.advance(ticks: 1)
         XCTAssertEqual(try train(world, shuttle).timetable.map(\.station), [mid, east, mid])
-        XCTAssertEqual(try train(world, shuttle).timetable.map(\.arrival.minutes), [0, 9, 22])
+        XCTAssertEqual(try train(world, shuttle).timetable.map(\.arrival.seconds), [0, 42 + 9 * 60, 42 + 22 * 60] as [Int64])
         XCTAssertEqual(try train(world, fast).timetable.map(\.station), [west, terminus, west])
-        XCTAssertEqual(try train(world, fast).timetable.map(\.arrival.minutes), [0, 19, 44])
-        // Seven minutes on, the express is on Mid's platform (7168 from
-        // West's berth: 3072 to b, 4096 into e2), not calling there: still
-        // travelling to Terminus.
-        try world.advance(ticks: 6)
-        XCTAssertEqual(try train(world, fast).position, .onEdge(forward(e2), offset: 4_096))
+        XCTAssertEqual(try train(world, fast).timetable.map(\.arrival.seconds), [0, 42 + 19 * 60, 42 + 44 * 60] as [Int64])
+        // Eight minutes on, the express is on Mid's platform (8 × 1024 - 716
+        // = 7476 from West's berth: 3072 to b, 4404 into e2), not calling
+        // there: still travelling to Terminus.
+        try world.advance(ticks: 7)
+        XCTAssertEqual(try train(world, fast).position, .onEdge(forward(e2), offset: 4_404))
         XCTAssertEqual(try train(world, fast).execution, .travellingToStop(1))
         XCTAssertEqual(world.stationsStoppedAt(by: fast), [])
     }
@@ -803,6 +817,7 @@ final class NetworkServiceTests: XCTestCase {
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let saved = try XCTUnwrap(json["trains"] as? [[String: Any]])
         // Seven minutes at 2048: 14336, into e3 (e2 and e3 entered).
+        // Stage W2b: it left at 0:42, so 14336 - 1433 = 12903, still into e3.
         let movement = try XCTUnwrap(saved[0]["movement"] as? [String: Any])
         XCTAssertEqual(movement["end"] as? Int, 4_096)
         XCTAssertEqual(movement["edges"] as? [Int], [2, 3, 4])
@@ -833,6 +848,7 @@ final class NetworkServiceTests: XCTestCase {
             ("travelling to no berth", mutated(0, movementChange("end", 4_000))),
             ("travelling on a spent path", mutated(1, { train in
                 train["execution"] = ["phase": "travelling", "stop": 1]
+                train["times"] = ["arrival": 0, "departure": 0]
             })),
         ]
         for (name, bytes) in refused {
@@ -845,6 +861,7 @@ final class NetworkServiceTests: XCTestCase {
             movement["end"] = nil
             train["movement"] = movement
             train["execution"] = nil
+            train["times"] = nil
         })
         let loaded = try JSONDecoder().decode(GameWorld.self, from: old)
         XCTAssertNil(loaded.train(id: running)?.movement.end)

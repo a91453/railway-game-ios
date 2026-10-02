@@ -11,16 +11,14 @@
 // - its room is its operational capacity less those on board
 //   (`getMetroTrainOperationalCap`: the rated capacity × 1.1).
 //
-// **Transitional timing, to be replaced in W2.** The `Ci/` game boards and
-// alights everyone at once as a train arrives, then dwells a fixed 36 s
-// (42 s at a terminal), whatever the passengers. GameCore still steps whole
-// minutes with a dwell of whole minutes, so for now a train is served once,
-// as it leaves the stop: everyone who came during the dwell can board, and
-// the result does not depend on how the dwell is sliced. This is not the
-// permanent meaning of boarding: W2 puts "arrive → doors open → passengers
-// → doors close → depart" on the game's clock with the dwell rules already
-// ported in `Railway/StationDwell.swift`, and replaces this timing. Who
-// boards, in what order and up to what capacity stays as it is.
+// **Timing** (Stage W2b, ARCHITECTURE decision 39). A service's train lets
+// passengers off and on during its dwell at a stop, once its doors have
+// opened: those for the stop get off and those waiting get on together, and
+// the exchange takes as long as the larger number needs at the rate of the
+// train's doors (see `ServiceDwell`). While its doors stay open, passengers
+// who come at a whole minute get on too. When a full train leaves, those
+// it could not take are counted as refused. Who boards, in what order and
+// up to what capacity is G1b's.
 //
 // Dependency direction (ARCHITECTURE, "GameCore 內部的依賴方向"): this file
 // reads the lines' assignments, the trains' timetables, execution progress
@@ -109,47 +107,49 @@ extension GameWorld {
 
     // MARK: - Serving stops
 
-    /// A train leaving a stop of its service: recorded by the departure
-    /// phases of ``advance(ticks:)`` and served, in the order they left,
-    /// once those phases are over.
-    struct StopDeparture {
-        let train: TrainID
-        let stop: Int
-        /// How far the train runs to its next call, in world units; `nil`
-        /// when its service ends at this stop instead (G1c).
-        let distance: Int64?
-    }
-
-    /// The boarding phase of a basic step (see ``advance(ticks:)``): serves
-    /// every stop left in this step, in the order they were left.
-    mutating func serve(_ departures: [StopDeparture]) {
+    /// Train `id` has just left stop `stop` of its service (Stage W2b): if
+    /// it is full, it counts those it leaves behind as refused (see
+    /// ``refuseLeftBehind(_:at:)``), and a line's train counts its
+    /// departure, as it leaves with those on board (G1c). `distance` is how
+    /// far it runs to its next call, in world units; `nil` when its service
+    /// ends at this stop instead.
+    mutating func serve(departureOf id: TrainID, from stop: Int, distance: Int64?) {
         // Nothing to do without passengers or accounts: worlds without
         // demand in the free economy pay nothing.
-        guard !passengers.isEmpty || !riders.isEmpty || accounts.mode == .management else { return }
-        for departure in departures {
-            serve(departure)
+        guard !passengers.isEmpty || !riders.isEmpty || accounts.mode == .management,
+              let train = trains.first(where: { $0.id == id })
+        else { return }
+        if stop < train.timetable.count - 1 {
+            refuseLeftBehind(train, at: stop)
+        }
+        if let distance, assignedLine(of: id) != nil {
+            countDeparture(distance: distance, passengers: riderCount(of: id), seats: train.ratedCapacity)
         }
     }
 
-    /// Train `departure.train` leaving stop `departure.stop` of its
-    /// timetable: those riding to that stop's station get off, and so does
-    /// anyone still on board at a stop where the train turns round or its
-    /// service ends (the reference's `releaseAll`; nobody boards for a
-    /// station past such a stop, so there is never anyone). Then, unless
-    /// that was the last stop, the train takes on passengers (see
-    /// ``board(_:at:)``).
-    private mutating func serve(_ departure: StopDeparture) {
-        guard let index = trains.firstIndex(where: { $0.id == departure.train }) else { return }
+    /// The exchange of train `index` at stop `stop` of its timetable, as its
+    /// doors finish opening (Stage W2b): those riding to that stop's
+    /// station get off, and so does anyone still on board at a stop where
+    /// the train turns round or its service ends (the reference's
+    /// `releaseAll`; nobody boards for a station past such a stop, so there
+    /// is never anyone). Then, unless it is the last stop, the train takes
+    /// on passengers (see ``boardPassengers(_:at:)``). Returns the larger of
+    /// the two numbers, which sets how long the exchange takes.
+    mutating func exchangePassengers(_ index: Int, at stop: Int) -> Int64 {
+        guard !passengers.isEmpty || !riders.isEmpty else { return 0 }
         let train = trains[index]
-        let stop = train.timetable[departure.stop]
-        let isLast = departure.stop == train.timetable.count - 1
+        let entry = train.timetable[stop]
+        let isLast = stop == train.timetable.count - 1
+        var alighted: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
-                if group.destination == stop.station {
+                if group.destination == entry.station {
                     passengers[passengerIndex(of: group.origin)].arrived += group.count
-                } else if stop.reverses || isLast {
+                    alighted += group.count
+                } else if entry.reverses || isLast {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
+                    alighted += group.count
                 } else {
                     kept.append(group)
                 }
@@ -160,28 +160,19 @@ extension GameWorld {
                 riders[slot].groups = kept
             }
         }
-        if !isLast {
-            board(train, at: departure.stop)
-        }
-        // A line's train counts its departure, as it leaves with those on
-        // board (G1c).
-        if let distance = departure.distance, assignedLine(of: train.id) != nil {
-            countDeparture(distance: distance, passengers: riderCount(of: train.id), seats: train.ratedCapacity)
-        }
+        let boarded = isLast ? 0 : boardPassengers(train, at: stop)
+        return max(alighted, boarded)
     }
 
-    /// `train`, assigned to a line and leaving stop `stop` of its round
-    /// trip, takes on the passengers waiting at the stop's station for its
-    /// line, in its direction (outbound until the far end, inbound from
-    /// there), for a station it calls at before it next turns round. The
-    /// farthest of those calls go first, and for one destination those who
-    /// came first; each group boards whole while there is room, and the
-    /// first that does not fit boards in part. Those left behind count as
-    /// refused at the station.
-    private mutating func board(_ train: Train, at stop: Int) {
-        guard let line = assignedLine(of: train.id),
+    /// The passengers at stop `stop` of `train`'s timetable it may take on:
+    /// with its record's index and the eligible groups' indices among those
+    /// waiting, in boarding order. `nil` at the last stop, where the train
+    /// calls nowhere after, for a train not on a line, or at a station
+    /// without passengers.
+    private func boardingPlan(of train: Train, at stop: Int) -> (record: Int, eligible: [Int])? {
+        guard stop < train.timetable.count - 1, let line = assignedLine(of: train.id),
               let record = passengers.firstIndex(where: { $0.station == train.timetable[stop].station })
-        else { return }
+        else { return nil }
         let direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
         // How far along each destination is: the first call at it.
         var reach: [StationID: Int] = [:]
@@ -197,39 +188,59 @@ extension GameWorld {
                 return left != right ? left > right : lhs.offset < rhs.offset
             }
             .map(\.element)
-        guard !eligible.isEmpty else { return }
+        return (record, eligible)
+    }
+
+    /// `train`, assigned to a line and waiting at stop `stop` of its round
+    /// trip with its doors open, takes on the passengers waiting at the
+    /// stop's station for its line, in its direction (outbound until the far
+    /// end, inbound from there), for a station it calls at before it next
+    /// turns round. The farthest of those calls go first, and for one
+    /// destination those who came first; each group boards whole while
+    /// there is room, and the first that does not fit boards in part.
+    /// Returns how many boarded.
+    mutating func boardPassengers(_ train: Train, at stop: Int) -> Int64 {
+        guard let (record, eligible) = boardingPlan(of: train, at: stop), !eligible.isEmpty else { return 0 }
+        let waiting = passengers[record].waiting
         var room = max(0, train.capacity - riderCount(of: train.id))
+        guard room > 0 else { return 0 }
         var taken: [Int: Int64] = [:]
-        var left: Int64 = 0
+        var boarded: Int64 = 0
         var boarding = riders.first { $0.train == train.id } ?? TrainRiders(train: train.id, groups: [])
         var paying: [StationID: Int64] = [:]
-        for index in eligible {
+        for index in eligible where room > 0 {
             let group = waiting[index]
             let count = min(group.count, room)
-            if count > 0 {
-                taken[index] = count
-                room -= count
-                boarding.add(count, from: passengers[record].station, to: group.destination)
-                paying[group.destination, default: 0] += count
-            }
-            left += group.count - count
+            taken[index] = count
+            room -= count
+            boarded += count
+            boarding.add(count, from: passengers[record].station, to: group.destination)
+            paying[group.destination, default: 0] += count
         }
         // Each destination's boarders pay together, rounded to whole
         // dollars (G1c; the reference's fare trips of a boarding plan).
         for destination in paying.keys.sorted() {
             chargeFares(paying[destination]!, from: passengers[record].station, to: destination)
         }
-        if !taken.isEmpty {
-            passengers[record].board(taken)
-            if let slot = riders.firstIndex(where: { $0.train == train.id }) {
-                riders[slot] = boarding
-            } else {
-                riders.insert(boarding, at: riders.firstIndex { $0.train > train.id } ?? riders.count)
-            }
+        passengers[record].board(taken)
+        if let slot = riders.firstIndex(where: { $0.train == train.id }) {
+            riders[slot] = boarding
+        } else {
+            riders.insert(boarding, at: riders.firstIndex { $0.train > train.id } ?? riders.count)
         }
-        if left > 0 {
-            passengers[record].refuse(left)
-        }
+        return boarded
+    }
+
+    /// `train`, leaving stop `stop` full, counts those still waiting there
+    /// that it could have taken as refused at the station (G1b's
+    /// `refused`). A train with room left takes everyone it can before its
+    /// doors close, so it leaves nobody it had room for.
+    private mutating func refuseLeftBehind(_ train: Train, at stop: Int) {
+        guard train.capacity - riderCount(of: train.id) <= 0,
+              let (record, eligible) = boardingPlan(of: train, at: stop), !eligible.isEmpty
+        else { return }
+        let waiting = passengers[record].waiting
+        passengers[record].refuse(eligible.reduce(Int64(0)) { $0 + waiting[$1].count })
     }
 
     /// The timetable entries `train` calls at after leaving `stop`, up to
@@ -283,7 +294,12 @@ extension GameWorld {
                 return "Passengers ride train \(id), which runs no service."
             }
             guard entry.count <= train.capacity else { return "More passengers ride train \(id) than it takes." }
-            let ahead = execution.stop...Self.segmentEnd(of: train, from: execution.stop)
+            // A train waiting at a stop may already carry those it took on
+            // there, for the calls after it (Stage W2b).
+            let ahead: ClosedRange<Int> = switch execution {
+            case .waitingAtStop(let stop, _): stop...Self.segmentEnd(of: train, from: min(stop + 1, train.timetable.count - 1))
+            case .travellingToStop(let stop, _): stop...Self.segmentEnd(of: train, from: stop)
+            }
             for group in entry.groups {
                 guard passengers.contains(where: { $0.station == group.origin }) else {
                     return "Passengers ride train \(id) from station \(group.origin.rawValue), which released none."

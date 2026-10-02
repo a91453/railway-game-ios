@@ -399,6 +399,9 @@ final class NetworkServicePropertyTests: XCTestCase {
             if train.execution != expected.service?.execution {
                 problems.append("train \(id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))")
             }
+            if train.times != expected.service?.times {
+                problems.append("train \(id) times \(String(describing: train.times)) vs \(String(describing: expected.service?.times))")
+            }
             if train.timetable != expected.timetable || train.timetablePeriod != expected.period { problems.append("train \(id) timetable") }
             let stopped = world.stationsStoppedAt(by: train.id)
             let whole = world.stationsBesideWholeTrain(train.id)

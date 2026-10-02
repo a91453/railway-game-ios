@@ -60,6 +60,11 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// While it is set, the service owns the train's continuation (see
     /// ``TimetableExecution``).
     public internal(set) var execution: TimetableExecution?
+    /// When the service's train arrived at and left its calls, and how far
+    /// its dwell at the call it waits at has got (Stage W2b); set exactly
+    /// while ``execution`` is. Only ``GameWorld`` changes it, with the
+    /// execution.
+    public internal(set) var times: ServiceTimes?
     /// How many cars the train has (Phase 4.5 Stage S2), one to a tile:
     /// 1, as every newly bought train has, up to ``maximumCars``. Set by
     /// ``GameWorld/setTrainCars(_:to:)`` while the train is unplaced.
@@ -99,6 +104,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.timetable = []
         self.timetablePeriod = nil
         self.execution = nil
+        self.times = nil
         self.cars = 1
         self.trail = []
         self.trailEdges = []
@@ -119,6 +125,24 @@ extension Train {
         let departure = timetable[stop].departure
         guard cycle > 0, let timetablePeriod else { return departure }
         return GameTime(seconds: departure.seconds + cycle * timetablePeriod)
+    }
+
+    /// The scheduled arrival at timetable entry `stop` in `cycle`, shifted
+    /// as ``scheduledDeparture(of:cycle:)`` is.
+    ///
+    /// - Precondition: as for ``scheduledDeparture(of:cycle:)``.
+    func scheduledArrival(of stop: Int, cycle: Int64) -> GameTime {
+        let arrival = timetable[stop].arrival
+        guard cycle > 0, let timetablePeriod else { return arrival }
+        return GameTime(seconds: arrival.seconds + cycle * timetablePeriod)
+    }
+
+    /// The call before timetable entry `stop` in `cycle`: the entry before
+    /// it, or the last entry of the cycle before for entry 0; `nil` for
+    /// entry 0 of cycle 0.
+    func call(before stop: Int, cycle: Int64) -> (stop: Int, cycle: Int64)? {
+        if stop > 0 { return (stop - 1, cycle) }
+        return cycle > 0 ? (timetable.count - 1, cycle - 1) : nil
     }
 
     /// The call a service makes after leaving timetable entry `stop` in
@@ -151,7 +175,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, cars, trail, trailEdges, reservation
+        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation
     }
 
     /// Decodes a train.
@@ -191,6 +215,13 @@ extension Train: Codable {
     /// by the ``GameWorld`` decoder. Since Stage S5 a train on the network
     /// may run a service.
     ///
+    /// A train running a service has `"times"` (Stage W2b; see
+    /// ``ServiceTimes``), and one without a service has none; times without
+    /// a service, a service without times, or times that do not fit what
+    /// the service is doing (see ``ServiceTimes/fits(_:)``) are rejected,
+    /// and so is an explicit `null`. That they are not after the clock is
+    /// checked by the ``GameWorld`` decoder.
+    ///
     /// A train without a reservation (Stage T) has no `"reservation"` key,
     /// which is also how trains saved before traffic control read; an
     /// explicit `null`, resources out of order or repeated, and a
@@ -216,6 +247,7 @@ extension Train: Codable {
         execution = container.contains(.execution)
             ? try container.decode(TimetableExecution.self, forKey: .execution)
             : nil
+        times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
         trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
         trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
@@ -275,6 +307,13 @@ extension Train: Codable {
                 debugDescription: "Train \(id.rawValue)'s service does not fit its timetable, period, position and movement."
             )
         }
+        // Stage W2b: a service has its times, and they fit what it is doing.
+        guard (execution == nil) == (times == nil), execution.map({ times!.fits($0) }) ?? true else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .times, in: container,
+                debugDescription: "Train \(id.rawValue)'s service times are missing, or do not fit what its service is doing."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -290,6 +329,7 @@ extension Train: Codable {
         }
         try container.encodeIfPresent(timetablePeriod, forKey: .period)
         try container.encodeIfPresent(execution, forKey: .execution)
+        try container.encodeIfPresent(times, forKey: .times)
         if cars != Self.minimumCars {
             try container.encode(cars, forKey: .cars)
         }

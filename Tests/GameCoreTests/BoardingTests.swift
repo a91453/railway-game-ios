@@ -4,8 +4,10 @@ import XCTest
 
 /// G1b (ARCHITECTURE decision 35): trains let passengers off at their
 /// destination and take on those waiting for their line and direction, the
-/// farthest first, up to their capacity, as they leave each stop. Every
-/// expectation here is worked out by hand from the rules.
+/// farthest first, up to their capacity, once their doors have opened at
+/// each stop (Stage W2b, decision 39); a full train counts those it leaves
+/// behind as refused when it leaves. Every expectation here is worked out
+/// by hand from the rules.
 final class BoardingTests: XCTestCase {
     // The line of `LineDispatchTests`, dead ends at both ends:
     //
@@ -14,11 +16,11 @@ final class BoardingTests: XCTestCase {
     //   a - b - c - d - e - f - g
     //
     // Line 1 calls at Alpha, Beta and Gamma, one link a minute: its round
-    // trip leaving Alpha at 0 is Alpha 0, Beta 2–3, Gamma 5–7 (turning
-    // round), Beta 9–10 and Alpha 12 (turning round; the service ends). The
-    // step from minute T serves the stops left at T, so after
-    // `advance(ticks: n)` every stop whose departure is before `n` has been
-    // served.
+    // trip for a train sent out at 0 is Alpha 0–0:42, Beta 2:42–3:42, Gamma
+    // 5:42–7:42 (turning round), Beta 9:42–10:42 and Alpha 12:42 (turning
+    // round; the service ends once the train has dwelt there). Passengers
+    // get off and on 8 s after the train arrives, as its doors open: at
+    // 0:08, 2:50, 5:50, 9:50 and 12:50 on time.
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -96,8 +98,8 @@ final class BoardingTests: XCTestCase {
 
     // MARK: - On and off
 
-    /// Leaving Alpha the train takes both groups; each gets off as the train
-    /// leaves its destination.
+    /// At Alpha the train takes both groups; each gets off once the train's
+    /// doors open at its destination.
     func testPassengersBoardAsTheTrainLeavesAndGetOffAtTheirDestination() throws {
         var world = try makeWorld()
         wait(&world, 5, at: alpha, for: beta, .outbound)
@@ -109,8 +111,8 @@ final class BoardingTests: XCTestCase {
         XCTAssertEqual(world.waitingPassengers(at: alpha), [])
         XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, riding: 12, overflowed: 0, abandoned: 0))
 
-        // Still on board while the train stands at Beta (2–3).
-        try world.advance(ticks: 2)
+        // Still on board on the way to Beta (2:42); off at 2:50.
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.riderCount(of: one), 12)
         try world.advance(ticks: 1)
         XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 7)])
@@ -124,7 +126,7 @@ final class BoardingTests: XCTestCase {
 
     /// The farthest destination boards first, and for one destination those
     /// who came first; the group that does not fit boards in part, keeping
-    /// its minute, and the rest count as refused.
+    /// its minute, and the rest count as refused when the full train leaves.
     func testTheFarthestBoardFirstUpToTheCapacityAndTheRestAreRefused() throws {
         var world = try makeWorld()
         try world.advance(ticks: 0)
@@ -141,6 +143,11 @@ final class BoardingTests: XCTestCase {
             WaitingGroup(line: main, direction: .outbound, destination: beta, since: GameTime(minutes: -3), count: 28),
             WaitingGroup(line: main, direction: .outbound, destination: beta, since: GameTime(minutes: -1), count: 40),
         ])
+        // 352 boarding at 8 a second take 44 s: the doors close at 0:52 and
+        // the train leaves at 1:01, refusing the 68 then.
+        XCTAssertEqual(world.passengerLedger(of: alpha).refused, 0)
+        XCTAssertEqual(world.train(id: one)?.times?.closing, GameTime(seconds: 52))
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.passengerLedger(of: alpha).refused, 68)
         assertConserved(world)
     }

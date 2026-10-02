@@ -97,6 +97,32 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: zh), "階梯票價 · 5 段，$ 0.55 起")
     }
 
+    /// Stage W2b: where a dwell has got to, in both languages.
+    func testDwellPhasesReadInBothLanguages() {
+        let phases: [DwellPhase] = [.doorsOpening, .boarding, .holding, .doorsClosing, .readyToLeave]
+        XCTAssertEqual(
+            phases.map { $0.text(in: .english) },
+            ["Doors opening", "Passengers boarding", "Doors open", "Doors closing", "Ready to leave"]
+        )
+        XCTAssertEqual(phases.map { $0.text(in: .traditionalChinese) }, ["開門中", "乘客上下車中", "開門停站", "關門中", "準備發車"])
+
+        // Arrived at 100, passengers until 130, doors closing from 160.
+        func at(_ second: Int64, _ exchangeEnd: Int64?, _ closing: Int64?) -> DwellPhase {
+            DwellPhase(
+                ServiceTimes(arrival: GameTime(seconds: 100), exchangeEnd: exchangeEnd.map(GameTime.init(seconds:)), closing: closing.map(GameTime.init(seconds:))),
+                at: GameTime(seconds: second)
+            )
+        }
+        XCTAssertEqual(at(105, nil, nil), .doorsOpening)
+        XCTAssertEqual(at(108, 130, nil), .boarding)
+        XCTAssertEqual(at(129, 130, nil), .boarding)
+        XCTAssertEqual(at(130, 130, nil), .holding)
+        XCTAssertEqual(at(160, 130, 160), .doorsClosing)
+        XCTAssertEqual(at(168, 130, 160), .doorsClosing)
+        XCTAssertEqual(at(169, 130, 160), .readyToLeave)
+        XCTAssertEqual(at(500, 130, 160), .readyToLeave, "waiting for its route")
+    }
+
     /// The session writes its messages and suggests names in its language.
     func testTheSessionSpeaksItsLanguage() async throws {
         var built = try makeWorld(width: 8, height: 4, balance: 100_000)

@@ -488,6 +488,11 @@ final class KernelDifferentialTests: XCTestCase {
                 train.execution == expected.service?.execution,
                 "train \(expected.id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))"
             )
+            // Stage W2b: its service's times.
+            check(
+                train.times == expected.service?.times,
+                "train \(expected.id) times \(String(describing: train.times)) vs \(String(describing: expected.service?.times))"
+            )
         }
         // Decision 22: lines and the service day, and what is derived for
         // each line (and an unknown one) at the current minute. Decision 23:

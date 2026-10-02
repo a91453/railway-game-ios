@@ -67,6 +67,15 @@ final class LinePatternTests: XCTestCase {
         return world
     }
 
+    /// A trip's stop for a train sent out at minute `sent`: arriving and
+    /// leaving `arrival` and `departure` seconds after it (Stage W2b: a
+    /// trip leaves its first call 42 s after the train is sent out).
+    private func stop(_ station: StationID, sent: Int64, _ arrival: Int64, _ departure: Int64, reverses: Bool = false) -> ScheduledStop {
+        ScheduledStop(
+            station: station, arrival: GameTime(seconds: sent * 60 + arrival), departure: GameTime(seconds: sent * 60 + departure), reverses: reverses
+        )
+    }
+
     private func stop(_ station: StationID, _ arrival: Int64, _ departure: Int64, reverses: Bool = false) -> ScheduledStop {
         ScheduledStop(station: station, arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure), reverses: reverses)
     }
@@ -220,10 +229,11 @@ final class LinePatternTests: XCTestCase {
         XCTAssertNil(world.assignedLine(of: shuttle))
         XCTAssertEqual(world.train(id: shuttle), before.train(id: shuttle), "the train itself is untouched")
 
-        // The trip ends on its return, at 486, and nothing sends it out again.
+        // The trip ends on its return (486:42) once the train has dwelt
+        // there, at 487:24, and nothing sends it out again.
         try world.advance(ticks: 20)
         XCTAssertNil(world.train(id: shuttle)?.execution)
-        XCTAssertEqual(world.train(id: shuttle)?.timetable.first?.departure, GameTime(minutes: 480))
+        XCTAssertEqual(world.train(id: shuttle)?.timetable.first?.departure, GameTime(seconds: 480 * 60 + 42))
     }
 
     // MARK: - Derived
@@ -319,7 +329,7 @@ final class LinePatternTests: XCTestCase {
     /// A pattern sends its own trains out from its first call, on trips
     /// calling only at its calls, when it runs trains beside the services
     /// before it: the express waits through the peak, when the short
-    /// working fills B-C, and leaves at 600.
+    /// working fills B-C, and is sent out at 600.
     func testPatternsSendTheirOwnTrainsOut() throws {
         var world = try makePatternWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
@@ -335,26 +345,27 @@ final class LinePatternTests: XCTestCase {
         try world.advance(ticks: 1)
         XCTAssertEqual(
             world.train(id: shuttle)?.timetable,
-            [stop(stationB, 480, 480), stop(stationC, 482, 484, reverses: true), stop(stationB, 486, 486, reverses: true)]
+            [stop(stationB, sent: 480, 0, 42), stop(stationC, sent: 480, 162, 282, reverses: true), stop(stationB, sent: 480, 402, 402, reverses: true)]
         )
         XCTAssertEqual(world.line(id: main)?.patterns[0].lastDispatch, GameTime(minutes: 480))
         XCTAssertNil(world.line(id: main)?.lastDispatch, "the line's own service sent nothing")
         XCTAssertEqual(world.train(id: express)?.timetable, [], "no room at peak")
 
-        // Back at B at 486, where the trip ends; the next leaves at 487,
-        // due since 484 and one train of two running.
-        try world.advance(ticks: 7)
-        XCTAssertEqual(world.train(id: shuttle)?.timetable.first, stop(stationB, 487, 487))
-        XCTAssertEqual(world.line(id: main)?.patterns[0].lastDispatch, GameTime(minutes: 487))
+        // Back at B at 486:42, where the trip ends at 487:24; the next is
+        // sent out at 488, due since 484 and one train of two running.
+        try world.advance(ticks: 8)
+        XCTAssertEqual(world.train(id: shuttle)?.timetable.first, stop(stationB, sent: 488, 0, 42))
+        XCTAssertEqual(world.line(id: main)?.patterns[0].lastDispatch, GameTime(minutes: 488))
 
-        // Every 7 minutes up to 599; at 600, off-peak, the express goes,
-        // calling at A and D only.
-        try world.advance(ticks: 113)
+        // Every 8 minutes up to 592, and at 600, off-peak (one train, 8
+        // apart); at 600 the express is sent out too, calling at A and D
+        // only.
+        try world.advance(ticks: 112)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 601))
-        XCTAssertEqual(world.train(id: shuttle)?.timetable.first, stop(stationB, 599, 599))
+        XCTAssertEqual(world.train(id: shuttle)?.timetable.first, stop(stationB, sent: 600, 0, 42))
         XCTAssertEqual(
             world.train(id: express)?.timetable,
-            [stop(stationA, 600, 600), stop(stationD, 606, 608, reverses: true), stop(stationA, 614, 614, reverses: true)]
+            [stop(stationA, sent: 600, 0, 42), stop(stationD, sent: 600, 402, 522, reverses: true), stop(stationA, sent: 600, 882, 882, reverses: true)]
         )
         XCTAssertEqual(world.line(id: main)?.patterns[1].lastDispatch, GameTime(minutes: 600))
 

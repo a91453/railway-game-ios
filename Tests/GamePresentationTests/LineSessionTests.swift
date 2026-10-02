@@ -128,8 +128,9 @@ final class LineSessionTests: XCTestCase {
         XCTAssertEqual(cut.lineServiceSummaries(Self.main, in: .english)[0].levels[0].text(in: .english), "No route")
     }
 
-    /// A train on a service: which one, where it is in its trip and whether
-    /// it is early or late, derived from the timetable and the clock.
+    /// A train on a service: which one, where it is in its trip, whether it
+    /// is early or late (GameCore's lateness, in whole minutes) and, at a
+    /// stop, where its dwell has got to (Stage W2b).
     func testATrainsServiceShowsWhereItIsAndHowLate() throws {
         var world = try Self.makeLineWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
@@ -145,28 +146,34 @@ final class LineSessionTests: XCTestCase {
         // Without a rate it is not ready: give it one.
         try world.setTrainMovementRate(shuttle, to: 1024)
         try world.advance(ticks: 1)
-        // Left Beta at 480, due at Gamma at 482.
+        // Sent out at 480, it left Beta at 480:42, due at Gamma at 482:42.
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "Next: Gamma, due 08:02")
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .onTime)
-        try world.advance(ticks: 1)
+        XCTAssertNil(world.trainServiceStatus(of: shuttle, in: .english)?.dwell)
+        try world.advance(ticks: 2)
+        // At Gamma since 482:42, its doors open until 484:33 for 484:42.
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "At Gamma, leaves 08:04")
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .onTime)
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.dwell, .holding)
 
-        // Held at Gamma with no rate, it falls behind.
+        // Held with no rate, it leaves Gamma on time but falls behind: 78 s
+        // past its arrival at Beta (486:42) at 488.
         try world.setTrainMovementRate(shuttle, to: 0)
         try world.advance(ticks: 5)
-        XCTAssertEqual(world.clock.now, GameTime(minutes: 487))
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 488))
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "Next: Beta, due 08:06")
+        XCTAssertEqual(world.lateness(of: shuttle), 78)
         XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .late(minutes: 1))
 
-        // A train of its own, waiting before its scheduled arrival, is early.
+        // A train of its own that arrived (started) before its scheduled
+        // arrival is early: by 2 minutes, while its doors open.
         let own = try world.purchaseTrain(named: "Own").id
         try world.placeTrain(own, at: .atNode(Self.a, heading: .east))
         try world.setTrainTimetable(own, to: [ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 490), departure: GameTime(minutes: 495))])
         try world.startTrainService(own)
         XCTAssertEqual(
             world.trainServiceStatus(of: own, in: .english),
-            TrainServiceStatus(serviceName: nil, stopText: "At Alpha, last stop", punctuality: .early(minutes: 3))
+            TrainServiceStatus(serviceName: nil, stopText: "At Alpha, last stop", punctuality: .early(minutes: 2), dwell: .doorsOpening)
         )
         XCTAssertEqual(Punctuality.early(minutes: 3).text(in: .english), "3 min early")
         XCTAssertEqual(Punctuality.late(minutes: 1).text(in: .english), "1 min late")

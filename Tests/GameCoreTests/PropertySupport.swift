@@ -841,7 +841,9 @@ enum WorldInvariants {
     /// 352; each group, listed once by origin and destination, came from a
     /// station with a record and rides to a station the train calls at
     /// from the stop it is at or heading for up to the next stop where it
-    /// turns round (or its last).
+    /// turns round (or its last). Stage W2b: a train waiting at a stop
+    /// where it turns round may already carry those it took on there, for
+    /// the calls after it.
     static func riderViolations(in world: GameWorld) -> [String] {
         var problems: [String] = []
         let trains = world.riders.map(\.train)
@@ -859,9 +861,10 @@ enum WorldInvariants {
             let total = entry.groups.reduce(Int64(0)) { $0 + $1.count }
             if total > Int64(train.cars) * 320 * 11 / 10 { problems.append("train \(id) carries \(total) on \(train.cars) cars") }
             var ahead: Set<StationID> = []
+            let waiting = if case .waitingAtStop = execution { true } else { false }
             for stop in execution.stop..<train.timetable.count {
                 ahead.insert(train.timetable[stop].station)
-                if train.timetable[stop].reverses { break }
+                if train.timetable[stop].reverses, !(waiting && stop == execution.stop) { break }
             }
             for group in entry.groups {
                 if group.count < 1 { problems.append("train \(id) has an empty group") }

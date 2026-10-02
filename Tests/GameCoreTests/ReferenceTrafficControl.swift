@@ -197,14 +197,15 @@ extension ReferenceWorld {
         let train = trains[i]
         var leaving: Train?
         if let service = train.service {
-            guard service.waiting, let due = Self.departure(train, stop: service.stop, cycle: service.cycle), due <= clockSeconds else { return nil }
+            // Stage W2b: due once its doors have closed.
+            guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
             leaving = firstLeaving(train)
         } else {
             guard let (l, k) = lineService(of: id.rawValue), let trip = readyTrip(of: train, line: l, service: k) else { return nil }
             var sent = train
             sent.timetable = trip
             sent.period = nil
-            sent.service = Service(stop: 0, waiting: true)
+            sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
             leaving = firstLeaving(sent)
         }
         guard let leaving else { return nil }

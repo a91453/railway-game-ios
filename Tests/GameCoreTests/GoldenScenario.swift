@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 23
+    static let schemaVersion = 24
 
     var description: String
     var initialState: InitialState
@@ -215,6 +215,7 @@ extension GoldenScenario.Step: Decodable {
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
+        case times, lateness
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -383,6 +384,12 @@ extension GoldenScenario.Step: Decodable {
             case .financeReport:
                 try requireOnly([.report], answering: "financeReport")
                 self = try .observe(observation, expect: .report(expect.decode(ReportSummary.self, forKey: .report)))
+            case .serviceTimes:
+                try requireOnly([.found, .times], answering: "serviceTimes")
+                self = try .observe(observation, expect: .times(Self.found(expect, .times, TimesSummary.self)))
+            case .lateness:
+                try requireOnly([.found, .lateness], answering: "lateness")
+                self = try .observe(observation, expect: .lateness(Self.found(expect, .lateness, Int64.self)))
             }
         default:
             throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -1067,6 +1074,9 @@ enum ScenarioObservation: Equatable {
     case tripFare(from: StationID, to: StationID)
     case accounts
     case financeReport(FinancePeriod)
+    /// Schema 24 (Stage W2b): a train's service times, and its lateness.
+    case serviceTimes(TrainID)
+    case lateness(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1162,6 +1172,10 @@ enum ScenarioObservation: Equatable {
             .accounts(AccountsSummary(world.accounts))
         case .financeReport(let period):
             .report(ReportSummary(world.financeReport(period)))
+        case .serviceTimes(let id):
+            .times(world.train(id: id)?.times.map(TimesSummary.init))
+        case .lateness(let id):
+            .lateness(world.lateness(of: id))
         }
     }
 }
@@ -1303,6 +1317,10 @@ extension ScenarioObservation: Decodable {
         // Schema 22: the economy (G1c).
         case "tripFare":
             self = try .tripFare(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+        case "serviceTimes":
+            self = try .serviceTimes(container.decodeTrain(forKey: .train))
+        case "lateness":
+            self = try .lateness(container.decodeTrain(forKey: .train))
         case "accounts":
             self = .accounts
         case "financeReport":
@@ -1383,6 +1401,8 @@ enum ObservationAnswer: Equatable {
     case fare(Int64?)
     case accounts(AccountsSummary)
     case report(ReportSummary)
+    case times(TimesSummary?)
+    case lateness(Int64?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1392,6 +1412,7 @@ extension ObservationAnswer: Encodable {
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
+        case times, lateness
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1479,6 +1500,14 @@ extension ObservationAnswer: Encodable {
             try container.encode(accounts, forKey: .accounts)
         case .report(let report):
             try container.encode(report, forKey: .report)
+        case .times(let times?):
+            try container.encode(true, forKey: .found)
+            try container.encode(times, forKey: .times)
+        case .lateness(let lateness?):
+            try container.encode(true, forKey: .found)
+            try container.encode(lateness, forKey: .lateness)
+        case .times(nil), .lateness(nil):
+            try container.encode(false, forKey: .found)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1600,6 +1629,9 @@ struct WorldSummary: Codable, Equatable {
         var timetable: [StopSummary]
         var `repeat`: RepeatSummary
         var execution: ExecutionSummary
+        /// Its service's times while it runs one (schema 24, Stage W2b):
+        /// absent without a service, never `null`.
+        var times: TimesSummary?
         /// Its cars, and the nodes its body lies over, nearest first; `1`
         /// and `[]` for a train of one car.
         var cars: Int
@@ -1610,6 +1642,47 @@ struct WorldSummary: Codable, Equatable {
         /// Under traffic control (schema 19): the track it has reserved,
         /// in resource order; `[]` for none.
         var reservation: [ResourceSummary]
+
+        private enum CodingKeys: String, CodingKey {
+            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trail, trailEdges, reservation
+        }
+
+        init(
+            id: Int, name: String, position: TrainPositionSummary, movement: TrainMovementSummary, timetable: [StopSummary],
+            repeat: RepeatSummary, execution: ExecutionSummary, times: TimesSummary? = nil, cars: Int, trail: [PositionSummary],
+            trailEdges: [Int], reservation: [ResourceSummary]
+        ) {
+            self.id = id
+            self.name = name
+            self.position = position
+            self.movement = movement
+            self.timetable = timetable
+            self.repeat = `repeat`
+            self.execution = execution
+            self.times = times
+            self.cars = cars
+            self.trail = trail
+            self.trailEdges = trailEdges
+            self.reservation = reservation
+        }
+
+        /// Every field is required but `times`, which is absent without a
+        /// service: an explicit `null` is rejected.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(Int.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            position = try container.decode(TrainPositionSummary.self, forKey: .position)
+            movement = try container.decode(TrainMovementSummary.self, forKey: .movement)
+            timetable = try container.decode([StopSummary].self, forKey: .timetable)
+            self.repeat = try container.decode(RepeatSummary.self, forKey: .repeat)
+            execution = try container.decode(ExecutionSummary.self, forKey: .execution)
+            times = try container.contains(.times) ? container.decode(TimesSummary.self, forKey: .times) : nil
+            cars = try container.decode(Int.self, forKey: .cars)
+            trail = try container.decode([PositionSummary].self, forKey: .trail)
+            trailEdges = try container.decode([Int].self, forKey: .trailEdges)
+            reservation = try container.decode([ResourceSummary].self, forKey: .reservation)
+        }
     }
 
     /// The track network (schema 16): nodes and edges in ID order.
@@ -1680,7 +1753,7 @@ struct WorldSummary: Codable, Equatable {
                     id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
                     repeat: RepeatSummary($0.timetablePeriodMinutes), execution: ExecutionSummary($0.execution),
-                    cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number),
+                    times: $0.times.map(TimesSummary.init), cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number),
                     reservation: $0.reservation.map(ResourceSummary.init)
                 )
             }
@@ -2423,24 +2496,123 @@ struct TrainMovementSummary: Codable, Equatable {
 /// round as it leaves (see `ScheduledStop`). Read as written, not checked:
 /// whether a timetable is valid is GameCore's decision, so a fixture can
 /// expect a negative time to be rejected.
-struct StopSummary: Codable, Equatable {
+struct StopSummary: Equatable {
     var station: Int
+    /// In seconds; written in whole minutes, or since schema 24 (Stage W2b)
+    /// in seconds between two minutes (see the `Codable` conformance).
     var arrival: Int64
     var departure: Int64
     var reverse: Bool
 
     init(_ stop: ScheduledStop) {
         station = stop.station.rawValue
-        arrival = stop.arrival.minutes
-        departure = stop.departure.minutes
+        arrival = stop.arrival.seconds
+        departure = stop.departure.seconds
         reverse = stop.reverses
     }
 
     var stop: ScheduledStop {
         ScheduledStop(
-            station: StationID(rawValue: station), arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure),
+            station: StationID(rawValue: station), arrival: GameTime(seconds: arrival), departure: GameTime(seconds: departure),
             reverses: reverse
         )
+    }
+}
+
+/// `{"station", "arrival", "departure", "reverse"}`, the times in whole
+/// minutes. Schema 24 (Stage W2b): a time between two minutes is written
+/// in seconds instead, as `"arrivalSeconds"` or `"departureSeconds"`;
+/// exactly one of each pair, as for the clock, so each time has one way to
+/// be written.
+extension StopSummary: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case station, arrival, arrivalSeconds, departure, departureSeconds, reverse
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func time(minutes: CodingKeys, seconds: CodingKeys) throws -> Int64 {
+            switch (container.contains(minutes), container.contains(seconds)) {
+            case (true, false):
+                let (time, overflow) = try container.decode(Int64.self, forKey: minutes).multipliedReportingOverflow(by: GameTime.secondsPerMinute)
+                guard !overflow else {
+                    throw DecodingError.dataCorruptedError(forKey: minutes, in: container, debugDescription: "A time must fit in a game second.")
+                }
+                return time
+            case (false, true):
+                let time = try container.decode(Int64.self, forKey: seconds)
+                guard time % GameTime.secondsPerMinute != 0 else {
+                    throw DecodingError.dataCorruptedError(forKey: seconds, in: container, debugDescription: "A whole minute is written as \"\(minutes.stringValue)\".")
+                }
+                return time
+            default:
+                throw DecodingError.dataCorruptedError(
+                    forKey: minutes, in: container, debugDescription: "A stop needs exactly one of \"\(minutes.stringValue)\" and \"\(seconds.stringValue)\"."
+                )
+            }
+        }
+        station = try container.decode(Int.self, forKey: .station)
+        arrival = try time(minutes: .arrival, seconds: .arrivalSeconds)
+        departure = try time(minutes: .departure, seconds: .departureSeconds)
+        reverse = try container.decode(Bool.self, forKey: .reverse)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        func encode(_ time: Int64, minutes: CodingKeys, seconds: CodingKeys) throws {
+            if time % GameTime.secondsPerMinute == 0 {
+                try container.encode(time / GameTime.secondsPerMinute, forKey: minutes)
+            } else {
+                try container.encode(time, forKey: seconds)
+            }
+        }
+        try container.encode(station, forKey: .station)
+        try encode(arrival, minutes: .arrival, seconds: .arrivalSeconds)
+        try encode(departure, minutes: .departure, seconds: .departureSeconds)
+        try container.encode(reverse, forKey: .reverse)
+    }
+}
+
+/// A service's times (schema 24, Stage W2b; see `ServiceTimes`), in game
+/// seconds: `{"arrival", "exchangeEnd", "closing", "departure"}`, the last
+/// three only when set, never `null`.
+struct TimesSummary: Equatable {
+    var arrival: Int64
+    var exchangeEnd: Int64?
+    var closing: Int64?
+    var departure: Int64?
+
+    init(arrival: Int64, exchangeEnd: Int64? = nil, closing: Int64? = nil, departure: Int64? = nil) {
+        self.arrival = arrival
+        self.exchangeEnd = exchangeEnd
+        self.closing = closing
+        self.departure = departure
+    }
+
+    init(_ times: ServiceTimes) {
+        self.init(arrival: times.arrival.seconds, exchangeEnd: times.exchangeEnd?.seconds, closing: times.closing?.seconds, departure: times.departure?.seconds)
+    }
+}
+
+extension TimesSummary: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case arrival, exchangeEnd, closing, departure
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        arrival = try container.decode(Int64.self, forKey: .arrival)
+        exchangeEnd = try container.contains(.exchangeEnd) ? container.decode(Int64.self, forKey: .exchangeEnd) : nil
+        closing = try container.contains(.closing) ? container.decode(Int64.self, forKey: .closing) : nil
+        departure = try container.contains(.departure) ? container.decode(Int64.self, forKey: .departure) : nil
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(arrival, forKey: .arrival)
+        try container.encodeIfPresent(exchangeEnd, forKey: .exchangeEnd)
+        try container.encodeIfPresent(closing, forKey: .closing)
+        try container.encodeIfPresent(departure, forKey: .departure)
     }
 }
 

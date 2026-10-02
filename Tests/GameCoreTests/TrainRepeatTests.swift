@@ -5,7 +5,11 @@ import XCTest
 /// Turning round and repeating timetables (Phase 4 Stage Q1, ARCHITECTURE
 /// decision 21): a stop can turn the train round as the service leaves it,
 /// and a timetable can repeat every period, cycle after cycle. Stage P's
-/// rules hold within every cycle.
+/// rules hold within every cycle, and Stage W2b's dwell at every call: 42 s
+/// at least where the train turns round or a cycle starts or ends, and
+/// reaching stop 0 of the next cycle at once counts as arriving there. A
+/// train that leaves 42 s into a minute is 1024 - 716 = 308 units along at
+/// the next.
 ///
 /// Expected values are worked out by hand from the rules and written out,
 /// never taken from a previous run. Every train here moves at rate 1024 (one
@@ -158,15 +162,18 @@ final class TrainRepeatTests: XCTestCase {
         XCTAssertEqual(try train(in: stuck).execution, .waitingAtStop(0))
         XCTAssertEqual(try train(in: stuck).position, .atNode(f, heading: .east))
 
-        // Turning round at Gamma: it leaves at minute 0 facing west and
-        // reaches b, Alpha's platform, four links later.
+        // Turning round at Gamma: it leaves at 0:42 facing west and reaches
+        // b, Alpha's platform, four links later, at 4:42.
         var turning = try makeServiceWorld([stop(gamma, 0, 0, reverses: true), stop(alpha, 4, 4)], every: nil, at: .atNode(f, heading: .east))
         try turning.advance(ticks: 1)
         XCTAssertEqual(try train(in: turning).execution, .travellingToStop(1))
-        XCTAssertEqual(try train(in: turning).position, .atNode(e, heading: .west))
+        XCTAssertEqual(try train(in: turning).position, .onLink(from: f, to: e, offset: 308))
         XCTAssertEqual(try train(in: turning).movement.continuation, [e, d, c, b])
         XCTAssertEqual(try train(in: turning).movement.cursor, 1)
         try turning.advance(ticks: 3)
+        XCTAssertEqual(try train(in: turning).execution, .travellingToStop(1))
+        XCTAssertEqual(try train(in: turning).position, .onLink(from: c, to: b, offset: 308))
+        try turning.advance(ticks: 1)
         XCTAssertEqual(try train(in: turning).execution, .waitingAtStop(1))
         XCTAssertEqual(try train(in: turning).position, .atNode(b, heading: .west))
     }
@@ -208,19 +215,24 @@ final class TrainRepeatTests: XCTestCase {
 
     // MARK: - Repeating
 
-    /// The shuttle runs on time cycle after cycle: out at 0, 12, 24, ...,
-    /// at Gamma from 4, 16, ..., back at Alpha from 10, 22, .... Leaving
-    /// Alpha at 12 turns the train, starts cycle 1 at Alpha at once (it is
-    /// already there) and leaves Alpha again in the same step.
+    /// The shuttle runs cycle after cycle: out at 0:42, 12:42, 24:42, ...
+    /// (42 s at Alpha first each time), at Gamma from 4:42, 16:42, ...,
+    /// left on time at 6, 18, ..., back at Alpha from 10, 22, .... Leaving
+    /// Alpha at 12 turns the train and starts cycle 1 at Alpha at once (it
+    /// is already there), which counts as arriving: it dwells its 42 s
+    /// again and leaves at 12:42.
     func testAShuttleRepeatsOnTimeTurningAtBothEnds() throws {
         var world = try makeServiceWorld(shuttle, every: 12, at: .atNode(b, heading: .east))
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0))
 
         try world.advance(ticks: 4)
+        XCTAssertEqual(try train(in: world).execution, .travellingToStop(1))
+        XCTAssertEqual(try train(in: world).position, .onLink(from: e, to: f, offset: 308))
+        try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(1))
         XCTAssertEqual(try train(in: world).position, .atNode(f, heading: .east))
 
-        try world.advance(ticks: 2)
+        try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(1), "Gamma is left at 6, not before")
 
         try world.advance(ticks: 1)
@@ -237,18 +249,19 @@ final class TrainRepeatTests: XCTestCase {
 
         try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .travellingToStop(1, cycle: 1))
-        XCTAssertEqual(try train(in: world).position, .atNode(c, heading: .east))
+        XCTAssertEqual(try train(in: world).position, .onLink(from: b, to: c, offset: 308))
         XCTAssertEqual(try train(in: world).movement.continuation, [c, d, e, f])
+        XCTAssertEqual(try train(in: world).times, ServiceTimes(arrival: GameTime(minutes: 12), departure: GameTime(seconds: 12 * 60 + 42)))
 
-        try world.advance(ticks: 3)
-        XCTAssertEqual(world.clock.now, GameTime(minutes: 16))
+        try world.advance(ticks: 4)
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 17))
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(1, cycle: 1))
         XCTAssertEqual(try train(in: world).position, .atNode(f, heading: .east))
 
-        try world.advance(ticks: 9)
+        try world.advance(ticks: 8)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 25))
         XCTAssertEqual(try train(in: world).execution, .travellingToStop(1, cycle: 2))
-        XCTAssertEqual(try train(in: world).position, .atNode(c, heading: .east))
+        XCTAssertEqual(try train(in: world).position, .onLink(from: b, to: c, offset: 308))
 
         // The timetable is plan data: it keeps its first cycle's times.
         XCTAssertEqual(try train(in: world).timetable, shuttle)
@@ -272,32 +285,48 @@ final class TrainRepeatTests: XCTestCase {
         XCTAssertEqual(try train(in: world).position, .atNode(b, heading: .east))
         try world.setTrainMovementRate(first, to: 1024)
 
-        // Moves from minute 3: Gamma at 7 (three late), left at 7 (one late),
-        // Alpha at 11, left at 12 on time.
+        // Moves from minute 3: Gamma at 7 (three late), where it turns round
+        // and so dwells 42 s: left at 7:42 (102 s late); Alpha at 11:42,
+        // 42 s there and 42 s again as cycle 1 starts there: left at 13:06
+        // (66 s late); Gamma at 17:06, left on time at 18.
         try world.advance(ticks: 4)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 7))
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(1))
         try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .travellingToStop(2))
+        XCTAssertEqual(world.lateness(of: first), 102)
         try world.advance(ticks: 3)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 11))
+        XCTAssertEqual(try train(in: world).execution, .travellingToStop(2))
+        try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(2))
         try world.advance(ticks: 1)
-        XCTAssertEqual(try train(in: world).execution, .waitingAtStop(2), "back on time: Alpha is left at 12")
+        XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1))
         try world.advance(ticks: 1)
         XCTAssertEqual(try train(in: world).execution, .travellingToStop(1, cycle: 1))
+        XCTAssertEqual(world.lateness(of: first), 66)
+        try world.advance(ticks: 4)
+        XCTAssertEqual(try train(in: world).execution, .waitingAtStop(1, cycle: 1))
+        try world.advance(ticks: 1)
+        XCTAssertEqual(try train(in: world).execution, .travellingToStop(2, cycle: 1))
+        XCTAssertEqual(try train(in: world).position, .atNode(e, heading: .west), "back on time: Gamma is left at 18")
+        XCTAssertEqual(world.lateness(of: first), 0)
     }
 
-    /// A service leaves at most one whole cycle of stops in a step. A train
-    /// saved many cycles behind a one-stop timetable, whose every call is at
-    /// the same station, goes one cycle further each step rather than
-    /// going round without end.
-    func testAServiceLeavesAtMostOneCycleOfStopsInAStep() throws {
+    /// A train never goes round without end: it dwells at every call. A
+    /// train saved many cycles behind a one-stop timetable, whose every
+    /// call is at the same station, goes one cycle further every 42 s (the
+    /// call starts and ends a cycle), however late it is.
+    func testALateServiceGoesOneCycleAtATime() throws {
+        // On time once the timetable holds it: cycle 0 left at 0:42, cycle 1
+        // at 1:24, cycle 2 at 2:06, cycle 3 held for its departure at 3.
         var world = try makeServiceWorld([stop(alpha, 0, 0)], every: 1, at: .atNode(b, heading: .east))
         try world.advance(ticks: 3)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 3), "on time: one call a minute")
 
-        // The same train saved at minute 1000, still in cycle 3.
+        // The same train saved at second 1000, still in cycle 3: it leaves
+        // at 1000, then cycle 4 at 1042, cycle 5 waits at 1060 and leaves
+        // at 1084, and so on, 42 s each.
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encode(world)) as? [String: Any])
         var clock = try XCTUnwrap(object["clock"] as? [String: Any])
         clock["now"] = 1000
@@ -305,13 +334,18 @@ final class TrainRepeatTests: XCTestCase {
         var late = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))
         XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0, cycle: 3))
         try late.advance(ticks: 1)
-        XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0, cycle: 4))
+        XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0, cycle: 5))
+        // 1060 to 1360: cycles 6 to 12 arrive at 1084 + 42 k.
         try late.advance(ticks: 5)
-        XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0, cycle: 9))
+        XCTAssertEqual(try train(in: late).execution, .waitingAtStop(0, cycle: 12))
 
-        // Two calls a cycle at stations sharing a platform: both each step.
+        // Two calls a cycle at stations sharing a platform, each 42 s (each
+        // starts or ends the cycle): cycle 1 reaches Gamma at 1:24, Delta at
+        // 2:06, cycle 2 Gamma at 2:48.
         var shared = try makeServiceWorld([stop(gamma, 0, 0), stop(delta, 0, 0)], every: 1, at: .atNode(f, heading: .east))
         try shared.advance(ticks: 2)
+        XCTAssertEqual(try train(in: shared).execution, .waitingAtStop(0, cycle: 1))
+        try shared.advance(ticks: 1)
         XCTAssertEqual(try train(in: shared).execution, .waitingAtStop(0, cycle: 2))
     }
 
@@ -364,8 +398,8 @@ final class TrainRepeatTests: XCTestCase {
     /// period are seconds here, near the end of the range.)
     func testTheServiceEndsAfterTheLastCycleWhoseTimesFit() throws {
         // Cycles 0 and 1 fit: cycle 1 leaves Alpha at 2^62 seconds, which
-        // is not a whole minute, so the train leaves at the next whole
-        // minute, `leaving`.
+        // is second 4 of minute `leaving - 1` (2^62 = 60 k + 4); the train
+        // leaves at that second (Stage W2b), its doors closing 9 s before.
         let period = Int64(1) << 62
         let leaving = (period + 59) / 60
         var world = try makeLineWorld(minute: 1)
@@ -374,11 +408,16 @@ final class TrainRepeatTests: XCTestCase {
         try world.setTrainTimetable(first, to: [stop(alpha, 0, 0)], repeatingEvery: period)
         try world.startTrainService(first)
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1))
-        try world.advance(ticks: Int(leaving - 1))
+        try world.advance(ticks: Int(leaving - 2))
+        XCTAssertEqual(world.clock.now, GameTime(seconds: period - 4))
         XCTAssertEqual(try train(in: world).execution, .waitingAtStop(0, cycle: 1))
+        XCTAssertEqual(
+            try train(in: world).times,
+            ServiceTimes(arrival: GameTime(minutes: 1), exchangeEnd: GameTime(seconds: 68), closing: GameTime(seconds: period - 9))
+        )
         try world.advance(ticks: 1)
         XCTAssertNil(try train(in: world).execution, "no cycle 2 to start")
-        XCTAssertEqual(world.clock.now, GameTime(minutes: leaving + 1))
+        XCTAssertEqual(world.clock.now, GameTime(minutes: leaving))
 
         // Only cycle 0 fits when the period is almost the whole range.
         let end = GameTime(seconds: .max - 10)
@@ -408,17 +447,18 @@ final class TrainRepeatTests: XCTestCase {
         double.setSpeed(.normal)
         XCTAssertEqual(double, batch)
 
-        // 1000 = 83 × 12 + 4: cycle 83 has just reached Gamma.
-        XCTAssertEqual(try train(in: batch).execution, .waitingAtStop(1, cycle: 83))
-        XCTAssertEqual(try train(in: batch).position, .atNode(f, heading: .east))
+        // 1000 = 83 × 12 + 4: cycle 83, which left Alpha at 996:42, reaches
+        // Gamma at 1000:42.
+        XCTAssertEqual(try train(in: batch).execution, .travellingToStop(1, cycle: 83))
+        XCTAssertEqual(try train(in: batch).position, .onLink(from: e, to: f, offset: 308))
     }
 
-    /// Stage W2a: a departure between two minutes is due at the first whole
-    /// minute after it, and a batch that skips idle minutes stops there as
-    /// single ticks do.
+    /// A departure between two minutes is made at its second (Stage W2b),
+    /// and a batch that skips idle minutes wakes for it as single ticks do.
     func testABatchWakesForADepartureBetweenTwoMinutes() throws {
         // From second 15 of minute 1, Alpha is left at second 15 of minute
-        // 2 and then every 28 minutes.
+        // 2 and then every 28 minutes, each cycle arriving at once at Alpha
+        // and holding for its departure.
         var start = try makeLineWorld(minute: 1)
         start.setSpeed(.x1)
         try start.advance(ticks: 150)
@@ -434,7 +474,7 @@ final class TrainRepeatTests: XCTestCase {
             try single.advance(ticks: 1)
         }
         XCTAssertEqual(batch, single)
-        // Left at minutes 3 and 31; the next leaves at minute 58.
+        // Left at 2:15 and 30:15; the next leaves at 58:15.
         XCTAssertEqual(batch.clock.now, GameTime(seconds: 75 + 38 * 60))
         XCTAssertEqual(try train(in: batch).execution, .waitingAtStop(0, cycle: 2))
     }

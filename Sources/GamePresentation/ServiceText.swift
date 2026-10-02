@@ -197,14 +197,21 @@ extension GameWorld {
     }
 }
 
-/// How a train on a service stands against its timetable, derived from
-/// the scheduled times and the clock, never stored.
+/// How a train on a service stands against its timetable: its
+/// ``GameWorld/lateness(of:)`` in whole minutes, never stored.
 public enum Punctuality: Hashable, Sendable {
     case onTime
-    /// Stopped at a station before its scheduled arrival there.
+    /// Reached the station it waits at before its scheduled arrival.
     case early(minutes: Int64)
-    /// Past the time it should have left its stop, or reached the next.
+    /// Left its last stop late, or past the time it should have left its
+    /// stop or reached the next.
     case late(minutes: Int64)
+
+    /// `seconds` late (early when negative), in whole minutes rounded
+    /// towards zero: less than a minute either way is on time.
+    init(lateness seconds: Int64) {
+        self = seconds >= 0 ? .late(by: seconds) : .early(by: seconds == .min ? .max : -seconds)
+    }
 
     /// Late by `seconds`, in whole minutes rounded down: less than a minute
     /// late is on time.
@@ -230,6 +237,49 @@ public enum Punctuality: Hashable, Sendable {
     }
 }
 
+/// Where a train waiting at a stop has got to in its dwell (Stage W2b),
+/// derived from its service's times (see ``ServiceTimes``) and the clock,
+/// never stored.
+public enum DwellPhase: Hashable, Sendable {
+    /// It has arrived, and its doors are opening.
+    case doorsOpening
+    /// Passengers are getting off and on.
+    case boarding
+    /// Its doors are open, and it holds until it may leave.
+    case holding
+    /// Its doors are closing.
+    case doorsClosing
+    /// Its doors have closed, and it leaves as soon as it can.
+    case readyToLeave
+
+    /// "Doors opening", "Passengers boarding", "Doors open", "Doors
+    /// closing" or "Ready to leave".
+    public func text(in language: DisplayLanguage) -> String {
+        switch self {
+        case .doorsOpening: language.text("Doors opening", "開門中")
+        case .boarding: language.text("Passengers boarding", "乘客上下車中")
+        case .holding: language.text("Doors open", "開門停站")
+        case .doorsClosing: language.text("Doors closing", "關門中")
+        case .readyToLeave: language.text("Ready to leave", "準備發車")
+        }
+    }
+
+    /// The phase of a dwell with `times` at `now`: the doors open until the
+    /// exchange starts, passengers get off and on until `exchangeEnd`, the
+    /// train holds with its doors open until `closing`, and its doors take
+    /// ``ServiceDwell/doorClosing`` to close.
+    public init(_ times: ServiceTimes, at now: GameTime) {
+        if let closing = times.closing {
+            let (closed, overflow) = closing.seconds.addingReportingOverflow(ServiceDwell.doorClosing)
+            self = !overflow && now.seconds >= closed ? .readyToLeave : .doorsClosing
+        } else if let exchangeEnd = times.exchangeEnd {
+            self = now < exchangeEnd ? .boarding : .holding
+        } else {
+            self = .doorsOpening
+        }
+    }
+}
+
 /// A train's service as the train panel shows it.
 public struct TrainServiceStatus: Hashable, Sendable {
     /// The line or pattern it runs for (see
@@ -241,30 +291,30 @@ public struct TrainServiceStatus: Hashable, Sendable {
     /// sent out".
     public let stopText: String
     public let punctuality: Punctuality?
+    /// Where it has got to in its dwell while it waits at a stop; `nil`
+    /// while it travels or waits to be sent out.
+    public let dwell: DwellPhase?
 
-    public init(serviceName: String?, stopText: String, punctuality: Punctuality?) {
+    public init(serviceName: String?, stopText: String, punctuality: Punctuality?, dwell: DwellPhase? = nil) {
         self.serviceName = serviceName
         self.stopText = stopText
         self.punctuality = punctuality
+        self.dwell = dwell
     }
 }
 
 extension GameWorld {
     /// Train `id`'s service now: which service it runs for, where it is in
-    /// its timetable and whether it is early or late; `nil` for a train
-    /// with no service that is on no line (or no such train).
-    ///
-    /// Waiting at a stop, a train is late by the minutes since its
-    /// scheduled departure once that has passed, and early by the minutes
-    /// until its scheduled arrival if it is already there. Travelling, it is
-    /// late by the minutes since its scheduled arrival at the next stop once
-    /// that has passed. Minutes are whole minutes, rounded down: less than
-    /// a minute either way is on time. Scheduled times include the cycle of a repeating
-    /// timetable.
+    /// its timetable, whether it is early or late (its
+    /// ``GameWorld/lateness(of:)`` in whole minutes, rounded towards zero:
+    /// less than a minute either way is on time) and, waiting at a stop,
+    /// where it has got to in its dwell; `nil` for a train with no service
+    /// that is on no line (or no such train). Scheduled times include the
+    /// cycle of a repeating timetable.
     public func trainServiceStatus(of id: TrainID, in language: DisplayLanguage) -> TrainServiceStatus? {
         guard let train = train(id: id) else { return nil }
         let serviceName = assignedServiceName(of: id, in: language)
-        guard let execution = train.execution else {
+        guard let execution = train.execution, let times = train.times, let lateness = lateness(of: id) else {
             return serviceName.map {
                 TrainServiceStatus(serviceName: $0, stopText: language.text("Waiting to be sent out", "等待派車"), punctuality: nil)
             }
@@ -273,19 +323,18 @@ extension GameWorld {
         let offset = (train.timetablePeriod ?? 0) &* execution.cycle
         let arrival = GameTime(seconds: stop.arrival.seconds &+ offset)
         let departure = GameTime(seconds: stop.departure.seconds &+ offset)
-        let now = clock.now
         let name = stationName(stop.station)
+        let punctuality = Punctuality(lateness: lateness)
         switch execution {
         case .waitingAtStop:
-            let punctuality = now > departure ? Punctuality.late(by: now.seconds - departure.seconds)
-                : now < arrival ? .early(by: arrival.seconds - now.seconds) : .onTime
             let isLast = train.timetablePeriod == nil && execution.stop == train.timetable.count - 1
             let text = isLast
                 ? language.text("At \(name), last stop", "停靠 \(name)，終點站")
                 : language.text("At \(name), leaves \(departure.clockText)", "停靠 \(name)，\(departure.clockText) 發車")
-            return TrainServiceStatus(serviceName: serviceName, stopText: text, punctuality: punctuality)
+            return TrainServiceStatus(
+                serviceName: serviceName, stopText: text, punctuality: punctuality, dwell: DwellPhase(times, at: clock.now)
+            )
         case .travellingToStop:
-            let punctuality = now > arrival ? Punctuality.late(by: now.seconds - arrival.seconds) : .onTime
             return TrainServiceStatus(
                 serviceName: serviceName,
                 stopText: language.text("Next: \(name), due \(arrival.clockText)", "下一站：\(name)，\(arrival.clockText) 到站"),

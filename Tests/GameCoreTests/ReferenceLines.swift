@@ -447,7 +447,9 @@ extension ReferenceWorld {
                 var sent = trains[i]
                 sent.timetable = timetable
                 sent.period = nil
-                sent.service = Service(stop: 0, waiting: true)
+                // Stage W2b: sent out as if it had just arrived; it dwells
+                // at the first call before it leaves.
+                sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
                 if trafficControl, let leaving = firstLeaving(sent), holder(of: needs(leaving).resources, except: sent.id) != nil { continue }
                 trains[i] = sent
                 if k == 0 {
@@ -455,7 +457,6 @@ extension ReferenceWorld {
                 } else {
                     lines[l].patterns[k - 1].lastDispatch = minutes
                 }
-                depart(i)
                 return
             }
         }
@@ -527,21 +528,23 @@ extension ReferenceWorld {
             memo.trips[place, default: [:]][key] = .some(pick)
         }
         guard let (turn, trip) = memo.trips[place]![key]! else { return .notReady }
-        // The timetable: leave now; each call the leg's minutes after
-        // the one before; stay 1 between the ends, 2 at the far end
-        // (turning), and finish on arrival back at the first call
-        // (turning).
-        var timetable = [ScheduledStop(station: first, arrival: GameTime(minutes: minutes), departure: GameTime(minutes: minutes), reverses: turn)]
-        var clock = minutes
+        // The timetable, in seconds: arrive now and stay 42 (Stage W2b);
+        // each call the leg's minutes after the one before; stay 1 minute
+        // between the ends, 2 at the far end (turning), and finish on
+        // arrival back at the first call (turning).
+        let now = minutes * 60
+        guard now <= Int64.max - 42 else { return .overflow }
+        var timetable = [ScheduledStop(station: first, arrival: GameTime(seconds: now), departure: GameTime(seconds: now + 42), reverses: turn)]
+        var clock = now + 42
         for (n, leg) in trip.legs.enumerated() {
             let final = n == trip.legs.count - 1
             let far = leg.to == service.calls.last!
-            let stay: Int64 = final ? 0 : far ? 2 : 1
-            guard clock <= Int64.max - leg.minutes - stay else { return .overflow }
-            let arrival = clock + leg.minutes
+            let stay: Int64 = final ? 0 : far ? 120 : 60
+            guard leg.minutes <= (Int64.max - stay - clock) / 60 else { return .overflow }
+            let arrival = clock + leg.minutes * 60
             clock = arrival + stay
             timetable.append(ScheduledStop(
-                station: line.stops[leg.to], arrival: GameTime(minutes: arrival), departure: GameTime(minutes: clock), reverses: final || far
+                station: line.stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: clock), reverses: final || far
             ))
         }
         return .ready(timetable)

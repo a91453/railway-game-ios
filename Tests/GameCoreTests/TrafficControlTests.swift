@@ -412,11 +412,13 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(world.train(id: one)?.timetable, [])
         XCTAssertEqual(world.train(id: one)?.position, .atNode(p(1, 1), heading: .east))
 
+        // Sent out at 2, it takes its route as it leaves at 2:42 (Stage W2b)
+        // and is 308 units along by 3.
         try world.unplaceTrain(blocker)
         try world.advance(ticks: 1)
         XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(minutes: 2))
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
-        XCTAssertEqual(world.train(id: one)?.position, .atNode(p(2, 1), heading: .east))
+        XCTAssertEqual(world.train(id: one)?.position, .onLink(from: p(1, 1), to: p(2, 1), offset: 308))
         XCTAssertNil(world.trainHoldingRoute(of: one))
     }
 

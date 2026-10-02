@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 23`）
+## Schema（`schemaVersion: 24`）
 
-除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），以及時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`（見下面「時間」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
+除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），以及列車沒有服務時省略的 `times`（見下面「服務時刻」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `23` |
+| `schemaVersion` | `24` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -28,9 +28,11 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 - **整數**：所有數字都是整數，寫成純十進位（不寫 `1.0`、`1e3`），絕對值不超過 2^53 − 1。有些語言的 JSON 讀取器把數字一律讀成 double，這個範圍內才保證精確；`testFixturesUsePortableJSON` 會檢查。
 - **金額**（`balance`、`costs`、`required`、`available`）：整數遊戲貨幣單位（GameCore 的 `Money`），沒有小數；`costs` 不可為負數。
-- **時間**（schema 23，Stage W2a 起 GameCore 的時鐘以秒計，決策 37）：
+- **時間**（schema 23，Stage W2a 起 GameCore 的時鐘以秒計，決策 37；schema 24 起時刻表與服務時刻可以落在兩分鐘之間，決策 39）：
   - 時鐘寫成 `gameMinutes`（開局以來的整分鐘）或 `gameSeconds`（開局以來的秒），恰好其中一個。整分鐘一律寫成 `gameMinutes`，`gameSeconds` 只用在落在兩分鐘之間的時刻，所以每個時刻只有一種寫法。
-  - 其他時間欄位仍然是分鐘：時刻表的 `arrival`、`departure` 與重複的 `minutes`、`lastDispatch`、`since`、`openedAt`、帳本列的 `time`、`serviceLevel` 的 `gameMinutes`。GameCore 以秒保存它們（分鐘 × 60）；在 Stage W2b 之前這些都落在整分鐘。
+  - 其他時間欄位仍然是分鐘：時刻表的 `arrival`、`departure` 與重複的 `minutes`、`lastDispatch`、`since`、`openedAt`、帳本列的 `time`、`serviceLevel` 的 `gameMinutes`。GameCore 以秒保存它們（分鐘 × 60）。
+  - 時刻表停靠的時間（schema 24，Stage W2b）可以落在兩分鐘之間：線路的時刻表在派車 42 秒後才離開第一站。這樣的時間寫成 `arrivalSeconds`、`departureSeconds`（開局以來的秒），取代 `arrival`、`departure`；和時鐘一樣，整分鐘一律寫成分鐘，每一站的到達與離開各恰好一種寫法。
+  - 服務時刻（`times`，schema 24）一律是開局以來的秒。
   - `ticks` 是模擬 tick 數。每個 tick 在 `paused` / `x1` / `x10` / `x60` / `normal` / `double` 下推進 0 / 0.1 / 1 / 6 / 60 / 120 秒（宿主每 100 ms 一個 tick，所以 `x1` 是真實時間）。不到一秒的部分累積在 `pendingTenths`（十分之一秒，1 到 9），跨過速度的改變與暫停；是 0 時不寫這個 key。
 - **位置**：`x`、`y` 是格子座標，`x` 向東、`y` 向南，`(0, 0)` 是西北角。
 - **方向**：`"north"`、`"east"`、`"south"`、`"west"`；陣列順序不影響意義，同一方向不可重複。
@@ -50,16 +52,21 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - `edges`（schema 16）：連續路網上的列車之後依序要進入的邊（邊的編號），完整列出（包含已進入的項），`cursor` 數的就是這一份；方格上的列車是 `[]`，路網上的列車 `continuation` 是 `[]`。
   - `end`（schema 18）：路網上的列車在路的最後一條邊（`edges` 的最後一項；用完時就是車頭所在的邊）上停下的位置，沿行進方向從它的起點量起；走到那條邊的終點時**不寫**這個 key（不可寫 `null`）。方格上的列車永遠沒有 `end`。
   - 未放置或從未設定過的列車是 `{ "rate": 0, "continuation": [], "cursor": 0, "edges": [] }`。
-- **時刻表**：依序的停靠陣列 `[{ "station", "arrival", "departure", "reverse" }, ...]`，四個欄位都必填：前三個是整數，`reverse` 是布林值（服務離開這一站時是否先讓列車折返）；**順序有意義**（陣列順序就是停靠順序）。沒有時刻表是 `[]`。指令裡的停靠照原樣讀取、不檢查，是否合法由 GameCore 判定，所以 fixture 可以預期負數時間被拒絕。
+- **時刻表**：依序的停靠陣列 `[{ "station", "arrival", "departure", "reverse" }, ...]`，四個欄位都必填（落在兩分鐘之間的時間改寫成 `arrivalSeconds` 或 `departureSeconds`，見上面「時間」）：前三個是整數，`reverse` 是布林值（服務離開這一站時是否先讓列車折返）；**順序有意義**（陣列順序就是停靠順序）。沒有時刻表是 `[]`。指令裡的停靠照原樣讀取、不檢查，是否合法由 GameCore 判定，所以 fixture 可以預期負數時間被拒絕。
 - **重複（repeat）**：以 `type` 區分兩種，只能出現該種類的欄位：
   - `{ "type": "once" }`：時刻表只跑一次（新購列車與 Stage Q1 之前的行為）。
   - `{ "type": "every", "minutes" }`：時刻表每 `minutes` 分鐘重複一次；整數，指令裡照原樣讀取，是否合法由 GameCore 判定。
 - **服務（execution）**：以 `type` 區分三種，只能出現該種類的欄位：
   - `{ "type": "inactive" }`：沒有執行中的服務。
-  - `{ "type": "waiting", "stop", "cycle" }`：停在時刻表第 `stop` 站，等待它在第 `cycle` 輪的排定出發。
+  - `{ "type": "waiting", "stop", "cycle" }`：停在時刻表第 `stop` 站（第 `cycle` 輪），停站到可以離開為止（Stage W2b：開門、上下車、等排定出發、關門，見下面「服務時刻」）。
   - `{ "type": "travelling", "stop", "cycle" }`：已離開前一站（`stop` 為 0 時是上一輪的最後一站），正前往第 `cycle` 輪的第 `stop` 站。
   - `stop` 是從 0 開始的**時刻表索引**，不是車站 ID（時刻表可以重複同一個車站）。
   - `cycle` 是重複的時刻表已經重新開始的次數，從 0 起；第 `k` 輪的每個時刻是時刻表記錄的時刻加上 `k × minutes`。只跑一次的時刻表永遠是 0。
+- **服務時刻（times）**（schema 24，Stage W2b，決策 39）：`{ "arrival", "exchangeEnd", "closing", "departure" }`，都是開局以來的秒；`arrival` 必填，另外三個只在有值時寫（不可寫 `null`）。
+  - `arrival`：到達正在等待的這一站（行駛中則是上一個等待過的站）的時刻；啟動服務與線路派車算是在那一刻到達第一站。
+  - `exchangeEnd`：只在等待時、車門開好之後才有：乘客上下車到哪一刻為止。
+  - `closing`：只在等待時：開始關門的時刻；離開是它的 9 秒後。
+  - `departure`：實際離開前一站的時刻；這個服務還沒離開過任何一站時沒有。
 - **服務等級**：`"peak"`、`"offPeak"`、`"low"`（尖峰、離峰、低峰）。
 - **線路**：`{ "id", "name", "stops", "rate", "window", "trainsInService", "targetHeadways", "trains", "lastDispatch", "patterns" }`，十個欄位都必填：
   - `id`：線路 ID，世界依序配發，從 1 開始、失敗的指令不消耗 ID、刪除的線路 ID 不再使用。指令、結果與觀察以 `line` 欄位寫線路 ID。
@@ -260,6 +267,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `tripFare`（schema 22） | `from`、`to`（車站 ID） | `{ "found": true, "fare": n }` 或 `{ "found": false }` | `tripFare(from:to:)` |
 | `accounts`（schema 22） | — | `{ "accounts": 帳 }` | `accounts` |
 | `financeReport`（schema 22） | `period`（`"day"`、`"week"`、`"month"`、`"year"`） | `{ "report": 報表 }` | `financeReport(_:)` |
+| `serviceTimes`（schema 24） | `train` | `{ "found": true, "times": 服務時刻 }`，沒有服務（或沒有這台列車）時 `{ "found": false }` | `train(id:)?.times` |
+| `lateness`（schema 24） | `train` | `{ "found": true, "lateness": 秒 }`（負數是早到），沒有服務（或沒有這台列車）時 `{ "found": false }` | `lateness(of:)` |
 
 相接規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 10）：
 
@@ -411,7 +420,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 - `stations`：`{ "id", "name", "x", "y", "annexes" }`，依 ID 遞增；`annexes` 是長出的格（`[{ "x", "y" }, ...]`，依長出的順序），只有一格的車站是 `[]`。車站在路網上的月台屬於鐵路網，寫在 `network` 的 `platforms`。
 - `tracks`：`{ "x", "y", "connections", "layout" }`，逐列由北到南、每列由西到東；平面交叉的 `connections` 是四個方向。
-- `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "cars", "trail", "trailEdges", "reservation" }`，依 ID 遞增（`movement` 只在路網上的路停在邊的中段時有 `end`，schema 18）；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是方格上的車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），`trailEdges` 是連續路網上車頭所在邊之後車身經過的邊（編號，由近到遠，到車尾所在的那一條為止）；1 節的列車是 `1`、`[]` 與 `[]`。`reservation`（schema 19）是列車在交通控制下預約的資源（形式見上面「軌道資源」，依資源的順序），沒有預約是 `[]`。
+- `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "times", "cars", "trail", "trailEdges", "reservation" }`，依 ID 遞增（`movement` 只在路網上的路停在邊的中段時有 `end`，schema 18；`times` 只在列車執行服務時有，形式見上面「服務時刻」，schema 24）；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是方格上的車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），`trailEdges` 是連續路網上車頭所在邊之後車身經過的邊（編號，由近到遠，到車尾所在的那一條為止）；1 節的列車是 `1`、`[]` 與 `[]`。`reservation`（schema 19）是列車在交通控制下預約的資源（形式見上面「軌道資源」，依資源的順序），沒有預約是 `[]`。
 - `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
 - `serviceDay`：服務日（形式見上面「服務日」）。
 - `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length", "profile", "structure" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則；`profile` 與 `structure`（schema 17）必填；`platforms`（schema 17）必填：`[{ "station", "edge", "start", "end" }, ...]`，沿鐵軌的順序（依邊的編號、再依起點）。沒有路網是 `{ "nodes": [], "edges": [], "platforms": [] }`。
@@ -455,3 +464,9 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **21**（G1b）：上下車與容量：`riders` 觀察，守恆稽核加上必填的 `riding`、`arrived`、`refused`，最終狀態車站的乘客加上必填的 `arrived`、`refused`、最終狀態必填的 `riders`，以及手算的 `boarding.json`（1 節列車 352 人的容量、下車站遠的先上、被拒絕的人數、下車、在遠端折返後載回程的人、線路的列車不能停止服務、離開線路後停止服務而放棄車上的人；預期值另以獨立的 Python 實作依規則計算）。既有的二十個 fixture 把 `schemaVersion` 從 20 改成 21，最終狀態加上 `"riders": []`，`station-demand.json` 的守恆稽核與最終狀態的乘客加上值為 0 的新欄位：它們都沒有列車載客。其他預期值都沒有改變。
 - **22**（G1c）：票價、帳本與經營：`setEconomyMode`、`setFareRules` 指令，`invalidFareRules` 結果，`tripFare`、`accounts`、`financeReport` 觀察，最終狀態必填的 `accounts`，以及 `economy.json`（從 23:00 開始經營，被拒絕與接受的距離票價、兩段票價的邊界、需求受票價影響、午夜的小時列與能源、人事列、日報表的本期與上期、跨日後的下一個小時；預期值另以獨立的 Python 實作依規則計算）。既有的二十一個 fixture 把 `schemaVersion` 從 21 改成 22，並只在最終狀態加上初始的 `accounts`：新的世界是自由模式，什麼都不收、不記，所以行為不變。其他預期值都沒有改變。
 - **23**（Stage W2a）：GameCore 的時鐘改以秒計（決策 37）：時鐘可以寫成 `gameSeconds`（只用在兩分鐘之間的時刻），最終狀態可以有 `pendingTenths`，新的速度 `x1`、`x10`、`x60`，以及 `clock-seconds.json`（真實時間累積十分之一秒、跨過速度的改變，列車每秒走它這一秒的份，跨過整分鐘時和以前一步一分鐘走到同一個地方，最後停在兩分鐘之間）。其他時間欄位仍然寫分鐘，GameCore 以秒保存，讀取端換算。既有的二十二個 fixture 只把 `schemaVersion` 從 22 改成 23：它們都以 `paused`、`normal` 或 `double` 推進整分鐘，Stage W2a 在整分鐘的行為不變（發車、派車、乘客與帳都還在整分鐘處理，到站在分鐘之內記下也不改變整分鐘看到的結果，列車在整分鐘時的位置與以前一步一分鐘相同），所以其他預期值都沒有改變。
+- **24**（Stage W2b）：停站、上下車與實際時刻（決策 39）：時刻表停靠可以寫成 `arrivalSeconds`、`departureSeconds`（只用在兩分鐘之間的時間），最終狀態執行服務的列車必有的 `times`，`serviceTimes`、`lateness` 觀察，以及手算的 `station-dwell.json`（開門 8 秒的那一步才上下車、端點最短停站 42 秒、早到的列車等到排定出發前 9 秒才關門、晚到的列車只停最短的 36 秒、在最後一站停完才結束服務、每一刻的誤點秒數）。既有的二十三個 fixture 把 `schemaVersion` 從 23 改成 24。**刻意的行為改變**，每個改變的值都另以獨立的參考模型（`ReferenceWorld` 逐秒依規則執行）核對：
+  - 服務在每一站停站才離開：啟動服務與派車算是在那一刻到達第一站，至少停 42 秒（端點與折返的站）或 36 秒（中間的站），所以列車比以前晚離開，之後的位置、服務與停在哪些車站也跟著晚：`train-repeat.json`、`train-service.json`、`line-dispatch.json`、`line-patterns.json`、`network-service.json`、`economy.json` 的位置、`execution`、`stationStops` 觀察與最終狀態。晚 42 秒、每分鐘 1024 的列車在整分鐘時還差一段的 308（= 1024 − ⌊1024 × 42 ÷ 60⌋）才到節點，晚 36 秒時差 410；每分鐘 2048 的路網列車少走 1433（= ⌊2048 × 42 ÷ 60⌋）。
+  - 線路的時刻表在派車 42 秒後才離開第一站，之後的時間都晚 42 秒（寫成 `arrivalSeconds`、`departureSeconds`）：`line-dispatch.json`、`line-patterns.json`、`network-service.json`、`boarding.json`、`economy.json` 的 `timetable` 觀察與最終狀態。`line-patterns.json` 的 Shuttle 一趟因此要 8 分鐘（以前 7 分鐘），最後一次派車從 599 變成 600。
+  - 被拒絕的人數改在客滿的列車離開時才計（等車中、可以上這班車卻沒上的人）：`boarding.json` 第一趟在 481:01 離開時記 4000（以前在 480 派車時記 3648），第二趟離開前已經取回線路，不再記；`economy.json` 最終狀態 Alpha 的 `refused` 18678 → 19192。
+  - 車門開著的時候每個整分鐘釋出的人也會上車，票價依每次上車的人數各自四捨五入到整美元：`economy.json` 第 1 個小時的票價收入 65600 → 65500（帳本列、日帳、報表與餘額跟著少 100）。
+  - 執行服務的列車加上 `times`。其他預期值都沒有改變。

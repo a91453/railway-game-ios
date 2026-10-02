@@ -148,6 +148,26 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | RailwayCore 參考包：`TicksPerTimetableUnit`、`timetable_start` | OpenTTD 的 tick 與日曆脫鉤，時刻表的單位可以選 | 分鐘 | 不採用：列車的時間就是時鐘的時間（gap 2 的決定） | — | 不移植（決定） |
 | 沒有參考 | 每分鐘的 rate 分到每一秒 | 一步走完 rate | `TrainMovement.distance(at:fromSecond:toSecond:)`：`⌊rate·(s+1)/60⌋ − ⌊rate·s/60⌋` | 單位／分鐘 → 單位／秒 | **gap**：自訂的整數規則，讓整分鐘與以前相同 |
 
+### Stage W2b：停站、上下車與誤點
+
+2026-10-02 檢查三份參考（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`）。ARCHITECTURE 決策 39。`StationDwell` 的常數以十分之一秒保存（決策 35 第 9 點），W2b 換成整秒。
+
+| 參考 | 行為 | 現有 GameCore | Swift（W2b） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- | --- |
+| 參考包 `02_W2_IMPLEMENTATION_CONTRACT.md`、`01_MIGRATION_MAP.md` 的狀態機（`LoadUnloadVehicle`、`load_unload_ticks`）：ARRIVED → DOORS_OPENING → ALIGHTING／BOARDING → DWELL_HOLD → DOORS_CLOSING → DEPARTING | 到站、開門、上下車、停留、關門、發車都由模擬的 tick 推進 | 上下車在離站時一次完成（決策 35 第 3 點） | `ServiceTimes`（`arrival`、`exchangeEnd`、`closing`、`departure`）、`GameWorld.stepDwell(_:at:)`、`departService(_:at:unroutable:)`；畫面的 `DwellPhase` | 秒 | faithful：下車與上車同時進行（參考的「before/while」擇 while） |
+| 參考包 `serviceTicks = max(ceil(alighting / alightingRate), ceil(boarding / boardingRate))` | 上下車的時間取較多的一邊 | — | `ServiceDwell.exchangeSeconds(_:cars:)`，`GameWorld.exchangePassengers(_:at:)` 回傳 `max(下車, 上車)` | 人 → 秒，進位 | faithful |
+| 參考包 `departureTick = max(arrival + minimumDwell, scheduledDeparture（timetable-hold）, arrival + dwellTicks)`，`dwellTicks = doorOpen + serviceTicks + doorClose + platformCongestionPenalty` | 早到等排定出發，誤點做完就走；沒有乘客也有最短停站 | 決策 20 的出發閘門：早到等、誤點的下一步就走，沒有停站時間 | `GameWorld.closingStart(of:stop:cycle:times:)` = `max(exchangeEnd, arrival + 最短停站 − 9, 排定出發 − 9)`；`departureDue(of:)` = `closing + 9` | 秒 | faithful；`platformCongestionPenalty` 沒有做（**gap**：包裡沒有數值） |
+| 參考包 `TrainRun.actualArrival`、`actualDeparture`、`latenessTicks`，`lateness_counter`；「Delay must be a simulation value」 | 實際時刻是權威狀態，誤點由實際與排定算出 | 誤點只在 GamePresentation 由位置推導（決策 25） | `Train.times`（存檔）、`GameWorld.lateness(of:)`（秒） | 秒 | faithful |
+| `Ci/` `app__q_c234188b7c397f91.js` `DWELL_GAME_SEC = 36` | 中間站停 36 秒 | `StationDwell.metroDwell`（360 十分之一秒，沒接上） | `ServiceDwell.minimum` = 36 | 十分之一秒 → 秒 | faithful |
+| `Ci/` 同檔 `DWELL_TERMINAL_GAME_SEC = 42`，非環狀線的第一站與最後一站（`y===s[0]\|\|y===s[s.length-1]`）；來回 `2l + 2f × 36 + 2 × 42` | 端點停 42 秒 | `StationDwell.metroTerminalDwell`（420） | `ServiceDwell.terminalMinimum` = 42，時刻表的第一站、最後一站與折返的站 | 十分之一秒 → 秒 | faithful；折返的站也算端點（我們的線路在那裡折返，相當於 `Ci` 的路段終點） |
+| `Ci/` 車門開 8 秒、關 8.3 秒 | 開關門的時間 | `StationDwell.metroDoorOpening`（80）、`metroDoorClosing`（83） | `ServiceDwell.doorOpening` = 8、`doorClosing` = 9 | 十分之一秒 → 秒，8.3 進位 | faithful（開）；機械（關：整秒步長，進位，不比參考短） |
+| `Ci/` `PARAMS.BOARDING_RATE = 2`（有定義、沒被讀、沒有單位） | — | `StationDwell.referenceBoardingRate` | `ServiceDwell.passengersPerDoorPerSecond` = 2 | 每扇門每秒的人數 | 值 faithful；單位是 **gap**（gap 10 的決定） |
+| 沒有參考 | 每節的門數 | — | `ServiceDwell.doorsPerCar` = 4 | — | **gap**：兩份網站都沒有門數，參考包只有 `doorCount` 的欄位名 |
+| `Ci/` `updateTrainAtStation`（到站那一刻一次下車、上車） | 到站時上下車 | 離站時一次完成（過渡） | 到站 8 秒後車門開好時下車與上車（`exchangePassengers`），開著門時整分鐘釋出的人也上車（`boardPassengers`） | — | faithful（時機改回到站之後）；整分鐘的補上車是 gap（`Ci` 停站期間不再上車），因為我們的乘客在整分鐘釋出 |
+| `Ci/` 客滿時留在月台的人 | — | 離站時把上不去的人記進 `refused` | 客滿的列車離站時，把還在等、可以搭它的人記進 `refused` | 次數 | faithful（決策 35 的次數）；計數的時刻是 gap |
+| `Railway/site_archive_clean/data/*.json` 的每站停站、`TRTC_OFFICIAL_COAST_DWELL_SEC` 等 | 真實時刻表的停站 | `StationDwell` 的純函式（決策 35 第 9 點） | 不用 | — | 不移植（決定）：遊戲的停站照 `Ci/` 的遊戲規則；真實時刻表的停站留給之後匯入真實資料時 |
+| 參考包「Transfer passengers re-enter station waiting demand」、`platformCongestionPenalty` | 轉乘、月台擁擠 | — | 沒有 | — | 延後：轉乘在 Phase 5；擁擠是 gap |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -177,8 +197,8 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 
 | 參考包的項目 | 現有 GameCore | 預計 | 分類 |
 | --- | --- | --- | --- |
-| P0-1 到站 → 開門 → 下車 → 上車 → 停留 → 關門 → 發車的狀態機（`LoadUnloadVehicle`、`load_unload_ticks`、`order.gradual_loading`） | `StationDwell`（G1b）已移植兩個網站的停站規則，還沒接上；上下車在離站時一次完成（決策 35 的過渡做法） | W2 | 狀態機：faithful 候選；停站依不依乘客人數見 gap 10（已決定） |
-| P0-2 時刻表與誤點（`lateness_counter`、`timetable_start`、`CmdChangeTimetable`、`TicksPerTimetableUnit`） | 決策 20 的出發閘門：早到的列車等到排定出發；誤點的列車到站後下一步就出發。誤點只在 GamePresentation 由位置推導（決策 25），不記錄實際的到達與出發時刻 | W2：實際的到達與出發時刻成為存檔的權威狀態，誤點改成 GameCore 的查詢 | faithful（語義） |
+| P0-1 到站 → 開門 → 下車 → 上車 → 停留 → 關門 → 發車的狀態機（`LoadUnloadVehicle`、`load_unload_ticks`、`order.gradual_loading`） | W2b ✅（決策 39）：`ServiceTimes` 與每秒的停站，見 [Stage W2b](#stage-w2b停站上下車與誤點) | — | faithful；停站依乘客人數延長（gap 10 的決定） |
+| P0-2 時刻表與誤點（`lateness_counter`、`timetable_start`、`CmdChangeTimetable`、`TicksPerTimetableUnit`） | W2b ✅（決策 39）：實際的到達與出發時刻是存檔的權威狀態，`lateness(of:)` 是 GameCore 的查詢；早到的列車等到排定出發，誤點的列車停完最短停站就走 | — | faithful（語義）；`TicksPerTimetableUnit` 不採用（gap 2） |
 | P0-3 以指令修改世界（`Cmd...`：驗證、成本、執行） | 已有：`GameWorld` 的指令、原子性、typed error（決策 4、5） | 預估成本與預覽可以在世界的 value 複本上試跑；需要時再加查詢 | 大部分已涵蓋 |
 | P0-4 固定的模擬 tick，與畫面分離 | 已有（決策 3、12） | — | 已涵蓋 |
 | P1-5 乘客群組（`CargoPacket`） | 已有：依起訖、線路、方向分組（G1a，決策 34） | 轉乘：Phase 5 | 已涵蓋；轉乘還沒有 |
@@ -238,6 +258,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 10. **停站依不依乘客人數。** `Ci/`、`Railway/` 的停站是固定的秒數（`StationDwell`）。參考包建議 `max(下車人數 ÷ 下車速率, 上車人數 ÷ 上車速率)` 加上開關門的時間，OpenTTD 的 gradual loading 也是依量裝卸。兩邊不一致，要作者決定。
     - **決定（2026-10-01）**：以 `StationDwell` 為最短停站（參考包也要求沒有乘客時仍有最短停站），上下車的人多時才延長，延長的部分照參考包的 `max(下車人數 ÷ 速率, 上車人數 ÷ 速率)`。
     - 速率與門數是 gap，在 W2b 定：起點是 `Ci/` 有定義但沒被讀的 `PARAMS.BOARDING_RATE = 2`，它沒有單位，要由我們補上。
+    - **W2b 的實作**（決策 39）：每扇門每秒 2 人、每節 4 扇門，上下車同時進行，時間是較多的一邊，進位到整秒；最短停站 36／42 秒包含開門 8 秒、關門 9 秒。見上面的 [Stage W2b 對照](#stage-w2b停站上下車與誤點)。
 
 ## 建議的實作順序
 
@@ -257,7 +278,7 @@ V 實際放行 → T、U（保證不互穿）
 1. **W1** ✅（ARCHITECTURE 決策 33）：翻譯 `buildProfile`、`profTimeToProg`、`profProgToTime` 與性能表。純計算，golden 與 property digest 都不變。
 2. **G1** ✅（第一個能玩的經營閉環，見 ROADMAP）：不依賴這份對照的任何 Stage。它對照的是 `Ci/` 的乘客與票價，不是 `Railway/`。
 3. **W2a** ✅（ARCHITECTURE 決策 37）：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
-4. **W2b**：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
+4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c**：曲線接到行程與移動（gap 1）。
 6. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 7. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。

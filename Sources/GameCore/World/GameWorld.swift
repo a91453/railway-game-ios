@@ -935,6 +935,9 @@ public struct GameWorld: Equatable, Sendable {
         guard isStopped(train, at: first.station) else { throw .trainNotAtFirstStop(id) }
 
         trains[index].execution = .waitingAtStop(0, cycle: train.startingCycle(at: clock.now))
+        // Stage W2b: starting counts as arriving at the first stop now, so
+        // the train dwells there before it leaves.
+        trains[index].times = ServiceTimes(arrival: clock.now)
     }
 
     /// Stops the train's service, wherever it has got to. Only the
@@ -953,6 +956,7 @@ public struct GameWorld: Equatable, Sendable {
         guard trains[index].execution != nil else { throw .trainServiceNotActive(id) }
 
         trains[index].execution = nil
+        trains[index].times = nil
         abandonRiders(of: id)
     }
 
@@ -1197,17 +1201,16 @@ public struct GameWorld: Equatable, Sendable {
     /// Trains move every second (phase 2 below), each second its share of
     /// its rate per minute: second `s` of a minute (from 0) takes a train
     /// `⌊rate·(s + 1)/60⌋ − ⌊rate·s/60⌋` units, so a whole minute takes it
-    /// its rate, as when a basic step was a minute. Arrivals (phase 4) are
-    /// recorded every second too, as a train stops at its stop, so a saved
-    /// world never has a service travelling along a spent path. Everything
-    /// else still happens on whole minutes, as it did then: the phases
-    /// before movement at the start of minute `T`. (Stage W2b moves them to
-    /// the second, with the references' dwell.) So the steps from minute
-    /// `T` to `T + 1` have six phases, each taking the lines in ascending
-    /// ``LineID`` order and the trains in ascending ``TrainID`` order:
+    /// its rate. Services run on the second too (Stage W2b): a train dwells
+    /// at each call (see ``ServiceTimes``) and leaves at whichever second
+    /// its doors have closed. The accounts, passengers and dispatch stay on
+    /// whole minutes. So each step from second `t` to `t + 1` has these
+    /// phases, each taking the lines in ascending ``LineID`` order and the
+    /// trains in ascending ``TrainID`` order:
     ///
-    /// - **Passengers at `T`** (G1a). Every pair of stations with trips
-    ///   (see ``hourlyDemand(from:to:)``), by ascending origin and then
+    /// - **At a whole minute `T`** only: the accounts settle (G1c), then
+    ///   **passengers** (G1a): every pair of stations with trips (see
+    ///   ``hourlyDemand(from:to:)``), by ascending origin and then
     ///   destination, releases its share of minute `T` at the origin, where
     ///   the passengers wait for their trip (see
     ///   ``passengerTrip(from:to:)``) or, when the station is full, leave at
@@ -1216,49 +1219,55 @@ public struct GameWorld: Equatable, Sendable {
     ///   how far into the hour the minute is: `((60 − m)·R_h + m·R_{h+1}) /
     ///   3600` at minute `m` of hour `h`, with the fraction kept for the next
     ///   minute. So a pair releases exactly its daily trips over any 1440
-    ///   minutes in a row. This phase reads no train and changes none.
-    /// 0. **Dispatch at `T`.** Each line sends out at most one of its
-    ///    trains on a round trip (see below), and that train leaves its
-    ///    first call at once, as phase 1 would have it leave.
-    /// 1. **Departures at `T`.** Every train whose service waits at a stop
-    ///    with a scheduled departure of `T` or earlier leaves it (see below).
-    ///    Departures are those of the service's cycle: the timetable's
-    ///    times shifted by whole periods.
+    ///   minutes in a row. This reads no train and changes none.
+    /// 0. **Dispatch at `T`**, only at a whole minute: each line sends out
+    ///    at most one of its trains on a round trip (see below). Its service
+    ///    starts as if it had just arrived at the first call, where it
+    ///    dwells before it leaves.
+    /// 1. **Services at `t`.** Every train whose service waits at a stop
+    ///    moves its dwell on, and then leaves if it is due:
     ///
-    ///    **Boarding** (G1b). Then every stop left in phases 0 and 1 is
-    ///    served, in the order it was left: those riding the train to that
-    ///    stop's station get off, and a train on a line takes on the
-    ///    passengers waiting there for its line and direction whose
-    ///    destination it calls at before it next turns round, the farthest
-    ///    first, up to its ``Train/capacity`` (see ``riders(of:)`` and
-    ///    ``PassengerLedger``). This reads the trains and changes only the
-    ///    passengers. Serving a stop in one step as the train leaves it is
-    ///    transitional: W2 replaces it with the references' dwell (see
-    ///    ``StationDwell``) on the game's clock.
-    /// 2. **Movement.** Every second, every train travels up to its share of
-    ///    its rate (see ``TrainMovement``).
-    /// 3. The clock moves on a second, to `T + 1` at the end of the minute.
-    /// 4. **Arrivals.** Every second, every train whose service is
-    ///    travelling to a stop and that is now stopped at that stop's
-    ///    station (see ``stationsStoppedAt(by:)``) waits at that stop.
+    ///    - **Doors open.** ``ServiceDwell/doorOpening`` after the train
+    ///      arrived, those riding it to the stop's station get off (at a
+    ///      stop where it turns round or its service ends, everyone does),
+    ///      and, before its last stop, a train on a line takes on the
+    ///      passengers waiting there for its line and direction whose
+    ///      destination it calls at before it next turns round, the
+    ///      farthest first, up to its ``Train/capacity`` (G1b; see
+    ///      ``riders(of:)`` and ``PassengerLedger``). Both use the doors at
+    ///      once, so the exchange lasts the larger number's
+    ///      ``ServiceDwell/exchangeSeconds(_:cars:)``.
+    ///    - **Doors held open.** At each whole minute while they are open,
+    ///      newly released passengers board too, and the exchange runs on.
+    ///    - **Doors closing.** They start closing at the first second when
+    ///      the exchange is over and, once they have closed, the train will
+    ///      have dwelt its least (``ServiceDwell/minimumDwell(isTerminal:)``)
+    ///      and reached its scheduled departure: an early train holds for
+    ///      its timetable, a late one leaves as soon as it can.
+    ///    - **Departure**, ``ServiceDwell/doorClosing`` later (see below).
+    ///      Departures are those of the service's cycle: the timetable's
+    ///      times shifted by whole periods. A full train counts those it
+    ///      could not take as refused, and a line's train counts the
+    ///      departure (G1c).
+    /// 2. **Movement.** Every train travels its share of its rate for
+    ///    second `t` (see ``TrainMovement``).
+    /// 3. The clock moves on to `t + 1`.
+    /// 4. **Arrivals.** Every train whose service is travelling to a stop
+    ///    and that is now stopped at that stop's station (see
+    ///    ``stationsStoppedAt(by:)``) waits at that stop, arriving at
+    ///    `t + 1`; its dwell starts in phase 1 of the next step.
     ///
-    /// Within a minute only movement and arrivals happen, and movement
-    /// depends on the map alone, so the seconds of a minute together move
-    /// every train exactly as far as one move of its whole rate would: the
-    /// trains stand where they stood when a basic step was a minute at
-    /// every whole minute. A train stopped at its stop stays there until a
-    /// departure, so recording its arrival within the minute rather than at
-    /// its end changes nothing a whole minute sees.
     /// Without traffic control trains do not interact, so the order only
-    /// fixes when each is updated. A train that arrives in phase 4 leaves
-    /// in phase 1 of the next minute at the earliest, even when its
-    /// scheduled departure is the minute it arrived, and a departure due
-    /// within a minute waits for the next whole minute. Whenever the clock
-    /// can hold the whole batch, `advance(ticks: n)` is the same as `n`
-    /// calls of `advance(ticks: 1)`, and one tick at a speed the same as
-    /// ticks at slower speeds that run the same seconds, apart from the
-    /// speed itself. (Near the clock's limit a batch is rejected whole,
-    /// while single ticks may still fit one at a time.)
+    /// fixes when each is updated. Between the seconds at which something
+    /// happens (a whole minute, a dwell moving on, a train coming to the
+    /// end of its route) only movement does, and it depends on the map
+    /// alone, so those seconds are taken together: they move every train
+    /// exactly as far as one second at a time would. Whenever the clock can
+    /// hold the whole batch, `advance(ticks: n)` is the same as `n` calls
+    /// of `advance(ticks: 1)`, and one tick at a speed the same as ticks at
+    /// slower speeds that run the same seconds, apart from the speed
+    /// itself. (Near the clock's limit a batch is rejected whole, while
+    /// single ticks may still fit one at a time.)
     ///
     /// A train that cannot enter the next link of its continuation (the track
     /// was removed after the continuation was set) waits at its node, and
@@ -1267,10 +1276,9 @@ public struct GameWorld: Equatable, Sendable {
     /// use is dropped, so a train never catches up.
     ///
     /// **Services** (see ``startTrainService(_:)``). A service never leaves a
-    /// stop before its scheduled departure, and adds no dwell of its own: a
-    /// train that arrives early waits for its departure, and one that
-    /// arrives at or after its departure leaves in the next step. Leaving
-    /// stop `i`:
+    /// stop before its scheduled departure, and never before its dwell
+    /// there is over (phase 1). Starting a service counts as arriving at
+    /// its first stop. Leaving stop `i`:
     ///
     /// - A stop marked ``ScheduledStop/reverses`` first turns the train
     ///   round where it stands, as ``reverseTrain(_:)`` would, and the rest
@@ -1290,11 +1298,7 @@ public struct GameWorld: Equatable, Sendable {
     /// - A path of no distance means the train is already stopped at the
     ///   next call's station (a repeated station, a platform both share, or
     ///   a repeating timetable that ends where it starts). It arrives there
-    ///   at once, and leaves it too in the same phase if that departure has
-    ///   also come. In one phase a service leaves at most as many stops as
-    ///   its timetable has: every stop of a timetable that runs once, and at
-    ///   most one whole cycle of a repeating one, which carries on in the
-    ///   next step.
+    ///   at once, and dwells there as at any call.
     /// - A train the service turns round, or leaves at its last stop, stands
     ///   where it is: on the track network its path now ends there (see
     ///   ``TrainMovement/end``), so it does not run on along its edge.
@@ -1313,11 +1317,10 @@ public struct GameWorld: Equatable, Sendable {
     /// round first where the stop says so (see ``reservedResources(of:)``);
     /// where another train holds some of it, nothing changes (the train is
     /// not turned round either) and the service tries again at the next
-    /// step. A line's train is ready only if its first departure can take
-    /// its route; one that cannot is not sent out, and the line's last
-    /// dispatch stays as it was. Earlier departures in a step take their
-    /// routes first: the lines' in phase 0, in line order, then the
-    /// services' in phase 1, in train ID order. A train's reservation is
+    /// step. A line's train is ready only if its first departure could take
+    /// its route when it is sent out; one that cannot is not sent out, and
+    /// the line's last dispatch stays as it was. Earlier departures in a
+    /// step take their routes first, in train ID order. A train's reservation is
     /// released when it comes to the end of its route, in phase 2. Trains
     /// move as they always have: the whole route was theirs before they
     /// set off.
@@ -1340,29 +1343,33 @@ public struct GameWorld: Equatable, Sendable {
     ///   faces when they are equal).
     ///
     /// The first ready train in ID order gets a timetable for one round trip
-    /// leaving at `T`, and its service starts at the first call: it leaves
-    /// in phase 1 of the same step. The times come from that trip at the
-    /// line's rate, with the dwells of ``ServiceLine``: out to the last
-    /// call, where it turns round, and back to the first, where it turns
-    /// round and the service ends; stops a pattern does not call at are
-    /// not in the timetable. The train then waits there until its service
+    /// sent out at `T`, and its service starts at the first call, where it
+    /// dwells (phase 1): the timetable has it leave
+    /// ``ServiceDwell/terminalMinimum`` after `T`. The times come from that
+    /// trip at the line's rate, with the dwells of ``ServiceLine``: out to
+    /// the last call, where it turns round, and back to the first, where it
+    /// turns round and the service ends; stops a pattern does not call at
+    /// are not in the timetable. The train then waits there until its service
     /// sends it out again. So a service never runs more trains than it runs
     /// at its level: when it runs fewer, the trains coming back wait at the
     /// first call; when it runs more, only trains waiting there can go. A
     /// train late back makes the next one leave late, never early.
     ///
-    /// When a whole minute changes no train (no train moves, no service
-    /// leaves, arrives or ends, and no line sends a train out), no later
-    /// minute of this call can change anything before the next scheduled
-    /// departure of a waiting service, or the next minute at which a line's
-    /// service with a ready train might send it out (the map and every train's inputs
-    /// stay the same until the next command, a departure that found no
-    /// route finds none later in the call, one whose route is held finds
-    /// it held until some train moves, and a line's window, level and
-    /// headways change only at known minutes), so the clock moves on at once to that minute,
-    /// or to the end of the batch, releasing each skipped minute's
-    /// passengers on the way. This is an exact shortcut, not an
-    /// approximation.
+    /// When a whole minute changes no train (no train moves, no service's
+    /// dwell moves on, no service leaves, arrives or ends, and no line
+    /// sends a train out), no later minute of this call can change anything
+    /// before the minute of the next second at which a service's dwell
+    /// moves on by itself (see ``nextServiceEvent(after:)``), or the next
+    /// minute at which a line's service with a ready train might send it
+    /// out (the map and every train's inputs stay the same until the next
+    /// command, a departure that found no route finds none later in the
+    /// call, one whose route is held finds it held until some train moves,
+    /// and a line's window, level and headways change only at known
+    /// minutes), so the clock moves on at once to that minute, or to the
+    /// end of the batch, releasing each skipped minute's passengers on the
+    /// way. While passengers are released and a train waits with its doors
+    /// open, minutes are not skipped: those released may board. This is an
+    /// exact shortcut, not an approximation.
     ///
     /// - Throws: ``GameError/clockOverflow`` if game time would pass the
     ///   largest second the clock can hold. This is checked before any train
@@ -1389,18 +1396,28 @@ public struct GameWorld: Equatable, Sendable {
                 if release != nil {
                     releasePassengers(at: start, &release!)
                 }
-                var departures: [StopDeparture] = []
-                let dispatched = dispatchTrains(memo: &memo, unroutable: &unroutable, departures: &departures)
-                let departed = departTrains(unroutable: &unroutable, departures: &departures)
-                serve(departures)
-                changed = dispatched || departed
+                if dispatchTrains(memo: &memo) {
+                    changed = true
+                }
             }
-            // The seconds to the end of this minute, or of the batch: they
-            // move the trains exactly as far as one second at a time would,
-            // and a train that stops at its stop in them stays there, so
-            // its arrival is recorded once, after them.
+            // Stage W2b: every service's dwell, and the departures due now.
+            if runServices(at: start, unroutable: &unroutable) {
+                changed = true
+            }
+            // The seconds to the end of this minute, or of the batch, or to
+            // the next second at which a service's dwell moves on or a
+            // train comes to the end of its route: they move the trains
+            // exactly as far as one second at a time would, and nothing
+            // else happens in them.
             let second = start.secondOfMinute
-            let span = min(remaining, minute - second)
+            var span = min(remaining, minute - second)
+            if let event = nextServiceEvent(after: start) {
+                let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
+                span = overflow ? span : min(span, gap)
+            }
+            if let end = secondsUntilARouteEnds(fromSecond: second, within: span) {
+                span = end
+            }
             if moveTrains(fromSecond: second, for: span) {
                 changed = true
             }
@@ -1410,7 +1427,8 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             if !changed, span == minute {
-                let wake = [minutesUntilNextDeparture(), minutesUntilNextDispatch(memo: &memo)].compactMap { $0 }.min()
+                let wake = [wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo)]
+                    .compactMap { $0 }.min()
                 let idle = min(remaining / minute, wake ?? remaining / minute)
                 if release != nil || accounts.mode == .management {
                     // Releasing passengers (G1a) and settling the accounts
@@ -1467,17 +1485,16 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
     /// each service, its own first and then its patterns in order, sends
-    /// out at most one of its trains (see ``advance(ticks:)``), which leaves
-    /// its first call at once, as phase 1 would have it leave. Returns
-    /// whether any was sent out.
+    /// out at most one of its trains (see ``advance(ticks:)``). Its service
+    /// starts at the first call as if it had just arrived there (Stage
+    /// W2b): it dwells there, and leaves when its doors have closed.
+    /// Returns whether any was sent out.
     ///
-    /// Leaving at once changes nothing without traffic control: departures
-    /// do not interact, and no later dispatch reads where the train is.
-    /// Under traffic control (Stage T) it makes sending a train out and
-    /// taking its route one step: the train is sent out only when it can
-    /// take its route (see ``readyTrain(of:_:memo:)``), and no departure in
-    /// between can take it first.
-    private mutating func dispatchTrains(memo: inout DispatchMemo, unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
+    /// Under traffic control (Stage T) the train is sent out only when it
+    /// could take its route now (see ``readyTrain(of:_:memo:)``); it takes
+    /// it when it leaves, and waits for it like any service if another
+    /// train has taken some of it meanwhile.
+    private mutating func dispatchTrains(memo: inout DispatchMemo) -> Bool {
         let now = clock.now
         var dispatched = false
         for index in lines.indices {
@@ -1485,14 +1502,16 @@ public struct GameWorld: Equatable, Sendable {
                 let line = lines[index]
                 guard isDispatchDue(line, service, at: now, memo: &memo),
                       let (ready, trip) = readyTrain(of: line, service, memo: &memo),
-                      let timetable = trip.timetable(calling: line.stops, leavingAt: now)
+                      let timetable = trip.timetable(calling: line.stops, sentOutAt: now)
                 else { continue }
                 trains[ready].timetable = timetable
                 trains[ready].timetablePeriod = nil
                 trains[ready].execution = .waitingAtStop(0)
+                // Stage W2b: the train is sent out as if it had just
+                // arrived at the first call; it dwells there first.
+                trains[ready].times = ServiceTimes(arrival: now)
                 lines[index].recordDispatch(ofService: service, at: now)
                 dispatched = true
-                departService(ready, unroutable: &unroutable, departures: &departures)
             }
         }
         return dispatched
@@ -1577,11 +1596,12 @@ public struct GameWorld: Equatable, Sendable {
     /// the trip says so, on its way along the first leg. `nil` if the
     /// trip's times would not fit.
     func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID]) -> Train? {
-        guard let timetable = trip.timetable(calling: stops, leavingAt: clock.now) else { return nil }
+        guard let timetable = trip.timetable(calling: stops, sentOutAt: clock.now) else { return nil }
         var sent = train
         sent.timetable = timetable
         sent.timetablePeriod = nil
         sent.execution = .waitingAtStop(0)
+        sent.times = ServiceTimes(arrival: clock.now)
         return leaving(sent, stop: 0, cycle: 0).train
     }
 
@@ -1624,55 +1644,120 @@ public struct GameWorld: Equatable, Sendable {
         return soonest
     }
 
-    /// Phase 1 of a basic step: every waiting service whose scheduled
-    /// departure has come leaves its stop, in ascending ID order. Returns
-    /// whether any service changed.
-    private mutating func departTrains(unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
+    /// The services' phase of a basic step (Stage W2b): every train whose
+    /// service waits at a stop, in ascending ID order, moves its dwell on
+    /// (see ``stepDwell(_:at:)``) and then leaves if its departure is due
+    /// (see ``departService(_:at:unroutable:)``). Returns whether any
+    /// service changed.
+    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>) -> Bool {
         var changed = false
-        for index in trains.indices where departService(index, unroutable: &unroutable, departures: &departures) {
-            changed = true
+        for index in trains.indices where trains[index].execution != nil {
+            if stepDwell(index, at: now) {
+                changed = true
+            }
+            if departService(index, at: now, unroutable: &unroutable) {
+                changed = true
+            }
         }
         return changed
     }
 
-    /// The departures of train `index`'s service at the current minute:
-    /// from each stop whose scheduled departure has come, one after another
-    /// (see ``leaving(_:stop:cycle:)``). Returns whether the service changed.
+    /// Moves on the dwell of train `index`, if its service waits at a stop
+    /// (see ``ServiceTimes``), and returns whether it changed:
     ///
-    /// Under traffic control (Stage T) each departure takes the whole route
+    /// - once its doors have opened, the passengers for that stop get off
+    ///   and those waiting for the train get on (see
+    ///   ``exchangePassengers(_:at:)``), taking as long as the larger
+    ///   number does (see ``ServiceDwell/exchangeSeconds(_:cars:)``);
+    /// - while its doors stay open, at each whole minute, when new
+    ///   passengers have come, they get on too, after those still getting
+    ///   on;
+    /// - its doors start closing once the exchange is over, its least dwell
+    ///   will be over when they have closed, and (when it is early) they
+    ///   close for its scheduled departure: at the latest of
+    ///   ``closingStart(of:stop:cycle:)``.
+    private mutating func stepDwell(_ index: Int, at now: GameTime) -> Bool {
+        guard case .waitingAtStop(let stop, let cycle)? = trains[index].execution, var times = trains[index].times else { return false }
+        var changed = false
+        if let end = times.exchangeEnd {
+            if times.closing == nil, now.isWholeMinute {
+                let boarded = boardPassengers(trains[index], at: stop)
+                if boarded > 0 {
+                    times.exchangeEnd = Self.saturating(max(end, now), plus: ServiceDwell.exchangeSeconds(boarded, cars: trains[index].cars))
+                    changed = true
+                }
+            }
+        } else {
+            guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
+            let busy = exchangePassengers(index, at: stop)
+            times.exchangeEnd = Self.saturating(now, plus: ServiceDwell.exchangeSeconds(busy, cars: trains[index].cars))
+            changed = true
+        }
+        if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
+            times.closing = now
+            changed = true
+        }
+        trains[index].times = times
+        return changed
+    }
+
+    /// When the doors of `train`, waiting at timetable entry `stop` of
+    /// `cycle` with `times`, start closing (Stage W2b): the latest of the
+    /// end of its exchange, its least dwell (see
+    /// ``ServiceDwell/minimumDwell(isTerminal:)``) less the time the doors
+    /// take to close, and its scheduled departure less that time. `nil`
+    /// while the doors are still opening.
+    func closingStart(of train: Train, stop: Int, cycle: Int64, times: ServiceTimes) -> GameTime? {
+        guard let exchangeEnd = times.exchangeEnd else { return nil }
+        let entry = train.timetable[stop]
+        let isTerminal = entry.reverses || stop == 0 || stop == train.timetable.count - 1
+        let leastDwell = Self.saturating(times.arrival, plus: ServiceDwell.minimumDwell(isTerminal: isTerminal) - ServiceDwell.doorClosing)
+        // Scheduled times are never negative, so this cannot overflow.
+        let scheduled = GameTime(seconds: train.scheduledDeparture(of: stop, cycle: cycle).seconds - ServiceDwell.doorClosing)
+        return max(exchangeEnd, leastDwell, scheduled)
+    }
+
+    /// When the service of `train`, waiting at a stop with its doors
+    /// closing, may leave: once they have closed. `nil` while it is not
+    /// waiting, or its doors are open.
+    func departureDue(of train: Train) -> GameTime? {
+        guard case .waitingAtStop? = train.execution, let closing = train.times?.closing else { return nil }
+        return Self.saturating(closing, plus: ServiceDwell.doorClosing)
+    }
+
+    /// `time` plus `seconds`, or the largest time when that does not fit.
+    static func saturating(_ time: GameTime, plus seconds: Int64) -> GameTime {
+        let (sum, overflow) = time.seconds.addingReportingOverflow(seconds)
+        return GameTime(seconds: overflow ? (seconds < 0 ? .min : .max) : sum)
+    }
+
+    /// Train `index`'s service leaves the stop it waits at if its departure
+    /// is due (see ``departureDue(of:)``); see ``leaving(_:stop:cycle:)``.
+    /// Returns whether the service changed.
+    ///
+    /// Under traffic control (Stage T) the departure takes the whole route
     /// to the next call at once (see ``reserving(_:)``). Where another train
     /// holds some of it, nothing changes: the train is not turned round
-    /// either, and the service tries again at the next step. Unlike a
-    /// departure without a route, this is not remembered for the rest of
-    /// the call: trains move and free track within one.
+    /// either, and it tries again at the next step. Unlike a departure
+    /// without a route, this is not remembered for the rest of the call:
+    /// trains move and free track within one.
     @discardableResult
-    private mutating func departService(_ index: Int, unroutable: inout Set<TrainID>, departures: inout [StopDeparture]) -> Bool {
-        var changed = false
-        let now = clock.now
-        // Every pass leaves one stop. A timetable that runs once ends
-        // within its stops; a repeating one could go round forever when
-        // it is late and calls at one station only, so each train leaves
-        // at most one whole cycle of stops per phase.
-        var passes = 0
-        while passes < trains[index].timetable.count,
-              case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
-              trains[index].scheduledDeparture(of: stop, cycle: cycle) <= now,
+    private mutating func departService(_ index: Int, at now: GameTime, unroutable: inout Set<TrainID>) -> Bool {
+        guard case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
+              let due = departureDue(of: trains[index]), due <= now,
               !unroutable.contains(trains[index].id),
-              trains[index].placement != nil {
-            passes += 1
-            let departure = leaving(trains[index], stop: stop, cycle: cycle)
-            guard let moved = departure.train else {
-                // Nothing changes: the train is not turned round either.
-                unroutable.insert(trains[index].id)
-                break
-            }
-            guard case .granted(let train) = reserving(moved) else { break }
-            trains[index] = train
-            departures.append(StopDeparture(train: train.id, stop: stop, distance: departure.distance))
-            changed = true
-            if case .completes = departure { break }
+              trains[index].placement != nil
+        else { return false }
+        let departure = leaving(trains[index], stop: stop, cycle: cycle)
+        guard let moved = departure.train else {
+            // Nothing changes: the train is not turned round either.
+            unroutable.insert(trains[index].id)
+            return false
         }
-        return changed
+        guard case .granted(let train) = reserving(moved) else { return false }
+        trains[index] = train
+        serve(departureOf: train.id, from: stop, distance: departure.distance)
+        return true
     }
 
     /// What leaving stop `stop` (of cycle `cycle`) does to `train`, whose
@@ -1723,19 +1808,24 @@ public struct GameWorld: Equatable, Sendable {
             // The last stop's departure: the service is complete.
             stand(&moved, at: start)
             moved.execution = nil
+            moved.times = nil
             return .completes(moved)
         }
         guard let path = path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
             return .noRoute
         }
         stand(&moved, at: start)
+        let now = clock.now
         if path.distance == 0 {
-            // Already stopped at the next call's station.
+            // Already stopped at the next call's station: it arrives there
+            // now, and dwells there as at any call (Stage W2b).
             moved.execution = .waitingAtStop(next.stop, cycle: next.cycle)
+            moved.times = ServiceTimes(arrival: now, departure: now)
             return .arrives(moved)
         }
         follow(path, &moved)
         moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
+        moved.times = ServiceTimes(arrival: train.times?.arrival ?? now, departure: now)
         return .setsOff(moved, distance: path.distance)
     }
 
@@ -1780,30 +1870,97 @@ public struct GameWorld: Equatable, Sendable {
                   isStopped(trains[index], at: trains[index].timetable[stop].station)
             else { continue }
             trains[index].execution = .waitingAtStop(stop, cycle: cycle)
+            trains[index].times = ServiceTimes(arrival: clock.now, departure: trains[index].times?.departure)
             arrived = true
         }
         return arrived
     }
 
-    /// The whole minutes from now, the start of a minute, until the start
-    /// of the minute at which the earliest scheduled departure (in its
-    /// service's cycle), after the minute just stepped, of a waiting service
-    /// is due, or `nil` if there is none.
-    /// Departures at or before that minute's start are left out: after a
-    /// minute that changed nothing, each of those found no route. One after
-    /// it but not after now (Stage W2a: a departure can fall between two
-    /// minutes) is due now. The clock may be before second 0, so a gap too
-    /// large for an `Int64` is given as `Int64.max`, which is more minutes
-    /// than any batch can have left.
-    private func minutesUntilNextDeparture() -> Int64? {
+    /// The first second after `now` at which some service's dwell moves on
+    /// by itself (Stage W2b), or `nil` if none does: a train's doors finish
+    /// opening, its doors start closing, or its departure comes. A departure
+    /// that has come and could not be made (no route, or its route held)
+    /// is not an event: it is tried again at every step, and can only
+    /// succeed once something else has changed. Boarding at whole minutes
+    /// needs no event: every whole minute ends a step anyway.
+    func nextServiceEvent(after now: GameTime) -> GameTime? {
+        var soonest: GameTime?
+        for train in trains {
+            guard case .waitingAtStop(let stop, let cycle)? = train.execution, let times = train.times else { continue }
+            let event: GameTime?
+            if times.exchangeEnd == nil {
+                event = Self.saturating(times.arrival, plus: ServiceDwell.doorOpening)
+            } else if times.closing == nil {
+                event = closingStart(of: train, stop: stop, cycle: cycle, times: times)
+            } else {
+                event = departureDue(of: train)
+            }
+            if let event, event > now, event < soonest ?? .init(seconds: .max) {
+                soonest = event
+            }
+        }
+        return soonest
+    }
+
+    /// The whole minutes from now, the start of a minute, that an idle step
+    /// may skip before the next service event at or after now (see
+    /// ``nextServiceEvent(after:)``), or `nil` if there is none. The step
+    /// just taken ended at now, so an event at now has not been seen yet.
+    /// None at all while `passengersWaiting` and a train waits with its
+    /// doors open: passengers who come at a whole minute get on.
+    private func wholeMinutesUntilNextServiceEvent(passengersWaiting: Bool) -> Int64? {
         let now = clock.now
-        let stepped = GameTime(seconds: now.seconds - GameTime.secondsPerMinute)
-        return trains.compactMap { train -> Int64? in
-            guard case .waitingAtStop(let stop, let cycle)? = train.execution else { return nil }
-            let departure = train.scheduledDeparture(of: stop, cycle: cycle)
-            guard departure > stepped else { return nil }
-            return departure <= now ? 0 : Self.minutes(from: now, until: departure)
-        }.min()
+        if passengersWaiting, trains.contains(where: { train in
+            if case .waitingAtStop? = train.execution, train.times?.closing == nil { return true }
+            return false
+        }) {
+            return 0
+        }
+        guard let event = nextServiceEvent(after: Self.saturating(now, plus: -1)) else { return nil }
+        let (gap, overflow) = event.seconds.subtractingReportingOverflow(now.seconds)
+        return overflow ? .max : gap / GameTime.secondsPerMinute
+    }
+
+    /// The seconds, from second `second` of a minute and at most `span`, in
+    /// which the first placed train with a rate comes to the end of the way
+    /// it can go (see ``routeStretches(of:)``), or `nil` if none does
+    /// within `span` (Stage W2b): its service arrives then, or its route is
+    /// released, so the step ends there.
+    ///
+    /// - Precondition: `0 <= second` and `second + span <= 60`.
+    private func secondsUntilARouteEnds(fromSecond second: Int64, within span: Int64) -> Int64? {
+        var soonest: Int64?
+        for train in trains where train.movement.rate > 0 && train.position != nil {
+            let route = routeStretches(of: train)
+            guard route.moves else { continue }
+            var left: Int64 = 0
+            for stretch in route.stretches {
+                let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
+                left = overflow ? .max : sum
+            }
+            let limit = soonest.map { $0 - 1 } ?? span
+            let rate = train.movement.rate
+            guard limit >= 1, TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + limit) >= left else { continue }
+            // A grid route counts links that are not laid now: a train held
+            // up on the way never comes to its end, however far it may go.
+            let end = travelling(train, distance: left)
+            var arrived = train
+            arrived.position = end.position
+            arrived.movement.cursor = end.cursor
+            guard !routeStretches(of: arrived).moves else { continue }
+            // The least `k` whose distance covers what is left.
+            var (low, high) = (Int64(1), limit)
+            while low < high {
+                let middle = (low + high) / 2
+                if TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + middle) >= left {
+                    high = middle
+                } else {
+                    low = middle + 1
+                }
+            }
+            soonest = low
+        }
+        return soonest
     }
 
     /// The travel of `span` basic steps from second `second` of a minute,
@@ -1818,14 +1975,8 @@ public struct GameWorld: Equatable, Sendable {
             let movement = trains[index].movement
             let distance = TrainMovement.distance(at: movement.rate, fromSecond: second, toSecond: second + span)
             guard let position = trains[index].position, distance > 0 else { continue }
-            if case .onEdge(let traversal, let offset) = position {
-                // On the track network: the same rules, each edge as long as
-                // it is (Stage S3).
-                let travel = TrainMovement.travel(
-                    along: traversal, offset: offset, length: network.edge(traversal.edge)!.length,
-                    distance: distance, edges: movement.edges, cursor: movement.cursor, end: movement.end,
-                    enter: { networkEntry(after: $0, into: $1) }
-                )
+            let travel = travelling(trains[index], distance: distance)
+            if case .onEdge(let traversal, _) = position {
                 guard travel.position != position || travel.cursor != movement.cursor,
                       case .onEdge(_, let reached) = travel.position
                 else { continue }
@@ -1847,13 +1998,6 @@ public struct GameWorld: Equatable, Sendable {
                 moved = true
                 continue
             }
-            let travel = TrainMovement.travel(
-                from: position,
-                distance: distance,
-                continuation: movement.continuation,
-                cursor: movement.cursor,
-                mayPass: { canPass(from: $0, facing: $1, to: $2) }
-            )
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
 
             trains[index].trail = Self.trail(
@@ -1872,6 +2016,29 @@ public struct GameWorld: Equatable, Sendable {
             moved = true
         }
         return moved
+    }
+
+    /// Where placed train `train` ends up after travelling up to `distance`
+    /// units, and its cursor: on the grid, along its continuation as far as
+    /// the track lets it pass; on the track network (Stage S3), each edge as
+    /// long as it is, up to where its path ends. It depends on the map
+    /// alone.
+    private func travelling(_ train: Train, distance: Int64) -> (position: TrainPosition, cursor: Int) {
+        let movement = train.movement
+        if case .onEdge(let traversal, let offset)? = train.position {
+            return TrainMovement.travel(
+                along: traversal, offset: offset, length: network.edge(traversal.edge)!.length,
+                distance: distance, edges: movement.edges, cursor: movement.cursor, end: movement.end,
+                enter: { networkEntry(after: $0, into: $1) }
+            )
+        }
+        return TrainMovement.travel(
+            from: train.position!,
+            distance: distance,
+            continuation: movement.continuation,
+            cursor: movement.cursor,
+            mayPass: { canPass(from: $0, facing: $1, to: $2) }
+        )
     }
 
     /// Stage T: once train `index` has come to the end of its route (it
@@ -2268,6 +2435,13 @@ extension GameWorld: Codable {
             }
             if let problem = serviceProblem(of: train) {
                 return problem
+            }
+            // Stage W2b: what a service did happened no later than now: it
+            // arrived, its doors opened if its exchange has started, they
+            // started closing, and it left the call before.
+            if let times = train.times,
+               times.latest > clock.now || (times.exchangeEnd != nil && Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) > clock.now) {
+                return "Train \(train.id.rawValue)'s service times are after the clock."
             }
         }
         return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem()

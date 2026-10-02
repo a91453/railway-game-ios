@@ -202,17 +202,20 @@ extension ReferenceWorld {
         let target = trains[i].timetable[next.stop].station
         if isAtBerth(start, of: target) {
             var there = standing(start)
-            there.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            there.service = Service(stop: next.stop, waiting: true, cycle: next.cycle, arrival: clockSeconds, departure: clockSeconds)
             departedDistance = 0
             return admit(there, at: i) == nil
         }
-        guard let path = networkPathToStation(from: start.position!, station: target, length: Self.length(start)) else { return false }
+        let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
+        let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
+        routeMemo.network[key] = .some(found)
+        guard let path = found else { return false }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
         off.cursor = 0
         off.end = path.end
-        off.service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
+        off.service = Service(stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds)
         _ = admit(off, at: i)
         return false
     }

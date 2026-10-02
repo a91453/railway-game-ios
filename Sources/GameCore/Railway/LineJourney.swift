@@ -74,26 +74,30 @@ struct LineTrip: Hashable, Sendable {
     let journey: LineJourney
 
     /// The trip's timetable, calling at the line's `stops` that the legs
-    /// reach, leaving the first call at `departure`, or `nil` if a time
-    /// would pass the largest second.
+    /// reach, for a train sent out at `dispatch`, or `nil` if a time would
+    /// pass the largest second.
     ///
-    /// One call per leg and one to start: the first call (arrival and
-    /// departure at `departure`, turning round first if the trip does),
-    /// then each leg's call, arriving the leg's minutes after the call
-    /// before it left. A call between the ends stays
-    /// ``ServiceLine/dwellMinutes``; the far end stays
-    /// ``ServiceLine/terminalDwellMinutes`` and turns the train round; back
-    /// at the first call the train arrives, turns round and the trip is
-    /// over, the train waiting there for the rest of its terminal dwell. So
-    /// a train on time is back ready to leave `roundTripMinutes` after it
-    /// left. The minutes are whole minutes of game seconds.
+    /// One call per leg and one to start: the first call (arriving at
+    /// `dispatch`, turning round first if the trip does, and leaving
+    /// ``ServiceDwell/terminalMinimum`` later, the least a train dwells
+    /// there to take on passengers; Stage W2b), then each leg's call,
+    /// arriving the leg's minutes after the call before it left. A call
+    /// between the ends stays ``ServiceLine/dwellMinutes``; the far end
+    /// stays ``ServiceLine/terminalDwellMinutes`` and turns the train
+    /// round; back at the first call the train arrives, turns round and the
+    /// trip is over, the train waiting there for the rest of its terminal
+    /// dwell, which is longer than the least it needs to let everyone off.
+    /// So a train on time is back ready to be sent out again
+    /// `roundTripMinutes` after it was sent out.
     ///
-    /// - Precondition: `departure` is second 0 or later.
-    func timetable(calling stops: [StationID], leavingAt departure: GameTime) -> [ScheduledStop]? {
+    /// - Precondition: `dispatch` is second 0 or later.
+    func timetable(calling stops: [StationID], sentOutAt dispatch: GameTime) -> [ScheduledStop]? {
         let legs = journey.legs
         let farEnd = legs[legs.count / 2 - 1].to
-        var timetable = [ScheduledStop(station: stops[legs[0].from], arrival: departure, departure: departure, reverses: turnsFirst)]
-        var time = departure.seconds
+        let (departure, overflow) = dispatch.seconds.addingReportingOverflow(ServiceDwell.terminalMinimum)
+        guard !overflow else { return nil }
+        var timetable = [ScheduledStop(station: stops[legs[0].from], arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst)]
+        var time = departure
         for (index, leg) in legs.enumerated() {
             let isLast = index == legs.count - 1
             let isFarEnd = leg.to == farEnd

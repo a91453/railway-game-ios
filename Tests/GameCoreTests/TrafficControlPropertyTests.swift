@@ -570,6 +570,7 @@ final class TrafficControlPropertyTests: XCTestCase {
                 problems.append("train \(id) movement \(movement) vs \(expected.continuation) \(expected.edges) \(expected.cursor) \(String(describing: expected.end))")
             }
             if train.execution != expected.service?.execution { problems.append("train \(id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))") }
+            if train.times != expected.service?.times { problems.append("train \(id) times \(String(describing: train.times)) vs \(String(describing: expected.service?.times))") }
             if train.timetable != expected.timetable || train.timetablePeriod != expected.period { problems.append("train \(id) timetable") }
             if train.reservation != expected.reservation { problems.append("train \(id) reservation \(train.reservation) vs \(expected.reservation)") }
             let held = world.heldResources(of: train.id)
