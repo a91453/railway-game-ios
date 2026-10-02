@@ -51,6 +51,16 @@
         }
       }
     },
+    "A preset keeps the station's daily trips. They go to the stations its lines reach that have ridership, shared by their own daily trips." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "預設會保留車站的日客流。旅次分給路線能到、而且有客流的車站，依各站自己的日客流分配。"
+          }
+        }
+      }
+    },
     "Add Pattern" : {
       "localizations" : {
         "zh-Hant" : {
@@ -87,6 +97,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加入區間車或快車"
+          }
+        }
+      }
+    },
+    "Apply to Its Lines" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "套用到全線路"
           }
         }
       }
@@ -241,6 +261,26 @@
         }
       }
     },
+    "Choose a station" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇車站"
+          }
+        }
+      }
+    },
+    "Choose what kind of place the station serves. A station without ridership starts no trips and draws none." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇車站服務的地區類型。沒有客流的車站不會產生旅次，也不會吸引旅次。"
+          }
+        }
+      }
+    },
     "Chooses how fast game time runs." : {
       "localizations" : {
         "zh-Hant" : {
@@ -277,6 +317,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除"
+          }
+        }
+      }
+    },
+    "Copy Ridership" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製客流設定"
           }
         }
       }
@@ -347,6 +397,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "能源"
+          }
+        }
+      }
+    },
+    "Entries" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "進站"
+          }
+        }
+      }
+    },
+    "Entries start their trip here and exits end it here. Tap a bar to read its hour." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "進站是從這裡出發的旅次，出站是在這裡結束的旅次。點一下長條可查看該小時。"
+          }
+        }
+      }
+    },
+    "Everyone released here is waiting, riding, arrived, left a full station or gave up. Left behind counts the times a full train left people waiting." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在這裡釋出的每位乘客，不是在候車、在車上、已抵達，就是因車站客滿離開或放棄搭乘。「未能上車」計算客滿列車留下候車乘客的次數。"
+          }
+        }
+      }
+    },
+    "Exits" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出站"
           }
         }
       }
@@ -591,6 +681,16 @@
         }
       }
     },
+    "No line links it to another station with ridership yet: the bars show how its own trips would spread over the day." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有路線連到其他有客流的車站：長條顯示它自己的旅次在一天中的分布。"
+          }
+        }
+      }
+    },
     "No lines yet. Pick stations under New Line to create one." : {
       "localizations" : {
         "zh-Hant" : {
@@ -637,6 +737,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "還沒有列車。先購買一列，再選擇一格軌道放置。"
+          }
+        }
+      }
+    },
+    "No trips to or from other stations yet." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有往返其他車站的旅次。"
           }
         }
       }
@@ -701,12 +811,42 @@
         }
       }
     },
+    "Passengers" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "乘客"
+          }
+        }
+      }
+    },
     "Passengers pay as they board. Running and upkeep are settled every hour, energy and staff every day, and the balance may go below zero." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "乘客上車時付費。營運與維護每小時結算，能源與員工每日結算，餘額可能變成負數。"
+          }
+        }
+      }
+    },
+    "Paste %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貼上%@"
+          }
+        }
+      }
+    },
+    "Paste Ridership" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貼上客流設定"
           }
         }
       }
@@ -841,6 +981,16 @@
         }
       }
     },
+    "Remove Ridership" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除客流"
+          }
+        }
+      }
+    },
     "Remove This Pattern" : {
       "localizations" : {
         "zh-Hant" : {
@@ -931,6 +1081,16 @@
         }
       }
     },
+    "Ridership" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "客流"
+          }
+        }
+      }
+    },
     "Rotate" : {
       "localizations" : {
         "zh-Hant" : {
@@ -997,6 +1157,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "讓列車依時刻表運行"
+          }
+        }
+      }
+    },
+    "Select a station on the map, or choose one above." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請在地圖上選擇車站，或從上方選一座。"
           }
         }
       }
@@ -1111,6 +1281,16 @@
         }
       }
     },
+    "Sets when its trips start and end over the day." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決定一天中旅次何時出發、何時抵達。"
+          }
+        }
+      }
+    },
     "Shows fares, running costs and the ledger." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1127,6 +1307,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顯示路線與它們的時刻表。"
+          }
+        }
+      }
+    },
+    "Shows the station's ridership: what kind of place it serves, its trips and its passengers." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示車站的客流：服務的地區類型、旅次與乘客。"
           }
         }
       }
@@ -1177,6 +1367,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "車站名稱"
+          }
+        }
+      }
+    },
+    "Steps through 100, 200, 500, 1,000 and so on, up to 1,000,000 a day." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依 100、200、500、1,000 等級距調整，最多每日 1,000,000 人次。"
           }
         }
       }
@@ -1337,6 +1537,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "列車：%@"
+          }
+        }
+      }
+    },
+    "Trips a day by station" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各站每日旅次"
+          }
+        }
+      }
+    },
+    "Trips by hour" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各小時旅次"
           }
         }
       }

@@ -12,9 +12,10 @@ import Observation
 /// Besides the world, the session keeps only transient UI state: the selected
 /// tile, the active tool, the track piece being placed, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
-/// stops picked for a new line, and the last action's message, written in
-/// ``language``. Anything shown about the game, including where each train is
-/// and where it is going, is derived from ``world`` on demand.
+/// stops picked for a new line, the copied station demand, and the last
+/// action's message, written in ``language``. Anything shown about the game,
+/// including where each train is and where it is going, is derived from
+/// ``world`` on demand.
 ///
 /// The session also hosts the game loop: it measures real time, turns it into
 /// whole ticks with a ``TickAccumulator`` and calls `GameWorld.advance(ticks:)`.
@@ -70,6 +71,11 @@ public final class GameSession {
     /// The stations picked, in order, for the next line. Only a draft:
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []
+
+    /// The station demand copied to paste onto other stations (Stage C2;
+    /// see ``copySelectedStationDemand()``). Only a clipboard: GameCore
+    /// checks it when it is pasted.
+    public internal(set) var demandClipboard: StationDemand?
 
     // The network tool (Stage C1): drafts only, read through GameCore when
     // used (see NetworkSession.swift).
