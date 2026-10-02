@@ -38,6 +38,7 @@ struct ContentView: View {
 
     private var tallLayout: some View {
         VStack(spacing: 0) {
+            Text("CX-2 localization probe: untranslated station")
             HUDView(session: session)
                 .padding(.horizontal)
                 .padding(.vertical, 10)

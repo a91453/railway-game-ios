@@ -2,7 +2,9 @@
 """Linux/macOS regression tests using a small Xcode-shaped XLIFF fixture."""
 
 import copy
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -28,6 +30,9 @@ CATALOG = {"sourceLanguage": "en", "strings": {
 
 class LocalizationTests(unittest.TestCase):
     def setUp(self):
+        output = contextlib.redirect_stdout(io.StringIO())
+        output.__enter__()
+        self.addCleanup(output.__exit__, None, None, None)
         self.root = ET.parse(FIXTURE).getroot()
         self.catalog = copy.deepcopy(CATALOG)
         self.temp = tempfile.TemporaryDirectory()
@@ -62,6 +67,12 @@ class LocalizationTests(unittest.TestCase):
             with self.subTest(state=state):
                 self.unit().find("x:target", NS).set("state", state)
                 self.assertIn(state, "\n".join(self.check()))
+
+    def test_accepted_xliff_states(self):
+        for state in ("translated", "final", "signed-off"):
+            with self.subTest(state=state):
+                self.unit().find("x:target", NS).set("state", state)
+                self.assertEqual(self.check(), [])
 
     def test_unapproved(self):
         self.unit().set("approved", "no")
@@ -98,6 +109,9 @@ class LocalizationTests(unittest.TestCase):
         unit = self.root.findall(".//x:trans-unit", NS)[2]
         unit.find("x:source", NS).text = "A different name"
         self.assertIn("A different name", "\n".join(self.check()))
+        unit.find("x:source", NS).text = "Railway Game"
+        self.root.findall("x:file", NS)[1].set("original", "Localizable.xcstrings")
+        self.assertIn("missing zh-Hant target", "\n".join(self.check()))
 
     def test_absent_empty_and_unsupported_exports(self):
         self.assertIn("No XLIFF", "\n".join(CHECKER.check_exports(self.directory, self.catalog)))
