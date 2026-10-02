@@ -267,13 +267,18 @@ final class StationFacilityTests: XCTestCase {
         try world.advance(ticks: 1)
         // Out: (2,1), (3,1), (4,1) to the first platform, one more for the
         // second car: 4 minutes. Turned at Central's (5,1), its head goes
-        // to (4,1): back to West's (1,1) is 3. Two minutes at each end.
-        let departure = try train(world, id).timetable[0].departure.minutes
-        XCTAssertEqual(try train(world, id).timetable.map { [$0.arrival.minutes - departure, $0.departure.minutes - departure] }, [[0, 0], [4, 6], [9, 9]])
+        // to (4,1): back to West's (1,1) is 3. Two minutes at each end. In
+        // seconds from leaving West, 42 s after it is sent out (Stage W2b).
+        let departure = try train(world, id).timetable[0].departure.seconds
+        XCTAssertEqual(
+            try train(world, id).timetable.map { [$0.arrival.seconds - departure, $0.departure.seconds - departure] },
+            [[-42, 0], [240, 360], [540, 540]]
+        )
         XCTAssertEqual(try train(world, id).timetable.map(\.reverses), [false, true, true])
 
-        try world.advance(ticks: 9)
-        // Back at West and turned round there: its head where its tail was,
+        try world.advance(ticks: 10)
+        // Back at West at 9:42 and, its dwell over at 10:24, turned round
+        // there: its head where its tail was,
         // at (2,1), off West's platform, too short for two cars; the line
         // cannot send it out again.
         XCTAssertNil(try train(world, id).execution)

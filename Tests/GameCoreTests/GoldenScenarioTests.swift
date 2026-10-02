@@ -90,6 +90,15 @@ final class GoldenScenarioTests: XCTestCase {
             var otherAccounts = committed
             otherAccounts.expectedFinalState.accounts.pending.fareTrips += 1
             XCTAssertEqual(otherAccounts.differences().count, 1, name)
+
+            // Schema 24: a train's service times, with a service or without.
+            if let index = committed.expectedFinalState.trains.indices.first {
+                var wrongTimes = committed
+                let train = committed.expectedFinalState.trains[index]
+                wrongTimes.expectedFinalState.trains[index].times = train.times.map { TimesSummary(arrival: $0.arrival + 1, exchangeEnd: $0.exchangeEnd, closing: $0.closing, departure: $0.departure) }
+                    ?? TimesSummary(arrival: 0)
+                XCTAssertEqual(wrongTimes.differences().count, 1, name)
+            }
         }
     }
 
@@ -318,6 +327,9 @@ final class GoldenScenarioTests: XCTestCase {
         var hourlyRevenueCount = 0
         var dailyCount = 0
         var distanceFareCount = 0
+        var closingTimesCount = 0
+        var lateCount = 0
+        var earlyOrOnTimeCount = 0
         var reportCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
@@ -388,6 +400,8 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .accounts(let accounts) = expect, accounts.ledger.contains(where: { $0.kind == "hourlyNet" && $0.breakdown[0].amount > 0 }) { hourlyRevenueCount += 1 }
                 if case .accounts(let accounts) = expect, accounts.ledger.contains(where: { $0.kind == "dailyStaff" }) { dailyCount += 1 }
                 if case .fare(let fare?) = expect, fare < 500 { distanceFareCount += 1 }
+                if case .times(let times?) = expect, times.exchangeEnd != nil, times.closing != nil, times.departure != nil { closingTimesCount += 1 }
+                if case .lateness(let lateness?) = expect { if lateness > 0 { lateCount += 1 } else { earlyOrOnTimeCount += 1 } }
                 if case .report(let report) = expect, report.previous.fareRevenue > 0 { reportCount += 1 }
                 if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
                 if case .trackPlatforms(let platforms) = expect, !platforms.isEmpty { wholePlatformCount += 1 }
@@ -439,6 +453,9 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(hourlyRevenueCount, 0, "No fixture pins an hour settled with fares")
         XCTAssertGreaterThan(dailyCount, 0, "No fixture pins a day's energy and staff")
         XCTAssertGreaterThan(distanceFareCount, 0, "No fixture pins a distance fare")
+        XCTAssertGreaterThan(closingTimesCount, 0, "No fixture pins a dwell whose doors are closing (Stage W2b)")
+        XCTAssertGreaterThan(lateCount, 0, "No fixture pins a late service")
+        XCTAssertGreaterThan(earlyOrOnTimeCount, 0, "No fixture pins a service on time")
         XCTAssertGreaterThan(reportCount, 0, "No fixture pins a finance report with revenue")
     }
 
@@ -616,6 +633,27 @@ final class GoldenScenarioTests: XCTestCase {
             return [.fare(nil), .fare(fare + 1)]
         case .fare(nil):
             return [.fare(500)]
+        case .times(let times?):
+            var wrong: [ObservationAnswer] = [.times(nil)]
+            var changed = times
+            changed.arrival += 1
+            wrong.append(.times(changed))
+            changed = times
+            changed.exchangeEnd = times.exchangeEnd.map { $0 + 1 } ?? times.arrival + ServiceDwell.doorOpening
+            wrong.append(.times(changed))
+            changed = times
+            changed.closing = times.closing == nil ? times.arrival + 1 : nil
+            wrong.append(.times(changed))
+            changed = times
+            changed.departure = times.departure == nil ? times.arrival : nil
+            wrong.append(.times(changed))
+            return wrong
+        case .times(nil):
+            return [.times(TimesSummary(arrival: 0))]
+        case .lateness(let lateness?):
+            return [.lateness(nil), .lateness(lateness + 1), .lateness(-lateness - 1)]
+        case .lateness(nil):
+            return [.lateness(0)]
         case .accounts(let accounts):
             var wrong: [ObservationAnswer] = []
             var mode = accounts
@@ -801,7 +839,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 23,
+              "schemaVersion": 24,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -860,7 +898,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in

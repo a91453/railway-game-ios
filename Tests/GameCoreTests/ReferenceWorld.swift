@@ -15,8 +15,13 @@ import GameCore
 ///   greedy walk, not from a breadth-first search;
 /// - a service is a stop index, a flag and a cycle, not an enum; every
 ///   departure looks its route up again (no memory of routes that were not
-///   found), and a train already stopped at the next stop's station is
-///   recognised by being stopped there, not by an empty route;
+///   found from one call to the next; within one `advance`, which cannot
+///   change the map, Stage W2b keeps the routes it looked up, see
+///   `routeMemo`), and a train already stopped at the next stop's station
+///   is recognised by being stopped there, not by an empty route;
+/// - Stage W2b: a dwell is worked out second by second from its times, with
+///   the doors' and the least dwell's rules written as comparisons, not as
+///   one event time;
 /// - a repeating timetable is checked by adding the period to the first
 ///   arrival, not by subtracting, and a scheduled time is the stored time
 ///   plus the cycle times the period, recomputed at every use;
@@ -81,13 +86,27 @@ struct ReferenceWorld: Equatable {
 
     /// Decision 20: the timetable entry a service is at or heading for.
     /// Decision 21: and the cycle of a repeating timetable it is in.
+    /// Stage W2b: and its times, in seconds: when it reached the stop it
+    /// waits at (or last waited at), when its exchange ends, when its
+    /// doors started closing, and when it left the stop before.
     struct Service: Equatable {
         var stop: Int
         var waiting: Bool
         var cycle: Int64 = 0
+        var arrival: Int64
+        var exchangeEnd: Int64?
+        var closing: Int64?
+        var departure: Int64?
 
         var execution: TimetableExecution {
             waiting ? .waitingAtStop(stop, cycle: cycle) : .travellingToStop(stop, cycle: cycle)
+        }
+
+        var times: ServiceTimes {
+            ServiceTimes(
+                arrival: GameTime(seconds: arrival), exchangeEnd: exchangeEnd.map(GameTime.init(seconds:)),
+                closing: closing.map(GameTime.init(seconds:)), departure: departure.map(GameTime.init(seconds:))
+            )
         }
     }
 
@@ -123,6 +142,26 @@ struct ReferenceWorld: Equatable {
     /// Decision 36: how far the last departure took its train, `nil` when
     /// its service ended instead; set by the departures.
     var departedDistance: Int64?
+    /// Stage W2b: routes worked out for departures within one `advance`,
+    /// which cannot change the map. A departure is now tried every second,
+    /// and this model's route search is slow (O(states²)), so its results
+    /// are kept for the call: the same start, station and length give the
+    /// same route. Not the model's state: `==` ignores it, and `advance`
+    /// empties it before it returns.
+    var routeMemo = RouteMemo()
+
+    struct RouteMemo: Equatable {
+        struct Key: Hashable {
+            var start: TrainPosition
+            var station: StationID
+            var length: Int64
+        }
+
+        var grid: [Key: [GridPosition]?] = [:]
+        var network: [Key: TrainPath?] = [:]
+
+        static func == (lhs: RouteMemo, rhs: RouteMemo) -> Bool { true }
+    }
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
@@ -620,7 +659,8 @@ struct ReferenceWorld: Equatable {
             if train.timetable.isEmpty { return .noTimetable(id) }
             if train.position == nil { return .trainNotPlaced(id) }
             if !stationsStoppedAt(by: id).contains(train.timetable[0].station) { return .trainNotAtFirstStop(id) }
-            trains[i].service = Service(stop: 0, waiting: true, cycle: startingCycle(train))
+            // Stage W2b: starting is arriving.
+            trains[i].service = Service(stop: 0, waiting: true, cycle: startingCycle(train), arrival: clockSeconds)
             return nil
         }
     }
@@ -663,10 +703,10 @@ struct ReferenceWorld: Equatable {
     }
 
     /// Decisions 3, 15 and 20: checked first, then every second is
-    /// stepped (Stage W2a): at a whole minute, departures at the minute;
-    /// travel, each train its share of its rate per minute for the second;
-    /// the clock; then arrivals. Decision 23: each line's dispatch comes
-    /// before the departures.
+    /// stepped (Stage W2a): at a whole minute, the accounts, passengers and
+    /// dispatch (decision 23); every service's dwell and departure (Stage
+    /// W2b); travel, each train its share of its rate per minute for the
+    /// second; the clock; then arrivals.
     mutating func advance(ticks: Int) -> GameError? {
         let tenthsPerTick: Int64 = switch speed {
         case .paused: 0
@@ -688,6 +728,8 @@ struct ReferenceWorld: Equatable {
         // Decision 23: within one call the map cannot change, so a line's
         // journey, and a trip from an idle train's place, stay the same.
         var memo = DispatchMemo()
+        routeMemo = RouteMemo()
+        defer { routeMemo = RouteMemo() }
         for _ in 0..<seconds {
             let second = clockSeconds - minutes * 60
             if second == 0 {
@@ -698,9 +740,10 @@ struct ReferenceWorld: Equatable {
                 for l in lines.indices {
                     dispatch(l, memo: &memo)
                 }
-                for i in trains.indices {
-                    depart(i)
-                }
+            }
+            for i in trains.indices {
+                dwell(i, second: second)
+                leave(i)
             }
             for i in trains.indices where trains[i].position != nil {
                 let distance = Self.share(of: trains[i].rate, inSecond: second)
@@ -718,7 +761,9 @@ struct ReferenceWorld: Equatable {
                 guard let service = trains[i].service, !service.waiting else { continue }
                 let target = trains[i].timetable[service.stop].station
                 if stationsStoppedAt(by: TrainID(rawValue: trains[i].id)).contains(target) {
-                    trains[i].service = Service(stop: service.stop, waiting: true, cycle: service.cycle)
+                    trains[i].service = Service(
+                        stop: service.stop, waiting: true, cycle: service.cycle, arrival: clockSeconds, departure: service.departure
+                    )
                 }
             }
         }
@@ -735,27 +780,83 @@ struct ReferenceWorld: Equatable {
         return covered(second + 1) - covered(second)
     }
 
-    /// Decision 20's departures at the current minute for one train: from
-    /// each stop whose departure has come, one pass after another while the
-    /// train arrives at once; decision 21: at most as many stops as the
-    /// timetable has.
-    mutating func depart(_ i: Int) {
-        var left = 0
-        while left < trains[i].timetable.count, let service = trains[i].service, service.waiting,
-              Self.departure(trains[i], stop: service.stop, cycle: service.cycle)! <= clockSeconds {
-            left += 1
-            // Decision 35: the stop is served as soon as it is left.
-            let leaving = service.stop
-            departedDistance = nil
-            let atOnce = departOnce(i)
-            if trains[i].service != service {
-                serveStop(i, stop: leaving)
-                // Decision 36: a line's train counts its departure.
-                if trains[i].service != nil, let distance = departedDistance {
-                    countDeparture(i, distance: distance)
-                }
+    /// Stage W2b: second `second` of a minute of train `i`'s dwell at the
+    /// stop its service waits at. 8 s after it arrived its doors are open:
+    /// those for the stop get off and those waiting get on, 8 a second a
+    /// car either way, the larger number setting how long. While the doors
+    /// stay open, at each whole minute, newcomers get on after those still
+    /// getting on. The doors start closing at the first second when the
+    /// exchange is over and, 9 s later, the train will have dwelt its least
+    /// (42 s at either end or a turn, 36 s elsewhere) and reached its
+    /// scheduled departure.
+    mutating func dwell(_ i: Int, second: Int64) {
+        guard var service = trains[i].service, service.waiting else { return }
+        let now = clockSeconds
+        let perSecond = 8 * Int64(trains[i].cars)
+        if let end = service.exchangeEnd {
+            if second == 0, service.closing == nil {
+                let boarded = board(i, stop: service.stop)
+                if boarded > 0 { service.exchangeEnd = Self.capped(max(end, now), (boarded + perSecond - 1) / perSecond) }
             }
-            guard atOnce else { return }
+        } else {
+            guard now >= Self.capped(service.arrival, 8) else { return }
+            let busy = exchange(i, stop: service.stop)
+            service.exchangeEnd = Self.capped(now, (busy + perSecond - 1) / perSecond)
+        }
+        let train = trains[i]
+        let terminal = service.stop == 0 || service.stop == train.timetable.count - 1 || train.timetable[service.stop].reverses
+        // A scheduled departure is never negative, so 9 s before it is a time.
+        if service.closing == nil, now >= service.exchangeEnd!, now >= Self.capped(service.arrival, (terminal ? 42 : 36) - 9),
+           now >= Self.departure(train, stop: service.stop, cycle: service.cycle)! - 9 {
+            service.closing = now
+        }
+        trains[i].service = service
+    }
+
+    /// `time + seconds`, or the last second there is when that is later.
+    static func capped(_ time: Int64, _ seconds: Int64) -> Int64 {
+        time > Int64.max - seconds ? .max : time + seconds
+    }
+
+    /// Stage W2b: how late train `id`'s service is, in seconds, negative
+    /// when early. Waiting: the seconds past its scheduled departure, or,
+    /// before that, how much sooner than scheduled it arrived (never
+    /// late). Travelling: the later of how late it left the call before
+    /// and how far past its scheduled arrival the clock is (never early).
+    func lateness(of id: Int) -> Int64? {
+        guard let train = trains.first(where: { $0.id == id }), let service = train.service else { return nil }
+        func scheduled(_ stop: Int, _ cycle: Int64) -> (arrival: Int64, departure: Int64) {
+            let shift = cycle * (train.period ?? 0)
+            return (train.timetable[stop].arrival.seconds + shift, train.timetable[stop].departure.seconds + shift)
+        }
+        let here = scheduled(service.stop, service.cycle)
+        if service.waiting {
+            return clockSeconds > here.departure ? clockSeconds - here.departure : min(0, service.arrival - here.arrival)
+        }
+        var late = max(0, clockSeconds - here.arrival)
+        let before: (Int, Int64)? = service.stop > 0 ? (service.stop - 1, service.cycle)
+            : service.cycle > 0 ? (train.timetable.count - 1, service.cycle - 1) : nil
+        if let left = service.departure, let (stop, cycle) = before {
+            late = max(late, left - scheduled(stop, cycle).departure)
+        }
+        return late
+    }
+
+    /// Stage W2b: train `i` leaves the stop its service waits at once its
+    /// doors have closed, if it can; a full train counts those it leaves
+    /// behind as refused (decision 35), and a line's train counts its
+    /// departure (decision 36).
+    mutating func leave(_ i: Int) {
+        guard let service = trains[i].service, service.waiting, let closing = service.closing,
+              clockSeconds >= Self.capped(closing, 9)
+        else { return }
+        let leaving = service.stop
+        departedDistance = nil
+        _ = departOnce(i)
+        guard trains[i].service != service else { return }
+        refuseLeftBehind(i, stop: leaving)
+        if trains[i].service != nil, let distance = departedDistance {
+            countDeparture(i, distance: distance)
         }
     }
 
@@ -801,9 +902,11 @@ struct ReferenceWorld: Equatable {
         // Decision 27: the route pulls a train with cars along the
         // platforms; one already stopped there that needs no pull is
         // there at once.
-        let route = route(from: start, toStation: target, length: length)
+        let key = RouteMemo.Key(start: start, station: target, length: length)
+        let route = routeMemo.grid[key] ?? route(from: start, toStation: target, length: length)
+        routeMemo.grid[key] = .some(route)
         if case .atNode(let tile, _) = start, stations(beside: tile).contains(target), route == [] {
-            leaving.service = Service(stop: next.stop, waiting: true, cycle: next.cycle)
+            leaving.service = Service(stop: next.stop, waiting: true, cycle: next.cycle, arrival: clockSeconds, departure: clockSeconds)
             departedDistance = 0
             return admit(leaving, at: i) == nil
         }
@@ -811,7 +914,7 @@ struct ReferenceWorld: Equatable {
         departedDistance = Int64(route.count) * 1024
         leaving.continuation = route
         leaving.cursor = 0
-        leaving.service = Service(stop: next.stop, waiting: false, cycle: next.cycle)
+        leaving.service = Service(stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds)
         _ = admit(leaving, at: i)
         return false
     }

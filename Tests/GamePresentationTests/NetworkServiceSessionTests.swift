@@ -148,7 +148,11 @@ final class NetworkServiceSessionTests: XCTestCase {
                 ScheduledStop(station: Self.east, arrival: GameTime(minutes: 13), departure: GameTime(minutes: 15)),
             ])
             try world.startTrainService(Self.tram)
-            XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "At West, leaves 00:05", punctuality: .onTime))
+            // Stage W2b: starting counts as arriving, so its doors are opening.
+            XCTAssertEqual(
+                world.trainServiceStatus(of: Self.tram, in: .english),
+                TrainServiceStatus(serviceName: nil, stopText: "At West, leaves 00:05", punctuality: .onTime, dwell: .doorsOpening)
+            )
             XCTAssertEqual(world.stationStopText(of: Self.tram, in: .english), "Stopped at West")
             // It leaves at 00:05 and is on its way at 00:06.
             try world.advance(ticks: 6)
@@ -160,7 +164,10 @@ final class NetworkServiceSessionTests: XCTestCase {
             if late {
                 XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .late(minutes: 1)))
             } else {
-                XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "At East, last stop", punctuality: .onTime))
+                XCTAssertEqual(
+                    world.trainServiceStatus(of: Self.tram, in: .english),
+                    TrainServiceStatus(serviceName: nil, stopText: "At East, last stop", punctuality: .onTime, dwell: .doorsOpening)
+                )
                 XCTAssertEqual(world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
             }
         }

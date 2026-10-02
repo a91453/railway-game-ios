@@ -1,9 +1,10 @@
 // Station dwell (G1b, ARCHITECTURE decision 35): every dwell rule of the
 // owner's two references, ported as pure integer arithmetic, so that W2 can
 // put "arrive → doors open → passengers → doors close → depart" on the
-// game's clock with them. Nothing here is wired into `advance(ticks:)`
-// yet: until W2, boarding happens at once as a train leaves a stop (see
-// `Boarding.swift`), a transitional rule these replace.
+// game's clock with them. Stage W2b (ARCHITECTURE decision 39) does so with
+// the metro game's dwells, door times and boarding rate (see
+// `ServiceDwell.swift`); the other rules here are not wired into
+// `advance(ticks:)`.
 //
 // Sources:
 //

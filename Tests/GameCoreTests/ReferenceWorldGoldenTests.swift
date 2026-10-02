@@ -65,7 +65,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
                         movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period.map { $0 / GameTime.secondsPerMinute }),
-                        execution: ExecutionSummary($0.service?.execution), cars: $0.cars, trail: $0.trail.map(PositionSummary.init),
+                        execution: ExecutionSummary($0.service?.execution), times: $0.service.map { TimesSummary($0.times) }, cars: $0.cars,
+                        trail: $0.trail.map(PositionSummary.init),
                         trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init)
                     )
                 },
@@ -245,6 +246,10 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .riders(model.riders(of: id.rawValue).map(RidingGroupSummary.init))
         case .tripFare(let origin, let destination):
             return .fare(model.tripFare(from: origin.rawValue, to: destination.rawValue))
+        case .serviceTimes(let id):
+            return .times(model.trains.first { $0.id == id.rawValue }?.service.map { TimesSummary($0.times) })
+        case .lateness(let id):
+            return .lateness(model.lateness(of: id.rawValue))
         case .accounts:
             return .accounts(model.accountsSummary)
         case .financeReport(let period):

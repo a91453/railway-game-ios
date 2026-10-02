@@ -19,7 +19,11 @@ final class LineDispatchTests: XCTestCase {
     //                      Delta(5,2)        Far(7,3): no platform
     //
     // Alpha to Gamma is four links, b to f, so four minutes each way at the
-    // default rate; with two minutes at each end a round trip is 12.
+    // default rate; with two minutes at each end a round trip is 12. Stage
+    // W2b: a train sent out at T dwells 42 s at Alpha and leaves at T:42,
+    // and is back at T + 10:42, its service ending once it has dwelt 42 s
+    // there, at T + 11:24. Leaving 42 s into a minute, it is 308 units along
+    // at the next.
     private let b = GridPosition(x: 1, y: 1)
     private let c = GridPosition(x: 2, y: 1)
     private let d = GridPosition(x: 3, y: 1)
@@ -76,9 +80,18 @@ final class LineDispatchTests: XCTestCase {
         ScheduledStop(station: station, arrival: GameTime(minutes: arrival), departure: GameTime(minutes: departure), reverses: reverses)
     }
 
-    /// Alpha to Gamma and back, leaving Alpha at `minute` facing east.
-    private func trip(_ minute: Int64) -> [ScheduledStop] {
-        [stop(alpha, minute, minute), stop(gamma, minute + 4, minute + 6, reverses: true), stop(alpha, minute + 10, minute + 10, reverses: true)]
+    /// Alpha to Gamma and back for a train sent out at `minute` facing
+    /// east: it arrives at Alpha then and leaves 42 s later (Stage W2b),
+    /// reaches Gamma 4 minutes after leaving, stays 2 and turns round, and
+    /// is back at Alpha 4 minutes after that.
+    private func trip(_ minute: Int64, reverses: Bool = false) -> [ScheduledStop] {
+        let leaving = minute * 60 + 42
+        func time(_ seconds: Int64) -> GameTime { GameTime(seconds: seconds) }
+        return [
+            ScheduledStop(station: alpha, arrival: GameTime(minutes: minute), departure: time(leaving), reverses: reverses),
+            ScheduledStop(station: gamma, arrival: time(leaving + 240), departure: time(leaving + 360), reverses: true),
+            ScheduledStop(station: alpha, arrival: time(leaving + 600), departure: time(leaving + 600), reverses: true),
+        ]
     }
 
     private func advance(_ world: inout GameWorld, _ ticks: Int) throws {
@@ -213,9 +226,9 @@ final class LineDispatchTests: XCTestCase {
     // MARK: - Dispatch
 
     /// Two trains, round trip 12: the line sends one out every 6 minutes,
-    /// each on a round trip that leaves in the same step, turns round at
-    /// Gamma, comes back to Alpha 10 minutes after it left, turns round and
-    /// waits there to be sent out again.
+    /// each on a round trip that leaves 42 s later, turns round at Gamma,
+    /// comes back to Alpha 10 minutes after it left, turns round and waits
+    /// there to be sent out again.
     func testALineSendsTrainsOutAHeadwayApartAndBringsThemBack() throws {
         var world = try makeDispatchWorld(trains: 2, running: TrainsInService(peak: 2, offPeak: 2, low: 2))
         XCTAssertEqual(world.lineHeadway(main, at: .low), 6)
@@ -225,14 +238,14 @@ final class LineDispatchTests: XCTestCase {
         XCTAssertEqual(first.timetable, trip(0))
         XCTAssertNil(first.timetablePeriod)
         XCTAssertEqual(first.execution, .travellingToStop(1))
-        XCTAssertEqual(first.position, .atNode(c, heading: .east))
+        XCTAssertEqual(first.position, .onLink(from: b, to: c, offset: 308))
         XCTAssertEqual(first.movement.continuation, [c, d, e, f])
         XCTAssertEqual(first.movement.cursor, 1)
         XCTAssertEqual(world.train(id: two)?.execution, nil, "one train per headway")
         XCTAssertEqual(world.train(id: two)?.timetable, [])
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 0))
 
-        // Gamma at 4; waits there until 6.
+        // Gamma at 4:42; waits there until 6:42.
         try advance(&world, 5)
         first = try XCTUnwrap(world.train(id: one))
         XCTAssertEqual(world.clock.now, GameTime(minutes: 6))
@@ -240,35 +253,43 @@ final class LineDispatchTests: XCTestCase {
         XCTAssertEqual(first.position, .atNode(f, heading: .east))
         XCTAssertNil(world.train(id: two)?.execution)
 
-        // At 6 the second train goes, and the first turns round at Gamma.
+        // At 6 the second train is sent out, and at 6:42 both leave, the
+        // first turned round at Gamma.
         try advance(&world, 1)
         first = try XCTUnwrap(world.train(id: one))
         var second = try XCTUnwrap(world.train(id: two))
         XCTAssertEqual(second.timetable, trip(6))
         XCTAssertEqual(second.execution, .travellingToStop(1))
-        XCTAssertEqual(second.position, .atNode(c, heading: .east))
+        XCTAssertEqual(second.position, .onLink(from: b, to: c, offset: 308))
         XCTAssertEqual(first.execution, .travellingToStop(2))
-        XCTAssertEqual(first.position, .atNode(e, heading: .west))
+        XCTAssertEqual(first.position, .onLink(from: f, to: e, offset: 308))
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 6))
 
-        // At 10 the first is back at Alpha and the second at Gamma.
+        // At 10:42 the first is back at Alpha and the second at Gamma.
         try advance(&world, 3)
+        first = try XCTUnwrap(world.train(id: one))
+        second = try XCTUnwrap(world.train(id: two))
+        XCTAssertEqual(first.execution, .travellingToStop(2))
+        XCTAssertEqual(first.position, .onLink(from: c, to: b, offset: 308))
+        try advance(&world, 1)
         first = try XCTUnwrap(world.train(id: one))
         second = try XCTUnwrap(world.train(id: two))
         XCTAssertEqual(first.execution, .waitingAtStop(2))
         XCTAssertEqual(first.position, .atNode(b, heading: .west))
         XCTAssertEqual(second.execution, .waitingAtStop(1))
 
-        // Its service ends at 10: turned round, keeping the trip's timetable.
+        // Its service ends at 11:24: turned round, keeping the trip's
+        // timetable.
         try advance(&world, 1)
         first = try XCTUnwrap(world.train(id: one))
         XCTAssertNil(first.execution)
+        XCTAssertNil(first.times)
         XCTAssertEqual(first.position, .atNode(b, heading: .east))
         XCTAssertEqual(first.timetable, trip(0))
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 6), "not due again until 12")
 
-        // At 12 it goes again.
-        try advance(&world, 2)
+        // At 12 it is sent out again.
+        try advance(&world, 1)
         first = try XCTUnwrap(world.train(id: one))
         XCTAssertEqual(first.timetable, trip(12))
         XCTAssertEqual(first.execution, .travellingToStop(1))
@@ -285,8 +306,8 @@ final class LineDispatchTests: XCTestCase {
 
         try advance(&world, 1)
         let train = try XCTUnwrap(world.train(id: one))
-        XCTAssertEqual(train.timetable, [stop(alpha, 0, 0, reverses: true)] + trip(0).dropFirst())
-        XCTAssertEqual(train.position, .atNode(c, heading: .east))
+        XCTAssertEqual(train.timetable, trip(0, reverses: true))
+        XCTAssertEqual(train.position, .onLink(from: b, to: c, offset: 308))
         XCTAssertEqual(train.execution, .travellingToStop(1))
     }
 
@@ -311,12 +332,13 @@ final class LineDispatchTests: XCTestCase {
         try advance(&world, 1)
         XCTAssertNil(world.train(id: three)?.execution)
         XCTAssertEqual(world.train(id: three)?.position, .atNode(c, heading: .west))
-        // It reaches Alpha at 32 and goes in the next step, turned round.
+        // It reaches Alpha at 32 and is sent out in the next step, to be
+        // turned round as it leaves.
         try advance(&world, 1)
         XCTAssertEqual(world.train(id: three)?.position, .atNode(b, heading: .west))
         XCTAssertNil(world.train(id: three)?.execution)
         try advance(&world, 1)
-        XCTAssertEqual(world.train(id: three)?.timetable.first, stop(alpha, 32, 32, reverses: true))
+        XCTAssertEqual(world.train(id: three)?.timetable, trip(32, reverses: true))
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 32))
 
         // A train that could not drive the trip is not sent out: with e
@@ -350,7 +372,8 @@ final class LineDispatchTests: XCTestCase {
             XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: minute))
         }
         // Peak at 30: 6 minutes after 24, and one train out, so train 2
-        // goes; at 36 train 1, back since 34.
+        // goes; at 36 train 1, back since 34:42 and its service over at
+        // 35:24.
         try advance(&world, 6)
         XCTAssertEqual(world.train(id: two)?.timetable, trip(30))
         XCTAssertEqual(world.train(id: two)?.execution, .travellingToStop(1))
@@ -361,8 +384,8 @@ final class LineDispatchTests: XCTestCase {
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         try advance(&world, 11)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 48))
-        XCTAssertNil(world.train(id: one)?.execution, "back since 46")
-        XCTAssertNil(world.train(id: two)?.execution, "back since 40, and waiting")
+        XCTAssertNil(world.train(id: one)?.execution, "back since 46:42, done at 47:24")
+        XCTAssertNil(world.train(id: two)?.execution, "back since 40:42, and waiting")
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 36))
         try advance(&world, 1)
         XCTAssertEqual(world.train(id: one)?.timetable, trip(48))
@@ -383,7 +406,7 @@ final class LineDispatchTests: XCTestCase {
         try advance(&world, 1)
         XCTAssertEqual(world.train(id: one)?.timetable, trip(0))
         try advance(&world, 19)
-        XCTAssertNil(world.train(id: one)?.execution, "back at 10, waiting")
+        XCTAssertNil(world.train(id: one)?.execution, "back at 10:42, done at 11:24, waiting")
         XCTAssertNil(world.train(id: two)?.execution, "one train keeps to 20 minutes")
         try advance(&world, 1)
         XCTAssertEqual(world.train(id: one)?.timetable, trip(20))
@@ -418,10 +441,10 @@ final class LineDispatchTests: XCTestCase {
         try advance(&world, 2)
         try world.unassignTrain(one)
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1))
-        try advance(&world, 8)
-        XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(2), "on time at Alpha at 10")
+        try advance(&world, 9)
+        XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(2), "on time at Alpha at 10:42")
         XCTAssertEqual(world.train(id: two)?.timetable, trip(6), "train 2 still goes at 6")
-        try advance(&world, 5)
+        try advance(&world, 4)
         XCTAssertNil(world.train(id: one)?.execution)
         XCTAssertEqual(world.train(id: one)?.timetable, trip(0), "not sent out again")
 

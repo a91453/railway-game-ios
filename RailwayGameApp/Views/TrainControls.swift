@@ -115,8 +115,9 @@ struct TrainControls: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The line or timetable the train runs, where it is in it and whether
-    /// it is early or late, derived from the schedule and the clock.
+    /// The line or timetable the train runs, where it is in it, whether it
+    /// is early or late and, at a stop, where its dwell has got to, derived
+    /// from its service's times and the clock.
     private func serviceStatus(_ service: TrainServiceStatus) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             if let name = service.serviceName {
@@ -133,6 +134,12 @@ struct TrainControls: View {
             }
             .font(.footnote)
             .monospacedDigit()
+            // Stage W2b: doors and boarding while it waits at a stop.
+            if let dwell = service.dwell {
+                Label(dwell.text(in: session.language), systemImage: "door.sliding.left.hand.open")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

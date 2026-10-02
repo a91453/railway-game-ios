@@ -51,9 +51,10 @@ extension GameWorld {
     /// The train that holds track on the route train `id` is waiting to
     /// take under traffic control, or `nil`: the lowest numbered such train.
     ///
-    /// A service waits for its route at a stop whose scheduled departure
-    /// has come: from where it would stand (turned round first where the
-    /// stop says so), along the path to its next call. A line's train waits
+    /// A service waits for its route at a stop where its departure is due
+    /// (its doors have closed; Stage W2b): from where it would stand
+    /// (turned round first where the stop says so), along the path to its
+    /// next call. A line's train waits
     /// for its route when it has no service, stands at its service's first
     /// call ready to go, and the line is due to send a train out: along the
     /// first leg of its trip. `nil` when traffic control is off, for a
@@ -64,7 +65,7 @@ extension GameWorld {
         guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
         let departing: Train?
         if case .waitingAtStop(let stop, let cycle)? = train.execution {
-            guard train.scheduledDeparture(of: stop, cycle: cycle) <= clock.now else { return nil }
+            guard let due = departureDue(of: train), due <= clock.now else { return nil }
             departing = leaving(train, stop: stop, cycle: cycle).train
         } else if train.execution == nil, let line = lines.first(where: { assignedLine(of: id) == $0.id }) {
             let service = assignedPattern(of: id).map { $0 + 1 } ?? 0

@@ -16,9 +16,9 @@ import GameCore
 ///
 /// G1b (decision 35) likewise:
 ///
-/// - a stop is served the moment the train leaves it, not after the
-///   departure phases, so serving them in the order they were left is
-///   checked to change nothing;
+/// - Stage W2b: who gets off and who gets on are worked out in one pass
+///   over the stop, and a full train's refused are counted the moment it
+///   leaves, not after the step's departures;
 /// - riders are dictionaries of train, origin and destination;
 /// - the next group to board is picked by scanning for the farthest call,
 ///   the earliest in the queue among equals, one group at a time, not by
@@ -236,13 +236,15 @@ extension ReferenceWorld {
 
     // MARK: - Boarding
 
-    /// Train `i` has just left stop `stop` of its timetable (decision 35):
-    /// riders for its station get off, and everyone left at a turn or the
-    /// last stop; then, on a line, it takes on the farthest first.
-    mutating func serveStop(_ i: Int, stop: Int) {
+    /// Stage W2b: train `i`'s doors have opened at stop `stop` of its
+    /// timetable (decision 35): riders for its station get off, and
+    /// everyone left at a turn or the last stop; then, before the last
+    /// stop, it takes on passengers. The larger of the two counts.
+    mutating func exchange(_ i: Int, stop: Int) -> Int64 {
         let train = trains[i]
         let station = train.timetable[stop].station.rawValue
         let last = train.timetable.count - 1
+        var alighted: Int64 = 0
         if var onBoard = passengers.riders[train.id] {
             for origin in onBoard.keys.sorted() {
                 for destination in onBoard[origin]!.keys.sorted() {
@@ -254,15 +256,25 @@ extension ReferenceWorld {
                     } else {
                         continue
                     }
+                    alighted += count
                     onBoard[origin]![destination] = nil
                 }
                 if onBoard[origin]!.isEmpty { onBoard[origin] = nil }
             }
             passengers.riders[train.id] = onBoard.isEmpty ? nil : onBoard
         }
+        return max(alighted, stop < last ? board(i, stop: stop) : 0)
+    }
+
+    /// Who train `i` may take on at stop `stop`, as indices into its
+    /// station's queue: its line's groups going its way to a station it
+    /// calls at before it next turns round, with how far that is.
+    func boardable(_ i: Int, stop: Int) -> [(index: Int, far: Int)] {
+        let train = trains[i]
+        let last = train.timetable.count - 1
         guard stop < last, let line = lines.first(where: { $0.roster.contains(train.id) || $0.patterns.contains { $0.roster.contains(train.id) } }),
-              var queue = passengers.queue[station]
-        else { return }
+              let queue = passengers.queue[train.timetable[stop].station.rawValue]
+        else { return [] }
         let outbound = 2 * stop < last
         // Each station ahead, and how far: its first call before the train
         // next turns round.
@@ -274,26 +286,39 @@ extension ReferenceWorld {
             if train.timetable[call].reverses { break }
             call += 1
         }
-        var room = Int64(train.cars) * 320 * 11 / 10 - (passengers.riders[train.id] ?? [:]).values.reduce(0) { $0 + $1.values.reduce(0, +) }
-        var skipped: Set<Int> = []
-        var refused: Int64 = 0
+        return queue.enumerated().compactMap { index, group in
+            guard group.line == line.id, group.outbound == outbound, let far = ahead[group.destination] else { return nil }
+            return (index, far)
+        }
+    }
+
+    func room(_ i: Int) -> Int64 {
+        Int64(trains[i].cars) * 320 * 11 / 10 - (passengers.riders[trains[i].id] ?? [:]).values.reduce(0) { $0 + $1.values.reduce(0, +) }
+    }
+
+    /// Train `i`, waiting at stop `stop` with its doors open, takes on the
+    /// farthest first while it has room; how many boarded.
+    mutating func board(_ i: Int, stop: Int) -> Int64 {
+        let train = trains[i]
+        let station = train.timetable[stop].station.rawValue
+        let candidates = boardable(i, stop: stop)
+        guard !candidates.isEmpty, var queue = passengers.queue[station] else { return 0 }
+        var room = room(i)
+        var left = candidates
+        var boarded: Int64 = 0
         var paid: [Int: Int64] = [:]
-        while true {
-            var best: Int?
-            for (index, group) in queue.enumerated() where !skipped.contains(index) && group.line == line.id && group.outbound == outbound {
-                guard let far = ahead[group.destination] else { continue }
-                if best == nil || far > ahead[queue[best!].destination]! { best = index }
+        while room > 0, !left.isEmpty {
+            var best = 0
+            for k in left.indices where left[k].far > left[best].far {
+                best = k
             }
-            guard let index = best else { break }
-            skipped.insert(index)
+            let index = left.remove(at: best).index
             let taking = min(room, queue[index].count)
-            refused += queue[index].count - taking
-            if taking > 0 {
-                room -= taking
-                queue[index].count -= taking
-                passengers.riders[train.id, default: [:]][station, default: [:]][queue[index].destination, default: 0] += taking
-                paid[queue[index].destination, default: 0] += taking
-            }
+            room -= taking
+            boarded += taking
+            queue[index].count -= taking
+            passengers.riders[train.id, default: [:]][station, default: [:]][queue[index].destination, default: 0] += taking
+            paid[queue[index].destination, default: 0] += taking
         }
         // Decision 36: each destination's boarders pay, rounded together.
         for (destination, count) in paid {
@@ -301,6 +326,16 @@ extension ReferenceWorld {
         }
         queue.removeAll { $0.count == 0 }
         passengers.queue[station] = queue.isEmpty ? nil : queue
+        return boarded
+    }
+
+    /// Stage W2b: train `i` has just left stop `stop` full: everyone it
+    /// could have taken there is refused (decision 35).
+    mutating func refuseLeftBehind(_ i: Int, stop: Int) {
+        guard room(i) <= 0 else { return }
+        let station = trains[i].timetable[stop].station.rawValue
+        let queue = passengers.queue[station] ?? []
+        let refused = boardable(i, stop: stop).reduce(Int64(0)) { $0 + queue[$1.index].count }
         if refused > 0 { passengers.refused[station, default: 0] += refused }
     }
 
