@@ -109,17 +109,27 @@ test_tools() {
     fail "the archive's Info.plist has no ApplicationProperties"
   fi
 
-  local key options destination
+  local key options destination scope="${TESTFLIGHT_SCOPE:-internal}"
   for options in "$export_options" "$upload_options"; do
     plutil -lint "$options" || fail "$(basename "$options") is not a valid property list"
-    for key in destination manageAppVersionAndBuildNumber method signingStyle testFlightInternalTestingOnly uploadSymbols; do
+    for key in destination manageAppVersionAndBuildNumber method signingStyle uploadSymbols; do
       /usr/libexec/PlistBuddy -c "Print :$key" "$options" >/dev/null 2>&1 ||
         fail "$(basename "$options") has no $key"
     done
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :method' "$options")" == "app-store-connect" ]] ||
       fail "$(basename "$options"): the method is not app-store-connect"
-    [[ "$(/usr/libexec/PlistBuddy -c 'Print :testFlightInternalTestingOnly' "$options")" == "true" ]] ||
-      fail "$(basename "$options"): internal-TestFlight-only is not enabled"
+    case "$scope" in
+      internal)
+        [[ "$(/usr/libexec/PlistBuddy -c 'Print :testFlightInternalTestingOnly' "$options" 2>/dev/null)" == "true" ]] ||
+          fail "$(basename "$options"): internal-TestFlight-only is not enabled"
+        ;;
+      external)
+        if /usr/libexec/PlistBuddy -c 'Print :testFlightInternalTestingOnly' "$options" >/dev/null 2>&1; then
+          fail "$(basename "$options"): external mode must omit testFlightInternalTestingOnly"
+        fi
+        ;;
+      *) fail "unknown TESTFLIGHT_SCOPE '$scope'" ;;
+    esac
   done
   destination="$(/usr/libexec/PlistBuddy -c 'Print :destination' "$export_options")"
   [[ "$destination" == export ]] || fail "the export options' destination is $destination, not export"
@@ -143,7 +153,7 @@ test_tools() {
     grep -qe "$key" <<<"$help" || fail "xcodebuild -help does not document $key"
   done
 
-  echo "$(xcodebuild -version | head -n 1): export and upload options and xcodebuild options checked."
+  echo "$(xcodebuild -version | head -n 1): $scope TestFlight export and upload options and xcodebuild options checked."
   finish
 }
 

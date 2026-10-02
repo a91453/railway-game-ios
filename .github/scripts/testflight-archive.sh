@@ -3,7 +3,8 @@
 # the export options: one to export the signed IPA that is checked, one to
 # upload the same archive to App Store Connect.
 #
-#   testflight-archive.sh adhoc       the release default: sign the archive
+#   testflight-archive.sh adhoc [internal|external]
+#                                     the release default: sign the archive
 #                                     ad hoc ("-") so no development
 #                                     certificate or profile is needed (a
 #                                     team with no registered device cannot
@@ -12,14 +13,16 @@
 #                                     signature and profile are applied at
 #                                     export, and testflight-verify-ipa.sh
 #                                     checks them
-#   testflight-archive.sh automatic   release alternative: automatic
+#   testflight-archive.sh automatic [internal|external]
+#                                     release alternative: automatic
 #                                     development signing for the real team,
 #                                     with the App Store Connect API key and
 #                                     -allowProvisioningUpdates, as Apple
 #                                     documents for headless xcodebuild; needs
 #                                     a development profile, so it fails for
 #                                     a team with no registered device
-#   testflight-archive.sh unsigned    dry run: no team, no key, no signing
+#   testflight-archive.sh unsigned [internal|external]
+#                                     dry run: no team, no key, no signing
 #
 # Always: Release configuration, generic iOS device, the committed project
 # and shared scheme (never regenerated here), and no automatic package
@@ -30,10 +33,14 @@
 #   UPLOAD_OPTIONS                    from testflight-signing.sh
 #   APPLE_TEAM_ID                     adhoc, automatic
 #   BUILD_NUMBER                      optional: CFBundleVersion of this build
+# The optional second argument selects TestFlight scope and defaults to
+# "internal" for backward compatibility. External mode deliberately omits
+# Apple's testFlightInternalTestingOnly export option.
 #   ASC_KEY_PATH, ASC_KEY_ID, ASC_ISSUER_ID   automatic
 set -euo pipefail
 
 mode="${1:-}"
+testing_scope="${2:-internal}"
 archive_path="${ARCHIVE_PATH:?ARCHIVE_PATH is not set; run testflight-signing.sh setup first}"
 export_options="${EXPORT_OPTIONS:?EXPORT_OPTIONS is not set; run testflight-signing.sh setup first}"
 upload_options="${UPLOAD_OPTIONS:?UPLOAD_OPTIONS is not set; run testflight-signing.sh setup first}"
@@ -76,7 +83,14 @@ case "$mode" in
     args+=(CODE_SIGNING_ALLOWED=NO)
     ;;
   *)
-    echo "usage: $0 automatic|adhoc|unsigned" >&2
+    echo "usage: $0 automatic|adhoc|unsigned [internal|external]" >&2
+    exit 64
+    ;;
+esac
+case "$testing_scope" in
+  internal|external) ;;
+  *)
+    echo "usage: $0 automatic|adhoc|unsigned [internal|external]" >&2
     exit 64
     ;;
 esac
@@ -90,12 +104,18 @@ xcodebuild "${args[@]}"
 # export (cloud-managed distribution certificate when no local one exists).
 # "export" writes the IPA that is checked; "upload" re-exports the same
 # archive with the same signing options and sends it to App Store Connect.
-# Both paths are restricted to internal TestFlight. The build number comes
-# from the archive; Xcode must not change it.
+# The build number comes from the archive; Xcode must not change it. Internal
+# mode adds Apple's internal-only marker; external mode omits it so App Store
+# Connect can submit the build to Beta App Review and external testing.
 team_entry=""
 if [[ -n "${APPLE_TEAM_ID:-}" ]]; then
   team_entry="	<key>teamID</key>
 	<string>$APPLE_TEAM_ID</string>"
+fi
+internal_testing_entry=""
+if [[ "$testing_scope" == internal ]]; then
+  internal_testing_entry="	<key>testFlightInternalTestingOnly</key>
+	<true/>"
 fi
 write_options() {
   local destination="$1" path="$2"
@@ -113,8 +133,7 @@ write_options() {
 	<key>signingStyle</key>
 	<string>automatic</string>
 $team_entry
-	<key>testFlightInternalTestingOnly</key>
-	<true/>
+$internal_testing_entry
 	<key>uploadSymbols</key>
 	<true/>
 </dict>
@@ -123,4 +142,4 @@ PLIST
 }
 write_options export "$export_options"
 write_options upload "$upload_options"
-echo "Archive ($mode) and export and upload options written."
+echo "Archive ($mode, $testing_scope TestFlight) and export and upload options written."

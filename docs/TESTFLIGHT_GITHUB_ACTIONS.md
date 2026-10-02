@@ -1,6 +1,6 @@
-# GitHub Actions → 內部 TestFlight
+# GitHub Actions → TestFlight
 
-目前的發佈路線是在 GitHub 標準 macOS runner（`macos-26`，預設 Xcode 26.6）上完成以下步驟，再以**內部** TestFlight 安裝到自己的 iPhone / iPad：
+目前的發佈路線是在 GitHub 標準 macOS runner（`macos-26`，預設 Xcode 26.6）上完成以下步驟，再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
 
 1. Archive（Release）
 2. 簽章
@@ -28,7 +28,7 @@
 ## 流程
 
 ```
-Actions → TestFlight (internal) → Run workflow（只允許 main）
+Actions → TestFlight → Run workflow（只允許 main）
   ├─ preflight（Linux，數秒）
   │    分支與觸發方式、每個必要設定是否存在且格式正確；
   │    缺少就一次列出全部並停止，不啟動 macOS runner
@@ -38,7 +38,8 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
        → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
          真實 Team；預設 `adhoc` 簽章（`automatic` 為選項，見下）
        → 匯出 IPA：xcodebuild -exportArchive，App Store Connect 發佈，
-         `testFlightInternalTestingOnly=true`，自動簽章 + API key
+         `internal` 時加入 `testFlightInternalTestingOnly=true`；`external` 時省略此鍵，
+         自動簽章 + API key
          （本機沒有發佈憑證時使用 Apple 雲端管理的發佈憑證）
        → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
          發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
@@ -59,6 +60,7 @@ Actions → TestFlight (internal) → Run workflow（只允許 main）
 | `.github/scripts/testflight-selftest*.sh` | 上述檢查用的測試（只用假值） |
 
 - **只允許一個發佈同時進行**：`concurrency: testflight-release`，而且不取消進行中的上傳。執行中再按一次會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。
+- **TestFlight 範圍**（Run workflow 的 `testing_scope` 選項）：`internal` 為預設，保留原本僅內部測試行為；`external` 會上傳可供 External Testing 使用的新 build。外部測試仍需在 App Store Connect 將該 build 加入外部群組並通過 Beta App Review。
 - **Archive 簽章方式**（Run workflow 的 `archive_signing` 選項）：
   - `adhoc`（預設，第一個選項）：以 ad hoc（`-`）簽章封存，不需要開發憑證或開發描述檔。適合 CI 與沒有已註冊開發裝置的新團隊。
     - **它不是最後輸出的 IPA 類型**：最後的 IPA 仍在匯出階段以 App Store distribution 憑證與 App Store 描述檔簽章，IPA 檢查會驗證這一點（真實執行的 log 顯示「App Store distribution build」）。
@@ -110,11 +112,12 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
    - **Environment secrets**：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY`（貼上 `.p8` 全文，換行保持原樣即可）。
    - **Environment variables**：`APPLE_TEAM_ID`、`ASC_APP_ID`；`BUILD_NUMBER_OFFSET` 選填。
 7. **內部測試群組**：App Store Connect → 你的 App → TestFlight → Internal Testing「+」→ 群組 `Internal`，加入自己，勾「Enable automatic distribution」。Apple 說明中必須手動加入群組的是 Xcode Cloud 的 build；若新 build 沒有自動出現，在群組頁按 Add Builds 手動加入。
-8. **發佈**：GitHub → Actions → **TestFlight (internal)** → Run workflow → Branch 選 `main`，`archive_signing` 維持預設的 `adhoc` → Run workflow。
+8. **發佈**：GitHub → Actions → **TestFlight** → Run workflow → Branch 選 `main`，`archive_signing` 維持預設的 `adhoc`；自己測試選 `testing_scope: internal`，要給朋友外部測試則選 `testing_scope: external` → Run workflow。
 9. **上傳之後**：
    - App Store Connect 會先處理（processing），通常數分鐘到數十分鐘。
    - TestFlight 若顯示 **Missing Compliance**，依實際情況回答出口合規問題（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉；本專案不替你預設答案）。
-   - 在 iPhone / iPad 的 TestFlight App 安裝。
+   - `internal`：照原本方式在內部群組安裝。
+   - `external`：在 App Store Connect → TestFlight → External Testing 將新 build 加到外部群組（例如 `Friends Beta`），填測試資訊並送 Beta App Review；核准後再以 Email 或 Public Link 邀請朋友。
 
 **會員生效前也可以先試跑**：先完成步驟 6 的 environment 與分支限制。preflight 會在幾秒內列出所有缺少的設定並停止，不啟動 macOS runner、不簽章、不上傳。若 environment 還不存在，GitHub 會自動建立一個沒有分支限制的 `testflight`，之後再補上限制即可。
 
@@ -163,7 +166,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - 刪除暫存 keychain、key 檔、這次新增的描述檔、archive 與 IPA（IPA 內含描述檔）。
   - 清理可以重複執行，setup 失敗或只完成一半時也安全。
 - **不會存成 artifact**：IPA、archive、描述檔、憑證、key 都不會上傳成 artifact。
-- **上傳的內容**：先檢查一份本地匯出的 IPA；上傳步驟再從**同一份 archive** 以相同 ExportOptions（只差 `destination`）與相同簽章方式重新匯出並直接上傳。它不是宣稱逐位元上傳剛才檢查的那個 IPA；上傳步驟只在本地 IPA 檢查通過後才執行。兩份 ExportOptions 都設 `testFlightInternalTestingOnly=true`。
+- **上傳的內容**：先檢查一份本地匯出的 IPA；上傳步驟再從**同一份 archive** 以相同 ExportOptions（只差 `destination`）與相同簽章方式重新匯出並直接上傳。它不是宣稱逐位元上傳剛才檢查的那個 IPA；上傳步驟只在本地 IPA 檢查通過後才執行。`internal` 模式的兩份 ExportOptions 都設 `testFlightInternalTestingOnly=true`；`external` 模式則都省略該鍵。
 - **Log 是公開的**：這個 repository 公開，Actions log 任何人都看得到。
   - 腳本只印出「是否存在、格式是否正確、yes/no、版本資訊」，不印秘密，也不印含帳號持有人姓名的憑證或描述檔名稱。
   - GitHub 會自動遮蔽 secrets，但官方說明遮蔽不保證完整，所以腳本本身就不輸出它們。
@@ -179,7 +182,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | Build number：`7.1` → 重跑 `7.2` → 下一次 `8.1`；offset；排序遞增；Apple 的 4 位／2 位 component 上限會在 preflight 擋下 | VERIFIED | 同上 |
 | 暫存 keychain 建立、設定、設為預設、還原、刪除；假 `.p8` 的權限與正規化；失敗步驟後清理；重複清理 | VERIFIED | macOS dry run（真實 `security`）＋ 本機 stub |
 | Archive 指令三種模式的參數與 ExportOptions；已提交的專案能以未簽章方式 archive | VERIFIED | macOS dry run ＋ 本機 stub |
-| Xcode 26 提供需要的 `xcodebuild` 選項（`-exportArchive`、`-allowProvisioningUpdates`、`-authenticationKey*`）、ExportOptions 鍵、`app-store-connect` 方法與 `testFlightInternalTestingOnly`；匯出與上傳兩份設定只差在 `destination`，且兩者都限制為 internal TestFlight | VERIFIED | macOS dry run |
+| Xcode 26 提供需要的 `xcodebuild` 選項（`-exportArchive`、`-allowProvisioningUpdates`、`-authenticationKey*`）、ExportOptions 鍵、`app-store-connect` 方法與 `testFlightInternalTestingOnly`；匯出與上傳兩份設定只差在 `destination`，並以 macOS dry run 分別驗證 internal 會加入 internal-only 鍵、external 會省略該鍵 | VERIFIED | macOS dry run |
 | IPA 檢查：正確的發佈 IPA 通過；build number 不符、開發描述檔、有裝置清單、缺描述檔、開發憑證簽章都擋下；不輸出姓名 | VERIFIED | macOS dry run（自簽的一次性憑證、合成 IPA）＋ 本機 stub |
 | 真實 Apple 驗證：Team API key（Admin）與 GitHub environment `testflight` 的 secrets／variables 讀取、preflight 通過；不需要 `.p12`、Apple 密碼或雙重認證 | VERIFIED | 真實執行 #1、#2 |
 | 沒有已註冊裝置的新團隊：`automatic` archive 失敗（沒有開發描述檔）；cleanup 在失敗後仍成功 | VERIFIED（觀察到的失敗） | 真實執行 #1 |
