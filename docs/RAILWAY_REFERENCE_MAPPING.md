@@ -265,6 +265,25 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | 沒有參考 | 車站的規模 | `GameWorld.stationSummary(_:in:)`：路網上月台的數量與總長 | 世界單位 → 公尺 | **gap**：`Ci` 的車站沒有月台的數量；照 ROADMAP F1 以月台表示規模 |
 | 沒有參考（`Ci` 沒有方格） | 方格的軌道、車站、拆除工具，方格道岔與單雙線資訊 | App 不再提供（`ConstructionTool.networkTools`）；GamePresentation 的相容層保留到 F3 | — | **改變**（作者決定） |
 
+### Stage C4：存檔、開始畫面與示範地圖
+
+2026-10-02 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 45。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，畫面是同目錄的 `game-dom__q_f4c03f23b8518a04.html`；參考包是 `Railway/railway_game_reference_clean/`。`Railway/site_archive_clean/` 只在 localStorage 存偏好設定，沒有遊戲存檔。
+
+| 參考 | 行為 | Swift（C4） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `buildLocalSavePayload`：`{app: "城市设计师", version: 2, exportedAt, data: serializeGameState()}` | 存檔檔案：App 名稱、版本、時間、遊戲狀態 | `SaveLibrary` 的檔案 `{"app": "RailwayGame", "savedAt", "summary", "game": {"saveVersion", "world"}}` | ISO 8601 時間 | faithful（結構）；版本移到 GameCore 的 `SavedGame`，另加列清單用的 `summary` |
+| 參考包 `01_MIGRATION_MAP.md`「P0/P1 infrastructure - save migration from the beginning」：`schemaVersion`，「Every schema change should have an explicit migration function and regression fixture」；`docs/savegame_format.md` 外層記版本 | 一開始就有版本，每次改格式都有遷移與回歸存檔 | `SavedGame.currentVersion` = 1、`init(from:)` 依版本讀取；`SaveFixtures/v1-demo-90-minutes.json` 與 `SavedGameTests` | — | faithful（規則）；格式是 JSON，不是 OpenTTD 的二進位 chunk |
+| 參考包 `web_runtime/offline_persistence_file_io.md`：「load → detect schemaVersion → run vN → vN+1 → validate → commit」，不要在版本改變時清掉所有存檔 | 讀檔的步驟 | 檔頭檢查 App 與版本 → `SavedGame` 依版本讀取 → `GameWorld` 的不變量檢查 → 換成新的 `GameSession` | — | faithful |
+| `Ci` `normalizeAndValidateSaveData`、`saveUi.crypto.invalid`、`saveUi.cloud.invalidFormat` | 讀檔前檢查與正規化，壞檔不載入 | `SaveError`：`notASave`、`newerVersion`、`damaged`、`fileSystem`，各有中英文訊息；清單上標出讀不進來的原因 | — | 部分 faithful：沒有正規化，壞檔一律拒絕（GameCore 的不變量） |
+| `Ci` `screen-save-load-ui`：`metroSaveLoadEnterDirectClick`（直接進入）、`metroSaveLoadRestartFreshClick`（重新開始） | 開始時選擇繼續或重新開始 | `StartView` 的「繼續」「新遊戲」；`GameLauncher.continueGame()`、`startNewGame()` | — | faithful |
+| `Ci` `archiveMetroAppCurrentDraftBeforeFreshStart` | 重新開始前先另存目前的草稿 | `SaveLibrary.archiveAutosave()`：另開一局之前把自動存檔改成玩家的存檔 | — | faithful |
+| `Ci` 本機草稿（`LOCAL_DRAFT_NO_FLOW_SAVE_DEBOUNCE_MS` = 1800，建造後寫入）與雲端自動存檔（`AUTOSAVE_INTERVAL_MS` = 900 × 1000） | 自動存檔 | 離開前景、回到開始畫面、每 `GameLauncher.autosaveInterval`（900 秒）寫入 `autosave.json` | 毫秒 → 秒 | 部分 faithful：間隔照雲端自動存檔；不在每次建造後存（世界每一刻都在變，整個重寫太頻繁），改在離開前景時存 |
+| `Ci` `saveUi.desktop.localSlots`、`gameMenuSave` | 本機存檔槽位、選單的「儲存」 | 玩家自己的存檔一個一個檔案、清單（讀取、刪除）；遊戲選單的「儲存遊戲」 | — | 部分 faithful：不限槽位數 |
+| `Ci` `downloadLocalSave`、`importLocalSaveFromFile`（`saveUi.desktop.export`、`import`） | 匯出、匯入 JSON 存檔 | 遊戲選單的「匯出存檔」（`ShareLink`，`SaveLibrary.exportFile`）；開始畫面的「匯入存檔」（`fileImporter`，`GameLauncher.importSave`） | — | faithful |
+| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」打開 iOS 的「設定」 | — | **改變**：iOS 的每個 App 的語言在「設定」 |
+| `Ci` 雲端存檔、加密（`metroEncryptSaveBlob`）、分享碼、`LOCAL_SAVE_MAX_IMPORT_BYTES` | 帳號、雲端與加密 | 不做 | — | 延後：沒有帳號與伺服器；iCloud 另議 |
+| `Ci` 教學的示範（上海—南京）；舊的 `DemoLayout.swift`（方格） | 示範地圖 | `DemoWorld`：路網上的兩條線，中央一座兩個月台的點車站，全天營運、每站有客流；Release 也能從開始畫面開 | 格 → 世界單位 | **gap**：參考沒有可以移植的示範地圖（它的示範是真實路線），配置是自己的 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -381,7 +400,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 → C5 最小教學 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
