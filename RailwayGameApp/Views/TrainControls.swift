@@ -4,8 +4,8 @@ import SwiftUI
 
 /// The train tool's options: which train, where GameCore has it, the path
 /// it has left and the station it is stopped at, the run it follows and
-/// its performance (Stage C3), its rate, and the train commands that need
-/// no tile.
+/// its performance (Stage C3), its own timetable (Stage C2), its rate, and
+/// the train commands that need no tile.
 ///
 /// Everything shown is read from `session.world` each time the view is
 /// drawn, and every control calls a `GameSession` method that applies one
@@ -20,6 +20,7 @@ struct TrainControls: View {
     static let maximumRate: Int64 = 1_024
 
     @Bindable var session: GameSession
+    @State private var showsTimetable = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,6 +31,15 @@ struct TrainControls: View {
                 PerformanceMenu(performance: train.performance, language: session.language) { performance in
                     session.setSelectedTrainPerformance(performance)
                 }
+                // Stage C2: its own timetable.
+                Button {
+                    showsTimetable = true
+                } label: {
+                    Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
+                        .font(.footnote)
+                        .monospacedDigit()
+                }
+                .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
                         Text(train.carsText(in: session.language))
@@ -52,6 +62,10 @@ struct TrainControls: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        }
+        .sheet(isPresented: $showsTimetable) {
+            TimetableEditor(session: session)
+                .presentationDetents([.medium, .large])
         }
     }
 

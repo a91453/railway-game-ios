@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作。2026-10-02 作者決定，U、V 之前先做 [Stage C](#stage-c--已完成核心的操作畫面)：補上已完成的核心還沒有的操作畫面，讓所有功能都能在實機上測試；C1（任意角度的建造）與 C3（性能）已實作。然後是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作。2026-10-02 作者決定，U、V 之前先做 [Stage C](#stage-c--已完成核心的操作畫面)：補上已完成的核心還沒有的操作畫面，讓所有功能都能在實機上測試；C1（任意角度的建造）、C2（營運與乘客的設定畫面）與 C3（性能）已實作，接著是 C4（測試輔助）。然後是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -349,7 +349,7 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
 3. **W2**（見下面的 [Stage W](#stage-w--行駛曲線)）：W2a 時間改用秒 ✅ → W2b 停站、上下車與誤點 ✅ → W2c 曲線接到行程與移動 ✅。
    - W2a 之後先做 L1（繁體中文，決策 38），發第二版內部 TestFlight（0.2.0），再做 W2b（2026-10-02 作者決定）。
    - **2026-10-01 作者決定 W2 先於 U-min。** 第三份參考（[RailwayCore 參考包](RAILWAY_REFERENCE_MAPPING.md#railwaycore-參考包)）把停站與誤點列為 P0，這也是 G1 目前最明顯的缺口；W2 先做，U-min 就直接建立在最終的移動方式上。
-4. **C**：已完成核心的操作畫面（見下面的 [Stage C](#stage-c--已完成核心的操作畫面)）。C1 ✅、C3 ✅。
+4. **C**：已完成核心的操作畫面（見下面的 [Stage C](#stage-c--已完成核心的操作畫面)）。C1 ✅、C2 ✅、C3 ✅。
    - **2026-10-02 作者決定**：U-min 之前，先讓已完成的核心都有畫面、都能在實機上測試。
    - 為什麼排在 U-min 之前：路網、高程與月台的核心在 S3–S5 就完成了，App 卻只能在方格上鋪軌，Release 版的新遊戲完全沒有路網；車站也從來沒有需求，所以 App 裡沒有乘客、也沒有票價收入。W2c 的加減速在方格上幾乎看不出來（一格 16 公尺），要能鋪幾公里長的線才看得到。U-min、V 建立在方格與路網共用的軌道模型上，晚做沒有重寫的風險，而且它們處理多台車的跟車與待避，等玩家能蓋長的線、放多台車時才用得上。
 5. U-min：movement authority 的最小穩定契約。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。
@@ -437,12 +437,12 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 | 拆除路網 | S3 `removeTrackEdge`、`removeTrackNode` | 沒有 | C1 ✅ |
 | 路網上的月台與車站 | S4、S5 `addTrackPlatform`、`removeTrackPlatform` | 沒有 | C1 ✅ |
 | 把列車放到路網上 | S3 `placeTrain(_:at: .onEdge)` | 只能放在方格上 | C1 ✅（放到車站的月台） |
-| 車站需求（種類、每日旅次） | G1a `setStationDemand` | 沒有：App 裡的車站從來沒有需求，所以沒有乘客，也沒有票價收入 | C2 |
-| 列車自己的時刻表（逐站的到達、出發、折返、重複） | O、P、Q1、W2b `setTrainTimetable` | 只能啟動、停止已有的時刻表 | C2 |
-| 線路的停靠站 | Q2a `setLineStops` | 只能建立、刪除線路 | C2 |
-| 尖峰、離峰、低峰的時段（服務日） | Q2a `setServiceDay` | 沒有 | C2 |
-| 道岔、平面交叉（方格） | S1 `buildTurnout`、`buildCrossing` | 沒有 | C2 |
-| 唯讀資訊：區段與單雙線、佔用衝突、每對車站的需求、乘客帳 | S1 `trackSections`、`lineTrackCounts`、`occupancyConflicts`；G1a `hourlyDemand`、`passengerLedger` | 沒有 | C2 |
+| 車站需求（種類、每日旅次） | G1a `setStationDemand` | 沒有：App 裡的車站從來沒有需求，所以沒有乘客，也沒有票價收入 | C2 ✅ |
+| 列車自己的時刻表（逐站的到達、出發、折返、重複） | O、P、Q1、W2b `setTrainTimetable` | 只能啟動、停止已有的時刻表 | C2 ✅ |
+| 線路的停靠站 | Q2a `setLineStops` | 只能建立、刪除線路 | C2 ✅ |
+| 尖峰、離峰、低峰的時段（服務日） | Q2a `setServiceDay` | 沒有 | C2 ✅ |
+| 道岔、平面交叉（方格） | S1 `buildTurnout`、`buildCrossing` | 沒有 | C2 ✅ |
+| 唯讀資訊：區段與單雙線、佔用衝突、每對車站的需求、乘客帳 | S1 `trackSections`、`lineTrackCounts`、`occupancyConflicts`；G1a `hourlyDemand`、`passengerLedger` | 沒有 | C2 ✅ |
 | 列車與線路的性能 | W2c `setTrainPerformance`、`setLinePerformance` | 沒有（W2c 也還沒有畫面） | C3 ✅ |
 | 存檔與讀檔 | `GameWorld` 的 `Codable` | 沒有：每次開 App 都是新遊戲 | C4 |
 | 示範地圖 | — | 只在 Debug | C4 |
@@ -460,12 +460,13 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 拆除：點軌段拆掉它，兩端沒有其他軌段的節點一起拆。
   - 列車工具：車站在路網上有月台時，把列車放到月台上，依朝向決定行進方向。
   - 每個操作都是 `GameWorld` 指令；幾個指令組成的操作在世界的副本上全部成功才生效。GameCore 沒有修改。
-- **C2 — 營運與乘客的設定畫面**：
-  - 車站需求（`Ci/` 的 `#panel-station-flow-adjust`：住宅、辦公、商業、觀光的預設與每日旅次）。
-  - 列車自己的時刻表（逐站的到達、出發、折返與重複週期）。
-  - 線路停靠站的編輯、服務日的時段。
-  - 方格的道岔與平面交叉。
-  - 唯讀的資訊：區段與單雙線、每對車站的需求、乘客帳。
+- **C2 ✅ — 營運與乘客的設定畫面**（ARCHITECTURE 決策 43）：依作者指示先做車站需求。
+  - **車站客流**：檢視列選到車站時打開客流面板，照 `Ci/` 的 `#panel-station-flow-adjust`：住宅區、辦公區、購物中心、景點四種預設（換預設時保留日客流）、日客流（沒有客流時從 10,000 開始，100 到 1,000,000）、複製、貼上、套用到全線路；進站與出站的每小時長條圖；往返各站的每日旅次、候車與乘客帳。
+  - **列車自己的時刻表**：照參考包的時刻表概念（起點、每站的行駛與停留，以到達與出發顯示）；加入停靠站、每次一分鐘移動到達或出發（之後的停靠站一起移動）、折返、刪除、清除、重複週期、開始與停止服務。
+  - **線路停靠站與服務日**：停靠站的插入、刪除、上下移動；服務日各時段的等級、開始時間、刪除、拆分與標準服務日；各等級的時段照 `Ci/` 的 `metroServiceSlotTimeRanges` 顯示。
+  - **方格的道岔與平面交叉**：軌道工具的選單選一般、道岔（與共用端）或平面交叉。
+  - **唯讀資訊**：區段、經過選取格的區段、共用軌道的列車；線路相鄰停靠站之間的單雙線。
+  - 還沒有：客流的自訂曲線與樞紐、時刻表的自動填入行駛時間（都需要 GameCore 或參考沒有的資料）。
 - **C3 ✅ — 性能**（ARCHITECTURE 決策 42）：W2c 合併之後，作者要求一起做，所以排在 C2 之前。
   - 列車與線路各有性能選單：Railway 參考的預設，以參考配對的車名命名（區間車、自強、太魯閣、高鐵等），加上捷運；以及 `Ci/` 建線畫面的「設計時速」（60 到 200 km/h）。
   - 線路面板顯示以它的性能規劃的各段時間與來回時間；列車面板顯示正在走的行駛（秒數、距離、預計到達）。

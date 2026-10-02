@@ -125,9 +125,12 @@ private struct ToolOptions: View {
     var body: some View {
         switch session.tool {
         case .select:
-            Label("Choose Track, Station, Remove or Network to build. Selecting only inspects.", systemImage: "info.circle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Choose Track, Station, Remove or Network to build. Selecting only inspects.", systemImage: "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                TrackInfo(session: session)
+            }
         case .buildTrack:
             TrackPieceEditor(session: session)
         case .buildStation:
@@ -160,6 +163,40 @@ private struct ToolOptions: View {
         case .train:
             TrainControls(session: session)
         }
+    }
+}
+
+/// Read-only facts about the grid's track (Stage C2): its sections, the
+/// sections through the selected tile, and track two trains occupy at once.
+/// Read from the world when drawn.
+private struct TrackInfo: View {
+    let session: GameSession
+
+    var body: some View {
+        let world = session.world
+        let language = session.language
+        VStack(alignment: .leading, spacing: 3) {
+            if let summary = world.trackSectionsSummary(in: language) {
+                Text(verbatim: summary)
+                    .fontWeight(.semibold)
+            }
+            if let position = session.selection {
+                let sections = world.sectionTexts(at: position, in: language)
+                ForEach(Array(sections.prefix(3).enumerated()), id: \.offset) { _, section in
+                    Label(section, systemImage: "arrow.left.and.right")
+                }
+                if sections.count > 3 {
+                    Text(verbatim: "…")
+                }
+            }
+            ForEach(Array(world.occupancyConflictTexts(in: language).prefix(2).enumerated()), id: \.offset) { _, conflict in
+                Label(conflict, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Color.orange)
+            }
+        }
+        .font(.footnote)
+        .monospacedDigit()
+        .accessibilityElement(children: .combine)
     }
 }
 

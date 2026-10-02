@@ -5,9 +5,10 @@ import SwiftUI
 /// Service lines (Phase 4 Stage R): every line and whether it runs now; for
 /// the selected line, each of its services (its own and its patterns) with
 /// the trains it is set to run at each level, what it can run and how far
-/// apart, its trains, and stretches no service covers; adding patterns and
-/// assigning the selected train; and picking stations for a new line. At the
-/// top, the traffic control switch (Phase 4.6 Stage T).
+/// apart, its trains, and stretches no service covers; its stops (Stage
+/// C2); adding patterns and assigning the selected train; and picking
+/// stations for a new line. At the top, the traffic control switch (Phase
+/// 4.6 Stage T) and the service day's bands (Stage C2).
 ///
 /// Shown in a sheet that leaves the map usable at half height, so stations
 /// can be selected for a new line while it is open. Everything shown is
@@ -27,9 +28,11 @@ struct LinesPanel: View {
         NavigationStack {
             Form {
                 trafficSection
+                serviceDaySection
                 linesSection
                 if let line = session.selectedLine {
                     lineSection(line)
+                    stopsSection(line)
                     ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
                         serviceSection(summary, of: line)
                     }
@@ -69,6 +72,64 @@ struct LinesPanel: View {
             ))
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
+        }
+    }
+
+    // MARK: - Service day (Stage C2)
+
+    /// The bands of the day, for every line: each with its level and, after
+    /// the first, a stepper for when it starts; adding splits the longest
+    /// band, and the standard day can be restored.
+    private var serviceDaySection: some View {
+        let day = session.world.serviceDay
+        let language = session.language
+        return Section {
+            ForEach(Array(day.bands.enumerated()), id: \.offset) { index, band in
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker(selection: Binding(get: { band.level }, set: { session.setServiceDayBand(index, to: $0) })) {
+                        ForEach(ServiceLevel.allCases, id: \.self) { level in
+                            Text(level.title(in: language)).tag(level)
+                        }
+                    } label: {
+                        Text(verbatim: day.bandText(index, in: language))
+                            .monospacedDigit()
+                    }
+                    .pickerStyle(.menu)
+                    if index > 0 {
+                        Stepper(
+                            onIncrement: ServiceDayEditing.canMove(index, later: true, in: day)
+                                ? { session.moveServiceDayBand(index, by: ServiceDayEditing.step) } : nil,
+                            onDecrement: ServiceDayEditing.canMove(index, later: false, in: day)
+                                ? { session.moveServiceDayBand(index, by: -ServiceDayEditing.step) } : nil
+                        ) {
+                            Text("Starts")
+                                .font(.footnote)
+                        }
+                        .accessibilityHint("Half an hour later or earlier, between the bands around it.")
+                    }
+                }
+                .deleteDisabled(index == 0)
+            }
+            .onDelete { offsets in
+                for index in offsets.sorted(by: >) where index > 0 {
+                    session.removeServiceDayBand(index)
+                }
+            }
+            Button {
+                session.addServiceDayBand()
+            } label: {
+                Label("Split the Longest Band", systemImage: "plus.circle")
+            }
+            Button {
+                session.resetServiceDay()
+            } label: {
+                Label("Standard Day", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(day == .standard)
+        } header: {
+            Text("Service day")
+        } footer: {
+            Text("Every line runs its peak, off-peak and low trains in these bands. Swipe a band to remove it; the band before it runs on.")
         }
     }
 
@@ -133,6 +194,12 @@ struct LinesPanel: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
+            // Stage C2: single or double track between its stops (Stage S1).
+            ForEach(Array(session.world.lineTrackCountTexts(line.id, in: session.language).enumerated()), id: \.offset) { _, text in
+                Label(text, systemImage: "road.lanes")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
                 if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
@@ -146,7 +213,61 @@ struct LinesPanel: View {
         } header: {
             Text(verbatim: "\(line.name) · \(line.window.displayText(in: session.language))")
         } footer: {
-            Text("Peak runs 07:00–10:00 and 16:00–20:00, low from 21:00 to 07:00, off-peak otherwise.")
+            Text(verbatim: session.world.serviceDay.summaryText(in: session.language))
+        }
+    }
+
+    // MARK: - The selected line's stops (Stage C2)
+
+    /// The line's stops in order, each with a menu to move it, insert a
+    /// station before it or remove it, and a menu to add a stop at the end.
+    private func stopsSection(_ line: ServiceLine) -> some View {
+        Section {
+            ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
+                HStack {
+                    Text(verbatim: "\(index + 1). \(name(of: station))")
+                        .font(.subheadline)
+                    Spacer(minLength: 8)
+                    Menu {
+                        Button("Move Up") {
+                            session.moveStopOfSelectedLine(at: index, by: -1)
+                        }
+                        .disabled(index == 0)
+                        Button("Move Down") {
+                            session.moveStopOfSelectedLine(at: index, by: 1)
+                        }
+                        .disabled(index == line.stops.count - 1)
+                        Menu("Insert Before") {
+                            stationButtons { session.insertStopIntoSelectedLine($0, at: index) }
+                        }
+                        Button("Remove Stop", role: .destructive) {
+                            session.removeStopFromSelectedLine(at: index)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .frame(minWidth: 44, minHeight: 32)
+                    }
+                    .accessibilityLabel("Edit stop \(index + 1), \(name(of: station))")
+                }
+            }
+            Menu {
+                stationButtons { session.insertStopIntoSelectedLine($0, at: line.stops.count) }
+            } label: {
+                Label("Add Stop at the End", systemImage: "plus.circle")
+            }
+        } header: {
+            Text("Stops")
+        } footer: {
+            Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
+        }
+    }
+
+    /// A button for every station, calling `choose` with its ID.
+    private func stationButtons(_ choose: @escaping @MainActor (StationID) -> Void) -> some View {
+        ForEach(session.world.stations) { station in
+            Button(station.name) {
+                choose(station.id)
+            }
         }
     }
 
