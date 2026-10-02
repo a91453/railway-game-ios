@@ -4,37 +4,54 @@ import SwiftUI
 
 @main
 struct RailwayGameApp: App {
-    /// Holds the app's single authoritative `GameWorld` for the app's lifetime.
+    /// Starts, continues and saves games for the app's lifetime (Stage C4).
     ///
-    /// Views get the session and change the world only through its methods,
-    /// which apply `GameWorld` commands; nothing else keeps a copy of the world.
-    @State private var session = RailwayGameApp.makeSession()
+    /// The game being played is its `GameSession`, the single authority over
+    /// that game's world. Views get the session and change the world only
+    /// through its methods, which apply `GameWorld` commands; nothing else
+    /// keeps a copy of the world.
+    @State private var launcher = RailwayGameApp.makeLauncher()
     /// The combined phase of all the app's scenes.
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            ContentView(session: session)
+            RootView(launcher: launcher)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
-            // One loop for the whole app, however many windows are open. It
-            // runs only while the app is active; time spent in the
-            // background is not replayed when the app returns.
-            if phase == .active {
-                session.startGameLoop()
-            } else {
-                session.stopGameLoop()
-            }
+            // One game loop for the whole app, however many windows are
+            // open. It runs only while the app is active; leaving the
+            // foreground autosaves, and time spent in the background is not
+            // replayed when the app returns.
+            launcher.setActive(phase == .active)
         }
     }
 
-    private static func makeSession() -> GameSession {
+    private static func makeLauncher() -> GameLauncher {
+        let library = (try? SaveLibrary.standard())
+            ?? SaveLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent("Saves", isDirectory: true))
+        let launcher = GameLauncher(library: library, language: .app)
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains(DemoLayout.launchArgument) {
-            return DemoLayout.makeSession()
+        // A Debug build launched with -demo-layout opens the demo map at
+        // once (Release builds open it from the start screen).
+        if ProcessInfo.processInfo.arguments.contains("-demo-layout") {
+            launcher.openDemo()
         }
         #endif
-        return GameSession(world: .newGame(), language: .app)
+        return launcher
+    }
+}
+
+/// The game being played, or the start screen when there is none.
+private struct RootView: View {
+    let launcher: GameLauncher
+
+    var body: some View {
+        if let session = launcher.session {
+            ContentView(session: session, launcher: launcher)
+        } else {
+            StartView(launcher: launcher)
+        }
     }
 }
 
@@ -44,32 +61,5 @@ extension DisplayLanguage {
     /// writes matches the rest of the screen.
     static var app: DisplayLanguage {
         DisplayLanguage(localization: Bundle.main.preferredLocalizations.first ?? "en")
-    }
-}
-
-extension GameWorld {
-    /// The world a new game starts with, running at 600× (`normal`), with
-    /// traffic control on (Phase 4.6 Stage T): trains take their whole
-    /// route before they leave, and a managed company (G1c). GameCore's own
-    /// new worlds start with both off.
-    static func newGame() -> GameWorld {
-        do {
-            var world = try GameWorld(
-                width: 32,
-                height: 24,
-                economy: GameEconomy(balance: 1_000_000),
-                clock: GameClock(speed: .normal)
-            )
-            try world.setTrafficControl(true)
-            // G1c: a new game is a managed company, so fares are charged
-            // and running costs settled.
-            world.setEconomyMode(.management)
-            return world
-        } catch {
-            // The size is a constant within GridMap's limits and an empty
-            // world has no trains to share track, so failing here is a
-            // programming error.
-            preconditionFailure("Could not create the new-game world: \(error)")
-        }
     }
 }
