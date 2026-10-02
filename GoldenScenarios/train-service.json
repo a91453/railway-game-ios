@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 24,
-  "description": "Timetable services on a line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1) with dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) has platform d, Gamma(5,0) and Delta(5,2) share platform f, and Echo(6,0) has no platform until g(6,1) is built. startTrainService checks, in the order unknownTrain, trainServiceActive, noTimetable, trainNotPlaced, trainNotAtFirstStop (the train must be stopped at the first stop's station); stopTrainService checks unknownTrain, trainServiceNotActive. A service runs the timetable once, in order, and its execution is the timetable index it waits at or travels to. Each basic step from second t: the services' dwells and departures (Stage W2b: a waiting service's doors open 8 s after it arrived and start closing once it has dwelt its least, 36 s, or 42 s at either end of its timetable or where it turns round, less the 9 s they take to close, and no sooner than 9 s before its scheduled departure; it leaves when they have closed), movement, the clock to t+1, arrivals at t+1 (a travelling service whose train is stopped at the next stop's station waits there). Local 1 (rate 1024, one link a minute) starts at Alpha: it never leaves before 5 even in one advance of 5 ticks, arrives early at Beta at 7 and waits until its departure at 10; Beta again (a repeated station) is reached at once, which counts as arriving: it dwells its least there and leaves at 10:36; Gamma is reached late at 12:36 and left after its least dwell, at 13:12, with no hold for the timetable; Delta shares Gamma's platform, so it is reached at once (and dwelt at), but Echo has no platform: without a route the train waits at Delta, also across an advance of 5 ticks, and leaves in the step after g is built; it arrives at Echo at 19, waits at the last stop until its departure at 20, and the service ends there, keeping the timetable. While a service runs, setTrainContinuation, reverseTrain, unplaceTrain and setTrainTimetable are refused with trainServiceActive, and setTrainMovementRate is allowed. Local 2 (rate 512) is stopped mid-journey: stopTrainService keeps its position, rate and continuation, it runs on to Beta under manual control, and a service only starts again from the first stop. Local 2 then runs Beta to Gamma within one advance of 20 ticks: it leaves at 40, reaches Gamma at 44, one minute before its last departure at 45, and the service still ends at 45 instead of that departure being skipped; a new one-stop service then starts at Delta, which shares Gamma's platform.",
+  "schemaVersion": 25,
+  "description": "Timetable services on a line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1) with dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) has platform d, Gamma(5,0) and Delta(5,2) share platform f, and Echo(6,0) has no platform until g(6,1) is built. startTrainService checks, in the order unknownTrain, trainServiceActive, noTimetable, trainNotPlaced, trainNotAtFirstStop (the train must be stopped at the first stop's station); stopTrainService checks unknownTrain, trainServiceNotActive. A service runs the timetable once, in order, and its execution is the timetable index it waits at or travels to. Each basic step from second t: the services' dwells and departures (Stage W2b: a waiting service's doors open 8 s after it arrived and start closing once it has dwelt its least, 36 s, or 42 s at either end of its timetable or where it turns round, less the 9 s they take to close, and no sooner than 9 s before its scheduled departure; it leaves when they have closed), movement, the clock to t+1, arrivals at t+1 (a travelling service whose train is stopped at the next stop's station waits there). Since Stage W2c a run takes the time the timetable gives it, from the scheduled departure to the scheduled arrival, on the train's running curve (standard here), shifted by a late departure. Local 1 (rate 1024) starts at Alpha: it never leaves before 5 even in one advance of 5 ticks, reaches Beta on time at 8 (681 units past b at 6) and waits until its departure at 10; Beta again (a repeated station) is reached at once, which counts as arriving: it dwells its least there and leaves at 10:36; Gamma is reached at 11:36, as late as it left (811 units past d at 11), and left after its least dwell, at 12:12, with no hold for the timetable; Delta shares Gamma's platform, so it is reached at once (and dwelt at), but Echo has no platform: without a route the train waits at Delta, also across an advance of 5 ticks, and leaves in the step after g is built, at 18; it arrives at Echo at 20, two minutes later (511 units past f at 19), waits at the last stop for its least dwell, and the service ends there at 20:42, keeping the timetable. While a service runs, setTrainContinuation, reverseTrain, unplaceTrain and setTrainTimetable are refused with trainServiceActive, and setTrainMovementRate is allowed. Local 2 (rate 512) is stopped mid-journey, 409 units past b on its 300 s run: stopTrainService keeps its position, rate and continuation, it runs on to Beta under manual control at 512 a minute, there at 30, and a service only starts again from the first stop. Local 2 then runs Beta 30/40, Gamma 44/45 within one advance of 20 ticks: it leaves at 40, reaches Gamma at 44, one minute before its last departure at 45, and the service still ends at 45 instead of that departure being skipped; a new one-stop service then starts at Delta, which shares Gamma's platform.",
   "initialState": {
     "mapWidth": 8,
     "mapHeight": 4,
@@ -196,7 +196,7 @@
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "node", "x": 2, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
+      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 681 }, "movement": { "rate": 1024, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
     },
     {
       "observe": { "type": "stationStops", "train": 1 },
@@ -236,19 +236,7 @@
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "link", "from": { "x": 3, "y": 1 }, "to": { "x": 4, "y": 1 }, "offset": 410 }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "cursor": 1, "edges": [] } }
-    },
-    {
-      "command": { "type": "advance", "ticks": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "travelling", "stop": 3, "cycle": 0 } }
-    },
-    {
-      "observe": { "type": "stationStops", "train": 1 },
-      "expect": { "stations": [] }
+      "expect": { "position": { "type": "link", "from": { "x": 3, "y": 1 }, "to": { "x": 4, "y": 1 }, "offset": 811 }, "movement": { "rate": 1024, "continuation": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "cursor": 1, "edges": [] } }
     },
     {
       "command": { "type": "advance", "ticks": 1 },
@@ -257,6 +245,18 @@
     {
       "observe": { "type": "execution", "train": 1 },
       "expect": { "execution": { "type": "waiting", "stop": 3, "cycle": 0 } }
+    },
+    {
+      "observe": { "type": "stationStops", "train": 1 },
+      "expect": { "stations": [3, 4] }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 1 },
+      "expect": { "execution": { "type": "waiting", "stop": 4, "cycle": 0 } }
     },
     {
       "observe": { "type": "routeToStation", "from": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "station": 5 },
@@ -292,11 +292,11 @@
     },
     {
       "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "waiting", "stop": 5, "cycle": 0 } }
+      "expect": { "execution": { "type": "travelling", "stop": 5, "cycle": 0 } }
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "node", "x": 6, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] } }
+      "expect": { "position": { "type": "link", "from": { "x": 5, "y": 1 }, "to": { "x": 6, "y": 1 }, "offset": 511 }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] } }
     },
     {
       "command": { "type": "advance", "ticks": 1 },
@@ -356,7 +356,7 @@
     },
     {
       "observe": { "type": "train", "train": 2 },
-      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
+      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 409 }, "movement": { "rate": 512, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
     },
     {
       "command": { "type": "stopTrainService", "train": 2 },
@@ -368,14 +368,14 @@
     },
     {
       "observe": { "type": "train", "train": 2 },
-      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 512 }, "movement": { "rate": 512, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
+      "expect": { "position": { "type": "link", "from": { "x": 1, "y": 1 }, "to": { "x": 2, "y": 1 }, "offset": 409 }, "movement": { "rate": 512, "continuation": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "cursor": 1, "edges": [] } }
     },
     {
       "command": { "type": "startTrainService", "train": 2 },
       "expect": { "result": "trainNotAtFirstStop", "train": 2 }
     },
     {
-      "command": { "type": "advance", "ticks": 3 },
+      "command": { "type": "advance", "ticks": 4 },
       "expect": { "result": "ok" }
     },
     {
@@ -391,7 +391,7 @@
       "expect": { "result": "trainNotAtFirstStop", "train": 2 }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 2, "arrival": 29, "departure": 40, "reverse": false }, { "station": 3, "arrival": 45, "departure": 45, "reverse": false }], "repeat": { "type": "once" } },
+      "command": { "type": "setTrainTimetable", "train": 2, "timetable": [{ "station": 2, "arrival": 30, "departure": 40, "reverse": false }, { "station": 3, "arrival": 44, "departure": 45, "reverse": false }], "repeat": { "type": "once" } },
       "expect": { "result": "ok" }
     },
     {
@@ -432,7 +432,7 @@
     }
   ],
   "expectedFinalState": {
-    "gameMinutes": 49,
+    "gameMinutes": 50,
     "speed": "normal",
     "balance": 343000,
     "stations": [
@@ -453,7 +453,7 @@
     ],
     "trains": [
       { "id": 1, "name": "Local 1", "position": { "type": "node", "x": 6, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 1, "arrival": 0, "departure": 5, "reverse": false }, { "station": 2, "arrival": 8, "departure": 10, "reverse": false }, { "station": 2, "arrival": 10, "departure": 10, "reverse": false }, { "station": 3, "arrival": 11, "departure": 11, "reverse": false }, { "station": 4, "arrival": 12, "departure": 12, "reverse": false }, { "station": 5, "arrival": 14, "departure": 20, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] },
-      { "id": 2, "name": "Local 2", "position": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 4, "arrival": 49, "departure": 60, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "waiting", "stop": 0, "cycle": 0 }, "times": { "arrival": 2940 }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
+      { "id": 2, "name": "Local 2", "position": { "type": "node", "x": 5, "y": 1, "heading": "east" }, "movement": { "rate": 512, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 4, "arrival": 49, "departure": 60, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "waiting", "stop": 0, "cycle": 0 }, "times": { "arrival": 3000 }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
     ],
     "lines": [],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],

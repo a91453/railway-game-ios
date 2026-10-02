@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 24,
-  "description": "Services on the track network (Phase 4.5 Stage S5, ARCHITECTURE decision 31). Surface Harbour (e1, 2048 to 6144), a curve (e2, 6346), a ramp down 1024 in a tunnel (e3, 32768, 1 in 32; node 3 is a tunnel portal) and underground Deep on a curve (e4, 6346; 1024 to 4096). A train stops with its head at the far end of a platform the way it travels (end going forward, L - start going backward), only at platforms no shorter than it; its path to a station is the least exact distance: the rest of its edge, every edge between and the stretch into the last. A leg takes that distance at the line's rate, rounded up. Mole (3 cars, 2048 a minute) repeats Harbour, Deep, Harbour every 70 minutes: out 2048 + 6346 + 32768 + 4096 = 45258 (23 minutes), turned at Deep with its head where its tail was (4298 along e4 backward), back 2048 + 32768 + 6346 + 6144 = 47306 (24 minutes), turned at Harbour (4096 facing east) and pulled up 2048 to the berth it started from. Line Tube sends Shuttle (1 car) out every 52 minutes: its journey from Harbour's berth as one car is 23 + 25 minutes and 2 at each end. Stage W2b: Mole, started at 0 for a departure at 0, dwells its 42 s at Harbour first and leaves at 0:42; Tube's timetable leaves Harbour 42 s after it sends Shuttle out (also at 0), so both run 42 s behind where they would have been until a stop holds them for its departure.",
+  "schemaVersion": 25,
+  "description": "Services on the track network (Phase 4.5 Stage S5, ARCHITECTURE decision 31). Surface Harbour (e1, 2048 to 6144), a curve (e2, 6346), a ramp down 1024 in a tunnel (e3, 32768, 1 in 32; node 3 is a tunnel portal) and underground Deep on a curve (e4, 6346; 1024 to 4096). A train stops with its head at the far end of a platform the way it travels (end going forward, L - start going backward), only at platforms no shorter than it; its path to a station is the least exact distance: the rest of its edge, every edge between and the stretch into the last. A line plans a leg in the least whole second its performance builds a running curve for over that distance, and a service's run takes the time its timetable gives it (Stage W2c, ARCHITECTURE decision 40). Mole (3 cars) repeats Harbour 0/0, Deep 22/30 turning, Harbour 53/62 turning, every 63 minutes: out 2048 + 6346 + 32768 + 4096 = 45258 in 22 minutes, turned at Deep with its head where its tail was (4298 along e4 backward), back 2048 + 32768 + 6346 + 6144 = 47306 in 23 minutes, turned at Harbour (4096 facing east) and pulled up 2048 in a minute to the berth it started from, for the next cycle at 63. Line Tube plans with a crawl at 2 km/h, { acceleration 25, braking 25, topSpeed 2 } (35.6 units a second, reached in 80 s over 1422 units, and as long to stop): its journey from Harbour's berth as one car is 45258 in 1353 s and 49354 in 1469 s, with 2 minutes at each end 3062 s, 52 minutes; it sends Shuttle (1 car, 2048 short of the berth: 47306 out, 1411 s) out every 52. Stage W2b: Mole, started at 0 for a departure at 0, dwells its 42 s at Harbour first and leaves at 0:42; Tube's timetable leaves Harbour 42 s after it sends Shuttle out (also at 0), so both run 42 s behind their timetables, each run shifted by its late departure, until a stop holds them for its departure.",
   "initialState": {
     "mapWidth": 64,
     "mapHeight": 64,
@@ -131,7 +131,7 @@
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 25, "departure": 30, "reverse": true }, { "station": 1, "arrival": 60, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 70 } },
+      "command": { "type": "setTrainTimetable", "train": 1, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 22, "departure": 30, "reverse": true }, { "station": 1, "arrival": 53, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 63 } },
       "expect": { "result": "ok" }
     },
     {
@@ -163,7 +163,7 @@
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "setLineRate", "line": 1, "rate": 2048 },
+      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 25, "braking": 25, "topSpeed": 2 } },
       "expect": { "result": "ok" }
     },
     {
@@ -176,7 +176,7 @@
     },
     {
       "observe": { "type": "lineJourney", "line": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "legs": [{ "from": 0, "to": 1, "path": { "traversals": [{ "edge": 2, "direction": "forward" }, { "edge": 3, "direction": "forward" }, { "edge": 4, "direction": "forward" }], "end": 4096, "distance": 45258 }, "minutes": 23 }, { "from": 1, "to": 0, "path": { "traversals": [{ "edge": 3, "direction": "backward" }, { "edge": 2, "direction": "backward" }, { "edge": 1, "direction": "backward" }], "end": 6144, "distance": 49354 }, "minutes": 25 }], "roundTripMinutes": 52 } }
+      "expect": { "found": true, "journey": { "start": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "legs": [{ "from": 0, "to": 1, "path": { "traversals": [{ "edge": 2, "direction": "forward" }, { "edge": 3, "direction": "forward" }, { "edge": 4, "direction": "forward" }], "end": 4096, "distance": 45258 }, "seconds": 1353 }, { "from": 1, "to": 0, "path": { "traversals": [{ "edge": 3, "direction": "backward" }, { "edge": 2, "direction": "backward" }, { "edge": 1, "direction": "backward" }], "end": 6144, "distance": 49354 }, "seconds": 1469 }], "roundTripSeconds": 3062, "roundTripMinutes": 52 } }
     },
     {
       "observe": { "type": "lineMaximumTrains", "line": 1 },
@@ -196,7 +196,7 @@
     },
     {
       "observe": { "type": "timetable", "train": 2 },
-      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 42, "reverse": false }, { "station": 2, "arrivalSeconds": 1482, "departureSeconds": 1602, "reverse": true }, { "station": 1, "arrivalSeconds": 3102, "departureSeconds": 3102, "reverse": true }] }
+      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 42, "reverse": false }, { "station": 2, "arrivalSeconds": 1453, "departureSeconds": 1573, "reverse": true }, { "station": 1, "arrivalSeconds": 3042, "departureSeconds": 3042, "reverse": true }] }
     },
     {
       "observe": { "type": "execution", "train": 1 },
@@ -204,7 +204,7 @@
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6759 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [2, 3, 4], "end": 4096 } }
+      "expect": { "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6739 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [2, 3, 4], "end": 4096 } }
     },
     {
       "command": { "type": "advance", "ticks": 4 },
@@ -212,7 +212,7 @@
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 413 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 } }
+      "expect": { "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 436 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 } }
     },
     {
       "observe": { "type": "trackPlatformsAlongTrain", "train": 1 },
@@ -256,7 +256,7 @@
     },
     {
       "observe": { "type": "train", "train": 1 },
-      "expect": { "position": { "type": "edge", "edge": 4, "direction": "backward", "offset": 6346 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [3, 2, 1], "end": 6144 } }
+      "expect": { "position": { "type": "edge", "edge": 4, "direction": "backward", "offset": 6334 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [3, 2, 1], "end": 6144 } }
     },
     {
       "observe": { "type": "execution", "train": 1 },
@@ -300,7 +300,7 @@
     },
     {
       "observe": { "type": "timetable", "train": 2 },
-      "expect": { "timetable": [{ "station": 1, "arrival": 52, "departureSeconds": 3162, "reverse": false }, { "station": 2, "arrivalSeconds": 4662, "departureSeconds": 4782, "reverse": true }, { "station": 1, "arrivalSeconds": 6282, "departureSeconds": 6282, "reverse": true }] }
+      "expect": { "timetable": [{ "station": 1, "arrival": 52, "departureSeconds": 3162, "reverse": false }, { "station": 2, "arrivalSeconds": 4631, "departureSeconds": 4751, "reverse": true }, { "station": 1, "arrivalSeconds": 6220, "departureSeconds": 6220, "reverse": true }] }
     },
     {
       "command": { "type": "advance", "ticks": 9 },
@@ -329,11 +329,11 @@
     ],
     "tracks": [],
     "trains": [
-      { "id": 1, "name": "Mole", "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6144 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [], "end": 6144 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 25, "departure": 30, "reverse": true }, { "station": 1, "arrival": 60, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 70 }, "execution": { "type": "waiting", "stop": 0, "cycle": 1 }, "times": { "arrival": 3780, "exchangeEnd": 3788, "departure": 3720 }, "cars": 3, "trail": [], "trailEdges": [], "reservation": [] },
-      { "id": 2, "name": "Shuttle", "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 10653 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 }, "timetable": [{ "station": 1, "arrival": 52, "departureSeconds": 3162, "reverse": false }, { "station": 2, "arrivalSeconds": 4662, "departureSeconds": 4782, "reverse": true }, { "station": 1, "arrivalSeconds": 6282, "departureSeconds": 6282, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "travelling", "stop": 1, "cycle": 0 }, "times": { "arrival": 3120, "departure": 3162 }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
+      { "id": 1, "name": "Mole", "position": { "type": "edge", "edge": 1, "direction": "forward", "offset": 6739 }, "movement": { "rate": 2048, "continuation": [], "cursor": 0, "edges": [2, 3, 4], "end": 4096 }, "timetable": [{ "station": 1, "arrival": 0, "departure": 0, "reverse": false }, { "station": 2, "arrival": 22, "departure": 30, "reverse": true }, { "station": 1, "arrival": 53, "departure": 62, "reverse": true }], "repeat": { "type": "every", "minutes": 63 }, "execution": { "type": "travelling", "stop": 1, "cycle": 1 }, "times": { "arrival": 3780, "departure": 3822, "run": { "start": 3822, "length": 45258, "seconds": 1320 } }, "cars": 3, "trail": [], "trailEdges": [], "reservation": [] },
+      { "id": 2, "name": "Shuttle", "position": { "type": "edge", "edge": 3, "direction": "forward", "offset": 10283 }, "movement": { "rate": 2048, "continuation": [], "cursor": 2, "edges": [2, 3, 4], "end": 4096 }, "timetable": [{ "station": 1, "arrival": 52, "departureSeconds": 3162, "reverse": false }, { "station": 2, "arrivalSeconds": 4631, "departureSeconds": 4751, "reverse": true }, { "station": 1, "arrivalSeconds": 6220, "departureSeconds": 6220, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "travelling", "stop": 1, "cycle": 0 }, "times": { "arrival": 3120, "departure": 3162, "run": { "start": 3162, "length": 49354, "seconds": 1469 } }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
     ],
     "lines": [
-      { "id": 1, "name": "Tube", "stops": [1, 2], "rate": 2048, "window": { "type": "allDay" }, "trainsInService": { "peak": 1, "offPeak": 1, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [2], "lastDispatch": 52, "patterns": [] }
+      { "id": 1, "name": "Tube", "stops": [1, 2], "performance": { "acceleration": 25, "braking": 25, "topSpeed": 2 }, "window": { "type": "allDay" }, "trainsInService": { "peak": 1, "offPeak": 1, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [2], "lastDispatch": 52, "patterns": [] }
     ],
     "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
     "network": {

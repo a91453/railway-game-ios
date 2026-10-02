@@ -348,19 +348,23 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(world.trainHoldingRoute(of: one), blocker)
         XCTAssertNil(world.trainHoldingRoute(of: blocker))
 
+        // It leaves at 3 on its run of five links in the 9 minutes its
+        // timetable gives it (Stage W2c), a minute along by 4.
         try world.unplaceTrain(blocker)
         XCTAssertNil(world.trainHoldingRoute(of: one))
         try world.advance(ticks: 1)
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
-        XCTAssertEqual(world.train(id: one)?.position, .atNode(p(2, 1), heading: .east))
+        XCTAssertEqual(world.train(id: one)?.position, .onLink(from: p(1, 1), to: p(2, 1), offset: runDistance(5_120, in: 540, after: 60)))
         let route = [
             tile(1, 1), tile(2, 1), tile(3, 1), tile(4, 1), tile(5, 1), tile(6, 1),
             link((1, 1), (2, 1)), link((2, 1), (3, 1)), link((3, 1), (4, 1)), link((4, 1), (5, 1)), link((5, 1), (6, 1)),
         ]
         XCTAssertEqual(world.reservedResources(of: one), route)
+        // Without its service it goes on at its rate, a link a minute: at
+        // (6,1) by 9.
         try world.stopTrainService(one)
         XCTAssertEqual(world.reservedResources(of: one), route)
-        try world.advance(ticks: 4)
+        try world.advance(ticks: 5)
         XCTAssertEqual(world.train(id: one)?.position, .atNode(p(6, 1), heading: .east))
         XCTAssertEqual(world.reservedResources(of: one), [])
     }
@@ -383,9 +387,10 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(0, cycle: 0))
         XCTAssertEqual(world.trainHoldingRoute(of: one), blocker)
 
+        // Turned and away at 2, on the 19 minutes' run to A.
         try world.unplaceTrain(blocker)
         try world.advance(ticks: 1)
-        XCTAssertEqual(world.train(id: one)?.position, .atNode(p(5, 1), heading: .west))
+        XCTAssertEqual(world.train(id: one)?.position, .onLink(from: p(6, 1), to: p(5, 1), offset: runDistance(5_120, in: 1_140, after: 60)))
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
     }
 
@@ -402,8 +407,10 @@ final class TrafficControlTests: XCTestCase {
         try world.assignTrain(one, to: line)
         let blocker = try place(&world, at: .atNode(p(4, 1), heading: .west))
         try world.setTrafficControl(true)
-        // The plan does not see the blocker.
-        XCTAssertEqual(world.lineJourney(line)?.roundTripMinutes, 14)
+        // The plan does not see the blocker: five links each way, 25 s
+        // each (√(2 × 5120 × 0.06) = 24.79 s), and the two ends: 290 s.
+        XCTAssertEqual(world.lineJourney(line)?.roundTripSeconds, 290)
+        XCTAssertEqual(world.lineJourney(line)?.roundTripMinutes, 5)
         XCTAssertEqual(world.trainHoldingRoute(of: one), blocker)
 
         try world.advance(ticks: 2)
@@ -413,12 +420,12 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(world.train(id: one)?.position, .atNode(p(1, 1), heading: .east))
 
         // Sent out at 2, it takes its route as it leaves at 2:42 (Stage W2b)
-        // and is 308 units along by 3.
+        // and is 18 s into its 25 s run by 3 (about 4031: braking).
         try world.unplaceTrain(blocker)
         try world.advance(ticks: 1)
         XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(minutes: 2))
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
-        XCTAssertEqual(world.train(id: one)?.position, .onLink(from: p(1, 1), to: p(2, 1), offset: 308))
+        XCTAssertEqual(world.train(id: one)?.position, .onLink(from: p(4, 1), to: p(5, 1), offset: runDistance(5_120, in: 25, after: 18) - 3_072))
         XCTAssertNil(world.trainHoldingRoute(of: one))
     }
 
@@ -839,8 +846,10 @@ final class TrafficControlTests: XCTestCase {
 
         try world.unplaceTrain(blocker)
         try world.advance(ticks: 1)
-        // Turned round (1024 along e2 backward), then 1024 on.
-        XCTAssertEqual(world.train(id: one)?.position, .onEdge(backward(2), offset: 2_048))
+        // Turned round (1024 along e2 backward), then a minute along its run
+        // of 7168 + 7168 = 14336 units in the 29 minutes its timetable gives
+        // it.
+        XCTAssertEqual(world.train(id: one)?.position, .onEdge(backward(2), offset: 1_024 + runDistance(14_336, in: 1_740, after: 60)))
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
         // From chainage 7168 back along e2 to n2, and e1 back to 7168 along
         // it: chainage 1024.

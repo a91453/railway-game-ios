@@ -23,3 +23,15 @@ func XCTAssertThrowsGameError<T>(
         XCTAssertEqual(error as? GameError, expected, file: file, line: line)
     }
 }
+
+/// Stage W2c: how far along a service's run a train is `elapsed` seconds
+/// after it set off: the running curve its performance builds for
+/// `length` units in `seconds` (W1's `RunningCurve`, checked against the
+/// reference's JavaScript in `RunningCurveTests`), all of it from the end
+/// of the run. Tests work arrival times out by hand; where a train is in
+/// between follows the curve, and this reads it off.
+func runDistance(_ length: Int64, in seconds: Int64, after elapsed: Int64, performance: TrainPerformance = .standard) -> Int64 {
+    guard elapsed > 0 else { return 0 }
+    guard elapsed < seconds else { return length }
+    return RunningCurve(length: length, duration: seconds * 1000, performance: performance)!.distance(at: elapsed * 1000)
+}

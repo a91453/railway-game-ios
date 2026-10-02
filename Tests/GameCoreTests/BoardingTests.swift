@@ -15,12 +15,14 @@ final class BoardingTests: XCTestCase {
     //       |           |          |
     //   a - b - c - d - e - f - g
     //
-    // Line 1 calls at Alpha, Beta and Gamma, one link a minute: its round
-    // trip for a train sent out at 0 is Alpha 0–0:42, Beta 2:42–3:42, Gamma
-    // 5:42–7:42 (turning round), Beta 9:42–10:42 and Alpha 12:42 (turning
-    // round; the service ends once the train has dwelt there). Passengers
-    // get off and on 8 s after the train arrives, as its doors open: at
-    // 0:08, 2:50, 5:50, 9:50 and 12:50 on time.
+    // Line 1 calls at Alpha, Beta and Gamma with the standard performance:
+    // each leg is two links in 16 s (Stage W2c: the least second its curve
+    // is built for, √(2 × 2048 × 0.06) = 15.68 s). Its round trip for a
+    // train sent out at 0 is Alpha 0–0:42, Beta 0:58–1:58, Gamma 2:14–4:14
+    // (turning round), Beta 4:30–5:30 and Alpha 5:46 (turning round; the
+    // service ends once the train has dwelt there). Passengers get off and
+    // on 8 s after the train arrives, as its doors open: at 0:08, 1:06,
+    // 2:22, 4:38 and 5:54 on time.
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -111,14 +113,12 @@ final class BoardingTests: XCTestCase {
         XCTAssertEqual(world.waitingPassengers(at: alpha), [])
         XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, riding: 12, overflowed: 0, abandoned: 0))
 
-        // Still on board on the way to Beta (2:42); off at 2:50.
-        try world.advance(ticks: 1)
-        XCTAssertEqual(world.riderCount(of: one), 12)
+        // Off at Beta at 1:06, as its doors open; the rest at Gamma at 2:22.
         try world.advance(ticks: 1)
         XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 7)])
         XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 5)
 
-        try world.advance(ticks: 4)
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.riders, [])
         XCTAssertEqual(world.passengerLedger(of: alpha), PassengerLedger(released: 12, waiting: 0, arrived: 12, overflowed: 0, abandoned: 0))
         assertConserved(world)
@@ -159,14 +159,16 @@ final class BoardingTests: XCTestCase {
         wait(&world, 352, at: alpha, for: gamma, .outbound)
         wait(&world, 10, at: beta, for: gamma, .outbound)
         wait(&world, 4, at: gamma, for: beta, .inbound)
-        try world.advance(ticks: 4)
+        // 352 boarding take 44 s: it leaves Alpha at 1:01, reaches Beta 16 s
+        // later and leaves it on time at 1:58, refusing the 10.
+        try world.advance(ticks: 2)
         XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 352)])
         XCTAssertEqual(world.passengerLedger(of: beta).refused, 10)
         XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [10])
 
-        // At Gamma the 352 get off, then the train turns round and takes
-        // the 4 going back.
-        try world.advance(ticks: 4)
+        // At Gamma (2:14) the 352 get off, then the train turns round and
+        // takes the 4 going back.
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.riders(of: one), [riding(gamma, beta, 4)])
         XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 352)
         assertConserved(world)
@@ -179,16 +181,16 @@ final class BoardingTests: XCTestCase {
         wait(&world, 3, at: beta, for: alpha, .inbound)
         wait(&world, 4, at: beta, for: gamma, .outbound, line: other)
         wait(&world, 5, at: beta, for: gamma, .outbound)
-        try world.advance(ticks: 4)
+        try world.advance(ticks: 2)
         XCTAssertEqual(world.riders(of: one), [riding(beta, gamma, 5)])
         XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [3, 4])
         XCTAssertEqual(world.passengerLedger(of: beta).refused, 0, "passengers the train would not take are not refused")
 
-        // Back through Beta (9–10) it takes the 3 for Alpha, and at Alpha
-        // they get off as the service ends.
-        try world.advance(ticks: 7)
+        // Back through Beta (4:30–5:30) it takes the 3 for Alpha, and at
+        // Alpha (5:46) they get off as the service ends.
+        try world.advance(ticks: 3)
         XCTAssertEqual(world.riders(of: one), [riding(beta, alpha, 3)])
-        try world.advance(ticks: 2)
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.riders, [])
         XCTAssertEqual(world.passengerLedger(of: beta).arrived, 8)
         XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [4])
@@ -223,7 +225,8 @@ final class BoardingTests: XCTestCase {
         wait(&world, 9, at: beta, for: gamma, .outbound)
         try world.advance(ticks: 1)
         try world.unassignTrain(one)
-        try world.advance(ticks: 3)
+        // At Beta at 0:58 the 5 get off (1:06); the 9 are not taken.
+        try world.advance(ticks: 1)
         XCTAssertEqual(world.riders(of: one), [riding(alpha, gamma, 7)])
         XCTAssertEqual(world.waitingPassengers(at: beta).map(\.count), [9])
         XCTAssertEqual(world.passengerLedger(of: beta).refused, 0)

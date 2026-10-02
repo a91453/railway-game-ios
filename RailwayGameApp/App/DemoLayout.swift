@@ -61,7 +61,6 @@ enum DemoLayout {
         try world.setTrainMovementRate(train.id, to: 512)
         let circle = try world.createLine(named: "Circle", stops: [harbor.id, northGate.id]).id
         try world.setLineServiceWindow(circle, to: .allDay)
-        try world.setLineRate(circle, to: 512)
         try world.setLineTrainsInService(circle, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         try world.assignTrain(train.id, to: circle)
     }

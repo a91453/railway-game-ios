@@ -24,6 +24,8 @@
 /// 4. the doors close (``closing``) for ``ServiceDwell/doorClosing``;
 /// 5. the train leaves as soon as it can: if its route is held or there is
 ///    none, it waits with its doors closed.
+///
+/// While it travels to the next call it follows its ``run`` (Stage W2c).
 public struct ServiceTimes: Hashable, Sendable {
     /// When the train arrived at the call it waits at, or, while it travels,
     /// at the call it last waited at. At the call its service started from,
@@ -41,12 +43,23 @@ public struct ServiceTimes: Hashable, Sendable {
     /// travels to: while it travels, the call it has just left. `nil` until
     /// it has left a call in this service.
     public internal(set) var departure: GameTime?
+    /// While the train travels (Stage W2c): the running curve it follows to
+    /// the next call, set off when it left the call before, or again after
+    /// it was held up on the way (see ``GameWorld/advance(ticks:)``). `nil`
+    /// while it waits, and while it travels without one: held up and not
+    /// able to move yet, or with a performance that builds no curve for the
+    /// way left, when it goes at its rate.
+    public internal(set) var run: ServiceRun?
 
-    public init(arrival: GameTime, exchangeEnd: GameTime? = nil, closing: GameTime? = nil, departure: GameTime? = nil) {
+    public init(
+        arrival: GameTime, exchangeEnd: GameTime? = nil, closing: GameTime? = nil, departure: GameTime? = nil,
+        run: ServiceRun? = nil
+    ) {
         self.arrival = arrival
         self.exchangeEnd = exchangeEnd
         self.closing = closing
         self.departure = departure
+        self.run = run
     }
 }
 
@@ -102,19 +115,21 @@ public enum ServiceDwell {
 
 extension ServiceTimes: Codable {
     private enum CodingKeys: String, CodingKey {
-        case arrival, exchangeEnd, closing, departure
+        case arrival, exchangeEnd, closing, departure, run
     }
 
-    /// Decodes `{"arrival": second}`, plus `"exchangeEnd"`, `"closing"` and
-    /// `"departure"` when they are set; an explicit `null` is rejected. That
-    /// they fit the train's service and the clock is checked by ``Train``'s
-    /// and ``GameWorld``'s decoders.
+    /// Decodes `{"arrival": second}`, plus `"exchangeEnd"`, `"closing"`,
+    /// `"departure"` and `"run"` (see ``ServiceRun``) when they are set; an
+    /// explicit `null` is rejected. That they fit the train's service, its
+    /// performance and the clock is checked by ``Train``'s and
+    /// ``GameWorld``'s decoders.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         arrival = try container.decode(GameTime.self, forKey: .arrival)
         exchangeEnd = container.contains(.exchangeEnd) ? try container.decode(GameTime.self, forKey: .exchangeEnd) : nil
         closing = container.contains(.closing) ? try container.decode(GameTime.self, forKey: .closing) : nil
         departure = container.contains(.departure) ? try container.decode(GameTime.self, forKey: .departure) : nil
+        run = container.contains(.run) ? try container.decode(ServiceRun.self, forKey: .run) : nil
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -123,6 +138,7 @@ extension ServiceTimes: Codable {
         try container.encodeIfPresent(exchangeEnd, forKey: .exchangeEnd)
         try container.encodeIfPresent(closing, forKey: .closing)
         try container.encodeIfPresent(departure, forKey: .departure)
+        try container.encodeIfPresent(run, forKey: .run)
     }
 }
 
@@ -130,28 +146,30 @@ extension ServiceTimes {
     /// Whether these times fit a service in `execution`, judged without the
     /// clock: while the train waits, the exchange ends no earlier than the
     /// doors finish opening, the doors start closing only once it has
-    /// ended, and the call before was left no later than this one was
-    /// reached; while it travels, it has left the call before, no earlier
-    /// than it reached that call, and nothing of a dwell is set. Times
-    /// compared with a sum are compared without overflowing.
+    /// ended, the call before was left no later than this one was reached,
+    /// and there is no run; while it travels, it has left the call before,
+    /// no earlier than it reached that call, nothing of a dwell is set, and
+    /// a run set off no earlier than it left (Stage W2c). Times compared
+    /// with a sum are compared without overflowing.
     func fits(_ execution: TimetableExecution) -> Bool {
         switch execution {
         case .waitingAtStop:
             if let departure, departure > arrival { return false }
+            guard run == nil else { return false }
             guard let exchangeEnd else { return closing == nil }
             let (opened, overflow) = arrival.seconds.addingReportingOverflow(ServiceDwell.doorOpening)
             guard !overflow, exchangeEnd.seconds >= opened else { return false }
             return closing.map { $0 >= exchangeEnd } ?? true
         case .travellingToStop:
             guard let departure, exchangeEnd == nil, closing == nil else { return false }
-            return departure >= arrival
+            return departure >= arrival && (run.map { $0.start >= departure } ?? true)
         }
     }
 
     /// The latest time stored, which the clock cannot be before; the end of
-    /// an exchange still under way may be.
+    /// an exchange still under way may be, and so may the end of a run.
     var latest: GameTime {
-        [arrival, closing, departure].compactMap { $0 }.max()!
+        [arrival, closing, departure, run?.start].compactMap { $0 }.max()!
     }
 }
 

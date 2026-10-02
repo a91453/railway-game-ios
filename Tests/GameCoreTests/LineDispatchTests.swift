@@ -18,12 +18,13 @@ final class LineDispatchTests: XCTestCase {
     //                          |
     //                      Delta(5,2)        Far(7,3): no platform
     //
-    // Alpha to Gamma is four links, b to f, so four minutes each way at the
-    // default rate; with two minutes at each end a round trip is 12. Stage
-    // W2b: a train sent out at T dwells 42 s at Alpha and leaves at T:42,
-    // and is back at T + 10:42, its service ending once it has dwelt 42 s
-    // there, at T + 11:24. Leaving 42 s into a minute, it is 308 units along
-    // at the next.
+    // Alpha to Gamma is four links, b to f. The line plans with a crawl
+    // (Stage W2c, `crawl`), so each way takes four minutes; with two
+    // minutes at each end a round trip is 12. Stage W2b: a train sent out at
+    // T dwells 42 s at Alpha and leaves at T:42, and is back at T + 10:42,
+    // its service ending once it has dwelt 42 s there, at T + 11:24. Its
+    // own performance is the standard one, which keeps to the 240 s a leg
+    // is given on a curve (`along(_:)`).
     private let b = GridPosition(x: 1, y: 1)
     private let c = GridPosition(x: 2, y: 1)
     private let d = GridPosition(x: 3, y: 1)
@@ -40,6 +41,16 @@ final class LineDispatchTests: XCTestCase {
     private let two = TrainID(rawValue: 2)
     private let three = TrainID(rawValue: 3)
     private let ghost = TrainID(rawValue: 99)
+    /// The line's performance (Stage W2c): a crawl at 1 km/h, about a link
+    /// a minute. It reaches 1 km/h in 8 s and stops from it in 10 s, so four
+    /// links take 8 + 221.4 + 10 = 239.4 s, planned as 240.
+    private let crawl = TrainPerformance(acceleration: 125, braking: 100, topSpeed: 1)
+
+    /// How far a train is along a 240 s leg of four links `elapsed` seconds
+    /// after it left (Stage W2c): on its standard curve for them.
+    private func along(_ elapsed: Int64) -> Int64 {
+        runDistance(4 * 1024, in: 240, after: elapsed)
+    }
 
     private func makeLineWorld(minute: Int64 = 0) throws -> GameWorld {
         var world = try GameWorld(
@@ -61,10 +72,11 @@ final class LineDispatchTests: XCTestCase {
 
     /// The line world with line 1 Alpha to Gamma running all day, and
     /// `count` trains bought, standing at Alpha facing east at one link a
-    /// minute, and assigned to it.
+    /// minute, and assigned to it. The line plans with `crawl`.
     private func makeDispatchWorld(trains count: Int, running: TrainsInService, minute: Int64 = 0) throws -> GameWorld {
         var world = try makeLineWorld(minute: minute)
         try world.createLine(named: "Main", stops: [alpha, gamma])
+        try world.setLinePerformance(main, to: crawl)
         try world.setLineServiceWindow(main, to: .allDay)
         try world.setLineTrainsInService(main, to: running)
         for index in 1...count {
@@ -82,8 +94,8 @@ final class LineDispatchTests: XCTestCase {
 
     /// Alpha to Gamma and back for a train sent out at `minute` facing
     /// east: it arrives at Alpha then and leaves 42 s later (Stage W2b),
-    /// reaches Gamma 4 minutes after leaving, stays 2 and turns round, and
-    /// is back at Alpha 4 minutes after that.
+    /// reaches Gamma 240 s after leaving (`crawl`), stays 2 minutes and
+    /// turns round, and is back at Alpha 240 s after that.
     private func trip(_ minute: Int64, reverses: Bool = false) -> [ScheduledStop] {
         let leaving = minute * 60 + 42
         func time(_ seconds: Int64) -> GameTime { GameTime(seconds: seconds) }
@@ -179,6 +191,9 @@ final class LineDispatchTests: XCTestCase {
     func testTargetHeadwaysSetTheTrainsAndTheHeadway() throws {
         var world = try makeLineWorld()
         try world.createLine(named: "Main", stops: [alpha, gamma])
+        try world.setLinePerformance(main, to: crawl)
+        XCTAssertEqual(world.lineJourney(main)?.legs.map(\.seconds), [240, 240])
+        XCTAssertEqual(world.lineJourney(main)?.roundTripSeconds, 720)
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 4, offPeak: 0, low: 1))
         let before = world
         XCTAssertThrowsGameError(try world.setLineTargetHeadways(unknownLine, to: TargetHeadways(peak: 0)), .unknownLine(unknownLine))
@@ -238,7 +253,8 @@ final class LineDispatchTests: XCTestCase {
         XCTAssertEqual(first.timetable, trip(0))
         XCTAssertNil(first.timetablePeriod)
         XCTAssertEqual(first.execution, .travellingToStop(1))
-        XCTAssertEqual(first.position, .onLink(from: b, to: c, offset: 308))
+        XCTAssertEqual(first.position, .onLink(from: b, to: c, offset: along(18)))
+        XCTAssertEqual(first.times?.run, ServiceRun(start: GameTime(seconds: 42), length: 4 * 1024, seconds: 240), "the leg's 240 s")
         XCTAssertEqual(first.movement.continuation, [c, d, e, f])
         XCTAssertEqual(first.movement.cursor, 1)
         XCTAssertEqual(world.train(id: two)?.execution, nil, "one train per headway")
@@ -260,9 +276,9 @@ final class LineDispatchTests: XCTestCase {
         var second = try XCTUnwrap(world.train(id: two))
         XCTAssertEqual(second.timetable, trip(6))
         XCTAssertEqual(second.execution, .travellingToStop(1))
-        XCTAssertEqual(second.position, .onLink(from: b, to: c, offset: 308))
+        XCTAssertEqual(second.position, .onLink(from: b, to: c, offset: along(18)))
         XCTAssertEqual(first.execution, .travellingToStop(2))
-        XCTAssertEqual(first.position, .onLink(from: f, to: e, offset: 308))
+        XCTAssertEqual(first.position, .onLink(from: f, to: e, offset: along(18)))
         XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 6))
 
         // At 10:42 the first is back at Alpha and the second at Gamma.
@@ -270,7 +286,7 @@ final class LineDispatchTests: XCTestCase {
         first = try XCTUnwrap(world.train(id: one))
         second = try XCTUnwrap(world.train(id: two))
         XCTAssertEqual(first.execution, .travellingToStop(2))
-        XCTAssertEqual(first.position, .onLink(from: c, to: b, offset: 308))
+        XCTAssertEqual(first.position, .onLink(from: c, to: b, offset: along(198) - 3 * 1024))
         try advance(&world, 1)
         first = try XCTUnwrap(world.train(id: one))
         second = try XCTUnwrap(world.train(id: two))
@@ -307,7 +323,7 @@ final class LineDispatchTests: XCTestCase {
         try advance(&world, 1)
         let train = try XCTUnwrap(world.train(id: one))
         XCTAssertEqual(train.timetable, trip(0, reverses: true))
-        XCTAssertEqual(train.position, .onLink(from: b, to: c, offset: 308))
+        XCTAssertEqual(train.position, .onLink(from: b, to: c, offset: along(18)))
         XCTAssertEqual(train.execution, .travellingToStop(1))
     }
 

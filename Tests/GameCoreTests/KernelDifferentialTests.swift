@@ -27,6 +27,8 @@ final class KernelDifferentialTests: XCTestCase {
         case unplace(TrainID)
         case reverse(TrainID)
         case setRate(TrainID, Int64)
+        /// Stage W2c.
+        case setPerformance(TrainID, TrainPerformance)
         case setContinuation(TrainID, [GridPosition])
         /// Never drawn by ``nextOperation(in:using:)``, so the Stage I–N
         /// campaigns and their digests are as before; the timetable
@@ -48,7 +50,7 @@ final class KernelDifferentialTests: XCTestCase {
         case createLine(String, [StationID])
         case removeLine(LineID)
         case setLineStops(LineID, [StationID])
-        case setLineRate(LineID, Int64)
+        case setLinePerformance(LineID, TrainPerformance)
         case setLineWindow(LineID, ServiceWindow)
         case setLineTrains(LineID, TrainsInService, pattern: Int? = nil)
         case setServiceDay(ServiceDay)
@@ -93,6 +95,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .unplace(let id): ".unplace(\(id.rawValue))"
             case .reverse(let id): ".reverse(\(id.rawValue))"
             case .setRate(let id, let rate): ".setRate(\(id.rawValue), \(rate))"
+            case .setPerformance(let id, let performance): ".setPerformance(\(id.rawValue), \(performance))"
             case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
             case .setTimetable(let id, let stops, let period):
                 ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.seconds)-\($0.departure.seconds)s\($0.reverses ? "R" : "")" }.joined(separator: ", "))]\(period.map { ", every \($0) s" } ?? ""))"
@@ -103,7 +106,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .createLine(let name, let stops): ".createLine(\"\(name)\", \(stops.map(\.rawValue)))"
             case .removeLine(let id): ".removeLine(\(id.rawValue))"
             case .setLineStops(let id, let stops): ".setLineStops(\(id.rawValue), \(stops.map(\.rawValue)))"
-            case .setLineRate(let id, let rate): ".setLineRate(\(id.rawValue), \(rate))"
+            case .setLinePerformance(let id, let performance): ".setLinePerformance(\(id.rawValue), \(performance))"
             case .setLineWindow(let id, let window): ".setLineWindow(\(id.rawValue), \(window))"
             case .setLineTrains(let id, let trains, let pattern):
                 ".setLineTrains(\(id.rawValue), \(trains.peak)/\(trains.offPeak)/\(trains.low)\(pattern.map { ", pattern \($0)" } ?? ""))"
@@ -243,6 +246,9 @@ final class KernelDifferentialTests: XCTestCase {
         case 16..<20:
             return .reverse(id)
         case 20..<30:
+            if random.chance(1, in: 5) {
+                return .setPerformance(id, random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+            }
             let rate: Int64 = random.chance(1, in: 20)
                 ? -random.int64(in: 1...5)
                 : random.element(of: [0, 1, 511, 1023, 1024, 1025, 3_000, random.int64(in: 0...4_096), .max])
@@ -319,6 +325,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .unplace(let id): try world.unplaceTrain(id)
             case .reverse(let id): try world.reverseTrain(id)
             case .setRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
+            case .setPerformance(let id, let performance): try world.setTrainPerformance(id, to: performance)
             case .setContinuation(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
             case .setTimetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
             case .startService(let id): try world.startTrainService(id)
@@ -332,7 +339,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .createLine(let name, let stops): try world.createLine(named: name, stops: stops)
             case .removeLine(let id): try world.removeLine(id)
             case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
-            case .setLineRate(let id, let rate): try world.setLineRate(id, to: rate)
+            case .setLinePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)
             case .setLineWindow(let id, let window): try world.setLineServiceWindow(id, to: window)
             case .setLineTrains(let id, let trains, let pattern): try world.setLineTrainsInService(id, to: trains, pattern: pattern)
             case .setServiceDay(let day): try world.setServiceDay(day)
@@ -383,6 +390,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .unplace(let id): return model.unplaceTrain(id)
         case .reverse(let id): return model.reverseTrain(id)
         case .setRate(let id, let rate): return model.setRate(id, rate)
+        case .setPerformance(let id, let performance): return model.setPerformance(id, performance)
         case .setContinuation(let id, let nodes): return model.setContinuation(id, nodes)
         case .setTimetable(let id, let stops, let period): return model.setTimetable(id, stops, period: period)
         case .startService(let id): return model.startService(id)
@@ -400,7 +408,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .createLine(let name, let stops): return model.createLine(named: name, stops: stops)
         case .removeLine(let id): return model.removeLine(id)
         case .setLineStops(let id, let stops): return model.setLineStops(id, stops)
-        case .setLineRate(let id, let rate): return model.setLineRate(id, rate)
+        case .setLinePerformance(let id, let performance): return model.setLinePerformance(id, performance)
         case .setLineWindow(let id, let window): return model.setLineWindow(id, window)
         case .setLineTrains(let id, let trains, let pattern): return model.setLineTrains(id, trains, pattern: pattern)
         case .setServiceDay(let day): return model.setServiceDay(day)
@@ -475,6 +483,7 @@ final class KernelDifferentialTests: XCTestCase {
             check(train.cars == expected.cars, "train \(expected.id) cars \(train.cars) vs \(expected.cars)")
             check(train.trail == expected.trail, "train \(expected.id) trail \(train.trail) vs \(expected.trail)")
             check(train.movement.rate == expected.rate, "train \(expected.id) rate \(train.movement.rate) vs \(expected.rate)")
+            check(train.performance == expected.performance, "train \(expected.id) performance")
             check(
                 train.movement.continuation == expected.continuation && train.movement.cursor == expected.cursor,
                 "train \(expected.id) continuation \(train.movement.continuation)@\(train.movement.cursor) vs \(expected.continuation)@\(expected.cursor)"
@@ -500,7 +509,7 @@ final class KernelDifferentialTests: XCTestCase {
         check(
             world.lines.map { [$0.id.rawValue] } == model.lines.map { [$0.id] }
                 && world.lines.map(\.name) == model.lines.map(\.name) && world.lines.map(\.stops) == model.lines.map(\.stops)
-                && world.lines.map(\.rate) == model.lines.map(\.rate) && world.lines.map(\.window) == model.lines.map(\.window)
+                && world.lines.map(\.performance) == model.lines.map(\.performance) && world.lines.map(\.window) == model.lines.map(\.window)
                 && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService)
                 && world.lines.map(\.targetHeadways) == model.lines.map(\.targetHeadways)
                 && world.lines.map { $0.trains.map(\.rawValue) } == model.lines.map(\.roster)

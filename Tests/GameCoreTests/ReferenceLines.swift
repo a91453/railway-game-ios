@@ -5,8 +5,8 @@ import GameCore
 /// them, and dispatch. Written from the rules,
 /// not from GameCore, and differently where it can be: windows as one or
 /// two ranges of the day, levels found by scanning the day's bands from the
-/// start, leg minutes as `(units - 1) / rate + 1`, and every start of a
-/// journey driven before the shortest is kept.
+/// start, leg seconds by trying every second upward (Stage W2c), and every
+/// start of a journey driven before the shortest is kept.
 extension ReferenceWorld {
     private func lineIndex(_ id: LineID) -> Int? {
         lines.firstIndex { $0.id == id.rawValue }
@@ -51,10 +51,11 @@ extension ReferenceWorld {
         return nil
     }
 
-    mutating func setLineRate(_ id: LineID, _ rate: Int64) -> GameError? {
+    /// Stage W2c: the line, then the performance.
+    mutating func setLinePerformance(_ id: LineID, _ performance: TrainPerformance) -> GameError? {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
-        guard rate > 0 else { return .invalidLineRate }
-        lines[index].rate = rate
+        guard Self.isValid(performance) else { return .invalidTrainPerformance }
+        lines[index].performance = performance
         return nil
     }
 
@@ -123,7 +124,7 @@ extension ReferenceWorld {
         for platform in platforms(of: line.stops[calls[0]]) {
             for heading in TrackDirection.allCases {
                 guard let journey = journey(of: line, calling: calls, from: .atNode(platform, heading: heading)) else { continue }
-                if best.map({ journey.roundTripMinutes < $0.roundTripMinutes }) ?? true {
+                if best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true {
                     best = journey
                 }
             }
@@ -131,7 +132,7 @@ extension ReferenceWorld {
         // Decision 31: then from every berth on the network, a train of one car.
         for start in journeyStarts(onNetworkOf: line.stops[calls[0]]) {
             guard let journey = networkJourney(of: line, calling: calls, from: start, trailEdges: [], length: 0) else { continue }
-            if best.map({ journey.roundTripMinutes < $0.roundTripMinutes }) ?? true {
+            if best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true {
                 best = journey
             }
         }
@@ -161,7 +162,9 @@ extension ReferenceWorld {
                 return TrackTraversal.link(from: node, to: next)
             }
             let path = TrainPath(traversals: links, end: nil, distance: units)
-            legs.append(LineLeg(from: from, to: to, path: path, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
+            // Stage W2c: the least second the line's curve is built for.
+            guard let seconds = units == 0 ? 0 : Self.leastSeconds(units, line.performance) else { return nil }
+            legs.append(LineLeg(from: from, to: to, path: path, seconds: seconds))
             if route.count >= 1 {
                 let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
                 let arrived = TrainPosition.atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
@@ -169,8 +172,8 @@ extension ReferenceWorld {
                 position = arrived
             }
         }
-        let total = legs.reduce(Int64(0)) { $0 + $1.minutes } + 2 * 2 + Int64(2 * (n - 2)) * 1
-        return LineJourney(start: start, legs: legs, roundTripMinutes: total)
+        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + 60 * (2 * 2 + Int64(2 * (n - 2)) * 1)
+        return LineJourney(start: start, legs: legs, roundTripSeconds: total)
     }
 
     /// Everything derived for one service of a line: `nil` parts where the
@@ -520,7 +523,7 @@ extension ReferenceWorld {
                 turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
             }
             let pick: (Bool, LineJourney)? = switch (straight, turned) {
-            case (let s?, let t?): t.roundTripMinutes < s.roundTripMinutes ? (true, t) : (false, s)
+            case (let s?, let t?): t.roundTripSeconds < s.roundTripSeconds ? (true, t) : (false, s)
             case (let s?, nil): (false, s)
             case (nil, let t?): (true, t)
             case (nil, nil): nil
@@ -529,7 +532,7 @@ extension ReferenceWorld {
         }
         guard let (turn, trip) = memo.trips[place]![key]! else { return .notReady }
         // The timetable, in seconds: arrive now and stay 42 (Stage W2b);
-        // each call the leg's minutes after the one before; stay 1 minute
+        // each call the leg's seconds after the one before (Stage W2c); stay 1 minute
         // between the ends, 2 at the far end (turning), and finish on
         // arrival back at the first call (turning).
         let now = minutes * 60
@@ -540,8 +543,8 @@ extension ReferenceWorld {
             let final = n == trip.legs.count - 1
             let far = leg.to == service.calls.last!
             let stay: Int64 = final ? 0 : far ? 120 : 60
-            guard leg.minutes <= (Int64.max - stay - clock) / 60 else { return .overflow }
-            let arrival = clock + leg.minutes * 60
+            guard leg.seconds <= Int64.max - stay - clock else { return .overflow }
+            let arrival = clock + leg.seconds
             clock = arrival + stay
             timetable.append(ScheduledStop(
                 station: line.stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: clock), reverses: final || far

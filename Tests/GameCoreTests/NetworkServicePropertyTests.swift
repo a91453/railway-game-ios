@@ -21,6 +21,8 @@ final class NetworkServicePropertyTests: XCTestCase {
         case unplace(TrainID)
         case reverse(TrainID)
         case rate(TrainID, Int64)
+        /// Stage W2c.
+        case performance(TrainID, TrainPerformance)
         case timetable(TrainID, [ScheduledStop], Int64?)
         case start(TrainID)
         case stop(TrainID)
@@ -34,7 +36,7 @@ final class NetworkServicePropertyTests: XCTestCase {
         case settle(TrainID, TrainPosition)
         /// A pattern added, with a train at each level.
         case patternRun(LineID, [Int])
-        case lineRate(LineID, Int64)
+        case linePerformance(LineID, TrainPerformance)
         case allDay(LineID)
         case trains(LineID, TrainsInService, Int?)
         case targets(LineID, TargetHeadways, Int?)
@@ -241,9 +243,14 @@ final class NetworkServicePropertyTests: XCTestCase {
         case 63..<66:
             return .reverse(anyTrain())
         case 66..<68:
+            if random.chance(1, in: 2) {
+                return .performance(anyTrain(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+            }
             return .rate(anyTrain(), random.element(of: [0, 512, 1_024, 2_048, 3_072] as [Int64]))
         case 68..<72:
-            guard world.lines.count < 2 else { return .lineRate(anyLine(), random.element(of: [512, 1_024, 2_048, 3_072] as [Int64])) }
+            guard world.lines.count < 2 else {
+                return .linePerformance(anyLine(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+            }
             // From where a free train (an even one) stands, now and then
             // anywhere.
             let waiting = free.filter { $0.id.rawValue % 2 == 0 && !world.stationsStoppedAt(by: $0.id).isEmpty }
@@ -301,6 +308,7 @@ final class NetworkServicePropertyTests: XCTestCase {
             case .unplace(let id): try world.unplaceTrain(id)
             case .reverse(let id): try world.reverseTrain(id)
             case .rate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
+            case .performance(let id, let performance): try world.setTrainPerformance(id, to: performance)
             case .timetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
             case .start(let id): try world.startTrainService(id)
             case .stop(let id): try world.stopTrainService(id)
@@ -320,7 +328,7 @@ final class NetworkServicePropertyTests: XCTestCase {
             case .patternRun(let id, let calls):
                 let pattern = try world.addLinePattern(id, calling: calls)
                 try world.setLineTrainsInService(id, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: pattern)
-            case .lineRate(let id, let rate): try world.setLineRate(id, to: rate)
+            case .linePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)
             case .allDay(let id): try world.setLineServiceWindow(id, to: .allDay)
             case .trains(let id, let trains, let pattern): try world.setLineTrainsInService(id, to: trains, pattern: pattern)
             case .targets(let id, let targets, let pattern): try world.setLineTargetHeadways(id, to: targets, pattern: pattern)
@@ -344,6 +352,7 @@ final class NetworkServicePropertyTests: XCTestCase {
         case .unplace(let id): model.unplaceTrain(id)
         case .reverse(let id): model.reverseTrain(id)
         case .rate(let id, let rate): model.setRate(id, rate)
+        case .performance(let id, let performance): model.setPerformance(id, performance)
         case .timetable(let id, let stops, let period): model.setTimetable(id, stops, period: periodSeconds(period))
         case .start(let id): model.startService(id)
         case .stop(let id): model.stopService(id)
@@ -359,7 +368,7 @@ final class NetworkServicePropertyTests: XCTestCase {
             model.addPattern(id, calls) ?? model.setLineTrains(
                 id, TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: (model.lines.first { $0.id == id.rawValue }?.patterns.count ?? 1) - 1
             )
-        case .lineRate(let id, let rate): model.setLineRate(id, rate)
+        case .linePerformance(let id, let performance): model.setLinePerformance(id, performance)
         case .allDay(let id): model.setLineWindow(id, .allDay)
         case .trains(let id, let trains, let pattern): model.setLineTrains(id, trains, pattern: pattern)
         case .targets(let id, let targets, let pattern): model.setLineTargets(id, targets, pattern: pattern)
@@ -399,6 +408,7 @@ final class NetworkServicePropertyTests: XCTestCase {
             if train.execution != expected.service?.execution {
                 problems.append("train \(id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))")
             }
+            if train.performance != expected.performance { problems.append("train \(id) performance") }
             if train.times != expected.service?.times {
                 problems.append("train \(id) times \(String(describing: train.times)) vs \(String(describing: expected.service?.times))")
             }
@@ -530,12 +540,14 @@ final class NetworkServicePropertyTests: XCTestCase {
                 tally["\(outcome.map { "\($0)".components(separatedBy: "(")[0] } ?? "ok") \(name)", default: 0] += 1
                 if case .advance = operation {
                     for (old, new) in zip(before.trains, world.trains) {
-                        switch (old.execution, new.execution) {
-                        case (.waitingAtStop(let stop, _)?, let now) where now != old.execution:
+                        if case .waitingAtStop(let stop, _)? = old.execution, new.execution != old.execution {
                             tally["departures", default: 0] += 1
                             if old.timetable[stop].reverses { tally["turned round at a stop", default: 0] += 1 }
-                        case (.travellingToStop?, .waitingAtStop?): tally["arrivals", default: 0] += 1
-                        default: break
+                        }
+                        // Stage W2c: a run can leave and arrive within one
+                        // advance.
+                        if old.execution != nil, case .waitingAtStop? = new.execution, new.execution != old.execution {
+                            tally["arrivals", default: 0] += 1
                         }
                         if old.execution != nil, new.execution == nil { tally["services completed", default: 0] += 1 }
                         if let cycle = new.execution?.cycle, cycle > 0 { tally["in a later cycle", default: 0] += 1 }

@@ -91,12 +91,20 @@ final class LineDispatchPropertyTests: XCTestCase {
         if random.chance(4, in: 5) { run(.setLineWindow(line, .allDay)) }
         run(.setLineTrains(line, TrainsInService(peak: random.below(4), offPeak: 1 + random.below(3), low: random.below(3))))
         if random.chance(1, in: 3) { run(.setLineTargets(line, targets(using: &random))) }
-        if random.chance(1, in: 4) { run(.setLineRate(line, random.element(of: [512, 700, 1500, 2048]))) }
+        // Stage W2c: mostly a crawl, so that trips last minutes as before
+        // (a train keeps to the time its line plans, whatever its own
+        // performance).
+        if random.chance(3, in: 4) {
+            run(.setLinePerformance(line, PerformanceSamples.crawl))
+        } else if random.chance(1, in: 2) {
+            run(.setLinePerformance(line, random.element(of: PerformanceSamples.valid)))
+        }
         for _ in 0..<(1 + random.below(3)) {
             run(.purchase("L\(world.trains.count + 1)"))
             guard let id = world.trains.last?.id, world.train(id: id)?.position == nil else { break }
             run(.place(id, .atNode(platform, heading: random.element(of: TrackDirection.allCases))))
             run(.setRate(id, random.element(of: [700, 1024, 1024, 1500, 2048, 4096])))
+            if random.chance(1, in: 4) { run(.setPerformance(id, random.element(of: PerformanceSamples.valid))) }
             run(.assign(id, line))
         }
         return operations
@@ -158,7 +166,9 @@ final class LineDispatchPropertyTests: XCTestCase {
             }
             return .setServiceDay(ServiceDay(bands: bands))
         case 14:
-            return .setLineRate(anyLine(), random.element(of: [300, 700, 1024, 2048]))
+            return random.chance(1, in: 2)
+                ? .setLinePerformance(anyLine(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+                : .setPerformance(anyTrain(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
         case 15:
             guard let line = lines.isEmpty ? nil : random.element(of: lines) else { return .advance(5) }
             let stations = world.stations.map(\.id)

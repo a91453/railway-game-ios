@@ -242,9 +242,9 @@ public struct LinePattern: Hashable, Sendable {
 }
 
 /// A service line: the stations its trains call at, in order, out from the
-/// first and back from the last; the rate it plans its journeys at; when it
-/// runs; how many trains it is to run at each level, or how far apart; and
-/// the trains assigned to it.
+/// first and back from the last; the performance it plans its journeys
+/// with; when it runs; how many trains it is to run at each level, or how
+/// far apart; and the trains assigned to it.
 ///
 /// The plan itself never moves or routes a train; what its trains would
 /// take, and how often they could run, is derived by
@@ -264,9 +264,12 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// in a row. The trains run from the first to the last and back, turning
     /// round at both ends.
     public internal(set) var stops: [StationID]
-    /// The rate, in logical units per game minute, that the line's journey
-    /// times are worked out at (see ``TrainMovement``). At least 1.
-    public internal(set) var rate: Int64
+    /// The performance the line's journey times are worked out with (Stage
+    /// W2c): each leg takes the least whole second it builds a running
+    /// curve for (see ``RunningCurve/leastSeconds(length:performance:)``).
+    /// ``TrainPerformance/standard`` for a new line. The trains it sends out
+    /// keep to those times with their own performance where they can.
+    public internal(set) var performance: TrainPerformance
     public internal(set) var window: ServiceWindow
     public internal(set) var trainsInService: TrainsInService
     /// The minutes the line aims to keep between trains, at the levels
@@ -285,8 +288,6 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// line after its own (see ``LinePattern``). A new line has none.
     public internal(set) var patterns: [LinePattern]
 
-    /// The rate of a new line: one link a minute.
-    public static let defaultRate: Int64 = TrainPosition.linkLength
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1
     /// Minutes a train stays at either end of the line, where it turns round.
@@ -295,13 +296,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// trains than its round trip allows at this headway.
     public static let minimumHeadwayMinutes: Int64 = 2
 
-    /// Creates a line with the standard window, the default rate, no trains
-    /// in service, no target headways and no trains assigned.
+    /// Creates a line with the standard window, the standard performance,
+    /// no trains in service, no target headways and no trains assigned.
     public init(id: LineID, name: String, stops: [StationID]) {
         self.id = id
         self.name = name
         self.stops = stops
-        self.rate = Self.defaultRate
+        self.performance = .standard
         self.window = .standard
         self.trainsInService = .none
         self.targetHeadways = .none
@@ -610,10 +611,10 @@ extension ServiceDay.Band: Codable {}
 
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
     }
 
-    /// Decodes a line, rejecting stops, a rate, a window, train counts or
+    /// Decodes a line, rejecting stops, a performance, a window, train counts or
     /// target headways no line can have, trains listed out of order or
     /// twice, or a dispatch before second 0, rather than repairing them.
     /// A line without targets has no `"targetHeadways"` key, one without
@@ -624,13 +625,15 @@ extension ServiceLine: Codable {
     /// existed read; a pattern calling at a stop the line does not have is
     /// rejected. That the stations and trains exist, that no train is on
     /// two lines or services and that no dispatch is after the clock are
-    /// checked by the ``GameWorld`` decoder.
+    /// checked by the ``GameWorld`` decoder. A line with the standard
+    /// performance (Stage W2c) has no `"performance"` key, which is also how
+    /// lines saved before Stage W2c read (their `"rate"` is not read).
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(LineID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         stops = try container.decode([StationID].self, forKey: .stops)
-        rate = try container.decode(Int64.self, forKey: .rate)
+        performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
         window = try container.decode(ServiceWindow.self, forKey: .window)
         trainsInService = try container.decode(TrainsInService.self, forKey: .trainsInService)
         targetHeadways = container.contains(.targetHeadways) ? try container.decode(TargetHeadways.self, forKey: .targetHeadways) : .none
@@ -641,9 +644,6 @@ extension ServiceLine: Codable {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
             )
-        }
-        guard rate >= 1 else {
-            throw DecodingError.dataCorruptedError(forKey: .rate, in: container, debugDescription: "Line \(id.rawValue)'s rate must be at least 1.")
         }
         guard zip(trains, trains.dropFirst()).allSatisfy({ $0 < $1 }) else {
             throw DecodingError.dataCorruptedError(
@@ -667,7 +667,9 @@ extension ServiceLine: Codable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(stops, forKey: .stops)
-        try container.encode(rate, forKey: .rate)
+        if performance != .standard {
+            try container.encode(performance, forKey: .performance)
+        }
         try container.encode(window, forKey: .window)
         try container.encode(trainsInService, forKey: .trainsInService)
         if targetHeadways != .none {
