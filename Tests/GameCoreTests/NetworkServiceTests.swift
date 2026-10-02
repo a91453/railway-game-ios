@@ -750,9 +750,9 @@ final class NetworkServiceTests: XCTestCase {
         // Each leaves its first call 42 s after it is sent out (Stage W2b).
         try world.advance(ticks: 1)
         XCTAssertEqual(try train(world, shuttle).timetable.map(\.station), [mid, east, mid])
-        XCTAssertEqual(try train(world, shuttle).timetable.map(\.arrival.seconds), [0, 42 + 9 * 60, 42 + 22 * 60])
+        XCTAssertEqual(try train(world, shuttle).timetable.map(\.arrival.seconds), [0, 42 + 9 * 60, 42 + 22 * 60] as [Int64])
         XCTAssertEqual(try train(world, fast).timetable.map(\.station), [west, terminus, west])
-        XCTAssertEqual(try train(world, fast).timetable.map(\.arrival.seconds), [0, 42 + 19 * 60, 42 + 44 * 60])
+        XCTAssertEqual(try train(world, fast).timetable.map(\.arrival.seconds), [0, 42 + 19 * 60, 42 + 44 * 60] as [Int64])
         // Eight minutes on, the express is on Mid's platform (8 × 1024 - 716
         // = 7476 from West's berth: 3072 to b, 4404 into e2), not calling
         // there: still travelling to Terminus.
