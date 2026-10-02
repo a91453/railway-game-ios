@@ -112,6 +112,7 @@ private struct ToolPicker: View {
         case .buildTrack: return String(localized: "Lay a track piece · \(costs.track.moneyText)")
         case .buildStation: return String(localized: "Build a station · \(costs.station.moneyText)")
         case .removeTrack: return String(localized: "Remove track · free, no refund")
+        case .network: return String(localized: "Track at any angle, platforms · \(costs.track.moneyText) a tile")
         case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
         }
     }
@@ -124,7 +125,7 @@ private struct ToolOptions: View {
     var body: some View {
         switch session.tool {
         case .select:
-            Label("Choose Track, Station or Remove to build. Selecting only inspects.", systemImage: "info.circle")
+            Label("Choose Track, Station, Remove or Network to build. Selecting only inspects.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         case .buildTrack:
@@ -154,35 +155,64 @@ private struct ToolOptions: View {
             Label("Removing track is free, but its cost is not refunded.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        case .network:
+            NetworkControls(session: session)
         case .train:
             TrainControls(session: session)
         }
     }
 }
 
-/// Applies the active tool to the selected tile. Shows the cost read from
-/// the world's economy; GameCore decides whether the action is allowed.
+/// Applies the active tool to the selected tile, or, with the network
+/// tool, builds, adds or removes what its taps picked. Shows the cost read
+/// from the world's economy or GameCore's preview; GameCore decides whether
+/// the action is allowed.
 private struct ActionButton: View {
     let session: GameSession
 
     var body: some View {
         if let title {
             Button {
-                session.applyTool()
+                act()
             } label: {
                 Label(title, systemImage: session.tool.systemImage)
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 32)
             }
             .buttonStyle(.borderedProminent)
-            .tint(session.tool == .removeTrack ? Color.red : Color.accentColor)
-            .disabled(session.selection == nil)
+            .tint(isRemoval ? Color.red : Color.accentColor)
+            .disabled(!isReady)
             .accessibilityHint(hint)
         }
     }
 
+    private var isRemoval: Bool {
+        session.tool == .removeTrack || (session.tool == .network && session.networkMode == .remove)
+    }
+
+    private var isReady: Bool {
+        guard session.tool == .network else { return session.selection != nil }
+        switch session.networkMode {
+        case .build: return session.networkPreview != nil
+        case .platform, .remove: return session.networkEdgePoint != nil
+        }
+    }
+
+    private func act() {
+        guard session.tool == .network else {
+            session.applyTool()
+            return
+        }
+        switch session.networkMode {
+        case .build: session.buildNetworkTrack()
+        case .platform: session.addNetworkPlatform()
+        case .remove: session.removeNetworkEdge()
+        }
+    }
+
     private var hint: String {
-        session.selection == nil ? String(localized: "Select a tile on the map first.") : ""
+        guard !isReady else { return "" }
+        return session.tool == .network ? String(localized: "Tap the map first.") : String(localized: "Select a tile on the map first.")
     }
 
     private var title: String? {
@@ -195,6 +225,14 @@ private struct ActionButton: View {
                 ? String(localized: "Grow Station · \(costs.station.moneyText)")
                 : String(localized: "Build Station · \(costs.station.moneyText)")
         case .removeTrack: return String(localized: "Remove Track")
+        case .network:
+            switch session.networkMode {
+            case .build:
+                guard let cost = session.networkPreview?.cost else { return String(localized: "Build Track") }
+                return String(localized: "Build Track · \(cost.moneyText)")
+            case .platform: return String(localized: "Add Platform")
+            case .remove: return String(localized: "Remove Track")
+            }
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
@@ -278,6 +316,7 @@ extension ConstructionTool {
         case .buildTrack: "road.lanes"
         case .buildStation: "tram.fill"
         case .removeTrack: "trash"
+        case .network: "point.topleft.down.curvedto.point.bottomright.up"
         case .train: "train.side.front.car"
         }
     }
@@ -288,6 +327,7 @@ extension ConstructionTool {
         case .buildTrack: String(localized: "Build track tool")
         case .buildStation: String(localized: "Build station tool")
         case .removeTrack: String(localized: "Remove track tool")
+        case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
         }
     }

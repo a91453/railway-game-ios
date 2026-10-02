@@ -168,6 +168,27 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Railway/site_archive_clean/data/*.json` 的每站停站、`TRTC_OFFICIAL_COAST_DWELL_SEC` 等 | 真實時刻表的停站 | `StationDwell` 的純函式（決策 35 第 9 點） | 不用 | — | 不移植（決定）：遊戲的停站照 `Ci/` 的遊戲規則；真實時刻表的停站留給之後匯入真實資料時 |
 | 參考包「Transfer passengers re-enter station waiting demand」、`platformCongestionPenalty` | 轉乘、月台擁擠 | — | 沒有 | — | 延後：轉乘在 Phase 5；擁擠是 gap |
 
+### Stage C1：任意角度的建造畫面
+
+2026-10-02 唯讀檢查 `a91453/railway-reference-private`（`1563ad0`）的三份參考。只有 `Ci/reference_snapshot/` 有玩家的建造模式；`Railway/site_archive_clean/` 是真實路線的地圖，`Railway/railway_game_reference_clean/` 是 OpenTTD 的編譯檔，兩者都沒有可以移植的建造畫面。ARCHITECTURE 決策 41。下表的 `Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，文字是同目錄的 `ui-locales/zh-CN__q_8e57e7fa49d074d2.js`。GameCore 沒有修改，都在 GamePresentation 與 App。
+
+| 參考 | 行為 | Swift（C1） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `G.editMode = "place"`、`executePlaceModeStationClick`、`placeStation`；`G.extendFromStart` | 點地圖放下一點，從線的任一端延伸 | `GameSession.tapNetwork(at:reach:)`、`networkStart`／`networkEnd`、`buildNetworkTrack()`（終點變成下一段的起點） | 畫面點 → 世界單位（`MapScale.worldPoint`） | faithful + 確認步驟：`Ci` 點了就建、可以復原（`pushMetroUndo`）；這裡沒有復原，所以先預覽再按「鋪設軌道」 |
+| `Ci` 沒有吸附格線或角度 | 位置與角度自由 | 新節點就在點到的位置，四捨五入到整數單位 | 1/64 公尺 | faithful |
+| `Ci` `catmullRom`（centripetal，指數 0.5）、`buildSplinePath`，第一點與最後一點重複 | 線通過各點，平順地延伸 | `NetworkBuilding.curve(from:leaving:to:leaving:)`：自由的一端控制點沿弦、在三分之一弦長（端點重複時的 Hermite 切線換成 Bézier）；接著既有軌道的一端沿那條軌道的方向，同樣三分之一弦長；兩端自由是直線 | 浮點 → 整數單位（四捨五入） | 部分 faithful：`Ci` 每加一點就重畫整條線，GameCore 的邊建好不變，所以已建的端點固定方向（C1 連續，相接由 GameCore 的 1/16 規則判斷） |
+| `Ci` `_turnAngleDeg`、`MIN_TURN_ANGLE_DEG = 90`、`previewExtensionTurnInvalid`（`EXTENSION_TANGENT_LOOKBACK_M = 10`） | 在一點轉彎超過 90 度不能建 | `NetworkBuilding.turnsAtMostRightAngle(_:toward:)`（內積 ≥ 0）、`NetworkProblem.tooSharp` | — | faithful；切線直接用邊端的方向，不用往回 10 公尺的近似 |
+| `Ci` `ANCHOR_MIN_SPACING_M = 22`、`metro.edit.node.too_close`「该位置与已有节点过近」 | 新節點離前一個節點不到 22 公尺時忽略 | `NetworkBuilding.minimumSpacing`（1408）、`NetworkProblem.tooClose` | 公尺 × 64 | faithful（值與訊息）；忽略改成顯示原因 |
+| `Ci` `ANCHOR_PICK_RADIUS_M = 50`、`STATION_CLICK_SNAP_M = 20` | 點在既有節點、車站附近就選它 | `NetworkBuilding.touchRadius` = 24 點，`GameWorld.trackNode(near:within:)`、`trackEdgePoint(near:within:)` | 畫面點 | **改變**：`Ci` 的公尺數配合城市地圖；這張地圖畫得近十倍（一格 16 公尺、22–64 點），50 公尺會點到三格外，所以改以畫面距離計 |
+| `Ci` `computePlacePreviewInvalid`、預覽線在不能建時是 `#666`；`updatePlaceDistanceHud` 顯示沿曲線的里程；`showMetroCostPreview` | 預覽變灰、顯示長度與費用 | `networkPreview`（在丟棄的世界副本上執行同樣的指令）、`NetworkPreview.text(in:)`、地圖的灰色虛線 | 單位 → 公尺 | faithful；費用是 GameCore 的 `ConstructionCosts.track` × 結構物倍數（`Ci` 的 `MetroEconomy` 不在快照裡） |
+| `Ci` `metroBuildStationPlatformRingGcj`，`metroPlatformHalfLengthM = STATION_PLATFORM_HALF_LENGTH_M (100) × 節數 ÷ STATION_PLATFORM_BASE_CARS (6)` | 月台以站在線上的位置為中心，長度與節數成正比 | `networkPlatformStretch`：以點到的位置為中心、`節數 × Train.carLength`，移到不超出軌段；`addNetworkPlatform()` | 節 → 1024 單位 | 部分 faithful：中心與比例照搬；每節長度用 GameCore 的 16 公尺（決策 27），不是 `Ci` 的 33 公尺，讓同樣節數的列車剛好放得下 |
+| `Ci` `findStationAtLatLng`（20 公尺內是既有車站） | 點在車站附近就用那一站 | `platformStationID` 預設是兩格內最近的車站，沒有就新建 | 格 | 部分 faithful：GameCore 的車站要放在一個方格上，新車站在月台中點下方的格子 |
+| `Ci` `anchorActionDelete`、`deleteLine` | 刪除節點、整條線 | `removeNetworkEdge()`：拆軌段，再拆孤立的節點 | — | 部分 faithful：以軌段為單位；移動節點、在線上插站是 gap（要 GameCore 加切開的指令） |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` `VIADUCT_LIFT_M = 6` 等 | 依高度畫高架、橋墩、隧道口 | 不用；結構物由玩家選（`networkStructure`），高度每 2 公尺（`networkHeight`） | — | 不移植：繪製參數，留給 Phase 8 的 renderer |
+| 參考包 `01_MIGRATION_MAP.md` §3、§10：建造指令分成 validate、estimateCost、execute | 先驗證、估價再執行 | 預覽在副本上執行 GameCore 的指令（驗證與估價），確認時在另一份副本上再執行一次 | — | faithful（語義） |
+| `Ci` `MIN_STATION_DISTANCE_M = 400`、`MIN_CURVE_RADIUS_M`（`DEFAULT_BUILD_LIMIT_SETTINGS` 預設關閉） | 最小站距、最小半徑 | 不做 | — | 不移植：參考預設關閉 |
+| 沒有參考 | 高度、結構物、豎曲線、把列車放到路網的月台 | `networkHeight`、`networkStructure`、`networkEasesGrade`、`place(_:atPlatformOf:)` | 公尺 × 64 | **gap**：`Ci` 的地鐵沒有高度；GameCore 的 S4、S5 規則已經有，畫面是自訂的 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -280,8 +301,9 @@ V 實際放行 → T、U（保證不互穿）
 3. **W2a** ✅（ARCHITECTURE 決策 37）：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c**：曲線接到行程與移動（gap 1）。
-6. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
-7. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
+6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)）。見 ROADMAP 的 Stage C。
+7. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
+8. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
 **順序（2026-10-01 作者決定）**：W2 先於 U-min。兩者互不依賴（U → T，W2 → W1），但後做的那個要處理「列車依曲線在授權終點前停下」；W2 先做，U-min 就直接建立在最終的移動方式上，不必先為固定的 rate 設計停車。
 

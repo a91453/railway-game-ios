@@ -2014,6 +2014,51 @@ GamePresentation／App：早到與誤點改由 `lateness(of:)` 推導（仍以�
 
 不做：月台擁擠的延長（參考包的 `platformCongestionPenalty`）、轉乘（參考包要求的「轉乘的人帶著剩下的路線回到車站」，乘客目前只有單一線路的旅次）、依車種的門數與速率、`Railway/` 的每站實測停站時間、時刻表的停留（`dwellMinutes`）改用秒；行駛曲線接到移動（W2c）。
 
+### 41. 任意角度的建造畫面（Stage C1）
+
+S3–S5 讓 GameCore 有了任意角度的路網、高程、結構物與路網上的月台，S5 起停站、時刻表、線路與派車都在路網上運作；但 App 只能在方格上鋪軌，Release 版的新遊戲沒有路網（示範地圖只在 Debug）。2026-10-02 作者決定，U-min 之前先補齊已完成核心的操作畫面（ROADMAP 的 Stage C），C1 是第一步：在 App 裡建造路網、月台，並把列車放上去。**GameCore 沒有修改**：golden 與 property digest 都不變。
+
+參考（2026-10-02 檢查三份）：只有 `Ci/reference_snapshot/` 有玩家的建造模式（`app__q_c234188b7c397f91.js`）；`Railway/site_archive_clean/` 是真實路線的地圖，只有結構物的繪製參數，沒有建造工具；`Railway/railway_game_reference_clean/` 是 OpenTTD 的編譯檔與文件，只有建造指令的名稱與「驗證、估價、執行」分開的建議（`01_MIGRATION_MAP.md`）。對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c1任意角度的建造畫面)。
+
+**GamePresentation**（Linux 上測試）：
+
+- `NetworkBuilding.curve(from:leaving:to:leaving:)`：照 `Ci/` 的建造模式。
+  - 位置自由：不對齊格線、角度不限（`Ci/` 沒有吸附）。
+  - `Ci/` 把一條線畫成通過各點的 centripetal Catmull-Rom 曲線（`catmullRom`），端點重複；換成 Bézier，端點的控制點在弦上、弦長的三分之一。`Ci/` 每加一點就重畫整條線；GameCore 的邊建好後不會改，所以接著既有軌道的一端沿那條軌道的方向（控制點同樣在三分之一弦長），自由的一端照 `Ci/` 沿弦。兩端都自由時是直線，與 `Ci/` 相同。
+  - 轉彎超過 90 度拒絕（`Ci/` 的 `_turnAngleDeg` 與 `MIN_TURN_ANGLE_DEG = 90`）：以內積的正負判斷，整數、精確。`Ci/` 以曲線往回 10 公尺的點近似切線（`EXTENSION_TANGENT_LOOKBACK_M`），這裡直接用邊端的方向。
+  - 控制點四捨五入到整數單位，方向的誤差遠小於 GameCore 相接的 1/16，所以接得上。
+- 接到哪一端：節點上每個邊端都是一個可以接的方向（與邊端離開的方向相反）；選最接近目標、而且轉彎不超過 90 度的那個。節點有邊端但都轉太多時拒絕（`Ci/` 的訊息「小於最小轉彎半徑」）。關掉「平順曲線」時一律是直線，不保證相接。
+- 新節點離另一端不到 22 公尺時拒絕（`Ci/` 的 `ANCHOR_MIN_SPACING_M`，訊息「該位置與既有節點過近」）。
+- 點選的範圍：以畫面的 24 點計（`NetworkBuilding.touchRadius`）。`Ci/` 以 50 公尺（`ANCHOR_PICK_RADIUS_M`）在城市地圖上點選；這張地圖畫得近十倍，同樣的公尺數會一次點到好幾格外。
+- `GameSession` 的路網工具（`ConstructionTool.network`）：
+  - 模式：鋪設、月台、拆除（`NetworkToolMode`）。
+  - 草稿（只存在 session，不是權威狀態）：起點與終點（`NetworkAnchor`：既有節點，或新節點的位置）、在軌段上點到的位置（`NetworkEdgePoint`）。
+  - 設定：結構物、新節點的高度（每 2 公尺，地面上下 64 公尺）、平順曲線、緩和坡度（高度不同時兩端各有四分之一長的豎曲線）、月台的節數、月台所屬的車站。
+  - 預覽（`networkPreview`）：在世界的副本上執行建造會用的同一串指令，再丟掉副本；費用是餘額的差，拒絕時顯示 GameCore 的訊息。`Ci/` 的預覽在不能建時變灰（`computePlacePreviewInvalid`），這裡相同。
+  - 建造（`buildNetworkTrack()`）：新的端點先 `buildTrackNode`，再 `buildTrackEdge`；終點變成下一段的起點。
+  - 月台（`addNetworkPlatform()`）：以點到的位置為中心、`節數 × Train.carLength` 長，移到不超出軌段；所屬車站預設是兩格內最近的車站，沒有就在月台中點下方的格子 `buildStation`，再 `addTrackPlatform`。
+  - 拆除（`removeNetworkEdge()`）：`removeTrackEdge`，再拆掉兩端沒有其他軌段的節點。
+  - 列車工具：選到的車站在路網上有月台時，`placeSelectedTrain()` 把列車放到第一個放得下的月台（沒有就最長的），朝向決定行進方向，車頭在月台的遠端，並以沒有路段、停在原地的 continuation 讓它停住。
+  - **原子性**：幾個指令組成的操作都在 `var draft = world` 上執行，全部成功才換掉 session 的世界；任何一步被拒絕，世界完全不變（例如建造被拒時不會留下新節點）。每一步仍是 `GameWorld` 的指令，session 不判斷遊戲規則。
+- 畫面要畫的東西（`NetworkOverlay`）與地圖座標的換算（`MapScale.worldPoint`、`worldDistance`）也在 GamePresentation，可以測試。
+- 文字：英文與繁體中文（軌段、節點、月台、高架、隧道等沿用決策 38 的用語）；`networkSummary` 在有軌段時加上軌段數。
+
+**App**：
+
+- 工具列多了「路網」；它的選項（`NetworkControls`）有模式、結構物、高度、兩個切換與預覽，月台模式有節數、所屬車站與這個軌段上的月台（可以拆）。動作按鈕依模式建造（顯示費用）、設置月台或拆除。
+- 地圖：路網工具的點擊換成世界座標，交給 session；畫出起點（實心圓）、終點（圓環）、可以建的段（實線加光暈）或不能建的段（灰色虛線），以及要拆的軌段（紅色）或月台的範圍（車站色）。形狀不同，不只靠顏色。
+- 檢視列在路網工具下顯示點選了什麼。
+
+**驗證**：`NetworkBuildingSessionTests` 以手算的控制點、長度與費用，比對 session 的世界與直接對 GameCore 執行同一串指令的世界：直線、平順延伸（GameCore 確實把兩段接起來）、太近、轉太多、被拒絕時不留下節點、高架爬升與太陡、豎曲線、月台與新車站、既有車站的月台、依朝向放置列車、拆除與孤立節點、中文。SwiftUI 只能在 macOS CI 編譯，實機的操作要用 TestFlight 檢查。
+
+**已知限制與留給之後**：
+
+- 沒有拖曳：兩次點擊加確認。`Ci/` 每次點擊直接建站或節點、可以復原；這裡沒有復原，所以先預覽再確認。
+- 不能移動或刪除單獨的節點、不能在軌段中間切開接上新的軌段（`Ci/` 有節點的移動與刪除、在線上插站）；GameCore 的邊建好後不變，要加切開的指令。
+- 車站仍然要放在一個方格上（月台中點下方的格子），那一格被方格的鐵軌或其他車站佔用時無法新建車站。
+- 側向淨空（平行的軌道太近時拒絕）是新的 GameCore 規則，不在 C1。
+- VoiceOver 無法在路網工具裡指定任意位置。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。

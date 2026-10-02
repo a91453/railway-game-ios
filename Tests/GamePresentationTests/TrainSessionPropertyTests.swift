@@ -158,6 +158,7 @@ final class TrainSessionPropertyTests: XCTestCase {
             case .buildTrack: _ = try? shadow.buildTrack(at: tile, connections: session.trackConnections)
             case .buildStation: _ = try? shadow.buildStation(named: session.stationName, at: tile)
             case .removeTrack: try? shadow.removeTrack(at: tile)
+            case .network: return
             case .train:
                 if let id, shadow.train(id: id)?.position != nil { send() } else { place() }
             }

@@ -14,6 +14,7 @@ enum TileArt {
         _ world: GameWorld,
         selectedTrainID: TrainID?,
         selection: GridPosition?,
+        network overlay: NetworkOverlay? = nil,
         tileSize: Double,
         in context: GraphicsContext
     ) {
@@ -60,6 +61,9 @@ enum TileArt {
         }
 
         drawNetwork(world, detail: detail, tileSize: tileSize, in: context)
+        if let overlay {
+            drawNetworkOverlay(overlay, tileSize: tileSize, in: context)
+        }
 
         if let selection, map.contains(selection) {
             drawSelection(in: rect(for: selection, tileSize: tileSize), context: context)
@@ -120,6 +124,60 @@ enum TileArt {
                 context.stroke(Path(ellipseIn: dot.insetBy(dx: -radius * 1.5, dy: -radius * 1.5)), with: .color(Palette.rail), lineWidth: max(1, radius * 0.6))
             }
         }
+    }
+
+    /// What the network tool picked (Stage C1): the edge to remove as a
+    /// wide red band, or the next platform's stretch as a station-coloured
+    /// band; the stretch it would build as a solid line with a halo, or
+    /// dashed and grey when GameCore would refuse it (the reference greys a
+    /// preview it cannot build); and its start as a filled dot, its end as
+    /// a ring, so neither relies on colour alone.
+    static func drawNetworkOverlay(_ overlay: NetworkOverlay, tileSize: Double, in context: GraphicsContext) {
+        if overlay.highlight.count > 1 {
+            let band = polyline(overlay.highlight, tileSize: tileSize)
+            switch overlay.highlightKind {
+            case .removal:
+                context.stroke(band, with: .color(Color.red.opacity(0.6)), style: StrokeStyle(lineWidth: max(6, tileSize * 0.6), lineCap: .round, lineJoin: .round))
+            case .platform:
+                context.stroke(band, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(6, tileSize * 0.85), lineCap: .butt, lineJoin: .round))
+                context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, tileSize * 0.75), lineCap: .butt, lineJoin: .round))
+            }
+        }
+        if overlay.preview.count > 1 {
+            let line = polyline(overlay.preview, tileSize: tileSize)
+            let width = max(2, tileSize * 0.12)
+            if overlay.previewIsBuildable {
+                context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: tileSize * 0.5, lineCap: .round, lineJoin: .round))
+                context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            } else {
+                context.stroke(line, with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [tileSize * 0.25, tileSize * 0.2]))
+            }
+        }
+        let radius = max(5, tileSize * 0.2)
+        for (index, anchor) in overlay.anchors.enumerated() {
+            let centre = MapScale.center(of: anchor, tileSize: tileSize)
+            let dot = Path(ellipseIn: CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2))
+            if index == 0 {
+                context.fill(dot, with: .color(Color.accentColor))
+                context.stroke(dot, with: .color(Color(uiColor: .systemBackground)), lineWidth: 2)
+            } else {
+                context.stroke(dot, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
+                context.stroke(dot, with: .color(Color.accentColor), lineWidth: 3)
+            }
+        }
+    }
+
+    /// The line through `points`, in map coordinates.
+    private static func polyline(_ points: [WorldCoordinate], tileSize: Double) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        let start = MapScale.center(of: first, tileSize: tileSize)
+        path.move(to: CGPoint(x: start.x, y: start.y))
+        for point in points.dropFirst() {
+            let next = MapScale.center(of: point, tileSize: tileSize)
+            path.addLine(to: CGPoint(x: next.x, y: next.y))
+        }
+        return path
     }
 
     /// One edge of the debug projection, styled by what carries it: a

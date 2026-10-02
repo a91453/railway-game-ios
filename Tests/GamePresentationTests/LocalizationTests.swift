@@ -65,7 +65,7 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 3 格軌道")
         XCTAssertEqual(TrackConnections([.north, .east]).summary(in: zh), "彎道 北–東")
         XCTAssertEqual(TrackPiece.allCases.map { $0.title(in: zh) }, ["直線", "彎道", "T 字岔", "十字"])
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "軌道", "車站", "拆除", "列車"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "軌道", "車站", "拆除", "路網", "列車"])
 
         let position = TrainPosition.atNode(GridPosition(x: 1, y: 0), heading: .east)
         XCTAssertEqual(position.displayText(in: zh), "在 (1, 0)，面向東")
