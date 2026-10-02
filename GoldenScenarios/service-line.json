@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 24,
-  "description": "Service lines (plan data) on the line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1)-g(6,1), dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) d, Gamma(5,0) and Delta(5,2) share f, Far(7,3) has none. createLine checks invalidName, invalidLineStops (fewer than two, or a station twice in a row), unknownStation, and gives the standard window 06:00-24:00, rate 1024 and no trains. A line's journey drives its stops out and back, turning round at the far end, from a platform of its first stop facing north, east, south or west, keeping the shortest round trip (the first among equals). Each leg takes its links x 1024 / rate minutes, rounded up; the round trip adds 1 minute at each call between the ends, out and back, and 2 at each end. Main (Alpha, Beta, Gamma) at rate 1024: four legs of 2 links, 2 minutes each, 8 + 2 + 4 = 14 minutes; at 700, 3 minutes each, 18 minutes. The most trains is the round trip / 2 (the 2-minute minimum headway), at least 1: 7, then 9. Trains in service at a level are the count set, capped by that: peak 10 runs 7, then 9; the headway is the round trip / trains, rounded up: 2, 5, 14, then 2 and 6; no trains, no headway. The service level is the service day's at that minute while the window is open: standard day low from 0, peak 420-600 and 960-1200, off-peak otherwise, low from 1260; closed outside the window (a window may close up to 1800, 06:00 the next morning). Far cannot be driven (no platform). Shared calls at two stations on one platform: no travel, 4 minutes, 2 trains. Removing e cuts Main off.",
+  "schemaVersion": 25,
+  "description": "Service lines (plan data) on the line a(0,1)-b(1,1)-c(2,1)-d(3,1)-e(4,1)-f(5,1)-g(6,1), dead ends at both ends. Alpha(1,0) has platform b, Beta(3,0) d, Gamma(5,0) and Delta(5,2) share f, Far(7,3) has none. createLine checks invalidName, invalidLineStops (fewer than two, or a station twice in a row), unknownStation, and gives the standard window 06:00-24:00, the standard performance and no trains. A line's journey drives its stops out and back, turning round at the far end, from a platform of its first stop facing north, east, south or west, keeping the shortest round trip (the first among equals). Each leg takes the least whole second the line's performance builds a running curve for over it (Stage W2c, ARCHITECTURE decision 40); the round trip adds 1 minute at each call between the ends, out and back, and 2 at each end, and a line plans with it rounded up to whole minutes. Main (Alpha, Beta, Gamma) with the standard performance (1.5 and 2.5 km/h a second, 1/a + 1/b = 0.06 s\u00b2 a unit): four legs of 2 links, sqrt(2 x 2048 x 0.06) = 15.7, so 16 s each, 64 + 120 + 240 = 424 s, 8 minutes. setLinePerformance checks the line, then the performance (an acceleration of 0 is invalidTrainPerformance); with a crawl, { acceleration 250, braking 250, topSpeed 1 }, two links take 4 + 111.2 + 4 s, so 120, and the round trip 840 s, 14 minutes. The most trains is the round trip / 2 (the 2-minute minimum headway), at least 1: 4, then 7. Trains in service at a level are the count set, capped by that: peak 10 runs 4, then 7; the headway is the round trip / trains, rounded up: 2, 3, 8, then 2 and 5; no trains, no headway. The service level is the service day's at that minute while the window is open: standard day low from 0, peak 420-600 and 960-1200, off-peak otherwise, low from 1260; closed outside the window (a window may close up to 1800, 06:00 the next morning). Far cannot be driven (no platform). Shared calls at two stations on one platform: no travel, 240 s, 4 minutes, 2 trains. Main from Alpha to Gamma at the crawl: four links, 4 + 226.4 + 4 s, so 235 s each way, 710 s, 12 minutes. Removing e cuts Main off.",
   "initialState": {
     "mapWidth": 8,
     "mapHeight": 4,
@@ -80,11 +80,11 @@
     },
     {
       "observe": { "type": "lineJourney", "line": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "minutes": 2 }, { "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "minutes": 2 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "minutes": 2 }, { "from": 1, "to": 0, "route": [{ "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "minutes": 2 }], "roundTripMinutes": 14 } }
+      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 16 }, { "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 16 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 16 }, { "from": 1, "to": 0, "route": [{ "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "seconds": 16 }], "roundTripSeconds": 424, "roundTripMinutes": 8 } }
     },
     {
       "observe": { "type": "lineMaximumTrains", "line": 1 },
-      "expect": { "found": true, "trains": 7 }
+      "expect": { "found": true, "trains": 4 }
     },
     {
       "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
@@ -104,7 +104,7 @@
     },
     {
       "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
-      "expect": { "found": true, "trains": 7 }
+      "expect": { "found": true, "trains": 4 }
     },
     {
       "observe": { "type": "lineHeadway", "line": 1, "level": "peak" },
@@ -116,7 +116,7 @@
     },
     {
       "observe": { "type": "lineHeadway", "line": 1, "level": "offPeak" },
-      "expect": { "found": true, "minutes": 5 }
+      "expect": { "found": true, "minutes": 3 }
     },
     {
       "observe": { "type": "lineTrainsInService", "line": 1, "level": "low" },
@@ -124,27 +124,27 @@
     },
     {
       "observe": { "type": "lineHeadway", "line": 1, "level": "low" },
-      "expect": { "found": true, "minutes": 14 }
+      "expect": { "found": true, "minutes": 8 }
     },
     {
-      "command": { "type": "setLineRate", "line": 1, "rate": 0 },
-      "expect": { "result": "invalidLineRate" }
+      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 0, "braking": 2500, "topSpeed": 110 } },
+      "expect": { "result": "invalidTrainPerformance" }
     },
     {
-      "command": { "type": "setLineRate", "line": 9, "rate": 700 },
+      "command": { "type": "setLinePerformance", "line": 9, "performance": "forestRailway" },
       "expect": { "result": "unknownLine", "line": 9 }
     },
     {
-      "command": { "type": "setLineRate", "line": 1, "rate": 700 },
+      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 } },
       "expect": { "result": "ok" }
     },
     {
       "observe": { "type": "lineJourney", "line": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "minutes": 3 }, { "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "minutes": 3 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "minutes": 3 }, { "from": 1, "to": 0, "route": [{ "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "minutes": 3 }], "roundTripMinutes": 18 } }
+      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 120 }, { "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 120 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 120 }, { "from": 1, "to": 0, "route": [{ "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "seconds": 120 }], "roundTripSeconds": 840, "roundTripMinutes": 14 } }
     },
     {
       "observe": { "type": "lineMaximumTrains", "line": 1 },
-      "expect": { "found": true, "trains": 9 }
+      "expect": { "found": true, "trains": 7 }
     },
     {
       "observe": { "type": "lineHeadway", "line": 1, "level": "peak" },
@@ -152,7 +152,7 @@
     },
     {
       "observe": { "type": "lineHeadway", "line": 1, "level": "offPeak" },
-      "expect": { "found": true, "minutes": 6 }
+      "expect": { "found": true, "minutes": 5 }
     },
     {
       "observe": { "type": "serviceLevel", "line": 1, "gameMinutes": 0 },
@@ -248,7 +248,7 @@
     },
     {
       "observe": { "type": "lineJourney", "line": 3 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 5, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [], "minutes": 0 }, { "from": 1, "to": 0, "route": [], "minutes": 0 }], "roundTripMinutes": 4 } }
+      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 5, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [], "seconds": 0 }, { "from": 1, "to": 0, "route": [], "seconds": 0 }], "roundTripSeconds": 240, "roundTripMinutes": 4 } }
     },
     {
       "observe": { "type": "lineMaximumTrains", "line": 3 },
@@ -268,7 +268,7 @@
     },
     {
       "observe": { "type": "lineJourney", "line": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }, { "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "minutes": 6 }, { "from": 1, "to": 0, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }, { "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "minutes": 6 }], "roundTripMinutes": 16 } }
+      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }, { "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 235 }, { "from": 1, "to": 0, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }, { "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "seconds": 235 }], "roundTripSeconds": 710, "roundTripMinutes": 12 } }
     },
     {
       "command": { "type": "removeTrack", "x": 4, "y": 1 },
@@ -304,8 +304,8 @@
     ],
     "trains": [],
     "lines": [
-      { "id": 1, "name": "Main", "stops": [1, 3], "rate": 700, "window": { "type": "allDay" }, "trainsInService": { "peak": 10, "offPeak": 3, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] },
-      { "id": 3, "name": "Shared", "stops": [3, 4], "rate": 1024, "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 0, "offPeak": 0, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] }
+      { "id": 1, "name": "Main", "stops": [1, 3], "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 }, "window": { "type": "allDay" }, "trainsInService": { "peak": 10, "offPeak": 3, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] },
+      { "id": 3, "name": "Shared", "stops": [3, 4], "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 0, "offPeak": 0, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] }
     ],
     "serviceDay": [{ "start": 0, "level": "offPeak" }, { "start": 480, "level": "peak" }],
     "network": { "nodes": [], "edges": [], "platforms": [] },

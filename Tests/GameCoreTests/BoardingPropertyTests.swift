@@ -78,8 +78,8 @@ final class BoardingPropertyTests: XCTestCase {
     /// Mostly a train of two or three cars on a line of its own: bought,
     /// lengthened, placed at the first platform (and heading) of any
     /// station where its body fits, and given a line from there to up to
-    /// two other served stations, running all day; applied to `world` as
-    /// they are drawn.
+    /// two other served stations, running all day at a crawl (Stage W2c);
+    /// applied to `world` as they are drawn.
     private static func longTrain(in world: inout GameWorld, using random: inout SplitMix64, into operations: inout [Operation]) {
         guard random.chance(3, in: 4), world.lines.count < 4 else { return }
         func run(_ operation: Operation) -> GameError? {
@@ -113,6 +113,10 @@ final class BoardingPropertyTests: XCTestCase {
         _ = run(.setLineWindow(line, .allDay))
         _ = run(.setLineTrains(line, TrainsInService(peak: 1, offPeak: 1, low: 1)))
         _ = run(.setRate(id, random.element(of: [1024, 1500, 2048])))
+        // Stage W2c: a crawl, so that its riders ride for minutes (the train
+        // keeps to the time its line plans); the dispatch lines run the
+        // other performances.
+        _ = run(.setLinePerformance(line, PerformanceSamples.crawl))
         _ = run(.assign(id, line))
     }
 

@@ -26,7 +26,7 @@ final class LocalizationTests: XCTestCase {
             .trainNotPlaced(train), .invalidTrainPosition, .invalidMovementRate, .invalidContinuation, .clockOverflow,
             .idsExhausted, .invalidTimetable, .unknownStation(StationID(rawValue: 3)), .trainServiceActive(train),
             .trainServiceNotActive(train), .noTimetable(train), .trainNotAtFirstStop(train), .unknownLine(LineID(rawValue: 3)),
-            .invalidLineStops, .invalidLineRate, .invalidServiceWindow, .invalidTrainsInService, .invalidServiceDay,
+            .invalidLineStops, .invalidTrainPerformance, .invalidServiceWindow, .invalidTrainsInService, .invalidServiceDay,
             .invalidHeadway, .trainOnLine(train), .trainNotOnLine(train), .invalidLinePattern, .unknownLinePattern(2),
             .invalidStationTile(position), .invalidTrainLength, .unknownTrackNode(.node(7)), .unknownTrackEdge(.edge(3)),
             .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep,

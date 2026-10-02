@@ -67,7 +67,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period.map { $0 / GameTime.secondsPerMinute }),
                         execution: ExecutionSummary($0.service?.execution), times: $0.service.map { TimesSummary($0.times) }, cars: $0.cars,
                         trail: $0.trail.map(PositionSummary.init),
-                        trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init)
+                        trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init), performance: $0.performance
                     )
                 },
                 final.trains, name
@@ -119,7 +119,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .createLine(let name, let stops): error = model.createLine(named: name, stops: stops)
         case .removeLine(let id): error = model.removeLine(id)
         case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
-        case .setLineRate(let id, let rate): error = model.setLineRate(id, rate)
+        case .setLinePerformance(let id, let performance): error = model.setLinePerformance(id, performance)
+        case .setTrainPerformance(let id, let performance): error = model.setPerformance(id, performance)
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
         case .setLineTrainsInService(let id, let trains, let pattern): error = model.setLineTrains(id, trains, pattern: pattern)
         case .setServiceDay(let day): error = model.setServiceDay(day)
@@ -259,7 +260,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
 
     private static func summary(_ line: ReferenceWorld.Line) -> LineSummary {
         LineSummary(
-            id: line.id, name: line.name, stops: line.stops.map(\.rawValue), rate: line.rate,
+            id: line.id, name: line.name, stops: line.stops.map(\.rawValue), performance: PerformanceSummary(line.performance),
             window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService),
             targetHeadways: TargetHeadwaysSummary(line.targetHeadways), trains: line.roster, lastDispatch: line.lastDispatch,
             patterns: line.patterns.map {

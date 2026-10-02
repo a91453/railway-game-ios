@@ -661,8 +661,11 @@ public struct GameWorld: Equatable, Sendable {
     /// no rate can overflow.
     ///
     /// Allowed while the train runs its timetable: a service never sets the
-    /// rate, so the rate is how fast a scheduled train goes, and 0 holds it
-    /// (a service still gives it a continuation when a departure comes).
+    /// rate. Between calls a service's train follows its running curve
+    /// (Stage W2c, see ``ServiceRun``) whatever its rate, unless the rate is
+    /// 0, which holds it (a service still gives it a continuation when a
+    /// departure comes); the rate is how fast it goes only when its
+    /// performance builds no curve for the way.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainNotPlaced(_:)``, or
@@ -672,6 +675,22 @@ public struct GameWorld: Equatable, Sendable {
         guard rate >= 0 else { throw .invalidMovementRate }
 
         trains[index].movement.rate = rate
+    }
+
+    /// Sets how train `id` accelerates, brakes and coasts, and how fast it may
+    /// run (Stage W2c; see ``Train/performance``): the running curves its
+    /// services follow between calls. Placed or not, at no cost.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainServiceActive(_:)`` while it runs a service (its
+    ///   run follows the curve of the performance it set off with), or
+    ///   ``GameError/invalidTrainPerformance`` (see
+    ///   ``TrainPerformance/isValid``).
+    public mutating func setTrainPerformance(_ id: TrainID, to performance: TrainPerformance) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard trains[index].execution == nil else { throw .trainServiceActive(id) }
+        guard performance.isValid else { throw .invalidTrainPerformance }
+        trains[index].performance = performance
     }
 
     /// Replaces a placed train's continuation with `nodes`, the nodes to
@@ -1021,15 +1040,18 @@ public struct GameWorld: Equatable, Sendable {
         abandonUnservedPassengers()
     }
 
-    /// Sets the rate, in logical units per game minute, that a line's
-    /// journey times are worked out at (see ``lineJourney(_:pattern:)``).
+    /// Sets the performance a line's journey times are worked out with
+    /// (Stage W2c; see ``ServiceLine/performance`` and
+    /// ``lineJourney(_:pattern:)``). Trains already sent out keep their
+    /// timetables.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
-    ///   ``GameError/invalidLineRate`` for a rate below 1.
-    public mutating func setLineRate(_ id: LineID, to rate: Int64) throws(GameError) {
+    ///   ``GameError/invalidTrainPerformance`` (see
+    ///   ``TrainPerformance/isValid``).
+    public mutating func setLinePerformance(_ id: LineID, to performance: TrainPerformance) throws(GameError) {
         let index = try lineIndex(of: id)
-        guard rate >= 1 else { throw .invalidLineRate }
-        lines[index].rate = rate
+        guard performance.isValid else { throw .invalidTrainPerformance }
+        lines[index].performance = performance
     }
 
     /// Sets when a line runs during the day (see ``ServiceWindow``).
@@ -1203,10 +1225,12 @@ public struct GameWorld: Equatable, Sendable {
     /// `⌊rate·(s + 1)/60⌋ − ⌊rate·s/60⌋` units, so a whole minute takes it
     /// its rate. Services run on the second too (Stage W2b): a train dwells
     /// at each call (see ``ServiceTimes``) and leaves at whichever second
-    /// its doors have closed. The accounts, passengers and dispatch stay on
-    /// whole minutes. So each step from second `t` to `t + 1` has these
-    /// phases, each taking the lines in ascending ``LineID`` order and the
-    /// trains in ascending ``TrainID`` order:
+    /// its doors have closed; between calls it follows its run's running
+    /// curve instead of its rate (Stage W2c, see ``ServiceRun``). The
+    /// accounts, passengers and dispatch stay on whole minutes. So each
+    /// step from second `t` to `t + 1` has these phases, each taking the
+    /// lines in ascending ``LineID`` order and the trains in ascending
+    /// ``TrainID`` order:
     ///
     /// - **At a whole minute `T`** only: the accounts settle (G1c), then
     ///   **passengers** (G1a): every pair of stations with trips (see
@@ -1248,9 +1272,21 @@ public struct GameWorld: Equatable, Sendable {
     ///      Departures are those of the service's cycle: the timetable's
     ///      times shifted by whole periods. A full train counts those it
     ///      could not take as refused, and a line's train counts the
-    ///      departure (G1c).
-    /// 2. **Movement.** Every train travels its share of its rate for
-    ///    second `t` (see ``TrainMovement``).
+    ///      departure (G1c). The train sets off on a run (Stage W2c, see
+    ///      ``run(of:length:scheduled:)``): in the seconds from the
+    ///      scheduled departure to the scheduled arrival when its
+    ///      performance builds a curve for them, otherwise as fast as it
+    ///      can.
+    ///
+    ///    A travelling train held up on its run (see phase 2) sets off on a
+    ///    new one from a stand over the way left, as fast as it can, once
+    ///    it has a rate and can move (see ``resumeRun(_:at:)``).
+    /// 2. **Movement.** Every train with a rate above 0 travels its share
+    ///    for second `t`: along its service's run, the curve's distance at
+    ///    `t + 1` less at `t`; otherwise its share of its rate (see
+    ///    ``TrainMovement``). A travelling train that could not keep to its
+    ///    run (a rate of 0, or track ahead removed) drops it (see
+    ///    ``dropRunsHeldUp(endingAt:)``).
     /// 3. The clock moves on to `t + 1`.
     /// 4. **Arrivals.** Every train whose service is travelling to a stop
     ///    and that is now stopped at that stop's station (see
@@ -1259,10 +1295,10 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// Without traffic control trains do not interact, so the order only
     /// fixes when each is updated. Between the seconds at which something
-    /// happens (a whole minute, a dwell moving on, a train coming to the
-    /// end of its route) only movement does, and it depends on the map
-    /// alone, so those seconds are taken together: they move every train
-    /// exactly as far as one second at a time would. Whenever the clock can
+    /// happens (a whole minute, a dwell moving on, a run's end, a train
+    /// coming to the end of its route) only movement does, and it depends
+    /// on the map and the clock alone, so those seconds are taken together:
+    /// they move every train exactly as far as one second at a time would. Whenever the clock can
     /// hold the whole batch, `advance(ticks: n)` is the same as `n` calls
     /// of `advance(ticks: 1)`, and one tick at a speed the same as ticks at
     /// slower speeds that run the same seconds, apart from the speed
@@ -1309,8 +1345,10 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// A travelling train follows its continuation like any other; if track
     /// ahead is removed it waits for that track, and no new route is looked
-    /// up. The timetable's arrival times are not read: they are the plan the
-    /// train is measured against, not a limit.
+    /// up. Since Stage W2c the timetable's arrival times set how long each
+    /// run takes, so a train that leaves on time arrives on time and one
+    /// that leaves late arrives as late; they are not a limit (a train that
+    /// cannot keep to its run arrives later).
     ///
     /// **Traffic control** (Stage T, see ``setTrafficControl(_:)``). A
     /// departure takes its whole route to the next call at once, turned
@@ -1359,7 +1397,8 @@ public struct GameWorld: Equatable, Sendable {
     /// dwell moves on, no service leaves, arrives or ends, and no line
     /// sends a train out), no later minute of this call can change anything
     /// before the minute of the next second at which a service's dwell
-    /// moves on by itself (see ``nextServiceEvent(after:)``), or the next
+    /// moves on by itself (see ``nextServiceEvent(after:)``), or a slow run
+    /// takes its train on (see ``nextRunMove(from:)``), or the next
     /// minute at which a line's service with a ready train might send it
     /// out (the map and every train's inputs stay the same until the next
     /// command, a departure that found no route finds none later in the
@@ -1415,10 +1454,13 @@ public struct GameWorld: Equatable, Sendable {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
             }
-            if let end = secondsUntilARouteEnds(fromSecond: second, within: span) {
+            if let end = secondsUntilARouteEnds(from: start, within: span) {
                 span = end
             }
-            if moveTrains(fromSecond: second, for: span) {
+            if moveTrains(from: start, for: span) {
+                changed = true
+            }
+            if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span)) {
                 changed = true
             }
             clock.advance(basicSteps: span)
@@ -1647,8 +1689,9 @@ public struct GameWorld: Equatable, Sendable {
     /// The services' phase of a basic step (Stage W2b): every train whose
     /// service waits at a stop, in ascending ID order, moves its dwell on
     /// (see ``stepDwell(_:at:)``) and then leaves if its departure is due
-    /// (see ``departService(_:at:unroutable:)``). Returns whether any
-    /// service changed.
+    /// (see ``departService(_:at:unroutable:)``); every train whose service
+    /// travels and was held up on its run sets off again if it can (Stage
+    /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
     private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>) -> Bool {
         var changed = false
         for index in trains.indices where trains[index].execution != nil {
@@ -1656,6 +1699,9 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             if departService(index, at: now, unroutable: &unroutable) {
+                changed = true
+            }
+            if resumeRun(index, at: now) {
                 changed = true
             }
         }
@@ -1696,6 +1742,50 @@ public struct GameWorld: Equatable, Sendable {
         if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
             times.closing = now
             changed = true
+        }
+        trains[index].times = times
+        return changed
+    }
+
+    /// Train `index`'s service, travelling to a stop, after it was held up
+    /// on its run (Stage W2c; see ``dropRunsHeldUp(endingAt:)``): a train
+    /// without a run sets off on a new one (see
+    /// ``run(of:length:scheduled:)``), in the least whole second its
+    /// performance builds a curve for, over the way left to the end of its
+    /// route, when all of these hold:
+    ///
+    /// - its rate is above 0 (a rate of 0 holds it);
+    /// - it has way left (see ``routeStretches(of:)``); and
+    /// - it can move now: the track lets it go on at least one unit.
+    ///
+    /// It was stopped, so it starts again from a stand, as fast as it can
+    /// (the references only sample timetables and have no rule for this).
+    /// A run that is over before the train arrived (which only a train held
+    /// up has, and it drops it at once) is dropped first. Returns whether
+    /// the service changed.
+    private mutating func resumeRun(_ index: Int, at now: GameTime) -> Bool {
+        guard case .travellingToStop? = trains[index].execution, var times = trains[index].times else { return false }
+        var changed = false
+        if let run = times.run {
+            guard run.end <= now else { return false }
+            times.run = nil
+            changed = true
+        }
+        let train = trains[index]
+        let route = routeStretches(of: train)
+        if train.movement.rate > 0, route.moves {
+            let step = travelling(train, distance: 1)
+            if step.position != train.position || step.cursor != train.movement.cursor {
+                var left: Int64 = 0
+                for stretch in route.stretches {
+                    let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
+                    left = overflow ? .max : sum
+                }
+                if let run = run(of: train, length: left) {
+                    times.run = run
+                    changed = true
+                }
+            }
         }
         trains[index].times = times
         return changed
@@ -1825,8 +1915,35 @@ public struct GameWorld: Equatable, Sendable {
         }
         follow(path, &moved)
         moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
-        moved.times = ServiceTimes(arrival: train.times?.arrival ?? now, departure: now)
+        // Stage W2c: the run takes the time the timetable gives it, from the
+        // scheduled departure to the scheduled arrival (never negative).
+        let scheduled = train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds
+            - train.scheduledDeparture(of: stop, cycle: cycle).seconds
+        moved.times = ServiceTimes(
+            arrival: train.times?.arrival ?? now, departure: now,
+            run: run(of: moved, length: path.distance, scheduled: scheduled)
+        )
         return .setsOff(moved, distance: path.distance)
+    }
+
+    /// The run `train`, a service's, sets off on now over `length` world
+    /// units to its next call (Stage W2c; see ``ServiceRun``): in the
+    /// `scheduled` seconds its timetable gives the run when its performance
+    /// builds a curve for them, as the Railway reference fits a run's curve
+    /// to the timetable; otherwise (it cannot keep that time, or there is
+    /// none) in the least whole second it builds one for, running as fast
+    /// as it can. `nil` when it builds none at all (see
+    /// ``RunningCurve/leastSeconds(length:performance:)``): the train then
+    /// goes at its rate.
+    ///
+    /// - Precondition: `length >= 1`.
+    func run(of train: Train, length: Int64, scheduled: Int64? = nil) -> ServiceRun? {
+        if let scheduled, (1...RunningCurve.maximumSeconds).contains(scheduled),
+           RunningCurve(length: length, duration: scheduled * 1000, performance: train.performance) != nil {
+            return ServiceRun(start: clock.now, length: length, seconds: scheduled)
+        }
+        return RunningCurve.leastSeconds(length: length, performance: train.performance)
+            .map { ServiceRun(start: clock.now, length: length, seconds: $0) }
     }
 
     // The service adapters that change a train (Stage S5; the others are in
@@ -1878,22 +1995,29 @@ public struct GameWorld: Equatable, Sendable {
 
     /// The first second after `now` at which some service's dwell moves on
     /// by itself (Stage W2b), or `nil` if none does: a train's doors finish
-    /// opening, its doors start closing, or its departure comes. A departure
-    /// that has come and could not be made (no route, or its route held)
-    /// is not an event: it is tried again at every step, and can only
-    /// succeed once something else has changed. Boarding at whole minutes
-    /// needs no event: every whole minute ends a step anyway.
+    /// opening, its doors start closing, or its departure comes; or (Stage
+    /// W2c) a travelling train's run comes to its end, after which a train
+    /// held up on the way sets off again (see ``resumeRun(_:at:)``). A
+    /// departure that has come and could not be made (no route, or its
+    /// route held) is not an event: it is tried again at every step, and
+    /// can only succeed once something else has changed; nor is a held-up
+    /// train that cannot move yet. Boarding at whole minutes needs no
+    /// event: every whole minute ends a step anyway.
     func nextServiceEvent(after now: GameTime) -> GameTime? {
         var soonest: GameTime?
         for train in trains {
-            guard case .waitingAtStop(let stop, let cycle)? = train.execution, let times = train.times else { continue }
+            guard let execution = train.execution, let times = train.times else { continue }
             let event: GameTime?
-            if times.exchangeEnd == nil {
-                event = Self.saturating(times.arrival, plus: ServiceDwell.doorOpening)
-            } else if times.closing == nil {
-                event = closingStart(of: train, stop: stop, cycle: cycle, times: times)
+            if case .waitingAtStop(let stop, let cycle) = execution {
+                if times.exchangeEnd == nil {
+                    event = Self.saturating(times.arrival, plus: ServiceDwell.doorOpening)
+                } else if times.closing == nil {
+                    event = closingStart(of: train, stop: stop, cycle: cycle, times: times)
+                } else {
+                    event = departureDue(of: train)
+                }
             } else {
-                event = departureDue(of: train)
+                event = times.run?.end
             }
             if let event, event > now, event < soonest ?? .init(seconds: .max) {
                 soonest = event
@@ -1904,10 +2028,12 @@ public struct GameWorld: Equatable, Sendable {
 
     /// The whole minutes from now, the start of a minute, that an idle step
     /// may skip before the next service event at or after now (see
-    /// ``nextServiceEvent(after:)``), or `nil` if there is none. The step
-    /// just taken ended at now, so an event at now has not been seen yet.
-    /// None at all while `passengersWaiting` and a train waits with its
-    /// doors open: passengers who come at a whole minute get on.
+    /// ``nextServiceEvent(after:)``) or the next second in which a run takes
+    /// a train on (see ``nextRunMove(from:)``), or `nil` if there is
+    /// neither. The step just taken ended at now, so an event at now has not
+    /// been seen yet. None at all while `passengersWaiting` and a train
+    /// waits with its doors open: passengers who come at a whole minute get
+    /// on.
     private func wholeMinutesUntilNextServiceEvent(passengersWaiting: Bool) -> Int64? {
         let now = clock.now
         if passengersWaiting, trains.contains(where: { train in
@@ -1916,19 +2042,57 @@ public struct GameWorld: Equatable, Sendable {
         }) {
             return 0
         }
-        guard let event = nextServiceEvent(after: Self.saturating(now, plus: -1)) else { return nil }
+        guard let event = [nextServiceEvent(after: Self.saturating(now, plus: -1)), nextRunMove(from: now)].compactMap({ $0 }).min() else {
+            return nil
+        }
         let (gap, overflow) = event.seconds.subtractingReportingOverflow(now.seconds)
         return overflow ? .max : gap / GameTime.secondsPerMinute
     }
 
-    /// The seconds, from second `second` of a minute and at most `span`, in
-    /// which the first placed train with a rate comes to the end of the way
-    /// it can go (see ``routeStretches(of:)``), or `nil` if none does
-    /// within `span` (Stage W2b): its service arrives then, or its route is
-    /// released, so the step ends there.
+    /// The first second, at or after `now`, in which the run of some
+    /// travelling service's train takes it farther along its curve than it
+    /// had come by `now`, or `nil` if none has a run (Stage W2c): the second
+    /// that ends when it has. A slow run can leave its train where it is for
+    /// whole minutes, and then take it on: that is a change an idle minute
+    /// does not foresee (or, when the train cannot go on, its run is dropped
+    /// then; see ``dropRunsHeldUp(endingAt:)``). Never after the run's last
+    /// second. Only the shortcut over idle minutes needs it: a step that
+    /// moves a train is not idle.
+    private func nextRunMove(from now: GameTime) -> GameTime? {
+        var soonest: GameTime?
+        for train in trains {
+            guard case .travellingToStop? = train.execution, let run = train.times?.run, run.end > now,
+                  let curve = run.curve(for: train.performance)
+            else { continue }
+            let covered = run.distance(on: curve, from: run.start, to: now)
+            // The least second in (now, end] by which the curve has come
+            // farther: at the end it has come all the way.
+            var (low, high) = (Self.saturating(now, plus: 1).seconds, run.end.seconds)
+            while low < high {
+                let middle = low + (high - low) / 2
+                if run.distance(on: curve, from: run.start, to: GameTime(seconds: middle)) > covered {
+                    high = middle
+                } else {
+                    low = middle + 1
+                }
+            }
+            // The second that ends at `low`; `low > now`, so it is not
+            // before now.
+            if low - 1 < soonest?.seconds ?? .max {
+                soonest = GameTime(seconds: low - 1)
+            }
+        }
+        return soonest
+    }
+
+    /// The seconds, from `start` and at most `span`, in which the first
+    /// placed train with a rate comes to the end of the way it can go (see
+    /// ``routeStretches(of:)``), or `nil` if none does within `span` (Stage
+    /// W2b): its service arrives then, or its route is released, so the
+    /// step ends there.
     ///
-    /// - Precondition: `0 <= second` and `second + span <= 60`.
-    private func secondsUntilARouteEnds(fromSecond second: Int64, within span: Int64) -> Int64? {
+    /// - Precondition: `start.secondOfMinute + span <= 60`.
+    private func secondsUntilARouteEnds(from start: GameTime, within span: Int64) -> Int64? {
         var soonest: Int64?
         for train in trains where train.movement.rate > 0 && train.position != nil {
             let route = routeStretches(of: train)
@@ -1939,8 +2103,8 @@ public struct GameWorld: Equatable, Sendable {
                 left = overflow ? .max : sum
             }
             let limit = soonest.map { $0 - 1 } ?? span
-            let rate = train.movement.rate
-            guard limit >= 1, TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + limit) >= left else { continue }
+            let share = travelShare(of: train, from: start)
+            guard limit >= 1, share(limit) >= left else { continue }
             // A grid route counts links that are not laid now: a train held
             // up on the way never comes to its end, however far it may go.
             let end = travelling(train, distance: left)
@@ -1952,7 +2116,7 @@ public struct GameWorld: Equatable, Sendable {
             var (low, high) = (Int64(1), limit)
             while low < high {
                 let middle = (low + high) / 2
-                if TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + middle) >= left {
+                if share(middle) >= left {
                     high = middle
                 } else {
                     low = middle + 1
@@ -1963,18 +2127,18 @@ public struct GameWorld: Equatable, Sendable {
         return soonest
     }
 
-    /// The travel of `span` basic steps from second `second` of a minute,
-    /// for every placed train with a rate, in ascending ID order: each
-    /// train's share of its rate for those seconds (see
-    /// ``TrainMovement/distance(at:fromSecond:toSecond:)``), in one move.
-    /// The moves of the seconds one at a time add up to it, since a move
-    /// depends on the map alone. Returns whether any train changed.
-    private mutating func moveTrains(fromSecond second: Int64, for span: Int64) -> Bool {
+    /// The travel of `span` basic steps from `start`, for every placed train
+    /// with a rate, in ascending ID order: each train's share for those
+    /// seconds (see ``travelShare(of:from:)``), in one move. The moves of
+    /// the seconds one at a time add up to it, since a move depends on the
+    /// map alone. Returns whether any train changed.
+    private mutating func moveTrains(from start: GameTime, for span: Int64) -> Bool {
         var moved = false
         for index in trains.indices {
             let movement = trains[index].movement
-            let distance = TrainMovement.distance(at: movement.rate, fromSecond: second, toSecond: second + span)
-            guard let position = trains[index].position, distance > 0 else { continue }
+            guard let position = trains[index].position, movement.rate > 0 else { continue }
+            let distance = travelShare(of: trains[index], from: start)(span)
+            guard distance > 0 else { continue }
             let travel = travelling(trains[index], distance: distance)
             if case .onEdge(let traversal, _) = position {
                 guard travel.position != position || travel.cursor != movement.cursor,
@@ -2016,6 +2180,49 @@ public struct GameWorld: Equatable, Sendable {
             moved = true
         }
         return moved
+    }
+
+    /// Stage W2c: every travelling service's train that could not follow its
+    /// run (see ``ServiceRun``) up to `end`, the end of a step, drops it:
+    /// held by a rate of 0, or by track ahead that was removed, it has
+    /// more way left than its curve has left to go. Its curve no longer says
+    /// where it is; it sets off again from a stand once it can (see
+    /// ``resumeRun(_:at:)``). Within a step the map and the rates cannot
+    /// change, so a train held up at one second of it is held up at its
+    /// end. Returns whether any run was dropped.
+    private mutating func dropRunsHeldUp(endingAt end: GameTime) -> Bool {
+        var dropped = false
+        for index in trains.indices {
+            guard case .travellingToStop? = trains[index].execution, let run = trains[index].times?.run,
+                  let curve = run.curve(for: trains[index].performance)
+            else { continue }
+            var left: Int64 = 0
+            for stretch in routeStretches(of: trains[index]).stretches {
+                let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
+                left = overflow ? .max : sum
+            }
+            guard left > run.length - run.distance(on: curve, from: run.start, to: end) else { continue }
+            trains[index].times?.run = nil
+            dropped = true
+        }
+        return dropped
+    }
+
+    /// How far placed train `train`, with a rate, may travel in the first
+    /// `k` seconds from `start`, for `k` from 0 to the end of `start`'s
+    /// minute: along its service's run (Stage W2c, see ``ServiceRun``) how
+    /// much farther its curve has come by then, and otherwise its share of
+    /// its rate (see ``TrainMovement/distance(at:fromSecond:toSecond:)``).
+    /// Never less for a larger `k`. The curve is built once, for all of
+    /// them.
+    func travelShare(of train: Train, from start: GameTime) -> (Int64) -> Int64 {
+        if case .travellingToStop? = train.execution, let run = train.times?.run {
+            guard let curve = run.curve(for: train.performance) else { return { _ in 0 } }
+            return { k in run.distance(on: curve, from: start, to: Self.saturating(start, plus: k)) }
+        }
+        let rate = train.movement.rate
+        let second = start.secondOfMinute
+        return { k in TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + k) }
     }
 
     /// Where placed train `train` ends up after travelling up to `distance`

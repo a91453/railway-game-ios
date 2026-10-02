@@ -13,10 +13,14 @@ import XCTest
 /// it runs. How far it has got is saved with the train.
 ///
 /// Expected values are worked out by hand from the rules and written out,
-/// never taken from a previous run. Every train here moves at rate 1024 (one
-/// link a minute) unless a test says otherwise: a train that leaves at
-/// second `s` of a minute has gone 1024 - floor(1024 s / 60) units by the
-/// next minute (308 for 42 s, 410 for 36 s, 717 for 18 s).
+/// never taken from a previous run. Since Stage W2c (decision 40) a train
+/// runs from one stop to the next on the running curve of its performance
+/// (the standard one here), in the time its timetable gives the run, from
+/// the scheduled departure to the scheduled arrival: a train that leaves on
+/// time arrives on time, and one that leaves late arrives as late. Where it
+/// is on the way is read off the curve with `runDistance(_:in:after:)`.
+/// Every train here has rate 1024 unless a test says otherwise; a rate
+/// above 0 only lets a train go.
 final class TrainServiceTests: XCTestCase {
     // A line along y = 1 with dead ends at both ends, and five stations:
     //
@@ -187,24 +191,25 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(0))
 
         // Alpha, where it starts, is an end: 42 s, so it leaves at 1000:42;
-        // by 1002 it is 308 + 1024 along, 308 past c, and reaches Beta at
-        // 1002:42.
+        // the run to Beta takes the minute from its departure at 1 to its
+        // arrival at 2, so it reaches Beta at 1001:42.
         try world.advance(ticks: 2)
         XCTAssertEqual(world.clock.now.minutes, 1002)
-        XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: c, to: d, offset: 308))
-        try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
         XCTAssertEqual(try position(of: first, in: world), .atNode(d, heading: .east))
+        XCTAssertEqual(world.train(id: first)?.times?.arrival, GameTime(seconds: 1001 * 60 + 42))
 
-        // Beta is between the ends: 36 s, so it leaves at 1003:18 and by
-        // 1005 is 717 + 1024 along, 717 past e; Gamma at 1005:18.
-        try world.advance(ticks: 2)
+        // Beta is between the ends: 36 s, so it leaves at 1002:18 on a
+        // minute's run, and by 1003 is 42 s along it, past e (about 1436:
+        // cruising at about 35 units a second); Gamma at 1003:18.
+        try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(2))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: e, to: f, offset: 717))
+        let along = runDistance(2048, in: 60, after: 42)
+        XCTAssertGreaterThan(along, 1024)
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: e, to: f, offset: along - 1024))
 
-        // Gamma is the last stop: 42 s, so its doors close at 1005:51 and
-        // the service ends at 1006:00, in the step that starts then.
+        // Gamma is the last stop: 42 s, so its doors close at 1003:51 and
+        // the service ends at 1004:00, in the step that starts then.
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(2))
         try world.advance(ticks: 1)
@@ -215,8 +220,9 @@ final class TrainServiceTests: XCTestCase {
 
     // MARK: - Departures and arrivals
 
-    /// An early train waits at its stop, minute by minute, and leaves in the
-    /// step that starts at its scheduled departure: not a minute earlier.
+    /// A train waits at its stop, minute by minute, and leaves in the step
+    /// that starts at its scheduled departure: not a minute earlier. On the
+    /// way it keeps to its timetable, so it arrives on time.
     func testATrainNeverLeavesBeforeItsScheduledDeparture() throws {
         var world = try makeServiceWorld([stop(alpha, 0, 3), stop(beta, 10, 12), stop(gamma, 20, 20)])
 
@@ -224,56 +230,62 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(0))
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
 
-        // The step from 3 leaves Alpha and enters c.
+        // The step from 3 leaves Alpha on a run of two links in the 7
+        // minutes to 10: a minute in, about 292 units along (cruising at
+        // about 4.9 a second).
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), .atNode(c, heading: .east))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: runDistance(2048, in: 420, after: 60)))
         XCTAssertEqual(try movement(of: first, in: world).continuation, [c, d])
         XCTAssertEqual(try movement(of: first, in: world).cursor, 1)
 
-        // At d by 5, five minutes early for an arrival at 10.
-        try world.advance(ticks: 1)
-        XCTAssertEqual(world.clock.now.minutes, 5)
+        // At d at 10, on time, and held there for the departure at 12.
+        try world.advance(ticks: 6)
+        XCTAssertEqual(world.clock.now.minutes, 10)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        XCTAssertEqual(world.train(id: first)?.times?.arrival, GameTime(minutes: 10))
+        XCTAssertEqual(world.lateness(of: first), 0)
         while world.clock.now.minutes < 12 {
             try world.advance(ticks: 1)
             XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1), "minute \(world.clock.now.minutes)")
             XCTAssertEqual(try position(of: first, in: world), .atNode(d, heading: .east), "minute \(world.clock.now.minutes)")
         }
 
-        // The departure is 12: the step from 12 leaves.
+        // The departure is 12: the step from 12 leaves, on 8 minutes' run.
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(2))
-        XCTAssertEqual(try position(of: first, in: world), .atNode(e, heading: .east))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: d, to: e, offset: runDistance(2048, in: 480, after: 60)))
     }
 
     /// A timetable without dwells still gets the least dwell at every stop:
-    /// a train that arrives with distance to spare stops there, and leaves
-    /// once its dwell is over.
+    /// the train leaves once its dwell is over. Each run still takes the
+    /// minute its timetable gives it, so the train runs later and later.
     func testAnArrivalWithZeroDwellStillDwellsItsLeast() throws {
-        // Four links a minute: leaving Alpha at 0:42 it has gone 4096 - 2867
-        // = 1229 by 1, 205 past c, and reaches d (2048) 12 s later, at 1:12
-        // (floor(4096 x 12 / 60) = 819 = 2048 - 1229).
+        // Leaving Alpha at 0:42 on a minute's run: 18 s along by 1 (about
+        // 602, cruising at about 35 a second), at d at 1:42.
         var world = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 1, 1), stop(gamma, 2, 2)], rate: 4096)
 
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: c, to: d, offset: 205))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: runDistance(2048, in: 60, after: 18)))
 
-        // Beta: 36 s from 1:12, so it leaves at 1:48 and has gone 4096 -
-        // 3276 = 820 by 2, 820 past d; Gamma 1228 later, at 2:18.
+        // Beta: 36 s from 1:42, so it still waits there at 2 and leaves at
+        // 2:18; 42 s along by 3 (about 1436, past e); Gamma at 3:18.
+        try world.advance(ticks: 1)
+        XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        XCTAssertEqual(try position(of: first, in: world), .atNode(d, heading: .east))
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(2))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: d, to: e, offset: 820))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: e, to: f, offset: runDistance(2048, in: 60, after: 42) - 1024))
 
-        // Gamma, the last stop: 42 s from 2:18; the service ends at 3:00.
+        // Gamma, the last stop: 42 s from 3:18; the service ends at 4:00.
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(2))
         XCTAssertEqual(try position(of: first, in: world), .atNode(f, heading: .east))
         XCTAssertEqual(try movement(of: first, in: world).continuation, [])
         try world.advance(ticks: 1)
         XCTAssertNil(try execution(of: first, in: world))
-        XCTAssertEqual(world.clock.now.minutes, 4)
+        XCTAssertEqual(world.clock.now.minutes, 5)
     }
 
     /// A late train is not held for its timetable: it leaves as soon as its
@@ -281,19 +293,26 @@ final class TrainServiceTests: XCTestCase {
     func testALateTrainLeavesOnceItsLeastDwellIsOver() throws {
         var world = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 1, 1), stop(gamma, 10, 10)])
 
-        // Leaving Alpha at 0:42, Beta, two links away, is reached at 2:42,
-        // after its departure at 1: 102 s late.
-        try world.advance(ticks: 3)
+        // Leaving Alpha at 0:42 on the minute's run to Beta, it is there at
+        // 1:42, after its departure at 1: at 2 it is 60 s late.
+        try world.advance(ticks: 2)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
-        XCTAssertEqual(world.lateness(of: first), 120)
+        XCTAssertEqual(world.lateness(of: first), 60)
 
-        // 36 s at Beta: its doors close at 3:09 and it leaves at 3:18, 138 s
-        // late, and is 717 past d by 4.
+        // 36 s at Beta: its doors close at 2:09 and it leaves at 2:18, 78 s
+        // late, on the 9 minutes' run to Gamma (from the departure at 1 to
+        // the arrival at 10), 42 s along it by 3.
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(2))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: d, to: e, offset: 717))
-        XCTAssertEqual(world.train(id: first)?.times, ServiceTimes(arrival: GameTime(seconds: 162), departure: GameTime(seconds: 198)))
-        XCTAssertEqual(world.lateness(of: first), 138)
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: d, to: e, offset: runDistance(2048, in: 540, after: 42)))
+        XCTAssertEqual(
+            world.train(id: first)?.times,
+            ServiceTimes(
+                arrival: GameTime(seconds: 102), departure: GameTime(seconds: 138),
+                run: ServiceRun(start: GameTime(seconds: 138), length: 2048, seconds: 540)
+            )
+        )
+        XCTAssertEqual(world.lateness(of: first), 78)
     }
 
     /// A stop at the station the train is already stopped at (a repeated
@@ -325,13 +344,14 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
 
         // Gamma to Delta across their shared platform.
+        // It leaves Delta at 4 on the 6 minutes' run to Beta.
         world = try makeServiceWorld([stop(gamma, 0, 0), stop(delta, 0, 4), stop(beta, 10, 10)], at: .atNode(f, heading: .west))
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
         XCTAssertEqual(try position(of: first, in: world), .atNode(f, heading: .west))
         try world.advance(ticks: 4)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(2))
-        XCTAssertEqual(try position(of: first, in: world), .atNode(e, heading: .west))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: f, to: e, offset: runDistance(2048, in: 360, after: 60)))
     }
 
     /// Without a route the train waits at its stop; once the map allows a
@@ -351,12 +371,17 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
         XCTAssertEqual(try movement(of: first, in: world).continuation, [])
 
+        // The step from 100 leaves on the 5 minutes' run its timetable
+        // gives it: at Beta at 105.
         try world.buildTrack(at: c, connections: [.east, .west])
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), .atNode(c, heading: .east))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: runDistance(2048, in: 300, after: 60)))
+        try world.advance(ticks: 3)
+        XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        XCTAssertEqual(world.train(id: first)?.times?.arrival, GameTime(minutes: 105))
 
         // A station without a platform is never reached: the train waits.
         world = try makeServiceWorld([stop(alpha, 0, 0), stop(far, 1, 1)])
@@ -367,11 +392,13 @@ final class TrainServiceTests: XCTestCase {
 
     /// A travelling train whose track ahead is removed waits for that track,
     /// like any train (decision 15); the service looks up no other route.
+    /// Held up, it drops its run (Stage W2c), and once the track is back it
+    /// sets off again from a stand, as fast as it can.
     func testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted() throws {
-        // Leaving at 0:42 at 512 a minute: 512 - 358 = 154 along by 1.
-        var world = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 1, 1)], rate: 512)
+        // Leaving at 0:42 on a minute's run: 18 s along by 1.
+        var world = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 1, 10)], rate: 512)
         try world.advance(ticks: 1)
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: 154))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: runDistance(2048, in: 60, after: 18)))
 
         try world.removeTrack(at: d)
         try world.advance(ticks: 5)
@@ -379,12 +406,16 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), .atNode(c, heading: .east))
         XCTAssertEqual(try movement(of: first, in: world).continuation, [c, d])
         XCTAssertEqual(try movement(of: first, in: world).cursor, 1)
+        XCTAssertNil(world.train(id: first)?.times?.run, "held up at c, it dropped its run")
 
+        // From 6 it sets off over the link left: 1024 units in 12 s (the
+        // least: √(2 × 1024 × 0.06) = 11.09 s), at Beta at 6:12.
         try world.buildTrack(at: d, connections: [.east, .west])
         try world.advance(ticks: 2)
         XCTAssertEqual(world.clock.now.minutes, 8)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
         XCTAssertEqual(try position(of: first, in: world), .atNode(d, heading: .east))
+        XCTAssertEqual(world.train(id: first)?.times?.arrival, GameTime(seconds: 6 * 60 + 12))
     }
 
     /// The last stop keeps its dwell: the service ends at the last stop's
@@ -393,10 +424,11 @@ final class TrainServiceTests: XCTestCase {
         let stops = [stop(alpha, 0, 0), stop(beta, 5, 9)]
         var world = try makeServiceWorld(stops)
 
-        // Beta at 2:42; its doors close at 8:51 for the departure at 9.
-        try world.advance(ticks: 3)
-        XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        // Beta at 5:42 (left Alpha at 0:42 on a 5 minutes' run); its doors
+        // close at 8:51 for the departure at 9.
         try world.advance(ticks: 6)
+        XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        try world.advance(ticks: 3)
         XCTAssertEqual(world.clock.now.minutes, 9)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
 
@@ -415,7 +447,9 @@ final class TrainServiceTests: XCTestCase {
     }
 
     /// The service sets the continuation, never the rate: at rate 0 the
-    /// train gets its route when the departure comes and stays put.
+    /// train gets its route when the departure comes and stays put. Held,
+    /// it drops the run it set off on (Stage W2c); once it may go, it sets
+    /// off again from a stand, as fast as it can.
     func testATrainWithRateZeroGetsItsRouteButDoesNotMove() throws {
         var world = try makeServiceWorld([stop(alpha, 0, 2), stop(beta, 5, 5)], rate: 0)
 
@@ -424,13 +458,25 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
         XCTAssertEqual(try movement(of: first, in: world).continuation, [c, d])
         XCTAssertEqual(world.stationsStoppedAt(by: first), [])
+        XCTAssertNil(world.train(id: first)?.times?.run, "held at 2, it dropped the run it set off on")
         try world.advance(ticks: 10)
         XCTAssertEqual(try position(of: first, in: world), .atNode(b, heading: .east))
+        XCTAssertNil(world.train(id: first)?.times?.run)
 
+        // From 13 it sets off over the two links in 16 s, the least (√(2 ×
+        // 2048 × 0.06) = 15.68 s): cruising at 640/3 units a second, it is
+        // past c 10 s in (about 1280). At Beta at 13:16, its doors close at
+        // 13:49, and the service ends at 13:58.
         try world.setTrainMovementRate(first, to: 1024)
-        try world.advance(ticks: 2)
-        XCTAssertEqual(world.clock.now.minutes, 15)
+        world.setSpeed(.x10)
+        try world.advance(ticks: 10)
+        XCTAssertEqual(world.clock.now.seconds, 13 * 60 + 10)
+        XCTAssertEqual(world.train(id: first)?.times?.run, ServiceRun(start: GameTime(minutes: 13), length: 2048, seconds: 16))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: c, to: d, offset: runDistance(2048, in: 16, after: 10) - 1024))
+        try world.advance(ticks: 6)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        XCTAssertEqual(world.train(id: first)?.times?.arrival, GameTime(seconds: 13 * 60 + 16))
+        world.setSpeed(.normal)
         try world.advance(ticks: 1)
         XCTAssertNil(try execution(of: first, in: world))
     }
@@ -461,6 +507,15 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertThrowsGameError(try world.removeTrack(at: b), .trackInUse(b))
         XCTAssertEqual(world, before)
 
+        // So does the performance (Stage W2c): a run follows the curve of
+        // the performance it set off with.
+        XCTAssertThrowsGameError(try world.setTrainPerformance(unknown, to: .metro), .unknownTrain(unknown))
+        XCTAssertThrowsGameError(try world.setTrainPerformance(first, to: .metro), .trainServiceActive(first))
+        XCTAssertThrowsGameError(
+            try world.setTrainPerformance(first, to: TrainPerformance(acceleration: 0, braking: 0, topSpeed: 0)), .trainServiceActive(first)
+        )
+        XCTAssertEqual(world, before)
+
         // The rate stays the player's.
         try world.setTrainMovementRate(first, to: 0)
         XCTAssertEqual(try movement(of: first, in: world).rate, 0)
@@ -474,7 +529,7 @@ final class TrainServiceTests: XCTestCase {
         let stops = [stop(alpha, 0, 0), stop(beta, 1, 1)]
         var world = try makeServiceWorld(stops, rate: 512)
         XCTAssertThrowsGameError(try world.stopTrainService(unknown), .unknownTrain(unknown))
-        // Left at 0:42: 154 along by 1.
+        // Left at 0:42 on a minute's run: 18 s along by 1.
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
         let before = try XCTUnwrap(world.train(id: first))
@@ -484,14 +539,17 @@ final class TrainServiceTests: XCTestCase {
         let after = try XCTUnwrap(world.train(id: first))
         XCTAssertNil(after.execution)
         XCTAssertNil(after.times)
-        XCTAssertEqual(after.position, .onLink(from: b, to: c, offset: 154))
+        let along = runDistance(2048, in: 60, after: 18)
+        XCTAssertEqual(after.position, .onLink(from: b, to: c, offset: along))
         XCTAssertEqual(after.position, before.position)
         XCTAssertEqual(after.movement, before.movement)
         XCTAssertEqual(after.timetable, stops)
         XCTAssertThrowsGameError(try world.stopTrainService(first), .trainServiceNotActive(first))
         XCTAssertThrowsGameError(try world.startTrainService(first), .trainNotAtFirstStop(first))
 
-        // 154 + 4 x 512 = 2202: at d, the end of its path, by 5.
+        // No longer on a run, it goes at its rate: along + 4 × 512 is over
+        // 2048, so it is at d, the end of its path, by 5.
+        XCTAssertGreaterThan(along + 4 * 512, 2048)
         try world.advance(ticks: 4)
         XCTAssertEqual(try position(of: first, in: world), .atNode(d, heading: .east))
         XCTAssertEqual(world.stationsStoppedAt(by: first), [beta])
@@ -560,29 +618,31 @@ final class TrainServiceTests: XCTestCase {
 
     /// Minutes that change nothing are skipped, but never past a second at
     /// which a dwell moves on: the doors close and the train leaves on time,
-    /// all inside one batch. Here the train reaches Beta at 2:42 and holds
-    /// for its departure at 5: idle through 3 and 4, its doors close at
-    /// 4:51, it leaves at 5 and reaches Gamma at 7.
+    /// all inside one batch. Here the train reaches Beta at 2:42 (left
+    /// Alpha at 0:42 on a 2 minutes' run) and holds for its departure at 5:
+    /// idle through 3 and 4, its doors close at 4:51, it leaves at 5 and
+    /// reaches Gamma at 10, at the end of its run.
     func testADepartureAfterIdleMinutesIsMetInsideOneBatch() throws {
         let start = try makeServiceWorld([stop(alpha, 0, 0), stop(beta, 2, 5), stop(gamma, 10, 10)])
         var world = start
 
-        try world.advance(ticks: 7)
+        try world.advance(ticks: 10)
 
-        XCTAssertEqual(world.clock.now.minutes, 7)
+        XCTAssertEqual(world.clock.now.minutes, 10)
         XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(2))
         XCTAssertEqual(try position(of: first, in: world), .atNode(f, heading: .east))
-        XCTAssertEqual(world.train(id: first)?.times, ServiceTimes(arrival: GameTime(minutes: 7), departure: GameTime(minutes: 5)))
+        XCTAssertEqual(world.train(id: first)?.times, ServiceTimes(arrival: GameTime(minutes: 10), departure: GameTime(minutes: 5)))
         var single = start
-        for _ in 0..<7 {
+        for _ in 0..<10 {
             try single.advance(ticks: 1)
         }
         XCTAssertEqual(single, world)
     }
 
     /// Idle time is still skipped at once, and a departure far ahead is met
-    /// exactly: a train at 1 unit a minute is exactly 100 units along 100
-    /// minutes after it left.
+    /// exactly: 100 minutes after it left on a run of two links in 2048
+    /// minutes (cruising at about a unit a minute), the train is where the
+    /// curve puts it then.
     func testAdvancingFarAheadStillMeetsTheDepartureExactly() throws {
         var world = try makeServiceWorld([stop(alpha, 0, 5_000_000_000), stop(beta, 5_000_002_048, 5_000_002_048)], rate: 1)
 
@@ -590,7 +650,7 @@ final class TrainServiceTests: XCTestCase {
 
         XCTAssertEqual(world.clock.now.minutes, 5_000_000_100)
         XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: 100))
+        XCTAssertEqual(try position(of: first, in: world), .onLink(from: b, to: c, offset: runDistance(2048, in: 2048 * 60, after: 100 * 60)))
     }
 
     /// The clock may be before second 0 (a save can hold one): a departure
@@ -685,7 +745,7 @@ final class TrainServiceTests: XCTestCase {
         try world.startTrainService(second)
         try world.advance(ticks: 1)
         XCTAssertEqual(try execution(of: second, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: second, in: world), .onLink(from: d, to: c, offset: 154))
+        XCTAssertEqual(try position(of: second, in: world), .onLink(from: d, to: c, offset: runDistance(2048, in: 180, after: 18)))
         let saved = try XCTUnwrap(JSONSerialization.jsonObject(with: encode(world)) as? [String: Any])
 
         func decode(_ change: (inout [[String: Any]]) -> Void) throws -> GameWorld {
@@ -737,9 +797,14 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertThrowsError(try decode { $0[0]["movement"] = ["rate": 1024, "continuation": [["x": 2, "y": 1]], "cursor": 0] })
         // Stage W2b: a service has its times, and they fit what it does and
         // the clock (1:00): Local 1's doors opened at 8 s and close at 4:51,
-        // Local 2 left Beta at 42 s.
+        // Local 2 left Beta at 42 s on the 3 minutes' run to Alpha (Stage
+        // W2c).
         XCTAssertEqual(world.train(id: first)?.times, ServiceTimes(arrival: .zero, exchangeEnd: GameTime(seconds: 8)))
-        XCTAssertEqual(world.train(id: second)?.times, ServiceTimes(arrival: .zero, departure: GameTime(seconds: 42)))
+        XCTAssertEqual(
+            world.train(id: second)?.times,
+            ServiceTimes(arrival: .zero, departure: GameTime(seconds: 42), run: ServiceRun(start: GameTime(seconds: 42), length: 2048, seconds: 180))
+        )
+        let run: [String: Any] = ["start": 42, "length": 2048, "seconds": 180]
         let badTimes: [(String, Int, Any?)] = [
             ("a service without times", 0, nil),
             ("explicit null", 0, NSNull()),
@@ -755,6 +820,16 @@ final class TrainServiceTests: XCTestCase {
             ("travelling with a dwell", 1, ["arrival": 0, "exchangeEnd": 8, "departure": 42]),
             ("leaving before arriving", 1, ["arrival": 10, "departure": 9]),
             ("leaving after the clock", 1, ["arrival": 0, "departure": 61]),
+            // Stage W2c: a run only while travelling, set off no earlier
+            // than the train left and no later than the clock, with a curve.
+            ("a run while waiting", 0, ["arrival": 0, "exchangeEnd": 8, "run": run]),
+            ("a null run", 1, ["arrival": 0, "departure": 42, "run": NSNull()]),
+            ("a run before leaving", 1, ["arrival": 0, "departure": 43, "run": run]),
+            ("a run after the clock", 1, ["arrival": 0, "departure": 42, "run": ["start": 61, "length": 2048, "seconds": 180]]),
+            ("a run of no length", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 0, "seconds": 180]]),
+            ("a run of no time", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 2048, "seconds": 0]]),
+            ("a run too long", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 2048, "seconds": 4_294_968]]),
+            ("a run too fast for the train", 1, ["arrival": 0, "departure": 42, "run": ["start": 42, "length": 2048, "seconds": 15]]),
         ]
         for (what, index, value) in badTimes {
             XCTAssertThrowsError(try decode { $0[index]["times"] = value }, what)
@@ -769,5 +844,10 @@ final class TrainServiceTests: XCTestCase {
         }
         XCTAssertEqual(inactive.trains.map(\.execution), [nil, nil])
         XCTAssertThrowsError(try decode { $0[0]["execution"] = nil })
+        // Stage W2c: a valid performance, which builds a curve for the run.
+        XCTAssertThrowsError(try decode { $0[1]["performance"] = NSNull() })
+        XCTAssertThrowsError(try decode { $0[1]["performance"] = ["acceleration": 0, "braking": 2_500, "topSpeed": 110] })
+        XCTAssertThrowsError(try decode { $0[1]["performance"] = ["acceleration": 1, "braking": 1, "topSpeed": 1] }, "it cannot make its run")
+        XCTAssertEqual(try decode { $0[1]["performance"] = ["acceleration": 1_500, "braking": 2_500, "topSpeed": 110] }, world)
     }
 }

@@ -16,8 +16,8 @@ public struct TrainID: RawRepresentable, Hashable, Comparable, Codable, Sendable
 /// A train has an identity, a name, a timetable (the stops it is scheduled
 /// to make, once or repeating every period), whether it is running that
 /// timetable as a service and how far it has got, and, once placed, a
-/// position on the track and a movement (rate and continuation). Consists
-/// are not modelled yet.
+/// position on the track and a movement (rate and continuation), and how it
+/// accelerates and brakes (Stage W2c). Consists are not modelled yet.
 public struct Train: Identifiable, Hashable, Sendable {
     public let id: TrainID
     public let name: String
@@ -93,9 +93,16 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// ``GameWorld`` changes it, as it gives the train a route or the route
     /// ends; its route itself stays in ``movement``.
     public internal(set) var reservation: [TrackResource]
+    /// How the train accelerates, brakes and coasts, and how fast it may run
+    /// (Stage W2c): a service's train follows the running curve this builds
+    /// from one call to the next (see ``ServiceRun``). ``TrainPerformance/standard``
+    /// for every newly bought train. Set by
+    /// ``GameWorld/setTrainPerformance(_:to:)`` while the train runs no
+    /// service.
+    public internal(set) var performance: TrainPerformance
 
     /// Creates an unplaced, idle train of one car without a timetable or a
-    /// service.
+    /// service, with the standard performance.
     public init(id: TrainID, name: String) {
         self.id = id
         self.name = name
@@ -109,6 +116,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.trail = []
         self.trailEdges = []
         self.reservation = []
+        self.performance = .standard
     }
 }
 
@@ -175,7 +183,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation
+        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation, performance
     }
 
     /// Decodes a train.
@@ -228,6 +236,12 @@ extension Train: Codable {
     /// reservation on an unplaced train are rejected. Whether the resources
     /// exist and fit the train's route is checked by the ``GameWorld``
     /// decoder.
+    ///
+    /// A train with the standard performance (Stage W2c) has no
+    /// `"performance"` key, which is also how trains saved before Stage W2c
+    /// read; an explicit `null` and a performance that is not valid (see
+    /// ``TrainPerformance/isValid``) are rejected, and so is a service run
+    /// (see ``ServiceRun``) for which the performance builds no curve.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TrainID.self, forKey: .id)
@@ -252,6 +266,7 @@ extension Train: Codable {
         trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
         trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
         reservation = container.contains(.reservation) ? try container.decode([TrackResource].self, forKey: .reservation) : []
+        performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
         guard zip(reservation, reservation.dropFirst()).allSatisfy({ $0 < $1 }), position != nil || reservation.isEmpty else {
             throw DecodingError.dataCorruptedError(
                 forKey: .reservation, in: container,
@@ -314,6 +329,13 @@ extension Train: Codable {
                 debugDescription: "Train \(id.rawValue)'s service times are missing, or do not fit what its service is doing."
             )
         }
+        // Stage W2c: the train's performance builds a curve for its run.
+        if let run = times?.run, run.curve(for: performance) == nil {
+            throw DecodingError.dataCorruptedError(
+                forKey: .times, in: container,
+                debugDescription: "Train \(id.rawValue)'s performance builds no curve for its run."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -341,6 +363,9 @@ extension Train: Codable {
         }
         if !reservation.isEmpty {
             try container.encode(reservation, forKey: .reservation)
+        }
+        if performance != .standard {
+            try container.encode(performance, forKey: .performance)
         }
     }
 }

@@ -12,7 +12,9 @@ import XCTest
 ///
 /// Expected values are worked out by hand from the rules and written out,
 /// never taken from a previous run. The clock runs at x10, one second a
-/// tick, unless a test says otherwise.
+/// tick, unless a test says otherwise. Between calls a train runs on its
+/// running curve in the time its timetable gives the run (Stage W2c,
+/// decision 40), or as fast as it can when that is too short.
 final class ServiceDwellTests: XCTestCase {
     // a(0,1) to g(6,1), dead ends at both ends; Alpha(1,0) has platform b,
     // Beta(3,0) d, Gamma(5,0) f.
@@ -46,10 +48,15 @@ final class ServiceDwellTests: XCTestCase {
         ScheduledStop(station: station, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: departure))
     }
 
-    private func times(_ arrival: Int64, _ exchangeEnd: Int64? = nil, _ closing: Int64? = nil, departure: Int64? = nil) -> ServiceTimes {
+    /// `run` is the start, length and seconds of a run (Stage W2c).
+    private func times(
+        _ arrival: Int64, _ exchangeEnd: Int64? = nil, _ closing: Int64? = nil, departure: Int64? = nil,
+        run: (Int64, Int64, Int64)? = nil
+    ) -> ServiceTimes {
         ServiceTimes(
             arrival: GameTime(seconds: arrival), exchangeEnd: exchangeEnd.map(GameTime.init(seconds:)),
-            closing: closing.map(GameTime.init(seconds:)), departure: departure.map(GameTime.init(seconds:))
+            closing: closing.map(GameTime.init(seconds:)), departure: departure.map(GameTime.init(seconds:)),
+            run: run.map { ServiceRun(start: GameTime(seconds: $0.0), length: $0.1, seconds: $0.2) }
         )
     }
 
@@ -82,19 +89,22 @@ final class ServiceDwellTests: XCTestCase {
 
     // MARK: - Holding and lateness
 
-    /// Two links a minute, so a minute between stations: Alpha 0–60, Beta
-    /// 120–120, Gamma 240–300.
+    /// Alpha 0–60, Beta 120–120, Gamma 240–240 and Gamma again 360–420:
     ///
     /// - Alpha: started (arrived) at 0, an end: least dwell 42 s, but early,
-    ///   so its doors close at 51 and it leaves at 60, on time.
+    ///   so its doors close at 51 and it leaves at 60, on time, on the
+    ///   minute's run to Beta.
     /// - Beta at 120, on time; between the ends, 36 s: doors closing at
-    ///   147, it leaves at 156, 36 s late, with no hold for the timetable.
-    /// - Gamma at 216, 24 s early; it holds for its departure at 300,
-    ///   doors closing at 291; the service ends at 300.
+    ///   147, it leaves at 156, 36 s late, with no hold for the timetable,
+    ///   on the 2 minutes' run to Gamma.
+    /// - Gamma at 276, 36 s late; 36 s again: it leaves at 312, and is at
+    ///   once at its next call, Gamma again (a call at the station it is
+    ///   at), 48 s early for 360. The last stop: it holds for its departure
+    ///   at 420, doors closing at 411; the service ends at 420.
     func testAnEarlyTrainHoldsForItsTimetableAndALateOneDoesNot() throws {
         var world = try makeWorld()
         try world.setTrainMovementRate(one, to: 2_048)
-        try world.setTrainTimetable(one, to: [stop(alpha, 0, 60), stop(beta, 120, 120), stop(gamma, 240, 300)])
+        try world.setTrainTimetable(one, to: [stop(alpha, 0, 60), stop(beta, 120, 120), stop(gamma, 240, 240), stop(gamma, 360, 420)])
         try world.startTrainService(one)
         XCTAssertEqual(world.train(id: one)?.times, times(0))
         XCTAssertEqual(world.lateness(of: one), 0)
@@ -107,7 +117,7 @@ final class ServiceDwellTests: XCTestCase {
         XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(0))
         try advance(&world, to: 61)
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1))
-        XCTAssertEqual(world.train(id: one)?.times, times(0, departure: 60))
+        XCTAssertEqual(world.train(id: one)?.times, times(0, departure: 60, run: (60, 2048, 60)))
         XCTAssertEqual(world.lateness(of: one), 0)
 
         try advance(&world, to: 120)
@@ -119,16 +129,24 @@ final class ServiceDwellTests: XCTestCase {
         XCTAssertEqual(world.lateness(of: one), 36)
         try advance(&world, to: 157)
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(2))
-        XCTAssertEqual(world.train(id: one)?.times, times(120, departure: 156))
+        XCTAssertEqual(world.train(id: one)?.times, times(120, departure: 156, run: (156, 2048, 120)))
         XCTAssertEqual(world.lateness(of: one), 36, "left Beta 36 s late, and not yet due at Gamma")
 
-        try advance(&world, to: 216)
+        try advance(&world, to: 276)
         XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(2))
-        XCTAssertEqual(world.lateness(of: one), -24, "early: arrived 24 s before its scheduled arrival")
-        try advance(&world, to: 300)
-        XCTAssertEqual(world.train(id: one)?.times, times(216, 224, 291, departure: 156))
-        XCTAssertEqual(world.lateness(of: one), -24, "still early until its departure has passed")
-        try advance(&world, to: 301)
+        XCTAssertEqual(world.train(id: one)?.times, times(276, departure: 156))
+        XCTAssertEqual(world.lateness(of: one), 36, "arrived as late as it left")
+        try advance(&world, to: 312)
+        XCTAssertEqual(world.train(id: one)?.times, times(276, 284, 303, departure: 156))
+
+        try advance(&world, to: 313)
+        XCTAssertEqual(world.train(id: one)?.execution, .waitingAtStop(3))
+        XCTAssertEqual(world.train(id: one)?.times, times(312, departure: 312))
+        XCTAssertEqual(world.lateness(of: one), -48, "early: arrived 48 s before its scheduled arrival")
+        try advance(&world, to: 420)
+        XCTAssertEqual(world.train(id: one)?.times, times(312, 320, 411, departure: 312))
+        XCTAssertEqual(world.lateness(of: one), -48, "still early until its departure has passed")
+        try advance(&world, to: 421)
         XCTAssertNil(world.train(id: one)?.execution)
         XCTAssertNil(world.train(id: one)?.times)
         XCTAssertNil(world.lateness(of: one))
@@ -137,23 +155,28 @@ final class ServiceDwellTests: XCTestCase {
 
     // MARK: - Passengers
 
-    /// One car, Main Alpha–Gamma, one link a minute: sent out at 0, its trip
-    /// leaves Alpha at 42, reaches Gamma at 4:42, leaves at 6:42.
+    /// One car, Main Alpha–Gamma: four links, 23 s a leg with the line's
+    /// standard performance (√(2 × 4096 × 0.06) = 22.17 s), so sent out at
+    /// 0 its trip leaves Alpha at 42, reaches Gamma at 65 and leaves it at
+    /// 185. The train's top speed is 3 km/h (53⅓ units a second), which
+    /// cannot keep 23 s: each run takes 79 s (4096 ÷ 53⅓ = 76.8 s cruising,
+    /// and 53⅓ × 0.06 ÷ 2 = 1.6 s lost speeding up and slowing down).
     ///
     /// - 300 for Gamma board at 8: 38 s (300 / 8 a second, rounded up), so
     ///   the exchange ends at 46, past the least dwell's 33: the doors close
     ///   at 46 and the train leaves at 55, 13 s late.
-    /// - Gamma at 295 (4:55): the 300 get off from 303 to 341; it holds for
-    ///   6:42, doors to close at 393.
-    /// - At 6:00, with its doors open, 300 more come and board for Alpha:
-    ///   from 360, 38 s more, to 398, past 393: the doors close at 398 and
-    ///   it leaves at 407, 5 s late.
+    /// - Gamma at 134 (2:14): the 300 get off from 142 to 180.
+    /// - At 3:00, with its doors still open (they would start closing at
+    ///   180, the latest of the exchange, 134 + 42 − 9 and 185 − 9), 300
+    ///   more come and board for Alpha: from 180, 38 s more, to 218: the
+    ///   doors close at 218 and it leaves at 227, 42 s late.
     func testPassengersMakeTheDwellLongerAndBoardWhileTheDoorsAreOpen() throws {
         var world = try makeWorld()
         try world.createLine(named: "Main", stops: [alpha, gamma])
         try world.setLineServiceWindow(main, to: .allDay)
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         try world.setTrainMovementRate(one, to: 1_024)
+        try world.setTrainPerformance(one, to: TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 3))
         try world.assignTrain(one, to: main)
         for station in [alpha, gamma] {
             try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 0))
@@ -167,24 +190,24 @@ final class ServiceDwellTests: XCTestCase {
         XCTAssertEqual(world.train(id: one)?.times, times(0, 46, 46))
         XCTAssertEqual(world.lateness(of: one), 13)
         try advance(&world, to: 56)
-        XCTAssertEqual(world.train(id: one)?.times, times(0, departure: 55))
+        XCTAssertEqual(world.train(id: one)?.times, times(0, departure: 55, run: (55, 4096, 79)))
 
-        try advance(&world, to: 304)
-        XCTAssertEqual(world.train(id: one)?.times, times(295, 341, departure: 55))
+        try advance(&world, to: 143)
+        XCTAssertEqual(world.train(id: one)?.times, times(134, 180, departure: 55))
         XCTAssertEqual(world.riderCount(of: one), 0)
         XCTAssertEqual(world.passengerLedger(of: alpha).arrived, 300)
 
-        try advance(&world, to: 360)
-        release(&world, 300, at: gamma, for: alpha, .inbound, since: 6)
-        try advance(&world, to: 361)
+        try advance(&world, to: 180)
+        release(&world, 300, at: gamma, for: alpha, .inbound, since: 3)
+        try advance(&world, to: 181)
         XCTAssertEqual(world.riderCount(of: one), 300)
-        XCTAssertEqual(world.train(id: one)?.times, times(295, 398, departure: 55))
-        try advance(&world, to: 407)
-        XCTAssertEqual(world.train(id: one)?.times, times(295, 398, 398, departure: 55))
-        XCTAssertEqual(world.lateness(of: one), 5)
-        try advance(&world, to: 408)
+        XCTAssertEqual(world.train(id: one)?.times, times(134, 218, departure: 55))
+        try advance(&world, to: 227)
+        XCTAssertEqual(world.train(id: one)?.times, times(134, 218, 218, departure: 55))
+        XCTAssertEqual(world.lateness(of: one), 42)
+        try advance(&world, to: 228)
         XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(2))
-        XCTAssertEqual(world.train(id: one)?.times, times(295, departure: 407))
+        XCTAssertEqual(world.train(id: one)?.times, times(134, departure: 227, run: (227, 4096, 79)))
     }
 
     /// Puts `count` passengers for `destination` in `station`'s queue, as
@@ -200,8 +223,8 @@ final class ServiceDwellTests: XCTestCase {
 
     /// An idle minute that ends exactly when a dwell moves on skips nothing:
     /// the doors start closing at 120, on the minute, and the train leaves
-    /// at 129 within one batch, as single ticks have it. One link a minute
-    /// from second 9 of minute 2: 1024 - 153 = 871 along by 3.
+    /// at 129 within one batch, as single ticks have it, on its 111 s run to
+    /// Beta: 51 s along it by 3.
     func testAnIdleMinuteNeverSkipsAServiceEventOnTheMinute() throws {
         var start = try makeWorld(speed: .normal)
         try start.setTrainMovementRate(one, to: 1_024)
@@ -216,8 +239,8 @@ final class ServiceDwellTests: XCTestCase {
         }
         XCTAssertEqual(batch, single)
         XCTAssertEqual(batch.train(id: one)?.execution, .travellingToStop(1))
-        XCTAssertEqual(batch.train(id: one)?.times, times(0, departure: 129))
-        XCTAssertEqual(batch.train(id: one)?.position, .onLink(from: b, to: c, offset: 871))
+        XCTAssertEqual(batch.train(id: one)?.times, times(0, departure: 129, run: (129, 2048, 111)))
+        XCTAssertEqual(batch.train(id: one)?.position, .onLink(from: b, to: c, offset: runDistance(2048, in: 111, after: 51)))
     }
 
     /// A save in the middle of a dwell, of the exchange or with the doors

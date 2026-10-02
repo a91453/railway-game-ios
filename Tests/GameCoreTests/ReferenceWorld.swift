@@ -22,6 +22,11 @@ import GameCore
 /// - Stage W2b: a dwell is worked out second by second from its times, with
 ///   the doors' and the least dwell's rules written as comparisons, not as
 ///   one event time;
+/// - Stage W2c: a service's run is followed second by second, its share of
+///   each second taken from the curve; the least second a curve is built
+///   for is found by trying every second upward from a bound below it, and
+///   the way left is read off the train's link or path (see
+///   `ReferenceRuns.swift`);
 /// - a repeating timetable is checked by adding the period to the first
 ///   arrival, not by subtracting, and a scheduled time is the stored time
 ///   plus the cycle times the period, recomputed at every use;
@@ -82,13 +87,16 @@ struct ReferenceWorld: Equatable {
         var end: Int64?
         /// Decision 32: the track it has reserved, in resource order.
         var reservation: [TrackResource] = []
+        /// Stage W2c: how it accelerates, brakes and coasts.
+        var performance: TrainPerformance = .standard
     }
 
     /// Decision 20: the timetable entry a service is at or heading for.
     /// Decision 21: and the cycle of a repeating timetable it is in.
     /// Stage W2b: and its times, in seconds: when it reached the stop it
     /// waits at (or last waited at), when its exchange ends, when its
-    /// doors started closing, and when it left the stop before.
+    /// doors started closing, and when it left the stop before. Stage W2c:
+    /// and, travelling, the curve it runs on.
     struct Service: Equatable {
         var stop: Int
         var waiting: Bool
@@ -97,6 +105,7 @@ struct ReferenceWorld: Equatable {
         var exchangeEnd: Int64?
         var closing: Int64?
         var departure: Int64?
+        var run: CurveRun?
 
         var execution: TimetableExecution {
             waiting ? .waitingAtStop(stop, cycle: cycle) : .travellingToStop(stop, cycle: cycle)
@@ -105,9 +114,18 @@ struct ReferenceWorld: Equatable {
         var times: ServiceTimes {
             ServiceTimes(
                 arrival: GameTime(seconds: arrival), exchangeEnd: exchangeEnd.map(GameTime.init(seconds:)),
-                closing: closing.map(GameTime.init(seconds:)), departure: departure.map(GameTime.init(seconds:))
+                closing: closing.map(GameTime.init(seconds:)), departure: departure.map(GameTime.init(seconds:)),
+                run: run.map { ServiceRun(start: GameTime(seconds: $0.start), length: $0.length, seconds: $0.seconds) }
             )
         }
+    }
+
+    /// Stage W2c: a run, set off at `start` (a second), `length` units long
+    /// and `seconds` long.
+    struct CurveRun: Equatable {
+        var start: Int64
+        var length: Int64
+        var seconds: Int64
     }
 
     let width: Int
@@ -170,7 +188,8 @@ struct ReferenceWorld: Equatable {
         var id: Int
         var name: String
         var stops: [StationID]
-        var rate: Int64 = 1024
+        /// Stage W2c: what its legs are timed with.
+        var performance: TrainPerformance = .standard
         var hours: (open: Int, close: Int)? = (360, 1440)
         var trains: [ServiceLevel: Int] = [.peak: 0, .offPeak: 0, .low: 0]
         var targets: [ServiceLevel: Int64] = [:]
@@ -179,7 +198,7 @@ struct ReferenceWorld: Equatable {
         var patterns: [Pattern] = []
 
         static func == (lhs: Line, rhs: Line) -> Bool {
-            lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.rate == rhs.rate
+            lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.performance == rhs.performance
                 && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
                 && lhs.targets == rhs.targets && lhs.roster == rhs.roster && lhs.lastDispatch == rhs.lastDispatch
                 && lhs.patterns == rhs.patterns
@@ -466,7 +485,7 @@ struct ReferenceWorld: Equatable {
         return nil
     }
 
-    private func index(_ id: TrainID) -> Result<Int, GameError> {
+    func index(_ id: TrainID) -> Result<Int, GameError> {
         guard let index = trains.firstIndex(where: { $0.id == id.rawValue }) else { return .failure(.unknownTrain(id)) }
         return .success(index)
     }
@@ -510,8 +529,11 @@ struct ReferenceWorld: Equatable {
         case .failure(let error): return error
         case .success(let i):
             // Position and movement go; the timetable is plan data and stays.
-            // Decision 27: so do the cars.
-            trains[i] = Train(id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable, period: trains[i].period, cars: trains[i].cars)
+            // Decision 27: so do the cars. Stage W2c: and the performance.
+            trains[i] = Train(
+                id: trains[i].id, name: trains[i].name, position: nil, timetable: trains[i].timetable, period: trains[i].period,
+                cars: trains[i].cars, performance: trains[i].performance
+            )
             return nil
         }
     }
@@ -705,8 +727,9 @@ struct ReferenceWorld: Equatable {
     /// Decisions 3, 15 and 20: checked first, then every second is
     /// stepped (Stage W2a): at a whole minute, the accounts, passengers and
     /// dispatch (decision 23); every service's dwell and departure (Stage
-    /// W2b); travel, each train its share of its rate per minute for the
-    /// second; the clock; then arrivals.
+    /// W2b), and a travelling one held up on its run setting off again
+    /// (Stage W2c); travel, each train its share of its run's curve or of
+    /// its rate per minute for the second; the clock; then arrivals.
     mutating func advance(ticks: Int) -> GameError? {
         let tenthsPerTick: Int64 = switch speed {
         case .paused: 0
@@ -744,9 +767,10 @@ struct ReferenceWorld: Equatable {
             for i in trains.indices {
                 dwell(i, second: second)
                 leave(i)
+                resume(i)
             }
             for i in trains.indices where trains[i].position != nil {
-                let distance = Self.share(of: trains[i].rate, inSecond: second)
+                let distance = travel(i, second: second)
                 guard distance > 0 else { continue }
                 if case .onEdge? = trains[i].position {
                     trains[i] = steppedOnNetwork(trains[i], distance: distance)
@@ -755,6 +779,10 @@ struct ReferenceWorld: Equatable {
                 }
                 // Decision 32: a route that has come to its end is released.
                 releaseIfArrived(i)
+            }
+            // Stage W2c: a train that fell behind its run drops it.
+            for i in trains.indices {
+                dropIfHeldUp(i)
             }
             clockSeconds += 1
             for i in trains.indices {
@@ -914,7 +942,10 @@ struct ReferenceWorld: Equatable {
         departedDistance = Int64(route.count) * 1024
         leaving.continuation = route
         leaving.cursor = 0
-        leaving.service = Service(stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds)
+        leaving.service = Service(
+            stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds,
+            run: setOff(trains[i], length: Int64(route.count) * 1024, from: (service.stop, service.cycle), to: next)
+        )
         _ = admit(leaving, at: i)
         return false
     }
@@ -931,7 +962,7 @@ struct ReferenceWorld: Equatable {
     }
 
     /// The head's step, and the nodes it entered on the way, in order.
-    private func steppedHead(_ train: Train, distance: Int64) -> (Train, [GridPosition]) {
+    func steppedHead(_ train: Train, distance: Int64) -> (Train, [GridPosition]) {
         var train = train
         let position = train.position!
         let (node, heading) = Self.ahead(position)

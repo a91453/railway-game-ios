@@ -320,8 +320,11 @@ extension GameError {
                 "A line calls at two stations or more, and not at the same station twice in a row.",
                 "路線至少要停靠兩個車站，而且不能連續兩次停靠同一站。"
             )
-        case .invalidLineRate:
-            language.text("A line's speed must be at least 1.", "路線的速度至少要是 1。")
+        case .invalidTrainPerformance:
+            language.text(
+                "That acceleration, braking or top speed is out of range.",
+                "加速度、減速度或最高速度超出範圍。"
+            )
         case .invalidServiceWindow:
             language.text(
                 "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",

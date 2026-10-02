@@ -3,13 +3,23 @@ import GameCore
 import XCTest
 
 /// Service lines (Phase 4 Stage Q2a, ARCHITECTURE decision 22): plan data
-/// for a line (its stops, rate, service window and trains per service
-/// level), the world's service day, and what is derived from them on the
-/// map: the service level at a time, the round trip a train would drive,
-/// the most trains the minimum headway allows, and the headway.
+/// for a line (its stops, performance, service window and trains per
+/// service level), the world's service day, and what is derived from them
+/// on the map: the service level at a time, the round trip a train would
+/// drive, the most trains the minimum headway allows, and the headway.
 ///
 /// Expected values are worked out by hand from the rules and written out,
 /// never taken from a previous run.
+///
+/// Leg times (Stage W2c, ARCHITECTURE decision 40) are the least whole
+/// second a running curve is built for. A link is 1024 units (16 m) and a
+/// km/h is 160/9 units a second, so the standard performance (1.5 km/h/s
+/// up, 2.5 down) accelerates at 26⅔ and brakes at 44⁴⁄₉ units/s²:
+/// 1/a + 1/b = 0.06 s²/unit. A run of L units too short to reach the top
+/// speed takes at least √(2L × 0.06) s: 11.09 s for one link (12 s),
+/// 15.68 for two (16 s), 19.2 for three (20 s), 22.17 for four (23 s) and
+/// 24.79 for five (25 s). The fastest of these, 522 units/s (29 km/h)
+/// for eight links, is far below the 110 km/h top speed.
 final class ServiceLineTests: XCTestCase {
     // The line of `TrainServiceTests`, dead ends at both ends:
     //
@@ -60,8 +70,8 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertNil(world.line(id: first))
     }
 
-    /// A new line gets the next ID, the standard window, the default rate
-    /// (one link a minute) and no trains in service; it changes nothing else.
+    /// A new line gets the next ID, the standard window, the standard
+    /// performance and no trains in service; it changes nothing else.
     func testCreatingALineUsesDefaultsAndChangesNothingElse() throws {
         var world = try makeLineWorld()
         let before = world
@@ -69,7 +79,7 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertEqual(line.id, first)
         XCTAssertEqual(line.name, "Main")
         XCTAssertEqual(line.stops, [alpha, beta, gamma])
-        XCTAssertEqual(line.rate, 1024)
+        XCTAssertEqual(line.performance, .standard)
         XCTAssertEqual(line.window, .hours(open: 360, close: 1440))
         XCTAssertEqual(line.trainsInService, TrainsInService(peak: 0, offPeak: 0, low: 0))
         XCTAssertEqual(world.lines, [line])
@@ -107,12 +117,12 @@ final class ServiceLineTests: XCTestCase {
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
 
         try world.setLineStops(first, to: [gamma, delta])
-        try world.setLineRate(first, to: 700)
+        try world.setLinePerformance(first, to: .metro)
         try world.setLineServiceWindow(first, to: .allDay)
         try world.setLineTrainsInService(first, to: TrainsInService(peak: 6, offPeak: 3, low: 1))
         let line = try XCTUnwrap(world.line(id: first))
         XCTAssertEqual(line.stops, [gamma, delta])
-        XCTAssertEqual(line.rate, 700)
+        XCTAssertEqual(line.performance, .metro)
         XCTAssertEqual(line.window, .allDay)
         XCTAssertEqual(line.trainsInService, TrainsInService(peak: 6, offPeak: 3, low: 1))
         XCTAssertEqual(line.name, "Main")
@@ -121,9 +131,16 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertThrowsGameError(try world.setLineStops(unknown, to: []), .unknownLine(unknown))
         XCTAssertThrowsGameError(try world.setLineStops(first, to: [ghost]), .invalidLineStops)
         XCTAssertThrowsGameError(try world.setLineStops(first, to: [alpha, ghost]), .unknownStation(ghost))
-        XCTAssertThrowsGameError(try world.setLineRate(unknown, to: 0), .unknownLine(unknown))
-        for rate: Int64 in [0, -1, .min] {
-            XCTAssertThrowsGameError(try world.setLineRate(first, to: rate), .invalidLineRate)
+        let slow = TrainPerformance(acceleration: 0, braking: 2_500, topSpeed: 110)
+        XCTAssertThrowsGameError(try world.setLinePerformance(unknown, to: slow), .unknownLine(unknown))
+        for performance in [
+            slow, TrainPerformance(acceleration: 1_500, braking: -1, topSpeed: 110),
+            TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: RunningCurve.maximumRate + 1),
+            TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 110, alternativeAcceleration: 0, alternativeBraking: 2_700),
+            TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 110, coast: TrainPerformance.Coast(deceleration: 2_500, speedRatio: 450)),
+            TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 110, coast: TrainPerformance.Coast(deceleration: 450, speedRatio: 1_000)),
+        ] {
+            XCTAssertThrowsGameError(try world.setLinePerformance(first, to: performance), .invalidTrainPerformance)
         }
         XCTAssertThrowsGameError(try world.setLineServiceWindow(unknown, to: .hours(open: -1, close: 0)), .unknownLine(unknown))
         for window: ServiceWindow in [
@@ -143,7 +160,8 @@ final class ServiceLineTests: XCTestCase {
         try world.setLineServiceWindow(first, to: .hours(open: 1439, close: 1800))
         try world.setLineServiceWindow(first, to: .hours(open: 0, close: 1))
         try world.setLineTrainsInService(first, to: TrainsInService(peak: .max, offPeak: 0, low: 0))
-        try world.setLineRate(first, to: .max)
+        let limit = RunningCurve.maximumRate
+        try world.setLinePerformance(first, to: TrainPerformance(acceleration: limit, braking: limit, topSpeed: limit))
     }
 
     // MARK: - The service day
@@ -194,38 +212,51 @@ final class ServiceLineTests: XCTestCase {
 
     // MARK: - Journeys
 
-    /// Alpha to Gamma by Beta and back, at one link a minute: each leg is two
-    /// links, so two minutes; four legs, a minute at Beta each way, and two
-    /// at each end make 14 minutes. Facing north, east or south at b all
-    /// drive it (only west, towards the dead end, cannot); north comes first.
+    /// Alpha to Gamma by Beta and back, with the standard performance: each
+    /// leg is two links, 16 s; four legs (64 s), a minute at Beta each way
+    /// and two at each end (360 s) make 424 s, 8 minutes rounded up. Facing
+    /// north, east or south at b all drive it (only west, towards the dead
+    /// end, cannot); north comes first.
     func testALineRoundTripIsItsLegsAndItsDwells() throws {
         var world = try makeLineWorld()
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         let journey = try XCTUnwrap(world.lineJourney(first))
         XCTAssertEqual(journey.start, .atNode(b, heading: .north))
         XCTAssertEqual(gridLegs(journey), [
-            GridLeg(from: 0, to: 1, route: [c, d], minutes: 2),
-            GridLeg(from: 1, to: 2, route: [e, f], minutes: 2),
-            GridLeg(from: 2, to: 1, route: [e, d], minutes: 2),
-            GridLeg(from: 1, to: 0, route: [c, b], minutes: 2),
+            GridLeg(from: 0, to: 1, route: [c, d], seconds: 16),
+            GridLeg(from: 1, to: 2, route: [e, f], seconds: 16),
+            GridLeg(from: 2, to: 1, route: [e, d], seconds: 16),
+            GridLeg(from: 1, to: 0, route: [c, b], seconds: 16),
         ])
-        XCTAssertEqual(journey.roundTripMinutes, 14)
+        XCTAssertEqual(journey.roundTripSeconds, 424)
+        XCTAssertEqual(journey.roundTripMinutes, 8)
 
-        // Legs round up: 2048 units at 700 a minute is 3 minutes; at 3000,
-        // 1 minute; at 512, 4 minutes.
-        for (rate, roundTrip): (Int64, Int64) in [(700, 18), (3000, 10), (512, 22), (.max, 10)] {
-            try world.setLineRate(first, to: rate)
-            XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, roundTrip, "rate \(rate)")
+        // Other performances, over the same 2048 units:
+        // - metro (3.96 and 4.68 km/h/s): 1/a + 1/b = 0.02622, √(4096 ×
+        //   0.02622) = 10.36 s, so 11 s a leg and 404 s, 7 minutes;
+        // - the forest railway (0.7 and 1.1): 0.13149, 23.21 s, so 24 s and
+        //   456 s, 8 minutes;
+        // - a top speed of 2 km/h (35⅑ units/s), which it reaches: 2048 ÷
+        //   35⅑ = 57.6 s cruising, plus 35⅑ × 0.06 ÷ 2 = 1.07 s lost speeding
+        //   up and slowing down, 58.67 s, so 59 s and 596 s, 10 minutes.
+        let crawl = TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 2)
+        for (performance, leg, roundTrip): (TrainPerformance, Int64, Int64) in [(.metro, 11, 7), (.forestRailway, 24, 8), (crawl, 59, 10)] {
+            try world.setLinePerformance(first, to: performance)
+            XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [leg, leg, leg, leg], "\(performance)")
+            XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, roundTrip, "\(performance)")
         }
 
-        // Two stops: four links each way, and the two ends.
-        try world.setLineRate(first, to: 1024)
+        // Two stops: four links each way (23 s), and the two ends: 286 s,
+        // 5 minutes.
+        try world.setLinePerformance(first, to: .standard)
         try world.setLineStops(first, to: [alpha, gamma])
-        XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 12)
+        XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [23, 23])
+        XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 5)
         // Stations sharing a platform: no travel, only the ends.
         try world.setLineStops(first, to: [gamma, delta])
         let shared = try XCTUnwrap(world.lineJourney(first))
-        XCTAssertEqual(gridLegs(shared), [GridLeg(from: 0, to: 1, route: [], minutes: 0), GridLeg(from: 1, to: 0, route: [], minutes: 0)])
+        XCTAssertEqual(gridLegs(shared), [GridLeg(from: 0, to: 1, route: [], seconds: 0), GridLeg(from: 1, to: 0, route: [], seconds: 0)])
+        XCTAssertEqual(shared.roundTripSeconds, 240)
         XCTAssertEqual(shared.roundTripMinutes, 4)
         XCTAssertEqual(shared.start, .atNode(f, heading: .north))
     }
@@ -249,7 +280,7 @@ final class ServiceLineTests: XCTestCase {
         try world.removeTrack(at: e)
         XCTAssertNil(world.lineJourney(main), "Gamma is cut off")
         try world.buildTrack(at: e, connections: [.east, .west])
-        XCTAssertEqual(world.lineJourney(main)?.roundTripMinutes, 14, "derived again from the map")
+        XCTAssertEqual(world.lineJourney(main)?.roundTripMinutes, 8, "derived again from the map")
     }
 
     /// Of the starts that can drive the line, the shortest round trip wins,
@@ -275,33 +306,35 @@ final class ServiceLineTests: XCTestCase {
         try world.buildStation(named: "B", at: GridPosition(x: 4, y: 3))
         try world.createLine(named: "Ring", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
 
-        // Facing north, the train must go round the top: five links out,
-        // three back (turned round at B it may leave west). Facing east it
-        // may leave south: three links each way.
+        // Facing north, the train must go round the top: five links out
+        // (25 s), three back (20 s; turned round at B it may leave west),
+        // 285 s. Facing east it may leave south: three links each way, 280
+        // s. Both are 5 minutes rounded up; the seconds decide.
         let journey = try XCTUnwrap(world.lineJourney(first))
         XCTAssertEqual(journey.start, .atNode(GridPosition(x: 1, y: 2), heading: .east))
         XCTAssertEqual(gridLegs(journey), [
-            GridLeg(from: 0, to: 1, route: [GridPosition(x: 1, y: 3), GridPosition(x: 2, y: 3), GridPosition(x: 3, y: 3)], minutes: 3),
-            GridLeg(from: 1, to: 0, route: [GridPosition(x: 2, y: 3), GridPosition(x: 1, y: 3), GridPosition(x: 1, y: 2)], minutes: 3),
+            GridLeg(from: 0, to: 1, route: [GridPosition(x: 1, y: 3), GridPosition(x: 2, y: 3), GridPosition(x: 3, y: 3)], seconds: 20),
+            GridLeg(from: 1, to: 0, route: [GridPosition(x: 2, y: 3), GridPosition(x: 1, y: 3), GridPosition(x: 1, y: 2)], seconds: 20),
         ])
-        XCTAssertEqual(journey.roundTripMinutes, 10)
+        XCTAssertEqual(journey.roundTripSeconds, 280)
+        XCTAssertEqual(journey.roundTripMinutes, 5)
     }
 
     // MARK: - Trains and headway
 
-    /// The 14-minute round trip allows 7 trains two minutes apart. A level
+    /// The 8-minute round trip allows 4 trains two minutes apart. A level
     /// runs the trains set for it, up to that; the headway shares the round
     /// trip between them, rounded up.
     func testTrainsInServiceAreCappedByTheMinimumHeadway() throws {
         var world = try makeLineWorld()
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
-        XCTAssertEqual(world.lineMaximumTrains(first), 7)
+        XCTAssertEqual(world.lineMaximumTrains(first), 4)
         try world.setLineTrainsInService(first, to: TrainsInService(peak: 10, offPeak: 3, low: 0))
-        XCTAssertEqual(world.lineTrainsInService(first, at: .peak), 7)
+        XCTAssertEqual(world.lineTrainsInService(first, at: .peak), 4)
         XCTAssertEqual(world.lineTrainsInService(first, at: .offPeak), 3)
         XCTAssertEqual(world.lineTrainsInService(first, at: .low), 0)
         XCTAssertEqual(world.lineHeadway(first, at: .peak), 2)
-        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 5)
+        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 3)
         XCTAssertNil(world.lineHeadway(first, at: .low), "no trains, no headway")
         XCTAssertEqual(world.line(id: first)?.trainsInService.peak, 10, "the count set is kept as it is")
 
@@ -310,15 +343,15 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 4)
         XCTAssertEqual(world.lineMaximumTrains(first), 2)
         try world.setServiceDay(.standard)
-        try world.setLineRate(first, to: 1024)
         XCTAssertEqual(world.lineHeadway(first, at: .peak), 2)
         XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 2)
 
-        // Slower: 22 minutes allow 11 trains; three are 8 minutes apart.
+        // Slower (a top speed of 2 km/h, see above): 10 minutes allow 5
+        // trains; three are 4 minutes apart.
         try world.setLineStops(first, to: [alpha, beta, gamma])
-        try world.setLineRate(first, to: 512)
-        XCTAssertEqual(world.lineMaximumTrains(first), 11)
-        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 8)
+        try world.setLinePerformance(first, to: TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 2))
+        XCTAssertEqual(world.lineMaximumTrains(first), 5)
+        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 4)
     }
 
     // MARK: - Saving
@@ -342,8 +375,8 @@ final class ServiceLineTests: XCTestCase {
         try world.setLineServiceWindow(LineID(rawValue: 2), to: .allDay)
         text = String(decoding: try encoder.encode(world), as: UTF8.self)
         XCTAssertTrue(text.contains(
-            #""lines":[{"id":1,"name":"Main","rate":1024,"stops":[1,2,3],"trainsInService":{"low":1,"offPeak":2,"peak":4},"window":{"close":1500,"open":300}},"#
-                + #"{"id":2,"name":"All day","rate":1024,"stops":[2,3],"trainsInService":{"low":0,"offPeak":0,"peak":0},"window":"allDay"}]"#
+            #""lines":[{"id":1,"name":"Main","stops":[1,2,3],"trainsInService":{"low":1,"offPeak":2,"peak":4},"window":{"close":1500,"open":300}},"#
+                + #"{"id":2,"name":"All day","stops":[2,3],"trainsInService":{"low":0,"offPeak":0,"peak":0},"window":"allDay"}]"#
         ), text)
         XCTAssertTrue(text.contains(#""nextLineID":3"#), text)
         XCTAssertFalse(text.contains(#""serviceDay""#), text)
@@ -400,7 +433,9 @@ final class ServiceLineTests: XCTestCase {
             ("one stop", line { $0["stops"] = [1] }),
             ("a stop twice in a row", line { $0["stops"] = [1, 1, 2] }),
             ("an unknown station", line { $0["stops"] = [1, 99] }),
-            ("rate 0", line { $0["rate"] = 0 }),
+            ("a null performance", line { $0["performance"] = NSNull() }),
+            ("no acceleration", line { $0["performance"] = ["acceleration": 0, "braking": 2_500, "topSpeed": 110] }),
+            ("no top speed", line { $0["performance"] = ["acceleration": 1_500, "braking": 2_500] }),
             ("a negative count", line { $0["trainsInService"] = ["peak": -1, "offPeak": 0, "low": 0] }),
             ("a missing count", line { $0["trainsInService"] = ["peak": 1, "offPeak": 0] }),
             ("a window closing at opening", line { $0["window"] = ["open": 600, "close": 600] }),
@@ -447,9 +482,9 @@ private struct GridLeg: Equatable {
     let from: Int
     let to: Int
     let route: [GridPosition]
-    let minutes: Int64
+    let seconds: Int64
 }
 
 private func gridLegs(_ journey: LineJourney) -> [GridLeg] {
-    journey.legs.map { GridLeg(from: $0.from, to: $0.to, route: $0.route, minutes: $0.minutes) }
+    journey.legs.map { GridLeg(from: $0.from, to: $0.to, route: $0.route, seconds: $0.seconds) }
 }

@@ -78,7 +78,7 @@ final class ServiceLinePropertyTests: XCTestCase {
         case 6..<8:
             return .setLineStops(anyLine(), stops())
         case 8..<11:
-            return .setLineRate(anyLine(), random.element(of: [1024, 1024, 512, 700, 1500, 3000, 1, 300, 5000, .max, 0, -1, .min]))
+            return .setLinePerformance(anyLine(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
         case 11..<13:
             let window: ServiceWindow = switch random.below(6) {
             case 0: .allDay
@@ -132,7 +132,7 @@ final class ServiceLinePropertyTests: XCTestCase {
             for (index, operation) in operations.enumerated() {
                 let error = KernelDifferentialTests.apply(operation, to: &world)
                 switch operation {
-                case .createLine, .removeLine, .setLineStops, .setLineRate, .setLineWindow, .setLineTrains, .setServiceDay:
+                case .createLine, .removeLine, .setLineStops, .setLinePerformance, .setLineWindow, .setLineTrains, .setServiceDay:
                     let name = "\(operation)".dropFirst().prefix { $0 != "(" }
                     counts[error.map { String("\($0)".prefix { $0 != "(" }) } ?? "ok \(name)", default: 0] += 1
                 default:
@@ -164,9 +164,9 @@ final class ServiceLinePropertyTests: XCTestCase {
         print("[digest] line.differential \(digest.hex) (\(summary))")
         assertVolume(ran == 30 * PropertySeeds.active.count, "every case should run")
         for (event, least) in [
-            ("ok createLine", 300), ("ok setLineStops", 200), ("ok setLineRate", 200), ("ok setLineWindow", 100),
+            ("ok createLine", 300), ("ok setLineStops", 200), ("ok setLinePerformance", 200), ("ok setLineWindow", 100),
             ("ok setLineTrains", 200), ("ok setServiceDay", 50), ("ok removeLine", 30), ("unknownLine", 50), ("invalidLineStops", 50),
-            ("unknownStation", 20), ("invalidLineRate", 50), ("invalidServiceWindow", 30), ("invalidTrainsInService", 30),
+            ("unknownStation", 20), ("invalidTrainPerformance", 50), ("invalidServiceWindow", 30), ("invalidTrainsInService", 30),
             ("invalidServiceDay", 20), ("drivable", 3_000), ("not drivable", 3_000), ("capped", 300), ("a leg with no travel", 100),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")

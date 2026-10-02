@@ -74,8 +74,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// A line calls at two stations or more, and never at the same station
     /// twice in a row.
     case invalidLineStops
-    /// A line's rate, the speed its journeys are planned at, is at least 1.
-    case invalidLineRate
+    /// A train's or line's performance has every rate and its top speed
+    /// within what a running curve is built for, and a coast slower than
+    /// its braking (see ``TrainPerformance/isValid``; Stage W2c).
+    case invalidTrainPerformance
     /// A line's service window opens at a minute of the day (`0...1439`) and
     /// closes after it, no later than 06:00 the next morning (`1800`).
     case invalidServiceWindow
