@@ -2120,6 +2120,60 @@ W2c（決策 40）讓每台列車與每條線路都有自己的 `TrainPerformanc
 
 **留給之後**：自訂加速度與減速度、依車種的容量（`Ci/` 的 `TRAIN_TYPES`）、指派列車時沿用線路的性能。
 
+### 43. 營運與乘客的設定畫面（Stage C2）
+
+Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有畫面的營運與乘客功能。最重要的是車站需求：App 從來沒有呼叫 `setStationDemand`，所以實機上沒有乘客，也沒有票價收入，G1 的經營閉環無法在 TestFlight 上測試。依作者指示先做車站需求，再做時刻表、線路停靠站與服務日、道岔與平面交叉、唯讀資訊。**GameCore 沒有修改**：golden 與 property digest 都不變。
+
+參考（2026-10-02 唯讀檢查三份，私有 repo `1563ad0`，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c2營運與乘客的設定畫面)）：
+
+- `Ci/reference_snapshot/`：自訂客流面板（`game-dom` 的 `#panel-station-flow-adjust`；`app__q_c234188b7c397f91.js` 的 `applyStationFlowPreset`、`copyStationFlowAdjustProfile`、`pasteStationFlowAdjustProfile`、`applyStationFlowAdjustToAllServingLines`、`drawStationFlowAdjustCanvas`、`stationFlowProfileArrayForUiMode`），以及服務時段的提示（`metroServiceSlotTimeRanges`）。`Ci/` 沒有每台列車的時刻表、沒有方格，時段固定寫在程式裡。
+- `Railway/railway_game_reference_clean/`：時刻表的概念（`01_MIGRATION_MAP.md` §2，編譯檔的 `TimetableWindow`、`CmdSetTimetableStart`、`CmdChangeTimetable`、`CmdAutofillTimetable`、`gui.timetable_arrival_departure`）。只有符號，沒有原始碼。
+- `Railway/site_archive_clean/`：真實的時刻表與股道，沒有玩家編輯的畫面；道岔、單雙線在 S1 已經對照過。
+
+**GamePresentation**（Linux 上測試）：
+
+- **車站客流**（`StationDemandText.swift`）：
+  - `StationDemandKind.title(in:)`：參考的四種預設（居民區、辦公區、購物中心、景區），台灣用語住宅區、辦公區、購物中心、景點。
+  - 換預設時保留車站的日客流（參考的「預設保持該車站預設的全天總量」）。沒有客流的車站從 `StationDemand.defaultDailyTrips`（10,000）開始：參考的總量來自伺服器資料，快照裡沒有，這是 gap；10,000 的尖峰小時約 870 人次，幾列車的量。
+  - `dailyTripSteps`：100、200、500 … 1,000,000（1、2、5 的級距），`dailyTrips(above:)`、`dailyTrips(below:)`。
+  - 複製、貼上、套用到全線路：照參考的 `stationFlowProfileForTarget`，目標站保留自己的總量；目標原本沒有客流時用來源的日客流（gap：我們的車站沒有預設總量）。套用到全線路是經過這一站的每條路線的每個停靠站（含自己），在世界的副本上全部成功才生效（決策 41 的原子性）。訊息照參考的「已套用到 N 條路線，共 M 座車站」。
+  - `StationFlow`：進站（從這一站出發的旅次，參考 `in` 畫布畫的 `out` 曲線）與出站（在這一站結束的旅次）每小時的人次，加總 GameCore 的 `hourlyDemand`。還沒有路線連到其他有客流的車站時（`isShape`），以 `StationDemand.dayShape` × 該預設的曲線，用最大餘數法把自己的日客流分到 24 小時，對應參考沒有基數時畫預設形狀。`summaryText`（全日總量與最多的小時）、`hourText`（某一小時）。
+  - 唯讀：`stationDemandPairs`（往返各站的每日旅次，`dailyDemand` 兩個方向）、`passengerLedgerRows`（`passengerLedger` 的各列）、`lines(callingAt:)`。
+  - `GameSession`：`selectedStation`（選取格上的車站）、`demandClipboard`（只存在 session 的剪貼簿，不是權威狀態），以及設定預設、日客流、移除、複製、貼上、套用的方法，各呼叫 `setStationDemand`。
+- **列車的時刻表**（`TimetableEditing.swift`）：照參考包的時刻表概念，起點時刻、每站的行駛與停留時間，顯示成到達與出發，加上重複週期。
+  - 直接編輯世界，不另存草稿：每個操作讀出列車的時刻表、改一份副本，呼叫一次 `setTrainTimetable`。
+  - 新增停靠站：第一站在下一個整分鐘到達，之後每站在上一站出發 3 分鐘後到達；每站停 1 分鐘。參考由實際跑一趟填入行駛時間（`CmdAutofillTimetable`），App 還沒有，這是 gap。
+  - 移動到達：這一站與之後的停靠站一起移動，所以只改到這一站的行駛時間；不早於前一站出發（第一站不早於第 0 秒，移動第一站就是參考的「起點」）。移動出發：只改停留，不早於到達。
+  - 折返、刪除停靠站、清除、重複：開啟重複時週期是涵蓋整份時刻表的最短整分鐘（至少一分鐘），每次加減一分鐘；編輯讓時刻表超過週期時，週期跟著加長，不讓 GameCore 拒絕。刪到沒有停靠站時不再重複。
+  - 服務執行中、或列車屬於路線時，GameCore 拒絕（`trainServiceActive`、`trainOnLine`），畫面顯示原因並停用控制項。
+- **線路的停靠站與服務日**（`LineEditing.swift`）：
+  - `LineStopEditing`：插入、刪除、上下移動，各呼叫一次 `setLineStops`。GameCore 拒絕連續兩次同一站與少於兩站；不再提供的行程，等車的乘客記進 `abandoned`。交路照 GameCore 的規則保留停靠的位置。
+  - `ServiceDay.ranges(of:)`：照參考的 `metroServiceSlotTimeRanges`，逐分鐘找出某一等級的時段，相鄰的同等級合併，最後一段結束在 24:00。`summaryText` 取代線路面板原本寫死的標準時段說明。
+  - `ServiceDayEditing`：參考的時段寫死在程式裡，編輯是 App 自己的（gap）。改等級、每次半小時移動開始時間（介於前後時段之間，第一段固定 00:00）、刪除（由前一段延續）、拆分最長的時段（在中點，取整到半小時，兩半同等級，所以行為不變）、回到標準服務日，各呼叫一次 `setServiceDay`。
+- **方格的道岔與平面交叉**：`TrackPieceKind`（一般、道岔、平面交叉）、`GameSession.trackPieceKind`、`turnoutStem`。
+  - 道岔至少要三個出口，所以從 T 字岔開始；共用端預設是第一個直線穿過的出口（西、北、東、南），跟著旋轉，而且一定是出口之一。`buildTurnout(at:connections:stem:)`。
+  - 平面交叉有四個出口；改任一方向或選四向以外的形狀時變回一般。`buildCrossing(at:)`。
+  - `trackPieceKindText`、`trackPieceLayout`：選單與預覽用。
+- **唯讀的軌道資訊**（`TrackInfoText.swift`）：`sectionTexts(at:in:)`（經過某一格的區段，分歧點是好幾個區段的端點）、`trackSectionsSummary`、`lineTrackCountTexts`（線路相鄰停靠站之間的單線、雙線或更多，方格上沒有軌道時說明）、`occupancyConflictTexts`（兩台以上列車佔用同一段軌道）、`TrackResource.displayText(in:)`。`parallelTracks` 只數方格的軌道（S1），路網的單雙線是 V 的範圍。
+
+**App**：
+
+- 檢視列選到車站時多一個「客流」按鈕，打開客流面板（`StationPanel`，半高的 sheet，地圖仍可操作）：四種預設（SF Symbols 的房子、大樓、購物車、山，對應參考的圖示；參考的 PNG 是 24–48 px 的黑色圖，不會跟著深色模式與字級）、日客流、複製、貼上、套用到全線路、移除；進站與出站的每小時長條圖；往返各站的每日旅次、候車與乘客帳。可以從選單換車站。
+- 長條圖（`HourlyBarChart`）：照參考的畫布，每小時一根、從同一條基線長出，目前的小時用強調色、其他用次要色；點一下長條或用 VoiceOver 上下滑動可以看那一小時；下方文字一定寫出全日總量、最多的小時與顯示的小時，不只靠顏色。
+- 列車工具多一個時刻表按鈕（顯示摘要），打開 `TimetableEditor`：停靠站、到達與出發的加減、折返、重複與週期、開始或停止服務、清除；不能修改時說明原因。
+- 線路面板：服務日（各時段的等級、開始時間、刪除、拆分、標準服務日）；選取的線路多了停靠站的編輯，以及相鄰停靠站之間的單雙線；線路說明改成依目前服務日的時段。
+- 軌道工具的形狀旁多一個選單：一般、道岔（與共用端）、平面交叉；預覽照地圖畫出共用端與平面交叉。
+- 選取工具顯示方格的區段、經過選取格的區段，以及共用軌道的列車。
+
+**驗證**：`StationDemandSessionTests`（每小時的值以參考的曲線手算）、`TimetableEditingTests`、`LineEditingTests`、`TrackLayoutSessionTests`、`TrackInfoTextTests`，比對手算的值與直接對 GameCore 執行同一串指令的世界。SwiftUI 只能在 macOS CI 編譯，實機的操作要用 TestFlight 檢查。
+
+**已知限制與留給之後**：
+
+- 客流：參考可以拖曳單一小時或整天的曲線，也有機場、高鐵的樞紐倍數；GameCore 的需求只有四種類型與日客流，要加自訂曲線與樞紐需要新的 GameCore 規則。參考的「恢復預設」是平的曲線，GameCore 沒有，所以只有移除。
+- 時刻表：沒有自動填入行駛時間；以分鐘為單位加減（GameCore 接受秒）；不能重新排序停靠站。
+- 服務日是全部路線共用一份（GameCore 的設計）；參考沒有編輯畫面。
+- 單雙線只數方格的軌道。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。

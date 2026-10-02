@@ -220,6 +220,31 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | 參考包 `BuildVehicleWindow`（只有符號） | 車輛的選購畫面 | 沒有可以移植的內容 | — | — |
 | 沒有參考 | 線路各段與來回的時間、列車正在走的行駛 | `lineJourneyText(_:in:)`、`trainRunText(of:in:)` | 秒 | **gap**：顯示 W2c 的推導，讓實機上看得到 |
 
+### Stage C2：營運與乘客的設定畫面
+
+2026-10-02 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 43。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，畫面是同目錄的 `game-dom__q_f4c03f23b8518a04.html`，文字是 `ui-locales/zh-CN__q_8e57e7fa49d074d2.js`。GameCore 沒有修改，都在 GamePresentation 與 App。
+
+| 參考 | 行為 | Swift（C2） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `#panel-station-flow-adjust`（「自定义客流」）、`applyStationFlowPreset`、`stationFlowKnownPresetKind`（office、residential、scenic、shopping） | 一鍵套用四種客流預設 | `StationPanel` 的四個按鈕、`GameSession.setSelectedStationDemandKind(_:)` → `setStationDemand` | — | faithful（曲線是 G1a 已移植的 `buildStationFlowPresetCurves`） |
+| `Ci` `normalizeStationFlowPresetDailyVolume`、`metro.station.custom_ridership_help`「预设保持该车站默认的全天总量」 | 換預設時保留車站的全天總量 | 有客流時保留 `dailyTrips` | 人次 | faithful |
+| `Ci` `stationFlowAuthorityBaseByHour`（伺服器的 `entryByHour`、`exitByHour`） | 車站的預設總量 | `StationDemand.defaultDailyTrips` = 10,000，`dailyTripSteps` 100 … 1,000,000 | 人次 | **gap**：總量來自伺服器資料，快照裡沒有；數值是自訂的 |
+| `Ci` `copyStationFlowAdjustProfile`、`pasteStationFlowAdjustProfile`、`stationFlowProfileForTarget` | 複製客流設定，貼到另一站時依目標的總量正規化 | `copySelectedStationDemand()`、`pasteDemandToSelectedStation()`：目標保留自己的日客流 | — | faithful；目標沒有客流時用來源的日客流（**gap**：參考的每站都有總量） |
+| `Ci` `applyStationFlowAdjustToAllServingLines`、`metro.notice.applied_to_lines`「已应用到 {lineCount} 条线路，共 {stationCount} 个物理站」、「当前车站没有可应用的线路」 | 套用到經過這一站的每條路線的每一站 | `applySelectedStationDemandToItsLines()`（在世界的副本上全部成功才生效） | — | faithful（訊息、計數含自己）；同上的 gap |
+| `Ci` `resetStationFlowAdjustForCurrent`（曲線全部回到 1） | 恢復預設 | `removeSelectedStationDemand()`（`nil`） | — | **改變**：GameCore 沒有平的曲線，只能移除需求 |
+| `Ci` `bindStationFlowAdjustDrag`、`applyStationFlowHubToggle`（機場、高鐵倍數） | 拖曳調整單一小時或全部時段；樞紐 | 不做 | — | 延後：需要 GameCore 的自訂曲線與樞紐規則 |
+| `Ci` `drawStationFlowAdjustCanvas`、`stationFlowProfileArrayForUiMode`（「进站」畫 `out`、「出站」畫 `in`）、目前小時用 `selected` 色、`_stationFlowAdjShowTip` | 每小時的進站與出站長條圖，目前小時強調，指到的小時顯示數值 | `StationFlow`（加總 `hourlyDemand`）、`HourlyBarChart`、`summaryText`、`hourText`；點一下長條看那一小時 | 人次 | faithful（方向與強調）；高度是實際的人次，不是參考的視覺近似 |
+| `Ci` `stationFlowAdjVisualBarHeight` 沒有基數時的預設形狀 | 還沒有資料時也畫出形狀 | `StationFlow.isShape`：`dayShape` × 預設曲線分配自己的日客流 | 人次 | 部分 faithful：形狀用 GameCore 的 `PEAK_FACTOR`，不是參考的正弦近似 |
+| `Ci` 的 `station-icon-residential`、`-scenic`、`-shopping`（PNG）與辦公的 SVG | 預設的圖示 | SF Symbols `house.fill`、`building.2.fill`、`cart.fill`、`mountain.2.fill` | — | 部分 faithful：同樣的圖案；PNG 是 24–48 px 的黑色圖，不跟著深色模式與字級 |
+| 參考包 `01_MIGRATION_MAP.md` §2（`timetable_start`、`CmdSetTimetableStart`、`CmdChangeTimetable`、`StopTiming.travelAllowance`、`minimumDwell`、`gui.timetable_arrival_departure`） | 時刻表的起點、每站的行駛與停留，以到達與出發顯示 | `TimetableEditing`（`movingArrival`、`movingDeparture`、`appending`）、`TimetableEditor` | 秒（每次 60 秒） | faithful（概念）；只有符號，畫面是自訂的 |
+| 參考包 `CmdAutofillTimetable` | 依實際跑一趟填入行駛時間 | 新的停靠站預設 3 分鐘後到、停 1 分鐘 | 秒 | **gap**：App 還沒有自動填入 |
+| 沒有參考（`Ci` 依線路派車，沒有每台列車的時刻表） | 重複週期 | `shortestPeriod(of:)`、`period(_:fitting:)` | 秒（整分鐘） | **gap**（Q1 的 `timetablePeriod`） |
+| `Ci` `tutorial.transport.18`「使用＋添加停靠车站」、`metro.station.add_node_or_station` | 在線路加減停靠站 | `LineStopEditing`、`insertStopIntoSelectedLine`、`removeStopFromSelectedLine`、`moveStopOfSelectedLine` → `setLineStops` | — | faithful（語義）；上下移動是自訂的 |
+| `Ci` `metroServiceSlotTimeRanges`、`metroResolveServiceSlotMain` | 提示各等級的時段，例如「07:00–10:00」換行「16:00–20:00」 | `ServiceDay.ranges(of:)`、`summaryText(in:)` | 分鐘 | faithful（逐分鐘掃描、合併、結束於 24:00） |
+| 沒有參考（`Ci` 的時段寫死在程式裡） | 編輯服務日 | `ServiceDayEditing`（改等級、半小時移動、刪除、拆分最長的時段、標準服務日）→ `setServiceDay` | 分鐘（每次 30） | **gap** |
+| `Railway/` `topology.js` `canTurn`（S1 已對照） | 道岔與平面交叉 | `TrackPieceKind`、`setTrackPieceKind`、`setTurnoutStem` → `buildTurnout`、`buildCrossing` | — | 已涵蓋（規則在 S1）；建造畫面是自訂的（`Ci` 沒有方格） |
+| `Railway/` `index.html` `inferMeetPassTimes` 依賴的單雙線（S1 已對照） | 區段與單雙線 | `sectionTexts(at:in:)`、`trackSectionsSummary`、`lineTrackCountTexts`、`occupancyConflictTexts` | — | 唯讀顯示 S1 的推導；**gap**：只數方格的軌道 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -335,7 +360,7 @@ V 實際放行 → T、U（保證不互穿）
 3. **W2a** ✅（ARCHITECTURE 決策 37）：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
-6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
+6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
 7. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 8. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
