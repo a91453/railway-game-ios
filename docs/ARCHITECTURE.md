@@ -20,8 +20,8 @@
 
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
-- **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額；英文與繁體中文，決策 38）與地圖縮放換算。它只依賴 GameCore 與 Swift 標準函式庫的 `Observation`，不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
-- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有唯一一個 `GameSession`，畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
+- **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額；英文與繁體中文，決策 38）與地圖縮放換算；Stage C4 起還有開始畫面與存檔（`GameLauncher`、`SaveLibrary`）。它只依賴 GameCore、Swift 標準函式庫的 `Observation`，以及只為存檔的 JSON 與檔案使用的 Foundation（決策 45；Linux 的 Swift 工具鏈也有），不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
+- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有 `GameLauncher`，它持有正在玩的那一局的 `GameSession`（同時只有一個，決策 45）；畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
 
 ### GameCore 內部的依賴方向（2026-09 決定）
 
@@ -2208,6 +2208,56 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
 - 平行軌道之間沒有側向淨空（F2）。
 - 示範地圖仍以方格建造，C4 用路網重做。
 
+### 45. 存檔、開始畫面與路網的示範地圖（Stage C4）
+
+Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成本最高的地方。C4 加入存檔與讀檔（含存檔版本與遷移）、開始畫面，並把示範地圖改用路網重做、在 Release 也能開。開始畫面是 2026-10-02 作者加入的（教學排在 C5）。
+
+參考（2026-10-02 唯讀檢查三份，私有 repo `1563ad0`，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c4存檔開始畫面與示範地圖)）：
+
+- `Ci/reference_snapshot/` 的本機存檔是 `{app, version, exportedAt, data}`（`buildLocalSavePayload`）；建造時自動寫入草稿；開始時的存檔卡片可以「直接進入」或「重新開始」（`screen-save-load-ui`），重新開始前先把目前的草稿另存（`archiveMetroAppCurrentDraftBeforeFreshStart`）；雲端存檔每 15 分鐘自動存一次（`AUTOSAVE_INTERVAL_MS`）；桌面版有本機槽位、匯出與匯入 JSON。
+- 參考包（`Railway/railway_game_reference_clean/`）：`01_MIGRATION_MAP.md` 建議存檔一開始就有 `schemaVersion`，「每次格式改變都要有明確的遷移函式與回歸存檔」；`docs/savegame_format.md` 是 OpenTTD 的二進位格式（外層記版本、各欄位依版本範圍讀取）；`web_runtime/offline_persistence_file_io.md` 是匯入與匯出，並要以版本遷移取代「版本一變就清掉所有存檔」。
+- `Railway/site_archive_clean/` 只把偏好設定存在 localStorage，沒有遊戲存檔。
+
+**GameCore**：`SavedGame`：`{"saveVersion": n, "world": {...}}`。
+
+- 版本屬於 GameCore，因為只有它知道世界的格式。版本 1 就是 C4 時 `GameWorld` 的 `Codable` 形式；它本來就讀得進更早的世界（之後加的 key 都可以省略），所以 C4 之前沒有需要遷移的存檔（App 也從來沒有存過檔）。
+- 讀檔時拒絕比這個 build 新的版本，不去猜；也拒絕 1 以下的版本。之後格式改到舊存檔讀不進來時，提高 `currentVersion`，在 `SavedGame.init(from:)` 加上從前一版轉換的一步。
+- `SaveFixtures/`：每個版本留一份回歸存檔，之後的 build 都必須讀得進來、能來回編碼、能繼續跑（`SavedGameTests`）。規則和 golden 一樣：不能為了讓測試通過去改或重產它（`CLAUDE.md`）。版本 1 的存檔是示範地圖跑了 90 分鐘：點車站、一座兩個月台的車站、地面與高架的邊、兩條路線、交通控制下的列車、等車的乘客與公司的帳。
+- golden 與 property digest 都不變。
+
+**GamePresentation**：
+
+- **Foundation**：只為存檔的 JSON 與檔案使用。它是 Linux 的 Swift 工具鏈的一部分，所以存檔一樣在 Linux CI 上測試；GameCore 仍然不 import Foundation。
+- `SaveLibrary`：一個資料夾裡的存檔，自動存檔是 `autosave.json`，玩家自己的存檔一個一個檔案（`save-<UTC 時間>.json`）。檔案是 `{"app": "RailwayGame", "savedAt", "summary", "game": SavedGame}`，對應參考的 `{app, version, exportedAt, data}`；`summary`（遊戲時間、現金、車站、路線、列車數）讓清單不必解出每一個世界。
+  - 讀檔先看檔頭：不是本遊戲的檔案、比這個 build 新的版本，在清單上就標出原因；世界本身由 GameCore 在讀取時檢查。寫入是整個檔案原子替換。
+  - 匯出：寫一個檔案到暫存資料夾，再交給分享（`exportFile`）。
+- `GameLauncher`：開始畫面與遊戲選單的動作；持有正在玩的 `GameSession`（沒有就是開始畫面），存檔只讀它的世界、不改它。
+  - 新遊戲、示範地圖、繼續（自動存檔）、讀取、匯入。
+  - 自動存檔的時機：App 離開前景、回到開始畫面、遊戲中每 15 分鐘（參考的 `AUTOSAVE_INTERVAL_MS`）。
+  - 另開一局（新遊戲、示範地圖、讀取別的存檔、匯入）之前，先把自動存檔另存成玩家的存檔，所以上一局永遠不會被蓋掉（參考的重新開始前另存草稿）。
+  - `setActive(_:)`：只有在前景時跑 game loop 與定時自動存檔。
+- `GameWorld.newGame()` 從 App 移到這裡，開始畫面才能開新局。
+- `DemoWorld`：路網的示範地圖，從新遊戲開始，用一般的指令、照常付費建好。
+  - 地面的 1 號線（西站、中央、東站）與跨越它的高架 2 號線（北站、中央、南站），不共用軌道。
+  - 中央是一座點車站，在兩條線上各有一個月台。
+  - 兩條線全天營運，各有一列四節列車；每站都有客流，所以一開就有乘客、票價與成本。
+  - 舊的方格示範配置（`DemoLayout.swift`）刪除。
+
+**App**：
+
+- **開始畫面**（`StartView`）：繼續（顯示存檔的遊戲時間、現金與規模，以及存檔時間）、新遊戲、示範地圖、存檔清單（點一下讀取、滑動刪除；讀不進來的寫出原因）、匯入（「檔案」App）。
+- **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡是一個打開「設定」的按鈕。
+- **遊戲選單**（HUD）：儲存遊戲、匯出存檔（分享時才寫出檔案）、回到開始畫面（先自動存檔）。
+- **`-demo-layout` 啟動參數**：仍然只有 Debug 有，`release-archive.yml` 確認 Release 的執行檔不含它；示範地圖本身在 Release 由開始畫面開啟。
+
+**驗證**：`SavedGameTests`（GameCore：格式、拒絕的情況、回歸存檔）、`SaveLibraryTests`、`GameLauncherTests`、`DemoWorldTests`（GamePresentation，用暫存資料夾與固定的時間）。SwiftUI 只能在 macOS CI 編譯，實機要用 TestFlight 檢查。
+
+**已知限制與留給之後**：
+
+- 沒有雲端存檔與帳號（參考的雲端槽位、加密、分享碼）；iCloud 之後另議。
+- 示範地圖照目前的經濟數值，大約 1.5 個遊戲小時後現金變成負的：新遊戲只有 $ 10,000，兩條線每小時的營運成本約 $ 4,500，票價約 $ 1,400。這是 G1c 的數值與新遊戲資金的平衡問題，不在 C4 修改。
+- 教學（C5）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -2239,5 +2289,6 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
 - 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站直線距離分段，0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·車公里 + 18·車站`、維修 `12·路線公里 + 9·車公里 + 8·列車`），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（720 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求。金額是美分。
 - 行駛曲線（決策 40）：列車與線路各有性能（加速、煞車、最高速度，可以有備用值與惰行；預設是標準性能），服務執行中不能換列車的性能。服務離開一站時得到一段行駛（出發時刻、長度、秒數），存檔；被擋住時丟掉，能動時從停止狀態以最少的秒數重新出發。
 - 車站可以建在世界座標的任意一點（`buildStation(named:at: PlanPoint)`）：不佔格、沒有方格的月台、不能長到格上，只在路網的邊上有月台；點必須在地圖上，收一座車站的費用（決策 44）。
+- 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。

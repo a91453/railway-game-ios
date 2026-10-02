@@ -9,6 +9,8 @@ import SwiftUI
 /// map.
 struct ContentView: View {
     let session: GameSession
+    /// Saves the game and goes back to the start screen (Stage C4).
+    let launcher: GameLauncher
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isWide = false
 
@@ -38,7 +40,7 @@ struct ContentView: View {
 
     private var tallLayout: some View {
         VStack(spacing: 0) {
-            HUDView(session: session)
+            HUDView(session: session, launcher: launcher)
                 .padding(.horizontal)
                 .padding(.vertical, 10)
                 .background(.bar)
@@ -76,7 +78,7 @@ struct ContentView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HUDView(session: session)
+                    HUDView(session: session, launcher: launcher)
                     Divider()
                     ControlPanel(session: session, arrangement: .column)
                     Divider()
