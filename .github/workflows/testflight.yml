@@ -1,13 +1,14 @@
-name: TestFlight (internal)
+name: TestFlight
 
 # Archives the committed project on a GitHub-hosted macOS runner, exports an
 # App Store distribution IPA signed through App Store Connect with the
 # team's API key, checks it, then uploads the archive, exported the same
-# way, to App Store Connect for internal TestFlight testing. Export and
-# upload use xcodebuild with the API key; the archive is signed ad hoc by
+# way, to App Store Connect for TestFlight testing. The manual run chooses
+# whether the uploaded build is internal-only or external-capable. Export
+# and upload use xcodebuild with the API key; the archive is signed ad hoc by
 # default (see archive_signing).
 #
-# Started only by hand (Actions -> TestFlight (internal) -> Run workflow) and
+# Started only by hand (Actions -> TestFlight -> Run workflow) and
 # only from main. Pull requests never run it; its secrets live in the
 # "testflight" environment, which only main may use. Setup, the required
 # secrets and variables, and what is verified: docs/TESTFLIGHT_GITHUB_ACTIONS.md.
@@ -33,6 +34,16 @@ on:
           - adhoc
           - automatic
         default: adhoc
+      testing_scope:
+        description: >-
+          TestFlight distribution scope. "internal" marks the build as internal-only.
+          "external" uploads an external-capable build that can be added to an
+          External Testing group and submitted to Beta App Review.
+        type: choice
+        options:
+          - internal
+          - external
+        default: internal
 
 permissions:
   contents: read
@@ -80,6 +91,7 @@ jobs:
     env:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
+      TESTING_SCOPE: ${{ inputs.testing_scope }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -119,7 +131,7 @@ jobs:
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: .github/scripts/testflight-archive.sh "$ARCHIVE_SIGNING"
+        run: .github/scripts/testflight-archive.sh "$ARCHIVE_SIGNING" "$TESTING_SCOPE"
 
       # Automatic signing for App Store Connect distribution; with no local
       # distribution certificate, xcodebuild uses the team's cloud-managed one.
@@ -180,7 +192,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           {
             echo ""
-            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER). App Store Connect now processes it; it appears in TestFlight when processing ends:"
+            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER) for $TESTING_SCOPE TestFlight. App Store Connect now processes it; it appears in TestFlight when processing ends:"
             echo "https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios"
           } >>"$GITHUB_STEP_SUMMARY"
 
