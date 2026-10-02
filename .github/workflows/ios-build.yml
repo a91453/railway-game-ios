@@ -132,8 +132,15 @@ jobs:
               env.write(f"SIMULATOR_UDID={device['udid']}\n")
           PY
 
+      # Boot explicitly before XCTest installs its runner. A cold Simulator
+      # otherwise leaves xcodebuild waiting without any test progress logs.
+      - name: Boot the selected iPhone Simulator
+        timeout-minutes: 8
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
+        timeout-minutes: 10
         run: |
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -144,7 +151,7 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
             -parallel-testing-enabled NO \
             -disableAutomaticPackageResolution \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY=-
 
       - name: Export UI screenshots as PNG
         if: always() && steps.ui-smoke.outcome != 'skipped'
@@ -165,7 +172,7 @@ jobs:
           retention-days: 14
 
       - name: Upload failed UI test results
-        if: failure() && steps.ui-smoke.outcome != 'skipped'
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
         uses: actions/upload-artifact@v7
         with:
           name: ui-smoke-xcresult
@@ -176,11 +183,13 @@ jobs:
       # Optional manual regression proof. Restore the source afterwards; this
       # deliberately broken build never replaces the normal screenshot run.
       - name: Prove a missing toolbar button fails the smoke test
+        id: missing-button
+        timeout-minutes: 5
         if: inputs.verify_missing_button
         run: bash .github/scripts/ui-smoke-missing-button.sh
 
       - name: Upload missing-button failure evidence
-        if: always() && inputs.verify_missing_button
+        if: always() && inputs.verify_missing_button && steps.missing-button.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           name: ui-smoke-missing-button-evidence

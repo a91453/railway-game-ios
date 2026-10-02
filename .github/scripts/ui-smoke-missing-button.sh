@@ -29,7 +29,7 @@ xcodebuild test \
   -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar \
   -parallel-testing-enabled NO \
   -disableAutomaticPackageResolution \
-  CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/ui-smoke-missing-button.log"
+  CODE_SIGN_IDENTITY=- 2>&1 | tee "$RUNNER_TEMP/ui-smoke-missing-button.log"
 test_status=${PIPESTATUS[0]}
 set -e
 if [[ "$test_status" == 0 ]]; then
