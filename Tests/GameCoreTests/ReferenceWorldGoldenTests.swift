@@ -38,10 +38,12 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.speed, final.speed.speed, name)
             XCTAssertEqual(model.balance, final.balance, name)
             XCTAssertEqual(
-                model.stations.map {
-                    WorldSummary.StationSummary(
-                        id: $0.id, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)
-                    )
+                model.stations.map { station in
+                    station.point.map { WorldSummary.StationSummary(id: station.id, name: station.name, point: $0) }
+                        ?? WorldSummary.StationSummary(
+                            id: station.id, name: station.name, x: station.position.x, y: station.position.y,
+                            annexes: station.annexes.map(PositionSummary.init)
+                        )
                 },
                 final.stations, name
             )
@@ -105,6 +107,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .buildCrossing(let p): error = model.buildCrossing(at: p)
         case .removeTrack(let p): error = model.removeTrack(at: p)
         case .buildStation(let name, let p): error = model.buildStation(named: name, at: p)
+        case .buildStationAt(let name, let point): error = model.buildStation(named: name, at: point)
         case .extendStation(let id, let p): error = model.extendStation(id, to: p)
         case .purchaseTrain(let name): error = model.purchaseTrain(named: name)
         case .setTrainCars(let id, let cars): error = model.setCars(id, cars)

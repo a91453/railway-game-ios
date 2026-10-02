@@ -472,7 +472,8 @@ final class KernelDifferentialTests: XCTestCase {
         check(world.tracks.count == model.tiles.values.count { if case .station = $0 { false } else { true } }, "track count")
         check(
             world.stations.map { [$0.id.rawValue, $0.position.x, $0.position.y] } == model.stations.map { [$0.id, $0.position.x, $0.position.y] }
-                && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.annexes) == model.stations.map(\.annexes),
+                && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.annexes) == model.stations.map(\.annexes)
+                && world.stations.map(\.point) == model.stations.map(\.point),
             "stations \(world.stations) vs \(model.stations)"
         )
         check(world.trains.map(\.id.rawValue) == model.trains.map(\.id), "train IDs \(world.trains.map(\.id.rawValue)) vs \(model.trains.map(\.id))")

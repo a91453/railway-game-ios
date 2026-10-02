@@ -58,9 +58,12 @@ struct ReferenceWorld: Equatable {
         var annexes: [GridPosition] = []
         /// Decision 30: its platforms on the track network, in order.
         var trackPlatforms: [TrackPlatform] = []
+        /// Stage F1: where a station built at a point stands; it takes no
+        /// tile, and `position` is the tile under the point.
+        var point: PlanPoint?
 
         var tiles: [GridPosition] {
-            [position] + annexes
+            point == nil ? [position] + annexes : []
         }
     }
 
@@ -446,6 +449,23 @@ struct ReferenceWorld: Equatable {
         balance -= costs.station
         stations.append(Station(id: nextStationID, name: name, position: p))
         tiles[p] = .station(nextStationID)
+        nextStationID += 1
+        return nil
+    }
+
+    /// Stage F1: in the order name, point on the map (else the tile under
+    /// it, rounding down, is out of bounds), ID, money. The station takes
+    /// no tile.
+    mutating func buildStation(named name: String, at point: PlanPoint) -> GameError? {
+        guard Self.isValidName(name) else { return .invalidName }
+        let tile = GridPosition(
+            x: Int((Double(point.x) / 1_024).rounded(.down)), y: Int((Double(point.y) / 1_024).rounded(.down))
+        )
+        guard point.x >= 0, point.y >= 0, point.x < Int64(width) * 1_024, point.y < Int64(height) * 1_024 else { return .outOfBounds(tile) }
+        guard nextStationID != Int.max else { return .idsExhausted }
+        if let error = funds(costs.station) { return error }
+        balance -= costs.station
+        stations.append(Station(id: nextStationID, name: name, position: tile, point: point))
         nextStationID += 1
         return nil
     }
