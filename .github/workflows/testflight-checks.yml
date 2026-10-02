@@ -89,10 +89,22 @@ jobs:
       - name: Set up signing (no key)
         run: .github/scripts/testflight-signing.sh setup
 
-      - name: Archive the committed project (unsigned)
-        run: .github/scripts/testflight-archive.sh unsigned
+      - name: Archive the committed project (unsigned, internal TestFlight)
+        run: .github/scripts/testflight-archive.sh unsigned internal
 
-      - name: Check the archive, the export options and the Xcode tools
+      - name: Check internal TestFlight export options and Xcode tools
+        env:
+          TESTFLIGHT_SCOPE: internal
+        run: .github/scripts/testflight-selftest-macos.sh tools
+
+      - name: Archive the committed project (unsigned, external TestFlight)
+        run: |
+          rm -rf "$ARCHIVE_PATH"
+          .github/scripts/testflight-archive.sh unsigned external
+
+      - name: Check external TestFlight export options and Xcode tools
+        env:
+          TESTFLIGHT_SCOPE: external
         run: .github/scripts/testflight-selftest-macos.sh tools
 
       - name: Simulate a failing release step
