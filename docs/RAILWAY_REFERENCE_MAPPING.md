@@ -361,7 +361,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網（車站自由擺設，App 只用路網）→ C4 → F2 側向淨空 → E1 大地圖 → E2 空白／實景（MapKit）→（E3 MapLibre，照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網（車站自由擺設，App 只用路網）→ C4 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
