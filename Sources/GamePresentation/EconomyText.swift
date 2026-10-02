@@ -3,7 +3,8 @@ import GameCore
 // What the economy panel, the HUD and the inspector show of G1c
 // (ARCHITECTURE decision 36): money in the reference's dollars, ledger rows,
 // the last hour by item, and the passengers waiting at a station and riding
-// a train. All of it is read from the world; nothing here is kept.
+// a train, in English or Traditional Chinese (see ``DisplayLanguage``). All
+// of it is read from the world; nothing here is kept.
 
 extension Money {
     /// The amount in whole dollars, as the reference shows money
@@ -27,49 +28,49 @@ extension Money {
 }
 
 extension EconomyMode {
-    public var displayName: String {
+    public func displayName(in language: DisplayLanguage) -> String {
         switch self {
-        case .free: "Free play"
-        case .management: "Management"
+        case .free: language.text("Free play", "自由模式")
+        case .management: language.text("Management", "經營模式")
         }
     }
 }
 
 extension LedgerEntry.Kind {
     /// The reference's ledger labels (`economy.ledger.metroHourlyNet`,
-    /// `metroDailyEnergy`, `metroDailyStaff`), in English.
-    public var displayName: String {
+    /// `metroDailyEnergy`, `metroDailyStaff`).
+    public func displayName(in language: DisplayLanguage) -> String {
         switch self {
-        case .hourlyNet: "Hourly net"
-        case .dailyEnergy: "Energy (daily)"
-        case .dailyStaff: "Staff (daily)"
+        case .hourlyNet: language.text("Hourly net", "小時淨額")
+        case .dailyEnergy: language.text("Energy (daily)", "能源費用（日結）")
+        case .dailyStaff: language.text("Staff (daily)", "員工費用（日結）")
         }
     }
 }
 
 extension LedgerItem {
     /// The reference's item labels (`economy.group.metroFareRevenue`,
-    /// `economy.ledger.metroRouteEnergy` and the others), in English.
-    public var displayName: String {
+    /// `economy.ledger.metroRouteEnergy` and the others).
+    public func displayName(in language: DisplayLanguage) -> String {
         switch self {
-        case .fareRevenue: "Fares"
-        case .operatingCost: "Operating"
-        case .maintenanceCost: "Maintenance"
-        case .routeEnergy: "Line power and traction"
-        case .trainEnergy: "Train power"
-        case .stationStaff: "Station staff"
-        case .trainStaff: "Drivers and dispatchers"
+        case .fareRevenue: language.text("Fares", "票價收入")
+        case .operatingCost: language.text("Operating", "營運成本")
+        case .maintenanceCost: language.text("Maintenance", "維護成本")
+        case .routeEnergy: language.text("Line power and traction", "線路供電與牽引用電")
+        case .trainEnergy: language.text("Train power", "列車日用電")
+        case .stationStaff: language.text("Station staff", "車站員工")
+        case .trainStaff: language.text("Drivers and dispatchers", "司機與調度員工")
         }
     }
 }
 
 extension FinancePeriod {
-    public var displayName: String {
+    public func displayName(in language: DisplayLanguage) -> String {
         switch self {
-        case .day: "Day"
-        case .week: "Week"
-        case .month: "Month"
-        case .year: "Year"
+        case .day: language.text("Day", "日")
+        case .week: language.text("Week", "週")
+        case .month: language.text("Month", "月")
+        case .year: language.text("Year", "年")
         }
     }
 }
@@ -89,13 +90,17 @@ extension LedgerEntry {
 extension FareRules {
     /// A one-line description, such as "Flat · $ 5.00" or "By distance ·
     /// 5 steps from $ 0.55".
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .flat(let fare): "Flat · \(fare.centsText)"
+        case .flat(let fare):
+            language.text("Flat · \(fare.centsText)", "固定票價 · \(fare.centsText)")
         case .distance(let bands):
             bands.count == 1
-                ? "By distance · 1 step, \(bands[0].fare.centsText)"
-                : "By distance · \(bands.count) steps from \(bands[0].fare.centsText)"
+                ? language.text("By distance · 1 step, \(bands[0].fare.centsText)", "階梯票價 · 1 段，\(bands[0].fare.centsText)")
+                : language.text(
+                    "By distance · \(bands.count) steps from \(bands[0].fare.centsText)",
+                    "階梯票價 · \(bands.count) 段，\(bands[0].fare.centsText) 起"
+                )
         }
     }
 }
@@ -142,7 +147,7 @@ extension GameWorld {
     /// Who waits at station `id`, by line and the way they go, such as
     /// ["Main to Gamma · 120", "Main to Alpha · 30"]: lines by ID, outbound
     /// first. Empty if nobody waits.
-    public func waitingText(at id: StationID) -> [String] {
+    public func waitingText(at id: StationID, in language: DisplayLanguage) -> [String] {
         var counts: [LineID: [LineDirection: Int64]] = [:]
         for group in waitingPassengers(at: id) {
             counts[group.line, default: [:]][group.direction, default: 0] += group.count
@@ -152,20 +157,29 @@ extension GameWorld {
             return LineDirection.allCases.compactMap { direction in
                 guard let count = counts[lineID]?[direction] else { return nil }
                 let end = direction == .outbound ? line?.stops.last : line?.stops.first
-                let towards = end.flatMap { station(id: $0)?.name }.map { " to \($0)" } ?? ""
-                return "\(line?.name ?? "Line #\(lineID.rawValue)")\(towards) · \(count)"
+                let towards = end.flatMap { station(id: $0)?.name }.map { language.text(" to \($0)", " 往 \($0)") } ?? ""
+                let name = line?.name ?? language.text("Line #\(lineID.rawValue)", "路線 #\(lineID.rawValue)")
+                return "\(name)\(towards) · \(count)"
             }
         }
+    }
+
+    /// Who waits at station `id`, as one line for the inspector: "waiting
+    /// Main to Gamma · 120, Main to Alpha · 30", or `nil` if nobody waits.
+    public func waitingSummary(at id: StationID, in language: DisplayLanguage) -> String? {
+        let groups = waitingText(at: id, in: language)
+        guard !groups.isEmpty else { return nil }
+        return language.text("waiting \(groups.joined(separator: ", "))", "候車 \(groups.joined(separator: "、"))")
     }
 
     /// How full train `id` is, such as "640 riding · 33%": riders over its
     /// rated capacity (cars × 320), rounded half up, as the reference's
     /// load. `nil` if nobody rides it (or there is no such train).
-    public func loadText(of id: TrainID) -> String? {
+    public func loadText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let train = train(id: id) else { return nil }
         let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
         guard count > 0 else { return nil }
         let percent = (200 * count + train.ratedCapacity) / (2 * train.ratedCapacity)
-        return "\(count) riding · \(percent)%"
+        return language.text("\(count) riding · \(percent)%", "載客 \(count) 人 · \(percent)%")
     }
 }

@@ -61,40 +61,71 @@ final class LineSessionTests: XCTestCase {
         XCTAssertEqual(clockText(minuteOfDay: 365), "06:05")
         XCTAssertEqual(clockText(minuteOfDay: 1500), "01:00")
         XCTAssertEqual(GameTime(minutes: 1440 + 510).clockText, "08:30")
-        XCTAssertEqual(ServiceWindow.allDay.displayText, "All day")
-        XCTAssertEqual(ServiceWindow.standard.displayText, "06:00–24:00")
-        XCTAssertEqual(ServiceWindow.hours(open: 1320, close: 1500).displayText, "22:00–01:00 next day")
-        XCTAssertEqual(headwayText(minutes: 4), "Every 4 min")
-        XCTAssertEqual(headwayText(minutes: 60), "Every 1 h")
-        XCTAssertEqual(headwayText(minutes: 90), "Every 1 h 30 min")
-        XCTAssertEqual(ServiceLevel.allCases.map(\.title), ["Peak", "Off-peak", "Low"])
+        XCTAssertEqual(ServiceWindow.allDay.displayText(in: .english), "All day")
+        XCTAssertEqual(ServiceWindow.standard.displayText(in: .english), "06:00–24:00")
+        XCTAssertEqual(ServiceWindow.hours(open: 1320, close: 1500).displayText(in: .english), "22:00–01:00 next day")
+        XCTAssertEqual(headwayText(minutes: 4, in: .english), "Every 4 min")
+        XCTAssertEqual(headwayText(minutes: 60, in: .english), "Every 1 h")
+        XCTAssertEqual(headwayText(minutes: 90, in: .english), "Every 1 h 30 min")
+        XCTAssertEqual(ServiceLevel.allCases.map { $0.title(in: .english) }, ["Peak", "Off-peak", "Low"])
+        // The line panel's stepper and target menu.
+        XCTAssertEqual(levelSettingText(.peak, trains: 2, target: nil, in: .english), "Peak: 2 wanted")
+        XCTAssertEqual(levelSettingText(.offPeak, trains: 2, target: 5, in: .english), "Off-peak: every 5 min")
+        XCTAssertEqual(targetHeadwayText(nil, in: .english), "Target: none")
+        XCTAssertEqual(targetHeadwayText(90, in: .english), "Target: every 1 h 30 min")
+    }
+
+    /// The same text in Traditional Chinese (Stage L1).
+    func testLinesReadInTraditionalChinese() throws {
+        XCTAssertEqual(ServiceWindow.allDay.displayText(in: .traditionalChinese), "全天")
+        XCTAssertEqual(ServiceWindow.hours(open: 1320, close: 1500).displayText(in: .traditionalChinese), "22:00–01:00（翌日）")
+        XCTAssertEqual(headwayText(minutes: 4, in: .traditionalChinese), "每 4 分鐘一班")
+        XCTAssertEqual(headwayText(minutes: 60, in: .traditionalChinese), "每 1 小時一班")
+        XCTAssertEqual(headwayText(minutes: 90, in: .traditionalChinese), "每 1 小時 30 分鐘一班")
+        XCTAssertEqual(ServiceLevel.allCases.map { $0.title(in: .traditionalChinese) }, ["尖峰", "離峰", "低峰"])
+        XCTAssertEqual(levelSettingText(.peak, trains: 2, target: nil, in: .traditionalChinese), "尖峰：上線 2 列")
+        XCTAssertEqual(levelSettingText(.low, trains: 0, target: 20, in: .traditionalChinese), "低峰：每 20 分鐘一班")
+        XCTAssertEqual(targetHeadwayText(nil, in: .traditionalChinese), "目標：無")
+        XCTAssertEqual(targetHeadwayText(5, in: .traditionalChinese), "目標：每 5 分鐘一班")
+        XCTAssertEqual(Punctuality.onTime.text(in: .traditionalChinese), "準點")
+        XCTAssertEqual(Punctuality.early(minutes: 2).text(in: .traditionalChinese), "早到 2 分")
+        XCTAssertEqual(Punctuality.late(minutes: 5).text(in: .traditionalChinese), "誤點 5 分")
+
+        let world = try Self.makeLineWorld()
+        let summaries = world.lineServiceSummaries(Self.main, in: .traditionalChinese)
+        XCTAssertEqual(summaries.map(\.title), ["普通車 Alpha–Delta", "區間車 Beta–Gamma", "快車 Alpha–Delta"])
+        XCTAssertEqual(summaries[2].callsText, "Alpha · Delta（通過 Beta、Gamma）")
+        XCTAssertEqual(summaries[0].levels.map { $0.text(in: .traditionalChinese) }, ["5 列 · 每 4 分鐘一班", "2 列 · 每 10 分鐘一班", "沒有列車"])
+        XCTAssertEqual(world.lineCoverageText(Self.main, at: .low, in: .traditionalChinese), "沒有服務：Alpha–Beta、Gamma–Delta")
+        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 480), in: .traditionalChinese), "尖峰")
+        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 180), in: .traditionalChinese), "已收班")
     }
 
     /// Each service with its kind, ends, calls, and at every level what it
     /// runs beside the services before it (Stage Q3's shared room).
     func testServicesAreSummarisedAsTheyRun() throws {
         let world = try Self.makeLineWorld()
-        let summaries = world.lineServiceSummaries(Self.main)
+        let summaries = world.lineServiceSummaries(Self.main, in: .english)
         XCTAssertEqual(summaries.map(\.pattern), [nil, 0, 1])
         XCTAssertEqual(summaries.map(\.title), ["All stops Alpha–Delta", "Short working Beta–Gamma", "Express Alpha–Delta"])
         XCTAssertEqual(summaries.map(\.callsText), [
             "Alpha · Beta · Gamma · Delta", "Beta · Gamma", "Alpha · Delta (passes Beta, Gamma)",
         ])
-        XCTAssertEqual(summaries[0].levels.map(\.text), ["5 trains · Every 4 min", "2 trains · Every 10 min", "No trains"])
-        XCTAssertEqual(summaries[1].levels.map(\.text), ["2 trains · Every 4 min", "1 train · Every 8 min", "1 train · Every 20 min"])
-        XCTAssertEqual(summaries[2].levels.map(\.text), ["No trains", "1 train · Every 16 min", "No trains"])
+        XCTAssertEqual(summaries[0].levels.map { $0.text(in: .english) }, ["5 trains · Every 4 min", "2 trains · Every 10 min", "No trains"])
+        XCTAssertEqual(summaries[1].levels.map { $0.text(in: .english) }, ["2 trains · Every 4 min", "1 train · Every 8 min", "1 train · Every 20 min"])
+        XCTAssertEqual(summaries[2].levels.map { $0.text(in: .english) }, ["No trains", "1 train · Every 16 min", "No trains"])
         XCTAssertEqual(summaries.map(\.assigned), [0, 0, 0])
-        XCTAssertEqual(world.lineServiceSummaries(LineID(rawValue: 9)), [])
+        XCTAssertEqual(world.lineServiceSummaries(LineID(rawValue: 9), in: .english), [])
 
-        XCTAssertNil(world.lineCoverageText(Self.main, at: .peak))
-        XCTAssertEqual(world.lineCoverageText(Self.main, at: .low), "Not covered: Alpha–Beta, Gamma–Delta")
-        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 480)), "Peak")
-        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 60)), "Closed")
+        XCTAssertNil(world.lineCoverageText(Self.main, at: .peak, in: .english))
+        XCTAssertEqual(world.lineCoverageText(Self.main, at: .low, in: .english), "Not covered: Alpha–Beta, Gamma–Delta")
+        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 480), in: .english), "Peak")
+        XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 60), in: .english), "Closed")
 
         // Without a route a service says so.
         var cut = world
         try cut.removeTrack(at: GridPosition(x: 6, y: 1))
-        XCTAssertEqual(cut.lineServiceSummaries(Self.main)[0].levels[0].text, "No route")
+        XCTAssertEqual(cut.lineServiceSummaries(Self.main, in: .english)[0].levels[0].text(in: .english), "No route")
     }
 
     /// A train on a service: which one, where it is in its trip and whether
@@ -103,30 +134,30 @@ final class LineSessionTests: XCTestCase {
         var world = try Self.makeLineWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
         try world.placeTrain(shuttle, at: .atNode(Self.b, heading: .east))
-        XCTAssertNil(world.trainServiceStatus(of: shuttle), "no line, no service")
-        XCTAssertNil(world.trainServiceStatus(of: TrainID(rawValue: 9)))
+        XCTAssertNil(world.trainServiceStatus(of: shuttle, in: .english), "no line, no service")
+        XCTAssertNil(world.trainServiceStatus(of: TrainID(rawValue: 9), in: .english))
 
         try world.assignTrain(shuttle, to: Self.main, pattern: 0)
         XCTAssertEqual(
-            world.trainServiceStatus(of: shuttle),
+            world.trainServiceStatus(of: shuttle, in: .english),
             TrainServiceStatus(serviceName: "Main · Short working Beta–Gamma", stopText: "Waiting to be sent out", punctuality: nil)
         )
         // Without a rate it is not ready: give it one.
         try world.setTrainMovementRate(shuttle, to: 1024)
         try world.advance(ticks: 1)
         // Left Beta at 480, due at Gamma at 482.
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.stopText, "Next: Gamma, due 08:02")
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.punctuality, .onTime)
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "Next: Gamma, due 08:02")
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .onTime)
         try world.advance(ticks: 1)
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.stopText, "At Gamma, leaves 08:04")
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.punctuality, .onTime)
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "At Gamma, leaves 08:04")
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .onTime)
 
         // Held at Gamma with no rate, it falls behind.
         try world.setTrainMovementRate(shuttle, to: 0)
         try world.advance(ticks: 5)
         XCTAssertEqual(world.clock.now, GameTime(minutes: 487))
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.stopText, "Next: Beta, due 08:06")
-        XCTAssertEqual(world.trainServiceStatus(of: shuttle)?.punctuality, .late(minutes: 1))
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.stopText, "Next: Beta, due 08:06")
+        XCTAssertEqual(world.trainServiceStatus(of: shuttle, in: .english)?.punctuality, .late(minutes: 1))
 
         // A train of its own, waiting before its scheduled arrival, is early.
         let own = try world.purchaseTrain(named: "Own").id
@@ -134,12 +165,12 @@ final class LineSessionTests: XCTestCase {
         try world.setTrainTimetable(own, to: [ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 490), departure: GameTime(minutes: 495))])
         try world.startTrainService(own)
         XCTAssertEqual(
-            world.trainServiceStatus(of: own),
+            world.trainServiceStatus(of: own, in: .english),
             TrainServiceStatus(serviceName: nil, stopText: "At Alpha, last stop", punctuality: .early(minutes: 3))
         )
-        XCTAssertEqual(Punctuality.early(minutes: 3).text, "3 min early")
-        XCTAssertEqual(Punctuality.late(minutes: 1).text, "1 min late")
-        XCTAssertEqual(Punctuality.onTime.text, "On time")
+        XCTAssertEqual(Punctuality.early(minutes: 3).text(in: .english), "3 min early")
+        XCTAssertEqual(Punctuality.late(minutes: 1).text(in: .english), "1 min late")
+        XCTAssertEqual(Punctuality.onTime.text(in: .english), "On time")
     }
 
     // MARK: - Commands
@@ -165,7 +196,7 @@ final class LineSessionTests: XCTestCase {
 
             // One stop is refused by GameCore, and the draft is kept.
             session.createLineFromDraft()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidLineStops.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidLineStops.playerMessage(in: .english)))
             XCTAssertEqual(session.world, start)
             XCTAssertEqual(session.lineDraft, [Self.stationA])
 
@@ -214,13 +245,13 @@ final class LineSessionTests: XCTestCase {
 
             // Refusals are GameCore's, and change nothing.
             session.setSelectedLineTrains(-1, at: .low)
-            XCTAssertEqual(session.message?.text, GameError.invalidTrainsInService.playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.invalidTrainsInService.playerMessage(in: .english))
             session.setSelectedLineTargetHeadway(1, at: .low)
-            XCTAssertEqual(session.message?.text, GameError.invalidHeadway.playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.invalidHeadway.playerMessage(in: .english))
             session.addPatternToSelectedLine(from: 2, to: 1, express: true)
-            XCTAssertEqual(session.message?.text, GameError.invalidLinePattern.playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.invalidLinePattern.playerMessage(in: .english))
             session.removePatternFromSelectedLine(9)
-            XCTAssertEqual(session.message?.text, GameError.unknownLinePattern(9).playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.unknownLinePattern(9).playerMessage(in: .english))
             XCTAssertEqual(session.world, expected)
 
             session.removeSelectedLine()
@@ -245,15 +276,15 @@ final class LineSessionTests: XCTestCase {
             try expected.assignTrain(Self.first, to: Self.main, pattern: 1)
             XCTAssertEqual(session.message?.text, "Blue now runs for Main · Express Alpha–Delta. It leaves once it waits at the first stop.")
             session.assignSelectedTrainToSelectedLine()
-            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage(in: .english))
             session.startSelectedTrainService()
-            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage(in: .english))
             session.unassignSelectedTrain()
             try expected.unassignTrain(Self.first)
             XCTAssertEqual(session.world, expected)
 
             session.startSelectedTrainService()
-            XCTAssertEqual(session.message?.text, GameError.noTimetable(Self.first).playerMessage)
+            XCTAssertEqual(session.message?.text, GameError.noTimetable(Self.first).playerMessage(in: .english))
             let stop = ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 480), departure: GameTime(minutes: 490))
             try expected.setTrainTimetable(Self.first, to: [stop])
             let withTimetable = expected
@@ -265,7 +296,7 @@ final class LineSessionTests: XCTestCase {
             try expected.stopTrainService(Self.first)
             XCTAssertEqual(second.world, expected)
             second.stopSelectedTrainService()
-            XCTAssertEqual(second.message?.text, GameError.trainServiceNotActive(Self.first).playerMessage)
+            XCTAssertEqual(second.message?.text, GameError.trainServiceNotActive(Self.first).playerMessage(in: .english))
         }
     }
 }

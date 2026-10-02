@@ -29,7 +29,7 @@ final class StationActionTests: XCTestCase {
             XCTAssertEqual(station?.position, Self.tile)
             XCTAssertEqual(session.selectedTile?.type, .station(id: StationID(rawValue: 1)))
             XCTAssertEqual(session.world.economy.balance, 9_000)
-            XCTAssertEqual(session.world.tileSummary(at: Self.tile), "Station · Central")
+            XCTAssertEqual(session.world.tileSummary(at: Self.tile, in: .english), "Station · Central")
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built station “Central” at (5, 1)."))
             XCTAssertEqual(session.stationName, "Station 2", "the next suggestion is ready")
         }
@@ -62,7 +62,7 @@ final class StationActionTests: XCTestCase {
             session.applyTool()
 
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidName.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidName.playerMessage(in: .english)))
             XCTAssertEqual(session.stationName, "   ", "a rejected name is left for the player to fix")
         }
     }
@@ -80,7 +80,7 @@ final class StationActionTests: XCTestCase {
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .failure, text: GameError.tileOccupied(Self.tile).playerMessage)
+                StatusMessage(kind: .failure, text: GameError.tileOccupied(Self.tile).playerMessage(in: .english))
             )
             XCTAssertEqual(session.stationName, "Station 1")
         }

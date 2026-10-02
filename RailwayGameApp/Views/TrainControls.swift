@@ -9,11 +9,11 @@ import SwiftUI
 /// Everything shown is read from `session.world` each time the view is
 /// drawn, and every control calls a `GameSession` method that applies one
 /// `GameWorld` command, so the view keeps no train state of its own. Trains
-/// move only when the game loop advances the world (Pause / 1× / 2× in the
-/// HUD).
+/// move only when the game loop advances the world (the HUD's speed
+/// controls).
 struct TrainControls: View {
     /// What one press of the rate control changes, in logical units per game
-    /// minute (1024 units are one tile; at 1× a game minute is 100 ms). An
+    /// minute (1024 units are one tile; at 600× a game minute is 100 ms). An
     /// `Int`, because that is `Int64`'s stride.
     static let rateStep = 32
     static let maximumRate: Int64 = 1_024
@@ -27,7 +27,7 @@ struct TrainControls: View {
                 status(of: train)
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
-                        Text(train.carsText)
+                        Text(train.carsText(in: session.language))
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     }
@@ -35,7 +35,7 @@ struct TrainControls: View {
                     headingPicker
                 } else {
                     Stepper(value: $session.selectedTrainRate, in: 0...Self.maximumRate, step: Self.rateStep) {
-                        Text(train.movement.rateText)
+                        Text(train.movement.rateText(in: session.language))
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     }
@@ -82,30 +82,31 @@ struct TrainControls: View {
     /// Where the train is, the path it has left and the station it is
     /// stopped at, exactly as GameCore records or derives them.
     private func status(of train: Train) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(train.positionText) · \(train.carsText)")
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: "\(train.positionText(in: language)) · \(train.carsText(in: language))")
                 .font(.subheadline)
                 .monospacedDigit()
             if train.position != nil {
-                Text(train.pathText)
+                Text(train.pathText(in: language))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                if let stop = session.world.stationStopText(of: train.id) {
+                if let stop = session.world.stationStopText(of: train.id, in: language) {
                     Text(stop)
                         .font(.footnote.weight(.semibold))
                 }
-                if let load = session.world.loadText(of: train.id) {
+                if let load = session.world.loadText(of: train.id, in: language) {
                     Label(load, systemImage: "person.2")
                         .font(.footnote)
                         .monospacedDigit()
                 }
             }
-            if let service = session.world.trainServiceStatus(of: train.id) {
+            if let service = session.world.trainServiceStatus(of: train.id, in: language) {
                 serviceStatus(service)
             }
             // Under traffic control: which train holds the route it waits for.
-            if let wait = session.world.routeWaitText(of: train.id) {
+            if let wait = session.world.routeWaitText(of: train.id, in: language) {
                 Label(wait, systemImage: "hourglass")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.orange)
@@ -125,7 +126,7 @@ struct TrainControls: View {
             HStack(spacing: 6) {
                 Text(service.stopText)
                 if let punctuality = service.punctuality {
-                    Text(punctuality.text)
+                    Text(punctuality.text(in: session.language))
                         .fontWeight(.semibold)
                         .foregroundStyle(punctuality == .onTime ? Color.green : Color.orange)
                 }
@@ -146,12 +147,12 @@ struct TrainControls: View {
                 Button {
                     session.setPlacementHeading(heading)
                 } label: {
-                    Text(heading.abbreviation)
+                    Text(heading.abbreviation(in: session.language))
                         .font(.subheadline.weight(.bold))
                         .frame(width: 36, height: 28)
                 }
                 .buttonStyle(SelectableButtonStyle(isActive: isActive))
-                .accessibilityLabel("Face \(heading.name)")
+                .accessibilityLabel("Face \(heading.name(in: session.language))")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }

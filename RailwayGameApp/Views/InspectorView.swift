@@ -12,7 +12,7 @@ struct InspectorView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             if let position = session.selection {
-                Text("x \(position.x), y \(position.y)")
+                Text(verbatim: "x \(position.x), y \(position.y)")
                     .monospacedDigit()
                     .fontWeight(.semibold)
                 Text(summary(at: position))
@@ -32,9 +32,10 @@ struct InspectorView: View {
     /// The tile's contents and, at a station, who waits there by line and
     /// direction (G1c).
     private func summary(at position: GridPosition) -> String {
-        let text = session.world.tileSummary(at: position)
-        guard case .station(let id)? = session.world.map.tile(at: position)?.type else { return text }
-        let waiting = session.world.waitingText(at: id)
-        return waiting.isEmpty ? text : "\(text) · waiting \(waiting.joined(separator: ", "))"
+        let text = session.world.tileSummary(at: position, in: session.language)
+        guard case .station(let id)? = session.world.map.tile(at: position)?.type,
+              let waiting = session.world.waitingSummary(at: id, in: session.language)
+        else { return text }
+        return "\(text) · \(waiting)"
     }
 }

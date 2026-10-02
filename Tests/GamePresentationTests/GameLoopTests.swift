@@ -50,7 +50,7 @@ final class GameLoopTests: XCTestCase {
             session.advance(realElapsed: .milliseconds(300))
 
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.clockOverflow.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.clockOverflow.playerMessage(in: .english)))
         }
     }
 

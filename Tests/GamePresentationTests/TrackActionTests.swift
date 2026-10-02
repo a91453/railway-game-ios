@@ -37,7 +37,7 @@ final class TrackActionTests: XCTestCase {
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .failure, text: GameError.tileOccupied(Self.tile).playerMessage)
+                StatusMessage(kind: .failure, text: GameError.tileOccupied(Self.tile).playerMessage(in: .english))
             )
         }
     }
@@ -71,7 +71,7 @@ final class TrackActionTests: XCTestCase {
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .failure, text: GameError.invalidTrackConnections.playerMessage)
+                StatusMessage(kind: .failure, text: GameError.invalidTrackConnections.playerMessage(in: .english))
             )
         }
     }
@@ -107,7 +107,7 @@ final class TrackActionTests: XCTestCase {
                 XCTAssertEqual(session.world, world)
                 XCTAssertEqual(
                     session.message,
-                    StatusMessage(kind: .failure, text: GameError.noTrackToRemove(position).playerMessage)
+                    StatusMessage(kind: .failure, text: GameError.noTrackToRemove(position).playerMessage(in: .english))
                 )
             }
         }

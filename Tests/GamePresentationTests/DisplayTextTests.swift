@@ -4,20 +4,20 @@ import XCTest
 
 final class DisplayTextTests: XCTestCase {
     func testTrackShapeNames() {
-        XCTAssertEqual(TrackConnections().shapeName, "No connections")
-        XCTAssertEqual(TrackConnections.south.shapeName, "Dead end")
-        XCTAssertEqual(TrackConnections([.north, .south]).shapeName, "Straight")
-        XCTAssertEqual(TrackConnections([.east, .west]).shapeName, "Straight")
-        XCTAssertEqual(TrackConnections([.north, .east]).shapeName, "Curve")
-        XCTAssertEqual(TrackConnections([.south, .west]).shapeName, "Curve")
-        XCTAssertEqual(TrackConnections([.north, .east, .west]).shapeName, "T-junction")
-        XCTAssertEqual(TrackConnections([.north, .east, .south, .west]).shapeName, "Four-way")
+        XCTAssertEqual(TrackConnections().shapeName(in: .english), "No connections")
+        XCTAssertEqual(TrackConnections.south.shapeName(in: .english), "Dead end")
+        XCTAssertEqual(TrackConnections([.north, .south]).shapeName(in: .english), "Straight")
+        XCTAssertEqual(TrackConnections([.east, .west]).shapeName(in: .english), "Straight")
+        XCTAssertEqual(TrackConnections([.north, .east]).shapeName(in: .english), "Curve")
+        XCTAssertEqual(TrackConnections([.south, .west]).shapeName(in: .english), "Curve")
+        XCTAssertEqual(TrackConnections([.north, .east, .west]).shapeName(in: .english), "T-junction")
+        XCTAssertEqual(TrackConnections([.north, .east, .south, .west]).shapeName(in: .english), "Four-way")
     }
 
     func testTrackSummaryListsDirectionsInCompassOrder() {
-        XCTAssertEqual(TrackConnections([.west, .north]).summary, "Curve N–W")
-        XCTAssertEqual(TrackConnections([.south, .north]).summary, "Straight N–S")
-        XCTAssertEqual(TrackConnections().summary, "No connections")
+        XCTAssertEqual(TrackConnections([.west, .north]).summary(in: .english), "Curve N–W")
+        XCTAssertEqual(TrackConnections([.south, .north]).summary(in: .english), "Straight N–S")
+        XCTAssertEqual(TrackConnections().summary(in: .english), "No connections")
     }
 
     func testTileSummaries() throws {
@@ -25,28 +25,28 @@ final class DisplayTextTests: XCTestCase {
         try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
         try world.buildStation(named: "Central", at: GridPosition(x: 2, y: 0))
 
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 0, y: 0)), "Empty")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 1, y: 0)), "Track · Straight E–W")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0)), "Station · Central")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0)), "Outside the map")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 0, y: 0), in: .english), "Empty")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 1, y: 0), in: .english), "Track · Straight E–W")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0), in: .english), "Station · Central")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0), in: .english), "Outside the map")
 
         try world.buildTurnout(at: GridPosition(x: 3, y: 1), connections: [.east, .south, .west], stem: .west)
         try world.buildCrossing(at: GridPosition(x: 4, y: 1))
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 3, y: 1)), "Turnout · E–S–W, stem W")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 4, y: 1)), "Level crossing · N–S over E–W")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 3, y: 1), in: .english), "Turnout · E–S–W, stem W")
+        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 4, y: 1), in: .english), "Level crossing · N–S over E–W")
     }
 
     func testNetworkSummaryCountsStationsAndTrackTiles() throws {
         var world = try makeWorld()
-        XCTAssertEqual(world.networkSummary, "0 stations · 0 track tiles")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 track tiles")
 
         try world.buildStation(named: "Central", at: GridPosition(x: 0, y: 0))
         try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
-        XCTAssertEqual(world.networkSummary, "1 station · 1 track tile")
+        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 track tile")
 
         try world.buildStation(named: "Harbor", at: GridPosition(x: 3, y: 0))
         try world.buildTrack(at: GridPosition(x: 2, y: 0), connections: [.east, .west])
-        XCTAssertEqual(world.networkSummary, "2 stations · 2 track tiles")
+        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 track tiles")
     }
 }
 
@@ -99,7 +99,7 @@ final class ErrorMessageTests: XCTestCase {
         ]
 
         for (error, message) in messages {
-            XCTAssertEqual(error.playerMessage, message)
+            XCTAssertEqual(error.playerMessage(in: .english), message)
         }
     }
 
@@ -115,34 +115,34 @@ final class ErrorMessageTests: XCTestCase {
 
 final class GameTimeDisplayTests: XCTestCase {
     func testGameTimeShowsDayAndTimeOfDay() {
-        XCTAssertEqual(GameTime.zero.displayText, "Day 1 · 00:00")
-        XCTAssertEqual(GameTime(minutes: 9).displayText, "Day 1 · 00:09")
-        XCTAssertEqual(GameTime(minutes: 8 * 60 + 30).displayText, "Day 1 · 08:30")
-        XCTAssertEqual(GameTime(minutes: 1_439).displayText, "Day 1 · 23:59")
-        XCTAssertEqual(GameTime(minutes: 1_440).displayText, "Day 2 · 00:00")
-        XCTAssertEqual(GameTime(minutes: 10 * 1_440 + 61).displayText, "Day 11 · 01:01")
+        XCTAssertEqual(GameTime.zero.displayText(in: .english), "Day 1 · 00:00")
+        XCTAssertEqual(GameTime(minutes: 9).displayText(in: .english), "Day 1 · 00:09")
+        XCTAssertEqual(GameTime(minutes: 8 * 60 + 30).displayText(in: .english), "Day 1 · 08:30")
+        XCTAssertEqual(GameTime(minutes: 1_439).displayText(in: .english), "Day 1 · 23:59")
+        XCTAssertEqual(GameTime(minutes: 1_440).displayText(in: .english), "Day 2 · 00:00")
+        XCTAssertEqual(GameTime(minutes: 10 * 1_440 + 61).displayText(in: .english), "Day 11 · 01:01")
     }
 
     func testTimesBeforeTheStartCountBackwards() {
-        XCTAssertEqual(GameTime(minutes: -1).displayText, "Day 0 · 23:59")
+        XCTAssertEqual(GameTime(minutes: -1).displayText(in: .english), "Day 0 · 23:59")
     }
 
     func testTheSecondsShowWhenTheyMatter() {
-        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayTextWithSeconds, "Day 1 · 08:30:15")
-        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayText, "Day 1 · 08:30")
-        XCTAssertEqual(GameTime(seconds: -1).displayTextWithSeconds, "Day 0 · 23:59:59")
+        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayTextWithSeconds(in: .english), "Day 1 · 08:30:15")
+        XCTAssertEqual(GameTime(seconds: 8 * 3_600 + 30 * 60 + 15).displayText(in: .english), "Day 1 · 08:30")
+        XCTAssertEqual(GameTime(seconds: -1).displayTextWithSeconds(in: .english), "Day 0 · 23:59:59")
         // The HUD: whole minutes at a minute a tick or more, seconds below
         // that or between two minutes.
-        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .normal).displayText, "Day 1 · 01:30")
-        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .paused).displayText, "Day 1 · 01:30")
-        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .x60).displayText, "Day 1 · 01:30:00")
-        XCTAssertEqual(GameClock(now: GameTime(seconds: 5_401), speed: .paused).displayText, "Day 1 · 01:30:01")
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .normal).displayText(in: .english), "Day 1 · 01:30")
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .paused).displayText(in: .english), "Day 1 · 01:30")
+        XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .x60).displayText(in: .english), "Day 1 · 01:30:00")
+        XCTAssertEqual(GameClock(now: GameTime(seconds: 5_401), speed: .paused).displayText(in: .english), "Day 1 · 01:30:01")
     }
 
     func testSpeedLabels() {
-        XCTAssertEqual(GameSpeed.allCases.map(\.label), ["Pause", "1×", "10×", "60×", "600×", "1200×"])
+        XCTAssertEqual(GameSpeed.allCases.map { $0.label(in: .english) }, ["Pause", "1×", "10×", "60×", "600×", "1200×"])
         XCTAssertEqual(
-            GameSpeed.allCases.map(\.accessibilityName),
+            GameSpeed.allCases.map { $0.accessibilityName(in: .english) },
             ["Paused", "Real time", "10 times real time", "60 times real time", "600 times real time", "1200 times real time"]
         )
     }

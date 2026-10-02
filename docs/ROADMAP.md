@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作，接著做 W2b（停站、上下車與誤點）與 W2c（行駛曲線接到移動），然後是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；接著做 W2b（停站、上下車與誤點）與 W2c（行駛曲線接到移動），然後是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -90,6 +90,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
   - 手冊：[TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
 - **真實 Apple 簽章與上傳：VERIFIED（到上傳為止）**：Apple Developer Program、Team API key 與 environment 已就緒。第 1 次真實執行（`automatic`）在 Archive 失敗，因為新團隊沒有已註冊裝置、Apple 無法產生開發描述檔；第 2 次（`adhoc`）Archive、App Store distribution 匯出、IPA 檢查、上傳與清理全部成功，所以預設改為 `adhoc`。細節與 run 網址見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
 - **尚未驗證**：App Store Connect processing、Missing Compliance 與 TestFlight 安裝到裝置（沒有 repository 層級的證據）。
+- **第二版（0.2.0）**：G1（第一個能玩的經營閉環）與 W2a 之後，先完成 L1（繁體中文），再由作者從 `main` 執行 `testflight.yml`。要在實機上看的：經營與路線面板、速度選單與 1×／10×／60× 的手感、中文排版。
 - **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
 - **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 
@@ -346,6 +347,7 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
    - T 已經保證兩台車不會同時用同一段軌道，乘客不需要 U。
    - `Ci/` 的參考在乘客、需求與票價上最完整。
 3. **W2**（見下面的 [Stage W](#stage-w--行駛曲線)）：W2a 時間改用秒 ✅ → W2b 停站、上下車與誤點 → W2c 曲線接到行程與移動。
+   - W2a 之後先做 L1（繁體中文，決策 38），發第二版內部 TestFlight（0.2.0），再做 W2b（2026-10-02 作者決定）。
    - **2026-10-01 作者決定 W2 先於 U-min。** 第三份參考（[RailwayCore 參考包](RAILWAY_REFERENCE_MAPPING.md#railwaycore-參考包)）把停站與誤點列為 P0，這也是 G1 目前最明顯的缺口；W2 先做，U-min 就直接建立在最終的移動方式上。
 4. U-min：movement authority 的最小穩定契約。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。
 5. V：待避與交會。它的推估要用 W1 的曲線；實際放行由 T、U 保證。
@@ -546,6 +548,7 @@ G1 先做了 5A、5B、5D、5E、5G 的最小版；這個 Phase 在它上面深�
 
 ## 跨階段議題
 
+- 在地化（**L1 ✅**，ARCHITECTURE 決策 38）：繁體中文（台灣用語）與英文，跟著系統語言切換；用語以參考 `Ci/` 的簡體中文介面為來源。之後新增的畫面文字要同時寫兩種語言：GamePresentation 的文字函式接收語言，App 的字面字串要加進 `Localizable.xcstrings`。
 - save/load：加入存檔版本欄位與 migration。第三份參考建議從一開始就有；App 目前不把存檔寫到裝置，所以排在正式存檔時。
 - undo/redo：利用 `GameWorld` 的 value semantics 快照
 - 大型地圖與大量列車：量測後再考慮 chunking、背景計算

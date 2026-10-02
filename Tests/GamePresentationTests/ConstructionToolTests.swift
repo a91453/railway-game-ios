@@ -81,10 +81,10 @@ final class ConstructionToolTests: XCTestCase {
     }
 
     func testPieceShapesMatchTheirNames() {
-        XCTAssertEqual(TrackPiece.straight.connections.shapeName, "Straight")
-        XCTAssertEqual(TrackPiece.curve.connections.shapeName, "Curve")
-        XCTAssertEqual(TrackPiece.junction.connections.shapeName, "T-junction")
-        XCTAssertEqual(TrackPiece.fourWay.connections.shapeName, "Four-way")
+        XCTAssertEqual(TrackPiece.straight.connections.shapeName(in: .english), "Straight")
+        XCTAssertEqual(TrackPiece.curve.connections.shapeName(in: .english), "Curve")
+        XCTAssertEqual(TrackPiece.junction.connections.shapeName(in: .english), "T-junction")
+        XCTAssertEqual(TrackPiece.fourWay.connections.shapeName(in: .english), "Four-way")
     }
 
     func testRotatingFourTimesReturnsTheSamePiece() {

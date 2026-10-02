@@ -30,7 +30,7 @@ struct LinesPanel: View {
                 linesSection
                 if let line = session.selectedLine {
                     lineSection(line)
-                    ForEach(session.world.lineServiceSummaries(line.id), id: \.pattern) { summary in
+                    ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
                         serviceSection(summary, of: line)
                     }
                     addPatternSection(line)
@@ -97,12 +97,12 @@ struct LinesPanel: View {
     }
 
     private func lineRow(_ line: ServiceLine) -> some View {
-        let status = session.world.lineStatusText(line.id, at: session.world.clock.now)
+        let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
         return HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.name)
                     .font(.subheadline.weight(.semibold))
-                Text("\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
+                Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -123,8 +123,8 @@ struct LinesPanel: View {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
-                if let gap = session.world.lineCoverageText(line.id, at: level) {
-                    Label("\(level.title): \(gap)", systemImage: "exclamationmark.triangle")
+                if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
+                    Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
                         .font(.footnote)
                         .foregroundStyle(.orange)
                 }
@@ -133,7 +133,7 @@ struct LinesPanel: View {
                 session.removeSelectedLine()
             }
         } header: {
-            Text("\(line.name) · \(line.window.displayText)")
+            Text(verbatim: "\(line.name) · \(line.window.displayText(in: session.language))")
         } footer: {
             Text("Peak runs 07:00–10:00 and 16:00–20:00, low from 21:00 to 07:00, off-peak otherwise.")
         }
@@ -182,9 +182,9 @@ struct LinesPanel: View {
                 }
             ) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(target.map { "\(level.level.title): \(headwayText(minutes: $0).lowercased())" } ?? "\(level.level.title): \(wanted) wanted")
+                    Text(levelSettingText(level.level, trains: wanted, target: target, in: session.language))
                         .font(.subheadline)
-                    Text(level.text)
+                    Text(level.text(in: session.language))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -195,12 +195,12 @@ struct LinesPanel: View {
                     session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
                 }
                 ForEach(Self.targets, id: \.self) { minutes in
-                    Button(headwayText(minutes: minutes)) {
+                    Button(headwayText(minutes: minutes, in: session.language)) {
                         session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
                     }
                 }
             } label: {
-                Label(target.map { "Target: \(headwayText(minutes: $0).lowercased())" } ?? "Target: none", systemImage: "clock.arrow.circlepath")
+                Label(targetHeadwayText(target, in: session.language), systemImage: "clock.arrow.circlepath")
                     .font(.caption)
             }
         }

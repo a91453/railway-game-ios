@@ -19,8 +19,8 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(Money(55).centsText, "$ 0.55")
         XCTAssertEqual(Money(500).centsText, "$ 5.00")
         XCTAssertEqual(Money(123_405).centsText, "$ 1,234.05")
-        XCTAssertEqual(FareRules.standard.displayText, "Flat · $ 5.00")
-        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText, "By distance · 5 steps from $ 0.55")
+        XCTAssertEqual(FareRules.standard.displayText(in: .english), "Flat · $ 5.00")
+        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from $ 0.55")
     }
 
     func testLedgerRowsAndTheLastHourAreReadFromTheAccounts() throws {
@@ -29,7 +29,7 @@ final class EconomyDisplayTests: XCTestCase {
         // The hour that ends at 60 is settled as the step from 60 starts.
         try world.advance(ticks: 61)
         let row = try XCTUnwrap(world.recentLedgerEntries().first)
-        XCTAssertEqual(row.kind.displayName, "Hourly net")
+        XCTAssertEqual(row.kind.displayName(in: .english), "Hourly net")
         XCTAssertLessThan(row.amount, .zero, "running costs and no fares")
         XCTAssertEqual(row.amountText, "-\(Money(-row.amount.amount).moneyText)")
         let totals = world.recentLedgerTotals()
@@ -41,26 +41,30 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(world.recentLedgerEntries().count, 2)
         XCTAssertEqual(world.recentLedgerEntries(1), [world.accounts.entries.last!], "newest first")
         XCTAssertEqual(world.recentLedgerTotals().reduce(Money.zero) { $0 + $1.amount }, world.accounts.entries.last!.amount, "only the last hour")
-        XCTAssertEqual(LedgerItem.trainStaff.displayName, "Drivers and dispatchers")
-        XCTAssertEqual(FinancePeriod.month.displayName, "Month")
+        XCTAssertEqual(LedgerItem.trainStaff.displayName(in: .english), "Drivers and dispatchers")
+        XCTAssertEqual(FinancePeriod.month.displayName(in: .english), "Month")
     }
 
     func testWaitingPassengersAreShownByLineAndDirectionAndTrainsByLoad() throws {
         var world = try makeLine()
         let alpha = StationID(rawValue: 1)
-        XCTAssertEqual(world.waitingText(at: alpha), [])
-        XCTAssertNil(world.loadText(of: TrainID(rawValue: 1)))
+        XCTAssertEqual(world.waitingText(at: alpha, in: .english), [])
+        XCTAssertNil(world.waitingSummary(at: alpha, in: .english))
+        XCTAssertNil(world.loadText(of: TrainID(rawValue: 1), in: .english))
         try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 200_000))
         try world.setStationDemand(StationID(rawValue: 3), to: StationDemand(kind: .office, dailyTrips: 1_000))
         try world.advance(ticks: 30)
         let waiting = world.waitingPassengers(at: alpha).reduce(Int64(0)) { $0 + $1.count }
         XCTAssertGreaterThan(waiting, 0)
-        XCTAssertEqual(world.waitingText(at: alpha), ["Main to Gamma · \(waiting)"])
+        XCTAssertEqual(world.waitingText(at: alpha, in: .english), ["Main to Gamma · \(waiting)"])
+        XCTAssertEqual(world.waitingSummary(at: alpha, in: .english), "waiting Main to Gamma · \(waiting)")
+        XCTAssertEqual(world.waitingSummary(at: alpha, in: .traditionalChinese), "候車 Main 往 Gamma · \(waiting)")
 
         let riding = world.riders(of: TrainID(rawValue: 1)).reduce(Int64(0)) { $0 + $1.count }
         XCTAssertGreaterThan(riding, 0)
         let percent = (riding * 100 * 2 + 320) / 640
-        XCTAssertEqual(world.loadText(of: TrainID(rawValue: 1)), "\(riding) riding · \(percent)%")
+        XCTAssertEqual(world.loadText(of: TrainID(rawValue: 1), in: .english), "\(riding) riding · \(percent)%")
+        XCTAssertEqual(world.loadText(of: TrainID(rawValue: 1), in: .traditionalChinese), "載客 \(riding) 人 · \(percent)%")
     }
 
     func testTheSessionSwitchesModeAndSetsFares() async throws {

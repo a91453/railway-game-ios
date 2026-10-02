@@ -152,35 +152,35 @@ final class StationStopSessionTests: XCTestCase {
             session.select(Self.hillTile)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, expected)
-            XCTAssertNil(session.world.stationStopText(of: Self.first), "departing")
+            XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "departing")
 
             // 3 links of 1024 at 384 a minute: 8 minutes.
             for _ in 0..<7 {
                 session.advance(realElapsed: .milliseconds(100))
             }
-            XCTAssertNil(session.world.stationStopText(of: Self.first), "not there yet")
+            XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "not there yet")
             session.advance(realElapsed: .milliseconds(100))
             XCTAssertEqual(session.world, arrived)
-            XCTAssertEqual(session.world.stationStopText(of: Self.first), "Stopped at Market, Hill")
-            XCTAssertEqual(session.selectedTrain?.positionText, "At (4, 2), facing East")
-            XCTAssertEqual(session.selectedTrain?.movement.pathText, "No path ahead")
+            XCTAssertEqual(session.world.stationStopText(of: Self.first, in: .english), "Stopped at Market, Hill")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "At (4, 2), facing East")
+            XCTAssertEqual(session.selectedTrain?.movement.pathText(in: .english), "No path ahead")
         }
     }
 
     func testTheStopTextIsReadFromTheWorld() throws {
         var world = try makeStationWorld()
-        XCTAssertNil(world.stationStopText(of: Self.first), "no such train")
+        XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "no such train")
         try world.purchaseTrain(named: "Train 1")
-        XCTAssertNil(world.stationStopText(of: Self.first), "unplaced")
+        XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "unplaced")
         try world.placeTrain(Self.first, at: .atNode(Self.c, heading: .east))
-        XCTAssertNil(world.stationStopText(of: Self.first), "not at a platform")
+        XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "not at a platform")
         try world.unplaceTrain(Self.first)
         try world.placeTrain(Self.first, at: .atNode(Self.b, heading: .east))
-        XCTAssertEqual(world.stationStopText(of: Self.first), "Stopped at Central")
+        XCTAssertEqual(world.stationStopText(of: Self.first, in: .english), "Stopped at Central")
         try world.unplaceTrain(Self.first)
         try world.placeTrain(Self.first, at: .atNode(Self.d, heading: .north))
-        XCTAssertEqual(world.stationStopText(of: Self.first), "Stopped at Market, Hill")
+        XCTAssertEqual(world.stationStopText(of: Self.first, in: .english), "Stopped at Market, Hill")
         try world.setTrainContinuation(Self.first, to: [Self.e])
-        XCTAssertNil(world.stationStopText(of: Self.first), "given somewhere to go")
+        XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "given somewhere to go")
     }
 }

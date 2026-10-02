@@ -62,8 +62,8 @@ final class NetworkServiceSessionTests: XCTestCase {
             let session = GameSession(world: world)
             session.selectTool(.train)
             session.selectTrain(Self.tram)
-            XCTAssertEqual(session.selectedTrain?.pathText, "No path ahead")
-            XCTAssertEqual(session.world.stationStopText(of: Self.tram), "Stopped at West")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
+            XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at West")
             session.select(Self.eastTile)
 
             session.sendSelectedTrain()
@@ -73,8 +73,8 @@ final class NetworkServiceSessionTests: XCTestCase {
                 session.message,
                 StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track. Set a rate to start.")
             )
-            XCTAssertEqual(session.selectedTrain?.pathText, "Path: 1 more edge, Edge #2, stopping 5120 units along it")
-            XCTAssertNil(session.world.stationStopText(of: Self.tram), "a train with a path left is not stopped")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Edge #2, stopping 5120 units along it")
+            XCTAssertNil(session.world.stationStopText(of: Self.tram, in: .english), "a train with a path left is not stopped")
         }
     }
 
@@ -89,12 +89,12 @@ final class NetworkServiceSessionTests: XCTestCase {
             // Five minutes (a tick is 100 ms): 5120 of the 8192 run, 2048
             // into e2.
             session.advance(realElapsed: .milliseconds(500))
-            XCTAssertEqual(session.selectedTrain?.positionText, "Edge #2 forward, 2048 units along")
-            XCTAssertEqual(session.selectedTrain?.pathText, "Path: stops 3072 units ahead")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 2048 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: stops 3072 units ahead")
             session.advance(realElapsed: .milliseconds(500))
-            XCTAssertEqual(session.selectedTrain?.positionText, "Edge #2 forward, 5120 units along")
-            XCTAssertEqual(session.selectedTrain?.pathText, "No path ahead")
-            XCTAssertEqual(session.world.stationStopText(of: Self.tram), "Stopped at East")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 5120 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
+            XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
         }
     }
 
@@ -148,20 +148,20 @@ final class NetworkServiceSessionTests: XCTestCase {
                 ScheduledStop(station: Self.east, arrival: GameTime(minutes: 13), departure: GameTime(minutes: 15)),
             ])
             try world.startTrainService(Self.tram)
-            XCTAssertEqual(world.trainServiceStatus(of: Self.tram), TrainServiceStatus(serviceName: nil, stopText: "At West, leaves 00:05", punctuality: .onTime))
-            XCTAssertEqual(world.stationStopText(of: Self.tram), "Stopped at West")
+            XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "At West, leaves 00:05", punctuality: .onTime))
+            XCTAssertEqual(world.stationStopText(of: Self.tram, in: .english), "Stopped at West")
             // It leaves at 00:05 and is on its way at 00:06.
             try world.advance(ticks: 6)
-            XCTAssertEqual(world.trainServiceStatus(of: Self.tram), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .onTime))
-            XCTAssertNil(world.stationStopText(of: Self.tram))
+            XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .onTime))
+            XCTAssertNil(world.stationStopText(of: Self.tram, in: .english))
             // 8192 at 1024 a minute: there at 00:13. At 512 a minute it is
             // still on its way, a minute late at 00:14.
             try world.advance(ticks: late ? 8 : 7)
             if late {
-                XCTAssertEqual(world.trainServiceStatus(of: Self.tram), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .late(minutes: 1)))
+                XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .late(minutes: 1)))
             } else {
-                XCTAssertEqual(world.trainServiceStatus(of: Self.tram), TrainServiceStatus(serviceName: nil, stopText: "At East, last stop", punctuality: .onTime))
-                XCTAssertEqual(world.stationStopText(of: Self.tram), "Stopped at East")
+                XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "At East, last stop", punctuality: .onTime))
+                XCTAssertEqual(world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
             }
         }
     }
@@ -177,17 +177,17 @@ final class NetworkServiceSessionTests: XCTestCase {
         // west), back 5120 + 7168 = 12288 (12 minutes) to West's far end
         // going west, and 2 minutes at each end.
         XCTAssertEqual(world.lineJourney(line)?.roundTripMinutes, 24)
-        let summaries = world.lineServiceSummaries(line)
+        let summaries = world.lineServiceSummaries(line, in: .english)
         XCTAssertEqual(summaries.map(\.title), ["All stops West–East"])
-        XCTAssertEqual(summaries.first?.levels.map(\.text), ["1 train · Every 24 min", "1 train · Every 24 min", "1 train · Every 24 min"])
+        XCTAssertEqual(summaries.first?.levels.map { $0.text(in: .english) }, ["1 train · Every 24 min", "1 train · Every 24 min", "1 train · Every 24 min"])
         XCTAssertEqual(summaries.first?.assigned, 1)
         XCTAssertEqual(summaries.first?.running, 0)
-        XCTAssertEqual(world.lineStatusText(line, at: world.clock.now), "Low")
-        XCTAssertEqual(world.trainServiceStatus(of: Self.tram), TrainServiceStatus(serviceName: "Shuttle", stopText: "Waiting to be sent out", punctuality: nil))
+        XCTAssertEqual(world.lineStatusText(line, at: world.clock.now, in: .english), "Low")
+        XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: "Shuttle", stopText: "Waiting to be sent out", punctuality: nil))
         // Sent out at once, and on its way to East.
         try world.advance(ticks: 1)
-        XCTAssertEqual(world.lineServiceSummaries(line).first?.running, 1)
-        let status = try XCTUnwrap(world.trainServiceStatus(of: Self.tram))
+        XCTAssertEqual(world.lineServiceSummaries(line, in: .english).first?.running, 1)
+        let status = try XCTUnwrap(world.trainServiceStatus(of: Self.tram, in: .english))
         XCTAssertEqual(status.serviceName, "Shuttle")
         XCTAssertTrue(status.stopText.hasPrefix("Next: East, due "), status.stopText)
         XCTAssertEqual(status.punctuality, .onTime)

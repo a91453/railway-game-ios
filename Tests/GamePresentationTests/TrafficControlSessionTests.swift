@@ -94,7 +94,7 @@ final class TrafficControlSessionTests: XCTestCase {
         try world.setTrafficControl(true)
         try world.setTrainContinuation(Self.express, to: [Self.tile(3), Self.tile(4)])
         // Before its departure is due, Local does not wait for anything.
-        XCTAssertNil(world.routeWaitText(of: Self.local))
+        XCTAssertNil(world.routeWaitText(of: Self.local, in: .english))
         var expected = world
         try expected.advance(ticks: 1)
         XCTAssertEqual(expected.trainHoldingRoute(of: Self.local), Self.express)
@@ -103,12 +103,12 @@ final class TrafficControlSessionTests: XCTestCase {
             session.advance(realElapsed: GameSession.tickInterval)
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.world.train(id: Self.local)?.execution, .waitingAtStop(0, cycle: 0))
-            XCTAssertEqual(session.world.routeWaitText(of: Self.local), "Waiting for Express to clear the route")
-            XCTAssertNil(session.world.routeWaitText(of: Self.express), "Express is not waiting for a route")
-            XCTAssertNil(session.world.routeWaitText(of: TrainID(rawValue: 9)))
+            XCTAssertEqual(session.world.routeWaitText(of: Self.local, in: .english), "Waiting for Express to clear the route")
+            XCTAssertNil(session.world.routeWaitText(of: Self.express, in: .english), "Express is not waiting for a route")
+            XCTAssertNil(session.world.routeWaitText(of: TrainID(rawValue: 9), in: .english))
             // Without traffic control nothing waits.
             session.setTrafficControl(false)
-            XCTAssertNil(session.world.routeWaitText(of: Self.local))
+            XCTAssertNil(session.world.routeWaitText(of: Self.local, in: .english))
         }
     }
 

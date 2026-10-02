@@ -34,15 +34,24 @@ struct RailwayGameApp: App {
             return DemoLayout.makeSession()
         }
         #endif
-        return GameSession(world: .newGame())
+        return GameSession(world: .newGame(), language: .app)
+    }
+}
+
+extension DisplayLanguage {
+    /// The language of the localization iOS chose for the app at launch:
+    /// the one its String Catalog shows, so the text GamePresentation
+    /// writes matches the rest of the screen.
+    static var app: DisplayLanguage {
+        DisplayLanguage(localization: Bundle.main.preferredLocalizations.first ?? "en")
     }
 }
 
 extension GameWorld {
-    /// The world a new game starts with, running at 1×, with traffic
-    /// control on (Phase 4.6 Stage T): trains take their whole route before
-    /// they leave, and a managed company (G1c). GameCore's own new worlds
-    /// start with both off.
+    /// The world a new game starts with, running at 600× (`normal`), with
+    /// traffic control on (Phase 4.6 Stage T): trains take their whole
+    /// route before they leave, and a managed company (G1c). GameCore's own
+    /// new worlds start with both off.
     static func newGame() -> GameWorld {
         do {
             var world = try GameWorld(

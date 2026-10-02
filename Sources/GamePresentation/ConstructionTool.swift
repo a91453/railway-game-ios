@@ -15,13 +15,13 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     case train
 
     /// Short name for the tool picker.
-    public var title: String {
+    public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .select: "Select"
-        case .buildTrack: "Track"
-        case .buildStation: "Station"
-        case .removeTrack: "Remove"
-        case .train: "Train"
+        case .select: language.text("Select", "選取")
+        case .buildTrack: language.text("Track", "軌道")
+        case .buildStation: language.text("Station", "車站")
+        case .removeTrack: language.text("Remove", "拆除")
+        case .train: language.text("Train", "列車")
         }
     }
 }
@@ -36,12 +36,12 @@ public enum TrackPiece: CaseIterable, Hashable, Sendable {
     /// without a junction).
     case fourWay
 
-    public var title: String {
+    public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .straight: "Straight"
-        case .curve: "Curve"
-        case .junction: "T-junction"
-        case .fourWay: "Four-way"
+        case .straight: language.text("Straight", "直線")
+        case .curve: language.text("Curve", "彎道")
+        case .junction: language.text("T-junction", "T 字岔")
+        case .fourWay: language.text("Four-way", "十字")
         }
     }
 

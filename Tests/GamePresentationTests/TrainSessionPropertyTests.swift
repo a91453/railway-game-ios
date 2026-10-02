@@ -228,11 +228,11 @@ final class TrainSessionPropertyTests: XCTestCase {
                     case .onEdge(let traversal, let offset): offset >= 0 && offset <= session.world.trackEdge(traversal.edge)?.length ?? -1
                     }
                     if !onTrack { problems.append("train \(train.id.rawValue) is off the track at \(position)") }
-                    if train.positionText != position.displayText { problems.append("position text is not derived") }
+                    if train.positionText(in: .english) != position.displayText(in: .english) { problems.append("position text is not derived") }
                     let stops = session.world.stationsStoppedAt(by: train.id)
                     let stopText = stops.isEmpty ? nil : "Stopped at " + stops.compactMap { session.world.station(id: $0)?.name }.joined(separator: ", ")
-                    if session.world.stationStopText(of: train.id) != stopText { problems.append("stop text is not derived") }
-                } else if train.movement != .idle || train.positionText != "Not on the track" {
+                    if session.world.stationStopText(of: train.id, in: .english) != stopText { problems.append("stop text is not derived") }
+                } else if train.movement != .idle || train.positionText(in: .english) != "Not on the track" {
                     problems.append("unplaced train \(train.id.rawValue) is not idle")
                 }
             }

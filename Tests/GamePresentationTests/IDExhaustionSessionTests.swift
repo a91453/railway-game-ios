@@ -28,7 +28,7 @@ final class IDExhaustionSessionTests: XCTestCase {
 
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.selectedTrainID, selected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.idsExhausted.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.idsExhausted.playerMessage(in: .english)))
         }
     }
 
@@ -45,7 +45,7 @@ final class IDExhaustionSessionTests: XCTestCase {
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.stationName, name)
             XCTAssertEqual(session.selection, GridPosition(x: 2, y: 2))
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.idsExhausted.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.idsExhausted.playerMessage(in: .english)))
         }
     }
 }

@@ -12,8 +12,9 @@ import Observation
 /// Besides the world, the session keeps only transient UI state: the selected
 /// tile, the active tool, the track piece being placed, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
-/// stops picked for a new line, and the last action's message. Anything shown about the game, including where each train is and
-/// where it is going, is derived from ``world`` on demand.
+/// stops picked for a new line, and the last action's message, written in
+/// ``language``. Anything shown about the game, including where each train is
+/// and where it is going, is derived from ``world`` on demand.
 ///
 /// The session also hosts the game loop: it measures real time, turns it into
 /// whole ticks with a ``TickAccumulator`` and calls `GameWorld.advance(ticks:)`.
@@ -26,6 +27,11 @@ import Observation
 public final class GameSession {
     /// The authoritative game state. Only the session mutates it.
     public private(set) var world: GameWorld
+
+    /// The language of the session's messages and suggested names, and of
+    /// the text the app derives from the world (Stage L1). Set once: iOS
+    /// restarts an app whose language changes.
+    public let language: DisplayLanguage
 
     /// The tile the player last selected. Always inside the map when set.
     public private(set) var selection: GridPosition?
@@ -65,8 +71,9 @@ public final class GameSession {
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []
 
-    /// Real time per simulation tick. At 1× a tick is one game minute, so a
-    /// game day lasts 144 real seconds.
+    /// Real time per simulation tick. At 600× (``GameSpeed/normal``) a tick
+    /// is one game minute, so a game day lasts 144 real seconds; at 1× it is
+    /// a tenth of a game second (Stage W2a).
     public nonisolated static let tickInterval: Duration = .milliseconds(100)
     /// The most real time one loop step turns into ticks (five ticks).
     public nonisolated static let maximumStepDuration: Duration = .milliseconds(500)
@@ -77,9 +84,10 @@ public final class GameSession {
     )
     @ObservationIgnored private var gameLoop: Task<Void, Never>?
 
-    public init(world: GameWorld) {
+    public init(world: GameWorld, language: DisplayLanguage = .english) {
         self.world = world
-        self.stationName = Self.suggestedStationName(for: world)
+        self.language = language
+        self.stationName = Self.suggestedStationName(for: world, in: language)
         self.selectedTrainID = world.trains.first?.id
         self.selectedLineID = world.lines.first?.id
     }
@@ -176,8 +184,11 @@ public final class GameSession {
         perform { world throws(GameError) in
             try world.setTrafficControl(enabled)
             return enabled
-                ? "Traffic control is on. Trains take their whole route before they leave."
-                : "Traffic control is off. Trains no longer wait for each other."
+                ? language.text(
+                    "Traffic control is on. Trains take their whole route before they leave.",
+                    "交通控制已開啟。列車出發前會先預約整條進路。"
+                )
+                : language.text("Traffic control is off. Trains no longer wait for each other.", "交通控制已關閉。列車不再互相等待。")
         }
     }
 
@@ -192,8 +203,11 @@ public final class GameSession {
         message = StatusMessage(
             kind: .success,
             text: mode == .management
-                ? "The company is managed: fares are charged and running costs settled from the next hour."
-                : "Free play: no fares or running costs."
+                ? language.text(
+                    "The company is managed: fares are charged and running costs settled from the next hour.",
+                    "公司進入經營模式：從下一個小時起收取票價、結算營運成本。"
+                )
+                : language.text("Free play: no fares or running costs.", "自由模式：不收票價，也沒有營運成本。")
         )
     }
 
@@ -201,7 +215,7 @@ public final class GameSession {
     public func setFareRules(_ rules: FareRules) {
         perform { world throws(GameError) in
             try world.setFareRules(rules)
-            return "Fares: \(rules.displayText)."
+            return language.text("Fares: \(rules.displayText(in: language)).", "已更新票價規則：\(rules.displayText(in: language))。")
         }
     }
 
@@ -226,7 +240,7 @@ public final class GameSession {
             do throws(GameError) {
                 try world.advance(ticks: ticks)
             } catch {
-                message = StatusMessage(kind: .failure, text: error.playerMessage)
+                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             }
         }
     }
@@ -301,9 +315,9 @@ public final class GameSession {
     public func purchaseTrain() {
         var purchased: TrainID?
         perform { world throws(GameError) in
-            let train = try world.purchaseTrain(named: Self.suggestedTrainName(for: world))
+            let train = try world.purchaseTrain(named: Self.suggestedTrainName(for: world, in: language))
             purchased = train.id
-            return "Bought \(train.name). Select a track tile to place it."
+            return language.text("Bought \(train.name). Select a track tile to place it.", "已購買 \(train.name)。請選擇一格軌道放置它。")
         }
         if let purchased {
             selectedTrainID = purchased
@@ -316,13 +330,16 @@ public final class GameSession {
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let tile = selection else {
-            message = StatusMessage(kind: .failure, text: "Select a track tile to place \(train.name) on.")
+            message = StatusMessage(kind: .failure, text: language.text("Select a track tile to place \(train.name) on.", "請選擇要放置 \(train.name) 的軌道格。"))
             return
         }
         let heading = placementHeading
         perform { world throws(GameError) in
             try world.placeTrain(train.id, at: .atNode(tile, heading: heading))
-            return "Placed \(train.name) at \(tile), facing \(heading.name.lowercased())."
+            return language.text(
+                "Placed \(train.name) at \(tile), facing \(heading.name(in: language).lowercased()).",
+                "已將 \(train.name) 放在 \(tile)，面向\(heading.name(in: language))。"
+            )
         }
     }
 
@@ -332,7 +349,8 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.setTrainCars(train.id, to: cars)
-            return "\(train.name) now has \(cars == 1 ? "1 car" : "\(cars) cars")."
+            let count = Train.carsText(cars, in: language)
+            return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。")
         }
     }
 
@@ -345,7 +363,7 @@ public final class GameSession {
         do throws(GameError) {
             try world.setTrainMovementRate(train.id, to: rate)
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage)
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
     }
 
@@ -373,11 +391,11 @@ public final class GameSession {
     public func sendSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let destination = selection else {
-            message = StatusMessage(kind: .failure, text: "Select the track tile to send \(train.name) to.")
+            message = StatusMessage(kind: .failure, text: language.text("Select the track tile to send \(train.name) to.", "請選擇 \(train.name) 要前往的軌道格。"))
             return
         }
         guard let position = train.position else {
-            message = StatusMessage(kind: .failure, text: GameError.trainNotPlaced(train.id).playerMessage)
+            message = StatusMessage(kind: .failure, text: GameError.trainNotPlaced(train.id).playerMessage(in: language))
             return
         }
         // A station is not track: the train goes to one of its platforms.
@@ -393,13 +411,17 @@ public final class GameSession {
             found = world.route(from: position, to: destination)
         }
         guard let route = found else {
-            let reason = station == nil
-                ? "it must be track the train can reach without turning back"
-                : "it needs track beside the station that the train can reach without turning back"
-            message = StatusMessage(
-                kind: .failure,
-                text: "No route for \(train.name) to \(station?.name ?? "\(destination)"): \(reason). Its path is unchanged."
-            )
+            let target = station?.name ?? "\(destination)"
+            let text = station == nil
+                ? language.text(
+                    "No route for \(train.name) to \(target): it must be track the train can reach without turning back. Its path is unchanged.",
+                    "\(train.name) 沒有路可以到 \(target)：目的地必須是列車不折返就能到達的軌道。路徑沒有改變。"
+                )
+                : language.text(
+                    "No route for \(train.name) to \(target): it needs track beside the station that the train can reach without turning back. Its path is unchanged.",
+                    "\(train.name) 沒有路可以到 \(target)：車站旁要有列車不折返就能到達的軌道。路徑沒有改變。"
+                )
+            message = StatusMessage(kind: .failure, text: text)
             return
         }
         // The route starts after this node: the one the train stands on, or
@@ -412,14 +434,19 @@ public final class GameSession {
         case .onEdge: return
         }
         // For a station, name it and the platform the route ends at.
-        let target = station.map { "\($0.name), platform \(route.last ?? start)" } ?? "\(destination)"
+        let target = station.map { language.text("\($0.name), platform \(route.last ?? start)", "\($0.name) 的月台 \(route.last ?? start)") }
+            ?? "\(destination)"
         perform { world throws(GameError) in
             try world.setTrainContinuation(train.id, to: route)
-            let links = route.count == 1 ? "1 link" : "\(route.count) links"
-            let sent = route.isEmpty
-                ? "\(train.name) stops at \(target)."
-                : "Sent \(train.name) to \(target), \(links) from \(start)."
-            return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
+            let sent: String
+            switch language {
+            case .english:
+                let links = route.count == 1 ? "1 link" : "\(route.count) links"
+                sent = route.isEmpty ? "\(train.name) stops at \(target)." : "Sent \(train.name) to \(target), \(links) from \(start)."
+            case .traditionalChinese:
+                sent = route.isEmpty ? "\(train.name) 停在 \(target)。" : "已派 \(train.name) 前往 \(target)，從 \(start) 起 \(route.count) 段連結。"
+            }
+            return train.movement.rate == 0 ? sent + language.text(" Set a rate to start.", "設定速率後出發。") : sent
         }
     }
 
@@ -429,23 +456,32 @@ public final class GameSession {
         guard let station else {
             message = StatusMessage(
                 kind: .failure,
-                text: "No route for \(train.name) to \(destination): a train on the track network goes only to a station. Its path is unchanged."
+                text: language.text(
+                    "No route for \(train.name) to \(destination): a train on the track network goes only to a station. Its path is unchanged.",
+                    "\(train.name) 沒有路可以到 \(destination)：路網上的列車只能前往車站。路徑沒有改變。"
+                )
             )
             return
         }
         guard let path = world.path(from: position, toStation: station.id, length: train.length) else {
             message = StatusMessage(
                 kind: .failure,
-                text: "No route for \(train.name) to \(station.name): it needs a platform on the track network as long as the train, that it can reach without turning back. Its path is unchanged."
+                text: language.text(
+                    "No route for \(train.name) to \(station.name): it needs a platform on the track network as long as the train, that it can reach without turning back. Its path is unchanged.",
+                    "\(train.name) 沒有路可以到 \(station.name)：路網上要有不短於列車、而且不折返就能到達的月台。路徑沒有改變。"
+                )
             )
             return
         }
         perform { world throws(GameError) in
             try world.setTrainContinuation(train.id, along: path.traversals, stoppingAt: path.end)
             let sent = path.distance == 0
-                ? "\(train.name) stops at \(station.name)."
-                : "Sent \(train.name) to \(station.name), \(path.distance) units along the track."
-            return train.movement.rate == 0 ? "\(sent) Set a rate to start." : sent
+                ? language.text("\(train.name) stops at \(station.name).", "\(train.name) 停在 \(station.name)。")
+                : language.text(
+                    "Sent \(train.name) to \(station.name), \(path.distance) units along the track.",
+                    "已派 \(train.name) 前往 \(station.name)，沿軌道 \(path.distance) 單位。"
+                )
+            return train.movement.rate == 0 ? sent + language.text(" Set a rate to start.", "設定速率後出發。") : sent
         }
     }
 
@@ -455,7 +491,7 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.reverseTrain(train.id)
-            return "Reversed \(train.name); its path was cleared."
+            return language.text("Reversed \(train.name); its path was cleared.", "\(train.name) 已反向，路徑已清除。")
         }
     }
 
@@ -465,18 +501,18 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.unplaceTrain(train.id)
-            return "Took \(train.name) off the track."
+            return language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")
         }
     }
 
     /// The selected train, or `nil` after reporting that there is none.
     private func requireSelectedTrain() -> Train? {
         guard let id = selectedTrainID else {
-            message = StatusMessage(kind: .failure, text: "Buy a train first.")
+            message = StatusMessage(kind: .failure, text: language.text("Buy a train first.", "請先購買列車。"))
             return nil
         }
         guard let train = world.train(id: id) else {
-            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(id).playerMessage)
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(id).playerMessage(in: language))
             return nil
         }
         return train
@@ -502,11 +538,20 @@ public final class GameSession {
     /// stops. Never changes the world.
     public func addSelectedStationToLineDraft() {
         guard let position = selection, let station = world.station(at: position) else {
-            message = StatusMessage(kind: .failure, text: "Select a station on the map to add it to the new line.")
+            message = StatusMessage(
+                kind: .failure,
+                text: language.text("Select a station on the map to add it to the new line.", "請在地圖上選擇車站，加到新路線。")
+            )
             return
         }
         guard lineDraft.last != station.id else {
-            message = StatusMessage(kind: .failure, text: "\(station.name) is already the last stop. A line cannot call at the same station twice in a row.")
+            message = StatusMessage(
+                kind: .failure,
+                text: language.text(
+                    "\(station.name) is already the last stop. A line cannot call at the same station twice in a row.",
+                    "\(station.name) 已經是最後一站。路線不能連續兩次停靠同一站。"
+                )
+            )
             return
         }
         lineDraft.append(station.id)
@@ -530,9 +575,12 @@ public final class GameSession {
         var created: LineID?
         let stops = lineDraft
         perform { world throws(GameError) in
-            let line = try world.createLine(named: Self.suggestedLineName(for: world), stops: stops)
+            let line = try world.createLine(named: Self.suggestedLineName(for: world, in: language), stops: stops)
             created = line.id
-            return "Created \(line.name) with \(stops.count) stops. Set how many trains it runs."
+            return language.text(
+                "Created \(line.name) with \(stops.count) stops. Set how many trains it runs.",
+                "已建立 \(line.name)，共 \(stops.count) 站。請設定上線列車數。"
+            )
         }
         if let created {
             selectedLineID = created
@@ -546,7 +594,7 @@ public final class GameSession {
         guard let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             try world.removeLine(line.id)
-            return "Removed \(line.name). Its trains finish the trip they are on."
+            return language.text("Removed \(line.name). Its trains finish the trip they are on.", "已刪除 \(line.name)。它的列車會跑完目前這一趟。")
         }
         selectedLineID = world.lines.first?.id
     }
@@ -556,7 +604,9 @@ public final class GameSession {
         guard let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             try world.setLineServiceWindow(line.id, to: allDay ? .allDay : .standard)
-            return "\(line.name) runs \(allDay ? "all day" : "from 06:00 to midnight")."
+            return allDay
+                ? language.text("\(line.name) runs all day.", "\(line.name) 全天營運。")
+                : language.text("\(line.name) runs from 06:00 to midnight.", "\(line.name) 從 06:00 營運到午夜。")
         }
     }
 
@@ -575,7 +625,10 @@ public final class GameSession {
         let changed = counts
         perform { world throws(GameError) in
             try world.setLineTrainsInService(line.id, to: changed, pattern: pattern)
-            return "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title.lowercased())."
+            return language.text(
+                "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title(in: language).lowercased()).",
+                "\(line.name)：\(level.title(in: language))上線 \(count) 列。"
+            )
         }
     }
 
@@ -593,8 +646,15 @@ public final class GameSession {
         let changed = targets
         perform { world throws(GameError) in
             try world.setLineTargetHeadways(line.id, to: changed, pattern: pattern)
-            let what = minutes.map { headwayText(minutes: $0).lowercased() } ?? "the train count"
-            return "\(line.name) at \(level.title.lowercased()): \(what)."
+            let levelName = level.title(in: language)
+            switch language {
+            case .english:
+                let what = minutes.map { headwayText(minutes: $0, in: language).lowercased() } ?? "the train count"
+                return "\(line.name) at \(levelName.lowercased()): \(what)."
+            case .traditionalChinese:
+                let what = minutes.map { headwayText(minutes: $0, in: language) } ?? "依上線列車數"
+                return "\(line.name)：\(levelName)\(what)。"
+            }
         }
     }
 
@@ -606,8 +666,11 @@ public final class GameSession {
         let calls = express ? [first, last] : (first <= last ? Array(first...last) : [first, last])
         perform { world throws(GameError) in
             let index = try world.addLinePattern(line.id, calling: calls)
-            let title = world.serviceTitle(of: world.line(id: line.id)!, calls: calls)
-            return "Added \(title) to \(line.name) as pattern \(index + 1)."
+            let title = world.serviceTitle(of: world.line(id: line.id)!, calls: calls, in: language)
+            return language.text(
+                "Added \(title) to \(line.name) as pattern \(index + 1).",
+                "已在 \(line.name) 加入\(title)（交路 \(index + 1)）。"
+            )
         }
     }
 
@@ -617,7 +680,7 @@ public final class GameSession {
         guard let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             try world.removeLinePattern(line.id, at: index)
-            return "Removed pattern \(index + 1) from \(line.name)."
+            return language.text("Removed pattern \(index + 1) from \(line.name).", "已從 \(line.name) 刪除交路 \(index + 1)。")
         }
     }
 
@@ -628,8 +691,11 @@ public final class GameSession {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             try world.assignTrain(train.id, to: line.id, pattern: pattern)
-            let service = world.assignedServiceName(of: train.id) ?? line.name
-            return "\(train.name) now runs for \(service). It leaves once it waits at the first stop."
+            let service = world.assignedServiceName(of: train.id, in: language) ?? line.name
+            return language.text(
+                "\(train.name) now runs for \(service). It leaves once it waits at the first stop.",
+                "\(train.name) 現在為 \(service) 服務。它在第一站等候後就會出發。"
+            )
         }
     }
 
@@ -638,7 +704,7 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.unassignTrain(train.id)
-            return "Took \(train.name) off its line. A trip under way is finished."
+            return language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
         }
     }
 
@@ -648,7 +714,7 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.startTrainService(train.id)
-            return "\(train.name) is running its timetable."
+            return language.text("\(train.name) is running its timetable.", "\(train.name) 開始依時刻表運行。")
         }
     }
 
@@ -658,14 +724,14 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.stopTrainService(train.id)
-            return "Stopped \(train.name)'s service. It stays where it is."
+            return language.text("Stopped \(train.name)'s service. It stays where it is.", "已停止 \(train.name) 的服務。它會停在原地。")
         }
     }
 
     /// The selected line, or `nil` after reporting that there is none.
     private func requireSelectedLine() -> ServiceLine? {
         guard let line = selectedLine else {
-            message = StatusMessage(kind: .failure, text: "Create or choose a line first.")
+            message = StatusMessage(kind: .failure, text: language.text("Create or choose a line first.", "請先建立或選擇一條路線。"))
             return nil
         }
         return line
@@ -687,7 +753,8 @@ public final class GameSession {
         case .buildTrack:
             perform { world throws(GameError) in
                 let track = try world.buildTrack(at: position, connections: trackConnections)
-                return "Built \(track.connections.shapeName.lowercased()) track at \(position)."
+                let shape = track.connections.shapeName(in: language)
+                return language.text("Built \(shape.lowercased()) track at \(position).", "已在 \(position) 鋪設\(shape)軌道。")
             }
         case .buildStation where growsStation:
             growStation(onto: position)
@@ -695,15 +762,15 @@ public final class GameSession {
             let built = perform { world throws(GameError) in
                 // The world allocates the station's ID.
                 let station = try world.buildStation(named: stationName, at: position)
-                return "Built station “\(station.name)” at \(position)."
+                return language.text("Built station “\(station.name)” at \(position).", "已在 \(position) 建造車站「\(station.name)」。")
             }
             if built {
-                stationName = Self.suggestedStationName(for: world)
+                stationName = Self.suggestedStationName(for: world, in: language)
             }
         case .removeTrack:
             perform { world throws(GameError) in
                 try world.removeTrack(at: position)
-                return "Removed track at \(position)."
+                return language.text("Removed track at \(position).", "已拆除 \(position) 的軌道。")
             }
         case .train:
             // The selected tile is where an unplaced train goes, or where a
@@ -723,12 +790,12 @@ public final class GameSession {
             station.tiles.contains { abs($0.x - position.x) + abs($0.y - position.y) == 1 }
         }
         guard let station = beside.min(by: { $0.id < $1.id }) else {
-            message = StatusMessage(kind: .failure, text: "There is no station beside \(position) to grow.")
+            message = StatusMessage(kind: .failure, text: language.text("There is no station beside \(position) to grow.", "\(position) 旁邊沒有可擴建的車站。"))
             return
         }
         perform { world throws(GameError) in
             try world.extendStation(station.id, to: position)
-            return "“\(station.name)” now covers \(station.tiles.count + 1) tiles."
+            return language.text("“\(station.name)” now covers \(station.tiles.count + 1) tiles.", "「\(station.name)」現在佔 \(station.tiles.count + 1) 格。")
         }
     }
 
@@ -744,42 +811,37 @@ public final class GameSession {
             message = StatusMessage(kind: .success, text: try command(&world))
             return true
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage)
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return false
         }
     }
 
-    /// "Station N" with the lowest N from the next station number upward
-    /// that no existing station uses.
-    private static func suggestedStationName(for world: GameWorld) -> String {
-        let names = Set(world.stations.map(\.name))
-        var number = world.stations.count + 1
-        while names.contains("Station \(number)") {
-            number += 1
-        }
-        return "Station \(number)"
+    /// "Station N" (or "車站 N") with the lowest N from the next station
+    /// number upward that no existing station uses.
+    private static func suggestedStationName(for world: GameWorld, in language: DisplayLanguage) -> String {
+        suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: Set(world.stations.map(\.name)))
     }
 
-    /// "Line N" with the lowest N from the next line number upward that no
-    /// existing line uses.
-    private static func suggestedLineName(for world: GameWorld) -> String {
-        let names = Set(world.lines.map(\.name))
-        var number = world.lines.count + 1
-        while names.contains("Line \(number)") {
-            number += 1
-        }
-        return "Line \(number)"
+    /// "Line N" (or "路線 N") with the lowest N from the next line number
+    /// upward that no existing line uses.
+    private static func suggestedLineName(for world: GameWorld, in language: DisplayLanguage) -> String {
+        suggestedName(language.text("Line", "路線"), from: world.lines.count + 1, taken: Set(world.lines.map(\.name)))
     }
 
-    /// "Train N" with the lowest N from the next train number upward that no
-    /// existing train uses.
-    private static func suggestedTrainName(for world: GameWorld) -> String {
-        let names = Set(world.trains.map(\.name))
-        var number = world.trains.count + 1
-        while names.contains("Train \(number)") {
+    /// "Train N" (or "列車 N") with the lowest N from the next train number
+    /// upward that no existing train uses.
+    private static func suggestedTrainName(for world: GameWorld, in language: DisplayLanguage) -> String {
+        suggestedName(language.text("Train", "列車"), from: world.trains.count + 1, taken: Set(world.trains.map(\.name)))
+    }
+
+    /// "`prefix` N" with the lowest N from `first` upward that is not in
+    /// `taken`.
+    private static func suggestedName(_ prefix: String, from first: Int, taken: Set<String>) -> String {
+        var number = first
+        while taken.contains("\(prefix) \(number)") {
             number += 1
         }
-        return "Train \(number)"
+        return "\(prefix) \(number)"
     }
 }
 

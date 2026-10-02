@@ -20,7 +20,7 @@
 
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
-- **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額）與地圖縮放換算。它只依賴 GameCore 與 Swift 標準函式庫的 `Observation`，不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
+- **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額；英文與繁體中文，決策 38）與地圖縮放換算。它只依賴 GameCore 與 Swift 標準函式庫的 `Observation`，不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
 - **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有唯一一個 `GameSession`，畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
 
 ### GameCore 內部的依賴方向（2026-09 決定）
@@ -128,7 +128,7 @@ GameCore 裡的經營層（Passenger、City、Economy）不得依賴鐵路的物
 `GameSession` 是 `@MainActor`、`@Observable` 的 class，`world` 為 `private(set)`，是 App 執行期間唯一一份 `GameWorld`。
 
 - SwiftUI 需要一個可觀察的 reference 擁有者；把這個責任放在 Presentation 層，GameCore 就能維持 value type、`Sendable`、不 import Observation。
-- 每個玩家動作都是 session 方法 → 對應的 `GameWorld` 指令。session 不預先檢查遊戲規則（空格、資金、名稱），由 GameCore 決定並丟出 `GameError`；session 只把結果轉成畫面訊息（`GameError.playerMessage`，定義在 GamePresentation）。失敗時世界保持不變（GameCore 的原子性保證）。
+- 每個玩家動作都是 session 方法 → 對應的 `GameWorld` 指令。session 不預先檢查遊戲規則（空格、資金、名稱），由 GameCore 決定並丟出 `GameError`；session 只把結果轉成畫面訊息（`GameError.playerMessage(in:)`，定義在 GamePresentation）。失敗時世界保持不變（GameCore 的原子性保證）。
 - session 另外只保存 UI 暫時狀態：選取的格子、目前工具、下一段鐵軌的方向、車站名稱草稿、選取的列車 ID、放置列車時的朝向、最後一則訊息。現金、時間、速度、地圖、車站、列車的位置與移動都直接從 `world` 讀取，不另存副本（列車見決策 17）。
 - 全部在 main actor 上執行，不需要鎖或 `@unchecked Sendable`。
 - 放在獨立的 SwiftPM target 而不是 App target，是為了讓 session 與其規則在 Linux 上以 `swift test` 驗證（App target 只能在 macOS CI 編譯）。
@@ -1863,7 +1863,7 @@ G1 的最後一步：乘客上車時付票價，線路的列車每次離站記�
 | `metroFareDemandPenaltyForFare`（相對 `METRO_FARE_DEMAND_BASELINE_USD = 0.75` 的比值的曲線） | `FareRules.demandFactor(fare:)`：每 0.05 一格、95 格的千分比表，線性內插 | 公式 faithful；GameCore 沒有 `exp`，事先算成表（機械換算），測試以 Foundation 逐格重算，誤差 ≤ 1.6‰ |
 | 需求乘上票價的影響 | `dailyDemand(from:)` 與乘客計畫：每對 `(trips × factor + 500) ÷ 1000` | faithful；只在經營模式而且玩家設定過票價時（第 6 點） |
 | `metroEconomyMoneyText`：`"$ " + Math.round(dollars)` 加千分位 | `GamePresentation` 的 `Money.moneyText` | faithful |
-| 經濟明細的分類標籤（`economy.ledger.*`、`economy.group.*`，只有 zh-CN） | `LedgerItem.displayName`、`LedgerEntry.Kind.displayName`（英文） | 翻譯 |
+| 經濟明細的分類標籤（`economy.ledger.*`、`economy.group.*`，只有 zh-CN） | `LedgerItem.displayName(in:)`、`LedgerEntry.Kind.displayName(in:)`（英文；繁體中文照參考轉換，決策 38） | 翻譯 |
 
 **1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）：一般四捨五入到整美元（`moneyText`），票價與「餘額不足」的訊息精確到美分（`centsText`），以免顯示成「需要 $ 10、只有 $ 10」。
 
@@ -1956,6 +1956,27 @@ W2 要接上真實車速與以秒計的停站（ROADMAP 的 Stage W；[對照文
   - 早到與誤點仍以整分鐘顯示，向下取整，不到一分鐘算準點。
   - App 的新遊戲仍以 `normal`（600 倍）開始，經營的節奏不變；確切的檔位之後在實機上調整。
 - **不做**：停站狀態機、依乘客人數的停站時間、實際的到達與出發時刻、誤點存檔（W2b）；行駛曲線接到移動（W2c）；畫面在一秒之內的插值。
+
+### 38. 繁體中文與英文（Stage L1）
+
+第二版內部 TestFlight（0.2.0）之前，App 加上繁體中文（台灣用語）。英文保留為來源語言，跟著系統語言切換。只換畫面文字，不改任何規則或存檔。
+
+- **語言從哪裡來**：iOS 在啟動時依使用者的語言設定，從 App 有的語系（`en`、`zh-Hant`）選一個；App 讀 `Bundle.main.preferredLocalizations.first`，換成 `DisplayLanguage` 交給 `GameSession`。String Catalog 用的也是同一個語系，所以兩邊的文字一致。使用者在設定改語言時 iOS 會重新啟動 App，所以 `GameSession.language` 是 `let`。
+- **GamePresentation（Linux 上測試）**：
+  - `DisplayLanguage`（`english`、`traditionalChinese`）；`init(localization:)` 把任何 `zh` 開頭的識別碼對到繁體中文，其他都是英文。
+  - 每個產生文字的函式都明確接收語言（`playerMessage(in:)`、`tileSummary(at:in:)`、`displayText(in:)` 等），沒有全域狀態，文字仍是世界與語言的純函數，兩種語言都在 Linux 上測試。
+  - 新增 `waitingSummary(at:in:)`、`levelSettingText`、`targetHeadwayText`：原本由 App 拼字的地方移進來，App 不再組合文字。
+  - `GameSession(world:language:)` 的語言預設英文（測試用）；App 一律明確傳入。建議的名稱（`車站 1`、`路線 1`、`列車 1`）是存進世界的玩家資料，之後換語言不會改名。
+- **App（Xcode）**：
+  - `RailwayGameApp/Resources/Localizable.xcstrings`（String Catalog，來源英文，加上 `zh-Hant`）：SwiftUI 的字面字串（`Text`、`Button`、`Label`、`Section`、無障礙標籤等）自動查表。
+  - App 自己算出的字串用 `String(localized:)`；只有格式、沒有文字的字串用 `Text(verbatim:)`，不進表。
+  - XcodeGen 2.46.0 從 String Catalog 讀出語系，寫進專案的 `knownRegions`；`project.yml` 只改了版本號（0.2.0）。
+- **用語的來源**，依序：
+  1. `Railway/site_archive_clean/` 的繁體中文（作者的台灣鐵道網站）：準點、誤點 {n} 分、早到 {n} 分、尖峰、離峰、已收班、班距、月台、停靠、發車、到站、終點站、時刻表、區間車、普通車、快車、倍速、暫停。
+  2. 參考 `Ci/` 的簡體中文介面（`ui-locales/zh-CN`），轉成繁體與台灣用語：經濟明細、經濟流水、小時淨額、能源費用（日結）、員工費用（日結）、票價收入、營運成本、維護成本、線路供電與牽引用電、列車日用電、車站員工、司機與調度員工、本期、上期、固定票價、階梯票價、票價規則、餘額不足、交路、上線列車數、開班、收班、候車、載客、第 N 日。`Ci/` 的高峰／平峰、站台、运营、快速列车、普通列车、发车间隔，改用上面台灣網站的說法（尖峰／離峰、月台、營運、快車、普通車、班距）。
+  3. 兩者都沒有的（gap，自訂）：交通控制、進路、軌段、道岔的共用端、平面交叉，以及所有錯誤訊息與建設、列車操作的說明。
+- **不翻譯**：GameCore（沒有介面文字）；金額（兩種語言都是 `$ 1,234`，與參考相同）、時鐘、座標、倍速（`600×`）；玩家取的名稱；Debug 的示範配置；App 的顯示名稱「Railway Game」（由作者決定中文名稱）。
+- **驗證**：GamePresentation 的中文由 Linux 測試逐字固定；String Catalog 的鍵由腳本從 App 原始碼的字面字串抽出，每個鍵都有翻譯。Xcode 編譯 String Catalog 與實機上的中文排版要靠 CI 的 iOS 建置與 TestFlight。
 
 ## 目前規則摘要
 
