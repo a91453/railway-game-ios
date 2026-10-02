@@ -2097,6 +2097,29 @@ S3–S5 讓 GameCore 有了任意角度的路網、高程、結構物與路網�
 - 側向淨空（平行的軌道太近時拒絕）是新的 GameCore 規則，不在 C1。
 - VoiceOver 無法在路網工具裡指定任意位置。
 
+### 42. 性能的畫面（Stage C3）
+
+W2c（決策 40）讓每台列車與每條線路都有自己的 `TrainPerformance`，預設 `standard`，由 `setTrainPerformance`、`setLinePerformance` 更換，但留下「選性能的畫面」。W2c 合併之後，作者要求一起做，所以 C3 排在 C2 之前。**GameCore 沒有修改**。
+
+參考（2026-10-02 檢查三份，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c3性能的畫面)）：
+
+- `Railway/site_archive_clean/index.html` 的 `PERF_*`、`PERF_RULES`、`PERF_BY_TYPE`：依真實車名選性能。數值在 W1 已移植成 `TrainPerformance` 的預設；畫面以參考配對的車名命名每個預設。
+- `Ci/reference_snapshot/` 的建線畫面（`game-dom` 的 `#modal-line`）：「設計時速」（`metro.line.design_speed`），選項是 `LINE_SPEED_MAIN_NON_SG`（80、100、120、160）與其他（`LINE_SPEED_EXTRA_NON_SG`），合起來是 `LINE_SPEED_ALL_NON_SG`；車型（`TRAIN_TYPES`）只決定每節的容量。
+- `Railway/railway_game_reference_clean/`：OpenTTD 的 `BuildVehicleWindow` 只有名稱，沒有可以移植的內容。
+
+**GamePresentation**（Linux 上測試）：
+
+- `PerformancePreset`：GameCore 的 14 個預設，依參考的規則命名（區間車、普通車、莒光／復興、自強、EMU3000、推拉式自強、太魯閣、普悠瑪、柴聯自強、DR1000、阿里山林鐵、高鐵），加上標準與捷運（`Ci/` 的地鐵列車）。`init?(matching:)` 找加減速與惰行相同的第一個預設（不看最高速度，因為設計時速只改它）；DR1000 與柴聯自強的數值相同，顯示為先列出的柴聯自強。
+- `PerformancePreset.designSpeeds`：`Ci/` 的 `LINE_SPEED_ALL_NON_SG`，60 到 200 km/h。`TrainPerformance.withTopSpeed(_:)` 只換最高速度。
+- 文字：`displayText(in:)`（「區間車 · 120 km/h · 2.5 / 3 km/h/s」，對不上預設時是「自訂」）、`durationText(seconds:in:)`、線路的 `lineJourneyText(_:in:)`（以線路的性能規劃的各段與來回）、列車的 `trainRunText(of:in:)`（`ServiceTimes.run`：秒數、距離、預計到達）。
+- `GameSession.setSelectedTrainPerformance(_:)`、`setSelectedLinePerformance(_:)`：各呼叫一個 `GameWorld` 指令；行駛中的列車被拒絕（`trainServiceActive`），不合法的性能被拒絕（`invalidTrainPerformance`），世界不變。
+
+**App**：`PerformanceMenu`（現在的性能與一個選單：車種、設計時速），放在列車工具與線路面板；線路面板另外顯示各段與來回的時間，列車工具顯示正在走的行駛。
+
+**驗證**：`PerformanceSessionTests` 以手算的值比對：兩個連結在標準性能是 16 秒、在 1 km/h 是 120 秒（W2c 的手算值），來回加上 480 秒的停站；派車後 08:00:42 出發、08:02:42 到。
+
+**留給之後**：自訂加速度與減速度、依車種的容量（`Ci/` 的 `TRAIN_TYPES`）、指派列車時沿用線路的性能。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。

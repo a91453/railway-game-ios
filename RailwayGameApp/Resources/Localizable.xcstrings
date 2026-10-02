@@ -251,6 +251,16 @@
         }
       }
     },
+    "Chooses how it accelerates, brakes and how fast it may run." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇加速、減速與最高速度。"
+          }
+        }
+      }
+    },
     "Chooses the train to control." : {
       "localizations" : {
         "zh-Hant" : {
@@ -277,6 +287,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立路線"
+          }
+        }
+      }
+    },
+    "Design speed" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設計時速"
           }
         }
       }
@@ -711,6 +731,16 @@
         }
       }
     },
+    "Performance: %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "性能：%@"
+          }
+        }
+      }
+    },
     "Period" : {
       "localizations" : {
         "zh-Hant" : {
@@ -747,6 +777,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "月台所屬車站"
+          }
+        }
+      }
+    },
+    "Preset" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車種"
           }
         }
       }

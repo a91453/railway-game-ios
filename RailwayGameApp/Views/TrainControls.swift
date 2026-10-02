@@ -3,8 +3,9 @@ import GamePresentation
 import SwiftUI
 
 /// The train tool's options: which train, where GameCore has it, the path
-/// it has left and the station it is stopped at, its rate, and the train
-/// commands that need no tile.
+/// it has left and the station it is stopped at, the run it follows and
+/// its performance (Stage C3), its rate, and the train commands that need
+/// no tile.
 ///
 /// Everything shown is read from `session.world` each time the view is
 /// drawn, and every control calls a `GameSession` method that applies one
@@ -25,6 +26,10 @@ struct TrainControls: View {
             header
             if let train = session.selectedTrain {
                 status(of: train)
+                // Stage C3: how it runs between calls (Stage W2c).
+                PerformanceMenu(performance: train.performance, language: session.language) { performance in
+                    session.setSelectedTrainPerformance(performance)
+                }
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
                         Text(train.carsText(in: session.language))
@@ -104,6 +109,13 @@ struct TrainControls: View {
             }
             if let service = session.world.trainServiceStatus(of: train.id, in: language) {
                 serviceStatus(service)
+            }
+            // Stage W2c: the running curve it follows to the next call.
+            if let run = session.world.trainRunText(of: train.id, in: language) {
+                Label(run, systemImage: "speedometer")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
             // Under traffic control: which train holds the route it waits for.
             if let wait = session.world.routeWaitText(of: train.id, in: language) {

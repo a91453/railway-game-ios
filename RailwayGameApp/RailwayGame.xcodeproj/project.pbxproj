@@ -16,6 +16,7 @@
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
 		72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC137C507F9A22C91174E71 /* NetworkOverview.swift */; };
+		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
 		80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
 		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
@@ -47,6 +48,7 @@
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
 		C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLayout.swift; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileArt.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +95,7 @@
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
+				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
 				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
 				60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
@@ -217,6 +220,7 @@
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
+				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
 				AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */,

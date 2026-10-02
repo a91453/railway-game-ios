@@ -207,6 +207,19 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `MIN_STATION_DISTANCE_M = 400`、`MIN_CURVE_RADIUS_M`（`DEFAULT_BUILD_LIMIT_SETTINGS` 預設關閉） | 最小站距、最小半徑 | 不做 | — | 不移植：參考預設關閉 |
 | 沒有參考 | 高度、結構物、豎曲線、把列車放到路網的月台 | `networkHeight`、`networkStructure`、`networkEasesGrade`、`place(_:atPlatformOf:)` | 公尺 × 64 | **gap**：`Ci` 的地鐵沒有高度；GameCore 的 S4、S5 規則已經有，畫面是自訂的 |
 
+### Stage C3：性能的畫面
+
+2026-10-02 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 42。GameCore 沒有修改。
+
+| 參考 | 行為 | Swift（C3） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway/` `index.html` `PERF_RULES`（`/區間/`、`/自強/`、`/\(太/`、`/\(普/`、`/\(PP/`、`/\(3000\|110[KM]/`、`/\(D\d/`、`/普快車\|普通車/`、`/莒光\|復興/`、`/阿里山號…/`）、`PERF_BY_TYPE`、`PERF_HSR`、`PERF_DR1000`、`PERF_DEFAULT` | 依車名選性能 | `PerformancePreset`（以這些車名命名 GameCore 的預設）、`PerformanceMenu` | 千分之一 km/h/s（W1 已換算） | 數值 faithful；選擇方式改成玩家從選單選（遊戲的列車沒有車名，gap 4 的決定） |
+| `Ci/` `game-dom__q_f4c03f23b8518a04.html` `#modal-line` 的 `line-speed-row-wrap`（`metro.line.design_speed`「设计时速」）；`app__q_c234188b7c397f91.js` `LINE_SPEED_MAIN_NON_SG = [80,100,120,160]`、`LINE_SPEED_ALL_NON_SG = [60,80,90,100,120,140,150,160,180,200]` | 建線時選設計時速 | `PerformancePreset.designSpeeds`、`TrainPerformance.withTopSpeed(_:)`；列車與線路都可以選 | km/h | faithful（選項）；`Ci/` 依城市換一組選項（`LINE_SPEED_HK` 等），這裡用非新加坡的全部選項 |
+| `Ci/` `TRAIN_TYPES`（A 型 310 人／節、B 型 260、C 型 200 等）、`#modal-line` 的車型與編組 | 選車型決定容量 | 不做 | — | 延後：GameCore 的容量是固定的每節 352 人（決策 35） |
+| `Ci/` `METRO_TRAIN_ACCEL_MPS2`、`METRO_TRAIN_DECEL_MPS2` | 地鐵列車的加減速 | `PerformancePreset.metro`（W2c 的 `TrainPerformance.metro`） | m/s² → 千分之一 km/h/s | faithful |
+| 參考包 `BuildVehicleWindow`（只有符號） | 車輛的選購畫面 | 沒有可以移植的內容 | — | — |
+| 沒有參考 | 線路各段與來回的時間、列車正在走的行駛 | `lineJourneyText(_:in:)`、`trainRunText(of:in:)` | 秒 | **gap**：顯示 W2c 的推導，讓實機上看得到 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -322,7 +335,7 @@ V 實際放行 → T、U（保證不互穿）
 3. **W2a** ✅（ARCHITECTURE 決策 37）：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
-6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)）。見 ROADMAP 的 Stage C。
+6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
 7. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 8. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
