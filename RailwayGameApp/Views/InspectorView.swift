@@ -2,9 +2,10 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Shows the selected tile's coordinates and contents, read from the world;
-/// with the network tool (Stage C1), what its taps have picked instead. On
-/// a station, a button opens its ridership (Stage C2).
+/// Shows the selected station, read from the world (Stage F1; see
+/// `GameSession.selectionText()`); with the network tool (Stage C1), what
+/// its taps have picked instead. On a station, a button opens its
+/// ridership (Stage C2).
 struct InspectorView: View {
     let session: GameSession
     @State private var showsStation = false
@@ -36,26 +37,23 @@ struct InspectorView: View {
             .font(.subheadline)
             .accessibilityElement(children: .combine)
         } else {
-            tileInspector
+            selectionInspector
         }
     }
 
-    private var tileInspector: some View {
+    private var selectionInspector: some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "scope")
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
-                if let position = session.selection {
-                    Text(verbatim: "x \(position.x), y \(position.y)")
-                        .monospacedDigit()
-                        .fontWeight(.semibold)
-                    Text(summary(at: position))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                if let text = session.selectionText() {
+                    Text(verbatim: text)
+                        .lineLimit(2)
                         .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text("Tap a tile to select it.")
+                    Text("Tap a station to select it.")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -75,15 +73,5 @@ struct InspectorView: View {
             }
         }
         .font(.subheadline)
-    }
-
-    /// The tile's contents and, at a station, who waits there by line and
-    /// direction (G1c).
-    private func summary(at position: GridPosition) -> String {
-        let text = session.world.tileSummary(at: position, in: session.language)
-        guard case .station(let id)? = session.world.map.tile(at: position)?.type,
-              let waiting = session.world.waitingSummary(at: id, in: session.language)
-        else { return text }
-        return "\(text) · \(waiting)"
     }
 }

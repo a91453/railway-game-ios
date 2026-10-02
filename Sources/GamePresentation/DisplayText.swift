@@ -82,12 +82,37 @@ extension GameWorld {
 }
 
 extension GameWorld {
-    private func stationSummary(_ id: StationID, in language: DisplayLanguage) -> String {
+    /// What station `id` is: "Station · Central", with its tiles when it
+    /// takes several, "Station · Central · 2 tiles", and its platforms on
+    /// the track network once it has any (Stage F1: their number and length
+    /// tell its size), "Station · Central · 2 platforms, 128 m".
+    public func stationSummary(_ id: StationID, in language: DisplayLanguage) -> String {
         let label = language.text("Station", "車站")
         guard let station = station(id: id) else { return "\(label) · #\(id.rawValue)" }
+        var parts = [label, station.name]
         let tiles = station.tiles.count
-        guard tiles > 1 else { return "\(label) · \(station.name)" }
-        return "\(label) · \(station.name) · " + language.text("\(tiles) tiles", "\(tiles) 格")
+        if tiles > 1 {
+            parts.append(language.text("\(tiles) tiles", "\(tiles) 格"))
+        }
+        let platforms = trackPlatforms(of: id)
+        if !platforms.isEmpty {
+            let length = NetworkBuilding.lengthText(platforms.reduce(0) { $0 + $1.length }, in: language)
+            parts.append(language.text(
+                platforms.count == 1 ? "1 platform, \(length)" : "\(platforms.count) platforms, \(length)",
+                "\(platforms.count) 座月台，共 \(length)"
+            ))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+extension Station {
+    /// Where the station stands, for lists: its tile, "x 3, y 4", or, at a
+    /// point (Stage F1), the point in metres east and south of the map's
+    /// north-west corner, "x 41 m, y 17 m".
+    public func placeText(in language: DisplayLanguage) -> String {
+        guard let point else { return "x \(position.x), y \(position.y)" }
+        return "x \(NetworkBuilding.lengthText(point.x, in: language)), y \(NetworkBuilding.lengthText(point.y, in: language))"
     }
 }
 
@@ -522,5 +547,22 @@ extension GameSpeed {
         case .normal: language.text("600 times real time", "真實時間的 600 倍")
         case .double: language.text("1200 times real time", "真實時間的 1200 倍")
         }
+    }
+}
+
+extension GameSession {
+    /// What the inspector shows about the selection (Stage F1): the
+    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and who
+    /// waits there by line and direction (G1c); or, on the grid (the
+    /// compatibility layer), a selected tile with track, "x 3, y 4 · Track
+    /// · E–W". `nil` when neither is selected.
+    public func selectionText() -> String? {
+        if let station = selectedStation {
+            let summary = world.stationSummary(station.id, in: language)
+            guard let waiting = world.waitingSummary(at: station.id, in: language) else { return summary }
+            return "\(summary) · \(waiting)"
+        }
+        guard let position = selection, world.track(at: position) != nil else { return nil }
+        return "x \(position.x), y \(position.y) · \(world.tileSummary(at: position, in: language))"
     }
 }

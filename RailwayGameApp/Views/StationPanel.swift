@@ -53,12 +53,12 @@ struct StationPanel: View {
         }
     }
 
-    /// Chooses another station by selecting its tile.
+    /// Chooses another station.
     private var stationMenu: some View {
         Menu {
             ForEach(session.world.stations) { station in
                 Button(station.name) {
-                    session.select(station.position)
+                    session.selectStation(station.id)
                 }
             }
         } label: {

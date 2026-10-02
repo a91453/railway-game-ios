@@ -26,6 +26,7 @@ struct MapView: View {
                     world: session.world,
                     selectedTrainID: session.selectedTrainID,
                     selection: session.selection,
+                    selectedStationID: session.selectedStation?.id,
                     network: session.networkOverlay,
                     tileSize: tileSize,
                     session: session
@@ -50,9 +51,7 @@ struct MapView: View {
     }
 
     private var selectionDescription: String {
-        guard let position = session.selection else { return String(localized: "No tile selected") }
-        let summary = session.world.tileSummary(at: position, in: session.language)
-        return String(localized: "Tile x \(position.x), y \(position.y), \(summary)")
+        session.selectionText() ?? String(localized: "Nothing selected")
     }
 
     private func zoomControls(tileSize: Double, fitting: Double) -> some View {
@@ -83,18 +82,20 @@ struct MapView: View {
     }
 }
 
-/// Draws the whole map, the track network and the placed trains in one
-/// `Canvas` and turns taps into grid positions, or, with the network tool
-/// (Stage C1), into world points with the reach of a fingertip.
+/// Draws the whole map, the track network, the stations and the placed
+/// trains in one `Canvas` and turns taps into world points with the reach
+/// of a fingertip: for the network tool (Stage C1), or to select a station
+/// (Stage F1).
 ///
 /// Equatable so that game ticks that change only the world's clock do not
-/// redraw it (only the map, the track network and the trains are drawn); a
-/// tick that moves a train does, and the train is drawn where GameCore now
-/// has it.
+/// redraw it (only the map, the track network, the stations and the
+/// trains are drawn); a tick that moves a train does, and the train is
+/// drawn where GameCore now has it.
 private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
     let selection: GridPosition?
+    let selectedStationID: StationID?
     /// What the network tool draws; `nil` with another tool.
     let network: NetworkOverlay?
     let tileSize: Double
@@ -102,10 +103,12 @@ private struct MapCanvas: View, Equatable {
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.map == rhs.world.map
+            && lhs.world.stations == rhs.world.stations
             && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
             && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.selection == rhs.selection
+            && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
             && lhs.tileSize == rhs.tileSize
             && lhs.session === rhs.session
@@ -113,13 +116,14 @@ private struct MapCanvas: View, Equatable {
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selection = selection, network = network, tileSize = tileSize
+        let selection = selection, selectedStationID = selectedStationID, network = network, tileSize = tileSize
         Canvas { context, _ in
             TileArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
-                // The network tool picks points, not tiles.
+                // The network tool picks points on the track, not stations.
                 selection: network == nil ? selection : nil,
+                selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
                 tileSize: tileSize,
                 in: context
@@ -128,13 +132,12 @@ private struct MapCanvas: View, Equatable {
         .frame(width: tileSize * Double(world.map.width), height: tileSize * Double(world.map.height))
         .contentShape(Rectangle())
         .onTapGesture { location in
+            let point = MapScale.worldPoint(atX: location.x, y: location.y, tileSize: tileSize)
+            let reach = MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: tileSize)
             if session.tool == .network {
-                session.tapNetwork(
-                    at: MapScale.worldPoint(atX: location.x, y: location.y, tileSize: tileSize),
-                    reach: MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: tileSize)
-                )
+                session.tapNetwork(at: point, reach: reach)
             } else {
-                session.select(MapScale.position(atX: location.x, y: location.y, tileSize: tileSize))
+                session.tapMap(at: point, reach: reach)
             }
         }
     }

@@ -1,22 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ connection" : {
+    "%@ station, %@" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@側連接"
-          }
-        }
-      }
-    },
-    "%@ station, x %lld, y %lld" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 車站，x %lld，y %lld"
+            "value" : "%@ 車站，%@"
           }
         }
       }
@@ -201,16 +191,6 @@
         }
       }
     },
-    "Build Station · %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建造車站 · %@"
-          }
-        }
-      }
-    },
     "Build Track" : {
       "localizations" : {
         "zh-Hant" : {
@@ -227,36 +207,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "鋪設軌道 · %@"
-          }
-        }
-      }
-    },
-    "Build a station · %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建造車站 · %@"
-          }
-        }
-      }
-    },
-    "Build station tool" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建站工具"
-          }
-        }
-      }
-    },
-    "Build track tool" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "鋪軌工具"
           }
         }
       }
@@ -321,12 +271,12 @@
         }
       }
     },
-    "Choose Track, Station, Remove or Network to build. Selecting only inspects." : {
+    "Choose Network to build track, platforms and stations. Selecting only inspects." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇「軌道」、「車站」、「拆除」或「路網」來建設。「選取」只會檢視。"
+            "value" : "選擇「路網」來鋪設軌道、設置月台與車站。「選取」只會檢視。"
           }
         }
       }
@@ -347,16 +297,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇車站服務的地區類型。沒有客流的車站不會產生旅次，也不會吸引旅次。"
-          }
-        }
-      }
-    },
-    "Chooses a plain piece, a turnout and the exit that joins the others, or a level crossing." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇一般軌道、道岔與連接其他出口的共用端，或平面交叉。"
           }
         }
       }
@@ -641,26 +581,6 @@
         }
       }
     },
-    "Grow Station · %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "擴建車站 · %@"
-          }
-        }
-      }
-    },
-    "Grow a station" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "擴建車站"
-          }
-        }
-      }
-    },
     "Half an hour later or earlier, between the bands around it." : {
       "localizations" : {
         "zh-Hant" : {
@@ -681,12 +601,12 @@
         }
       }
     },
-    "Inspect a tile" : {
+    "Inspect stations and track" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "檢視一格"
+            "value" : "檢視車站與軌道"
           }
         }
       }
@@ -707,16 +627,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "過去一小時流水"
-          }
-        }
-      }
-    },
-    "Lay a track piece · %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "鋪設一格軌道 · %@"
           }
         }
       }
@@ -871,22 +781,12 @@
         }
       }
     },
-    "No stations yet. Choose Station, select an empty tile and build one." : {
+    "No stations yet. Choose Network, then Platform, and tap the track to build one." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還沒有車站。選擇「車站」，再選一格空地來建造。"
-          }
-        }
-      }
-    },
-    "No tile selected" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有選取格子"
+            "value" : "還沒有車站。選擇「路網」再選「月台」，點選軌道就能建造。"
           }
         }
       }
@@ -911,12 +811,12 @@
         }
       }
     },
-    "No train yet. Buy one, then select a track tile to place it." : {
+    "No train yet. Buy one, then select a station to place it." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還沒有列車。先購買一列，再選擇一格軌道放置。"
+            "value" : "還沒有列車。請先購買一列，再選擇要放置它的車站。"
           }
         }
       }
@@ -931,6 +831,16 @@
         }
       }
     },
+    "Nothing selected" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未選取"
+          }
+        }
+      }
+    },
     "Nothing settled in the last hour." : {
       "localizations" : {
         "zh-Hant" : {
@@ -941,32 +851,12 @@
         }
       }
     },
-    "Off" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "關"
-          }
-        }
-      }
-    },
     "Off Line" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "離開路線"
-          }
-        }
-      }
-    },
-    "On" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開"
           }
         }
       }
@@ -1071,26 +961,6 @@
         }
       }
     },
-    "Piece" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "軌道種類"
-          }
-        }
-      }
-    },
-    "Piece: %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "軌道種類：%@"
-          }
-        }
-      }
-    },
     "Place %@ Here" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1127,16 +997,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "車種"
-          }
-        }
-      }
-    },
-    "Preview: %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "預覽：%@"
           }
         }
       }
@@ -1231,36 +1091,6 @@
         }
       }
     },
-    "Remove track tool" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拆軌工具"
-          }
-        }
-      }
-    },
-    "Remove track · free, no refund" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拆除軌道 · 免費，不退款"
-          }
-        }
-      }
-    },
-    "Removing track is free, but its cost is not refunded." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拆除軌道免費，但建造費用不會退還。"
-          }
-        }
-      }
-    },
     "Repeats" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1307,26 +1137,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "客流"
-          }
-        }
-      }
-    },
-    "Rotate" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "旋轉"
-          }
-        }
-      }
-    },
-    "Rotate piece clockwise" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "順時針旋轉軌道"
           }
         }
       }
@@ -1391,6 +1201,16 @@
         }
       }
     },
+    "Select a station on the map first." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在地圖上選擇車站。"
+          }
+        }
+      }
+    },
     "Select a station on the map, or choose one above." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1407,26 +1227,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在地圖上選擇車站，再加到這裡。依序加入兩站以上。"
-          }
-        }
-      }
-    },
-    "Select a tile on the map first." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請先在地圖上選擇一格。"
-          }
-        }
-      }
-    },
-    "Select an empty tile beside a station: it grows onto it, and track beside the new tile becomes platform." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇車站旁的一格空地：車站會擴建到那一格，新格子旁的軌道會成為月台。"
           }
         }
       }
@@ -1481,12 +1281,12 @@
         }
       }
     },
-    "Selects its tile on the map." : {
+    "Selects it on the map." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在地圖上選取它的格子。"
+            "value" : "在地圖上選取它。"
           }
         }
       }
@@ -1661,16 +1461,6 @@
         }
       }
     },
-    "Stem" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共用端"
-          }
-        }
-      }
-    },
     "Steps through 100, 200, 500, 1,000 and so on, up to 1,000,000 a day." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1761,12 +1551,12 @@
         }
       }
     },
-    "Tap a tile to select it." : {
+    "Tap a station to select it." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點一下格子來選取。"
+            "value" : "點選車站即可選取。"
           }
         }
       }
@@ -1811,16 +1601,6 @@
         }
       }
     },
-    "Tile x %lld, y %lld, %@" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "格子 x %lld，y %lld，%@"
-          }
-        }
-      }
-    },
     "Timetable" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1841,22 +1621,22 @@
         }
       }
     },
-    "Track at any angle, platforms · %@ a tile" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "任意角度的軌道與月台 · 每格 %@"
-          }
-        }
-      }
-    },
     "Track network tool" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "路網工具"
+          }
+        }
+      }
+    },
+    "Track, platforms and stations · %@ per 16 m" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軌道、月台與車站 · 每 16 公尺 %@"
           }
         }
       }

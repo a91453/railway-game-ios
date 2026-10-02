@@ -135,7 +135,7 @@ final class LocalizationTests: XCTestCase {
 
             session.selectTool(.train)
             session.purchaseTrain()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇一格軌道放置它。"))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇要放置它的車站。"))
             session.select(GridPosition(x: 1, y: 1))
             session.applyTool()
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已將 列車 1 放在 (1, 1)，面向東。"))

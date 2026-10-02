@@ -2,7 +2,7 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Tool picker, selected-tile inspector, tool options and the action button.
+/// Tool picker, selection inspector, tool options and the action button.
 struct ControlPanel: View {
     enum Arrangement {
         /// Everything in one column (phones, and the sidebar on wide screens).
@@ -21,7 +21,7 @@ struct ControlPanel: View {
                 ToolPicker(session: session)
                 InspectorView(session: session)
                 ToolOptions(session: session)
-                    .frame(minHeight: TrackPieceEditor.height, alignment: .topLeading)
+                    .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
                 ActionButton(session: session)
             }
         case .sideBySide:
@@ -35,7 +35,7 @@ struct ControlPanel: View {
                 Divider()
                 VStack(alignment: .leading, spacing: 16) {
                     ToolOptions(session: session)
-                        .frame(minHeight: TrackPieceEditor.height, alignment: .topLeading)
+                        .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
                     Divider()
                     NetworkOverview(session: session)
                 }
@@ -45,9 +45,10 @@ struct ControlPanel: View {
     }
 }
 
-/// One button per construction tool: a row of compact buttons, or a list
-/// with what each tool costs where there is room. The active tool is filled,
-/// the others outlined, so the state does not depend on colour alone.
+/// One button per tool the app offers (Stage F1: the track network only),
+/// a row of compact buttons, or a list with what each tool costs where
+/// there is room. The active tool is filled, the others outlined, so the
+/// state does not depend on colour alone.
 private struct ToolPicker: View {
     let session: GameSession
     var showsDetails = false
@@ -57,7 +58,7 @@ private struct ToolPicker: View {
             ? AnyLayout(VStackLayout(spacing: 6))
             : AnyLayout(HStackLayout(spacing: 8))
         layout {
-            ForEach(ConstructionTool.allCases, id: \.self) { tool in
+            ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
                 Button {
                     session.selectTool(tool)
@@ -108,56 +109,31 @@ private struct ToolPicker: View {
     private func detail(for tool: ConstructionTool) -> String {
         let costs = session.world.economy.costs
         switch tool {
-        case .select: return String(localized: "Inspect a tile")
-        case .buildTrack: return String(localized: "Lay a track piece · \(costs.track.moneyText)")
-        case .buildStation: return String(localized: "Build a station · \(costs.station.moneyText)")
-        case .removeTrack: return String(localized: "Remove track · free, no refund")
-        case .network: return String(localized: "Track at any angle, platforms · \(costs.track.moneyText) a tile")
+        case .select: return String(localized: "Inspect stations and track")
+        // The grid's tools are not offered (Stage F1).
+        case .buildTrack, .buildStation, .removeTrack: return ""
+        case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
         case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
         }
     }
 }
 
-/// What the active tool needs besides a tile.
+/// What the active tool needs besides a tap on the map.
 private struct ToolOptions: View {
+    /// Keeps the panel from jumping in height between tools.
+    static let minimumHeight = 116.0
+
     @Bindable var session: GameSession
 
     var body: some View {
         switch session.tool {
         case .select:
-            VStack(alignment: .leading, spacing: 6) {
-                Label("Choose Track, Station, Remove or Network to build. Selecting only inspects.", systemImage: "info.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                TrackInfo(session: session)
-            }
-        case .buildTrack:
-            TrackPieceEditor(session: session)
-        case .buildStation:
-            VStack(alignment: .leading, spacing: 6) {
-                Picker("Station", selection: $session.growsStation) {
-                    Text("New station").tag(false)
-                    Text("Grow a station").tag(true)
-                }
-                .pickerStyle(.segmented)
-                if session.growsStation {
-                    Label("Select an empty tile beside a station: it grows onto it, and track beside the new tile becomes platform.", systemImage: "info.circle")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Station name")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Station name", text: $session.stationName)
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
-                        .submitLabel(.done)
-                }
-            }
-        case .removeTrack:
-            Label("Removing track is free, but its cost is not refunded.", systemImage: "info.circle")
+            Label("Choose Network to build track, platforms and stations. Selecting only inspects.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        // The grid's tools are not offered (Stage F1).
+        case .buildTrack, .buildStation, .removeTrack:
+            EmptyView()
         case .network:
             NetworkControls(session: session)
         case .train:
@@ -166,41 +142,7 @@ private struct ToolOptions: View {
     }
 }
 
-/// Read-only facts about the grid's track (Stage C2): its sections, the
-/// sections through the selected tile, and track two trains occupy at once.
-/// Read from the world when drawn.
-private struct TrackInfo: View {
-    let session: GameSession
-
-    var body: some View {
-        let world = session.world
-        let language = session.language
-        VStack(alignment: .leading, spacing: 3) {
-            if let summary = world.trackSectionsSummary(in: language) {
-                Text(verbatim: summary)
-                    .fontWeight(.semibold)
-            }
-            if let position = session.selection {
-                let sections = world.sectionTexts(at: position, in: language)
-                ForEach(Array(sections.prefix(3).enumerated()), id: \.offset) { _, section in
-                    Label(section, systemImage: "arrow.left.and.right")
-                }
-                if sections.count > 3 {
-                    Text(verbatim: "…")
-                }
-            }
-            ForEach(Array(world.occupancyConflictTexts(in: language).prefix(2).enumerated()), id: \.offset) { _, conflict in
-                Label(conflict, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(Color.orange)
-            }
-        }
-        .font(.footnote)
-        .monospacedDigit()
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Applies the active tool to the selected tile, or, with the network
+/// Applies the train tool to the selected station, or, with the network
 /// tool, builds, adds or removes what its taps picked. Shows the cost read
 /// from the world's economy or GameCore's preview; GameCore decides whether
 /// the action is allowed.
@@ -224,7 +166,7 @@ private struct ActionButton: View {
     }
 
     private var isRemoval: Bool {
-        session.tool == .removeTrack || (session.tool == .network && session.networkMode == .remove)
+        session.tool == .network && session.networkMode == .remove
     }
 
     private var isReady: Bool {
@@ -249,19 +191,13 @@ private struct ActionButton: View {
 
     private var hint: String {
         guard !isReady else { return "" }
-        return session.tool == .network ? String(localized: "Tap the map first.") : String(localized: "Select a tile on the map first.")
+        return session.tool == .network ? String(localized: "Tap the map first.") : String(localized: "Select a station on the map first.")
     }
 
     private var title: String? {
-        let costs = session.world.economy.costs
         switch session.tool {
-        case .select: return nil
-        case .buildTrack: return String(localized: "Build Track · \(costs.track.moneyText)")
-        case .buildStation:
-            return session.growsStation
-                ? String(localized: "Grow Station · \(costs.station.moneyText)")
-                : String(localized: "Build Station · \(costs.station.moneyText)")
-        case .removeTrack: return String(localized: "Remove Track")
+        // The grid's tools are not offered (Stage F1).
+        case .select, .buildTrack, .buildStation, .removeTrack: return nil
         case .network:
             switch session.networkMode {
             case .build:
@@ -361,9 +297,8 @@ extension ConstructionTool {
     var accessibilityName: String {
         switch self {
         case .select: String(localized: "Select tool")
-        case .buildTrack: String(localized: "Build track tool")
-        case .buildStation: String(localized: "Build station tool")
-        case .removeTrack: String(localized: "Remove track tool")
+        // The grid's tools are not offered (Stage F1).
+        case .buildTrack, .buildStation, .removeTrack: ""
         case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
         }

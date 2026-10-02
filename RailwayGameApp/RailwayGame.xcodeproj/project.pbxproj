@@ -22,7 +22,6 @@
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
 		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
-		AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */; };
 		BAAE6E57E7C2D199CC097CF2 /* DemoLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
@@ -39,7 +38,6 @@
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
 		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackPieceEditor.swift; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		903982CCE649E985E784BE87 /* HUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDView.swift; sourceTree = "<group>"; };
 		908DF494BE421AA1D9D8EE60 /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
@@ -103,7 +101,6 @@
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
-				60900FF525C1578DDC57B062 /* TrackPieceEditor.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 			);
 			path = Views;
@@ -231,7 +228,6 @@
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
-				AAAD64A1CF89FB01A3728557 /* TrackPieceEditor.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

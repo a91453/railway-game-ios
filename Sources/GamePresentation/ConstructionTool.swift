@@ -13,9 +13,14 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     /// Builds the track network at any angle, its platforms, and removes
     /// it (Stage C1; see ``GameSession/networkMode``).
     case network
-    /// Places the selected train on the selected tile, or sends it there
-    /// once it is on the track (see ``GameSession/applyTool()``).
+    /// Places the selected train at the selected station, or sends it
+    /// there once it is on the track (see ``GameSession/applyTool()``).
     case train
+
+    /// The tools the app offers (Stage F1): it builds only on the track
+    /// network. The grid's track, station and remove tools stay in the
+    /// session for the compatibility layer until the grid goes (Stage F3).
+    public static let networkTools: [ConstructionTool] = [.select, .network, .train]
 
     /// Short name for the tool picker.
     public func title(in language: DisplayLanguage) -> String {
