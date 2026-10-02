@@ -180,16 +180,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      # Optional manual regression proof. Restore the source afterwards; this
-      # deliberately broken build never replaces the normal screenshot run.
+      # Regression proof on PRs (also available manually). Restore the source
+      # afterwards; this broken build never replaces the normal screenshot run.
       - name: Prove a missing toolbar button fails the smoke test
         id: missing-button
         timeout-minutes: 5
-        if: inputs.verify_missing_button
+        if: github.event_name == 'pull_request' || inputs.verify_missing_button
         run: bash .github/scripts/ui-smoke-missing-button.sh
 
       - name: Upload missing-button failure evidence
-        if: always() && inputs.verify_missing_button && steps.missing-button.outcome != 'skipped'
+        if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           name: ui-smoke-missing-button-evidence

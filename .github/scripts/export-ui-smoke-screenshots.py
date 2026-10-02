@@ -19,8 +19,8 @@ def export(source: Path, destination: Path) -> None:
     for test in manifest:
         for attachment in test["attachments"]:
             name = attachment["suggestedHumanReadableName"]
-            # xcresulttool can append an extension to the attachment's name.
-            name = name.removesuffix(".png")
+            # xcresulttool appends _<index>_<UUID>.png to the attachment name.
+            name = name.split("_", 1)[0].removesuffix(".png")
             if name not in expected:
                 continue
             image = source / attachment["exportedFileName"]
