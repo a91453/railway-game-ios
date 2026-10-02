@@ -194,6 +194,12 @@ struct LinesPanel: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
+            // Stage C2: single or double track between its stops (Stage S1).
+            ForEach(Array(session.world.lineTrackCountTexts(line.id, in: session.language).enumerated()), id: \.offset) { _, text in
+                Label(text, systemImage: "road.lanes")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
                 if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
