@@ -5,131 +5,139 @@ import XCTest
 /// Stage C2: editing a train's own timetable, one `setTrainTimetable` per
 /// control. Times are worked out by hand: a first stop at the next whole
 /// minute waiting a minute, three minutes to the next stop.
-@MainActor
 final class TimetableEditingTests: XCTestCase {
-    private let alpha = StationID(rawValue: 1)
-    private let beta = StationID(rawValue: 2)
+    func testStopsAreAddedAtTheNextMinuteThenThreeMinutesApart() async throws {
+        try await MainActor.run {
+            let session = GameSession(world: try makeLine())
+            session.addStopToSelectedTrainTimetable(alpha)
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "T1 now calls at Alpha: arrives 00:01, leaves 00:02."))
+            session.addStopToSelectedTrainTimetable(beta)
+            XCTAssertEqual(session.selectedTrain?.timetable, [
+                ScheduledStop(station: alpha, arrival: GameTime(seconds: 60), departure: GameTime(seconds: 120)),
+                ScheduledStop(station: beta, arrival: GameTime(seconds: 300), departure: GameTime(seconds: 360)),
+            ])
+            XCTAssertNil(session.selectedTrain?.timetablePeriod)
 
-    func testStopsAreAddedAtTheNextMinuteThenThreeMinutesApart() throws {
-        let session = GameSession(world: try makeLine())
-        session.addStopToSelectedTrainTimetable(alpha)
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "T1 now calls at Alpha: arrives 00:01, leaves 00:02."))
-        session.addStopToSelectedTrainTimetable(beta)
-        XCTAssertEqual(session.selectedTrain?.timetable, [
-            ScheduledStop(station: alpha, arrival: GameTime(seconds: 60), departure: GameTime(seconds: 120)),
-            ScheduledStop(station: beta, arrival: GameTime(seconds: 300), departure: GameTime(seconds: 360)),
-        ])
-        XCTAssertNil(session.selectedTrain?.timetablePeriod)
-
-        let rows = session.world.timetableRows(of: TrainID(rawValue: 1), in: .english)
-        XCTAssertEqual(rows.map(\.stationName), ["Alpha", "Beta"])
-        XCTAssertEqual(rows.map(\.timesText), ["00:01 → 00:02", "00:05 → 00:06"])
-        XCTAssertEqual(rows.map(\.detailText), ["waits 1 min", "3 min from Alpha · waits 1 min"])
-        XCTAssertEqual(
-            session.world.timetableRows(of: TrainID(rawValue: 1), in: .traditionalChinese).map(\.detailText),
-            ["停 1 分", "距 Alpha 3 分 · 停 1 分"]
-        )
-        XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .english), "2 stops from Day 1 · 00:01 · runs once")
-        XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .traditionalChinese), "2 站，第 1 日 · 00:01 起 · 只跑一次")
+            let rows = session.world.timetableRows(of: TrainID(rawValue: 1), in: .english)
+            XCTAssertEqual(rows.map(\.stationName), ["Alpha", "Beta"])
+            XCTAssertEqual(rows.map(\.timesText), ["00:01 → 00:02", "00:05 → 00:06"])
+            XCTAssertEqual(rows.map(\.detailText), ["waits 1 min", "3 min from Alpha · waits 1 min"])
+            XCTAssertEqual(
+                session.world.timetableRows(of: TrainID(rawValue: 1), in: .traditionalChinese).map(\.detailText),
+                ["停 1 分", "距 Alpha 3 分 · 停 1 分"]
+            )
+            XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .english), "2 stops from Day 1 · 00:01 · runs once")
+            XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .traditionalChinese), "2 站，第 1 日 · 00:01 起 · 只跑一次")
+        }
     }
 
-    func testMovingAnArrivalMovesTheRestAndNeverPassesTheStopBefore() throws {
-        let session = try makeTimetabled()
-        session.moveSelectedTrainArrival(at: 1, by: 60)
-        XCTAssertEqual(times(session), [60, 120, 360, 420])
-        XCTAssertEqual(session.message?.text, "T1 arrives at Beta at 00:06.")
-        XCTAssertTrue(TimetableEditing.canArriveEarlier(1, in: session.selectedTrain!.timetable))
-        session.moveSelectedTrainArrival(at: 1, by: -600)
-        XCTAssertEqual(times(session), [60, 120, 120, 180], "no earlier than Alpha's departure")
-        XCTAssertFalse(TimetableEditing.canArriveEarlier(1, in: session.selectedTrain!.timetable))
+    func testMovingAnArrivalMovesTheRestAndNeverPassesTheStopBefore() async throws {
+        try await MainActor.run {
+            let session = try makeTimetabled()
+            session.moveSelectedTrainArrival(at: 1, by: 60)
+            XCTAssertEqual(times(session), [60, 120, 360, 420])
+            XCTAssertEqual(session.message?.text, "T1 arrives at Beta at 00:06.")
+            XCTAssertTrue(TimetableEditing.canArriveEarlier(1, in: session.selectedTrain!.timetable))
+            session.moveSelectedTrainArrival(at: 1, by: -600)
+            XCTAssertEqual(times(session), [60, 120, 120, 180], "no earlier than Alpha's departure")
+            XCTAssertFalse(TimetableEditing.canArriveEarlier(1, in: session.selectedTrain!.timetable))
 
-        // The first stop's arrival is the start: it moves everything.
-        session.moveSelectedTrainArrival(at: 0, by: 120)
-        XCTAssertEqual(times(session), [180, 240, 240, 300])
-        session.moveSelectedTrainArrival(at: 0, by: -600)
-        XCTAssertEqual(times(session), [0, 60, 60, 120], "never before second 0")
+            // The first stop's arrival is the start: it moves everything.
+            session.moveSelectedTrainArrival(at: 0, by: 120)
+            XCTAssertEqual(times(session), [180, 240, 240, 300])
+            session.moveSelectedTrainArrival(at: 0, by: -600)
+            XCTAssertEqual(times(session), [0, 60, 60, 120], "never before second 0")
+        }
     }
 
-    func testMovingADepartureChangesTheWaitAndNeverLeavesBeforeArriving() throws {
-        let session = try makeTimetabled()
-        session.moveSelectedTrainDeparture(at: 0, by: 60)
-        XCTAssertEqual(times(session), [60, 180, 360, 420])
-        XCTAssertEqual(session.message?.text, "T1 leaves Alpha at 00:03.")
-        session.moveSelectedTrainDeparture(at: 0, by: -600)
-        XCTAssertEqual(times(session), [60, 60, 240, 300], "leaves the second it arrives at the earliest")
-        XCTAssertFalse(TimetableEditing.canLeaveEarlier(0, in: session.selectedTrain!.timetable))
-        XCTAssertTrue(TimetableEditing.canLeaveEarlier(1, in: session.selectedTrain!.timetable))
+    func testMovingADepartureChangesTheWaitAndNeverLeavesBeforeArriving() async throws {
+        try await MainActor.run {
+            let session = try makeTimetabled()
+            session.moveSelectedTrainDeparture(at: 0, by: 60)
+            XCTAssertEqual(times(session), [60, 180, 360, 420])
+            XCTAssertEqual(session.message?.text, "T1 leaves Alpha at 00:03.")
+            session.moveSelectedTrainDeparture(at: 0, by: -600)
+            XCTAssertEqual(times(session), [60, 60, 240, 300], "leaves the second it arrives at the earliest")
+            XCTAssertFalse(TimetableEditing.canLeaveEarlier(0, in: session.selectedTrain!.timetable))
+            XCTAssertTrue(TimetableEditing.canLeaveEarlier(1, in: session.selectedTrain!.timetable))
+        }
     }
 
-    func testRepeatingStartsAtTheShortestPeriodAndGrowsToFit() throws {
-        let session = try makeTimetabled()
-        // From 00:01 to 00:06: five minutes.
-        session.setSelectedTrainTimetableRepeats(true)
-        XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300)
-        XCTAssertEqual(session.message?.text, "T1's timetable repeats every 5 min.")
-        session.changeSelectedTrainTimetablePeriod(by: 600)
-        XCTAssertEqual(session.selectedTrain?.timetablePeriod, 900)
-        session.changeSelectedTrainTimetablePeriod(by: -6_000)
-        XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300, "never shorter than the timetable")
-        session.moveSelectedTrainDeparture(at: 1, by: 90)
-        XCTAssertEqual(session.selectedTrain?.timetablePeriod, 420, "6 min 30 s, rounded up to whole minutes")
-        XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .english), "2 stops from Day 1 · 00:01 · repeats every 7 min")
-        XCTAssertEqual(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .english), "Every 7 min")
-        XCTAssertEqual(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .traditionalChinese), "每 7 分")
-        XCTAssertEqual(session.world.timetableRows(of: TrainID(rawValue: 1), in: .english)[1].timesText, "00:05 → 00:07:30")
-        session.setSelectedTrainTimetableRepeats(false)
-        XCTAssertNil(session.selectedTrain?.timetablePeriod)
-        XCTAssertEqual(session.message?.text, "T1's timetable runs once.")
-        XCTAssertNil(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .english))
-        XCTAssertEqual(TimetableEditing.shortestPeriod(of: [
-            ScheduledStop(station: alpha, arrival: GameTime(seconds: 60), departure: GameTime(seconds: 60)),
-        ]), 60, "at least a minute")
-        XCTAssertNil(TimetableEditing.shortestPeriod(of: []))
+    func testRepeatingStartsAtTheShortestPeriodAndGrowsToFit() async throws {
+        try await MainActor.run {
+            let session = try makeTimetabled()
+            // From 00:01 to 00:06: five minutes.
+            session.setSelectedTrainTimetableRepeats(true)
+            XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300)
+            XCTAssertEqual(session.message?.text, "T1's timetable repeats every 5 min.")
+            session.changeSelectedTrainTimetablePeriod(by: 600)
+            XCTAssertEqual(session.selectedTrain?.timetablePeriod, 900)
+            session.changeSelectedTrainTimetablePeriod(by: -6_000)
+            XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300, "never shorter than the timetable")
+            session.moveSelectedTrainDeparture(at: 1, by: 90)
+            XCTAssertEqual(session.selectedTrain?.timetablePeriod, 420, "6 min 30 s, rounded up to whole minutes")
+            XCTAssertEqual(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .english), "2 stops from Day 1 · 00:01 · repeats every 7 min")
+            XCTAssertEqual(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .english), "Every 7 min")
+            XCTAssertEqual(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .traditionalChinese), "每 7 分")
+            XCTAssertEqual(session.world.timetableRows(of: TrainID(rawValue: 1), in: .english)[1].timesText, "00:05 → 00:07:30")
+            session.setSelectedTrainTimetableRepeats(false)
+            XCTAssertNil(session.selectedTrain?.timetablePeriod)
+            XCTAssertEqual(session.message?.text, "T1's timetable runs once.")
+            XCTAssertNil(session.world.timetablePeriodText(of: TrainID(rawValue: 1), in: .english))
+            XCTAssertEqual(TimetableEditing.shortestPeriod(of: [
+                ScheduledStop(station: alpha, arrival: GameTime(seconds: 60), departure: GameTime(seconds: 60)),
+            ]), 60, "at least a minute")
+            XCTAssertNil(TimetableEditing.shortestPeriod(of: []))
+        }
     }
 
-    func testTurningRoundRemovingAndClearing() throws {
-        let session = try makeTimetabled()
-        session.setSelectedTrainTimetableRepeats(true)
-        session.toggleSelectedTrainReverse(at: 1)
-        XCTAssertEqual(session.selectedTrain?.timetable.map(\.reverses), [false, true])
-        XCTAssertEqual(session.message?.text, "T1 turns round at Beta.")
-        XCTAssertEqual(session.world.timetableRows(of: TrainID(rawValue: 1), in: .english).map(\.reverses), [false, true])
-        session.toggleSelectedTrainReverse(at: 1)
-        XCTAssertEqual(session.message?.text, "T1 no longer turns round at Beta.")
+    func testTurningRoundRemovingAndClearing() async throws {
+        try await MainActor.run {
+            let session = try makeTimetabled()
+            session.setSelectedTrainTimetableRepeats(true)
+            session.toggleSelectedTrainReverse(at: 1)
+            XCTAssertEqual(session.selectedTrain?.timetable.map(\.reverses), [false, true])
+            XCTAssertEqual(session.message?.text, "T1 turns round at Beta.")
+            XCTAssertEqual(session.world.timetableRows(of: TrainID(rawValue: 1), in: .english).map(\.reverses), [false, true])
+            session.toggleSelectedTrainReverse(at: 1)
+            XCTAssertEqual(session.message?.text, "T1 no longer turns round at Beta.")
 
-        session.removeSelectedTrainStop(at: 0)
-        XCTAssertEqual(times(session), [300, 360])
-        XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300, "kept: the rest still fits")
-        XCTAssertEqual(session.message?.text, "T1 no longer calls at Alpha.")
-        session.removeSelectedTrainStop(at: 0)
-        XCTAssertEqual(session.selectedTrain?.timetable, [])
-        XCTAssertNil(session.selectedTrain?.timetablePeriod, "an empty timetable cannot repeat")
+            session.removeSelectedTrainStop(at: 0)
+            XCTAssertEqual(times(session), [300, 360])
+            XCTAssertEqual(session.selectedTrain?.timetablePeriod, 300, "kept: the rest still fits")
+            XCTAssertEqual(session.message?.text, "T1 no longer calls at Alpha.")
+            session.removeSelectedTrainStop(at: 0)
+            XCTAssertEqual(session.selectedTrain?.timetable, [])
+            XCTAssertNil(session.selectedTrain?.timetablePeriod, "an empty timetable cannot repeat")
 
-        let cleared = try makeTimetabled()
-        cleared.setSelectedTrainTimetableRepeats(true)
-        cleared.clearSelectedTrainTimetable()
-        XCTAssertEqual(cleared.selectedTrain?.timetable, [])
-        XCTAssertNil(cleared.selectedTrain?.timetablePeriod)
-        XCTAssertEqual(cleared.message?.text, "Cleared T1's timetable.")
+            let cleared = try makeTimetabled()
+            cleared.setSelectedTrainTimetableRepeats(true)
+            cleared.clearSelectedTrainTimetable()
+            XCTAssertEqual(cleared.selectedTrain?.timetable, [])
+            XCTAssertNil(cleared.selectedTrain?.timetablePeriod)
+            XCTAssertEqual(cleared.message?.text, "Cleared T1's timetable.")
+        }
     }
 
-    func testGameCoreRefusesWhileTheServiceRunsAndForALinesTrain() throws {
-        let session = try makeTimetabled()
-        session.startSelectedTrainService()
-        XCTAssertEqual(session.message?.kind, .success)
-        let before = session.world
-        session.moveSelectedTrainArrival(at: 1, by: 60)
-        XCTAssertEqual(session.message?.kind, .failure)
-        XCTAssertEqual(session.message?.text, GameError.trainServiceActive(TrainID(rawValue: 1)).playerMessage(in: .english))
-        XCTAssertEqual(session.world, before)
+    func testGameCoreRefusesWhileTheServiceRunsAndForALinesTrain() async throws {
+        try await MainActor.run {
+            let session = try makeTimetabled()
+            session.startSelectedTrainService()
+            XCTAssertEqual(session.message?.kind, .success)
+            let before = session.world
+            session.moveSelectedTrainArrival(at: 1, by: 60)
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertEqual(session.message?.text, GameError.trainServiceActive(TrainID(rawValue: 1)).playerMessage(in: .english))
+            XCTAssertEqual(session.world, before)
 
-        var world = try makeLine()
-        let line = try world.createLine(named: "Main", stops: [alpha, beta])
-        try world.assignTrain(TrainID(rawValue: 1), to: line.id)
-        let onLine = GameSession(world: world)
-        onLine.addStopToSelectedTrainTimetable(alpha)
-        XCTAssertEqual(onLine.message?.text, GameError.trainOnLine(TrainID(rawValue: 1)).playerMessage(in: .english))
-        XCTAssertEqual(onLine.selectedTrain?.timetable, [])
+            var world = try makeLine()
+            let line = try world.createLine(named: "Main", stops: [alpha, beta])
+            try world.assignTrain(TrainID(rawValue: 1), to: line.id)
+            let onLine = GameSession(world: world)
+            onLine.addStopToSelectedTrainTimetable(alpha)
+            XCTAssertEqual(onLine.message?.text, GameError.trainOnLine(TrainID(rawValue: 1)).playerMessage(in: .english))
+            XCTAssertEqual(onLine.selectedTrain?.timetable, [])
+        }
     }
 
     func testTimesOnALaterDayShowTheDay() {
@@ -148,33 +156,38 @@ final class TimetableEditingTests: XCTestCase {
             ScheduledStop(station: beta, arrival: first, departure: GameTime(seconds: first.seconds + 60)),
         ])
     }
+}
 
-    /// Track (0,1)–(4,1), Alpha (1,0) and Beta (3,0) beside it, train T1
-    /// standing at Alpha.
-    private func makeLine() throws -> GameWorld {
-        var world = try makeWorld(width: 6, height: 3, balance: 100_000)
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...3 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 4, y: 1), connections: .west)
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
-        let train = try world.purchaseTrain(named: "T1")
-        try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
-        return world
-    }
+private let alpha = StationID(rawValue: 1)
+private let beta = StationID(rawValue: 2)
 
-    /// ``makeLine()`` with Alpha 00:01–00:02 and Beta 00:05–00:06.
-    private func makeTimetabled() throws -> GameSession {
-        let session = GameSession(world: try makeLine())
-        session.addStopToSelectedTrainTimetable(alpha)
-        session.addStopToSelectedTrainTimetable(beta)
-        return session
+/// Track (0,1)–(4,1), Alpha (1,0) and Beta (3,0) beside it, train T1
+/// standing at Alpha.
+private func makeLine() throws -> GameWorld {
+    var world = try makeWorld(width: 6, height: 3, balance: 100_000)
+    try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
+    for x in 1...3 {
+        try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
     }
+    try world.buildTrack(at: GridPosition(x: 4, y: 1), connections: .west)
+    try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
+    try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
+    let train = try world.purchaseTrain(named: "T1")
+    try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+    return world
+}
 
-    /// Every arrival and departure in order, in seconds.
-    private func times(_ session: GameSession) -> [Int64] {
-        session.selectedTrain?.timetable.flatMap { [$0.arrival.seconds, $0.departure.seconds] } ?? []
-    }
+/// ``makeLine()`` with Alpha 00:01–00:02 and Beta 00:05–00:06.
+@MainActor
+private func makeTimetabled() throws -> GameSession {
+    let session = GameSession(world: try makeLine())
+    session.addStopToSelectedTrainTimetable(alpha)
+    session.addStopToSelectedTrainTimetable(beta)
+    return session
+}
+
+/// Every arrival and departure in order, in seconds.
+@MainActor
+private func times(_ session: GameSession) -> [Int64] {
+    session.selectedTrain?.timetable.flatMap { [$0.arrival.seconds, $0.departure.seconds] } ?? []
 }
