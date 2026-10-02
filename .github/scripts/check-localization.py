@@ -77,7 +77,7 @@ def check_exports(export_path, catalog):
                 source = element_text(unit.find("x:source", ns))
                 context = f"{source!r} [{original}, id={key!r}]"
                 # Xcode also exports generated InfoPlist app-name metadata.
-                if (Path(original).name == "InfoPlist.strings"
+                if (Path(original).name in {"InfoPlist.strings", "RailwayGame-InfoPlist.strings"}
                         and APP_NAMES.get(key) == source):
                     continue
                 if Path(original).name in {"Localizable.xcstrings", "Localizable.strings"}:
@@ -101,6 +101,9 @@ def check_exports(export_path, catalog):
         issues.append("Export contains no trans-unit elements")
     if not localizable_count:
         issues.append("Export contains no Localizable trans-unit elements")
+    print(f"Read {len(files)} XLIFF file(s): {count} trans-unit(s), "
+          f"{localizable_count} Localizable unit(s), "
+          f"{len(catalog['strings'])} committed catalog key(s).")
     return issues
 
 
