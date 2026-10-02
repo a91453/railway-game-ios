@@ -3,6 +3,7 @@
 這份文件把作者 `Railway/` 網站的實體層，逐函式對照到 [ROADMAP](ROADMAP.md) 的 Stage T、U、V、W 與折返。內容包括：
 
 - 對照表；
+- 第三份參考 `Railway/railway_game_reference_clean/`（[RailwayCore 參考包](#railwaycore-參考包)）的對照；
 - gap 分析；
 - 建議的實作順序。
 
@@ -11,6 +12,7 @@
 ## 來源
 
 - 私有 repo `a91453/railway-reference-private`，commit `b52f05c`（2026-09-30 讀取）。以唯讀方式附加，clone 在公開 repo 之外。
+  - 2026-10-01 對 commit `1563ad0` 重新確認：`Railway/site_archive_clean/` 只改了隱私權與使用條款頁，`Ci/` 只改了三份說明文件（改成直接移植的政策），下文的對照不變。新增的 `Railway/railway_game_reference_clean/` 見 [RailwayCore 參考包](#railwaycore-參考包)。
 - 下文的路徑都在 `Railway/site_archive_clean/` 之下；`index.html` 的行號以這個 commit 為準。
 - 逐檔讀過的檔案：
   - `rail-3d/physical/` 的每一個 JS：`motion.js`、`timing.js`、`turnbacks.js`、`route-runtime.js`、`plan-binding.js`、`topology.js`、`client.js`、`metro-motion.js`、`afr-operation.js`、`structure-kind.js`、`display-level.js`、`portal-paths.js`。
@@ -146,24 +148,85 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `dispatch.json` `handoffs`（`basis: "matching-timetable-turnaround"`） | 同一組車在終點折返，接下一班 | Q1 的重複、Q2b 的來回派車 | 不需要 | — | 已涵蓋 |
 | `metro-motion.js` `routeFor`：停車點夾在 [半個編組長 + 2 m, 路徑長 − 半個編組長 − 2 m] | 車身不超出車止 | S5 的停車位置：車頭停在行進方向上月台的末端，只停放得下整列的月台 | 不需要 | — | 已涵蓋（規則不同，S5 在前） |
 
+## RailwayCore 參考包
+
+### 來源與性質
+
+- 私有 repo 的 `Railway/railway_game_reference_clean/`，commit `1563ad0`（2026-10-01 讀取）。
+- 逐檔讀過：`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`02_W2_IMPLEMENTATION_CONTRACT.md`、`MANIFEST.txt`、`binary_reference/` 的三份清單、`docs/linkgraph.md`、`web_runtime/` 的兩個檔案。`docs/` 其餘四份（`desync.md`、`debugging_desyncs.md`、`savegame_format.md`、`logging_and_performance_metrics.md`）讀了章節結構。
+- `binary_reference/railway_core_15_3.wasm` 是編譯好的 OpenTTD 15.3，改名為 RailwayCore（字串裡有 `OpenTTD`、`Squirrel 2.2.5 stable - With custom OpenTTD modifications`）。`docs/` 是改名後的 OpenTTD 開發文件。
+- 包裡**沒有原始碼**，只有符號名稱、原始碼路徑與設定名稱，用來定位行為。
+- `01_MIGRATION_MAP.md` 與 `02_W2_IMPLEMENTATION_CONTRACT.md` 是為這個專案寫的移植清單與 W2 驗收規格。裡面的公式與資料結構是建議，不是從原始碼抽出來的。
+
+### 授權
+
+- 包裡沒有附授權檔；OpenTTD 本身是 GPL-2.0。
+- 包自己的規則是「移植行為、狀態機、資料模型、測試與演算法結構，用獨立的實作，不複製原始碼」。這個 repo 是公開的、App 要上 App Store，所以照這條做：不把 OpenTTD 的原始碼或 wasm 放進 repo 或 App，符號與設定名稱只用來找行為。
+
+### 對照表
+
+| 參考包的項目 | 現有 GameCore | 預計 | 分類 |
+| --- | --- | --- | --- |
+| P0-1 到站 → 開門 → 下車 → 上車 → 停留 → 關門 → 發車的狀態機（`LoadUnloadVehicle`、`load_unload_ticks`、`order.gradual_loading`） | `StationDwell`（G1b）已移植兩個網站的停站規則，還沒接上；上下車在離站時一次完成（決策 35 的過渡做法） | W2 | 狀態機：faithful 候選；停站依不依乘客人數見 gap 10（已決定） |
+| P0-2 時刻表與誤點（`lateness_counter`、`timetable_start`、`CmdChangeTimetable`、`TicksPerTimetableUnit`） | 決策 20 的出發閘門：早到的列車等到排定出發；誤點的列車到站後下一步就出發。誤點只在 GamePresentation 由位置推導（決策 25），不記錄實際的到達與出發時刻 | W2：實際的到達與出發時刻成為存檔的權威狀態，誤點改成 GameCore 的查詢 | faithful（語義） |
+| P0-3 以指令修改世界（`Cmd...`：驗證、成本、執行） | 已有：`GameWorld` 的指令、原子性、typed error（決策 4、5） | 預估成本與預覽可以在世界的 value 複本上試跑；需要時再加查詢 | 大部分已涵蓋 |
+| P0-4 固定的模擬 tick，與畫面分離 | 已有（決策 3、12） | — | 已涵蓋 |
+| P1-5 乘客群組（`CargoPacket`） | 已有：依起訖、線路、方向分組（G1a，決策 34） | 轉乘：Phase 5 | 已涵蓋；轉乘還沒有 |
+| P1-6 Link graph 的乘客路徑 | 沒有（G1 不做路徑選擇） | Phase 5 | **gap**：`docs/linkgraph.md` 只講執行緒與重算間隔，沒有演算法 |
+| P1-7 路徑成本（`pf.yapf.rail_*_penalty`：彎道、坡度、車站、月台長短、折返等） | `TrainRoute.shortest` 只看長度 | V 或之後，和 `Railway/` `topology.js` 的 `shortestPath` 加權一起做 | 項目可以參考；**gap**：包裡沒有數值 |
+| P2-8 公司與經濟分離 | 已有：`GameEconomy`、帳本（G1c，決策 36） | — | 已涵蓋 |
+| P2-9 城市成長、產業 | 沒有 | Phase 6 | **gap**：只有原始碼路徑 |
+| P2-10 建設規則與成本在指令裡 | 已有：建設指令先驗證再扣款 | — | 已涵蓋 |
+| 存檔版本與 migration（`docs/savegame_format.md`） | 沒有（決策 6）；App 目前不把存檔寫到裝置 | 正式存檔時（ROADMAP 的跨階段議題） | 延後 |
+| 決定性除錯：種子、指令紀錄、checksum、重播（`docs/desync.md`） | golden scenario 就是指令序列的重播；property campaign 比對 digest | 世界的 checksum 與指令紀錄等需要時再加 | 大部分已涵蓋 |
+| `web_runtime/`：雙指縮放、IndexedDB 存檔、存檔的匯入匯出 | 原生 App 不適用 | Web 宿主（[WEB_PORT_READINESS](WEB_PORT_READINESS.md)） | 只適用 Web |
+
+### 和另外兩份參考的差異
+
+- **停站**：`Ci/`、`Railway/` 的停站是固定的秒數，沒有一條規則依乘客人數或車門數改變停站；`Ci/` 的 `PARAMS.BOARDING_RATE` 有定義但沒有被讀（`StationDwell.referenceBoardingRate`）。參考包建議依人數與每扇門的速率計算，OpenTTD 的 gradual loading 也是依量逐 tick 裝卸。見 gap 10。
+- **時間**：
+  - `Ci/` 的時鐘是隨畫格前進的小數分鐘，1× 是真實時間（`GAME_SECONDS_PER_REAL_SECOND = 1`）；
+  - `Railway/` 依時間取樣，以秒計；
+  - OpenTTD 以 tick 計，時刻表的單位可以選（`TicksPerTimetableUnit`）；
+  - 我們的基本步長是一遊戲分鐘，1× 每 100 ms 一步，是真實時間的 600 倍（決策 3、12）。
+
+  見 gap 2、9。
+
 ## Gap 分析
 
-需要作者決定或補資料的事，依影響大小排列：
+需要作者決定或補資料的事，依影響大小排列。2026-10-01 作者決定 W2 先於 U-min，其餘採用建議的方案；已決定的寫在各項的「決定」。
 
 1. **W 的時間從哪裡來？** 參考的 `buildProfile` 是「給定班表的時間 T，找出能準點的曲線」；ROADMAP 的 W 是「由性能推導時間，取代固定的 rate」。建議：
    - W1 只翻譯曲線，不改變任何行為；
-   - W2 把線路一段的時間定為 `buildProfile` 建得出曲線的最短整分鐘。
+   - W2 把線路一段的時間定為 `buildProfile` 建得出曲線的最短整秒。
    - 這是把參考的函式當成判斷條件使用，不是新公式；但「由性能決定時刻表」本身是參考沒有的行為，要作者同意。
+   - **決定（2026-10-01）**：照上面的建議，一段的時間是建得出曲線的最短整秒（gap 2 改用秒之後）。時刻表以秒儲存，畫面顯示到分鐘，需要時顯示秒。
 2. **時間的解析度。** 參考以秒計：安全間隔 30 秒、等待最多 184 秒、跑段曲線以秒解。GameCore 的基本步長是一分鐘（決策 3）。
    - 交會與待避若照參考以秒判斷，時刻表、閘門與存檔就要有秒。
    - 或者把秒無條件進位成分鐘，但這會改變參考的結果。
    - 這是架構層級的決定。
-3. **整列車預約的演算法不在快照。** V 的「衝突時排定等待」只有結果（`holds`）與更新紀錄的文字；T 已經依自己的設計實作。建議作者把建置腳本加進私有 repo（`motion.js` 註解提到的 `scripts/lib/track_section_via.mjs`、`track_directions.mjs`，以及產生 `dispatch.json` 的腳本）。有了它們，V 就能翻譯而不是設計，也能回頭對照 T 的規則。
+   - **決定（2026-10-01）**：基本步長改成一秒（W2a）。不改成與遊戲時間脫鉤的 tick：真實時刻表、W1 的曲線與 `Ci/` 的每小時需求，都假設列車的時間就是時鐘的時間。
+   - 為什麼不維持分鐘：地圖是真實比例（一格 16 公尺；手機預設一格 32 pt，也就是每公尺 2 pt）。100 km/h 的列車在 1 倍真實時間下每秒移動約 56 pt，10 倍約 560 pt（比一個手機畫面寬），60 倍以上就看不清楚。要看得到列車，1× 必須接近真實時間（gap 9）。在這種速度下，一分鐘的步長代表每 6 到 60 真實秒才前進一次，玩家的指令最多要等一分鐘才生效。
+     - 先前（同一天稍早）的建議是「維持分鐘、列車在一步之內帶毫秒的餘數」，只在 1× 很快時成立，所以撤回。
+   - 秒也解決 [TIMETABLE_DATA_STUDY](TIMETABLE_DATA_STUDY.md) 記錄的換算問題（站間不到一分鐘、行駛時間被壓縮）；V 的 30 秒安全間隔與以秒計的等待也能照參考表達。
+   - 範圍（2026-10 量測）：`ServiceLine`、`GameWorld`、`LineJourney` 等約 15 個檔案的時間邏輯、23 個 golden fixture、測試裡約 560 處 `advance`。不只是乘以 60：每分鐘的整數 rate 換成每秒多半不是整數，乘客釋出的進位也可能改變。W2a 的做法：
+     - 只換時間單位，不加新玩法；
+     - 乘客釋出與經營結算仍然每分鐘做一次，這兩部分的行為不變，也省下大部分的計算；
+     - 列車的 rate 仍以每分鐘的單位數表示，每秒走「rate × 累計秒數 ÷ 60」的整數部分與上一秒的差，沒有事件發生的整分鐘，位置與現在相同；
+     - golden 的 schema 加上時間單位，舊 fixture 讀入時換算；真的改變的值在 W2a 的 PR 逐一說明；
+     - 同樣的遊戲時間要跑 60 倍的步數；最快的檔位維持現在的 600 倍時，每真實秒 600 步。
+3. **整列車預約的演算法不在快照。** V 的「衝突時排定等待」只有結果（`holds`）與更新紀錄的文字；T 已經依自己的設計實作。建議作者把建置腳本加進私有 repo（`motion.js` 註解提到的 `scripts/lib/track_section_via.mjs`、`track_directions.mjs`，以及產生 `dispatch.json` 的腳本）。有了它們，V 就能翻譯而不是設計，也能回頭對照 T 的規則。2026-10-01 重新確認：RailwayCore 參考包也沒有這些腳本。
 4. **車種性能怎麼選。** `PERF_RULES` 依真實車名（自強、區間、PP、DR1000 等）比對。遊戲的列車沒有車名或車種。W1 先把數值表照抄成具名的預設，列車帶哪一組要作者決定。
 5. **跟車規則的角色。** `updateBlockHolds` 是畫面層、隨畫格改變的顯示延後。U 若要採用它的距離（0.4 km、兩車長度的平均），要以基本步長重新表達；若 U 只用預約的資源，這組常數就只給畫面用。
 6. **沒有號誌與閉塞。** 兩個網站都沒有號誌機、固定閉塞或聯鎖。U 的授權終點（到下一站、或到下一個可以停車的地方）是 gap，照 ARCHITECTURE 決策 29 第 12 點與 PR #31 的語義處理，並在 PR 裡列出。
 7. **限速區段與觀測曲線。** 參考的限速區段綁定真實地名，觀測曲線要用實測資料；兩者都可以移植，W1 還沒做。虛擬地圖上的曲率限速參考沒有，要由我們的幾何推導，這是 gap。
 8. **通過站。** 參考的通過站有推導出的通過時刻，我們的 Q3 快車通過站沒有時刻。V 的交會推估需要它。
+9. **1× 的時間比例。** 目前 1× 每 100 ms 走一遊戲分鐘，是真實時間的 600 倍（決策 12）。W2 接上真實的車速之後，100 km/h 的列車在 1× 下每一真實秒跑過約 1,000 格（一格 16 公尺），畫面上等於瞬間移動。`Ci/` 的 1× 是真實時間。
+   - **決定（2026-10-01）**：1× 接近真實時間（照 `Ci/` 的 `GAME_SECONDS_PER_REAL_SECOND = 1`），另外提供加速的檔位，最快維持現在的 600 倍，經營時不必等。
+   - 確切的檔位與 tick 間隔在 W2a 定（會擴充 `GameSpeed`；決策 3 的「結果與速度無關」仍然成立），之後在實機（TestFlight）上調整。
+10. **停站依不依乘客人數。** `Ci/`、`Railway/` 的停站是固定的秒數（`StationDwell`）。參考包建議 `max(下車人數 ÷ 下車速率, 上車人數 ÷ 上車速率)` 加上開關門的時間，OpenTTD 的 gradual loading 也是依量裝卸。兩邊不一致，要作者決定。
+    - **決定（2026-10-01）**：以 `StationDwell` 為最短停站（參考包也要求沒有乘客時仍有最短停站），上下車的人多時才延長，延長的部分照參考包的 `max(下車人數 ÷ 速率, 上車人數 ÷ 速率)`。
+    - 速率與門數是 gap，在 W2b 定：起點是 `Ci/` 有定義但沒被讀的 `PARAMS.BOARDING_RATE = 2`，它沒有單位，要由我們補上。
 
 ## 建議的實作順序
 
@@ -171,17 +234,23 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 
 ```
 T 進路預約 ✅（PR #40）
-W1 行駛曲線核心 ── 不依賴其他 Stage；參考最完整
-U movement authority → T
-W2 曲線接到行程與移動 → W1，以及 gap 1、2 的決定
-V 交會與待避的推估 → W1（buildProfile、v/b）、S1 的單雙線，以及 gap 2、8
+W1 行駛曲線核心 ✅ ── 不依賴其他 Stage；參考最完整
+W2a 時間改用秒 ── 不依賴其他 Stage（gap 2、9 的決定）
+W2b 停站、上下車與誤點 → W2a、G1b 的 StationDwell（gap 10）
+W2c 曲線接到行程與移動 → W1、W2a（gap 1）
+U movement authority → T；排在 W2c 之後，直接用曲線在授權終點前停下
+V 交會與待避的推估 → W1（buildProfile、v/b）、S1 的單雙線，以及 gap 8
 V 實際放行 → T、U（保證不互穿）
 ```
 
 1. **W1** ✅（ARCHITECTURE 決策 33）：翻譯 `buildProfile`、`profTimeToProg`、`profProgToTime` 與性能表。純計算，golden 與 property digest 都不變。
-2. **G1**（第一個能玩的經營閉環，見 ROADMAP）：不依賴這份對照的任何 Stage。它對照的是 `Ci/` 的乘客與票價，不是 `Railway/`。
-3. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。可以和 G1 對調。
-4. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
-5. **W2**：先請作者決定 gap 1、2。
+2. **G1** ✅（第一個能玩的經營閉環，見 ROADMAP）：不依賴這份對照的任何 Stage。它對照的是 `Ci/` 的乘客與票價，不是 `Railway/`。
+3. **W2a**：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
+4. **W2b**：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
+5. **W2c**：曲線接到行程與移動（gap 1）。
+6. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
+7. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
+
+**順序（2026-10-01 作者決定）**：W2 先於 U-min。兩者互不依賴（U → T，W2 → W1），但後做的那個要處理「列車依曲線在授權終點前停下」；W2 先做，U-min 就直接建立在最終的移動方式上，不必先為固定的 rate 設計停車。
 
 依 ARCHITECTURE 的依賴方向規則，G1 的乘客與經營只讀車站、線路與停站的查詢，所以之後的 U、V、W2 改變鐵路的物理層時，不必重寫它們。
