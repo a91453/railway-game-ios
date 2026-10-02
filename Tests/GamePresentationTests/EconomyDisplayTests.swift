@@ -53,7 +53,11 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertNil(world.loadText(of: TrainID(rawValue: 1), in: .english))
         try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 200_000))
         try world.setStationDemand(StationID(rawValue: 3), to: StationDemand(kind: .office, dailyTrips: 1_000))
-        try world.advance(ticks: 30)
+        // Stage W2c: the line sends its train out every 8 minutes; at 26 the
+        // one sent out at 24 has left Alpha (24:42) with the passengers it
+        // took on there and is due at Gamma at 26:14, and those who came
+        // after it wait.
+        try world.advance(ticks: 26)
         let waiting = world.waitingPassengers(at: alpha).reduce(Int64(0)) { $0 + $1.count }
         XCTAssertGreaterThan(waiting, 0)
         XCTAssertEqual(world.waitingText(at: alpha, in: .english), ["Main to Gamma · \(waiting)"])

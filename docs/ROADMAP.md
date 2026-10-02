@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）已實作；接著做 W2c（行駛曲線接到移動），然後是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作；接著是 U、V（見 Phase 4.6 的實作順序）。目前 App 的地圖畫面是原型：方格加上連續路網的俯視除錯投影，不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -346,7 +346,7 @@ S5 是 S3/S4 的路網與 Phase 3–4 營運系統（N、P、Q1、Q2a、Q2b、Q3
 2. **G1** ✅：第一個能玩的經營閉環（見下面的 [G1](#g1--第一個能玩的經營閉環)）。G1a ✅、G1b ✅、G1c ✅。
    - T 已經保證兩台車不會同時用同一段軌道，乘客不需要 U。
    - `Ci/` 的參考在乘客、需求與票價上最完整。
-3. **W2**（見下面的 [Stage W](#stage-w--行駛曲線)）：W2a 時間改用秒 ✅ → W2b 停站、上下車與誤點 ✅ → W2c 曲線接到行程與移動。
+3. **W2**（見下面的 [Stage W](#stage-w--行駛曲線)）：W2a 時間改用秒 ✅ → W2b 停站、上下車與誤點 ✅ → W2c 曲線接到行程與移動 ✅。
    - W2a 之後先做 L1（繁體中文，決策 38），發第二版內部 TestFlight（0.2.0），再做 W2b（2026-10-02 作者決定）。
    - **2026-10-01 作者決定 W2 先於 U-min。** 第三份參考（[RailwayCore 參考包](RAILWAY_REFERENCE_MAPPING.md#railwaycore-參考包)）把停站與誤點列為 P0，這也是 G1 目前最明顯的缺口；W2 先做，U-min 就直接建立在最終的移動方式上。
 4. U-min：movement authority 的最小穩定契約。建立在 T 上；參考只有畫面層的跟車距離，授權規則大部分是 gap。
@@ -409,7 +409,12 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
     - 列車在月台上看起來停了，不代表完成。
   - 實作：到站 8 秒後開門、下車與上車同時進行（每節 4 扇門 × 每秒 2 人，門數是 gap）、至少停 36 秒（第一站、最後一站與折返的站 42 秒）、早到等到排定出發前 9 秒才關門、關門 9 秒後出發；開著門時整分鐘釋出的人也上車；客滿離站時才記 `refused`。啟動服務與派車算到達第一站，線路的時刻表在派車 42 秒後出發。`ServiceTimes` 存檔，`lateness(of:)` 是 GameCore 的查詢，畫面顯示停站的階段。golden schema 24（時刻表可以寫秒、列車的 `times`、`serviceTimes`、`lateness` 觀察與 `station-dwell.json`）。
   - 還沒有：月台擁擠的延長、轉乘、依車種的門數與速率、`Railway/` 的每站實測停站時間。
-- **W2c — 曲線接到行程與移動**（gap 1）：線路一段的時間是 `buildProfile` 建得出曲線的最短整秒。
+- **W2c ✅ — 曲線接到行程與移動**（gap 1、4，ARCHITECTURE 決策 40）：
+  - 線路一段的時間是線路的性能建得出曲線（`buildProfile`）的最少整秒，來回無條件進位到整分鐘規劃列車數與班距；取代線路的 rate。
+  - 服務的列車在兩站之間跟著曲線走（`ServiceRun` 存檔）：照 Railway 參考的 `assignRunProfiles` 走班表給的時間，準時出發就準時到達、晚出發整段往後移；排得太緊時走最少的秒數。被擋住（rate 0、鐵軌被拆）時丟掉這段，能動時從停止狀態盡快重新出發（gap）。
+  - 列車與線路各有性能（gap 4 的決定：預設 `standard`，`setTrainPerformance`、`setLinePerformance` 更換；新增 `Ci/` 的地鐵列車 `metro`）。
+  - golden schema 25（`performance`、`run`、行程的秒數、手算的 `service-run.json`）。
+  - 還沒有：選性能的畫面、依車種選性能、限速區段與觀測曲線、曲率與坡度限速。
 
 - 站間不再等速：加速、定速、惰行、煞車組成的梯形曲線，加上速度上限；曲線半徑與坡度之後再考慮。
 - 全部用整數計算，deterministic。

@@ -141,8 +141,13 @@ final class NetworkServiceSessionTests: XCTestCase {
     }
 
     func testANetworkServiceReadsItsNextStopAndPunctuality() throws {
-        for (rate, late) in [(Int64(1_024), false), (512, true)] {
-            var world = try makeNetworkWorld(rate: rate)
+        // Stage W2c: a crawl reaching 1 km/h in 100 s and stopping from it
+        // in as long needs 561 s for 8192 units (6414 at 17.8 units a
+        // second, 360.8 s, and 200 s speeding up and slowing down).
+        let crawl = TrainPerformance(acceleration: 10, braking: 10, topSpeed: 1)
+        for (performance, late) in [(TrainPerformance.standard, false), (crawl, true)] {
+            var world = try makeNetworkWorld(rate: 1_024)
+            try world.setTrainPerformance(Self.tram, to: performance)
             try world.setTrainTimetable(Self.tram, to: [
                 ScheduledStop(station: Self.west, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 5)),
                 ScheduledStop(station: Self.east, arrival: GameTime(minutes: 13), departure: GameTime(minutes: 15)),
@@ -158,8 +163,9 @@ final class NetworkServiceSessionTests: XCTestCase {
             try world.advance(ticks: 6)
             XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .onTime))
             XCTAssertNil(world.stationStopText(of: Self.tram, in: .english))
-            // 8192 at 1024 a minute: there at 00:13. At 512 a minute it is
-            // still on its way, a minute late at 00:14.
+            // 8192 in the 480 s the timetable gives the run: there at 00:13.
+            // The crawl needs 561 s, to 00:14:21: still on its way, a minute
+            // late at 00:14.
             try world.advance(ticks: late ? 8 : 7)
             if late {
                 XCTAssertEqual(world.trainServiceStatus(of: Self.tram, in: .english), TrainServiceStatus(serviceName: nil, stopText: "Next: East, due 00:13", punctuality: .late(minutes: 1)))
@@ -179,14 +185,16 @@ final class NetworkServiceSessionTests: XCTestCase {
         try world.setLineServiceWindow(line, to: .allDay)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         try world.assignTrain(Self.tram, to: line)
-        // The line's own journey is a train of one car's: out 8192 (8
-        // minutes), turned where it stands at East (1024 along e2 going
-        // west), back 5120 + 7168 = 12288 (12 minutes) to West's far end
-        // going west, and 2 minutes at each end.
-        XCTAssertEqual(world.lineJourney(line)?.roundTripMinutes, 24)
+        // The line's own journey is a train of one car's: out 8192 (32 s,
+        // √(2 × 8192 × 0.06) = 31.4, Stage W2c), turned where it stands at
+        // East (1024 along e2 going west), back 5120 + 7168 = 12288 (39 s,
+        // 38.4) to West's far end going west, and 2 minutes at each end:
+        // 311 s, planned as 6 minutes.
+        XCTAssertEqual(world.lineJourney(line)?.roundTripSeconds, 311)
+        XCTAssertEqual(world.lineJourney(line)?.roundTripMinutes, 6)
         let summaries = world.lineServiceSummaries(line, in: .english)
         XCTAssertEqual(summaries.map(\.title), ["All stops West–East"])
-        XCTAssertEqual(summaries.first?.levels.map { $0.text(in: .english) }, ["1 train · Every 24 min", "1 train · Every 24 min", "1 train · Every 24 min"])
+        XCTAssertEqual(summaries.first?.levels.map { $0.text(in: .english) }, ["1 train · Every 6 min", "1 train · Every 6 min", "1 train · Every 6 min"])
         XCTAssertEqual(summaries.first?.assigned, 1)
         XCTAssertEqual(summaries.first?.running, 0)
         XCTAssertEqual(world.lineStatusText(line, at: world.clock.now, in: .english), "Low")

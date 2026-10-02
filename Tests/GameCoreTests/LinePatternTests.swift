@@ -17,10 +17,11 @@ final class LinePatternTests: XCTestCase {
     //         |       |       |       |
     //   o  -  a - o - b - o - c - o - d  -  o
     //
-    // At one link a minute each stop is two minutes from the next. Main
-    // (A, B, C, D) takes 12 minutes of travel, a minute at B and C each
-    // way and two at each end: 20. B-C and back is 4 + 4 = 8; A-D non-stop
-    // and back is 12 + 4 = 16.
+    // The line plans with a crawl (Stage W2c, `crawl`): each stop is 120 s
+    // from the next, and A to D non-stop 350 s. Main (A, B, C, D) takes 12
+    // minutes of travel, a minute at B and C each way and two at each end:
+    // 20. B-C and back is 4 + 4 = 8; A-D non-stop and back is 700 s + 4
+    // minutes, 940 s, which the line plans as 16 minutes.
     private let a = GridPosition(x: 1, y: 1)
     private let b = GridPosition(x: 3, y: 1)
     private let c = GridPosition(x: 5, y: 1)
@@ -35,6 +36,11 @@ final class LinePatternTests: XCTestCase {
     private let two = TrainID(rawValue: 2)
     private let three = TrainID(rawValue: 3)
     private let ghost = TrainID(rawValue: 99)
+    /// The line's performance (Stage W2c): a crawl at 1 km/h, about a link
+    /// a minute. It reaches 1 km/h in 4 s and stops from it in 4 s, covering
+    /// 35.6 units each time: two links take 8 + 111.2 s, planned as 120, and
+    /// six 8 + 341.6 s, planned as 350.
+    private let crawl = TrainPerformance(acceleration: 250, braking: 250, topSpeed: 1)
 
     private func makeWorld(minute: Int64 = 480) throws -> GameWorld {
         var world = try GameWorld(
@@ -50,6 +56,7 @@ final class LinePatternTests: XCTestCase {
             try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
         }
         try world.createLine(named: "Main", stops: [stationA, stationB, stationC, stationD])
+        try world.setLinePerformance(main, to: crawl)
         return world
     }
 
@@ -246,14 +253,19 @@ final class LinePatternTests: XCTestCase {
         XCTAssertEqual(short.start, .atNode(b, heading: .north))
         XCTAssertEqual(short.legs.map { [$0.from, $0.to] }, [[1, 2], [2, 1]])
         XCTAssertEqual(short.legs.map(\.route), [[GridPosition(x: 4, y: 1), c], [GridPosition(x: 4, y: 1), b]])
+        XCTAssertEqual(short.legs.map(\.seconds), [120, 120])
+        XCTAssertEqual(short.roundTripSeconds, 480)
         XCTAssertEqual(short.roundTripMinutes, 8)
 
         let express = try XCTUnwrap(world.lineJourney(main, pattern: 1))
         XCTAssertEqual(express.start, .atNode(a, heading: .north))
         XCTAssertEqual(express.legs.map { [$0.from, $0.to] }, [[0, 3], [3, 0]])
-        XCTAssertEqual(express.legs.map(\.minutes), [6, 6], "it passes B and C")
-        XCTAssertEqual(express.roundTripMinutes, 16)
+        XCTAssertEqual(express.legs.map(\.seconds), [350, 350], "it passes B and C")
+        XCTAssertEqual(express.roundTripSeconds, 940)
+        XCTAssertEqual(express.roundTripMinutes, 16, "rounded up")
 
+        XCTAssertEqual(world.lineJourney(main)?.legs.map(\.seconds), [120, 120, 120, 120, 120, 120])
+        XCTAssertEqual(world.lineJourney(main)?.roundTripSeconds, 1200)
         XCTAssertEqual(world.lineJourney(main)?.roundTripMinutes, 20)
         XCTAssertEqual(world.lineJourney(main, pattern: nil), world.lineJourney(main))
         XCTAssertNil(world.lineJourney(main, pattern: 2))
@@ -365,7 +377,7 @@ final class LinePatternTests: XCTestCase {
         XCTAssertEqual(world.train(id: shuttle)?.timetable.first, stop(stationB, sent: 600, 0, 42))
         XCTAssertEqual(
             world.train(id: express)?.timetable,
-            [stop(stationA, sent: 600, 0, 42), stop(stationD, sent: 600, 402, 522, reverses: true), stop(stationA, sent: 600, 882, 882, reverses: true)]
+            [stop(stationA, sent: 600, 0, 42), stop(stationD, sent: 600, 392, 512, reverses: true), stop(stationA, sent: 600, 862, 862, reverses: true)]
         )
         XCTAssertEqual(world.line(id: main)?.patterns[1].lastDispatch, GameTime(minutes: 600))
 

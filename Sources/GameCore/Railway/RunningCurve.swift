@@ -18,18 +18,23 @@
 //   1000 × 2^14, where the reference's fourteen halvings are exact.
 //
 // Square roots are integer square roots. Every other quantity is the exact
-// floor of the reference's formula, given the cruise speed. Nothing here
-// changes how trains run yet: W2 connects the curve to journeys and
-// movement.
+// floor of the reference's formula, given the cruise speed. Stage W2c
+// (ARCHITECTURE decision 40) connects the curve to journeys and movement:
+// a line's leg takes the least whole second its performance builds a curve
+// for (``RunningCurve/leastSeconds(length:performance:)``), and a service's
+// train follows a curve from one call to the next (``ServiceRun``).
 
 /// How a train accelerates, brakes and coasts, and how fast it may run
 /// (Stage W1): the input of a ``RunningCurve``.
 ///
 /// The presets are the owner's reference values (`PERF_DEFAULT`,
 /// `PERF_HSR`, `PERF_DR1000`, `PERF_RULES` and `PERF_BY_TYPE` in the
-/// Railway reference). Which preset a train uses is not decided yet: the
-/// reference picks one from a real train's type and car name, which the
-/// game's trains do not have.
+/// Railway reference; ``metro`` from the metro game). The reference picks
+/// one from a real train's type and car name, which the game's trains do
+/// not have: since Stage W2c every train and every line has its own,
+/// ``standard`` until a command changes it (see
+/// ``GameWorld/setTrainPerformance(_:to:)`` and
+/// ``GameWorld/setLinePerformance(_:to:)``).
 public struct TrainPerformance: Hashable, Sendable {
     /// Coasting between cruising and braking (the reference's `coast`):
     /// the train rolls, slowing at ``deceleration``, down to
@@ -106,6 +111,68 @@ public struct TrainPerformance: Hashable, Sendable {
     public static let semiExpress = TrainPerformance(acceleration: 1500, braking: 2600, topSpeed: 120)
     /// `PERF_RULES` `/電車|區間/` and `PERF_BY_TYPE` `區間車`, `區間快`: local EMUs.
     public static let local = TrainPerformance(acceleration: 2500, braking: 3000, topSpeed: 120)
+    /// The metro game's trains (`Ci/`, Stage W2c): `METRO_TRAIN_ACCEL_MPS2`
+    /// 1.1 m/s² and `METRO_TRAIN_DECEL_MPS2` 1.3 m/s² (3.96 and 4.68 km/h
+    /// per second, exactly), and a new line's design speed of 80 km/h
+    /// (`maxSpeedKmh: e.maxSpeedKmh || 80`).
+    public static let metro = TrainPerformance(acceleration: 3960, braking: 4680, topSpeed: 80)
+
+    /// Whether a train or line may have this performance (Stage W2c): every
+    /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast
+    /// that slows the train less than its braking, down to below its cruise
+    /// speed (a speed ratio in `0..<1000`). These are the values
+    /// ``RunningCurve`` builds a curve with; it would quietly ignore a coast
+    /// that does not fit, which a command rejects instead.
+    public var isValid: Bool {
+        let range = 1...RunningCurve.maximumRate
+        guard range.contains(acceleration), range.contains(braking), range.contains(topSpeed),
+              alternativeAcceleration.map(range.contains) ?? true, alternativeBraking.map(range.contains) ?? true
+        else { return false }
+        guard let coast else { return true }
+        return range.contains(coast.deceleration) && coast.deceleration < braking && (0..<1000).contains(coast.speedRatio)
+    }
+}
+
+extension TrainPerformance.Coast: Codable {}
+
+/// Saved as `{"acceleration", "braking", "topSpeed"}` with
+/// `"alternativeAcceleration"`, `"alternativeBraking"` and
+/// `"coast": {"deceleration", "speedRatio"}` when set; an explicit `null`
+/// is rejected. A performance that is not valid (see
+/// ``TrainPerformance/isValid``) is rejected.
+extension TrainPerformance: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case acceleration, braking, topSpeed, alternativeAcceleration, alternativeBraking, coast
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            acceleration: try container.decode(Int64.self, forKey: .acceleration),
+            braking: try container.decode(Int64.self, forKey: .braking),
+            topSpeed: try container.decode(Int64.self, forKey: .topSpeed),
+            alternativeAcceleration: container.contains(.alternativeAcceleration)
+                ? try container.decode(Int64.self, forKey: .alternativeAcceleration) : nil,
+            alternativeBraking: container.contains(.alternativeBraking) ? try container.decode(Int64.self, forKey: .alternativeBraking) : nil,
+            coast: container.contains(.coast) ? try container.decode(Coast.self, forKey: .coast) : nil
+        )
+        guard isValid else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .acceleration, in: container,
+                debugDescription: "A performance's rates and top speed must be 1 to \(RunningCurve.maximumRate), with a coast below its braking."
+            )
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(acceleration, forKey: .acceleration)
+        try container.encode(braking, forKey: .braking)
+        try container.encode(topSpeed, forKey: .topSpeed)
+        try container.encodeIfPresent(alternativeAcceleration, forKey: .alternativeAcceleration)
+        try container.encodeIfPresent(alternativeBraking, forKey: .alternativeBraking)
+        try container.encodeIfPresent(coast, forKey: .coast)
+    }
 }
 
 /// The run of a train between two stops (Stage W1): it covers ``length``
@@ -236,6 +303,41 @@ public struct RunningCurve: Hashable, Sendable {
             return
         }
         return nil
+    }
+
+    /// The longest run, in whole seconds, a curve is built for: the most
+    /// whole seconds in ``maximumDuration``.
+    public static let maximumSeconds: Int64 = maximumDuration / 1000
+
+    /// The least whole second in which `performance` builds a curve for a
+    /// run of `length` world units (see ``init(length:duration:performance:)``),
+    /// or `nil` if it builds none in up to ``maximumSeconds`` (Stage W2c):
+    /// how long a line plans a leg to take, and how long a train takes when
+    /// it cannot keep to its timetable. It is the time of the fastest run,
+    /// accelerating to the curve's cruise speed and braking at the end,
+    /// rounded up to the step the clock goes in.
+    ///
+    /// A curve is built for a duration exactly when one is without
+    /// coasting, with one of the performance's accelerations and brakings,
+    /// and that holds for every longer duration once it holds for one: the
+    /// discriminant only grows, the cruise speed only falls, and so do the
+    /// times it takes to reach and leave it. So the least second is found
+    /// by halving the range.
+    public static func leastSeconds(length: Int64, performance: TrainPerformance) -> Int64? {
+        func builds(_ seconds: Int64) -> Bool {
+            RunningCurve(length: length, duration: seconds * 1000, performance: performance) != nil
+        }
+        guard builds(maximumSeconds) else { return nil }
+        var (low, high) = (Int64(1), maximumSeconds)
+        while low < high {
+            let middle = (low + high) / 2
+            if builds(middle) {
+                high = middle
+            } else {
+                low = middle + 1
+            }
+        }
+        return low
     }
 
     private init(

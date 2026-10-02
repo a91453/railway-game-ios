@@ -168,6 +168,24 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Railway/site_archive_clean/data/*.json` 的每站停站、`TRTC_OFFICIAL_COAST_DWELL_SEC` 等 | 真實時刻表的停站 | `StationDwell` 的純函式（決策 35 第 9 點） | 不用 | — | 不移植（決定）：遊戲的停站照 `Ci/` 的遊戲規則；真實時刻表的停站留給之後匯入真實資料時 |
 | 參考包「Transfer passengers re-enter station waiting demand」、`platformCongestionPenalty` | 轉乘、月台擁擠 | — | 沒有 | — | 延後：轉乘在 Phase 5；擁擠是 gap |
 
+### Stage W2c：曲線接到行程與移動
+
+2026-10-02 檢查三份參考（私有 repo `1563ad0`：`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`）。ARCHITECTURE 決策 40。W1 的曲線（`RunningCurve`，距離 1/64 m、時間毫秒、率千分之一 km/h/s）照舊；W2c 以整秒切段。
+
+| 參考 | 行為 | 現有 GameCore | Swift（W2c） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- | --- |
+| `Railway/` `index.html` `assignRunProfiles`（8367 行）：`runT = s[k1].arrSec − s[k0].depSec`，`buildProfile(runKm, runT, a, b, v, coast)`，再依序改用 `bAlt`、`aAlt` | 一段走班表給的時間 | 服務的列車照 rate 等速 | `GameWorld.leaving(_:stop:cycle:)` 算排定的時間（下一站在該輪的排定到達 − 這一站的排定出發），`run(of:length:scheduled:)` 以 `RunningCurve.init?(length:duration:performance:)` 建曲線，存成 `ServiceTimes.run`（`ServiceRun`） | 秒 → 毫秒 × 1000 | faithful |
+| 同上：都建不出曲線時等速 | 沒有曲線時的退路 | — | 排定的時間建不出曲線（或不在 1 到 4,294,967 秒）時走最少的秒數；連最少的也沒有時沒有行駛，照 rate 移動 | 秒 | 部分 faithful：參考是等速走完班表的時間，我們是盡快跑（**gap**：參考的班表一定是真實的，排得太緊在參考裡不會發生） |
+| `Railway/` `profTimeToProg`（8315 行）、`trainSeg`、`segProg`；`motion.js` `runOf`、`runBetween` | 依經過的時間取曲線上的位置 | 每秒走 rate 的份 | `ServiceRun.distance(on:from:to:)`、`GameWorld.travelShare(of:from:)`：每秒走曲線在這一秒結束與開始的距離差 | 毫秒 → 秒；距離無條件捨去 | faithful + 機械（整數步長） |
+| `Railway/` `liveDelaySec`、21014 行 `sourceSec − delaySec − eventSec`；參考包「Actual departure updates delay for the next segment」 | 誤點的列車沿同一條曲線、整段往後移 | — | 行駛從實際出發的那一刻開始，長度與秒數照排定，所以晚出發就晚到同樣多；`lateness(of:)` 照 W2b | 秒 | faithful |
+| `Ci/` `app__q_c234188b7c397f91.js` `METRO_TRAIN_ACCEL_MPS2 = 1.1`、`METRO_TRAIN_DECEL_MPS2 = 1.3`、`maxSpeedKmh: e.maxSpeedKmh \|\| 80` | 地鐵列車的加減速與路線的設計速度 | — | `TrainPerformance.metro` = 3960、4680、80 | m/s² × 3.6 × 1000 → 千分之一 km/h/s（精確） | faithful |
+| `Ci/` 同檔：一段的時間是加速到路線速度、在下一站前煞停的最短時間 | 由性能推導行駛時間 | 線路一段 = ⌈距離 ÷ rate⌉ 分鐘 | `RunningCurve.leastSeconds(length:performance:)`：`buildProfile` 建得出曲線的最少整秒（二分搜尋）；`LineLeg.seconds`、`LineJourney.roundTripSeconds`，`roundTripMinutes` 無條件進位 | 秒 | faithful（gap 1 的決定）：梯形或三角形的最短時間，進位到整秒 |
+| `Railway/` `PERF_*`、`resolvePerf`（依車名選） | 每台列車的性能 | W1 只有預設值 | `Train.performance`、`ServiceLine.performance`（預設 `standard`），`setTrainPerformance(_:to:)`、`setLinePerformance(_:to:)`（取代 `setLineRate`），`TrainPerformance.isValid`、`Codable` | 千分之一 km/h/s、km/h | 數值 faithful；選擇方式是 gap 4 的決定（見下面） |
+| 參考包 `StopTiming.travelAllowance`、`CmdAutofillTimetable` | 時刻表的行駛時間由實際行駛時間填 | 線路的時刻表照 rate | 線路的時刻表照 `leastSeconds` 填（線路的性能） | 秒 | faithful（語義） |
+| 沒有參考 | 被擋住的列車（rate 0、前方鐵軌被拆） | 等待，補回後續行 | 這一步結束時剩下的路比曲線剩下的長就丟掉行駛（`dropRunsHeldUp(endingAt:)`）；能動時從停止狀態以最少的秒數走剩下的路（`resumeRun(_:at:)`） | 秒 | **gap**：參考只依時間取樣，列車不會被擋住 |
+| 沒有參考 | 很慢的一段整分鐘不動 | 閒置分鐘的捷徑 | `nextRunMove(from:)`：下一個讓列車往前的秒不被跳過 | 秒 | **gap**（GameCore 的機械） |
+| `Railway/` `buildObsProfile`、`SPEED_ZONES`、`resolvePerf` 的車名規則 | 觀測曲線、限速區段、依車名選性能 | — | 不做 | — | 延後（gap 7；列車還沒有車名或車種） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -231,6 +249,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
    - W2 把線路一段的時間定為 `buildProfile` 建得出曲線的最短整秒。
    - 這是把參考的函式當成判斷條件使用，不是新公式；但「由性能決定時刻表」本身是參考沒有的行為，要作者同意。
    - **決定（2026-10-01）**：照上面的建議，一段的時間是建得出曲線的最短整秒（gap 2 改用秒之後）。時刻表以秒儲存，畫面顯示到分鐘，需要時顯示秒。
+   - **W2c 的實作**（決策 40）：線路以自己的性能規劃一段的最少整秒（`RunningCurve.leastSeconds(length:performance:)`）；服務的列車照參考的 `assignRunProfiles` 走班表給的時間，排得太緊時走最少的秒數。見上面的 [Stage W2c 對照](#stage-w2c曲線接到行程與移動)。
 2. **時間的解析度。** 參考以秒計：安全間隔 30 秒、等待最多 184 秒、跑段曲線以秒解。GameCore 的基本步長是一分鐘（決策 3）。
    - 交會與待避若照參考以秒判斷，時刻表、閘門與存檔就要有秒。
    - 或者把秒無條件進位成分鐘，但這會改變參考的結果。
@@ -247,6 +266,8 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
      - 同樣的遊戲時間要跑 60 倍的步數；最快的檔位維持現在的 600 倍時，每真實秒 600 步。
 3. **整列車預約的演算法不在快照。** V 的「衝突時排定等待」只有結果（`holds`）與更新紀錄的文字；T 已經依自己的設計實作。建議作者把建置腳本加進私有 repo（`motion.js` 註解提到的 `scripts/lib/track_section_via.mjs`、`track_directions.mjs`，以及產生 `dispatch.json` 的腳本）。有了它們，V 就能翻譯而不是設計，也能回頭對照 T 的規則。2026-10-01 重新確認：RailwayCore 參考包也沒有這些腳本。
 4. **車種性能怎麼選。** `PERF_RULES` 依真實車名（自強、區間、PP、DR1000 等）比對。遊戲的列車沒有車名或車種。W1 先把數值表照抄成具名的預設，列車帶哪一組要作者決定。
+   - **決定（2026-10-02）**：每台列車與每條線路都有自己的性能，預設 `standard`，以指令更換（`setTrainPerformance`、`setLinePerformance`）；畫面的選擇之後與車種一起做。
+   - **W2c 的實作**（決策 40）：另加 `Ci/` 的地鐵列車（`metro`：1.1、1.3 m/s²，80 km/h）。列車的性能只在不是標準時存檔。
 5. **跟車規則的角色。** `updateBlockHolds` 是畫面層、隨畫格改變的顯示延後。U 若要採用它的距離（0.4 km、兩車長度的平均），要以基本步長重新表達；若 U 只用預約的資源，這組常數就只給畫面用。
 6. **沒有號誌與閉塞。** 兩個網站都沒有號誌機、固定閉塞或聯鎖。U 的授權終點（到下一站、或到下一個可以停車的地方）是 gap，照 ARCHITECTURE 決策 29 第 12 點與 PR #31 的語義處理，並在 PR 裡列出。
 7. **限速區段與觀測曲線。** 參考的限速區段綁定真實地名，觀測曲線要用實測資料；兩者都可以移植，W1 還沒做。虛擬地圖上的曲率限速參考沒有，要由我們的幾何推導，這是 gap。
@@ -269,7 +290,7 @@ T 進路預約 ✅（PR #40）
 W1 行駛曲線核心 ✅ ── 不依賴其他 Stage；參考最完整
 W2a 時間改用秒 ── 不依賴其他 Stage（gap 2、9 的決定）
 W2b 停站、上下車與誤點 → W2a、G1b 的 StationDwell（gap 10）
-W2c 曲線接到行程與移動 → W1、W2a（gap 1）
+W2c 曲線接到行程與移動 ✅ → W1、W2a（gap 1、4）
 U movement authority → T；排在 W2c 之後，直接用曲線在授權終點前停下
 V 交會與待避的推估 → W1（buildProfile、v/b）、S1 的單雙線，以及 gap 8
 V 實際放行 → T、U（保證不互穿）
@@ -279,7 +300,7 @@ V 實際放行 → T、U（保證不互穿）
 2. **G1** ✅（第一個能玩的經營閉環，見 ROADMAP）：不依賴這份對照的任何 Stage。它對照的是 `Ci/` 的乘客與票價，不是 `Railway/`。
 3. **W2a** ✅（ARCHITECTURE 決策 37）：時間改用秒（gap 2、9）。只換單位與速度檔位，不加新玩法。
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
-5. **W2c**：曲線接到行程與移動（gap 1）。
+5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 7. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

@@ -215,7 +215,10 @@ extension ReferenceWorld {
         off.edges = path.traversals.map { Run($0)!.edge }
         off.cursor = 0
         off.end = path.end
-        off.service = Service(stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds)
+        off.service = Service(
+            stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds,
+            run: setOff(trains[i], length: path.distance, from: (service.stop, service.cycle), to: next)
+        )
         _ = admit(off, at: i)
         return false
     }
@@ -267,10 +270,12 @@ extension ReferenceWorld {
             if from == calls[n - 1] { train = turnedOnNetwork(train) }
             guard let path = networkPathToStation(from: train.position!, station: line.stops[to], length: length) else { return nil }
             let units = path.distance
-            legs.append(LineLeg(from: from, to: to, path: path, minutes: units == 0 ? 0 : (units - 1) / line.rate + 1))
+            // Stage W2c: the least second the line's curve is built for.
+            guard let seconds = units == 0 ? 0 : Self.leastSeconds(units, line.performance) else { return nil }
+            legs.append(LineLeg(from: from, to: to, path: path, seconds: seconds))
             train = followed(train, along: path)
         }
-        let total = legs.reduce(Int64(0)) { $0 + $1.minutes } + 2 * 2 + Int64(2 * (n - 2)) * 1
-        return LineJourney(start: start, legs: legs, roundTripMinutes: total)
+        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + 60 * (2 * 2 + Int64(2 * (n - 2)) * 1)
+        return LineJourney(start: start, legs: legs, roundTripSeconds: total)
     }
 }

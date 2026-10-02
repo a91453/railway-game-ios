@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 24
+    static let schemaVersion = 25
 
     var description: String
     var initialState: InitialState
@@ -441,7 +441,8 @@ enum ScenarioCommand: Equatable {
     case createLine(name: String, stops: [StationID])
     case removeLine(LineID)
     case setLineStops(LineID, [StationID])
-    case setLineRate(LineID, Int64)
+    case setLinePerformance(LineID, TrainPerformance)
+    case setTrainPerformance(TrainID, TrainPerformance)
     case setLineServiceWindow(LineID, ServiceWindow)
     case setLineTrainsInService(LineID, TrainsInService, pattern: Int?)
     case setServiceDay(ServiceDay)
@@ -508,8 +509,10 @@ enum ScenarioCommand: Equatable {
                 try world.removeLine(id)
             case .setLineStops(let id, let stops):
                 try world.setLineStops(id, to: stops)
-            case .setLineRate(let id, let rate):
-                try world.setLineRate(id, to: rate)
+            case .setLinePerformance(let id, let performance):
+                try world.setLinePerformance(id, to: performance)
+            case .setTrainPerformance(let id, let performance):
+                try world.setTrainPerformance(id, to: performance)
             case .setLineServiceWindow(let id, let window):
                 try world.setLineServiceWindow(id, to: window)
             case .setLineTrainsInService(let id, let trains, let pattern):
@@ -570,6 +573,7 @@ extension ScenarioCommand: Decodable {
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
         case profile, structure, start, end, enabled, demand, mode, rules
+        case performance
     }
 
     init(from decoder: any Decoder) throws {
@@ -625,9 +629,9 @@ extension ScenarioCommand: Decodable {
             self = try .startTrainService(container.decodeTrain(forKey: .train))
         case "stopTrainService":
             self = try .stopTrainService(container.decodeTrain(forKey: .train))
-        // Line commands are read as written: rejecting too few stops, a rate
-        // below 1, a window, counts or a day that do not fit is GameCore's
-        // decision.
+        // Line commands are read as written: rejecting too few stops, a
+        // performance, a window, counts or a day that do not fit is
+        // GameCore's decision.
         case "createLine":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .createLine(name: container.decode(String.self, forKey: .name), stops: stops)
@@ -636,8 +640,14 @@ extension ScenarioCommand: Decodable {
         case "setLineStops":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
-        case "setLineRate":
-            self = try .setLineRate(container.decodeLine(forKey: .line), container.decode(Int64.self, forKey: .rate))
+        case "setLinePerformance":
+            let performance = try container.decode(PerformanceSummary.self, forKey: .performance).performance
+            self = try .setLinePerformance(container.decodeLine(forKey: .line), performance)
+        case "setTrainPerformance":
+            // Read as written: rejecting a performance that is not valid is
+            // GameCore's decision (schema 25, Stage W2c).
+            let performance = try container.decode(PerformanceSummary.self, forKey: .performance).performance
+            self = try .setTrainPerformance(container.decodeTrain(forKey: .train), performance)
         case "setLineServiceWindow":
             self = try .setLineServiceWindow(container.decodeLine(forKey: .line), container.decode(WindowSummary.self, forKey: .window).window)
         case "setLineTrainsInService":
@@ -804,8 +814,8 @@ extension StepOutcome: Codable {
             self = try .rejected(.unknownLine(container.decodeLine(forKey: .line)))
         case "invalidLineStops":
             self = .rejected(.invalidLineStops)
-        case "invalidLineRate":
-            self = .rejected(.invalidLineRate)
+        case "invalidTrainPerformance":
+            self = .rejected(.invalidTrainPerformance)
         case "invalidServiceWindow":
             self = .rejected(.invalidServiceWindow)
         case "invalidTrainsInService":
@@ -939,8 +949,8 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .line)
         case .rejected(.invalidLineStops):
             try container.encode("invalidLineStops", forKey: .result)
-        case .rejected(.invalidLineRate):
-            try container.encode("invalidLineRate", forKey: .result)
+        case .rejected(.invalidTrainPerformance):
+            try container.encode("invalidTrainPerformance", forKey: .result)
         case .rejected(.invalidServiceWindow):
             try container.encode("invalidServiceWindow", forKey: .result)
         case .rejected(.invalidTrainsInService):
@@ -1642,15 +1652,18 @@ struct WorldSummary: Codable, Equatable {
         /// Under traffic control (schema 19): the track it has reserved,
         /// in resource order; `[]` for none.
         var reservation: [ResourceSummary]
+        /// Its performance (schema 25, Stage W2c): absent for the standard
+        /// performance, never `null`.
+        var performance: PerformanceSummary
 
         private enum CodingKeys: String, CodingKey {
-            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trail, trailEdges, reservation
+            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trail, trailEdges, reservation, performance
         }
 
         init(
             id: Int, name: String, position: TrainPositionSummary, movement: TrainMovementSummary, timetable: [StopSummary],
             repeat: RepeatSummary, execution: ExecutionSummary, times: TimesSummary? = nil, cars: Int, trail: [PositionSummary],
-            trailEdges: [Int], reservation: [ResourceSummary]
+            trailEdges: [Int], reservation: [ResourceSummary], performance: TrainPerformance = .standard
         ) {
             self.id = id
             self.name = name
@@ -1664,10 +1677,12 @@ struct WorldSummary: Codable, Equatable {
             self.trail = trail
             self.trailEdges = trailEdges
             self.reservation = reservation
+            self.performance = PerformanceSummary(performance)
         }
 
         /// Every field is required but `times`, which is absent without a
-        /// service: an explicit `null` is rejected.
+        /// service, and `performance`, absent for the standard one: an
+        /// explicit `null` is rejected.
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             id = try container.decode(Int.self, forKey: .id)
@@ -1682,6 +1697,27 @@ struct WorldSummary: Codable, Equatable {
             trail = try container.decode([PositionSummary].self, forKey: .trail)
             trailEdges = try container.decode([Int].self, forKey: .trailEdges)
             reservation = try container.decode([ResourceSummary].self, forKey: .reservation)
+            performance = try container.contains(.performance)
+                ? container.decode(PerformanceSummary.self, forKey: .performance) : PerformanceSummary(.standard)
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(position, forKey: .position)
+            try container.encode(movement, forKey: .movement)
+            try container.encode(timetable, forKey: .timetable)
+            try container.encode(self.repeat, forKey: .repeat)
+            try container.encode(execution, forKey: .execution)
+            try container.encodeIfPresent(times, forKey: .times)
+            try container.encode(cars, forKey: .cars)
+            try container.encode(trail, forKey: .trail)
+            try container.encode(trailEdges, forKey: .trailEdges)
+            try container.encode(reservation, forKey: .reservation)
+            if performance.performance != .standard {
+                try container.encode(performance, forKey: .performance)
+            }
         }
     }
 
@@ -1754,7 +1790,7 @@ struct WorldSummary: Codable, Equatable {
                     movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
                     repeat: RepeatSummary($0.timetablePeriodMinutes), execution: ExecutionSummary($0.execution),
                     times: $0.times.map(TimesSummary.init), cars: $0.cars, trail: $0.trail.map(PositionSummary.init), trailEdges: $0.trailEdges.map(\.number),
-                    reservation: $0.reservation.map(ResourceSummary.init)
+                    reservation: $0.reservation.map(ResourceSummary.init), performance: $0.performance
                 )
             }
             .sorted { $0.id < $1.id }
@@ -1979,16 +2015,18 @@ struct PassengerSummary: Codable, Equatable {
 
 // MARK: - Service lines
 
-/// A service line as a fixture value: `{"id", "name", "stops", "rate",
-/// "window", "trainsInService", "targetHeadways", "trains",
+/// A service line as a fixture value: `{"id", "name", "stops",
+/// "performance", "window", "trainsInService", "targetHeadways", "trains",
 /// "lastDispatch", "patterns"}` (see `ServiceLine`). Every field is
-/// required; `lastDispatch` is `null` for a line that never sent a train
+/// required but `performance` (schema 25, Stage W2c; it replaces the rate
+/// before it), which is absent for the standard performance, never
+/// `null`; `lastDispatch` is `null` for a line that never sent a train
 /// out, and `patterns` is `[]` for a line without any.
 struct LineSummary: Codable, Equatable {
     var id: Int
     var name: String
     var stops: [Int]
-    var rate: Int64
+    var performance: PerformanceSummary
     var window: WindowSummary
     var trainsInService: TrainsSummary
     var targetHeadways: TargetHeadwaysSummary
@@ -1997,13 +2035,14 @@ struct LineSummary: Codable, Equatable {
     var patterns: [PatternSummary]
 
     init(
-        id: Int, name: String, stops: [Int], rate: Int64, window: WindowSummary, trainsInService: TrainsSummary,
-        targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?, patterns: [PatternSummary] = []
+        id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
+        trainsInService: TrainsSummary, targetHeadways: TargetHeadwaysSummary, trains: [Int], lastDispatch: Int64?,
+        patterns: [PatternSummary] = []
     ) {
         self.id = id
         self.name = name
         self.stops = stops
-        self.rate = rate
+        self.performance = performance
         self.window = window
         self.trainsInService = trainsInService
         self.targetHeadways = targetHeadways
@@ -2016,7 +2055,7 @@ struct LineSummary: Codable, Equatable {
         id = line.id.rawValue
         name = line.name
         stops = line.stops.map(\.rawValue)
-        rate = line.rate
+        performance = PerformanceSummary(line.performance)
         window = WindowSummary(line.window)
         trainsInService = TrainsSummary(line.trainsInService)
         targetHeadways = TargetHeadwaysSummary(line.targetHeadways)
@@ -2026,7 +2065,7 @@ struct LineSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, rate, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
     }
 
     init(from decoder: any Decoder) throws {
@@ -2034,7 +2073,8 @@ struct LineSummary: Codable, Equatable {
         id = try container.decode(Int.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         stops = try container.decode([Int].self, forKey: .stops)
-        rate = try container.decode(Int64.self, forKey: .rate)
+        performance = try container.contains(.performance)
+            ? container.decode(PerformanceSummary.self, forKey: .performance) : PerformanceSummary(.standard)
         window = try container.decode(WindowSummary.self, forKey: .window)
         trainsInService = try container.decode(TrainsSummary.self, forKey: .trainsInService)
         targetHeadways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways)
@@ -2050,7 +2090,9 @@ struct LineSummary: Codable, Equatable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(stops, forKey: .stops)
-        try container.encode(rate, forKey: .rate)
+        if performance.performance != .standard {
+            try container.encode(performance, forKey: .performance)
+        }
         try container.encode(window, forKey: .window)
         try container.encode(trainsInService, forKey: .trainsInService)
         try container.encode(targetHeadways, forKey: .targetHeadways)
@@ -2232,7 +2274,9 @@ struct BandSummary: Codable, Equatable {
 }
 
 /// A line's journey as a fixture value: `{"start", "legs": [{"from", "to",
-/// "route", "minutes"}, ...], "roundTripMinutes"}` (see `LineJourney`).
+/// "route", "seconds"}, ...], "roundTripSeconds", "roundTripMinutes"}` (see
+/// `LineJourney`; since schema 25, Stage W2c, a leg takes whole seconds,
+/// and the round trip is in seconds and rounded up to minutes).
 struct JourneySummary: Codable, Equatable {
     /// A leg: on the grid its `"route"` (the tiles its links lead to), on
     /// the track network (schema 18) its `"path"`; one of the two.
@@ -2241,11 +2285,12 @@ struct JourneySummary: Codable, Equatable {
         var to: Int
         var route: [PositionSummary]?
         var path: PathSummary?
-        var minutes: Int64
+        var seconds: Int64
     }
 
     var start: TrainPositionSummary
     var legs: [Leg]
+    var roundTripSeconds: Int64
     var roundTripMinutes: Int64
 
     init(_ journey: LineJourney) {
@@ -2255,9 +2300,10 @@ struct JourneySummary: Codable, Equatable {
             Leg(
                 from: leg.from, to: leg.to,
                 route: onNetwork ? nil : leg.route.map(PositionSummary.init), path: onNetwork ? PathSummary(leg.path) : nil,
-                minutes: leg.minutes
+                seconds: leg.seconds
             )
         }
+        roundTripSeconds = journey.roundTripSeconds
         roundTripMinutes = journey.roundTripMinutes
     }
 }
@@ -2574,29 +2620,42 @@ extension StopSummary: Codable {
 }
 
 /// A service's times (schema 24, Stage W2b; see `ServiceTimes`), in game
-/// seconds: `{"arrival", "exchangeEnd", "closing", "departure"}`, the last
-/// three only when set, never `null`.
+/// seconds: `{"arrival", "exchangeEnd", "closing", "departure", "run"}`,
+/// all but the first only when set, never `null`. `run` (schema 25, Stage
+/// W2c; see `ServiceRun`) is `{"start", "length", "seconds"}`.
 struct TimesSummary: Equatable {
+    struct Run: Codable, Equatable {
+        var start: Int64
+        var length: Int64
+        var seconds: Int64
+    }
+
     var arrival: Int64
     var exchangeEnd: Int64?
     var closing: Int64?
     var departure: Int64?
+    var run: Run?
 
-    init(arrival: Int64, exchangeEnd: Int64? = nil, closing: Int64? = nil, departure: Int64? = nil) {
+    init(arrival: Int64, exchangeEnd: Int64? = nil, closing: Int64? = nil, departure: Int64? = nil, run: Run? = nil) {
         self.arrival = arrival
         self.exchangeEnd = exchangeEnd
         self.closing = closing
         self.departure = departure
+        self.run = run
     }
 
     init(_ times: ServiceTimes) {
-        self.init(arrival: times.arrival.seconds, exchangeEnd: times.exchangeEnd?.seconds, closing: times.closing?.seconds, departure: times.departure?.seconds)
+        self.init(
+            arrival: times.arrival.seconds, exchangeEnd: times.exchangeEnd?.seconds, closing: times.closing?.seconds,
+            departure: times.departure?.seconds,
+            run: times.run.map { Run(start: $0.start.seconds, length: $0.length, seconds: $0.seconds) }
+        )
     }
 }
 
 extension TimesSummary: Codable {
     private enum CodingKeys: String, CodingKey {
-        case arrival, exchangeEnd, closing, departure
+        case arrival, exchangeEnd, closing, departure, run
     }
 
     init(from decoder: any Decoder) throws {
@@ -2605,6 +2664,7 @@ extension TimesSummary: Codable {
         exchangeEnd = try container.contains(.exchangeEnd) ? container.decode(Int64.self, forKey: .exchangeEnd) : nil
         closing = try container.contains(.closing) ? container.decode(Int64.self, forKey: .closing) : nil
         departure = try container.contains(.departure) ? container.decode(Int64.self, forKey: .departure) : nil
+        run = try container.contains(.run) ? container.decode(Run.self, forKey: .run) : nil
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -2613,6 +2673,75 @@ extension TimesSummary: Codable {
         try container.encodeIfPresent(exchangeEnd, forKey: .exchangeEnd)
         try container.encodeIfPresent(closing, forKey: .closing)
         try container.encodeIfPresent(departure, forKey: .departure)
+        try container.encodeIfPresent(run, forKey: .run)
+    }
+}
+
+/// A performance (schema 25, Stage W2c; see `TrainPerformance`): the name
+/// of a preset, such as `"standard"`, `"metro"` or `"express"`, or
+/// `{"acceleration", "braking", "topSpeed"}` with `"alternativeAcceleration"`,
+/// `"alternativeBraking"` and `"coast": {"deceleration", "speedRatio"}`
+/// when set. Written as the first preset's name it equals, otherwise as
+/// the object. Read as written: an object need not be valid, so a fixture
+/// can expect GameCore to reject it.
+struct PerformanceSummary: Codable, Equatable {
+    var performance: TrainPerformance
+
+    init(_ performance: TrainPerformance) {
+        self.performance = performance
+    }
+
+    static let presets: [(name: String, performance: TrainPerformance)] = [
+        ("standard", .standard), ("metro", .metro), ("local", .local), ("express", .express), ("semiExpress", .semiExpress),
+        ("ordinary", .ordinary), ("highSpeed", .highSpeed), ("dieselRailcar", .dieselRailcar), ("dieselExpress", .dieselExpress),
+        ("forestRailway", .forestRailway), ("tiltingTaroko", .tiltingTaroko), ("tiltingPuyuma", .tiltingPuyuma),
+        ("pushPull", .pushPull), ("emu3000", .emu3000),
+    ]
+
+    private enum CodingKeys: String, CodingKey {
+        case acceleration, braking, topSpeed, alternativeAcceleration, alternativeBraking, coast
+    }
+
+    private struct CoastSummary: Codable {
+        var deceleration: Int64
+        var speedRatio: Int64
+    }
+
+    init(from decoder: any Decoder) throws {
+        if let single = try? decoder.singleValueContainer(), let name = try? single.decode(String.self) {
+            guard let preset = Self.presets.first(where: { $0.name == name }) else {
+                throw DecodingError.dataCorruptedError(in: single, debugDescription: "Unknown performance \"\(name)\".")
+            }
+            performance = preset.performance
+            return
+        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let coast = try container.decodeIfPresent(CoastSummary.self, forKey: .coast)
+        performance = TrainPerformance(
+            acceleration: try container.decode(Int64.self, forKey: .acceleration),
+            braking: try container.decode(Int64.self, forKey: .braking),
+            topSpeed: try container.decode(Int64.self, forKey: .topSpeed),
+            alternativeAcceleration: try container.decodeIfPresent(Int64.self, forKey: .alternativeAcceleration),
+            alternativeBraking: try container.decodeIfPresent(Int64.self, forKey: .alternativeBraking),
+            coast: coast.map { TrainPerformance.Coast(deceleration: $0.deceleration, speedRatio: $0.speedRatio) }
+        )
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        if let preset = Self.presets.first(where: { $0.performance == performance }) {
+            var single = encoder.singleValueContainer()
+            try single.encode(preset.name)
+            return
+        }
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(performance.acceleration, forKey: .acceleration)
+        try container.encode(performance.braking, forKey: .braking)
+        try container.encode(performance.topSpeed, forKey: .topSpeed)
+        try container.encodeIfPresent(performance.alternativeAcceleration, forKey: .alternativeAcceleration)
+        try container.encodeIfPresent(performance.alternativeBraking, forKey: .alternativeBraking)
+        try container.encodeIfPresent(
+            performance.coast.map { CoastSummary(deceleration: $0.deceleration, speedRatio: $0.speedRatio) }, forKey: .coast
+        )
     }
 }
 

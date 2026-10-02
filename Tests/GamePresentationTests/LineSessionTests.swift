@@ -22,6 +22,10 @@ final class LineSessionTests: XCTestCase {
     private static let stationD = StationID(rawValue: 4)
     private static let main = LineID(rawValue: 1)
     private static let first = TrainID(rawValue: 1)
+    /// Line 1's performance (Stage W2c): a crawl at 1 km/h, about a link a
+    /// minute, so a stop is 120 s from the next and Alpha 350 s from Delta
+    /// (as in `LinePatternTests`).
+    private static let crawl = TrainPerformance(acceleration: 250, braking: 250, topSpeed: 1)
 
     private static func makeStationWorld(minute: Int64 = 480) throws -> GameWorld {
         var world = try GameWorld(
@@ -41,10 +45,12 @@ final class LineSessionTests: XCTestCase {
 
     /// Line 1 calls at every station; 5 / 2 / 0 trains; a short working
     /// Beta-Gamma (4 / 1 / 1, 20 minutes apart at low) and an express
-    /// Alpha-Delta (2 / 1 / 0). Round trips 20, 8 and 16 minutes.
+    /// Alpha-Delta (2 / 1 / 0). Round trips 20, 8 and 16 minutes, with
+    /// `crawl`.
     private static func makeLineWorld() throws -> GameWorld {
         var world = try makeStationWorld()
         try world.createLine(named: "Main", stops: [Self.stationA, Self.stationB, Self.stationC, Self.stationD])
+        try world.setLinePerformance(Self.main, to: Self.crawl)
         try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 5, offPeak: 2, low: 0))
         try world.addLinePattern(Self.main, calling: [1, 2])
         try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 4, offPeak: 1, low: 1), pattern: 0)

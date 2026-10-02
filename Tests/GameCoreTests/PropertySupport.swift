@@ -271,6 +271,23 @@ enum NetworkShape: CaseIterable {
     case twoComponents
 }
 
+/// Stage W2c: performances the campaigns give trains and lines: presets of
+/// every kind (with and without coasting and alternatives), and some that
+/// no train or line may have.
+enum PerformanceSamples {
+    /// A crawl at 1 km/h, about a link a minute, as trains went before
+    /// Stage W2c: on the campaigns' small maps a real train's run is over in
+    /// seconds, a crawl's lasts minutes.
+    static let crawl = TrainPerformance(acceleration: 250, braking: 250, topSpeed: 1)
+    static let valid: [TrainPerformance] = [.standard, .metro, .local, .express, .ordinary, .forestRailway, .highSpeed, .pushPull, crawl]
+    static let invalid: [TrainPerformance] = [
+        TrainPerformance(acceleration: 0, braking: 2_500, topSpeed: 110),
+        TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: RunningCurve.maximumRate + 1),
+        TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 110, coast: TrainPerformance.Coast(deceleration: 2_500, speedRatio: 450)),
+        TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 110, alternativeBraking: -1),
+    ]
+}
+
 enum NetworkGenerator {
     static let costs = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
 
@@ -664,7 +681,7 @@ enum WorldInvariants {
             for stop in line.stops where world.station(id: stop) == nil {
                 problems.append("line \(id) calls at unknown station \(stop.rawValue)")
             }
-            if line.rate < 1 { problems.append("line \(id) rate \(line.rate)") }
+            if !line.performance.isValid { problems.append("line \(id) performance \(line.performance)") }
             if case .hours(let open, let close) = line.window, !(open >= 0 && open < 1440 && close > open && close <= 1800) {
                 problems.append("line \(id) window \(open)-\(close)")
             }
@@ -1054,6 +1071,15 @@ enum WorldInvariants {
         }
         guard let position = train.position else { return ["unplaced train \(id) runs a service"] }
         let target = train.timetable[execution.stop].station
+        // Stage W2c: a run only while travelling, set off no later than now,
+        // with a curve for the train's performance.
+        if let run = train.times?.run {
+            if case .waitingAtStop = execution { return ["train \(id) waits with a run"] }
+            if run.start > world.clock.now || run.length < 1 || !(1...RunningCurve.maximumSeconds).contains(run.seconds)
+                || run.curve(for: train.performance) == nil {
+                return ["train \(id) run \(run)"]
+            }
+        }
         switch execution {
         case .waitingAtStop:
             return world.stationsStoppedAt(by: train.id).contains(target) ? [] : ["train \(id) waits at station \(target.rawValue) but is not stopped there"]

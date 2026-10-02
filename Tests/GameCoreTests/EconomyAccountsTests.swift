@@ -7,12 +7,14 @@ import XCTest
 /// worked out by hand from the reference's legacy formulas, in cents.
 final class EconomyAccountsTests: XCTestCase {
     // Alpha(1,0) Beta(3,0) Gamma(5,0) on a(0,1)–g(6,1); line 1 calls at all
-    // three, one train of one car at one link a minute. Its round trip
-    // leaving Alpha at T: Alpha T, Beta T+2–T+3, Gamma T+5–T+7, Beta
-    // T+9–T+10, Alpha T+12; it takes 14 minutes (the line's round trip), so
-    // trains leave at 0, 14, 28, 42, 56, … Each leg is 2 links (2048 world
-    // units, 32 m); a trip leaves four stops for another (Alpha, Beta,
-    // Gamma, Beta) and ends at Alpha.
+    // three, one train of one car. Each leg is 2 links (2048 world units,
+    // 32 m), which the line's standard performance plans at 16 s (Stage
+    // W2c: √(2 × 2048 × 0.06) = 15.7). A trip sent out at T leaves Alpha
+    // at T+0:42 (Stage W2b), is at Beta T+0:58–T+1:58, Gamma T+2:14–T+4:14,
+    // Beta T+4:30–T+5:30 and back at Alpha at T+5:46, where its service
+    // ends at T+6:28. The line's round trip is 424 s, planned as 8 minutes,
+    // so trains leave at 0, 8, 16, 24, … A trip leaves four stops for
+    // another (Alpha, Beta, Gamma, Beta) and ends at Alpha.
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -108,11 +110,12 @@ final class EconomyAccountsTests: XCTestCase {
 
     // MARK: - Settlements
 
-    /// Hour 0: trips leave at 0, 14, 28 and 42 (four departures each) and
-    /// at 56 (Alpha at 56, Beta at 59): 18 departures, 18 × 2048 world
-    /// units. Operating round(75·18 + 42·36864/64000 + 18·3) = round(1428.192)
-    /// = 1428; maintenance round(12·4096/64000 + 9·36864/64000 + 8·1) =
-    /// round(13.952) = 14. Three passengers paid 5 each at Alpha at 0.
+    /// Hour 0: trips are sent out at 0, 8, …, 48 (four departures each) and
+    /// at 56 (Alpha at 56:42, Beta at 57:58; Gamma at 60:14 is in the next
+    /// hour): 30 departures, 30 × 2048 = 61440 world units. Operating
+    /// round(75·30 + 42·61440/64000 + 18·3) = round(2344.32) = 2344;
+    /// maintenance round(12·4096/64000 + 9·61440/64000 + 8·1) =
+    /// round(17.408) = 17. Three passengers paid 5 each at Alpha at 0.
     func testAnHourIsSettledIntoOneRowAtTheTopOfTheNext() throws {
         var world = try makeWorld()
         try wait(&world, 3, at: alpha, for: beta)
@@ -120,22 +123,24 @@ final class EconomyAccountsTests: XCTestCase {
         try world.advance(ticks: 60)
         XCTAssertEqual(world.accounts.pending.fareRevenue, 1_500)
         XCTAssertEqual(world.accounts.pending.fareTrips, 3)
-        XCTAssertEqual(world.accounts.pending.departures, 18)
-        XCTAssertEqual(world.accounts.pending.trainDistance, 18 * 2_048)
+        XCTAssertEqual(world.accounts.pending.departures, 30)
+        XCTAssertEqual(world.accounts.pending.trainDistance, 30 * 2_048)
         XCTAssertEqual(world.accounts.entries, [])
         XCTAssertEqual(world.economy.balance, start, "nothing is settled within the hour")
 
         try world.advance(ticks: 1)
         XCTAssertEqual(world.accounts.entries, [LedgerEntry(
-            kind: .hourlyNet, time: GameTime(minutes: 60), amount: 1_500 - 142_800 - 1_400,
+            kind: .hourlyNet, time: GameTime(minutes: 60), amount: 1_500 - 234_400 - 1_700,
             breakdown: [
-                LedgerLine(item: .fareRevenue, amount: 1_500), LedgerLine(item: .operatingCost, amount: -142_800),
-                LedgerLine(item: .maintenanceCost, amount: -1_400),
+                LedgerLine(item: .fareRevenue, amount: 1_500), LedgerLine(item: .operatingCost, amount: -234_400),
+                LedgerLine(item: .maintenanceCost, amount: -1_700),
             ],
             crowding: CrowdingMetrics(crowdedStations: 0, fullTrains: 0, maxWaiting: 0, maxLoad: 0)
         )])
-        XCTAssertEqual(world.economy.balance, start + Money(1_500 - 142_800 - 1_400))
-        XCTAssertEqual(world.accounts.pending, .empty, "the next departure, Gamma at 63, is in the next hour")
+        XCTAssertEqual(world.economy.balance, start + Money(1_500 - 234_400 - 1_700))
+        XCTAssertEqual(world.accounts.pending.departures, 1, "Gamma at 60:14 is in the next hour")
+        XCTAssertEqual(world.accounts.pending.trainDistance, 2_048)
+        XCTAssertEqual(world.accounts.pending.fareRevenue, .zero)
         XCTAssertEqual(world.accounts.openedAt, GameTime(minutes: 60))
     }
 

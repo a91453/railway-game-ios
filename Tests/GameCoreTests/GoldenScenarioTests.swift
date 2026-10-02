@@ -95,9 +95,22 @@ final class GoldenScenarioTests: XCTestCase {
             if let index = committed.expectedFinalState.trains.indices.first {
                 var wrongTimes = committed
                 let train = committed.expectedFinalState.trains[index]
-                wrongTimes.expectedFinalState.trains[index].times = train.times.map { TimesSummary(arrival: $0.arrival + 1, exchangeEnd: $0.exchangeEnd, closing: $0.closing, departure: $0.departure) }
-                    ?? TimesSummary(arrival: 0)
+                wrongTimes.expectedFinalState.trains[index].times = train.times.map {
+                    TimesSummary(arrival: $0.arrival + 1, exchangeEnd: $0.exchangeEnd, closing: $0.closing, departure: $0.departure, run: $0.run)
+                } ?? TimesSummary(arrival: 0)
                 XCTAssertEqual(wrongTimes.differences().count, 1, name)
+
+                // Schema 25: a train's performance.
+                var wrongPerformance = committed
+                wrongPerformance.expectedFinalState.trains[index].performance = PerformanceSummary(train.performance.performance == .metro ? .standard : .metro)
+                XCTAssertEqual(wrongPerformance.differences().count, 1, name)
+            }
+            // Schema 25: a line's performance.
+            if let index = committed.expectedFinalState.lines.indices.first {
+                var wrongPerformance = committed
+                let performance = committed.expectedFinalState.lines[index].performance.performance
+                wrongPerformance.expectedFinalState.lines[index].performance = PerformanceSummary(performance == .metro ? .standard : .metro)
+                XCTAssertEqual(wrongPerformance.differences().count, 1, name)
             }
         }
     }
@@ -328,6 +341,7 @@ final class GoldenScenarioTests: XCTestCase {
         var dailyCount = 0
         var distanceFareCount = 0
         var closingTimesCount = 0
+        var runCount = 0
         var lateCount = 0
         var earlyOrOnTimeCount = 0
         var reportCount = 0
@@ -401,6 +415,7 @@ final class GoldenScenarioTests: XCTestCase {
                 if case .accounts(let accounts) = expect, accounts.ledger.contains(where: { $0.kind == "dailyStaff" }) { dailyCount += 1 }
                 if case .fare(let fare?) = expect, fare < 500 { distanceFareCount += 1 }
                 if case .times(let times?) = expect, times.exchangeEnd != nil, times.closing != nil, times.departure != nil { closingTimesCount += 1 }
+                if case .times(let times?) = expect, times.run != nil { runCount += 1 }
                 if case .lateness(let lateness?) = expect { if lateness > 0 { lateCount += 1 } else { earlyOrOnTimeCount += 1 } }
                 if case .report(let report) = expect, report.previous.fareRevenue > 0 { reportCount += 1 }
                 if case .nodes(let nodes) = expect, !nodes.isEmpty { portalCount += 1 }
@@ -454,6 +469,7 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(dailyCount, 0, "No fixture pins a day's energy and staff")
         XCTAssertGreaterThan(distanceFareCount, 0, "No fixture pins a distance fare")
         XCTAssertGreaterThan(closingTimesCount, 0, "No fixture pins a dwell whose doors are closing (Stage W2b)")
+        XCTAssertGreaterThan(runCount, 0, "No fixture pins a service's run (Stage W2c)")
         XCTAssertGreaterThan(lateCount, 0, "No fixture pins a late service")
         XCTAssertGreaterThan(earlyOrOnTimeCount, 0, "No fixture pins a service on time")
         XCTAssertGreaterThan(reportCount, 0, "No fixture pins a finance report with revenue")
@@ -526,11 +542,14 @@ final class GoldenScenarioTests: XCTestCase {
             changed.roundTripMinutes += 1
             wrong.append(.journey(changed))
             changed = journey
+            changed.roundTripSeconds += 1
+            wrong.append(.journey(changed))
+            changed = journey
             changed.legs = Array(journey.legs.dropLast())
             wrong.append(.journey(changed))
             if let leg = journey.legs.first {
                 changed = journey
-                changed.legs[0].minutes = leg.minutes + 1
+                changed.legs[0].seconds = leg.seconds + 1
                 wrong.append(.journey(changed))
                 if let route = leg.route {
                     changed = journey
@@ -647,6 +666,16 @@ final class GoldenScenarioTests: XCTestCase {
             changed = times
             changed.departure = times.departure == nil ? times.arrival : nil
             wrong.append(.times(changed))
+            // Schema 25: the run, another or none.
+            changed = times
+            changed.run = times.run.map { TimesSummary.Run(start: $0.start, length: $0.length, seconds: $0.seconds + 1) }
+                ?? TimesSummary.Run(start: times.arrival, length: 1, seconds: 1)
+            wrong.append(.times(changed))
+            if times.run != nil {
+                changed = times
+                changed.run = nil
+                wrong.append(.times(changed))
+            }
             return wrong
         case .times(nil):
             return [.times(TimesSummary(arrival: 0))]
@@ -839,7 +868,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 24,
+              "schemaVersion": 25,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -898,7 +927,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1279,7 +1308,13 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"type": "createLine", "name": " ", "stops": []}"#, .createLine(name: " ", stops: [])),
             (#"{"type": "removeLine", "line": 2}"#, .removeLine(line)),
             (#"{"type": "setLineStops", "line": 2, "stops": [4, 1]}"#, .setLineStops(line, [4, 1].map(StationID.init(rawValue:)))),
-            (#"{"type": "setLineRate", "line": 2, "rate": 0}"#, .setLineRate(line, 0)),
+            (#"{"type": "setLinePerformance", "line": 2, "performance": "metro"}"#, .setLinePerformance(line, .metro)),
+            // Read as written: rejecting a performance that is not valid is GameCore's decision.
+            (#"{"type": "setLinePerformance", "line": 2, "performance": {"acceleration": 0, "braking": 2500, "topSpeed": 110}}"#,
+             .setLinePerformance(line, TrainPerformance(acceleration: 0, braking: 2_500, topSpeed: 110))),
+            (#"{"type": "setTrainPerformance", "train": 3, "performance": "highSpeed"}"#, .setTrainPerformance(TrainID(rawValue: 3), .highSpeed)),
+            (#"{"type": "setTrainPerformance", "train": 3, "performance": {"acceleration": 1400, "braking": 1500, "topSpeed": 300, "alternativeAcceleration": 2000, "alternativeBraking": 2700, "coast": {"deceleration": 450, "speedRatio": 450}}}"#,
+             .setTrainPerformance(TrainID(rawValue: 3), .highSpeed)),
             (#"{"type": "setLineServiceWindow", "line": 2, "window": {"type": "allDay"}}"#, .setLineServiceWindow(line, .allDay)),
             (#"{"type": "setLineServiceWindow", "line": 2, "window": {"type": "hours", "open": 900, "close": 100}}"#,
              .setLineServiceWindow(line, .hours(open: 900, close: 100))),
@@ -1304,7 +1339,7 @@ final class GoldenScenarioTests: XCTestCase {
         let results: [(String, StepOutcome)] = [
             (#"{"result": "unknownLine", "line": 4}"#, .rejected(.unknownLine(LineID(rawValue: 4)))),
             (#"{"result": "invalidLineStops"}"#, .rejected(.invalidLineStops)),
-            (#"{"result": "invalidLineRate"}"#, .rejected(.invalidLineRate)),
+            (#"{"result": "invalidTrainPerformance"}"#, .rejected(.invalidTrainPerformance)),
             (#"{"result": "invalidServiceWindow"}"#, .rejected(.invalidServiceWindow)),
             (#"{"result": "invalidTrainsInService"}"#, .rejected(.invalidTrainsInService)),
             (#"{"result": "invalidServiceDay"}"#, .rejected(.invalidServiceDay)),
