@@ -1,51 +1,54 @@
 import GameCore
 
-// Player-facing text for GameCore values. GameCore stays free of UI copy;
-// the app shows these strings as they are (English only for the prototype).
+// Player-facing text for GameCore values, in English or Traditional Chinese
+// (see ``DisplayLanguage``). GameCore stays free of UI copy; the app shows
+// these strings as they are.
 
 extension TrackDirection {
-    public var name: String {
+    /// "North", or "北".
+    public func name(in language: DisplayLanguage) -> String {
         switch self {
-        case .north: "North"
-        case .east: "East"
-        case .south: "South"
-        case .west: "West"
+        case .north: language.text("North", "北")
+        case .east: language.text("East", "東")
+        case .south: language.text("South", "南")
+        case .west: language.text("West", "西")
         }
     }
 
-    public var abbreviation: String {
+    /// "N", or "北".
+    public func abbreviation(in language: DisplayLanguage) -> String {
         switch self {
-        case .north: "N"
-        case .east: "E"
-        case .south: "S"
-        case .west: "W"
+        case .north: language.text("N", "北")
+        case .east: language.text("E", "東")
+        case .south: language.text("S", "南")
+        case .west: language.text("W", "西")
         }
     }
 }
 
 extension TrackConnections {
     /// The kind of track piece these connections form, such as "Straight".
-    public var shapeName: String {
+    public func shapeName(in language: DisplayLanguage) -> String {
         let directions = directions
         switch directions.count {
-        case 0: return "No connections"
-        case 1: return "Dead end"
+        case 0: return language.text("No connections", "沒有連接")
+        case 1: return language.text("Dead end", "盡頭")
         case 2:
             let isStraight = self == [.north, .south] || self == [.east, .west]
-            return isStraight ? "Straight" : "Curve"
-        case 3: return "T-junction"
-        default: return "Four-way"
+            return isStraight ? language.text("Straight", "直線") : language.text("Curve", "彎道")
+        case 3: return language.text("T-junction", "T 字岔")
+        default: return language.text("Four-way", "十字")
         }
     }
 
     /// The connected directions, such as "N–E".
-    public var abbreviation: String {
-        directions.map(\.abbreviation).joined(separator: "–")
+    public func abbreviation(in language: DisplayLanguage) -> String {
+        directions.map { $0.abbreviation(in: language) }.joined(separator: "–")
     }
 
     /// Shape and directions, such as "Curve N–E".
-    public var summary: String {
-        isEmpty ? shapeName : "\(shapeName) \(abbreviation)"
+    public func summary(in language: DisplayLanguage) -> String {
+        isEmpty ? shapeName(in: language) : "\(shapeName(in: language)) \(abbreviation(in: language))"
     }
 }
 
@@ -54,39 +57,53 @@ extension GameWorld {
     /// "Turnout · E–S–W, stem W", "Level crossing · N–S over E–W",
     /// "Station · Central" or, for a station grown onto more tiles,
     /// "Station · Central · 3 tiles".
-    public func tileSummary(at position: GridPosition) -> String {
+    public func tileSummary(at position: GridPosition, in language: DisplayLanguage) -> String {
         // The railway first (Stage S3A: it is not on the map), then the land.
         if let track = track(at: position) {
             switch track.layout {
-            case .open: return "Track · \(track.connections.summary)"
-            case .turnout(let stem): return "Turnout · \(track.connections.abbreviation), stem \(stem.abbreviation)"
-            case .crossing: return "Level crossing · N–S over E–W"
+            case .open:
+                return language.text("Track · ", "軌道 · ") + track.connections.summary(in: language)
+            case .turnout(let stem):
+                let exits = track.connections.abbreviation(in: language)
+                return language.text(
+                    "Turnout · \(exits), stem \(stem.abbreviation(in: language))",
+                    "道岔 · \(exits)，共用端 \(stem.abbreviation(in: language))"
+                )
+            case .crossing:
+                return language.text("Level crossing · N–S over E–W", "平面交叉 · 北–南 跨 東–西")
             }
         }
         switch map.tile(at: position)?.type {
-        case nil: return "Outside the map"
-        case .empty?: return "Empty"
-        case .station(let id)?: return stationSummary(id)
+        case nil: return language.text("Outside the map", "地圖外")
+        case .empty?: return language.text("Empty", "空地")
+        case .station(let id)?: return stationSummary(id, in: language)
         }
     }
 }
 
 extension GameWorld {
-    private func stationSummary(_ id: StationID) -> String {
-        guard let station = station(id: id) else { return "Station · #\(id.rawValue)" }
+    private func stationSummary(_ id: StationID, in language: DisplayLanguage) -> String {
+        let label = language.text("Station", "車站")
+        guard let station = station(id: id) else { return "\(label) · #\(id.rawValue)" }
         let tiles = station.tiles.count
-        return tiles == 1 ? "Station · \(station.name)" : "Station · \(station.name) · \(tiles) tiles"
+        guard tiles > 1 else { return "\(label) · \(station.name)" }
+        return "\(label) · \(station.name) · " + language.text("\(tiles) tiles", "\(tiles) 格")
     }
 }
 
 extension GameWorld {
     /// How much has been built, such as "3 stations · 17 track tiles".
-    public var networkSummary: String {
+    public func networkSummary(in language: DisplayLanguage) -> String {
         let stationCount = stations.count
         let trackCount = tracks.count
-        let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
-        let trackText = trackCount == 1 ? "1 track tile" : "\(trackCount) track tiles"
-        return "\(stationText) · \(trackText)"
+        switch language {
+        case .english:
+            let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
+            let trackText = trackCount == 1 ? "1 track tile" : "\(trackCount) track tiles"
+            return "\(stationText) · \(trackText)"
+        case .traditionalChinese:
+            return "\(stationCount) 座車站 · \(trackCount) 格軌道"
+        }
     }
 }
 
@@ -97,12 +114,16 @@ extension GameWorld {
     /// `stationsStoppedAt(by:)`. A train of several cars not wholly beside
     /// one of them (see `stationsBesideWholeTrain(_:)`) is told so:
     /// "Stopped at Central · the platform is too short for all its cars".
-    public func stationStopText(of id: TrainID) -> String? {
+    public func stationStopText(of id: TrainID, in language: DisplayLanguage) -> String? {
         let stopped = stationsStoppedAt(by: id)
         let names = stopped.map { station(id: $0)?.name ?? "#\($0.rawValue)" }
         guard !names.isEmpty else { return nil }
-        let text = "Stopped at \(names.joined(separator: ", "))"
-        return stationsBesideWholeTrain(id).count < stopped.count ? "\(text) · the platform is too short for all its cars" : text
+        let text = language.text(
+            "Stopped at \(names.joined(separator: ", "))",
+            "停在 \(names.joined(separator: "、"))"
+        )
+        guard stationsBesideWholeTrain(id).count < stopped.count else { return text }
+        return text + language.text(" · the platform is too short for all its cars", " · 月台太短，容不下所有車廂")
     }
 }
 
@@ -111,194 +132,301 @@ extension TrainPosition {
     /// East" at a node, or "(3, 2) → (4, 2), 256 / 1024" on a link (the
     /// offset from the first tile, out of ``TrainPosition/linkLength``); on
     /// the track network, "Edge #3 forward, 256 units along".
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .atNode(let tile, let heading):
-            "At \(tile), facing \(heading.name)"
+            language.text("At \(tile), facing \(heading.name(in: language))", "在 \(tile)，面向\(heading.name(in: language))")
         case .onLink(let from, let to, let offset):
             "\(from) → \(to), \(offset) / \(TrainPosition.linkLength)"
         case .onEdge(let traversal, let offset):
-            "\(traversal.edge.displayText) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along"
+            language.text(
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along",
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "正向" : "反向")，距起點 \(offset) 單位"
+            )
         }
     }
 }
 
 extension TrackNodeID {
     /// "Node #3" on the track network, or "Tile (3, 2)" on the grid.
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .tile(let tile): "Tile \(tile)"
-        case .node(let number): "Node #\(number)"
+        case .tile(let tile): language.text("Tile \(tile)", "格 \(tile)")
+        case .node(let number): language.text("Node #\(number)", "節點 #\(number)")
         }
     }
 }
 
 extension TrackEdgeID {
     /// "Edge #3" on the track network, or "Link (3, 2)–(4, 2)" on the grid.
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .link(let a, let b): "Link \(a)–\(b)"
-        case .edge(let number): "Edge #\(number)"
+        case .link(let a, let b): language.text("Link \(a)–\(b)", "連結 \(a)–\(b)")
+        case .edge(let number): language.text("Edge #\(number)", "軌段 #\(number)")
         }
     }
 }
 
 extension Train {
     /// The train's position, or "Not on the track" while it is unplaced.
-    public var positionText: String {
-        position?.displayText ?? "Not on the track"
+    public func positionText(in language: DisplayLanguage) -> String {
+        position?.displayText(in: language) ?? language.text("Not on the track", "不在軌道上")
     }
 
     /// How many cars it has, one to a tile: "1 car", "3 cars".
-    public var carsText: String {
-        cars == 1 ? "1 car" : "\(cars) cars"
+    public func carsText(in language: DisplayLanguage) -> String {
+        Self.carsText(cars, in: language)
     }
 
-    /// The path the train has left. On the grid, ``TrainMovement/pathText``.
+    /// "1 car", "3 cars", or "3 節車廂".
+    static func carsText(_ cars: Int, in language: DisplayLanguage) -> String {
+        language.text(cars == 1 ? "1 car" : "\(cars) cars", "\(cars) 節車廂")
+    }
+
+    /// The path the train has left. On the grid, ``TrainMovement/pathText(in:)``.
     /// On the track network: "No path ahead", "Path: 1 more edge, Edge #4",
     /// "Path: 3 more edges, ending on Edge #9", with ", stopping 3000 units
     /// along it" when it stops part of the way along the last (Stage S5),
     /// or "Path: stops 1024 units ahead" on the edge it is on.
-    public var pathText: String {
-        guard case .onEdge(_, let offset)? = position else { return movement.pathText }
+    public func pathText(in language: DisplayLanguage) -> String {
+        guard case .onEdge(_, let offset)? = position else { return movement.pathText(in: language) }
         let edges = movement.remainingEdges
         guard let last = edges.last else {
-            guard let end = movement.end, end > offset else { return "No path ahead" }
-            return "Path: stops \(end - offset) units ahead"
+            guard let end = movement.end, end > offset else { return language.text("No path ahead", "前方沒有路徑") }
+            return language.text("Path: stops \(end - offset) units ahead", "路徑：前方 \(end - offset) 單位處停車")
         }
-        let stop = movement.end.map { ", stopping \($0) units along it" } ?? ""
-        return edges.count == 1
-            ? "Path: 1 more edge, \(last.displayText)\(stop)"
-            : "Path: \(edges.count) more edges, ending on \(last.displayText)\(stop)"
+        let edge = last.displayText(in: language)
+        let stop = movement.end.map { language.text(", stopping \($0) units along it", "，在其 \($0) 單位處停車") } ?? ""
+        switch language {
+        case .english:
+            return edges.count == 1
+                ? "Path: 1 more edge, \(edge)\(stop)"
+                : "Path: \(edges.count) more edges, ending on \(edge)\(stop)"
+        case .traditionalChinese:
+            return edges.count == 1
+                ? "路徑：再 1 個軌段，\(edge)\(stop)"
+                : "路徑：再 \(edges.count) 個軌段，終於\(edge)\(stop)"
+        }
     }
 }
 
 extension TrainMovement {
     /// The rate, such as "Rate 128 / min": logical units per game minute,
     /// where ``TrainPosition/linkLength`` units are one tile.
-    public var rateText: String {
-        "Rate \(rate) / min"
+    public func rateText(in language: DisplayLanguage) -> String {
+        language.text("Rate \(rate) / min", "速率 \(rate)／分鐘")
     }
 
     /// The continuation entries the train has not entered yet, such as
     /// "No path ahead", "Path: 1 more node, (4, 2)" or "Path: 5 more nodes,
-    /// ending at (8, 3)": the grid's path (see ``Train/pathText`` for the
-    /// track network's).
-    public var pathText: String {
+    /// ending at (8, 3)": the grid's path (see ``Train/pathText(in:)`` for
+    /// the track network's).
+    public func pathText(in language: DisplayLanguage) -> String {
         let remaining = remainingContinuation
-        guard let last = remaining.last else { return "No path ahead" }
-        return remaining.count == 1
-            ? "Path: 1 more node, \(last)"
-            : "Path: \(remaining.count) more nodes, ending at \(last)"
+        guard let last = remaining.last else { return language.text("No path ahead", "前方沒有路徑") }
+        switch language {
+        case .english:
+            return remaining.count == 1
+                ? "Path: 1 more node, \(last)"
+                : "Path: \(remaining.count) more nodes, ending at \(last)"
+        case .traditionalChinese:
+            return remaining.count == 1
+                ? "路徑：再 1 個節點，\(last)"
+                : "路徑：再 \(remaining.count) 個節點，終點 \(last)"
+        }
     }
 }
 
 extension GameError {
     /// What went wrong, in words a player can act on. GameError itself
     /// carries only structured data.
-    public var playerMessage: String {
+    public func playerMessage(in language: DisplayLanguage) -> String {
         switch self {
         case .invalidMapSize(let width, let height):
-            "A \(width) × \(height) map is not supported."
+            language.text("A \(width) × \(height) map is not supported.", "不支援 \(width) × \(height) 的地圖。")
         case .outOfBounds(let position):
-            "\(position) is outside the map."
+            language.text("\(position) is outside the map.", "\(position) 在地圖外。")
         case .tileOccupied(let position):
-            "Tile \(position) is already occupied."
+            language.text("Tile \(position) is already occupied.", "\(position) 這一格已經有東西了。")
         case .invalidTrackConnections:
             // The app builds pieces only from the four named directions, so
             // an empty piece is the only way a player can get this error.
-            "Choose at least one direction for the track."
+            language.text("Choose at least one direction for the track.", "請為軌道選擇至少一個方向。")
         case .invalidName:
-            "Enter a name."
+            language.text("Enter a name.", "請輸入名稱。")
         case .insufficientFunds(let required, let available):
-            "Not enough cash: this costs \(required.centsText) and you have \(available.centsText)."
+            language.text(
+                "Not enough cash: this costs \(required.centsText) and you have \(available.centsText).",
+                "餘額不足：需要 \(required.centsText)，目前只有 \(available.centsText)。"
+            )
         case .noTrackToRemove(let position):
-            "There is no track to remove at \(position)."
+            language.text("There is no track to remove at \(position).", "\(position) 沒有可拆除的軌道。")
         case .trackInUse(let position):
-            "A train is on the track at \(position). Take the train off the track first."
+            language.text(
+                "A train is on the track at \(position). Take the train off the track first.",
+                "\(position) 的軌道上有列車。請先把列車移出軌道。"
+            )
         case .unknownTrain(let id):
-            "There is no train #\(id.rawValue)."
+            language.text("There is no train #\(id.rawValue).", "沒有列車 #\(id.rawValue)。")
         case .trainAlreadyPlaced(let id):
-            "Train #\(id.rawValue) is already on the track."
+            language.text("Train #\(id.rawValue) is already on the track.", "列車 #\(id.rawValue) 已經在軌道上。")
         case .trainNotPlaced(let id):
-            "Train #\(id.rawValue) is not on the track."
+            language.text("Train #\(id.rawValue) is not on the track.", "列車 #\(id.rawValue) 不在軌道上。")
         case .invalidTrainPosition:
-            "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars."
+            language.text(
+                "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars.",
+                "列車只能放在軌道格上，或兩格相接的軌道之間，而且後方要有足夠的軌道容納所有車廂。"
+            )
         case .invalidMovementRate:
-            "A train's rate cannot be negative."
+            language.text("A train's rate cannot be negative.", "列車的速率不能是負數。")
         case .invalidContinuation:
-            "The train cannot follow that path: each step must lead to joined track, without turning back."
+            language.text(
+                "The train cannot follow that path: each step must lead to joined track, without turning back.",
+                "列車無法沿這條路徑行駛：每一步都必須接到相連的軌道，而且不能折返。"
+            )
         case .clockOverflow:
-            "Game time cannot advance any further."
+            language.text("Game time cannot advance any further.", "遊戲時間已經無法再往前推進。")
         case .idsExhausted:
-            "This game has no IDs left for anything more of this kind."
+            language.text("This game has no IDs left for anything more of this kind.", "這個遊戲已經沒有可用的編號，無法再增加這類項目。")
         case .invalidTimetable:
-            "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives. A repeating timetable needs a stop, and a period long enough to start again without going back."
+            language.text(
+                "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives. A repeating timetable needs a stop, and a period long enough to start again without going back.",
+                "時刻表的時間不能是負數，也不能倒流：每一站的發車不早於到站，也不晚於下一站的到站。重複的時刻表至少要有一站，週期也要夠長，重新開始時時間才不會倒流。"
+            )
         case .unknownStation(let id):
-            "There is no station #\(id.rawValue)."
+            language.text("There is no station #\(id.rawValue).", "沒有車站 #\(id.rawValue)。")
         case .trainServiceActive(let id):
-            "Train #\(id.rawValue) is running its timetable. Stop its service first."
+            language.text(
+                "Train #\(id.rawValue) is running its timetable. Stop its service first.",
+                "列車 #\(id.rawValue) 正在依時刻表運行。請先停止它的服務。"
+            )
         case .trainServiceNotActive(let id):
-            "Train #\(id.rawValue) is not running a timetable."
+            language.text("Train #\(id.rawValue) is not running a timetable.", "列車 #\(id.rawValue) 沒有在依時刻表運行。")
         case .noTimetable(let id):
-            "Train #\(id.rawValue) has no timetable to run."
+            language.text("Train #\(id.rawValue) has no timetable to run.", "列車 #\(id.rawValue) 沒有可執行的時刻表。")
         case .trainNotAtFirstStop(let id):
-            "Train #\(id.rawValue) must be stopped at its timetable's first station to start its service."
+            language.text(
+                "Train #\(id.rawValue) must be stopped at its timetable's first station to start its service.",
+                "列車 #\(id.rawValue) 必須停在時刻表的第一站，才能開始服務。"
+            )
         case .unknownLine(let id):
-            "There is no line #\(id.rawValue)."
+            language.text("There is no line #\(id.rawValue).", "沒有路線 #\(id.rawValue)。")
         case .invalidLineStops:
-            "A line calls at two stations or more, and not at the same station twice in a row."
+            language.text(
+                "A line calls at two stations or more, and not at the same station twice in a row.",
+                "路線至少要停靠兩個車站，而且不能連續兩次停靠同一站。"
+            )
         case .invalidLineRate:
-            "A line's speed must be at least 1."
+            language.text("A line's speed must be at least 1.", "路線的速度至少要是 1。")
         case .invalidServiceWindow:
-            "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning."
+            language.text(
+                "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
+                "開班時間須在 00:00 到 23:59 之間，收班時間須晚於開班時間，最晚到次日 06:00。"
+            )
         case .invalidTrainsInService:
-            "A line cannot run a negative number of trains."
+            language.text("A line cannot run a negative number of trains.", "路線的上線列車數不能是負數。")
         case .invalidServiceDay:
-            "The day's service levels must start at 00:00 and change at later times within the day."
+            language.text(
+                "The day's service levels must start at 00:00 and change at later times within the day.",
+                "一天的服務等級必須從 00:00 開始，之後只能在同一天較晚的時間改變。"
+            )
         case .invalidHeadway:
-            "A target headway must be between 2 minutes and 24 hours."
+            language.text("A target headway must be between 2 minutes and 24 hours.", "目標班距須在 2 分鐘到 24 小時之間。")
         case .trainOnLine(let id):
-            "Train #\(id.rawValue) runs for a line. Take it off the line first."
+            language.text(
+                "Train #\(id.rawValue) runs for a line. Take it off the line first.",
+                "列車 #\(id.rawValue) 正在為路線服務。請先把它從路線移除。"
+            )
         case .trainNotOnLine(let id):
-            "Train #\(id.rawValue) is not on a line."
+            language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
         case .invalidLinePattern:
-            "A pattern calls at two of its line's stops or more, in the line's order."
+            language.text(
+                "A pattern calls at two of its line's stops or more, in the line's order.",
+                "交路至少要依路線的順序，停靠路線上的兩站以上。"
+            )
         case .unknownLinePattern(let index):
-            "The line has no pattern #\(index + 1)."
+            language.text("The line has no pattern #\(index + 1).", "這條路線沒有交路 #\(index + 1)。")
         case .invalidStationTile(let position):
-            "A station can only grow onto an empty tile beside one of its tiles, not \(position)."
+            language.text(
+                "A station can only grow onto an empty tile beside one of its tiles, not \(position).",
+                "車站只能擴建到緊鄰車站的空地，不能擴建到 \(position)。"
+            )
         case .invalidTrainLength:
-            "A train has \(Train.minimumCars) to \(Train.maximumCars) cars."
+            language.text(
+                "A train has \(Train.minimumCars) to \(Train.maximumCars) cars.",
+                "列車可以有 \(Train.minimumCars) 到 \(Train.maximumCars) 節車廂。"
+            )
         case .unknownTrackNode(let node):
-            "\(node.displayText) is not a node of the track network."
+            language.text(
+                "\(node.displayText(in: language)) is not a node of the track network.",
+                "\(node.displayText(in: language)) 不是路網的節點。"
+            )
         case .unknownTrackEdge(let edge):
-            "\(edge.displayText) is not an edge of the track network."
+            language.text(
+                "\(edge.displayText(in: language)) is not an edge of the track network.",
+                "\(edge.displayText(in: language)) 不是路網的軌段。"
+            )
         case .invalidTrackGeometry:
-            "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different nodes, and run smoothly."
+            language.text(
+                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different nodes, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點是不同的節點，而且線形要平順。"
+            )
         case .trackNodeInUse(let node):
-            "Track still ends at \(node.displayText.lowercased()). Remove that track first."
+            language.text(
+                "Track still ends at \(node.displayText(in: language).lowercased()). Remove that track first.",
+                "還有軌道接在\(node.displayText(in: language))。請先拆除那段軌道。"
+            )
         case .trackEdgeInUse(let edge):
-            "A train is on \(edge.displayText.lowercased()). Take the train off the track first."
+            language.text(
+                "A train is on \(edge.displayText(in: language).lowercased()). Take the train off the track first.",
+                "\(edge.displayText(in: language)) 上有列車。請先把列車移出軌道。"
+            )
         case .trackTooSteep:
-            "That track would be too steep. Track may climb or fall at most 40 in 1000; make it longer or the height difference smaller."
+            language.text(
+                "That track would be too steep. Track may climb or fall at most 40 in 1000; make it longer or the height difference smaller.",
+                "這段軌道太陡了。坡度最多是千分之 40；請把軌道加長，或縮小高度差。"
+            )
         case .invalidTrackStructure:
-            "That structure can't carry track at those heights: surface track stays within 2 m of the ground, viaducts and bridges above it, tunnels below it."
+            language.text(
+                "That structure can't carry track at those heights: surface track stays within 2 m of the ground, viaducts and bridges above it, tunnels below it.",
+                "這種結構物無法在這個高度鋪設軌道：地面軌道與地面的高度差在 2 公尺以內，高架與橋樑在地面以上，隧道在地面以下。"
+            )
         case .trackConflict(let edge):
-            "That track would cross \(edge.displayText.lowercased()) without 8 m between them. Pass over or under it, or cross at a shared node."
+            language.text(
+                "That track would cross \(edge.displayText(in: language).lowercased()) without 8 m between them. Pass over or under it, or cross at a shared node.",
+                "這段軌道會與\(edge.displayText(in: language))交叉，但兩者的高度差不到 8 公尺。請從上方或下方通過，或在共用的節點交會。"
+            )
         case .trackEdgeHasPlatform(let edge):
-            "A station has a platform on \(edge.displayText.lowercased()). Remove the platform first."
+            language.text(
+                "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first.",
+                "\(edge.displayText(in: language)) 上有車站的月台。請先拆除月台。"
+            )
         case .invalidPlatform:
-            "A platform must lie on a level stretch of one edge and not overlap another platform."
+            language.text(
+                "A platform must lie on a level stretch of one edge and not overlap another platform.",
+                "月台必須位於同一個軌段上的平坦區間，而且不能與其他月台重疊。"
+            )
         case .trackReserved(let id):
-            "Train #\(id.rawValue) holds that track under traffic control. Wait for it to clear the route."
+            language.text(
+                "Train #\(id.rawValue) holds that track under traffic control. Wait for it to clear the route.",
+                "在交通控制下，這段軌道由列車 #\(id.rawValue) 預約中。請等它讓出進路。"
+            )
         case .trainsShareTrack(let first, let second):
-            "Trains #\(first.rawValue) and #\(second.rawValue) need the same track, so traffic control can't be turned on. Move one of them first."
+            language.text(
+                "Trains #\(first.rawValue) and #\(second.rawValue) need the same track, so traffic control can't be turned on. Move one of them first.",
+                "列車 #\(first.rawValue) 與 #\(second.rawValue) 需要同一段軌道，所以無法開啟交通控制。請先移動其中一台。"
+            )
         case .invalidStationDemand:
             // Money's text is only the digits, grouped by thousands.
-            "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day."
+            language.text(
+                "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day.",
+                "車站每天的出發旅次是 0 到 \(Money(StationDemand.maximumDailyTrips).displayText)。"
+            )
         case .invalidFareRules:
-            "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end."
+            language.text(
+                "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end.",
+                "票價須為非負金額；階梯票價的區間須從 0 公里開始連續銜接，最後一個區間的結束距離須留空。"
+            )
         }
     }
 }
@@ -325,14 +453,15 @@ extension GameTime {
     /// Day and time of day, such as "Day 1 · 08:30", rounded down to the
     /// minute. Second 0 is the start of day 1. Display only: GameCore has
     /// no calendar.
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         let (day, minuteOfDay) = dayAndMinute
-        return "Day \(day + 1) · \(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+        let time = "\(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+        return language.text("Day \(day + 1) · \(time)", "第 \(day + 1) 日 · \(time)")
     }
 
-    /// ``displayText`` with the seconds, such as "Day 1 · 08:30:15".
-    public var displayTextWithSeconds: String {
-        "\(displayText):\(Self.twoDigits(secondOfMinute))"
+    /// ``displayText(in:)`` with the seconds, such as "Day 1 · 08:30:15".
+    public func displayTextWithSeconds(in language: DisplayLanguage) -> String {
+        "\(displayText(in: language)):\(Self.twoDigits(secondOfMinute))"
     }
 
     /// The day (from 0) and the minute of that day, also before second 0.
@@ -352,21 +481,22 @@ extension GameTime {
 }
 
 extension GameClock {
-    /// The clock as the HUD shows it: ``GameTime/displayText``, with the
-    /// seconds (``GameTime/displayTextWithSeconds``) while they matter, at
-    /// a speed slower than a minute a tick or between whole minutes.
-    public var displayText: String {
+    /// The clock as the HUD shows it: ``GameTime/displayText(in:)``, with
+    /// the seconds (``GameTime/displayTextWithSeconds(in:)``) while they
+    /// matter, at a speed slower than a minute a tick or between whole
+    /// minutes.
+    public func displayText(in language: DisplayLanguage) -> String {
         now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
-            ? now.displayText : now.displayTextWithSeconds
+            ? now.displayText(in: language) : now.displayTextWithSeconds(in: language)
     }
 }
 
 extension GameSpeed {
     /// Compact label for the speed controls: how many times real time it
     /// runs at, as the host ticks every 100 ms.
-    public var label: String {
+    public func label(in language: DisplayLanguage) -> String {
         switch self {
-        case .paused: "Pause"
+        case .paused: language.text("Pause", "暫停")
         case .x1: "1×"
         case .x10: "10×"
         case .x60: "60×"
@@ -376,15 +506,14 @@ extension GameSpeed {
     }
 
     /// Spoken name, since "1×" reads poorly aloud.
-    public var accessibilityName: String {
+    public func accessibilityName(in language: DisplayLanguage) -> String {
         switch self {
-        case .paused: "Paused"
-        case .x1: "Real time"
-        case .x10: "10 times real time"
-        case .x60: "60 times real time"
-        case .normal: "600 times real time"
-        case .double: "1200 times real time"
+        case .paused: language.text("Paused", "已暫停")
+        case .x1: language.text("Real time", "真實時間")
+        case .x10: language.text("10 times real time", "真實時間的 10 倍")
+        case .x60: language.text("60 times real time", "真實時間的 60 倍")
+        case .normal: language.text("600 times real time", "真實時間的 600 倍")
+        case .double: language.text("1200 times real time", "真實時間的 1200 倍")
         }
     }
 }
-

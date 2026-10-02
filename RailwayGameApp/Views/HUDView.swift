@@ -74,7 +74,7 @@ struct HUDView: View {
     }
 
     private var time: some View {
-        let text = session.world.clock.displayText
+        let text = session.world.clock.displayText(in: session.language)
         return Label(text, systemImage: "clock")
             .accessibilityLabel("Game time \(text)")
     }
@@ -88,6 +88,7 @@ private struct SpeedControl: View {
 
     var body: some View {
         let clock = session.world.clock
+        let language = session.language
         HStack(spacing: 4) {
             Button {
                 session.togglePause()
@@ -104,19 +105,19 @@ private struct SpeedControl: View {
                         session.setSpeed(speed)
                     } label: {
                         if speed == clock.speed {
-                            Label(speed.label, systemImage: "checkmark")
+                            Label(speed.label(in: language), systemImage: "checkmark")
                         } else {
-                            Text(speed.label)
+                            Text(speed.label(in: language))
                         }
                     }
-                    .accessibilityLabel(speed.accessibilityName)
+                    .accessibilityLabel(speed.accessibilityName(in: language))
                 }
             } label: {
-                Text(clock.runningSpeed.label)
+                Text(clock.runningSpeed.label(in: language))
                     .font(.subheadline.weight(.bold))
                     .frame(minWidth: 56, minHeight: 32)
             }
-            .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName)")
+            .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName(in: language))")
             .accessibilityHint("Chooses how fast game time runs.")
         }
         .accessibilityElement(children: .contain)

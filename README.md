@@ -16,7 +16,8 @@ App 目前能做到：
 - 點選格子，顯示座標與內容
 - 工具：選取、鋪軌、建站、拆軌；以 N / E / S / W 開關、常用形狀（直線、彎道、T 字、十字）與旋轉選擇鐵軌連接方向
 - 建設透過 GameCore 指令執行；失敗時顯示玩家看得懂的訊息，世界不變
-- HUD：現金、遊戲時間（`Day 1 · 08:30`，慢速或在分鐘中間時加上秒）、暫停／播放與速度選單（1× 真實時間、10×、60×、600×、1200×；新遊戲是 600×）
+- 繁體中文與英文：跟著系統語言切換（ARCHITECTURE 決策 38）
+- HUD：現金、遊戲時間（`Day 1 · 08:30`／`第 1 日 · 08:30`，慢速或在分鐘中間時加上秒）、暫停／播放與速度選單（1× 真實時間、10×、60×、600×、1200×；新遊戲是 600×）
 - `GameSession` 的 game loop 把真實時間換算成整數 tick 推進遊戲時間與列車；App 不在前景作用中（背景、控制中心、App 切換器）時停止，回來不補跑
 - Train 工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格或車站（GameCore 求路後原封不動提交為 continuation；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑、rate 與停在哪些車站，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
 
@@ -102,7 +103,7 @@ GoldenScenarios/  可移植的 golden scenario（JSON，schema 見該目錄的 R
 RailwayGameApp/
   project.yml   XcodeGen spec（專案設定的唯一來源）
   RailwayGame.xcodeproj  由 project.yml 產生並提交（Xcode Cloud 需要），不要手改
-  Resources/    Assets.xcassets（App Icon）
+  Resources/    Assets.xcassets（App Icon）、Localizable.xcstrings（畫面字串的繁體中文，決策 38）
   App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，用 `-demo-layout` 啟動參數開啟的示範配置）
   Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor、TrainControls
 ```

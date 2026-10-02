@@ -94,7 +94,7 @@ final class TrainControlTests: XCTestCase {
                 session.message,
                 StatusMessage(
                     kind: .failure,
-                    text: GameError.insufficientFunds(required: testCosts.train, available: Money(4_999)).playerMessage
+                    text: GameError.insufficientFunds(required: testCosts.train, available: Money(4_999)).playerMessage(in: .english)
                 )
             )
         }
@@ -148,14 +148,14 @@ final class TrainControlTests: XCTestCase {
                 session.select(tile)
                 session.placeSelectedTrain()
                 XCTAssertEqual(session.world, world)
-                XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidTrainPosition.playerMessage))
+                XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidTrainPosition.playerMessage(in: .english)))
             }
 
             let other = GameSession(world: placed)
             other.select(Self.d)
             other.placeSelectedTrain()
             XCTAssertEqual(other.world, placed, "placing never moves a train that is already on the track")
-            XCTAssertEqual(other.message, StatusMessage(kind: .failure, text: GameError.trainAlreadyPlaced(Self.first).playerMessage))
+            XCTAssertEqual(other.message, StatusMessage(kind: .failure, text: GameError.trainAlreadyPlaced(Self.first).playerMessage(in: .english)))
         }
     }
 
@@ -210,12 +210,12 @@ final class TrainControlTests: XCTestCase {
             let session = GameSession(world: placed)
             session.selectedTrainRate = -1
             XCTAssertEqual(session.world, placed)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidMovementRate.playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidMovementRate.playerMessage(in: .english)))
 
             let offTrack = GameSession(world: unplaced)
             offTrack.setSelectedTrainRate(128)
             XCTAssertEqual(offTrack.world, unplaced)
-            XCTAssertEqual(offTrack.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage))
+            XCTAssertEqual(offTrack.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage(in: .english)))
 
             let none = GameSession(world: noTrain)
             none.setSelectedTrainRate(128)
@@ -362,7 +362,7 @@ final class TrainControlTests: XCTestCase {
             second.select(Self.e)
             second.sendSelectedTrain()
             XCTAssertEqual(second.world, unplaced)
-            XCTAssertEqual(second.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage))
+            XCTAssertEqual(second.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage(in: .english)))
 
             let third = GameSession(world: placed)
             third.sendSelectedTrain()
@@ -412,7 +412,7 @@ final class TrainControlTests: XCTestCase {
 
             session.unplaceSelectedTrain()
             XCTAssertEqual(session.world, unplaced)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.trainNotPlaced(Self.first).playerMessage(in: .english)))
             session.reverseSelectedTrain()
             XCTAssertEqual(session.world, unplaced)
         }
@@ -476,16 +476,16 @@ final class TrainControlTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             // 7 × 384 = 2688 units: two links and 640 into the third.
             XCTAssertEqual(session.selectedTrain?.position, .onLink(from: Self.c, to: Self.d, offset: 640))
-            XCTAssertEqual(session.selectedTrain?.positionText, "(3, 2) → (4, 2), 640 / 1024")
-            XCTAssertEqual(session.selectedTrain?.movement.pathText, "Path: 1 more node, (5, 2)")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "(3, 2) → (4, 2), 640 / 1024")
+            XCTAssertEqual(session.selectedTrain?.movement.pathText(in: .english), "Path: 1 more node, (5, 2)")
 
             // The rest of the way: 4 × 1024 − 2688 = 1408 more units.
             for _ in 0..<4 {
                 session.advance(realElapsed: .milliseconds(100))
             }
             XCTAssertEqual(session.selectedTrain?.position, .atNode(Self.e, heading: .east))
-            XCTAssertEqual(session.selectedTrain?.movement.pathText, "No path ahead")
-            XCTAssertEqual(session.selectedTrain?.positionText, "At (5, 2), facing East")
+            XCTAssertEqual(session.selectedTrain?.movement.pathText(in: .english), "No path ahead")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "At (5, 2), facing East")
         }
     }
 
@@ -520,21 +520,21 @@ final class TrainControlTests: XCTestCase {
                 }
             }
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.selectedTrain?.positionText, "(1, 2) → (2, 2), 600 / 1024")
-            XCTAssertEqual(session.selectedTrain?.movement.pathText, "Path: 2 more nodes, ending at (4, 2)")
-            XCTAssertEqual(session.selectedTrain?.movement.rateText, "Rate 300 / min")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "(1, 2) → (2, 2), 600 / 1024")
+            XCTAssertEqual(session.selectedTrain?.movement.pathText(in: .english), "Path: 2 more nodes, ending at (4, 2)")
+            XCTAssertEqual(session.selectedTrain?.movement.rateText(in: .english), "Rate 300 / min")
         }
     }
 }
 
 final class TrainDisplayTests: XCTestCase {
     func testPositionsReadAsGameCoreStoresThem() {
-        XCTAssertEqual(TrainPosition.atNode(GridPosition(x: 3, y: 2), heading: .north).displayText, "At (3, 2), facing North")
+        XCTAssertEqual(TrainPosition.atNode(GridPosition(x: 3, y: 2), heading: .north).displayText(in: .english), "At (3, 2), facing North")
         XCTAssertEqual(
-            TrainPosition.onLink(from: GridPosition(x: 4, y: 2), to: GridPosition(x: 3, y: 2), offset: 1).displayText,
+            TrainPosition.onLink(from: GridPosition(x: 4, y: 2), to: GridPosition(x: 3, y: 2), offset: 1).displayText(in: .english),
             "(4, 2) → (3, 2), 1 / 1024"
         )
-        XCTAssertEqual(Train(id: TrainID(rawValue: 1), name: "Train 1").positionText, "Not on the track")
+        XCTAssertEqual(Train(id: TrainID(rawValue: 1), name: "Train 1").positionText(in: .english), "Not on the track")
     }
 
     func testPathAndRateText() throws {
@@ -545,18 +545,18 @@ final class TrainDisplayTests: XCTestCase {
         try world.purchaseTrain(named: "Train 1")
         let id = TrainID(rawValue: 1)
         try world.placeTrain(id, at: .atNode(GridPosition(x: 0, y: 0), heading: .east))
-        XCTAssertEqual(world.train(id: id)?.movement.pathText, "No path ahead")
-        XCTAssertEqual(world.train(id: id)?.movement.rateText, "Rate 0 / min")
+        XCTAssertEqual(world.train(id: id)?.movement.pathText(in: .english), "No path ahead")
+        XCTAssertEqual(world.train(id: id)?.movement.rateText(in: .english), "Rate 0 / min")
 
         try world.setTrainContinuation(id, to: [GridPosition(x: 1, y: 0)])
-        XCTAssertEqual(world.train(id: id)?.movement.pathText, "Path: 1 more node, (1, 0)")
+        XCTAssertEqual(world.train(id: id)?.movement.pathText(in: .english), "Path: 1 more node, (1, 0)")
 
         try world.setTrainContinuation(id, to: [GridPosition(x: 1, y: 0), GridPosition(x: 2, y: 0), GridPosition(x: 3, y: 0)])
         try world.setTrainMovementRate(id, to: 1_536)
         try world.advance(ticks: 1)
         // One link entered and half of the next: two entries entered, one left.
-        XCTAssertEqual(world.train(id: id)?.movement.pathText, "Path: 1 more node, (3, 0)")
-        XCTAssertEqual(world.train(id: id)?.movement.rateText, "Rate 1536 / min")
+        XCTAssertEqual(world.train(id: id)?.movement.pathText(in: .english), "Path: 1 more node, (3, 0)")
+        XCTAssertEqual(world.train(id: id)?.movement.rateText(in: .english), "Rate 1536 / min")
     }
 
     func testTrainsAreDrawnWhereGameCoreHasThem() {

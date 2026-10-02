@@ -20,7 +20,7 @@ enum DemoLayout {
         } catch {
             preconditionFailure("The demo layout no longer builds: \(error)")
         }
-        let session = GameSession(world: world)
+        let session = GameSession(world: world, language: .app)
         sendTrain(in: session)
         return session
     }

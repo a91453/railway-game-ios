@@ -39,7 +39,7 @@ final class StationFacilitySessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "“Central” now covers 2 tiles."))
             XCTAssertEqual(session.world.stations.first?.annexes, [Self.p(4, 0)])
             XCTAssertEqual(session.world.economy.balance, Money(997_300))
-            XCTAssertEqual(session.world.tileSummary(at: Self.p(4, 0)), "Station · Central · 2 tiles")
+            XCTAssertEqual(session.world.tileSummary(at: Self.p(4, 0), in: .english), "Station · Central · 2 tiles")
             XCTAssertEqual(session.world.platforms(of: StationID(rawValue: 1)), [Self.p(3, 1), Self.p(4, 1)])
 
             // Growing onto track is GameCore's refusal.
@@ -56,11 +56,11 @@ final class StationFacilitySessionTests: XCTestCase {
             let session = GameSession(world: world)
             session.selectTool(.train)
             session.purchaseTrain()
-            XCTAssertEqual(session.selectedTrain?.carsText, "1 car")
+            XCTAssertEqual(session.selectedTrain?.carsText(in: .english), "1 car")
 
             session.setSelectedTrainCars(2)
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Train 1 now has 2 cars."))
-            XCTAssertEqual(session.selectedTrain?.carsText, "2 cars")
+            XCTAssertEqual(session.selectedTrain?.carsText(in: .english), "2 cars")
             session.setSelectedTrainCars(17)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "A train has 1 to 16 cars."))
 
@@ -86,10 +86,10 @@ final class StationFacilitySessionTests: XCTestCase {
         let id = try world.purchaseTrain(named: "Long").id
         try world.setTrainCars(id, to: 2)
         try world.placeTrain(id, at: .atNode(Self.p(3, 1), heading: .east))
-        XCTAssertEqual(world.stationStopText(of: id), "Stopped at Central · the platform is too short for all its cars")
+        XCTAssertEqual(world.stationStopText(of: id, in: .english), "Stopped at Central · the platform is too short for all its cars")
 
         try world.extendStation(StationID(rawValue: 1), to: Self.p(2, 0))
-        XCTAssertEqual(world.stationStopText(of: id), "Stopped at Central")
+        XCTAssertEqual(world.stationStopText(of: id, in: .english), "Stopped at Central")
     }
 
     /// The body is drawn from the head through the trail's centres to the

@@ -1,16 +1,17 @@
 import GameCore
 
 // Player-facing text for service lines, their patterns and the trains that
-// run them (Phase 4 Stage R). Everything here is derived from the world on
-// demand; nothing is stored.
+// run them (Phase 4 Stage R), in English or Traditional Chinese (see
+// ``DisplayLanguage``). Everything here is derived from the world on demand;
+// nothing is stored.
 
 extension ServiceLevel {
     /// "Peak", "Off-peak" or "Low".
-    public var title: String {
+    public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .peak: "Peak"
-        case .offPeak: "Off-peak"
-        case .low: "Low"
+        case .peak: language.text("Peak", "尖峰")
+        case .offPeak: language.text("Off-peak", "離峰")
+        case .low: language.text("Low", "低峰")
         }
     }
 }
@@ -34,23 +35,48 @@ extension GameTime {
 extension ServiceWindow {
     /// "All day", "06:00–24:00", or "22:00–01:00 next day" for a window
     /// that runs past midnight.
-    public var displayText: String {
+    public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .allDay:
-            return "All day"
+            return language.text("All day", "全天")
         case .hours(let open, let close):
             let end = close == 1440 ? "24:00" : clockText(minuteOfDay: close)
-            return "\(clockText(minuteOfDay: open))–\(end)\(close > 1440 ? " next day" : "")"
+            let nextDay = close > 1440 ? language.text(" next day", "（翌日）") : ""
+            return "\(clockText(minuteOfDay: open))–\(end)\(nextDay)"
         }
     }
 }
 
 /// A headway as the player reads it: "Every 4 min", "Every 1 h" or
-/// "Every 1 h 30 min".
-public func headwayText(minutes: Int64) -> String {
-    guard minutes >= 60 else { return "Every \(minutes) min" }
+/// "Every 1 h 30 min"; "每 4 分鐘一班".
+public func headwayText(minutes: Int64, in language: DisplayLanguage) -> String {
     let rest = minutes % 60
-    return "Every \(minutes / 60) h" + (rest == 0 ? "" : " \(rest) min")
+    switch language {
+    case .english:
+        guard minutes >= 60 else { return "Every \(minutes) min" }
+        return "Every \(minutes / 60) h" + (rest == 0 ? "" : " \(rest) min")
+    case .traditionalChinese:
+        guard minutes >= 60 else { return "每 \(minutes) 分鐘一班" }
+        return "每 \(minutes / 60) 小時" + (rest == 0 ? "" : " \(rest) 分鐘") + "一班"
+    }
+}
+
+/// What a service is set to run at `level`, as the line panel's stepper
+/// says it: "Peak: every 5 min" with a target headway, otherwise "Peak: 2
+/// wanted" (`trains`, the train count it is set to).
+public func levelSettingText(_ level: ServiceLevel, trains: Int, target: Int64?, in language: DisplayLanguage) -> String {
+    let name = level.title(in: language)
+    guard let target else { return language.text("\(name): \(trains) wanted", "\(name)：上線 \(trains) 列") }
+    let headway = headwayText(minutes: target, in: language)
+    return language.text("\(name): \(headway.lowercased())", "\(name)：\(headway)")
+}
+
+/// A service's target headway: "Target: every 5 min", or "Target: none"
+/// when it runs by its train count.
+public func targetHeadwayText(_ minutes: Int64?, in language: DisplayLanguage) -> String {
+    guard let minutes else { return language.text("Target: none", "目標：無") }
+    let headway = headwayText(minutes: minutes, in: language)
+    return language.text("Target: \(headway.lowercased())", "目標：\(headway)")
 }
 
 /// One service of a line (its own, or a pattern) at one level, as the line
@@ -63,10 +89,11 @@ public struct LevelServiceSummary: Hashable, Sendable {
     public let headway: Int64?
 
     /// "3 trains · Every 4 min", "No trains", or "No route".
-    public var text: String {
-        guard let trains else { return "No route" }
-        guard trains > 0, let headway else { return "No trains" }
-        return "\(trains) \(trains == 1 ? "train" : "trains") · \(headwayText(minutes: headway))"
+    public func text(in language: DisplayLanguage) -> String {
+        guard let trains else { return language.text("No route", "沒有可行駛的路") }
+        guard trains > 0, let headway else { return language.text("No trains", "沒有列車") }
+        let count = language.text("\(trains) \(trains == 1 ? "train" : "trains")", "\(trains) 列")
+        return "\(count) · \(headwayText(minutes: headway, in: language))"
     }
 }
 
@@ -96,16 +123,18 @@ extension GameWorld {
     /// "All stops A–D" for every stop, "Short working B–C" for a run of
     /// neighbouring stops short of the ends, "Express A–D" when it leaves
     /// stops out.
-    func serviceTitle(of line: ServiceLine, calls: [Int]) -> String {
+    func serviceTitle(of line: ServiceLine, calls: [Int], in language: DisplayLanguage) -> String {
         let ends = "\(stationName(line.stops[calls[0]]))–\(stationName(line.stops[calls[calls.count - 1]]))"
         let passes = calls.count < calls[calls.count - 1] - calls[0] + 1
-        if passes { return "Express \(ends)" }
-        return calls.count == line.stops.count ? "All stops \(ends)" : "Short working \(ends)"
+        if passes { return language.text("Express ", "快車 ") + ends }
+        return calls.count == line.stops.count
+            ? language.text("All stops ", "普通車 ") + ends
+            : language.text("Short working ", "區間車 ") + ends
     }
 
     /// Every service of line `id`, its own first, as the line panel shows
     /// it; empty if there is no such line.
-    public func lineServiceSummaries(_ id: LineID) -> [LineServiceSummary] {
+    public func lineServiceSummaries(_ id: LineID, in language: DisplayLanguage) -> [LineServiceSummary] {
         guard let line = line(id: id) else { return [] }
         let services: [(pattern: Int?, calls: [Int], trains: [TrainID])] =
             [(nil, Array(line.stops.indices), line.trains)] + line.patterns.enumerated().map { ($0, $1.calls, $1.trains) }
@@ -113,7 +142,8 @@ extension GameWorld {
             let calls = service.calls
             let called = calls.map { stationName(line.stops[$0]) }
             let passed = (calls[0]...calls[calls.count - 1]).filter { !calls.contains($0) }.map { stationName(line.stops[$0]) }
-            let callsText = called.joined(separator: " · ") + (passed.isEmpty ? "" : " (passes \(passed.joined(separator: ", ")))")
+            let passes = language.text(" (passes \(passed.joined(separator: ", ")))", "（通過 \(passed.joined(separator: "、"))）")
+            let callsText = called.joined(separator: " · ") + (passed.isEmpty ? "" : passes)
             let levels = ServiceLevel.allCases.map { level in
                 LevelServiceSummary(
                     level: level,
@@ -123,7 +153,7 @@ extension GameWorld {
             }
             return LineServiceSummary(
                 pattern: service.pattern,
-                title: serviceTitle(of: line, calls: calls),
+                title: serviceTitle(of: line, calls: calls, in: language),
                 callsText: callsText,
                 levels: levels,
                 assigned: service.trains.count,
@@ -134,14 +164,14 @@ extension GameWorld {
 
     /// Whether line `id` is running at `time` and at which level: "Peak",
     /// "Off-peak", "Low", or "Closed".
-    public func lineStatusText(_ id: LineID, at time: GameTime) -> String {
-        serviceLevel(of: id, at: time)?.title ?? "Closed"
+    public func lineStatusText(_ id: LineID, at time: GameTime, in language: DisplayLanguage) -> String {
+        serviceLevel(of: id, at: time)?.title(in: language) ?? language.text("Closed", "已收班")
     }
 
     /// The stretches of line `id` no service runs over at `level`, such as
     /// "Not covered: Alpha–Beta, Gamma–Delta", or `nil` when every segment
     /// is covered (or there is no such line).
-    public func lineCoverageText(_ id: LineID, at level: ServiceLevel) -> String? {
+    public func lineCoverageText(_ id: LineID, at level: ServiceLevel, in language: DisplayLanguage) -> String? {
         guard let line = line(id: id), let loads = lineSegmentLoads(id, at: level) else { return nil }
         var gaps: [String] = []
         var start: Int?
@@ -154,15 +184,16 @@ extension GameWorld {
                 start = nil
             }
         }
-        return gaps.isEmpty ? nil : "Not covered: \(gaps.joined(separator: ", "))"
+        guard !gaps.isEmpty else { return nil }
+        return language.text("Not covered: \(gaps.joined(separator: ", "))", "沒有服務：\(gaps.joined(separator: "、"))")
     }
 
     /// The name of the service train `id` runs for, such as "Main" or
     /// "Main · Express Alpha–Delta", or `nil` when it is on no line.
-    public func assignedServiceName(of id: TrainID) -> String? {
+    public func assignedServiceName(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let lineID = assignedLine(of: id), let line = line(id: lineID) else { return nil }
         guard let pattern = assignedPattern(of: id) else { return line.name }
-        return "\(line.name) · \(serviceTitle(of: line, calls: line.patterns[pattern].calls))"
+        return "\(line.name) · \(serviceTitle(of: line, calls: line.patterns[pattern].calls, in: language))"
     }
 }
 
@@ -190,11 +221,11 @@ public enum Punctuality: Hashable, Sendable {
     }
 
     /// "On time", "2 min early" or "5 min late".
-    public var text: String {
+    public func text(in language: DisplayLanguage) -> String {
         switch self {
-        case .onTime: "On time"
-        case .early(let minutes): "\(minutes) min early"
-        case .late(let minutes): "\(minutes) min late"
+        case .onTime: language.text("On time", "準點")
+        case .early(let minutes): language.text("\(minutes) min early", "早到 \(minutes) 分")
+        case .late(let minutes): language.text("\(minutes) min late", "誤點 \(minutes) 分")
         }
     }
 }
@@ -230,11 +261,13 @@ extension GameWorld {
     /// that has passed. Minutes are whole minutes, rounded down: less than
     /// a minute either way is on time. Scheduled times include the cycle of a repeating
     /// timetable.
-    public func trainServiceStatus(of id: TrainID) -> TrainServiceStatus? {
+    public func trainServiceStatus(of id: TrainID, in language: DisplayLanguage) -> TrainServiceStatus? {
         guard let train = train(id: id) else { return nil }
-        let serviceName = assignedServiceName(of: id)
+        let serviceName = assignedServiceName(of: id, in: language)
         guard let execution = train.execution else {
-            return serviceName.map { TrainServiceStatus(serviceName: $0, stopText: "Waiting to be sent out", punctuality: nil) }
+            return serviceName.map {
+                TrainServiceStatus(serviceName: $0, stopText: language.text("Waiting to be sent out", "等待派車"), punctuality: nil)
+            }
         }
         let stop = train.timetable[execution.stop]
         let offset = (train.timetablePeriod ?? 0) &* execution.cycle
@@ -247,12 +280,16 @@ extension GameWorld {
             let punctuality = now > departure ? Punctuality.late(by: now.seconds - departure.seconds)
                 : now < arrival ? .early(by: arrival.seconds - now.seconds) : .onTime
             let isLast = train.timetablePeriod == nil && execution.stop == train.timetable.count - 1
-            let text = isLast ? "At \(name), last stop" : "At \(name), leaves \(departure.clockText)"
+            let text = isLast
+                ? language.text("At \(name), last stop", "停靠 \(name)，終點站")
+                : language.text("At \(name), leaves \(departure.clockText)", "停靠 \(name)，\(departure.clockText) 發車")
             return TrainServiceStatus(serviceName: serviceName, stopText: text, punctuality: punctuality)
         case .travellingToStop:
             let punctuality = now > arrival ? Punctuality.late(by: now.seconds - arrival.seconds) : .onTime
             return TrainServiceStatus(
-                serviceName: serviceName, stopText: "Next: \(name), due \(arrival.clockText)", punctuality: punctuality
+                serviceName: serviceName,
+                stopText: language.text("Next: \(name), due \(arrival.clockText)", "下一站：\(name)，\(arrival.clockText) 到站"),
+                punctuality: punctuality
             )
         }
     }
@@ -262,8 +299,9 @@ extension GameWorld {
     /// Under traffic control, "Waiting for Express to clear the route"
     /// while train `id` is due to leave on a route another train holds
     /// (see ``trainHoldingRoute(of:)``), naming that train; `nil` otherwise.
-    public func routeWaitText(of id: TrainID) -> String? {
+    public func routeWaitText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let holder = trainHoldingRoute(of: id) else { return nil }
-        return "Waiting for \(train(id: holder)?.name ?? "#\(holder.rawValue)") to clear the route"
+        let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
+        return language.text("Waiting for \(name) to clear the route", "等待 \(name) 讓出進路")
     }
 }

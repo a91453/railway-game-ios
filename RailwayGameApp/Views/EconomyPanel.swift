@@ -52,7 +52,7 @@ struct EconomyPanel: View {
                 .monospacedDigit()
             Picker("Mode", selection: Binding(get: { accounts.mode }, set: { session.setEconomyMode($0) })) {
                 ForEach(EconomyMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName).tag(mode)
+                    Text(mode.displayName(in: session.language)).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
@@ -65,7 +65,7 @@ struct EconomyPanel: View {
 
     private var faresSection: some View {
         Section("Fares") {
-            LabeledContent("Rules", value: accounts.effectiveFareRules.displayText)
+            LabeledContent("Rules", value: accounts.effectiveFareRules.displayText(in: session.language))
             Stepper(value: $flatFare, in: 0...10_000, step: 25) {
                 Text("Flat fare \(Money(flatFare).centsText)")
                     .monospacedDigit()
@@ -87,7 +87,7 @@ struct EconomyPanel: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(totals, id: \.item) { total in
-                LabeledContent(total.item.displayName, value: total.amountText)
+                LabeledContent(total.item.displayName(in: session.language), value: total.amountText)
                     .monospacedDigit()
             }
         }
@@ -97,14 +97,14 @@ struct EconomyPanel: View {
         Section("Report") {
             Picker("Period", selection: $period) {
                 ForEach(FinancePeriod.allCases, id: \.self) { period in
-                    Text(period.displayName).tag(period)
+                    Text(period.displayName(in: session.language)).tag(period)
                 }
             }
             .pickerStyle(.segmented)
             let report = session.world.financeReport(period)
             Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 4) {
                 GridRow {
-                    Text("").gridColumnAlignment(.leading)
+                    Text(verbatim: "").gridColumnAlignment(.leading)
                     Text("This").fontWeight(.semibold)
                     Text("Last").fontWeight(.semibold)
                 }
@@ -120,7 +120,7 @@ struct EconomyPanel: View {
         }
     }
 
-    private func reportRow(_ title: String, _ current: Money, _ previous: Money) -> some View {
+    private func reportRow(_ title: LocalizedStringKey, _ current: Money, _ previous: Money) -> some View {
         GridRow {
             Text(title).gridColumnAlignment(.leading)
             Text(current.moneyText)
@@ -138,13 +138,13 @@ struct EconomyPanel: View {
             ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
-                        Text(entry.kind.displayName)
+                        Text(entry.kind.displayName(in: session.language))
                             .fontWeight(.semibold)
                         Spacer()
                         Text(entry.amountText)
                             .foregroundStyle(entry.amount < .zero ? Color.red : Color.green)
                     }
-                    Text(entry.time.displayText)
+                    Text(entry.time.displayText(in: session.language))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

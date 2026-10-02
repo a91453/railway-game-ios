@@ -49,8 +49,9 @@ struct MapView: View {
     }
 
     private var selectionDescription: String {
-        guard let position = session.selection else { return "No tile selected" }
-        return "Tile x \(position.x), y \(position.y), \(session.world.tileSummary(at: position))"
+        guard let position = session.selection else { return String(localized: "No tile selected") }
+        let summary = session.world.tileSummary(at: position, in: session.language)
+        return String(localized: "Tile x \(position.x), y \(position.y), \(summary)")
     }
 
     private func zoomControls(tileSize: Double, fitting: Double) -> some View {

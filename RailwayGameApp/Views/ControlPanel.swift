@@ -79,7 +79,7 @@ private struct ToolPicker: View {
         VStack(spacing: 2) {
             Image(systemName: tool.systemImage)
                 .font(.body.weight(.semibold))
-            Text(tool.title)
+            Text(tool.title(in: session.language))
                 .font(.caption.weight(isActive ? .bold : .regular))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -93,7 +93,7 @@ private struct ToolPicker: View {
                 .font(.title3.weight(.semibold))
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: 1) {
-                Text(tool.title)
+                Text(tool.title(in: session.language))
                     .font(.subheadline.weight(isActive ? .bold : .semibold))
                 Text(detail(for: tool))
                     .font(.caption)
@@ -108,11 +108,11 @@ private struct ToolPicker: View {
     private func detail(for tool: ConstructionTool) -> String {
         let costs = session.world.economy.costs
         switch tool {
-        case .select: return "Inspect a tile"
-        case .buildTrack: return "Lay a track piece · \(costs.track.moneyText)"
-        case .buildStation: return "Build a station · \(costs.station.moneyText)"
-        case .removeTrack: return "Remove track · free, no refund"
-        case .train: return "Place and send trains · \(costs.train.moneyText) each"
+        case .select: return String(localized: "Inspect a tile")
+        case .buildTrack: return String(localized: "Lay a track piece · \(costs.track.moneyText)")
+        case .buildStation: return String(localized: "Build a station · \(costs.station.moneyText)")
+        case .removeTrack: return String(localized: "Remove track · free, no refund")
+        case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
         }
     }
 }
@@ -182,21 +182,23 @@ private struct ActionButton: View {
     }
 
     private var hint: String {
-        session.selection == nil ? "Select a tile on the map first." : ""
+        session.selection == nil ? String(localized: "Select a tile on the map first.") : ""
     }
 
     private var title: String? {
         let costs = session.world.economy.costs
         switch session.tool {
         case .select: return nil
-        case .buildTrack: return "Build Track · \(costs.track.moneyText)"
+        case .buildTrack: return String(localized: "Build Track · \(costs.track.moneyText)")
         case .buildStation:
-            return session.growsStation ? "Grow Station · \(costs.station.moneyText)" : "Build Station · \(costs.station.moneyText)"
-        case .removeTrack: return "Remove Track"
+            return session.growsStation
+                ? String(localized: "Grow Station · \(costs.station.moneyText)")
+                : String(localized: "Build Station · \(costs.station.moneyText)")
+        case .removeTrack: return String(localized: "Remove Track")
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
-            return train.position == nil ? "Place \(train.name) Here" : "Send \(train.name) Here"
+            return train.position == nil ? String(localized: "Place \(train.name) Here") : String(localized: "Send \(train.name) Here")
         }
     }
 }
@@ -221,7 +223,7 @@ struct StatusBanner: View {
 
     private func banner(for message: StatusMessage) -> some View {
         let isSuccess = message.kind == .success
-        let kindName: String = isSuccess ? "Done" : "Problem"
+        let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .foregroundStyle(isSuccess ? Color.green : Color.orange)
@@ -282,11 +284,11 @@ extension ConstructionTool {
 
     var accessibilityName: String {
         switch self {
-        case .select: "Select tool"
-        case .buildTrack: "Build track tool"
-        case .buildStation: "Build station tool"
-        case .removeTrack: "Remove track tool"
-        case .train: "Train tool"
+        case .select: String(localized: "Select tool")
+        case .buildTrack: String(localized: "Build track tool")
+        case .buildStation: String(localized: "Build station tool")
+        case .removeTrack: String(localized: "Remove track tool")
+        case .train: String(localized: "Train tool")
         }
     }
 }

@@ -12,10 +12,11 @@ struct TrackPieceEditor: View {
     let session: GameSession
 
     var body: some View {
+        let language = session.language
         HStack(alignment: .top, spacing: 16) {
             compass
             VStack(alignment: .leading, spacing: 8) {
-                Text(session.trackConnections.summary)
+                Text(session.trackConnections.summary(in: language))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -23,7 +24,7 @@ struct TrackPieceEditor: View {
                     ForEach(TrackPiece.allCases, id: \.self) { piece in
                         // Highlighted when the current piece has this shape,
                         // in any rotation.
-                        let isActive = session.trackConnections.shapeName == piece.connections.shapeName
+                        let isActive = session.trackConnections.shapeName(in: language) == piece.connections.shapeName(in: language)
                         Button {
                             session.selectTrackPiece(piece)
                         } label: {
@@ -33,7 +34,7 @@ struct TrackPieceEditor: View {
                                 .frame(width: Self.buttonSize, height: Self.buttonSize - 8)
                         }
                         .buttonStyle(SelectableButtonStyle(isActive: isActive))
-                        .accessibilityLabel(piece.title)
+                        .accessibilityLabel(piece.title(in: language))
                         .accessibilityAddTraits(isActive ? .isSelected : [])
                     }
                 }
@@ -62,7 +63,7 @@ struct TrackPieceEditor: View {
                 TrackPreview(connections: session.trackConnections)
                     .frame(width: Self.buttonSize, height: Self.buttonSize)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .accessibilityLabel("Preview: \(session.trackConnections.summary)")
+                    .accessibilityLabel("Preview: \(session.trackConnections.summary(in: session.language))")
                 toggle(.east)
             }
             GridRow {
@@ -75,11 +76,11 @@ struct TrackPieceEditor: View {
 
     private func toggle(_ direction: TrackDirection) -> some View {
         let isOn = session.trackConnections.contains(TrackConnections(direction))
-        let state: String = isOn ? "On" : "Off"
+        let state = isOn ? String(localized: "On") : String(localized: "Off")
         return Button {
             session.toggleTrackDirection(direction)
         } label: {
-            Text(direction.abbreviation)
+            Text(direction.abbreviation(in: session.language))
                 .font(.subheadline.weight(.bold))
                 .frame(width: Self.buttonSize, height: Self.buttonSize)
                 .foregroundStyle(isOn ? Color.white : Color.primary)
@@ -93,7 +94,7 @@ struct TrackPieceEditor: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(direction.name) connection")
+        .accessibilityLabel("\(direction.name(in: session.language)) connection")
         .accessibilityValue(state)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
