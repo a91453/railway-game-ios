@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// What has been built so far, read from the world: counts and every
-/// station. Tapping a station selects its tile. Shown where there is room
+/// station. Tapping a station selects it. Shown where there is room
 /// (iPad, and the sidebar on wide screens).
 struct NetworkOverview: View {
     let session: GameSession
@@ -23,7 +23,7 @@ struct NetworkOverview: View {
             .accessibilityElement(children: .combine)
 
             if world.stations.isEmpty {
-                Text("No stations yet. Choose Station, select an empty tile and build one.")
+                Text("No stations yet. Choose Network, then Platform, and tap the track to build one.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
@@ -37,9 +37,10 @@ struct NetworkOverview: View {
     }
 
     private func stationButton(_ station: Station) -> some View {
-        let isSelected = session.selection == station.position
+        let isSelected = session.selectedStation?.id == station.id
+        let place = station.placeText(in: session.language)
         return Button {
-            session.select(station.position)
+            session.selectStation(station.id)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "tram.fill")
@@ -49,7 +50,7 @@ struct NetworkOverview: View {
                     Text(station.name)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
-                    Text(verbatim: "x \(station.position.x), y \(station.position.y)")
+                    Text(verbatim: place)
                         .font(.caption)
                         .monospacedDigit()
                         .opacity(0.75)
@@ -60,8 +61,8 @@ struct NetworkOverview: View {
             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
         }
         .buttonStyle(SelectableButtonStyle(isActive: isSelected))
-        .accessibilityLabel("\(station.name) station, x \(station.position.x), y \(station.position.y)")
-        .accessibilityHint("Selects its tile on the map.")
+        .accessibilityLabel("\(station.name) station, \(place)")
+        .accessibilityHint("Selects it on the map.")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

@@ -125,9 +125,18 @@ final class GoldenScenarioTests: XCTestCase {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
             for (index, station) in committed.expectedFinalState.stations.enumerated() {
-                if station.annexes.count > 1 { annexCount += 1 }
-                var wrongAnnexes = [station.annexes + [PositionSummary(GridPosition(x: 99, y: 99))]]
-                if station.annexes.count > 1 { wrongAnnexes += [Array(station.annexes.dropLast()), station.annexes.reversed()] }
+                // Schema 26: a station at a point has no annexes; another
+                // point is reported once.
+                if let point = station.point {
+                    var scenario = committed
+                    scenario.expectedFinalState.stations[index].point = PlanPoint(x: point.x + 1, y: point.y)
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) station \(station.id) expecting another point")
+                    continue
+                }
+                guard let annexes = station.annexes else { continue }
+                if annexes.count > 1 { annexCount += 1 }
+                var wrongAnnexes = [annexes + [PositionSummary(GridPosition(x: 99, y: 99))]]
+                if annexes.count > 1 { wrongAnnexes += [Array(annexes.dropLast()), annexes.reversed()] }
                 for wrong in wrongAnnexes {
                     var scenario = committed
                     scenario.expectedFinalState.stations[index].annexes = wrong
@@ -868,7 +877,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 25,
+              "schemaVersion": 26,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -927,7 +936,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in

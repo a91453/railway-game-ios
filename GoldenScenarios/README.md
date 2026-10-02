@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 25`）
+## Schema（`schemaVersion: 26`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`routeToStation` 可以省略的 `cars`（見下面「車站設施」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與線路的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或方向名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `25` |
+| `schemaVersion` | `26` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -123,6 +123,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `buildTurnout` | `x`、`y`、`connections`、`stem`（方向名稱） | `buildTurnout(at:connections:stem:)` |
 | `buildCrossing` | `x`、`y` | `buildCrossing(at:)` |
 | `buildStation` | `name`、`x`、`y` | `buildStation(named:at:)` |
+| `buildStationAt` | `name`、`point`（`{ "x", "y" }`，世界單位） | `buildStation(named:at:)`（`PlanPoint`） |
 | `extendStation` | `station`、`x`、`y` | `extendStation(_:to:)` |
 | `purchaseTrain` | `name` | `purchaseTrain(named:)` |
 | `setTrainCars` | `train`、`cars` | `setTrainCars(_:to:)` |
@@ -430,7 +431,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 ### 最終狀態
 
-- `stations`：`{ "id", "name", "x", "y", "annexes" }`，依 ID 遞增；`annexes` 是長出的格（`[{ "x", "y" }, ...]`，依長出的順序），只有一格的車站是 `[]`。車站在路網上的月台屬於鐵路網，寫在 `network` 的 `platforms`。
+- `stations`：`{ "id", "name", "x", "y", "annexes" }`，或建在一個點上的車站 `{ "id", "name", "point": { "x", "y" } }`（世界單位，沒有 `x`、`y`、`annexes`），依 ID 遞增；`annexes` 是長出的格（`[{ "x", "y" }, ...]`，依長出的順序），只有一格的車站是 `[]`。車站在路網上的月台屬於鐵路網，寫在 `network` 的 `platforms`。
 - `tracks`：`{ "x", "y", "connections", "layout" }`，逐列由北到南、每列由西到東；平面交叉的 `connections` 是四個方向。
 - `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "times", "cars", "trail", "trailEdges", "reservation", "performance" }`，依 ID 遞增（`performance` 只在不是標準性能時有，schema 25；`movement` 只在路網上的路停在邊的中段時有 `end`，schema 18；`times` 只在列車執行服務時有，形式見上面「服務時刻」，schema 24）；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是方格上的車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），`trailEdges` 是連續路網上車頭所在邊之後車身經過的邊（編號，由近到遠，到車尾所在的那一條為止）；1 節的列車是 `1`、`[]` 與 `[]`。`reservation`（schema 19）是列車在交通控制下預約的資源（形式見上面「軌道資源」，依資源的順序），沒有預約是 `[]`。
 - `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
@@ -487,3 +488,4 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 為了保留原來要驗證的情境，幾個 fixture 改了指令（只改輸入，不改規則）：`boarding.json`、`economy.json`、`line-patterns.json`、`service-line.json` 的線路用 1 km/h 的慢速性能 `{ 250, 250, 1 }`（兩個連結 120 秒，和以前一樣）；`line-dispatch.json` 用 `{ 125, 100, 1 }`（四個連結 240 秒）；`network-service.json` 的 Tube 用 2 km/h 的 `{ 25, 25, 2 }`（往返 52 分鐘，和以前一樣），Mole 的時刻表改成 Deep 22/30、Harbour 53/62、每 63 分鐘（和以前照 rate 跑到的時間相近）；`traffic-reservation.json` 的時刻表 East 11 → 10、West 12 → 9（和以前到達的時間相同）；`station-dwell.json` 的列車用 `{ 250, 250, 1 }`，第一段排得太緊（60 秒）而以最少的 120 秒跑完、第二段從晚出發整段後移，最後一次 `advance` 119 → 179；`train-service.json` 的 Local 2 手動開到 Beta 多一個 tick（3 → 4），時刻表 Beta 29 → 30、Gamma 到達 45 → 44；`service-line.json` 的第二個性能 700 → 慢速性能（`setLineRate` 的 0 改成加速度 0 的性能）。
   - 線路的行程以秒計：`service-line.json` 的標準性能一段 16 秒（以前 2 分鐘），整趟 424 秒、8 分鐘，最多 4 台、班距 2、3、8 分鐘。
   - 執行服務、行駛中的列車加上 `run`；不是標準性能的列車與線路加上 `performance`。其他預期值都沒有改變。
+- **26**（Stage F1）：建在任意座標的車站（決策 44）：`buildStationAt` 指令，最終狀態車站的 `point` 形式，以及手算的 `free-station.json`（點上的車站不占格：同一格可以有兩個點上的車站，土地、方格軌道與方格車站的規則不變，旁邊的方格軌道不是它的月台；沒有名字、點在地圖外時拒絕，地圖外報點所在的格（向下取整）；一樣花一個車站的錢；不能長到格上；路網上的月台、往車站的路徑與停靠和其他車站相同）。既有的二十五個 fixture 只把 `schemaVersion` 從 25 改成 26，其他預期值都沒有改變。

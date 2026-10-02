@@ -106,6 +106,23 @@ public struct GameWorld: Equatable, Sendable {
         return station(id: id)
     }
 
+    /// The station whose ``Station/location`` is nearest `point`, if one
+    /// lies within `reach` world units of it (Stage F1): the lowest
+    /// numbered of equally near ones. Distances compare squared, exactly.
+    public func station(near point: PlanPoint, within reach: Int64) -> Station? {
+        guard reach >= 0, point.isWithinLimits, reach <= WorldCoordinate.limit else { return nil }
+        var best: (station: Station, squared: Int64)?
+        for station in stations {
+            let location = station.location
+            let dx = location.x - point.x, dy = location.y - point.y
+            guard abs(dx) <= reach, abs(dy) <= reach else { continue }
+            let squared = dx * dx + dy * dy
+            guard squared <= reach * reach, best.map({ squared < $0.squared }) ?? true else { continue }
+            best = (station, squared)
+        }
+        return best?.station
+    }
+
     // MARK: - Construction
 
     /// Lays a track piece on an empty tile and charges ``ConstructionCosts/track``.
@@ -480,6 +497,41 @@ public struct GameWorld: Equatable, Sendable {
         stations.append(station)
         map.setType(.station(id: station.id), at: position)
         return station
+    }
+
+    /// Builds a station standing at `point` (Stage F1) and charges
+    /// ``ConstructionCosts/station``. It takes no tile: the land and any
+    /// grid track under it are unchanged, and other stations may stand over
+    /// the same tile. It has no platforms until the track network gives it
+    /// some (``addTrackPlatform(_:on:from:to:)``); grid track beside it never
+    /// becomes its platform, and it cannot grow onto tiles
+    /// (``extendStation(_:to:)`` refuses it).
+    ///
+    /// - Throws, checked in this order: ``GameError/invalidName``,
+    ///   ``GameError/outOfBounds(_:)`` naming the tile under `point` when it
+    ///   lies off the map (`0 <= x < width × 1024`, `0 <= y < height ×
+    ///   1024`), ``GameError/idsExhausted``, or
+    ///   ``GameError/insufficientFunds(required:available:)``.
+    @discardableResult
+    public mutating func buildStation(named name: String, at point: PlanPoint) throws(GameError) -> Station {
+        guard Self.isValidName(name) else { throw .invalidName }
+        guard isOnMap(point) else { throw .outOfBounds(Self.tile(under: point)) }
+        let (id, nextID) = try Self.allocateID(from: nextStationID)
+        try economy.spend(economy.costs.station)
+
+        let station = Station(id: StationID(rawValue: id), name: name, point: point)
+        nextStationID = nextID
+        stations.append(station)
+        return station
+    }
+
+    /// The tile under `point`, rounding down, also off the map.
+    static func tile(under point: PlanPoint) -> GridPosition {
+        let size = WorldCoordinate.tileSize
+        func floor(_ value: Int64) -> Int {
+            Int(value >= 0 ? value / size : -((-value + size - 1) / size))
+        }
+        return GridPosition(x: floor(point.x), y: floor(point.y))
     }
 
     /// Grows station `id` onto the empty tile at `position`, beside one of
@@ -2580,6 +2632,9 @@ extension GameWorld: Codable {
         }
         for station in stations {
             guard Self.isValidName(station.name) else { return "Station \(station.id.rawValue) has an invalid name." }
+            if let point = station.point, !isOnMap(point) {
+                return "Station \(station.id.rawValue) stands off the map."
+            }
             guard station.tiles.allSatisfy({ map.tile(at: $0)?.type == .station(id: station.id) }) else {
                 return "Station \(station.id.rawValue) does not match the map tile at \(station.position)."
             }

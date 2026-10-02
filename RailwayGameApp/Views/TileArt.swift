@@ -2,18 +2,20 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Draws map tiles and trains. Shared by the map and the track-direction
-/// preview, so a piece looks the same before and after it is built.
+/// Draws the map, the track network, stations and trains.
 ///
-/// Tile kinds differ in shape, not only colour: track is drawn as rails,
-/// a station as a badge with a train symbol, a train as a disc. Zoomed out
+/// Kinds differ in shape, not only colour: track is drawn as rails, a
+/// station as a badge with a train symbol, a train as a disc. Zoomed out
 /// (``MapDetail/overview``), track is a thin line and a station a plain
-/// square, without the grid.
+/// mark. No grid lines are drawn (Stage F1): only the map's edge is; the
+/// grid's track and stations, kept for old saves, are drawn on their
+/// tiles.
 enum TileArt {
     static func drawMap(
         _ world: GameWorld,
         selectedTrainID: TrainID?,
         selection: GridPosition?,
+        selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
         tileSize: Double,
         in context: GraphicsContext
@@ -22,9 +24,7 @@ enum TileArt {
         let detail = MapScale.detail(forTileSize: tileSize)
         let bounds = CGRect(x: 0, y: 0, width: tileSize * Double(map.width), height: tileSize * Double(map.height))
         context.fill(Path(bounds), with: .color(Palette.land))
-        if detail == .full {
-            drawGrid(columns: map.width, rows: map.height, tileSize: tileSize, in: context)
-        }
+        context.stroke(Path(bounds.insetBy(dx: 0.5, dy: 0.5)), with: .color(Palette.mapEdge), lineWidth: 1)
 
         // The land: stations. The grid's track is the railway network's
         // (Stage S3A), drawn from it below.
@@ -61,11 +61,22 @@ enum TileArt {
         }
 
         drawNetwork(world, detail: detail, tileSize: tileSize, in: context)
+        // Stations at a point (Stage F1) over their platforms.
+        for station in world.stations where station.point != nil {
+            drawPointStation(station, isSelected: station.id == selectedStationID, detail: detail, tileSize: tileSize, in: context)
+        }
         if let overlay {
             drawNetworkOverlay(overlay, tileSize: tileSize, in: context)
         }
 
-        if let selection, map.contains(selection) {
+        // A station on tiles has its tiles outlined, and so has a selected
+        // tile of the grid's track; a station at a point has its own ring,
+        // and bare land shows nothing.
+        if let station = selectedStationID.flatMap({ world.station(id: $0) }) {
+            for tile in station.tiles {
+                drawSelection(in: rect(for: tile, tileSize: tileSize), context: context)
+            }
+        } else if let selection, map.contains(selection), world.track(at: selection) != nil {
             drawSelection(in: rect(for: selection, tileSize: tileSize), context: context)
         }
 
@@ -314,7 +325,35 @@ enum TileArt {
         let badge = Path(roundedRect: badgeRect, cornerRadius: rect.width * 0.18)
         context.fill(badge, with: .color(Palette.station))
         context.stroke(badge, with: .color(Palette.rail.opacity(0.5)), lineWidth: 1)
+        drawStationSymbol(in: badgeRect, context: context)
+    }
 
+    /// A station at a point (Stage F1): a round badge where it stands,
+    /// with a train symbol and its name below at full detail. The selected
+    /// one gets a thick accent ring with a halo, so it does not rely on
+    /// colour alone.
+    static func drawPointStation(_ station: Station, isSelected: Bool, detail: MapDetail, tileSize: Double, in context: GraphicsContext) {
+        let centre = MapScale.center(of: WorldCoordinate(x: station.location.x, y: station.location.y), tileSize: tileSize)
+        let radius = max(5, tileSize * 0.32)
+        let badgeRect = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
+        let badge = Path(ellipseIn: badgeRect)
+        context.fill(badge, with: .color(Palette.station))
+        context.stroke(badge, with: .color(Palette.rail.opacity(0.5)), lineWidth: 1)
+        if isSelected {
+            let ring = Path(ellipseIn: badgeRect.insetBy(dx: -3, dy: -3))
+            context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
+            context.stroke(ring, with: .color(.accentColor), lineWidth: 3)
+        }
+        guard detail == .full else { return }
+        drawStationSymbol(in: badgeRect.insetBy(dx: radius * 0.15, dy: radius * 0.15), context: context)
+        let name = Text(verbatim: station.name)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(Palette.rail)
+        context.draw(name, at: CGPoint(x: centre.x, y: centre.y + radius + 4), anchor: .top)
+    }
+
+    /// The station's train symbol, centred in `badgeRect`.
+    private static func drawStationSymbol(in badgeRect: CGRect, context: GraphicsContext) {
         var symbol = context.resolve(Image(systemName: "tram.fill"))
         symbol.shading = .color(Palette.stationSymbol)
         let natural = symbol.size
@@ -328,23 +367,6 @@ enum TileArt {
             width: size.width,
             height: size.height
         ))
-    }
-
-    private static func drawGrid(columns: Int, rows: Int, tileSize: Double, in context: GraphicsContext) {
-        let width = tileSize * Double(columns)
-        let height = tileSize * Double(rows)
-        var grid = Path()
-        for column in 0...columns {
-            let x = Double(column) * tileSize
-            grid.move(to: CGPoint(x: x, y: 0))
-            grid.addLine(to: CGPoint(x: x, y: height))
-        }
-        for row in 0...rows {
-            let y = Double(row) * tileSize
-            grid.move(to: CGPoint(x: 0, y: y))
-            grid.addLine(to: CGPoint(x: width, y: y))
-        }
-        context.stroke(grid, with: .color(Palette.gridLine), lineWidth: 0.5)
     }
 
     private static func drawSelection(in rect: CGRect, context: GraphicsContext) {

@@ -226,9 +226,12 @@ extension GameWorld {
 }
 
 extension GameSession {
-    /// The station on the selected tile, read from the world.
+    /// The selected station, read from the world: the one picked
+    /// (``selectedStationID``), or else the station that takes the selected
+    /// tile, also when it was built or grew there after the tile was
+    /// selected.
     public var selectedStation: Station? {
-        selection.flatMap { world.station(at: $0) }
+        selectedStationID.flatMap { world.station(id: $0) } ?? selection.flatMap { world.station(at: $0) }
     }
 
     /// Gives the selected station the `Ci/` preset `kind`
@@ -350,8 +353,7 @@ extension GameSession {
         }
     }
 
-    /// The station on the selected tile, or `nil` after reporting that
-    /// there is none.
+    /// The selected station, or `nil` after reporting that there is none.
     private func requireSelectedStation() -> Station? {
         guard let station = selectedStation else {
             message = StatusMessage(kind: .failure, text: language.text("Select a station on the map first.", "請先在地圖上選擇車站。"))

@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 25
+    static let schemaVersion = 26
 
     var description: String
     var initialState: InitialState
@@ -427,6 +427,9 @@ enum ScenarioCommand: Equatable {
     case buildCrossing(GridPosition)
     case removeTrack(GridPosition)
     case buildStation(name: String, GridPosition)
+    /// A station at a point of the world, taking no tile (schema 26,
+    /// Stage F1).
+    case buildStationAt(name: String, PlanPoint)
     case extendStation(StationID, GridPosition)
     case purchaseTrain(name: String)
     case setTrainCars(TrainID, Int)
@@ -481,6 +484,8 @@ enum ScenarioCommand: Equatable {
                 try world.removeTrack(at: position)
             case .buildStation(let name, let position):
                 try world.buildStation(named: name, at: position)
+            case .buildStationAt(let name, let point):
+                try world.buildStation(named: name, at: point)
             case .extendStation(let id, let position):
                 try world.extendStation(id, to: position)
             case .purchaseTrain(let name):
@@ -573,7 +578,7 @@ extension ScenarioCommand: Decodable {
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
         case z, from, to, curve, edge, node, path
         case profile, structure, start, end, enabled, demand, mode, rules
-        case performance
+        case performance, point
     }
 
     init(from decoder: any Decoder) throws {
@@ -594,6 +599,8 @@ extension ScenarioCommand: Decodable {
             self = try .removeTrack(container.decodePosition(x: .x, y: .y))
         case "buildStation":
             self = try .buildStation(name: container.decode(String.self, forKey: .name), container.decodePosition(x: .x, y: .y))
+        case "buildStationAt":
+            self = try .buildStationAt(name: container.decode(String.self, forKey: .name), container.decode(PlanPoint.self, forKey: .point))
         case "extendStation":
             self = try .extendStation(container.decodeStation(forKey: .station), container.decodePosition(x: .x, y: .y))
         case "purchaseTrain":
@@ -1615,13 +1622,65 @@ struct WorldSummary: Codable, Equatable {
     /// The company's accounts (schema 22).
     var accounts: AccountsSummary
 
+    /// A station on tiles, `{ "id", "name", "x", "y", "annexes" }`, or
+    /// (schema 26, Stage F1) at a point, `{ "id", "name", "point": { "x",
+    /// "y" } }`: one form or the other, never both.
     struct StationSummary: Codable, Equatable {
         var id: Int
         var name: String
-        var x: Int
-        var y: Int
+        var x: Int?
+        var y: Int?
         /// The tiles it grew onto, in order; `[]` for one tile.
-        var annexes: [PositionSummary]
+        var annexes: [PositionSummary]?
+        /// Where a station at a point stands.
+        var point: PlanPoint?
+
+        init(id: Int, name: String, x: Int, y: Int, annexes: [PositionSummary]) {
+            self.id = id
+            self.name = name
+            self.x = x
+            self.y = y
+            self.annexes = annexes
+        }
+
+        init(id: Int, name: String, point: PlanPoint) {
+            self.id = id
+            self.name = name
+            self.point = point
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, name, x, y, annexes, point
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(Int.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            if container.contains(.point) {
+                guard !container.contains(.x), !container.contains(.y), !container.contains(.annexes) else {
+                    throw DecodingError.dataCorruptedError(forKey: .point, in: container, debugDescription: "A station is at a point or on tiles, not both.")
+                }
+                point = try container.decode(PlanPoint.self, forKey: .point)
+            } else {
+                x = try container.decode(Int.self, forKey: .x)
+                y = try container.decode(Int.self, forKey: .y)
+                annexes = try container.decode([PositionSummary].self, forKey: .annexes)
+            }
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            if let point {
+                try container.encode(point, forKey: .point)
+            } else {
+                try container.encode(x, forKey: .x)
+                try container.encode(y, forKey: .y)
+                try container.encode(annexes, forKey: .annexes)
+            }
+        }
     }
 
     struct TrackSummary: Codable, Equatable {
@@ -1774,10 +1833,12 @@ struct WorldSummary: Codable, Equatable {
         speed = SpeedName(world.clock.speed)
         balance = world.economy.balance.amount
         stations = world.stations
-            .map {
-                StationSummary(
-                    id: $0.id.rawValue, name: $0.name, x: $0.position.x, y: $0.position.y, annexes: $0.annexes.map(PositionSummary.init)
-                )
+            .map { station in
+                station.point.map { StationSummary(id: station.id.rawValue, name: station.name, point: $0) }
+                    ?? StationSummary(
+                        id: station.id.rawValue, name: station.name, x: station.position.x, y: station.position.y,
+                        annexes: station.annexes.map(PositionSummary.init)
+                    )
             }
             .sorted { $0.id < $1.id }
         tracks = world.tracks

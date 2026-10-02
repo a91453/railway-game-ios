@@ -5,7 +5,7 @@ import SwiftUI
 /// The train tool's options: which train, where GameCore has it, the path
 /// it has left and the station it is stopped at, the run it follows and
 /// its performance (Stage C3), its own timetable (Stage C2), its rate, and
-/// the train commands that need no tile.
+/// the train commands that need no station.
 ///
 /// Everything shown is read from `session.world` each time the view is
 /// drawn, and every control calls a `GameSession` method that applies one
@@ -58,7 +58,7 @@ struct TrainControls: View {
                     commands
                 }
             } else {
-                Text("No train yet. Buy one, then select a track tile to place it.")
+                Text("No train yet. Buy one, then select a station to place it.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

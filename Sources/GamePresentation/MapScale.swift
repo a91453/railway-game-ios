@@ -178,10 +178,10 @@ public enum MapScale {
 
 /// How much of the map is drawn. Presentation only.
 public enum MapDetail: Hashable, Sendable {
-    /// Track as thin lines, stations as plain marks, trains; no grid, no
-    /// rail detail and no station symbols.
+    /// Track as thin lines, stations as plain marks, trains; no rail
+    /// detail, station symbols or names.
     case overview
-    /// Everything: grid, ballast and rails, buffer stops, station badges
-    /// with their symbol, and trains.
+    /// Everything: ballast and rails, buffer stops, station badges with
+    /// their symbol and name, and trains. No grid lines (Stage F1).
     case full
 }

@@ -245,6 +245,26 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Railway/` `topology.js` `canTurn`（S1 已對照） | 道岔與平面交叉 | `TrackPieceKind`、`setTrackPieceKind`、`setTurnoutStem` → `buildTurnout`、`buildCrossing` | — | 已涵蓋（規則在 S1）；建造畫面是自訂的（`Ci` 沒有方格） |
 | `Railway/` `index.html` `inferMeetPassTimes` 依賴的單雙線（S1 已對照） | 區段與單雙線 | `sectionTexts(at:in:)`、`trackSectionsSummary`、`lineTrackCountTexts`、`occupancyConflictTexts` | — | 唯讀顯示 S1 的推導；**gap**：只數方格的軌道 |
 
+### Stage F1：全面路網
+
+2026-10-02 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 44。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`。`Railway/railway_game_reference_clean/` 的車站是 OpenTTD 以方格為單位的指令（只有符號），`Railway/site_archive_clean/` 是真實車站的經緯度，都沒有可以移植的擺設規則；作者 2026-10-02 決定車站自由擺設，所以照 `Ci` 的做法。
+
+| 參考 | 行為 | Swift（F1） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `placeStation(e,t,r,n)`（`latlng: t`）、`placeStationInAddModeAtLatLng` | 車站放在任意一點，沒有方格 | `GameWorld.buildStation(named:at: PlanPoint)`、`Station.point`、`Station.location`（`tiles` 為空）；golden `buildStationAt` | 公尺 → 世界單位（1/64 公尺） | faithful |
+| `Ci` `metroBuildStationPlatformRingGcj`（月台以車站在線上的位置為中心，C1 已對照） | 車站在線上，月台在它兩側 | 月台工具在月台中點建點車站（`addNetworkPlatform()`），取代 C1 的「中點下方的格子」 | 世界單位 | faithful（反過來由月台決定車站的點，因為 GameCore 的月台先於車站存在於邊上） |
+| `Ci` `metroValidateCityBuildRegion`、`metroCanPlaceWithinQuota` | 只能建在城市範圍內、有配額 | 點必須在地圖上，否則 `outOfBounds`（點所在的格，向下取整）；收一座車站的費用 | 世界單位 | 部分 faithful：範圍是地圖；沒有配額（GameCore 以餘額限制） |
+| `Ci` `metroHasCoincidentStation`（同一線 0.1 公尺內已有車站就不放） | 同一點不放兩座 | GameCore 不擋；月台工具在兩格內有車站時沿用它，所以不會在同一處建第二座 | — | **改變**：GameCore 的車站不屬於線路；兩座點車站可以在同一格（golden `free-station.json`） |
+| `Ci` `STATION_CLICK_SNAP_M = 20`、`findStationAtLatLng`、`_findNearestDifferentLineStationWithin`（20 公尺內的他線車站成為轉乘） | 點在車站附近就用那一站 | `GameWorld.station(near:within:)`（依位置，同樣近時取 ID 小的）；`GameSession.tapMap(at:reach:)`（`NetworkBuilding.touchRadius` 24 點）；月台工具用兩格內最近的車站（點車站以點計） | 畫面點；格 | 部分 faithful：同 C1，距離以畫面點計；轉乘由 GameCore 的路線推導，不另外標記 |
+| `Ci` `METRO_STATION_HIT_SIZE_PX = 22`、車站的 8 px 圓點 | 車站畫成圓點，點擊範圍 22 px | `TileArt.drawPointStation`（圓形徽章、列車符號、完整細節時的站名，選到時強調色外圈）；觸控範圍 24 點 | 畫面點 | 部分 faithful：圖樣是自己的 |
+| `Ci` `MIN_STATION_DISTANCE_M = 400`（`DEFAULT_BUILD_LIMIT_SETTINGS.minStationDistance: false`） | 最小站距 | 不做 | — | 不移植：參考預設關閉 |
+| `Ci` `ensureStationNameUnique`、`metroInstantStationSeedName` | 名字重複時換成預設名加編號 | `GameSession.suggestedStationName`（「車站 N」，跳過已用的）；GameCore 只拒絕空白的名字 | — | 部分 faithful：建議的名字不重複，玩家輸入的名字可以重複（與 C1 相同） |
+| `Ci` 沒有格線 | 地圖不畫格線 | `TileArt.drawMap` 只畫地圖邊界；方格的軌道與車站（相容層）照舊畫在格上 | — | faithful |
+| 參考包 `CmdBuildRailStation`、`CmdRemoveFromRailStation`（OpenTTD，以方格為單位，只有符號）；`01_MIGRATION_MAP.md` §3 `BuildStationCommand` | 方格車站；建造指令回傳結果 | 方格車站留作相容層（`buildStation(named:at: GridPosition)`、`extendStation`，F3 另議）；新指令一樣是 `GameWorld` 的指令，失敗不改變世界 | — | 不移植方格（作者決定）；指令的形式 faithful |
+| `Railway/site_archive_clean/` 的 `stations/*`、`api/*.json` | 真實車站的經緯度 | 不用 | — | 延後：E2 實景模式把世界原點對到經緯度 |
+| 沒有參考 | 車站的規模 | `GameWorld.stationSummary(_:in:)`：路網上月台的數量與總長 | 世界單位 → 公尺 | **gap**：`Ci` 的車站沒有月台的數量；照 ROADMAP F1 以月台表示規模 |
+| 沒有參考（`Ci` 沒有方格） | 方格的軌道、車站、拆除工具，方格道岔與單雙線資訊 | App 不再提供（`ConstructionTool.networkTools`）；GamePresentation 的相容層保留到 F3 | — | **改變**（作者決定） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -361,7 +381,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網（車站自由擺設，App 只用路網）→ C4 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 → C5 最小教學 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

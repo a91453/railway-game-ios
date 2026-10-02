@@ -10,7 +10,7 @@ import Observation
 /// own copy of game state.
 ///
 /// Besides the world, the session keeps only transient UI state: the selected
-/// tile, the active tool, the track piece being placed, the draft station name,
+/// tile and station, the active tool, the track piece being placed, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
 /// stops picked for a new line, the copied station demand, and the last
 /// action's message, written in ``language``. Anything shown about the game,
@@ -36,6 +36,13 @@ public final class GameSession {
 
     /// The tile the player last selected. Always inside the map when set.
     public private(set) var selection: GridPosition?
+
+    /// The station the player last picked (Stage F1): an ID only, never a
+    /// copy of the station. Read the selected station through
+    /// ``selectedStation``. A station at a point takes no tile, so it is
+    /// picked by where it stands (``tapMap(at:reach:)``) or by name
+    /// (``selectStation(_:)``), not by the tile alone.
+    public private(set) var selectedStationID: StationID?
 
     /// What the action button does to the selected tile.
     public private(set) var tool: ConstructionTool = .select
@@ -147,16 +154,55 @@ public final class GameSession {
         selection.flatMap { world.track(at: $0) }
     }
 
-    /// Selects the tile at `position`; positions outside the map are ignored.
+    /// Selects the tile at `position` and the station on it (see
+    /// ``station(onTile:)``); positions outside the map are ignored.
     public func select(_ position: GridPosition) {
-        guard world.map.contains(position), position != selection else { return }
+        guard world.map.contains(position) else { return }
+        let station = station(onTile: position)?.id
+        guard position != selection || station != selectedStationID else { return }
         selection = position
+        selectedStationID = station
+        message = nil
+    }
+
+    /// A tap on the map at `point` with the select or train tool (Stage
+    /// F1), reaching `reach` world units to a station: selects the station
+    /// that takes the tile under the point, or else the nearest station
+    /// within reach (`GameWorld.station(near:within:)`), or else one at a
+    /// point inside that tile (see ``station(onTile:)``), and the tile.
+    /// Taps off the map are ignored. Never changes the world.
+    public func tapMap(at point: PlanPoint, reach: Int64) {
+        let size = WorldCoordinate.tileSize
+        guard point.x >= 0, point.y >= 0, point.x < Int64(world.map.width) * size, point.y < Int64(world.map.height) * size else { return }
+        let tile = GridPosition(x: Int(point.x / size), y: Int(point.y / size))
+        let station = (world.station(at: tile) ?? world.station(near: point, within: reach) ?? station(onTile: tile))?.id
+        guard tile != selection || station != selectedStationID else { return }
+        selection = tile
+        selectedStationID = station
+        message = nil
+    }
+
+    /// Selects station `id` and the tile it stands on: its first tile, or
+    /// the tile under its point. Never changes the world; an ID the world
+    /// does not have is ignored.
+    public func selectStation(_ id: StationID) {
+        guard let station = world.station(id: id), id != selectedStationID || station.position != selection else { return }
+        selection = station.position
+        selectedStationID = id
         message = nil
     }
 
     public func clearSelection() {
         selection = nil
+        selectedStationID = nil
         message = nil
+    }
+
+    /// The station on the tile at `position`: the station that takes the
+    /// tile, or else the first, in ID order, of the stations at a point
+    /// inside it.
+    func station(onTile position: GridPosition) -> Station? {
+        world.station(at: position) ?? world.stations.first { $0.tiles.isEmpty && $0.position == position }
     }
 
     /// Moves the selection one tile toward `direction`, staying inside the map.
@@ -427,31 +473,41 @@ public final class GameSession {
         perform { world throws(GameError) in
             let train = try world.purchaseTrain(named: Self.suggestedTrainName(for: world, in: language))
             purchased = train.id
-            return language.text("Bought \(train.name). Select a track tile to place it.", "已購買 \(train.name)。請選擇一格軌道放置它。")
+            return language.text("Bought \(train.name). Select a station to place it.", "已購買 \(train.name)。請選擇要放置它的車站。")
         }
         if let purchased {
             selectedTrainID = purchased
         }
     }
 
-    /// Puts the selected train at the centre of the selected tile, facing
+    /// Puts the selected train on a platform of the selected station on
+    /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
+    ///
+    /// Without such a station, on the grid (the compatibility layer, Stage
+    /// F1), it goes at the centre of the selected tile, facing
     /// ``placementHeading``, through `GameWorld.placeTrain(_:at:)`. GameCore
     /// decides whether the tile can take it.
-    ///
-    /// On a station with platforms on the track network (Stage C1), the
-    /// train goes onto one of them instead (see
-    /// ``place(_:atPlatformOf:)``).
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let tile = selection else {
-            message = StatusMessage(kind: .failure, text: language.text("Select a track tile to place \(train.name) on.", "請選擇要放置 \(train.name) 的軌道格。"))
+            message = StatusMessage(kind: .failure, text: language.text("Select a station to place \(train.name) at.", "請選擇要放置 \(train.name) 的車站。"))
             return
         }
         // Stage C1: a station with platforms on the track network takes
         // the train at one of them.
-        if let station = world.station(at: tile), !world.trackPlatforms(of: station.id).isEmpty {
-            place(train, atPlatformOf: station)
-            return
+        if let station = selectedStation {
+            if !world.trackPlatforms(of: station.id).isEmpty {
+                place(train, atPlatformOf: station)
+                return
+            }
+            // Stage F1: a station at a point has no tile to stand on.
+            if station.tiles.isEmpty {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "\(station.name) has no platform yet. Add one with the network tool.",
+                    "\(station.name) 還沒有月台。請用路網工具加上月台。"
+                ))
+                return
+            }
         }
         let heading = placementHeading
         perform { world throws(GameError) in
@@ -487,8 +543,8 @@ public final class GameSession {
         }
     }
 
-    /// Sends the selected train to the selected tile, or to the selected
-    /// station.
+    /// Sends the selected train to the selected station, or to the
+    /// selected tile.
     ///
     /// Asks GameCore for the route from where the train is now
     /// (`GameWorld.route(from:to:)` for a track tile, or
@@ -511,7 +567,7 @@ public final class GameSession {
     public func sendSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         guard let destination = selection else {
-            message = StatusMessage(kind: .failure, text: language.text("Select the track tile to send \(train.name) to.", "請選擇 \(train.name) 要前往的軌道格。"))
+            message = StatusMessage(kind: .failure, text: language.text("Select the station to send \(train.name) to.", "請選擇 \(train.name) 要前往的車站。"))
             return
         }
         guard let position = train.position else {
@@ -519,7 +575,7 @@ public final class GameSession {
             return
         }
         // A station is not track: the train goes to one of its platforms.
-        let station = world.station(at: destination)
+        let station = selectedStation
         if case .onEdge = position {
             send(train, from: position, to: station, at: destination)
             return
@@ -654,10 +710,10 @@ public final class GameSession {
         message = nil
     }
 
-    /// Adds the station on the selected tile to the end of the new line's
-    /// stops. Never changes the world.
+    /// Adds the selected station to the end of the new line's stops. Never
+    /// changes the world.
     public func addSelectedStationToLineDraft() {
-        guard let position = selection, let station = world.station(at: position) else {
+        guard let station = selectedStation else {
             message = StatusMessage(
                 kind: .failure,
                 text: language.text("Select a station on the map to add it to the new line.", "請在地圖上選擇車站，加到新路線。")

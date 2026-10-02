@@ -279,12 +279,12 @@ final class NetworkBuildingSessionTests: XCTestCase {
     }
 
     /// A tap 3000 along the edge with four cars picks 952–5048; no station
-    /// is near, so a new one goes on the tile under the middle, 4024 east:
-    /// (3, 3).
-    func testAPlatformGetsANewStationOnTheTileUnderIt() async throws {
+    /// is near, so a new one goes at the middle, (4024, 3072), taking no
+    /// tile (Stage F1).
+    func testAPlatformGetsANewStationAtItsMiddle() async throws {
         let world = try makeLineWorld()
         var expected = world
-        let station = try expected.buildStation(named: "Station 1", at: GridPosition(x: 3, y: 3))
+        let station = try expected.buildStation(named: "Station 1", at: PlanPoint(x: 4_024, y: 3_072))
         try expected.addTrackPlatform(station.id, on: .edge(1), from: 952, to: 5_048)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
@@ -300,7 +300,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Built station “Station 1” at (3, 3) with a 64 m platform on edge #1.")
+                StatusMessage(kind: .success, text: "Built station “Station 1” with a 64 m platform on edge #1.")
             )
             XCTAssertEqual(session.platformStationID, station.id)
             XCTAssertEqual(session.stationName, "Station 2")

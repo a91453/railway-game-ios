@@ -69,7 +69,7 @@ final class TrainControlTests: XCTestCase {
 
             session.purchaseTrain()
             XCTAssertEqual(session.selectedTrainID, Self.first)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Bought Train 1. Select a track tile to place it."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Bought Train 1. Select a station to place it."))
             XCTAssertNil(session.selectedTrain?.position, "a new train is not on the track")
 
             session.purchaseTrain()
@@ -367,7 +367,7 @@ final class TrainControlTests: XCTestCase {
             let third = GameSession(world: placed)
             third.sendSelectedTrain()
             XCTAssertEqual(third.world, placed)
-            XCTAssertEqual(third.message, StatusMessage(kind: .failure, text: "Select the track tile to send Train 1 to."))
+            XCTAssertEqual(third.message, StatusMessage(kind: .failure, text: "Select the station to send Train 1 to."))
         }
     }
 

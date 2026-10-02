@@ -203,41 +203,44 @@ extension GameSession {
     /// Adds a platform along ``networkPlatformStretch`` through
     /// `GameWorld.addTrackPlatform(_:on:from:to:)` for the station
     /// ``platformStationID``, or for a new station built first through
-    /// `GameWorld.buildStation(named:at:)` on the tile under the middle of
-    /// the platform. All or nothing.
+    /// `GameWorld.buildStation(named:at:)` at the middle of the platform,
+    /// taking no tile (Stage F1). All or nothing. A new station then serves
+    /// the next platform, so a second track beside it joins the same
+    /// station.
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
             return
         }
-        let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position
-        let tile = GridPosition(x: Int(middle.x / WorldCoordinate.tileSize), y: Int(middle.y / WorldCoordinate.tileSize))
+        let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
         let chosen = platformStationID.flatMap { world.station(id: $0) }
         let name = stationName
-        let built = perform { world throws(GameError) in
+        var built: StationID?
+        perform { world throws(GameError) in
             var draft = world
             let station: Station
             if let chosen {
                 station = chosen
             } else {
-                station = try draft.buildStation(named: name, at: tile)
+                station = try draft.buildStation(named: name, at: middle)
             }
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
             world = draft
+            built = chosen == nil ? station.id : nil
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             return chosen == nil
                 ? language.text(
-                    "Built station “\(station.name)” at \(tile) with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
-                    "已在 \(tile) 建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
+                    "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
+                    "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
                 )
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
                 )
         }
-        if built, chosen == nil {
+        if let built {
             stationName = Self.suggestedStationName(for: world, in: language)
-            platformStationID = world.station(at: tile)?.id
+            platformStationID = built
         }
     }
 
@@ -252,15 +255,15 @@ extension GameSession {
     }
 
     /// The station nearest the place `point` on the network, by its tiles'
-    /// centres, if one lies within two tiles; the lowest ID of equally
-    /// near ones.
+    /// centres or, at a point (Stage F1), by that point, if one lies within
+    /// two tiles; the lowest ID of equally near ones.
     private func nearestStation(to point: NetworkEdgePoint) -> StationID? {
         guard let position = world.trackGeometry(of: point.edge)?.location(at: point.distance).position else { return nil }
         let reach = 2 * WorldCoordinate.tileSize
         var best: (id: StationID, distance: Int64)?
         for station in world.stations {
-            for tile in station.tiles {
-                let centre = WorldCoordinate(centreOf: tile)
+            let places = station.tiles.isEmpty ? [station.location] : station.tiles.map { WorldCoordinate(centreOf: $0).plan }
+            for centre in places {
                 let dx = centre.x - position.x, dy = centre.y - position.y
                 let squared = dx * dx + dy * dy
                 guard squared <= reach * reach, best == nil || squared < best!.distance else { continue }

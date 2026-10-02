@@ -2139,7 +2139,7 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
   - 複製、貼上、套用到全線路：照參考的 `stationFlowProfileForTarget`，目標站保留自己的總量；目標原本沒有客流時用來源的日客流（gap：我們的車站沒有預設總量）。套用到全線路是經過這一站的每條路線的每個停靠站（含自己），在世界的副本上全部成功才生效（決策 41 的原子性）。訊息照參考的「已套用到 N 條路線，共 M 座車站」。
   - `StationFlow`：進站（從這一站出發的旅次，參考 `in` 畫布畫的 `out` 曲線）與出站（在這一站結束的旅次）每小時的人次，加總 GameCore 的 `hourlyDemand`。還沒有路線連到其他有客流的車站時（`isShape`），以 `StationDemand.dayShape` × 該預設的曲線，用最大餘數法把自己的日客流分到 24 小時，對應參考沒有基數時畫預設形狀。`summaryText`（全日總量與最多的小時）、`hourText`（某一小時）。
   - 唯讀：`stationDemandPairs`（往返各站的每日旅次，`dailyDemand` 兩個方向）、`passengerLedgerRows`（`passengerLedger` 的各列）、`lines(callingAt:)`。
-  - `GameSession`：`selectedStation`（選取格上的車站）、`demandClipboard`（只存在 session 的剪貼簿，不是權威狀態），以及設定預設、日客流、移除、複製、貼上、套用的方法，各呼叫 `setStationDemand`。
+  - `GameSession`：`selectedStation`（選取格上的車站；F1 起改為選取的車站，決策 44）、`demandClipboard`（只存在 session 的剪貼簿，不是權威狀態），以及設定預設、日客流、移除、複製、貼上、套用的方法，各呼叫 `setStationDemand`。
 - **列車的時刻表**（`TimetableEditing.swift`）：照參考包的時刻表概念，起點時刻、每站的行駛與停留時間，顯示成到達與出發，加上重複週期。
   - 直接編輯世界，不另存草稿：每個操作讀出列車的時刻表、改一份副本，呼叫一次 `setTrainTimetable`。
   - 新增停靠站：第一站在下一個整分鐘到達，之後每站在上一站出發 3 分鐘後到達；每站停 1 分鐘。參考由實際跑一趟填入行駛時間（`CmdAutofillTimetable`），App 還沒有，這是 gap。
@@ -2174,6 +2174,40 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
 - 服務日是全部路線共用一份（GameCore 的設計）；參考沒有編輯畫面。
 - 單雙線只數方格的軌道。
 
+### 44. 全面路網：任意座標的車站（Stage F1）
+
+2026-10-02 作者決定（C2 合併之後）：鐵軌全部改用路網，車站與土地自由擺設，不再以方格為單位（ROADMAP 的 Stage F）。F1 是第一步：車站可以放在世界座標的任意一點，App 只用路網建造。方格與方格車站留作相容層，舊存檔與既有 golden 的預期值不變；移除方格是 F3，要作者另外同意。
+
+參考（2026-10-02 唯讀檢查三份，私有 repo `1563ad0`，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-f1全面路網)）：`Ci/reference_snapshot/` 的 `placeStation` 把車站放在任意經緯度，沒有方格；`findStationAtLatLng`、`STATION_CLICK_SNAP_M`（20 公尺）點在車站附近就用那一站；`metroHasCoincidentStation`（同一線 0.1 公尺內）不重疊；`MIN_STATION_DISTANCE_M`（400 公尺）預設關閉。`Railway/railway_game_reference_clean/` 只有 OpenTTD 以方格為單位的 `CmdBuildRailStation` 符號；`Railway/site_archive_clean/` 是真實車站的經緯度，留給 E2。
+
+**GameCore**：
+
+- `Station.point: PlanPoint?`：建在一個點上的車站。它不佔格：`tiles` 是空的，`annexes` 是空的，地圖不變，`position` 是點所在的格（只為了既有以格為鍵的查詢，向下取整）。`Station.location` 是車站在平面上的位置：點，或方格車站第一格的中心。
+- `buildStation(named:at: PlanPoint)`：檢查順序與方格版相同（名字 → 位置 → 配發 ID → 扣款），點不在地圖上時以點所在的格回報 `outOfBounds`；不檢查格上有沒有東西，同一格可以有好幾座點車站，也可以在方格軌道或方格車站的格上（它們互不相干）。一樣收一座車站的費用，失敗不改變世界。
+- 點車站沒有方格的月台：`platforms(of:)` 是空的，`extendStation` 以 `invalidStationTile` 拒絕。它只在路網的邊上有月台（`addTrackPlatform`，S4、S5），所以找路、停站、線路、乘客與經營都不用改：它們本來就以車站 ID 與月台為準。
+- `station(near:within:)`：依 `location` 找最近的車站，同樣近時取 ID 小的；`reach` 是負數或超出範圍時是 `nil`。
+- 存檔：點車站寫成 `{ "id", "name", "point": { "x", "y" } }`，沒有 `position` 與 `annexes`；讀檔拒絕兩者並存、負的點，以及不在地圖上的點。方格車站的格式不變。
+- golden schema 26：`buildStationAt` 指令、最終狀態的 `point` 形式、手算的 `free-station.json`；既有的二十五個 fixture 只改 `schemaVersion`。差分模型（`ReferenceWorld`）自己實作同樣的規則，`KernelDifferentialTests` 比對 `point`。
+
+**GamePresentation**：
+
+- `GameSession.selectedStationID`：選取的車站，只存 ID。點車站不佔格，所以不能再由「選取格上的車站」推出。`tapMap(at:reach:)`：選取或列車工具點地圖時，選那一格的方格車站，否則觸控範圍內最近的車站（`station(near:within:)`），否則點在那一格裡的點車站；`selectStation(_:)` 從清單選。`select(_:)`（鍵盤與 VoiceOver 的逐格移動）選那一格的車站。`selectedStation` 是選到的那一站，否則是選取格上的方格車站（相容層：在選取格上建的方格車站也算）。
+- 列車工具與新路線用選取的車站：放到它的路網月台，送往它（`path(from:toStation:)`）；點車站沒有月台時說明要先加月台。方格的放置與送往仍以選取格進行（相容層）。
+- 路網的月台工具在月台中點建一座點車站，取代 C1 的「月台中點下方的格子」；兩格內已有車站時沿用它（點車站以點計距離），所以同一處的第二條軌道加入同一站。
+- `GameWorld.stationSummary(_:in:)`：車站的規模以路網上月台的數量與總長表示（「2 座月台，共 128 公尺」）；`Station.placeText(in:)`：點車站以公尺寫出位置。`selectionText()`：檢視列的文字。
+- `ConstructionTool.networkTools`：App 提供的工具（選取、路網、列車）。方格的軌道、車站、拆除工具與 C2 的方格道岔、區段資訊留在 GamePresentation 當相容層的一部分，測試照舊；App 不再提供，F3 再一起移除。
+
+**App**：工具列只有選取、路網、列車；拿掉方格軌道的編輯器（`TrackPieceEditor`）、車站工具、拆除工具與選取工具的方格區段資訊。地圖不畫格線，只畫邊界；點車站畫成圓形徽章、列車符號與站名，選到時有強調色的外圈；方格的軌道與車站照舊畫在格上。點地圖改成世界座標加觸控範圍。檢視列、站名清單與客流面板用選取的車站。
+
+**驗證**：`FreeStationTests`（GameCore，手算）、golden `free-station.json`（GameCore 與 `ReferenceWorld` 都跑）、`FreeStationSessionTests`（GamePresentation）。既有的 golden 預期值、差分與 property campaign 都不變。SwiftUI 只能在 macOS CI 編譯，實機要用 TestFlight 檢查。
+
+**已知限制與留給之後**：
+
+- 車站沒有服務範圍；乘客仍是車站之間的需求（G1a）。以距離計算服務範圍是 Phase 5–7（ROADMAP）。
+- 車站不能移動、改名或拆除；`Ci` 可以拖曳車站，GameCore 還沒有對應的指令。
+- 平行軌道之間沒有側向淨空（F2）。
+- 示範地圖仍以方格建造，C4 用路網重做。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（暫定 1024）。
@@ -2204,5 +2238,6 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
 - 上下車與容量（決策 35、39）：列車到達一站 8 秒後車門開好，坐到那一站的人下車（`arrived`），同時線路上的列車讓那一站等它的線路、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1）；花的時間是較多的一邊 ÷ 每節每秒 8 人，進位到整秒；開著門時每個整分鐘釋出的人也上車。客滿的列車離開時，還在等、本來可以搭的人記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
 - 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站直線距離分段，0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·車公里 + 18·車站`、維修 `12·路線公里 + 9·車公里 + 8·列車`），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（720 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求。金額是美分。
 - 行駛曲線（決策 40）：列車與線路各有性能（加速、煞車、最高速度，可以有備用值與惰行；預設是標準性能），服務執行中不能換列車的性能。服務離開一站時得到一段行駛（出發時刻、長度、秒數），存檔；被擋住時丟掉，能動時從停止狀態以最少的秒數重新出發。
+- 車站可以建在世界座標的任意一點（`buildStation(named:at: PlanPoint)`）：不佔格、沒有方格的月台、不能長到格上，只在路網的邊上有月台；點必須在地圖上，收一座車站的費用（決策 44）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
