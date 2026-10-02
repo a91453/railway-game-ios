@@ -60,6 +60,25 @@ public enum TrackPiece: CaseIterable, Hashable, Sendable {
     }
 }
 
+/// What kind of grid piece the track tool lays (Stage C2): a plain piece,
+/// whose exits all join, or one of Phase 4.5 Stage S1's turnouts and level
+/// crossings, which GameCore had and the app could not build.
+public enum TrackPieceKind: CaseIterable, Hashable, Sendable {
+    case plain
+    /// The stem joins every other exit; those join only the stem.
+    case turnout
+    /// Two straight tracks crossing without joining.
+    case crossing
+
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .plain: language.text("Plain", "一般")
+        case .turnout: language.text("Turnout", "道岔")
+        case .crossing: language.text("Crossing", "平面交叉")
+        }
+    }
+}
+
 extension TrackDirection {
     /// The direction a quarter turn clockwise from this one.
     public var clockwise: TrackDirection {

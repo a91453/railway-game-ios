@@ -351,6 +351,16 @@
         }
       }
     },
+    "Chooses a plain piece, a turnout and the exit that joins the others, or a level crossing." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇一般軌道、道岔與連接其他出口的共用端，或平面交叉。"
+          }
+        }
+      }
+    },
     "Chooses how fast game time runs." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1061,6 +1071,26 @@
         }
       }
     },
+    "Piece" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軌道種類"
+          }
+        }
+      }
+    },
+    "Piece: %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軌道種類：%@"
+          }
+        }
+      }
+    },
     "Place %@ Here" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1627,6 +1657,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "車站名稱"
+          }
+        }
+      }
+    },
+    "Stem" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共用端"
           }
         }
       }

@@ -44,6 +44,14 @@ public final class GameSession {
     /// player edits it; GameCore rejects building an empty piece.
     public private(set) var trackConnections: TrackConnections = TrackPiece.straight.connections
 
+    /// Whether the next track piece is plain, a turnout or a level crossing
+    /// (Stage C2).
+    public private(set) var trackPieceKind: TrackPieceKind = .plain
+
+    /// The exit of the next turnout that joins every other one. Always one
+    /// of ``trackConnections`` while the kind is a turnout and it has any.
+    public private(set) var turnoutStem: TrackDirection = .west
+
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
@@ -177,18 +185,86 @@ public final class GameSession {
         message = nil
     }
 
-    /// Adds or removes one direction of the next track piece.
+    /// Adds or removes one direction of the next track piece. A crossing
+    /// has all four, so changing one makes the piece plain.
     public func toggleTrackDirection(_ direction: TrackDirection) {
         trackConnections.formSymmetricDifference(TrackConnections(direction))
+        if trackPieceKind == .crossing {
+            trackPieceKind = .plain
+        }
+        keepTurnoutStem()
     }
 
+    /// Starts the next piece from `piece`. Only the four-way piece can be a
+    /// crossing, and a turnout needs three exits or more, so otherwise the
+    /// piece becomes plain.
     public func selectTrackPiece(_ piece: TrackPiece) {
         trackConnections = piece.connections
+        if (trackPieceKind == .crossing && piece != .fourWay) || (trackPieceKind == .turnout && piece.connections.directions.count < 3) {
+            trackPieceKind = .plain
+        }
+        keepTurnoutStem()
     }
 
-    /// Turns the next track piece a quarter turn clockwise.
+    /// Turns the next track piece, and a turnout's stem, a quarter turn
+    /// clockwise.
     public func rotateTrackPiece() {
         trackConnections = trackConnections.rotatedClockwise
+        turnoutStem = turnoutStem.clockwise
+    }
+
+    /// Makes the next piece plain, a turnout or a level crossing (Stage
+    /// C2). A turnout of fewer than three exits starts as a T-junction, and
+    /// a crossing has all four.
+    public func setTrackPieceKind(_ kind: TrackPieceKind) {
+        trackPieceKind = kind
+        switch kind {
+        case .plain: break
+        case .turnout:
+            if trackConnections.directions.count < 3 {
+                trackConnections = TrackPiece.junction.connections
+            }
+            keepTurnoutStem()
+        case .crossing:
+            trackConnections = TrackPiece.fourWay.connections
+        }
+    }
+
+    /// The next piece's kind as the track tool's menu shows it: "Plain",
+    /// "Turnout · stem W" or "Crossing"; "道岔 · 共用端 西".
+    public var trackPieceKindText: String {
+        switch trackPieceKind {
+        case .plain, .crossing:
+            return trackPieceKind.title(in: language)
+        case .turnout:
+            let stem = turnoutStem.abbreviation(in: language)
+            return language.text("Turnout · stem \(stem)", "道岔 · 共用端 \(stem)")
+        }
+    }
+
+    /// The layout the next piece gets: what the preview draws.
+    public var trackPieceLayout: TrackLayout {
+        switch trackPieceKind {
+        case .plain: .open
+        case .turnout: .turnout(stem: turnoutStem)
+        case .crossing: .crossing
+        }
+    }
+
+    /// Makes `stem` the next turnout's stem, if the piece has that exit.
+    public func setTurnoutStem(_ stem: TrackDirection) {
+        guard trackConnections.contains(TrackConnections(stem)) else { return }
+        turnoutStem = stem
+    }
+
+    /// Keeps the turnout's stem among the piece's exits: the first exit,
+    /// west, north, east then south, that a straight track runs through,
+    /// or else the first exit.
+    private func keepTurnoutStem() {
+        guard !trackConnections.contains(TrackConnections(turnoutStem)) else { return }
+        let order: [TrackDirection] = [.west, .north, .east, .south]
+        let exits = order.filter { trackConnections.contains(TrackConnections($0)) }
+        turnoutStem = exits.first { trackConnections.contains(TrackConnections($0.opposite)) } ?? exits.first ?? turnoutStem
     }
 
     // MARK: - Speed
@@ -796,9 +872,23 @@ public final class GameSession {
             return
         case .buildTrack:
             perform { world throws(GameError) in
-                let track = try world.buildTrack(at: position, connections: trackConnections)
-                let shape = track.connections.shapeName(in: language)
-                return language.text("Built \(shape.lowercased()) track at \(position).", "已在 \(position) 鋪設\(shape)軌道。")
+                switch trackPieceKind {
+                case .plain:
+                    let track = try world.buildTrack(at: position, connections: trackConnections)
+                    let shape = track.connections.shapeName(in: language)
+                    return language.text("Built \(shape.lowercased()) track at \(position).", "已在 \(position) 鋪設\(shape)軌道。")
+                case .turnout:
+                    let track = try world.buildTurnout(at: position, connections: trackConnections, stem: turnoutStem)
+                    let exits = track.connections.abbreviation(in: language)
+                    let stem = turnoutStem.abbreviation(in: language)
+                    return language.text(
+                        "Built a turnout at \(position): \(exits), stem \(stem).",
+                        "已在 \(position) 鋪設道岔：\(exits)，共用端 \(stem)。"
+                    )
+                case .crossing:
+                    try world.buildCrossing(at: position)
+                    return language.text("Built a level crossing at \(position).", "已在 \(position) 鋪設平面交叉。")
+                }
             }
         case .buildStation where growsStation:
             growStation(onto: position)
