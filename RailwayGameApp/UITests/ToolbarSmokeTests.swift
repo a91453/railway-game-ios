@@ -19,7 +19,7 @@ final class ToolbarSmokeTests: XCTestCase {
     private func captureToolbar(language: String, locale: String, queries: [String]) {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         app.launch()
         defer { app.terminate() }
 

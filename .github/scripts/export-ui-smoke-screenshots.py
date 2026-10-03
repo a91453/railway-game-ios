@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Give keepAlways UI attachments stable names and require all six PNGs."""
+"""Give keepAlways UI attachments stable names and require every smoke PNG."""
 
 import json
 from pathlib import Path
@@ -14,6 +14,14 @@ def export(source: Path, destination: Path) -> None:
         for language in ("en", "zh-Hant")
         for index, tool in enumerate(("select", "network", "train"), 1)
     }
+    expected.update(
+        f"{language}-flow-{index:02d}-{step}"
+        for language in ("en", "zh-Hant")
+        for index, step in enumerate((
+            "start-empty", "demo-map", "menu-save", "game-saved",
+            "menu-return", "start-saved", "continued-map", "start-reset",
+        ), 1)
+    )
     found = set()
     destination.mkdir(parents=True, exist_ok=True)
     for test in manifest:

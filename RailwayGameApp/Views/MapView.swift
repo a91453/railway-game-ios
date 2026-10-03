@@ -33,6 +33,7 @@ struct MapView: View {
                 )
                 .equatable()
                 .accessibilityElement()
+                .accessibilityIdentifier("map")
                 .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
                 .accessibilityValue(selectionDescription)
                 .accessibilityHint("Use the actions to move the selected tile.")
