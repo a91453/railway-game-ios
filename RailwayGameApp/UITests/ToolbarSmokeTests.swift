@@ -19,10 +19,17 @@ final class ToolbarSmokeTests: XCTestCase {
     private func captureToolbar(language: String, locale: String, queries: [String]) {
         continueAfterFailure = false
         let app = XCUIApplication()
-        // The app creates a new game on each launch without -demo-layout.
         app.launchArguments = ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         app.launch()
         defer { app.terminate() }
+
+        // The app opens on the start screen; start a new game from it.
+        let newGame = app.buttons["start.newGame"]
+        guard newGame.waitForExistence(timeout: 10) else {
+            XCTFail("Missing start screen button: New Game")
+            return
+        }
+        newGame.tap()
 
         let tools = ["select", "network", "train"]
         for (index, query) in queries.enumerated() {

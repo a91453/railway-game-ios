@@ -39,6 +39,8 @@ struct StartView: View {
                     ) {
                         launcher.startNewGame()
                     }
+                    // Stable across localizations for the UI smoke tests.
+                    .accessibilityIdentifier("start.newGame")
                     StartButton(
                         title: String(localized: "Demo Map"),
                         detail: String(localized: "Two lines already running, with passengers"),
