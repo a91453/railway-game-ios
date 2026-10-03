@@ -1,15 +1,31 @@
 name: iOS App Build
 
-# Build and UI smoke tests against the real Apple SDK, and a check that the
+# Build and UI tests against the real Apple SDK, and a check that the
 # committed Xcode project still matches project.yml.
 # GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
 # lives in release-archive.yml.
 #
+# Two lanes, chosen by the event:
+#
+# - Pull requests (the gate): the build, the project check and a short list of
+#   UI tests on an iPhone Simulator, the ones only a Simulator can answer: the
+#   start screen, the three tools in both languages, starting, saving and
+#   continuing a game, and the tutorial's first steps. The iPad job runs only
+#   when the change touches the tutorial's screens. Kept short and steady so a
+#   red result means something.
+# - Pushes to main, a nightly run and manual runs (everything else): all the
+#   UI tests (map gestures, large text, landscape too), the iPad tutorial tests
+#   and, nightly and on request, the proof below that a missing toolbar button
+#   fails the smoke test. A red result here does not block a pull request; it
+#   is fixed by the next one.
+#
+# The UI tests are the check. Their screenshots are only evidence for a person
+# to look at: they are uploaded as artifacts, and a missing or renamed
+# screenshot never fails a run.
+#
 # Two jobs run in parallel, each on its own runner with its own Simulator, so
 # the wall time is the slower job rather than the sum. A cold Simulator boot
-# costs about 4 minutes on a fresh runner, so each device is booted once: the
-# iPhone job runs the build, the smoke tests and the missing-button proof on
-# one boot, and the iPad job runs the tutorial tests on its own.
+# costs about 4 minutes on a fresh runner, so each device is booted once.
 
 on:
   pull_request:
@@ -21,6 +37,9 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**"
+  # 18:17 UTC is 02:17 in Taipei. A scheduled run uses the default branch.
+  schedule:
+    - cron: "17 18 * * *"
   workflow_dispatch:
     inputs:
       verify_missing_button:
@@ -43,6 +62,45 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    name: Changes (does the iPad job need to run?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      ipad: ${{ steps.detect.outputs.ipad }}
+    steps:
+      # Depth 2 is enough: on a pull request the checkout is the pull request
+      # merged into its base, whose two parents are both fetched.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      # Everything but a pull request runs the iPad job. A pull request runs
+      # it when it touches the tutorial's screens or this pipeline: the card's
+      # placement differs most between an iPhone and an iPad. If the changed
+      # files cannot be listed, run it.
+      - name: Detect changes to the tutorial's screens
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          ipad=true
+          if [[ "$EVENT" == pull_request ]]; then
+            if files="$(git diff --name-only HEAD^1 HEAD)"; then
+              echo "Changed files:"
+              echo "$files"
+              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml|\.github/scripts/export-ui-smoke-screenshots\.py)' <<<"$files"; then
+                ipad=true
+              else
+                ipad=false
+              fi
+            else
+              echo "::warning::Could not list the changed files; running the iPad job."
+            fi
+          fi
+          echo "ipad=$ipad" >> "$GITHUB_OUTPUT"
+          echo "iPad job: $ipad"
+
   build:
     name: Xcode build (iOS Simulator)
     runs-on: macos-26
@@ -163,14 +221,32 @@ jobs:
         timeout-minutes: 8
         run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
 
+      # A pull request runs the gate list; everything else runs all the UI
+      # tests. The gate keeps what only a Simulator can answer and leaves the
+      # gesture, large-text and landscape tests, the slowest and the least
+      # steady, to the full run.
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
-        # The toolbar, start/save, tutorial and map tests also need time for
-        # cold XCTest startup and Xcode to finish writing the result bundle.
-        # Measured 7m42s to 12m29s as tests were added (12m29s with the map
-        # interaction tests); a slower runner can take 1.8 times as long.
+        # The full list took 12m29s with the map interaction tests (7m42s
+        # before the start/save and map tests were added), counting cold
+        # XCTest startup and Xcode writing the result bundle; a slower runner
+        # can take 1.8 times as long. The gate list is shorter than that.
         timeout-minutes: 25
         run: |
+          only=()
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            lane="gate (pull request): the short list"
+            only=(
+              -only-testing:RailwayGameUITests/ToolbarSmokeTests
+              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests
+              -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
+              -only-testing:RailwayGameUITests/TutorialUITests/testBuildingTrackEnablesNextAndSkipEnds
+            )
+          else
+            lane="full ($GITHUB_EVENT_NAME): all the UI tests"
+          fi
+          echo "UI test lane: $lane"
+          echo "- **UI test lane:** $lane" >> "$GITHUB_STEP_SUMMARY"
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -178,6 +254,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
+            ${only[@]+"${only[@]}"} \
             -parallel-testing-enabled NO \
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
@@ -213,20 +290,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      # Regression proof on PRs (also available manually). Restore the source
-      # afterwards; this broken build never replaces the normal screenshot run.
-      # It reuses the iPhone Simulator the smoke tests already booted.
+      # Proof that the smoke test can fail: nightly and on request, not on
+      # every pull request. Restore the source afterwards; this broken build
+      # never replaces the normal screenshot run. It reuses the iPhone
+      # Simulator the smoke tests already booted.
       - name: Prove a missing toolbar button fails the smoke test
         id: missing-button
         # It rebuilds the app without Select first: 2m03s to 4m11s measured.
         timeout-minutes: 10
-        if: github.event_name == 'pull_request' || inputs.verify_missing_button
+        if: github.event_name == 'schedule' || inputs.verify_missing_button
         run: |
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
           bash .github/scripts/ui-smoke-missing-button.sh
 
       - name: Upload missing-button failure evidence
-        if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
+        if: always() && steps.missing-button.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           # A re-run of a failed job uploads the same names again.
@@ -241,6 +319,10 @@ jobs:
 
   ipad-tutorial:
     name: iPad tutorial tests (iOS Simulator)
+    # A skipped job passes a required check, so a pull request that leaves the
+    # tutorial's screens alone is not held up by it.
+    needs: changes
+    if: needs.changes.outputs.ipad == 'true'
     runs-on: macos-26
     # Room for the step limits below (boot 8, tests 20) and the rest.
     timeout-minutes: 40
@@ -302,8 +384,7 @@ jobs:
             --path "$RUNNER_TEMP/ipad-tutorial.xcresult" \
             --output-path "$RUNNER_TEMP/ipad-tutorial-attachments"
           python3 .github/scripts/export-ui-smoke-screenshots.py \
-            "$RUNNER_TEMP/ipad-tutorial-attachments" "$RUNNER_TEMP/ipad-tutorial-screenshots" \
-            --tutorial-only
+            "$RUNNER_TEMP/ipad-tutorial-attachments" "$RUNNER_TEMP/ipad-tutorial-screenshots"
 
       - name: Upload iPad tutorial screenshots
         if: always() && steps.ipad-tutorial.outcome != 'skipped'
@@ -313,7 +394,7 @@ jobs:
           overwrite: true
           name: ipad-tutorial-screenshots
           path: ${{ runner.temp }}/ipad-tutorial-screenshots
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Upload failed iPad tutorial results
