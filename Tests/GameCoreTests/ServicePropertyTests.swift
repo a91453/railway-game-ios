@@ -25,8 +25,10 @@ import XCTest
 ///
 /// Decision 21 adds a second campaign, `service.repeating`, whose generated
 /// timetables turn trains round at some stops and mostly repeat: the same
-/// checks, with its own volume of turns and new cycles. Since Stage F3b
-/// both run on the track network (see ``KernelNetwork``).
+/// checks, with its own volume of turns and new cycles. It runs from
+/// ``ServiceRepeatingPropertyTests``, a class of its own so that CI can run
+/// it in a shard of its own. Since Stage F3b both run on the track network
+/// (see ``KernelNetwork``).
 final class ServicePropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
@@ -148,7 +150,7 @@ final class ServicePropertyTests: XCTestCase {
     // MARK: - The campaign
 
     func testServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
-        let counts = try runServiceCampaign("service.differential", repeating: false)
+        let counts = try Self.runServiceCampaign("service.differential", repeating: false)
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         for (event, least) in [
             ("startService", 500), ("stopService", 40), ("trainNotAtFirstStop", 70), ("trainServiceActive", 150),
@@ -161,22 +163,8 @@ final class ServicePropertyTests: XCTestCase {
         }
     }
 
-    /// Decision 21: services that turn trains round and repeat, under the
-    /// same checks.
-    func testRepeatingServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
-        let counts = try runServiceCampaign("service.repeating", repeating: true)
-        let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
-        for (event, least) in [
-            ("startService", 400), ("invalidTimetable", 40), ("departures", 100), ("arrivals", 40),
-            ("turned round", 150), ("new cycles", 150), ("started late in a later cycle", 20), ("completed", 100),
-            ("waits without a route", 150),
-        ] {
-            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
-        }
-    }
-
     /// Runs one service campaign and returns how often each event happened.
-    private func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
+    static func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
         var counts: [String: Int] = [:]
         var digest = Digest()
         let encoder = JSONEncoder()
