@@ -339,6 +339,28 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `guide.metro.shortcut.1`「缩放地图：滚动鼠标滚轮以放大或缩小地图。」、`guide.flight.shortcut.5`「移动地图：使用 W / A / S / D 平移地图。」；`TUTORIAL_STEPS` 沒有這一步 | 說明畫面的縮放與平移 | 教學的第三步 `map.move`（`TutorialGoal.moveMap`，框 `map` 與 `map.zoom`）；`GameSession.mapDidMove()` | — | gap：參考的教學沒有這一步，文字照說明畫面改成觸控 |
 | `Ci` `serializeGameState`（地圖是真實的經緯度，沒有格子） | 存檔裡的地圖 | `SavedGame` 版本 2：`{"width","height","occupied":[{"x","y","tile"}]}`，版本 1 的 `tiles` 照舊讀 | — | gap：參考沒有格子地圖；格式是這裡的（量測見決策 48） |
 
+### 環線
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 49。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`；`Railway` 是 `Railway/site_archive_clean/index.html` 與 `rail-3d.js`；參考包 `Railway/railway_game_reference_clean/` 沒有環線。時間是秒（`DWELL_GAME_SEC` = 36 對應 `ServiceDwell.minimum`），班距與一圈在 GameCore 無條件進位到整分鐘（決策 22、40）。
+
+| 參考 | 行為 | Swift | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `completeRingLine`（三站以上，`e.isRing = true`）、`metroSplitOpenRing` | 把線路設成環線、打開成一般線路 | `GameWorld.setLineRing(_:to:)`、`ServiceLine.isRing`；`isRingStopList`（三站以上、第一站與最後一站不同） | — | faithful；打開時不改站序（參考從切開的地方重排） |
+| `Ci` `normalizeRingPairedTrainCaps`、`metroRingPairedTrainCountAtOrBelow`（t − t mod 2） | 環線的列車數是偶數，無條件捨去 | `ServiceLine.paired(_:)`：`setLineRing`、`setLineTrainsInService` | — | faithful |
+| `Ci` `metroRingDirectionTrainCounts`（內 ⌈t/2⌉、外 ⌊t/2⌋）、`metroRingDirectionalHeadways`（一圈 ÷ 該方向的列車數） | 兩個方向各一半、各自的班距 | `ServiceLine.ringService(_:_:at:lap:)`：每個方向 t/2（偶數），班距 ⌈一圈 ÷ 每個方向的列車數⌉、不短於目標 | 分鐘，進位 | faithful；班距進位到整分鐘照決策 22 |
+| `Ci` `metroHeadwayRoundTripMinutes(…, isRing)`：各段 + 最後一站回第一站 + `n × DWELL_GAME_SEC`；`(isRing ? 2 : 1) × floor(…)` | 一圈的時間、最多列車數 | `GameWorld.driveLap(_:calling:from:)`：各段 + 每站 `dwellMinutes`；`lineMaximumTrains` = 2 × max(1, ⌊一圈 ÷ 2⌋) | 每站 60 秒（決策 22 的 1 分鐘，不是 36 秒） | faithful 結構；停站沿用決策 22 的整分鐘 |
+| `Ci` `metroBuildRingServiceTimeline(e, t, dir)`：依方向 1／−1 排一圈的各段，每段行駛 + `DWELL_GAME_SEC` | 一圈的時刻 | `LineTrip.timetable(calling:sentOutAt:)` 的環線分支：派車後 36 秒離開，每站 + 1 分鐘，回到第一站結束；`ServiceLine.ringCalls(_:)` | 秒 | faithful；第一站 36 秒（`ServiceDwell.minimum`） |
+| `Ci` 每個方向一組列車（`dir`） | 列車的方向 | `ServiceLine.ringDirection(of:)`：依 ID 輪流內環、外環 | — | 改寫：我們的列車屬於線路，不屬於方向 |
+| `Ci` `applyRingTrainTimePhase`、`equalRedistributeRingServiceTrains` | 列車沿一圈的時間相位連續繞行、平均分布 | `DispatchStream`：每個方向從第一站依班距派車，各自記 `lastDispatch`／`outerLastDispatch` | — | **gap**：沿用決策 23 的派車模型 |
+| `Ci` 環線的停站一律 `DWELL_GAME_SEC`（沒有 `DWELL_TERMINAL_GAME_SEC`） | 環線沒有端點 | `closingStart`：環線列車的第一站與最後一站最少停 36 秒，折返的站 42 秒 | 秒 | faithful |
+| `Ci` `metroCollectRawTargetsForBoarding`：環線讀兩個方向的佇列 `[n, -n]` | 上車 | `boardingPlan`：環線不看方向，只看這一圈會不會到 | — | faithful；**刻意的差異**：不坐過第一站 |
+| `Ci` `consolidateRingRouteLegs`（環線只有一條涵蓋全線的 route leg） | 環線沒有區間車 | `setLineRing`／`addLinePattern` 在有服務模式時拒絕（`invalidLinePattern`） | — | faithful |
+| `Ci` `expressStops`、`calcLineHeadwayMinForRingExpress`、`getRingExpressRouteLeg` | 環線快車 | 沒有 | — | **gap** |
+| `Railway` `buildLineSchedule`：`ln.loop` 時依序各站再回到第一站；`termName: null`；`rail-3d.js` 的「環線最後一站到第 0 站仍是一段真的軌道」 | 真實的環狀線 | 同上（一圈、沒有終點站） | — | faithful |
+| `Railway` `runBetween`：環線走較短的方向 | 乘客的方向 | 沒有：乘客搭哪個方向都可以，只要這一圈會到 | — | **gap** |
+| `Railway` `DWELL_SEC` = 25 | 停站 | 沒有採用：照 `Ci` 的 36 秒與決策 22 的 1 分鐘 | — | 不採用 |
+| （參考沒有） | 示範地圖的環線 | `DemoWorld`：兩圈軌道（半徑 12、13 格）各一個方向，每站三個月台 | — | gap：這裡的配置 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -455,7 +477,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

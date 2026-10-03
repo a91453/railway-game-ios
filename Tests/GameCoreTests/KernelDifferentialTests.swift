@@ -63,6 +63,9 @@ final class KernelDifferentialTests: XCTestCase {
         /// and a pattern for the three above.
         case addPattern(LineID, [Int])
         case removePattern(LineID, Int)
+        /// Decision 49: only the dispatch campaign (`LineDispatchPropertyTests`)
+        /// draws it.
+        case setLineRing(LineID, Bool)
         /// Only the track-resource campaign (`TrackResourcePropertyTests`)
         /// draws these.
         case buildTurnout(GridPosition, UInt8, TrackDirection)
@@ -117,6 +120,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .assign(let id, let line, let pattern): ".assign(\(id.rawValue), \(line.rawValue)\(pattern.map { ", pattern \($0)" } ?? ""))"
             case .addPattern(let id, let calls): ".addPattern(\(id.rawValue), \(calls))"
             case .removePattern(let id, let pattern): ".removePattern(\(id.rawValue), \(pattern))"
+            case .setLineRing(let id, let ring): ".setLineRing(\(id.rawValue), \(ring))"
             case .buildTurnout(let p, let mask, let stem): ".buildTurnout(\(p), \(mask), stem \(stem))"
             case .buildCrossing(let p): ".buildCrossing(\(p))"
             case .extendStation(let id, let p): ".extendStation(\(id.rawValue), \(p))"
@@ -357,6 +361,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .unassign(let id): try world.unassignTrain(id)
             case .addPattern(let id, let calls): try world.addLinePattern(id, calling: calls)
             case .removePattern(let id, let pattern): try world.removeLinePattern(id, at: pattern)
+            case .setLineRing(let id, let ring): try world.setLineRing(id, to: ring)
             case .buildTurnout(let p, let mask, let stem): try world.buildTurnout(at: p, connections: TrackConnections(rawValue: mask), stem: stem)
             case .buildCrossing(let p): try world.buildCrossing(at: p)
             case .extendStation(let id, let p): try world.extendStation(id, to: p)
@@ -427,6 +432,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .unassign(let id): return model.unassign(id)
         case .addPattern(let id, let calls): return model.addPattern(id, calls)
         case .removePattern(let id, let pattern): return model.removePattern(id, pattern)
+        case .setLineRing(let id, let ring): return model.setLineRing(id, ring)
         case .buildTurnout(let p, let mask, let stem): return model.buildTurnout(at: p, mask: mask, stem: stem)
         case .buildCrossing(let p): return model.buildCrossing(at: p)
         case .extendStation(let id, let p): return model.extendStation(id, to: p)
@@ -525,7 +531,9 @@ final class KernelDifferentialTests: XCTestCase {
                 && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService)
                 && world.lines.map(\.targetHeadways) == model.lines.map(\.targetHeadways)
                 && world.lines.map { $0.trains.map(\.rawValue) } == model.lines.map(\.roster)
-                && world.lines.map { $0.lastDispatch?.minutes } == model.lines.map(\.lastDispatch),
+                && world.lines.map { $0.lastDispatch?.minutes } == model.lines.map(\.lastDispatch)
+                && world.lines.map(\.isRing) == model.lines.map(\.ring)
+                && world.lines.map { $0.outerLastDispatch?.minutes } == model.lines.map(\.outerLastDispatch),
             "lines \(world.lines) vs \(model.lines)"
         )
         // Decision 24: each line's patterns.
@@ -591,7 +599,7 @@ final class KernelDifferentialTests: XCTestCase {
                     check(world.lineHeadway(id, at: level, pattern: pattern) == expected.headways[level], "headway of \(name) at \(level)")
                 }
             }
-            for level in ServiceLevel.allCases where patterns > 0 || raw == 0 {
+            for level in ServiceLevel.allCases where patterns > 0 || raw == 0 || world.line(id: id)?.isRing == true {
                 let loads = world.lineSegmentLoads(id, at: level)
                 check(loads == all?.loads[level], "segment loads of line \(raw) at \(level): \(String(describing: loads)) vs \(String(describing: all?.loads[level]))")
             }

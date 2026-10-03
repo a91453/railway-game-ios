@@ -186,7 +186,8 @@ struct ReferenceWorld: Equatable {
 
     /// Decision 22: a service line; `hours` is `nil` all day. Decision 23:
     /// its targets by level, the IDs of its trains and its last dispatch.
-    /// Decision 24: its patterns.
+    /// Decision 24: its patterns. Decision 49: whether it is a ring, and
+    /// when it last sent a train out the outer way.
     struct Line: Equatable {
         var id: Int
         var name: String
@@ -199,12 +200,14 @@ struct ReferenceWorld: Equatable {
         var roster: [Int] = []
         var lastDispatch: Int64?
         var patterns: [Pattern] = []
+        var ring = false
+        var outerLastDispatch: Int64?
 
         static func == (lhs: Line, rhs: Line) -> Bool {
             lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.performance == rhs.performance
                 && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
                 && lhs.targets == rhs.targets && lhs.roster == rhs.roster && lhs.lastDispatch == rhs.lastDispatch
-                && lhs.patterns == rhs.patterns
+                && lhs.patterns == rhs.patterns && lhs.ring == rhs.ring && lhs.outerLastDispatch == rhs.outerLastDispatch
         }
 
         var targetHeadways: TargetHeadways {
@@ -844,8 +847,8 @@ struct ReferenceWorld: Equatable {
     /// stay open, at each whole minute, newcomers get on after those still
     /// getting on. The doors start closing at the first second when the
     /// exchange is over and, 9 s later, the train will have dwelt its least
-    /// (42 s at either end or a turn, 36 s elsewhere) and reached its
-    /// scheduled departure.
+    /// (42 s at either end or a turn, 36 s elsewhere; a ring's train has no
+    /// ends, decision 49) and reached its scheduled departure.
     mutating func dwell(_ i: Int, second: Int64) {
         guard var service = trains[i].service, service.waiting else { return }
         let now = clockSeconds
@@ -861,7 +864,9 @@ struct ReferenceWorld: Equatable {
             service.exchangeEnd = Self.capped(now, (busy + perSecond - 1) / perSecond)
         }
         let train = trains[i]
-        let terminal = service.stop == 0 || service.stop == train.timetable.count - 1 || train.timetable[service.stop].reverses
+        let ends = service.stop == 0 || service.stop == train.timetable.count - 1
+        let onRing = lines.contains { $0.ring && $0.roster.contains(train.id) }
+        let terminal = train.timetable[service.stop].reverses || (ends && !onRing)
         // A scheduled departure is never negative, so 9 s before it is a time.
         if service.closing == nil, now >= service.exchangeEnd!, now >= Self.capped(service.arrival, (terminal ? 42 : 36) - 9),
            now >= Self.departure(train, stop: service.stop, cycle: service.cycle)! - 9 {

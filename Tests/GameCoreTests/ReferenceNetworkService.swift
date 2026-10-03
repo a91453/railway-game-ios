@@ -261,13 +261,11 @@ extension ReferenceWorld {
     /// `length` with body `trailEdges`: out along `calls`, turned at the
     /// last, back; `nil` if a leg has no way.
     func networkJourney(of line: Line, calling calls: [Int], from start: TrainPosition, trailEdges: [Int], length: Int64) -> LineJourney? {
-        let n = calls.count
         var train = Self.driver(at: start, trailEdges: trailEdges, length: length)
         var legs: [LineLeg] = []
-        var pairs: [(Int, Int)] = (0..<(n - 1)).map { (calls[$0], calls[$0 + 1]) }
-        pairs += (1..<n).reversed().map { (calls[$0], calls[$0 - 1]) }
+        let (pairs, turn) = Self.legPairs(line, calls)
         for (from, to) in pairs {
-            if from == calls[n - 1] { train = turnedOnNetwork(train) }
+            if from == turn { train = turnedOnNetwork(train) }
             guard let path = networkPathToStation(from: train.position!, station: line.stops[to], length: length) else { return nil }
             let units = path.distance
             // Stage W2c: the least second the line's curve is built for.
@@ -275,7 +273,7 @@ extension ReferenceWorld {
             legs.append(LineLeg(from: from, to: to, path: path, seconds: seconds))
             train = followed(train, along: path)
         }
-        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + 60 * (2 * 2 + Int64(2 * (n - 2)) * 1)
-        return LineJourney(start: start, legs: legs, roundTripSeconds: total)
+        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + Self.dwellSeconds(line, calls)
+        return LineJourney(start: start, legs: legs, roundTripSeconds: total, isRing: line.ring)
     }
 }

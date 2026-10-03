@@ -7,7 +7,8 @@ import XCTest
 /// removed under the lines, trains, time) mixed with line commands, mostly
 /// sensible and sometimes invalid on purpose (too few stops, a station twice
 /// in a row, unknown stations and lines, rates below 1, windows and days
-/// that do not fit, negative counts).
+/// that do not fit, negative counts), and lines made rings and lines again
+/// (decision 49).
 ///
 /// - **Against the reference.** Every sequence runs on GameCore and on
 ///   ``ReferenceWorld``; outcomes, all state (lines and the service day
@@ -66,7 +67,7 @@ final class ServiceLinePropertyTests: XCTestCase {
             }
             return stops
         }
-        switch random.below(20) {
+        switch random.below(22) {
         case 0..<4:
             // At most three lines at a time: the reference drives every line
             // after every step, and its routes are slow on purpose.
@@ -108,6 +109,8 @@ final class ServiceLinePropertyTests: XCTestCase {
                 return .setSpeed(.normal)
             }
             return .advance(random.below(900))
+        case 19, 20:
+            return .setLineRing(anyLine(), random.chance(4, in: 5))
         default:
             return .saveAndLoad
         }
@@ -132,7 +135,7 @@ final class ServiceLinePropertyTests: XCTestCase {
             for (index, operation) in operations.enumerated() {
                 let error = KernelDifferentialTests.apply(operation, to: &world)
                 switch operation {
-                case .createLine, .removeLine, .setLineStops, .setLinePerformance, .setLineWindow, .setLineTrains, .setServiceDay:
+                case .createLine, .removeLine, .setLineStops, .setLinePerformance, .setLineWindow, .setLineTrains, .setServiceDay, .setLineRing:
                     let name = "\(operation)".dropFirst().prefix { $0 != "(" }
                     counts[error.map { String("\($0)".prefix { $0 != "(" }) } ?? "ok \(name)", default: 0] += 1
                 default:
@@ -144,6 +147,7 @@ final class ServiceLinePropertyTests: XCTestCase {
                         continue
                     }
                     counts["drivable", default: 0] += 1
+                    if journey.isRing { counts["drivable ring", default: 0] += 1 }
                     if journey.legs.contains(where: { $0.route.isEmpty }) { counts["a leg with no travel", default: 0] += 1 }
                     if let maximum = world.lineMaximumTrains(line.id), line.trainsInService.peak > maximum {
                         counts["capped", default: 0] += 1
@@ -167,7 +171,8 @@ final class ServiceLinePropertyTests: XCTestCase {
             ("ok createLine", 300), ("ok setLineStops", 200), ("ok setLinePerformance", 200), ("ok setLineWindow", 100),
             ("ok setLineTrains", 200), ("ok setServiceDay", 50), ("ok removeLine", 30), ("unknownLine", 50), ("invalidLineStops", 50),
             ("unknownStation", 20), ("invalidTrainPerformance", 50), ("invalidServiceWindow", 30), ("invalidTrainsInService", 30),
-            ("invalidServiceDay", 20), ("drivable", 3_000), ("not drivable", 3_000), ("capped", 300), ("a leg with no travel", 100),
+            ("invalidServiceDay", 20), ("drivable", 2_500), ("not drivable", 3_000), ("capped", 300), ("a leg with no travel", 100),
+            ("ok setLineRing", 100), ("drivable ring", 300),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }

@@ -813,9 +813,27 @@ public final class GameSession {
         }
     }
 
+    /// Makes the selected line a ring, its trains going on from its last
+    /// stop back to the first, half of them each way round (decision 49),
+    /// or a line that turns round at its ends again. A ring runs its trains
+    /// in pairs: GameCore makes its counts even, down.
+    public func setSelectedLineRing(_ isRing: Bool) {
+        guard let line = requireSelectedLine(), line.isRing != isRing else { return }
+        perform { world throws(GameError) in
+            try world.setLineRing(line.id, to: isRing)
+            return isRing
+                ? language.text(
+                    "\(line.name) is a ring: its trains go on from the last stop to the first, half of them each way round.",
+                    "\(line.name) 改為環線：列車從最後一站接著開回第一站，一半依站序、一半反方向。"
+                )
+                : language.text("\(line.name) turns round at its ends again.", "\(line.name) 改回在兩端折返。")
+        }
+    }
+
     /// Sets how many trains a service of the selected line runs at `level`
     /// (its own for `pattern` `nil`), keeping the other levels. How many it
-    /// can run is derived; see ``GameWorld/lineServiceSummaries(_:)``.
+    /// can run is derived; see ``GameWorld/lineServiceSummaries(_:)``. A
+    /// ring's count is made even, down (decision 49).
     public func setSelectedLineTrains(_ count: Int, at level: ServiceLevel, pattern: Int? = nil) {
         guard let line = requireSelectedLine() else { return }
         let current = pattern.flatMap { line.patterns.indices.contains($0) ? line.patterns[$0].trainsInService : nil } ?? line.trainsInService

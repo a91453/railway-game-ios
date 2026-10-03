@@ -153,6 +153,8 @@ CX-5 的覆蓋層這樣讀（示意）：
 | `centered(on:)` | 把某一點移到畫面中央（例如選到的車站），到邊緣停住 |
 | `centerX`、`centerY`、`viewport`、`mapRegion` | 唯讀 |
 
+**示範地圖的中心**（2026-10-03 起的約定）：`DemoWorld` 的中心永遠是叫 Central（中文「中央」）的車站，在地圖的正中央（第 (512, 512) 格的西北角），`WorldRegion.built(in:)` 的中心就是它（`DemoWorldTests` 釘住），所以打開示範地圖時畫面中央是 Central。UI 測試可以依賴這一點；示範地圖的其他配置（站數、線路、環線的大小）之後還會改，不要依賴。
+
 **縮放範圍**：每格最多 64 點；最少到整張地圖放得下，但不小於必要（新遊戲 16 公里的地圖在手機上每格不到 0.4 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和 `MapScale.center(of:tileSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住）。E1 只改了開局的位置與按鈕的步長，其餘介面不變。
 
 ### CX-4 怎麼接

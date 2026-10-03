@@ -68,10 +68,17 @@ extension ConstructionCosts {
 /// - Line 2 runs on a viaduct 8 m up from North through Central to South,
 ///   over Line 1, so the two never share track; Central has a platform on
 ///   each, one station at a point with two platforms.
-/// - Each line has one four-car train, runs all day, and every station has
-///   ridership, so passengers, fares and costs start at once.
-/// - It stands in the middle of the map (Stage E1), with room to build on
-///   every side.
+/// - The Ring Line (decision 49) runs round Central through West, North,
+///   East and South, on two circles of track, one each way round, with a
+///   platform on each at every station: North and South have Line 2's
+///   platform above the ring's, West and East Line 1's beside them. Lines 1
+///   and 2 end inside the ring, so no track crosses another at its height.
+/// - Lines 1 and 2 have one four-car train each and the ring two two-car
+///   trains, one each way; all run all day, and every station has
+///   ridership, so passengers, fares and costs start at once. What is left
+///   of the starting money still builds the tutorial's first line.
+/// - Central is the middle of the map (Stage E1) and of what the demo
+///   builds, so the map opens on it, with room to build on every side.
 public enum DemoWorld {
     public static func make(in language: DisplayLanguage) -> GameWorld {
         var world = GameWorld.newGame()
@@ -85,55 +92,92 @@ public enum DemoWorld {
 
     private static let tile = WorldCoordinate.tileSize
     private static let cars = 4
-
-    /// The demo's 32 × 24 tiles in the middle of the map: the tile its
-    /// north-west corner is on.
-    private static func origin(of map: GridMap) -> (x: Int64, y: Int64) {
-        (Int64(max(0, map.width - 32) / 2), Int64(max(0, map.height - 24) / 2))
-    }
+    private static let ringCars = 2
+    /// The inner ring track's radius and how far Lines 1 and 2 reach from
+    /// Central, in tiles: the lines end three tiles inside the ring, so no
+    /// track crosses another at its height. The outer ring track is a tile
+    /// further out.
+    private static let ringRadius: Int64 = 12
+    private static let reach: Int64 = 9
 
     private static func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
         let platform = Int64(cars) * Train.carLength
-        let corner = origin(of: world.map)
-        // A point `x`, `y` tiles from the demo's corner, plus `dx`, `dy` world
-        // units.
-        func at(_ x: Int64, _ y: Int64, dx: Int64 = 0, dy: Int64 = 0) -> (x: Int64, y: Int64) {
-            ((corner.x + x) * tile + dx, (corner.y + y) * tile + dy)
-        }
-        func node(_ x: Int64, _ y: Int64, z: Int64 = 0) throws(GameError) -> TrackNodeID {
-            let point = at(x, y)
-            return try world.buildTrackNode(at: WorldCoordinate(x: point.x, y: point.y, z: z))
-        }
-        // Line 1: west to east across the middle, 28 tiles.
-        let west = try node(2, 12)
-        let east = try node(30, 12)
+        let ringPlatform = Int64(ringCars) * Train.carLength
+        // Central, the middle of the map: the demo is built around it.
+        let cx = Int64(world.map.width / 2) * tile, cy = Int64(world.map.height / 2) * tile
+        let span = 2 * reach * tile
+        // Line 1: west to east through Central, on the ground.
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: cx - reach * tile, y: cy))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: cx + reach * tile, y: cy))
         let ground = try world.buildTrackEdge(from: west, to: east)
-        // Line 2: north to south across it, 20 tiles, 8 m up all the way.
+        // Line 2: north to south through Central, 8 m up all the way.
         let height: Int64 = 512
-        let north = try node(16, 2, z: height)
-        let south = try node(16, 22, z: height)
+        let north = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy - reach * tile, z: height))
+        let south = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy + reach * tile, z: height))
         let viaduct = try world.buildTrackEdge(from: north, to: south, structure: .elevated)
+        // The ring: two circles round Central on the ground, one track each
+        // way (the inner one the inner way round, clockwise on the map, the
+        // outer one the outer way), never joined, so the two ways never
+        // meet head on. Each is four quarter arcs between nodes on the
+        // diagonals, each a cubic Bézier with handles 4/3 (√2 − 1) of the
+        // radius long along the circle (square roots only, exact in IEEE
+        // arithmetic, so every platform builds it the same), built
+        // clockwise: the arc through North, then East, South and West.
+        func plan(_ x: Double, _ y: Double) -> PlanPoint {
+            PlanPoint(x: cx + Int64(x.rounded()), y: cy + Int64(y.rounded()))
+        }
+        func circle(radius tiles: Int64) throws(GameError) -> [TrackEdgeID] {
+            let radius = Double(tiles * tile)
+            let d = radius / 2.0.squareRoot()
+            let m = 4.0 / 3.0 * (2.0.squareRoot() - 1) * radius / 2.0.squareRoot()
+            var nodes: [TrackNodeID] = []
+            for corner in [plan(-d, -d), plan(d, -d), plan(d, d), plan(-d, d)] {
+                nodes.append(try world.buildTrackNode(at: WorldCoordinate(x: corner.x, y: corner.y)))
+            }
+            let handles = [
+                (plan(-d + m, -d - m), plan(d - m, -d - m)),
+                (plan(d + m, -d + m), plan(d + m, d - m)),
+                (plan(d - m, d + m), plan(-d + m, d + m)),
+                (plan(-d - m, d - m), plan(-d - m, -d + m)),
+            ]
+            var edges: [TrackEdgeID] = []
+            for (index, handle) in handles.enumerated() {
+                edges.append(try world.buildTrackEdge(from: nodes[index], to: nodes[(index + 1) % 4], curve: .cubic(handle.0, handle.1)))
+            }
+            return edges
+        }
+        let innerRing = try circle(radius: ringRadius)
+        let outerRing = try circle(radius: ringRadius + 1)
 
         let names = language == .english
             ? ["West", "Central", "East", "North", "South"]
             : ["西站", "中央", "東站", "北站", "南站"]
-        // Each station stands at the middle of its first platform.
-        func station(_ name: String, at point: (x: Int64, y: Int64)) throws(GameError) -> StationID {
-            try world.buildStation(named: name, at: PlanPoint(x: point.x, y: point.y)).id
+        // Each station stands at the middle of its first platform on Line 1
+        // or 2.
+        func station(_ name: String, at x: Int64, _ y: Int64) throws(GameError) -> StationID {
+            try world.buildStation(named: name, at: PlanPoint(x: x, y: y)).id
         }
-        let westStation = try station(names[0], at: at(3, 12, dx: platform / 2))
-        let central = try station(names[1], at: at(16, 12))
-        let eastStation = try station(names[2], at: at(29, 12, dx: -platform / 2))
-        let northStation = try station(names[3], at: at(16, 3, dy: platform / 2))
-        let southStation = try station(names[4], at: at(16, 21, dy: -platform / 2))
+        let first = reach * tile - tile - platform / 2
+        let westStation = try station(names[0], at: cx - first, cy)
+        let central = try station(names[1], at: cx, cy)
+        let eastStation = try station(names[2], at: cx + first, cy)
+        let northStation = try station(names[3], at: cx, cy - first)
+        let southStation = try station(names[4], at: cx, cy + first)
         // Offsets along each edge, measured from its first node.
-        let groundLength = 28 * tile, viaductLength = 20 * tile
-        try world.addTrackPlatform(westStation, on: ground, from: tile, to: tile + platform)
-        try world.addTrackPlatform(central, on: ground, from: 14 * tile - platform / 2, to: 14 * tile + platform / 2)
-        try world.addTrackPlatform(eastStation, on: ground, from: groundLength - tile - platform, to: groundLength - tile)
-        try world.addTrackPlatform(northStation, on: viaduct, from: tile, to: tile + platform)
-        try world.addTrackPlatform(central, on: viaduct, from: 10 * tile - platform / 2, to: 10 * tile + platform / 2)
-        try world.addTrackPlatform(southStation, on: viaduct, from: viaductLength - tile - platform, to: viaductLength - tile)
+        for (edge, stations) in [(ground, (westStation, eastStation)), (viaduct, (northStation, southStation))] {
+            try world.addTrackPlatform(stations.0, on: edge, from: tile, to: tile + platform)
+            try world.addTrackPlatform(central, on: edge, from: span / 2 - platform / 2, to: span / 2 + platform / 2)
+            try world.addTrackPlatform(stations.1, on: edge, from: span - tile - platform, to: span - tile)
+        }
+        // The ring calls at the four ends, a platform on each track in the
+        // middle of its arc: at North and South below Line 2's, at West and
+        // East beside Line 1's.
+        for ring in [innerRing, outerRing] {
+            for (edge, id) in zip(ring, [northStation, eastStation, southStation, westStation]) {
+                guard let length = world.network.edge(edge)?.length else { continue }
+                try world.addTrackPlatform(id, on: edge, from: length / 2 - ringPlatform / 2, to: length / 2 + ringPlatform / 2)
+            }
+        }
 
         let demands: [(StationID, StationDemandKind, Int64)] = [
             (westStation, .residential, 20_000),
@@ -146,24 +190,42 @@ public enum DemoWorld {
             try world.setStationDemand(id, to: StationDemand(kind: kind, dailyTrips: trips))
         }
 
-        let lines = language == .english ? ["Line 1", "Line 2"] : ["1 號線", "2 號線"]
-        let trains = language == .english ? ["Train 1", "Train 2"] : ["列車 1", "列車 2"]
-        let services: [(name: String, train: String, stops: [StationID], edge: TrackEdgeID, berth: Int64)] = [
-            (lines[0], trains[0], [westStation, central, eastStation], ground, tile + platform),
-            (lines[1], trains[1], [northStation, central, southStation], viaduct, tile + platform),
-        ]
-        for service in services {
-            let line = try world.createLine(named: service.name, stops: service.stops).id
-            try world.setLineServiceWindow(line, to: .allDay)
-            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
-            // The train waits at the line's first platform, its head at the
-            // platform's far end, and the line sends it out.
-            let train = try world.purchaseTrain(named: service.train).id
+        let lines = language == .english ? ["Line 1", "Line 2", "Ring Line"] : ["1 號線", "2 號線", "環狀線"]
+        let trains = language == .english
+            ? ["Train 1", "Train 2", "Ring Train 1", "Ring Train 2"]
+            : ["列車 1", "列車 2", "環狀線列車 1", "環狀線列車 2"]
+        // Where a train waits at its line's first platform: on `edge` going
+        // `direction`, its head at the platform's far end.
+        func place(
+            _ name: String, cars: Int = Self.cars, at berth: (edge: TrackEdgeID, direction: TrackEdgeDirection, offset: Int64)
+        ) throws(GameError) -> TrainID {
+            let train = try world.purchaseTrain(named: name).id
             try world.setTrainCars(train, to: cars)
-            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: service.edge, direction: .forward), offset: service.berth))
-            try world.setTrainContinuation(train, along: [], stoppingAt: service.berth)
+            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: berth.edge, direction: berth.direction), offset: berth.offset))
+            try world.setTrainContinuation(train, along: [], stoppingAt: berth.offset)
             try world.setTrainMovementRate(train, to: 512)
-            try world.assignTrain(train, to: line)
+            return train
+        }
+        func run(_ name: String, calling stops: [StationID], ring: Bool = false) throws(GameError) -> LineID {
+            let line = try world.createLine(named: name, stops: stops).id
+            try world.setLineRing(line, to: ring)
+            try world.setLineServiceWindow(line, to: .allDay)
+            // A ring runs its trains in pairs, one each way.
+            let count = ring ? 2 : 1
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: count, offPeak: count, low: count))
+            return line
+        }
+        let line1 = try run(lines[0], calling: [westStation, central, eastStation])
+        try world.assignTrain(try place(trains[0], at: (ground, .forward, tile + platform)), to: line1)
+        let line2 = try run(lines[1], calling: [northStation, central, southStation])
+        try world.assignTrain(try place(trains[1], at: (viaduct, .forward, tile + platform)), to: line2)
+        // The ring from West: its first train the inner way round on the
+        // inner track (clockwise, north first), its second the outer way on
+        // the outer track, both at West's platform on the arc through West.
+        let ringLine = try run(lines[2], calling: [westStation, northStation, eastStation, southStation], ring: true)
+        for (name, edge, direction) in [(trains[2], innerRing[3], TrackEdgeDirection.forward), (trains[3], outerRing[3], .backward)] {
+            guard let length = world.network.edge(edge)?.length else { continue }
+            try world.assignTrain(try place(name, cars: ringCars, at: (edge, direction, length / 2 + ringPlatform / 2)), to: ringLine)
         }
     }
 }

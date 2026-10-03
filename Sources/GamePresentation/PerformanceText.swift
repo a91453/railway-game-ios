@@ -134,7 +134,8 @@ extension GameWorld {
     /// How long line `id`'s own service takes, worked out with the line's
     /// performance (Stage W2c, `lineJourney(_:pattern:)`): "Round trip 7
     /// min 4 s · legs 16 s, 16 s, 16 s, 16 s", the first eight legs then
-    /// "…". `nil` when the line cannot run.
+    /// "…"; a ring's lap (decision 49) "Lap 7 min 16 s · legs …". `nil`
+    /// when the line cannot run.
     public func lineJourneyText(_ id: LineID, in language: DisplayLanguage) -> String? {
         guard let journey = lineJourney(id) else { return nil }
         var legs = journey.legs.prefix(8).map { durationText(seconds: $0.seconds, in: language) }
@@ -142,6 +143,9 @@ extension GameWorld {
             legs.append("…")
         }
         let roundTrip = durationText(seconds: journey.roundTripSeconds, in: language)
+        if journey.isRing {
+            return language.text("Lap \(roundTrip) · legs \(legs.joined(separator: ", "))", "一圈 \(roundTrip) · 各段 \(legs.joined(separator: "、"))")
+        }
         return language.text(
             "Round trip \(roundTrip) · legs \(legs.joined(separator: ", "))",
             "來回 \(roundTrip) · 各段 \(legs.joined(separator: "、"))"

@@ -6,8 +6,8 @@ import XCTest
 /// sequences: lines on small networks with trains assigned and standing at
 /// their first stops, mixed with target headways, counts, windows and
 /// service days that change the service, assignments and removals, trains
-/// moved and held by hand, track built and removed under them, and
-/// advances short and long; some commands invalid on purpose (targets out
+/// moved and held by hand, track built and removed under them, lines made
+/// rings and lines again (decision 49), and advances short and long; some commands invalid on purpose (targets out
 /// of range, unknown trains and lines, trains on a line already, manual
 /// timetables and services for a line's trains).
 ///
@@ -88,6 +88,11 @@ final class LineDispatchPropertyTests: XCTestCase {
         if stops.count < 2 { stops.append(served.first { $0 != first }!) }
         run(.createLine("D\(world.lines.count + 1)", stops))
         guard let line = world.lines.last?.id else { return operations }
+        // Decision 49: a third stop round, sometimes, to make a ring.
+        if random.chance(1, in: 3), let third = served.first(where: { !stops.contains($0) }) {
+            if stops.count == 2 { run(.setLineStops(line, stops + [third])) }
+            run(.setLineRing(line, true))
+        }
         if random.chance(4, in: 5) { run(.setLineWindow(line, .allDay)) }
         run(.setLineTrains(line, TrainsInService(peak: random.below(4), offPeak: 1 + random.below(3), low: random.below(3))))
         if random.chance(1, in: 3) { run(.setLineTargets(line, targets(using: &random))) }
@@ -134,7 +139,7 @@ final class LineDispatchPropertyTests: XCTestCase {
             trains.isEmpty || random.chance(1, in: 12) ? unknownTrain : random.element(of: trains).id
         }
         let assigned = lines.flatMap(\.trains)
-        switch random.below(40) {
+        switch random.below(42) {
         case 0..<3:
             // Mostly a free train onto a first stop, then assigned there.
             let free = trains.filter { !assigned.contains($0.id) }
@@ -216,6 +221,8 @@ final class LineDispatchPropertyTests: XCTestCase {
             return .setSpeed(random.element(of: GameSpeed.allCases))
         case 24..<34:
             return .advance(random.below(40))
+        case 40, 41:
+            return .setLineRing(anyLine(), random.chance(2, in: 3))
         default:
             return .advance(60 + random.below(600))
         }
@@ -242,7 +249,7 @@ final class LineDispatchPropertyTests: XCTestCase {
                 let error = KernelDifferentialTests.apply(operation, to: &world)
                 let at = "step \(index) \(operation)"
                 switch operation {
-                case .assign, .unassign, .setLineTargets:
+                case .assign, .unassign, .setLineTargets, .setLineRing:
                     let name = "\(operation)".dropFirst().prefix { $0 != "(" }
                     counts[error.map { String("\($0)".prefix { $0 != "(" }) } ?? "ok \(name)", default: 0] += 1
                 case .setTimetable, .startService, .stopService:
@@ -275,6 +282,7 @@ final class LineDispatchPropertyTests: XCTestCase {
             ("ok assign", 150), ("ok unassign", 30), ("ok setLineTargets", 80), ("trainOnLine", 60), ("invalidHeadway", 10),
             ("unknownTrain", 5), ("unknownLine", 5), ("trainNotOnLine", 5),
             ("dispatched", 400), ("turned round first", 10), ("trips finished", 150), ("waiting to go", 400),
+            ("ok setLineRing", 40), ("dispatched on a ring", 30),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }
@@ -294,6 +302,7 @@ final class LineDispatchPropertyTests: XCTestCase {
                 let sentOut = train.timetable != old.timetable
                 if sentOut {
                     counts["dispatched", default: 0] += 1
+                    if line.isRing { counts["dispatched on a ring", default: 0] += 1 }
                     if train.timetable.first?.reverses == true { counts["turned round first", default: 0] += 1 }
                 }
                 if (sentOut || old.execution != nil), train.execution == nil {

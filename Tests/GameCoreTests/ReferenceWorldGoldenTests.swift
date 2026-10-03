@@ -122,6 +122,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .createLine(let name, let stops): error = model.createLine(named: name, stops: stops)
         case .removeLine(let id): error = model.removeLine(id)
         case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
+        case .setLineRing(let id, let ring): error = model.setLineRing(id, ring)
         case .setLinePerformance(let id, let performance): error = model.setLinePerformance(id, performance)
         case .setTrainPerformance(let id, let performance): error = model.setPerformance(id, performance)
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
@@ -262,7 +263,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
     }
 
     private static func summary(_ line: ReferenceWorld.Line) -> LineSummary {
-        LineSummary(
+        var summary = LineSummary(
             id: line.id, name: line.name, stops: line.stops.map(\.rawValue), performance: PerformanceSummary(line.performance),
             window: WindowSummary(line.window), trainsInService: TrainsSummary(line.trainsInService),
             targetHeadways: TargetHeadwaysSummary(line.targetHeadways), trains: line.roster, lastDispatch: line.lastDispatch,
@@ -273,5 +274,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 )
             }
         )
+        summary.isRing = line.ring
+        summary.outerLastDispatch = line.outerLastDispatch
+        return summary
     }
 }

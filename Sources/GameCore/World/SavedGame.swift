@@ -22,9 +22,13 @@
 ///    writing them all made a save of an empty map 13 MB; a build that
 ///    reads only version 1 says the save is newer than it rather than
 ///    calling it damaged.
+/// 3. Ring lines (ARCHITECTURE decision 49): a line can be a ring
+///    (`"ring": true`, with `"outerLastDispatch"`). A build that reads only
+///    version 2 would take a ring for a line that turns round at its ends,
+///    so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 2
+    public static let currentVersion = 3
 
     public let world: GameWorld
 
@@ -57,7 +61,9 @@ extension SavedGame: Codable {
         }
         // Version 1 to 2: the world reads the map with every tile written
         // out as well as with only its occupied tiles, so a version 1 world
-        // needs no step of its own. Later versions add their steps here.
+        // needs no step of its own. Version 2 to 3: a version 2 world has no
+        // rings, and a line without `"ring"` is not one, so it needs none
+        // either. Later versions add their steps here.
         world = try container.decode(GameWorld.self, forKey: .world)
     }
 

@@ -1379,6 +1379,16 @@
         }
       }
     },
+    "Ring line" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "環線"
+          }
+        }
+      }
+    },
     "Rules" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1879,6 +1889,16 @@
         }
       }
     },
+    "The last stop runs on to the first. Passengers waiting for a trip the line no longer takes leave." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最後一站接回第一站。等候路線不再提供之行程的乘客會離開。"
+          }
+        }
+      }
+    },
     "The service is running. Stop it to change the timetable." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1975,6 +1995,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "列車：%@"
+          }
+        }
+      }
+    },
+    "Trains go on from the last stop back to the first: half in the order of the stops, half the other way. They run in pairs." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列車從最後一站接著開回第一站：一半依站序、一半反方向，以兩列為一組。"
           }
         }
       }

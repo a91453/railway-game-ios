@@ -87,13 +87,22 @@ public struct LevelServiceSummary: Hashable, Sendable {
     public let trains: Int?
     /// The minutes between them, or `nil` when it runs none.
     public let headway: Int64?
+    /// Whether it is a ring's (decision 49): half its trains go each way
+    /// round, and the headway is each way's.
+    public let isRing: Bool
 
-    /// "3 trains · Every 4 min", "No trains", or "No route".
+    /// "3 trains · Every 4 min", "No trains", or "No route"; on a ring "4
+    /// trains (2 each way) · Every 5 min each way".
     public func text(in language: DisplayLanguage) -> String {
         guard let trains else { return language.text("No route", "沒有可行駛的路") }
         guard trains > 0, let headway else { return language.text("No trains", "沒有列車") }
         let count = language.text("\(trains) \(trains == 1 ? "train" : "trains")", "\(trains) 列")
-        return "\(count) · \(headwayText(minutes: headway, in: language))"
+        guard isRing else { return "\(count) · \(headwayText(minutes: headway, in: language))" }
+        let every = headwayText(minutes: headway, in: language)
+        return language.text(
+            "\(count) (\(trains / 2) each way) · \(every) each way",
+            "\(count)（每個方向 \(trains / 2) 列）· 每個方向\(every)"
+        )
     }
 }
 
@@ -102,10 +111,11 @@ public struct LevelServiceSummary: Hashable, Sendable {
 public struct LineServiceSummary: Hashable, Sendable {
     public let pattern: Int?
     /// "All stops", "Short working" or "Express", with its ends, such as
-    /// "Express Alpha–Delta".
+    /// "Express Alpha–Delta"; "Ring" for a ring's.
     public let title: String
     /// The stations called at, such as "Alpha · Gamma · Delta", and for an
-    /// express the ones it passes: "passes Beta".
+    /// express the ones it passes: "passes Beta"; a ring's once round, back
+    /// to the first.
     public let callsText: String
     public let levels: [LevelServiceSummary]
     /// The trains assigned to it, and of them those on a trip now.
@@ -143,17 +153,22 @@ extension GameWorld {
             let called = calls.map { stationName(line.stops[$0]) }
             let passed = (calls[0]...calls[calls.count - 1]).filter { !calls.contains($0) }.map { stationName(line.stops[$0]) }
             let passes = language.text(" (passes \(passed.joined(separator: ", ")))", "（通過 \(passed.joined(separator: "、"))）")
-            let callsText = called.joined(separator: " · ") + (passed.isEmpty ? "" : passes)
+            var callsText = called.joined(separator: " · ") + (passed.isEmpty ? "" : passes)
+            if line.isRing {
+                callsText = (called + [called[0]]).joined(separator: " · ")
+                    + language.text(", and half the trains the other way round", "，一半列車反方向")
+            }
             let levels = ServiceLevel.allCases.map { level in
                 LevelServiceSummary(
                     level: level,
                     trains: lineTrainsInService(id, at: level, pattern: service.pattern),
-                    headway: lineHeadway(id, at: level, pattern: service.pattern)
+                    headway: lineHeadway(id, at: level, pattern: service.pattern),
+                    isRing: line.isRing
                 )
             }
             return LineServiceSummary(
                 pattern: service.pattern,
-                title: serviceTitle(of: line, calls: calls, in: language),
+                title: line.isRing ? language.text("Ring", "環線") : serviceTitle(of: line, calls: calls, in: language),
                 callsText: callsText,
                 levels: levels,
                 assigned: service.trains.count,
@@ -170,9 +185,14 @@ extension GameWorld {
 
     /// The stretches of line `id` no service runs over at `level`, such as
     /// "Not covered: Alpha–Beta, Gamma–Delta", or `nil` when every segment
-    /// is covered (or there is no such line).
+    /// is covered (or there is no such line). A ring (decision 49) runs
+    /// over all of itself or none of it.
     public func lineCoverageText(_ id: LineID, at level: ServiceLevel, in language: DisplayLanguage) -> String? {
         guard let line = line(id: id), let loads = lineSegmentLoads(id, at: level) else { return nil }
+        if line.isRing {
+            guard loads.allSatisfy({ $0 == 0 }) else { return nil }
+            return language.text("Not covered: the whole ring", "沒有服務：整條環線")
+        }
         var gaps: [String] = []
         var start: Int?
         for segment in 0...loads.count {

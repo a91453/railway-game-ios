@@ -241,6 +241,22 @@ public struct LinePattern: Hashable, Sendable {
     }
 }
 
+/// One stream of a line's trains, sent out from its first call on its own
+/// headway: a service of the line, or on a ring (decision 49) its own
+/// service one way round.
+struct DispatchStream: Hashable, Sendable {
+    let service: Int
+    let direction: RingDirection?
+}
+
+/// Which way round a ring line's train runs (the `Ci/` metro game's
+/// `train.dir`): ``inner`` (内环, `1`) calls at the line's stops in order,
+/// ``outer`` (外环, `-1`) in reverse; both come back to the first stop.
+public enum RingDirection: String, CaseIterable, Codable, Sendable {
+    case inner
+    case outer
+}
+
 /// A service line: the stations its trains call at, in order, out from the
 /// first and back from the last; the performance it plans its journeys
 /// with; when it runs; how many trains it is to run at each level, or how
@@ -257,6 +273,11 @@ public struct LinePattern: Hashable, Sendable {
 /// stops, each with its own trains. Where services share a stretch of the
 /// line, together they run no more trains than the minimum headway allows
 /// (see ``GameWorld/lineSegmentLoads(_:at:)``).
+///
+/// A line may instead be a ring (``isRing``, ARCHITECTURE decision 49,
+/// after the `Ci/` metro game's `isRing`): its trains run on from the last
+/// stop back to the first, never turning round, half of them each way (see
+/// ``RingDirection``), and it has no patterns.
 public struct ServiceLine: Identifiable, Hashable, Sendable {
     public let id: LineID
     public internal(set) var name: String
@@ -287,6 +308,16 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// The line's further services, in the order they claim room on the
     /// line after its own (see ``LinePattern``). A new line has none.
     public internal(set) var patterns: [LinePattern]
+    /// Whether the line is a ring (decision 49): its trains go on from the
+    /// last stop to the first, round and round, and never turn round. A
+    /// ring has three stops or more, does not call at the same station
+    /// first and last, and has no patterns; its counts of trains in service
+    /// are even, half for each ``RingDirection``.
+    public internal(set) var isRing: Bool
+    /// When a ring last sent a train out the ``RingDirection/outer`` way,
+    /// or `nil` if it never has (or the line is not a ring);
+    /// ``lastDispatch`` is the ``RingDirection/inner`` way's.
+    public internal(set) var outerLastDispatch: GameTime?
 
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1
@@ -309,12 +340,89 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         self.trains = []
         self.lastDispatch = nil
         self.patterns = []
+        self.isRing = false
+        self.outerLastDispatch = nil
     }
 
     /// Whether `stops` can be a line's stops, judged without a world: at
     /// least two, and no station twice in a row.
     static func isStopList(_ stops: [StationID]) -> Bool {
         stops.count >= 2 && zip(stops, stops.dropFirst()).allSatisfy { $0 != $1 }
+    }
+
+    /// Whether `stops` can be a ring's stops (decision 49): three or more
+    /// (the reference closes a line into a ring at three stations), none
+    /// twice in a row, going round from the last to the first too.
+    static func isRingStopList(_ stops: [StationID]) -> Bool {
+        stops.count >= 3 && isStopList(stops) && stops.first != stops.last
+    }
+
+    /// `count` made even, down: a ring runs its trains in pairs, one each
+    /// way (the reference's `metroRingPairedTrainCountAtOrBelow`).
+    static func paired(_ count: Int) -> Int {
+        count - count % 2
+    }
+
+    /// Which way round train `id` runs, if the line is a ring and the train
+    /// is on it: the first of its trains in ascending ID order, the third,
+    /// and so on ``RingDirection/inner``, the second, the fourth and so on
+    /// ``RingDirection/outer`` (the reference's
+    /// `equalRedistributeRingServiceTrains`, by the trains' creation order,
+    /// which here is their IDs' order).
+    public func ringDirection(of id: TrainID) -> RingDirection? {
+        guard isRing, let index = trains.firstIndex(of: id) else { return nil }
+        return index % 2 == 0 ? .inner : .outer
+    }
+
+    /// A ring's trains that run `direction`, in ascending ID order.
+    func ringTrains(_ direction: RingDirection) -> [TrainID] {
+        trains.indices.filter { ($0 % 2 == 0) == (direction == .inner) }.map { trains[$0] }
+    }
+
+    /// The calls of a ring's lap `direction`, as indices into ``stops``:
+    /// from the first stop round to it again, in order or in reverse.
+    func ringCalls(_ direction: RingDirection) -> [Int] {
+        switch direction {
+        case .inner: Array(stops.indices) + [0]
+        case .outer: [0] + stops.indices.dropFirst().reversed() + [0]
+        }
+    }
+
+    /// The line's streams of trains, each sent out from its first call on
+    /// its own headway: one for each service (see ``serviceCount``), or on
+    /// a ring one each way round (decision 49).
+    var dispatchStreams: [DispatchStream] {
+        isRing
+            ? RingDirection.allCases.map { DispatchStream(service: 0, direction: $0) }
+            : (0..<serviceCount).map { DispatchStream(service: $0, direction: nil) }
+    }
+
+    /// The stream train `id` runs in, if it is on the line.
+    func dispatchStream(of id: TrainID) -> DispatchStream? {
+        dispatchStreams.first { trains(of: $0).contains(id) }
+    }
+
+    /// The trains of `stream`, in ascending ID order.
+    func trains(of stream: DispatchStream) -> [TrainID] {
+        stream.direction.map(ringTrains) ?? trains(ofService: stream.service)
+    }
+
+    /// When `stream` last sent a train out.
+    func lastDispatch(of stream: DispatchStream) -> GameTime? {
+        switch stream.direction {
+        case .inner: lastDispatch
+        case .outer: outerLastDispatch
+        case nil: lastDispatch(ofService: stream.service)
+        }
+    }
+
+    /// Records that `stream` sent a train out at `time`.
+    mutating func recordDispatch(of stream: DispatchStream, at time: GameTime) {
+        switch stream.direction {
+        case .inner: lastDispatch = time
+        case .outer: outerLastDispatch = time
+        case nil: recordDispatch(ofService: stream.service, at: time)
+        }
     }
 
     /// How many trains the line's own service runs at `level`, and the
@@ -353,6 +461,36 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         }
         guard count > 0 else { return nil }
         return (count, headway(of: count, roundTrip: roundTrip, target: targets[level]))
+    }
+
+    /// How many trains a ring with `counts` and `targets` runs at `level`,
+    /// both ways together, and the minutes between two trains going the
+    /// same way, for a lap of `lap` minutes; `nil` when it runs none then
+    /// (decision 49, the reference's `metroHeadwayRoundTripMinutes` for a
+    /// ring and `calcLineHeadwayMin`, which shares the lap between the
+    /// trains of one way, `Math.ceil(n/2)`).
+    ///
+    /// Each way runs half the count set for the level (a ring's counts are
+    /// even, see ``paired(_:)``), or with a target the fewest trains that
+    /// keep to it, the lap divided by the target, rounded up; and never
+    /// more than keep ``minimumHeadwayMinutes`` apart, at least one each
+    /// way (the reference's `(isRing ? 2 : 1) * floor(…)`). The headway
+    /// is the lap shared between one way's trains, rounded up, or the
+    /// target if that is longer.
+    ///
+    /// - Precondition: `lap >= 1`.
+    static func ringService(
+        _ counts: TrainsInService, _ targets: TargetHeadways, at level: ServiceLevel, lap: Int64
+    ) -> (trains: Int, headway: Int64)? {
+        let maximum = Int(clamping: max(1, lap / minimumHeadwayMinutes))
+        let eachWay: Int
+        if let target = targets[level] {
+            eachWay = min(Int(clamping: dividedRoundingUp(lap, by: target)), maximum)
+        } else {
+            eachWay = min(counts[level] / 2, maximum)
+        }
+        guard eachWay > 0 else { return nil }
+        return (2 * eachWay, headway(of: eachWay, roundTrip: lap, target: targets[level]))
     }
 
     /// The minutes between `trains` trains (at least one) sharing a round
@@ -429,7 +567,18 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// past ``segmentCapacity``. A service left with no room runs none.
     ///
     /// - Precondition: `roundTrips.count <= serviceCount`, each at least 1.
+    ///
+    /// A ring (decision 49) has only its own service, and its plan comes
+    /// from ``ringService(_:_:at:lap:)``, the round trip being its lap; its
+    /// load is on every segment, the last one from its last stop back to
+    /// the first included, each way at its headway.
     func services(at level: ServiceLevel, roundTrips: [Int64?]) -> (plans: [(trains: Int, headway: Int64)?], loads: [Int]) {
+        if isRing {
+            guard let lap = roundTrips.first ?? nil, let plan = Self.ringService(trainsInService, targetHeadways, at: level, lap: lap) else {
+                return ([nil], Array(repeating: 0, count: stops.count))
+            }
+            return ([plan], Array(repeating: Self.load(ofHeadway: plan.headway), count: stops.count))
+        }
         var loads = Array(repeating: 0, count: stops.count - 1)
         var plans: [(trains: Int, headway: Int64)?] = []
         for (service, roundTrip) in roundTrips.enumerated() {
@@ -611,7 +760,7 @@ extension ServiceDay.Band: Codable {}
 
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -627,7 +776,13 @@ extension ServiceLine: Codable {
     /// two lines or services and that no dispatch is after the clock are
     /// checked by the ``GameWorld`` decoder. A line with the standard
     /// performance (Stage W2c) has no `"performance"` key, which is also how
-    /// lines saved before Stage W2c read (their `"rate"` is not read).
+    /// lines saved before Stage W2c read (their `"rate"` is not read). A
+    /// ring (decision 49) has `"ring": true`, and `"outerLastDispatch"`
+    /// once it has sent a train out the outer way; a line that is not a
+    /// ring has neither, which is how lines saved before rings read. A ring
+    /// with fewer than three stops, the same station first and last,
+    /// patterns or an odd count of trains in service is rejected, and so is
+    /// an outer dispatch on a line that is not a ring.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(LineID.self, forKey: .id)
@@ -640,6 +795,8 @@ extension ServiceLine: Codable {
         trains = container.contains(.trains) ? try container.decode([TrainID].self, forKey: .trains) : []
         lastDispatch = container.contains(.lastDispatch) ? try container.decode(GameTime.self, forKey: .lastDispatch) : nil
         patterns = container.contains(.patterns) ? try container.decode([LinePattern].self, forKey: .patterns) : []
+        isRing = container.contains(.ring) ? try container.decode(Bool.self, forKey: .ring) : false
+        outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -658,6 +815,25 @@ extension ServiceLine: Codable {
         guard patterns.allSatisfy({ LinePattern.isCallList($0.calls, stopCount: stops.count) }) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .patterns, in: container, debugDescription: "Line \(id.rawValue) has a pattern calling at a stop it does not have."
+            )
+        }
+        if isRing {
+            guard Self.isRingStopList(stops), patterns.isEmpty,
+                  ServiceLevel.allCases.allSatisfy({ trainsInService[$0] % 2 == 0 })
+            else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .ring, in: container,
+                    debugDescription: "Ring \(id.rawValue) needs three stops or more, not the same first and last, no patterns and even train counts."
+                )
+            }
+        } else if container.contains(.ring) {
+            // `false` is never written: a line that is not a ring has no key.
+            throw DecodingError.dataCorruptedError(forKey: .ring, in: container, debugDescription: "Only a ring has \"ring\".")
+        }
+        guard isRing || outerLastDispatch == nil, (outerLastDispatch?.seconds ?? 0) >= 0 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .outerLastDispatch, in: container,
+                debugDescription: "Line \(id.rawValue): only a ring sends trains out the outer way, never before second 0."
             )
         }
     }
@@ -682,6 +858,10 @@ extension ServiceLine: Codable {
         if !patterns.isEmpty {
             try container.encode(patterns, forKey: .patterns)
         }
+        if isRing {
+            try container.encode(true, forKey: .ring)
+        }
+        try container.encodeIfPresent(outerLastDispatch, forKey: .outerLastDispatch)
     }
 }
 

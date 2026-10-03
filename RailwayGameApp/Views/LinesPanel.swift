@@ -5,9 +5,9 @@ import SwiftUI
 /// Service lines (Phase 4 Stage R): every line and whether it runs now; for
 /// the selected line, each of its services (its own and its patterns) with
 /// the trains it is set to run at each level, what it can run and how far
-/// apart, its trains, and stretches no service covers; its stops (Stage
-/// C2); adding patterns and assigning the selected train; and picking
-/// stations for a new line. At the top, the traffic control switch (Phase
+/// apart, its trains, and stretches no service covers; whether it is a
+/// ring (decision 49); its stops (Stage C2); adding patterns and assigning
+/// the selected train; and picking stations for a new line. At the top, the traffic control switch (Phase
 /// 4.6 Stage T) and the service day's bands (Stage C2).
 ///
 /// Shown in a sheet that leaves the map usable at half height, so stations
@@ -36,7 +36,10 @@ struct LinesPanel: View {
                     ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
                         serviceSection(summary, of: line)
                     }
-                    addPatternSection(line)
+                    // A ring has no patterns.
+                    if !line.isRing {
+                        addPatternSection(line)
+                    }
                 }
                 draftSection
             }
@@ -183,6 +186,17 @@ struct LinesPanel: View {
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
+            // Decision 49: a ring's trains go on from its last stop to the
+            // first, half each way round.
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Ring line", isOn: Binding(
+                    get: { session.selectedLine?.isRing ?? false },
+                    set: { session.setSelectedLineRing($0) }
+                ))
+                Text("Trains go on from the last stop back to the first: half in the order of the stops, half the other way. They run in pairs.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
             PerformanceMenu(performance: line.performance, language: session.language) { performance in
@@ -258,7 +272,11 @@ struct LinesPanel: View {
         } header: {
             Text("Stops")
         } footer: {
-            Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
+            if line.isRing {
+                Text("The last stop runs on to the first. Passengers waiting for a trip the line no longer takes leave.")
+            } else {
+                Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
+            }
         }
     }
 
@@ -297,20 +315,21 @@ struct LinesPanel: View {
     }
 
     /// The trains a service is set to run at one level, with a stepper to
-    /// change it, what it can run and how far apart, and a menu for a
-    /// target headway.
+    /// change it (two at a time on a ring, one each way), what it can run
+    /// and how far apart, and a menu for a target headway.
     private func levelRow(_ level: LevelServiceSummary, pattern: Int?, of line: ServiceLine) -> some View {
         let counts = pattern.map { line.patterns[$0].trainsInService } ?? line.trainsInService
         let targets = pattern.map { line.patterns[$0].targetHeadways } ?? line.targetHeadways
         let wanted = counts[level.level]
         let target = targets[level.level]
+        let step = line.isRing ? 2 : 1
         return VStack(alignment: .leading, spacing: 4) {
             Stepper(
                 onIncrement: {
-                    session.setSelectedLineTrains(wanted + 1, at: level.level, pattern: pattern)
+                    session.setSelectedLineTrains(wanted + step, at: level.level, pattern: pattern)
                 },
                 onDecrement: {
-                    session.setSelectedLineTrains(max(0, wanted - 1), at: level.level, pattern: pattern)
+                    session.setSelectedLineTrains(max(0, wanted - step), at: level.level, pattern: pattern)
                 }
             ) {
                 VStack(alignment: .leading, spacing: 1) {
