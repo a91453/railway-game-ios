@@ -14,19 +14,14 @@ final class RealWorldMapUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        let realWorld = app.buttons["start.realWorld"]
-        XCTAssertTrue(realWorld.waitForExistence(timeout: 10))
-        realWorld.tap()
+        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
 
-        let taipei = app.buttons["place.tra-taipei"]
-        XCTAssertTrue(taipei.waitForExistence(timeout: 10), "The references' places are listed")
-        XCTAssertEqual(taipei.label, "Taipei")
+        let taipei = tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei")
+        XCTAssertEqual(taipei.label, "Taipei", "The references' places are listed")
         taipei.tap()
         capture(app, name: "real-world-01-picker")
 
-        let build = app.buttons["realWorld.start"]
-        XCTAssertTrue(build.waitForExistence(timeout: 10))
-        build.tap()
+        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
@@ -35,25 +30,18 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Zoom in"].exists)
         capture(app, name: "real-world-02-game")
 
-        style.tap()
-        let satellite = app.buttons["Satellite"]
-        XCTAssertTrue(satellite.waitForExistence(timeout: 10))
-        satellite.tap()
+        tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
         XCTAssertTrue(map.waitForExistence(timeout: 10))
         capture(app, name: "real-world-03-satellite")
 
         // Keep the live clock from rebuilding the native menu while XCTest
         // targets its actions, as in the start and save flow.
-        let pause = app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch
-        XCTAssertTrue(pause.waitForExistence(timeout: 10))
-        pause.tap()
-        app.buttons["hud.menu"].firstMatch.tap()
-        let back = app.buttons["menu.backToStart"].firstMatch
-        XCTAssertTrue(back.waitForExistence(timeout: 10))
-        back.tap()
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        tappable(app.buttons.matching(identifier: "hud.menu"), name: "hud.menu").tap()
+        tappable(app.buttons.matching(identifier: "menu.backToStart"), name: "menu.backToStart").tap()
 
-        let continueButton = app.buttons["start.continue"]
-        XCTAssertTrue(continueButton.waitForExistence(timeout: 10))
+        let continueButton = tappable(app.buttons.matching(identifier: "start.continue"), name: "start.continue")
         XCTAssertTrue(continueButton.label.contains("Real-world map"), "The autosave is a real-world map's: \(continueButton.label)")
         continueButton.tap()
         XCTAssertTrue(app.buttons["map.style"].waitForExistence(timeout: 15), "Continuing keeps the real-world map")
@@ -72,6 +60,24 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["Zoom in"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["map.style"].exists)
+    }
+
+    /// The copy of a button the player can touch. Existence can come before
+    /// a menu or screen transition ends, and `ViewThatFits` can also expose
+    /// an unplaced copy of a menu action, so `firstMatch` alone may not be
+    /// hittable (the start and save flow's rule, `StartSaveFlowSmokeTests`).
+    private func tappable(_ query: XCUIElementQuery, name: String) -> XCUIElement {
+        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing button: \(name)")
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            if let button = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+                XCTAssertTrue(button.isEnabled, "Button is disabled: \(name)")
+                return button
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        } while Date() < deadline
+        XCTFail("Button cannot be tapped: \(name)")
+        return query.firstMatch
     }
 
     private func capture(_ app: XCUIApplication, name: String) {
