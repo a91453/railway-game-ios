@@ -24,17 +24,23 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         assertGame(in: app)
         capture(app, name: "\(language)-flow-02-demo-map")
 
+        // Keep the live clock from rebuilding the native menu while XCTest
+        // targets its actions, as in the tutorial UI tests. Use the real HUD.
+        requiredButton(app.buttons.matching(NSPredicate(
+            format: "label == %@", language == "en" ? "Pause" : "暫停"
+        )), name: "Pause").tap()
+
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-03-menu-save")
 
-        requiredMenuAction("menu.saveGame", in: app).tap()
+        requiredButton("menu.saveGame", in: app).tap()
         assertGame(in: app)
         capture(app, name: "\(language)-flow-04-game-saved")
 
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-05-menu-return")
 
-        requiredMenuAction("menu.backToStart", in: app).tap()
+        requiredButton("menu.backToStart", in: app).tap()
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.continue", in: app)
         // Back to Start creates only an autosave. This separate button also
@@ -74,30 +80,29 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
     private func openGameMenu(in app: XCUIApplication) {
         requiredButton("hud.menu", in: app).tap()
-        _ = requiredMenuAction("menu.saveGame", in: app)
-        _ = requiredMenuAction("menu.backToStart", in: app)
+        _ = requiredButton("menu.saveGame", in: app)
+        _ = requiredButton("menu.backToStart", in: app)
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        let button = app.buttons[identifier]
-        XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing UI flow button: \(identifier)")
-        XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(identifier)")
-        assertHittable(button, message: "UI flow button cannot be tapped: \(identifier)")
-        return button
+        requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
     }
 
-    private func requiredMenuAction(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        let button = app.buttons[identifier]
-        XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing UI flow button: \(identifier)")
-        XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(identifier)")
-        // Native SwiftUI menus expose their action's identifier on a Button
-        // inside a collection-view cell. On iOS 26 that inner Button has no
-        // hittable point; the visible cell is the actual tap target. Keep the
-        // identifier query and require the row to become tappable before use.
-        let row = app.collectionViews.cells.containing(.button, identifier: identifier).element
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "Missing menu row: \(identifier)")
-        assertHittable(row, message: "UI flow menu action cannot be tapped: \(identifier)")
-        return row
+    private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {
+        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing UI flow button: \(name)")
+        // ViewThatFits can also expose an unplaced copy of a menu action.
+        // Find the button the player can touch, allowing the transition to
+        // finish, and still fail if it is disabled or no copy is tappable.
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            if let button = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+                XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(name)")
+                return button
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        } while Date() < deadline
+        XCTFail("UI flow button cannot be tapped: \(name)")
+        return query.firstMatch
     }
 
     private func assertHittable(_ element: XCUIElement, message: String) {

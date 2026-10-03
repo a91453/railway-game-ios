@@ -137,7 +137,7 @@ struct ReferenceWorld: Equatable {
     var stations: [Station] = []
     var trains: [Train] = []
     var balance: Int64
-    let costs: (track: Int64, station: Int64, train: Int64)
+    let costs: (track: Int64, station: Int64, train: Int64, car: Int64)
     /// Stage W2a: the clock counts seconds, and ticks at 1x leave tenths
     /// of a second pending.
     var clockSeconds: Int64
@@ -249,7 +249,7 @@ struct ReferenceWorld: Equatable {
         self.width = width
         self.height = height
         self.balance = balance
-        self.costs = (costs.track.amount, costs.station.amount, costs.train.amount)
+        self.costs = (costs.track.amount, costs.station.amount, costs.train.amount, costs.car.amount)
         self.clockSeconds = seconds
         self.speed = speed
         self.resumeSpeed = speed == .paused ? .normal : speed
@@ -490,6 +490,12 @@ struct ReferenceWorld: Equatable {
         case .success(let i):
             guard cars >= 1, cars <= 16 else { return .invalidTrainLength }
             guard trains[i].position == nil else { return .trainAlreadyPlaced(id) }
+            // Each car added is paid for; one taken off is not paid back.
+            if cars > trains[i].cars {
+                let price = costs.car * Int64(cars - trains[i].cars)
+                if let error = funds(price) { return error }
+                balance -= price
+            }
             trains[i].cars = cars
             return nil
         }

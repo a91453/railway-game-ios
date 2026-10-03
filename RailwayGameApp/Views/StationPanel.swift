@@ -70,7 +70,25 @@ struct StationPanel: View {
 
     // MARK: - Demand
 
+    @ViewBuilder
     private func demandSection(_ station: Station) -> some View {
+        if session.canEditStationDemand {
+            editableDemandSection(station)
+        } else {
+            // A managed company's city sets the ridership (decision 46).
+            Section {
+                Text(verbatim: session.world.stationDemand(of: station.id)?.displayText(in: session.language) ?? "—")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+            } header: {
+                Text("Ridership")
+            } footer: {
+                Text("A managed company's city sets each station's ridership. Free play can change it.")
+            }
+        }
+    }
+
+    private func editableDemandSection(_ station: Station) -> some View {
         let demand = session.world.stationDemand(of: station.id)
         let language = session.language
         return Section {

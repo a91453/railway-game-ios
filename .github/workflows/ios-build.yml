@@ -180,13 +180,84 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Select an available iPad Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/ipad-simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "ipad-simulators.json").read_text())["devices"]
+          ipads = [device for runtime, group in devices.items()
+                   if ".iOS-" in runtime for device in group
+                   if device["isAvailable"] and device["name"].startswith("iPad")]
+          if not ipads:
+              raise SystemExit("No available iPad Simulator")
+          device = ipads[0]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"IPAD_SIMULATOR_UDID={device['udid']}\n")
+          PY
+
+      - name: Boot the selected iPad Simulator
+        timeout-minutes: 8
+        run: |
+          xcrun simctl shutdown "$SIMULATOR_UDID"
+          xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
+
+      - name: iPad tutorial tests (bilingual and large text)
+        id: ipad-tutorial
+        timeout-minutes: 10
+        run: |
+          xcodebuild test \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/ipad-tutorial.xcresult" \
+            -only-testing:RailwayGameUITests/TutorialUITests \
+            -parallel-testing-enabled NO \
+            -disableAutomaticPackageResolution \
+            CODE_SIGN_IDENTITY=-
+
+      - name: Export iPad tutorial screenshots
+        if: always() && steps.ipad-tutorial.outcome != 'skipped'
+        run: |
+          xcrun xcresulttool export attachments \
+            --path "$RUNNER_TEMP/ipad-tutorial.xcresult" \
+            --output-path "$RUNNER_TEMP/ipad-tutorial-attachments"
+          python3 .github/scripts/export-ui-smoke-screenshots.py \
+            "$RUNNER_TEMP/ipad-tutorial-attachments" "$RUNNER_TEMP/ipad-tutorial-screenshots" \
+            --tutorial-only
+
+      - name: Upload iPad tutorial screenshots
+        if: always() && steps.ipad-tutorial.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ipad-tutorial-screenshots
+          path: ${{ runner.temp }}/ipad-tutorial-screenshots
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failed iPad tutorial results
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          name: ipad-tutorial-xcresult
+          path: ${{ runner.temp }}/ipad-tutorial.xcresult
+          if-no-files-found: error
+          retention-days: 7
+
       # Regression proof on PRs (also available manually). Restore the source
       # afterwards; this broken build never replaces the normal screenshot run.
       - name: Prove a missing toolbar button fails the smoke test
         id: missing-button
         timeout-minutes: 5
         if: github.event_name == 'pull_request' || inputs.verify_missing_button
-        run: bash .github/scripts/ui-smoke-missing-button.sh
+        run: |
+          xcrun simctl shutdown "$IPAD_SIMULATOR_UDID"
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          bash .github/scripts/ui-smoke-missing-button.sh
 
       - name: Upload missing-button failure evidence
         if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'

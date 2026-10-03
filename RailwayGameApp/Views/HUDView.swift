@@ -80,6 +80,13 @@ struct HUDView: View {
             }
             Divider()
             Button {
+                session.startTutorial()
+            } label: {
+                Label("Tutorial", systemImage: "hand.point.up.left")
+            }
+            .accessibilityIdentifier("menu.tutorial")
+            Divider()
+            Button {
                 launcher.returnToStart()
             } label: {
                 Label("Back to Start", systemImage: "house")
