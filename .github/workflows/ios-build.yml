@@ -4,6 +4,12 @@ name: iOS App Build
 # committed Xcode project still matches project.yml.
 # GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
 # lives in release-archive.yml.
+#
+# Two jobs run in parallel, each on its own runner with its own Simulator, so
+# the wall time is the slower job rather than the sum. A cold Simulator boot
+# costs about 4 minutes on a fresh runner, so each device is booted once: the
+# iPhone job runs the build, the smoke tests and the missing-button proof on
+# one boot, and the iPad job runs the tutorial tests on its own.
 
 on:
   pull_request:
@@ -180,6 +186,44 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # Regression proof on PRs (also available manually). Restore the source
+      # afterwards; this broken build never replaces the normal screenshot run.
+      # It reuses the iPhone Simulator the smoke tests already booted.
+      - name: Prove a missing toolbar button fails the smoke test
+        id: missing-button
+        timeout-minutes: 5
+        if: github.event_name == 'pull_request' || inputs.verify_missing_button
+        run: |
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          bash .github/scripts/ui-smoke-missing-button.sh
+
+      - name: Upload missing-button failure evidence
+        if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-smoke-missing-button-evidence
+          path: |
+            ${{ runner.temp }}/ui-smoke-missing-button.xcresult
+            ${{ runner.temp }}/ui-smoke-missing-button-summary.json
+            ${{ runner.temp }}/ui-smoke-missing-button.log
+          if-no-files-found: error
+          retention-days: 7
+
+  ipad-tutorial:
+    name: iPad tutorial tests (iOS Simulator)
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain versions
+        run: |
+          sw_vers
+          uname -m
+          xcode-select --print-path
+          xcodebuild -version
+          echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
+
       - name: Select an available iPad Simulator
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/ipad-simulators.json"
@@ -200,13 +244,11 @@ jobs:
 
       - name: Boot the selected iPad Simulator
         timeout-minutes: 8
-        run: |
-          xcrun simctl shutdown "$SIMULATOR_UDID"
-          xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
+        run: xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
 
       - name: iPad tutorial tests (bilingual and large text)
         id: ipad-tutorial
-        timeout-minutes: 10
+        timeout-minutes: 12
         run: |
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -245,28 +287,5 @@ jobs:
         with:
           name: ipad-tutorial-xcresult
           path: ${{ runner.temp }}/ipad-tutorial.xcresult
-          if-no-files-found: error
-          retention-days: 7
-
-      # Regression proof on PRs (also available manually). Restore the source
-      # afterwards; this broken build never replaces the normal screenshot run.
-      - name: Prove a missing toolbar button fails the smoke test
-        id: missing-button
-        timeout-minutes: 5
-        if: github.event_name == 'pull_request' || inputs.verify_missing_button
-        run: |
-          xcrun simctl shutdown "$IPAD_SIMULATOR_UDID"
-          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-          bash .github/scripts/ui-smoke-missing-button.sh
-
-      - name: Upload missing-button failure evidence
-        if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ui-smoke-missing-button-evidence
-          path: |
-            ${{ runner.temp }}/ui-smoke-missing-button.xcresult
-            ${{ runner.temp }}/ui-smoke-missing-button-summary.json
-            ${{ runner.temp }}/ui-smoke-missing-button.log
           if-no-files-found: error
           retention-days: 7

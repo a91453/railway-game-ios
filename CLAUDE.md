@@ -69,8 +69,9 @@ and `Railway/railway_game_reference_clean/` (start with its
   `.github/scripts/swift-shards.sh`, which also proves each shard ran exactly
   its tests; pull requests that change nothing the package builds or tests
   skip the Swift jobs, and the `Swift CI (gate)` job always reports),
-  `ios-build.yml` (committed-project drift check and Xcode Simulator build on
-  macOS), `release-archive.yml` (unsigned Release device archive; manual, and
+  `ios-build.yml` (two parallel macOS jobs: committed-project drift check,
+  Xcode Simulator build and iPhone UI smoke tests; iPad tutorial UI tests),
+  `release-archive.yml` (unsigned Release device archive; manual, and
   on PRs that change project settings or app resources), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
