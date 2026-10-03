@@ -61,8 +61,13 @@ struct MapView: View {
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
                 // A station chosen in the overview may be kilometres away.
+                // One already in view stays where it is, under the finger
+                // that tapped it.
                 if let station = session.selectedStation {
-                    camera = projection.centered(on: WorldCoordinate(x: station.location.x, y: station.location.y))
+                    let point = WorldCoordinate(x: station.location.x, y: station.location.y)
+                    if !projection.visibleRegion.contains(point) {
+                        camera = projection.centered(on: point)
+                    }
                 }
             }
         }
@@ -175,6 +180,9 @@ private struct MapGestures: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
+        // A pointer's wheel and a trackpad's two-finger scroll pan the map,
+        // as they scrolled the ScrollView it replaced.
+        pan.allowedScrollTypesMask = .all
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
         pan.delegate = context.coordinator
         pinch.delegate = context.coordinator
