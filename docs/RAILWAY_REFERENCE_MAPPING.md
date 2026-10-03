@@ -303,6 +303,25 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `metroResolveStationWaitCap`：線路容量 × 8 | 車站候車上限 | 不變：4,000 | — | 刻意保留，另外處理 |
 | 開局資金、建設價格、營運補貼（`operatingSubsidy`）、`serviceCost` | 在經濟引擎裡 | `GameWorld.startingBalance`、`ConstructionCosts.newGame` | — | gap：依回本天數訂 |
 
+### Stage C5：最小教學
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 47。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`（`TUTORIAL_STEPS` 在第 40 行，其餘函式在第 111 行），文字在 `Ci/reference_snapshot/lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js` 的 `tutorial.step.0`–`11`。`Railway/site_archive_clean/` 與 `Railway/railway_game_reference_clean/` 沒有教學：搜尋 `tutorial`、`onboarding` 沒有結果，`guide` 只出現在車站頁的「STATION GUIDE」介紹與文件用語。參考只有簡體中文；英文與繁體中文是這裡寫的。
+
+| 參考 | 行為 | Swift（C5） | 分類 |
+| --- | --- | --- | --- |
+| `Ci` `TUTORIAL_STEPS[0]` 開始建線（`#nav-btn-add-line`、`#modal-line`） | 點「添加線路」，再依序點地圖放站 | `build.network`（選路網工具）、`build.track`（鋪設軌道） | 改寫成觸控：路網沒有「添加線路」 |
+| `Ci` `TUTORIAL_STEPS[1]` 放置車站與節點 | 左鍵放站、右鍵加節點讓線路彎曲 | `build.firstStation`（月台模式放第一座車站）；彎曲是 `build.track` 的「終點變成下一段的起點」 | 改寫成觸控 |
+| `Ci` `TUTORIAL_STEPS[4]` 確認建設線路：至少兩個站點 | 按 Enter 或雙擊結束建設 | `build.secondStation`（第二座車站）、`line.create`（建立路線） | 改寫成觸控 |
+| `Ci` `TUTORIAL_STEPS[7]` 開始列車運營（`#panel-line-info`、`#line-info-capacity-row`） | 在線路資訊面板調高峰／平峰／低峰的上線列車數 | `line.service`（指派列車並設定上線列車數，框「路線」按鈕） | 改寫：這裡的列車要先購買、放置、指派 |
+| `Ci` `TUTORIAL_STEPS[10]` 控制模擬（`#bottombar`） | 倍速、時間、人口 | `time.speed`（框 `hud.speed`，`.changeSpeed`） | faithful |
+| `Ci` `TUTORIAL_STEPS[11]` 導覽結束 | 可以從選單重開 | `end`（框 `hud.menu`） | faithful |
+| `Ci` `TUTORIAL_STEPS[2,3,5,6,8,9]`（快捷鍵：左鍵、右鍵、Shift、Ctrl+A、N） | 滑鼠與鍵盤快捷鍵 | — | 不移植：沒有觸控的對應 |
+| `Ci` `tutorialStepText(e,t)`、`tutorial.step.<i>.title`／`.body` | 標題與說明，走翻譯鍵；內文有 HTML（`tutorial-shortcut-row`） | `TutorialStep.title(in:)`／`body(in:)`；純文字 | 機械換算 |
+| `Ci` `startTutorial(force)`、`showTutorialStep(i)`、`dismissTutorial(skip)` | 開始、顯示某一步、結束 | 第 0 步的 `startTutorial()`、`showNextTutorialStep()`／`showPreviousTutorialStep()`、`skipTutorial()` | faithful（第 0 步） |
+| `Ci` `_tutorialStepDoneAction`、`_tutorialOnAction`、`_tutorialStepActionDone` | 步驟要求的動作；快照裡 `_tutorialStepDoneAction` 從來沒被設定，只留下四個動作名稱 | `TutorialGoal`、`isTutorialStepDone`：由世界與 session 推導 | gap：參考沒有可移植的判斷，自己訂 |
+| `Ci` `metrobuilder_tutorial_done`、`openUI`、`cardPosition` | 看過就不再自動開啟、步驟開面板、卡片位置 | — | 還沒有（決策 47 第 4 點） |
+| 沒有對應 | — | `train.place`（購買並放置列車）、`station.ridership`（乘客） | gap：這個遊戲的列車要自己買，客流在車站面板 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -419,7 +438,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 → E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
