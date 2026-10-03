@@ -123,7 +123,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS �
 | --- | --- | --- |
 | 1. Claude Code Cloud | Linux 容器 | 原始碼開發；GameCore `swift build` / `swift test`。**沒有** Xcode、Simulator、SwiftUI / UIKit |
 | 2. Linux CI（`ci.yml`） | 每次 push 到 `main` 與手動執行；PR 只在改到會影響 Swift package 的檔案時（`Package.swift`、`Sources/`、`Tests/`、`GoldenScenarios/`、`ci.yml`、`swift-shards.sh`）才跑 Swift job，`Swift CI (gate)` 一定回報 | Swift 6.0（最低相容版本）：warnings as errors 的 build 與除了長 campaign 以外的全部測試。Swift 6.4（目前的完整正確性驗證）：同樣的 build 與**全部**測試，包含 property / differential / mutation campaign（不減量，分成 5 個平行 shard） |
-| 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；不需簽章 |
+| 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；iPhone UI 煙霧測試與 iPad 教學 UI 測試（兩個平行 job，各用自己的 Simulator）；不需簽章 |
 | 4. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
 | 5. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
 | 6. TestFlight（`testflight.yml`） | macOS runner，**只能從 `main` 手動**觸發 | Archive（預設 `adhoc`）→ App Store distribution 簽章匯出 IPA → 檢查 → 上傳 App Store Connect（**已在真實執行驗證**）；需要 environment `testflight` 的 secrets |
