@@ -120,9 +120,15 @@ extension ReferenceWorld {
         return branchSections.map(\.section) + rings.map(\.section)
     }
 
+    /// The grid's and the track network's separate tracks (Stage F3c: see
+    /// `ReferenceNetworkSections.swift`), which never meet, added up.
+    func parallelTracks(between a: StationID, and b: StationID) -> Int {
+        gridParallelTracks(between: a, and: b) + networkParallelTracks(between: a, and: b)
+    }
+
     /// The most link-disjoint paths between the stations' platforms, by
     /// depth-first augmenting paths on unit capacities each way.
-    func parallelTracks(between a: StationID, and b: StationID) -> Int {
+    private func gridParallelTracks(between a: StationID, and b: StationID) -> Int {
         let sources = Set(platforms(of: a))
         let sinks = Set(platforms(of: b)).subtracting(sources)
         guard !sources.isEmpty, !sinks.isEmpty else { return 0 }

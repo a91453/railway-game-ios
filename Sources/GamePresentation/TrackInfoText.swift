@@ -1,11 +1,12 @@
 import GameCore
 
 // Read-only track facts (Stage C2) that Phase 4.5 Stage S1 derives and the
-// app never showed: the grid's sections between branch points
-// (`trackSections`), how many separate tracks join each pair of a line's
-// stops (`lineTrackCounts`: single or double track) and the track two
-// trains occupy at once (`occupancyConflicts`). All of it is read from the
-// world when shown; nothing is kept.
+// app never showed: the sections between branch points (`trackSections` on
+// the grid, `networkSections` on the track network from Stage F3c), how
+// many separate tracks join each pair of a line's stops (`lineTrackCounts`:
+// single or double track, grid and network alike from Stage F3c) and the
+// track two trains occupy at once (`occupancyConflicts`). All of it is read
+// from the world when shown; nothing is kept.
 
 extension TrackResource {
     /// "Tile (3, 1)", "Link (3, 1)–(4, 1)", "Node #2", or for part of an
@@ -39,26 +40,27 @@ extension GameWorld {
         }
     }
 
-    /// How many grid sections the network has: "4 sections" or "4 sections
-    /// · 1 loop"; "4 個區段 · 1 個環線". `nil` without grid track.
+    /// How many sections the railway has, on the grid and on the track
+    /// network (``networkSections()``): "4 sections" or "4 sections · 1
+    /// loop"; "4 個區段 · 1 個環線". `nil` without track.
     public func trackSectionsSummary(in language: DisplayLanguage) -> String? {
-        let sections = trackSections()
+        let sections = trackSections().map(\.isLoop) + networkSections().map(\.isLoop)
         guard !sections.isEmpty else { return nil }
-        let loops = sections.filter(\.isLoop).count
+        let loops = sections.filter { $0 }.count
         let count = language.text("\(sections.count) \(sections.count == 1 ? "section" : "sections")", "\(sections.count) 個區段")
         guard loops > 0 else { return count }
         return count + language.text(" · \(loops) \(loops == 1 ? "loop" : "loops")", " · \(loops) 個環線")
     }
 
-    /// Each pair of consecutive stops of line `id` and the separate grid
-    /// tracks joining them (``lineTrackCounts(_:)``): "Alpha–Beta · single
-    /// track", "Beta–Gamma · double track", "· 3 tracks", or "· no grid
-    /// track". Empty for an unknown line.
+    /// Each pair of consecutive stops of line `id` and the separate tracks
+    /// joining them (``lineTrackCounts(_:)``): "Alpha–Beta · single
+    /// track", "Beta–Gamma · double track", "· 3 tracks", or "· no track".
+    /// Empty for an unknown line.
     public func lineTrackCountTexts(_ id: LineID, in language: DisplayLanguage) -> [String] {
         guard let line = line(id: id), let counts = lineTrackCounts(id) else { return [] }
         return zip(zip(line.stops, line.stops.dropFirst()), counts).map { pair, count in
             let tracks = switch count {
-            case 0: language.text("no grid track", "方格上沒有軌道")
+            case 0: language.text("no track", "沒有軌道")
             case 1: language.text("single track", "單線")
             case 2: language.text("double track", "雙線")
             default: language.text("\(count) tracks", "\(count) 線")

@@ -49,7 +49,8 @@ set -euo pipefail
 #   campaigns-4  LineDispatchPropertyTests 356, LinePatternPropertyTests 182,
 #                PassengerPropertyTests 36, TimetablePropertyTests 21
 #   campaigns-5  NetworkServicePropertyTests 348, TrafficControlPropertyTests 200,
-#                TrackResourcePropertyTests 30
+#                TrackResourcePropertyTests 30, NetworkSectionPropertyTests (Stage
+#                F3c, 52 s on a local run, not yet timed on a runner)
 #   rest         ServiceLinePropertyTests 402, KernelDifferentialTests 25, and
 #                about 95 for everything else
 classes_of() {
@@ -58,7 +59,7 @@ classes_of() {
     campaigns-2) echo "BoardingPropertyTests ServicePropertyTests" ;;
     campaigns-3) echo "SaveMutationTests VerticalRailwayPropertyTests StationFacilityPropertyTests" ;;
     campaigns-4) echo "LineDispatchPropertyTests LinePatternPropertyTests PassengerPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests TrackResourcePropertyTests" ;;
+    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests TrackResourcePropertyTests NetworkSectionPropertyTests" ;;
     *) return 1 ;;
   esac
 }

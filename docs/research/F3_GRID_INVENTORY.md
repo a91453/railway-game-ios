@@ -467,6 +467,31 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 
 這些 fixture 只有路網的指令與內容，F3c 刪方格時必須原樣重播；之後的行為變更若改動 checksum，要在該 PR 重新錄製並逐一說明（規則同 golden 與存檔 fixture）。
 
+## 8. F3c 進度
+
+### 8.1 F3c-1：區段與單雙線的路網版
+
+方格刪掉之前，只有方格版的兩個唯讀查詢先有路網版，刪方格時功能不跟著消失（ARCHITECTURE 決策 51 的 F3c-1）。
+
+| 參考 | Swift | 倍率 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` 第 47–57 行 `trackGroups`（從普通節點填滿到分歧點） | [`GameWorld.networkSections()`](../../Sources/GameCore/Railway/TrackResources.swift)、`NetworkSection`；判斷普通節點的 `isPlain(_:)` | 世界單位（只看相接，不看長度） |
+| 同上（參考只有一個實作） | 差分模型 [`ReferenceWorld.networkSections()`](../../Tests/GameCoreTests/ReferenceNetworkSections.swift)：邊的 union-find，再排出順序 | — |
+| S1 的 `parallelTracks`（不共用連結的路徑數；`tra_track_sections.json` 的 ≥ 0.5 沒有移植，見下） | `GameWorld.parallelTracks(between:and:)` = 方格 + `networkParallelTracks`：每段軌道容量 1 的最大流，廣度優先 | 世界單位 |
+| — | 差分模型 `ReferenceWorld.networkParallelTracks`：深度優先、以邊與段落命名的頂點 | — |
+
+- **區段**：分歧點是「不是正好兩條相接的邊」的節點：道岔、交叉、盡頭，以及兩條邊在那裡不相接的節點。從分歧點出發的區段依（節點編號、邊編號）最小的那一端排，從那一端走；沒有分歧點的環依最小的邊編號排，從那條邊的 `from` 節點順著走。沒有邊的節點不屬於任何區段（方格的孤立格是一格的區段；路網的節點不是軌道）。
+- **和參考不同的地方**：參考的一組只列普通節點；我們另外列出邊與行進方向，以及兩端的分歧點（和方格的 `trackSections()` 一樣）。參考數相鄰的節點、看 `switch` 標記；GameCore 沒有標記，所以數邊端並用相接規則（決策 29），同一對節點之間的兩條邊是兩股（參考是重複的 OSM way，共用一個資源）。盡頭在參考裡屬於一組，在我們這裡是區段的端點。
+- **單雙線**：沿用 S1 的定義，路網上路徑不共用任何一段軌道：一條邊，在兩站的月台處切開（同一條邊上的兩站之間的那一段也算一段，長度 0 也算）。路徑只在相接的邊之間轉換，可以在邊上折返（S1 也不看轉向規則）；從月台往邊的兩個方向都可以出發。方格與路網不相連，兩個數相加。
+- **驗證**：`NetworkSectionTests`（7 個，預期值手算：避車線、切斷避車線、環、同一條邊上的兩站、菱形交叉、空路網）；新的 campaign `network.sections`（`NetworkSectionPropertyTests`，16 個 case × 4 個 seed，kernel 的路網與指令，每一步比對區段與每一對車站的單雙線，另外檢查每條邊正好在一個區段、區段內的節點都是普通節點）。改壞 GameCore 的三處（每段容量 2、普通節點不看相接、環從另一端反向走）時這個 campaign 都會失敗。`track.resources` 的 digest 不變（696BB5A1406DD105），方格的查詢沒有變。
+- **行為**：兩個都是唯讀查詢，沒有規則讀它們，golden 也沒有觀察路網的這兩個查詢，所以遊戲行為、golden、存檔與 replay fixture 都不變。改變的是路網世界的查詢結果（原本沒有區段、單雙線一律 0）與文字：線路面板的單雙線原本在路網世界一律是「方格上沒有軌道」，現在是單線、雙線或「沒有軌道」；區段摘要也數路網。
+
+### 8.2 F3c-1 之後暫時沒有改的地方
+
+- **tra 的「平行比例 ≥ 0.5 算雙線」**（`Railway/site_archive_clean/data/tra_track_sections.json`）沒有移植：產生器 `scripts/build_tra_track_sections.mjs` 不在 repo，「哪一段算平行」沒有定義；它是真實路線的資料分類，參考唯一的使用者是交會推估（`index.html` 第 8460 行 `single(a,b)`），留到 V 和交會一起移植。
+- **路網區段的文字**：方格有 `sectionTexts(at:)`（經過某一格的區段）；路網沒有對應的「經過某條邊的區段」文字，App 也沒有呼叫這些查詢的畫面（C2 的方格選取已經拿掉）。要顯示時再加。
+- **F3c 其餘步驟**：GamePresentation 與 App 的方格程式（F3c-2）、GameCore 的方格與 golden schema 28（F3c-3，方格版的 `trackSections()`／`TrackSection` 與方格的平行路徑在那時刪）、`Web/WasmProbe`（F3c-4）。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

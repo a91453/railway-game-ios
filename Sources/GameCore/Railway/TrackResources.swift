@@ -182,6 +182,30 @@ public struct TrackSection: Hashable, Sendable {
     }
 }
 
+/// A run of the track network between branch points (Stage F3c; the
+/// network's ``TrackSection``, and the Railway reference's track groups): a
+/// chain of edges whose inner nodes are plain, where exactly two edges end
+/// and they join, so trains run straight through.
+public struct NetworkSection: Hashable, Sendable {
+    /// The edges along the section in order, each the way the section runs.
+    public let traversals: [TrackTraversal]
+    /// The nodes along the section in order: where each traversal starts,
+    /// then where the last one ends, except on a loop. Each end is a branch
+    /// point (a node where one edge ends, or more than two, or two that do
+    /// not join) and may end several sections; a section from a branch
+    /// point back to itself has it at both ends.
+    public let nodes: [TrackNodeID]
+    /// Whether the section closes on itself without a branch point: a ring
+    /// of plain nodes.
+    public let isLoop: Bool
+
+    public init(traversals: [TrackTraversal], nodes: [TrackNodeID], isLoop: Bool) {
+        self.traversals = traversals
+        self.nodes = nodes
+        self.isLoop = isLoop
+    }
+}
+
 extension GameWorld {
     // MARK: - Occupancy
 
@@ -294,19 +318,84 @@ extension GameWorld {
         return sections
     }
 
+    /// Whether trains run straight through `node`: exactly two edges end
+    /// there, and they join.
+    private func isPlain(_ node: TrackNode) -> Bool {
+        node.ends.count == 2 && node.ends[0].exits.contains(node.ends[1].edge)
+    }
+
+    /// Every section of the track network (see ``NetworkSection``), each
+    /// once: sections from a branch point first, each from the end whose
+    /// node, then edge, has the lowest number, in that order; then rings of
+    /// plain nodes, each from the `from` node of its lowest numbered edge,
+    /// along that edge, in the order of those edges. A node no edge ends at
+    /// is in no section.
+    ///
+    /// Every edge of the network belongs to exactly one section. The
+    /// Railway reference groups the plain nodes between branch points the
+    /// same way (`topology.js`, `trackGroups`); here the chain also lists
+    /// its edges and the branch points at its ends. Pure, but walks the
+    /// whole network: O(edges log edges).
+    public func networkSections() -> [NetworkSection] {
+        var sections: [NetworkSection] = []
+        var covered: Set<TrackEdgeID> = []
+        // Along `first` from `start`, through plain nodes, until a branch
+        // point or, round a ring, `start` again.
+        func walk(from start: TrackNode, along first: TrackTraversal) {
+            var traversals = [first]
+            var nodes = [start.id]
+            while let edge = network.edge(traversals[traversals.count - 1].edge),
+                  let here = network.node(edge.end(of: traversals[traversals.count - 1].direction)) {
+                let isEnd = here.id == start.id || !isPlain(here)
+                if !isEnd || !isPlain(start) { nodes.append(here.id) }
+                guard !isEnd,
+                      let next = here.ends.first(where: { $0.edge != edge.id }),
+                      let step = network.edge(next.edge)?.traversal(leaving: here.id) else { break }
+                traversals.append(step)
+            }
+            covered.formUnion(traversals.map(\.edge))
+            sections.append(NetworkSection(traversals: traversals, nodes: nodes, isLoop: isPlain(start)))
+        }
+        for node in network.nodes where !isPlain(node) {
+            for end in node.ends where !covered.contains(end.edge) {
+                guard let first = network.edge(end.edge)?.traversal(leaving: node.id) else { continue }
+                walk(from: node, along: first)
+            }
+        }
+        // Rings of plain nodes, which no branch point starts.
+        for edge in network.edges where !covered.contains(edge.id) {
+            guard let start = network.node(edge.from) else { continue }
+            walk(from: start, along: TrackTraversal(edge: edge.id, direction: .forward))
+        }
+        return sections
+    }
+
     // MARK: - Parallel tracks
 
     /// How many separate tracks join stations `a` and `b`: the most paths
-    /// from a platform of `a` to a platform of `b` that share no link. 0
+    /// from a platform of `a` to a platform of `b` that share no track. 0
     /// when the stations are not joined by track or one does not exist; 1
     /// is single track; 2 or more is double track or wider. Turning rules
     /// and trains are not considered: this counts the track laid, as a map
-    /// shows it. A platform the two stations share is counted only as a
-    /// platform of `a`.
+    /// shows it.
+    ///
+    /// On the grid, paths share no link, and a platform the two stations
+    /// share is counted only as a platform of `a`. On the track network
+    /// (Stage F3c), paths share no stretch of track: an edge, cut where a
+    /// platform of `a` or `b` lies on it. A path passes from one edge to
+    /// another only where they join at a node, may turn back along the way,
+    /// and starts and ends at a platform, either way along its edge. Grid
+    /// and network never meet, so the two counts add up.
     ///
     /// Pure. Explores the track reachable from `a`'s platforms once per path
-    /// found (at most sixteen): O(reachable track tiles) each.
+    /// found: O(reachable track tiles) each on the grid, O(edges, platforms
+    /// and the joins between edges) on the network.
     public func parallelTracks(between a: StationID, and b: StationID) -> Int {
+        gridParallelTracks(between: a, and: b) + networkParallelTracks(between: a, and: b)
+    }
+
+    /// The grid's separate tracks (see ``parallelTracks(between:and:)``).
+    private func gridParallelTracks(between a: StationID, and b: StationID) -> Int {
         let sources = Set(platforms(of: a))
         let sinks = Set(platforms(of: b)).subtracting(sources)
         guard !sources.isEmpty, !sinks.isEmpty else { return 0 }
@@ -344,6 +433,58 @@ extension GameWorld {
         }
     }
 
+    /// The track network's separate tracks (see
+    /// ``parallelTracks(between:and:)``): a maximum flow by breadth-first
+    /// augmenting paths. Each stretch of track (an edge, cut at the
+    /// platforms of `a` and `b` on it) is two vertices joined by an arc of
+    /// capacity 1, entered by one and left by the other, so one path at
+    /// most uses it; the stretches either side of a platform of `a` are
+    /// where paths start, those either side of a platform of `b` where they
+    /// end, and a stretch at a node leads to every stretch at that node
+    /// whose edge joins its edge.
+    private func networkParallelTracks(between a: StationID, and b: StationID) -> Int {
+        guard a != b else { return 0 }
+        let platforms = network.platforms.filter { $0.station == a || $0.station == b }
+        guard platforms.contains(where: { $0.station == a }), platforms.contains(where: { $0.station == b }) else { return 0 }
+        var graph = UnitFlow()
+        // The stretches of each edge in order along it, from its `from` node:
+        // one more than the platforms of `a` and `b` on it.
+        var first: [TrackEdgeID: Int] = [:]
+        var stretches = 0
+        for edge in network.edges {
+            let cuts = platforms.filter { $0.edge == edge.id }
+            first[edge.id] = stretches
+            for (index, platform) in cuts.enumerated() {
+                for stretch in [stretches + index, stretches + index + 1] {
+                    if platform.station == a {
+                        graph.add(from: UnitFlow.source, to: UnitFlow.entry(stretch), capacity: UnitFlow.unlimited)
+                    } else {
+                        graph.add(from: UnitFlow.exit(stretch), to: UnitFlow.sink, capacity: UnitFlow.unlimited)
+                    }
+                }
+            }
+            stretches += cuts.count + 1
+        }
+        for stretch in 0..<stretches {
+            graph.add(from: UnitFlow.entry(stretch), to: UnitFlow.exit(stretch), capacity: 1)
+        }
+        // The stretch of `edge` that reaches `node`.
+        func stretch(of edge: TrackEdgeID, at node: TrackNodeID) -> Int? {
+            guard let start = first[edge], let track = network.edge(edge) else { return nil }
+            return track.from == node ? start : start + platforms.count { $0.edge == edge }
+        }
+        for node in network.nodes {
+            for end in node.ends {
+                guard let from = stretch(of: end.edge, at: node.id) else { continue }
+                for exit in end.exits {
+                    guard let to = stretch(of: exit, at: node.id) else { continue }
+                    graph.add(from: UnitFlow.exit(from), to: UnitFlow.entry(to), capacity: UnitFlow.unlimited)
+                }
+            }
+        }
+        return graph.maximumFlow()
+    }
+
     /// The separate tracks between each pair of consecutive stops of line
     /// `id` (see ``parallelTracks(between:and:)``): element `i` is from stop
     /// `i` to stop `i + 1`. `nil` if the line does not exist.
@@ -357,4 +498,70 @@ extension GameWorld {
 private struct Arc: Hashable {
     let from: GridPosition
     let to: GridPosition
+}
+
+/// The flow network of the track network's parallel tracks: vertices by
+/// number (the source, the sink, and each stretch of track's entry and
+/// exit), and arcs with the room left on them, each stored beside its
+/// reverse.
+private struct UnitFlow {
+    static let source = 0
+    static let sink = 1
+    /// More room than any flow here can use: every path passes a stretch.
+    static let unlimited = Int.max / 2
+
+    static func entry(_ stretch: Int) -> Int {
+        2 + 2 * stretch
+    }
+
+    static func exit(_ stretch: Int) -> Int {
+        3 + 2 * stretch
+    }
+
+    /// Arc `i` runs to `targets[i]` with `room[i]` left; arc `i ^ 1` is
+    /// its reverse.
+    private var targets: [Int] = []
+    private var room: [Int] = []
+    /// The arcs leaving each vertex.
+    private var arcs: [[Int]] = [[], []]
+
+    mutating func add(from: Int, to: Int, capacity: Int) {
+        while arcs.count <= max(from, to) { arcs.append([]) }
+        arcs[from].append(targets.count)
+        targets.append(to)
+        room.append(capacity)
+        arcs[to].append(targets.count)
+        targets.append(from)
+        room.append(0)
+    }
+
+    /// The most flow from the source to the sink, found one unit at a time
+    /// along the shortest path with room left.
+    mutating func maximumFlow() -> Int {
+        var flow = 0
+        while true {
+            var arrivedBy = [Int?](repeating: nil, count: arcs.count)
+            var seen = [Bool](repeating: false, count: arcs.count)
+            seen[Self.source] = true
+            var queue = [Self.source]
+            var index = 0
+            while index < queue.count, !seen[Self.sink] {
+                let here = queue[index]
+                index += 1
+                for arc in arcs[here] where room[arc] > 0 && !seen[targets[arc]] {
+                    seen[targets[arc]] = true
+                    arrivedBy[targets[arc]] = arc
+                    queue.append(targets[arc])
+                }
+            }
+            guard seen[Self.sink] else { return flow }
+            var vertex = Self.sink
+            while let arc = arrivedBy[vertex] {
+                room[arc] -= 1
+                room[arc ^ 1] += 1
+                vertex = targets[arc ^ 1]
+            }
+            flow += 1
+        }
+    }
 }

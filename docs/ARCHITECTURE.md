@@ -2154,7 +2154,7 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
   - 道岔至少要三個出口，所以從 T 字岔開始；共用端預設是第一個直線穿過的出口（西、北、東、南），跟著旋轉，而且一定是出口之一。`buildTurnout(at:connections:stem:)`。
   - 平面交叉有四個出口；改任一方向或選四向以外的形狀時變回一般。`buildCrossing(at:)`。
   - `trackPieceKindText`、`trackPieceLayout`：選單與預覽用。
-- **唯讀的軌道資訊**（`TrackInfoText.swift`）：`sectionTexts(at:in:)`（經過某一格的區段，分歧點是好幾個區段的端點）、`trackSectionsSummary`、`lineTrackCountTexts`（線路相鄰停靠站之間的單線、雙線或更多，方格上沒有軌道時說明）、`occupancyConflictTexts`（兩台以上列車佔用同一段軌道）、`TrackResource.displayText(in:)`。`parallelTracks` 只數方格的軌道（S1），路網的單雙線是 V 的範圍。
+- **唯讀的軌道資訊**（`TrackInfoText.swift`）：`sectionTexts(at:in:)`（經過某一格的區段，分歧點是好幾個區段的端點）、`trackSectionsSummary`、`lineTrackCountTexts`（線路相鄰停靠站之間的單線、雙線或更多，方格上沒有軌道時說明）、`occupancyConflictTexts`（兩台以上列車佔用同一段軌道）、`TrackResource.displayText(in:)`。`parallelTracks` 只數方格的軌道（S1），路網的單雙線是 V 的範圍（F3c-1 起也數路網，區段也有路網版 `networkSections()`，見決策 51）。
 
 **App**：
 
@@ -2172,7 +2172,7 @@ Stage C 的第二步（ROADMAP 的盤點表）：GameCore 已有、App 卻沒有
 - 客流：參考可以拖曳單一小時或整天的曲線，也有機場、高鐵的樞紐倍數；GameCore 的需求只有四種類型與日客流，要加自訂曲線與樞紐需要新的 GameCore 規則。參考的「恢復預設」是平的曲線，GameCore 沒有，所以只有移除。
 - 時刻表：沒有自動填入行駛時間；以分鐘為單位加減（GameCore 接受秒）；不能重新排序停靠站。
 - 服務日是全部路線共用一份（GameCore 的設計）；參考沒有編輯畫面。
-- 單雙線只數方格的軌道。
+- 單雙線只數方格的軌道（F3c-1 起也數路網）。
 
 ### 44. 全面路網：任意座標的車站（Stage F1）
 
@@ -2483,6 +2483,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
   - 只有一部分能搬的 6 份（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`train-movement`、`train-route`）與只屬於方格的 3 份（`track-connectivity`、`track-resources`、`train-position`）：能在路網表達的規則寫成路網的 golden，路網上缺的對應規則補新的 golden；方格的原檔留到 F3c 和方格程式一起刪。方格才有的契約（格的出口與相接、相鄰擴站、格月台、北東南西的平手順序、拆掉再重建同一格會接著走、格的 offset 範圍）不搬。
 - **F3b — 測試搬到路網，GameCore 不動**：路網的世界產生器、campaign、存檔變異 campaign 與差分模型改成路網；方格的單元測試留到 F3c。產生器改了 digest 就會變，新的 digest 記在文件裡，不當成「行為沒變」。
 - **F3c — 刪掉方格**：GameCore 的方格型別、case、指令、錯誤、方格分支與存檔的方格格式；GamePresentation 的方格工具、方格選取與文字；App 的方格繪圖與「選取北邊的格子」這類 VoiceOver 動作；golden schema 28 拿掉方格的指令、觀察與寫法；`Web/WasmProbe`。
+  - **F3c-1**（刪除之前）：只有方格版的兩個唯讀查詢先有路網版，刪方格時功能不跟著消失。區段 `networkSections()`（`NetworkSection`）移植參考 `topology.js` 的 `trackGroups`：在分歧點切開的邊鏈；分歧點是不是正好兩條邊相接的節點（道岔、交叉、盡頭、兩條邊不相接的節點），沒有分歧點的環另列。單雙線 `parallelTracks` 沿用 S1 的定義（不共用軌道的路徑數），路網上一段軌道是一條邊、在兩站的月台處切開，路徑只在相接的邊之間轉換，可以折返。兩者都是唯讀查詢，沒有規則讀它們，所以遊戲行為不變；改變的是路網世界的查詢結果（原本沒有區段、一律 0 線）與線路面板的文字。參考 `tra_track_sections.json` 的「平行比例 ≥ 0.5 算雙線」沒有移植：產生器不在 repo，「平行」的定義是缺口；參考唯一的使用者是交會推估（`inferMeetPassTimes` 的 `single(a,b)`），留到 V。
 
 **參考**（2026-10-03 唯讀檢查三份，私有 repo `1563ad0`）：`Ci/` 的鐵路是經緯度上的車站與折線（沒有格）；`Railway/site_archive_clean/` 沿既有線形用累積距離與經緯度內插（沒有格）；參考包 `Railway/railway_game_reference_clean/` 是 OpenTTD（RailwayCore 15.3）的 tile／trackdir 系統，`01_MIGRATION_MAP.md` 要求移植行為與演算法結構而不是保留原實作。F3 與前兩份一致；OpenTTD 的選路、號誌與進路規則之後照決策 28 轉成節點、邊與行進方向，不把方格搬回來。
 

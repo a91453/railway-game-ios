@@ -64,12 +64,42 @@ final class TrackInfoTextTests: XCTestCase {
             "Alpha–Beta · double track",
             "Beta–Gamma · double track",
             "Gamma–Epsilon · single track",
-            "Epsilon–Delta · no grid track",
+            "Epsilon–Delta · no track",
         ])
         XCTAssertEqual(world.lineTrackCountTexts(line.id, in: .traditionalChinese), [
-            "Alpha–Beta · 雙線", "Beta–Gamma · 雙線", "Gamma–Epsilon · 單線", "Epsilon–Delta · 方格上沒有軌道",
+            "Alpha–Beta · 雙線", "Beta–Gamma · 雙線", "Gamma–Epsilon · 單線", "Epsilon–Delta · 沒有軌道",
         ])
         XCTAssertEqual(world.lineTrackCountTexts(LineID(rawValue: 9), in: .english), [])
+    }
+
+    /// Stage F3c: the track network counts too. Two straight lines of the
+    /// network along rows 1 and 3 (nodes 1–4 and 5–8, edges 1–3 and 4–6),
+    /// each with a platform of Alpha at its west end and one of Beta at its
+    /// east end; Gamma has no platform.
+    func testTheTrackNetworkHasSectionsAndTracksToo() throws {
+        var world = try makeWorld(width: 8, height: 4, balance: 100_000)
+        for y in [1, 3] {
+            for x in 0...3 {
+                try world.buildTrackNode(at: WorldCoordinate(x: Int64(x) * 1_024 + 512, y: Int64(y) * 1_024 + 512))
+            }
+        }
+        for first in [1, 5] {
+            for node in first..<(first + 3) {
+                try world.buildTrackEdge(from: .node(node), to: .node(node + 1))
+            }
+        }
+        let alpha = try world.buildStation(named: "Alpha", at: PlanPoint(x: 512, y: 2_560)).id
+        let beta = try world.buildStation(named: "Beta", at: PlanPoint(x: 3_584, y: 2_560)).id
+        let gamma = try world.buildStation(named: "Gamma", at: PlanPoint(x: 6_656, y: 512)).id
+        for (station, edges) in [(alpha, [1, 4]), (beta, [3, 6])] {
+            for edge in edges {
+                try world.addTrackPlatform(station, on: .edge(edge), from: 0, to: 1_024)
+            }
+        }
+        XCTAssertEqual(world.trackSectionsSummary(in: .english), "2 sections")
+        let line = try world.createLine(named: "Main", stops: [alpha, beta, gamma])
+        XCTAssertEqual(world.lineTrackCountTexts(line.id, in: .english), ["Alpha–Beta · double track", "Beta–Gamma · no track"])
+        XCTAssertEqual(world.lineTrackCountTexts(line.id, in: .traditionalChinese), ["Alpha–Beta · 雙線", "Beta–Gamma · 沒有軌道"])
     }
 
     func testTrainsSharingTrackAreListed() throws {

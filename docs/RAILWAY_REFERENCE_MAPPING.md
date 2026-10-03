@@ -243,7 +243,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `metroServiceSlotTimeRanges`、`metroResolveServiceSlotMain` | 提示各等級的時段，例如「07:00–10:00」換行「16:00–20:00」 | `ServiceDay.ranges(of:)`、`summaryText(in:)` | 分鐘 | faithful（逐分鐘掃描、合併、結束於 24:00） |
 | 沒有參考（`Ci` 的時段寫死在程式裡） | 編輯服務日 | `ServiceDayEditing`（改等級、半小時移動、刪除、拆分最長的時段、標準服務日）→ `setServiceDay` | 分鐘（每次 30） | **gap** |
 | `Railway/` `topology.js` `canTurn`（S1 已對照） | 道岔與平面交叉 | `TrackPieceKind`、`setTrackPieceKind`、`setTurnoutStem` → `buildTurnout`、`buildCrossing` | — | 已涵蓋（規則在 S1）；建造畫面是自訂的（`Ci` 沒有方格） |
-| `Railway/` `index.html` `inferMeetPassTimes` 依賴的單雙線（S1 已對照） | 區段與單雙線 | `sectionTexts(at:in:)`、`trackSectionsSummary`、`lineTrackCountTexts`、`occupancyConflictTexts` | — | 唯讀顯示 S1 的推導；**gap**：只數方格的軌道 |
+| `Railway/` `index.html` `inferMeetPassTimes` 依賴的單雙線（S1 已對照） | 區段與單雙線 | `sectionTexts(at:in:)`、`trackSectionsSummary`、`lineTrackCountTexts`、`occupancyConflictTexts` | — | 唯讀顯示 S1 的推導；F3c-1 起也數路網（`networkSections()`、路網的 `parallelTracks`） |
 
 ### Stage F1：全面路網
 
@@ -398,9 +398,9 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 
 | 參考 | 行為 | F3c 預計的 GameCore | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
-| `Railway/site_archive_clean/data/tra_track_sections.json` 的 `source_notes` 與欄位（`tracks`、`parallelFrac`、`lengthM`）；讀表端 `index.html` 的 `traSectionKey`、`single(a,b)` | 相鄰兩站之間，有平行正線股道的長度佔比 ≥ 0.5 算雙線（`tracks=2`），否則單線 | `parallelTracks(between:and:)`、`lineTrackCounts(_:)` 改成路網版（`TrackInfoText` 用；方格版只算方格月台，路網上的車站一律是 0） | 長度佔比；世界單位 | 預計 faithful（規則）；產生器不在 repo，「哪一段算平行」的判斷是缺口，F3c 要自己補並寫明 |
+| `Railway/site_archive_clean/data/tra_track_sections.json` 的 `source_notes` 與欄位（`tracks`、`parallelFrac`、`lengthM`）；讀表端 `index.html` 的 `traSectionKey`、`single(a,b)` | 相鄰兩站之間，有平行正線股道的長度佔比 ≥ 0.5 算雙線（`tracks=2`），否則單線 | F3c-1：`parallelTracks(between:and:)`、`lineTrackCounts(_:)` 也數路網，沿用 S1 的定義（不共用軌道的路徑數；路網上一段軌道是一條邊，在兩站的月台處切開） | 世界單位 | **沒有移植 ≥ 0.5 的規則**：產生器 `scripts/build_tra_track_sections.mjs` 不在 repo，「平行」的定義是缺口；它是真實路線的資料分類，參考唯一的使用者是交會推估（`index.html` 第 8460 行 `single(a,b)`），留到 V 和交會一起移植。路網的單雙線不是自訂新規則，而是 S1 已有的定義延伸到路網 |
 | `Railway/site_archive_clean/rail-3d/physical/topology.js` 第 41–42 行 | 同一對節點之間重複的 way 共用一個佔用資源，不算第二股 | 不需要：GameCore 每條邊各自是一股、各有自己的 span（決策 29、S3A） | — | 不同（GameCore 的邊是玩家蓋的軌道，不是重複的 OSM 資料） |
-| `topology.js` 的 `trackGroups`（第 47–57 行） | 從不是道岔、相鄰節點不超過兩個的節點出發填滿，得到兩個分歧點之間的一段軌道 | `trackSections()` 改成路網版：在不是只接兩條邊的節點（道岔、交叉、盡頭）切開的邊鏈，沒有分歧點的環另列 | 世界單位 | 預計直接移植 |
+| `topology.js` 的 `trackGroups`（第 47–57 行） | 從不是道岔、相鄰節點不超過兩個的節點出發填滿，得到兩個分歧點之間的一段軌道 | F3c-1：`networkSections()`（`NetworkSection`）：在分歧點（不是正好兩條相接的邊的節點：道岔、交叉、盡頭、兩條不相接的邊）切開的邊鏈，沒有分歧點的環另列 | 世界單位 | **已移植**。參考的一組是分歧點之間的普通節點；我們的區段另外列出邊、行進方向與兩端的分歧點。改寫的地方：參考數相鄰節點、看 `switch` 標記，我們數邊端並用相接規則（GameCore 沒有標記；同一對節點之間的兩條邊是兩股）；盡頭在參考裡屬於一組，在我們這裡是區段的端點（和方格的 `trackSections()` 一樣）；沒有邊的節點都不屬於任何一組 |
 | `topology.js` 的 `canTurn`（第 77–101 行）與 `stableVector` | OSM 節點上能不能轉線：同一條 way、只有兩個鄰點、`switch`、交叉只接最直的一支、未標記的三叉點用 cos 門檻推斷 | 不改：GameCore 的邊是遊戲自己建的幾何，節點上兩端反向 1/16 以內才相接（決策 29），已經涵蓋道岔、菱形交叉與 slip | — | 不同（參考的門檻是為了從 OSM 資料推斷道岔；F3 不改相接規則） |
 | `topology.js` 的 `shortestPath`（第 102–131 行） | Dijkstra，以「節點＋進入的邊」為狀態，每一步檢查 `canTurn`；路徑中重複的節點一律不要 | 不改：GameCore 同樣以進入的邊為狀態、不立即折返，但允許經過同一個節點兩次（折返線，`network-route.json`），同長依邊的編號遞增 | — | 不同，記給作者決定（F3 不改選路規則） |
 
