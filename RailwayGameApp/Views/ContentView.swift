@@ -36,6 +36,7 @@ struct ContentView: View {
         // The map and controls share one screen, so text stops growing at the
         // largest standard size instead of pushing the map off screen.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .tutorialOverlay(session: session)
     }
 
     private var tallLayout: some View {

@@ -249,6 +249,16 @@
         }
       }
     },
+    "Back" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一步"
+          }
+        }
+      }
+    },
     "Back to Start" : {
       "localizations" : {
         "zh-Hant" : {
@@ -435,6 +445,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除時刻表"
+          }
+        }
+      }
+    },
+    "Complete this step to continue." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成這一步後才能繼續。"
           }
         }
       }
@@ -789,6 +809,16 @@
         }
       }
     },
+    "Learn to build and run a railway step by step" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一步步學習建造鐵道與營運列車"
+          }
+        }
+      }
+    },
     "Leave" : {
       "localizations" : {
         "zh-Hant" : {
@@ -915,6 +945,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新車站"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步"
           }
         }
       }
@@ -1609,6 +1649,16 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "略過"
+          }
+        }
+      }
+    },
     "Smooth curves" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1695,6 +1745,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "車站名稱"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步，共 %lld 步"
           }
         }
       }
@@ -1945,6 +2005,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在此折返"
+          }
+        }
+      }
+    },
+    "Tutorial" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教學"
           }
         }
       }
