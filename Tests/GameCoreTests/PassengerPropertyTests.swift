@@ -48,15 +48,18 @@ final class PassengerPropertyTests: XCTestCase {
         )
         var model = ReferenceWorld(width: 2 * count + 1, height: 3, balance: 1_000_000, costs: costs, minutes: start, speed: .normal)
         for index in 0..<count {
-            let position = GridPosition(x: 2 * index + 1, y: 1)
-            try world.buildStation(named: "S\(index + 1)", at: position)
-            XCTAssertNil(model.buildStation(named: "S\(index + 1)", at: position))
+            // At points (Stage F3b): the tile under each, for fares, as before.
+            let point = TestLine.centre(2 * index + 1, 1)
+            try world.buildStation(named: "S\(index + 1)", at: point)
+            XCTAssertNil(model.buildStation(named: "S\(index + 1)", at: point))
         }
         return (world, model)
     }
 
     private static func stops(_ world: GameWorld, using random: inout SplitMix64) -> [StationID] {
         let ids = world.stations.map(\.id)
+        // A mutated save (Stage F3b) may load with fewer than two stations.
+        guard ids.count >= 2 else { return ids + [StationID(rawValue: 99)] }
         var stops: [StationID] = []
         for _ in 0..<(2 + random.below(4)) {
             // Now and then a station twice in a row (refused), or one that
@@ -75,7 +78,9 @@ final class PassengerPropertyTests: XCTestCase {
     }
 
     static func operation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
-        let station = random.chance(1, in: 20) ? StationID(rawValue: 99) : random.element(of: world.stations).id
+        // A mutated save of point stations (Stage F3b) may load with none:
+        // no tile of the map names them.
+        let station = world.stations.isEmpty || random.chance(1, in: 20) ? StationID(rawValue: 99) : random.element(of: world.stations).id
         let line = world.lines.isEmpty || random.chance(1, in: 15) ? LineID(rawValue: 99) : random.element(of: world.lines).id
         switch random.below(20) {
         case 0..<6:

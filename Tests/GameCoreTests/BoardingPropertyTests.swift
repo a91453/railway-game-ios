@@ -28,7 +28,8 @@ final class BoardingPropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
-        var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .loopWithTails, .ladder, .grid], using: &c.random)
+        // On the track network (Stage F3b).
+        var setup = KernelDifferentialTests.makeNetworkSetup(shapes: [.balloons, .balloons, .balloons, .line, .line, .loopWithTails, .loopWithTails, .ladder, .crossings], using: &c.random)
         // Around the morning peak, and now and then the night.
         setup.seconds = 60 * (c.random.chance(1, in: 5) ? c.random.int64(in: -30...300) : c.random.int64(in: 400...1_100))
         setup.speed = c.random.element(of: [.normal, .normal, .double, .paused])
@@ -76,7 +77,7 @@ final class BoardingPropertyTests: XCTestCase {
     }
 
     /// Mostly a train of two or three cars on a line of its own: bought,
-    /// lengthened, placed at the first platform (and heading) of any
+    /// lengthened, placed at the first platform end (either way) of any
     /// station where its body fits, and given a line from there to up to
     /// two other served stations, running all day at a crawl (Stage W2c);
     /// applied to `world` as they are drawn.
@@ -89,17 +90,15 @@ final class BoardingPropertyTests: XCTestCase {
         _ = run(.purchase("C\(world.trains.count + 1)"))
         guard let id = world.trains.last?.id else { return }
         _ = run(.setCars(id, 2 + random.below(2)))
-        let served = world.stations.filter { !world.platforms(of: $0.id).isEmpty }.map(\.id)
+        let served = world.stations.filter { !KernelNetwork.endBerths(in: world, of: [$0.id]).isEmpty }.map(\.id)
         var first: StationID?
         search: for station in served {
-            for platform in world.platforms(of: station) {
-                for heading in TrackDirection.allCases {
-                    var trial = world
-                    if KernelDifferentialTests.apply(.place(id, .atNode(platform, heading: heading)), to: &trial) == nil {
-                        _ = run(.place(id, .atNode(platform, heading: heading)))
-                        first = station
-                        break search
-                    }
+            for berth in KernelNetwork.endBerths(in: world, of: [station]) {
+                var trial = world
+                if KernelDifferentialTests.apply(.place(id, berth), to: &trial) == nil {
+                    _ = run(.place(id, berth))
+                    first = station
+                    break search
                 }
             }
         }
@@ -151,7 +150,7 @@ final class BoardingPropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("boarding.differential", cases: 16) { c in
             let (setup, operations) = try Self.generate(&c, operations: 70)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
+            c.note("setup: \(setup.summary), second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations, lineAnswers: false) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations, lineAnswers: false)
@@ -201,7 +200,9 @@ final class BoardingPropertyTests: XCTestCase {
         assertVolume(ran == 16 * PropertySeeds.active.count, "every case should run")
         for (event, least) in [
             ("boarded", 300), ("arrived", 300), ("refused", 150), ("full trains", 300), ("several cars", 100), ("riders abandoned", 10),
-            ("several destinations", 200),
+            // On the track network (Stage F3b) lines are sparser than on
+            // the grid: 43 in the four seeds' run when the floor was set.
+            ("several destinations", 20),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }

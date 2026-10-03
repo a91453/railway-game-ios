@@ -140,6 +140,9 @@ final class NetworkServicePropertyTests: XCTestCase {
     private static func timetable(for train: Train, in world: GameWorld, using random: inout SplitMix64) -> ([ScheduledStop], Int64?) {
         let stations = world.stations.map(\.id)
         let here = world.stationsStoppedAt(by: train.id).first ?? random.element(of: stations)
+        // A mutated save (Stage F3b) may load with one station: no
+        // timetable then, which GameCore refuses.
+        guard stations.contains(where: { $0 != here }) else { return ([], nil) }
         let there = random.element(of: stations.filter { $0 != here })
         let repeating = random.chance(1, in: 3)
         let calls = repeating || random.chance(1, in: 2) ? [here, there, here] : [here, there]
@@ -165,6 +168,9 @@ final class NetworkServicePropertyTests: XCTestCase {
     static func operation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
         let trains = world.trains
         let stations = world.stations.map(\.id)
+        // A mutated save (SaveMutationTests) of point stations may load
+        // without stations or trains (Stage F3b): nothing to drive then.
+        guard !stations.isEmpty, !trains.isEmpty else { return .advance(1 + random.below(12)) }
         func anyTrain() -> TrainID {
             random.chance(1, in: 20) ? TrainID(rawValue: 9) : random.element(of: trains).id
         }
@@ -478,8 +484,8 @@ final class NetworkServicePropertyTests: XCTestCase {
             XCTAssertNil(model.buildNetworkEdge(from: from, to: to, curve: edge.2, profile: .uniform, structure: edge.3))
         }
         for (index, name) in ["A", "B", "C"].enumerated() {
-            _ = try world.buildStation(named: name, at: GridPosition(x: index + 1, y: 1))
-            _ = model.buildStation(named: name, at: GridPosition(x: index + 1, y: 1))
+            _ = try world.buildStation(named: name, at: TestLine.centre(index + 1, 1))
+            _ = model.buildStation(named: name, at: TestLine.centre(index + 1, 1))
             for _ in 0..<(1 + testCase.random.below(2)) {
                 let edge = world.network.edges[testCase.random.element(of: layout.level)]
                 let start = testCase.random.int64(in: 0...max(0, edge.length - 1_024))

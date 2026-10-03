@@ -30,7 +30,7 @@ final class TimetablePropertyTests: XCTestCase {
     /// A mix of Stage I–N operations and timetable replacements, drawn with
     /// the world stepped along so that operations fit the state they meet.
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
-        let setup = KernelDifferentialTests.makeSetup(using: &c.random)
+        let setup = KernelDifferentialTests.makeNetworkSetup(using: &c.random)
         var (world, _) = try setup.build()
         var operations: [Operation] = []
         for _ in 0..<count {
@@ -70,7 +70,7 @@ final class TimetablePropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("timetable.differential", cases: 60) { c in
             let (setup, operations) = try Self.generate(&c, operations: 120)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
+            c.note("setup: \(setup.summary), +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
             // Atomicity and every outcome, against the reference model.
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {

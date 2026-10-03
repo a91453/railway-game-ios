@@ -92,7 +92,7 @@ final class StationFacilityPropertyTests: XCTestCase {
                 if !bodies.isEmpty, c.random.chance(3, in: 4) {
                     run(.removeTrack(c.random.element(of: bodies)))
                 } else {
-                    run(KernelDifferentialTests.nextOperation(in: world, using: &c.random))
+                    run(KernelDifferentialTests.nextGridOperation(in: world, using: &c.random))
                 }
             case 9:
                 guard let train else { run(.advance(3)); continue }
@@ -107,9 +107,9 @@ final class StationFacilityPropertyTests: XCTestCase {
             case 11..<16:
                 run(.advance(1 + c.random.below(10)))
             case 16, 17:
-                run(LineDispatchPropertyTests.nextDispatchOperation(in: world, using: &c.random))
+                run(Self.gridDispatchOperation(in: world, using: &c.random))
             default:
-                run(KernelDifferentialTests.nextOperation(in: world, using: &c.random))
+                run(KernelDifferentialTests.nextGridOperation(in: world, using: &c.random))
             }
         }
         return (setup, operations)
@@ -140,11 +140,177 @@ final class StationFacilityPropertyTests: XCTestCase {
         return .atNode(tile, heading: stepDirection(from: behind, to: tile)!)
     }
 
+    // MARK: - Dispatch on the grid
+
+    // The line dispatch campaign's generators as they were on the grid
+    // (before Stage F3b moved that campaign to the track network), kept
+    // for this campaign, whose subject is the grid: it goes with the grid
+    // in Stage F3c.
+
+    /// A working line: two or three stations with platforms, mostly ones a
+    /// train can reach from the first, a count or a target at each level,
+    /// usually open all day, and one to three trains bought, standing at
+    /// the first stop facing any way, given a rate and assigned; applied to
+    /// `world` as they are drawn, and they may still fail.
+    static func gridScriptedLine(in world: inout GameWorld, using random: inout SplitMix64) -> [Operation] {
+        var operations: [Operation] = []
+        func run(_ operation: Operation) {
+            operations.append(operation)
+            _ = KernelDifferentialTests.apply(operation, to: &world)
+        }
+        let served = world.stations.filter { !world.platforms(of: $0.id).isEmpty }.map(\.id)
+        guard served.count >= 2, world.lines.count < 3 else {
+            run(.advance(random.below(20)))
+            return operations
+        }
+        let first = random.element(of: served)
+        let platform = random.element(of: world.platforms(of: first))
+        let reachable = served.filter { station in
+            station != first && TrackDirection.allCases.contains { world.route(from: .atNode(platform, heading: $0), toStation: station) != nil }
+        }
+        var stops = [first]
+        for _ in 0..<(1 + random.below(2)) {
+            let pool = !reachable.isEmpty && random.chance(5, in: 6) ? reachable : served
+            let next = random.element(of: pool)
+            if next != stops.last { stops.append(next) }
+        }
+        if stops.count < 2 { stops.append(served.first { $0 != first }!) }
+        run(.createLine("D\(world.lines.count + 1)", stops))
+        guard let line = world.lines.last?.id else { return operations }
+        // Decision 49: a third stop round, sometimes, to make a ring.
+        if random.chance(1, in: 3), let third = served.first(where: { !stops.contains($0) }) {
+            if stops.count == 2 { run(.setLineStops(line, stops + [third])) }
+            run(.setLineRing(line, true))
+        }
+        if random.chance(4, in: 5) { run(.setLineWindow(line, .allDay)) }
+        run(.setLineTrains(line, TrainsInService(peak: random.below(4), offPeak: 1 + random.below(3), low: random.below(3))))
+        if random.chance(1, in: 3) { run(.setLineTargets(line, LineDispatchPropertyTests.targets(using: &random))) }
+        // Stage W2c: mostly a crawl, so that trips last minutes as before
+        // (a train keeps to the time its line plans, whatever its own
+        // performance).
+        if random.chance(3, in: 4) {
+            run(.setLinePerformance(line, PerformanceSamples.crawl))
+        } else if random.chance(1, in: 2) {
+            run(.setLinePerformance(line, random.element(of: PerformanceSamples.valid)))
+        }
+        for _ in 0..<(1 + random.below(3)) {
+            run(.purchase("L\(world.trains.count + 1)"))
+            guard let id = world.trains.last?.id, world.train(id: id)?.position == nil else { break }
+            run(.place(id, .atNode(platform, heading: random.element(of: TrackDirection.allCases))))
+            run(.setRate(id, random.element(of: [700, 1024, 1024, 1500, 2048, 4096])))
+            if random.chance(1, in: 4) { run(.setPerformance(id, random.element(of: PerformanceSamples.valid))) }
+            run(.assign(id, line))
+        }
+        return operations
+    }
+
+    /// A dispatch operation, drawn with the world in view.
+    static func gridDispatchOperation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
+        let lines = world.lines
+        let trains = world.trains
+        let unknownLine = LineID(rawValue: random.element(of: [0, -1, (lines.last?.id.rawValue ?? 0) + 1]))
+        let unknownTrain = TrainID(rawValue: random.element(of: [0, -1, trains.count + 1]))
+        func anyLine() -> LineID {
+            lines.isEmpty || random.chance(1, in: 12) ? unknownLine : random.element(of: lines).id
+        }
+        func anyTrain() -> TrainID {
+            trains.isEmpty || random.chance(1, in: 12) ? unknownTrain : random.element(of: trains).id
+        }
+        let assigned = lines.flatMap(\.trains)
+        switch random.below(42) {
+        case 0..<3:
+            // Mostly a free train onto a first stop, then assigned there.
+            let free = trains.filter { !assigned.contains($0.id) }
+            if let line = lines.isEmpty ? nil : random.element(of: lines), let train = free.isEmpty ? nil : random.element(of: free),
+               train.position == nil, let platform = world.platforms(of: line.stops[0]).first, random.chance(1, in: 2) {
+                return .place(train.id, .atNode(platform, heading: random.element(of: TrackDirection.allCases)))
+            }
+            return .assign(anyTrain(), anyLine())
+        case 3, 4:
+            return .unassign(random.chance(3, in: 4) && !assigned.isEmpty ? random.element(of: assigned) : anyTrain())
+        case 5..<8:
+            return .setLineTargets(anyLine(), random.chance(1, in: 4) ? .none : LineDispatchPropertyTests.targets(using: &random))
+        case 8..<11:
+            let counts = (0..<3).map { _ in random.chance(1, in: 20) ? -1 : random.below(5) }
+            return .setLineTrains(anyLine(), TrainsInService(peak: counts[0], offPeak: counts[1], low: counts[2]))
+        case 11, 12:
+            let window: ServiceWindow = switch random.below(4) {
+            case 0: .allDay
+            case 1: .hours(open: random.below(1440), close: 1441 + random.below(359))
+            default: .hours(open: random.below(1200), close: 1200 + random.below(240))
+            }
+            return .setLineWindow(anyLine(), window)
+        case 13:
+            var start = 0
+            var bands: [ServiceDay.Band] = []
+            while start < 1440, bands.count < 5 {
+                bands.append(ServiceDay.Band(start: start, level: random.element(of: ServiceLevel.allCases)))
+                start += 1 + random.below(400)
+            }
+            return .setServiceDay(ServiceDay(bands: bands))
+        case 14:
+            return random.chance(1, in: 2)
+                ? .setLinePerformance(anyLine(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+                : .setPerformance(anyTrain(), random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
+        case 15:
+            guard let line = lines.isEmpty ? nil : random.element(of: lines) else { return .advance(5) }
+            let stations = world.stations.map(\.id)
+            var stops = line.stops
+            if random.chance(1, in: 2), stops.count > 2 {
+                stops.removeLast()
+            } else if let extra = stations.first(where: { $0 != stops.last }) {
+                stops.append(extra)
+            }
+            return .setLineStops(line.id, stops)
+        case 16:
+            return random.chance(1, in: 4) ? .removeLine(anyLine()) : .advance(random.below(30))
+        case 17..<20:
+            // A line's train by hand: its timetable or service (refused), or
+            // held, released, turned or taken off.
+            let id = !assigned.isEmpty && random.chance(4, in: 5) ? random.element(of: assigned) : anyTrain()
+            switch random.below(8) {
+            case 0: return .setTimetable(id, [])
+            case 1: return .startService(id)
+            case 2: return .stopService(id)
+            case 3: return .setRate(id, 0)
+            case 4: return .setRate(id, random.element(of: [700, 1024, 2048]))
+            case 5: return .reverse(id)
+            case 6: return .unplace(id)
+            default:
+                let platforms = lines.flatMap { world.platforms(of: $0.stops[0]) }
+                guard let platform = platforms.isEmpty ? nil : random.element(of: platforms) else { return .advance(5) }
+                return .place(id, .atNode(platform, heading: random.element(of: TrackDirection.allCases)))
+            }
+        case 20, 21:
+            // A line's train sent back to its first stop by hand.
+            guard let line = lines.isEmpty ? nil : random.element(of: lines), let id = line.trains.isEmpty ? nil : random.element(of: line.trains) else {
+                return .advance(10)
+            }
+            return .sendToStation(id, line.stops[0])
+        case 22:
+            // A line's train waiting at its first stop, turned round by hand:
+            // it may then have to turn again as it leaves.
+            let waiting = lines.flatMap { line in
+                line.trains.filter { world.train(id: $0)?.execution == nil && world.stationsStoppedAt(by: $0).contains(line.stops[0]) }
+            }
+            return waiting.isEmpty ? .advance(10) : .reverse(random.element(of: waiting))
+        case 23:
+            if world.clock.isPaused { return .setSpeed(random.element(of: [.normal, .double])) }
+            return .setSpeed(random.element(of: GameSpeed.allCases))
+        case 24..<34:
+            return .advance(random.below(40))
+        case 40, 41:
+            return .setLineRing(anyLine(), random.chance(2, in: 3))
+        default:
+            return .advance(60 + random.below(600))
+        }
+    }
+
     /// A line as ``LineDispatchPropertyTests/scriptedLine(in:using:)``
     /// makes one, its trains then taken off, given cars and put back at the
     /// first stop's platform with room behind them if there is any, moving.
     static func lineWithCars(in world: inout GameWorld, using random: inout SplitMix64) -> [Operation] {
-        var operations = LineDispatchPropertyTests.scriptedLine(in: &world, using: &random)
+        var operations = Self.gridScriptedLine(in: &world, using: &random)
         func run(_ operation: Operation) {
             operations.append(operation)
             _ = KernelDifferentialTests.apply(operation, to: &world)

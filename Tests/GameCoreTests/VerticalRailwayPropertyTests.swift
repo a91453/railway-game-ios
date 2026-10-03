@@ -348,7 +348,7 @@ final class VerticalRailwayPropertyTests: XCTestCase {
             clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Upper", 0), ("Lower", 1)] {
-            _ = try? world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            _ = try? world.buildStation(named: name, at: TestLine.centre(x, 0))
         }
         for point in layout.nodes { _ = Self.apply(.buildNode(point), to: &world) }
         for edge in layout.edges { _ = Self.apply(.buildEdge(.node(edge.0 + 1), .node(edge.1 + 1), edge.2, edge.3, edge.4), to: &world) }
@@ -375,10 +375,10 @@ final class VerticalRailwayPropertyTests: XCTestCase {
             let costs = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
             var world = try GameWorld(width: layout.width, height: layout.height, economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(speed: .normal))
             var model = ReferenceWorld(width: layout.width, height: layout.height, balance: 1_000_000_000, costs: costs, minutes: 0, speed: .normal)
-            // Two stations on the grid to hang platforms on.
+            // Two stations at points to hang platforms on (Stage F3b).
             for (name, x) in [("Upper", 0), ("Lower", 1)] {
-                _ = try? world.buildStation(named: name, at: GridPosition(x: x, y: 0))
-                _ = model.buildStation(named: name, at: GridPosition(x: x, y: 0))
+                _ = try? world.buildStation(named: name, at: TestLine.centre(x, 0))
+                _ = model.buildStation(named: name, at: TestLine.centre(x, 0))
             }
             var steps: [Operation] = layout.nodes.map { .buildNode($0) }
             steps += layout.edges.map { .buildEdge(.node($0.0 + 1), .node($0.1 + 1), $0.2, $0.3, $0.4) }

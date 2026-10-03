@@ -151,7 +151,9 @@ final class SaveMutationTests: XCTestCase {
                 if let problem = WorldInvariants.roundTripProblem(of: loaded) {
                     c.fail("\(where_) \(described) loaded a world that does not survive saving: \(problem)")
                 }
-                for station in loaded.stations {
+                // A station on tiles is on its tile; one at a point takes none
+                // (Stage F1; the invariants check its position).
+                for station in loaded.stations where station.point == nil {
                     c.expect(loaded.station(at: station.position) == station, "\(where_) \(described): station \(station.id.rawValue) is not on its tile")
                 }
                 var current = loaded
@@ -770,7 +772,7 @@ final class SaveMutationTests: XCTestCase {
                 var current = loaded
                 for step in 0..<6 {
                     let operation = c.random.chance(1, in: 2)
-                        ? KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                        ? KernelDifferentialTests.nextGridOperation(in: current, using: &c.random)
                         : .advance(c.random.below(20))
                     let before = current
                     if KernelDifferentialTests.apply(operation, to: &current) != nil {
@@ -848,7 +850,7 @@ final class SaveMutationTests: XCTestCase {
                 var current = loaded
                 for step in 0..<6 {
                     let operation = c.random.chance(1, in: 2)
-                        ? KernelDifferentialTests.nextOperation(in: current, using: &c.random)
+                        ? KernelDifferentialTests.nextGridOperation(in: current, using: &c.random)
                         : .advance(c.random.below(20))
                     let before = current
                     if KernelDifferentialTests.apply(operation, to: &current) != nil {

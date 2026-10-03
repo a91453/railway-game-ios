@@ -25,8 +25,10 @@ import XCTest
 ///
 /// Decision 21 adds a second campaign, `service.repeating`, whose generated
 /// timetables turn trains round at some stops and mostly repeat: the same
-/// checks, with its own volume of turns and new cycles. The first campaign
-/// draws exactly as before, so its digest is unchanged.
+/// checks, with its own volume of turns and new cycles. It runs from
+/// ``ServiceRepeatingPropertyTests``, a class of its own so that CI can run
+/// it in a shard of its own. Since Stage F3b both run on the track network
+/// (see ``KernelNetwork``).
 final class ServicePropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
@@ -34,8 +36,11 @@ final class ServicePropertyTests: XCTestCase {
     /// world stepped along so that operations fit the state they meet.
     static func generate(_ c: inout PropertyCase, operations count: Int, repeating: Bool = false) throws -> (KernelDifferentialTests.Setup, [Operation]) {
         // Mostly networks with loops, where a train can reach most stations
-        // whichever way it faces, so that services run far.
-        let setup = KernelDifferentialTests.makeSetup(shapes: [.loopWithTails, .loopWithTails, .grid, .grid, .ladder, .ladder, .random, .line, .twoComponents], using: &c.random)
+        // whichever way it faces, so that services run far; on the track
+        // network (Stage F3b).
+        let setup = KernelDifferentialTests.makeNetworkSetup(
+            shapes: [.balloons, .balloons, .balloons, .loopWithTails, .loopWithTails, .crossings, .ladder, .ladder, .line, .twoLines], using: &c.random
+        )
         var (world, _) = try setup.build()
         var operations: [Operation] = []
         for _ in 0..<count {
@@ -53,7 +58,8 @@ final class ServicePropertyTests: XCTestCase {
     }
 
     /// A whole service, applied to `world` as it is drawn: an idle train
-    /// (bought if there is none) put on a platform unless it is already
+    /// (bought if there is none) put at a platform's end (see
+    /// ``KernelNetwork/endBerths(in:of:)``) unless it is already
     /// stopped at a station, a rate, a timetable from there that it can
     /// mostly drive, the start, and time to run it. The operations drawn
     /// after it may still interrupt the service.
@@ -63,8 +69,8 @@ final class ServicePropertyTests: XCTestCase {
             operations.append(operation)
             _ = KernelDifferentialTests.apply(operation, to: &world)
         }
-        let platforms = world.stations.flatMap { world.platforms(of: $0.id) }
-        guard !platforms.isEmpty else { return [.advance(random.below(10))] }
+        let berths = KernelNetwork.endBerths(in: world)
+        guard !berths.isEmpty else { return [.advance(random.below(10))] }
         let idle = world.trains.filter { $0.execution == nil && ($0.position == nil || !world.stationsStoppedAt(by: $0.id).isEmpty) }
         let id: TrainID
         if let train = idle.isEmpty ? nil : random.element(of: idle) {
@@ -75,7 +81,7 @@ final class ServicePropertyTests: XCTestCase {
             id = bought.id
         }
         if world.train(id: id)?.position == nil {
-            run(.place(id, .atNode(random.element(of: platforms), heading: random.element(of: TrackDirection.allCases))))
+            run(.place(id, random.element(of: berths)))
         }
         run(.setRate(id, random.element(of: [256, 700, 1024, 1024, 1500, 3000, 4096])))
         guard let train = world.train(id: id), let from = world.stationsStoppedAt(by: id).first else { return operations }
@@ -100,10 +106,10 @@ final class ServicePropertyTests: XCTestCase {
         }
         switch random.below(20) {
         case 0..<3:
-            // An unplaced train onto a platform, facing any way.
-            let platforms = world.stations.flatMap { world.platforms(of: $0.id) }
-            guard let train = trains.first(where: { $0.position == nil }), !platforms.isEmpty else { return .advance(random.below(10)) }
-            return .place(train.id, .atNode(random.element(of: platforms), heading: random.element(of: TrackDirection.allCases)))
+            // An unplaced train onto the end of a platform, facing any way.
+            let berths = KernelNetwork.endBerths(in: world)
+            guard let train = trains.first(where: { $0.position == nil }), !berths.isEmpty else { return .advance(random.below(10)) }
+            return .place(train.id, random.element(of: berths))
         case 3..<7:
             // A timetable from where an idle train is stopped.
             let ready = trains.filter { $0.execution == nil && !world.stationsStoppedAt(by: $0.id).isEmpty }
@@ -121,7 +127,7 @@ final class ServicePropertyTests: XCTestCase {
         case 11:
             return .stopService(anyTrain())
         case 12..<16:
-            // A rate that crosses links in whole and in part, mostly for a
+            // A rate that crosses edges in whole and in part, mostly for a
             // train that runs a service or has a timetable.
             let running = trains.filter { $0.execution != nil || ($0.position != nil && !$0.timetable.isEmpty) }
             let id = !running.isEmpty && random.chance(3, in: 4) ? random.element(of: running).id : anyTrain()
@@ -144,40 +150,28 @@ final class ServicePropertyTests: XCTestCase {
     // MARK: - The campaign
 
     func testServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
-        let counts = try runServiceCampaign("service.differential", repeating: false)
+        let counts = try Self.runServiceCampaign("service.differential", repeating: false)
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         for (event, least) in [
             ("startService", 500), ("stopService", 40), ("trainNotAtFirstStop", 70), ("trainServiceActive", 150),
-            ("trainServiceNotActive", 80), ("noTimetable", 60), ("unknownTrain", 300), ("refused while running", 280),
+            // "noTimetable" on the track network (Stage F3b): 59 in the four
+            // seeds' run when this floor was set (60 on the grid).
+            ("trainServiceNotActive", 80), ("noTimetable", 40), ("unknownTrain", 300), ("refused while running", 280),
             ("departures", 120), ("arrivals", 45), ("further without moving", 400), ("completed", 400), ("waits without a route", 400),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }
     }
 
-    /// Decision 21: services that turn trains round and repeat, under the
-    /// same checks.
-    func testRepeatingServicesMatchTheReferenceAndBatchesMatchSingleSteps() throws {
-        let counts = try runServiceCampaign("service.repeating", repeating: true)
-        let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
-        for (event, least) in [
-            ("startService", 400), ("invalidTimetable", 40), ("departures", 100), ("arrivals", 40),
-            ("turned round", 150), ("new cycles", 150), ("started late in a later cycle", 20), ("completed", 100),
-            ("waits without a route", 150),
-        ] {
-            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
-        }
-    }
-
     /// Runs one service campaign and returns how often each event happened.
-    private func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
+    static func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
         var counts: [String: Int] = [:]
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign(name, cases: 30) { c in
             let (setup, operations) = try Self.generate(&c, operations: 120, repeating: repeating)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
+            c.note("setup: \(setup.summary), +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
             // Every outcome and all state, against the reference model.
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
@@ -322,7 +316,7 @@ final class ServicePropertyTests: XCTestCase {
 
 enum ServiceGenerator {
     /// A timetable operation for `train` from `station`: the Stage P
-    /// timetable, drawn exactly as before, unless `repeating`. Then some
+    /// timetable, unless `repeating`. Then some
     /// stops turn the train round (and the stations after them are drawn
     /// from where the train would face), and the timetable mostly repeats:
     /// usually back at the first station and with a period that fits,
@@ -391,12 +385,12 @@ enum ServiceGenerator {
                     // The same station again: reached at once.
                 } else if let from = position, random.chance(9, in: 10) {
                     // Mostly a journey rather than a station already reached.
-                    let routes = all.compactMap { id in world.route(from: from, toStation: id).map { (id, $0) } }
-                    let journeys = routes.filter { !$0.1.isEmpty }
-                    let choices = !journeys.isEmpty && random.chance(9, in: 10) ? journeys : routes
-                    if let (next, route) = choices.isEmpty ? nil : random.element(of: choices) {
+                    let paths = all.compactMap { id in world.path(from: from, toStation: id, length: train.length).map { (id, $0) } }
+                    let journeys = paths.filter { $0.1.distance > 0 }
+                    let choices = !journeys.isEmpty && random.chance(9, in: 10) ? journeys : paths
+                    if let (next, path) = choices.isEmpty ? nil : random.element(of: choices) {
                         current = next
-                        position = end(of: route, from: from)
+                        position = KernelNetwork.end(of: path, from: from, in: world)
                     } else {
                         current = random.element(of: all)
                         position = nil
@@ -411,7 +405,7 @@ enum ServiceGenerator {
             // Only drawn when turning, so Stage P's timetables are as before.
             let reverses = turning && random.chance(1, in: 3)
             if reverses {
-                position = position.map(ReferenceWorld.turned)
+                position = position.map { KernelNetwork.turned($0, in: world) }
             }
             stops.append(ScheduledStop(
                 station: current, arrival: GameTime(seconds: time), departure: GameTime(seconds: departure), reverses: reverses
@@ -419,12 +413,5 @@ enum ServiceGenerator {
             time = departure
         }
         return stops
-    }
-
-    /// Where a train at `start` stands after following `route` to its end.
-    private static func end(of route: [GridPosition], from start: TrainPosition) -> TrainPosition {
-        guard let last = route.last else { return start }
-        let before = route.count >= 2 ? route[route.count - 2] : ahead(of: start).node
-        return .atNode(last, heading: stepDirection(from: before, to: last)!)
     }
 }
