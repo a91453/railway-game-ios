@@ -7,7 +7,7 @@ final class MapInteractionTests: XCTestCase {
     func testNavigationDoesNotChooseConstructionPoints() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
@@ -42,7 +42,7 @@ final class MapInteractionTests: XCTestCase {
     func testZoomButtonsRemainUsableWithoutPinching() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
