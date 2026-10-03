@@ -521,3 +521,25 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
   - `train-repeat.json`：路網上在車站掉頭的列車停在新方向月台的近端，不是原來的停車點，所以 Shuttle 改成從東邊到 b 的方向放置（`e2` backward 1024），時刻表在每一圈開始的 Alpha 掉頭（`reverse` 從 [false, true, true]，在最後一站掉頭，改成 [true, true, false]）：每一圈離開 Alpha、到 Gamma 與回 Alpha 的時刻和距離都和以前一樣。
   - `service-run.json`：`lineJourney` 的起點與第一段如上（去程 3584），來回 286 → 284 秒、快車 282 → 281 秒，分鐘數不變。
   - `boarding.json`、`clock-seconds.json`、`station-dwell.json`：除了餘額與位置、路徑的寫法，旅客、時刻與帳都沒有改變。
+- **F3a-3**：只有一部分能搬或只屬於方格的九份（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`），把路網能表達的規則寫成六份新的手算 fixture；方格的原檔留到 F3c 和方格一起刪除。
+  - `network-construction.json`（← `build-starter-line`）：錢、檢查順序、被拒絕的指令不改變世界也不用掉 ID、拆除免費不退錢、ID 不重用、月台的範圍與重疊。
+  - `network-train-position.json`（← `train-position`）：邊上 0 到邊長都能放（端點也可以）、放置與反向的檢查順序、反向與反向兩次、有列車的邊不能拆、停在節點的列車只在它所在的那條邊上。
+  - `network-train-movement.json`（← `train-movement`）：每秒的距離、恰好到邊的盡頭不看下一項、走完的路徑記成 `[]`、拆掉的邊讓列車停在前一條邊的盡頭等（重建的邊是新 ID，舊路徑不會恢復）、rate 0 與暫停、2 倍速一個 tick 兩分鐘、反向與取下清掉路徑。
+  - `network-route.json`（← `train-route`）：`pathToNode` 的最短長度、同長時每個節點依邊的編號遞增、不立即折返、經由折返線（balloon loop）到列車後方的節點、面對盡頭沒有路、空路徑、找不到的情形，以及列車照路徑走。
+  - `network-station-stop.json`（← `station-stop` 與 `station-facilities` 的車長規則）：`pathToStation` 到列車放得下的月台的停車點、停車的條件（路徑走完、車頭在月台上）、相接的兩個月台都算、經過或還沒到路徑終點不算、反向會清掉路徑與 `end`、加在停著的列車下的月台立刻算、兩節車在月台上與車尾超出月台。
+  - `network-junctions.json`（← `track-connectivity`、`track-resources`）：節點上兩個邊端反向（1/16 以內，整數判斷，剛好 1/16 也算）才相接的道岔、菱形交叉、占用的節點與 span、衝突。
+  - `free-station.json` 的點車站部分本來就在路網上；方格的部分在 F3c 一起拿掉。
+  - 路網沒有對應、F3c 會和方格一起消失的規則：格子的出口與相接（`connectedNeighbors`、`isConnected`、`exits`）、四鄰格自動成為月台（`platforms`、`platformTracks`、`routeToStation`）、方格車站與 `extendStation`、格內的道岔與平交道（`buildTurnout`、`buildCrossing`）、`trackSections`、`parallelTracks`、`node`／`link` 位置與 heading、北東南西的平手規則，以及拆掉再蓋回同一格會沿原來的路徑繼續（路網的 ID 不重用）。
+
+### F3a 之後暫時沒有改的地方
+
+以下不是遺漏，而是排在 F3b、F3c 的工作；F3a 只動 fixture 與文件。
+
+- **GameCore 完全沒有改**：方格的鐵軌、`node`／`link` 位置、方格車站、格內的道岔與平交道、方格的尋路與停站都還在，行為、存檔格式與 golden schema（27）都不變。→ F3c。
+- **九份方格 fixture 一個值都沒動**（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`），照常執行，和新的 `network-*.json` 並存。→ F3c 刪除。
+- **Golden 執行器**（`Tests/GameCoreTests/GoldenScenario.swift`）的方格指令、觀察與最終狀態的寫法（`tracks`、車站的 `x`／`y`／`annexes`、`node`／`link` 位置）還在。→ F3c（schema 28）。
+- **單元測試、property／差分／mutation campaign 與獨立參考模型**（`ReferenceWorld` 等）的方格部分還在方格上，campaign 的 digest 不變。→ F3b。
+- **GamePresentation 與 App** 的方格相容層；`TrackInfoText` 用的 `parallelTracks`、`lineTrackCounts` 只算方格月台，路網上的車站一律是 0。→ F3c 照參考的做法改成路網版（單線／雙線照 `tra_track_sections.json` 的規則，區段照 `topology.js` 的 `trackGroups`；見 [RAILWAY_REFERENCE_MAPPING](../docs/RAILWAY_REFERENCE_MAPPING.md) 的 Stage F3）。
+- **`Web/WasmProbe`**：跑的是同一批 fixture，照決策 51 在 F3c 一起處理。
+- **`SaveFixtures/` 沒改**：四份存檔都只有路網與點車站（v1 還帶著空地的 `map.tiles`），F3c 之後也必須照常載入。
+- **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。

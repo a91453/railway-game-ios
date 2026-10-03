@@ -394,6 +394,16 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | 參考包 `Railway/railway_game_reference_clean/`（OpenTTD／RailwayCore 15.3）：tile 上的 track piece、`trackdir`、`src/pathfinder/yapf/*` | 方格的軌道與尋路 | 不移植方格；選路、號誌與進路的規則之後照決策 28 轉成節點、邊與行進方向（U-min、V） | — | **不移植**（F1、F3 作者決定）；`01_MIGRATION_MAP.md` 要求移植行為與演算法結構，不是原實作 |
 | （參考沒有） | 一格 1024 單位、地圖的大小與邊界 | 保留：`GridMap`、`GridPosition`、`TrainPosition.linkLength`、`WorldCoordinate.tileSize` | — | 保留（決策 51；改名另議） |
 
+**F3c 要補的缺口，參考裡已有的做法**（2026-10-03 為 F3a-3 列出的缺口再查三份參考；F3c 照這些移植，不自己另訂規則）：
+
+| 參考 | 行為 | F3c 預計的 GameCore | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway/site_archive_clean/data/tra_track_sections.json` 的 `source_notes` 與欄位（`tracks`、`parallelFrac`、`lengthM`）；讀表端 `index.html` 的 `traSectionKey`、`single(a,b)` | 相鄰兩站之間，有平行正線股道的長度佔比 ≥ 0.5 算雙線（`tracks=2`），否則單線 | `parallelTracks(between:and:)`、`lineTrackCounts(_:)` 改成路網版（`TrackInfoText` 用；方格版只算方格月台，路網上的車站一律是 0） | 長度佔比；世界單位 | 預計 faithful（規則）；產生器不在 repo，「哪一段算平行」的判斷是缺口，F3c 要自己補並寫明 |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` 第 41–42 行 | 同一對節點之間重複的 way 共用一個佔用資源，不算第二股 | 不需要：GameCore 每條邊各自是一股、各有自己的 span（決策 29、S3A） | — | 不同（GameCore 的邊是玩家蓋的軌道，不是重複的 OSM 資料） |
+| `topology.js` 的 `trackGroups`（第 47–57 行） | 從不是道岔、相鄰節點不超過兩個的節點出發填滿，得到兩個分歧點之間的一段軌道 | `trackSections()` 改成路網版：在不是只接兩條邊的節點（道岔、交叉、盡頭）切開的邊鏈，沒有分歧點的環另列 | 世界單位 | 預計直接移植 |
+| `topology.js` 的 `canTurn`（第 77–101 行）與 `stableVector` | OSM 節點上能不能轉線：同一條 way、只有兩個鄰點、`switch`、交叉只接最直的一支、未標記的三叉點用 cos 門檻推斷 | 不改：GameCore 的邊是遊戲自己建的幾何，節點上兩端反向 1/16 以內才相接（決策 29），已經涵蓋道岔、菱形交叉與 slip | — | 不同（參考的門檻是為了從 OSM 資料推斷道岔；F3 不改相接規則） |
+| `topology.js` 的 `shortestPath`（第 102–131 行） | Dijkstra，以「節點＋進入的邊」為狀態，每一步檢查 `canTurn`；路徑中重複的節點一律不要 | 不改：GameCore 同樣以進入的邊為狀態、不立即折返，但允許經過同一個節點兩次（折返線，`network-route.json`），同長依邊的編號遞增 | — | 不同，記給作者決定（F3 不改選路規則） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
