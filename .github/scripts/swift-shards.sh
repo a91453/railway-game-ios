@@ -37,14 +37,28 @@ set -euo pipefail
 
 # The balance follows the measured class times; the `run` summary prints the
 # slowest classes of every shard, so a rebalance is a look at those and an edit
-# of this table.
+# of this table. Take each class's time from the slower of several runs: the
+# same class takes about 1.8 times as long on a slower runner (EconomyPropertyTests
+# 302 s on one, 513 s on another), and the slow runners are the ones that set
+# the wall time. Seconds on a slow runner (2026-10, runs 37087310644,
+# 37099689824, 37099911383), shard totals about 520 to 595 s:
+#   campaigns-1  EconomyPropertyTests 513, ContinuousTrackPropertyTests 66
+#   campaigns-2  BoardingPropertyTests 435, ServicePropertyTests 139
+#   campaigns-3  SaveMutationTests 406, VerticalRailwayPropertyTests 157,
+#                StationFacilityPropertyTests 29
+#   campaigns-4  LineDispatchPropertyTests 356, LinePatternPropertyTests 182,
+#                PassengerPropertyTests 36, TimetablePropertyTests 21
+#   campaigns-5  NetworkServicePropertyTests 348, TrafficControlPropertyTests 200,
+#                TrackResourcePropertyTests 30
+#   rest         ServiceLinePropertyTests 402, KernelDifferentialTests 25, and
+#                about 95 for everything else
 classes_of() {
   case "$1" in
-    campaigns-1) echo "NetworkServicePropertyTests TrackResourcePropertyTests PassengerPropertyTests BoardingPropertyTests" ;;
-    campaigns-2) echo "SaveMutationTests" ;;
-    campaigns-3) echo "ServicePropertyTests ContinuousTrackPropertyTests StationFacilityPropertyTests" ;;
-    campaigns-4) echo "VerticalRailwayPropertyTests LineDispatchPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "TrafficControlPropertyTests LinePatternPropertyTests EconomyPropertyTests" ;;
+    campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests" ;;
+    campaigns-2) echo "BoardingPropertyTests ServicePropertyTests" ;;
+    campaigns-3) echo "SaveMutationTests VerticalRailwayPropertyTests StationFacilityPropertyTests" ;;
+    campaigns-4) echo "LineDispatchPropertyTests LinePatternPropertyTests PassengerPropertyTests TimetablePropertyTests" ;;
+    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests TrackResourcePropertyTests" ;;
     *) return 1 ;;
   esac
 }

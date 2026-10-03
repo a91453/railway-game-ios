@@ -28,9 +28,7 @@ struct RailwayGameApp: App {
     }
 
     private static func makeLauncher() -> GameLauncher {
-        let library = (try? SaveLibrary.standard())
-            ?? SaveLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent("Saves", isDirectory: true))
-        let launcher = GameLauncher(library: library, language: .app)
+        let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
         #if DEBUG
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
@@ -39,6 +37,29 @@ struct RailwayGameApp: App {
         }
         #endif
         return launcher
+    }
+
+    private static func makeSaveLibrary() -> SaveLibrary {
+        #if DEBUG
+        // UI tests use only this temporary folder. Clear it on every launch,
+        // including relaunches on a Simulator that already has player saves.
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+            let manager = FileManager.default
+            let directory = manager.temporaryDirectory.appendingPathComponent("UITestingSaves", isDirectory: true)
+            do {
+                if manager.fileExists(atPath: directory.path) {
+                    try manager.removeItem(at: directory)
+                }
+                try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+                return SaveLibrary(directory: directory)
+            } catch {
+                // Never fall back to the player's library if isolation fails.
+                fatalError("Could not prepare UI test saves: \(error)")
+            }
+        }
+        #endif
+        return (try? SaveLibrary.standard())
+            ?? SaveLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent("Saves", isDirectory: true))
     }
 }
 

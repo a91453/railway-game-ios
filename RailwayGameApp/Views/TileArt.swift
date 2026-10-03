@@ -268,7 +268,7 @@ enum TileArt {
         let badgeRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         let name = projection.detail == .full
             ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.rail)) : nil
-        let nameSize = name?.measure(in: CGSize(width: .infinity, height: .infinity)) ?? .zero
+        let nameSize = name?.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity)) ?? .zero
         let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
         // Include the measured label, not only the station's anchor: a name
         // can be visible while its station is just outside the viewport.

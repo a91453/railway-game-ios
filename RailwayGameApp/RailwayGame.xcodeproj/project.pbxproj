@@ -29,6 +29,7 @@
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
+		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
@@ -66,6 +67,7 @@
 		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		A7D933E24E26C2077E5BC12A /* RailwayGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RailwayGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
 		C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSmokeTests.swift; sourceTree = "<group>"; };
@@ -154,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
+				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
 				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
 			);
@@ -296,6 +299,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
+				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
 				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,
 			);
