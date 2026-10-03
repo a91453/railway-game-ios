@@ -3,28 +3,38 @@
 /// Prices are never negative: spending a negative amount is a programming
 /// error (see ``GameEconomy/spend(_:)``), and decoding refuses one.
 public struct ConstructionCosts: Hashable, Codable, Sendable {
+    /// Each tile of a track's length (times its structure's
+    /// ``TrackStructure/costFactor`` on the track network).
     public var track: Money
     public var station: Money
+    /// A new train, with its first car.
     public var train: Money
+    /// Each car added to a train (``GameWorld/setTrainCars(_:to:)``), as the
+    /// reference's management mode spends its car quota (`metro.cars`).
+    /// 0, cars for nothing, in worlds from before it.
+    public var car: Money
 
-    public init(track: Money, station: Money, train: Money) {
+    public init(track: Money, station: Money, train: Money, car: Money = .zero) {
         self.track = track
         self.station = station
         self.train = train
+        self.car = car
     }
 
-    /// Placeholder prices until balancing work starts.
+    /// GameCore's prices for its own new worlds and tests. The app's new
+    /// game sets its own (`GameWorld.newGame()`, ARCHITECTURE decision 46).
     public static let standard = ConstructionCosts(track: 1_000, station: 50_000, train: 200_000)
 }
 
 extension ConstructionCosts {
     private enum CodingKeys: String, CodingKey {
-        case track, station, train
+        case track, station, train, car
     }
 
     /// Decodes prices, rejecting a negative one: spending a negative amount is
     /// a programming error (see ``GameEconomy/spend(_:)``), so a save holding
-    /// one would load and then trap at the next purchase.
+    /// one would load and then trap at the next purchase. A save without
+    /// `"car"` adds cars for nothing.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         func price(_ key: CodingKeys) throws -> Money {
@@ -34,7 +44,20 @@ extension ConstructionCosts {
             }
             return price
         }
-        self.init(track: try price(.track), station: try price(.station), train: try price(.train))
+        let car = container.contains(.car) ? try price(.car) : .zero
+        self.init(track: try price(.track), station: try price(.station), train: try price(.train), car: car)
+    }
+
+    /// Writes `"car"` only when cars cost something, so a world whose cars
+    /// are free saves as before.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(track, forKey: .track)
+        try container.encode(station, forKey: .station)
+        try container.encode(train, forKey: .train)
+        if car != .zero {
+            try container.encode(car, forKey: .car)
+        }
     }
 }
 

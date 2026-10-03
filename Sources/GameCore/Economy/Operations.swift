@@ -46,6 +46,18 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Sets the city's fare baseline (see ``CompanyAccounts/fareBaseline``):
+    /// the reference picks it by city (`metroFareDemandBaselineForCity`,
+    /// 0.75 for its default city, 5.50 for the most expensive). Free.
+    ///
+    /// - Throws: ``GameError/invalidFareRules`` for a baseline outside 0.01
+    ///   to ``FareRules/maximumFare``.
+    public mutating func setFareBaseline(_ baseline: Money) throws(GameError) {
+        guard (Money(1)...FareRules.maximumFare).contains(baseline) else { throw .invalidFareRules }
+        accounts.fareBaseline = baseline
+        passengerPlan = PassengerPlanCache()
+    }
+
     // MARK: - Queries
 
     /// The fare a passenger from `origin` to `destination` pays: the rule's
@@ -79,7 +91,7 @@ extension GameWorld {
               let squared = squaredDistance(from: origin, to: destination)
         else { return nil }
         // The reference's demand reads the rule's fare, before the minimum.
-        return FareRules.demandFactor(fare: accounts.effectiveFareRules.fare(squaredDistance: squared))
+        return FareRules.demandFactor(fare: accounts.effectiveFareRules.fare(squaredDistance: squared), baseline: accounts.fareBaseline)
     }
 
     // MARK: - Accrual
@@ -117,7 +129,9 @@ extension GameWorld {
     // MARK: - Settlement
 
     /// The network's fixed assets at the moment of a settlement: its
-    /// stations (each once, however many lines call there), its route
+    /// stations (each line's own, once each: a station two lines call at
+    /// counts for both, as the reference counts each line's stations,
+    /// `metroEconomyFixedAssets`), its route
     /// length (each line's own service, out to its far end, in world
     /// units; 0 for one that cannot be driven) and its trains (each
     /// service's most at any level).
@@ -128,11 +142,11 @@ extension GameWorld {
     }
 
     func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
-        var stations: Set<StationID> = []
+        var stations: Int64 = 0
         var length: Int64 = 0
         var trains: Int64 = 0
         for line in lines {
-            stations.formUnion(line.stops)
+            stations += Int64(Set(line.stops).count)
             let journey: LineJourney?
             if let known = memo.journeys[line.id]?[0] {
                 journey = known
@@ -148,7 +162,7 @@ extension GameWorld {
                 trains += Int64(max(counts.peak, counts.offPeak, counts.low))
             }
         }
-        return FixedAssets(stations: Int64(stations.count), routeLength: length, trains: trains)
+        return FixedAssets(stations: stations, routeLength: length, trains: trains)
     }
 
     /// World units in a kilometre.
@@ -258,6 +272,7 @@ extension GameWorld {
         }
         guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
         guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
+        guard (Money(1)...FareRules.maximumFare).contains(accounts.fareBaseline) else { return "The fare baseline is out of range." }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }

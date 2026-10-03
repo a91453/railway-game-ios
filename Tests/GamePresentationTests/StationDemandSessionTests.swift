@@ -36,6 +36,43 @@ final class StationDemandSessionTests: XCTestCase {
         }
     }
 
+    /// Decision 46: a managed company's city sets each station's ridership,
+    /// as the reference lets only free play change it
+    /// (`stationFlowCustomEditingAllowed`); the city gives a station
+    /// without ridership its own when the game opens.
+    func testAManagedCompanysCitySetsTheRidership() async throws {
+        try await MainActor.run {
+            var world = try makeStations()
+            try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 2_000))
+            world.setEconomyMode(.management)
+            let session = GameSession(world: world)
+            XCTAssertEqual(session.world.stationDemand(of: alpha), StationDemand(kind: .residential, dailyTrips: 10_000))
+            XCTAssertEqual(session.world.stationDemand(of: beta), StationDemand(kind: .office, dailyTrips: 2_000), "its own kept")
+            XCTAssertFalse(session.canEditStationDemand)
+
+            let opened = session.world
+            session.selectStation(alpha)
+            let refused = StatusMessage(kind: .failure, text: "A managed company's city sets each station's ridership. Only free play can change it.")
+            session.setSelectedStationDemandKind(.office)
+            XCTAssertEqual(session.message, refused)
+            session.setSelectedStationDailyTrips(1_000_000)
+            XCTAssertEqual(session.message, refused)
+            session.removeSelectedStationDemand()
+            session.copySelectedStationDemand()
+            XCTAssertEqual(session.message?.kind, .success, "copying changes nothing")
+            session.pasteDemandToSelectedStation()
+            XCTAssertEqual(session.message, refused)
+            session.applySelectedStationDemandToItsLines()
+            XCTAssertEqual(session.message, refused)
+            XCTAssertEqual(session.world, opened)
+
+            session.setEconomyMode(.free)
+            XCTAssertTrue(session.canEditStationDemand)
+            session.setSelectedStationDailyTrips(20_000)
+            XCTAssertEqual(session.world.stationDemand(of: alpha), StationDemand(kind: .residential, dailyTrips: 20_000))
+        }
+    }
+
     func testTheDailyTripsStepThroughOneTwoAndFive() {
         XCTAssertEqual(StationDemand.dailyTrips(above: 10_000), 20_000)
         XCTAssertEqual(StationDemand.dailyTrips(above: 12_345), 20_000)

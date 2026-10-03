@@ -119,6 +119,25 @@ final class FreeStationSessionTests: XCTestCase {
         }
     }
 
+    /// Decision 46: a managed company's city gives a new station its
+    /// ridership; in free play the player sets it.
+    func testAManagedCompanysNewStationHasTheCitysRidership() async throws {
+        var world = try makeLineWorld()
+        world.setEconomyMode(.management)
+        try await MainActor.run { [world] in
+            for managed in [true, false] {
+                let session = GameSession(world: world)
+                if !managed { session.setEconomyMode(.free) }
+                session.selectTool(.network)
+                session.setNetworkMode(.platform)
+                session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_000), reach: 256)
+                session.addNetworkPlatform()
+                let station = try XCTUnwrap(session.world.stations.first)
+                XCTAssertEqual(session.world.stationDemand(of: station.id), managed ? .cityDefault : nil)
+            }
+        }
+    }
+
     func testTheTrainToolAndTheLineDraftUseTheSelectedStation() async throws {
         var world = try makeLineWorld()
         let west = try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 3_072)).id

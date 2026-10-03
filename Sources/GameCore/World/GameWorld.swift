@@ -632,18 +632,27 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2), one
-    /// to a tile: ``Train/minimumCars`` to ``Train/maximumCars``. Free. A
-    /// train of more than one car is placed with its body behind its head
-    /// along the track it could have come by (see ``placeTrain(_:at:)``).
+    /// to a tile: ``Train/minimumCars`` to ``Train/maximumCars``. Each car
+    /// added costs ``ConstructionCosts/car``; taking cars off refunds
+    /// nothing. A train of more than one car is placed with its body behind
+    /// its head along the track it could have come by (see
+    /// ``placeTrain(_:at:)``).
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
-    ///   ``GameError/invalidTrainLength``, or
-    ///   ``GameError/trainAlreadyPlaced(_:)`` (take it off the track first).
+    ///   ``GameError/invalidTrainLength``,
+    ///   ``GameError/trainAlreadyPlaced(_:)`` (take it off the track first),
+    ///   or ``GameError/insufficientFunds(required:available:)``.
     public mutating func setTrainCars(_ id: TrainID, to cars: Int) throws(GameError) {
         let index = try trainIndex(of: id)
         guard (Train.minimumCars...Train.maximumCars).contains(cars) else { throw .invalidTrainLength }
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
 
+        let added = Int64(cars - trains[index].cars)
+        if added > 0 {
+            let (price, overflow) = economy.costs.car.amount.multipliedReportingOverflow(by: added)
+            guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+            try economy.spend(Money(price))
+        }
         trains[index].cars = cars
     }
 
