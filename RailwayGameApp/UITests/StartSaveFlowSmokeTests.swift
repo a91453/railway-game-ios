@@ -27,14 +27,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-03-menu-save")
 
-        requiredButton("menu.saveGame", in: app).tap()
+        requiredMenuAction("menu.saveGame", in: app).tap()
         assertGame(in: app)
         capture(app, name: "\(language)-flow-04-game-saved")
 
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-05-menu-return")
 
-        requiredButton("menu.backToStart", in: app).tap()
+        requiredMenuAction("menu.backToStart", in: app).tap()
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.continue", in: app)
         // Back to Start creates only an autosave. This separate button also
@@ -66,7 +66,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     private func assertGame(in app: XCUIApplication) {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10), "Missing game map")
-        XCTAssertTrue(map.isHittable, "Game map is not visible")
+        assertHittable(map, message: "Game map is not visible")
         for identifier in ["tool.select", "tool.network", "tool.train", "hud.menu"] {
             _ = requiredButton(identifier, in: app)
         }
@@ -74,16 +74,36 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
     private func openGameMenu(in app: XCUIApplication) {
         requiredButton("hud.menu", in: app).tap()
-        _ = requiredButton("menu.saveGame", in: app)
-        _ = requiredButton("menu.backToStart", in: app)
+        _ = requiredMenuAction("menu.saveGame", in: app)
+        _ = requiredMenuAction("menu.backToStart", in: app)
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         let button = app.buttons[identifier]
         XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing UI flow button: \(identifier)")
         XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(identifier)")
-        XCTAssertTrue(button.isHittable, "UI flow button cannot be tapped: \(identifier)")
+        assertHittable(button, message: "UI flow button cannot be tapped: \(identifier)")
         return button
+    }
+
+    private func requiredMenuAction(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+        let button = app.buttons[identifier]
+        XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing UI flow button: \(identifier)")
+        XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(identifier)")
+        // Native SwiftUI menus expose their action's identifier on a Button
+        // inside a collection-view cell. On iOS 26 that inner Button has no
+        // hittable point; the visible cell is the actual tap target. Keep the
+        // identifier query and require the row to become tappable before use.
+        let row = app.collectionViews.cells.containing(.button, identifier).element
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Missing menu row: \(identifier)")
+        assertHittable(row, message: "UI flow menu action cannot be tapped: \(identifier)")
+        return row
+    }
+
+    private func assertHittable(_ element: XCUIElement, message: String) {
+        // Existence can precede the end of a menu or screen transition.
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, message)
     }
 
     private func capture(_ app: XCUIApplication, name: String) {
