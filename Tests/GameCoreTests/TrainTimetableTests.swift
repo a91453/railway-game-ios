@@ -468,7 +468,7 @@ final class TrainTimetableTests: XCTestCase {
         XCTAssertEqual(old.timetable, [])
         let placed = try JSONDecoder().decode(
             Train.self,
-            from: Data(#"{"id": 1, "name": "A", "position": {"atNode": {"tile": {"x": 1, "y": 1}, "heading": {"east": {}}}}, "movement": {"rate": 5, "continuation": [], "cursor": 0}}"#.utf8)
+            from: Data(#"{"id": 1, "name": "A", "position": {"onEdge": {"edge": 1, "direction": "forward", "offset": 0}}, "movement": {"rate": 5, "continuation": [], "cursor": 0}}"#.utf8)
         )
         XCTAssertEqual(placed.timetable, [])
         XCTAssertEqual(placed.movement.rate, 5)
