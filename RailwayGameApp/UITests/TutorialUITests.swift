@@ -126,6 +126,11 @@ final class TutorialUITests: XCTestCase {
         app.buttons["tool.select"].tap()
 
         // The game menu starts the tutorial again without leaving this game.
+        // Pause through the real HUD so a rapidly changing game clock does
+        // not continuously rebuild the native menu while XCTest targets it.
+        hittableButton(app.buttons.matching(NSPredicate(
+            format: "label == %@", language == "en" ? "Pause" : "暫停"
+        ))).tap()
         app.buttons[language == "en" ? "Game menu" : "遊戲選單"].tap()
         // ViewThatFits can expose an unplaced menu action with an infinite
         // frame as well as the visible native menu item. Select the action
