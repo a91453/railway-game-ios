@@ -115,6 +115,7 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(skip.waitForExistence(timeout: 5))
         XCTAssertTrue(skip.isHittable)
         checkToolIsUncovered(app, identifier: "tool.network")
+        checkToolIsUncovered(app, identifier: "tool.select")
         app.buttons["tool.select"].tap()
         waitForEnabled(next, false)
         app.buttons["tool.network"].tap()
@@ -126,8 +127,12 @@ final class TutorialUITests: XCTestCase {
 
         // The game menu starts the tutorial again without leaving this game.
         app.buttons[language == "en" ? "Game menu" : "遊戲選單"].tap()
-        let restart = app.buttons["menu.tutorial"]
-        XCTAssertTrue(restart.waitForExistence(timeout: 5))
+        // ViewThatFits can expose an unplaced menu action with an infinite
+        // frame as well as the visible native menu item. Select the action
+        // the player can actually touch, rather than the hidden duplicate.
+        let restart = hittableButton(app.buttons.matching(NSPredicate(
+            format: "identifier == %@ OR label == %@", "menu.tutorial", tutorialLabel
+        )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
         XCTAssertTrue(next.waitForExistence(timeout: 5))
@@ -135,6 +140,19 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(next, false)
         skip.tap()
         XCTAssertFalse(next.exists)
+    }
+
+    private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            if let visible = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+                return visible
+            }
+            // Only the test runner waits; the app can finish opening the menu.
+            Thread.sleep(forTimeInterval: 0.1)
+        } while Date() < deadline
+        XCTFail("No visible tutorial menu action")
+        return query.firstMatch
     }
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {

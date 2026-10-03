@@ -10,12 +10,16 @@ extension View {
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
                     let viewport = CGRect(origin: .zero, size: proxy.size)
+                    let controls = anchors.values.compactMap { anchor -> CGRect? in
+                        let visible = proxy[anchor].intersection(viewport)
+                        return visible.isEmpty || visible.isNull ? nil : visible
+                    }
                     let frames = tutorial.step.targets.compactMap { target -> CGRect? in
                         guard let anchor = anchors[target] else { return nil }
                         let visible = proxy[anchor].intersection(viewport)
                         return visible.isEmpty || visible.isNull ? nil : visible
                     }
-                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames)
+                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls)
                 }
             }
         }
@@ -28,6 +32,7 @@ private struct TutorialOverlay: View {
     let session: GameSession
     let tutorial: Tutorial
     let frames: [CGRect]
+    let controls: [CGRect]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -45,7 +50,7 @@ private struct TutorialOverlay: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            TutorialCardLayout(target: frames.first) {
+            TutorialCardLayout(target: frames.first, controls: controls) {
                 TutorialCard(session: session, tutorial: tutorial)
                     .id(tutorial.index)
             }
@@ -58,6 +63,7 @@ private struct TutorialOverlay: View {
 /// for wide screens. Missing targets and insufficient space use the centre.
 private struct TutorialCardLayout: Layout {
     let target: CGRect?
+    let controls: [CGRect]
     private let margin: CGFloat = 16
     private let gap: CGFloat = 12
 
@@ -78,6 +84,10 @@ private struct TutorialCardLayout: Layout {
             // placement bounds can have a nonzero origin, so put the target
             // in that same coordinate space before comparing candidates.
             let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
+            // Keep other small controls usable too. A large target can
+            // still be used outside the card (for example, tapping a map).
+            let obstacles = controls.filter { $0.width <= size.width && $0.height <= size.height }
+                .map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
             let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
             let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
             let candidates = [
@@ -85,8 +95,16 @@ private struct TutorialCardLayout: Layout {
                 CGPoint(x: x, y: target.minY - gap - size.height),
                 CGPoint(x: target.maxX + gap, y: y),
                 CGPoint(x: target.minX - gap - size.width, y: y),
+                centred,
+                CGPoint(x: available.minX, y: centred.y),
+                CGPoint(x: available.maxX - size.width, y: centred.y),
+                CGPoint(x: centred.x, y: available.minY),
+                CGPoint(x: centred.x, y: available.maxY - size.height),
             ]
-            origin = candidates.first { available.contains(CGRect(origin: $0, size: size)) } ?? centred
+            origin = candidates.first {
+                let frame = CGRect(origin: $0, size: size)
+                return available.contains(frame) && !obstacles.contains { $0.intersects(frame) }
+            } ?? centred
         }
         card.place(at: origin, anchor: .topLeading, proposal: ProposedViewSize(size))
     }
