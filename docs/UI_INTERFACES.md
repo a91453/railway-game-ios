@@ -42,19 +42,26 @@
 
 這些方法都不改世界。按鈕的文字（上一步、下一步、完成、略過、教學）屬於 App 的 String Catalog，由 CX-5 加，附繁體中文（台灣用語）。
 
-### 示範步驟
+### 步驟
 
-`Tutorial.demoSteps` 有三步，讓畫面有東西可以畫；C5 換成真正的步驟。
+C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內容步驟改寫成觸控與這個 App 的工具，共十步。步驟的 `id`、框出的控制項與做完的條件：
 
-| `id` | 框出 | 做完的條件（`goal`） |
-| --- | --- | --- |
-| `demo.networkTool` | `tool.network` | 選了路網工具（`.chooseTool(.network)`） |
-| `demo.buildTrack` | `map`、`panel.action` | 這一步出現之後蓋了新的軌段（`.buildTrack`） |
-| `demo.end` | 沒有：卡片在畫面中央 | 讀完就好（`.read`） |
+| # | `id` | 框出 | 做完的條件（`goal`） |
+| --- | --- | --- | --- |
+| 1 | `build.network` | `tool.network` | 選了路網工具（`.chooseTool(.network)`） |
+| 2 | `build.track` | `map`、`panel.action` | 這一步出現之後蓋了新的軌段（`.buildTrack`） |
+| 3 | `build.firstStation` | `network.modes`、`map`、`panel.action` | 這一步出現之後蓋了新的車站（`.buildStation`） |
+| 4 | `build.secondStation` | `network.modes`、`map`、`panel.action` | 同上（`.buildStation`） |
+| 5 | `line.create` | `hud.lines` | 這一步出現之後建了新的路線（`.createLine`） |
+| 6 | `train.place` | `tool.train`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
+| 7 | `line.service` | `hud.lines` | 新指派了列車給一條設了上線列車數的路線（`.startService`） |
+| 8 | `station.ridership` | `map` | 讀完就好（`.read`） |
+| 9 | `time.speed` | `hud.speed` | 速度（含暫停）和這一步出現時不同（`.changeSpeed`） |
+| 10 | `end` | `hud.menu` | 讀完就好（`.read`） |
 
-做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。
+做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。要求「蓋了什麼」的條件比較的是這一步**第一次出現時**的世界（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次。
 
-C5 會換成真正的步驟（`Ci/` 的 `tutorial.step.0`–`11` 的內容步驟，改寫成觸控與這個 App 的工具），加新的 `TutorialGoal` 與 `TutorialTarget`（只增加，不改既有的名稱），需要時讓步驟打開面板（參考的 `openUI`）。畫面只要寫成通用的（不寫死步驟數、`id` 或某個目標），就不用跟著改。
+C5 沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 5、7 框「路線」按鈕，面板裡的操作用文字說明。E1 會加入縮放與平移的步驟（`map.zoom` 已經標好），E2 視需要加實景模式的步驟。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
 
 ## 2. 識別碼（`TutorialTarget`）
 
@@ -101,7 +108,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 - **不能擋住操作**：玩家要做了才能前進，所以被框出的控制項與地圖都要能點；只有卡片接收觸控（其他部分 `allowsHitTesting(false)`）。
 - **找不到的目標不畫框**：目前的版面沒有那個控制項（例如 iPhone 與 iPad 的排法不同）時就略過；全部找不到時，卡片放畫面中央。
-- **preference 不會離開 sheet**：路線面板、車站面板等 sheet 裡的控制項，要在那個 sheet 裡也掛覆蓋層才找得到。第 0 步的識別碼都在主畫面；C5 需要面板裡的目標時，由 Claude Code 一起定。
+- **preference 不會離開 sheet**：路線面板、車站面板等 sheet 裡的控制項，要在那個 sheet 裡也掛覆蓋層才找得到。第 0 步的識別碼都在主畫面；C5 的步驟沒有用面板裡的目標；需要時由 Claude Code 一起定。
 - **HUD 有兩種排法**：`HUDView` 用 `ViewThatFits` 在一排與兩排之間選，兩種都有標記。Simulator 上框的位置不對時，告訴 Claude Code（Linux 上無法驗證）。
 - VoiceOver：步驟換了要能讀到卡片（例如 `AccessibilityNotification.Announcement` 或把焦點移到卡片）。
 

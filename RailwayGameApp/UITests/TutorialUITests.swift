@@ -1,7 +1,8 @@
 import XCTest
 
-/// Exercises the CX-5 card against step 0's demo. Gameplay goals are tested
-/// in TutorialSessionTests; these checks prove the overlay passes touches
+/// Exercises the CX-5 card against the tutorial's first steps (C5: the network
+/// tool, then a stretch of track). Gameplay goals are tested in
+/// TutorialSessionTests; these checks prove the overlay passes touches
 /// through to the tool, observes completion and exposes its navigation.
 @MainActor
 final class TutorialUITests: XCTestCase {
@@ -17,7 +18,7 @@ final class TutorialUITests: XCTestCase {
         checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip", largeText: true)
     }
 
-    func testBuildingTrackEnablesDoneAndFinishes() {
+    func testBuildingTrackEnablesNextAndSkipEnds() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
@@ -58,11 +59,13 @@ final class TutorialUITests: XCTestCase {
         build.tap()
         waitForEnabled(next, true)
         next.tap()
-        XCTAssertEqual(next.label, "Done")
+        // The next step asks for a station, so Next waits again; Done is the
+        // last of ten steps and is checked in TutorialSessionTests.
+        XCTAssertEqual(next.label, "Next")
+        waitForEnabled(next, false, "The station step waits for a station")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
-        XCTAssertTrue(next.isEnabled)
-        capture(app, name: "en-tutorial-done")
-        next.tap()
+        capture(app, name: "en-tutorial-station-step")
+        app.buttons["tutorial.skip"].tap()
         XCTAssertFalse(next.exists)
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
     }
@@ -93,7 +96,7 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertEqual(next.label, nextLabel)
         XCTAssertEqual(skip.label, skipLabel)
-        XCTAssertFalse(next.isEnabled, "The first demo step waits for the network tool")
+        XCTAssertFalse(next.isEnabled, "The first step waits for the network tool")
         XCTAssertFalse(back.exists, "The first step has no Back button")
 
         // The outlined button must receive the touch underneath the overlay.
