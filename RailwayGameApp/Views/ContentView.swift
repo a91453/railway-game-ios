@@ -35,11 +35,13 @@ struct ContentView: View {
             }
             .ignoresSafeArea(.keyboard)
         }
+        // Inside the text size limit below: the tutorial's card shares the
+        // screen with the controls it must not cover.
+        .tutorialOverlay(session: session)
         // The map and controls share one screen, so text stops growing at the
         // largest standard size instead of pushing the map off screen.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .onChange(of: ObjectIdentifier(session)) { _, _ in mapCamera = nil }
-        .tutorialOverlay(session: session)
     }
 
     private var tallLayout: some View {
@@ -60,6 +62,7 @@ struct ContentView: View {
                     ControlPanel(session: session, arrangement: .sideBySide)
                         .padding()
                 }
+                .tutorialClip()
                 .background(.bar)
             } else {
                 map
@@ -90,6 +93,7 @@ struct ContentView: View {
                 }
                 .padding()
             }
+            .tutorialClip()
             .frame(width: 360)
             .background(.bar)
         }

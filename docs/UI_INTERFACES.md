@@ -79,8 +79,9 @@ C5 會換成真正的步驟（`Ci/` 的 `tutorial.step.0`–`11` 的內容步驟
 
 檔案：`RailwayGameApp/Views/TutorialTargets.swift`。
 
-- `TutorialTargetBounds`：`PreferenceKey`，值是 `[TutorialTarget: Anchor<CGRect>]`。
+- `TutorialTargetBounds`：`PreferenceKey`，值是 `[TutorialTarget: TutorialTargetAnchor]`。`TutorialTargetAnchor` 是控制項的範圍（`bounds`），加上它所在的每個捲動區的範圍（`clips`）；`visibleFrame(in:viewport:)` 取畫面上看得到的部分，捲出捲動區的控制項就沒有。
 - `tutorialTarget(_:)`：`View` 的 modifier，把這個 view 的範圍以它的識別碼回報上去；傳 `nil` 就不標記。
+- `tutorialClip()`：掛在 `ScrollView` 上，裡面標記的控制項只算它露出來的部分（iPad 直向的控制面板、橫向的側欄）。
 
 CX-5 的覆蓋層這樣讀（示意）：
 
@@ -88,7 +89,8 @@ CX-5 的覆蓋層這樣讀（示意）：
 .overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
     GeometryReader { proxy in
         if let tutorial = session.tutorial {
-            let frames = tutorial.step.targets.compactMap { target in anchors[target].map { proxy[$0] } }
+            let viewport = CGRect(origin: .zero, size: proxy.size)
+            let frames = tutorial.step.targets.compactMap { anchors[$0]?.visibleFrame(in: proxy, viewport: viewport) }
             // 框出 frames，卡片放在 frames.first 旁邊；沒有就放中央。
         }
     }

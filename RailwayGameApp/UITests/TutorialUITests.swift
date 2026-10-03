@@ -35,19 +35,26 @@ final class TutorialUITests: XCTestCase {
         next.tap()
         waitForEnabled(next, false)
 
-        // Tap the visible top of the map, outside the centred card. The
-        // underlying map and the outlined Build Track action stay usable.
+        // Tap the map in a row the card leaves free: the card may sit on the
+        // map (it may cover part of it, never a control), above or below.
+        // The underlying map and the outlined Build Track action stay usable.
         let map = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 5))
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
         let visibleMap = map.frame.intersection(app.frame)
+        let row = freeRow(in: visibleMap, avoiding: card.frame)
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        origin.withOffset(CGVector(dx: visibleMap.minX + 50, dy: visibleMap.minY + 24)).tap()
-        origin.withOffset(CGVector(dx: visibleMap.minX + 130, dy: visibleMap.minY + 24)).tap()
+        origin.withOffset(CGVector(dx: visibleMap.minX + 50, dy: row)).tap()
+        origin.withOffset(CGVector(dx: visibleMap.minX + 130, dy: row)).tap()
         waitForEnabled(next, false, "Choosing the ends only previews track")
         let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
         XCTAssertTrue(build.waitForExistence(timeout: 5))
         waitForEnabled(build, true)
+        // The step asks for this button: the card must leave it usable.
+        XCTAssertTrue(build.isHittable)
+        XCTAssertFalse(card.frame.intersects(build.frame), "The tutorial card covers Build Track")
         build.tap()
         waitForEnabled(next, true)
         next.tap()
@@ -158,6 +165,14 @@ final class TutorialUITests: XCTestCase {
         } while Date() < deadline
         XCTFail("No visible tutorial menu action")
         return query.firstMatch
+    }
+
+    /// A row of `map` 24 points from an edge of the part `card` does not
+    /// cover: above the card when there is room, otherwise below it.
+    private func freeRow(in map: CGRect, avoiding card: CGRect) -> CGFloat {
+        guard card.intersects(map) else { return map.minY + 24 }
+        if card.minY - map.minY >= 48 { return map.minY + 24 }
+        return min(card.maxY + 24, map.maxY - 24)
     }
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {

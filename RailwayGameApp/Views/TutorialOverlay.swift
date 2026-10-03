@@ -10,21 +10,22 @@ extension View {
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
                     let viewport = CGRect(origin: .zero, size: proxy.size)
+                    let frames = tutorial.step.targets.compactMap { target -> CGRect? in
+                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
+                    }
                     // Every control the player may need stays clear of the card,
                     // whatever its size (a full-width Build Track button is
                     // one). The map is the exception: it fills the screen and
                     // is tapped past the card.
                     let controls = anchors.compactMap { target, anchor -> CGRect? in
-                        guard target != .map else { return nil }
-                        let visible = proxy[anchor].intersection(viewport)
-                        return visible.isEmpty || visible.isNull ? nil : visible
+                        target == .map ? nil : anchor.visibleFrame(in: proxy, viewport: viewport)
                     }
-                    let frames = tutorial.step.targets.compactMap { target -> CGRect? in
-                        guard let anchor = anchors[target] else { return nil }
-                        let visible = proxy[anchor].intersection(viewport)
-                        return visible.isEmpty || visible.isNull ? nil : visible
+                    // What the step asks the player to use matters most when
+                    // no placement leaves every control clear.
+                    let required = tutorial.step.targets.compactMap { target -> CGRect? in
+                        target == .map ? nil : anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
                     }
-                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls)
+                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls, required: required)
                 }
             }
         }
@@ -38,6 +39,7 @@ private struct TutorialOverlay: View {
     let tutorial: Tutorial
     let frames: [CGRect]
     let controls: [CGRect]
+    let required: [CGRect]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -55,7 +57,7 @@ private struct TutorialOverlay: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            TutorialCardLayout(target: frames.first, controls: controls) {
+            TutorialCardLayout(target: frames.first, controls: controls, required: required) {
                 TutorialCard(session: session, tutorial: tutorial)
                     .id(tutorial.index)
             }
@@ -65,10 +67,15 @@ private struct TutorialOverlay: View {
 
 /// Measures the actual card (including translated text and Dynamic Type),
 /// then tries below/above the first visible target, with sides as a fallback
-/// for wide screens. Missing targets and insufficient space use the centre.
+/// for wide screens, then inside a large target such as the map, then the
+/// centre and the edges. The first placement that covers no control wins;
+/// when every one covers something, the one that covers least, sparing the
+/// step's own controls first. Missing targets use the centre.
 private struct TutorialCardLayout: Layout {
     let target: CGRect?
     let controls: [CGRect]
+    /// The step's own controls (not the map), among `controls`.
+    let required: [CGRect]
     private let margin: CGFloat = 16
     private let gap: CGFloat = 12
 
@@ -92,6 +99,7 @@ private struct TutorialCardLayout: Layout {
             // Keep the other controls usable too. `controls` leaves out the
             // map, which can be tapped outside the card.
             let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+            let required = self.required.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
             let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
             let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
             let candidates = [
@@ -99,6 +107,10 @@ private struct TutorialCardLayout: Layout {
                 CGPoint(x: x, y: target.minY - gap - size.height),
                 CGPoint(x: target.maxX + gap, y: y),
                 CGPoint(x: target.minX - gap - size.width, y: y),
+                // Inside a target as large as the map, along its bottom or
+                // top: the rest of it stays free to tap.
+                CGPoint(x: x, y: target.maxY - gap - size.height),
+                CGPoint(x: x, y: target.minY + gap),
                 centred,
                 CGPoint(x: available.minX, y: centred.y),
                 CGPoint(x: available.maxX - size.width, y: centred.y),
@@ -109,10 +121,21 @@ private struct TutorialCardLayout: Layout {
                 CGPoint(x: available.minX, y: available.maxY - size.height),
                 CGPoint(x: available.maxX - size.width, y: available.maxY - size.height),
             ]
-            origin = candidates.first {
-                let frame = CGRect(origin: $0, size: size)
-                return available.contains(frame) && !obstacles.contains { $0.intersects(frame) }
-            } ?? centred
+            func covered(_ rects: [CGRect], by frame: CGRect) -> CGFloat {
+                rects.reduce(0) { sum, rect in
+                    let common = rect.intersection(frame)
+                    return common.isNull ? sum : sum + common.width * common.height
+                }
+            }
+            func cost(_ frame: CGRect) -> CGFloat {
+                covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
+            }
+            let placements = candidates
+                .map { CGRect(origin: $0, size: size) }
+                .filter { available.contains($0) }
+            // `min` keeps the first of equals, so the first placement that
+            // covers nothing wins, as the order above intends.
+            origin = placements.min { cost($0) < cost($1) }?.origin ?? centred
         }
         card.place(at: origin, anchor: .topLeading, proposal: ProposedViewSize(size))
     }
@@ -148,7 +171,11 @@ private struct TutorialCard: View {
         .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tutorial.card")
-        .onChange(of: tutorial.index, initial: true) { _, _ in
+        // The card is new for each step (`.id`). Move VoiceOver to its title
+        // once it is on screen: set while the card is being inserted, the
+        // focus is dropped.
+        .task(id: tutorial.index) {
+            try? await Task.sleep(for: .milliseconds(100))
             focusesTitle = true
         }
     }
