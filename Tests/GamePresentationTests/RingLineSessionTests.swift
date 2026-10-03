@@ -36,40 +36,41 @@ final class RingLineSessionTests: XCTestCase {
     /// uncovered. Line 1 runs on straight track, so as a ring it has no way
     /// back from East to West. Turning the switch off makes it a line
     /// again; a line of two stops cannot be a ring.
-    @MainActor
-    func testTheSwitchMakesALineARingAndBack() throws {
-        let session = GameSession(world: DemoWorld.make(in: .english))
-        let line = session.world.lines[0].id
-        session.selectLine(line)
-        session.setSelectedLineRing(true)
-        XCTAssertEqual(session.message?.kind, .success)
-        XCTAssertEqual(session.message?.text, "Line 1 is a ring: its trains go on from the last stop to the first, half of them each way round.")
-        XCTAssertEqual(session.selectedLine?.isRing, true)
-        XCTAssertEqual(session.selectedLine?.trainsInService, TrainsInService(peak: 0, offPeak: 0, low: 0))
-        XCTAssertEqual(session.world.lineCoverageText(line, at: .peak, in: .english), "Not covered: the whole ring")
-        XCTAssertEqual(session.world.lineServiceSummaries(line, in: .english).first?.levels[0].text(in: .english), "No route")
+    func testTheSwitchMakesALineARingAndBack() async throws {
+        await MainActor.run {
+            let session = GameSession(world: DemoWorld.make(in: .english))
+            let line = session.world.lines[0].id
+            session.selectLine(line)
+            session.setSelectedLineRing(true)
+            XCTAssertEqual(session.message?.kind, .success)
+            XCTAssertEqual(session.message?.text, "Line 1 is a ring: its trains go on from the last stop to the first, half of them each way round.")
+            XCTAssertEqual(session.selectedLine?.isRing, true)
+            XCTAssertEqual(session.selectedLine?.trainsInService, TrainsInService(peak: 0, offPeak: 0, low: 0))
+            XCTAssertEqual(session.world.lineCoverageText(line, at: .peak, in: .english), "Not covered: the whole ring")
+            XCTAssertEqual(session.world.lineServiceSummaries(line, in: .english).first?.levels[0].text(in: .english), "No route")
 
-        session.setSelectedLineTrains(3, at: .peak)
-        XCTAssertEqual(session.selectedLine?.trainsInService.peak, 2, "in pairs")
+            session.setSelectedLineTrains(3, at: .peak)
+            XCTAssertEqual(session.selectedLine?.trainsInService.peak, 2, "in pairs")
 
-        session.setSelectedLineRing(false)
-        XCTAssertEqual(session.message?.text, "Line 1 turns round at its ends again.")
-        XCTAssertEqual(session.selectedLine?.isRing, false)
-        XCTAssertEqual(session.selectedLine?.trainsInService.peak, 2)
+            session.setSelectedLineRing(false)
+            XCTAssertEqual(session.message?.text, "Line 1 turns round at its ends again.")
+            XCTAssertEqual(session.selectedLine?.isRing, false)
+            XCTAssertEqual(session.selectedLine?.trainsInService.peak, 2)
 
-        // Two stops: refused, with the ring's rule.
-        session.selectStation(session.world.stations[0].id)
-        session.addSelectedStationToLineDraft()
-        session.selectStation(session.world.stations[1].id)
-        session.addSelectedStationToLineDraft()
-        session.createLineFromDraft()
-        let before = session.world
-        session.setSelectedLineRing(true)
-        XCTAssertEqual(session.message?.kind, .failure)
-        XCTAssertEqual(
-            session.message?.text,
-            "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last."
-        )
-        XCTAssertEqual(session.world, before)
+            // Two stops: refused, with the ring's rule.
+            session.selectStation(session.world.stations[0].id)
+            session.addSelectedStationToLineDraft()
+            session.selectStation(session.world.stations[1].id)
+            session.addSelectedStationToLineDraft()
+            session.createLineFromDraft()
+            let before = session.world
+            session.setSelectedLineRing(true)
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertEqual(
+                session.message?.text,
+                "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last."
+            )
+            XCTAssertEqual(session.world, before)
+        }
     }
 }
