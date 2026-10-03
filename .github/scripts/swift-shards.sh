@@ -55,7 +55,8 @@ set -euo pipefail
 #   campaigns-3  SaveMutationTests 538
 #   campaigns-4  LinePatternPropertyTests 427, StationFacilityPropertyTests 30
 #   campaigns-5  LineDispatchPropertyTests 409, TimetablePropertyTests 106
-#   campaigns-6  ServicePropertyTests ~285, VerticalRailwayPropertyTests 132
+#   campaigns-6  ServicePropertyTests ~285, VerticalRailwayPropertyTests 132,
+#                NetworkSectionPropertyTests ~42 (Stage F3c, 52 s locally)
 #   campaigns-7  ServiceRepeatingPropertyTests ~395, TrafficControlPropertyTests 98,
 #                TrackResourcePropertyTests 22
 #   campaigns-8  NetworkServicePropertyTests 160, ServiceLinePropertyTests 322
@@ -69,7 +70,7 @@ classes_of() {
     campaigns-3) echo "SaveMutationTests" ;;
     campaigns-4) echo "LinePatternPropertyTests StationFacilityPropertyTests" ;;
     campaigns-5) echo "LineDispatchPropertyTests TimetablePropertyTests" ;;
-    campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests" ;;
+    campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
     campaigns-7) echo "ServiceRepeatingPropertyTests TrafficControlPropertyTests TrackResourcePropertyTests" ;;
     campaigns-8) echo "NetworkServicePropertyTests ServiceLinePropertyTests" ;;
     *) return 1 ;;

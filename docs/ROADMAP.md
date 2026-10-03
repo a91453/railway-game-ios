@@ -316,8 +316,8 @@ Q 把前者展開成後者：服務模式產生具體、有限的班次，交給
 ### Stage S1 — 軌道資源 ✅
 
 - **道岔與平面交叉**：新增兩種鐵軌。道岔的 stem 接到每條支線，支線之間不互通；平面交叉只能直行。原本的鐵軌行為不變，所以既有存檔、路徑與 golden 值都不變。路徑、continuation 與移動遵守同一條轉向規則（`exits(from:facing:)`）。
-- **區段**：兩個分岔點之間相連的一串鐵軌，沒有分岔點的環狀線是一個區段；由地圖推導、不存檔（`trackSections()`）。
-- **單線與雙線**：兩站之間不共用連結的路徑數（`parallelTracks`、`lineTrackCounts`），1 是單線、2 以上是雙線。
+- **區段**：兩個分岔點之間相連的一串鐵軌，沒有分岔點的環狀線是一個區段；由地圖推導、不存檔（`trackSections()`；路網的版本 `networkSections()` 在 F3c-1 加入，移植參考的 `trackGroups`）。
+- **單線與雙線**：兩站之間不共用連結的路徑數（`parallelTracks`、`lineTrackCounts`），1 是單線、2 以上是雙線。F3c-1 起也數路網：路徑不共用任何一段軌道（一條邊，在兩站的月台處切開）。
 - **佔用資源**：鐵軌格（節點）與相鄰鐵軌之間的連結；平面交叉是一格，兩個方向共用。唯讀查詢：每台列車佔用的資源、互相衝突的列車。
 - 之前所有 Stage 的 property digest 不變；golden scenario schema v14 新增 `track-resources.json`（ARCHITECTURE 決策 26）。
 - **留給之後**：建造道岔與平面交叉的畫面。
@@ -552,6 +552,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - **F3a — golden 搬到路網**（GameCore 不動）：4 份只用方格車站的改成點車站 ✅；12 份規則和軌道無關的在路網上重寫，預期值的變化逐一說明 ✅（[GoldenScenarios/README](../GoldenScenarios/README.md#f3fixture-搬到路網schema-不變)）；只有一部分能搬或只屬於方格的 9 份，能表達的規則寫成路網的 golden ✅（六份 `network-*.json`），方格的原檔留到 F3c。
   - **F3b — 測試搬到路網**（GameCore 不動）：只把方格當布景的單元測試搬到路網 ✅（F3b-1，預期值的變化與暫時沒改的地方見 [F3_GRID_INVENTORY §7](research/F3_GRID_INVENTORY.md#7-f3b-進度)）；路網的世界產生器、campaign 與存檔變異 campaign ✅（F3b-2，新的 digest 與改了的量下限在 §7.3）；方格本身是主題的 campaign 留到 F3c。移植參考的 desync 重播：五份 [`ReplayFixtures/`](../ReplayFixtures/README.md)，F3c 必須原樣重播 ✅（F3b-3）。
   - **F3c — 刪掉方格**：GameCore、GamePresentation 與 App 的方格程式，golden schema 28，`Web/WasmProbe`。
+    - **F3c-1 — 方格才有的查詢先有路網版** ✅：區段（`networkSections()`，移植參考 `topology.js` 的 `trackGroups`）與單雙線（`parallelTracks` 也數路網）；線路面板的單雙線在路網世界不再一律是「方格上沒有軌道」。細節與暫時沒有改的地方見 [F3_GRID_INVENTORY §8](research/F3_GRID_INVENTORY.md#8-f3c-進度)。
 
 ## Stage E — 大地圖與實景模式
 
