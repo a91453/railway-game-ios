@@ -317,7 +317,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
     /// station within two tiles is chosen for it.
     func testAPlatformNearAStationServesIt() async throws {
         var world = try makeLineWorld()
-        let station = try world.buildStation(named: "East", at: GridPosition(x: 8, y: 4))
+        let station = try world.buildStation(named: "East", at: PlanPoint(x: 8_704, y: 4_608))
         var expected = world
         try expected.addTrackPlatform(station.id, on: .edge(1), from: 6_144, to: 8_192)
         await MainActor.run { [expected] in
@@ -341,11 +341,11 @@ final class NetworkBuildingSessionTests: XCTestCase {
     /// head at the far end the way it faces, standing there.
     func testATrainIsPlacedOnAPlatformTheWayItFaces() async throws {
         var world = try makeLineWorld()
-        let station = try world.buildStation(named: "Mid", at: GridPosition(x: 4, y: 3))
+        let station = try world.buildStation(named: "Mid", at: PlanPoint(x: 4_608, y: 3_584))
         try world.addTrackPlatform(station.id, on: .edge(1), from: 952, to: 5_048)
         let train = try world.purchaseTrain(named: "Tram")
         try world.setTrainCars(train.id, to: 2)
-        for (heading, direction, offset) in [(TrackDirection.east, TrackEdgeDirection.forward, Int64(5_048)), (.west, .backward, 7_240)] {
+        for (heading, direction, offset) in [(CompassHeading.east, TrackEdgeDirection.forward, Int64(5_048)), (.west, .backward, 7_240)] {
             var expected = world
             try expected.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: .edge(1), direction: direction), offset: offset))
             try expected.setTrainContinuation(train.id, along: [], stoppingAt: offset)
@@ -399,7 +399,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testAnEdgeWithAPlatformIsNotRemoved() async throws {
         var world = try makeLineWorld()
-        let station = try world.buildStation(named: "Mid", at: GridPosition(x: 4, y: 3))
+        let station = try world.buildStation(named: "Mid", at: PlanPoint(x: 4_608, y: 3_584))
         try world.addTrackPlatform(station.id, on: .edge(1), from: 952, to: 5_048)
         await MainActor.run { [world] in
             let session = GameSession(world: world)
@@ -473,8 +473,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testTheToolsSettingsAndTheNetworkSummaryRead() async throws {
         let world = try makeLineWorld()
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 track tiles · 1 edge")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 格軌道 · 1 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 edge")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 個軌段")
         await MainActor.run {
             let session = GameSession(world: world)
             XCTAssertEqual(session.networkHeightText(), "New nodes on the ground")

@@ -113,8 +113,6 @@ private struct ToolPicker: View {
         let costs = session.world.economy.costs
         switch tool {
         case .select: return String(localized: "Inspect stations and track")
-        // The grid's tools are not offered (Stage F1).
-        case .buildTrack, .buildStation, .removeTrack: return ""
         case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
         case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
         }
@@ -134,9 +132,6 @@ private struct ToolOptions: View {
             Label("Choose Network to build track, platforms and stations. Selecting only inspects.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        // The grid's tools are not offered (Stage F1).
-        case .buildTrack, .buildStation, .removeTrack:
-            EmptyView()
         case .network:
             NetworkControls(session: session)
         case .train:
@@ -200,8 +195,7 @@ private struct ActionButton: View {
 
     private var title: String? {
         switch session.tool {
-        // The grid's tools are not offered (Stage F1).
-        case .select, .buildTrack, .buildStation, .removeTrack: return nil
+        case .select: return nil
         case .network:
             switch session.networkMode {
             case .build:
@@ -290,9 +284,6 @@ extension ConstructionTool {
     var systemImage: String {
         switch self {
         case .select: "hand.point.up.left"
-        case .buildTrack: "road.lanes"
-        case .buildStation: "tram.fill"
-        case .removeTrack: "trash"
         case .network: "point.topleft.down.curvedto.point.bottomright.up"
         case .train: "train.side.front.car"
         }
@@ -301,8 +292,6 @@ extension ConstructionTool {
     var accessibilityName: String {
         switch self {
         case .select: String(localized: "Select tool")
-        // The grid's tools are not offered (Stage F1).
-        case .buildTrack, .buildStation, .removeTrack: ""
         case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
         }

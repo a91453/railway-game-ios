@@ -25,7 +25,6 @@ enum TileArt {
     static func drawMap(
         _ world: GameWorld,
         selectedTrainID: TrainID?,
-        selection: GridPosition?,
         selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
         projection: some MapProjection,
@@ -49,35 +48,12 @@ enum TileArt {
         }
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
-        // Read occupied station tiles, not map.tiles: even at whole-map
-        // zoom an empty 1024² map has no million-tile allocation or scan.
-        for station in world.stations {
-            for tile in station.tiles where region.intersects(tileRegion(tile)) {
-                let badge = tilePath(tile, inset: 0.08, projection: projection)
-                context.fill(badge, with: .color(Palette.station))
-                if detail == .full {
-                    context.stroke(badge, with: .color(Palette.rail.opacity(0.5)), lineWidth: 1)
-                    drawStationSymbol(at: projection.screenPoint(of: WorldCoordinate(centreOf: tile)), size: tileSize * 0.52, context: context)
-                }
-            }
-        }
-        for track in world.tracks where region.intersects(tileRegion(track.position)) {
-            drawTrack(track, projection: projection, in: context)
-        }
         drawNetwork(world, projection: projection, cached: edges, in: context)
         for station in world.stations where station.point != nil {
             drawPointStation(station, isSelected: station.id == selectedStationID, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
 
-        if let station = selectedStationID.flatMap({ world.station(id: $0) }) {
-            for tile in station.tiles where region.intersects(tileRegion(tile)) {
-                drawSelection(tile, projection: projection, context: context)
-            }
-        } else if let selection, world.map.contains(selection), world.track(at: selection) != nil,
-                  region.intersects(tileRegion(selection)) {
-            drawSelection(selection, projection: projection, context: context)
-        }
         for train in world.trains {
             guard let position = train.position, let location = world.location(of: position) else { continue }
             // A tail may still be visible when its head is offscreen. Only
@@ -230,61 +206,6 @@ enum TileArt {
         context.stroke(dot, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)), lineWidth: isSelected ? 3 : 1.5)
     }
 
-    private static func drawTrack(_ track: Track, projection: some MapProjection, in context: GraphicsContext) {
-        let tile = track.position
-        let size = projection.tileSize
-        var context = context
-        context.clip(to: tilePath(tile, projection: projection))
-        let line = trackPath(track.connections, tile: tile, projection: projection)
-        if projection.detail == .overview {
-            context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, size * 0.2), lineCap: .round, lineJoin: .round))
-            return
-        }
-        context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: size * 0.42, lineCap: .round, lineJoin: .round))
-        context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1.5, size * 0.1), lineCap: .round, lineJoin: .round))
-        switch track.layout {
-        case .open:
-            if track.connections.directions.count == 1, let end = track.connections.directions.first {
-                drawBar(across: end, x: 0.5, y: 0.5, half: 0.22, tile: tile, projection: projection, context: context)
-            }
-        case .turnout(let stem):
-            let edge = edgePoint(stem)
-            drawBar(across: stem, x: edge.x + (0.5 - edge.x) / 3, y: edge.y + (0.5 - edge.y) / 3, half: 0.2, tile: tile, projection: projection, context: context)
-        case .crossing:
-            let mark = tilePath(tile, inset: 0.35, projection: projection)
-            context.fill(mark, with: .color(Palette.ballast))
-            context.stroke(mark, with: .color(Palette.rail), lineWidth: max(1, size * 0.05))
-        }
-    }
-
-    private static func drawBar(across direction: TrackDirection, x: Double, y: Double, half: Double, tile: GridPosition, projection: some MapProjection, context: GraphicsContext) {
-        let horizontal = direction == .north || direction == .south
-        var bar = Path()
-        bar.move(to: tilePoint(tile, x: x - (horizontal ? half : 0), y: y - (horizontal ? 0 : half), projection: projection))
-        bar.addLine(to: tilePoint(tile, x: x + (horizontal ? half : 0), y: y + (horizontal ? 0 : half), projection: projection))
-        context.stroke(bar, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1.5, projection.tileSize * 0.1), lineCap: .round))
-    }
-
-    private static func trackPath(_ connections: TrackConnections, tile: GridPosition, projection: some MapProjection) -> Path {
-        let center = tilePoint(tile, x: 0.5, y: 0.5, projection: projection)
-        func edge(_ direction: TrackDirection) -> CGPoint {
-            let point = edgePoint(direction)
-            return tilePoint(tile, x: point.x, y: point.y, projection: projection)
-        }
-        let directions = connections.directions
-        var path = Path()
-        if directions.count == 2, connections != [.north, .south], connections != [.east, .west] {
-            path.move(to: edge(directions[0]))
-            path.addQuadCurve(to: edge(directions[1]), control: center)
-        } else {
-            for direction in directions {
-                path.move(to: center)
-                path.addLine(to: edge(direction))
-            }
-        }
-        return path
-    }
-
     private static func drawPointStation(_ station: Station, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
         let center = projection.screenPoint(of: station.location)
         let radius = max(5, projection.tileSize * 0.32)
@@ -329,33 +250,8 @@ enum TileArt {
         context.draw(symbol, in: CGRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height))
     }
 
-    private static func drawSelection(_ tile: GridPosition, projection: some MapProjection, context: GraphicsContext) {
-        let outline = tilePath(tile, inset: min(0.2, 1.5 / projection.tileSize), projection: projection)
-        context.stroke(outline, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
-        context.stroke(outline, with: .color(.accentColor), lineWidth: 3)
-    }
-
     private static func drawingRegion(_ projection: some MapProjection) -> WorldRegion {
         projection.visibleRegion.expanded(by: max(12, projection.tileSize) / projection.pointsPerUnit)
-    }
-
-    private static func tileRegion(_ tile: GridPosition) -> WorldRegion {
-        let unit = Double(WorldCoordinate.tileSize)
-        return WorldRegion(minX: Double(tile.x) * unit, minY: Double(tile.y) * unit, maxX: Double(tile.x + 1) * unit, maxY: Double(tile.y + 1) * unit)
-    }
-
-    private static func tilePath(_ tile: GridPosition, inset: Double = 0, projection: some MapProjection) -> Path {
-        polygon([
-            tilePoint(tile, x: inset, y: inset, projection: projection),
-            tilePoint(tile, x: 1 - inset, y: inset, projection: projection),
-            tilePoint(tile, x: 1 - inset, y: 1 - inset, projection: projection),
-            tilePoint(tile, x: inset, y: 1 - inset, projection: projection)
-        ])
-    }
-
-    private static func tilePoint(_ tile: GridPosition, x: Double, y: Double, projection: some MapProjection) -> CGPoint {
-        let unit = Double(WorldCoordinate.tileSize)
-        return screenPoint((Double(tile.x) + x) * unit, (Double(tile.y) + y) * unit, projection)
     }
 
     private static func screenPoint(_ x: Double, _ y: Double, _ projection: some MapProjection) -> CGPoint {
@@ -375,14 +271,5 @@ enum TileArt {
 
     private static func disc(at point: ScreenPoint, radius: Double) -> Path {
         Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
-    }
-
-    private static func edgePoint(_ direction: TrackDirection) -> (x: Double, y: Double) {
-        switch direction {
-        case .north: (0.5, 0)
-        case .east: (1, 0.5)
-        case .south: (0.5, 1)
-        case .west: (0, 0.5)
-        }
     }
 }

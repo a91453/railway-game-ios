@@ -258,21 +258,19 @@ extension GameSession {
         }
     }
 
-    /// The station nearest the place `point` on the network, by its tiles'
-    /// centres or, at a point (Stage F1), by that point, if one lies within
-    /// two tiles; the lowest ID of equally near ones.
+    /// The station nearest the place `point` on the network, by where it
+    /// stands (``Station/location``), if one lies within two tiles; the
+    /// lowest ID of equally near ones.
     private func nearestStation(to point: NetworkEdgePoint) -> StationID? {
         guard let position = world.trackGeometry(of: point.edge)?.location(at: point.distance).position else { return nil }
         let reach = 2 * WorldCoordinate.tileSize
         var best: (id: StationID, distance: Int64)?
         for station in world.stations {
-            let places = station.tiles.isEmpty ? [station.location] : station.tiles.map { WorldCoordinate(centreOf: $0).plan }
-            for centre in places {
-                let dx = centre.x - position.x, dy = centre.y - position.y
-                let squared = dx * dx + dy * dy
-                guard squared <= reach * reach, best == nil || squared < best!.distance else { continue }
-                best = (station.id, squared)
-            }
+            let centre = station.location
+            let dx = centre.x - position.x, dy = centre.y - position.y
+            let squared = dx * dx + dy * dy
+            guard squared <= reach * reach, best == nil || squared < best!.distance else { continue }
+            best = (station.id, squared)
         }
         return best?.id
     }

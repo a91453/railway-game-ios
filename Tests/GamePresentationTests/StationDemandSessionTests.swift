@@ -231,7 +231,7 @@ private let delta = StationID(rawValue: 4)
 private func makeStations() throws -> GameWorld {
     var world = try makeWorld(width: 8, height: 4, balance: 100_000)
     for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
-        try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+        try world.buildStation(named: name, at: TestLine.centre(x, 0))
     }
     return world
 }

@@ -24,15 +24,12 @@ final class SpeedControlTests: XCTestCase {
         let world = try makeWorld(balance: 10_000)
         await MainActor.run {
             let session = GameSession(world: world)
-            session.select(GridPosition(x: 0, y: 0))
-            session.selectTool(.buildTrack)
-            session.applyTool()
-            XCTAssertEqual(session.world.economy.balance.displayText, "9,900")
+            session.selectTool(.train)
+            session.purchaseTrain()
+            XCTAssertEqual(session.world.economy.balance.displayText, "5,000")
 
-            session.select(GridPosition(x: 1, y: 0))
-            session.selectTool(.buildStation)
-            session.applyTool()
-            XCTAssertEqual(session.world.economy.balance.displayText, "8,900")
+            session.purchaseTrain()
+            XCTAssertEqual(session.world.economy.balance.displayText, "0")
         }
     }
 }

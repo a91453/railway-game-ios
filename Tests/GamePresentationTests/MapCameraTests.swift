@@ -212,7 +212,7 @@ final class MapCameraTests: XCTestCase {
     }
 
     /// What a game has built: its track nodes, the points along its edges,
-    /// its stations, and an old save's grid track; nothing for a new game.
+    /// and its stations; nothing for a new game.
     func testTheBuiltRegionHoldsTheNetworkAndTheStations() throws {
         XCTAssertNil(WorldRegion.built(in: .newGame()))
         // The demo's outer ring track, 13 tiles round Central (tile 512,
@@ -222,7 +222,7 @@ final class MapCameraTests: XCTestCase {
         XCTAssertEqual(demo, WorldRegion(minX: 499 * 1_024, minY: 499 * 1_024, maxX: 525 * 1_024, maxY: 525 * 1_024))
 
         var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
-        try world.buildTrack(at: GridPosition(x: 3, y: 2), connections: [.east, .west])
+        try world.buildTrackNode(at: WorldCoordinate(x: 3_584, y: 2_560))
         try world.buildStation(named: "Far", at: PlanPoint(x: 10_240, y: 6_144))
         XCTAssertEqual(WorldRegion.built(in: world), WorldRegion(minX: 3_584, minY: 2_560, maxX: 10_240, maxY: 6_144))
     }

@@ -1,12 +1,11 @@
 import GameCore
 
-// Read-only track facts (Stage C2) that Phase 4.5 Stage S1 derives and the
-// app never showed: the sections between branch points (`trackSections` on
-// the grid, `networkSections` on the track network from Stage F3c), how
-// many separate tracks join each pair of a line's stops (`lineTrackCounts`:
-// single or double track, grid and network alike from Stage F3c) and the
-// track two trains occupy at once (`occupancyConflicts`). All of it is read
-// from the world when shown; nothing is kept.
+// Read-only track facts (Stage C2) that Phase 4.5 Stage S1 derives: the
+// sections of the track network between branch points (`networkSections`,
+// Stage F3c), how many separate tracks join each pair of a line's stops
+// (`lineTrackCounts`: single or double track) and the track two trains
+// occupy at once (`occupancyConflicts`). All of it is read from the world
+// when shown; nothing is kept.
 
 extension TrackResource {
     /// "Tile (3, 1)", "Link (3, 1)–(4, 1)", "Node #2", or for part of an
@@ -24,29 +23,13 @@ extension TrackResource {
 }
 
 extension GameWorld {
-    /// The grid sections through the track at `position` (see
-    /// ``trackSections()``): "6 tiles, (0, 1)–(5, 1)" for a run between
-    /// branch points, "Loop of 8 tiles through (2, 2)" for a ring. A branch
-    /// point ends several sections; a tile without track is in none.
-    public func sectionTexts(at position: GridPosition, in language: DisplayLanguage) -> [String] {
-        guard track(at: position) != nil else { return [] }
-        return trackSections().filter { $0.nodes.contains(position) }.map { section in
-            let count = section.nodes.count
-            if section.isLoop {
-                return language.text("Loop of \(count) tiles through \(section.nodes[0])", "環線 \(count) 格，經過 \(section.nodes[0])")
-            }
-            let ends = "\(section.nodes[0])–\(section.nodes[count - 1])"
-            return language.text("\(count) \(count == 1 ? "tile" : "tiles"), \(ends)", "\(count) 格，\(ends)")
-        }
-    }
-
-    /// How many sections the railway has, on the grid and on the track
-    /// network (``networkSections()``): "4 sections" or "4 sections · 1
-    /// loop"; "4 個區段 · 1 個環線". `nil` without track.
+    /// How many sections the track network has (``networkSections()``):
+    /// "4 sections" or "4 sections · 1 loop"; "4 個區段 · 1 個環線". `nil`
+    /// without track.
     public func trackSectionsSummary(in language: DisplayLanguage) -> String? {
-        let sections = trackSections().map(\.isLoop) + networkSections().map(\.isLoop)
+        let sections = networkSections()
         guard !sections.isEmpty else { return nil }
-        let loops = sections.filter { $0 }.count
+        let loops = sections.filter(\.isLoop).count
         let count = language.text("\(sections.count) \(sections.count == 1 ? "section" : "sections")", "\(sections.count) 個區段")
         guard loops > 0 else { return count }
         return count + language.text(" · \(loops) \(loops == 1 ? "loop" : "loops")", " · \(loops) 個環線")

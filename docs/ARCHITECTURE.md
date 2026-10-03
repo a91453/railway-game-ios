@@ -2484,6 +2484,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - **F3b — 測試搬到路網，GameCore 不動**：路網的世界產生器、campaign、存檔變異 campaign 與差分模型改成路網；方格的單元測試留到 F3c。產生器改了 digest 就會變，新的 digest 記在文件裡，不當成「行為沒變」。
 - **F3c — 刪掉方格**：GameCore 的方格型別、case、指令、錯誤、方格分支與存檔的方格格式；GamePresentation 的方格工具、方格選取與文字；App 的方格繪圖與「選取北邊的格子」這類 VoiceOver 動作；golden schema 28 拿掉方格的指令、觀察與寫法；`Web/WasmProbe`。
   - **F3c-1**（刪除之前）：只有方格版的兩個唯讀查詢先有路網版，刪方格時功能不跟著消失。區段 `networkSections()`（`NetworkSection`）移植參考 `topology.js` 的 `trackGroups`：在分歧點切開的邊鏈；分歧點是不是正好兩條邊相接的節點（道岔、交叉、盡頭、兩條邊不相接的節點），沒有分歧點的環另列。單雙線 `parallelTracks` 沿用 S1 的定義（不共用軌道的路徑數），路網上一段軌道是一條邊、在兩站的月台處切開，路徑只在相接的邊之間轉換，可以折返。兩者都是唯讀查詢，沒有規則讀它們，所以遊戲行為不變；改變的是路網世界的查詢結果（原本沒有區段、一律 0 線）與線路面板的文字。參考 `tra_track_sections.json` 的「平行比例 ≥ 0.5 算雙線」沒有移植：產生器不在 repo，「平行」的定義是缺口；參考唯一的使用者是交會推估（`inferMeetPassTimes` 的 `single(a,b)`），留到 V。
+  - **F3c-2**（GameCore 不動）：GamePresentation 與 App 不再呼叫方格的鐵軌、車站與列車位置。方格工具（F1 起 App 已不提供）、`GameSession` 的軌道形狀與擴站、方格的放置與送車、方格選取（`selectedTrack`、`moveSelection`、佔格車站優先）、方格文字與繪圖、地圖上「選取北邊的格子」等 VoiceOver 動作拿掉。列車只放在選取車站的路網月台、只送到選取的車站。放置方向改成 GamePresentation 的 `CompassHeading`，畫面一樣是北東南西。`selection` 仍是點到的那一格土地。剩下的只有對 GameCore 列舉的完整 switch（方格位置、節點、連結的文字與方格錯誤訊息），F3c-3 和 GameCore 的 case 一起刪。
 
 **參考**（2026-10-03 唯讀檢查三份，私有 repo `1563ad0`）：`Ci/` 的鐵路是經緯度上的車站與折線（沒有格）；`Railway/site_archive_clean/` 沿既有線形用累積距離與經緯度內插（沒有格）；參考包 `Railway/railway_game_reference_clean/` 是 OpenTTD（RailwayCore 15.3）的 tile／trackdir 系統，`01_MIGRATION_MAP.md` 要求移植行為與演算法結構而不是保留原實作。F3 與前兩份一致；OpenTTD 的選路、號誌與進路規則之後照決策 28 轉成節點、邊與行進方向，不把方格搬回來。
 

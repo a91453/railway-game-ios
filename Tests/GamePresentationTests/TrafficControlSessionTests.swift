@@ -10,34 +10,29 @@ import XCTest
 /// Each test compares the session's world with the same commands applied to
 /// GameCore directly.
 final class TrafficControlSessionTests: XCTestCase {
-    // A dead-end line on row 1 with a station at each end:
+    // A dead-end line of the track network on row 1 (nodes at columns
+    // 0–6, edges 1–6 eastward, see `TestLine`) with a station at each end:
     //
-    //       West            East
-    //   a - b - c - d - e - f - g
+    //   row 0:        West            East
+    //   row 1:   o - o - o - o - o - o - o
     //
-    // West's platform is b (1, 1), East's f (5, 1). Express (1) stands at c
-    // facing east; Local (2) stands at East's platform facing west, due to
-    // leave for West at minute 1.
+    // West's platforms are either side of column 1, East's of column 5.
+    // Express (1) stands at column 2 facing east; Local (2) stands at
+    // East facing west, due to leave for West at minute 1.
+    private static let line = TestLine(tiles: 7, row: 1)
     private static let express = TrainID(rawValue: 1)
     private static let local = TrainID(rawValue: 2)
-
-    private static func tile(_ x: Int) -> GridPosition {
-        GridPosition(x: x, y: 1)
-    }
+    private static let east = StationID(rawValue: 2)
 
     private func makeLineWorld() throws -> GameWorld {
         var world = try makeWorld(width: 8, height: 3, balance: 100_000, speed: .normal)
-        try world.buildTrack(at: Self.tile(0), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: Self.tile(x), connections: [.east, .west])
-        }
-        try world.buildTrack(at: Self.tile(6), connections: .west)
-        let west = try world.buildStation(named: "West", at: GridPosition(x: 1, y: 0)).id
-        let east = try world.buildStation(named: "East", at: GridPosition(x: 5, y: 0)).id
+        try Self.line.build(in: &world)
+        let west = try Self.line.buildStation(named: "West", beside: 1, at: 0, in: &world)
+        let east = try Self.line.buildStation(named: "East", beside: 5, at: 0, in: &world)
         try world.purchaseTrain(named: "Express")
-        try world.placeTrain(Self.express, at: .atNode(Self.tile(2), heading: .east))
+        try world.placeTrain(Self.express, at: Self.line.at(2, facingEast: true))
         try world.purchaseTrain(named: "Local")
-        try world.placeTrain(Self.local, at: .atNode(Self.tile(5), heading: .west))
+        try world.placeTrain(Self.local, at: Self.line.at(5, facingEast: false))
         try world.setTrainMovementRate(Self.local, to: 1_024)
         try world.setTrainTimetable(Self.local, to: [
             ScheduledStop(station: east, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
@@ -69,7 +64,7 @@ final class TrafficControlSessionTests: XCTestCase {
         var world = try makeLineWorld()
         // Sent on to East without traffic control, Express needs the
         // platform Local stands on.
-        try world.setTrainContinuation(Self.express, to: [Self.tile(3), Self.tile(4), Self.tile(5)])
+        try world.setTrainContinuation(Self.express, along: Self.line.path(from: 2, through: [3, 4, 5]))
         var expected = world
         do throws(GameError) {
             try expected.setTrafficControl(true)
@@ -92,7 +87,7 @@ final class TrafficControlSessionTests: XCTestCase {
     func testAWaitingTrainSaysWhichTrainHoldsItsRoute() async throws {
         var world = try makeLineWorld()
         try world.setTrafficControl(true)
-        try world.setTrainContinuation(Self.express, to: [Self.tile(3), Self.tile(4)])
+        try world.setTrainContinuation(Self.express, along: Self.line.path(from: 2, through: [3, 4]))
         // Before its departure is due, Local does not wait for anything.
         XCTAssertNil(world.routeWaitText(of: Self.local, in: .english))
         var expected = world
@@ -116,11 +111,11 @@ final class TrafficControlSessionTests: XCTestCase {
         var world = try makeLineWorld()
         try world.stopTrainService(Self.local)
         try world.setTrafficControl(true)
-        try world.setTrainContinuation(Self.local, to: [Self.tile(4), Self.tile(3)])
+        try world.setTrainContinuation(Self.local, along: Self.line.path(from: 5, through: [4, 3]))
         await MainActor.run { [world] in
             let session = GameSession(world: world)
             session.selectTrain(Self.express)
-            session.select(Self.tile(4))
+            session.selectStation(Self.east)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(

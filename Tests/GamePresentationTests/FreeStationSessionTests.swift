@@ -10,7 +10,7 @@ final class FreeStationSessionTests: XCTestCase {
     func testATapSelectsTheNearestStationWithinReachOrTheOneOnTheTile() async throws {
         try await MainActor.run {
             var world = try makeWorld(width: 16, height: 8, balance: 100_000)
-            let tile = try world.buildStation(named: "Tile", at: GridPosition(x: 0, y: 0)).id
+            let tile = try world.buildStation(named: "Tile", at: PlanPoint(x: 512, y: 512)).id
             let west = try world.buildStation(named: "West", at: PlanPoint(x: 4_000, y: 3_000)).id
             let twin = try world.buildStation(named: "Twin", at: PlanPoint(x: 4_500, y: 3_000)).id
             let close = try world.buildStation(named: "Close", at: PlanPoint(x: 900, y: 900)).id
@@ -30,14 +30,16 @@ final class FreeStationSessionTests: XCTestCase {
             session.tapMap(at: PlanPoint(x: 3_500, y: 2_500), reach: 300)
             XCTAssertEqual(session.selectedStationID, west)
             XCTAssertEqual(session.selection, GridPosition(x: 3, y: 2))
-            // A station on tiles takes its tile, even with Close nearer.
+            // Within half the reach: 141 from Close, 690 from Tile (Stage
+            // F3c: no station takes a tile, so the tile under the tap no
+            // longer wins over a nearer station).
             session.tapMap(at: PlanPoint(x: 1_000, y: 1_000), reach: 300)
-            XCTAssertEqual(session.selectedStationID, tile)
-            // Beside it, the nearer: 361 from Close, 595 from Tile's centre.
+            XCTAssertEqual(session.selectedStationID, close)
+            // The nearer: 361 from Close, 595 from Tile.
             session.tapMap(at: PlanPoint(x: 1_100, y: 600), reach: 640)
             XCTAssertEqual(session.selectedStationID, close)
             session.tapMap(at: PlanPoint(x: 1_100, y: 300), reach: 640)
-            XCTAssertEqual(session.selectedStationID, tile, "625 from Tile's centre, 632 from Close")
+            XCTAssertEqual(session.selectedStationID, tile, "625 from Tile, 632 from Close")
             // Empty land selects no station.
             session.tapMap(at: PlanPoint(x: 10_000, y: 6_000), reach: 300)
             XCTAssertNil(session.selectedStationID)
@@ -53,7 +55,7 @@ final class FreeStationSessionTests: XCTestCase {
     func testAStationIsSelectedByNameOrByTheTileItStandsIn() async throws {
         try await MainActor.run {
             var world = try makeWorld(width: 16, height: 8, balance: 100_000)
-            let tile = try world.buildStation(named: "Tile", at: GridPosition(x: 0, y: 0)).id
+            let tile = try world.buildStation(named: "Tile", at: PlanPoint(x: 512, y: 512)).id
             let west = try world.buildStation(named: "West", at: PlanPoint(x: 4_000, y: 3_000)).id
             let twin = try world.buildStation(named: "Twin", at: PlanPoint(x: 3_500, y: 2_500)).id
             let session = GameSession(world: world)
@@ -68,7 +70,7 @@ final class FreeStationSessionTests: XCTestCase {
             XCTAssertEqual(session.selectedStationID, west)
             session.select(GridPosition(x: 0, y: 0))
             XCTAssertEqual(session.selectedStationID, tile)
-            session.moveSelection(.east)
+            session.select(GridPosition(x: 1, y: 0))
             XCTAssertNil(session.selectedStationID)
             session.clearSelection()
             XCTAssertNil(session.selection)
@@ -94,7 +96,6 @@ final class FreeStationSessionTests: XCTestCase {
             session.addNetworkPlatform()
             let station = try XCTUnwrap(session.world.station(id: StationID(rawValue: 1)))
             XCTAssertEqual(station.point, PlanPoint(x: 4_024, y: 3_072))
-            XCTAssertEqual(station.tiles, [])
             XCTAssertEqual(session.world.map.tile(at: GridPosition(x: 3, y: 3))?.type, .empty)
             XCTAssertEqual(session.message?.text, "Built station “Station 1” with a 64 m platform on edge #1.")
 

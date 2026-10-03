@@ -18,16 +18,19 @@ final class GameSessionTests: XCTestCase {
 
     // MARK: - Selection
 
-    func testSelectingATileExposesItsCurrentContents() async throws {
+    func testSelectingATilePicksTheStationInsideIt() async throws {
         var world = try makeWorld()
-        try world.buildTrack(at: GridPosition(x: 2, y: 1), connections: [.east, .west])
+        let station = try world.buildStation(named: "Central", at: PlanPoint(x: 2_300, y: 1_100))
         await MainActor.run { [world] in
             let session = GameSession(world: world)
 
             session.select(GridPosition(x: 2, y: 1))
-
             XCTAssertEqual(session.selection, GridPosition(x: 2, y: 1))
-            XCTAssertEqual(session.selectedTrack, Track(position: session.selection!, connections: [.east, .west]))
+            XCTAssertEqual(session.selectedStation?.id, station.id, "the station stands inside the tile")
+
+            session.select(GridPosition(x: 3, y: 1))
+            XCTAssertEqual(session.selection, GridPosition(x: 3, y: 1))
+            XCTAssertNil(session.selectedStation)
             XCTAssertEqual(session.world, world)
         }
     }
@@ -55,28 +58,7 @@ final class GameSessionTests: XCTestCase {
             session.clearSelection()
 
             XCTAssertNil(session.selection)
-            XCTAssertNil(session.selectedTile)
-        }
-    }
-
-    func testMovingTheSelectionStaysInsideTheMap() async throws {
-        let world = try makeWorld(width: 3, height: 2)
-        await MainActor.run {
-            let session = GameSession(world: world)
-
-            session.moveSelection(.east)
-            XCTAssertEqual(session.selection, GridPosition(x: 0, y: 0), "starts at the north-west corner")
-
-            session.moveSelection(.north)
-            session.moveSelection(.west)
-            XCTAssertEqual(session.selection, GridPosition(x: 0, y: 0))
-
-            session.moveSelection(.east)
-            session.moveSelection(.east)
-            session.moveSelection(.east)
-            session.moveSelection(.south)
-            session.moveSelection(.south)
-            XCTAssertEqual(session.selection, GridPosition(x: 2, y: 1))
+            XCTAssertNil(session.selectedStation)
         }
     }
 }

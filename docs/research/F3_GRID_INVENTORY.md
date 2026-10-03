@@ -490,7 +490,42 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 
 - **tra 的「平行比例 ≥ 0.5 算雙線」**（`Railway/site_archive_clean/data/tra_track_sections.json`）沒有移植：產生器 `scripts/build_tra_track_sections.mjs` 不在 repo，「哪一段算平行」沒有定義；它是真實路線的資料分類，參考唯一的使用者是交會推估（`index.html` 第 8460 行 `single(a,b)`），留到 V 和交會一起移植。
 - **路網區段的文字**：方格有 `sectionTexts(at:)`（經過某一格的區段）；路網沒有對應的「經過某條邊的區段」文字，App 也沒有呼叫這些查詢的畫面（C2 的方格選取已經拿掉）。要顯示時再加。
-- **F3c 其餘步驟**：GamePresentation 與 App 的方格程式（F3c-2）、GameCore 的方格與 golden schema 28（F3c-3，方格版的 `trackSections()`／`TrackSection` 與方格的平行路徑在那時刪）、`Web/WasmProbe`（F3c-4）。
+- **F3c 其餘步驟**：GameCore 的方格與 golden schema 28（F3c-3，方格版的 `trackSections()`／`TrackSection` 與方格的平行路徑在那時刪）、`Web/WasmProbe`（F3c-4）。
+
+### 8.3 F3c-2：GamePresentation 與 App 不再用方格
+
+GameCore 沒有改。GamePresentation 與 App 不再呼叫方格的鐵軌、車站與列車位置的 API，F3c-3 刪 GameCore 的方格時不必再動它們（只剩對 GameCore 列舉的完整 switch，見 §8.4）。
+
+| 拿掉的 | 之後 |
+| --- | --- |
+| 工具 `buildTrack`、`buildStation`、`removeTrack`，`TrackPiece`、`TrackPieceKind`，`GameSession` 的軌道形狀、道岔共用端、擴站（F1 起 App 已經不提供） | 工具只有選取、路網、列車；車站由路網工具的月台模式建（F1） |
+| 放置列車在選取的格（`placeTrain(.atNode)`） | 只放在選取車站的路網月台；沒選車站時說「請選擇要放置 T 的車站」 |
+| 送到選取的格（方格路徑 `route(to:)`、`setTrainContinuation(to:)`） | 只送到選取的車站（`path(from:toStation:length:)`）；沒選車站時說「請選擇 T 要前往的車站」（原本是「路網上的列車只能前往車站」） |
+| 放置方向用 GameCore 的 `TrackDirection` | GamePresentation 自己的 `CompassHeading`（北東南西，畫面不變） |
+| `selectedTrack`、`selectedTile`、`moveSelection`；點地圖時「佔那一格的車站優先」；`selectedStation` 從格找車站 | `selection` 只是點到的那一格（土地）；車站只靠點與名字選（App 的世界沒有佔格的車站，所以結果相同） |
+| 選取的方格軌道文字（`tileSummary`、`TrackConnections` 的名稱）、站的格數、`networkSummary` 的「格軌道」 | 「3 座車站 · 4 個軌段」 |
+| `sectionTexts(at:)`（經過某一格的區段）；區段摘要數方格 | 區段摘要只數路網（F3c-1 的 `networkSections()`） |
+| 方格的路徑文字 `TrainMovement.pathText` | `Train.pathText` 只說路網的路 |
+| `MapScale` 的格中心與方格列車的換算 | 列車的位置、朝向與車身都經過世界查詢（`location(of:)`、`bodyPath(of:)`） |
+| App：畫方格鐵軌、佔格的車站與選取的格；地圖的 VoiceOver 動作「選取北／東／南／西邊的格子」與提示（字串目錄的五筆一起拿掉） | 地圖只畫路網、點車站與列車；VoiceOver 從車站清單選站 |
+
+**測試**：GamePresentationTests 只把方格當布景的都搬到路網（共用的 `TestLine` 複製一份到這個 target）：TrainControlTests、StationStopSessionTests、StationFacilitySessionTests、TrafficControlSessionTests、TrackInfoTextTests、LineSessionTests、PerformanceSessionTests、TimetableEditingTests、EconomyDisplayTests、TrainSessionPropertyTests（差分的 UI 動作改成選站、路網放置與送車），以及只用方格車站的 LineEditing、StationDemandSession、NetworkServiceSession、NetworkBuildingSession、FreeStationSession。只屬於方格工具的 TrackLayoutSessionTests、TrackActionTests 刪掉，其中和工具無關的兩條規則搬到 ToolActionTests；StationActionTests 改用月台工具建站。
+
+預期值有變的（其餘只是寫法換成路網，數值照舊）：
+
+| 測試 | 變化 | 原因 |
+| --- | --- | --- |
+| PerformanceSessionTests | 標準性能來回 9 分 36 秒 → 9 分 34 秒、第一段 16 → 14 秒；crawl 20 分 → 19 分 31 秒、第一段 2 分 → 1 分 31 秒 | 行程從往返最短的 berth 出發，第一段少 512（和 F3b-1 的 ServiceLineTests 同一條規則） |
+| FreeStationSessionTests | 點在 (1000, 1000)：原本選佔格的 Tile，現在選半徑內的 Close | 沒有車站佔格了 |
+| TrainControlTests、StationStopSessionTests | 訊息從「…，從 (1, 2) 起 4 段連結」變成「…，沿軌道 4096 單位」；送到非車站的格改成「請選擇…要前往的車站」 | 路網的送車訊息（S5） |
+| DisplayTextTests、NetworkBuildingSessionTests、LocalizationTests | 「0 座車站 · 0 格軌道 · 1 個軌段」→「0 座車站 · 1 個軌段」 | 拿掉方格的格數 |
+
+### 8.4 F3c-2 之後暫時沒有改的地方
+
+- **對 GameCore 列舉的完整 switch**：`TrainPosition.atNode／onLink`、`TrackNodeID.tile`、`TrackEdgeID.link` 的顯示文字與方格的 `GameError` 訊息（以及測它們的 DisplayText、Localization、NetworkDisplay 測試）還在，GameCore 拿掉那些 case 時（F3c-3）一起刪。
+- **`GameSession.selection`** 仍是 `GridPosition`：點到的那一格土地，決策 51 保留 `GridPosition`（點車站底下的格）。
+- **VoiceOver 在地圖上移動選取**：方格的四個動作拿掉後，地圖沒有替代的動作；VoiceOver 使用者從車站清單（路網總覽、線路面板）選站。參考沒有這個功能，需要時另外設計。
+- **UNVERIFIED — App（SwiftUI）**：Linux 不能編譯 App；`RailwayGameApp/` 的改動（ControlPanel、TrainControls、MapView、TileArt、字串目錄）要靠 macOS CI 的建置與 UI 測試確認。
 
 ## 驗證紀錄
 

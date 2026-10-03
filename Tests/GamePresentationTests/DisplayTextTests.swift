@@ -3,50 +3,24 @@ import GamePresentation
 import XCTest
 
 final class DisplayTextTests: XCTestCase {
-    func testTrackShapeNames() {
-        XCTAssertEqual(TrackConnections().shapeName(in: .english), "No connections")
-        XCTAssertEqual(TrackConnections.south.shapeName(in: .english), "Dead end")
-        XCTAssertEqual(TrackConnections([.north, .south]).shapeName(in: .english), "Straight")
-        XCTAssertEqual(TrackConnections([.east, .west]).shapeName(in: .english), "Straight")
-        XCTAssertEqual(TrackConnections([.north, .east]).shapeName(in: .english), "Curve")
-        XCTAssertEqual(TrackConnections([.south, .west]).shapeName(in: .english), "Curve")
-        XCTAssertEqual(TrackConnections([.north, .east, .west]).shapeName(in: .english), "T-junction")
-        XCTAssertEqual(TrackConnections([.north, .east, .south, .west]).shapeName(in: .english), "Four-way")
-    }
+    /// Stage F3c: the stations and the track network's edges; the grid's
+    /// track tiles are gone.
+    func testNetworkSummaryCountsStationsAndEdges() throws {
+        var world = try makeWorld(balance: 100_000)
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 edges")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 個軌段")
 
-    func testTrackSummaryListsDirectionsInCompassOrder() {
-        XCTAssertEqual(TrackConnections([.west, .north]).summary(in: .english), "Curve N–W")
-        XCTAssertEqual(TrackConnections([.south, .north]).summary(in: .english), "Straight N–S")
-        XCTAssertEqual(TrackConnections().summary(in: .english), "No connections")
-    }
+        try world.buildStation(named: "Central", at: PlanPoint(x: 512, y: 512))
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 1_536, y: 1_536))
+        try world.buildTrackEdge(from: west, to: east)
+        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 edge")
 
-    func testTileSummaries() throws {
-        var world = try makeWorld()
-        try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
-        try world.buildStation(named: "Central", at: GridPosition(x: 2, y: 0))
-
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 0, y: 0), in: .english), "Empty")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 1, y: 0), in: .english), "Track · Straight E–W")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0), in: .english), "Station · Central")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0), in: .english), "Outside the map")
-
-        try world.buildTurnout(at: GridPosition(x: 3, y: 1), connections: [.east, .south, .west], stem: .west)
-        try world.buildCrossing(at: GridPosition(x: 4, y: 1))
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 3, y: 1), in: .english), "Turnout · E–S–W, stem W")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 4, y: 1), in: .english), "Level crossing · N–S over E–W")
-    }
-
-    func testNetworkSummaryCountsStationsAndTrackTiles() throws {
-        var world = try makeWorld()
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 track tiles")
-
-        try world.buildStation(named: "Central", at: GridPosition(x: 0, y: 0))
-        try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
-        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 track tile")
-
-        try world.buildStation(named: "Harbor", at: GridPosition(x: 3, y: 0))
-        try world.buildTrack(at: GridPosition(x: 2, y: 0), connections: [.east, .west])
-        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 track tiles")
+        try world.buildStation(named: "Harbor", at: PlanPoint(x: 3_584, y: 512))
+        let far = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 1_536))
+        try world.buildTrackEdge(from: east, to: far)
+        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 edges")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 個軌段")
     }
 }
 

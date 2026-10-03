@@ -11,8 +11,7 @@ final class DemoWorldTests: XCTestCase {
     func testTheDemoMapIsBuiltOnTheNetworkWithStationsAtPoints() throws {
         let world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
-        XCTAssertTrue(world.stations.allSatisfy { $0.point != nil && $0.tiles.isEmpty }, "no station takes a tile")
-        XCTAssertTrue(world.tracks.isEmpty, "no grid track")
+        XCTAssertTrue(world.stations.allSatisfy { $0.point != nil }, "every station stands at a point")
         // Line 1 on the ground, Line 2 on a viaduct, and the four arcs of
         // each ring track: edges 3 to 6 the inner, 7 to 10 the outer.
         XCTAssertEqual(world.network.edges.map(\.structure), [.surface, .elevated] + Array(repeating: .surface, count: 8))

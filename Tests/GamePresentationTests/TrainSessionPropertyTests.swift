@@ -2,16 +2,17 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Stage M, differentially: generated sequences of UI actions (tiles, tools,
-/// trains, headings, rates, sends, reversing, taking off, building, time
-/// passing) drive a `GameSession`, while a shadow `GameWorld` receives the
+/// Stage M, differentially: generated sequences of UI actions (tiles,
+/// stations, tools, trains, headings, rates, sends, reversing, taking off,
+/// time passing) drive a `GameSession`, while a shadow `GameWorld` receives the
 /// GameCore commands each action stands for. After every action the two
 /// worlds must be identical, and everything the train tool shows must be read
 /// from the session's world. The session can therefore neither add, drop,
 /// reorder nor alter a command, nor move a train by itself.
 ///
 /// Cases are generated from fixed seeds (the same canonical seeds as the
-/// GameCore property suites); a failure names the seed and case.
+/// GameCore property suites); a failure names the seed and case. On the
+/// track network since Stage F3c.
 final class TrainSessionPropertyTests: XCTestCase {
     private static let seeds: [UInt64] = [0x5EED_A001, 0x5EED_A002, 0x5EED_A003, 0x5EED_A004]
 
@@ -32,40 +33,45 @@ final class TrainSessionPropertyTests: XCTestCase {
         mutating func element<T>(of array: [T]) -> T { array[below(array.count)] }
     }
 
-    /// An 8 x 6 network: mostly track, neighbours joined both ways at random,
-    /// and a station.
+    /// An 8 x 6 map with two lines of the track network, along rows 1 and
+    /// 4: a node at the centre of each tile, neighbours mostly joined by a
+    /// straight edge; and three stations at points, each beside a node with
+    /// platforms on the half of each edge there nearer it (as `TestLine`).
     private static func makeNetwork(_ random: inout Random) throws -> GameWorld {
         var world = try makeWorld(balance: 10_000_000, speed: .normal)
-        var exits: [[TrackConnections]] = Array(repeating: Array(repeating: [], count: 8), count: 6)
-        for y in 0..<6 {
-            for x in 0..<8 {
-                if x < 7, random.below(10) < 7 {
-                    exits[y][x].insert(.east)
-                    exits[y][x + 1].insert(.west)
-                }
-                if y < 5, random.below(10) < 5 {
-                    exits[y][x].insert(.south)
-                    exits[y + 1][x].insert(.north)
-                }
+        var nodes: [Int: [Int: TrackNodeID]] = [:]
+        var edges: [Int: [Int: TrackEdgeID]] = [:]
+        for row in [1, 4] {
+            for column in 0..<8 {
+                let centre = TestLine.centre(column, row)
+                nodes[row, default: [:]][column] = try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))
+            }
+            for column in 1..<8 where random.below(10) < 8 {
+                edges[row, default: [:]][column] = try world.buildTrackEdge(from: nodes[row]![column - 1]!, to: nodes[row]![column]!)
             }
         }
-        let station = GridPosition(x: random.below(8), y: random.below(6))
-        for y in 0..<6 {
-            for x in 0..<8 where !exits[y][x].isEmpty && GridPosition(x: x, y: y) != station && random.below(10) < 9 {
-                try world.buildTrack(at: GridPosition(x: x, y: y), connections: exits[y][x])
+        for index in 1...3 {
+            let row = random.element(of: [1, 4])
+            let column = random.below(8)
+            let station = try world.buildStation(named: "Yard \(index)", at: TestLine.centre(column, row + random.element(of: [-1, 1]))).id
+            if let west = edges[row]?[column] {
+                try? world.addTrackPlatform(station, on: west, from: TestLine.tile / 2, to: TestLine.tile)
+            }
+            if let east = edges[row]?[column + 1] {
+                try? world.addTrackPlatform(station, on: east, from: 0, to: TestLine.tile / 2)
             }
         }
-        try world.buildStation(named: "Yard", at: station)
         return world
     }
 
     private enum Action: CustomStringConvertible {
         case select(GridPosition)
+        case selectStation(StationID)
         case clearSelection
         case selectTool(ConstructionTool)
         case purchase
         case selectTrain(TrainID)
-        case heading(TrackDirection)
+        case heading(CompassHeading)
         case place
         case rate(Int64)
         case boundRate(Int64)
@@ -79,6 +85,7 @@ final class TrainSessionPropertyTests: XCTestCase {
         var description: String {
             switch self {
             case .select(let tile): "select \(tile)"
+            case .selectStation(let id): "select station \(id.rawValue)"
             case .clearSelection: "clear selection"
             case .selectTool(let tool): "tool \(tool)"
             case .purchase: "buy"
@@ -99,12 +106,13 @@ final class TrainSessionPropertyTests: XCTestCase {
 
     private static func nextAction(_ random: inout Random, trains: Int) -> Action {
         switch random.below(100) {
-        case 0..<14: return .select(GridPosition(x: random.below(10) - 1, y: random.below(8) - 1))
+        case 0..<8: return .select(GridPosition(x: random.below(10) - 1, y: random.below(8) - 1))
+        case 8..<14: return .selectStation(StationID(rawValue: 1 + random.below(4)))
         case 14..<16: return .clearSelection
         case 16..<22: return .selectTool(random.element(of: ConstructionTool.allCases))
         case 22..<27: return .purchase
         case 27..<30: return .selectTrain(TrainID(rawValue: 1 + random.below(trains + 2)))
-        case 30..<33: return .heading(random.element(of: TrackDirection.allCases))
+        case 30..<33: return .heading(random.element(of: CompassHeading.allCases))
         case 33..<41: return .place
         case 41..<47: return .rate(random.element(of: [0, 32, 256, 1_024, 3_000, -1]))
         case 47..<50: return .boundRate(Int64(random.below(40)) * 32)
@@ -123,25 +131,42 @@ final class TrainSessionPropertyTests: XCTestCase {
     @MainActor
     private static func applyToShadow(_ action: Action, _ shadow: inout GameWorld, session: GameSession) {
         let id = session.selectedTrainID
-        let tile = session.selection
+        let station = session.selectedStation
+        // NetworkSession's placing: the first platform the train fits, or
+        // else the longest; facing the way along it nearer the heading,
+        // its head at the far end, standing there.
         func place() {
-            guard let id, let tile else { return }
-            try? shadow.placeTrain(id, at: .atNode(tile, heading: session.placementHeading))
+            guard let id, let station, let train = shadow.train(id: id) else { return }
+            let platforms = shadow.trackPlatforms(of: station.id)
+            guard let platform = platforms.first(where: { $0.length >= train.length }) ?? platforms.max(by: { $0.length < $1.length }),
+                  let edge = shadow.network.edge(platform.edge),
+                  let geometry = shadow.trackGeometry(of: platform.edge)
+            else { return }
+            let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+            let forward = switch session.placementHeading {
+            case .north: way.dy <= 0
+            case .east: way.dx >= 0
+            case .south: way.dy >= 0
+            case .west: way.dx <= 0
+            }
+            let offset = forward ? platform.end : edge.length - platform.start
+            var draft = shadow
+            do {
+                try draft.placeTrain(id, at: .onEdge(TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward), offset: offset))
+                if offset < edge.length {
+                    try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
+                }
+                shadow = draft
+            } catch {}
         }
         func send() {
-            guard let id, let tile, let position = shadow.train(id: id)?.position else { return }
-            // A station tile sends the train to the station (Stage N).
-            let route: [GridPosition]?
-            if let station = shadow.station(at: tile) {
-                route = shadow.route(from: position, toStation: station.id)
-            } else {
-                route = shadow.route(from: position, to: tile)
-            }
-            guard let route else { return }
-            try? shadow.setTrainContinuation(id, to: route)
+            guard let id, let station, let train = shadow.train(id: id), let position = train.position,
+                  let path = shadow.path(from: position, toStation: station.id, length: train.length)
+            else { return }
+            try? shadow.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
         }
         switch action {
-        case .select, .clearSelection, .selectTool, .selectTrain, .heading:
+        case .select, .selectStation, .clearSelection, .selectTool, .selectTrain, .heading:
             return
         case .purchase:
             _ = try? shadow.purchaseTrain(named: "Train \(shadow.trains.count + 1)")
@@ -152,13 +177,9 @@ final class TrainSessionPropertyTests: XCTestCase {
         case .send:
             send()
         case .applyTool:
-            guard let tile else { return }
+            guard session.selection != nil else { return }
             switch session.tool {
-            case .select: return
-            case .buildTrack: _ = try? shadow.buildTrack(at: tile, connections: session.trackConnections)
-            case .buildStation: _ = try? shadow.buildStation(named: session.stationName, at: tile)
-            case .removeTrack: try? shadow.removeTrack(at: tile)
-            case .network: return
+            case .select, .network: return
             case .train:
                 if let id, shadow.train(id: id)?.position != nil { send() } else { place() }
             }
@@ -177,6 +198,7 @@ final class TrainSessionPropertyTests: XCTestCase {
     private static func perform(_ action: Action, on session: GameSession) {
         switch action {
         case .select(let tile): session.select(tile)
+        case .selectStation(let id): session.selectStation(id)
         case .clearSelection: session.clearSelection()
         case .selectTool(let tool): session.selectTool(tool)
         case .purchase: session.purchaseTrain()
@@ -223,10 +245,9 @@ final class TrainSessionPropertyTests: XCTestCase {
             if let tile = session.selection, !session.world.map.contains(tile) { problems.append("selection \(tile) left the map") }
             for train in session.world.trains {
                 if let position = train.position {
-                    let onTrack: Bool = switch position {
-                    case .atNode(let tile, _): session.world.track(at: tile) != nil
-                    case .onLink(let from, let to, let offset): (1...1023).contains(offset) && session.world.isConnected(from, to: to)
-                    case .onEdge(let traversal, let offset): offset >= 0 && offset <= session.world.trackEdge(traversal.edge)?.length ?? -1
+                    var onTrack = false
+                    if case .onEdge(let traversal, let offset) = position {
+                        onTrack = offset >= 0 && offset <= session.world.trackEdge(traversal.edge)?.length ?? -1
                     }
                     if !onTrack { problems.append("train \(train.id.rawValue) is off the track at \(position)") }
                     if train.positionText(in: .english) != position.displayText(in: .english) { problems.append("position text is not derived") }

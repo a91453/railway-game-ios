@@ -21,7 +21,7 @@ final class NetworkDisplayTests: XCTestCase {
 
     func testWorldPointsAreDrawnATileFor1024Units() {
         XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 512), tileSize: 32) == (48, 16))
-        XCTAssertTrue(MapScale.center(of: WorldCoordinate(centreOf: GridPosition(x: 3, y: 2)), tileSize: 32) == MapScale.center(of: GridPosition(x: 3, y: 2), tileSize: 32))
+        XCTAssertTrue(MapScale.center(of: WorldCoordinate(centreOf: GridPosition(x: 3, y: 2)), tileSize: 32) == (112, 80), "a tile's centre")
     }
 
     func testTrainsOnTheNetworkAreDrawnWhereGameCoreHasThem() throws {
