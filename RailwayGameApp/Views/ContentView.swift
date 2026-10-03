@@ -93,6 +93,7 @@ struct ContentView: View {
 
     private var map: some View {
         MapView(session: session)
+            .tutorialTarget(.map)
             .overlay(alignment: .top) {
                 StatusBanner(session: session)
             }

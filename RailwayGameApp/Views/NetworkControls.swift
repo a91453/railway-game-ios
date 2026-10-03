@@ -21,6 +21,7 @@ struct NetworkControls: View {
                 }
             }
             .pickerStyle(.segmented)
+            .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
                 buildOptions

@@ -12,8 +12,8 @@ import Observation
 /// Besides the world, the session keeps only transient UI state: the selected
 /// tile and station, the active tool, the track piece being placed, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
-/// stops picked for a new line, the copied station demand, and the last
-/// action's message, written in ``language``. Anything shown about the game,
+/// stops picked for a new line, the copied station demand, the tutorial on
+/// screen, and the last action's message, written in ``language``. Anything shown about the game,
 /// including where each train is and where it is going, is derived from
 /// ``world`` on demand.
 ///
@@ -119,6 +119,10 @@ public final class GameSession {
     /// The station the next platform serves; `nil` builds a new station
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?
+
+    /// The tutorial on screen (Stage C5), or `nil`. Moved through the
+    /// tutorial methods (see TutorialSession.swift); never saved.
+    public internal(set) var tutorial: Tutorial?
 
     /// Real time per simulation tick. At 600× (``GameSpeed/normal``) a tick
     /// is one game minute, so a game day lasts 144 real seconds; at 1× it is

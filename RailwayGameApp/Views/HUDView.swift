@@ -62,6 +62,7 @@ struct HUDView: View {
         .buttonStyle(SelectableButtonStyle(isActive: showsLines))
         .accessibilityLabel("Lines")
         .accessibilityHint("Shows the service lines and their timetables.")
+        .tutorialTarget(.linesButton)
     }
 
     /// Saving, exporting the game as a file and going back to the start
@@ -89,6 +90,7 @@ struct HUDView: View {
         }
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
+        .tutorialTarget(.gameMenu)
     }
 
     /// The balance in dollars; it opens the economy panel.
@@ -154,6 +156,7 @@ private struct SpeedControl: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
+        .tutorialTarget(.speedControl)
     }
 }
 

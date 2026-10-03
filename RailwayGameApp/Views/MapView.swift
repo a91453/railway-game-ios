@@ -78,6 +78,7 @@ struct MapView: View {
         }
         .font(.title3)
         .background(.regularMaterial, in: Capsule())
+        .tutorialTarget(.zoomControls)
         .padding(12)
     }
 }
