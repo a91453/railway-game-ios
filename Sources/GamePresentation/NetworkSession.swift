@@ -204,9 +204,10 @@ extension GameSession {
     /// `GameWorld.addTrackPlatform(_:on:from:to:)` for the station
     /// ``platformStationID``, or for a new station built first through
     /// `GameWorld.buildStation(named:at:)` at the middle of the platform,
-    /// taking no tile (Stage F1). All or nothing. A new station then serves
-    /// the next platform, so a second track beside it joins the same
-    /// station.
+    /// taking no tile (Stage F1); a managed company's city gives the new
+    /// station its ridership (``StationDemand/cityDefault``). All or
+    /// nothing. A new station then serves the next platform, so a second
+    /// track beside it joins the same station.
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
@@ -223,6 +224,9 @@ extension GameSession {
                 station = chosen
             } else {
                 station = try draft.buildStation(named: name, at: middle)
+                if draft.accounts.mode == .management {
+                    try draft.setStationDemand(station.id, to: .cityDefault)
+                }
             }
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
             world = draft

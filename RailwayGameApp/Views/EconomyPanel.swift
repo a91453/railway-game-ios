@@ -15,6 +15,7 @@ struct EconomyPanel: View {
     @Environment(\.dismiss) private var dismiss
     @State private var period: FinancePeriod = .day
     @State private var flatFare: Int64 = 500
+    @State private var confirmsFreePlay = false
 
     var body: some View {
         NavigationStack {
@@ -50,12 +51,21 @@ struct EconomyPanel: View {
         Section {
             LabeledContent("Balance", value: session.world.economy.balance.moneyText)
                 .monospacedDigit()
-            Picker("Mode", selection: Binding(get: { accounts.mode }, set: { session.setEconomyMode($0) })) {
-                ForEach(EconomyMode.allCases, id: \.self) { mode in
-                    Text(mode.displayName(in: session.language)).tag(mode)
+            LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
+            // Free play cannot become managed again (decision 46), so the
+            // switch goes one way, after a confirmation.
+            if accounts.mode == .management {
+                Button("Switch to Free Play", role: .destructive) {
+                    confirmsFreePlay = true
+                }
+                .confirmationDialog("Switch to Free Play", isPresented: $confirmsFreePlay, titleVisibility: .visible) {
+                    Button("Switch to Free Play", role: .destructive) {
+                        session.setEconomyMode(.free)
+                    }
+                } message: {
+                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
                 }
             }
-            .pickerStyle(.segmented)
         } footer: {
             Text(accounts.mode == .management
                 ? "Passengers pay as they board. Running and upkeep are settled every hour, energy and staff every day, and the balance may go below zero."

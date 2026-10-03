@@ -71,13 +71,23 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(world.loadText(of: TrainID(rawValue: 1), in: .traditionalChinese), "載客 \(riding) 人 · \(percent)%")
     }
 
-    func testTheSessionSwitchesModeAndSetsFares() async throws {
-        let world = try makeLine()
-        await MainActor.run {
+    /// Decision 46: a managed company may switch to free play, which
+    /// cannot become managed again (the reference loads a free-play save
+    /// only in free play).
+    func testTheSessionSwitchesToFreePlayOnlyOnceAndSetsFares() async throws {
+        var world = try makeLine()
+        world.setEconomyMode(.management)
+        await MainActor.run { [world] in
             let session = GameSession(world: world)
+            session.setEconomyMode(.free)
+            XCTAssertEqual(session.world.accounts.mode, .free)
+            XCTAssertEqual(session.message?.text, "Free play: no fares or running costs, and you set each station's ridership.")
             session.setEconomyMode(.management)
-            XCTAssertEqual(session.world.accounts.mode, .management)
-            XCTAssertEqual(session.message?.kind, .success)
+            XCTAssertEqual(session.world.accounts.mode, .free)
+            XCTAssertEqual(
+                session.message,
+                StatusMessage(kind: .failure, text: "Free play cannot become a managed company again. Start a new game to manage one.")
+            )
             session.setFareRules(.flat(-1))
             XCTAssertEqual(session.message?.kind, .failure)
             XCTAssertNil(session.world.accounts.fareRules)

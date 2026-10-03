@@ -69,6 +69,16 @@
         }
       }
     },
+    "A managed company's city sets each station's ridership. Free play can change it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "經營模式下，各站的客流由城市決定；自由模式可以修改。"
+          }
+        }
+      }
+    },
     "A minute later or earlier; the stops after it move with it." : {
       "localizations" : {
         "zh-Hant" : {
@@ -645,6 +655,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "固定票價 %@"
+          }
+        }
+      }
+    },
+    "Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由模式不收票價、沒有營運成本，各站的客流由你設定。切換後無法再改回經營模式。"
           }
         }
       }
@@ -1735,6 +1755,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "結構物"
+          }
+        }
+      }
+    },
+    "Switch to Free Play" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切換到自由模式"
           }
         }
       }
