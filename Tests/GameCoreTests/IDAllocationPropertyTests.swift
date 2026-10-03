@@ -6,9 +6,10 @@ import XCTest
 /// round trips, starting from ID counters that are either ordinary or a few
 /// steps from the end. Each result is predicted from a model of the two
 /// counters (hand out the counter's value, then add 1; refuse at `Int.max`)
-/// and of which tiles are taken, and checked against GameCore: the IDs
-/// handed out, the saved counters, and an unchanged world after every
-/// refusal. See `IDAllocationTests` for the rule.
+/// and of where the map ends, and checked against GameCore: the IDs handed
+/// out, the saved counters, and an unchanged world after every refusal.
+/// See `IDAllocationTests` for the rule. Stations stand at points, track is
+/// the network's (Stage F3b).
 final class IDAllocationPropertyTests: XCTestCase {
     private static let side = 6
 
@@ -36,9 +37,8 @@ final class IDAllocationPropertyTests: XCTestCase {
         var created = 0, refused = 0, lastIDs = 0, roundTrips = 0
         let ran = try runCampaign("ids.allocation", cases: 40) { c in
             var world = try makeWorld(width: Self.side, height: Self.side, balance: 1_000_000_000)
-            try world.buildTrack(at: GridPosition(x: 0, y: 0), connections: [.east])
-            try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.west])
-            try world.buildStation(named: "Yard", at: GridPosition(x: 2, y: 0))
+            try TestLine(tiles: 2, row: 0).build(in: &world)
+            try world.buildStation(named: "Yard", at: TestLine.centre(2, 0))
             try world.purchaseTrain(named: "Local")
             var next: [Kind: Int] = [.station: startingCounter(&c), .train: startingCounter(&c)]
             c.note("counters: station \(next[.station]!), train \(next[.train]!)")
@@ -46,7 +46,6 @@ final class IDAllocationPropertyTests: XCTestCase {
             saved["nextStationID"] = next[.station]
             saved["nextTrainID"] = next[.train]
             world = try JSONDecoder().decode(GameWorld.self, from: try JSONSerialization.data(withJSONObject: saved))
-            var taken: Set<GridPosition> = [GridPosition(x: 0, y: 0), GridPosition(x: 1, y: 0), GridPosition(x: 2, y: 0)]
 
             for step in 0..<16 {
                 let before = world
@@ -66,8 +65,6 @@ final class IDAllocationPropertyTests: XCTestCase {
                 let expected: GameError?
                 if kind == .station, !world.map.contains(tile) {
                     expected = .outOfBounds(tile)
-                } else if kind == .station, taken.contains(tile) {
-                    expected = .tileOccupied(tile)
                 } else if next[kind] == Int.max {
                     expected = .idsExhausted
                 } else {
@@ -76,7 +73,7 @@ final class IDAllocationPropertyTests: XCTestCase {
 
                 let outcome = Result { () throws(GameError) -> Int in
                     switch kind {
-                    case .station: try world.buildStation(named: "S\(step)", at: tile).id.rawValue
+                    case .station: try world.buildStation(named: "S\(step)", at: TestLine.centre(tile.x, tile.y)).id.rawValue
                     case .train: try world.purchaseTrain(named: "T\(step)").id.rawValue
                     }
                 }
@@ -86,7 +83,6 @@ final class IDAllocationPropertyTests: XCTestCase {
                     c.expect(id == next[kind], "step \(step): got ID \(id), expected \(next[kind]!)")
                     if id == Int.max - 1 { lastIDs += 1 }
                     next[kind] = next[kind]! + 1
-                    if kind == .station { taken.insert(tile) }
                     created += 1
                 case (.failure(let error), let expected?):
                     c.expect(error == expected, "step \(step): refused with \(error), expected \(expected)")

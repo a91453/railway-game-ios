@@ -72,7 +72,7 @@ final class TrackResourcePropertyTests: XCTestCase {
             case 4, 5:
                 run(.advance(1 + c.random.below(8)))
             default:
-                run(KernelDifferentialTests.nextOperation(in: world, using: &c.random))
+                run(KernelDifferentialTests.nextGridOperation(in: world, using: &c.random))
             }
         }
         return (setup, operations)

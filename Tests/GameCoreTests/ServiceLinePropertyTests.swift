@@ -25,7 +25,8 @@ final class ServiceLinePropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
-        let setup = KernelDifferentialTests.makeSetup(shapes: [.loopWithTails, .loopWithTails, .grid, .ladder, .line, .line, .random, .twoComponents], using: &c.random)
+        // On the track network (Stage F3b).
+        let setup = KernelDifferentialTests.makeNetworkSetup(shapes: [.balloons, .balloons, .balloons, .loopWithTails, .loopWithTails, .crossings, .ladder, .line, .line, .twoLines], using: &c.random)
         var (world, _) = try setup.build()
         var operations: [Operation] = []
         for _ in 0..<count {
@@ -123,7 +124,7 @@ final class ServiceLinePropertyTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("line.differential", cases: 30) { c in
             let (setup, operations) = try Self.generate(&c, operations: 100)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds)")
+            c.note("setup: \(setup.summary), second \(setup.seconds)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations)
@@ -148,7 +149,7 @@ final class ServiceLinePropertyTests: XCTestCase {
                     }
                     counts["drivable", default: 0] += 1
                     if journey.isRing { counts["drivable ring", default: 0] += 1 }
-                    if journey.legs.contains(where: { $0.route.isEmpty }) { counts["a leg with no travel", default: 0] += 1 }
+                    if journey.legs.contains(where: { $0.path.distance == 0 }) { counts["a leg with no travel", default: 0] += 1 }
                     if let maximum = world.lineMaximumTrains(line.id), line.trainsInService.peak > maximum {
                         counts["capped", default: 0] += 1
                     }
@@ -167,11 +168,14 @@ final class ServiceLinePropertyTests: XCTestCase {
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         print("[digest] line.differential \(digest.hex) (\(summary))")
         assertVolume(ran == 30 * PropertySeeds.active.count, "every case should run")
+        // Stage F3b: no floor for "a leg with no travel". On the track
+        // network two stations never share a berth (on the grid they could
+        // share a platform tile), so a leg between two stops always travels.
         for (event, least) in [
             ("ok createLine", 300), ("ok setLineStops", 200), ("ok setLinePerformance", 200), ("ok setLineWindow", 100),
             ("ok setLineTrains", 200), ("ok setServiceDay", 50), ("ok removeLine", 30), ("unknownLine", 50), ("invalidLineStops", 50),
             ("unknownStation", 20), ("invalidTrainPerformance", 50), ("invalidServiceWindow", 30), ("invalidTrainsInService", 30),
-            ("invalidServiceDay", 20), ("drivable", 2_500), ("not drivable", 3_000), ("capped", 300), ("a leg with no travel", 100),
+            ("invalidServiceDay", 20), ("drivable", 2_500), ("not drivable", 3_000), ("capped", 300),
             ("ok setLineRing", 100), ("drivable ring", 300),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")

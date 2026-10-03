@@ -190,8 +190,8 @@ final class TrafficControlPropertyTests: XCTestCase {
             }
         }
         for (index, name) in ["A", "B", "C"].enumerated() {
-            _ = try world.buildStation(named: name, at: GridPosition(x: index + 1, y: 1))
-            XCTAssertNil(model.buildStation(named: name, at: GridPosition(x: index + 1, y: 1)))
+            _ = try world.buildStation(named: name, at: TestLine.centre(index + 1, 1))
+            XCTAssertNil(model.buildStation(named: name, at: TestLine.centre(index + 1, 1)))
             for _ in 0..<(2 + testCase.random.below(2)) {
                 let edge = world.network.edges[testCase.random.element(of: level)]
                 let start = testCase.random.int64(in: 0...max(0, edge.length - 1_024))
@@ -276,6 +276,9 @@ final class TrafficControlPropertyTests: XCTestCase {
         let stations = world.stations.map(\.id)
         let here = world.stationsStoppedAt(by: train.id).first ?? random.element(of: stations)
         let others = stations.filter { $0 != here }
+        // A mutated save (Stage F3b) may load with one station: no
+        // timetable then, which GameCore refuses.
+        guard !others.isEmpty else { return ([], nil) }
         // Mostly a station the train can reach, as it faces or turned round.
         let reachable = others.filter { station in
             guard let position = train.position else { return false }
@@ -307,6 +310,9 @@ final class TrafficControlPropertyTests: XCTestCase {
     static func operation(in world: GameWorld, grid: Bool, using random: inout SplitMix64) -> Operation {
         let trains = world.trains
         let stations = world.stations.map(\.id)
+        // A mutated save (SaveMutationTests) of point stations may load
+        // without stations or trains (Stage F3b): nothing to drive then.
+        guard !stations.isEmpty, !trains.isEmpty else { return .advance(1 + random.below(12)) }
         func anyTrain() -> TrainID {
             random.chance(1, in: 25) ? TrainID(rawValue: 9) : random.element(of: trains).id
         }

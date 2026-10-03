@@ -27,7 +27,8 @@ final class LinePatternPropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
-        var setup = KernelDifferentialTests.makeSetup(shapes: [.line, .line, .loopWithTails, .ladder], using: &c.random)
+        // On the track network (Stage F3b).
+        var setup = KernelDifferentialTests.makeNetworkSetup(shapes: [.balloons, .balloons, .balloons, .line, .line, .loopWithTails, .ladder], using: &c.random)
         setup.seconds = 60 * (c.random.int64(in: -30...3_000))
         setup.speed = c.random.element(of: [.normal, .normal, .double, .paused])
         var (world, _) = try setup.build()
@@ -54,33 +55,26 @@ final class LinePatternPropertyTests: XCTestCase {
     }
 
     /// A line of three or four stations with platforms, mostly ones a
-    /// train can reach from the one before, usually open all day, with
+    /// train drives to in turn (see ``KernelNetwork/drivableStops``),
+    /// usually open all day, with
     /// counts for its own service, one or two patterns with counts (a
-    /// target now and then), and a train or two bought, placed at a
-    /// pattern's first call facing any way, and assigned to it; applied to
-    /// `world` as drawn, and they may still fail.
+    /// target now and then), and a train or two bought, placed at the end
+    /// of a platform of a pattern's first call facing any way, and assigned
+    /// to it; applied to `world` as drawn, and they may still fail.
     static func scriptedLine(in world: inout GameWorld, using random: inout SplitMix64) -> [Operation] {
         var operations: [Operation] = []
         func run(_ operation: Operation) {
             operations.append(operation)
             _ = KernelDifferentialTests.apply(operation, to: &world)
         }
-        let served = world.stations.filter { !world.platforms(of: $0.id).isEmpty }.map(\.id)
+        let served = world.stations.filter { !KernelNetwork.endBerths(in: world, of: [$0.id]).isEmpty }.map(\.id)
         guard served.count >= 2, world.lines.count < 3 else {
             run(.advance(random.below(20)))
             return operations
         }
-        var stops = [random.element(of: served)]
-        for _ in 0..<(2 + random.below(2)) {
-            let from = world.platforms(of: stops.last!)
-            let reachable = served.filter { station in
-                station != stops.last && from.contains { platform in
-                    TrackDirection.allCases.contains { world.route(from: .atNode(platform, heading: $0), toStation: station) != nil }
-                }
-            }
-            let next = random.element(of: !reachable.isEmpty && random.chance(5, in: 6) ? reachable : served)
-            if next != stops.last { stops.append(next) }
-        }
+        let first = random.element(of: served)
+        let start = random.element(of: KernelNetwork.endBerths(in: world, of: [first]))
+        var stops = KernelNetwork.drivableStops(from: first, at: start, count: 2 + random.below(2), among: served, in: world, using: &random)
         if stops.count < 2 { stops.append(served.first { $0 != stops[0] }!) }
         run(.createLine("P\(world.lines.count + 1)", stops))
         guard let line = world.lines.last?.id else { return operations }
@@ -92,12 +86,12 @@ final class LinePatternPropertyTests: XCTestCase {
             run(.setLineTrains(line, TrainsInService(peak: random.below(5), offPeak: 1 + random.below(3), low: random.below(3)), pattern: pattern))
             if random.chance(1, in: 4) { run(.setLineTargets(line, LineDispatchPropertyTests.targets(using: &random), pattern: pattern)) }
             let first = world.line(id: line)!.stops[world.line(id: line)!.patterns[pattern].calls[0]]
-            let platforms = world.platforms(of: first)
-            guard !platforms.isEmpty else { continue }
+            let berths = KernelNetwork.endBerths(in: world, of: [first])
+            guard !berths.isEmpty else { continue }
             for _ in 0..<(1 + random.below(2)) {
                 run(.purchase("Q\(world.trains.count + 1)"))
                 guard let id = world.trains.last?.id, world.train(id: id)?.position == nil else { break }
-                run(.place(id, .atNode(random.element(of: platforms), heading: random.element(of: TrackDirection.allCases))))
+                run(.place(id, random.element(of: berths)))
                 run(.setRate(id, random.element(of: [700, 1024, 1024, 2048, 4096])))
                 run(.assign(id, line, pattern: pattern))
             }
@@ -145,8 +139,8 @@ final class LinePatternPropertyTests: XCTestCase {
             let pattern = anyPattern()
             if let train = free.isEmpty ? nil : random.element(of: free), line.patterns.indices.contains(pattern), random.chance(1, in: 2) {
                 let first = line.stops[line.patterns[pattern].calls[0]]
-                if train.position == nil, let platform = world.platforms(of: first).first {
-                    return .place(train.id, .atNode(platform, heading: random.element(of: TrackDirection.allCases)))
+                if train.position == nil, let berth = KernelNetwork.endBerths(in: world, of: [first]).first {
+                    return .place(train.id, berth)
                 }
                 return .assign(train.id, line.id, pattern: pattern)
             }
@@ -179,9 +173,12 @@ final class LinePatternPropertyTests: XCTestCase {
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let ran = try runCampaign("line.patterns", cases: 6) { c in
+        // Stage F3b: ten cases rather than six. The track network's shapes
+        // give each case fewer dispatches than the grid's did, and six
+        // cases left the counts below to a handful of them.
+        let ran = try runCampaign("line.patterns", cases: 10) { c in
             let (setup, operations) = try Self.generate(&c, operations: 45)
-            c.note("setup: \(setup.width)x\(setup.height), \(setup.specs.count) tiles, second \(setup.seconds), \(setup.speed)")
+            c.note("setup: \(setup.summary), second \(setup.seconds), \(setup.speed)")
 
             if let failure = KernelDifferentialTests.firstProblem(setup, operations) {
                 let minimal = KernelDifferentialTests.minimalFailure(setup, operations)
@@ -230,7 +227,7 @@ final class LinePatternPropertyTests: XCTestCase {
         }
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         print("[digest] line.patterns \(digest.hex) (\(summary))")
-        assertVolume(ran == 6 * PropertySeeds.active.count, "every case should run")
+        assertVolume(ran == 10 * PropertySeeds.active.count, "every case should run")
         for (event, least) in [
             ("ok addPattern", 40), ("ok removePattern", 8), ("ok setLineTrains", 35), ("ok assign", 50), ("invalidLinePattern", 6),
             ("unknownLinePattern", 8), ("pattern dispatched", 60), ("express dispatched", 15), ("segment full", 8),

@@ -380,13 +380,79 @@ GameLauncher／SaveLibrary 會呼叫共用 SavedGame 的 JSON encode/decode，�
 - **方格本身是主題的單元測試**：TrackConstructionTests、TrackConnectivityTests、TrainPositionTests、TrainMovementTests、TrainRouteTests、StationStopTests、TrackResourceTests、StationFacilityTests、StationAndTrainTests 的格站部分，以及 RailwayNetworkAuthorityTests、ContinuousTrackTests、FreeStationTests、SavedGameTests 的方格子測試、NetworkServiceTests 的格／路網隔離斷言、VerticalRailwayTests 的 grid link 斷言。留到 F3c 和方格程式一起刪；刪之前逐條確認路網有對應測試，沒有的補上。
 - **TrafficControlTests 的方格段**：其中和軌道種類無關的規則（開關交通管制、共用軌道或相遇路線時拒開、跟車等整條路、派車等路、等被拆的軌）要在刪方格段之前有路網版本；路網段已有的（服務等路，只為出發才折返）不重寫。
 - **TrainTimetableTests 的兩個方格存檔格式測試**（`testEmptyTimetablesAreNotSavedAndOldSavesReadAsEmpty`、`testASaveWithoutTimetablesKeepsItsFormat`）：主題是方格存檔，F3c 拒絕手做的方格存檔時一起處理。
-- **Property、差分、save mutation campaign 與 ReferenceWorld 的方格模型**（§3.2–§3.4）：F3b 的下一步；產生器換了 digest 就會變，新的 digest 記在文件。
+- **Property、差分、save mutation campaign 與 ReferenceWorld 的方格模型**（§3.2–§3.4）：F3b-2 已搬（§7.3）。
 - **觀察到、沒有改的 GameCore 行為**（F3b 不動 GameCore，記給之後的階段決定）：
   1. 一節車的列車在月台折返後停在新方向的近端；下一站若是同一站，服務先開到 berth 才算到站。`stationsStoppedAt` 已把它算在站裡，但「已停在下一站就立刻到站」看的是到 berth 的距離是否為 0。
   2. 服務路徑上的邊被拆掉再重建是新的邊，被擋住的服務列車一直等，不會改走新邊（方格時重建同一格會接著走）。
   3. 路網上兩站不能共用月台；在兩站月台的交界，每個方向只會是其中一站的 berth。
 
 驗證：見 F3b-1 的 PR（Linux Swift 6.4 的完整測試與 warnings-as-errors 建置）。macOS／Xcode 不受影響，沒有在本機執行。
+
+### 7.3 F3b-2：campaign 搬到路網
+
+GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路網上產生世界，獨立參考模型（`ReferenceWorld`）原本就有路網的指令，沒有改。
+
+**共用的路網產生器** [`KernelNetwork`](../../Tests/GameCoreTests/KernelNetwork.swift)（取代方格的 `NetworkShape`）：節點在格心，橫豎的直邊各 1024，轉彎用曲線；邊在節點只有反方向、差 1/16 以內才相接，所以轉角是曲線、分岔是同方向離開的道岔。形狀對應方格的用途：
+
+| 形狀 | 對應方格的 | 內容 |
+| --- | --- | --- |
+| `line` | `line` | 一條直線，偶爾有 2–3 格長的邊（長列車放得下的月台） |
+| `loopWithTails` | `loopWithTails` | 兩條直邊加兩端曲線的環，轉角接出尾線（道岔） |
+| `ladder` | `ladder` | 兩條平行線，用 S 形渡線同方向接起來：等長的替代路線 |
+| `crossings` | `grid` | 共用節點但不相接的平面交叉：列車只能直走過去 |
+| `twoLines` | `twoComponents` | 兩條不相通的線 |
+| `balloons` | （方格的環） | 一條線兩端各一個迴圈，兩支都從線的端點同方向離開：列車繞迴圈就能掉頭，任何站兩個方向都到得了 |
+
+車站是點車站，約一半的節點旁有一站，月台在該站節點兩側各邊離它近的那一半（最多兩格；偶爾整條邊，偶爾沒有）；偶爾有一站離軌道很遠。路網上只能在月台停的列車要能掉頭，方格的環很多、路網的形狀較稀疏，所以 `balloons` 補上方格那種「繞一圈回來」的路。
+
+**核心 campaign 的路網指令**（`KernelDifferentialTests.nextOperation`；方格的版本改名 `nextGridOperation`，只剩方格本身是主題的 campaign 用，F3c 刪除）：建節點、建邊（直線或曲線）、拆邊、拆節點、在點上建站、加月台、拆月台、放到邊上、手動給路徑並停在某處、送到節點、送到車站（到 berth 的路），其餘指令照舊，各類比例與方格相同。每一步除了原本比對的狀態，還比對路網的節點、邊與月台、每列車的路徑、停點與車身、每列車到每一站的路。停站轉換規則多了路網的三條（決策 18 之外）：列車在路網上反向會開到邊的盡頭，所以反向可以結束停站；月台加在停著的列車底下會多停一站；拆掉列車底下（沒有服務需要）的月台會少停一站。
+
+**產生器不再出方格的指令**：路網 campaign 故意放錯位置時改放到不存在的邊或邊外，不再用方格位置。這樣 F3c 刪掉方格的 case 時，這些 campaign 產生的指令一個都不變，digest 應該完全相同，可以拿來證明 F3c 沒有改遊戲行為。
+
+**搬到路網的 campaign 與 digest（舊 → 新）**：
+
+| Campaign（suite） | 測試類別 | 舊 digest（方格，PR #84 的 CI） | 新 digest（路網） |
+| --- | --- | --- | --- |
+| `kernel.differential` | KernelDifferentialTests | A62B8C4320C627D1 | F47A646FE640DF46 |
+| `stateMachine.replay` | WorldStateMachineTests | 697A83B146954944 | D6365571232E943D |
+| `ids.allocation` | IDAllocationPropertyTests | C8EB3DB7EB4AF977 | F758A3276BCE4233 |
+| `timetable.differential` | TimetablePropertyTests | BD45BE9134085D0D | FE747524D42262A2 |
+| `service.differential` | ServicePropertyTests | FD07836B770C9534 | C6651E0F3814DE72 |
+| `service.repeating` | ServicePropertyTests | 5F64514EF59418D7 | FDE17B82B2F62E0E |
+| `line.differential` | ServiceLinePropertyTests | BB6704D839F59654 | 5BC81327E09471FC |
+| `line.dispatch` | LineDispatchPropertyTests | D4348AB9FD75ADBE | 64CE531B44C9168B |
+| `line.patterns` | LinePatternPropertyTests | A6D6E8E03091E6BF | A501408567DFA643 |
+| `passenger.differential` | PassengerPropertyTests | 45F665FB9CEF29DD | 7252126EEF12395A |
+| `boarding.differential` | BoardingPropertyTests | 335CA1EE9BA64518 | B87EFD417F5CDA1B |
+| `economy.differential` | EconomyPropertyTests | FCF21908F7AC0187 | B39027771D907D9D |
+| `service.network` | NetworkServicePropertyTests（點車站） | DD5C9D48842DEB67 | 93B28EDC34398663 |
+| `traffic.reservation` | TrafficControlPropertyTests（路網一半用點車站） | 830ED73A7B1DA205 | B4ACB2397A8CFAD1 |
+| `vertical.differential` | VerticalRailwayPropertyTests（點車站） | B59222327C26BD3F | 304714C513B40EFB |
+
+不變（方格本身是主題，或沒有用到方格車站）：`track.resources` 696BB5A1406DD105、`station.facilities` F1F33A66D49FC516、`network.differential` 0474078196C584BC、`movement.determinism` E57ED3F6BA74E16D、`route.reference` 31A64EEA8E625E89、`stationStop.routes` 3242A5341BD2789A。存檔變異 campaign 只印量（`[volume]`），沒有 digest；它們跟著上面的產生器改在路網上。
+
+**量的下限有變的**：
+
+| Campaign | 下限 | 原因 |
+| --- | --- | --- |
+| `kernel.differential` | 新增路網指令的下限：移動列車的 advance 300、給出路徑的送車 200、成功的 stand 250、place 350、buildEdge 200、removeEdge 200、addPlatform 100、removePlatform 200、buildStationAt 200、拆有列車的邊被拒 100 | 方格版沒有逐類的下限；路網版確認每一類指令都真的跑到 |
+| `line.patterns` | case 6 → 10 | 路網的形狀較稀疏，6 個 case 跑不到足夠的交路與快車 |
+| `line.differential` | 拿掉「沒有移動的一段」（≥ 100） | 路網上兩站不會共用 berth（方格可以共用月台格），兩站之間的一段一定要移動 |
+| `line.dispatch` | 「跑完的趟」150 → 100 | 路網上一個 case 內跑完的趟較少：設定時四個 seed 共 134 |
+| `boarding.differential` | 「同時載往幾個迄點」200 → 20 | 路網上的線路較稀疏：設定時四個 seed 共 43 |
+| `service.differential` | 「沒有時刻表」60 → 40 | 設定時四個 seed 共 59 |
+
+**修正的測試支援**：`WorldInvariants` 原本假設每座車站都佔一格，點車站（Stage F1）不佔格；改成點車站檢查「位置是點底下的格、沒有擴站」，格站照舊。存檔變異 campaign 的「車站在它的格上」也只對格站檢查。
+
+點車站的存檔被變異成沒有車站、只剩一座車站或沒有列車時仍讀得進來（地圖沒有格指向它們；方格車站時這種變異會被拒絕），而存檔變異 campaign 會在讀進來的世界上接著跑各 campaign 的產生器。完整測試因此抓到三個產生器在這種世界會當掉：乘客（沒有車站、少於兩站時排停靠站）、路網服務與交通管制（沒有車站或列車；只剩一站時排時刻表）。它們在這種世界改送 advance 或空的時刻表（GameCore 拒絕）。只有那種世界才走新的分支，其他情況抽到的亂數不變，digest 不受影響（乘客、路網服務與交通管制的 digest 在加了防呆前後相同）。
+
+方格本身是主題的 `station.facilities` 借用線路派車 campaign 的產生器（`scriptedLine`、`nextDispatchOperation`），那兩個改到路網後，它在方格上派不出長列車。它改用一份方格版的複本（`gridScriptedLine`、`gridDispatchOperation`，F3b-2 之前的寫法），digest 回到原值；F3c 和方格一起刪。
+
+### 7.4 F3b-2 之後暫時沒有改的地方
+
+- **方格本身是主題的 campaign** 留在方格上，digest 不變，F3c 和方格程式一起刪：`topology.*`、`position.*`、`movement.*`、`route.*`、`composition.*`、`stationStop.routes`、`track.resources`、`station.facilities`，以及它們的存檔變異（`save.trackMutation`、`save.facilityMutation`）。`traffic.reservation` 的方格一半也一樣。
+- **`ReferenceWorld` 的方格模型**：只剩上面那些 campaign 用，F3c 一起刪。
+- **觀察到的 GameCore 行為**（§7.2 的三條）照舊，F3b 不改 GameCore。
 
 ## 驗證紀錄
 

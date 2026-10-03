@@ -628,8 +628,16 @@ enum WorldInvariants {
         if ids != ids.sorted() || Set(ids).count != ids.count {
             problems.append("train IDs not unique and ascending: \(ids)")
         }
-        for station in world.stations where world.map.tile(at: station.position)?.type != .station(id: station.id) {
-            problems.append("station \(station.id.rawValue) does not match its tile")
+        // Stage F1: a station at a point takes no tile; its position is the
+        // tile under the point, and it never grows onto others.
+        for station in world.stations {
+            if let point = station.point {
+                if station.position != GridPosition(x: Int(point.x / 1_024), y: Int(point.y / 1_024)) || !station.annexes.isEmpty {
+                    problems.append("station \(station.id.rawValue) at \(point) has position \(station.position) and annexes \(station.annexes)")
+                }
+            } else if world.map.tile(at: station.position)?.type != .station(id: station.id) {
+                problems.append("station \(station.id.rawValue) does not match its tile")
+            }
         }
         // Decision 27: every tile of a station is its tile on the map, each
         // annex beside an earlier tile, none twice; no other station tiles.
@@ -646,7 +654,7 @@ enum WorldInvariants {
             }
         }
         let stationTiles = world.map.tiles.filter { if case .station = $0.type { true } else { false } }.count
-        if stationTiles != world.stations.reduce(0, { $0 + 1 + $1.annexes.count }) {
+        if stationTiles != world.stations.reduce(0, { $0 + ($1.point == nil ? 1 + $1.annexes.count : 0) }) {
             problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")
         }
         // Decision 29 (S3A): the railway network holds the grid's track, one
