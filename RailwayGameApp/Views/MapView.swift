@@ -7,7 +7,8 @@ import UIKit
 /// taps still go through the session's ordinary world commands.
 struct MapView: View {
     let session: GameSession
-    @State private var camera: PlanCamera?
+    /// The parent keeps this view state across portrait/landscape layouts.
+    @Binding var camera: PlanCamera?
     @State private var edges: [TrackEdgeID: MapEdgeDrawing] = [:]
 
     var body: some View {
