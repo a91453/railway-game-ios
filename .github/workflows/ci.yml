@@ -113,7 +113,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # The slowest shard takes about 11 minutes on a slow runner; the
+    # The slowest shard takes about 9 minutes of tests on a fast runner and
+    # up to about 16 on a slow one (see the table in swift-shards.sh); the
     # limit leaves room for campaigns to grow before a shard is split further.
     timeout-minutes: 20
     container: swift:6.4-noble

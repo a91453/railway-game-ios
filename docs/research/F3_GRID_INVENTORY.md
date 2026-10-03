@@ -454,6 +454,8 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 - **`ReferenceWorld` 的方格模型**：只剩上面那些 campaign 用，F3c 一起刪。
 - **觀察到的 GameCore 行為**（§7.2 的三條）照舊，F3b 不改 GameCore。
 
+**CI 的 shard**：搬到路網之後幾個 campaign 變慢（Boarding 約 510 秒、兩個 service campaign 合計約 680 秒），五個 campaign shard 裝不下 20 分鐘的上限，`campaigns-2`（Boarding 加 Service）在 PR #86–#89 跑了 18 分鐘後被取消。改成八個 campaign shard，`ServiceLinePropertyTests` 與 `KernelDifferentialTests` 也從 `rest` 移到具名的 shard；`service.repeating` 移到自己的類別 `ServiceRepeatingPropertyTests`（只為了能放進另一個 shard，campaign 名稱、檢查與 digest 都不變）。每個 shard 的秒數與估計方式記在 `.github/scripts/swift-shards.sh`。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。
