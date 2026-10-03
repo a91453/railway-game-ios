@@ -1,9 +1,8 @@
 // Service line journeys (Phase 4 Stage Q2a). A line is plan data; what its
 // trains would take, and how often they could run, is derived here from the
 // map on every query and never stored, like connectivity, routes and stops.
-// Since Phase 4.5 Stage S5 a journey is driven on the grid or on the track
-// network by the same rules: each leg is a TrainPath (ARCHITECTURE decision
-// 31). Since Stage W2c each leg takes the least whole second the line's
+// Since Phase 4.5 Stage S5 a journey is driven on the track network: each
+// leg is a TrainPath (ARCHITECTURE decision 31). Since Stage W2c each leg takes the least whole second the line's
 // performance builds a running curve for over the path's exact distance
 // (ARCHITECTURE decision 40), as the metro game times a leg by accelerating
 // to the line's speed and braking at the next station.
@@ -23,9 +22,9 @@ public struct LineLeg: Hashable, Sendable {
     public let to: Int
     /// The path the leg takes (Stage S5), as
     /// ``GameWorld/path(from:toStation:length:)`` gives it from where the
-    /// previous leg ended: links on the grid, edges to a platform's berth on
-    /// the track network. No traversals and no distance when the train is
-    /// already where it stops for the next call (a platform both share).
+    /// previous leg ended: edges to a platform's berth. No traversals and no
+    /// distance when the train is already where it stops for the next call
+    /// (a platform both share).
     public let path: TrainPath
     /// Whole seconds the leg takes with the line's performance (Stage W2c):
     /// the least in which it builds a running curve for the path's
@@ -39,13 +38,6 @@ public struct LineLeg: Hashable, Sendable {
         self.path = path
         self.seconds = seconds
     }
-
-    /// On the grid, the continuation the leg takes: the tiles its links
-    /// lead to, as ``GameWorld/route(from:toStation:length:)`` gives it.
-    /// Empty on the track network.
-    public var route: [GridPosition] {
-        path.traversals.compactMap(\.tileAhead)
-    }
 }
 
 /// A service's round trip as a train would drive it: out from its first
@@ -53,8 +45,7 @@ public struct LineLeg: Hashable, Sendable {
 /// line's own service the calls are all its stops; for a pattern, the
 /// pattern's calls.
 public struct LineJourney: Hashable, Sendable {
-    /// Where the journey starts: at a platform of the first call, facing the
-    /// way it leaves; on the track network, at a berth of one of its
+    /// Where the journey starts: at a berth of one of the first call's
     /// platforms (Stage S5).
     public let start: TrainPosition
     /// The legs out, then the legs back: `2 × (calls − 1)` of them; on a
@@ -173,21 +164,18 @@ extension GameWorld {
     /// index `pattern`, as a train would drive it on this map; `nil` if the
     /// line or pattern does not exist or some leg has no route.
     ///
-    /// The journey starts at a platform of the first call, as a train of one
+    /// The journey starts at a berth of the first call, as a train of one
     /// car. From there each leg is the path
     /// ``path(from:toStation:length:)`` finds to the next call's station,
     /// starting where the leg before ended; stops a pattern does not call at
     /// are not aimed for. At the last call the train turns round where it
     /// stands, as ``reverseTrain(_:)`` would, and comes back the same way
-    /// through the calls in reverse order. The starts are every grid
-    /// platform of the first call, in ``platforms(of:)`` order, each facing
-    /// north, east, south and west in turn; then (Stage S5) every platform it
-    /// has on the track network, in order along the track, at its berth going
-    /// forward and then at its berth going back (see ``TrackPlatform``). Of
-    /// those whose whole round trip can be driven, the one with the shortest
-    /// round trip is chosen, the first in that order among equals. A journey
-    /// that starts on the grid stays on the grid, and one on the network on
-    /// the network.
+    /// through the calls in reverse order. The starts are every platform of
+    /// the first call (Stage S5), in order along the track, at its berth
+    /// going forward and then at its berth going back (see
+    /// ``TrackPlatform``). Of those whose whole round trip can be driven, the
+    /// one with the shortest round trip is chosen, the first in that order
+    /// among equals.
     ///
     /// Pure. Costs one drive of the service per start, each one route
     /// search per leg (see ``route(from:to:)``).
@@ -207,11 +195,10 @@ extension GameWorld {
     func journey(of line: ServiceLine, service: Int) -> LineJourney? {
         let calls = line.calls(ofService: service)
         let first = line.stops[calls[0]]
-        let starts = platforms(of: first).flatMap { platform in TrackDirection.allCases.map { TrainPosition.atNode(platform, heading: $0) } }
-            + berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
+        let starts = berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
         var best: LineJourney?
         for start in starts {
-            let placement = TrainPlacement(position: start, trail: [], trailEdges: [], length: 0)
+            let placement = TrainPlacement(position: start, trailEdges: [], length: 0)
             let driven = line.isRing ? driveLap(line, calling: line.ringCalls(.inner), from: placement) : drive(line, calling: calls, from: placement)
             guard let journey = driven else {
                 continue
@@ -291,10 +278,9 @@ extension GameWorld {
     /// from where it stands at the first call: as it faces, or turned round
     /// first (with its head where its tail was, for a train of several
     /// cars) when only that can be driven or its round trip is shorter.
-    /// `nil` if neither can be driven, or the train is not placed. On the
-    /// grid or the track network alike (Stage S5): the train's length
-    /// decides which platforms it can stop at and where its head is once it
-    /// has turned round.
+    /// `nil` if neither can be driven, or the train is not placed. The
+    /// train's length decides which platforms it can stop at and where its
+    /// head is once it has turned round (Stage S5).
     ///
     /// On a ring (decision 49) the trip is a lap the way the train runs
     /// (``ServiceLine/ringDirection(of:)``; the ``RingDirection/inner``
@@ -326,13 +312,10 @@ extension GameWorld {
     ///
     /// A train of several cars (Stage S2) turns round with its head where
     /// its tail was, and each leg takes it where
-    /// ``path(from:toStation:length:)`` stops a train that long: on the grid
-    /// pulled along each station's platforms, on the track network (Stage
-    /// S5) at a berth of a platform it fits. Each leg's seconds are the
-    /// least in which the line's performance builds a running curve for
-    /// its exact distance (Stage W2c); on the grid every leg starts at a
-    /// node (a train is sent out stopped at a platform, and its length is
-    /// whole links), so that distance is 1024 a link.
+    /// ``path(from:toStation:length:)`` stops a train that long: at a berth
+    /// of a platform it fits (Stage S5). Each leg's seconds are the least in
+    /// which the line's performance builds a running curve for its exact
+    /// distance (Stage W2c).
     func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> LineJourney? {
         let stops = line.stops
         let farEnd = calls[calls.count - 1]

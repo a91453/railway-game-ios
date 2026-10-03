@@ -1,131 +1,40 @@
-// Route finding: the shortest continuation that takes a train to a track
-// tile, found by searching the network derived from the map on demand.
-//
-// A train cannot turn straight back (see TrainMovement), so where it can go
-// next depends on the direction it faces as well as the node it is at. The
-// search therefore visits states (node, heading), at most four per track
-// tile, and never stores a graph: neighbours come from the same derived
-// connectivity query that movement uses.
+// Route finding on the railway graph: the shortest route a train can take to
+// a node, found by searching the network on demand. A train cannot turn
+// straight back along an edge, so the search visits traversals (the edge it
+// arrived along, and which way), and never stores a graph: what follows each
+// comes from the same transitions query that movement uses.
 
 extension GameWorld {
-    /// The shortest continuation that takes a train at `start` to the track
-    /// tile `destination`, or `nil` if there is none.
-    ///
-    /// The result can be passed to ``setTrainContinuation(_:to:)`` unchanged
-    /// on this world: it starts after the node ahead of the train (the node it
-    /// stands on, or the `to` end of its link), every step is a joined link,
-    /// and it never turns straight back, not even against the train's current
-    /// heading. It ends at `destination`. An empty list means the node ahead
-    /// is already `destination`.
-    ///
-    /// - Shortest means the fewest links. Every link is
-    ///   ``TrainPosition/linkLength`` long, so this is also the shortest
-    ///   distance.
-    /// - Among shortest routes the result is the one whose sequence of exit
-    ///   directions comes first when directions are ordered north, east,
-    ///   south, west (compared step by step from the start). The answer
-    ///   depends only on the map, `start` and `destination`, never on build
-    ///   order, and is the same on every run and platform.
-    /// - A route never reverses the train. It may loop, pass a node twice or
-    ///   use a junction to change direction; if the only way to
-    ///   `destination` starts by turning back, there is no route until the
-    ///   train is reversed.
-    ///
-    /// Returns `nil` when `start` is not a valid position on this map's track
-    /// (see ``placeTrain(_:at:)``), when `destination` is not a track tile
-    /// (empty, a station, or outside the map), or when no route exists. To
-    /// go to a station, use ``route(from:toStation:)``.
-    ///
-    /// Pure: reads the map only through its public queries (the start and
-    /// destination checks, then ``exits(from:facing:)`` while searching),
-    /// changes nothing and keeps no cache. It explores only track
-    /// reachable from `start`: at most four states per track tile, so time
-    /// and memory are O(reachable track tiles), without scanning the map. On
-    /// a nearly full 1024 x 1024 map that is seconds and hundreds of
-    /// megabytes, so a host should not call it synchronously on the main
-    /// actor for large maps.
-    public func route(from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
-        guard isOnTrack(start), track(at: destination) != nil, let (node, heading) = start.ahead else { return nil }
-        return TrainRoute.shortest(from: node, heading: heading, to: { $0 == destination }) { exits(from: $0, facing: $1) }
-    }
-
     /// The shortest route that takes a train at `start` to node `node` of
-    /// the railway graph, as the traversals it would travel after the edge
-    /// or link it is on, or `nil` if there is none (Stage S3). One search
-    /// for the grid and the track network:
+    /// the track network, as the traversals it would travel after the edge
+    /// it is on, or `nil` if there is none (Stage S3). It starts at the end
+    /// of the edge the train is on and ends where it first reaches `node`:
+    /// the least total length, and among routes of that length the one
+    /// whose edges come first in ascending order at each node, compared step
+    /// by step from the start. It never turns straight back along an edge;
+    /// it may loop.
     ///
-    /// - On the grid (`start` on the grid, `node` a tile) it is
-    ///   ``route(from:to:)`` written as links.
-    /// - On the network (`start` on an edge, `node` a network node) it
-    ///   starts at the end of the edge the train is on and ends where it
-    ///   first reaches `node`: the least total length, and among routes of
-    ///   that length the one whose edges come first in ascending order at
-    ///   each node, compared step by step from the start. It never turns
-    ///   straight back along an edge; it may loop.
-    ///
-    /// An empty list means the train is at, or is heading along its edge
-    /// for, `node`. The result can be passed to
-    /// ``setTrainContinuation(_:along:)`` unchanged on this world. `nil` when
-    /// `start` is not on this world's track, `node` is not a node of the
-    /// same kind of track, or no route exists. Pure: reads only topology and
-    /// lengths, and explores only track no further than the route.
+    /// An empty list means the train is heading along its edge for `node`.
+    /// The result can be passed to ``setTrainContinuation(_:along:stoppingAt:)``
+    /// unchanged on this world. `nil` when `start` is not on this world's
+    /// track, `node` is not one of its nodes, or no route exists. Pure: reads
+    /// only topology and lengths, and explores only track no further than the
+    /// route.
     public func route(from start: TrainPosition, to node: TrackNodeID) -> [TrackTraversal]? {
-        guard isOnTrack(start) else { return nil }
-        switch (start, node) {
-        case (.onEdge(let traversal, _), .node):
-            guard network.node(node) != nil else { return nil }
+        guard isOnTrack(start), network.node(node) != nil else { return nil }
+        switch start {
+        case .onEdge(let traversal, _):
             return TrainRoute.shortest(from: traversal, isDestination: { network.edge($0.edge)?.end(of: $0.direction) == node }) { arrival in
                 transitions(after: arrival).map { ($0, network.edge($0.edge)!.length) }
-            }
-        case (.onEdge, .tile), (_, .node):
-            return nil
-        case (_, .tile(let tile)):
-            guard let path = route(from: start, to: tile), let (first, _) = start.ahead else { return nil }
-            var ahead = first
-            return path.map { next in
-                defer { ahead = next }
-                return TrackTraversal.link(from: ahead, to: next)
             }
         }
     }
 }
 
 /// The route-finding kernel, separate from ``GameWorld`` so that it sees the
-/// network only through the neighbour query it is given. One search serves
-/// the grid and the track network (ARCHITECTURE decision 29).
+/// network only through the neighbour query it is given (ARCHITECTURE
+/// decision 29).
 enum TrainRoute {
-    /// A place in the grid search: a node and the direction the train faces
-    /// there.
-    private struct State: Hashable {
-        var node: GridPosition
-        var heading: TrackDirection
-    }
-
-    /// The grid route from `node` facing `heading` to any node that
-    /// `isDestination` accepts: the generic search over (node, heading)
-    /// states, every link ``TrainPosition/linkLength`` long.
-    ///
-    /// `exits` must list the nodes a train at a node facing a heading may go
-    /// on to, in north, east, south, west order (see
-    /// ``GameWorld/exits(from:facing:)``). The result is the route with the
-    /// fewest links and, among those, the one whose exit directions come
-    /// first in that order, compared step by step from the start. It ends at
-    /// the first destination it reaches, so it passes no other destination
-    /// on the way.
-    static func shortest(
-        from node: GridPosition,
-        heading: TrackDirection,
-        to isDestination: (GridPosition) -> Bool,
-        exits: (GridPosition, TrackDirection) -> [GridPosition]
-    ) -> [GridPosition]? {
-        shortest(from: State(node: node, heading: heading), isDestination: { isDestination($0.node) }) { state in
-            exits(state.node, state.heading).compactMap { neighbor in
-                guard let direction = TrackDirection(from: state.node, to: neighbor), direction != state.heading.opposite else { return nil }
-                return (State(node: neighbor, heading: direction), TrainPosition.linkLength)
-            }
-        }?.map(\.node)
-    }
-
     /// The shortest route from `start` to a state `isDestination` accepts,
     /// as the states after `start` in order; `[]` when `start` is one, and
     /// `nil` when none can be reached.
@@ -138,9 +47,7 @@ enum TrainRoute {
     ///
     /// - it has the least total length;
     /// - among routes of that length, it is the one whose choices come first
-    ///   in `next`'s order, compared step by step from the start (so on the
-    ///   grid, where every step is one link, it is the route with the fewest
-    ///   links whose exit directions come first north, east, south, west);
+    ///   in `next`'s order, compared step by step from the start;
     /// - it ends at the first destination it reaches.
     ///
     /// Three passes, each over the states no further from `start` than the

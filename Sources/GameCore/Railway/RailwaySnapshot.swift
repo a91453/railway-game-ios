@@ -27,9 +27,8 @@ public struct TrackAlignment: Hashable, Sendable {
 
 /// The railway as a renderer needs it at one moment: the nodes, edges and
 /// platforms of the track network and every placed train (see
-/// ``GameWorld/railwaySnapshot()``). The grid's track pieces are
-/// ``GameWorld/tracks``; its links are also available one by one through
-/// ``GameWorld/trackAlignment(of:)``.
+/// ``GameWorld/railwaySnapshot()``). Edges are also available one by one
+/// through ``GameWorld/trackAlignment(of:)``.
 public struct RailwaySnapshot: Hashable, Sendable {
     /// A node of the track network.
     public struct Node: Hashable, Sendable {
@@ -71,16 +70,15 @@ public struct RailwaySnapshot: Hashable, Sendable {
 }
 
 extension GameWorld {
-    /// Edge `id` of the railway graph with its alignment, or `nil` if there
-    /// is none. A grid link is a straight, level, surface edge between the
-    /// centres of its tiles.
+    /// Edge `id` of the track network with its alignment, or `nil` if there
+    /// is none.
     public func trackAlignment(of id: TrackEdgeID) -> TrackAlignment? {
         guard let edge = trackEdge(id), let geometry = trackGeometry(of: id) else { return nil }
         return TrackAlignment(edge: edge, geometry: geometry)
     }
 
     /// Whether node `id` of the track network is a tunnel portal (see
-    /// ``RailwayNetwork/isTunnelPortal(_:)``). A grid tile never is.
+    /// ``RailwayNetwork/isTunnelPortal(_:)``).
     public func isTunnelPortal(_ id: TrackNodeID) -> Bool {
         network.isTunnelPortal(id)
     }
@@ -89,7 +87,7 @@ extension GameWorld {
     /// stands along (Stage S4): its head is on the platform's edge, its body
     /// does not leave that edge, and every point from its head to its tail
     /// lies between the platform's start and end. In order along the track;
-    /// empty for a train on the grid, off the track or unknown.
+    /// empty for a train off the track or unknown.
     public func trackPlatformsAlongWholeTrain(_ id: TrainID) -> [TrackPlatform] {
         guard let train = train(id: id), case .onEdge(let traversal, let offset)? = train.position, train.trailEdges.isEmpty,
               let edge = network.edge(traversal.edge)

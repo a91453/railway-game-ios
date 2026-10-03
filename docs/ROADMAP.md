@@ -316,7 +316,7 @@ Q 把前者展開成後者：服務模式產生具體、有限的班次，交給
 ### Stage S1 — 軌道資源 ✅
 
 - **道岔與平面交叉**：新增兩種鐵軌。道岔的 stem 接到每條支線，支線之間不互通；平面交叉只能直行。原本的鐵軌行為不變，所以既有存檔、路徑與 golden 值都不變。路徑、continuation 與移動遵守同一條轉向規則（`exits(from:facing:)`）。
-- **區段**：兩個分岔點之間相連的一串鐵軌，沒有分岔點的環狀線是一個區段；由地圖推導、不存檔（`trackSections()`；路網的版本 `networkSections()` 在 F3c-1 加入，移植參考的 `trackGroups`）。
+- **區段**：兩個分岔點之間相連的一串鐵軌，沒有分岔點的環狀線是一個區段；由地圖推導、不存檔（`trackSections()`；路網的版本 `networkSections()` 在 F3c-1 加入，移植參考的 `trackGroups`，F3c-3c 起只剩它）。
 - **單線與雙線**：兩站之間不共用連結的路徑數（`parallelTracks`、`lineTrackCounts`），1 是單線、2 以上是雙線。F3c-1 起也數路網：路徑不共用任何一段軌道（一條邊，在兩站的月台處切開）。
 - **佔用資源**：鐵軌格（節點）與相鄰鐵軌之間的連結；平面交叉是一格，兩個方向共用。唯讀查詢：每台列車佔用的資源、互相衝突的列車。
 - 之前所有 Stage 的 property digest 不變；golden scenario schema v14 新增 `track-resources.json`（ARCHITECTURE 決策 26）。
@@ -556,6 +556,8 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
     - **F3c-2 — GamePresentation 與 App 不再用方格** ✅：方格工具、方格選取與文字、方格繪圖與「選取北邊的格子」的 VoiceOver 動作拿掉；放置方向改成 GamePresentation 自己的 `CompassHeading`；列車只放在、只送到車站。GameCore 不動。
     - **F3c-3a — 只有方格測試測到的規則，先在路網上測** ✅：移動、位置、選路、停站、節數、單雙線與交通控制共 25 個路網測試（`NetworkRuleTests` 與 `TrafficControlTests` 的新段落），對照表與暫時沒有改的地方見 [F3_GRID_INVENTORY §8.5](research/F3_GRID_INVENTORY.md#85-f3c-3a只有方格測試測到的規則先在路網上測)。GameCore 不動。
     - **F3c-3b — 刪掉方格的測試與 fixture** ✅：方格是主題的單元測試、campaign、存檔變異與八份 golden 刪掉，`free-station.json` 拿掉方格的步驟（餘額 2200 → 2400），`traffic.reservation` 只剩路網（新的 digest），其餘用到方格車站的路網測試改成點車站。GameCore 不動。見 [F3_GRID_INVENTORY §8.7](research/F3_GRID_INVENTORY.md#87-f3c-3b刪掉方格的測試與-fixture)。
+    - **F3c-3c — 刪掉 GameCore 的方格** ✅：方格的型別、case、指令、查詢、錯誤與存檔格式拿掉，手做的方格存檔拒絕並說明原因；golden 執行器、差分模型與 campaign 支援一起拿掉方格。fixture 仍是 schema 27，所有 golden、存檔與重播 fixture、campaign digest 都不變。見 [F3_GRID_INVENTORY §8.9](research/F3_GRID_INVENTORY.md#89-f3c-3c刪掉-gamecore-的方格)。
+    - **F3c-4 — golden schema 28 與 `Web/WasmProbe`**：fixture 拿掉 `tracks`、`trail`、`continuation`。
 
 ## Stage E — 大地圖與實景模式
 

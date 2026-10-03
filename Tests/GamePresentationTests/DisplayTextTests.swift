@@ -30,17 +30,13 @@ final class ErrorMessageTests: XCTestCase {
         let messages: [GameError: String] = [
             .invalidMapSize(width: 0, height: 5): "A 0 × 5 map is not supported.",
             .outOfBounds(position): "(4, 7) is outside the map.",
-            .tileOccupied(position): "Tile (4, 7) is already occupied.",
-            .invalidTrackConnections: "Choose at least one direction for the track.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
                 "Not enough cash: this costs $ 500.00 and you have $ 12.34.",
-            .noTrackToRemove(position): "There is no track to remove at (4, 7).",
-            .trackInUse(position): "A train is on the track at (4, 7). Take the train off the track first.",
             .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",
-            .invalidTrainPosition: "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars.",
+            .invalidTrainPosition: "A train can only be placed on the track, with track behind it for all its cars.",
             .invalidMovementRate: "A train's rate cannot be negative.",
             .invalidContinuation: "The train cannot follow that path: each step must lead to joined track, without turning back.",
             .clockOverflow: "Game time cannot advance any further.",
@@ -64,7 +60,6 @@ final class ErrorMessageTests: XCTestCase {
             .trainNotOnLine(TrainID(rawValue: 3)): "Train #3 is not on a line.",
             .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",
             .unknownLinePattern(2): "The line has no pattern #3.",
-            .invalidStationTile(GridPosition(x: 4, y: 2)): "A station can only grow onto an empty tile beside one of its tiles, not (4, 2).",
             .invalidTrainLength: "A train has 1 to 16 cars.",
             .trackReserved(TrainID(rawValue: 3)): "Train #3 holds that track under traffic control. Wait for it to clear the route.",
             .trainsShareTrack(TrainID(rawValue: 2), TrainID(rawValue: 3)):

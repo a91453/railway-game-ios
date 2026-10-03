@@ -1,51 +1,23 @@
 // Trains and the railway graph (Phase 4.5 Stage S3, ARCHITECTURE decision
-// 29): the grid seen as a graph (the legacy adapter), the rules a train on
-// the track network follows (entering edges, its body, turning round, the
-// track it occupies), and read-only queries in world coordinates for
-// renderers. Nothing here reads geometry while a train moves: movement and
-// routes use only edge lengths and the transitions worked out when each
-// edge was built.
+// 29): the rules a train on the track network follows (entering edges, its
+// body, turning round, the track it occupies), and read-only queries in
+// world coordinates for renderers. Nothing here reads geometry while a
+// train moves: movement and routes use only edge lengths and the
+// transitions worked out when each edge was built. (Until Stage F3c the
+// grid was seen as a second graph here; it went with the grid, decision
+// 51.)
 
 extension GameWorld {
-    // MARK: - The graph, grid and network alike
+    // MARK: - The graph
 
-    /// The node `id` of the railway graph, or `nil` if there is none: a
-    /// node of the track network, or a track tile of the grid seen as a node
-    /// (at its centre, with an end for each joined neighbour in north, east,
-    /// south, west order, each with the tiles a train arriving along it may
-    /// go on to; see ``exits(from:facing:)``).
+    /// The node `id` of the track network, or `nil` if there is none.
     public func trackNode(_ id: TrackNodeID) -> TrackNode? {
-        switch id {
-        case .node:
-            return network.node(id)
-        case .tile(let tile):
-            guard track(at: tile) != nil else { return nil }
-            let centre = WorldCoordinate(centreOf: tile)
-            let ends = connectedNeighbors(of: tile).map { neighbor in
-                let arrival = TrackDirection(from: neighbor, to: tile)!
-                return TrackNodeEnd(
-                    edge: .link(between: tile, and: neighbor),
-                    direction: WorldCoordinate(centreOf: neighbor).plan.vector(from: centre.plan),
-                    exits: exits(from: tile, facing: arrival).map { .link(between: tile, and: $0) }
-                )
-            }
-            return TrackNode(id: id, position: centre, ends: ends)
-        }
+        network.node(id)
     }
 
-    /// The edge `id` of the railway graph, or `nil` if there is none: an
-    /// edge of the track network, or the link between two joined track tiles
-    /// of the grid seen as an edge (straight, ``TrainPosition/linkLength``
-    /// long, from its first tile to its second). A link must be written in
-    /// order (see ``TrackEdgeID/link(between:and:)``).
+    /// The edge `id` of the track network, or `nil` if there is none.
     public func trackEdge(_ id: TrackEdgeID) -> TrackEdge? {
-        switch id {
-        case .edge:
-            return network.edge(id)
-        case .link(let a, let b):
-            guard TrackEdgeID.precedes(a, b), isConnected(a, to: b) else { return nil }
-            return TrackEdge(id: id, from: .tile(a), to: .tile(b), curve: .straight, length: TrainPosition.linkLength)
-        }
+        network.edge(id)
     }
 
     /// The centre line of edge `id` (see ``TrackGeometry``), with its
@@ -60,31 +32,19 @@ extension GameWorld {
 
     /// Where node `id` stands, or `nil` if there is no such node.
     func trackNodePosition(_ id: TrackNodeID) -> WorldCoordinate? {
-        switch id {
-        case .node: network.node(id)?.position
-        case .tile(let tile): track(at: tile) != nil ? WorldCoordinate(centreOf: tile) : nil
-        }
+        network.node(id)?.position
     }
 
     /// The traversals a train may go on to after `traversal`, at the node
-    /// it ends at, in that node's order: on the grid the tiles
-    /// ``exits(from:facing:)`` gives, north, east, south, west; on the
-    /// network the edges joining the end it arrives by, in ascending order.
-    /// Never back along the same edge. Empty for an edge that does not
+    /// it ends at: the edges joining the end it arrives by, in ascending
+    /// order. Never back along the same edge. Empty for an edge that does not
     /// exist. This is the transitions hook routes and traffic control use:
     /// it reads only topology.
     public func transitions(after traversal: TrackTraversal) -> [TrackTraversal] {
-        switch traversal.edge {
-        case .link(let a, let b):
-            guard trackEdge(traversal.edge) != nil else { return [] }
-            let (from, to) = traversal.direction == .forward ? (a, b) : (b, a)
-            return exits(from: to, facing: TrackDirection(from: from, to: to)!).map { TrackTraversal.link(from: to, to: $0) }
-        case .edge:
-            guard let edge = network.edge(traversal.edge), let node = network.node(edge.end(of: traversal.direction)),
-                  let end = node.end(of: edge.id)
-            else { return [] }
-            return end.exits.compactMap { network.edge($0)?.traversal(leaving: node.id) }
-        }
+        guard let edge = network.edge(traversal.edge), let node = network.node(edge.end(of: traversal.direction)),
+              let end = node.end(of: edge.id)
+        else { return [] }
+        return end.exits.compactMap { network.edge($0)?.traversal(leaving: node.id) }
     }
 
     // MARK: - Trains on the network
@@ -220,25 +180,19 @@ extension GameWorld {
 
     // MARK: - The resources along an edge (Stage S3A)
 
-    /// The spans of edge `id` of the railway graph, from its `from` node to
-    /// its `to` node (see ``RailwayNetwork/spans(of:length:)``): one for a
-    /// grid link, one for every tile's length or less of a network edge,
-    /// cut again at the ends of its platforms (Stage S4). Empty if there is
-    /// no such edge.
+    /// The spans of edge `id`, from its `from` node to its `to` node (see
+    /// ``RailwayNetwork/spans(of:length:)``): one for every tile's length or
+    /// less of the edge, cut again at the ends of its platforms (Stage S4).
+    /// Empty if there is no such edge.
     public func trackSpans(of id: TrackEdgeID) -> [TrackSpan] {
         guard let edge = trackEdge(id) else { return [] }
         return network.spans(of: id, length: edge.length)
     }
 
     /// The traversals train `id` will enter after the one it is on, in
-    /// order (Stage S3A): what traffic control reads to know a train's way,
-    /// whichever kind of track it runs on.
-    ///
-    /// - On the grid, every link of its continuation still ahead, whether or
-    ///   not it is laid now: a train waits where a link is missing and goes
-    ///   on once it is rebuilt.
-    /// - On the network, its edges still ahead up to one it cannot enter: an
-    ///   edge that was removed never comes back, as IDs are not reused.
+    /// order (Stage S3A): what traffic control reads to know a train's way.
+    /// Its edges still ahead up to one it cannot enter: an edge that was
+    /// removed never comes back, as IDs are not reused.
     ///
     /// Empty for an unplaced train, one with nothing ahead, or an unknown ID.
     public func pathAhead(of id: TrainID) -> [TrackTraversal] {
@@ -249,60 +203,28 @@ extension GameWorld {
     /// The traversals `train` will enter after the one it is on (see
     /// ``pathAhead(of:)``), for a train as a command would leave it.
     func pathAhead(of train: Train) -> [TrackTraversal] {
-        guard let position = train.position else { return [] }
+        guard case .onEdge(let traversal, _)? = train.position else { return [] }
         var path: [TrackTraversal] = []
-        switch position {
-        case .onEdge(let traversal, _):
-            var arrival = traversal
-            for edge in train.movement.remainingEdges {
-                guard let entry = transitions(after: arrival).first(where: { $0.edge == edge }) else { break }
-                path.append(entry)
-                arrival = entry
-            }
-        case .atNode, .onLink:
-            guard var node = position.ahead?.node else { return [] }
-            for next in train.movement.remainingContinuation {
-                path.append(.link(from: node, to: next))
-                node = next
-            }
+        var arrival = traversal
+        for edge in train.movement.remainingEdges {
+            guard let entry = transitions(after: arrival).first(where: { $0.edge == edge }) else { break }
+            path.append(entry)
+            arrival = entry
         }
         return path
     }
 
     // MARK: - World coordinates, for renderers
 
-    /// Where a train at `position` is in the world and the way it faces:
-    /// the centre of its tile facing its heading, a point on its link, or a
-    /// point on its network edge (see ``TrackGeometry/location(at:going:)``).
-    /// `nil` when the position is not on this world's track. Display data:
+    /// Where a train at `position` is in the world and the way it faces: a
+    /// point on its edge (see ``TrackGeometry/location(at:going:)``). `nil`
+    /// when the position is not on this world's track. Display data:
     /// renderers convert it and never write it back.
     public func location(of position: TrainPosition) -> TrackLocation? {
         guard isOnTrack(position) else { return nil }
         switch position {
-        case .atNode(let tile, let heading):
-            return TrackLocation(position: WorldCoordinate(centreOf: tile), direction: Self.vector(of: heading))
-        case .onLink(let from, let to, let offset):
-            let start = WorldCoordinate(centreOf: from)
-            let end = WorldCoordinate(centreOf: to)
-            let way = end.plan.vector(from: start.plan)
-            let point = WorldCoordinate(
-                x: start.x + way.dx * offset / TrainPosition.linkLength,
-                y: start.y + way.dy * offset / TrainPosition.linkLength,
-                z: start.z
-            )
-            return TrackLocation(position: point, direction: way)
         case .onEdge(let traversal, let offset):
             return trackGeometry(of: traversal.edge)?.location(at: offset, going: traversal.direction)
-        }
-    }
-
-    /// The unit plan vector of a grid direction (y grows south).
-    static func vector(of direction: TrackDirection) -> PlanVector {
-        switch direction {
-        case .north: PlanVector(dx: 0, dy: -1)
-        case .east: PlanVector(dx: 1, dy: 0)
-        case .south: PlanVector(dx: 0, dy: 1)
-        case .west: PlanVector(dx: -1, dy: 0)
         }
     }
 
@@ -332,19 +254,6 @@ extension GameWorld {
             remaining -= start - end
         }
         switch position {
-        case .atNode(let tile, _):
-            var ahead = tile
-            for node in train.trail where remaining > 0 {
-                follow(TrackTraversal.link(from: node, to: ahead), from: TrainPosition.linkLength)
-                ahead = node
-            }
-        case .onLink(let from, let to, let offset):
-            follow(TrackTraversal.link(from: from, to: to), from: offset)
-            var ahead = from
-            for node in train.trail.dropFirst() where remaining > 0 {
-                follow(TrackTraversal.link(from: node, to: ahead), from: TrainPosition.linkLength)
-                ahead = node
-            }
         case .onEdge(let traversal, let offset):
             follow(traversal, from: offset)
             for behind in trailTraversals(behind: traversal, trail: train.trailEdges) ?? [] where remaining > 0 {

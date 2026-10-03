@@ -59,23 +59,6 @@ public struct GridMap: Equatable, Sendable {
         }
     }
 
-    /// The position one tile from `position` toward `direction`, or `nil` if
-    /// either position lies outside the map.
-    ///
-    /// `position` is checked first, so the one-tile step cannot overflow even
-    /// for extreme coordinates.
-    func neighbor(of position: GridPosition, toward direction: TrackDirection) -> GridPosition? {
-        guard contains(position) else { return nil }
-        var neighbor = position
-        switch direction {
-        case .north: neighbor.y -= 1
-        case .east: neighbor.x += 1
-        case .south: neighbor.y += 1
-        case .west: neighbor.x -= 1
-        }
-        return contains(neighbor) ? neighbor : nil
-    }
-
     /// Replaces the tile at `position`. Callers must validate the position.
     mutating func setType(_ type: TileType, at position: GridPosition) {
         precondition(contains(position), "setType(_:at:) called with \(position) outside the map")

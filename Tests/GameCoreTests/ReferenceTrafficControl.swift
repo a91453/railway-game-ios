@@ -25,25 +25,7 @@ extension ReferenceWorld {
     /// junctions all that comes close enough to foul), and whether the route
     /// has any distance left.
     func needs(_ train: Train) -> (resources: Set<TrackResource>, moves: Bool) {
-        guard let position = train.position else { return ([], false) }
-        guard case .onEdge(let traversal, let offset) = position else {
-            // The grid: the rest of the link, then every step of the
-            // continuation, a link and the tile it leads to.
-            var found = Set(occupied(train))
-            var node = Self.ahead(position).0
-            var moves = false
-            if case .onLink = position {
-                found.insert(.node(.tile(node)))
-                moves = true
-            }
-            for next in train.continuation[train.cursor...] {
-                found.insert(.wholeLink(.link((node.y, node.x) < (next.y, next.x) ? node : next, (node.y, node.x) < (next.y, next.x) ? next : node)))
-                found.insert(.node(.tile(next)))
-                node = next
-                moves = true
-            }
-            return (found, moves)
-        }
+        guard case .onEdge(let traversal, let offset)? = train.position else { return ([], false) }
         var path = path(of: train)
         let head = spans(path)[path.count - 1].start + offset
         // The runs it will enter, as far as it can.
@@ -232,19 +214,6 @@ extension ReferenceWorld {
             if let k = line.patterns.firstIndex(where: { $0.roster.contains(id) }) { return (l, k + 1) }
         }
         return nil
-    }
-
-    /// Whether removing track at `p` would take away track a train has
-    /// reserved.
-    func reserves(tile p: GridPosition) -> Int? {
-        trains.sorted { $0.id < $1.id }.first { train in
-            train.reservation.contains { resource in
-                switch resource {
-                case .node(let node): node == .tile(p)
-                case .span(let span): if case .link(let a, let b) = span.edge { a == p || b == p } else { false }
-                }
-            }
-        }?.id
     }
 
     /// Whether `resource` is at node `node` or within 1024 of it on an edge

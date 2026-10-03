@@ -7,9 +7,8 @@ import GameCore
 ///
 /// - the least second a curve is built for is found by trying every second
 ///   upward from one below the whole way at top speed, not by halving;
-/// - the way a train has left is added up from its link and continuation,
-///   or walked along its path's edges, not taken from its route's
-///   stretches;
+/// - the way a train has left is walked along its path's edges, not taken
+///   from its route's stretches;
 /// - whether it can move is a one-unit step taken on a copy;
 /// - a run's share of a second is the curve's distance at the second's end
 ///   less at its start, each second, not a whole span at once.
@@ -84,17 +83,10 @@ extension ReferenceWorld {
         return CurveRun(start: clockSeconds, length: length, seconds: least)
     }
 
-    /// The units left to the end of `train`'s way: on the grid the rest of
-    /// its link and a link for every entry of its continuation not yet
-    /// entered; on the network from its head along every edge it can still
-    /// enter, to where its path stops on the last.
+    /// The units left to the end of `train`'s way: from its head along
+    /// every edge it can still enter, to where its path stops on the last.
     func wayLeft(_ train: Train) -> Int64 {
-        guard let position = train.position else { return 0 }
-        guard case .onEdge(let traversal, let offset) = position else {
-            var left = Int64(train.continuation.count - train.cursor) * Self.linkLength
-            if case .onLink(_, _, let into) = position { left += Self.linkLength - into }
-            return left
-        }
+        guard case .onEdge(let traversal, let offset)? = train.position else { return 0 }
         var run = Run(traversal)!
         var left = -offset
         var index = train.cursor
@@ -109,8 +101,8 @@ extension ReferenceWorld {
 
     /// Whether `train` can go on one unit now.
     func canMove(_ train: Train) -> Bool {
-        let moved = if case .onEdge? = train.position { steppedOnNetwork(train, distance: 1) } else { steppedHead(train, distance: 1).0 }
-        return moved.position != train.position || moved.cursor != train.cursor || moved.continuation != train.continuation
+        let moved = steppedOnNetwork(train, distance: 1)
+        return moved.position != train.position || moved.cursor != train.cursor
     }
 
     /// After the second's travel: train `i`'s service, travelling on a run,

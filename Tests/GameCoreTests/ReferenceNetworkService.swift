@@ -132,17 +132,9 @@ extension ReferenceWorld {
     }
 
     /// Decision 31: the way to station `id` for a train of `length` at
-    /// `start`, on the grid (its route as links) or on the network.
+    /// `start` on the network.
     func pathToStation(from start: TrainPosition, station id: StationID, length: Int64) -> TrainPath? {
-        if case .onEdge = start { return networkPathToStation(from: start, station: id, length: length) }
-        guard isOnTrack(start), let route = route(from: start, toStation: id, length: length) else { return nil }
-        var node = Self.ahead(start).0
-        let links = route.map { next -> TrackTraversal in
-            defer { node = next }
-            return TrackTraversal.link(from: node, to: next)
-        }
-        let rest: Int64 = if case .onLink(_, _, let offset) = start { Self.linkLength - offset } else { 0 }
-        return TrainPath(traversals: links, end: nil, distance: rest + Int64(route.count) * Self.linkLength)
+        networkPathToStation(from: start, station: id, length: length)
     }
 
     // MARK: - Trains

@@ -16,7 +16,7 @@ public struct TrainID: RawRepresentable, Hashable, Comparable, Codable, Sendable
 /// A train has an identity, a name, a timetable (the stops it is scheduled
 /// to make, once or repeating every period), whether it is running that
 /// timetable as a service and how far it has got, and, once placed, a
-/// position on the track and a movement (rate and continuation), and how it
+/// position on the track and a movement (rate and path), and how it
 /// accelerates and brakes (Stage W2c). Consists are not modelled yet.
 public struct Train: Identifiable, Hashable, Sendable {
     public let id: TrainID
@@ -57,7 +57,7 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// Only ``GameWorld`` changes it, through
     /// ``GameWorld/startTrainService(_:)``,
     /// ``GameWorld/stopTrainService(_:)`` and ``GameWorld/advance(ticks:)``.
-    /// While it is set, the service owns the train's continuation (see
+    /// While it is set, the service owns the train's path (see
     /// ``TimetableExecution``).
     public internal(set) var execution: TimetableExecution?
     /// When the service's train arrived at and left its calls, and how far
@@ -69,18 +69,12 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// 1, as every newly bought train has, up to ``maximumCars``. Set by
     /// ``GameWorld/setTrainCars(_:to:)`` while the train is unplaced.
     public internal(set) var cars: Int
-    /// The nodes the train's body lies over behind its head, nearest first
-    /// (see ``length``): every node behind the head that the body reaches
-    /// or passes, up to and including the first at or beyond its tail.
-    /// Empty for a train of one car or unplaced. Only ``GameWorld``
-    /// changes it, as the head moves.
-    public internal(set) var trail: [GridPosition]
-    /// On the track network (Stage S3), the edges the train's body lies
-    /// over behind the edge its head is on, nearest first: every edge the
-    /// body reaches into, up to and including the one its tail is on.
-    /// Empty for a train of one car, for a train whose body fits on its
-    /// head's edge, and on the grid. Only ``GameWorld`` changes it, as the
-    /// head moves.
+    /// The edges the train's body lies over behind the edge its head is on
+    /// (Stage S3), nearest first: every edge the body reaches into, up to
+    /// and including the one its tail is on (see ``length``). Empty for a
+    /// train of one car, for a train whose body fits on its head's edge, and
+    /// for an unplaced train. Only ``GameWorld`` changes it, as the head
+    /// moves.
     public internal(set) var trailEdges: [TrackEdgeID]
     /// The track this train has reserved for its route under traffic control
     /// (Phase 4.6 Stage T, ARCHITECTURE decision 32), in resource order,
@@ -113,7 +107,6 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.execution = nil
         self.times = nil
         self.cars = 1
-        self.trail = []
         self.trailEdges = []
         self.reservation = []
         self.performance = .standard
@@ -206,22 +199,21 @@ extension Train: Codable {
     /// none is ever read as unplaced, idle, without a timetable, as running
     /// once or without a service, no timetable is sorted or trimmed, no
     /// period is changed, and no execution is moved to another stop or
-    /// cycle or dropped. A train of one car has no `"cars"` and no
-    /// `"trail"` key, which is also how trains saved before trains had
-    /// length read; cars outside `minimumCars...maximumCars`, or a trail that does not
-    /// fit the length and position (see ``isTrail(_:length:at:)``), are
-    /// rejected. That the trail is on this map's track is checked by the
-    /// ``GameWorld`` decoder.
+    /// cycle or dropped. A train of one car has no `"cars"` key, which is
+    /// also how trains saved before trains had length read; cars outside
+    /// `minimumCars...maximumCars` are rejected.
     ///
-    /// A train on the track network (Stage S3) has `"trailEdges"` (edge
-    /// numbers) instead of `"trail"` when its body reaches beyond its head's
-    /// edge; without the key, which is also how trains saved before Stage S3
-    /// read, it has none, and an explicit `null` is rejected. A train on the
-    /// network with a grid trail, one on the grid with trail edges, and one
-    /// on the network with a body at offset 0 (see ``TrainPosition``) are
-    /// rejected; whether its edges exist and its body fits them is checked
-    /// by the ``GameWorld`` decoder. Since Stage S5 a train on the network
-    /// may run a service.
+    /// A train whose body reaches beyond its head's edge has `"trailEdges"`
+    /// (edge numbers, Stage S3); without the key, which is also how trains
+    /// saved before Stage S3 read, it has none, and an explicit `null` is
+    /// rejected. An unplaced train with trail edges and a train with a body
+    /// at offset 0 (see ``TrainPosition``) are rejected; whether its edges
+    /// exist and its body fits them is checked by the ``GameWorld`` decoder.
+    ///
+    /// A body on the grid (a `"trail"` of tiles), which only a save made by
+    /// hand could hold, is refused with that reason: the grid went in Stage
+    /// F3c (ARCHITECTURE decision 51). An empty `"trail"`, which every train
+    /// could have had, is read as none.
     ///
     /// A train running a service has `"times"` (Stage W2b; see
     /// ``ServiceTimes``), and one without a service has none; times without
@@ -263,7 +255,13 @@ extension Train: Codable {
             : nil
         times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
-        trail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
+        let gridTrail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
+        guard gridTrail.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .trail, in: container,
+                debugDescription: "Train \(id.rawValue) has a body on the grid, which is no longer supported: the grid was removed in Stage F3c. Only a save made by hand could hold one."
+            )
+        }
         trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
         reservation = container.contains(.reservation) ? try container.decode([TrackResource].self, forKey: .reservation) : []
         performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
@@ -279,10 +277,10 @@ extension Train: Codable {
             )
         }
         if case .onEdge(_, let offset)? = position {
-            guard trail.isEmpty, length == 0 || offset > 0 else {
+            guard length == 0 || offset > 0 else {
                 throw DecodingError.dataCorruptedError(
                     forKey: .position, in: container,
-                    debugDescription: "Train \(id.rawValue) on the track network has a grid trail or a body at offset 0."
+                    debugDescription: "Train \(id.rawValue) has a body at offset 0."
                 )
             }
             guard trailEdges.allSatisfy({ ($0.networkNumber ?? 0) >= 1 }) else {
@@ -290,12 +288,7 @@ extension Train: Codable {
             }
         } else {
             guard trailEdges.isEmpty else {
-                throw DecodingError.dataCorruptedError(forKey: .trailEdges, in: container, debugDescription: "Train \(id.rawValue) has trail edges but is not on the track network.")
-            }
-            guard Self.isTrail(trail, length: length, at: position) else {
-                throw DecodingError.dataCorruptedError(
-                    forKey: .trail, in: container, debugDescription: "Train \(id.rawValue)'s trail does not fit its length and position."
-                )
+                throw DecodingError.dataCorruptedError(forKey: .trailEdges, in: container, debugDescription: "Train \(id.rawValue) has trail edges but is not on the track.")
             }
         }
         guard movement.fits(position) else {
@@ -354,9 +347,6 @@ extension Train: Codable {
         try container.encodeIfPresent(times, forKey: .times)
         if cars != Self.minimumCars {
             try container.encode(cars, forKey: .cars)
-        }
-        if !trail.isEmpty {
-            try container.encode(trail, forKey: .trail)
         }
         if !trailEdges.isEmpty {
             try container.encode(trailEdges.map { $0.networkNumber }, forKey: .trailEdges)

@@ -5,30 +5,25 @@ import GameCore
 // generated networks built through the public commands.
 
 extension TrackNodeID {
-    /// The number of a network node. Only for network nodes.
+    /// The number of a network node.
     var number: Int {
-        guard case .node(let number) = self else { preconditionFailure("\(self) is not a node of the track network") }
-        return number
+        switch self {
+        case .node(let number): number
+        }
     }
 }
 
 extension TrackEdgeID {
-    /// The number of a network edge. Only for network edges.
+    /// The number of a network edge.
     var number: Int {
-        guard case .edge(let number) = self else { preconditionFailure("\(self) is not an edge of the track network") }
-        return number
+        switch self {
+        case .edge(let number): number
+        }
     }
 
     /// The number written in fixtures: a network edge's number.
     var networkNumberForFixture: Int {
         number
-    }
-}
-
-extension TrackResource {
-    /// The one span of grid link `link`, the whole of it.
-    static func wholeLink(_ link: TrackEdgeID) -> TrackResource {
-        .span(TrackSpan(edge: link, start: 0, end: TrainPosition.linkLength))
     }
 }
 
@@ -173,10 +168,10 @@ enum NetworkInvariants {
     }
 
     /// Decision 29 for a train on the network: on an edge, within it; a
-    /// body at offset 0 only for a train of one car; no grid trail or grid
-    /// continuation; the body edges joined as a train could have come, just
-    /// reaching the tail; its continuation's edges built once (below the
-    /// next number, even if removed since). Decision 31: where its path
+    /// body at offset 0 only for a train of one car; the body edges joined
+    /// as a train could have come, just reaching the tail; its
+    /// continuation's edges built once (below the next number, even if
+    /// removed since). Decision 31: where its path
     /// ends lies inside the last edge (when that edge is still there),
     /// after its start while edges are left, and not behind the train
     /// once none are.
@@ -184,12 +179,10 @@ enum NetworkInvariants {
         guard case .onEdge(let traversal, let offset)? = train.position else { return [] }
         let id = train.id.rawValue
         var problems: [String] = []
-        guard let edge = world.trackEdge(traversal.edge), case .edge = traversal.edge else { return ["train \(id) is on an edge that does not exist"] }
+        guard let edge = world.trackEdge(traversal.edge) else { return ["train \(id) is on an edge that does not exist"] }
         if offset < 0 || offset > edge.length { problems.append("train \(id) offset \(offset) on an edge \(edge.length) long") }
         let length = Int64(train.cars - 1) * 1024
         if length > 0, offset == 0 { problems.append("train \(id) with a body stands at offset 0") }
-        if !train.trail.isEmpty { problems.append("train \(id) on the network has a grid trail") }
-        if !train.movement.continuation.isEmpty { problems.append("train \(id) on the network has a grid continuation") }
         if let end = train.movement.end {
             let left = train.movement.remainingEdges
             if left.isEmpty ? end < offset : end < 1 { problems.append("train \(id)'s path ends at \(end), behind it or at the start of its last edge") }

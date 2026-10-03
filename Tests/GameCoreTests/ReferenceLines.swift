@@ -177,21 +177,12 @@ extension ReferenceWorld {
         return line.ring ? 60 * (n - 1) : 60 * (2 * 2 + 2 * (n - 2) * 1)
     }
 
-    /// Service `k` of `line` driven from every platform of its first call
-    /// facing every way; the shortest, the first found among equals. A
-    /// ring's journey is its lap the inner way.
+    /// Service `k` of `line` driven from every berth of its first call on
+    /// the network (decision 31), a train of one car; the shortest, the
+    /// first found among equals. A ring's journey is its lap the inner way.
     func serviceJourney(_ line: Line, _ k: Int) -> LineJourney? {
         let calls = line.ring ? Self.lap(line, outer: false) : line.service(k).calls
         var best: LineJourney?
-        for platform in platforms(of: line.stops[calls[0]]) {
-            for heading in TrackDirection.allCases {
-                guard let journey = journey(of: line, calling: calls, from: .atNode(platform, heading: heading)) else { continue }
-                if best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true {
-                    best = journey
-                }
-            }
-        }
-        // Decision 31: then from every berth on the network, a train of one car.
         for start in journeyStarts(onNetworkOf: line.stops[calls[0]]) {
             guard let journey = networkJourney(of: line, calling: calls, from: start, trailEdges: [], length: 0) else { continue }
             if best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true {
@@ -199,41 +190,6 @@ extension ReferenceWorld {
             }
         }
         return best
-    }
-
-    /// The line driven once from `start`, calling at `calls` (indices of its
-    /// stops): out along them, turning at the last, back along them in
-    /// reverse (a ring's lap, once along them); `nil` if a leg has no
-    /// route. Decision 27: a train `length` long with body `trail` turns
-    /// with its head at its tail and is pulled along the platforms.
-    func journey(of line: Line, calling calls: [Int], from start: TrainPosition, trail: [GridPosition] = [], length: Int64 = 0) -> LineJourney? {
-        var position = start
-        var body = trail
-        var legs: [LineLeg] = []
-        let (pairs, turn) = Self.legPairs(line, calls)
-        for (from, to) in pairs {
-            if from == turn { (position, body) = Self.turnedWithBody(position, body, length: length) }
-            guard let route = route(from: position, toStation: line.stops[to], length: length) else { return nil }
-            let units = Int64(route.count) * Self.linkLength
-            // Decision 31: a leg keeps its path as links from the node ahead.
-            var node = Self.ahead(position).0
-            let links = route.map { next -> TrackTraversal in
-                defer { node = next }
-                return TrackTraversal.link(from: node, to: next)
-            }
-            let path = TrainPath(traversals: links, end: nil, distance: units)
-            // Stage W2c: the least second the line's curve is built for.
-            guard let seconds = units == 0 ? 0 : Self.leastSeconds(units, line.performance) else { return nil }
-            legs.append(LineLeg(from: from, to: to, path: path, seconds: seconds))
-            if route.count >= 1 {
-                let previous = route.count >= 2 ? route[route.count - 2] : Self.ahead(position).0
-                let arrived = TrainPosition.atNode(route[route.count - 1], heading: stepDirection(from: previous, to: route[route.count - 1])!)
-                body = Self.body(after: position, body, to: arrived, passed: route, length: length)
-                position = arrived
-            }
-        }
-        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + Self.dwellSeconds(line, calls)
-        return LineJourney(start: start, legs: legs, roundTripSeconds: total, isRing: line.ring)
     }
 
     /// Everything derived for one service of a line: `nil` parts where the
@@ -502,7 +458,6 @@ extension ReferenceWorld {
 
     struct Place: Hashable {
         var position: TrainPosition
-        var trail: [GridPosition]
         var trailEdges: [Int]
     }
 
@@ -610,22 +565,14 @@ extension ReferenceWorld {
         guard train.service == nil, let position = train.position, train.rate > 0,
               stationsStoppedAt(by: TrainID(rawValue: train.id)).contains(first)
         else { return .notReady }
-        let place = Place(position: position, trail: train.trail, trailEdges: train.trailEdges)
+        let place = Place(position: position, trailEdges: train.trailEdges)
         let length = Self.length(train)
         let key = ServiceKey(line: line.id, service: k, outer: outer == true)
         if memo.trips[place]?[key] == nil {
-            let straight: LineJourney?
-            let turned: LineJourney?
-            if case .onEdge = position {
-                // Decision 31: on the network, from its place and body.
-                straight = networkJourney(of: line, calling: calls, from: position, trailEdges: train.trailEdges, length: length)
-                let back = turnedOnNetwork(train)
-                turned = networkJourney(of: line, calling: calls, from: back.position!, trailEdges: back.trailEdges, length: length)
-            } else {
-                straight = journey(of: line, calling: calls, from: position, trail: train.trail, length: length)
-                let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
-                turned = journey(of: line, calling: calls, from: back, trail: backBody, length: length)
-            }
+            // Decision 31: from its place and body.
+            let straight = networkJourney(of: line, calling: calls, from: position, trailEdges: train.trailEdges, length: length)
+            let back = turnedOnNetwork(train)
+            let turned = networkJourney(of: line, calling: calls, from: back.position!, trailEdges: back.trailEdges, length: length)
             let pick: (Bool, LineJourney)? = switch (straight, turned) {
             case (let s?, let t?): t.roundTripSeconds < s.roundTripSeconds ? (true, t) : (false, s)
             case (let s?, nil): (false, s)

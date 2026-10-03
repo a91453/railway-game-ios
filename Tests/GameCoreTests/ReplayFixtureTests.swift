@@ -80,8 +80,7 @@ final class ReplayFixtureTests: XCTestCase {
         // And every recorded command keeps its form through a round trip.
         for command in fixture.commands {
             let operation = try XCTUnwrap(command.operation)
-            let again = try XCTUnwrap(ReplayCommand(operation))
-            XCTAssertEqual(again.operation, operation)
+            XCTAssertEqual(ReplayCommand(operation).operation, operation)
         }
     }
 
@@ -104,9 +103,7 @@ final class ReplayFixtureTests: XCTestCase {
             } while generated.0.seconds > 1_000_000_000 || generated.0.speed == .paused
             let (setup, operations) = generated
             let start = try setup.build().0
-            let commands = try operations.map { operation in
-                try XCTUnwrap(ReplayCommand(operation), "\(recipe.name): \(operation) has no recorded form")
-            }
+            let commands = operations.map(ReplayCommand.init)
             let checksums = ReplayFixture.checksums(from: start, applying: operations, every: ReplayFixture.interval) { index, problem in
                 XCTFail("\(recipe.name): command \(index): \(problem)")
             }

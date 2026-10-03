@@ -129,8 +129,8 @@ final class TimetablePropertyTests: XCTestCase {
                 guard let position = train.position else { continue }
                 for station in scheduled.stations {
                     c.expect(
-                        scheduled.route(from: position, toStation: station.id) == plain.route(from: position, toStation: station.id),
-                        "a route to station \(station.id.rawValue) differs with timetables"
+                        scheduled.path(from: position, toStation: station.id) == plain.path(from: position, toStation: station.id),
+                        "a path to station \(station.id.rawValue) differs with timetables"
                     )
                 }
             }

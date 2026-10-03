@@ -1,17 +1,12 @@
 // The railway network (Phase 4.5 Stage S3, ARCHITECTURE decision 29): the
-// one record of all railway track in a world (S3A). It holds two kinds of
-// track behind one graph vocabulary (see TrackGraph):
+// one record of all railway track in a world (S3A): numbered nodes at world
+// coordinates and numbered edges between them (S3B). Until Stage F3c it also
+// held the grid's track pieces, anchored to tiles; they went with the grid
+// (decision 51).
 //
-// - grid track, anchored to tiles: each track tile's exits and layout (plain,
-//   turnout or level crossing), the railway of Stages I–S2. A tile is a node
-//   and the link between two tiles whose exits face each other an edge,
-//   1024 long, derived from the pieces;
-// - the continuous network (S3B): numbered nodes at world coordinates and
-//   numbered edges between them.
-//
-// The land (empty ground, stations) is the GridMap's; the railway is only
-// here. For the continuous network: nodes are points in the world; edges run between two of them along a
-// TrackCurve, any length and any heading. Only a shared node joins two
+// The land is the GridMap's; the railway is only here. Nodes are points in
+// the world; edges run between two of them along a TrackCurve, any length
+// and any heading. Only a shared node joins two
 // edges: edges that cross in plan without one never meet. Which edges a
 // train may pass between at a node is derived once, when an edge is built or
 // a save is loaded, from the way each edge leaves the node: two edge ends
@@ -28,9 +23,6 @@
 
 /// A node of the track network: a point where edges end and meet.
 public struct TrackNode: Hashable, Sendable {
-    /// Always ``TrackNodeID/node(_:)`` for a node of the network; a grid
-    /// tile seen as a node (see ``GameWorld/trackNode(_:)``) has
-    /// ``TrackNodeID/tile(_:)``.
     public let id: TrackNodeID
     public let position: WorldCoordinate
     /// The edges that end here, in ascending order, each with the edges a
@@ -64,9 +56,6 @@ public struct TrackNodeEnd: Hashable, Sendable {
 
 /// An edge of the railway graph: a stretch of track between two nodes.
 public struct TrackEdge: Hashable, Sendable {
-    /// ``TrackEdgeID/edge(_:)`` for an edge of the network;
-    /// ``TrackEdgeID/link(_:_:)`` for a grid link seen as an edge (see
-    /// ``GameWorld/trackEdge(_:)``).
     public let id: TrackEdgeID
     public let from: TrackNodeID
     public let to: TrackNodeID
@@ -74,13 +63,11 @@ public struct TrackEdge: Hashable, Sendable {
     public let curve: TrackCurve
     /// The distance a train travels along the edge, in world units (see
     /// ``TrackGeometry/length``): derived from the end nodes and the curve
-    /// when the edge is built or loaded, never saved. A grid link is
-    /// ``TrainPosition/linkLength`` long.
+    /// when the edge is built or loaded, never saved.
     public let length: Int64
-    /// How the height changes between the end nodes (Stage S4); uniform for
-    /// a grid link.
+    /// How the height changes between the end nodes (Stage S4).
     public let profile: TrackProfile
-    /// What carries the track (Stage S4); surface for a grid link.
+    /// What carries the track (Stage S4).
     public let structure: TrackStructure
 
     init(
@@ -115,15 +102,11 @@ public struct TrackEdge: Hashable, Sendable {
     }
 }
 
-/// The railway of a world (Stage S3A): the grid's track pieces, and the
-/// continuous network's nodes and edges, each in ascending ID order, and
-/// its platforms (Stage S4). Changed only by ``GameWorld``'s commands.
+/// The railway of a world (Stage S3A): the network's nodes and edges, each
+/// in ascending ID order, and its platforms (Stage S4). Changed only by
+/// ``GameWorld``'s commands.
 public struct RailwayNetwork: Hashable, Sendable {
-    /// The grid's track pieces by the tile they are anchored to (Stage
-    /// S3A). Saved in the map's tile list, the save format of Stages I–S2
-    /// (see ``GameWorld``), not under the network's own key.
-    private var pieces: [GridPosition: Track]
-    /// The continuous network's nodes and edges, in ascending ID order.
+    /// The network's nodes and edges, in ascending ID order.
     public private(set) var nodes: [TrackNode]
     public private(set) var edges: [TrackEdge]
     /// The next node and edge number to hand out; every number in use is
@@ -136,7 +119,6 @@ public struct RailwayNetwork: Hashable, Sendable {
 
     /// An empty network, handing out numbers from 1.
     public init() {
-        pieces = [:]
         nodes = []
         edges = []
         nextNodeNumber = 1
@@ -154,48 +136,21 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// space it needs, not a crossing (see ``TrackClearance``).
     public static let junctionZone: Int64 = 1_024
 
-    /// Whether the continuous network has no nodes and has never handed out
-    /// a number, so a world saves it by leaving it out. Grid track does not
-    /// count: it is saved in the map's tiles. (A platform needs an edge.)
+    /// Whether the network has no nodes and has never handed out a number,
+    /// so a world saves it by leaving it out. (A platform needs an edge.)
     var isPristine: Bool {
         nodes.isEmpty && edges.isEmpty && nextNodeNumber == 1 && nextEdgeNumber == 1
     }
 
-    // MARK: - Grid track (Stage S3A)
-
-    /// The grid track piece anchored to `position`, or `nil`.
-    public func track(at position: GridPosition) -> Track? {
-        pieces[position]
-    }
-
-    /// Every grid track piece, in row-major order.
-    public var tracks: [Track] {
-        pieces.values.sorted { TrackEdgeID.precedes($0.position, $1.position) }
-    }
-
-    /// Lays `track` on its tile, replacing nothing: the caller has checked
-    /// the tile is free.
-    mutating func lay(_ track: Track) {
-        precondition(pieces[track.position] == nil, "lay(_:) needs a tile without track")
-        pieces[track.position] = track
-    }
-
-    /// Removes the grid track piece at `position`, which exists.
-    mutating func removeTrack(at position: GridPosition) {
-        let removed = pieces.removeValue(forKey: position)
-        precondition(removed != nil, "removeTrack(at:) needs a tile with track")
-    }
-
     // MARK: - Spans (Stage S3A)
 
-    /// The longest a span of an edge is: 1024, a tile, as long as a grid
-    /// link, so the grid and the network are divided alike.
+    /// The longest a span of an edge is: 1024, a tile's width.
     public static let spanLength: Int64 = 1_024
 
     /// The spans of edge `edge`, `length` long, from its `from` node: the
     /// fewest equal parts no longer than ``spanLength``. With
     /// `n = ⌈length ÷ 1024⌉` parts, the `k`-th boundary is at
-    /// `⌊k × length ÷ n⌋`. A grid link is one span; an edge of 2 km is 125.
+    /// `⌊k × length ÷ n⌋`. An edge of 2 km is 125.
     /// Worked out from the integer length alone, never from the samples.
     ///
     /// - Precondition: `length > 0`.
@@ -209,8 +164,7 @@ public struct RailwayNetwork: Hashable, Sendable {
 
     /// The spans of edge `id`, `length` long (Stage S4): its equal parts
     /// (see ``spans(of:length:)``), cut again at the ends of every platform
-    /// on it, so a platform is a whole number of spans. A grid link has no
-    /// platforms and stays one span.
+    /// on it, so a platform is a whole number of spans.
     func spans(of id: TrackEdgeID, length: Int64) -> [TrackSpan] {
         let equal = Self.spans(of: id, length: length)
         let cuts = platforms(on: id).flatMap { [$0.start, $0.end] }

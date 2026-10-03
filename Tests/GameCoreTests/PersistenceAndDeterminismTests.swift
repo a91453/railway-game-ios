@@ -58,19 +58,23 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         }
     }
 
-    func testDecodingRejectsStationWithoutMatchingTile() throws {
+    /// A station on a tile, which only a save made by hand could hold since
+    /// Stage F3c removed the grid, is refused with the reason (decision 51).
+    func testDecodingRejectsAStationOnATile() throws {
         var world = try makeWorld(balance: 100_000)
-        try world.buildStation(named: "West", at: GridPosition(x: 1, y: 1))
+        try world.buildStation(named: "West", at: PlanPoint(x: 1_536, y: 1_536))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: try encode(world)) as? [String: Any])
         var stations = try XCTUnwrap(object["stations"] as? [[String: Any]])
-        stations[0]["position"] = ["x": 2, "y": 2]
+        stations[0]["point"] = nil
+        stations[0]["position"] = ["x": 1, "y": 1]
         object["stations"] = stations
         let corrupted = try JSONSerialization.data(withJSONObject: object)
 
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: corrupted)) { error in
-            guard case DecodingError.dataCorrupted = error else {
+            guard case DecodingError.dataCorrupted(let context) = error else {
                 return XCTFail("Expected dataCorrupted, got \(error)")
             }
+            XCTAssertTrue(context.debugDescription.contains("the grid was removed in Stage F3c"), context.debugDescription)
         }
     }
 

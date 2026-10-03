@@ -463,8 +463,7 @@ final class VerticalRailwayTests: XCTestCase {
         // The order of refusals.
         refused(.unknownStation(StationID(rawValue: 9)), in: world) { try $0.addTrackPlatform(StationID(rawValue: 9), on: .edge(99), from: 0, to: -1) }
         refused(.unknownTrackEdge(.edge(99)), in: world) { try $0.addTrackPlatform(annex, on: .edge(99), from: 0, to: -1) }
-        let link = TrackEdgeID.link(GridPosition(x: 0, y: 0), GridPosition(x: 1, y: 0))
-        refused(.unknownTrackEdge(link), in: world) { try $0.addTrackPlatform(annex, on: link, from: 0, to: 100) }
+        refused(.unknownTrackEdge(.edge(0)), in: world) { try $0.addTrackPlatform(annex, on: .edge(0), from: 0, to: 100) }
         // An edge with a platform stays until the platform goes.
         refused(.trackEdgeHasPlatform(surface), in: world) { try $0.removeTrackEdge(surface) }
 
