@@ -94,7 +94,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // inside a collection-view cell. On iOS 26 that inner Button has no
         // hittable point; the visible cell is the actual tap target. Keep the
         // identifier query and require the row to become tappable before use.
-        let row = app.collectionViews.cells.containing(.button, identifier).element
+        let row = app.collectionViews.cells.containing(.button, identifier: identifier).element
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Missing menu row: \(identifier)")
         assertHittable(row, message: "UI flow menu action cannot be tapped: \(identifier)")
         return row
