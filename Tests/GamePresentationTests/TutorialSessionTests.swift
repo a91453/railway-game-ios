@@ -89,6 +89,40 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
+    /// Back to a step the player finished leaves it finished: Next must not
+    /// wait for a second stretch of track because the step was shown again.
+    func testBackToTheTrackStepKeepsItDone() async throws {
+        let world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.startTutorial()
+            session.selectTool(.network)
+            session.showNextTutorialStep()
+            session.tapNetwork(at: PlanPoint(x: 2_048, y: 2_048), reach: Self.reach)
+            session.tapNetwork(at: PlanPoint(x: 6_144, y: 2_048), reach: Self.reach)
+            session.buildNetworkTrack()
+            XCTAssertTrue(session.isTutorialStepDone)
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "demo.end")
+
+            session.showPreviousTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "demo.buildTrack")
+            XCTAssertEqual(session.world.network.edges.count, 1)
+            XCTAssertTrue(session.isTutorialStepDone, "the track built for this step is still built")
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "demo.end", "Next works again")
+
+            // A step shown for the first time still waits for its own track.
+            session.showPreviousTutorialStep()
+            session.showPreviousTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "demo.networkTool")
+            session.startTutorial()
+            session.selectTool(.network)
+            session.showNextTutorialStep()
+            XCTAssertFalse(session.isTutorialStepDone, "starting again snapshots the track that is there now")
+        }
+    }
+
     /// Back goes to the step before (none on the first), Skip ends the
     /// tutorial at any step, and starting again begins at the first step.
     /// None of them changes the world.
