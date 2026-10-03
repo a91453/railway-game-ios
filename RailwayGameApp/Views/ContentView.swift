@@ -13,6 +13,8 @@ struct ContentView: View {
     let launcher: GameLauncher
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isWide = false
+    /// Lives above both layouts: switching them must not discard the camera.
+    @State private var mapCamera: PlanCamera?
 
     var body: some View {
         Group {
@@ -36,6 +38,7 @@ struct ContentView: View {
         // The map and controls share one screen, so text stops growing at the
         // largest standard size instead of pushing the map off screen.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .onChange(of: ObjectIdentifier(session)) { _, _ in mapCamera = nil }
         .tutorialOverlay(session: session)
     }
 
@@ -93,7 +96,7 @@ struct ContentView: View {
     }
 
     private var map: some View {
-        MapView(session: session)
+        MapView(session: session, camera: $mapCamera)
             .tutorialTarget(.map)
             .overlay(alignment: .top) {
                 StatusBanner(session: session)

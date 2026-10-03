@@ -58,4 +58,29 @@ final class MapInteractionTests: XCTestCase {
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)
     }
+
+    func testRotationKeepsTheCameraZoom() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer {
+            XCUIDevice.shared.orientation = .portrait
+            app.terminate()
+        }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        newGame.tap()
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        for _ in 0..<4 { zoomIn.tap() }
+        XCTAssertFalse(zoomIn.isEnabled)
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertGreaterThan(app.frame.width, app.frame.height)
+        XCTAssertFalse(zoomIn.isEnabled, "Changing the layout must keep the camera's maximum zoom")
+        app.buttons["Zoom out"].tap()
+        XCTAssertTrue(zoomIn.isEnabled)
+    }
 }
