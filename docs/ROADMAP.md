@@ -123,7 +123,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 
 - **Repository readiness ✅**（PR #8）：
   - XcodeGen 產生的 Xcode 專案與 shared scheme 提交進版控，`ios-build.yml` 檢查它與 `project.yml` 一致；
-  - Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon；
+  - Release Archive、iPhone / iPad、自動簽章設定、臨時 App Icon（0.3.0 起換成作者提供的圖）；
   - 未簽章的 Release 裝置 Archive（`release-archive.yml`）。
 - **GitHub Actions → 內部 TestFlight 基礎設施：已實作，真實執行驗證到上傳 App Store Connect**：
   - `testflight.yml`：只能從 `main` 手動觸發；preflight → Archive（預設 `adhoc`）→ App Store distribution 匯出 IPA → 檢查 → 上傳；
@@ -132,6 +132,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - **真實 Apple 簽章與上傳：VERIFIED（到上傳為止）**：Apple Developer Program、Team API key 與 environment 已就緒。第 1 次真實執行（`automatic`）在 Archive 失敗，因為新團隊沒有已註冊裝置、Apple 無法產生開發描述檔；第 2 次（`adhoc`）Archive、App Store distribution 匯出、IPA 檢查、上傳與清理全部成功，所以預設改為 `adhoc`。細節與 run 網址見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
 - **尚未驗證**：App Store Connect processing、Missing Compliance 與 TestFlight 安裝到裝置（沒有 repository 層級的證據）。
 - **第二版（0.2.0）**：G1（第一個能玩的經營閉環）與 W2a 之後，先完成 L1（繁體中文），再由作者從 `main` 執行 `testflight.yml`。要在實機上看的：經營與路線面板、速度選單與 1×／10×／60× 的手感、中文排版。
+- **第三版（0.3.0）**（2026-10-03，作者要求）：版本號改為 0.3.0，App 圖示換成作者提供的圖（取代臨時圖示）。由作者從 `main` 執行 `testflight.yml`；`CFBundleVersion` 仍由 workflow 決定。
 - **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
 - **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 
