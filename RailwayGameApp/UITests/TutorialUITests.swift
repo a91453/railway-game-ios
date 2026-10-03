@@ -1,0 +1,135 @@
+import XCTest
+
+/// Exercises the CX-5 card against step 0's demo. Gameplay goals are tested
+/// in TutorialSessionTests; these checks prove the overlay passes touches
+/// through to the tool, observes completion and exposes its navigation.
+@MainActor
+final class TutorialUITests: XCTestCase {
+    func testEnglishTutorialNavigation() {
+        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip")
+    }
+
+    func testTraditionalChineseTutorialNavigation() {
+        checkNavigation(language: "zh-Hant", locale: "zh_TW", tutorialLabel: "教學", nextLabel: "下一步", backLabel: "上一步", skipLabel: "略過")
+    }
+
+    func testBuildingTrackEnablesDoneAndFinishes() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let start = app.buttons["start.tutorial"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+        let next = app.buttons["tutorial.next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        app.buttons["tool.network"].tap()
+        waitForEnabled(next, true)
+        next.tap()
+        waitForEnabled(next, false)
+
+        // Tap the visible top of the map, outside the centred card. The
+        // underlying map and the outlined Build Track action stay usable.
+        let map = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 5))
+        let visibleMap = map.frame.intersection(app.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: visibleMap.minX + 50, dy: visibleMap.minY + 24)).tap()
+        origin.withOffset(CGVector(dx: visibleMap.minX + 130, dy: visibleMap.minY + 24)).tap()
+        waitForEnabled(next, false, "Choosing the ends only previews track")
+        let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
+        XCTAssertTrue(build.waitForExistence(timeout: 5))
+        waitForEnabled(build, true)
+        build.tap()
+        waitForEnabled(next, true)
+        next.tap()
+        XCTAssertEqual(next.label, "Done")
+        XCTAssertTrue(app.buttons["tutorial.back"].exists)
+        XCTAssertTrue(next.isEnabled)
+        capture(app, name: "en-tutorial-done")
+        next.tap()
+        XCTAssertFalse(next.exists)
+        XCTAssertTrue(app.buttons["tool.network"].isHittable)
+    }
+
+    private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String) {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+        app.launch()
+        defer {
+            app.terminate()
+            XCUIDevice.shared.orientation = .portrait
+        }
+
+        let start = app.buttons["start.tutorial"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(start.label.contains(tutorialLabel))
+        start.tap()
+
+        let next = app.buttons["tutorial.next"]
+        let back = app.buttons["tutorial.back"]
+        let skip = app.buttons["tutorial.skip"]
+        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertEqual(next.label, nextLabel)
+        XCTAssertEqual(skip.label, skipLabel)
+        XCTAssertFalse(next.isEnabled, "The first demo step waits for the network tool")
+        XCTAssertFalse(back.exists, "The first step has no Back button")
+
+        // The outlined button must receive the touch underneath the overlay.
+        app.buttons["tool.network"].tap()
+        waitForEnabled(next, true)
+        app.buttons["tool.select"].tap()
+        waitForEnabled(next, false)
+        app.buttons["tool.network"].tap()
+        waitForEnabled(next, true)
+        capture(app, name: "\(language)-tutorial-tool")
+        next.tap()
+
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        XCTAssertEqual(back.label, backLabel)
+        waitForEnabled(next, false)
+        capture(app, name: "\(language)-tutorial-map")
+        back.tap()
+        XCTAssertFalse(back.exists)
+        waitForEnabled(next, true)
+
+        // Reflowing the card must preserve navigation and usable controls.
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(skip.waitForExistence(timeout: 5))
+        XCTAssertTrue(skip.isHittable)
+        capture(app, name: "\(language)-tutorial-landscape")
+        skip.tap()
+        XCTAssertFalse(next.exists)
+        app.buttons["tool.select"].tap()
+
+        // The game menu starts the tutorial again without leaving this game.
+        app.buttons[language == "en" ? "Game menu" : "遊戲選單"].tap()
+        let restart = app.buttons["menu.tutorial"]
+        XCTAssertTrue(restart.waitForExistence(timeout: 5))
+        XCTAssertEqual(restart.label, tutorialLabel)
+        restart.tap()
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertFalse(back.exists)
+        waitForEnabled(next, false)
+        skip.tap()
+        XCTAssertFalse(next.exists)
+    }
+
+    private func waitForEnabled(_ element: XCUIElement, _ enabled: Bool, _ message: String = "") {
+        let predicate = NSPredicate(format: "enabled == %@", NSNumber(value: enabled))
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed, message)
+    }
+
+    private func capture(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}
