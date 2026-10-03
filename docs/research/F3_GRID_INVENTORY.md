@@ -456,6 +456,19 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 
 **CI 的 shard**：搬到路網之後幾個 campaign 變慢（Boarding 約 510 秒、兩個 service campaign 合計約 680 秒），五個 campaign shard 裝不下 20 分鐘的上限，`campaigns-2`（Boarding 加 Service）在 PR #86–#89 跑了 18 分鐘後被取消。改成八個 campaign shard，`ServiceLinePropertyTests` 與 `KernelDifferentialTests` 也從 `rest` 移到具名的 shard；`service.repeating` 移到自己的類別 `ServiceRepeatingPropertyTests`（只為了能放進另一個 shard，campaign 名稱、檢查與 digest 都不變）。每個 shard 的秒數與估計方式記在 `.github/scripts/swift-shards.sh`。
 
+### 7.5 F3b-3：重播 fixture（移植參考的 desync 重播）
+
+參考包的除錯工具（`Railway/railway_game_reference_clean/docs/desync.md` §2.1 快取檢查、§2.2 指令紀錄、§3.1 重播、§3.2 比對 checksum 找出分歧的區間；`01_MIGRATION_MAP.md` 的「Determinism / debugging」）以獨立實作移植成 [`ReplayFixtures/`](../../ReplayFixtures/README.md)：五個路網 campaign case 的起始世界、指令紀錄，以及每 10 個指令一個遊戲狀態的 checksum。`ReplayFixtureTests` 逐段重播，每個世界都檢查不變量；checksum 對不上時指出分歧的那一段指令。
+
+| 參考 | Swift | 說明 |
+| --- | --- | --- |
+| `desync.md` §2.2 指令紀錄 | `ReplayCommand`（純值的 Codable，不用 GameCore 會拒絕無效值的 coding） | 有效與被拒的指令都記 |
+| §3.2 每段 checksum | `ReplayState.checksum(of:)`：時間、金錢與帳、路網與月台、車站與乘客、列車的位置／車身／路徑／服務、線路與交路、乘客群（FNV-1a 64） | 算遊戲狀態的描述，不是存檔位元組：存檔格式改了但值不變時 checksum 不變 |
+| §3.1 重播、§3.2 縮小區間 | `ReplayFixtureTests.testEveryRecordedStreamReplaysToTheSameStates`、`firstDifference` | 第一個不同的 checksum 指出分歧的指令區間 |
+| §2.1 每 tick 檢查快取 | 每個指令後跑 `WorldInvariants` | |
+
+這些 fixture 只有路網的指令與內容，F3c 刪方格時必須原樣重播；之後的行為變更若改動 checksum，要在該 PR 重新錄製並逐一說明（規則同 golden 與存檔 fixture）。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

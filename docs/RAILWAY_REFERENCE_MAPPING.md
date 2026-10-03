@@ -444,7 +444,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | P2-9 城市成長、產業 | 沒有 | Phase 6 | **gap**：只有原始碼路徑 |
 | P2-10 建設規則與成本在指令裡 | 已有：建設指令先驗證再扣款 | — | 已涵蓋 |
 | 存檔版本與 migration（`docs/savegame_format.md`） | 沒有（決策 6）；App 目前不把存檔寫到裝置 | 正式存檔時（ROADMAP 的跨階段議題） | 延後 |
-| 決定性除錯：種子、指令紀錄、checksum、重播（`docs/desync.md`） | golden scenario 就是指令序列的重播；property campaign 比對 digest | 世界的 checksum 與指令紀錄等需要時再加 | 大部分已涵蓋 |
+| 決定性除錯：種子、指令紀錄、checksum、重播（`docs/desync.md` §2.1 快取檢查、§2.2 紀錄、§3.1 重播、§3.2 比對 checksum 並從較晚的存檔重來，找出分歧的區間） | golden scenario 就是指令序列的重播；property campaign 比對 digest；F3b 起加上 [`ReplayFixtures/`](../ReplayFixtures/README.md)：路網 campaign 的指令紀錄、每 10 個指令一個狀態 checksum，`ReplayFixtureTests` 逐段重播比對，對不上就指出是哪一段指令；每個世界都檢查不變量（對應 §2.1 的快取檢查）；checksum 算的是遊戲狀態的描述，不是存檔的位元組 | 已移植（獨立實作，沒有原始碼） | 已涵蓋 |
 | `web_runtime/`：雙指縮放、IndexedDB 存檔、存檔的匯入匯出 | 原生 App 不適用 | Web 宿主（[WEB_PORT_READINESS](WEB_PORT_READINESS.md)） | 只適用 Web |
 
 ### 和另外兩份參考的差異
