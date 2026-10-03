@@ -861,6 +861,206 @@ final class TrafficControlTests: XCTestCase {
         ].sorted())
     }
 
+    // MARK: - Rules first tested on the grid, on the network (Stage F3c)
+    //
+    // The grid tests above go with the grid; these keep each rule they
+    // alone covered, on the straight network (`makeLineWorld`) or the
+    // network of two stations below.
+
+    /// `testWithoutTrafficControlTrainsShareTrackAsBefore`: off, trains on
+    /// the network stand on the same span; nothing is reserved or saved.
+    func testWithoutTrafficControlNetworkTrainsShareTrackAsBefore() throws {
+        var world = try makeLineWorld()
+        XCTAssertFalse(world.isTrafficControlEnabled)
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 700))
+        let two = try buy(&world)
+        try world.placeTrain(two, at: .onEdge(forward(1), offset: 700))
+        try world.setTrainContinuation(one, along: [forward(2)], stoppingAt: 1_500)
+        XCTAssertEqual(world.occupancyConflicts(), [TrackConflict(resource: span(1, 0, 1_024), trains: [one, two])])
+        XCTAssertEqual(world.reservedResources(of: one), [])
+        XCTAssertEqual(world.heldResources(of: one), [span(1, 0, 1_024)])
+        XCTAssertNil(world.trainHoldingRoute(of: one))
+        let json = try encoded(world)
+        XCTAssertNil(json["trafficControl"])
+        let trains = try XCTUnwrap(json["trains"] as? [[String: Any]])
+        XCTAssertTrue(trains.allSatisfy { $0["reservation"] == nil })
+    }
+
+    /// `testTurningTrafficControlOnAndOff`: on, a train with a way to go
+    /// takes all of it and a standing train only its place; on twice is on;
+    /// off gives back exactly the world before.
+    func testTurningTrafficControlOnAndOffOnTheNetwork() throws {
+        var world = try makeLineWorld()
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 4_600))
+        try world.setTrainContinuation(one, along: [forward(2)], stoppingAt: 1_500)
+        let two = try stand(&world, at: forward(1), 1_500)
+        let off = world
+
+        try world.setTrafficControl(true)
+        XCTAssertTrue(world.isTrafficControlEnabled)
+        let route = [node(2), span(1, 4_096, 5_120), span(2, 0, 1_000), span(2, 1_000, 2_000)]
+        XCTAssertEqual(world.reservedResources(of: one), route)
+        XCTAssertEqual(world.train(id: one)?.reservation, route)
+        XCTAssertEqual(world.heldResources(of: one), route)
+        XCTAssertEqual(world.reservedResources(of: two), [])
+        XCTAssertEqual(world.heldResources(of: two), [span(1, 1_024, 2_048)])
+        let on = world
+        try world.setTrafficControl(true)
+        XCTAssertEqual(world, on)
+
+        try world.setTrafficControl(false)
+        XCTAssertEqual(world, off)
+        XCTAssertEqual(world.reservedResources(of: one), [])
+    }
+
+    /// `testGridRoutesAreTakenWholeAndKeptForTheTrip`, the parts no network
+    /// test had: rate 0 and a new rate keep the reservation, and removing
+    /// an edge a train stands on is refused as in use before as reserved.
+    func testANetworkReservationOutlastsRate0AndTrackInUseComesFirst() throws {
+        var world = try makeLineWorld()
+        try world.setTrafficControl(true)
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 4_600))
+        try world.setTrainContinuation(one, along: [forward(2)], stoppingAt: 1_500)
+        let route = [node(2), span(1, 4_096, 5_120), span(2, 0, 1_000), span(2, 1_000, 2_000)]
+        let before = world
+        // e1 is in use (one stands on it) and reserved; e2 only reserved.
+        XCTAssertThrowsGameError(try world.removeTrackEdge(.edge(1)), .trackEdgeInUse(.edge(1)))
+        XCTAssertThrowsGameError(try world.removeTrackEdge(.edge(2)), .trackReserved(one))
+        XCTAssertEqual(world, before)
+
+        try world.setTrainMovementRate(one, to: 0)
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.train(id: one)?.position, .onEdge(forward(1), offset: 4_600))
+        XCTAssertEqual(world.reservedResources(of: one), route)
+        try world.setTrainMovementRate(one, to: 1_024)
+        XCTAssertEqual(world.reservedResources(of: one), route)
+    }
+
+    /// `testALinkRunsOnToItsEnd`: a train part of the way along an edge runs
+    /// to its end by itself, so turning it round there takes the other end;
+    /// refused, with nothing changed, while another train holds that.
+    func testATrainTurnedRoundOnAnEdgeTakesItsOtherEnd() throws {
+        var world = try makeLineWorld()
+        try world.setTrafficControl(true)
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 500))
+        XCTAssertEqual(world.reservedResources(of: one), [
+            node(2), span(1, 0, 1_024), span(1, 1_024, 2_048), span(1, 2_048, 3_072), span(1, 3_072, 4_096), span(1, 4_096, 5_120),
+        ])
+        // At n1, the end of e1 run backward: it holds n1 alone and stands.
+        let two = try buy(&world)
+        try world.placeTrain(two, at: .onEdge(backward(1), offset: 5_120))
+        XCTAssertEqual(world.heldResources(of: two), [node(1)])
+        XCTAssertEqual(world.reservedResources(of: two), [])
+        let before = world
+        XCTAssertThrowsGameError(try world.reverseTrain(one), .trackReserved(two))
+        XCTAssertEqual(world, before)
+
+        try world.unplaceTrain(two)
+        try world.reverseTrain(one)
+        // 5120 − 500 along e1 run backward, the same point, running to n1.
+        XCTAssertEqual(world.train(id: one)?.position, .onEdge(backward(1), offset: 4_620))
+        XCTAssertEqual(world.reservedResources(of: one), [node(1), span(1, 0, 1_024)])
+    }
+
+    /// `testATrainWaitingForRemovedTrackKeepsItsWayThroughTheGap`, where the
+    /// network differs: an edge that was removed never comes back, so a
+    /// path broken by one is reserved to where it breaks, the end of the
+    /// last edge the train can reach.
+    func testAPathBrokenByARemovedEdgeIsReservedToWhereItBreaks() throws {
+        var world = try makeLineWorld()
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 4_600))
+        try world.setTrainContinuation(one, along: [forward(2)], stoppingAt: 1_500)
+        try world.removeTrackEdge(.edge(2))
+        try world.setTrafficControl(true)
+        XCTAssertEqual(world.reservedResources(of: one), [node(2), span(1, 4_096, 5_120)])
+        XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
+    }
+
+    // Two stations on two edges of 8192, n1 (1024, 1024) to n2 (9216,
+    // 1024) to n3 (17408, 1024): W's platform on e1 from 1024 to 5120, E's
+    // on e2 from 3072 to 7168. Every span is 1024 long. The stations stand
+    // at points, as every station will once the grid is gone.
+    private func makeStationsWorld() throws -> (world: GameWorld, west: StationID, east: StationID) {
+        var world = try GameWorld(width: 20, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        let nodes = try [1_024, 9_216, 17_408].map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: 1_024)) }
+        try world.buildTrackEdge(from: nodes[0], to: nodes[1])
+        try world.buildTrackEdge(from: nodes[1], to: nodes[2])
+        let west = try world.buildStation(named: "W", at: PlanPoint(x: 3_072, y: 2_048)).id
+        let east = try world.buildStation(named: "E", at: PlanPoint(x: 13_312, y: 2_048)).id
+        try world.addTrackPlatform(west, on: .edge(1), from: 1_024, to: 5_120)
+        try world.addTrackPlatform(east, on: .edge(2), from: 3_072, to: 7_168)
+        return (world, west, east)
+    }
+
+    /// From W's forward berth (5120 along e1) to E's (7168 along e2): the
+    /// rest of e1, n2 and e2 up to 7168, with the spans on both sides of
+    /// each end, where the train stands and where it stops.
+    private var westToEast: [TrackResource] {
+        [node(2), span(1, 4_096, 5_120), span(1, 5_120, 6_144), span(1, 6_144, 7_168), span(1, 7_168, 8_192)]
+            + stride(from: Int64(0), through: 7_168, by: 1_024).map { span(2, $0, $0 + 1_024) }
+    }
+
+    /// `testAServiceWaitsForItsRoute`, the part no network test had:
+    /// stopping a service keeps its reservation, released when the train
+    /// gets to the end of its path.
+    func testStoppingANetworkServiceKeepsItsReservation() throws {
+        var (world, west, east) = try makeStationsWorld()
+        try world.setTrafficControl(true)
+        let one = try stand(&world, at: forward(1), 5_120)
+        try world.setTrainMovementRate(one, to: 1_024)
+        try world.setTrainTimetable(one, to: [
+            ScheduledStop(station: west, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: east, arrival: GameTime(minutes: 30), departure: GameTime(minutes: 30)),
+        ])
+        try world.startTrainService(one)
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.reservedResources(of: one), westToEast)
+
+        try world.stopTrainService(one)
+        XCTAssertEqual(world.reservedResources(of: one), westToEast)
+        // Without its service it goes on at its rate: 3072 + 7168 = 10240
+        // units at most, ten minutes.
+        try world.advance(ticks: 10)
+        XCTAssertEqual(world.train(id: one)?.position, .onEdge(forward(2), offset: 7_168))
+        XCTAssertEqual(world.reservedResources(of: one), [])
+    }
+
+    /// `testALineWaitsToSendATrainOut`: a line does not send out a train
+    /// whose first route another train holds: no dispatch, no timetable, no
+    /// service; it goes at the first step the route is free.
+    func testALineWaitsToSendANetworkTrainOut() throws {
+        var (world, west, east) = try makeStationsWorld()
+        let one = try stand(&world, at: forward(1), 5_120)
+        try world.setTrainMovementRate(one, to: 1_024)
+        let line = try world.createLine(named: "L", stops: [west, east]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(one, to: line)
+        let blocker = try stand(&world, at: forward(2), 3_000)
+        try world.setTrafficControl(true)
+        XCTAssertEqual(world.trainHoldingRoute(of: one), blocker)
+
+        try world.advance(ticks: 2)
+        XCTAssertNil(world.line(id: line)?.lastDispatch)
+        XCTAssertNil(world.train(id: one)?.execution)
+        XCTAssertEqual(world.train(id: one)?.timetable, [])
+        XCTAssertEqual(world.train(id: one)?.position, .onEdge(forward(1), offset: 5_120))
+        XCTAssertEqual(world.reservedResources(of: one), [])
+
+        try world.unplaceTrain(blocker)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(minutes: 2))
+        XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.reservedResources(of: one), westToEast)
+        XCTAssertNil(world.trainHoldingRoute(of: one))
+    }
+
     // MARK: - Saves
 
     private func encoded(_ world: GameWorld) throws -> [String: Any] {

@@ -220,7 +220,7 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertEqual(world.stationsBesideWholeTrain(id), [])
 
         // Clearing the path runs the train on to d: Terminus, 6144...8192.
-        try world.setTrainContinuation(id, to: [])
+        try world.setTrainContinuation(id, along: [])
         XCTAssertNil(try train(world, id).movement.end)
         try world.advance(ticks: 3)
         XCTAssertEqual(try train(world, id).position, .onEdge(forward(e3), offset: 8_192))

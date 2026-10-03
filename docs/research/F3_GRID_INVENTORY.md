@@ -527,6 +527,40 @@ GameCore 沒有改。GamePresentation 與 App 不再呼叫方格的鐵軌、車�
 - **VoiceOver 在地圖上移動選取**：方格的四個動作拿掉後，地圖沒有替代的動作；VoiceOver 使用者從車站清單（路網總覽、線路面板）選站。參考沒有這個功能，需要時另外設計。
 - **UNVERIFIED — App（SwiftUI）**：Linux 不能編譯 App；`RailwayGameApp/` 的改動（ControlPanel、TrainControls、MapView、TileArt、字串目錄）要靠 macOS CI 的建置與 UI 測試確認。
 
+### 8.5 F3c-3a：只有方格測試測到的規則，先在路網上測
+
+GameCore 沒有改。刪方格的單元測試之前，先盤點每個方格測試測的規則在路網上有沒有測試；沒有的（和軌道種類無關、只是剛好寫在方格上）在路網上重寫。預期值都依規則手算，沒有取自執行結果；寫好後一次全部通過。
+
+| 方格的測試 | 路網的測試 |
+| --- | --- |
+| TrainMovementTests `testAHugeRateEndsWithTheContinuationWithoutOverflow` | NetworkRuleTests `testAHugeRateEndsAtThePathsEndWithoutOverflow` |
+| TrainMovementTests `testZeroDistanceChangesNothing` | `testZeroTicksAndARateOfZeroMoveNothing` |
+| TrainMovementTests `testTheWaitingTrainChecksOnlyItsOwnNextLink` | `testAWaitingTrainChecksOnlyTheEdgeItsPathNames`（道岔的分支被拆，直行的路通也不改走） |
+| TrainMovementTests `testEachTrainMovesAsIfItWereAlone` | `testEachTrainMovesAsIfItWereAlone` |
+| TrainMovementTests 時間盡頭的三個測試 | `testTheLastMinutesCanBeReachedExactlyWithATrainMoving`、`testABatchPastTheEndOfTimeIsRejectedWholeWithATrainMoving` |
+| TrainMovementTests `testIdleTrainsAreSavedWithoutAMovement…`、`testMalformedMovementIsRejectedNotReadAsIdle` | `testIdleTrainsAreSavedWithoutAMovementAndOldSavesReadAsIdle`、`testMalformedNetworkMovementIsRejectedNotReadAsIdle`（壞的 rate、cursor、edges、`end`，路網上的方格 continuation，未放置卻有 movement） |
+| TrainPositionTests `testSharedTrackStaysProtectedUntilNoTrainIsOnIt`、`testTrainsSavedBeforePositionsExistedDecodeAsUnplaced` | `testSharedTrackStaysProtectedUntilNoTrainIsOnIt`、`testTrainsSavedWithoutAPositionLoadUnplaced` |
+| TrainRouteTests `testALargeGridIsSearchedWithoutTrouble` | `testALongLineIsSearchedWithoutTrouble`（199 條邊） |
+| StationStopTests 等待被拆的軌道不算停站、ID 順序、不明的站與列車 | `testWaitingAtAPlatformForRemovedTrackIsNotAStop`、`testStationsAreListedInAscendingIDOrder`、`testUnknownStationsAndTrainsHaveNoPlatformsOrStops` |
+| StationFacilityTests 設定節數、節數的存檔 | `testCarsAreSetOffTheTrack`、`testCarsAreSavedOnlyAboveOneAndRefusedOutOfRange` |
+| TrackResourceTests 不明線路沒有單雙線 | `testAnUnknownLineHasNoTrackCounts` |
+| TrafficControlTests `testWithoutTrafficControlTrainsShareTrackAsBefore` | TrafficControlTests `testWithoutTrafficControlNetworkTrainsShareTrackAsBefore` |
+| TrafficControlTests `testTurningTrafficControlOnAndOff` | `testTurningTrafficControlOnAndOffOnTheNetwork` |
+| TrafficControlTests `testGridRoutesAreTakenWholeAndKeptForTheTrip`（rate 0 保留預約；「使用中」先於「已預約」） | `testANetworkReservationOutlastsRate0AndTrackInUseComesFirst` |
+| TrafficControlTests `testALinkRunsOnToItsEnd` | `testATrainTurnedRoundOnAnEdgeTakesItsOtherEnd` |
+| TrafficControlTests `testATrainWaitingForRemovedTrackKeepsItsWayThroughTheGap` | `testAPathBrokenByARemovedEdgeIsReservedToWhereItBreaks`：**規則不同**，方格的缺口補回後會接著走，路網的邊拆了就不會回來，所以只預約到斷掉的地方（決策 32 原本就這樣寫，這裡第一次有單元測試） |
+| TrafficControlTests `testAServiceWaitsForItsRoute`（停止服務保留預約） | `testStoppingANetworkServiceKeepsItsReservation` |
+| TrafficControlTests `testALineWaitsToSendATrainOut` | `testALineWaitsToSendANetworkTrainOut` |
+
+另外兩個只因為寫法用到方格的測試改成路網的寫法，規則不變：NetworkServiceTests 清除路徑從 `setTrainContinuation(to: [])` 改成 `along: []`；TrainTimetableTests 舊存檔讀成空時刻表，解碼的列車從方格節點改成路網的邊上。
+
+### 8.6 F3c-3a 之後暫時沒有改的地方
+
+- **方格的單元測試、方格 golden、差分模型的方格部分與方格本身是主題的 campaign** 都還在，F3c-3b 刪。
+- **還在用佔格車站的路網測試**（16 個檔，例如 StationStopTests、StationAndTrainTests 與 TrafficControlTests 舊的路網段落）：佔格車站在 F3c-3b 改成那一格中心的點車站（決策 51 的 F3a 規則：底下的格相同，費用與票價不變）。這次新加的測試已經用點車站。
+- **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的舊 map codec）：它們測的就是方格的存檔內容，和 F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」（決策 51 第 3 點）一起改。
+- **TrainTimetableTests `testASaveWithoutTimetablesKeepsItsFormat`** 逐位元釘住一份方格世界的存檔；路網世界的整份格式由 `SaveFixtures/` 釘住，「沒有時刻表的列車不寫 `timetable`、舊存檔讀成空」由 `testEmptyTimetablesAreNotSavedAndOldSavesReadAsEmpty` 在路網上測，這個方格測試在 F3c-3b 刪。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。
