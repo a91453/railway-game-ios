@@ -634,7 +634,8 @@ public struct GameWorld: Equatable, Sendable {
     /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2), one
     /// to a tile: ``Train/minimumCars`` to ``Train/maximumCars``. Each car
     /// added costs ``ConstructionCosts/car``; taking cars off refunds
-    /// nothing. A train of more than one car is placed with its body behind
+    /// nothing. Cars that cost nothing are added whatever the balance, even
+    /// a negative one. A train of more than one car is placed with its body behind
     /// its head along the track it could have come by (see
     /// ``placeTrain(_:at:)``).
     ///
@@ -651,7 +652,9 @@ public struct GameWorld: Equatable, Sendable {
         if added > 0 {
             let (price, overflow) = economy.costs.car.amount.multipliedReportingOverflow(by: added)
             guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
-            try economy.spend(Money(price))
+            // Free cars are added even in the red: `spend` would refuse a
+            // price of 0 against a negative balance.
+            if price > 0 { try economy.spend(Money(price)) }
         }
         trains[index].cars = cars
     }

@@ -363,12 +363,23 @@ public final class GameSession {
     /// as the reference loads a free-play save only in free play
     /// (`MetroSaveModePolicy`): its ridership would be the player's, not
     /// the city's.
+    ///
+    /// A company in the red cannot switch: building still costs money in
+    /// free play, which has no income, so a negative balance could never be
+    /// built out of and the switch cannot be undone.
     public func setEconomyMode(_ mode: EconomyMode) {
         guard mode != world.accounts.mode else { return }
         guard mode == .free else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Free play cannot become a managed company again. Start a new game to manage one.",
                 "自由模式無法再改回經營模式。要經營公司，請開新遊戲。"
+            ))
+            return
+        }
+        guard world.economy.balance >= .zero else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game.",
+                "公司目前虧損。自由模式沒有收入，蓋東西仍要花錢，切過去就什麼都蓋不了。請先讓餘額回到零以上，或開新遊戲。"
             ))
             return
         }

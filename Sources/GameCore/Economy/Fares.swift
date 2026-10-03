@@ -67,8 +67,13 @@ public enum FareRules: Hashable, Sendable {
     /// each fare times `baseline` ÷ 0.75 (the steps were written for the
     /// reference's default city), to the nearest 0.05. ``standardBands``
     /// itself at 0.75.
+    ///
+    /// - Precondition: `baseline` is from 1 to ``maximumFare``, the range a
+    ///   world accepts for its baseline (a far larger one would overflow the
+    ///   product below).
     public static func standardBands(for baseline: Money) -> [FareBand] {
-        standardBands.map { band in
+        precondition((Money(1)...maximumFare).contains(baseline), "standardBands(for:) requires a baseline from 1 to maximumFare")
+        return standardBands.map { band in
             let fare = (2 * band.fare.amount * baseline.amount + 375) / 750 * 5
             return FareBand(fromMeters: band.fromMeters, toMeters: band.toMeters, fare: Money(fare))
         }

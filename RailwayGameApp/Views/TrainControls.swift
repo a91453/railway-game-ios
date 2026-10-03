@@ -47,6 +47,11 @@ struct TrainControls: View {
                             .monospacedDigit()
                     }
                     .accessibilityHint("One car to a tile. A train of several cars needs track behind it, and platforms as long as it.")
+                    if let price = session.world.carPriceText(in: session.language) {
+                        Text(price)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     headingPicker
                 } else {
                     Stepper(value: $session.selectedTrainRate, in: 0...Self.maximumRate, step: Self.rateStep) {

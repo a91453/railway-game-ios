@@ -97,6 +97,43 @@ final class EconomyDisplayTests: XCTestCase {
         }
     }
 
+    /// The cars stepper charges on every step up and never pays back, so the
+    /// price is shown beside it (nothing when cars are free).
+    func testTheCarPriceIsShownBesideTheStepperWhenCarsCostMoney() throws {
+        var world = try GameWorld(width: 4, height: 2, economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: 4_000_000)))
+        XCTAssertEqual(world.carPriceText(in: .english), "Each car added costs $ 40,000; taking cars off refunds nothing.")
+        XCTAssertEqual(world.carPriceText(in: .traditionalChinese), "每加一節車廂 $ 40,000；減少車廂不退費。")
+        world = try GameWorld(width: 4, height: 2, economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000)))
+        XCTAssertNil(world.carPriceText(in: .english), "free cars: nothing to say")
+    }
+
+    /// Building still costs money in free play and nothing earns any, so a
+    /// company in the red that switched could never build again (and the
+    /// switch cannot be undone): the session refuses until the balance is
+    /// back above zero.
+    func testACompanyInTheRedCannotSwitchToFreePlay() async throws {
+        var world = try makeLine()
+        world.setEconomyMode(.management)
+        for _ in 0..<60 where world.economy.balance >= .zero {
+            try world.advance(ticks: 1_440)
+        }
+        XCTAssertLessThan(world.economy.balance, .zero, "the setup is a company in the red")
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            // A managed world is given its stations' ridership as it opens,
+            // so compare with the session's own world, not the one passed in.
+            let opened = session.world
+            session.setEconomyMode(.free)
+            XCTAssertEqual(session.world.accounts.mode, .management, "refused")
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertEqual(
+                session.message?.text,
+                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game."
+            )
+            XCTAssertEqual(session.world, opened, "nothing else changed")
+        }
+    }
+
     /// Alpha(1,0) Beta(3,0) Gamma(5,0) on track (0,1)–(6,1), line Main
     /// calling at all three, one train of one car running it all day.
     private func makeLine() throws -> GameWorld {
