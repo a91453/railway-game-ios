@@ -69,8 +69,12 @@ and `Railway/railway_game_reference_clean/` (start with its
   `.github/scripts/swift-shards.sh`, which also proves each shard ran exactly
   its tests; pull requests that change nothing the package builds or tests
   skip the Swift jobs, and the `Swift CI (gate)` job always reports),
-  `ios-build.yml` (two parallel macOS jobs: committed-project drift check,
-  Xcode Simulator build and iPhone UI smoke tests; iPad tutorial UI tests),
+  `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
+  build, iPhone UI tests. A pull request runs a short gate list of UI tests,
+  and the iPad tutorial tests only when it touches the tutorial's screens;
+  pushes to `main`, a nightly run and manual runs run every UI test, the iPad
+  tutorial tests and the missing-button proof, and their red result does not
+  block a pull request),
   `release-archive.yml` (unsigned Release device archive; manual, and
   on PRs that change project settings or app resources), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
@@ -153,8 +157,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   new test class needs no CI change: the `rest` shard runs everything the
   campaign shards do not name. Move a long campaign to another shard in
   `classes_of` in that script when the shard timings drift apart.
-- Real-device visual checks are manual (internal TestFlight); CI has no
-  screenshot or UI regression test.
+- Real-device visual checks are manual (internal TestFlight). CI's UI tests
+  (`RailwayGameApp/UITests/`, `ios-build.yml`) assert on the Simulator, and
+  their screenshots are only artifacts for a person to look at: a missing or
+  renamed screenshot never fails a run, and nothing compares images. A new UI
+  test joins the gate list in `ios-build.yml` only if it is steady and only a
+  Simulator can answer it; otherwise it runs in the full lane.
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.
