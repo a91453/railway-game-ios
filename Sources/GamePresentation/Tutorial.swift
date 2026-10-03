@@ -113,9 +113,11 @@ public struct Tutorial: Hashable, Sendable {
     public let steps: [TutorialStep]
     /// The step on screen, from 0.
     public private(set) var index: Int
-    /// The network's edges when the step was shown, for
-    /// ``TutorialGoal/buildTrack``.
-    private var edgesWhenShown: Set<TrackEdgeID>
+    /// The network's edges when each step was first shown, by step, for
+    /// ``TutorialGoal/buildTrack``. Going back to a step keeps its first
+    /// snapshot: a new one would hide the track already built for it, and
+    /// Next would wait for a second stretch.
+    private var edgesWhenFirstShown: [Int: Set<TrackEdgeID>]
 
     /// The first of `steps`, shown over `world`.
     ///
@@ -124,7 +126,7 @@ public struct Tutorial: Hashable, Sendable {
         precondition(!steps.isEmpty, "a tutorial needs a step")
         self.steps = steps
         index = 0
-        edgesWhenShown = []
+        edgesWhenFirstShown = [:]
         show(0, over: world)
     }
 
@@ -149,7 +151,9 @@ public struct Tutorial: Hashable, Sendable {
     mutating func show(_ index: Int, over world: GameWorld) {
         precondition(steps.indices.contains(index), "show(_:over:) needs one of the steps")
         self.index = index
-        edgesWhenShown = Set(world.network.edges.map(\.id))
+        if edgesWhenFirstShown[index] == nil {
+            edgesWhenFirstShown[index] = Set(world.network.edges.map(\.id))
+        }
     }
 
     /// Whether the player has done what the step on screen asks, in
@@ -161,7 +165,8 @@ public struct Tutorial: Hashable, Sendable {
         case .chooseTool(let wanted):
             return tool == wanted
         case .buildTrack:
-            return world.network.edges.contains { !edgesWhenShown.contains($0.id) }
+            let before = edgesWhenFirstShown[index] ?? []
+            return world.network.edges.contains { !before.contains($0.id) }
         }
     }
 }

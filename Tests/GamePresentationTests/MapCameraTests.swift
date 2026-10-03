@@ -123,6 +123,17 @@ final class MapCameraTests: XCTestCase {
 
     /// What is in view, for drawing only that: the inverse of the view's
     /// corners.
+    /// The screen never sends a point that is not a number, but turning one
+    /// into world units must not trap; infinities stop at the world's limit.
+    func testPointsThatAreNotNumbersDoNotTrap() {
+        let camera = PlanCamera(map: map, viewport: phone)
+        let point = camera.planPoint(at: ScreenPoint(x: .nan, y: .nan))
+        XCTAssertEqual(point, PlanPoint(x: 0, y: 0))
+        XCTAssertEqual(camera.worldDistance(.nan), 0)
+        let far = camera.planPoint(at: ScreenPoint(x: .infinity, y: -.infinity))
+        XCTAssertEqual(far, PlanPoint(x: WorldCoordinate.limit, y: -WorldCoordinate.limit))
+    }
+
     func testTheVisibleRegionIsWhatTheViewShows() {
         let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288)).zoomedIn()
         let region = camera.visibleRegion

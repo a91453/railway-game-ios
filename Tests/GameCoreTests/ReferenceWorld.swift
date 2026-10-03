@@ -493,8 +493,11 @@ struct ReferenceWorld: Equatable {
             // Each car added is paid for; one taken off is not paid back.
             if cars > trains[i].cars {
                 let price = costs.car * Int64(cars - trains[i].cars)
-                if let error = funds(price) { return error }
-                balance -= price
+                // Free cars are added in the red too.
+                if price > 0 {
+                    if let error = funds(price) { return error }
+                    balance -= price
+                }
             }
             trains[i].cars = cars
             return nil

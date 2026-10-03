@@ -27,6 +27,20 @@ extension Money {
     }
 }
 
+extension GameWorld {
+    /// What adding a car to a train costs, for the control that adds them:
+    /// each car added is paid for and taking cars off pays nothing back, so
+    /// stepping up, down and up again pays twice. `nil` when cars are free.
+    public func carPriceText(in language: DisplayLanguage) -> String? {
+        let price = economy.costs.car
+        guard price > .zero else { return nil }
+        return language.text(
+            "Each car added costs \(price.moneyText); taking cars off refunds nothing.",
+            "每加一節車廂 \(price.moneyText)；減少車廂不退費。"
+        )
+    }
+}
+
 extension EconomyMode {
     public func displayName(in language: DisplayLanguage) -> String {
         switch self {

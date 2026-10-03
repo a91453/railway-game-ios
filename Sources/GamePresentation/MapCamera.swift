@@ -159,6 +159,9 @@ extension MapProjection {
     }
 
     private static func wholeUnits(_ value: Double) -> Int64 {
+        // Not a number would trap in the conversion; the screen never sends
+        // one, but no point may crash the game.
+        guard !value.isNaN else { return 0 }
         let limit = Double(WorldCoordinate.limit)
         return Int64(min(max(value.rounded(), -limit), limit))
     }

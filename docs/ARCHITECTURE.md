@@ -2248,7 +2248,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - **開始畫面**（`StartView`）：繼續（顯示存檔的遊戲時間、現金與規模，以及存檔時間）、新遊戲、示範地圖、存檔清單（點一下讀取、滑動刪除；讀不進來的寫出原因）、匯入（「檔案」App）。
 - **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡是一個打開「設定」的按鈕。
 - **遊戲選單**（HUD）：儲存遊戲、匯出存檔（分享時才寫出檔案）、回到開始畫面（先自動存檔）。
-- **`-demo-layout` 啟動參數**：仍然只有 Debug 有，`release-archive.yml` 確認 Release 的執行檔不含它；示範地圖本身在 Release 由開始畫面開啟。
+- **`-demo-layout` 啟動參數**：仍然只有 Debug 有，`release-archive.yml` 確認 Release 的執行檔不含它（參數名太短，Swift 把 15 位元組以內的字串放在程式碼裡而不是二進位的資料裡，直接找不到；所以改找 Debug 專用的 `DebugLaunch.marker`，`ios-build.yml` 也確認 Debug 的 App 找得到它）；示範地圖本身在 Release 由開始畫面開啟。
 
 **驗證**：`SavedGameTests`（GameCore：格式、拒絕的情況、回歸存檔）、`SaveLibraryTests`、`GameLauncherTests`、`DemoWorldTests`（GamePresentation，用暫存資料夾與固定的時間）。SwiftUI 只能在 macOS CI 編譯，實機要用 TestFlight 檢查。
 
@@ -2286,7 +2286,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - App 的新遊戲把它設成標準票價 $ 5：沒有設定票價時每趟收 $ 5、需求不變；設定同樣的 $ 5 之後需求也不變。這是參考依城市換基準的做法，值是這個遊戲的城市的（gap），E2 的實景模式之後可以照參考的城市表設。
 - 編輯器的距離票價依基準縮放（`standardBands(for:)`）：基準 $ 5 時是 $ 3.65／4.65／5.65／6.65／8.00。
 
-**4. 車廂的價格**：`ConstructionCosts.car`，`setTrainCars` 每加一節收一次，減少不退；價格乘上節數會溢位時，視為比任何餘額都多（`insufficientFunds(required: Money.max)`）。檢查順序 `unknownTrain` → `invalidTrainLength` → `trainAlreadyPlaced` → `insufficientFunds`。
+**4. 車廂的價格**：`ConstructionCosts.car`，`setTrainCars` 每加一節收一次，減少不退；價格乘上節數會溢位時，視為比任何餘額都多（`insufficientFunds(required: Money.max)`）。價格是 0 時不扣款，餘額為負也照加（`spend` 會拒絕「0 元對負餘額」，所以只在價格大於 0 時才呼叫；決策 46 之前的經營存檔車廂不收費，而且很快就虧損）。檢查順序 `unknownTrain` → `invalidTrainLength` → `trainAlreadyPlaced` → `insufficientFunds`。
 
 **5. 存檔**：`"accounts"` 的 `"fareBaseline"` 只在不是 0.75 時寫，`"costs"` 的 `"car"` 只在不是 0 時寫；沒有的時候讀成 0.75 與 0，所以舊存檔、golden 與 `SaveFixtures/` 照舊讀取、行為不變，不需要提高存檔版本。讀檔拒絕 0 以下或超過上限的基準、負的車廂價格。
 
@@ -2300,7 +2300,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **7. 經營模式的客流**（App）：
 - 經營模式下不能修改車站的客流（車站面板唯讀，修改的指令回報原因），複製仍然可以。
 - 路網工具在經營模式下建的新車站，同一個操作裡拿到 `StationDemand.cityDefault`；打開一局經營模式的遊戲時，沒有客流的車站也拿到它（決策 46 之前的存檔可能有這樣的車站）。
-- 經濟面板只能從經營切到自由（先確認），自由模式不能再切回經營。
+- 經濟面板只能從經營切到自由（先確認），自由模式不能再切回經營。自由模式沒有收入，蓋東西仍然要花餘額，所以餘額為負的公司不能切（`GameSession.setEconomyMode` 拒絕並說明）：切過去就什麼都蓋不了，而且不能反悔。自由模式的建設是否該免費是另一個決定，會改變 golden，這裡沒有動。
 - GameCore 照舊允許任何時候設定客流與兩個方向的模式：這是 App 的規則，和參考一樣在畫面層；示範地圖由指令直接設定它的客流。
 
 **刻意保留的差異**（之後再處理）：

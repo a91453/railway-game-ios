@@ -60,6 +60,47 @@ final class CarPriceTests: XCTestCase {
         XCTAssertEqual(dear, unchanged)
     }
 
+    /// A managed company that is in the red after a day: two stations and a
+    /// line cost more to run than the one train earns.
+    private func makeCompanyInTheRed(car: Money) throws -> (GameWorld, TrainID) {
+        var world = try GameWorld(
+            width: 8, height: 4,
+            economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: car)),
+            clock: GameClock(speed: .normal)
+        )
+        for (name, x) in [("Alpha", 1), ("Beta", 3)] {
+            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+        }
+        try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
+        let spare = try world.purchaseTrain(named: "Spare").id
+        world.setEconomyMode(.management)
+        try world.advance(ticks: 1_441)
+        XCTAssertLessThan(world.economy.balance, .zero, "the setup is a company in the red")
+        return (world, spare)
+    }
+
+    /// Cars cost nothing in a save from before they had a price, and such a
+    /// company is soon in the red: adding cars must still work, as it did
+    /// before they were charged for (`spend` would refuse a price of 0
+    /// against a negative balance).
+    func testFreeCarsAreAddedEvenWithANegativeBalance() throws {
+        var (world, spare) = try makeCompanyInTheRed(car: .zero)
+        let balance = world.economy.balance
+        try world.setTrainCars(spare, to: 3)
+        XCTAssertEqual(world.train(id: spare)?.cars, 3)
+        XCTAssertEqual(world.economy.balance, balance, "nothing was charged")
+    }
+
+    func testPricedCarsAreStillRefusedWithANegativeBalance() throws {
+        var (world, spare) = try makeCompanyInTheRed(car: 2_000)
+        let before = world
+        XCTAssertThrowsGameError(
+            try world.setTrainCars(spare, to: 2),
+            .insufficientFunds(required: 2_000, available: world.economy.balance)
+        )
+        XCTAssertEqual(world, before)
+    }
+
     func testFreeCarsSaveAsBeforeAndPricedOnesRoundTrip() throws {
         let free = ConstructionCosts(track: 1, station: 2, train: 3)
         let keys = try XCTUnwrap(JSONSerialization.jsonObject(with: try JSONEncoder().encode(free)) as? [String: Any]).keys

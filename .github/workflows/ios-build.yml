@@ -31,9 +31,11 @@ on:
 permissions:
   contents: read
 
-# Superseded PR runs are cancelled; runs on main are never cancelled mid-build.
+# A newer push to a pull request cancels its older run. Every commit on main
+# keeps its own complete run: a later merge never cancels or replaces it (a
+# group shared by all of main would drop every queued run but the newest).
 concurrency:
-  group: ios-build-${{ github.ref }}
+  group: ios-build-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
@@ -86,6 +88,8 @@ jobs:
         if: failure() && steps.project-check.outcome == 'failure'
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: regenerated-xcodeproj
           path: RailwayGameApp/RailwayGame.xcodeproj
           retention-days: 7
@@ -119,6 +123,19 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
             CODE_SIGNING_ALLOWED=NO
+
+      # release-archive.yml proves no Debug-only launch argument code is in
+      # the Release binary by not finding this marker there. Prove it finds
+      # the marker where the code is, or that check would pass vacuously.
+      - name: Check the Debug app carries the Debug-only marker
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          marker="RailwayGame Debug-only launch argument"
+          if ! grep -rqF -- "$marker" "$app"; then
+            echo "::error::The Debug app does not contain \"$marker\" (see DebugLaunch in RailwayGameApp.swift); the Release archive check that looks for it would prove nothing."
+            exit 1
+          fi
+          echo "The Debug app carries the Debug-only marker."
 
       - name: Select an available iPhone Simulator
         run: |
@@ -174,6 +191,8 @@ jobs:
         if: always() && steps.ui-smoke.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: ui-smoke-screenshots
           path: ${{ runner.temp }}/ui-smoke-screenshots
           if-no-files-found: warn
@@ -183,6 +202,8 @@ jobs:
         if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: ui-smoke-xcresult
           path: ${{ runner.temp }}/ui-smoke.xcresult
           if-no-files-found: warn
@@ -203,6 +224,8 @@ jobs:
         if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: ui-smoke-missing-button-evidence
           path: |
             ${{ runner.temp }}/ui-smoke-missing-button.xcresult
@@ -250,7 +273,9 @@ jobs:
 
       - name: iPad tutorial tests (bilingual and large text)
         id: ipad-tutorial
-        timeout-minutes: 12
+        # This step also compiles the app and the UI tests. It took 7 to 12
+        # minutes on different runners (11m40s once), so leave room.
+        timeout-minutes: 20
         run: |
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -278,6 +303,8 @@ jobs:
         if: always() && steps.ipad-tutorial.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: ipad-tutorial-screenshots
           path: ${{ runner.temp }}/ipad-tutorial-screenshots
           if-no-files-found: error
@@ -287,6 +314,8 @@ jobs:
         if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
         uses: actions/upload-artifact@v7
         with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
           name: ipad-tutorial-xcresult
           path: ${{ runner.temp }}/ipad-tutorial.xcresult
           if-no-files-found: error
