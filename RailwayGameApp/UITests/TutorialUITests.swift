@@ -139,7 +139,7 @@ final class TutorialUITests: XCTestCase {
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {
         let tool = app.buttons[identifier]
-        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(tool.waitForExistence(timeout: 5))
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         XCTAssertTrue(tool.isHittable)
