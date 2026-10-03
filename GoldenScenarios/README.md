@@ -503,3 +503,43 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 執行服務、行駛中的列車加上 `run`；不是標準性能的列車與線路加上 `performance`。其他預期值都沒有改變。
 - **26**（Stage F1）：建在任意座標的車站（決策 44）：`buildStationAt` 指令，最終狀態車站的 `point` 形式，以及手算的 `free-station.json`（點上的車站不占格：同一格可以有兩個點上的車站，土地、方格軌道與方格車站的規則不變，旁邊的方格軌道不是它的月台；沒有名字、點在地圖外時拒絕，地圖外報點所在的格（向下取整）；一樣花一個車站的錢；不能長到格上；路網上的月台、往車站的路徑與停靠和其他車站相同）。既有的二十五個 fixture 只把 `schemaVersion` 從 25 改成 26，其他預期值都沒有改變。
 - **27**（環線，決策 49）：`setLineRing` 指令，線路的 `ring` 與 `outerLastDispatch`、環線行程的 `ring`，以及手算的 `ring-line.json`（方格上的一圈軌道與四站：設定環線的檢查與偶數化、整圈的行程與規劃、兩個方向各自派車與各自的時刻表）。既有的二十六個 fixture 只把 `schemaVersion` 從 26 改成 27，其他預期值都沒有改變：它們沒有環線。
+
+## F3：fixture 搬到路網（schema 不變）
+
+ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路網的指令（點車站、節點、邊、邊上的月台與路徑）重寫同一個情境，schema 仍是 27。規則沒有改；改變的預期值都只因為路網的配置和方格不同，逐一記在下面。
+
+- **F3a-1**：`network-service.json`、`traffic-reservation.json`、`vertical-railway.json`、`station-demand.json` 的方格車站改成在同一格中心的點車站（`buildStationAt`），最終狀態的車站改寫成 `point`。其他預期值都沒有改變。
+- **F3a-2**：十二份規則和軌道無關的 fixture 在路網上重寫。共同的配置：方格的每一格軌道換成格中心的一個節點，相鄰兩格之間一條 1024 長的直線邊（邊 k 連接第 k、k+1 個節點）；車站是原來那一格中心的點車站，在它的節點兩側各有半格月台（西邊那條邊的 [512, 1024]、東邊那條邊的 [0, 512]），列車往哪個方向都停在節點上，兩站之間跑的距離和方格一樣。方格上停在節點的列車寫成停在邊的端點（往東是西邊那條邊的 forward 1024，往西是東邊那條邊的 backward 1024）。路網的列車沒有路徑時會跑到所在邊的盡頭（方格上會停在原地），折返後在新方向月台的近端，路徑完全走進之後記成 `edges: []`、`cursor: 0`。預期值的變化：
+  - 每份的餘額：軌道的錢照邊算（每條邊 `ceil(長度 / 1024)` 格的價錢），N 格軌道是 N − 1 條邊，所以多一格的錢：`clock-seconds.json` 4400 → 4500，其他每份多 1000（`ring-line.json` 不變：四條直線各 1 格、四個彎道各 2 格，和方格的 12 格一樣）。
+  - 線路規劃的行程（`lineJourney`）從讓來回最短的停車點出發：第一站節點東側月台往東的那一端，在節點東邊 512，所以第一段少 512。`service-run.json`、`line-patterns.json`、`service-line.json` 的 `lineJourney` 起點、路徑、第一段的秒數與來回秒數因此改變（例如 `service-line.json` 標準性能 424 → 422 秒、慢速 840 → 811 秒，`line-patterns.json` 1200 → 1171、480 → 451、940 → 911 秒）；整數分鐘、可派的車數與班距都沒有改變。列車實際的時刻表從它停的節點出發，和方格一樣。
+  - `economy.json`：線路長度也是照這個行程算（3584，以前 4096），每天的路線能源 round(220 × 0.056) = 12 美元（以前 14）：`dailyEnergy` −37400 → −37200（`routeEnergy` −1400 → −1200）、日報表與週報表的 `energyCost` 37400 → 37200，最終餘額再多 200。
+  - `service-line.json`：Gamma 與 Delta 在路網上不能共用月台，Delta 的月台接在 Gamma 東側月台後面（`e6` [512, 1024]）；`Shared` 從不用移動（0 秒、240 秒、4 分鐘）變成去程 512（8 秒）、回程 1024（12 秒），260 秒、5 分鐘，最多仍是 2 台。拆掉 e 那一格改成先拆 Beta 東側的月台、再拆 `e4`（有月台的邊不能拆）。
+  - `train-service.json`：Gamma 與 Delta 的月台相接（`e5` [0, 512] 與 [512, 1024]），停在 512 的列車同時在兩站（`stationStops` [3, 4]）；Beta 到 Gamma 是 1536（以前 2048），同樣 60 秒，11 分時在 `e4` 609（以前 d 之後 811）；Gamma 到 Delta 變成 512 的一段，晚 72 秒出發，13 分時還在路上、13:12 到。Echo 的月台在蓋 g 時一起蓋。到終點後掉頭的列車沒有路徑，跑回 f（`e6` backward 1024）。
+  - `line-dispatch.json`、`line-patterns.json`：在第一站掉頭的列車停在節點東側月台的 forward 0，所以之後的路徑不含它所在的那條邊（例如 `[3, 4, 5]`、`cursor: 0`，以前四格、`cursor: 1`），最終狀態路徑的 `end` 是 0。`line-dispatch.json` 的 Delta 沒有月台（沒有線路停它）。
+  - `ring-line.json`：路網的邊只在節點反向離開時才相接，所以四個角各是一條三次曲線（把手 1338），長度剛好 2048，和方格繞過角的兩個連結一樣；每站一個月台，在順時針進站那條邊的最後 512，所以兩個方向站與站之間都是 3072。行程、時刻表與規劃的值都沒有改變；Outer 放好後給一條空路徑停在月台的另一端（不然它會跑到邊的盡頭），最終狀態它的路徑 `end` 是 512。
+  - `train-timetable.json`：Alpha 的月台是整條 e1、Beta 的是整條 e4，Gamma 沒有月台；`platforms` 觀察改成 `pathToStation`（到 Gamma 找不到路）；往 b 的 continuation 改成停在 e1 的 512、Alpha 的月台上的空路徑（`end: 512`）。
+  - `train-repeat.json`：路網上在車站掉頭的列車停在新方向月台的近端，不是原來的停車點，所以 Shuttle 改成從東邊到 b 的方向放置（`e2` backward 1024），時刻表在每一圈開始的 Alpha 掉頭（`reverse` 從 [false, true, true]，在最後一站掉頭，改成 [true, true, false]）：每一圈離開 Alpha、到 Gamma 與回 Alpha 的時刻和距離都和以前一樣。
+  - `service-run.json`：`lineJourney` 的起點與第一段如上（去程 3584），來回 286 → 284 秒、快車 282 → 281 秒，分鐘數不變。
+  - `boarding.json`、`clock-seconds.json`、`station-dwell.json`：除了餘額與位置、路徑的寫法，旅客、時刻與帳都沒有改變。
+- **F3a-3**：只有一部分能搬或只屬於方格的九份（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`），把路網能表達的規則寫成六份新的手算 fixture；方格的原檔留到 F3c 和方格一起刪除。
+  - `network-construction.json`（← `build-starter-line`）：錢、檢查順序、被拒絕的指令不改變世界也不用掉 ID、拆除免費不退錢、ID 不重用、月台的範圍與重疊。
+  - `network-train-position.json`（← `train-position`）：邊上 0 到邊長都能放（端點也可以）、放置與反向的檢查順序、反向與反向兩次、有列車的邊不能拆、停在節點的列車只在它所在的那條邊上。
+  - `network-train-movement.json`（← `train-movement`）：每秒的距離、恰好到邊的盡頭不看下一項、走完的路徑記成 `[]`、拆掉的邊讓列車停在前一條邊的盡頭等（重建的邊是新 ID，舊路徑不會恢復）、rate 0 與暫停、2 倍速一個 tick 兩分鐘、反向與取下清掉路徑。
+  - `network-route.json`（← `train-route`）：`pathToNode` 的最短長度、同長時每個節點依邊的編號遞增、不立即折返、經由折返線（balloon loop）到列車後方的節點、面對盡頭沒有路、空路徑、找不到的情形，以及列車照路徑走。
+  - `network-station-stop.json`（← `station-stop` 與 `station-facilities` 的車長規則）：`pathToStation` 到列車放得下的月台的停車點、停車的條件（路徑走完、車頭在月台上）、相接的兩個月台都算、經過或還沒到路徑終點不算、反向會清掉路徑與 `end`、加在停著的列車下的月台立刻算、兩節車在月台上與車尾超出月台。
+  - `network-junctions.json`（← `track-connectivity`、`track-resources`）：節點上兩個邊端反向（1/16 以內，整數判斷，剛好 1/16 也算）才相接的道岔、菱形交叉、占用的節點與 span、衝突。
+  - `free-station.json` 的點車站部分本來就在路網上；方格的部分在 F3c 一起拿掉。
+  - 路網沒有對應、F3c 會和方格一起消失的規則：格子的出口與相接（`connectedNeighbors`、`isConnected`、`exits`）、四鄰格自動成為月台（`platforms`、`platformTracks`、`routeToStation`）、方格車站與 `extendStation`、格內的道岔與平交道（`buildTurnout`、`buildCrossing`）、`trackSections`、`parallelTracks`、`node`／`link` 位置與 heading、北東南西的平手規則，以及拆掉再蓋回同一格會沿原來的路徑繼續（路網的 ID 不重用）。
+
+### F3a 之後暫時沒有改的地方
+
+以下不是遺漏，而是排在 F3b、F3c 的工作；F3a 只動 fixture 與文件。
+
+- **GameCore 完全沒有改**：方格的鐵軌、`node`／`link` 位置、方格車站、格內的道岔與平交道、方格的尋路與停站都還在，行為、存檔格式與 golden schema（27）都不變。→ F3c。
+- **九份方格 fixture 一個值都沒動**（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`），照常執行，和新的 `network-*.json` 並存。→ F3c 刪除。
+- **Golden 執行器**（`Tests/GameCoreTests/GoldenScenario.swift`）的方格指令、觀察與最終狀態的寫法（`tracks`、車站的 `x`／`y`／`annexes`、`node`／`link` 位置）還在。→ F3c（schema 28）。
+- **單元測試、property／差分／mutation campaign 與獨立參考模型**（`ReferenceWorld` 等）的方格部分還在方格上，campaign 的 digest 不變。→ F3b。
+- **GamePresentation 與 App** 的方格相容層；`TrackInfoText` 用的 `parallelTracks`、`lineTrackCounts` 只算方格月台，路網上的車站一律是 0。→ F3c 照參考的做法改成路網版（單線／雙線照 `tra_track_sections.json` 的規則，區段照 `topology.js` 的 `trackGroups`；見 [RAILWAY_REFERENCE_MAPPING](../docs/RAILWAY_REFERENCE_MAPPING.md) 的 Stage F3）。
+- **`Web/WasmProbe`**：跑的是同一批 fixture，照決策 51 在 F3c 一起處理。
+- **`SaveFixtures/` 沒改**：四份存檔都只有路網與點車站（v1 還帶著空地的 `map.tiles`），F3c 之後也必須照常載入。
+- **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。

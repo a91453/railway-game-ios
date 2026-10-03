@@ -1,297 +1,88 @@
 {
   "schemaVersion": 27,
-  "description": "Boarding, alighting and capacity (G1b, ARCHITECTURE decision 35) on the line a(0,1)-b(1,1)-...-g(6,1), dead ends at both ends; Alpha(1,0) has platform b, Beta(3,0) d, Gamma(5,0) f. Main (Alpha, Beta, Gamma) runs all day; its round trip for a train sent out at T is Alpha T to T+42 s (Stage W2b: the least dwell at a terminal) and, from that departure D, Beta D+2 to D+3, Gamma D+5 to D+7 (turning round), Beta D+9 to D+10, Alpha D+12 (turning round; the service ends once the train's dwell there is over). Stage W2c (ARCHITECTURE decision 40): Main plans its legs with a crawl, { acceleration 250, braking 250, topSpeed 1 } (1 km/h, about a link a minute): two links take 4 s to reach 1 km/h, 111.2 s at it and 4 s to stop, 119.2, so 120 s, the 2 minutes they took before; the train (standard performance) follows its running curve in the time its timetable gives each leg, so it reaches every call when it did before. Blue, one car (352 passengers at most: 320 rated x 1.1), is on Main. Alpha (residential, 1,000,000 a day) fills its queue of 4000 within a minute of 07:50; Beta (office, 20,000) and Gamma (office, 1,000). 8 s after a train arrives its doors are open: those riding to the stop get off (arrived) while it takes on passengers for its line and direction whose destination it calls at before it next turns round, the larger number setting how long that takes at 2 a second through each of its car's 4 doors; while its doors stay open it takes on those released at each whole minute too. A full train leaving counts as refused those waiting that it could have taken. The line runs no train until 07:59, then one: Blue is sent out at 480, and at 480:08 takes on the farthest first (all 127 for Gamma, then 225 of the Beta groups, earliest first); 352 take 44 s, so its doors close at 480:52 and it leaves at 481:01, 19 s late, refusing the 4000 then waiting (the release at 481 has filled the queue again). The 225 get off at Beta (483:01 to 483:47), the 127 at Gamma, reached at 485:47, where Blue takes 17 for Alpha, then 1 more at each of 486:00 and 487:00 while it holds for its departure at 487:42, 19 in all, and turns round as it leaves; at Beta (489:42 to 490:42) it has room for 333 of the 455 for Alpha that come by 490 (122 refused as it leaves). Back at Alpha at 492:42 the 352 get off and the service ends at 493:43; the round trip takes 14 minutes (8 travelling, 1 + 1 at Beta, 2 + 2 at the ends), so the line sends Blue out again at 494, and it takes on 352 for Beta. A line's train cannot have its service stopped (trainOnLine); taken off the line at 495, before it leaves at 495:01, it finishes the trip as an ordinary service (off the line, it refuses no one), and when that service is stopped at 497, a second before it reaches Beta, its 352 riders are abandoned; it runs on to Beta, where its path ends. Every count is from the independent G1a/G1b calculator (docs: GoldenScenarios/README.md); released = waiting + riding + arrived + overflowed + abandoned at every station.",
+  "description": "Boarding, alighting and capacity (G1b, ARCHITECTURE decision 35) on the track network: nodes a (512, 1536) to g (6656, 1536), a tile apart, joined by straight edges e1 a-b to e6 f-g, each 1024 long, dead ends at both ends. Alpha (1536, 512), Beta (3584, 512) and Gamma (5632, 512) each have a platform on the half tile of track either side of their node, b, d and f, so a train stops at the node going either way and every leg is 2048 long, two tiles as before. Main (Alpha, Beta, Gamma) runs all day; its round trip for a train sent out at T is Alpha T to T+42 s (Stage W2b: the least dwell at a terminal) and, from that departure D, Beta D+2 to D+3, Gamma D+5 to D+7 (turning round), Beta D+9 to D+10, Alpha D+12 (turning round; the service ends once the train's dwell there is over). Stage W2c (ARCHITECTURE decision 40): Main plans its legs with a crawl, { acceleration 250, braking 250, topSpeed 1 } (1 km/h, about 1024 units a minute): 2048 units take 4 s to reach 1 km/h, 111.2 s at it and 4 s to stop, 119.2, so 120 s, the 2 minutes they took before; the train (standard performance) follows its running curve in the time its timetable gives each leg, so it reaches every call when it did before. Blue, one car (352 passengers at most: 320 rated x 1.1), is on Main. Alpha (residential, 1,000,000 a day) fills its queue of 4000 within a minute of 07:50; Beta (office, 20,000) and Gamma (office, 1,000). 8 s after a train arrives its doors are open: those riding to the stop get off (arrived) while it takes on passengers for its line and direction whose destination it calls at before it next turns round, the larger number setting how long that takes at 2 a second through each of its car's 4 doors; while its doors stay open it takes on those released at each whole minute too. A full train leaving counts as refused those waiting that it could have taken. The line runs no train until 07:59, then one: Blue is sent out at 480, and at 480:08 takes on the farthest first (all 127 for Gamma, then 225 of the Beta groups, earliest first); 352 take 44 s, so its doors close at 480:52 and it leaves at 481:01, 19 s late, refusing the 4000 then waiting (the release at 481 has filled the queue again). The 225 get off at Beta (483:01 to 483:47), the 127 at Gamma, reached at 485:47, where Blue takes 17 for Alpha, then 1 more at each of 486:00 and 487:00 while it holds for its departure at 487:42, 19 in all, and turns round as it leaves; at Beta (489:42 to 490:42) it has room for 333 of the 455 for Alpha that come by 490 (122 refused as it leaves). Back at Alpha at 492:42 the 352 get off and the service ends at 493:43; the round trip takes 14 minutes (8 travelling, 1 + 1 at Beta, 2 + 2 at the ends), so the line sends Blue out again at 494, and it takes on 352 for Beta. A line's train cannot have its service stopped (trainOnLine); taken off the line at 495, before it leaves at 495:01, it finishes the trip as an ordinary service (off the line, it refuses no one), and when that service is stopped at 497, a second before it reaches Beta, its 352 riders are abandoned; it runs on to Beta, where its path ends at node d (e3 forward 1024). Every count is from the independent G1a/G1b calculator (docs: GoldenScenarios/README.md); released = waiting + riding + arrived + overflowed + abandoned at every station.",
   "initialState": {
     "mapWidth": 8,
     "mapHeight": 4,
     "balance": 1000000,
-    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "costs": {"track": 1000, "station": 50000, "train": 200000},
     "gameMinutes": 470,
     "speed": "normal"
   },
   "steps": [
-    {
-      "command": { "type": "buildTrack", "x": 0, "y": 1, "connections": ["east"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 5, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 6, "y": 1, "connections": ["west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "Alpha", "x": 1, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "Beta", "x": 3, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "Gamma", "x": 5, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "purchaseTrain", "name": "Blue" },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 1, "y": 1, "heading": "east" } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1024 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "createLine", "name": "Main", "stops": [1, 2, 3] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLineServiceWindow", "line": 1, "window": { "type": "allDay" } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 1, "line": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setStationDemand", "station": 1, "demand": { "kind": "residential", "dailyTrips": 1000000 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setStationDemand", "station": 2, "demand": { "kind": "office", "dailyTrips": 20000 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setStationDemand", "station": 3, "demand": { "kind": "office", "dailyTrips": 1000 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "advance", "ticks": 10 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 27582, "waiting": 4000, "riding": 0, "arrived": 0, "overflowed": 23582, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "trains": { "peak": 1, "offPeak": 1, "low": 1 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "advance", "ticks": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 1, "destination": 2, "count": 225 }, { "origin": 1, "destination": 3, "count": 127 }] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 30433, "waiting": 3648, "riding": 352, "arrived": 0, "overflowed": 26433, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "observe": { "type": "serviceTimes", "train": 1 },
-      "expect": { "found": true, "times": { "arrival": 28800, "exchangeEnd": 28852, "closing": 28852 } }
-    },
-    {
-      "observe": { "type": "lateness", "train": 1 },
-      "expect": { "found": true, "lateness": 18 }
-    },
-    {
-      "command": { "type": "advance", "ticks": 3 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 1, "destination": 3, "count": 127 }] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 38883, "waiting": 4000, "riding": 127, "arrived": 225, "overflowed": 34531, "abandoned": 0, "refused": 4000 } }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 2 },
-      "expect": { "ledger": { "released": 304, "waiting": 304, "riding": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "command": { "type": "advance", "ticks": 3 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "serviceTimes", "train": 1 },
-      "expect": { "found": true, "times": { "arrival": 29147, "exchangeEnd": 29172, "departure": 29027 } }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 3, "destination": 1, "count": 18 }] }
-    },
-    {
-      "command": { "type": "advance", "ticks": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 3, "destination": 1, "count": 19 }] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 49915, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 45563, "abandoned": 0, "refused": 4000 } }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 2 },
-      "expect": { "ledger": { "released": 391, "waiting": 391, "riding": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 3 },
-      "expect": { "ledger": { "released": 19, "waiting": 0, "riding": 19, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "command": { "type": "advance", "ticks": 5 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 63331, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 58979, "abandoned": 0, "refused": 4000 } }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 2 },
-      "expect": { "ledger": { "released": 498, "waiting": 165, "riding": 0, "arrived": 333, "overflowed": 0, "abandoned": 0, "refused": 122 } }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 3 },
-      "expect": { "ledger": { "released": 24, "waiting": 5, "riding": 0, "arrived": 19, "overflowed": 0, "abandoned": 0, "refused": 0 } }
-    },
-    {
-      "command": { "type": "advance", "ticks": 2 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 1, "destination": 2, "count": 352 }] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 68581, "waiting": 3648, "riding": 352, "arrived": 352, "overflowed": 64229, "abandoned": 0, "refused": 4000 } }
-    },
-    {
-      "command": { "type": "stopTrainService", "train": 1 },
-      "expect": { "result": "trainOnLine", "train": 1 }
-    },
-    {
-      "command": { "type": "unassignTrain", "train": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "advance", "ticks": 2 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [{ "origin": 1, "destination": 2, "count": 352 }] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 73763, "waiting": 4000, "riding": 352, "arrived": 352, "overflowed": 69059, "abandoned": 0, "refused": 4000 } }
-    },
-    {
-      "command": { "type": "stopTrainService", "train": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "riders", "train": 1 },
-      "expect": { "riders": [] }
-    },
-    {
-      "observe": { "type": "passengerLedger", "station": 1 },
-      "expect": { "ledger": { "released": 73763, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 69059, "abandoned": 352, "refused": 4000 } }
-    },
-    {
-      "command": { "type": "advance", "ticks": 2 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "waitingPassengers", "station": 1 },
-      "expect": { "groups": [{ "line": 1, "direction": "outbound", "destination": 2, "since": 470, "count": 1978 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 471, "count": 1318 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 481, "count": 352 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 495, "count": 352 }] }
-    },
-    {
-      "observe": { "type": "waitingPassengers", "station": 2 },
-      "expect": { "groups": [{ "line": 1, "direction": "inbound", "destination": 1, "since": 485, "count": 14 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 486, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 487, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 21 }] }
-    },
-    {
-      "observe": { "type": "waitingPassengers", "station": 3 },
-      "expect": { "groups": [{ "line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 1 }] }
-    }
+    {"command": {"type": "buildTrackNode", "x": 512, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 1536, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 2560, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 3584, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 4608, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 5632, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 6656, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 2, "to": 3, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 3, "to": 4, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 4, "to": 5, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 5, "to": 6, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 6, "to": 7, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Alpha", "point": {"x": 1536, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Beta", "point": {"x": 3584, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Gamma", "point": {"x": 5632, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 1, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 2, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 3, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 4, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 5, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 6, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Blue"}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeTrain", "train": 1, "position": {"type": "edge", "edge": 1, "direction": "forward", "offset": 1024}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainMovementRate", "train": 1, "rate": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "createLine", "name": "Main", "stops": [1, 2, 3]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLinePerformance", "line": 1, "performance": {"acceleration": 250, "braking": 250, "topSpeed": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "allDay"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "assignTrain", "train": 1, "line": 1}, "expect": {"result": "ok"}},
+    {"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "residential", "dailyTrips": 1000000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setStationDemand", "station": 2, "demand": {"kind": "office", "dailyTrips": 20000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setStationDemand", "station": 3, "demand": {"kind": "office", "dailyTrips": 1000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 10}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": []}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 27582, "waiting": 4000, "riding": 0, "arrived": 0, "overflowed": 23582, "abandoned": 0, "refused": 0}}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "trains": {"peak": 1, "offPeak": 1, "low": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 1, "destination": 2, "count": 225}, {"origin": 1, "destination": 3, "count": 127}]}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 30433, "waiting": 3648, "riding": 352, "arrived": 0, "overflowed": 26433, "abandoned": 0, "refused": 0}}},
+    {"observe": {"type": "serviceTimes", "train": 1}, "expect": {"found": true, "times": {"arrival": 28800, "exchangeEnd": 28852, "closing": 28852}}},
+    {"observe": {"type": "lateness", "train": 1}, "expect": {"found": true, "lateness": 18}},
+    {"command": {"type": "advance", "ticks": 3}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 1, "destination": 3, "count": 127}]}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 38883, "waiting": 4000, "riding": 127, "arrived": 225, "overflowed": 34531, "abandoned": 0, "refused": 4000}}},
+    {"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 304, "waiting": 304, "riding": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0}}},
+    {"command": {"type": "advance", "ticks": 3}, "expect": {"result": "ok"}},
+    {"observe": {"type": "serviceTimes", "train": 1}, "expect": {"found": true, "times": {"arrival": 29147, "exchangeEnd": 29172, "departure": 29027}}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 3, "destination": 1, "count": 18}]}},
+    {"command": {"type": "advance", "ticks": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 3, "destination": 1, "count": 19}]}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 49915, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 45563, "abandoned": 0, "refused": 4000}}},
+    {"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 391, "waiting": 391, "riding": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0}}},
+    {"observe": {"type": "passengerLedger", "station": 3}, "expect": {"ledger": {"released": 19, "waiting": 0, "riding": 19, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0}}},
+    {"command": {"type": "advance", "ticks": 5}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": []}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 63331, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 58979, "abandoned": 0, "refused": 4000}}},
+    {"observe": {"type": "passengerLedger", "station": 2}, "expect": {"ledger": {"released": 498, "waiting": 165, "riding": 0, "arrived": 333, "overflowed": 0, "abandoned": 0, "refused": 122}}},
+    {"observe": {"type": "passengerLedger", "station": 3}, "expect": {"ledger": {"released": 24, "waiting": 5, "riding": 0, "arrived": 19, "overflowed": 0, "abandoned": 0, "refused": 0}}},
+    {"command": {"type": "advance", "ticks": 2}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 1, "destination": 2, "count": 352}]}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 68581, "waiting": 3648, "riding": 352, "arrived": 352, "overflowed": 64229, "abandoned": 0, "refused": 4000}}},
+    {"command": {"type": "stopTrainService", "train": 1}, "expect": {"result": "trainOnLine", "train": 1}},
+    {"command": {"type": "unassignTrain", "train": 1}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 2}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": [{"origin": 1, "destination": 2, "count": 352}]}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 73763, "waiting": 4000, "riding": 352, "arrived": 352, "overflowed": 69059, "abandoned": 0, "refused": 4000}}},
+    {"command": {"type": "stopTrainService", "train": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "riders", "train": 1}, "expect": {"riders": []}},
+    {"observe": {"type": "passengerLedger", "station": 1}, "expect": {"ledger": {"released": 73763, "waiting": 4000, "riding": 0, "arrived": 352, "overflowed": 69059, "abandoned": 352, "refused": 4000}}},
+    {"command": {"type": "advance", "ticks": 2}, "expect": {"result": "ok"}},
+    {"observe": {"type": "waitingPassengers", "station": 1}, "expect": {"groups": [{"line": 1, "direction": "outbound", "destination": 2, "since": 470, "count": 1978}, {"line": 1, "direction": "outbound", "destination": 2, "since": 471, "count": 1318}, {"line": 1, "direction": "outbound", "destination": 2, "since": 481, "count": 352}, {"line": 1, "direction": "outbound", "destination": 2, "since": 495, "count": 352}]}},
+    {"observe": {"type": "waitingPassengers", "station": 2}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 1, "since": 485, "count": 14}, {"line": 1, "direction": "inbound", "destination": 1, "since": 486, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 487, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 21}]}},
+    {"observe": {"type": "waitingPassengers", "station": 3}, "expect": {"groups": [{"line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 1}]}}
   ],
-  "expectedFinalState": {
-    "gameMinutes": 499,
-    "speed": "normal",
-    "balance": 643000,
-    "stations": [
-      { "id": 1, "name": "Alpha", "x": 1, "y": 0, "annexes": [] },
-      { "id": 2, "name": "Beta", "x": 3, "y": 0, "annexes": [] },
-      { "id": 3, "name": "Gamma", "x": 5, "y": 0, "annexes": [] }
-    ],
-    "tracks": [
-      { "x": 0, "y": 1, "connections": ["east"], "layout": { "type": "open" } },
-      { "x": 1, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 2, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 3, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 4, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 5, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 6, "y": 1, "connections": ["west"], "layout": { "type": "open" } }
-    ],
-    "trains": [
-      { "id": 1, "name": "Blue", "position": { "type": "node", "x": 3, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 1, "arrival": 494, "departureSeconds": 29682, "reverse": false }, { "station": 2, "arrivalSeconds": 29802, "departureSeconds": 29862, "reverse": false }, { "station": 3, "arrivalSeconds": 29982, "departureSeconds": 30102, "reverse": true }, { "station": 2, "arrivalSeconds": 30222, "departureSeconds": 30282, "reverse": false }, { "station": 1, "arrivalSeconds": 30402, "departureSeconds": 30402, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
-    ],
-    "lines": [
-      { "id": 1, "name": "Main", "stops": [1, 2, 3], "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 }, "window": { "type": "allDay" }, "trainsInService": { "peak": 1, "offPeak": 1, "low": 1 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": 494, "patterns": [] }
-    ],
-    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [], "platforms": [] },
-    "trafficControl": false,
-    "passengers": [
-      { "station": 1, "demand": { "kind": "residential", "dailyTrips": 1000000 }, "waiting": [{ "line": 1, "direction": "outbound", "destination": 2, "since": 470, "count": 1978 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 471, "count": 1318 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 481, "count": 352 }, { "line": 1, "direction": "outbound", "destination": 2, "since": 495, "count": 352 }], "released": 78879, "arrived": 352, "overflowed": 74175, "abandoned": 352, "refused": 4000 },
-      { "station": 2, "demand": { "kind": "office", "dailyTrips": 20000 }, "waiting": [{ "line": 1, "direction": "inbound", "destination": 1, "since": 485, "count": 14 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 486, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 487, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 22 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 21 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 21 }], "released": 624, "arrived": 333, "overflowed": 0, "abandoned": 0, "refused": 122 },
-      { "station": 3, "demand": { "kind": "office", "dailyTrips": 1000 }, "waiting": [{ "line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 1 }, { "line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 1 }], "released": 30, "arrived": 19, "overflowed": 0, "abandoned": 0, "refused": 0 }
-    ],
-    "riders": [],
-    "accounts": {
-      "mode": "free", "fareRules": null, "openedAt": null,
-      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
-      "ledger": [], "days": []
-    }
-  }
+  "expectedFinalState": {"gameMinutes": 499, "speed": "normal", "balance": 644000, "stations": [{"id": 1, "name": "Alpha", "point": {"x": 1536, "y": 512}}, {"id": 2, "name": "Beta", "point": {"x": 3584, "y": 512}}, {"id": 3, "name": "Gamma", "point": {"x": 5632, "y": 512}}], "tracks": [], "trains": [{"id": 1, "name": "Blue", "position": {"type": "edge", "edge": 3, "direction": "forward", "offset": 1024}, "movement": {"rate": 1024, "continuation": [], "cursor": 0, "edges": []}, "timetable": [{"station": 1, "arrival": 494, "departureSeconds": 29682, "reverse": false}, {"station": 2, "arrivalSeconds": 29802, "departureSeconds": 29862, "reverse": false}, {"station": 3, "arrivalSeconds": 29982, "departureSeconds": 30102, "reverse": true}, {"station": 2, "arrivalSeconds": 30222, "departureSeconds": 30282, "reverse": false}, {"station": 1, "arrivalSeconds": 30402, "departureSeconds": 30402, "reverse": true}], "repeat": {"type": "once"}, "execution": {"type": "inactive"}, "cars": 1, "trail": [], "trailEdges": [], "reservation": []}], "lines": [{"id": 1, "name": "Main", "stops": [1, 2, 3], "performance": {"acceleration": 250, "braking": 250, "topSpeed": 1}, "window": {"type": "allDay"}, "trainsInService": {"peak": 1, "offPeak": 1, "low": 1}, "targetHeadways": {"peak": null, "offPeak": null, "low": null}, "trains": [], "lastDispatch": 494, "patterns": []}], "serviceDay": [{"start": 0, "level": "low"}, {"start": 420, "level": "peak"}, {"start": 600, "level": "offPeak"}, {"start": 960, "level": "peak"}, {"start": 1200, "level": "offPeak"}, {"start": 1260, "level": "low"}], "network": {"nodes": [{"id": 1, "x": 512, "y": 1536, "z": 0}, {"id": 2, "x": 1536, "y": 1536, "z": 0}, {"id": 3, "x": 2560, "y": 1536, "z": 0}, {"id": 4, "x": 3584, "y": 1536, "z": 0}, {"id": 5, "x": 4608, "y": 1536, "z": 0}, {"id": 6, "x": 5632, "y": 1536, "z": 0}, {"id": 7, "x": 6656, "y": 1536, "z": 0}], "edges": [{"id": 1, "from": 1, "to": 2, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 2, "from": 2, "to": 3, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 3, "from": 3, "to": 4, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 4, "from": 4, "to": 5, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 5, "from": 5, "to": 6, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 6, "from": 6, "to": 7, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}], "platforms": [{"station": 1, "edge": 1, "start": 512, "end": 1024}, {"station": 1, "edge": 2, "start": 0, "end": 512}, {"station": 2, "edge": 3, "start": 512, "end": 1024}, {"station": 2, "edge": 4, "start": 0, "end": 512}, {"station": 3, "edge": 5, "start": 512, "end": 1024}, {"station": 3, "edge": 6, "start": 0, "end": 512}]}, "trafficControl": false, "passengers": [{"station": 1, "demand": {"kind": "residential", "dailyTrips": 1000000}, "waiting": [{"line": 1, "direction": "outbound", "destination": 2, "since": 470, "count": 1978}, {"line": 1, "direction": "outbound", "destination": 2, "since": 471, "count": 1318}, {"line": 1, "direction": "outbound", "destination": 2, "since": 481, "count": 352}, {"line": 1, "direction": "outbound", "destination": 2, "since": 495, "count": 352}], "released": 78879, "arrived": 352, "overflowed": 74175, "abandoned": 352, "refused": 4000}, {"station": 2, "demand": {"kind": "office", "dailyTrips": 20000}, "waiting": [{"line": 1, "direction": "inbound", "destination": 1, "since": 485, "count": 14}, {"line": 1, "direction": "inbound", "destination": 1, "since": 486, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 487, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 22}, {"line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 21}, {"line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 21}], "released": 624, "arrived": 333, "overflowed": 0, "abandoned": 0, "refused": 122}, {"station": 3, "demand": {"kind": "office", "dailyTrips": 1000}, "waiting": [{"line": 1, "direction": "inbound", "destination": 1, "since": 488, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 489, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 490, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 491, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 492, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 493, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 494, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 495, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 496, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 497, "count": 1}, {"line": 1, "direction": "inbound", "destination": 1, "since": 498, "count": 1}], "released": 30, "arrived": 19, "overflowed": 0, "abandoned": 0, "refused": 0}], "riders": [], "accounts": {"mode": "free", "fareRules": null, "openedAt": null, "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0}, "ledger": [], "days": []}}
 }

@@ -1,354 +1,106 @@
 {
   "schemaVersion": 27,
-  "description": "Patterns on the line a(0,1)-...-i(8,1), dead ends at both ends; A(1,0) has platform (1,1), B(3,0) (3,1), C(5,0) (5,1), D(7,0) (7,1). Main calls at A, B, C, D and plans its legs with a crawl, { acceleration 250, braking 250, topSpeed 1 } (Stage W2c, ARCHITECTURE decision 40): two links take 4 + 111.2 + 4 s, so 120, and six 4 + 341.6 + 4, so 350: round trip 12 minutes of travel, 1 at B and C each way and 2 at each end, 20; peak 5 trains 4 apart, off-peak 2 (10 apart), low none. Pattern 0 is a short working B-C (round trip 8, at most 4 trains); pattern 1 an express A-D that passes B and C (350 s each way, round trip 940 s, rounded up to 16 minutes, at most 8). addLinePattern needs two calls or more, rising, each a stop of the line; setLineStops may not leave a pattern calling past the new last stop. A segment carries at most 720 trains a day each way (one every 2 minutes); a service puts a day's trains at its headway, rounded up, on each segment from its first call to its last, and the services claim room in order, the line's own first. At peak Main puts 360 on every segment; pattern 0 would run 4 trains 2 apart (720) on B-C, but only 360 is left there, so it runs 2, 4 apart; nothing is left on B-C for the express, which runs none. Off-peak: Main 144, pattern 0 one train 8 apart (180), the express one train 16 apart (90). Low: Main runs none; pattern 0 keeps a 20-minute target, one train (72), so A-B and C-D are not covered. Shuttle, at B facing east on pattern 0, is sent out at 480 and every 8 minutes until 600, the first off-peak minute (Stage W2b: it leaves 42 s after it is sent out, its 6-minute trip brings it back 42 s after the minute, its service ends once it has dwelt 42 s there, and it is sent out again at the next minute). The express waits through the peak, is sent out from A at 600, off-peak, and leaves at 600:42, with a timetable calling only at A and D: at D at 606:32, 350 s later. Removing pattern 0 at 601 takes Shuttle off the line; it finishes its trip as an ordinary service, back at B at 606:42 and ending at 607:24. The express becomes pattern 0.",
+  "description": "Patterns on the track network: nodes a (512, 1536) to i (8704, 1536), a tile apart, joined by straight edges e1 a-b to e8 h-i, each 1024 long, dead ends at both ends. A (1536, 512), B (3584, 512), C (5632, 512) and D (7680, 512) each have a platform on the half tile of track either side of their node, b, d, f and h, so a train stops at the node going either way and drives as far from call to call as it did on the grid. Main calls at A, B, C, D and plans its legs with a crawl, { acceleration 250, braking 250, topSpeed 1 } (Stage W2c, ARCHITECTURE decision 40): 2048 units take 4 + 111.2 + 4 s, so 120, and 6144 4 + 341.6 + 4, so 350. A service's journey starts at the berth that makes the shortest round trip, the end of its first call's platform past the node going east, 512 units on, so its first leg is 512 shorter: 1536 units in 91 s, 5632 in 321. Main's round trip is 91 + 5 x 120 s of travel, 1 minute at B and C each way and 2 at each end, 1171 s, rounded up to 20 minutes, as before; peak 5 trains 4 apart, off-peak 2 (10 apart), low none. Pattern 0 is a short working B-C (91 + 120 s and 2 + 2 minutes, 451 s, round trip 8, at most 4 trains); pattern 1 an express A-D that passes B and C (321 s out and 350 back, round trip 911 s, rounded up to 16 minutes, at most 8). A train sent out from the node drives the whole 2048 or 6144. addLinePattern needs two calls or more, rising, each a stop of the line; setLineStops may not leave a pattern calling past the new last stop. A segment carries at most 720 trains a day each way (one every 2 minutes); a service puts a day's trains at its headway, rounded up, on each segment from its first call to its last, and the services claim room in order, the line's own first. At peak Main puts 360 on every segment; pattern 0 would run 4 trains 2 apart (720) on B-C, but only 360 is left there, so it runs 2, 4 apart; nothing is left on B-C for the express, which runs none. Off-peak: Main 144, pattern 0 one train 8 apart (180), the express one train 16 apart (90). Low: Main runs none; pattern 0 keeps a 20-minute target, one train (72), so A-B and C-D are not covered. Shuttle, at B facing east on pattern 0, is sent out at 480 and every 8 minutes until 600, the first off-peak minute (Stage W2b: it leaves 42 s after it is sent out, its 6-minute trip brings it back 42 s after the minute, its service ends once it has dwelt 42 s there, and it is sent out again at the next minute). The express waits through the peak, is sent out from A at 600, off-peak, and leaves at 600:42, with a timetable calling only at A and D: at D at 606:32, 350 s later. Removing pattern 0 at 601 takes Shuttle off the line; it finishes its trip as an ordinary service, back at B at 606:42 and ending at 607:24. The express becomes pattern 0.",
   "initialState": {
     "mapWidth": 9,
     "mapHeight": 2,
     "balance": 1000000,
-    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "costs": {"track": 1000, "station": 50000, "train": 200000},
     "gameMinutes": 480,
     "speed": "normal"
   },
   "steps": [
-    {
-      "command": { "type": "buildTrack", "x": 0, "y": 1, "connections": ["east"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 5, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 6, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 7, "y": 1, "connections": ["east", "west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildTrack", "x": 8, "y": 1, "connections": ["west"] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "A", "x": 1, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "B", "x": 3, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "C", "x": 5, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "buildStation", "name": "D", "x": 7, "y": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "purchaseTrain", "name": "Shuttle" },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "purchaseTrain", "name": "Express" },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "purchaseTrain", "name": "Spare" },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "createLine", "name": "Main", "stops": [1, 2, 3, 4] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "trains": { "peak": 5, "offPeak": 2, "low": 0 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 1, "calls": [1, 2] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 1, "calls": [0, 3] },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 1, "calls": [2] },
-      "expect": { "result": "invalidLinePattern" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 1, "calls": [2, 1] },
-      "expect": { "result": "invalidLinePattern" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 1, "calls": [0, 4] },
-      "expect": { "result": "invalidLinePattern" }
-    },
-    {
-      "command": { "type": "addLinePattern", "line": 9, "calls": [0, 1] },
-      "expect": { "result": "unknownLine", "line": 9 }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "pattern": 0, "trains": { "peak": 4, "offPeak": 1, "low": 1 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "pattern": 1, "trains": { "peak": 2, "offPeak": 1, "low": 0 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "pattern": 2, "trains": { "peak": 1, "offPeak": 1, "low": 1 } },
-      "expect": { "result": "unknownLinePattern", "pattern": 2 }
-    },
-    {
-      "command": { "type": "setLineTrainsInService", "line": 1, "pattern": 0, "trains": { "peak": -1, "offPeak": 1, "low": 1 } },
-      "expect": { "result": "invalidTrainsInService" }
-    },
-    {
-      "command": { "type": "setLineTargetHeadways", "line": 1, "pattern": 0, "targetHeadways": { "peak": null, "offPeak": null, "low": 20 } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setLineTargetHeadways", "line": 1, "pattern": 5, "targetHeadways": { "peak": null, "offPeak": null, "low": 20 } },
-      "expect": { "result": "unknownLinePattern", "pattern": 5 }
-    },
-    {
-      "command": { "type": "setLineStops", "line": 1, "stops": [1, 2, 3] },
-      "expect": { "result": "invalidLinePattern" }
-    },
-    {
-      "observe": { "type": "lineJourney", "line": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 120 }, { "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 120 }, { "from": 2, "to": 3, "route": [{ "x": 6, "y": 1 }, { "x": 7, "y": 1 }], "seconds": 120 }, { "from": 3, "to": 2, "route": [{ "x": 6, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 120 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 120 }, { "from": 1, "to": 0, "route": [{ "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "seconds": 120 }], "roundTripSeconds": 1200, "roundTripMinutes": 20 } }
-    },
-    {
-      "observe": { "type": "lineJourney", "line": 1, "pattern": 0 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 3, "y": 1, "heading": "north" }, "legs": [{ "from": 1, "to": 2, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }], "seconds": 120 }, { "from": 2, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 120 }], "roundTripSeconds": 480, "roundTripMinutes": 8 } }
-    },
-    {
-      "observe": { "type": "lineJourney", "line": 1, "pattern": 1 },
-      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 1, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 3, "route": [{ "x": 2, "y": 1 }, { "x": 3, "y": 1 }, { "x": 4, "y": 1 }, { "x": 5, "y": 1 }, { "x": 6, "y": 1 }, { "x": 7, "y": 1 }], "seconds": 350 }, { "from": 3, "to": 0, "route": [{ "x": 6, "y": 1 }, { "x": 5, "y": 1 }, { "x": 4, "y": 1 }, { "x": 3, "y": 1 }, { "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "seconds": 350 }], "roundTripSeconds": 940, "roundTripMinutes": 16 } }
-    },
-    {
-      "observe": { "type": "lineJourney", "line": 1, "pattern": 2 },
-      "expect": { "found": false }
-    },
-    {
-      "observe": { "type": "lineMaximumTrains", "line": 1 },
-      "expect": { "found": true, "trains": 10 }
-    },
-    {
-      "observe": { "type": "lineMaximumTrains", "line": 1, "pattern": 0 },
-      "expect": { "found": true, "trains": 4 }
-    },
-    {
-      "observe": { "type": "lineMaximumTrains", "line": 1, "pattern": 1 },
-      "expect": { "found": true, "trains": 8 }
-    },
-    {
-      "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
-      "expect": { "found": true, "trains": 5 }
-    },
-    {
-      "observe": { "type": "lineHeadway", "line": 1, "level": "peak" },
-      "expect": { "found": true, "minutes": 4 }
-    },
-    {
-      "observe": { "type": "lineTrainsInService", "line": 1, "pattern": 0, "level": "peak" },
-      "expect": { "found": true, "trains": 2 }
-    },
-    {
-      "observe": { "type": "lineHeadway", "line": 1, "pattern": 0, "level": "peak" },
-      "expect": { "found": true, "minutes": 4 }
-    },
-    {
-      "observe": { "type": "lineTrainsInService", "line": 1, "pattern": 1, "level": "peak" },
-      "expect": { "found": true, "trains": 0 }
-    },
-    {
-      "observe": { "type": "lineHeadway", "line": 1, "pattern": 1, "level": "peak" },
-      "expect": { "found": false }
-    },
-    {
-      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "peak" },
-      "expect": { "found": true, "loads": [360, 720, 360] }
-    },
-    {
-      "observe": { "type": "lineTrainsInService", "line": 1, "pattern": 1, "level": "offPeak" },
-      "expect": { "found": true, "trains": 1 }
-    },
-    {
-      "observe": { "type": "lineHeadway", "line": 1, "pattern": 1, "level": "offPeak" },
-      "expect": { "found": true, "minutes": 16 }
-    },
-    {
-      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "offPeak" },
-      "expect": { "found": true, "loads": [234, 414, 234] }
-    },
-    {
-      "observe": { "type": "lineHeadway", "line": 1, "pattern": 0, "level": "low" },
-      "expect": { "found": true, "minutes": 20 }
-    },
-    {
-      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "low" },
-      "expect": { "found": true, "loads": [0, 72, 0] }
-    },
-    {
-      "observe": { "type": "lineSegmentLoads", "line": 2, "level": "low" },
-      "expect": { "found": false }
-    },
-    {
-      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 3, "y": 1, "heading": "east" } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 1, "y": 1, "heading": "east" } },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1024 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 1024 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 1, "line": 1, "pattern": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 2, "line": 1, "pattern": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 1, "line": 1 },
-      "expect": { "result": "trainOnLine", "train": 1 }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 3, "line": 1, "pattern": 7 },
-      "expect": { "result": "unknownLinePattern", "pattern": 7 }
-    },
-    {
-      "command": { "type": "assignTrain", "train": 9, "line": 1, "pattern": 7 },
-      "expect": { "result": "unknownTrain", "train": 9 }
-    },
-    {
-      "command": { "type": "advance", "ticks": 1 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "timetable", "train": 1 },
-      "expect": { "timetable": [{ "station": 2, "arrival": 480, "departureSeconds": 28842, "reverse": false }, { "station": 3, "arrivalSeconds": 28962, "departureSeconds": 29082, "reverse": true }, { "station": 2, "arrivalSeconds": 29202, "departureSeconds": 29202, "reverse": true }] }
-    },
-    {
-      "observe": { "type": "timetable", "train": 2 },
-      "expect": { "timetable": [] }
-    },
-    {
-      "command": { "type": "advance", "ticks": 120 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "timetable", "train": 1 },
-      "expect": { "timetable": [{ "station": 2, "arrival": 600, "departureSeconds": 36042, "reverse": false }, { "station": 3, "arrivalSeconds": 36162, "departureSeconds": 36282, "reverse": true }, { "station": 2, "arrivalSeconds": 36402, "departureSeconds": 36402, "reverse": true }] }
-    },
-    {
-      "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "travelling", "stop": 1, "cycle": 0 } }
-    },
-    {
-      "observe": { "type": "timetable", "train": 2 },
-      "expect": { "timetable": [{ "station": 1, "arrival": 600, "departureSeconds": 36042, "reverse": false }, { "station": 4, "arrivalSeconds": 36392, "departureSeconds": 36512, "reverse": true }, { "station": 1, "arrivalSeconds": 36862, "departureSeconds": 36862, "reverse": true }] }
-    },
-    {
-      "command": { "type": "removeLinePattern", "line": 1, "pattern": 0 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "command": { "type": "removeLinePattern", "line": 1, "pattern": 3 },
-      "expect": { "result": "unknownLinePattern", "pattern": 3 }
-    },
-    {
-      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "offPeak" },
-      "expect": { "found": true, "loads": [234, 234, 234] }
-    },
-    {
-      "observe": { "type": "lineTrainsInService", "line": 1, "pattern": 0, "level": "offPeak" },
-      "expect": { "found": true, "trains": 1 }
-    },
-    {
-      "command": { "type": "advance", "ticks": 10 },
-      "expect": { "result": "ok" }
-    },
-    {
-      "observe": { "type": "execution", "train": 1 },
-      "expect": { "execution": { "type": "inactive" } }
-    },
-    {
-      "observe": { "type": "execution", "train": 2 },
-      "expect": { "execution": { "type": "travelling", "stop": 2, "cycle": 0 } }
-    }
+    {"command": {"type": "buildTrackNode", "x": 512, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 1536, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 2560, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 3584, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 4608, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 5632, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 6656, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 7680, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 8704, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 2, "to": 3, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 3, "to": 4, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 4, "to": 5, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 5, "to": 6, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 6, "to": 7, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 7, "to": 8, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 8, "to": 9, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "A", "point": {"x": 1536, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "B", "point": {"x": 3584, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "C", "point": {"x": 5632, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "D", "point": {"x": 7680, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 1, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 2, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 3, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 4, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 5, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 6, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 4, "edge": 7, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 4, "edge": 8, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Shuttle"}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Express"}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Spare"}, "expect": {"result": "ok"}},
+    {"command": {"type": "createLine", "name": "Main", "stops": [1, 2, 3, 4]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLinePerformance", "line": 1, "performance": {"acceleration": 250, "braking": 250, "topSpeed": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "trains": {"peak": 5, "offPeak": 2, "low": 0}}, "expect": {"result": "ok"}},
+    {"command": {"type": "addLinePattern", "line": 1, "calls": [1, 2]}, "expect": {"result": "ok"}},
+    {"command": {"type": "addLinePattern", "line": 1, "calls": [0, 3]}, "expect": {"result": "ok"}},
+    {"command": {"type": "addLinePattern", "line": 1, "calls": [2]}, "expect": {"result": "invalidLinePattern"}},
+    {"command": {"type": "addLinePattern", "line": 1, "calls": [2, 1]}, "expect": {"result": "invalidLinePattern"}},
+    {"command": {"type": "addLinePattern", "line": 1, "calls": [0, 4]}, "expect": {"result": "invalidLinePattern"}},
+    {"command": {"type": "addLinePattern", "line": 9, "calls": [0, 1]}, "expect": {"result": "unknownLine", "line": 9}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "pattern": 0, "trains": {"peak": 4, "offPeak": 1, "low": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "pattern": 1, "trains": {"peak": 2, "offPeak": 1, "low": 0}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "pattern": 2, "trains": {"peak": 1, "offPeak": 1, "low": 1}}, "expect": {"result": "unknownLinePattern", "pattern": 2}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "pattern": 0, "trains": {"peak": -1, "offPeak": 1, "low": 1}}, "expect": {"result": "invalidTrainsInService"}},
+    {"command": {"type": "setLineTargetHeadways", "line": 1, "pattern": 0, "targetHeadways": {"peak": null, "offPeak": null, "low": 20}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineTargetHeadways", "line": 1, "pattern": 5, "targetHeadways": {"peak": null, "offPeak": null, "low": 20}}, "expect": {"result": "unknownLinePattern", "pattern": 5}},
+    {"command": {"type": "setLineStops", "line": 1, "stops": [1, 2, 3]}, "expect": {"result": "invalidLinePattern"}},
+    {"observe": {"type": "lineJourney", "line": 1}, "expect": {"found": true, "journey": {"start": {"type": "edge", "edge": 2, "direction": "forward", "offset": 512}, "legs": [{"from": 0, "to": 1, "path": {"traversals": [{"edge": 3, "direction": "forward"}], "distance": 1536}, "seconds": 91}, {"from": 1, "to": 2, "path": {"traversals": [{"edge": 4, "direction": "forward"}, {"edge": 5, "direction": "forward"}], "distance": 2048}, "seconds": 120}, {"from": 2, "to": 3, "path": {"traversals": [{"edge": 6, "direction": "forward"}, {"edge": 7, "direction": "forward"}], "distance": 2048}, "seconds": 120}, {"from": 3, "to": 2, "path": {"traversals": [{"edge": 6, "direction": "backward"}], "distance": 2048}, "seconds": 120}, {"from": 2, "to": 1, "path": {"traversals": [{"edge": 5, "direction": "backward"}, {"edge": 4, "direction": "backward"}], "distance": 2048}, "seconds": 120}, {"from": 1, "to": 0, "path": {"traversals": [{"edge": 3, "direction": "backward"}, {"edge": 2, "direction": "backward"}], "distance": 2048}, "seconds": 120}], "roundTripSeconds": 1171, "roundTripMinutes": 20}}},
+    {"observe": {"type": "lineJourney", "line": 1, "pattern": 0}, "expect": {"found": true, "journey": {"start": {"type": "edge", "edge": 4, "direction": "forward", "offset": 512}, "legs": [{"from": 1, "to": 2, "path": {"traversals": [{"edge": 5, "direction": "forward"}], "distance": 1536}, "seconds": 91}, {"from": 2, "to": 1, "path": {"traversals": [{"edge": 4, "direction": "backward"}], "distance": 2048}, "seconds": 120}], "roundTripSeconds": 451, "roundTripMinutes": 8}}},
+    {"observe": {"type": "lineJourney", "line": 1, "pattern": 1}, "expect": {"found": true, "journey": {"start": {"type": "edge", "edge": 2, "direction": "forward", "offset": 512}, "legs": [{"from": 0, "to": 3, "path": {"traversals": [{"edge": 3, "direction": "forward"}, {"edge": 4, "direction": "forward"}, {"edge": 5, "direction": "forward"}, {"edge": 6, "direction": "forward"}, {"edge": 7, "direction": "forward"}], "distance": 5632}, "seconds": 321}, {"from": 3, "to": 0, "path": {"traversals": [{"edge": 6, "direction": "backward"}, {"edge": 5, "direction": "backward"}, {"edge": 4, "direction": "backward"}, {"edge": 3, "direction": "backward"}, {"edge": 2, "direction": "backward"}], "distance": 6144}, "seconds": 350}], "roundTripSeconds": 911, "roundTripMinutes": 16}}},
+    {"observe": {"type": "lineJourney", "line": 1, "pattern": 2}, "expect": {"found": false}},
+    {"observe": {"type": "lineMaximumTrains", "line": 1}, "expect": {"found": true, "trains": 10}},
+    {"observe": {"type": "lineMaximumTrains", "line": 1, "pattern": 0}, "expect": {"found": true, "trains": 4}},
+    {"observe": {"type": "lineMaximumTrains", "line": 1, "pattern": 1}, "expect": {"found": true, "trains": 8}},
+    {"observe": {"type": "lineTrainsInService", "line": 1, "level": "peak"}, "expect": {"found": true, "trains": 5}},
+    {"observe": {"type": "lineHeadway", "line": 1, "level": "peak"}, "expect": {"found": true, "minutes": 4}},
+    {"observe": {"type": "lineTrainsInService", "line": 1, "pattern": 0, "level": "peak"}, "expect": {"found": true, "trains": 2}},
+    {"observe": {"type": "lineHeadway", "line": 1, "pattern": 0, "level": "peak"}, "expect": {"found": true, "minutes": 4}},
+    {"observe": {"type": "lineTrainsInService", "line": 1, "pattern": 1, "level": "peak"}, "expect": {"found": true, "trains": 0}},
+    {"observe": {"type": "lineHeadway", "line": 1, "pattern": 1, "level": "peak"}, "expect": {"found": false}},
+    {"observe": {"type": "lineSegmentLoads", "line": 1, "level": "peak"}, "expect": {"found": true, "loads": [360, 720, 360]}},
+    {"observe": {"type": "lineTrainsInService", "line": 1, "pattern": 1, "level": "offPeak"}, "expect": {"found": true, "trains": 1}},
+    {"observe": {"type": "lineHeadway", "line": 1, "pattern": 1, "level": "offPeak"}, "expect": {"found": true, "minutes": 16}},
+    {"observe": {"type": "lineSegmentLoads", "line": 1, "level": "offPeak"}, "expect": {"found": true, "loads": [234, 414, 234]}},
+    {"observe": {"type": "lineHeadway", "line": 1, "pattern": 0, "level": "low"}, "expect": {"found": true, "minutes": 20}},
+    {"observe": {"type": "lineSegmentLoads", "line": 1, "level": "low"}, "expect": {"found": true, "loads": [0, 72, 0]}},
+    {"observe": {"type": "lineSegmentLoads", "line": 2, "level": "low"}, "expect": {"found": false}},
+    {"command": {"type": "placeTrain", "train": 1, "position": {"type": "edge", "edge": 3, "direction": "forward", "offset": 1024}}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeTrain", "train": 2, "position": {"type": "edge", "edge": 1, "direction": "forward", "offset": 1024}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainMovementRate", "train": 1, "rate": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainMovementRate", "train": 2, "rate": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "assignTrain", "train": 1, "line": 1, "pattern": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "assignTrain", "train": 2, "line": 1, "pattern": 1}, "expect": {"result": "ok"}},
+    {"command": {"type": "assignTrain", "train": 1, "line": 1}, "expect": {"result": "trainOnLine", "train": 1}},
+    {"command": {"type": "assignTrain", "train": 3, "line": 1, "pattern": 7}, "expect": {"result": "unknownLinePattern", "pattern": 7}},
+    {"command": {"type": "assignTrain", "train": 9, "line": 1, "pattern": 7}, "expect": {"result": "unknownTrain", "train": 9}},
+    {"command": {"type": "advance", "ticks": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [{"station": 2, "arrival": 480, "departureSeconds": 28842, "reverse": false}, {"station": 3, "arrivalSeconds": 28962, "departureSeconds": 29082, "reverse": true}, {"station": 2, "arrivalSeconds": 29202, "departureSeconds": 29202, "reverse": true}]}},
+    {"observe": {"type": "timetable", "train": 2}, "expect": {"timetable": []}},
+    {"command": {"type": "advance", "ticks": 120}, "expect": {"result": "ok"}},
+    {"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [{"station": 2, "arrival": 600, "departureSeconds": 36042, "reverse": false}, {"station": 3, "arrivalSeconds": 36162, "departureSeconds": 36282, "reverse": true}, {"station": 2, "arrivalSeconds": 36402, "departureSeconds": 36402, "reverse": true}]}},
+    {"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "travelling", "stop": 1, "cycle": 0}}},
+    {"observe": {"type": "timetable", "train": 2}, "expect": {"timetable": [{"station": 1, "arrival": 600, "departureSeconds": 36042, "reverse": false}, {"station": 4, "arrivalSeconds": 36392, "departureSeconds": 36512, "reverse": true}, {"station": 1, "arrivalSeconds": 36862, "departureSeconds": 36862, "reverse": true}]}},
+    {"command": {"type": "removeLinePattern", "line": 1, "pattern": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "removeLinePattern", "line": 1, "pattern": 3}, "expect": {"result": "unknownLinePattern", "pattern": 3}},
+    {"observe": {"type": "lineSegmentLoads", "line": 1, "level": "offPeak"}, "expect": {"found": true, "loads": [234, 234, 234]}},
+    {"observe": {"type": "lineTrainsInService", "line": 1, "pattern": 0, "level": "offPeak"}, "expect": {"found": true, "trains": 1}},
+    {"command": {"type": "advance", "ticks": 10}, "expect": {"result": "ok"}},
+    {"observe": {"type": "execution", "train": 1}, "expect": {"execution": {"type": "inactive"}}},
+    {"observe": {"type": "execution", "train": 2}, "expect": {"execution": {"type": "travelling", "stop": 2, "cycle": 0}}}
   ],
-  "expectedFinalState": {
-    "gameMinutes": 611,
-    "speed": "normal",
-    "balance": 191000,
-    "stations": [
-      { "id": 1, "name": "A", "x": 1, "y": 0, "annexes": [] },
-      { "id": 2, "name": "B", "x": 3, "y": 0, "annexes": [] },
-      { "id": 3, "name": "C", "x": 5, "y": 0, "annexes": [] },
-      { "id": 4, "name": "D", "x": 7, "y": 0, "annexes": [] }
-    ],
-    "tracks": [
-      { "x": 0, "y": 1, "connections": ["east"], "layout": { "type": "open" } },
-      { "x": 1, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 2, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 3, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 4, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 5, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 6, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 7, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 8, "y": 1, "connections": ["west"], "layout": { "type": "open" } }
-    ],
-    "trains": [
-      { "id": 1, "name": "Shuttle", "position": { "type": "node", "x": 3, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 2, "arrival": 600, "departureSeconds": 36042, "reverse": false }, { "station": 3, "arrivalSeconds": 36162, "departureSeconds": 36282, "reverse": true }, { "station": 2, "arrivalSeconds": 36402, "departureSeconds": 36402, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] },
-      { "id": 2, "name": "Express", "position": { "type": "link", "from": { "x": 5, "y": 1 }, "to": { "x": 4, "y": 1 }, "offset": 548 }, "movement": { "rate": 1024, "continuation": [{ "x": 6, "y": 1 }, { "x": 5, "y": 1 }, { "x": 4, "y": 1 }, { "x": 3, "y": 1 }, { "x": 2, "y": 1 }, { "x": 1, "y": 1 }], "cursor": 3, "edges": [] }, "timetable": [{ "station": 1, "arrival": 600, "departureSeconds": 36042, "reverse": false }, { "station": 4, "arrivalSeconds": 36392, "departureSeconds": 36512, "reverse": true }, { "station": 1, "arrivalSeconds": 36862, "departureSeconds": 36862, "reverse": true }], "repeat": { "type": "once" }, "execution": { "type": "travelling", "stop": 2, "cycle": 0 }, "times": { "arrival": 36392, "departure": 36512, "run": { "start": 36512, "length": 6144, "seconds": 350 } }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] },
-      { "id": 3, "name": "Spare", "position": { "type": "unplaced" }, "movement": { "rate": 0, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
-    ],
-    "lines": [
-      { "id": 1, "name": "Main", "stops": [1, 2, 3, 4], "performance": { "acceleration": 250, "braking": 250, "topSpeed": 1 }, "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 5, "offPeak": 2, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [{ "calls": [0, 3], "trainsInService": { "peak": 2, "offPeak": 1, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [2], "lastDispatch": 600 }] }
-    ],
-    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
-    "network": { "nodes": [], "edges": [], "platforms": [] },
-    "trafficControl": false,
-    "passengers": [],
-    "riders": [],
-    "accounts": {
-      "mode": "free", "fareRules": null, "openedAt": null,
-      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
-      "ledger": [], "days": []
-    }
-  }
+  "expectedFinalState": {"gameMinutes": 611, "speed": "normal", "balance": 192000, "stations": [{"id": 1, "name": "A", "point": {"x": 1536, "y": 512}}, {"id": 2, "name": "B", "point": {"x": 3584, "y": 512}}, {"id": 3, "name": "C", "point": {"x": 5632, "y": 512}}, {"id": 4, "name": "D", "point": {"x": 7680, "y": 512}}], "tracks": [], "trains": [{"id": 1, "name": "Shuttle", "position": {"type": "edge", "edge": 4, "direction": "forward", "offset": 0}, "movement": {"rate": 1024, "continuation": [], "cursor": 0, "edges": [], "end": 0}, "timetable": [{"station": 2, "arrival": 600, "departureSeconds": 36042, "reverse": false}, {"station": 3, "arrivalSeconds": 36162, "departureSeconds": 36282, "reverse": true}, {"station": 2, "arrivalSeconds": 36402, "departureSeconds": 36402, "reverse": true}], "repeat": {"type": "once"}, "execution": {"type": "inactive"}, "cars": 1, "trail": [], "trailEdges": [], "reservation": []}, {"id": 2, "name": "Express", "position": {"type": "edge", "edge": 5, "direction": "backward", "offset": 548}, "movement": {"rate": 1024, "continuation": [], "cursor": 2, "edges": [6, 5, 4, 3, 2]}, "timetable": [{"station": 1, "arrival": 600, "departureSeconds": 36042, "reverse": false}, {"station": 4, "arrivalSeconds": 36392, "departureSeconds": 36512, "reverse": true}, {"station": 1, "arrivalSeconds": 36862, "departureSeconds": 36862, "reverse": true}], "repeat": {"type": "once"}, "execution": {"type": "travelling", "stop": 2, "cycle": 0}, "times": {"arrival": 36392, "departure": 36512, "run": {"start": 36512, "length": 6144, "seconds": 350}}, "cars": 1, "trail": [], "trailEdges": [], "reservation": []}, {"id": 3, "name": "Spare", "position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "timetable": [], "repeat": {"type": "once"}, "execution": {"type": "inactive"}, "cars": 1, "trail": [], "trailEdges": [], "reservation": []}], "lines": [{"id": 1, "name": "Main", "stops": [1, 2, 3, 4], "performance": {"acceleration": 250, "braking": 250, "topSpeed": 1}, "window": {"type": "hours", "open": 360, "close": 1440}, "trainsInService": {"peak": 5, "offPeak": 2, "low": 0}, "targetHeadways": {"peak": null, "offPeak": null, "low": null}, "trains": [], "lastDispatch": null, "patterns": [{"calls": [0, 3], "trainsInService": {"peak": 2, "offPeak": 1, "low": 0}, "targetHeadways": {"peak": null, "offPeak": null, "low": null}, "trains": [2], "lastDispatch": 600}]}], "serviceDay": [{"start": 0, "level": "low"}, {"start": 420, "level": "peak"}, {"start": 600, "level": "offPeak"}, {"start": 960, "level": "peak"}, {"start": 1200, "level": "offPeak"}, {"start": 1260, "level": "low"}], "network": {"nodes": [{"id": 1, "x": 512, "y": 1536, "z": 0}, {"id": 2, "x": 1536, "y": 1536, "z": 0}, {"id": 3, "x": 2560, "y": 1536, "z": 0}, {"id": 4, "x": 3584, "y": 1536, "z": 0}, {"id": 5, "x": 4608, "y": 1536, "z": 0}, {"id": 6, "x": 5632, "y": 1536, "z": 0}, {"id": 7, "x": 6656, "y": 1536, "z": 0}, {"id": 8, "x": 7680, "y": 1536, "z": 0}, {"id": 9, "x": 8704, "y": 1536, "z": 0}], "edges": [{"id": 1, "from": 1, "to": 2, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 2, "from": 2, "to": 3, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 3, "from": 3, "to": 4, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 4, "from": 4, "to": 5, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 5, "from": 5, "to": 6, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 6, "from": 6, "to": 7, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 7, "from": 7, "to": 8, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}, {"id": 8, "from": 8, "to": 9, "curve": {"type": "straight"}, "length": 1024, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface"}], "platforms": [{"station": 1, "edge": 1, "start": 512, "end": 1024}, {"station": 1, "edge": 2, "start": 0, "end": 512}, {"station": 2, "edge": 3, "start": 512, "end": 1024}, {"station": 2, "edge": 4, "start": 0, "end": 512}, {"station": 3, "edge": 5, "start": 512, "end": 1024}, {"station": 3, "edge": 6, "start": 0, "end": 512}, {"station": 4, "edge": 7, "start": 512, "end": 1024}, {"station": 4, "edge": 8, "start": 0, "end": 512}]}, "trafficControl": false, "passengers": [], "riders": [], "accounts": {"mode": "free", "fareRules": null, "openedAt": null, "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0}, "ledger": [], "days": []}}
 }
