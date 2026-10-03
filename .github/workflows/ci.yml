@@ -113,8 +113,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # The slowest shard takes about 5 minutes; the limit leaves room for
-    # campaigns to grow before a shard is split further.
+    # The slowest shard takes about 11 minutes on a slow runner; the
+    # limit leaves room for campaigns to grow before a shard is split further.
     timeout-minutes: 20
     container: swift:6.4-noble
     strategy:
