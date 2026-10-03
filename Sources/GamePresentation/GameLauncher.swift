@@ -68,6 +68,13 @@ public final class GameLauncher {
         begin(DemoWorld.make(in: language), keepingAutosave: true)
     }
 
+    /// Starts a new game with the tutorial on its first step (the start
+    /// screen's tutorial entry, Stage C5).
+    public func startTutorial() {
+        guard begin(.newGame(), keepingAutosave: true) else { return }
+        session?.startTutorial()
+    }
+
     /// Goes on with the autosave.
     public func continueGame() {
         guard let autosave else {
@@ -109,14 +116,16 @@ public final class GameLauncher {
         }
     }
 
-    private func begin(_ world: GameWorld, keepingAutosave: Bool) {
+    /// Plays `world`. Returns whether it started.
+    @discardableResult
+    private func begin(_ world: GameWorld, keepingAutosave: Bool) -> Bool {
         if keepingAutosave {
             do throws(SaveError) {
                 try library.archiveAutosave()
             } catch {
                 // Starting anyway would write over the last game.
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
-                return
+                return false
             }
         }
         session?.stopGameLoop()
@@ -127,6 +136,7 @@ public final class GameLauncher {
             started.startGameLoop()
         }
         refresh()
+        return true
     }
 
     // MARK: - Saving

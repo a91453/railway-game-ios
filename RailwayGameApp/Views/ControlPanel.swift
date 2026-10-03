@@ -74,6 +74,7 @@ private struct ToolPicker: View {
                 // Stable across localizations for screenshot-only UI tests.
                 .accessibilityIdentifier("tool.\(tool)")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
+                .tutorialTarget(TutorialTarget(tool: tool))
             }
         }
     }
@@ -164,6 +165,7 @@ private struct ActionButton: View {
             .tint(isRemoval ? Color.red : Color.accentColor)
             .disabled(!isReady)
             .accessibilityHint(hint)
+            .tutorialTarget(.actionButton)
         }
     }
 

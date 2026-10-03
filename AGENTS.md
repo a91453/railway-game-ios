@@ -49,6 +49,11 @@ one place only (2026-10-02, the author's decision):
   pull requests do not bump the golden schema and do not add ARCHITECTURE
   decisions; when a task needs one, say so in the pull request instead.
 
+The tutorial and map camera interfaces that the app's tutorial screens and
+the large map are built against, the names of the controls the tutorial
+outlines, and who changes which file while they are built in parallel:
+[`docs/UI_INTERFACES.md`](docs/UI_INTERFACES.md).
+
 Shared files that conflict easily:
 
 - `RailwayGameApp/RailwayGame.xcodeproj` is generated. Never merge it by hand:
