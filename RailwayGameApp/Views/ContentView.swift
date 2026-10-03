@@ -65,14 +65,31 @@ struct ContentView: View {
                 .tutorialClip()
                 .background(.bar)
             } else {
-                map
-                Divider()
-                ControlPanel(session: session, arrangement: .column)
-                    .padding()
-                    .background(.bar)
+                // Phones: the map keeps a fixed share of the height and the
+                // controls scroll below it. When the map took whatever the
+                // controls left, text that changes length as the game runs
+                // (a train's status and riders) resized it every game
+                // minute, and what it showed slid up and down; and controls
+                // taller than the space left were drawn over one another.
+                GeometryReader { proxy in
+                    VStack(spacing: 0) {
+                        map
+                            .frame(height: (proxy.size.height * Self.phoneMapShare).rounded())
+                        Divider()
+                        ScrollView {
+                            ControlPanel(session: session, arrangement: .column)
+                                .padding()
+                        }
+                        .tutorialClip()
+                        .background(.bar)
+                    }
+                }
             }
         }
     }
+
+    /// The share of the height under the HUD the map keeps on a phone.
+    private static let phoneMapShare: CGFloat = 0.5
 
     /// The map view's shape on an iPad in portrait: 4:3, the shape of the
     /// 32 × 24 map before Stage E1. The view is a window on the map now, so

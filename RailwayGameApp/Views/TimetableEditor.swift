@@ -15,6 +15,9 @@ struct TimetableEditor: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
 
+    /// The least height of a stop's stepper or switch, in points.
+    private static let controlHeight: CGFloat = 44
+
     var body: some View {
         NavigationStack {
             Form {
@@ -135,6 +138,9 @@ struct TimetableEditor: View {
         }
     }
 
+    /// A stop's name and times, then its controls, each at least as tall as
+    /// a control is drawn (44 points): sized to their small labels alone,
+    /// the steppers and the switch were drawn over one another.
     private func stopRow(_ row: TimetableRow, of train: Train) -> some View {
         let stops = train.timetable
         return VStack(alignment: .leading, spacing: 6) {
@@ -158,6 +164,7 @@ struct TimetableEditor: View {
                 Text(row.index == 0 ? "Start" : "Arrive")
                     .font(.footnote)
             }
+            .frame(minHeight: Self.controlHeight)
             .accessibilityHint("A minute later or earlier; the stops after it move with it.")
             Stepper(
                 onIncrement: { session.moveSelectedTrainDeparture(at: row.index, by: TimetableEditing.step) },
@@ -167,12 +174,14 @@ struct TimetableEditor: View {
                 Text("Leave")
                     .font(.footnote)
             }
+            .frame(minHeight: Self.controlHeight)
             .accessibilityHint("A minute later or earlier; the stops after it move with it.")
             Toggle("Turn round here", isOn: Binding(
                 get: { row.reverses },
                 set: { _ in session.toggleSelectedTrainReverse(at: row.index) }
             ))
             .font(.footnote)
+            .frame(minHeight: Self.controlHeight)
         }
         .padding(.vertical, 2)
     }

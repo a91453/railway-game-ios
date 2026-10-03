@@ -14,7 +14,9 @@ struct HUDView: View {
     @State private var showsEconomy = false
 
     var body: some View {
-        // One row when it fits (iPad, sidebar), otherwise cash and time stack.
+        // One row when it fits (iPad, sidebar), otherwise cash and time
+        // stack; with large text on a phone, the time gets a row of its own
+        // rather than being cut short ("Day 2 · 07…").
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 20) {
                 cash
@@ -33,6 +35,17 @@ struct HUDView: View {
                 linesButton
                 SpeedControl(session: session)
                 gameMenu
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    cash
+                    Spacer(minLength: 8)
+                    linesButton
+                    SpeedControl(session: session)
+                    gameMenu
+                }
+                time
+                    .minimumScaleFactor(0.75)
             }
         }
         .font(.subheadline.weight(.semibold))
