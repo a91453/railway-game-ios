@@ -30,14 +30,15 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Zoom in"].exists)
         capture(app, name: "real-world-02-game")
 
+        // Keep the live clock from rebuilding the native menus (the map
+        // style's and the game's) while XCTest targets their actions, as in
+        // the start and save flow: pause before opening either.
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
         XCTAssertTrue(map.waitForExistence(timeout: 10))
         capture(app, name: "real-world-03-satellite")
 
-        // Keep the live clock from rebuilding the native menu while XCTest
-        // targets its actions, as in the start and save flow.
-        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         tappable(app.buttons.matching(identifier: "hud.menu"), name: "hud.menu").tap()
         tappable(app.buttons.matching(identifier: "menu.backToStart"), name: "menu.backToStart").tap()
 
