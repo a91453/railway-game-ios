@@ -80,7 +80,7 @@ final class ErrorMessageTests: XCTestCase {
             .trainNotAtFirstStop(TrainID(rawValue: 3)):
                 "Train #3 must be stopped at its timetable's first station to start its service.",
             .unknownLine(LineID(rawValue: 3)): "There is no line #3.",
-            .invalidLineStops: "A line calls at two stations or more, and not at the same station twice in a row.",
+            .invalidLineStops: "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last.",
             .invalidTrainPerformance: "That acceleration, braking or top speed is out of range.",
             .invalidServiceWindow: "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
             .invalidTrainsInService: "A line cannot run a negative number of trains.",
@@ -88,7 +88,7 @@ final class ErrorMessageTests: XCTestCase {
             .invalidHeadway: "A target headway must be between 2 minutes and 24 hours.",
             .trainOnLine(TrainID(rawValue: 3)): "Train #3 runs for a line. Take it off the line first.",
             .trainNotOnLine(TrainID(rawValue: 3)): "Train #3 is not on a line.",
-            .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order.",
+            .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",
             .unknownLinePattern(2): "The line has no pattern #3.",
             .invalidStationTile(GridPosition(x: 4, y: 2)): "A station can only grow onto an empty tile beside one of its tiles, not (4, 2).",
             .invalidTrainLength: "A train has 1 to 16 cars.",

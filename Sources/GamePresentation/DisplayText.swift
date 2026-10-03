@@ -342,8 +342,8 @@ extension GameError {
             language.text("There is no line #\(id.rawValue).", "沒有路線 #\(id.rawValue)。")
         case .invalidLineStops:
             language.text(
-                "A line calls at two stations or more, and not at the same station twice in a row.",
-                "路線至少要停靠兩個車站，而且不能連續兩次停靠同一站。"
+                "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last.",
+                "路線至少要停靠兩個車站，而且不能連續兩次停靠同一站。環線至少要三站，第一站與最後一站也不能相同。"
             )
         case .invalidTrainPerformance:
             language.text(
@@ -373,8 +373,8 @@ extension GameError {
             language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
         case .invalidLinePattern:
             language.text(
-                "A pattern calls at two of its line's stops or more, in the line's order.",
-                "交路至少要依路線的順序，停靠路線上的兩站以上。"
+                "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",
+                "交路至少要依路線的順序，停靠路線上的兩站以上。環線不能有交路。"
             )
         case .unknownLinePattern(let index):
             language.text("The line has no pattern #\(index + 1).", "這條路線沒有交路 #\(index + 1)。")
