@@ -63,15 +63,15 @@
       "expect": { "transitions": [{ "edge": 2, "direction": "forward" }, { "edge": 3, "direction": "forward" }] }
     },
     {
-      "command": { "type": "buildStation", "name": "West", "x": 1, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "West", "point": { "x": 1536, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "buildStation", "name": "East", "x": 2, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "East", "point": { "x": 2560, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "buildStation", "name": "South", "x": 3, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "South", "point": { "x": 3584, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
@@ -304,9 +304,9 @@
     "speed": "normal",
     "balance": 81540,
     "stations": [
-      { "id": 1, "name": "West", "x": 1, "y": 1, "annexes": [] },
-      { "id": 2, "name": "East", "x": 2, "y": 1, "annexes": [] },
-      { "id": 3, "name": "South", "x": 3, "y": 1, "annexes": [] }
+      { "id": 1, "name": "West", "point": { "x": 1536, "y": 1536 } },
+      { "id": 2, "name": "East", "point": { "x": 2560, "y": 1536 } },
+      { "id": 3, "name": "South", "point": { "x": 3584, "y": 1536 } }
     ],
     "tracks": [],
     "trains": [

@@ -11,15 +11,15 @@
   },
   "steps": [
     {
-      "command": { "type": "buildStation", "name": "Home", "x": 1, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "Home", "point": { "x": 1536, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "buildStation", "name": "Office", "x": 5, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "Office", "point": { "x": 5632, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
-      "command": { "type": "buildStation", "name": "Mall", "x": 9, "y": 1 },
+      "command": { "type": "buildStationAt", "name": "Mall", "point": { "x": 9728, "y": 1536 } },
       "expect": { "result": "ok" }
     },
     {
@@ -180,9 +180,9 @@
     "speed": "normal",
     "balance": 0,
     "stations": [
-      { "id": 1, "name": "Home", "x": 1, "y": 1, "annexes": [] },
-      { "id": 2, "name": "Office", "x": 5, "y": 1, "annexes": [] },
-      { "id": 3, "name": "Mall", "x": 9, "y": 1, "annexes": [] }
+      { "id": 1, "name": "Home", "point": { "x": 1536, "y": 1536 } },
+      { "id": 2, "name": "Office", "point": { "x": 5632, "y": 1536 } },
+      { "id": 3, "name": "Mall", "point": { "x": 9728, "y": 1536 } }
     ],
     "tracks": [],
     "trains": [],

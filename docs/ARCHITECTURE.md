@@ -2460,6 +2460,32 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 錨點只記點，不記地名；參考依城市設定的票價基準（`metroFareDemandBaselineForCity`）、城市的人口與起訖需求（Phase 5、6）沒有接上。
 - 已經開始的遊戲不能換錨點（GameCore 允許，畫面沒有）。
 
+### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
+
+2026-10-03。E2 合併、實機確認之後，作者決定**現在**做 F3，排在 F2、U-min、V 之前，並交給 Claude Code 選「對未來幫助最大、又不影響新功能」的做法。這一條記下範圍與步驟；每一步的細節在各自的 PR 補上。
+
+**為什麼現在**：決策 28 起鐵路的權威是節點與邊（topology），方格只是同一個 graph 的另一個 adapter；F1 之後 App 只建路網，C4 的存檔又在 F1 之後，所以玩家的世界不會有方格。但方格的程式還在共用函式裡（移動、預約、停站、路徑、行程各有方格分支），大部分的 golden、property 與差分 campaign 也建在方格上。U-min 與 V 會大改的正是這些共用函式；方格留著，每一次都要同時顧兩種軌道、讓兩套測試都通過。
+
+**盤點**（`docs/research/F3_GRID_INVENTORY.md`，Codex，PR #82；Claude Code 另做一份獨立的盤點，兩份一致，差異已併入下面）：GameCore 約 1,600 行方格程式（9 個只給方格的型別或檔案，加上約 15 個共用函式的方格分支）；27 份 golden 有 25 份依賴方格；約 40 個 property／差分 campaign 與 11 個存檔變異 campaign 的世界產生器是方格；差分模型約 880 行方格。`SaveFixtures/` 的四份存檔都沒有方格內容。
+
+**作者的決定**（2026-10-03）：
+1. 完整移除，不只凍結。
+2. 不改任何遊戲行為：票價照舊以點車站底下那一格算距離（`squaredDistance`，`Station.position`），換成精確的點距離要另外決定；一格 1024 單位（車長、建造費、座標）的數值不變。
+3. 手做、含方格內容的舊存檔在 F3c 之後拒絕並說明原因；App 寫過的存檔都不受影響（存檔在 C4 才有，那時 App 已經沒有方格工具）。
+4. golden 的遷移照下面的規則，預期值的每一個變化在 PR 裡說明。
+
+**保留的**（名字裡有「格」，但不是方格鐵路）：`GridMap` 的大小與邊界（新遊戲 1024 × 1024、E2 的地圖中心）、`GridPosition`（越界錯誤、點車站底下的格）、一格 1024 單位（`TrainPosition.linkLength`、`WorldCoordinate.tileSize`、`Train.carLength`、`edgeCost`）、存檔裡 `movement` 的 `"continuation": []`（每份存檔都有，讀檔要繼續接受）。改名另外處理，不和刪除混在一起。放列車時選的東南西北（GamePresentation 的 `placementHeading`）在 F3c 換成路網的說法。
+
+**三步，每步一個或幾個 PR**：
+- **F3a — golden 搬到路網，GameCore 不動**。新舊實作與差分模型同時通過，證明每條規則在路網上都測得到。
+  - 只為了路網月台或車站 ID 才建方格車站的 4 份（`network-service`、`traffic-reservation`、`vertical-railway`、`station-demand`）：改成那一格中心的點車站（1024x + 512, 1024y + 512）。底下的格相同，所以費用、票價與其他預期值都不變，只有最終狀態的車站寫法從 `{x, y, annexes}` 變成 `{point}`。
+  - 規則和軌道種類無關、只是蓋在方格上的 12 份（`boarding`、`clock-seconds`、`economy`、`line-dispatch`、`line-patterns`、`ring-line`、`service-line`、`service-run`、`station-dwell`、`train-repeat`、`train-service`、`train-timetable`）：在路網上重寫，盡量讓距離、秒數與時刻相同；建造費（方格每格收一次、路網依邊長進位）、位置的寫法、ID、路網的轉彎要用曲線這些一定會變的值逐一說明。
+  - 只有一部分能搬的 6 份（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`train-movement`、`train-route`）與只屬於方格的 3 份（`track-connectivity`、`track-resources`、`train-position`）：能在路網表達的規則寫成路網的 golden，路網上缺的對應規則補新的 golden；方格的原檔留到 F3c 和方格程式一起刪。方格才有的契約（格的出口與相接、相鄰擴站、格月台、北東南西的平手順序、拆掉再重建同一格會接著走、格的 offset 範圍）不搬。
+- **F3b — 測試搬到路網，GameCore 不動**：路網的世界產生器、campaign、存檔變異 campaign 與差分模型改成路網；方格的單元測試留到 F3c。產生器改了 digest 就會變，新的 digest 記在文件裡，不當成「行為沒變」。
+- **F3c — 刪掉方格**：GameCore 的方格型別、case、指令、錯誤、方格分支與存檔的方格格式；GamePresentation 的方格工具、方格選取與文字；App 的方格繪圖與「選取北邊的格子」這類 VoiceOver 動作；golden schema 28 拿掉方格的指令、觀察與寫法；`Web/WasmProbe`。
+
+**參考**（2026-10-03 唯讀檢查三份，私有 repo `1563ad0`）：`Ci/` 的鐵路是經緯度上的車站與折線（沒有格）；`Railway/site_archive_clean/` 沿既有線形用累積距離與經緯度內插（沒有格）；參考包 `Railway/railway_game_reference_clean/` 是 OpenTTD（RailwayCore 15.3）的 tile／trackdir 系統，`01_MIGRATION_MAP.md` 要求移植行為與演算法結構而不是保留原實作。F3 與前兩份一致；OpenTTD 的選路、號誌與進路規則之後照決策 28 轉成節點、邊與行進方向，不把方格搬回來。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（1024，E1 起是新遊戲的大小）；地圖只記不是空地的格子，存檔也只寫它們（決策 48）。

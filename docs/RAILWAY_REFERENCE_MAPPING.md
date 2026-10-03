@@ -383,6 +383,17 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `metroFareDemandBaselineForCity`（依城市的票價基準） | 城市決定票價基準 | 沒有：實景與空白的新遊戲都是標準票價（G1d） | — | **gap**：錨點不記城市 |
 | `Railway` `TW_BOX`（整個台灣的平移範圍） | 地圖的範圍 | 新遊戲的 16 公里地圖（E1） | — | 不採用（E1 已決定） |
 
+### Stage F3：移除方格
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 51；盤點見 [F3_GRID_INVENTORY](research/F3_GRID_INVENTORY.md)。F3 不移植新的行為，只拿掉方格的相容層；這張表記下三份參考對「方格還是 graph」的做法，以及 F3 之後對應的 GameCore。
+
+| 參考 | 行為 | F3 之後的 GameCore | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` 車站的 `latlng` 與線路的折線（`placeStation`、`metroBuildStationPlatformRingGcj`） | 鐵路是地圖上的點與線，沒有格 | 路網的節點與邊（`TrackNodeID.node`、`TrackEdgeID.edge`）、點車站（`buildStation(named:at: PlanPoint)`）、邊上的月台 | 世界單位（1/64 公尺） | faithful（決策 28、29、44 已經是這樣；F3 拿掉另一種） |
+| `Railway/site_archive_clean/` `data/tra.json` 等：沿線形的累積距離（`d`）與經緯度內插 | 列車位置是沿線的距離 | 列車位置 `onEdge(行進方向, offset)`：哪條邊、哪個方向、沿邊多遠 | 世界單位 | faithful（S3 起） |
+| 參考包 `Railway/railway_game_reference_clean/`（OpenTTD／RailwayCore 15.3）：tile 上的 track piece、`trackdir`、`src/pathfinder/yapf/*` | 方格的軌道與尋路 | 不移植方格；選路、號誌與進路的規則之後照決策 28 轉成節點、邊與行進方向（U-min、V） | — | **不移植**（F1、F3 作者決定）；`01_MIGRATION_MAP.md` 要求移植行為與演算法結構，不是原實作 |
+| （參考沒有） | 一格 1024 單位、地圖的大小與邊界 | 保留：`GridMap`、`GridPosition`、`TrainPosition.linkLength`、`WorldCoordinate.tileSize` | — | 保留（決策 51；改名另議） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -499,7 +510,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F3 移除方格（進行中，[對照](#stage-f3移除方格)）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
