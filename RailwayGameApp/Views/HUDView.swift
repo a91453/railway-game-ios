@@ -1,12 +1,15 @@
 import GameCore
 import GamePresentation
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// Cash (which opens the economy panel), game time, speed controls and the
-/// button that opens the lines panel. Everything shown is read from the world, so it updates as soon as
-/// a command or a tick changes it.
+/// Cash (which opens the economy panel), game time, speed controls, the
+/// button that opens the lines panel and the game menu (Stage C4: save,
+/// export, back to the start screen). Everything shown is read from the
+/// world, so it updates as soon as a command or a tick changes it.
 struct HUDView: View {
     let session: GameSession
+    let launcher: GameLauncher
     @State private var showsLines = false
     @State private var showsEconomy = false
 
@@ -19,6 +22,7 @@ struct HUDView: View {
                 Spacer(minLength: 12)
                 linesButton
                 SpeedControl(session: session)
+                gameMenu
             }
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -28,6 +32,7 @@ struct HUDView: View {
                 Spacer(minLength: 8)
                 linesButton
                 SpeedControl(session: session)
+                gameMenu
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -57,6 +62,33 @@ struct HUDView: View {
         .buttonStyle(SelectableButtonStyle(isActive: showsLines))
         .accessibilityLabel("Lines")
         .accessibilityHint("Shows the service lines and their timetables.")
+    }
+
+    /// Saving, exporting the game as a file and going back to the start
+    /// screen, which autosaves first.
+    private var gameMenu: some View {
+        Menu {
+            Button {
+                launcher.saveCurrentGame()
+            } label: {
+                Label("Save Game", systemImage: "square.and.arrow.down")
+            }
+            ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Railway Game save"))) {
+                Label("Export Save", systemImage: "square.and.arrow.up")
+            }
+            Divider()
+            Button {
+                launcher.returnToStart()
+            } label: {
+                Label("Back to Start", systemImage: "house")
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 44, height: 32)
+        }
+        .accessibilityLabel("Game menu")
+        .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
     }
 
     /// The balance in dollars; it opens the economy panel.
@@ -122,5 +154,17 @@ private struct SpeedControl: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
+    }
+}
+
+/// The game as a save file to share (Stage C4, the reference's "导出本地存档"),
+/// written when the player shares it.
+private struct ExportedSave: Transferable {
+    let world: GameWorld
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .json) { save in
+            SentTransferredFile(try SaveLibrary.exportFile(for: save.world, at: Date()))
+        }
     }
 }

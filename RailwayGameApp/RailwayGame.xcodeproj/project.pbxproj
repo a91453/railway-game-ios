@@ -23,7 +23,7 @@
 		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
-		BAAE6E57E7C2D199CC097CF2 /* DemoLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */; };
+		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
@@ -56,11 +56,11 @@
 		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
 		A0888B79097535628EEF865F /* RailwayGameUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RailwayGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		A7D933E24E26C2077E5BC12A /* RailwayGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RailwayGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
-		C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLayout.swift; sourceTree = "<group>"; };
 		C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSmokeTests.swift; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
@@ -92,7 +92,6 @@
 		323CCFDFD5FC7E9426C5F161 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				C39A76B78B5CFA1BDB62C5E7 /* DemoLayout.swift */,
 				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
 			);
 			path = App;
@@ -112,6 +111,7 @@
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
+				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
@@ -259,7 +259,6 @@
 			files = (
 				44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */,
 				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
-				BAAE6E57E7C2D199CC097CF2 /* DemoLayout.swift in Sources */,
 				647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */,
 				4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */,
 				9C344F54682319D6B608F56A /* InspectorView.swift in Sources */,
@@ -270,6 +269,7 @@
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
+				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,

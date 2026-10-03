@@ -59,6 +59,9 @@ and `Railway/railway_game_reference_clean/` (start with its
   the `.xcodeproj`.
 - `GoldenScenarios/` — portable golden scenario fixtures (JSON) that pin
   GameCore behavior; run by `Tests/GameCoreTests/GoldenScenarioTests.swift`.
+- `SaveFixtures/` — a committed save of each save version (`SavedGame`) that
+  every later build must still load; run by
+  `Tests/GameCoreTests/SavedGameTests.swift` (`SaveFixtures/README.md`).
 - `.github/workflows/` — `ci.yml` (the Swift package on Linux: Swift 6.0 is
   the minimum-compatibility job, every test except the long property /
   differential / mutation campaigns; Swift 6.4 is the full correctness suite,
@@ -97,6 +100,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Golden scenarios are a behavior contract (`GoldenScenarios/README.md`). Tests
   only read them; never edit an expected value to make a test pass. A changed
   value is a deliberate behavior change that the PR must justify value by value.
+- Never edit or regenerate a save in `SaveFixtures/` to make a test pass: one
+  that stops loading means players' old saves stop loading. A format change
+  old saves cannot be read under raises `SavedGame.currentVersion`, adds the
+  migration step and adds a fixture of the new version.
 - Do not raise `swift-tools-version` (6.0) or drop Swift 6.0 compatibility
   without a concrete technical reason.
 

@@ -275,7 +275,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
   - 未選方案 B（不提交、在 `ci_post_clone.sh` 產生）：Apple 明文表示動態產生或編輯專案的工具可能讓首次設定與之後的建置失敗；首次 onboarding 時借來的 Mac 也得先裝 XcodeGen 產生專案才能開啟，而 Xcode Cloud 端要依賴 clone 後才存在的專案。沒有官方證據證明這條路可靠，所以不採用。
 - **可重現**：同一個 checkout 重新產生、不同路徑或使用者重新產生，輸出完全相同；Xcode Cloud 寫入的 `manifest.json` 與 `Package.resolved` 在重新產生時保留。限制：checkout 資料夾名稱會寫進專案（本地套件的顯示名稱），所以要在名為 `railway-game-ios` 的資料夾（`git clone` 預設）中產生。
 - **漂移檢查**：`ios-build.yml` 以固定版本、checksum 驗證的 XcodeGen 重新產生，任何差異都失敗並附上預期專案的 artifact；另外確認 shared scheme 已提交、`xcodebuild -describeAllArchivableProducts`（Xcode Cloud 用來找產品的指令）列得出 App。
-- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Railway Game；`MARKETING_VERSION` 0.2.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `DemoLayout` 與 `-demo-layout` 不會編進 Release。
+- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Railway Game；`MARKETING_VERSION` 0.2.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
 - **App Icon**：原創的臨時圖示（鐵軌延伸到地平線），單一 1024×1024 不透明 PNG，`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
 - **未簽章 Release Archive**：`release-archive.yml` 以 Release、`generic/platform=iOS`、`-disableAutomaticPackageResolution`、`CODE_SIGNING_ALLOWED=NO` 封存並檢查 Info.plist、圖示、架構與 Release 不含示範配置。它**不能**證明簽章、上傳或 TestFlight；`CODE_SIGNING_ALLOWED=NO` 只用在這個 CI 檢查，不用於任何真正的發佈。
 

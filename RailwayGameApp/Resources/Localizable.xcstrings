@@ -31,6 +31,34 @@
         }
       }
     },
+    "%lld saves" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld save"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld saves"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個存檔"
+          }
+        }
+      }
+    },
     "%lld units per game minute" : {
       "localizations" : {
         "zh-Hant" : {
@@ -77,6 +105,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "預設會保留車站的日客流。旅次分給路線能到、而且有客流的車站，依各站自己的日客流分配。"
+          }
+        }
+      }
+    },
+    "A save file from Files or another device" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從「檔案」或其他裝置匯入的存檔"
           }
         }
       }
@@ -151,6 +189,16 @@
         }
       }
     },
+    "An empty map and %@ to build with" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空白地圖，以及 %@ 的建設資金"
+          }
+        }
+      }
+    },
     "Apply to Its Lines" : {
       "localizations" : {
         "zh-Hant" : {
@@ -181,6 +229,26 @@
         }
       }
     },
+    "Autosave" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動存檔"
+          }
+        }
+      }
+    },
+    "Back to Start" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回到開始畫面"
+          }
+        }
+      }
+    },
     "Balance" : {
       "localizations" : {
         "zh-Hant" : {
@@ -207,6 +275,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "鋪設軌道 · %@"
+          }
+        }
+      }
+    },
+    "Build a railway, run its trains and carry the city's passengers." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鋪設鐵路、營運列車，載運城市的乘客。"
           }
         }
       }
@@ -351,6 +429,16 @@
         }
       }
     },
+    "Continue" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "繼續"
+          }
+        }
+      }
+    },
     "Copy Ridership" : {
       "localizations" : {
         "zh-Hant" : {
@@ -367,6 +455,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立路線"
+          }
+        }
+      }
+    },
+    "Demo Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "示範地圖"
           }
         }
       }
@@ -491,6 +589,16 @@
         }
       }
     },
+    "Export Save" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出存檔"
+          }
+        }
+      }
+    },
     "Express: call at the two ends only" : {
       "localizations" : {
         "zh-Hant" : {
@@ -561,6 +669,16 @@
         }
       }
     },
+    "Game menu" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遊戲選單"
+          }
+        }
+      }
+    },
     "Game speed" : {
       "localizations" : {
         "zh-Hant" : {
@@ -591,6 +709,16 @@
         }
       }
     },
+    "Import a Save" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入存檔"
+          }
+        }
+      }
+    },
     "Insert Before" : {
       "localizations" : {
         "zh-Hant" : {
@@ -607,6 +735,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "檢視車站與軌道"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "語言"
           }
         }
       }
@@ -731,6 +869,16 @@
         }
       }
     },
+    "New Game" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新遊戲"
+          }
+        }
+      }
+    },
     "New line" : {
       "localizations" : {
         "zh-Hant" : {
@@ -747,6 +895,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新車站"
+          }
+        }
+      }
+    },
+    "No Saved Games" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有存檔"
           }
         }
       }
@@ -867,6 +1025,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一節車廂佔一格。多節的列車後方要有軌道，月台也要和列車一樣長。"
+          }
+        }
+      }
+    },
+    "Opens Settings, where the game's language is chosen." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開「設定」，在那裡選擇遊戲的語言。"
           }
         }
       }
@@ -1017,6 +1185,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "利潤"
+          }
+        }
+      }
+    },
+    "Railway Game save" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Railway Game 存檔"
           }
         }
       }
@@ -1197,6 +1375,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "讓列車依時刻表運行"
+          }
+        }
+      }
+    },
+    "Save Game" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存遊戲"
+          }
+        }
+      }
+    },
+    "Saved %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存於 %@"
+          }
+        }
+      }
+    },
+    "Saved Games" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存檔"
+          }
+        }
+      }
+    },
+    "Saves the game, exports it as a file, or goes back to the start screen." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存遊戲、匯出成檔案，或回到開始畫面。"
           }
         }
       }
@@ -1697,6 +1915,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在此折返"
+          }
+        }
+      }
+    },
+    "Two lines already running, with passengers" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有兩條路線在營運，也有乘客"
           }
         }
       }
