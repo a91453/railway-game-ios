@@ -10,7 +10,12 @@ extension View {
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
                     let viewport = CGRect(origin: .zero, size: proxy.size)
-                    let controls = anchors.values.compactMap { anchor -> CGRect? in
+                    // Every control the player may need stays clear of the card,
+                    // whatever its size (a full-width Build Track button is
+                    // one). The map is the exception: it fills the screen and
+                    // is tapped past the card.
+                    let controls = anchors.compactMap { target, anchor -> CGRect? in
+                        guard target != .map else { return nil }
                         let visible = proxy[anchor].intersection(viewport)
                         return visible.isEmpty || visible.isNull ? nil : visible
                     }
@@ -84,10 +89,9 @@ private struct TutorialCardLayout: Layout {
             // placement bounds can have a nonzero origin, so put the target
             // in that same coordinate space before comparing candidates.
             let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
-            // Keep other small controls usable too. A large target can
-            // still be used outside the card (for example, tapping a map).
-            let obstacles = controls.filter { $0.width <= size.width && $0.height <= size.height }
-                .map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+            // Keep the other controls usable too. `controls` leaves out the
+            // map, which can be tapped outside the card.
+            let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
             let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
             let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
             let candidates = [
