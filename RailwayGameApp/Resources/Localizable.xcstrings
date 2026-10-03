@@ -279,6 +279,16 @@
         }
       }
     },
+    "Build Here" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在這裡建造"
+          }
+        }
+      }
+    },
     "Build Track" : {
       "localizations" : {
         "zh-Hant" : {
@@ -309,6 +319,16 @@
         }
       }
     },
+    "Build on a map of a real place" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在真實地點的地圖上建造"
+          }
+        }
+      }
+    },
     "Buy a train for %@" : {
       "localizations" : {
         "zh-Hant" : {
@@ -335,6 +355,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "依上線列車數"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
           }
         }
       }
@@ -859,6 +889,26 @@
         }
       }
     },
+    "Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地圖"
+          }
+        }
+      }
+    },
+    "Map Style" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地圖樣式"
+          }
+        }
+      }
+    },
     "Map, %lld by %lld tiles" : {
       "localizations" : {
         "zh-Hant" : {
@@ -985,6 +1035,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "還沒有路線。在「新路線」選擇車站來建立。"
+          }
+        }
+      }
+    },
+    "No places found." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到地點。"
           }
         }
       }
@@ -1259,6 +1319,16 @@
         }
       }
     },
+    "Real-World Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "實景地圖"
+          }
+        }
+      }
+    },
     "Remove %@" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1449,6 +1519,26 @@
         }
       }
     },
+    "Satellite" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "衛星"
+          }
+        }
+      }
+    },
+    "Satellite with Labels" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "衛星（含標示）"
+          }
+        }
+      }
+    },
     "Save Game" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1485,6 +1575,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "儲存遊戲、匯出成檔案，或回到開始畫面。"
+          }
+        }
+      }
+    },
+    "Search Results" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋結果"
+          }
+        }
+      }
+    },
+    "Search for a place" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋地點"
           }
         }
       }
@@ -1905,6 +2015,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服務運行中。請先停止服務再修改時刻表。"
+          }
+        }
+      }
+    },
+    "The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方框是你的地圖，每邊 16 公里。移動地圖選好它的中心，再點「在這裡建造」。"
           }
         }
       }

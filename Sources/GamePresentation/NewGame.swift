@@ -7,7 +7,10 @@ extension GameWorld {
     /// managed company (G1c) in a city whose fare baseline is the standard
     /// fare. GameCore's own new worlds start with both off and the
     /// reference's default city.
-    public static func newGame() -> GameWorld {
+    ///
+    /// A blank map, or with `anchor` a real-world map with its middle there
+    /// (Stage E2): the same game either way, laid over the Earth or not.
+    public static func newGame(anchor: GeoAnchor? = nil) -> GameWorld {
         do {
             var world = try GameWorld(
                 width: newGameMapSize,
@@ -23,6 +26,7 @@ extension GameWorld {
             // 46): trips pay it until the player sets fares, and setting
             // the same fare keeps their demand.
             try world.setFareBaseline(FareRules.standardFare)
+            world.setGeoAnchor(anchor)
             return world
         } catch {
             // The size is a constant within GridMap's limits and an empty

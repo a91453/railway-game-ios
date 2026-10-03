@@ -30,6 +30,7 @@ enum TileArt {
         network overlay: NetworkOverlay? = nil,
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
+        drawsLand: Bool = true,
         in context: GraphicsContext
     ) {
         let tileSize = projection.tileSize
@@ -42,7 +43,10 @@ enum TileArt {
             screenPoint(bounds.maxX, bounds.maxY, projection),
             screenPoint(bounds.minX, bounds.maxY, projection)
         ])
-        context.fill(land, with: .color(Palette.land))
+        // Over Apple's map (Stage E2) only the map's edge is drawn.
+        if drawsLand {
+            context.fill(land, with: .color(Palette.land))
+        }
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
         // Read occupied station tiles, not map.tiles: even at whole-map

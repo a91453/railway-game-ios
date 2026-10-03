@@ -232,6 +232,9 @@ public struct SaveSummary: Codable, Hashable, Sendable {
     public let stations: Int
     public let lines: Int
     public let trains: Int
+    /// `true` for a real-world map (Stage E2); absent for a blank one, and
+    /// in every summary written before E2.
+    public let realWorld: Bool?
 
     public init(world: GameWorld) {
         seconds = world.clock.now.seconds
@@ -239,19 +242,22 @@ public struct SaveSummary: Codable, Hashable, Sendable {
         stations = world.stations.count
         lines = world.lines.count
         trains = world.trains.count
+        realWorld = world.geoAnchor == nil ? nil : true
     }
 
-    /// "Day 3 · 14:20 · $ 12,345 · 5 stations · 2 lines · 2 trains".
+    /// "Day 3 · 14:20 · $ 12,345 · 5 stations · 2 lines · 2 trains", after
+    /// "Real-world map · " on one.
     public func text(in language: DisplayLanguage) -> String {
         let time = GameTime(seconds: seconds).displayText(in: language)
         let money = Money(balance).moneyText
+        let map = realWorld == true ? [language.text("Real-world map", "實景地圖")] : []
         switch language {
         case .english:
             func count(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? "1 \(one)" : "\(n) \(many)" }
-            return [time, money, count(stations, "station", "stations"), count(lines, "line", "lines"), count(trains, "train", "trains")]
+            return (map + [time, money, count(stations, "station", "stations"), count(lines, "line", "lines"), count(trains, "train", "trains")])
                 .joined(separator: " · ")
         case .traditionalChinese:
-            return [time, money, "\(stations) 座車站", "\(lines) 條路線", "\(trains) 列列車"].joined(separator: " · ")
+            return (map + [time, money, "\(stations) 座車站", "\(lines) 條路線", "\(trains) 列列車"]).joined(separator: " · ")
         }
     }
 }

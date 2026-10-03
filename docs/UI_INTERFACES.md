@@ -7,7 +7,7 @@
 | CX-6：開始畫面、示範地圖、存檔流程的 UI 測試 | Codex | 不依賴這兩個介面 |
 | CX-5：教學畫面（高亮框、步驟卡、按鈕） | Codex | [教學](#1-教學gamepresentation)、[識別碼](#2-識別碼tutorialtarget)、[App 端的標記](#3-app-端的標記與讀法) |
 | CX-4 ✅：大地圖繪製（只畫畫面內、依縮放顯示細節、雙指縮放；PR #69–#71） | Codex | [相機](#4-相機gamepresentation) |
-| 經濟平衡核對 ✅；C5 的真正步驟與判斷 ✅；E1 的 16 公里地圖 ✅（存檔、開局的相機、縮放步長、教學的一步）；E2 | Claude Code | — |
+| 經濟平衡核對 ✅；C5 的真正步驟與判斷 ✅；E1 的 16 公里地圖 ✅（存檔、開局的相機、縮放步長、教學的一步）；E2 ✅（實景地圖，決策 50） | Claude Code | — |
 
 介面之後如果要改，由 Claude Code 連同其他代理已經寫好的畫面一起改，不讓它們重做。
 
@@ -62,7 +62,7 @@ C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內�
 
 做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。要求「蓋了什麼」的條件比較的是這一步**第一次出現時**的世界（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次。
 
-C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 視需要加實景模式的步驟。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
+C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 沒有加步驟（教學在空白地圖上，決策 50）。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
 
 **移動地圖（`.moveMap`，E1）**：相機是地圖 view 的狀態，不在 session 裡，所以地圖 view 在玩家捏合、拖曳或按縮放按鈕時呼叫 `session.mapDidMove()`（`MapView.swift` 已接好）。它只在等這個動作的那一步第一次呼叫時改變 session，手勢的每一幀都呼叫也沒關係。旋轉裝置、改變大小、選到遠方的車站時自動置中不要呼叫。
 
@@ -159,7 +159,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 ### CX-4 怎麼接
 
-- **繪製收 `some MapProjection`**：`TileArt` 的函式改收 `some MapProjection`，不要收 `PlanCamera`。E2 的實景模式會用 MapKit 的相機實作同一個 protocol，畫面不用重寫。MapKit 的相機可以旋轉與傾斜，所以每個點都用 `screenPoint` 換算，不要假設整個畫面同一個比例、也不要用位移量自己推。
+- **繪製收 `some MapProjection`**：`TileArt` 的函式改收 `some MapProjection`，不要收 `PlanCamera`。E2 的實景模式原本設想用 MapKit 的相機實作同一個 protocol；實作時改成照舊用 `PlanCamera`，Apple 地圖（`AppleMapBackground`）跟著它（決策 50），畫面一樣不用重寫。之後可以旋轉與傾斜的相機仍然走這個 protocol，所以每個點都用 `screenPoint` 換算，不要假設整個畫面同一個比例、也不要用位移量自己推。
 - **只畫畫面內**：路網的邊用 `WorldRegion(enclosing: geometry.points)` 和 `visibleRegion.expanded(by:)` 比，相交才畫；車站、月台、列車同理。
 - **相機是 view 的狀態**：地圖 view 用 `@State` 保存 `PlanCamera?`，在 `GeometryReader` 第一次拿到大小時建立，大小改變時 `resized(to:)`。不放進 `GameSession`，也不放進 GameCore。
 - **點擊**：`session.tapMap(at: camera.planPoint(at: location), reach: camera.worldDistance(NetworkBuilding.touchRadius))`，路網工具用 `tapNetwork`，和現在一樣。

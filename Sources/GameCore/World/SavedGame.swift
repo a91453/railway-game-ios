@@ -26,9 +26,13 @@
 ///    (`"ring": true`, with `"outerLastDispatch"`). A build that reads only
 ///    version 2 would take a ring for a line that turns round at its ends,
 ///    so it says the save is newer than it instead.
+/// 4. Real-world maps (Stage E2, ARCHITECTURE decision 50): the world can
+///    have a `"geoAnchor"`. A build that reads only version 3 would drop
+///    it, and its next save would turn a real-world game into a blank one,
+///    so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 3
+    public static let currentVersion = 4
 
     public let world: GameWorld
 
@@ -63,7 +67,9 @@ extension SavedGame: Codable {
         // out as well as with only its occupied tiles, so a version 1 world
         // needs no step of its own. Version 2 to 3: a version 2 world has no
         // rings, and a line without `"ring"` is not one, so it needs none
-        // either. Later versions add their steps here.
+        // either. Version 3 to 4: a version 3 world is a blank map, and a
+        // world without `"geoAnchor"` is one. Later versions add their
+        // steps here.
         world = try container.decode(GameWorld.self, forKey: .world)
     }
 
