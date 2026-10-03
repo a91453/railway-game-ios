@@ -9,7 +9,8 @@ name: Release Archive (unsigned)
 #
 # Normally started by hand: Actions -> Release Archive (unsigned) -> Run workflow.
 # It also runs on pull requests that change the project settings, the app's
-# resources or this workflow.
+# resources, its entry point (where the Debug-only launch arguments are) or
+# this workflow.
 
 on:
   workflow_dispatch:
@@ -18,6 +19,7 @@ on:
       - RailwayGameApp/project.yml
       - RailwayGameApp/RailwayGame.xcodeproj/**
       - RailwayGameApp/Resources/**
+      - RailwayGameApp/App/**
       - .github/workflows/release-archive.yml
 
 permissions:
@@ -104,11 +106,15 @@ jobs:
           [[ "$platform" == "iphoneos" ]] || fail "Not built for the iOS device SDK: $platform"
           [[ "$icon" == "AppIcon" ]] || fail "The app icon is not in the archived app's Info.plist."
           [[ -f "$app/Assets.car" ]] || fail "The compiled asset catalog (Assets.car) is missing."
-          for argument in -demo-layout -ui-testing; do
-            if grep -qF -- "$argument" "$binary"; then
-              fail "The Release binary contains the Debug-only $argument argument."
-            fi
-          done
+          # The Debug-only launch arguments (-demo-layout, -ui-testing) are too
+          # short to find in a binary (Swift keeps strings of 15 bytes or
+          # fewer in the code), so look for the longer marker that exists next
+          # to them in RailwayGameApp.swift. ios-build.yml checks that a Debug
+          # app does contain it, so this check cannot pass for lack of text.
+          marker="RailwayGame Debug-only launch argument"
+          if grep -qF -- "$marker" "$binary"; then
+            fail "The Release binary contains the Debug-only launch argument code (found: $marker)."
+          fi
           # Expected to report "not signed at all": this archive is unsigned.
           codesign --display "$app" 2>&1 || true
           [[ "$failed" == false ]]

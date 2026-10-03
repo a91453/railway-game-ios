@@ -32,7 +32,7 @@ struct RailwayGameApp: App {
         #if DEBUG
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
-        if ProcessInfo.processInfo.arguments.contains("-demo-layout") {
+        if DebugLaunch.isSet("-demo-layout") {
             launcher.openDemo()
         }
         #endif
@@ -43,7 +43,7 @@ struct RailwayGameApp: App {
         #if DEBUG
         // UI tests use only this temporary folder. Clear it on every launch,
         // including relaunches on a Simulator that already has player saves.
-        if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+        if DebugLaunch.isSet("-ui-testing") {
             let manager = FileManager.default
             let directory = manager.temporaryDirectory.appendingPathComponent("UITestingSaves", isDirectory: true)
             do {
@@ -62,6 +62,25 @@ struct RailwayGameApp: App {
             ?? SaveLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent("Saves", isDirectory: true))
     }
 }
+
+#if DEBUG
+/// The launch arguments that exist only in Debug builds. Their names (11 and
+/// 12 bytes) cannot be searched for in a Release binary: Swift keeps a string
+/// of 15 bytes or fewer in the code, not as bytes in the binary. So
+/// ``marker``, which is longer and exists only here, is what
+/// `release-archive.yml` looks for in the Release binary (it must not be
+/// found) and `ios-build.yml` in the Debug app (it must be). Keep the text in
+/// the two workflows the same.
+private enum DebugLaunch {
+    static let marker = "RailwayGame Debug-only launch argument"
+
+    static func isSet(_ argument: String) -> Bool {
+        guard ProcessInfo.processInfo.arguments.contains(argument) else { return false }
+        print("\(marker): \(argument)")
+        return true
+    }
+}
+#endif
 
 /// The game being played, or the start screen when there is none.
 private struct RootView: View {
