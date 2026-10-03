@@ -3,8 +3,9 @@ import GameCore
 extension GameWorld {
     /// The world a new game starts with, running at 600× (`normal`), with
     /// traffic control on (Phase 4.6 Stage T): trains take their whole
-    /// route before they leave, and a managed company (G1c). GameCore's own
-    /// new worlds start with both off.
+    /// route before they leave, and a managed company (G1c) in a city whose
+    /// fare baseline is the standard fare. GameCore's own new worlds start
+    /// with both off and the reference's default city.
     public static func newGame() -> GameWorld {
         do {
             var world = try GameWorld(
@@ -17,6 +18,10 @@ extension GameWorld {
             // G1c: a new game is a managed company, so fares are charged
             // and running costs settled.
             world.setEconomyMode(.management)
+            // The city's passengers think the standard fare fair (decision
+            // 46): trips pay it until the player sets fares, and setting
+            // the same fare keeps their demand.
+            try world.setFareBaseline(FareRules.standardFare)
             return world
         } catch {
             // The size is a constant within GridMap's limits and an empty

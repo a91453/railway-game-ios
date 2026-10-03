@@ -46,8 +46,12 @@ public enum FareRules: Hashable, Sendable {
     case flat(Money)
     case distance([FareBand])
 
-    /// The editor's flat fare: 5.
-    public static let standard = FareRules.flat(500)
+    /// The editor's flat fare: 5 (`flatFare ?? 5`).
+    public static let standardFare: Money = 500
+
+    /// What trips pay until the player sets fares: ``standardFare`` for
+    /// any distance.
+    public static let standard = FareRules.flat(standardFare)
 
     /// The editor's distance steps (`lineInfoFareDefaultDistanceBands`):
     /// 0.55 to 6 km, 0.70 to 12, 0.85 to 22, 1.00 to 32, 1.20 beyond.
@@ -58,6 +62,17 @@ public enum FareRules: Hashable, Sendable {
         FareBand(fromMeters: 22_000, toMeters: 32_000, fare: 100),
         FareBand(fromMeters: 32_000, toMeters: nil, fare: 120),
     ]
+
+    /// ``standardBands`` for a city whose fare baseline is `baseline`:
+    /// each fare times `baseline` ÷ 0.75 (the steps were written for the
+    /// reference's default city), to the nearest 0.05. ``standardBands``
+    /// itself at 0.75.
+    public static func standardBands(for baseline: Money) -> [FareBand] {
+        standardBands.map { band in
+            let fare = (2 * band.fare.amount * baseline.amount + 375) / 750 * 5
+            return FareBand(fromMeters: band.fromMeters, toMeters: band.toMeters, fare: Money(fare))
+        }
+    }
 
     /// The most steps the engine takes.
     public static let maximumBands = 64
@@ -122,12 +137,13 @@ extension FareRules {
     // MARK: Demand
 
     /// The fare the reference's demand compares fares with
-    /// (`METRO_FARE_DEMAND_BASELINE_USD`): 0.75. The reference has one for
-    /// each real city; the game has no city, so it keeps the default.
+    /// (`METRO_FARE_DEMAND_BASELINE_USD`): 0.75, its default city's. It
+    /// has one for each real city (`metroFareDemandBaselineForCity`); a
+    /// world sets its own with ``GameWorld/setFareBaseline(_:)``.
     public static let demandBaseline: Money = 75
 
     /// How much of a pair's demand a fare of `fare` keeps, in thousandths
-    /// (`metroFareDemandPenaltyForFare` against ``demandBaseline``): up to
+    /// (`metroFareDemandPenaltyForFare` against `baseline`): up to
     /// 1080 for the cheapest trip, falling to 1000 at the baseline, then
     /// with `exp(−0.72·(a − 1)^1.35)`, and faster from 4 times the baseline,
     /// never below 10. A fare of 0 or less is taken as the baseline, 1000
@@ -135,10 +151,14 @@ extension FareRules {
     /// replaces it so). GameCore has no `exp`: the curve is a table at every
     /// 0.05 of the ratio, interpolated linearly (within 1.6 thousandths of
     /// the formula; `EconomyAccountsTests` checks it).
-    public static func demandFactor(fare: Money) -> Int64 {
+    ///
+    /// - Precondition: `baseline` is positive.
+    public static func demandFactor(fare: Money, baseline: Money = demandBaseline) -> Int64 {
+        precondition(baseline > .zero, "demandFactor(fare:baseline:) requires a positive baseline")
         guard fare > .zero else { return 1_000 }
-        // The ratio fare / baseline in thousandths, rounded down.
-        let ratio = fare.amount * 1_000 / demandBaseline.amount
+        // The ratio fare / baseline in thousandths, rounded down; both are
+        // at most maximumFare, so the product fits.
+        let ratio = fare.amount * 1_000 / baseline.amount
         let index = ratio / 50
         guard index < Int64(demandTable.count - 1) else { return demandTable[demandTable.count - 1] }
         let into = ratio % 50

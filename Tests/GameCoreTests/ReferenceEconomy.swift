@@ -17,6 +17,9 @@ import GameCore
 struct ReferenceAccounts: Equatable {
     var managed = false
     var rules: FareRules?
+    /// The city's fare baseline, in cents: the reference's default city's
+    /// 75 until set.
+    var baseline: Int64 = 75
     var opened: Int64?
     var fareCents: Int64 = 0
     var fareTrips: Int64 = 0
@@ -62,6 +65,13 @@ extension ReferenceWorld {
         return nil
     }
 
+    mutating func setFareBaseline(_ baseline: Money) -> GameError? {
+        // A cent at least, and no dearer than any fare may be.
+        if baseline.amount < 1 || baseline.amount > 1_000_000_000 { return .invalidFareRules }
+        accounts.baseline = baseline.amount
+        return nil
+    }
+
     // MARK: - Fares
 
     /// The rule's fare between two stations, before the minimum.
@@ -93,7 +103,7 @@ extension ReferenceWorld {
     /// The demand factor of a pair while fares change demand.
     func demandFactor(from origin: Int, to destination: Int) -> Int64? {
         guard accounts.managed, accounts.rules != nil, let fare = ruleFare(from: origin, to: destination) else { return nil }
-        return FareRules.demandFactor(fare: Money(fare))
+        return FareRules.demandFactor(fare: Money(fare), baseline: Money(accounts.baseline))
     }
 
     mutating func chargeFare(_ count: Int64, from origin: Int, to destination: Int) {

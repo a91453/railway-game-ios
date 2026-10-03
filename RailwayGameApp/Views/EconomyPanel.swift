@@ -74,7 +74,7 @@ struct EconomyPanel: View {
                 session.setFareRules(.flat(Money(flatFare)))
             }
             Button("Charge by distance (standard steps)") {
-                session.setFareRules(.distance(FareRules.standardBands))
+                session.setFareRules(.distance(FareRules.standardBands(for: accounts.fareBaseline)))
             }
         }
     }

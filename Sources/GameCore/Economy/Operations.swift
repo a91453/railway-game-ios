@@ -46,6 +46,18 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Sets the city's fare baseline (see ``CompanyAccounts/fareBaseline``):
+    /// the reference picks it by city (`metroFareDemandBaselineForCity`,
+    /// 0.75 for its default city, 5.50 for the most expensive). Free.
+    ///
+    /// - Throws: ``GameError/invalidFareRules`` for a baseline outside 0.01
+    ///   to ``FareRules/maximumFare``.
+    public mutating func setFareBaseline(_ baseline: Money) throws(GameError) {
+        guard (Money(1)...FareRules.maximumFare).contains(baseline) else { throw .invalidFareRules }
+        accounts.fareBaseline = baseline
+        passengerPlan = PassengerPlanCache()
+    }
+
     // MARK: - Queries
 
     /// The fare a passenger from `origin` to `destination` pays: the rule's
@@ -79,7 +91,7 @@ extension GameWorld {
               let squared = squaredDistance(from: origin, to: destination)
         else { return nil }
         // The reference's demand reads the rule's fare, before the minimum.
-        return FareRules.demandFactor(fare: accounts.effectiveFareRules.fare(squaredDistance: squared))
+        return FareRules.demandFactor(fare: accounts.effectiveFareRules.fare(squaredDistance: squared), baseline: accounts.fareBaseline)
     }
 
     // MARK: - Accrual
@@ -260,6 +272,7 @@ extension GameWorld {
         }
         guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
         guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
+        guard (Money(1)...FareRules.maximumFare).contains(accounts.fareBaseline) else { return "The fare baseline is out of range." }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }

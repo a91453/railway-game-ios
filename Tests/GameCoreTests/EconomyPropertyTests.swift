@@ -34,6 +34,7 @@ final class EconomyPropertyTests: XCTestCase {
             switch c.random.below(24) {
             case 0, 1: operations.append(.setFareRules(fareRules(using: &c.random)))
             case 2: operations.append(.setEconomyMode(c.random.chance(1, in: 3) ? .free : .management))
+            case 4: operations.append(.setFareBaseline(Money(c.random.element(of: [0, 1, 75, 155, 500, 550, c.random.int64(in: -5...900)]))))
             case 3: operations.append(.advance(c.random.element(of: [60, 61, 1_440, 1_441])))
             default: break
             }
@@ -98,6 +99,8 @@ final class EconomyPropertyTests: XCTestCase {
                 switch operation {
                 case .setFareRules:
                     counts[error == nil ? "fare rules set" : "fare rules refused", default: 0] += 1
+                case .setFareBaseline:
+                    counts[error == nil ? "fare baseline set" : "fare baseline refused", default: 0] += 1
                 case .advance(let ticks) where error == nil:
                     Self.countEvents(before: before, after: world, into: &counts)
                     if let problem = ServicePropertyTests.batchProblem(ticks: ticks, from: before, batch: world) {
@@ -123,7 +126,7 @@ final class EconomyPropertyTests: XCTestCase {
         assertVolume(ran == 12 * PropertySeeds.active.count, "every case should run")
         for (event, least) in [
             ("hours settled", 200), ("hours with fares", 60), ("days settled", 20), ("fare rules set", 60), ("fare rules refused", 5),
-            ("below zero", 10),
+            ("fare baseline set", 20), ("fare baseline refused", 2), ("below zero", 10),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }

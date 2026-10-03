@@ -276,6 +276,35 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "a free company")
     }
 
+    /// A city's own baseline moves the whole curve (the reference's
+    /// `metroFareDemandBaselineForCity`): at a baseline of 5, a fare of 5
+    /// keeps the whole demand and twice it keeps 487 thousandths; the
+    /// editor's distance steps scale with it.
+    func testACityBaselineMovesTheDemandCurve() throws {
+        var world = try makeWorld()
+        try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        XCTAssertEqual(world.accounts.fareBaseline, 75, "the reference's default city")
+        try world.setFareBaseline(500)
+        try world.setFareRules(.flat(500))
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "at the baseline")
+        try world.setFareRules(.flat(1_000))
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 487, "twice the baseline")
+        try world.setFareRules(.flat(75))
+        // 0.15 of the baseline: 1080 to 1076 at 150 of 1000 thousandths in
+        // the table's steps of 50, so 1068.
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_068)
+
+        let before = world
+        XCTAssertThrowsError(try world.setFareBaseline(0)) { XCTAssertEqual($0 as? GameError, .invalidFareRules) }
+        XCTAssertThrowsError(try world.setFareBaseline(FareRules.maximumFare + Money(1))) { XCTAssertEqual($0 as? GameError, .invalidFareRules) }
+        XCTAssertEqual(world, before, "a refused baseline changes nothing")
+
+        XCTAssertEqual(FareRules.standardBands(for: FareRules.demandBaseline), FareRules.standardBands)
+        XCTAssertEqual(FareRules.standardBands(for: 500).map(\.fare), [365, 465, 565, 665, 800], "0.55 to 1.20 times 5 / 0.75, to 0.05")
+        XCTAssertEqual(FareRules.standardBands(for: 500).map(\.toMeters), FareRules.standardBands.map(\.toMeters))
+    }
+
     func testTheDemandTableIsTheReferencesFormula() {
         func reference(_ ratio: Double) -> Double {
             var value: Double
@@ -305,6 +334,8 @@ final class EconomyAccountsTests: XCTestCase {
         try wait(&world, 3, at: alpha, for: beta)
         try world.setFareRules(.distance(FareRules.standardBands))
         try world.advance(ticks: 1_500)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(world), as: UTF8.self).contains("fareBaseline"), "the default city's is not written")
+        try world.setFareBaseline(500)
         let data = try JSONEncoder().encode(world)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -319,6 +350,8 @@ final class EconomyAccountsTests: XCTestCase {
             "unknown mode": broken { $0["mode"] = "sandbox" },
             "bad rules": broken { $0["fareRules"] = ["mode": "flat", "fare": -1] },
             "null rules": broken { $0["fareRules"] = NSNull() },
+            "a free baseline": broken { $0["fareBaseline"] = 0 },
+            "a baseline dearer than any fare": broken { $0["fareBaseline"] = FareRules.maximumFare.amount + 1 },
             "negative accrual": broken {
                 var pending = $0["pending"] as! [String: Any]
                 pending["departures"] = -1
