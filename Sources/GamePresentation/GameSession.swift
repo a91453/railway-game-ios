@@ -966,11 +966,14 @@ public final class GameSession {
             growStation(onto: position)
         case .buildStation:
             let built = perform { world throws(GameError) in
-                // The world allocates the station's ID.
-                let station = try world.buildStation(named: stationName, at: position)
-                if world.accounts.mode == .management {
-                    try world.setStationDemand(station.id, to: .cityDefault)
+                // The world allocates the station's ID; a managed company's
+                // city gives it ridership, all or nothing.
+                var draft = world
+                let station = try draft.buildStation(named: stationName, at: position)
+                if draft.accounts.mode == .management {
+                    try draft.setStationDemand(station.id, to: .cityDefault)
                 }
+                world = draft
                 return language.text("Built station “\(station.name)” at \(position).", "已在 \(position) 建造車站「\(station.name)」。")
             }
             if built {

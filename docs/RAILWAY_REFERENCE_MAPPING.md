@@ -284,6 +284,25 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` 雲端存檔、加密（`metroEncryptSaveBlob`）、分享碼、`LOCAL_SAVE_MAX_IMPORT_BYTES` | 帳號、雲端與加密 | 不做 | — | 延後：沒有帳號與伺服器；iCloud 另議 |
 | `Ci` 教學的示範（上海—南京）；舊的 `DemoLayout.swift`（方格） | 示範地圖 | `DemoWorld`：路網上的兩條線，中央一座兩個月台的點車站，全天營運、每站有客流；Release 也能從開始畫面開 | 格 → 世界單位 | **gap**：參考沒有可以移植的示範地圖（它的示範是真實路線），配置是自己的 |
 
+### G1d：經濟平衡
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 46。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`。`Railway/site_archive_clean/` 沒有經濟；`Railway/railway_game_reference_clean/` 只有 OpenTTD 的二進位與檔名（`binary_reference/relevant_source_paths.txt` 的 `src/economy.cpp`），沒有數值。參考的經濟引擎（`window.MetroEconomy`）不在快照裡。
+
+| 參考 | 行為 | Swift（G1d） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `metroEconomySettleHourlyIfNeeded`：`Math.round(departures*75+trainKm*42+l*18)`、`Math.round(u*12+trainKm*9+c*8)` | 舊路徑的小時結算，用列車公里 | 不變（決策 36 已是列車公里，只改文件用字） | 64000 單位 = 1 km | faithful |
+| `Ci` `metroEconomyFixedAssets`：依 `branchRootId` 分組，每組的車站集合相加 | 轉乘站每條線路各算一次 | `fixedAssets(memo:)`：每條線路的停靠站去掉重複，再相加 | — | faithful（更正） |
+| `Ci` `metroFareDemandPenaltyForTrip`：`n>0\|\|(n=a)` | 0 以下的票價當成基準 | `demandFactor(fare:baseline:)`：0 以下是 1000‰ | — | faithful（更正） |
+| `Ci` `metroFareDemandBaselineForCity`、`METRO_FARE_DEMAND_BASELINE_USD = 0.75` | 每個城市的基準票價 | `CompanyAccounts.fareBaseline`、`setFareBaseline(_:)`；App 的新遊戲 = $ 5 | 美元 → 美分 | 機制 faithful；值是 gap |
+| `Ci` 編輯器 `flatFare ?? 5`、`lineInfoFareDefaultDistanceBands` | 預設的均一與距離票價 | `FareRules.standardFare`、`standardBands(for:)`（× 基準 ÷ 0.75，取到 0.05） | — | 機械換算 |
+| `Ci` `stationFlowCustomEditingAllowed`、`syncStationFlowAdjustMode` | 只有自由模式能改客流，經營模式隱藏面板 | `GameSession.canEditStationDemand`；車站面板唯讀 | — | faithful（App 層） |
+| `Ci` 經營模式的 `useGlobalODModel`（真實城市的客流） | 客流來自城市 | `StationDemand.cityDefault`（住宅區 10,000） | — | gap（Phase 5） |
+| `Ci` `MetroSaveModePolicy`、`metroSaveModeError` | 自由模式的存檔只能在自由模式讀 | 經營 → 自由單向 | — | faithful（App 層） |
+| `Ci` `metroQuotaPurchaseCatalogItems`（備用價目：10 km $ 100、5 站 $ 75、6 節 $ 60、快線 $ 350） | 配額的購買 | `ConstructionCosts.car`（每加一節收費）；不採用配額 | — | 部分 faithful：現金 |
+| `Ci` `getTrainCap`：B 型 `ppc: 260`、6 節；`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1` | 新線的預設容量 | 不變：每節 320 × 1.1（決策 35） | — | 刻意保留，另外處理 |
+| `Ci` `metroResolveStationWaitCap`：線路容量 × 8 | 車站候車上限 | 不變：4,000 | — | 刻意保留，另外處理 |
+| 開局資金、建設價格、營運補貼（`operatingSubsidy`）、`serviceCost` | 在經濟引擎裡 | `GameWorld.startingBalance`、`ConstructionCosts.newGame` | — | gap：依回本天數訂 |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
