@@ -26,8 +26,9 @@ final class MapInteractionTests: XCTestCase {
         let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
         XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
-        map.pinch(withScale: 1.5, velocity: 1)
+        map.pinch(withScale: 3, velocity: 1)
         XCTAssertFalse(clear.isEnabled, "Pinching must not pick a track anchor")
+        XCTAssertFalse(app.buttons["Zoom in"].isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
 
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35)).tap()
