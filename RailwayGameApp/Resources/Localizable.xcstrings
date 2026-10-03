@@ -69,6 +69,16 @@
         }
       }
     },
+    "A managed company's city sets each station's ridership. Free play can change it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "經營模式下，各站的客流由城市決定；自由模式可以修改。"
+          }
+        }
+      }
+    },
     "A minute later or earlier; the stops after it move with it." : {
       "localizations" : {
         "zh-Hant" : {
@@ -235,6 +245,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自動存檔"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一步"
           }
         }
       }
@@ -425,6 +445,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除時刻表"
+          }
+        }
+      }
+    },
+    "Complete this step to continue." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成這一步後才能繼續。"
           }
         }
       }
@@ -649,6 +679,16 @@
         }
       }
     },
+    "Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由模式不收票價、沒有營運成本，各站的客流由你設定。切換後無法再改回經營模式。"
+          }
+        }
+      }
+    },
     "Free play: no fares and no running costs." : {
       "localizations" : {
         "zh-Hant" : {
@@ -765,6 +805,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "過去一小時流水"
+          }
+        }
+      }
+    },
+    "Learn to build and run a railway step by step" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一步步學習建造鐵道與營運列車"
           }
         }
       }
@@ -895,6 +945,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新車站"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步"
           }
         }
       }
@@ -1589,6 +1649,16 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "略過"
+          }
+        }
+      }
+    },
     "Smooth curves" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1679,6 +1749,16 @@
         }
       }
     },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步，共 %lld 步"
+          }
+        }
+      }
+    },
     "Steps through 100, 200, 500, 1,000 and so on, up to 1,000,000 a day." : {
       "localizations" : {
         "zh-Hant" : {
@@ -1735,6 +1815,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "結構物"
+          }
+        }
+      }
+    },
+    "Switch to Free Play" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切換到自由模式"
           }
         }
       }
@@ -1915,6 +2005,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在此折返"
+          }
+        }
+      }
+    },
+    "Tutorial" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教學"
           }
         }
       }

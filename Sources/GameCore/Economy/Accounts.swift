@@ -191,6 +191,11 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// ``FareRules/standard`` and fares do not change demand (the
     /// reference's demand overlay starts with the first change of rules).
     public internal(set) var fareRules: FareRules?
+    /// The fare the city's passengers think fair, which a fare's effect on
+    /// demand is measured against (the reference's
+    /// `metroFareDemandBaselineForCity`): ``FareRules/demandBaseline``,
+    /// the reference's default city, until set.
+    public internal(set) var fareBaseline: Money = FareRules.demandBaseline
     public internal(set) var pending: HourlyAccrual = .empty
     /// When the accrual in ``pending`` began: the minute the company became
     /// managed, or the last settlement. An hour is settled only once it
@@ -219,7 +224,8 @@ public struct CompanyAccounts: Hashable, Sendable {
 
     /// Whether there is nothing in the accounts: a world before G1c.
     var isPristine: Bool {
-        mode == .free && fareRules == nil && pending == .empty && openedAt == nil && entries.isEmpty && days.isEmpty
+        mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && pending == .empty && openedAt == nil
+            && entries.isEmpty && days.isEmpty
     }
 
     /// The rules trips pay by.
@@ -302,16 +308,18 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, pending, openedAt, entries, days
+        case mode, fareRules, fareBaseline, pending, openedAt, entries, days
     }
 
     /// Decodes the accounts; rules the player never set have no
-    /// `"fareRules"`. That the amounts are within bounds and in order is
-    /// checked by the ``GameWorld`` decoder.
+    /// `"fareRules"`, and the default city's baseline no `"fareBaseline"`.
+    /// That the amounts are within bounds and in order is checked by the
+    /// ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         mode = try container.decode(EconomyMode.self, forKey: .mode)
         fareRules = container.contains(.fareRules) ? try container.decode(FareRules.self, forKey: .fareRules) : nil
+        fareBaseline = container.contains(.fareBaseline) ? try container.decode(Money.self, forKey: .fareBaseline) : FareRules.demandBaseline
         pending = try container.decode(HourlyAccrual.self, forKey: .pending)
         openedAt = container.contains(.openedAt) ? try container.decode(GameTime.self, forKey: .openedAt) : nil
         entries = try container.decode([LedgerEntry].self, forKey: .entries)
@@ -323,6 +331,9 @@ extension CompanyAccounts: Codable {
         try container.encode(mode, forKey: .mode)
         if let fareRules {
             try container.encode(fareRules, forKey: .fareRules)
+        }
+        if fareBaseline != FareRules.demandBaseline {
+            try container.encode(fareBaseline, forKey: .fareBaseline)
         }
         try container.encode(pending, forKey: .pending)
         if let openedAt {

@@ -42,6 +42,14 @@ struct StartView: View {
                     // Stable across localizations for the UI smoke tests.
                     .accessibilityIdentifier("start.newGame")
                     StartButton(
+                        title: String(localized: "Tutorial"),
+                        detail: String(localized: "Learn to build and run a railway step by step"),
+                        systemImage: "hand.point.up.left"
+                    ) {
+                        launcher.startTutorial()
+                    }
+                    .accessibilityIdentifier("start.tutorial")
+                    StartButton(
                         title: String(localized: "Demo Map"),
                         detail: String(localized: "Two lines already running, with passengers"),
                         systemImage: "tram.fill"

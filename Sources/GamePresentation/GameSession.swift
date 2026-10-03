@@ -137,8 +137,11 @@ public final class GameSession {
     )
     @ObservationIgnored private var gameLoop: Task<Void, Never>?
 
+    /// A managed company's stations without ridership get the city's
+    /// (``StationDemand/cityDefault``), as stations built since do; saves
+    /// from before ARCHITECTURE decision 46 may have such stations.
     public init(world: GameWorld, language: DisplayLanguage = .english) {
-        self.world = world
+        self.world = Self.withCityRidership(world)
         self.language = language
         self.stationName = Self.suggestedStationName(for: world, in: language)
         self.selectedTrainID = world.trains.first?.id
@@ -354,21 +357,26 @@ public final class GameSession {
 
     // MARK: - Economy
 
-    /// Switches the company between free play and management through
-    /// `GameWorld.setEconomyMode(_:)`. Managed, fares are charged and the
-    /// running costs settled every hour and day.
+    /// Switches a managed company to free play through
+    /// `GameWorld.setEconomyMode(_:)`: no fares or running costs, and
+    /// ridership the player sets. Free play cannot become managed again,
+    /// as the reference loads a free-play save only in free play
+    /// (`MetroSaveModePolicy`): its ridership would be the player's, not
+    /// the city's.
     public func setEconomyMode(_ mode: EconomyMode) {
         guard mode != world.accounts.mode else { return }
+        guard mode == .free else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "Free play cannot become a managed company again. Start a new game to manage one.",
+                "自由模式無法再改回經營模式。要經營公司，請開新遊戲。"
+            ))
+            return
+        }
         world.setEconomyMode(mode)
-        message = StatusMessage(
-            kind: .success,
-            text: mode == .management
-                ? language.text(
-                    "The company is managed: fares are charged and running costs settled from the next hour.",
-                    "公司進入經營模式：從下一個小時起收取票價、結算營運成本。"
-                )
-                : language.text("Free play: no fares or running costs.", "自由模式：不收票價，也沒有營運成本。")
-        )
+        message = StatusMessage(kind: .success, text: language.text(
+            "Free play: no fares or running costs, and you set each station's ridership.",
+            "自由模式：不收票價，也沒有營運成本；各站的客流由你設定。"
+        ))
     }
 
     /// Sets the network's fare rules through `GameWorld.setFareRules(_:)`.
@@ -528,9 +536,13 @@ public final class GameSession {
     public func setSelectedTrainCars(_ cars: Int) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
+            let balance = world.economy.balance
             try world.setTrainCars(train.id, to: cars)
             let count = Train.carsText(cars, in: language)
-            return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。")
+            // Added cars are paid for (decision 46).
+            let paid = balance - world.economy.balance
+            guard paid > .zero else { return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。") }
+            return language.text("\(train.name) now has \(count), for \(paid.moneyText).", "\(train.name) 現在有 \(count)，花費 \(paid.moneyText)。")
         }
     }
 
@@ -954,8 +966,14 @@ public final class GameSession {
             growStation(onto: position)
         case .buildStation:
             let built = perform { world throws(GameError) in
-                // The world allocates the station's ID.
-                let station = try world.buildStation(named: stationName, at: position)
+                // The world allocates the station's ID; a managed company's
+                // city gives it ridership, all or nothing.
+                var draft = world
+                let station = try draft.buildStation(named: stationName, at: position)
+                if draft.accounts.mode == .management {
+                    try draft.setStationDemand(station.id, to: .cityDefault)
+                }
+                world = draft
                 return language.text("Built station “\(station.name)” at \(position).", "已在 \(position) 建造車站「\(station.name)」。")
             }
             if built {

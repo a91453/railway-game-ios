@@ -180,6 +180,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 | `Railway/` `getZoom() >= 14`、`Ci/` `MAP_STATION_PLATFORM_MIN_ZOOM` | `detail`（`MapScale.detail(forTileSize:)`） |
 | MapLibre `project`／`unproject` | `screenPoint(of:)`／`worldPosition(at:)`、`planPoint(at:)` |
 | MapLibre `getCenter`、`flyTo({center, zoom})` | `centerX`、`centerY`、`centered(on:)`、`zoomed(by:around:)` |
+| `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`：兩指的距離每變 5% 縮放一格，以兩指的中點為準 | `zoomed(by:around:)`：倍率連續，手指下的點不動（CX-4 可以照它把一格的縮放換成倍率） |
 
 比例：世界座標照舊是 1/64 公尺、一格 1024 單位。相機的 `Double` 只留在畫面，送回 GameCore 前捨入成整數（`planPoint(at:)`、`worldDistance(_:)`，並限制在 `WorldCoordinate.limit` 內）。
 

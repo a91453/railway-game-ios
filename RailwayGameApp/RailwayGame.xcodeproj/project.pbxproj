@@ -15,6 +15,8 @@
 		304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
 		4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903982CCE649E985E784BE87 /* HUDView.swift */; };
+		4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */; };
+		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
@@ -51,6 +53,7 @@
 		21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapInteractionTests.swift; sourceTree = "<group>"; };
 		2C7E3045294CC098C802F9DA /* railway-game-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "railway-game-ios"; path = ..; sourceTree = SOURCE_ROOT; };
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
 		3FC137C507F9A22C91174E71 /* NetworkOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkOverview.swift; sourceTree = "<group>"; };
 		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
@@ -69,6 +72,7 @@
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileArt.swift; sourceTree = "<group>"; };
+		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +124,7 @@
 				E5BBFAEBB4F4FE8B0DF82DC3 /* TileArt.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
+				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
 			);
 			path = Views;
@@ -150,6 +155,7 @@
 			children = (
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
+				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -280,6 +286,7 @@
 				80282EFDF740D530F5B212F4 /* TileArt.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
+				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,
 				231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -290,6 +297,7 @@
 			files = (
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
+				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

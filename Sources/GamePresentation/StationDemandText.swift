@@ -33,6 +33,13 @@ extension StationDemand {
     /// app's own: a peak hour of about 870 trips, a few trains' worth.
     public static let defaultDailyTrips: Int64 = 10_000
 
+    /// The ridership a managed company's city gives every station
+    /// (ARCHITECTURE decision 46): the reference's management mode reads
+    /// each station's from the real city (`stationFlowCustomEditingAllowed`
+    /// lets only free play change it). Until the game has a city (Phase 5),
+    /// every station is a residential one of ``defaultDailyTrips``.
+    public static let cityDefault = StationDemand(kind: .residential, dailyTrips: defaultDailyTrips)
+
     /// The daily trips the app steps through: 1, 2 and 5 times each power
     /// of ten from 100 to ``maximumDailyTrips``.
     public static let dailyTripSteps: [Int64] = [
@@ -234,19 +241,28 @@ extension GameSession {
         selectedStationID.flatMap { world.station(id: $0) } ?? selection.flatMap { world.station(at: $0) }
     }
 
+    /// Whether the player may change stations' ridership: only in free
+    /// play, as the reference's `stationFlowCustomEditingAllowed`. A managed
+    /// company's city sets it (``StationDemand/cityDefault``).
+    public var canEditStationDemand: Bool {
+        world.accounts.mode == .free
+    }
+
     /// Gives the selected station the `Ci/` preset `kind`
     /// (`applyStationFlowPreset`) through `GameWorld.setStationDemand(_:to:)`,
     /// keeping its daily trips as the reference keeps a station's total; a
     /// station without demand gets ``StationDemand/defaultDailyTrips``.
+    /// Free play only (see ``canEditStationDemand``).
     public func setSelectedStationDemandKind(_ kind: StationDemandKind) {
-        guard let station = requireSelectedStation() else { return }
+        guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         let trips = world.stationDemand(of: station.id)?.dailyTrips ?? StationDemand.defaultDailyTrips
         setDemand(StationDemand(kind: kind, dailyTrips: trips), of: station)
     }
 
     /// Sets the trips a day the selected station starts, keeping its kind.
+    /// Free play only.
     public func setSelectedStationDailyTrips(_ trips: Int64) {
-        guard let station = requireSelectedStation() else { return }
+        guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         guard let demand = world.stationDemand(of: station.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Choose what kind of place \(station.name) serves first.",
@@ -258,9 +274,9 @@ extension GameSession {
     }
 
     /// Clears the selected station's demand; passengers already waiting
-    /// there stay.
+    /// there stay. Free play only.
     public func removeSelectedStationDemand() {
-        guard let station = requireSelectedStation() else { return }
+        guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         perform { world throws(GameError) in
             try world.setStationDemand(station.id, to: nil)
             return language.text(
@@ -291,9 +307,9 @@ extension GameSession {
     /// Gives the selected station the copied kind
     /// (`pasteStationFlowAdjustProfile`), keeping its own daily trips as
     /// the reference keeps each station's total; one without demand takes
-    /// the copied trips too.
+    /// the copied trips too. Free play only.
     public func pasteDemandToSelectedStation() {
-        guard let station = requireSelectedStation() else { return }
+        guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         guard let copied = demandClipboard else {
             message = StatusMessage(kind: .failure, text: language.text("Copy a station's ridership first.", "請先複製一座車站的客流設定。"))
             return
@@ -304,9 +320,9 @@ extension GameSession {
     /// Gives every station of every line calling at the selected station
     /// its kind (`applyStationFlowAdjustToAllServingLines`), each keeping
     /// its own daily trips; stations without demand take the selected
-    /// station's. All or nothing.
+    /// station's. All or nothing. Free play only.
     public func applySelectedStationDemandToItsLines() {
-        guard let station = requireSelectedStation() else { return }
+        guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         guard let demand = world.stationDemand(of: station.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(station.name) has no ridership to apply.",
@@ -351,6 +367,30 @@ extension GameSession {
                 "\(station.name)：\(demand.displayText(in: language))。"
             )
         }
+    }
+
+    /// Whether ridership may be changed, after reporting why not.
+    private func requireDemandEditing() -> Bool {
+        guard canEditStationDemand else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "A managed company's city sets each station's ridership. Only free play can change it.",
+                "經營模式下，各站的客流由城市決定；只有自由模式可以修改。"
+            ))
+            return false
+        }
+        return true
+    }
+
+    /// Every station of a managed company without ridership given the
+    /// city's (``StationDemand/cityDefault``); `world` as it is otherwise.
+    static func withCityRidership(_ world: GameWorld) -> GameWorld {
+        guard world.accounts.mode == .management else { return world }
+        var world = world
+        for station in world.stations where world.stationDemand(of: station.id) == nil {
+            // A known station and a valid demand: this cannot fail.
+            try? world.setStationDemand(station.id, to: .cityDefault)
+        }
+        return world
     }
 
     /// The selected station, or `nil` after reporting that there is none.
