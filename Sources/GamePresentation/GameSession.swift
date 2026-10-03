@@ -71,6 +71,11 @@ public final class GameSession {
     /// train. Read the train itself through ``selectedTrain``.
     public private(set) var selectedTrainID: TrainID?
 
+    /// The train the last tap on the map picked (see ``tapMap(at:reach:)``),
+    /// which the select tool's inspector shows; `nil` once a tap or a
+    /// command selects a station or a tile instead.
+    public private(set) var tappedTrainID: TrainID?
+
     /// The heading the selected train gets when it is placed. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
     public private(set) var placementHeading: TrackDirection = .east
@@ -166,26 +171,52 @@ public final class GameSession {
     public func select(_ position: GridPosition) {
         guard world.map.contains(position) else { return }
         let station = station(onTile: position)?.id
-        guard position != selection || station != selectedStationID else { return }
+        guard position != selection || station != selectedStationID || tappedTrainID != nil else { return }
         selection = position
         selectedStationID = station
+        tappedTrainID = nil
         message = nil
     }
 
     /// A tap on the map at `point` with the select or train tool (Stage
-    /// F1), reaching `reach` world units to a station: selects the station
-    /// that takes the tile under the point, or else the nearest station
-    /// within reach (`GameWorld.station(near:within:)`), or else one at a
-    /// point inside that tile (see ``station(onTile:)``), and the tile.
-    /// Taps off the map are ignored. Never changes the world.
+    /// F1), reaching `reach` world units: selects the station that takes
+    /// the tile under the point or whose mark is within half the reach;
+    /// or else the train drawn nearest within reach
+    /// (`GameWorld.train(near:within:)`, see ``tapTrain(_:)``); or else
+    /// the nearest station within reach (`GameWorld.station(near:within:)`),
+    /// or one at a point inside that tile (see ``station(onTile:)``), and
+    /// the tile. A station right under the finger wins over a train beside
+    /// it, so a station's mark always selects it. Taps off the map are
+    /// ignored. Never changes the world.
     public func tapMap(at point: PlanPoint, reach: Int64) {
         let size = WorldCoordinate.tileSize
         guard point.x >= 0, point.y >= 0, point.x < Int64(world.map.width) * size, point.y < Int64(world.map.height) * size else { return }
         let tile = GridPosition(x: Int(point.x / size), y: Int(point.y / size))
-        let station = (world.station(at: tile) ?? world.station(near: point, within: reach) ?? station(onTile: tile))?.id
-        guard tile != selection || station != selectedStationID else { return }
+        var station = (world.station(at: tile) ?? world.station(near: point, within: reach / 2))?.id
+        if station == nil, let train = world.train(near: point, within: reach) {
+            tapTrain(train)
+            return
+        }
+        station = station ?? (world.station(near: point, within: reach) ?? self.station(onTile: tile))?.id
+        guard tile != selection || station != selectedStationID || tappedTrainID != nil else { return }
         selection = tile
         selectedStationID = station
+        tappedTrainID = nil
+        message = nil
+    }
+
+    /// A tap that picked train `id`: it becomes the train the train tool
+    /// acts on, and the select tool's inspector shows it. The select tool
+    /// lets go of the station or tile it had; the train tool keeps it, as
+    /// the place it sends the train to.
+    private func tapTrain(_ id: TrainID) {
+        guard tappedTrainID != id || selectedTrainID != id || (tool == .select && selection != nil) else { return }
+        selectedTrainID = id
+        tappedTrainID = id
+        if tool == .select {
+            selection = nil
+            selectedStationID = nil
+        }
         message = nil
     }
 
@@ -193,15 +224,17 @@ public final class GameSession {
     /// the tile under its point. Never changes the world; an ID the world
     /// does not have is ignored.
     public func selectStation(_ id: StationID) {
-        guard let station = world.station(id: id), id != selectedStationID || station.position != selection else { return }
+        guard let station = world.station(id: id), id != selectedStationID || station.position != selection || tappedTrainID != nil else { return }
         selection = station.position
         selectedStationID = id
+        tappedTrainID = nil
         message = nil
     }
 
     public func clearSelection() {
         selection = nil
         selectedStationID = nil
+        tappedTrainID = nil
         message = nil
     }
 
