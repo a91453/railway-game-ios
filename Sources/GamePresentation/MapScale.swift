@@ -174,6 +174,57 @@ public enum MapScale {
     public static func detail(forTileSize tileSize: Double) -> MapDetail {
         tileSize < overviewBelow ? .overview : .full
     }
+
+    /// Projects only segments touching the view (including the stroke's
+    /// margin in screen points). Separate runs must stay separate: joining
+    /// across an offscreen stretch could draw a false line through the view.
+    /// Each vertex goes through the projection, also for turned/tilted maps.
+    /// Overview drawing may skip vertices within `minimumSpacing` points;
+    /// the first and last vertex of every visible run are always kept.
+    public static func visiblePolylines(
+        _ points: [WorldCoordinate],
+        projection: some MapProjection,
+        margin: Double,
+        minimumSpacing: Double = 0
+    ) -> [[ScreenPoint]] {
+        guard points.count > 1 else { return [] }
+        let region = projection.visibleRegion.expanded(by: max(0, margin) / projection.pointsPerUnit)
+        var runs: [[ScreenPoint]] = []
+        var run: [ScreenPoint] = []
+        func finish() {
+            guard run.count > 1 else { run = []; return }
+            if minimumSpacing > 0 {
+                var simplified = [run[0]]
+                for point in run.dropFirst().dropLast() {
+                    let last = simplified[simplified.count - 1]
+                    let dx = point.x - last.x, dy = point.y - last.y
+                    if dx * dx + dy * dy >= minimumSpacing * minimumSpacing {
+                        simplified.append(point)
+                    }
+                }
+                simplified.append(run[run.count - 1])
+                runs.append(simplified)
+            } else {
+                runs.append(run)
+            }
+            run = []
+        }
+        for index in 1..<points.count {
+            let start = points[index - 1], end = points[index]
+            let bounds = WorldRegion(
+                minX: Double(min(start.x, end.x)), minY: Double(min(start.y, end.y)),
+                maxX: Double(max(start.x, end.x)), maxY: Double(max(start.y, end.y))
+            )
+            if region.intersects(bounds) {
+                if run.isEmpty { run.append(projection.screenPoint(of: start)) }
+                run.append(projection.screenPoint(of: end))
+            } else {
+                finish()
+            }
+        }
+        finish()
+        return runs
+    }
 }
 
 /// How much of the map is drawn. Presentation only.
