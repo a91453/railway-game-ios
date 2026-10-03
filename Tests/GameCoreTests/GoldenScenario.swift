@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 26
+    static let schemaVersion = 27
 
     var description: String
     var initialState: InitialState
@@ -444,6 +444,8 @@ enum ScenarioCommand: Equatable {
     case createLine(name: String, stops: [StationID])
     case removeLine(LineID)
     case setLineStops(LineID, [StationID])
+    /// Makes a line a ring or a line again (schema 27, decision 49).
+    case setLineRing(LineID, Bool)
     case setLinePerformance(LineID, TrainPerformance)
     case setTrainPerformance(TrainID, TrainPerformance)
     case setLineServiceWindow(LineID, ServiceWindow)
@@ -514,6 +516,8 @@ enum ScenarioCommand: Equatable {
                 try world.removeLine(id)
             case .setLineStops(let id, let stops):
                 try world.setLineStops(id, to: stops)
+            case .setLineRing(let id, let isRing):
+                try world.setLineRing(id, to: isRing)
             case .setLinePerformance(let id, let performance):
                 try world.setLinePerformance(id, to: performance)
             case .setTrainPerformance(let id, let performance):
@@ -575,7 +579,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, x, y, connections, name, train, position, rate, continuation, timetable, `repeat`, speed, ticks
-        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars
+        case line, stops, window, trains, bands, targetHeadways, pattern, calls, stem, station, cars, ring
         case z, from, to, curve, edge, node, path
         case profile, structure, start, end, enabled, demand, mode, rules
         case performance, point
@@ -647,6 +651,8 @@ extension ScenarioCommand: Decodable {
         case "setLineStops":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
+        case "setLineRing":
+            self = try .setLineRing(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .ring))
         case "setLinePerformance":
             let performance = try container.decode(PerformanceSummary.self, forKey: .performance).performance
             self = try .setLinePerformance(container.decodeLine(forKey: .line), performance)
@@ -2082,17 +2088,22 @@ struct PassengerSummary: Codable, Equatable {
 /// required but `performance` (schema 25, Stage W2c; it replaces the rate
 /// before it), which is absent for the standard performance, never
 /// `null`; `lastDispatch` is `null` for a line that never sent a train
-/// out, and `patterns` is `[]` for a line without any.
+/// out, and `patterns` is `[]` for a line without any. A ring (schema 27,
+/// decision 49) also has `"ring": true` and `"outerLastDispatch"` (the
+/// minute it last sent a train the outer way, or `null`); a line that is
+/// not a ring has neither.
 struct LineSummary: Codable, Equatable {
     var id: Int
     var name: String
     var stops: [Int]
+    var isRing = false
     var performance: PerformanceSummary
     var window: WindowSummary
     var trainsInService: TrainsSummary
     var targetHeadways: TargetHeadwaysSummary
     var trains: [Int]
     var lastDispatch: Int64?
+    var outerLastDispatch: Int64?
     var patterns: [PatternSummary]
 
     init(
@@ -2122,11 +2133,14 @@ struct LineSummary: Codable, Equatable {
         targetHeadways = TargetHeadwaysSummary(line.targetHeadways)
         trains = line.trains.map(\.rawValue)
         lastDispatch = line.lastDispatch?.minutes
+        isRing = line.isRing
+        outerLastDispatch = line.outerLastDispatch?.minutes
         patterns = line.patterns.map(PatternSummary.init)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
+        case isRing = "ring", outerLastDispatch
     }
 
     init(from decoder: any Decoder) throws {
@@ -2144,6 +2158,20 @@ struct LineSummary: Codable, Equatable {
         // dispatched.
         lastDispatch = try container.decodeNil(forKey: .lastDispatch) ? nil : container.decode(Int64.self, forKey: .lastDispatch)
         patterns = try container.decode([PatternSummary].self, forKey: .patterns)
+        // Schema 27: a ring says so, and its outer dispatch is then
+        // required; a line that is not a ring writes neither.
+        if container.contains(.isRing) {
+            guard try container.decode(Bool.self, forKey: .isRing) else {
+                throw DecodingError.dataCorruptedError(forKey: .isRing, in: container, debugDescription: "\"ring\" is written only as true.")
+            }
+            isRing = true
+            outerLastDispatch = try container.decodeNil(forKey: .outerLastDispatch)
+                ? nil : container.decode(Int64.self, forKey: .outerLastDispatch)
+        } else if container.contains(.outerLastDispatch) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .outerLastDispatch, in: container, debugDescription: "Only a ring has \"outerLastDispatch\"."
+            )
+        }
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -2164,6 +2192,14 @@ struct LineSummary: Codable, Equatable {
             try container.encodeNil(forKey: .lastDispatch)
         }
         try container.encode(patterns, forKey: .patterns)
+        if isRing {
+            try container.encode(true, forKey: .isRing)
+            if let outerLastDispatch {
+                try container.encode(outerLastDispatch, forKey: .outerLastDispatch)
+            } else {
+                try container.encodeNil(forKey: .outerLastDispatch)
+            }
+        }
     }
 }
 
@@ -2337,7 +2373,8 @@ struct BandSummary: Codable, Equatable {
 /// A line's journey as a fixture value: `{"start", "legs": [{"from", "to",
 /// "route", "seconds"}, ...], "roundTripSeconds", "roundTripMinutes"}` (see
 /// `LineJourney`; since schema 25, Stage W2c, a leg takes whole seconds,
-/// and the round trip is in seconds and rounded up to minutes).
+/// and the round trip is in seconds and rounded up to minutes). A ring's
+/// lap (schema 27) also has `"ring": true`; other journeys do not have it.
 struct JourneySummary: Codable, Equatable {
     /// A leg: on the grid its `"route"` (the tiles its links lead to), on
     /// the track network (schema 18) its `"path"`; one of the two.
@@ -2353,6 +2390,7 @@ struct JourneySummary: Codable, Equatable {
     var legs: [Leg]
     var roundTripSeconds: Int64
     var roundTripMinutes: Int64
+    var ring: Bool?
 
     init(_ journey: LineJourney) {
         start = TrainPositionSummary(journey.start)
@@ -2366,6 +2404,7 @@ struct JourneySummary: Codable, Equatable {
         }
         roundTripSeconds = journey.roundTripSeconds
         roundTripMinutes = journey.roundTripMinutes
+        ring = journey.isRing ? true : nil
     }
 }
 

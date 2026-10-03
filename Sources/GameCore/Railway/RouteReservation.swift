@@ -67,11 +67,11 @@ extension GameWorld {
         if case .waitingAtStop(let stop, let cycle)? = train.execution {
             guard let due = departureDue(of: train), due <= clock.now else { return nil }
             departing = leaving(train, stop: stop, cycle: cycle).train
-        } else if train.execution == nil, let line = lines.first(where: { assignedLine(of: id) == $0.id }) {
-            let service = assignedPattern(of: id).map { $0 + 1 } ?? 0
+        } else if train.execution == nil, let line = lines.first(where: { assignedLine(of: id) == $0.id }),
+                  let stream = line.dispatchStream(of: id) {
             var memo = DispatchMemo()
-            guard isDispatchDue(line, service, at: clock.now, memo: &memo),
-                  let trip = readyTrip(of: train, on: line, service, memo: &memo)
+            guard isDispatchDue(line, stream, at: clock.now, memo: &memo),
+                  let trip = readyTrip(of: train, on: line, stream.service, memo: &memo)
             else { return nil }
             departing = firstDeparture(of: train, on: trip, calling: line.stops)
         } else {

@@ -267,8 +267,9 @@ extension ReferenceWorld {
     }
 
     /// Who train `i` may take on at stop `stop`, as indices into its
-    /// station's queue: its line's groups going its way to a station it
-    /// calls at before it next turns round, with how far that is.
+    /// station's queue: its line's groups going its way (on a ring,
+    /// decision 49, either way) to a station it calls at before it next
+    /// turns round, with how far that is.
     func boardable(_ i: Int, stop: Int) -> [(index: Int, far: Int)] {
         let train = trains[i]
         let last = train.timetable.count - 1
@@ -287,7 +288,7 @@ extension ReferenceWorld {
             call += 1
         }
         return queue.enumerated().compactMap { index, group in
-            guard group.line == line.id, group.outbound == outbound, let far = ahead[group.destination] else { return nil }
+            guard group.line == line.id, line.ring || group.outbound == outbound, let far = ahead[group.destination] else { return nil }
             return (index, far)
         }
     }

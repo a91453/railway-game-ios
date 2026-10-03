@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 27,
+  "description": "A ring line (schema 27, ARCHITECTURE decision 49) on a loop of grid track: (1,1) to (5,1) along the top, (5,1) to (5,3) down the east, (5,3) to (1,3) along the bottom, (1,3) to (1,1) up the west. Alpha(3,0) has platform (3,1), Beta(6,2) (5,2), Gamma(3,4) (3,3), Delta(0,2) (1,2); from each to the next round the loop is three links, 3072 units. A ring needs three stops or more and not the same station first and last (Short A-B and Back A-B-A cannot be one), and no patterns; making Ring one makes its counts even, down (5, 2, 1 to 4, 2, 0), and from then on it refuses patterns and stop lists that are not a ring, and keeps odd counts even (3 to 2). Making a line that is not a ring a line is nothing. Ring plans with a crawl { acceleration 125, braking 100, topSpeed 1 }: a leg accelerates for 8 s, runs at 1 km/h and brakes for 10 s, 181.8 s, so 182; the lap the inner way is four legs, the last Delta to Alpha, and a minute at each stop, no terminal: 968 s, 17 minutes; the journey starts at Alpha's platform facing north (every heading ties on the grid, the first wins). At most 17 / 2 = 8 trains each way, 16 in all; with one each way the headway is 17 and every segment carries 1440 / 17 rounded up = 85 a day; a target of 5 runs 17 / 5 rounded up = 4 each way, 8, at 5 (288 a day). Inner and Outer stand at Alpha, Inner facing east and Outer west; Inner (the lower ID) runs the inner way, Alpha-Beta-Gamma-Delta-Alpha, Outer the outer way, Alpha-Delta-Gamma-Beta-Alpha. At 00:00 each way sends its train out (lastDispatch and outerLastDispatch 0): it leaves Alpha after the least dwell, 36 s (no terminal on a ring), and each stop is 182 + 60 s after the one before, never reversing: 0/36, 218/278, 460/520, 702/762, 944/944. The lap ends at 980 s, so at 00:17, before that minute's dispatch, both stand at Alpha facing the way they came round.",
+  "initialState": {
+    "mapWidth": 7,
+    "mapHeight": 5,
+    "balance": 1000000,
+    "costs": { "track": 1000, "station": 50000, "train": 200000 },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 1, "connections": ["west", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 3, "connections": ["west", "north"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 3, "connections": ["east", "north"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 2, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 3, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 1, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 4, "y": 3, "connections": ["east", "west"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 1, "y": 2, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildTrack", "x": 5, "y": 2, "connections": ["north", "south"] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Alpha", "x": 3, "y": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Beta", "x": 6, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Gamma", "x": 3, "y": 4 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "buildStation", "name": "Delta", "x": 0, "y": 2 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "createLine", "name": "Ring", "stops": [1, 2, 3, 4] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "createLine", "name": "Short", "stops": [1, 2] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "createLine", "name": "Back", "stops": [1, 2, 1] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLinePerformance", "line": 1, "performance": { "acceleration": 125, "braking": 100, "topSpeed": 1 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineTrainsInService", "line": 1, "trains": { "peak": 5, "offPeak": 2, "low": 1 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 9, "ring": true },
+      "expect": { "result": "unknownLine", "line": 9 }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 2, "ring": true },
+      "expect": { "result": "invalidLineStops" }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 3, "ring": true },
+      "expect": { "result": "invalidLineStops" }
+    },
+    {
+      "command": { "type": "addLinePattern", "line": 1, "calls": [0, 1] },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 1, "ring": true },
+      "expect": { "result": "invalidLinePattern" }
+    },
+    {
+      "command": { "type": "removeLinePattern", "line": 1, "pattern": 0 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 1, "ring": true },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
+      "expect": { "found": true, "trains": 4 }
+    },
+    {
+      "observe": { "type": "lineTrainsInService", "line": 1, "level": "offPeak" },
+      "expect": { "found": true, "trains": 2 }
+    },
+    {
+      "observe": { "type": "lineTrainsInService", "line": 1, "level": "low" },
+      "expect": { "found": true, "trains": 0 }
+    },
+    {
+      "command": { "type": "addLinePattern", "line": 1, "calls": [0, 1] },
+      "expect": { "result": "invalidLinePattern" }
+    },
+    {
+      "command": { "type": "setLineStops", "line": 1, "stops": [1, 2] },
+      "expect": { "result": "invalidLineStops" }
+    },
+    {
+      "command": { "type": "setLineStops", "line": 1, "stops": [1, 2, 3, 1] },
+      "expect": { "result": "invalidLineStops" }
+    },
+    {
+      "command": { "type": "setLineRing", "line": 2, "ring": false },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineServiceWindow", "line": 1, "window": { "type": "allDay" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setLineTrainsInService", "line": 1, "trains": { "peak": 3, "offPeak": 3, "low": 3 } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "lineJourney", "line": 1 },
+      "expect": { "found": true, "journey": { "start": { "type": "node", "x": 3, "y": 1, "heading": "north" }, "legs": [{ "from": 0, "to": 1, "route": [{ "x": 4, "y": 1 }, { "x": 5, "y": 1 }, { "x": 5, "y": 2 }], "seconds": 182 }, { "from": 1, "to": 2, "route": [{ "x": 5, "y": 3 }, { "x": 4, "y": 3 }, { "x": 3, "y": 3 }], "seconds": 182 }, { "from": 2, "to": 3, "route": [{ "x": 2, "y": 3 }, { "x": 1, "y": 3 }, { "x": 1, "y": 2 }], "seconds": 182 }, { "from": 3, "to": 0, "route": [{ "x": 1, "y": 1 }, { "x": 2, "y": 1 }, { "x": 3, "y": 1 }], "seconds": 182 }], "roundTripSeconds": 968, "roundTripMinutes": 17, "ring": true } }
+    },
+    {
+      "observe": { "type": "lineMaximumTrains", "line": 1 },
+      "expect": { "found": true, "trains": 16 }
+    },
+    {
+      "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
+      "expect": { "found": true, "trains": 2 }
+    },
+    {
+      "observe": { "type": "lineHeadway", "line": 1, "level": "peak" },
+      "expect": { "found": true, "minutes": 17 }
+    },
+    {
+      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "peak" },
+      "expect": { "found": true, "loads": [85, 85, 85, 85] }
+    },
+    {
+      "command": { "type": "setLineTargetHeadways", "line": 1, "targetHeadways": { "peak": 5, "offPeak": null, "low": null } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "lineTrainsInService", "line": 1, "level": "peak" },
+      "expect": { "found": true, "trains": 8 }
+    },
+    {
+      "observe": { "type": "lineHeadway", "line": 1, "level": "peak" },
+      "expect": { "found": true, "minutes": 5 }
+    },
+    {
+      "observe": { "type": "lineSegmentLoads", "line": 1, "level": "peak" },
+      "expect": { "found": true, "loads": [288, 288, 288, 288] }
+    },
+    {
+      "command": { "type": "setLineTargetHeadways", "line": 1, "targetHeadways": { "peak": null, "offPeak": null, "low": null } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Inner" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "purchaseTrain", "name": "Outer" },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 1, "position": { "type": "node", "x": 3, "y": 1, "heading": "east" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "placeTrain", "train": 2, "position": { "type": "node", "x": 3, "y": 1, "heading": "west" } },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 1, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "setTrainMovementRate", "train": 2, "rate": 1024 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "assignTrain", "train": 1, "line": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "assignTrain", "train": 2, "line": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "command": { "type": "advance", "ticks": 1 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "timetable", "train": 1 },
+      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 36, "reverse": false }, { "station": 2, "arrivalSeconds": 218, "departureSeconds": 278, "reverse": false }, { "station": 3, "arrivalSeconds": 460, "departureSeconds": 520, "reverse": false }, { "station": 4, "arrivalSeconds": 702, "departureSeconds": 762, "reverse": false }, { "station": 1, "arrivalSeconds": 944, "departureSeconds": 944, "reverse": false }] }
+    },
+    {
+      "observe": { "type": "timetable", "train": 2 },
+      "expect": { "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 36, "reverse": false }, { "station": 4, "arrivalSeconds": 218, "departureSeconds": 278, "reverse": false }, { "station": 3, "arrivalSeconds": 460, "departureSeconds": 520, "reverse": false }, { "station": 2, "arrivalSeconds": 702, "departureSeconds": 762, "reverse": false }, { "station": 1, "arrivalSeconds": 944, "departureSeconds": 944, "reverse": false }] }
+    },
+    {
+      "observe": { "type": "execution", "train": 1 },
+      "expect": { "execution": { "type": "travelling", "stop": 1, "cycle": 0 } }
+    },
+    {
+      "observe": { "type": "execution", "train": 2 },
+      "expect": { "execution": { "type": "travelling", "stop": 1, "cycle": 0 } }
+    },
+    {
+      "command": { "type": "advance", "ticks": 16 },
+      "expect": { "result": "ok" }
+    },
+    {
+      "observe": { "type": "execution", "train": 1 },
+      "expect": { "execution": { "type": "inactive" } }
+    },
+    {
+      "observe": { "type": "execution", "train": 2 },
+      "expect": { "execution": { "type": "inactive" } }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 17,
+    "speed": "normal",
+    "balance": 388000,
+    "stations": [
+      { "id": 1, "name": "Alpha", "x": 3, "y": 0, "annexes": [] },
+      { "id": 2, "name": "Beta", "x": 6, "y": 2, "annexes": [] },
+      { "id": 3, "name": "Gamma", "x": 3, "y": 4, "annexes": [] },
+      { "id": 4, "name": "Delta", "x": 0, "y": 2, "annexes": [] }
+    ],
+    "tracks": [
+      { "x": 1, "y": 1, "connections": ["east", "south"], "layout": { "type": "open" } },
+      { "x": 2, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 1, "connections": ["south", "west"], "layout": { "type": "open" } },
+      { "x": 1, "y": 2, "connections": ["north", "south"], "layout": { "type": "open" } },
+      { "x": 5, "y": 2, "connections": ["north", "south"], "layout": { "type": "open" } },
+      { "x": 1, "y": 3, "connections": ["north", "east"], "layout": { "type": "open" } },
+      { "x": 2, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 3, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 4, "y": 3, "connections": ["east", "west"], "layout": { "type": "open" } },
+      { "x": 5, "y": 3, "connections": ["north", "west"], "layout": { "type": "open" } }
+    ],
+    "trains": [
+      { "id": 1, "name": "Inner", "position": { "type": "node", "x": 3, "y": 1, "heading": "east" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 36, "reverse": false }, { "station": 2, "arrivalSeconds": 218, "departureSeconds": 278, "reverse": false }, { "station": 3, "arrivalSeconds": 460, "departureSeconds": 520, "reverse": false }, { "station": 4, "arrivalSeconds": 702, "departureSeconds": 762, "reverse": false }, { "station": 1, "arrivalSeconds": 944, "departureSeconds": 944, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] },
+      { "id": 2, "name": "Outer", "position": { "type": "node", "x": 3, "y": 1, "heading": "west" }, "movement": { "rate": 1024, "continuation": [], "cursor": 0, "edges": [] }, "timetable": [{ "station": 1, "arrival": 0, "departureSeconds": 36, "reverse": false }, { "station": 4, "arrivalSeconds": 218, "departureSeconds": 278, "reverse": false }, { "station": 3, "arrivalSeconds": 460, "departureSeconds": 520, "reverse": false }, { "station": 2, "arrivalSeconds": 702, "departureSeconds": 762, "reverse": false }, { "station": 1, "arrivalSeconds": 944, "departureSeconds": 944, "reverse": false }], "repeat": { "type": "once" }, "execution": { "type": "inactive" }, "cars": 1, "trail": [], "trailEdges": [], "reservation": [] }
+    ],
+    "lines": [
+      { "id": 1, "name": "Ring", "stops": [1, 2, 3, 4], "performance": { "acceleration": 125, "braking": 100, "topSpeed": 1 }, "window": { "type": "allDay" }, "trainsInService": { "peak": 2, "offPeak": 2, "low": 2 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [1, 2], "lastDispatch": 0, "patterns": [], "ring": true, "outerLastDispatch": 0 },
+      { "id": 2, "name": "Short", "stops": [1, 2], "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 0, "offPeak": 0, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] },
+      { "id": 3, "name": "Back", "stops": [1, 2, 1], "window": { "type": "hours", "open": 360, "close": 1440 }, "trainsInService": { "peak": 0, "offPeak": 0, "low": 0 }, "targetHeadways": { "peak": null, "offPeak": null, "low": null }, "trains": [], "lastDispatch": null, "patterns": [] }
+    ],
+    "serviceDay": [{ "start": 0, "level": "low" }, { "start": 420, "level": "peak" }, { "start": 600, "level": "offPeak" }, { "start": 960, "level": "peak" }, { "start": 1200, "level": "offPeak" }, { "start": 1260, "level": "low" }],
+    "network": { "nodes": [], "edges": [], "platforms": [] },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "free", "fareRules": null, "openedAt": null,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [], "days": []
+    }
+  }
+}

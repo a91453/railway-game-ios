@@ -57,17 +57,25 @@ public struct LineJourney: Hashable, Sendable {
     /// way it leaves; on the track network, at a berth of one of its
     /// platforms (Stage S5).
     public let start: TrainPosition
-    /// The legs out, then the legs back: `2 × (calls − 1)` of them.
+    /// The legs out, then the legs back: `2 × (calls − 1)` of them; on a
+    /// ring (``isRing``) once round instead, one leg for each of its stops,
+    /// the last from its last call back to the first.
     public let legs: [LineLeg]
     /// The seconds the whole round trip takes (Stage W2c): every leg, plus
     /// ``ServiceLine/dwellMinutes`` at each call between the ends (once out
     /// and once back) and ``ServiceLine/terminalDwellMinutes`` at each end.
+    /// On a ring, once round: every leg and ``ServiceLine/dwellMinutes`` at
+    /// each stop, and no terminal (decision 49).
     public let roundTripSeconds: Int64
+    /// Whether the journey is a ring's lap (decision 49): it never turns
+    /// round, and comes back to its first call going the same way.
+    public let isRing: Bool
 
-    public init(start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64) {
+    public init(start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64, isRing: Bool = false) {
         self.start = start
         self.legs = legs
         self.roundTripSeconds = roundTripSeconds
+        self.isRing = isRing
     }
 
     /// The round trip in whole minutes, rounded up: what a line plans its
@@ -103,9 +111,33 @@ struct LineTrip: Hashable, Sendable {
     /// `roundTripMinutes` after it was sent out (or sooner: the round trip
     /// is rounded up to a whole minute).
     ///
+    /// A ring's lap (decision 49) has no terminal: the first call is left
+    /// ``ServiceDwell/minimum`` after `dispatch` (or
+    /// ``ServiceDwell/terminalMinimum`` when the train turns round there
+    /// first, as any train that turns), every call on the way stays
+    /// ``ServiceLine/dwellMinutes``, nothing else turns round, and back at
+    /// the first call the lap is over (the reference's ring dwell,
+    /// `DWELL_GAME_SEC` at every stop).
+    ///
     /// - Precondition: `dispatch` is second 0 or later.
     func timetable(calling stops: [StationID], sentOutAt dispatch: GameTime) -> [ScheduledStop]? {
         let legs = journey.legs
+        if journey.isRing {
+            let least = turnsFirst ? ServiceDwell.terminalMinimum : ServiceDwell.minimum
+            let (departure, overflow) = dispatch.seconds.addingReportingOverflow(least)
+            guard !overflow else { return nil }
+            var timetable = [ScheduledStop(station: stops[legs[0].from], arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst)]
+            var time = departure
+            for (index, leg) in legs.enumerated() {
+                let dwell = index == legs.count - 1 ? 0 : ServiceLine.dwellMinutes
+                let (arrival, late) = time.addingReportingOverflow(leg.seconds)
+                let (leaving, later) = arrival.addingReportingOverflow(dwell * GameTime.secondsPerMinute)
+                guard !late, !later else { return nil }
+                timetable.append(ScheduledStop(station: stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: leaving)))
+                time = leaving
+            }
+            return timetable
+        }
         let farEnd = legs[legs.count / 2 - 1].to
         let (departure, overflow) = dispatch.seconds.addingReportingOverflow(ServiceDwell.terminalMinimum)
         guard !overflow else { return nil }
@@ -167,6 +199,11 @@ extension GameWorld {
     /// The journey of `line`'s service `service` (see
     /// ``ServiceLine/serviceCount``), as ``lineJourney(_:pattern:)``
     /// finds it.
+    ///
+    /// A ring's journey (decision 49) is its lap the
+    /// ``RingDirection/inner`` way, from the same starts: once round, in
+    /// the order of its stops, back to the first (see
+    /// ``driveLap(_:calling:from:)``).
     func journey(of line: ServiceLine, service: Int) -> LineJourney? {
         let calls = line.calls(ofService: service)
         let first = line.stops[calls[0]]
@@ -174,7 +211,9 @@ extension GameWorld {
             + berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
         var best: LineJourney?
         for start in starts {
-            guard let journey = drive(line, calling: calls, from: TrainPlacement(position: start, trail: [], trailEdges: [], length: 0)) else {
+            let placement = TrainPlacement(position: start, trail: [], trailEdges: [], length: 0)
+            let driven = line.isRing ? driveLap(line, calling: line.ringCalls(.inner), from: placement) : drive(line, calling: calls, from: placement)
+            guard let journey = driven else {
                 continue
             }
             if best == nil || journey.roundTripSeconds < best!.roundTripSeconds {
@@ -189,9 +228,13 @@ extension GameWorld {
     /// ``ServiceLine/minimumHeadwayMinutes`` between them over its round
     /// trip, and at least one. `nil` if the line or pattern does not exist
     /// or its journey cannot be driven.
+    ///
+    /// A ring (decision 49) runs that many each way, twice as many in all
+    /// (the reference's `(isRing ? 2 : 1) * floor(…)`).
     public func lineMaximumTrains(_ id: LineID, pattern: Int? = nil) -> Int? {
-        guard let roundTrip = lineJourney(id, pattern: pattern)?.roundTripMinutes else { return nil }
-        return Int(clamping: max(1, roundTrip / ServiceLine.minimumHeadwayMinutes))
+        guard let journey = lineJourney(id, pattern: pattern) else { return nil }
+        let eachWay = Int(clamping: max(1, journey.roundTripMinutes / ServiceLine.minimumHeadwayMinutes))
+        return journey.isRing ? eachWay * 2 : eachWay
     }
 
     /// How many trains line `id`'s own service, or its pattern at index
@@ -252,11 +295,23 @@ extension GameWorld {
     /// grid or the track network alike (Stage S5): the train's length
     /// decides which platforms it can stop at and where its head is once it
     /// has turned round.
+    ///
+    /// On a ring (decision 49) the trip is a lap the way the train runs
+    /// (``ServiceLine/ringDirection(of:)``; the ``RingDirection/inner``
+    /// way for a train not on it), from where it stands as it faces or
+    /// turned round first, by the same choice.
     func trip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
         guard let placement = train.placement else { return nil }
         let calls = line.calls(ofService: service)
-        let ahead = drive(line, calling: calls, from: placement)
-        let turned = drive(line, calling: calls, from: turnedRound(placement))
+        let ahead: LineJourney?, turned: LineJourney?
+        if line.isRing {
+            let lap = line.ringCalls(line.ringDirection(of: train.id) ?? .inner)
+            ahead = driveLap(line, calling: lap, from: placement)
+            turned = driveLap(line, calling: lap, from: turnedRound(placement))
+        } else {
+            ahead = drive(line, calling: calls, from: placement)
+            turned = drive(line, calling: calls, from: turnedRound(placement))
+        }
         if let turned, ahead.map({ turned.roundTripSeconds < $0.roundTripSeconds }) ?? true {
             return LineTrip(turnsFirst: true, journey: turned)
         }
@@ -303,5 +358,34 @@ extension GameWorld {
             placement = self.placement(placement, after: path)
         }
         return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds)
+    }
+
+    /// A ring's lap calling at `calls` (indices into its stops, from the
+    /// first stop round to it again, see ``ServiceLine/ringCalls(_:)``),
+    /// driven from `start`, or `nil` as for ``drive(_:calling:from:)``
+    /// (decision 49). Each leg as there, never turning round; the lap's
+    /// seconds are every leg and ``ServiceLine/dwellMinutes`` at each stop
+    /// it calls at once round (the reference's
+    /// `metroHeadwayRoundTripMinutes` for a ring: one dwell a stop, no
+    /// terminal).
+    func driveLap(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> LineJourney? {
+        let stops = line.stops
+        var placement = start
+        var legs: [LineLeg] = []
+        var seconds = ServiceLine.dwellMinutes * Int64(calls.count - 1) * GameTime.secondsPerMinute
+        for (from, to) in zip(calls, calls.dropFirst()) {
+            guard let path = path(from: placement.position, toStation: stops[to], length: placement.length) else { return nil }
+            var legSeconds: Int64 = 0
+            if path.distance > 0 {
+                guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
+                legSeconds = least
+            }
+            let (total, overflow) = seconds.addingReportingOverflow(legSeconds)
+            guard !overflow else { return nil }
+            seconds = total
+            legs.append(LineLeg(from: from, to: to, path: path, seconds: legSeconds))
+            placement = self.placement(placement, after: path)
+        }
+        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds, isRing: true)
     }
 }

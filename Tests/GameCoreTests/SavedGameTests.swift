@@ -3,9 +3,9 @@ import GameCore
 import XCTest
 
 /// Stage C4: the versioned save. Version 1 is the world's `Codable` form;
-/// version 2 (Stage E1) writes only the map's occupied tiles. Unknown
-/// versions are refused, and every committed save in `SaveFixtures/` keeps
-/// loading (see its README).
+/// version 2 (Stage E1) writes only the map's occupied tiles; version 3
+/// (decision 49) can hold ring lines. Unknown versions are refused, and
+/// every committed save in `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private func makeWorld() throws -> GameWorld {
         var world = try GameWorld(
@@ -29,8 +29,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 2)
-        XCTAssertEqual(SavedGame.currentVersion, 2)
+        XCTAssertEqual(object["saveVersion"] as? Int, 3)
+        XCTAssertEqual(SavedGame.currentVersion, 3)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -44,7 +44,8 @@ final class SavedGameTests: XCTestCase {
         }
         XCTAssertNoThrow(try decode(#"{"saveVersion": 1, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 2, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 3, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertNoThrow(try decode(#"{"saveVersion": 3, "world": \#(world)}"#))
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 4, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -184,6 +185,31 @@ final class SavedGameTests: XCTestCase {
         XCTAssertTrue(world.isTrafficControlEnabled)
         XCTAssertEqual(world.accounts.mode, .management)
         XCTAssertEqual(world.economy.balance, Money(131_595_600))
+    }
+
+    /// The version 3 save (decision 49): the demo map after 90 minutes,
+    /// with the Ring Line round Central on two tracks, a train each way,
+    /// both sent out since it opened.
+    func testTheVersionThreeSaveReadsAsItWasWritten() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v3-demo-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 3)
+        let lines = try XCTUnwrap((object["world"] as? [String: Any])?["lines"] as? [[String: Any]])
+        XCTAssertEqual(lines.map { $0["ring"] as? Bool }, [nil, nil, true])
+
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
+        XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
+        XCTAssertEqual(world.network.edges.count, 10)
+        XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
+        XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
+        XCTAssertEqual(world.trains.map(\.name), ["Train 1", "Train 2", "Ring Train 1", "Ring Train 2"])
+        let ring = world.lines[2]
+        XCTAssertEqual(ring.trains.map { ring.ringDirection(of: $0) }, [.inner, .outer])
+        XCTAssertNotNil(ring.lastDispatch)
+        XCTAssertNotNil(ring.outerLastDispatch)
+        XCTAssertTrue(world.isTrafficControlEnabled)
+        XCTAssertEqual(world.accounts.mode, .management)
     }
 
     /// `SaveFixtures/` at the repository root, found from this source file.

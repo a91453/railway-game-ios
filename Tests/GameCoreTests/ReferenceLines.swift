@@ -1,8 +1,8 @@
 import GameCore
 
-/// Decisions 22 to 24, written a second time for ``ReferenceWorld``:
-/// service lines and their patterns, the service day, what is derived from
-/// them, and dispatch. Written from the rules,
+/// Decisions 22 to 24 and 49, written a second time for ``ReferenceWorld``:
+/// service lines, their patterns and rings, the service day, what is
+/// derived from them, and dispatch. Written from the rules,
 /// not from GameCore, and differently where it can be: windows as one or
 /// two ranges of the day, levels found by scanning the day's bands from the
 /// start, leg seconds by trying every second upward (Stage W2c), and every
@@ -12,12 +12,15 @@ extension ReferenceWorld {
         lines.firstIndex { $0.id == id.rawValue }
     }
 
-    /// Two stops or more, never one twice in a row; then every station known.
-    private func stopsProblem(_ stops: [StationID]) -> GameError? {
-        guard stops.count >= 2 else { return .invalidLineStops }
+    /// Two stops or more, never one twice in a row (decision 49: on a ring
+    /// three or more, and round from the last to the first too); then
+    /// every station known.
+    private func stopsProblem(_ stops: [StationID], ring: Bool = false) -> GameError? {
+        guard stops.count >= (ring ? 3 : 2) else { return .invalidLineStops }
         for index in 1..<stops.count where stops[index] == stops[index - 1] {
             return .invalidLineStops
         }
+        if ring, stops[0] == stops[stops.count - 1] { return .invalidLineStops }
         let known = Set(stations.map(\.id))
         if let missing = stops.first(where: { !known.contains($0.rawValue) }) {
             return .unknownStation(missing)
@@ -43,11 +46,28 @@ extension ReferenceWorld {
 
     mutating func setLineStops(_ id: LineID, _ stops: [StationID]) -> GameError? {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
-        if let problem = stopsProblem(stops) { return problem }
+        if let problem = stopsProblem(stops, ring: lines[index].ring) { return problem }
         // Decision 24: the patterns keep their calls, which must still fit.
         if lines[index].patterns.contains(where: { $0.calls.contains { $0 >= stops.count } }) { return .invalidLinePattern }
         lines[index].stops = stops
         abandonStrandedPassengers()
+        return nil
+    }
+
+    /// Decision 49: a ring needs a ring's stops, then no patterns, and runs
+    /// its trains in pairs (each count down to an even one); a line again
+    /// forgets its outer dispatch.
+    mutating func setLineRing(_ id: LineID, _ ring: Bool) -> GameError? {
+        guard let index = lineIndex(id) else { return .unknownLine(id) }
+        if ring {
+            let stops = lines[index].stops
+            guard stops.count >= 3, stops.first != stops.last else { return .invalidLineStops }
+            guard lines[index].patterns.isEmpty else { return .invalidLinePattern }
+            lines[index].trains = lines[index].trains.mapValues { $0 - $0 % 2 }
+        } else {
+            lines[index].outerLastDispatch = nil
+        }
+        lines[index].ring = ring
         return nil
     }
 
@@ -75,7 +95,9 @@ extension ReferenceWorld {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
         if let pattern, !lines[index].patterns.indices.contains(pattern) { return .unknownLinePattern(pattern) }
         guard min(trains.peak, trains.offPeak, trains.low) >= 0 else { return .invalidTrainsInService }
-        let counts: [ServiceLevel: Int] = [.peak: trains.peak, .offPeak: trains.offPeak, .low: trains.low]
+        var counts: [ServiceLevel: Int] = [.peak: trains.peak, .offPeak: trains.offPeak, .low: trains.low]
+        // Decision 49: in pairs on a ring.
+        if lines[index].ring { counts = counts.mapValues { $0 / 2 * 2 } }
         if let pattern {
             lines[index].patterns[pattern].trains = counts
         } else {
@@ -116,10 +138,50 @@ extension ReferenceWorld {
         return serviceJourney(line, pattern.map { $0 + 1 } ?? 0)
     }
 
+    /// Decision 49: a ring's lap one way, as indices of its stops: from the
+    /// first round to it again, in their order the inner way, against it
+    /// the outer.
+    static func lap(_ line: Line, outer: Bool) -> [Int] {
+        let inner = Array(line.stops.indices) + [0]
+        return outer ? inner.reversed() : inner
+    }
+
+    /// Decision 49: the way the train `id` runs on `line`: alternately in
+    /// the order of their IDs, the first the inner way; `nil` off a ring.
+    static func isOuter(_ id: Int, on line: Line) -> Bool? {
+        guard line.ring, let place = line.roster.firstIndex(of: id) else { return nil }
+        return place % 2 == 1
+    }
+
+    /// The trains of one way of a ring: every other one of its roster.
+    static func roster(of line: Line, outer: Bool) -> [Int] {
+        stride(from: outer ? 1 : 0, to: line.roster.count, by: 2).map { line.roster[$0] }
+    }
+
+    /// The legs a journey calling at `calls` drives, and the call it turns
+    /// round at: out and back, turning at the last; a ring's lap (decision
+    /// 49) once along `calls`, never turning.
+    static func legPairs(_ line: Line, _ calls: [Int]) -> (pairs: [(Int, Int)], turn: Int?) {
+        let n = calls.count
+        if line.ring { return ((1..<n).map { (calls[$0 - 1], calls[$0]) }, nil) }
+        var pairs: [(Int, Int)] = (0..<(n - 1)).map { (calls[$0], calls[$0 + 1]) }
+        pairs += (1..<n).reversed().map { (calls[$0], calls[$0 - 1]) }
+        return (pairs, calls[n - 1])
+    }
+
+    /// The seconds spent at the calls of a journey along `calls`: 2 minutes
+    /// at each end and 1 at each call between, out and back; on a ring 1
+    /// at every stop of the lap (decision 49).
+    static func dwellSeconds(_ line: Line, _ calls: [Int]) -> Int64 {
+        let n = Int64(calls.count)
+        return line.ring ? 60 * (n - 1) : 60 * (2 * 2 + 2 * (n - 2) * 1)
+    }
+
     /// Service `k` of `line` driven from every platform of its first call
-    /// facing every way; the shortest, the first found among equals.
+    /// facing every way; the shortest, the first found among equals. A
+    /// ring's journey is its lap the inner way.
     func serviceJourney(_ line: Line, _ k: Int) -> LineJourney? {
-        let calls = line.service(k).calls
+        let calls = line.ring ? Self.lap(line, outer: false) : line.service(k).calls
         var best: LineJourney?
         for platform in platforms(of: line.stops[calls[0]]) {
             for heading in TrackDirection.allCases {
@@ -141,18 +203,16 @@ extension ReferenceWorld {
 
     /// The line driven once from `start`, calling at `calls` (indices of its
     /// stops): out along them, turning at the last, back along them in
-    /// reverse; `nil` if a leg has no route. Decision 27: a train `length`
-    /// long with body `trail` turns with its head at its tail and is pulled
-    /// along the platforms.
+    /// reverse (a ring's lap, once along them); `nil` if a leg has no
+    /// route. Decision 27: a train `length` long with body `trail` turns
+    /// with its head at its tail and is pulled along the platforms.
     func journey(of line: Line, calling calls: [Int], from start: TrainPosition, trail: [GridPosition] = [], length: Int64 = 0) -> LineJourney? {
-        let n = calls.count
         var position = start
         var body = trail
         var legs: [LineLeg] = []
-        var pairs: [(Int, Int)] = (0..<(n - 1)).map { (calls[$0], calls[$0 + 1]) }
-        pairs += (1..<n).reversed().map { (calls[$0], calls[$0 - 1]) }
+        let (pairs, turn) = Self.legPairs(line, calls)
         for (from, to) in pairs {
-            if from == calls[n - 1] { (position, body) = Self.turnedWithBody(position, body, length: length) }
+            if from == turn { (position, body) = Self.turnedWithBody(position, body, length: length) }
             guard let route = route(from: position, toStation: line.stops[to], length: length) else { return nil }
             let units = Int64(route.count) * Self.linkLength
             // Decision 31: a leg keeps its path as links from the node ahead.
@@ -172,8 +232,8 @@ extension ReferenceWorld {
                 position = arrived
             }
         }
-        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + 60 * (2 * 2 + Int64(2 * (n - 2)) * 1)
-        return LineJourney(start: start, legs: legs, roundTripSeconds: total)
+        let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + Self.dwellSeconds(line, calls)
+        return LineJourney(start: start, legs: legs, roundTripSeconds: total, isRing: line.ring)
     }
 
     /// Everything derived for one service of a line: `nil` parts where the
@@ -192,7 +252,7 @@ extension ReferenceWorld {
         let k = pattern.map { $0 + 1 } ?? 0
         let journeys = (0...k).map { serviceJourney(line, $0) }
         guard let journey = journeys[k] else { return none }
-        var answers = LineAnswers(journey: journey, maximum: Self.maximumTrains(roundTrip: journey.roundTripMinutes), trains: [:], headways: [:])
+        var answers = LineAnswers(journey: journey, maximum: Self.maximum(line, journey), trains: [:], headways: [:])
         for level in ServiceLevel.allCases {
             let plan = Self.plans(line, at: level, journeys: journeys)[k]!
             answers.trains[level] = plan.trains
@@ -209,7 +269,7 @@ extension ReferenceWorld {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
         let journeys = (0...line.patterns.count).map { serviceJourney(line, $0) }
         var services = journeys.map { journey in
-            LineAnswers(journey: journey, maximum: journey.map { Self.maximumTrains(roundTrip: $0.roundTripMinutes) }, trains: [:], headways: [:])
+            LineAnswers(journey: journey, maximum: journey.map { Self.maximum(line, $0) }, trains: [:], headways: [:])
         }
         var loads: [ServiceLevel: [Int]] = [:]
         for level in ServiceLevel.allCases {
@@ -219,9 +279,21 @@ extension ReferenceWorld {
                 services[k].trains[level] = plan.trains
                 services[k].headways[level] = plan.headway
             }
-            loads[level] = (0..<(line.stops.count - 1)).map { Self.loadBefore(line, plans, $0) }
+            loads[level] = (0..<Self.segments(line)).map { Self.loadBefore(line, plans, $0) }
         }
         return (services, loads)
+    }
+
+    /// The most trains `line` runs on `journey`: decision 49, a ring as
+    /// many each way as a line would run.
+    static func maximum(_ line: Line, _ journey: LineJourney) -> Int {
+        (line.ring ? 2 : 1) * maximumTrains(roundTrip: journey.roundTripMinutes)
+    }
+
+    /// Stop to stop; a ring's last segment runs from its last stop back to
+    /// the first.
+    static func segments(_ line: Line) -> Int {
+        line.ring ? line.stops.count : line.stops.count - 1
     }
 
     /// Decisions 22 and 23: the trains a service runs at `level` on its own
@@ -260,6 +332,14 @@ extension ReferenceWorld {
     /// call to its last to what the services before it put there, stays
     /// within 720.
     static func plans(_ line: Line, at level: ServiceLevel, journeys: [LineJourney?]) -> [(trains: Int, headway: Int64?)?] {
+        if line.ring {
+            // Decision 49: one service, each way planned as a line on the
+            // lap, with half the count; twice the trains in all.
+            guard let lap = journeys[0]?.roundTripMinutes else { return [nil] }
+            let eachWay = plan(Pattern(calls: [], trains: line.trains.mapValues { $0 / 2 }, targets: line.targets), at: level,
+                               roundTrip: lap, maximum: maximumTrains(roundTrip: lap))
+            return [(2 * eachWay.trains, eachWay.headway)]
+        }
         var plans: [(trains: Int, headway: Int64?)?] = []
         for (k, journey) in journeys.enumerated() {
             guard let journey else {
@@ -282,8 +362,10 @@ extension ReferenceWorld {
         return plans
     }
 
-    /// What `plans` (of services 0, 1, ... of `line`) put on `segment`.
+    /// What `plans` (of services 0, 1, ... of `line`) put on `segment`;
+    /// a ring's one service is on every segment.
     static func loadBefore(_ line: Line, _ plans: [(trains: Int, headway: Int64?)?], _ segment: Int) -> Int {
+        if line.ring { return plans[0]?.headway.map(load) ?? 0 }
         var total = 0
         for (k, plan) in plans.enumerated() {
             guard let headway = plan?.headway else { continue }
@@ -328,7 +410,7 @@ extension ReferenceWorld {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
         let journeys = (0...line.patterns.count).map { serviceJourney(line, $0) }
         let plans = Self.plans(line, at: level, journeys: journeys)
-        return (0..<(line.stops.count - 1)).map { Self.loadBefore(line, plans, $0) }
+        return (0..<Self.segments(line)).map { Self.loadBefore(line, plans, $0) }
     }
 }
 
@@ -387,6 +469,8 @@ extension ReferenceWorld {
     /// Decision 24: two calls or more, each a stop of the line, rising.
     mutating func addPattern(_ id: LineID, _ calls: [Int]) -> GameError? {
         guard let index = lines.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownLine(id) }
+        // Decision 49: never on a ring.
+        if lines[index].ring { return .invalidLinePattern }
         guard calls.count >= 2, calls.allSatisfy({ (0..<lines[index].stops.count).contains($0) }),
               (1..<calls.count).allSatisfy({ calls[$0 - 1] < calls[$0] })
         else { return .invalidLinePattern }
@@ -404,6 +488,8 @@ extension ReferenceWorld {
     struct ServiceKey: Hashable {
         var line: Int
         var service: Int
+        /// Decision 49: a ring's trip the outer way.
+        var outer = false
     }
 
     /// What stays the same within one call of `advance`.
@@ -421,11 +507,22 @@ extension ReferenceWorld {
     }
 
     /// Every service of one line, its own first, dispatching at the current
-    /// minute.
+    /// minute; a ring (decision 49) each way on its own, the inner first.
     mutating func dispatch(_ l: Int, memo: inout DispatchMemo) {
+        if lines[l].ring {
+            dispatch(l, service: 0, outer: false, memo: &memo)
+            dispatch(l, service: 0, outer: true, memo: &memo)
+            return
+        }
         for k in 0...lines[l].patterns.count {
             dispatch(l, service: k, memo: &memo)
         }
+    }
+
+    /// The trains that dispatch together: a service's, or one way's of a
+    /// ring.
+    static func roster(of line: Line, service k: Int, outer: Bool?) -> [Int] {
+        outer.map { roster(of: line, outer: $0) } ?? line.service(k).roster
     }
 
     /// One service's dispatch at the current minute: from minute 0, window
@@ -436,12 +533,13 @@ extension ReferenceWorld {
     /// first call, that can drive the round trip from there (turned round
     /// only if that is shorter or the only way) leaves on it now. Decision
     /// 32: under traffic control, only if its first departure can take its
-    /// route; and it leaves at once.
-    mutating func dispatch(_ l: Int, service k: Int, memo: inout DispatchMemo) {
-        guard isDue(l, service: k, memo: &memo) else { return }
-        for id in lines[l].service(k).roster {
+    /// route; and it leaves at once. On a ring (decision 49), `outer` says
+    /// which way: the trains of that way, and its own last dispatch.
+    mutating func dispatch(_ l: Int, service k: Int, outer: Bool? = nil, memo: inout DispatchMemo) {
+        guard isDue(l, service: k, outer: outer, memo: &memo) else { return }
+        for id in Self.roster(of: lines[l], service: k, outer: outer) {
             guard let i = trains.firstIndex(where: { $0.id == id }) else { continue }
-            switch tripTimetable(i, l, service: k, memo: &memo) {
+            switch tripTimetable(i, l, service: k, outer: outer, memo: &memo) {
             case .notReady:
                 continue
             case .overflow:
@@ -455,7 +553,9 @@ extension ReferenceWorld {
                 sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
                 if trafficControl, let leaving = firstLeaving(sent), holder(of: needs(leaving).resources, except: sent.id) != nil { continue }
                 trains[i] = sent
-                if k == 0 {
+                if outer == true {
+                    lines[l].outerLastDispatch = minutes
+                } else if k == 0 {
                     lines[l].lastDispatch = minutes
                 } else {
                     lines[l].patterns[k - 1].lastDispatch = minutes
@@ -466,11 +566,13 @@ extension ReferenceWorld {
     }
 
     /// Whether service `k` of line `l` sends a train out now if one is
-    /// ready.
-    func isDue(_ l: Int, service k: Int, memo: inout DispatchMemo) -> Bool {
+    /// ready; on a ring (decision 49) one way, `outer` or not, which runs
+    /// half the trains at the ring's headway since its own last dispatch.
+    func isDue(_ l: Int, service k: Int, outer: Bool? = nil, memo: inout DispatchMemo) -> Bool {
         let line = lines[l]
         let service = line.service(k)
-        guard !service.roster.isEmpty, minutes >= 0,
+        let roster = Self.roster(of: line, service: k, outer: outer)
+        guard !roster.isEmpty, minutes >= 0,
               let level = serviceLevel(of: LineID(rawValue: line.id), at: GameTime(minutes: minutes))
         else { return false }
         var journeys: [LineJourney?] = []
@@ -484,9 +586,9 @@ extension ReferenceWorld {
         guard journeys[k] != nil, let plan = Self.plans(line, at: level, journeys: journeys)[k], plan.trains > 0,
               let headway = plan.headway
         else { return false }
-        if let last = service.lastDispatch, minutes - last < headway { return false }
-        let busy = trains.filter { service.roster.contains($0.id) && $0.service != nil }.count
-        return busy < plan.trains
+        if let last = outer == true ? line.outerLastDispatch : service.lastDispatch, minutes - last < headway { return false }
+        let busy = trains.filter { roster.contains($0.id) && $0.service != nil }.count
+        return busy < (outer == nil ? plan.trains : plan.trains / 2)
     }
 
     enum TripTimetable {
@@ -497,30 +599,32 @@ extension ReferenceWorld {
 
     /// The timetable train `i` would be sent out on by service `k` of line
     /// `l` now: none unless it has no service, is placed, moves at some
-    /// rate, stands at the first call and can drive the round trip.
-    func tripTimetable(_ i: Int, _ l: Int, service k: Int, memo: inout DispatchMemo) -> TripTimetable {
+    /// rate, stands at the first call and can drive the round trip (on a
+    /// ring, decision 49, the lap the way `outer` says).
+    func tripTimetable(_ i: Int, _ l: Int, service k: Int, outer: Bool? = nil, memo: inout DispatchMemo) -> TripTimetable {
         let line = lines[l]
         let service = line.service(k)
-        let first = line.stops[service.calls[0]]
+        let calls = outer.map { Self.lap(line, outer: $0) } ?? service.calls
+        let first = line.stops[calls[0]]
         let train = trains[i]
         guard train.service == nil, let position = train.position, train.rate > 0,
               stationsStoppedAt(by: TrainID(rawValue: train.id)).contains(first)
         else { return .notReady }
         let place = Place(position: position, trail: train.trail, trailEdges: train.trailEdges)
         let length = Self.length(train)
-        let key = ServiceKey(line: line.id, service: k)
+        let key = ServiceKey(line: line.id, service: k, outer: outer == true)
         if memo.trips[place]?[key] == nil {
             let straight: LineJourney?
             let turned: LineJourney?
             if case .onEdge = position {
                 // Decision 31: on the network, from its place and body.
-                straight = networkJourney(of: line, calling: service.calls, from: position, trailEdges: train.trailEdges, length: length)
+                straight = networkJourney(of: line, calling: calls, from: position, trailEdges: train.trailEdges, length: length)
                 let back = turnedOnNetwork(train)
-                turned = networkJourney(of: line, calling: service.calls, from: back.position!, trailEdges: back.trailEdges, length: length)
+                turned = networkJourney(of: line, calling: calls, from: back.position!, trailEdges: back.trailEdges, length: length)
             } else {
-                straight = journey(of: line, calling: service.calls, from: position, trail: train.trail, length: length)
+                straight = journey(of: line, calling: calls, from: position, trail: train.trail, length: length)
                 let (back, backBody) = Self.turnedWithBody(position, train.trail, length: length)
-                turned = journey(of: line, calling: service.calls, from: back, trail: backBody, length: length)
+                turned = journey(of: line, calling: calls, from: back, trail: backBody, length: length)
             }
             let pick: (Bool, LineJourney)? = switch (straight, turned) {
             case (let s?, let t?): t.roundTripSeconds < s.roundTripSeconds ? (true, t) : (false, s)
@@ -531,6 +635,26 @@ extension ReferenceWorld {
             memo.trips[place, default: [:]][key] = .some(pick)
         }
         guard let (turn, trip) = memo.trips[place]![key]! else { return .notReady }
+        if outer != nil {
+            // Decision 49: no ends: 36 s at the first call (42 when it turns
+            // there), a minute at every call after it but the last, back at
+            // the first; nothing turns on the way.
+            let now = minutes * 60
+            let stay: Int64 = turn ? 42 : 36
+            guard now <= Int64.max - stay else { return .overflow }
+            var timetable = [ScheduledStop(station: first, arrival: GameTime(seconds: now), departure: GameTime(seconds: now + stay), reverses: turn)]
+            var clock = now + stay
+            for (n, leg) in trip.legs.enumerated() {
+                let dwell: Int64 = n == trip.legs.count - 1 ? 0 : 60
+                guard leg.seconds <= Int64.max - dwell - clock else { return .overflow }
+                let arrival = clock + leg.seconds
+                clock = arrival + dwell
+                timetable.append(ScheduledStop(
+                    station: line.stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: clock), reverses: false
+                ))
+            }
+            return .ready(timetable)
+        }
         // The timetable, in seconds: arrive now and stay 42 (Stage W2b);
         // each call the leg's seconds after the one before (Stage W2c); stay 1 minute
         // between the ends, 2 at the far end (turning), and finish on
@@ -554,11 +678,13 @@ extension ReferenceWorld {
     }
 
     /// Decision 32: the timetable train `train` would be sent out on now by
-    /// its line, if the line is due and the train ready (routes aside).
+    /// its line, if the line is due and the train ready (routes aside); on
+    /// a ring, the way it runs.
     func readyTrip(of train: Train, line l: Int, service k: Int) -> [ScheduledStop]? {
         var memo = DispatchMemo()
-        guard isDue(l, service: k, memo: &memo), let i = trains.firstIndex(where: { $0.id == train.id }),
-              case .ready(let timetable) = tripTimetable(i, l, service: k, memo: &memo)
+        let outer = Self.isOuter(train.id, on: lines[l])
+        guard isDue(l, service: k, outer: outer, memo: &memo), let i = trains.firstIndex(where: { $0.id == train.id }),
+              case .ready(let timetable) = tripTimetable(i, l, service: k, outer: outer, memo: &memo)
         else { return nil }
         return timetable
     }

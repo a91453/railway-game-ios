@@ -215,10 +215,11 @@ final class MapCameraTests: XCTestCase {
     /// its stations, and an old save's grid track; nothing for a new game.
     func testTheBuiltRegionHoldsTheNetworkAndTheStations() throws {
         XCTAssertNil(WorldRegion.built(in: .newGame()))
-        // The demo's ring, 20 tiles round Central (tile 512, 512): its nodes
-        // are on the diagonals, 14 tiles out each way, but its arcs reach 20.
+        // The demo's outer ring track, 13 tiles round Central (tile 512,
+        // 512): its nodes are on the diagonals, 9.2 tiles out each way, but
+        // its arcs reach 13.
         let demo = try XCTUnwrap(WorldRegion.built(in: DemoWorld.make(in: .english)))
-        XCTAssertEqual(demo, WorldRegion(minX: 492 * 1_024, minY: 492 * 1_024, maxX: 532 * 1_024, maxY: 532 * 1_024))
+        XCTAssertEqual(demo, WorldRegion(minX: 499 * 1_024, minY: 499 * 1_024, maxX: 525 * 1_024, maxY: 525 * 1_024))
 
         var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
         try world.buildTrack(at: GridPosition(x: 3, y: 2), connections: [.east, .west])

@@ -877,7 +877,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongTopologyExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 26,
+              "schemaVersion": 27,
               "description": "Deliberately wrong: expects a one-sided exit to join.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -936,7 +936,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1317,6 +1317,8 @@ final class GoldenScenarioTests: XCTestCase {
             (#"{"type": "createLine", "name": " ", "stops": []}"#, .createLine(name: " ", stops: [])),
             (#"{"type": "removeLine", "line": 2}"#, .removeLine(line)),
             (#"{"type": "setLineStops", "line": 2, "stops": [4, 1]}"#, .setLineStops(line, [4, 1].map(StationID.init(rawValue:)))),
+            (#"{"type": "setLineRing", "line": 2, "ring": true}"#, .setLineRing(line, true)),
+            (#"{"type": "setLineRing", "line": 2, "ring": false}"#, .setLineRing(line, false)),
             (#"{"type": "setLinePerformance", "line": 2, "performance": "metro"}"#, .setLinePerformance(line, .metro)),
             // Read as written: rejecting a performance that is not valid is GameCore's decision.
             (#"{"type": "setLinePerformance", "line": 2, "performance": {"acceleration": 0, "braking": 2500, "topSpeed": 110}}"#,
@@ -1592,6 +1594,8 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"command": {"type": "createLine", "name": "L"}, "expect": {"result": "ok"}}"#,
             #"{"command": {"type": "createLine", "name": "L", "stops": ["Alpha"]}, "expect": {"result": "ok"}}"#,
             #"{"command": {"type": "removeLine"}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineRing", "line": 1}, "expect": {"result": "ok"}}"#,
+            #"{"command": {"type": "setLineRing", "line": 1, "ring": 1}, "expect": {"result": "ok"}}"#,
             #"{"command": {"type": "setLineRate", "line": 1, "rate": 1.5}, "expect": {"result": "ok"}}"#,
             #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "allDay", "open": 0}}, "expect": {"result": "ok"}}"#,
             #"{"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "hours", "open": 0}}, "expect": {"result": "ok"}}"#,
@@ -1624,6 +1628,17 @@ final class GoldenScenarioTests: XCTestCase {
         ]
         for json in steps {
             XCTAssertThrowsError(try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(json.utf8)), json)
+        }
+
+        // Schema 27: only a ring writes "ring", only as true, and then
+        // always with "outerLastDispatch".
+        let line = #""id": 1, "name": "L", "stops": [1, 2, 3], "window": {"type": "allDay"}, "trainsInService": {"peak": 0, "offPeak": 0, "low": 0}, "targetHeadways": {"peak": null, "offPeak": null, "low": null}, "trains": [], "lastDispatch": null, "patterns": []"#
+        XCTAssertFalse(try JSONDecoder().decode(LineSummary.self, from: Data("{\(line)}".utf8)).isRing)
+        let ring = try? JSONDecoder().decode(LineSummary.self, from: Data(#"{\#(line), "ring": true, "outerLastDispatch": 4}"#.utf8))
+        XCTAssertEqual(ring?.isRing, true)
+        XCTAssertEqual(ring?.outerLastDispatch, 4)
+        for fields in [#""ring": false"#, #""ring": true"#, #""outerLastDispatch": null"#] {
+            XCTAssertThrowsError(try JSONDecoder().decode(LineSummary.self, from: Data(#"{\#(line), \#(fields)}"#.utf8)), fields)
         }
     }
 

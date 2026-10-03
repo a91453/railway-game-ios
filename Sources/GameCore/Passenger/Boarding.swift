@@ -169,10 +169,16 @@ extension GameWorld {
     /// waiting, in boarding order. `nil` at the last stop, where the train
     /// calls nowhere after, for a train not on a line, or at a station
     /// without passengers.
+    ///
+    /// On a ring (decision 49) the train takes those waiting either way
+    /// (the reference's `metroCollectRawTargetsForBoarding`, which reads
+    /// both of a ring station's queues), for a station it calls at before
+    /// its lap ends back at the first stop.
     private func boardingPlan(of train: Train, at stop: Int) -> (record: Int, eligible: [Int])? {
         guard stop < train.timetable.count - 1, let line = assignedLine(of: train.id),
               let record = passengers.firstIndex(where: { $0.station == train.timetable[stop].station })
         else { return nil }
+        let onRing = self.line(id: line)?.isRing ?? false
         let direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
         // How far along each destination is: the first call at it.
         var reach: [StationID: Int] = [:]
@@ -181,7 +187,7 @@ extension GameWorld {
         }
         let waiting = passengers[record].waiting
         let eligible = waiting.indices
-            .filter { waiting[$0].line == line && waiting[$0].direction == direction && reach[waiting[$0].destination] != nil }
+            .filter { waiting[$0].line == line && (onRing || waiting[$0].direction == direction) && reach[waiting[$0].destination] != nil }
             .enumerated()
             .sorted { lhs, rhs in
                 let (left, right) = (reach[waiting[lhs.element].destination]!, reach[waiting[rhs.element].destination]!)

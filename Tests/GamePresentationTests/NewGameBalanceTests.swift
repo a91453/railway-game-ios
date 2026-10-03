@@ -46,10 +46,14 @@ final class NewGameBalanceTests: XCTestCase {
         XCTAssertTrue((7...14).contains(payback), "pays for itself in \(payback) days")
     }
 
-    /// The demo map is built with a new game's money and prices.
+    /// The demo map is built with a new game's money and prices, and leaves
+    /// enough to build the tutorial's first line beside it: two stations
+    /// and a train.
     func testTheDemoMapFitsTheStartingMoney() {
         let demo = DemoWorld.make(in: .english)
-        XCTAssertEqual(demo.economy.costs, .newGame)
-        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(196_240_000), "$1,962,400")
+        let costs = ConstructionCosts.newGame
+        XCTAssertEqual(demo.economy.costs, costs)
+        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(229_120_000), "$2,291,200")
+        XCTAssertGreaterThan(demo.economy.balance.amount, 2 * costs.station.amount + costs.train.amount)
     }
 }
