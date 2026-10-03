@@ -11,7 +11,7 @@ extension GameWorld {
             var world = try GameWorld(
                 width: 32,
                 height: 24,
-                economy: GameEconomy(balance: 1_000_000),
+                economy: GameEconomy(balance: startingBalance, costs: .newGame),
                 clock: GameClock(speed: .normal)
             )
             try world.setTrafficControl(true)
@@ -30,6 +30,23 @@ extension GameWorld {
             preconditionFailure("Could not create the new-game world: \(error)")
         }
     }
+
+    /// What a new game starts with: $3,000,000, a first line and some to
+    /// spare (ARCHITECTURE decision 46; the reference's starting cash is in
+    /// its economy engine, which its snapshot does not have).
+    public static let startingBalance: Money = 300_000_000
+}
+
+extension ConstructionCosts {
+    /// A new game's prices (ARCHITECTURE decision 46), set so a first line
+    /// pays for itself in about ten days of its fares less its running
+    /// costs: about $35,000 a day for each station of the city's ridership
+    /// at the standard fare. Track is $100,000 a kilometre on the ground
+    /// (times 3 on a viaduct, 4 on a bridge, 5 in a tunnel), a station
+    /// $200,000, a train $150,000 with its first car and each car added
+    /// $40,000. The reference prices building in quotas, from its economy
+    /// engine, which its snapshot does not have.
+    public static let newGame = ConstructionCosts(track: 160_000, station: 20_000_000, train: 15_000_000, car: 4_000_000)
 }
 
 /// A small prebuilt network for trying the game and testing it on a

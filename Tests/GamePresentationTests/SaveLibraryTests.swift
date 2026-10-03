@@ -56,9 +56,9 @@ final class SaveLibraryTests: XCTestCase {
 
     func testTheSummaryReadsInBothLanguages() {
         let summary = SaveSummary(world: DemoWorld.make(in: .english))
-        XCTAssertEqual(summary.text(in: .english), "Day 1 · 00:00 · $ 2,620 · 5 stations · 2 lines · 2 trains")
-        XCTAssertEqual(summary.text(in: .traditionalChinese), "第 1 日 · 00:00 · $ 2,620 · 5 座車站 · 2 條路線 · 2 列列車")
-        XCTAssertEqual(SaveSummary(world: .newGame()).text(in: .english), "Day 1 · 00:00 · $ 10,000 · 0 stations · 0 lines · 0 trains")
+        XCTAssertEqual(summary.text(in: .english), "Day 1 · 00:00 · $ 1,319,200 · 5 stations · 2 lines · 2 trains")
+        XCTAssertEqual(summary.text(in: .traditionalChinese), "第 1 日 · 00:00 · $ 1,319,200 · 5 座車站 · 2 條路線 · 2 列列車")
+        XCTAssertEqual(SaveSummary(world: .newGame()).text(in: .english), "Day 1 · 00:00 · $ 3,000,000 · 0 stations · 0 lines · 0 trains")
     }
 
     func testFilesThatCannotBeLoadedAreListedWithTheReason() throws {
