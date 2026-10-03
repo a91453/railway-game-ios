@@ -32,9 +32,9 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
         app.buttons["tool.network"].tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         next.tap()
-        waitForEnabled(next, false)
+        waitForEnabled(app, false)
 
         // Tap the map in a row the card leaves free: the card may sit on the
         // map (it may cover part of it, never a control), above or below.
@@ -49,31 +49,33 @@ final class TutorialUITests: XCTestCase {
         let origin = app.coordinate(withNormalizedOffset: .zero)
         origin.withOffset(CGVector(dx: visibleMap.minX + 50, dy: row)).tap()
         origin.withOffset(CGVector(dx: visibleMap.minX + 130, dy: row)).tap()
-        waitForEnabled(next, false, "Choosing the ends only previews track")
+        waitForEnabled(app, false, "Choosing the ends only previews track")
         let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
         XCTAssertTrue(build.waitForExistence(timeout: 5))
-        waitForEnabled(build, true)
+        waitForEnabled(app, true, buttonDescription: "Build Track (label prefix)", query: {
+            $0.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track"))
+        })
         // The step asks for this button: the card must leave it usable.
         XCTAssertTrue(build.isHittable)
         XCTAssertFalse(card.frame.intersects(build.frame), "The tutorial card covers Build Track")
         build.tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         next.tap()
         // Stage E1: the map step waits until the player moves the map. The
         // zoom buttons are among its controls, so the card leaves them free.
-        waitForEnabled(next, false, "The map step waits for the map to move")
+        waitForEnabled(app, false, "The map step waits for the map to move")
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.waitForExistence(timeout: 5))
         XCTAssertTrue(zoomIn.isHittable)
         XCTAssertFalse(card.frame.intersects(zoomIn.frame), "The tutorial card covers the zoom buttons")
         capture(app, name: "en-tutorial-map-step")
         zoomIn.tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         next.tap()
         // The next step asks for a station, so Next waits again; Done is the
         // last of eleven steps and is checked in TutorialSessionTests.
         XCTAssertEqual(next.label, "Next")
-        waitForEnabled(next, false, "The station step waits for a station")
+        waitForEnabled(app, false, "The station step waits for a station")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         capture(app, name: "en-tutorial-station-step")
         app.buttons["tutorial.skip"].tap()
@@ -107,29 +109,29 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertEqual(next.label, nextLabel)
         XCTAssertEqual(skip.label, skipLabel)
-        XCTAssertFalse(next.isEnabled, "The first step waits for the network tool")
+        waitForEnabled(app, false, "The first step waits for the network tool")
         XCTAssertFalse(back.exists, "The first step has no Back button")
 
         // The outlined button must receive the touch underneath the overlay.
         checkToolIsUncovered(app, identifier: "tool.network")
         app.buttons["tool.network"].tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
         checkToolIsUncovered(app, identifier: "tool.select")
         app.buttons["tool.select"].tap()
-        waitForEnabled(next, false)
+        waitForEnabled(app, false)
         app.buttons["tool.network"].tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         capture(app, name: "\(screenshotPrefix)-tutorial-tool")
         next.tap()
 
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         XCTAssertEqual(back.label, backLabel)
-        waitForEnabled(next, false)
+        waitForEnabled(app, false)
         capture(app, name: "\(screenshotPrefix)-tutorial-map")
         back.tap()
         XCTAssertFalse(back.exists)
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
 
         // Reflowing the card must preserve navigation and usable controls.
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -138,9 +140,9 @@ final class TutorialUITests: XCTestCase {
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
         app.buttons["tool.select"].tap()
-        waitForEnabled(next, false)
+        waitForEnabled(app, false)
         app.buttons["tool.network"].tap()
-        waitForEnabled(next, true)
+        waitForEnabled(app, true)
         capture(app, name: "\(screenshotPrefix)-tutorial-landscape")
         skip.tap()
         XCTAssertFalse(next.exists)
@@ -163,7 +165,7 @@ final class TutorialUITests: XCTestCase {
         restart.tap()
         XCTAssertTrue(next.waitForExistence(timeout: 5))
         XCTAssertFalse(back.exists)
-        waitForEnabled(next, false)
+        waitForEnabled(app, false)
         skip.tap()
         XCTAssertFalse(next.exists)
     }
@@ -198,10 +200,36 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 
-    private func waitForEnabled(_ element: XCUIElement, _ enabled: Bool, _ message: String = "") {
-        let predicate = NSPredicate(format: "enabled == %@", NSNumber(value: enabled))
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed, message)
+    private func waitForEnabled(
+        _ app: XCUIApplication, _ enabled: Bool, _ message: String = "",
+        buttonDescription: String = "tutorial.next",
+        query: (XCUIApplication) -> XCUIElementQuery = { $0.buttons.matching(identifier: "tutorial.next") },
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            // The card is rebuilt for each step. Resolve the current buttons
+            // on every poll, and never accept an absent or duplicate match.
+            let buttons = query(app).allElementsBoundByIndex
+            if buttons.count == 1, buttons[0].isEnabled == enabled {
+                return
+            }
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { break }
+            Thread.sleep(forTimeInterval: min(0.25, remaining))
+        } while Date() < deadline
+
+        let buttons = query(app).allElementsBoundByIndex
+        let states = buttons.enumerated().map { index, button in
+            "[\(index)] isEnabled=\(button.isEnabled)"
+        }.joined(separator: ", ")
+        let diagnostics = "Timed out after 5 seconds waiting for \(buttonDescription) isEnabled=\(enabled); found \(buttons.count) matching buttons: [\(states)]. \(message)"
+        let hierarchy = XCTAttachment(string: "\(diagnostics)\n\n\(app.debugDescription)")
+        hierarchy.name = "waitForEnabled-\(buttonDescription)-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        capture(app, name: "waitForEnabled-\(buttonDescription)-timeout")
+        XCTFail(diagnostics, file: file, line: line)
     }
 
     private func capture(_ app: XCUIApplication, name: String) {
