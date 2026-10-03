@@ -27,7 +27,7 @@ def export(source: Path, destination: Path, *, tutorial_only: bool = False) -> N
         for language in ("en", "zh-Hant", "en-large-text")
         for screen in ("tool", "map", "landscape")
     )
-    expected.add("en-tutorial-done")
+    expected.add("en-tutorial-station-step")
     found = set()
     destination.mkdir(parents=True, exist_ok=True)
     for test in manifest:
