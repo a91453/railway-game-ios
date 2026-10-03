@@ -454,6 +454,19 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 - **`ReferenceWorld` 的方格模型**：只剩上面那些 campaign 用，F3c 一起刪。
 - **觀察到的 GameCore 行為**（§7.2 的三條）照舊，F3b 不改 GameCore。
 
+### 7.5 F3b-3：重播 fixture（移植參考的 desync 重播）
+
+參考包的除錯工具（`Railway/railway_game_reference_clean/docs/desync.md` §2.1 快取檢查、§2.2 指令紀錄、§3.1 重播、§3.2 比對 checksum 找出分歧的區間；`01_MIGRATION_MAP.md` 的「Determinism / debugging」）以獨立實作移植成 [`ReplayFixtures/`](../../ReplayFixtures/README.md)：五個路網 campaign case 的起始世界、指令紀錄，以及每 10 個指令一個遊戲狀態的 checksum。`ReplayFixtureTests` 逐段重播，每個世界都檢查不變量；checksum 對不上時指出分歧的那一段指令。
+
+| 參考 | Swift | 說明 |
+| --- | --- | --- |
+| `desync.md` §2.2 指令紀錄 | `ReplayCommand`（純值的 Codable，不用 GameCore 會拒絕無效值的 coding） | 有效與被拒的指令都記 |
+| §3.2 每段 checksum | `ReplayState.checksum(of:)`：時間、金錢與帳、路網與月台、車站與乘客、列車的位置／車身／路徑／服務、線路與交路、乘客群（FNV-1a 64） | 算遊戲狀態的描述，不是存檔位元組：存檔格式改了但值不變時 checksum 不變 |
+| §3.1 重播、§3.2 縮小區間 | `ReplayFixtureTests.testEveryRecordedStreamReplaysToTheSameStates`、`firstDifference` | 第一個不同的 checksum 指出分歧的指令區間 |
+| §2.1 每 tick 檢查快取 | 每個指令後跑 `WorldInvariants` | |
+
+這些 fixture 只有路網的指令與內容，F3c 刪方格時必須原樣重播；之後的行為變更若改動 checksum，要在該 PR 重新錄製並逐一說明（規則同 golden 與存檔 fixture）。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

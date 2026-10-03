@@ -1,0 +1,911 @@
+{
+  "checksums" : [
+    "77F18403B3F85DB7",
+    "EA17DFE6F7F8C92B",
+    "E6AC5A92637C87FB",
+    "B2BF8C4BB32461AD",
+    "4372E93910A6AEA2",
+    "65767152D796EC42",
+    "555E9A2D98D481BD",
+    "84F48F665EC0058C",
+    "62607983DCDA9A6A",
+    "17E882C661FAA02D",
+    "9ACC1D0A08F05BFC",
+    "D05B342BED79CC73",
+    "CBAAF437250CE0D"
+  ],
+  "commands" : [
+    {
+      "kind" : "sendToStation",
+      "station" : 4,
+      "train" : 2
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 0
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 3,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 1
+    },
+    {
+      "edge" : 6,
+      "end" : 2230,
+      "kind" : "addPlatform",
+      "start" : 510,
+      "station" : 2
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "B5",
+      "point" : [
+        5632,
+        512
+      ]
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : " ",
+      "point" : [
+        3584,
+        1536
+      ]
+    },
+    {
+      "coordinate" : [
+        4608,
+        3584,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "kind" : "pause"
+    },
+    {
+      "kind" : "resume"
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : -1
+    },
+    {
+      "at" : {
+        "edge" : 1,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : -1,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 11,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "unplace",
+      "train" : 0
+    },
+    {
+      "coordinate" : [
+        3584,
+        512,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "kind" : "unplace",
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 3000,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 511,
+      "train" : 0
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 9,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 120,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "sendWholeTrainToStation",
+      "station" : 3,
+      "train" : 1
+    },
+    {
+      "kind" : "pause"
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "paused"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 3000,
+      "train" : 1
+    },
+    {
+      "kind" : "buildEdge",
+      "node" : 7,
+      "to" : 12
+    },
+    {
+      "edge" : 5,
+      "end" : 968,
+      "kind" : "addPlatform",
+      "start" : 295,
+      "station" : 4
+    },
+    {
+      "kind" : "reverse",
+      "train" : 9223372036854775807
+    },
+    {
+      "edge" : 6,
+      "kind" : "removePlatform",
+      "start" : 0,
+      "station" : 4
+    },
+    {
+      "edge" : 3,
+      "kind" : "removePlatform",
+      "start" : 512,
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 3,
+      "train" : 1
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "kind" : "reverse",
+      "train" : -1
+    },
+    {
+      "edge" : 7,
+      "kind" : "removePlatform",
+      "start" : 0,
+      "station" : 4
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "x60"
+    },
+    {
+      "edge" : 6,
+      "end" : 1707,
+      "kind" : "addPlatform",
+      "start" : 364,
+      "station" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "kind" : "reverse",
+      "train" : -1
+    },
+    {
+      "edge" : 9,
+      "kind" : "removeEdge"
+    },
+    {
+      "edge" : 5,
+      "kind" : "removePlatform",
+      "start" : 512,
+      "station" : 3
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 4,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 511,
+      "train" : 2
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 9223372036854775807,
+      "train" : 1
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 2,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "normal"
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 8,
+      "train" : 0
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "unplace",
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 4,
+      "train" : -1
+    },
+    {
+      "kind" : "reverse",
+      "train" : 9223372036854775807
+    },
+    {
+      "edge" : 10,
+      "end" : 2492,
+      "kind" : "addPlatform",
+      "start" : 803,
+      "station" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 511,
+      "train" : 0
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "B5",
+      "point" : [
+        6144,
+        0
+      ]
+    },
+    {
+      "edge" : 8,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "x10"
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "buildEdge",
+      "node" : 11,
+      "to" : 5
+    },
+    {
+      "at" : {
+        "edge" : 6,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : -1,
+      "train" : -1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "resume"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "coordinate" : [
+        5632,
+        3584,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : -1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 9,
+      "train" : 1
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1022,
+      "train" : 2
+    },
+    {
+      "kind" : "buildEdge",
+      "node" : 5,
+      "to" : 11
+    },
+    {
+      "kind" : "setPerformance",
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      },
+      "train" : -1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 511,
+      "train" : 0
+    },
+    {
+      "kind" : "removeNode",
+      "node" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "edge" : 2,
+      "kind" : "removePlatform",
+      "start" : 513,
+      "station" : 1
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : -1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 9223372036854775807,
+      "train" : -1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "at" : {
+        "edge" : 99,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : -1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 8,
+      "train" : 9223372036854775807
+    },
+    {
+      "edge" : 3,
+      "kind" : "removePlatform",
+      "start" : 0,
+      "station" : 1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 6,
+      "train" : 1
+    },
+    {
+      "kind" : "unplace",
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "\n\t"
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T1"
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 12,
+      "train" : 0
+    },
+    {
+      "edge" : 2,
+      "end" : 1731,
+      "kind" : "addPlatform",
+      "start" : 81,
+      "station" : 3
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 13,
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 2,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "removeNode",
+      "node" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 3,
+      "train" : -1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 4,
+      "train" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "coordinate" : [
+        4608,
+        4608,
+        0
+      ],
+      "kind" : "buildNode"
+    }
+  ],
+  "description" : "The kernel campaign: track, stations, platforms and trains moved by hand, on a generated network.",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "kernel.differential seed 5EEDA001 case 4",
+  "start" : {
+    "clock" : {
+      "now" : 2271204,
+      "resumeSpeed" : "x10",
+      "speed" : "x10"
+    },
+    "economy" : {
+      "balance" : 90,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "map" : {
+      "height" : 5,
+      "occupied" : [
+
+      ],
+      "width" : 6
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 6,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 7,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 9,
+          "id" : 8,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 10,
+          "id" : 9,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 11,
+          "id" : 10,
+          "to" : 12
+        }
+      ],
+      "nextEdgeID" : 11,
+      "nextNodeID" : 13,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 512,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 1536,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 2560,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 3584,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 4608,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 5632,
+          "y" : 3584,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 2,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 1024,
+          "start" : 0,
+          "station" : 4
+        },
+        {
+          "edge" : 7,
+          "end" : 512,
+          "start" : 0,
+          "station" : 4
+        }
+      ]
+    },
+    "nextStationID" : 5,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 2560,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 3584,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "S4",
+        "point" : {
+          "x" : 1536,
+          "y" : 2560
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

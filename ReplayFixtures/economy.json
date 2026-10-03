@@ -1,0 +1,1424 @@
+{
+  "checksums" : [
+    "E017B928F92EF1E9",
+    "F8734EFAD314675B",
+    "FA81733FBF091ECD",
+    "A599C96A58EE3602",
+    "40504B8538E6DE94",
+    "40504B8538E6DE94",
+    "81EC4543C39ACB43",
+    "D394B29A1201984",
+    "72CB82E6B68A4F07",
+    "94C405E09624DAB9",
+    "E2A15E080462F199",
+    "2BB6A399BAFB74B1",
+    "887310BDBA60BA93",
+    "C2BEFB11297A33FA",
+    "3F5F4B47226E968C",
+    "71F4F9F9514AA9DC",
+    "A66AA04D4A501094",
+    "DE3FE1236DB2C6F6",
+    "F153AF82CB7F65F2",
+    "F601D50753993B2C",
+    "3CECBD8C7E6719F5"
+  ],
+  "commands" : [
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "management"
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "normal"
+    },
+    {
+      "kind" : "createLine",
+      "name" : "D1",
+      "stations" : [
+        2,
+        3
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 3,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 1,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L1"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1441
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 4096,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L2"
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 155
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 61
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 2048,
+      "train" : 2
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 2
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L3"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 3
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 3
+    },
+    {
+      "kind" : "setPerformance",
+      "performance" : {
+        "acceleration" : 1500,
+        "braking" : 2500,
+        "topSpeed" : 110
+      },
+      "train" : 3
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1441
+    },
+    {
+      "kind" : "purchase",
+      "name" : "C4"
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 269,
+            "from" : 0,
+            "to" : 53
+          },
+          {
+            "fare" : 265,
+            "from" : 53,
+            "to" : 132
+          },
+          {
+            "fare" : 100,
+            "from" : 132,
+            "to" : 195
+          },
+          {
+            "fare" : 357,
+            "from" : 195
+          }
+        ]
+      }
+    },
+    {
+      "cars" : 3,
+      "kind" : "setCars",
+      "train" : 4
+    },
+    {
+      "at" : {
+        "edge" : 1,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 4
+    },
+    {
+      "kind" : "createLine",
+      "name" : "C",
+      "stations" : [
+        1,
+        2
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 1,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 2048,
+      "train" : 4
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 2,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "train" : 4
+    },
+    {
+      "kind" : "createLine",
+      "name" : "D3",
+      "stations" : [
+        2,
+        1
+      ]
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 2,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 3,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L5"
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 5
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 4096,
+      "train" : 5
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 5
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 43
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L6"
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 155
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 6
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 2048,
+      "train" : 6
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 6
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L7"
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 7
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1500,
+      "train" : 7
+    },
+    {
+      "kind" : "setPerformance",
+      "performance" : {
+        "acceleration" : 1500,
+        "braking" : 2500,
+        "topSpeed" : 110
+      },
+      "train" : 7
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 7
+    },
+    {
+      "kind" : "purchase",
+      "name" : "C8"
+    },
+    {
+      "cars" : 3,
+      "kind" : "setCars",
+      "train" : 8
+    },
+    {
+      "at" : {
+        "edge" : 1,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 8
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 155
+    },
+    {
+      "kind" : "createLine",
+      "name" : "C",
+      "stations" : [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 4,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 4,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 1,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1500,
+      "train" : 8
+    },
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "free"
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 4,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "assign",
+      "line" : 4,
+      "train" : 8
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 50,
+            "from" : 5
+          }
+        ]
+      }
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 5829,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 1
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 39234,
+        "kind" : "shopping"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 3,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1440
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 30
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+
+        ]
+      }
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 8
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+        "close" : 1474,
+        "open" : 1035
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 4,
+      "stations" : [
+        1,
+        2,
+        3,
+        1
+      ]
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 2,
+      "stations" : [
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "management"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "management"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 464
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 543
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 25
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 8
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 2,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 8
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "flat" : 456
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 21
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 3,
+      "targets" : {
+        "peak" : 12
+      }
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 0,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 440
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1441
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 8
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 32
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 9927,
+        "kind" : "scenic"
+      },
+      "kind" : "setStationDemand",
+      "station" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 21
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 550
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 340058,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 34011,
+        "kind" : "scenic"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 39
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 35
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 3,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "management"
+    },
+    {
+      "kind" : "stopService",
+      "train" : 1
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 487032,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "flat" : 75
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "trains" : {
+        "low" : 2,
+        "offPeak" : 3,
+        "peak" : 4
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 447
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 18377,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 175
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 658
+    },
+    {
+      "kind" : "reverse",
+      "train" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 5347,
+        "kind" : "shopping"
+      },
+      "kind" : "setStationDemand",
+      "station" : 2
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 75
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "unassign",
+      "train" : 2
+    },
+    {
+      "kind" : "stopService",
+      "train" : 2
+    },
+    {
+      "kind" : "stopService",
+      "train" : 8
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 16
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 0
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 4
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 544,
+            "from" : 0
+          }
+        ]
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 251
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 3,
+      "window" : {
+        "close" : 1744,
+        "open" : 278
+      }
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 521,
+            "from" : 0
+          }
+        ]
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 15
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 2,
+      "targets" : {
+        "offPeak" : 45,
+        "peak" : 1440
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "setEconomyMode",
+      "mode" : "free"
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "trains" : {
+        "low" : 4,
+        "offPeak" : 0,
+        "peak" : 3
+      }
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "flat" : 500
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 11
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 2,
+      "train" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 22
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 15
+    },
+    {
+      "day" : [
+        {
+          "level" : "low",
+          "start" : 0
+        },
+        {
+          "level" : "peak",
+          "start" : 160
+        },
+        {
+          "level" : "peak",
+          "start" : 432
+        },
+        {
+          "level" : "peak",
+          "start" : 558
+        },
+        {
+          "level" : "low",
+          "start" : 568
+        }
+      ],
+      "kind" : "setServiceDay"
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 11066,
+        "kind" : "office"
+      },
+      "kind" : "setStationDemand",
+      "station" : 3
+    },
+    {
+      "kind" : "setFareBaseline",
+      "money" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 470
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 483
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 164,
+            "from" : 0,
+            "to" : 32
+          },
+          {
+            "fare" : 360,
+            "from" : 32,
+            "to" : 88
+          },
+          {
+            "fare" : 72,
+            "from" : 88,
+            "to" : 186
+          },
+          {
+            "fare" : 423,
+            "from" : 186
+          }
+        ]
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 20
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 4,
+      "window" : {
+        "close" : 1246,
+        "open" : 378
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "flat" : 40
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 0,
+        "peak" : 1
+      }
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 56144,
+        "kind" : "residential"
+      },
+      "kind" : "setStationDemand",
+      "station" : 1
+    },
+    {
+      "kind" : "setStationDemand",
+      "station" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 11
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 50,
+            "from" : 0,
+            "to" : 40
+          },
+          {
+            "fare" : 70,
+            "from" : 60
+          }
+        ]
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1441
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 23
+    },
+    {
+      "kind" : "reverse",
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 11
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "unplace",
+      "train" : 8
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 28
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 7
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "setFareRules",
+      "rules" : {
+        "bands" : [
+          {
+            "fare" : 123,
+            "from" : 0,
+            "to" : 6
+          },
+          {
+            "fare" : 260,
+            "from" : 6
+          }
+        ]
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 19
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 34
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 26
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 4,
+        "offPeak" : 1,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 60
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 21
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 16
+    },
+    {
+      "demand" : {
+        "dailyTrips" : 89571,
+        "kind" : "shopping"
+      },
+      "kind" : "setStationDemand",
+      "station" : 3
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+        "offPeak" : 7,
+        "peak" : 20
+      }
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+        "close" : 1343,
+        "open" : 573
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "day" : [
+        {
+          "level" : "low",
+          "start" : 0
+        },
+        {
+          "level" : "low",
+          "start" : 93
+        },
+        {
+          "level" : "low",
+          "start" : 399
+        },
+        {
+          "level" : "peak",
+          "start" : 681
+        },
+        {
+          "level" : "peak",
+          "start" : 981
+        }
+      ],
+      "kind" : "setServiceDay"
+    }
+  ],
+  "description" : "Passengers boarding lines' trains, fares, and the accounts over hours and days.",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "economy.differential seed 5EEDA001 case 1",
+  "start" : {
+    "clock" : {
+      "now" : 8220,
+      "resumeSpeed" : "double",
+      "speed" : "double"
+    },
+    "economy" : {
+      "balance" : 1000000,
+      "costs" : {
+        "car" : 300,
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "map" : {
+      "height" : 3,
+      "occupied" : [
+
+      ],
+      "width" : 12
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 8
+        }
+      ],
+      "nextEdgeID" : 8,
+      "nextNodeID" : 9,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 7680,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 9728,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 10752,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 11776,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 1024,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 3072,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 2048,
+          "start" : 1024,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        }
+      ]
+    },
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 512,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 2560,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 9728,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

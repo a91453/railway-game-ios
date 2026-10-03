@@ -1,0 +1,1394 @@
+{
+  "checksums" : [
+    "7FAF931CC1B0790C",
+    "D39175D6063BBE13",
+    "AEF10D6C7A877626",
+    "C50B3036970C93F2",
+    "F80ABB61C040BF30",
+    "DEE9071C4A5B711A",
+    "1808AB7D429510A4",
+    "388C33DF5C9F3ED5",
+    "78C47517637ECA85",
+    "24ACD8194BE01ED8",
+    "13F068B456B1823C",
+    "F5F02768A903F3E8",
+    "8498C1E3E9DD329D",
+    "934296D89332FA50",
+    "934296D89332FA50"
+  ],
+  "commands" : [
+    {
+      "edge" : 1,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 9223372036854775807
+    },
+    {
+      "at" : {
+        "edge" : 4,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1551,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+
+      ],
+      "train" : 0
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 1200,
+          "reverses" : false,
+          "station" : 5
+        }
+      ],
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "reverse",
+      "train" : 0
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S1"
+    },
+    {
+      "at" : {
+        "edge" : 13,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 2366,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 4096,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "period" : 1380,
+      "stops" : [
+        {
+          "arrival" : 5413140,
+          "departure" : 5413140,
+          "reverses" : true,
+          "station" : 5
+        },
+        {
+          "arrival" : 5413140,
+          "departure" : 5413560,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 5413560,
+          "departure" : 5413860,
+          "reverses" : true,
+          "station" : 5
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 45
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 120,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 660,
+          "departure" : 960,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 1440,
+          "departure" : 5413230,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 8700900,
+          "departure" : 11598000,
+          "reverses" : false,
+          "station" : 1
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 2,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 256,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : -5,
+      "train" : 0
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 256,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "edge" : 13,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "stopService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "end" : 1213,
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 1680,
+          "departure" : 5414130,
+          "reverses" : false,
+          "station" : 1
+        }
+      ],
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 1800,
+          "departure" : 10791180,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 30446160,
+          "departure" : 42760320,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 44078040,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 9223372036854775807,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 1
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "end" : 1993,
+      "kind" : "stand",
+      "path" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 3000,
+      "train" : 9223372036854775807
+    },
+    {
+      "edge" : 8,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "unplace",
+      "train" : 1
+    },
+    {
+      "kind" : "sendWholeTrainToStation",
+      "station" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 0,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 5414070,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 2
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "resume"
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 5,
+      "train" : 1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 2,
+      "train" : 1
+    },
+    {
+      "at" : {
+        "edge" : 11,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1610,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 5413110,
+          "departure" : 5413650,
+          "reverses" : true,
+          "station" : 4
+        },
+        {
+          "arrival" : 5413650,
+          "departure" : 5414010,
+          "reverses" : true,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414010,
+          "departure" : 5414010,
+          "reverses" : true,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414010,
+          "departure" : 5414370,
+          "reverses" : false,
+          "station" : 4
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 59
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 480,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 540,
+          "departure" : 660,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 1260,
+          "departure" : 12397560,
+          "reverses" : false,
+          "station" : 3
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 2
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 480,
+          "departure" : 540,
+          "reverses" : false,
+          "station" : 2
+        },
+        {
+          "arrival" : 660,
+          "departure" : 1500,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5413764,
+          "departure" : 21967920,
+          "reverses" : false,
+          "station" : 1
+        },
+        {
+          "arrival" : 47013000,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 2
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "stopService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "at" : {
+        "edge" : 0,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1500,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "period" : -1,
+      "stops" : [
+        {
+          "arrival" : 5414124,
+          "departure" : 5414124,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414124,
+          "departure" : 5414364,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414844,
+          "departure" : 5414844,
+          "reverses" : true,
+          "station" : 4
+        },
+        {
+          "arrival" : 5416044,
+          "departure" : 5416404,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5416524,
+          "departure" : 5416524,
+          "reverses" : true,
+          "station" : 5
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setTimetable",
+      "period" : 540,
+      "stops" : [
+        {
+          "arrival" : 5414424,
+          "departure" : 5414424,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414424,
+          "departure" : 5414544,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 5414544,
+          "departure" : 5414964,
+          "reverses" : true,
+          "station" : 5
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 0,
+          "reverses" : false,
+          "station" : 1
+        },
+        {
+          "arrival" : 0,
+          "departure" : 300,
+          "reverses" : false,
+          "station" : 2
+        },
+        {
+          "arrival" : 720,
+          "departure" : 1200,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 1800,
+          "departure" : 5414784,
+          "reverses" : false,
+          "station" : 4
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "edge" : 11,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "reverse",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T2"
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "paused"
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 1
+    },
+    {
+      "at" : {
+        "edge" : 9223372036854775807,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 330
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 960,
+          "departure" : 1320,
+          "reverses" : false,
+          "station" : 5
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 52092300,
+          "reverses" : false,
+          "station" : 4
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T2"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "at" : {
+        "edge" : 4,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1610,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 4,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 435
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "B6",
+      "point" : [
+        512,
+        512
+      ]
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 0,
+          "departure" : 0,
+          "reverses" : false,
+          "station" : 4
+        },
+        {
+          "arrival" : 0,
+          "departure" : 660,
+          "reverses" : false,
+          "station" : 3
+        },
+        {
+          "arrival" : 960,
+          "departure" : 1140,
+          "reverses" : false,
+          "station" : 2
+        },
+        {
+          "arrival" : 1260,
+          "departure" : 1620,
+          "reverses" : false,
+          "station" : 1
+        },
+        {
+          "arrival" : 4683240,
+          "departure" : 5468604,
+          "reverses" : false,
+          "station" : 3
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 2432,
+      "train" : 1
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "T2"
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 13
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "stand",
+      "path" : [
+        {
+          "edge" : 10,
+          "forward" : false
+        },
+        {
+          "edge" : 9,
+          "forward" : false
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 120,
+          "departure" : 5473404,
+          "reverses" : false,
+          "station" : 5
+        },
+        {
+          "arrival" : 5473404,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 6
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 9223372036854775807,
+      "train" : 1
+    },
+    {
+      "kind" : "sendWholeTrainToStation",
+      "station" : 5,
+      "train" : 1
+    },
+    {
+      "at" : {
+        "edge" : 13,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 2366,
+      "train" : 1
+    },
+    {
+      "kind" : "removeNode",
+      "node" : 0
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+        {
+          "arrival" : 5472984,
+          "departure" : 44642340,
+          "reverses" : false,
+          "station" : 6
+        },
+        {
+          "arrival" : 51081960,
+          "departure" : 9223372036854775807,
+          "reverses" : false,
+          "station" : 1
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "reverse",
+      "train" : 9223372036854775807
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "sendWholeTrainToStation",
+      "station" : 5,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 700,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "sendWholeTrainToStation",
+      "station" : 7,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 3000,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "kind" : "setTimetable",
+      "stops" : [
+
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 3000,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "S2"
+    },
+    {
+      "kind" : "startService",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    }
+  ],
+  "description" : "Timetables that turn trains round and repeat, among the kernel's commands.",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "service.repeating seed 5EEDA001 case 6",
+  "start" : {
+    "clock" : {
+      "now" : 5413140,
+      "resumeSpeed" : "x60",
+      "speed" : "x60"
+    },
+    "economy" : {
+      "balance" : 8231,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "map" : {
+      "height" : 5,
+      "occupied" : [
+
+      ],
+      "width" : 11
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7680,
+                "y" : 2560
+              },
+              "control2" : {
+                "x" : 7680,
+                "y" : 1536
+              }
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 10291,
+                "y" : 1536
+              },
+              "control2" : {
+                "x" : 10752,
+                "y" : 1997
+              }
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 10752,
+                "y" : 3123
+              },
+              "control2" : {
+                "x" : 10291,
+                "y" : 3584
+              }
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7680,
+                "y" : 3584
+              },
+              "control2" : {
+                "x" : 7680,
+                "y" : 2560
+              }
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 3584,
+                "y" : 2560
+              },
+              "control2" : {
+                "x" : 3584,
+                "y" : 1536
+              }
+            }
+          },
+          "from" : 1,
+          "id" : 8,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 9,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 973,
+                "y" : 1536
+              },
+              "control2" : {
+                "x" : 512,
+                "y" : 1997
+              }
+            }
+          },
+          "from" : 9,
+          "id" : 10,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 512,
+                "y" : 3123
+              },
+              "control2" : {
+                "x" : 973,
+                "y" : 3584
+              }
+            }
+          },
+          "from" : 10,
+          "id" : 11,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 11,
+          "id" : 12,
+          "to" : 12
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 3584,
+                "y" : 3584
+              },
+              "control2" : {
+                "x" : 3584,
+                "y" : 2560
+              }
+            }
+          },
+          "from" : 12,
+          "id" : 13,
+          "to" : 1
+        }
+      ],
+      "nextEdgeID" : 14,
+      "nextNodeID" : 13,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 4608,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 6656,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 8704,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 9728,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 10752,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 9728,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 8704,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 512,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 1536,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 2560,
+          "y" : 3584,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 4,
+          "end" : 805,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 4,
+          "end" : 1610,
+          "start" : 805,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 805,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1610,
+          "start" : 805,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 10,
+          "end" : 1610,
+          "start" : 805,
+          "station" : 4
+        },
+        {
+          "edge" : 11,
+          "end" : 805,
+          "start" : 0,
+          "station" : 4
+        },
+        {
+          "edge" : 12,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 5
+        },
+        {
+          "edge" : 13,
+          "end" : 1183,
+          "start" : 0,
+          "station" : 5
+        }
+      ]
+    },
+    "nextStationID" : 6,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 9728,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 10752,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 9728,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "S4",
+        "point" : {
+          "x" : 512,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "S5",
+        "point" : {
+          "x" : 2560,
+          "y" : 2560
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

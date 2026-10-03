@@ -1,0 +1,849 @@
+{
+  "checksums" : [
+    "AC5968C584AB653D",
+    "242CF4A54FB8932B",
+    "C31FEB0CDE92D22F",
+    "8C3C9A4B8163D57B",
+    "81BA91A9A46F4277",
+    "D640234CB5074AF2",
+    "9238B71600FAD8FB",
+    "D333CC9A9C07B9D5",
+    "38E35D1F40413E37",
+    "A9786415D0F102C2",
+    "F15B6B6A42B3FE6E",
+    "D8BFB169492F202A",
+    "137FAF91B982F74F"
+  ],
+  "commands" : [
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "createLine",
+      "name" : "D1",
+      "stations" : [
+        2,
+        1
+      ]
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 1,
+      "stations" : [
+        2,
+        1,
+        3
+      ]
+    },
+    {
+      "kind" : "setLineRing",
+      "line" : 1,
+      "ring" : true
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 2,
+        "peak" : 3
+      }
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+        "low" : 2,
+        "offPeak" : 45,
+        "peak" : 45
+      }
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 1,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L1"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1500,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L2"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 2
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 2048,
+      "train" : 2
+    },
+    {
+      "kind" : "setPerformance",
+      "performance" : {
+        "acceleration" : 1800,
+        "braking" : 2900,
+        "topSpeed" : 130
+      },
+      "train" : 2
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 2
+    },
+    {
+      "kind" : "sendToStation",
+      "station" : 2,
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "kind" : "setLineRing",
+      "line" : 1,
+      "ring" : true
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 2
+    },
+    {
+      "kind" : "createLine",
+      "name" : "D2",
+      "stations" : [
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 1,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 2,
+      "performance" : {
+        "acceleration" : 1800,
+        "braking" : 2900,
+        "topSpeed" : 130
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L3"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 3
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 4096,
+      "train" : 3
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "train" : 3
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L4"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 4
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 4
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "train" : 4
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L5"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 5
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 700,
+      "train" : 5
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "train" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 2,
+      "targets" : {
+        "offPeak" : 8,
+        "peak" : 5
+      }
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "B4",
+      "point" : [
+        512,
+        2560
+      ]
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 26
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 570,
+      "train" : -1
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+        "low" : 3,
+        "offPeak" : 45
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 22
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 22
+    },
+    {
+      "kind" : "unassign",
+      "train" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 534
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "createLine",
+      "name" : "D3",
+      "stations" : [
+        2,
+        3
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 3,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 3,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "setLinePerformance",
+      "line" : 3,
+      "performance" : {
+        "acceleration" : 250,
+        "braking" : 250,
+        "topSpeed" : 1
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L6"
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 6
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 6
+    },
+    {
+      "kind" : "setPerformance",
+      "performance" : {
+        "acceleration" : 1800,
+        "braking" : 2900,
+        "topSpeed" : 130
+      },
+      "train" : 6
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 6
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L7"
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 7
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1500,
+      "train" : 7
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 7
+    },
+    {
+      "kind" : "purchase",
+      "name" : "L8"
+    },
+    {
+      "at" : {
+        "edge" : 2,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 3072,
+      "train" : 8
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 4096,
+      "train" : 8
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 8
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "kind" : "stopService",
+      "train" : 7
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "unassign",
+      "train" : 5
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 9
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 30
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 4,
+      "train" : 3
+    },
+    {
+      "edge" : 1,
+      "kind" : "removePlatform",
+      "start" : 1536,
+      "station" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 146
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "x60"
+    },
+    {
+      "kind" : "unassign",
+      "train" : 6
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 15
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 27
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : 8
+    },
+    {
+      "kind" : "unplace",
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 532
+    },
+    {
+      "kind" : "unplace",
+      "train" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 18
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 7
+    },
+    {
+      "kind" : "setLineRing",
+      "line" : 2,
+      "ring" : true
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "unassign",
+      "train" : 5
+    },
+    {
+      "kind" : "setLineRing",
+      "line" : 1,
+      "ring" : true
+    },
+    {
+      "kind" : "assign",
+      "line" : 3,
+      "train" : 8
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "x10"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 12
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 16
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 0
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 626
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 21
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 4,
+      "train" : 8
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 2,
+      "targets" : {
+        "low" : 12
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 21
+    },
+    {
+      "at" : {
+        "edge" : 99,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 10
+    },
+    {
+      "kind" : "unassign",
+      "train" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 27
+    },
+    {
+      "kind" : "unassign",
+      "train" : 7
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 3,
+      "targets" : {
+        "low" : 3,
+        "offPeak" : 54,
+        "peak" : 8
+      }
+    },
+    {
+      "kind" : "unassign",
+      "train" : 2
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 4,
+        "offPeak" : 1,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "trains" : {
+        "low" : -1,
+        "offPeak" : 0,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "unassign",
+      "train" : 8
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+        "close" : 1485,
+        "open" : 137
+      }
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 4
+    }
+  ],
+  "description" : "Lines that send their trains out, with targets, windows, service days and rings.",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "line.dispatch seed 5EEDA001 case 2",
+  "start" : {
+    "clock" : {
+      "now" : 52440,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 1000000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "map" : {
+      "height" : 8,
+      "occupied" : [
+
+      ],
+      "width" : 3
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        }
+      ],
+      "nextEdgeID" : 4,
+      "nextNodeID" : 5,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 1536,
+          "y" : 512,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 1536,
+          "y" : 6656,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 1536,
+          "y" : 7680,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 3072,
+          "start" : 1536,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 1536,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 3072,
+          "start" : 1536,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        }
+      ]
+    },
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 1536,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 1536,
+          "y" : 5632
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 1536,
+          "y" : 6656
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

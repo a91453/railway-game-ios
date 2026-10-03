@@ -1,0 +1,1170 @@
+{
+  "checksums" : [
+    "F4505F4B5B35C480",
+    "83B591E0291776D9",
+    "65A0A8A63D7CDC64",
+    "DC2CE8D954391BB6",
+    "84B6E78799703927",
+    "C0A571B652DF9071",
+    "53ECF36436D77DE9",
+    "865B6C21F6B1DC43",
+    "F11EC634513888ED",
+    "AE57A473C80C1E33",
+    "30155B9C4DA3B4EF",
+    "AC6B673D76EE38CF",
+    "5DA8411F5CAD190B"
+  ],
+  "commands" : [
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "createLine",
+      "name" : "P1",
+      "stations" : [
+        5,
+        3,
+        1,
+        2
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 1,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 1,
+        "peak" : 0
+      }
+    },
+    {
+      "calls" : [
+        1,
+        2,
+        3
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "pattern" : 0,
+      "trains" : {
+        "low" : 2,
+        "offPeak" : 2,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "Q1"
+    },
+    {
+      "at" : {
+        "edge" : 3,
+        "forward" : true
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1024,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "purchase",
+      "name" : "Q2"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 7
+    },
+    {
+      "calls" : [
+        2,
+        3
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 212
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "pattern" : 1,
+      "targets" : {
+        "low" : 9223372036854775807,
+        "peak" : 45
+      }
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 1,
+      "stations" : [
+        5,
+        3,
+        1
+      ]
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 14
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "pattern" : 1,
+      "trains" : {
+        "low" : -1,
+        "offPeak" : 2,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 35
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 38
+    },
+    {
+      "calls" : [
+        0,
+        1
+      ],
+      "kind" : "addPattern",
+      "line" : -1
+    },
+    {
+      "calls" : [
+        0,
+        1
+      ],
+      "kind" : "addPattern",
+      "line" : 0
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "pattern" : 1,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 1,
+        "peak" : -1
+      }
+    },
+    {
+      "kind" : "reverse",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 32
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 1,
+      "stations" : [
+        5,
+        3,
+        1
+      ]
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 353
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 123
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 34
+    },
+    {
+      "calls" : [
+        0,
+        2
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 0,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 3,
+        "peak" : 4
+      }
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "double"
+    },
+    {
+      "kind" : "removePattern",
+      "line" : 1,
+      "pattern" : 0
+    },
+    {
+      "kind" : "removePattern",
+      "line" : 1,
+      "pattern" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "unassign",
+      "train" : 99
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "pattern" : 0,
+      "targets" : {
+        "low" : 3,
+        "offPeak" : 5,
+        "peak" : 1
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : 0,
+      "train" : 1
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+        "low" : 1440,
+        "offPeak" : 45,
+        "peak" : 2
+      }
+    },
+    {
+      "calls" : [
+        1,
+        2,
+        3
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    },
+    {
+      "edge" : 12,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 15
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "removePattern",
+      "line" : 1,
+      "pattern" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 28
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "pattern" : 0,
+      "trains" : {
+        "low" : 4,
+        "offPeak" : 1,
+        "peak" : 4
+      }
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 8
+    },
+    {
+      "at" : {
+        "edge" : 9,
+        "forward" : false
+      },
+      "kind" : "place",
+      "offset" : 1024,
+      "train" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 10
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 20
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 24
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 569
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 187
+    },
+    {
+      "kind" : "unassign",
+      "train" : 1
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 94
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "kind" : "createLine",
+      "name" : "P2",
+      "stations" : [
+        4,
+        1,
+        5,
+        2
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 2,
+        "peak" : 2
+      }
+    },
+    {
+      "calls" : [
+
+      ],
+      "kind" : "addPattern",
+      "line" : 2
+    },
+    {
+      "kind" : "setLineRing",
+      "line" : 1,
+      "ring" : true
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 276
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 2,
+      "trains" : {
+        "low" : 3,
+        "offPeak" : 0,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "pattern" : -1,
+      "train" : 1
+    },
+    {
+      "kind" : "removePattern",
+      "line" : 1,
+      "pattern" : 0
+    },
+    {
+      "kind" : "assign",
+      "line" : 2,
+      "pattern" : 0,
+      "train" : 99
+    },
+    {
+      "end" : 1013,
+      "kind" : "stand",
+      "path" : [
+        {
+          "edge" : 2,
+          "forward" : false
+        },
+        {
+          "edge" : 1,
+          "forward" : false
+        },
+        {
+          "edge" : 13,
+          "forward" : false
+        }
+      ],
+      "train" : 1
+    },
+    {
+      "kind" : "sendToNode",
+      "node" : 10,
+      "train" : 3
+    },
+    {
+      "kind" : "removePattern",
+      "line" : 1,
+      "pattern" : 0
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : 0,
+      "train" : 99
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 1,
+      "stations" : [
+        5,
+        3,
+        1
+      ]
+    },
+    {
+      "kind" : "assign",
+      "line" : 1,
+      "pattern" : -1,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 345
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 1,
+      "targets" : {
+        "low" : 1441,
+        "offPeak" : 3,
+        "peak" : 12
+      }
+    },
+    {
+      "calls" : [
+        0,
+        1
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    },
+    {
+      "kind" : "saveAndLoad"
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 2,
+      "pattern" : -1,
+      "targets" : {
+
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 20
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 2,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "trains" : {
+        "low" : 3,
+        "offPeak" : 0,
+        "peak" : 0
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 1,
+      "pattern" : 0,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 0,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 394
+    },
+    {
+      "kind" : "createLine",
+      "name" : "P3",
+      "stations" : [
+        3,
+        1,
+        5,
+        1
+      ]
+    },
+    {
+      "kind" : "setLineWindow",
+      "line" : 3,
+      "window" : {
+
+      }
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "trains" : {
+        "low" : 1,
+        "offPeak" : 2,
+        "peak" : 0
+      }
+    },
+    {
+      "calls" : [
+        1,
+        2
+      ],
+      "kind" : "addPattern",
+      "line" : 3
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "pattern" : 0,
+      "trains" : {
+        "low" : 0,
+        "offPeak" : 3,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "setLineTargets",
+      "line" : 3,
+      "pattern" : 0,
+      "targets" : {
+        "offPeak" : 5
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "Q2"
+    },
+    {
+      "calls" : [
+        0,
+        1,
+        2,
+        3
+      ],
+      "kind" : "addPattern",
+      "line" : 3
+    },
+    {
+      "kind" : "setLineTrains",
+      "line" : 3,
+      "pattern" : 1,
+      "trains" : {
+        "low" : 2,
+        "offPeak" : 1,
+        "peak" : 2
+      }
+    },
+    {
+      "kind" : "purchase",
+      "name" : "Q2"
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "normal"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 206
+    },
+    {
+      "kind" : "setRate",
+      "rate" : 1025,
+      "train" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "calls" : [
+        0,
+        1,
+        3
+      ],
+      "kind" : "addPattern",
+      "line" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 27
+    },
+    {
+      "kind" : "setLineStops",
+      "line" : 2,
+      "stations" : [
+        4,
+        1,
+        5
+      ]
+    },
+    {
+      "calls" : [
+        0,
+        2
+      ],
+      "kind" : "addPattern",
+      "line" : 1
+    }
+  ],
+  "description" : "Lines with patterns: short workings and expresses, and the loads on each stretch.",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "line.patterns seed 5EEDA001 case 5",
+  "start" : {
+    "clock" : {
+      "now" : 152520,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 7324,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "map" : {
+      "height" : 5,
+      "occupied" : [
+
+      ],
+      "width" : 11
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7680,
+                "y" : 2560
+              },
+              "control2" : {
+                "x" : 7680,
+                "y" : 1536
+              }
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 10291,
+                "y" : 1536
+              },
+              "control2" : {
+                "x" : 10752,
+                "y" : 1997
+              }
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 10752,
+                "y" : 3123
+              },
+              "control2" : {
+                "x" : 10291,
+                "y" : 3584
+              }
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7680,
+                "y" : 3584
+              },
+              "control2" : {
+                "x" : 7680,
+                "y" : 2560
+              }
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 3584,
+                "y" : 2560
+              },
+              "control2" : {
+                "x" : 3584,
+                "y" : 1536
+              }
+            }
+          },
+          "from" : 1,
+          "id" : 8,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 9,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 973,
+                "y" : 1536
+              },
+              "control2" : {
+                "x" : 512,
+                "y" : 1997
+              }
+            }
+          },
+          "from" : 9,
+          "id" : 10,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 512,
+                "y" : 3123
+              },
+              "control2" : {
+                "x" : 973,
+                "y" : 3584
+              }
+            }
+          },
+          "from" : 10,
+          "id" : 11,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 11,
+          "id" : 12,
+          "to" : 12
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 3584,
+                "y" : 3584
+              },
+              "control2" : {
+                "x" : 3584,
+                "y" : 2560
+              }
+            }
+          },
+          "from" : 12,
+          "id" : 13,
+          "to" : 1
+        }
+      ],
+      "nextEdgeID" : 14,
+      "nextNodeID" : 13,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 4608,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 6656,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 8704,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 9728,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 10752,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 9728,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 8704,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 512,
+          "y" : 2560,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 1536,
+          "y" : 3584,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 2560,
+          "y" : 3584,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 2366,
+          "start" : 1183,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 4,
+          "end" : 1610,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 4
+        },
+        {
+          "edge" : 7,
+          "end" : 2368,
+          "start" : 0,
+          "station" : 4
+        },
+        {
+          "edge" : 8,
+          "end" : 1184,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 8,
+          "end" : 2368,
+          "start" : 1184,
+          "station" : 5
+        },
+        {
+          "edge" : 9,
+          "end" : 512,
+          "start" : 0,
+          "station" : 5
+        },
+        {
+          "edge" : 13,
+          "end" : 2366,
+          "start" : 0,
+          "station" : 1
+        }
+      ]
+    },
+    "nextStationID" : 6,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 4608,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 8704,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 9728,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "S4",
+        "point" : {
+          "x" : 8704,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "S5",
+        "point" : {
+          "x" : 2560,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}
