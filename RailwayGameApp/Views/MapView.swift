@@ -1,52 +1,78 @@
 import GameCore
 import GamePresentation
 import SwiftUI
+import UIKit
 
-/// The scrollable, zoomable map. It draws `session.world.map` directly, so
-/// every command result shows up on the next frame.
+/// A viewport-sized map. The camera and derived geometry are view state;
+/// taps still go through the session's ordinary world commands.
 struct MapView: View {
     let session: GameSession
-    /// Tile size the player zoomed to; `nil` follows the viewport. View-only state.
-    @State private var zoomedTileSize: Double?
+    @State private var camera: PlanCamera?
+    @State private var edges: [TrackEdgeID: MapEdgeDrawing] = [:]
 
     var body: some View {
         GeometryReader { proxy in
             let map = session.world.map
-            let fitting = MapScale.fittingSize(
-                width: proxy.size.width,
-                height: proxy.size.height,
-                columns: map.width,
-                rows: map.height
-            )
-            let tileSize = zoomedTileSize.map { MapScale.clamped($0, fitting: fitting) }
-                ?? MapScale.automaticSize(fitting: fitting)
+            let viewport = ScreenSize(width: proxy.size.width, height: proxy.size.height)
+            let projection = camera?.resized(to: viewport) ?? PlanCamera(map: map, viewport: viewport)
 
-            ScrollView([.horizontal, .vertical]) {
-                MapCanvas(
-                    world: session.world,
-                    selectedTrainID: session.selectedTrainID,
-                    selection: session.selection,
-                    selectedStationID: session.selectedStation?.id,
-                    network: session.networkOverlay,
-                    tileSize: tileSize,
-                    session: session
-                )
-                .equatable()
-                .accessibilityElement()
-                .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
-                .accessibilityValue(selectionDescription)
-                .accessibilityHint("Use the actions to move the selected tile.")
-                .accessibilityAction(named: "Select tile to the north") { session.moveSelection(.north) }
-                .accessibilityAction(named: "Select tile to the east") { session.moveSelection(.east) }
-                .accessibilityAction(named: "Select tile to the south") { session.moveSelection(.south) }
-                .accessibilityAction(named: "Select tile to the west") { session.moveSelection(.west) }
-                // Centres the map when it is smaller than the viewport.
-                .frame(minWidth: proxy.size.width, minHeight: proxy.size.height)
+            MapCanvas(
+                world: session.world,
+                selectedTrainID: session.selectedTrainID,
+                selection: session.selection,
+                selectedStationID: session.selectedStation?.id,
+                network: session.networkOverlay,
+                camera: projection,
+                edges: edges
+            )
+            .equatable()
+            .overlay {
+                MapGestures(camera: projection, onCameraChange: { camera = $0 }) { location in
+                    let point = projection.planPoint(at: location)
+                    let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                    if session.tool == .network {
+                        session.tapNetwork(at: point, reach: reach)
+                    } else {
+                        session.tapMap(at: point, reach: reach)
+                    }
+                }
+                .accessibilityHidden(true)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
+            .accessibilityIdentifier(TutorialTarget.map.rawValue)
+            .accessibilityValue(selectionDescription)
+            .accessibilityHint("Use the actions to move the selected tile.")
+            .accessibilityAction(named: "Select tile to the north") { moveSelection(.north, camera: projection) }
+            .accessibilityAction(named: "Select tile to the east") { moveSelection(.east, camera: projection) }
+            .accessibilityAction(named: "Select tile to the south") { moveSelection(.south, camera: projection) }
+            .accessibilityAction(named: "Select tile to the west") { moveSelection(.west, camera: projection) }
             .background(Color(uiColor: .secondarySystemBackground))
+            .clipped()
             .overlay(alignment: .bottomTrailing) {
-                zoomControls(tileSize: tileSize, fitting: fitting)
+                zoomControls(camera: projection)
             }
+            .onChange(of: viewport, initial: true) { _, size in
+                camera = camera?.resized(to: size) ?? PlanCamera(map: map, viewport: size)
+            }
+            .onChange(of: WorldRegion(map: map)) { _, _ in
+                camera = PlanCamera(map: map, viewport: viewport)
+            }
+            .onChange(of: session.selectedStation?.id) { _, _ in
+                // A station chosen in the overview may be kilometres away.
+                if let station = session.selectedStation {
+                    camera = projection.centered(on: WorldCoordinate(x: station.location.x, y: station.location.y))
+                }
+            }
+        }
+        .onChange(of: session.world.network, initial: true) { _, network in
+            // Edges are immutable and IDs are never reused. Keep their
+            // sampled geometry across ticks, pans and zooms; discard removals.
+            var next: [TrackEdgeID: MapEdgeDrawing] = [:]
+            for edge in network.edges {
+                next[edge.id] = edges[edge.id] ?? MapEdgeDrawing(edge: edge, world: session.world)
+            }
+            edges = next
         }
     }
 
@@ -54,26 +80,33 @@ struct MapView: View {
         session.selectionText() ?? String(localized: "Nothing selected")
     }
 
-    private func zoomControls(tileSize: Double, fitting: Double) -> some View {
+    private func moveSelection(_ direction: TrackDirection, camera: PlanCamera) {
+        session.moveSelection(direction)
+        if let selection = session.selection {
+            self.camera = camera.centered(on: WorldCoordinate(centreOf: selection))
+        }
+    }
+
+    private func zoomControls(camera: PlanCamera) -> some View {
         HStack(spacing: 0) {
             Button {
-                zoomedTileSize = MapScale.zoomedOut(from: tileSize, fitting: fitting)
+                self.camera = camera.zoomedOut()
             } label: {
                 Image(systemName: "minus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(tileSize <= MapScale.minimumSize(fitting: fitting))
+            .disabled(!camera.canZoomOut)
             .accessibilityLabel("Zoom out")
 
             Divider().frame(height: 24)
 
             Button {
-                zoomedTileSize = MapScale.zoomedIn(from: tileSize, fitting: fitting)
+                self.camera = camera.zoomedIn()
             } label: {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(tileSize >= MapScale.largestSize)
+            .disabled(!camera.canZoomIn)
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)
@@ -83,24 +116,16 @@ struct MapView: View {
     }
 }
 
-/// Draws the whole map, the track network, the stations and the placed
-/// trains in one `Canvas` and turns taps into world points with the reach
-/// of a fingertip: for the network tool (Stage C1), or to select a station
-/// (Stage F1).
-///
-/// Equatable so that game ticks that change only the world's clock do not
-/// redraw it (only the map, the track network, the stations and the
-/// trains are drawn); a tick that moves a train does, and the train is
-/// drawn where GameCore now has it.
+/// Clock-only ticks do not redraw the map; camera changes and moving
+/// trains do. Canvas never allocates a view the size of the whole world.
 private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
     let selection: GridPosition?
     let selectedStationID: StationID?
-    /// What the network tool draws; `nil` with another tool.
     let network: NetworkOverlay?
-    let tileSize: Double
-    let session: GameSession
+    let camera: PlanCamera
+    let edges: [TrackEdgeID: MapEdgeDrawing]
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.map == rhs.world.map
@@ -111,34 +136,106 @@ private struct MapCanvas: View, Equatable {
             && lhs.selection == rhs.selection
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
-            && lhs.tileSize == rhs.tileSize
-            && lhs.session === rhs.session
+            && lhs.camera == rhs.camera
+            && lhs.edges == rhs.edges
     }
 
     var body: some View {
-        let world = world, selectedTrainID = selectedTrainID
-        let selection = selection, selectedStationID = selectedStationID, network = network, tileSize = tileSize
         Canvas { context, _ in
             TileArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
-                // The network tool picks points on the track, not stations.
                 selection: network == nil ? selection : nil,
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
-                tileSize: tileSize,
+                projection: camera,
+                edges: edges,
                 in: context
             )
         }
-        .frame(width: tileSize * Double(world.map.width), height: tileSize * Double(world.map.height))
-        .contentShape(Rectangle())
-        .onTapGesture { location in
-            let point = MapScale.worldPoint(atX: location.x, y: location.y, tileSize: tileSize)
-            let reach = MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: tileSize)
-            if session.tool == .network {
-                session.tapNetwork(at: point, reach: reach)
-            } else {
-                session.tapMap(at: point, reach: reach)
+    }
+}
+
+/// UIKit recognizers arbitrate taps, single-finger drags and pinches:
+/// navigating must never also select a point for the construction tool.
+/// A pinch uses its starting camera and centroid, including centroid drift.
+private struct MapGestures: UIViewRepresentable {
+    let camera: PlanCamera
+    let onCameraChange: (PlanCamera) -> Void
+    let onTap: (ScreenPoint) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
+        pan.maximumNumberOfTouches = 1
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
+        pan.delegate = context.coordinator
+        pinch.delegate = context.coordinator
+        tap.require(toFail: pan)
+        tap.require(toFail: pinch)
+        view.addGestureRecognizer(tap)
+        view.addGestureRecognizer(pan)
+        view.addGestureRecognizer(pinch)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.parent = self
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var parent: MapGestures
+        private var panStart: PlanCamera?
+        private var pinchStart: PlanCamera?
+        private var pinchAnchor = CGPoint.zero
+
+        init(_ parent: MapGestures) { self.parent = parent }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            // Adding a second finger to an existing drag can start a pinch.
+            (gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPinchGestureRecognizer)
+                || (gestureRecognizer is UIPinchGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer)
+        }
+
+        @objc func tap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let point = gesture.location(in: gesture.view)
+            parent.onTap(ScreenPoint(x: point.x, y: point.y))
+        }
+
+        @objc func pan(_ gesture: UIPanGestureRecognizer) {
+            if gesture.state == .began { panStart = parent.camera }
+            if gesture.state == .began || gesture.state == .changed || gesture.state == .ended,
+               pinchStart == nil, let start = panStart {
+                let delta = gesture.translation(in: gesture.view)
+                parent.onCameraChange(start.panned(byX: delta.x, y: delta.y))
+            }
+            if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
+                panStart = nil
+            }
+        }
+
+        @objc func pinch(_ gesture: UIPinchGestureRecognizer) {
+            if gesture.state == .began {
+                panStart = nil
+                pinchStart = parent.camera
+                pinchAnchor = gesture.location(in: gesture.view)
+            }
+            // The centroid after a finger lifts is no longer the pinch's
+            // centroid. Keep the last two-finger frame instead of jumping.
+            if gesture.state == .began || gesture.state == .changed,
+               gesture.numberOfTouches >= 2, let start = pinchStart {
+                let point = gesture.location(in: gesture.view)
+                let anchor = ScreenPoint(x: pinchAnchor.x, y: pinchAnchor.y)
+                parent.onCameraChange(start.zoomed(by: gesture.scale, around: anchor)
+                    .panned(byX: point.x - pinchAnchor.x, y: point.y - pinchAnchor.y))
+            }
+            if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
+                pinchStart = nil
             }
         }
     }
