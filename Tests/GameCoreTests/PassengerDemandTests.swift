@@ -12,11 +12,12 @@ final class PassengerDemandTests: XCTestCase {
     private let c = StationID(rawValue: 3)
     private let d = StationID(rawValue: 4)
 
-    /// Four stations in a row and a line A–B–C; D is on no line.
+    /// Four point stations in a row, at the centres of tiles (2, 2), (6,
+    /// 2), (10, 2) and (14, 2), and a line A–B–C; D is on no line.
     private func makeCorridor() throws -> GameWorld {
         var world = try makeWorld(width: 20, height: 5, balance: 100_000)
         for x in [2, 6, 10, 14] {
-            try world.buildStation(named: "S\(x)", at: GridPosition(x: x, y: 2))
+            try world.buildStation(named: "S\(x)", at: TestLine.centre(x, 2))
         }
         try world.createLine(named: "Line", stops: [a, b, c])
         world.setSpeed(.normal)

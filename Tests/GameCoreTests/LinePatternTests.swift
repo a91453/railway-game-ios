@@ -11,7 +11,9 @@ import XCTest
 /// never taken from a previous run.
 final class LinePatternTests: XCTestCase {
     // A straight line, dead ends at both ends, a station above every other
-    // tile:
+    // tile, on the track network (Stage F3b, see `TestLine`): a node at each
+    // tile centre, edges of 1024, a platform either side of each station's
+    // node:
     //
     //       A(1,0)  B(3,0)  C(5,0)  D(7,0)
     //         |       |       |       |
@@ -21,11 +23,13 @@ final class LinePatternTests: XCTestCase {
     // from the next, and A to D non-stop 350 s. Main (A, B, C, D) takes 12
     // minutes of travel, a minute at B and C each way and two at each end:
     // 20. B-C and back is 4 + 4 = 8; A-D non-stop and back is 700 s + 4
-    // minutes, 940 s, which the line plans as 16 minutes.
-    private let a = GridPosition(x: 1, y: 1)
-    private let b = GridPosition(x: 3, y: 1)
-    private let c = GridPosition(x: 5, y: 1)
-    private let d = GridPosition(x: 7, y: 1)
+    // minutes, 940 s, which the line plans as 16 minutes. A service plans
+    // its journey from the berth that makes the shortest round trip, the end
+    // of its first call's platform past the node going east, 512 on: its
+    // first leg is 1536 (91 s) or, non-stop, 5632 (321 s), and its round
+    // trip 29 s shorter in the same whole minutes. Trains sent out from the
+    // node drive the whole legs.
+    private let line = TestLine(tiles: 9)
     private let stationA = StationID(rawValue: 1)
     private let stationB = StationID(rawValue: 2)
     private let stationC = StationID(rawValue: 3)
@@ -47,13 +51,9 @@ final class LinePatternTests: XCTestCase {
             width: 9, height: 2, economy: GameEconomy(balance: 2_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...7 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 8, y: 1), connections: .west)
+        try line.build(in: &world)
         for (name, x) in [("A", 1), ("B", 3), ("C", 5), ("D", 7)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try line.buildStation(named: name, beside: x, at: 0, in: &world)
         }
         try world.createLine(named: "Main", stops: [stationA, stationB, stationC, stationD])
         try world.setLinePerformance(main, to: crawl)
@@ -157,7 +157,7 @@ final class LinePatternTests: XCTestCase {
         for index in 1...3 {
             try world.purchaseTrain(named: "T\(index)")
         }
-        try world.placeTrain(three, at: .atNode(b, heading: .east))
+        try world.placeTrain(three, at: line.at(3, facingEast: true))
         try world.setTrainTimetable(three, to: [stop(stationB, 480, 500)])
         try world.startTrainService(three)
 
@@ -218,7 +218,7 @@ final class LinePatternTests: XCTestCase {
         var world = try makePatternWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
         let express = try world.purchaseTrain(named: "Express").id
-        try world.placeTrain(shuttle, at: .atNode(b, heading: .east))
+        try world.placeTrain(shuttle, at: line.at(3, facingEast: true))
         try world.setTrainMovementRate(shuttle, to: 1024)
         try world.assignTrain(shuttle, to: main, pattern: 0)
         try world.assignTrain(express, to: main, pattern: 1)
@@ -249,23 +249,27 @@ final class LinePatternTests: XCTestCase {
     /// the line's stops, from a platform of its first call.
     func testPatternJourneysCallOnlyAtTheirCalls() throws {
         let world = try makePatternWorld()
+        // From the end of B's platform past its node (edge 4, 512): 1536 to
+        // C (91 s), then, turned round at C, 2048 back to B (120 s): 451 s.
         let short = try XCTUnwrap(world.lineJourney(main, pattern: 0))
-        XCTAssertEqual(short.start, .atNode(b, heading: .north))
+        XCTAssertEqual(short.start, .onEdge(TrackTraversal(edge: line.edge(4), direction: .forward), offset: 512))
         XCTAssertEqual(short.legs.map { [$0.from, $0.to] }, [[1, 2], [2, 1]])
-        XCTAssertEqual(short.legs.map(\.route), [[GridPosition(x: 4, y: 1), c], [GridPosition(x: 4, y: 1), b]])
-        XCTAssertEqual(short.legs.map(\.seconds), [120, 120])
-        XCTAssertEqual(short.roundTripSeconds, 480)
+        XCTAssertEqual(short.legs.map(\.path.traversals), [line.path(from: 4, through: [5]), line.path(from: 4, through: [3])])
+        XCTAssertEqual(short.legs.map(\.path.distance), [1_536, 2_048])
+        XCTAssertEqual(short.legs.map(\.seconds), [91, 120])
+        XCTAssertEqual(short.roundTripSeconds, 451)
         XCTAssertEqual(short.roundTripMinutes, 8)
 
+        // Non-stop: 5632 out (321 s) and 6144 back (350 s): 911 s.
         let express = try XCTUnwrap(world.lineJourney(main, pattern: 1))
-        XCTAssertEqual(express.start, .atNode(a, heading: .north))
+        XCTAssertEqual(express.start, .onEdge(TrackTraversal(edge: line.edge(2), direction: .forward), offset: 512))
         XCTAssertEqual(express.legs.map { [$0.from, $0.to] }, [[0, 3], [3, 0]])
-        XCTAssertEqual(express.legs.map(\.seconds), [350, 350], "it passes B and C")
-        XCTAssertEqual(express.roundTripSeconds, 940)
+        XCTAssertEqual(express.legs.map(\.seconds), [321, 350], "it passes B and C")
+        XCTAssertEqual(express.roundTripSeconds, 911)
         XCTAssertEqual(express.roundTripMinutes, 16, "rounded up")
 
-        XCTAssertEqual(world.lineJourney(main)?.legs.map(\.seconds), [120, 120, 120, 120, 120, 120])
-        XCTAssertEqual(world.lineJourney(main)?.roundTripSeconds, 1200)
+        XCTAssertEqual(world.lineJourney(main)?.legs.map(\.seconds), [91, 120, 120, 120, 120, 120])
+        XCTAssertEqual(world.lineJourney(main)?.roundTripSeconds, 1171)
         XCTAssertEqual(world.lineJourney(main)?.roundTripMinutes, 20)
         XCTAssertEqual(world.lineJourney(main, pattern: nil), world.lineJourney(main))
         XCTAssertNil(world.lineJourney(main, pattern: 2))
@@ -326,9 +330,11 @@ final class LinePatternTests: XCTestCase {
         XCTAssertEqual(world.lineTrainsInService(main, at: .peak, pattern: 1), 0)
         XCTAssertEqual(world.lineSegmentLoads(main, at: .peak), [720, 720, 720])
 
-        // Cut the track between C and D: Main and the express cannot be
-        // driven, and the short working has B-C to itself.
-        try world.removeTrack(at: GridPosition(x: 6, y: 1))
+        // Cut the track between C and D (edge 6, after C's platform past its
+        // node): Main and the express cannot be driven, and the short
+        // working has B-C to itself.
+        try world.removeTrackPlatform(stationC, on: line.edge(6), from: 0)
+        try world.removeTrackEdge(line.edge(6))
         XCTAssertNil(world.lineTrainsInService(main, at: .peak))
         XCTAssertNil(world.lineTrainsInService(main, at: .peak, pattern: 1))
         XCTAssertEqual(world.lineTrainsInService(main, at: .peak, pattern: 0), 4)
@@ -346,8 +352,8 @@ final class LinePatternTests: XCTestCase {
         var world = try makePatternWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
         let express = try world.purchaseTrain(named: "Express").id
-        try world.placeTrain(shuttle, at: .atNode(b, heading: .east))
-        try world.placeTrain(express, at: .atNode(a, heading: .east))
+        try world.placeTrain(shuttle, at: line.at(3, facingEast: true))
+        try world.placeTrain(express, at: line.at(1, facingEast: true))
         for id in [shuttle, express] {
             try world.setTrainMovementRate(id, to: 1024)
         }
@@ -385,8 +391,8 @@ final class LinePatternTests: XCTestCase {
         var stepped = try makePatternWorld()
         let s = try stepped.purchaseTrain(named: "Shuttle").id
         let e = try stepped.purchaseTrain(named: "Express").id
-        try stepped.placeTrain(s, at: .atNode(b, heading: .east))
-        try stepped.placeTrain(e, at: .atNode(a, heading: .east))
+        try stepped.placeTrain(s, at: line.at(3, facingEast: true))
+        try stepped.placeTrain(e, at: line.at(1, facingEast: true))
         for id in [s, e] {
             try stepped.setTrainMovementRate(id, to: 1024)
         }
@@ -405,7 +411,7 @@ final class LinePatternTests: XCTestCase {
     func testPatternsSaveAndBadPatternsAreRefused() throws {
         var world = try makePatternWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
-        try world.placeTrain(shuttle, at: .atNode(b, heading: .east))
+        try world.placeTrain(shuttle, at: line.at(3, facingEast: true))
         try world.setTrainMovementRate(shuttle, to: 1024)
         try world.assignTrain(shuttle, to: main, pattern: 0)
         try world.advance(ticks: 3)

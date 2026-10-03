@@ -69,7 +69,7 @@ final class CarPriceTests: XCTestCase {
             clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
         }
         try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
         let spare = try world.purchaseTrain(named: "Spare").id

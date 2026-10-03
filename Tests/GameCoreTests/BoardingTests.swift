@@ -9,7 +9,9 @@ import XCTest
 /// behind as refused when it leaves. Every expectation here is worked out
 /// by hand from the rules.
 final class BoardingTests: XCTestCase {
-    // The line of `LineDispatchTests`, dead ends at both ends:
+    // The line of `LineDispatchTests`, dead ends at both ends, on the track
+    // network (Stage F3b): a node at each tile centre, edges of 1024 between
+    // them, and a platform either side of b, d and f (see `TestLine`):
     //
     //   Alpha(1,0)  Beta(3,0)  Gamma(5,0)
     //       |           |          |
@@ -23,6 +25,7 @@ final class BoardingTests: XCTestCase {
     // service ends once the train has dwelt there). Passengers get off and
     // on 8 s after the train arrives, as its doors open: at 0:08, 1:06,
     // 2:22, 4:38 and 5:54 on time.
+    private let line = TestLine(tiles: 7)
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -35,21 +38,17 @@ final class BoardingTests: XCTestCase {
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
-        try world.buildStation(named: "Gamma", at: GridPosition(x: 5, y: 0))
+        try line.build(in: &world)
+        try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try line.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         try world.createLine(named: "Other", stops: [alpha, beta, gamma])
         try world.setLineServiceWindow(main, to: .allDay)
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "T1")
         try world.setTrainCars(train.id, to: cars)
-        try world.placeTrain(train.id, at: .atNode(GridPosition(x: cars, y: 1), heading: .east))
+        try world.placeTrain(train.id, at: line.at(cars, facingEast: true))
         try world.setTrainMovementRate(train.id, to: 1024)
         try world.assignTrain(train.id, to: main)
         // A record for each station, so passengers can be put in its queue.

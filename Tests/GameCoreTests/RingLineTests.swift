@@ -12,28 +12,42 @@ import XCTest
 /// Expected values are worked out by hand from the rules and written out,
 /// never taken from a previous run.
 final class RingLineTests: XCTestCase {
-    // A loop of grid track, clockwise from the top:
+    // A loop of track-network track (Stage F3b), clockwise from the top,
+    // the loop of the golden `ring-line.json`: nodes 1 (2560, 1536), 2
+    // (3584, 1536) and 3 (4608, 1536) along the top and 5 (4608, 3584), 6
+    // (3584, 3584) and 7 (2560, 3584) along the bottom, joined by straight
+    // edges of 1024 (1, 2, 5 and 6), and at each corner one cubic edge 2048
+    // long (3 to node 4 (5632, 2560), 4, 7 to node 8 (1536, 2560), and 8),
+    // the length of the grid's two links round the corner: edges join at a
+    // node only where they leave it in opposite directions, so a corner
+    // must be a curve.
     //
     //        A(3,0)
-    //   (1,1) (2,1) (3,1) (4,1) (5,1)
-    //   (1,2)                   (5,2) B(6,2)
-    //   (1,3) (2,3) (3,3) (4,3) (5,3)
+    //   (2,1) (3,1) (4,1)
+    //   (1,2)             (5,2) B(6,2)
+    //   (2,3) (3,3) (4,3)
     //  D(0,2)       C(3,4)
     //
-    // D stands left of (1,2). Each station's platform is the track tile
-    // beside it, and from each to the next round the loop is three links,
-    // 48 m. The ring plans with a crawl (as `LineDispatchTests`): 1 km/h,
-    // reached in 8 s (1.111 m) and stopped from in 10 s (1.389 m), so a
-    // leg of 48 m takes 8 + 45.5 / 0.27778 + 10 = 181.8 s, planned as 182.
-    // A lap is four legs and a minute at each of the four stops, 968 s,
-    // planned as 17 minutes.
+    // Each station has one platform, the last 512 of the edge that leads
+    // clockwise into its node (A edge 1, B edge 3, C edge 5, D edge 7), so a
+    // train stops at the node going clockwise and 512 before it going
+    // anticlockwise; either way from each to the next round the loop is
+    // 3072, 48 m. The ring plans with a crawl (as `LineDispatchTests`): 1
+    // km/h, reached in 8 s (1.111 m) and stopped from in 10 s (1.389 m),
+    // so a leg of 48 m takes 8 + 45.5 / 0.27778 + 10 = 181.8 s, planned as
+    // 182. A lap is four legs and a minute at each of the four stops, 968
+    // s, planned as 17 minutes.
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
     private let delta = StationID(rawValue: 4)
     private let ring = LineID(rawValue: 1)
     private let unknownLine = LineID(rawValue: 9)
-    private let a = GridPosition(x: 3, y: 1)
+    /// Alpha's berths: going clockwise (the inner way) at node 2, the end
+    /// of edge 1; going anticlockwise (the outer way) 512 along edge 1
+    /// backward.
+    private let clockwise = TrainPosition.onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 1_024)
+    private let anticlockwise = TrainPosition.onEdge(TrackTraversal(edge: .edge(1), direction: .backward), offset: 512)
     private let crawl = TrainPerformance(acceleration: 125, braking: 100, topSpeed: 1)
     private let leg: Int64 = 182
     private let lap: Int64 = 968
@@ -43,21 +57,26 @@ final class RingLineTests: XCTestCase {
             width: 7, height: 5, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .south])
-        try world.buildTrack(at: GridPosition(x: 5, y: 1), connections: [.west, .south])
-        try world.buildTrack(at: GridPosition(x: 5, y: 3), connections: [.west, .north])
-        try world.buildTrack(at: GridPosition(x: 1, y: 3), connections: [.east, .north])
-        for x in 2...4 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-            try world.buildTrack(at: GridPosition(x: x, y: 3), connections: [.east, .west])
+        let corner: Int64 = 1_338
+        let nodes: [(Int64, Int64)] = [(2_560, 1_536), (3_584, 1_536), (4_608, 1_536), (5_632, 2_560), (4_608, 3_584), (3_584, 3_584), (2_560, 3_584), (1_536, 2_560)]
+        for (x, y) in nodes {
+            try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
         }
-        for x in [1, 5] {
-            try world.buildTrack(at: GridPosition(x: x, y: 2), connections: [.north, .south])
+        let curves: [TrackCurve] = [
+            .straight, .straight,
+            .cubic(PlanPoint(x: 4_608 + corner, y: 1_536), PlanPoint(x: 5_632, y: 2_560 - corner)),
+            .cubic(PlanPoint(x: 5_632, y: 2_560 + corner), PlanPoint(x: 4_608 + corner, y: 3_584)),
+            .straight, .straight,
+            .cubic(PlanPoint(x: 2_560 - corner, y: 3_584), PlanPoint(x: 1_536, y: 2_560 + corner)),
+            .cubic(PlanPoint(x: 1_536, y: 2_560 - corner), PlanPoint(x: 2_560 - corner, y: 1_536)),
+        ]
+        for (index, curve) in curves.enumerated() {
+            try world.buildTrackEdge(from: .node(index + 1), to: .node((index + 1) % 8 + 1), curve: curve)
         }
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 3, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 6, y: 2))
-        try world.buildStation(named: "Gamma", at: GridPosition(x: 3, y: 4))
-        try world.buildStation(named: "Delta", at: GridPosition(x: 0, y: 2))
+        for (name, x, y, edge, length) in [("Alpha", 3, 0, 1, 1_024), ("Beta", 6, 2, 3, 2_048), ("Gamma", 3, 4, 5, 1_024), ("Delta", 0, 2, 7, 2_048)] as [(String, Int, Int, Int, Int64)] {
+            let station = try world.buildStation(named: name, at: TestLine.centre(x, y)).id
+            try world.addTrackPlatform(station, on: .edge(edge), from: length - 512, to: length)
+        }
         return world
     }
 
@@ -74,7 +93,12 @@ final class RingLineTests: XCTestCase {
         try world.setLineTrainsInService(ring, to: running)
         for index in 1...count {
             let train = try world.purchaseTrain(named: "T\(index)")
-            try world.placeTrain(train.id, at: .atNode(a, heading: index % 2 == 1 ? .east : .west))
+            try world.placeTrain(train.id, at: index % 2 == 1 ? clockwise : anticlockwise)
+            if index % 2 == 0 {
+                // A placed train with no path runs to the end of its edge:
+                // the outer way's train keeps to its berth, mid-edge.
+                try world.setTrainContinuation(train.id, along: [], stoppingAt: 512)
+            }
             try world.setTrainMovementRate(train.id, to: 1024)
             try world.assignTrain(train.id, to: ring)
         }
@@ -179,9 +203,10 @@ final class RingLineTests: XCTestCase {
         try targets.setLineTrainsInService(ring, to: pairs(40))
         XCTAssertEqual(targets.lineTrainsInService(ring, at: .low), 16, "never past the maximum")
 
-        // Without the track from Delta back to Alpha there is no lap.
+        // Without the track from Delta back to Alpha (the corner, edge 8)
+        // there is no lap.
         var open = world
-        try open.removeTrack(at: GridPosition(x: 1, y: 1))
+        try open.removeTrackEdge(.edge(8))
         XCTAssertNil(open.lineJourney(ring))
         XCTAssertNil(open.lineMaximumTrains(ring))
     }
@@ -220,8 +245,8 @@ final class RingLineTests: XCTestCase {
         try world.advance(ticks: 16)
         XCTAssertNil(world.train(id: inner)?.execution)
         XCTAssertNil(world.train(id: outer)?.execution)
-        XCTAssertEqual(world.train(id: inner)?.position, .atNode(a, heading: .east))
-        XCTAssertEqual(world.train(id: outer)?.position, .atNode(a, heading: .west))
+        XCTAssertEqual(world.train(id: inner)?.position, clockwise)
+        XCTAssertEqual(world.train(id: outer)?.position, anticlockwise)
         try world.advance(ticks: 1)
         line = try XCTUnwrap(world.line(id: ring))
         XCTAssertEqual(line.lastDispatch, GameTime(minutes: 17))

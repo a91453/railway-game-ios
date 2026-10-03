@@ -15,16 +15,16 @@ import XCTest
 /// units a second. Where a train is between calls is read off the curve
 /// with `runDistance(_:in:after:)`.
 final class ServiceRunTests: XCTestCase {
-    // A line along y = 1 with dead ends at both ends:
+    // A line along y = 1 with dead ends at both ends, on the track network
+    // (Stage F3b): a node at each tile centre, a to g, edges 1 to 6 of 1024
+    // between them.
     //
     //   Alpha(1,0)  Beta(3,0)  Gamma(5,0)
     //       |           |          |
     //   a - b - c - d - e - f - g
     //
-    // Platforms: Alpha b, Beta d, Gamma f; two links between each.
-    private let b = GridPosition(x: 1, y: 1)
-    private let c = GridPosition(x: 2, y: 1)
-    private let d = GridPosition(x: 3, y: 1)
+    // Platforms either side of b, d and f; two edges, 2048, between each.
+    private let line = TestLine(tiles: 7)
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let one = TrainID(rawValue: 1)
@@ -33,16 +33,12 @@ final class ServiceRunTests: XCTestCase {
         var world = try GameWorld(
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
+        try line.build(in: &world)
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try line.buildStation(named: name, beside: x, at: 0, in: &world)
         }
         try world.purchaseTrain(named: "Local")
-        try world.placeTrain(one, at: .atNode(b, heading: .east))
+        try world.placeTrain(one, at: line.at(1, facingEast: true))
         try world.setTrainMovementRate(one, to: 1024)
         return world
     }
@@ -222,19 +218,19 @@ final class ServiceRunTests: XCTestCase {
         try advance(&world, to: 61)
         XCTAssertEqual(try train(world).execution, .travellingToStop(1))
         XCTAssertEqual(try train(world).times?.run, ServiceRun(start: GameTime(seconds: 60), length: 2_048, seconds: 120))
-        XCTAssertEqual(try train(world).position, .onLink(from: b, to: c, offset: runDistance(2_048, in: 120, after: 1)))
+        XCTAssertEqual(try train(world).position, line.between(1, 2, offset: runDistance(2_048, in: 120, after: 1)))
         // Halfway through the time, not quite halfway along: it lost more
         // speeding up (1.5 km/h a second) than it will slowing down (2.5).
         try advance(&world, to: 120)
         let halfway = runDistance(2_048, in: 120, after: 60)
         XCTAssertLessThan(halfway, 1_024)
-        XCTAssertEqual(try train(world).position, .onLink(from: b, to: c, offset: halfway))
+        XCTAssertEqual(try train(world).position, line.between(1, 2, offset: halfway))
         XCTAssertEqual(world.lateness(of: one), 0)
         try advance(&world, to: 179)
         XCTAssertEqual(try train(world).execution, .travellingToStop(1))
         try advance(&world, to: 180)
         XCTAssertEqual(try train(world).execution, .waitingAtStop(1))
-        XCTAssertEqual(try train(world).position, .atNode(d, heading: .east))
+        XCTAssertEqual(try train(world).position, line.at(3, facingEast: true))
         XCTAssertEqual(try train(world).times, ServiceTimes(arrival: GameTime(seconds: 180), departure: GameTime(seconds: 60)))
         XCTAssertEqual(world.lateness(of: one), 0)
     }
@@ -248,7 +244,7 @@ final class ServiceRunTests: XCTestCase {
         // Accelerating for its first 8 s, to 213⅓ units a second (12 km/h):
         // a·t²/2 = 26⅔ × 9 ÷ 2 = 120 after 3 s.
         try advance(&world, to: 63)
-        XCTAssertEqual(try train(world).position, .onLink(from: b, to: c, offset: 120))
+        XCTAssertEqual(try train(world).position, line.between(1, 2, offset: 120))
         try advance(&world, to: 75)
         XCTAssertEqual(world.lateness(of: one), 5, "75 - 70")
         try advance(&world, to: 76)
@@ -265,7 +261,7 @@ final class ServiceRunTests: XCTestCase {
         XCTAssertEqual(try train(world).times?.run, ServiceRun(start: GameTime(seconds: 42), length: 2_048, seconds: 120))
         try advance(&world, to: 100)
         XCTAssertEqual(world.lateness(of: one), 42)
-        XCTAssertEqual(try train(world).position, .onLink(from: b, to: c, offset: runDistance(2_048, in: 120, after: 58)))
+        XCTAssertEqual(try train(world).position, line.between(1, 2, offset: runDistance(2_048, in: 120, after: 58)))
         try advance(&world, to: 161)
         XCTAssertEqual(world.lateness(of: one), 42, "left 42 s late; 41 s past its arrival")
         try advance(&world, to: 162)
@@ -307,6 +303,6 @@ final class ServiceRunTests: XCTestCase {
         XCTAssertEqual(try train(batch).times?.run, run)
         let along = runDistance(2_048, in: 1_200_000, after: 120 * 60 - 42)
         XCTAssertGreaterThan(along, 0)
-        XCTAssertEqual(try train(batch).position, .onLink(from: b, to: c, offset: along))
+        XCTAssertEqual(try train(batch).position, line.between(1, 2, offset: along))
     }
 }

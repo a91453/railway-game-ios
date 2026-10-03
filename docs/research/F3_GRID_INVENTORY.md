@@ -346,6 +346,48 @@ GameLauncher／SaveLibrary 會呼叫共用 SavedGame 的 JSON encode/decode，�
 4. **保存相容性另有責任**：固定 SaveFixtures 無格鐵路，但自造舊世界測試與玩家存檔仍需有明確處理；本筆記不主張升版本、重寫／刪 fixture 或放棄讀檔。
 5. **App 清理範圍**：隱藏的 session 工具、舊世界畫圖與 fallback 路徑要一起評估；路網選站、方向與純 renderer／map 功能仍需替代或保留。
 
+## 7. F3b 進度
+
+§3 的行號是盤點當時（F3a 之前）的基準，之後的修改會讓它們漂移。
+
+### 7.1 F3b-1：只把方格當布景的單元測試（已搬到路網）
+
+共用的 [`TestLine`](../../Tests/GameCoreTests/TestLine.swift) 用 F3a-2 golden 的同一種搬法（[GoldenScenarios/README](../../GoldenScenarios/README.md#f3fixture-搬到路網schema-不變)）：原本那排格的每個格心放一個節點，相鄰兩個之間一條 1024 的直邊；車站改成點車站，月台在節點兩側各半格，所以列車停在節點上，兩站之間開的距離和方格時一樣。
+
+已搬：ServiceDwellTests、ServiceRunTests、PassengerDemandTests、BoardingTests、EconomyAccountsTests、CarPriceTests、RingLineTests（環線用 `ring-line.json` 的路網環）、ServiceLineTests、LineDispatchTests、LinePatternTests、TrainTimetableTests、TrainServiceTests、TrainRepeatTests、IDAllocationTests、PersistenceAndDeterminismTests 的腳本、NetworkServiceTests 與 VerticalRailwayTests 的車站（改點車站，底下的格不變，所以票價距離不變）。GameCore 沒有改。
+
+預期值有變的地方（其餘只是位置寫法換成路網，數值照舊）：
+
+| 類別 | 變化 | 原因（路網既有的規則） |
+| --- | --- | --- |
+| EconomyAccountsTests | 一天的能源 37400 → 37200、路線能源 1400 → 1200 | 路線長度取自 line 的計畫行程：從 Alpha 東側月台的 berth 出發，3584 而不是 4096；round(220 × 0.056) = 12 |
+| ServiceLineTests | 行程起點 b 朝北 → 邊 2 正向 512；各段秒數第一段變短（標準 16 → 14、metro 11 → 9、forest 24 → 21、crawl 59 → 45），往返分鐘數不變；Alpha–Gamma [23,23] → [21,23] | 行程從往返最短的 berth 出發，第一段少 512 |
+| ServiceLineTests | Gamma／Delta 共用月台 0+0 s、4 分 → 8+12 s、5 分；兩列車的尖峰／離峰班距 2 → 3 分 | 路網上兩站不能共用月台，只能在月台交界相接 |
+| ServiceLineTests | 「開不了的行程」：拆 e 格 → 拆 Beta 在邊 4 的月台與邊 4，重建是新邊 7；各段 [14,16,18,14] | 邊 ID 不重用 |
+| ServiceLineTests | 「選往返最短的起點」改在直線上寫：從邊 2 正向 512 出發 422 s，從 b 出發 424 s；沒有 Alpha 東側月台時 426 s | 方格的環與朝向起點在路網沒有對應寫法 |
+| LineDispatchTests | crawl 計畫行程 [240,240]／720 → [211,240]／691（分鐘不變）；服務在 Alpha 結束時 b 朝東 → 邊 2 正向 0 | 同上第一段；折返停在原地 |
+| LinePatternTests | pattern 0 起點 → 邊 4 正向 512；[120,120]／480 → [91,120]／451、express [350,350]／940 → [321,350]／911、Main 1200 → 1171（分鐘不變） | 同上第一段 |
+| TrainTimetableTests | 放在 a 的列車 cursor 2 → 1；在 b 反向 → 邊 1 反向 0 | 路網的 cursor 只數進入的邊；反向在原地 |
+| TrainServiceTests | Gamma → Delta → Beta：Delta 出發的一段 2048 → 2560 | Delta 的月台在 f 之後（邊 6 的後半） |
+| TrainServiceTests | 「行駛中拆軌」：目的地 Beta → Gamma、2 分的行程；重建後仍等（方格時會接著走，6:12 到 Beta） | 服務路徑終點所在的月台不能拆（S5）；重建是新邊，原路徑一直被擋 |
+| TrainServiceTests | 存檔中的服務：最後停在 Delta 的位置 f → g；「拆掉 Beta 唯一的月台」改成驗證拆除被拒（trainServiceActive） | Delta 往東的 berth 在月台尾端；S5 |
+| TrainRepeatTests | 往返車從第 1 圈起：12:00 立刻到 Alpha → 先開 512 到 berth，12:08 到、12:50 開（原 12:42），往 Gamma 3584（原 4096），16:50 到（原 16:42）；1000 tick 後的位置 308 → 278 | 一節車在月台折返後停在新方向的近端，該站的 berth 在遠端 |
+| TrainRepeatTests | 「一圈兩次停共用月台的兩站」→「一圈停同一站兩次」，時間不變 | 兩站月台交界只在一個方向是其中一站的 berth，繞圈時要移動 |
+| IDAllocationTests | 拒絕順序少了「蓋在軌道上」（tileOccupied） | 點車站不佔格 |
+
+### 7.2 F3b-1 之後暫時沒有改的地方
+
+- **方格本身是主題的單元測試**：TrackConstructionTests、TrackConnectivityTests、TrainPositionTests、TrainMovementTests、TrainRouteTests、StationStopTests、TrackResourceTests、StationFacilityTests、StationAndTrainTests 的格站部分，以及 RailwayNetworkAuthorityTests、ContinuousTrackTests、FreeStationTests、SavedGameTests 的方格子測試、NetworkServiceTests 的格／路網隔離斷言、VerticalRailwayTests 的 grid link 斷言。留到 F3c 和方格程式一起刪；刪之前逐條確認路網有對應測試，沒有的補上。
+- **TrafficControlTests 的方格段**：其中和軌道種類無關的規則（開關交通管制、共用軌道或相遇路線時拒開、跟車等整條路、派車等路、等被拆的軌）要在刪方格段之前有路網版本；路網段已有的（服務等路，只為出發才折返）不重寫。
+- **TrainTimetableTests 的兩個方格存檔格式測試**（`testEmptyTimetablesAreNotSavedAndOldSavesReadAsEmpty`、`testASaveWithoutTimetablesKeepsItsFormat`）：主題是方格存檔，F3c 拒絕手做的方格存檔時一起處理。
+- **Property、差分、save mutation campaign 與 ReferenceWorld 的方格模型**（§3.2–§3.4）：F3b 的下一步；產生器換了 digest 就會變，新的 digest 記在文件。
+- **觀察到、沒有改的 GameCore 行為**（F3b 不動 GameCore，記給之後的階段決定）：
+  1. 一節車的列車在月台折返後停在新方向的近端；下一站若是同一站，服務先開到 berth 才算到站。`stationsStoppedAt` 已把它算在站裡，但「已停在下一站就立刻到站」看的是到 berth 的距離是否為 0。
+  2. 服務路徑上的邊被拆掉再重建是新的邊，被擋住的服務列車一直等，不會改走新邊（方格時重建同一格會接著走）。
+  3. 路網上兩站不能共用月台；在兩站月台的交界，每個方向只會是其中一站的 berth。
+
+驗證：見 F3b-1 的 PR（Linux Swift 6.4 的完整測試與 warnings-as-errors 建置）。macOS／Xcode 不受影響，沒有在本機執行。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

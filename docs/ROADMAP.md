@@ -550,7 +550,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 - **F2 — 側向淨空**（排在 E2 之後、U-min 之前）：平行的兩條邊中心線距離小於線間距時拒絕（S4 的留給之後）。線間距照參考，開工時查；會改到差分 campaign 的參考模型。淨空規則在讀檔時也會檢查，所以要決定 C4 之後的舊存檔怎麼處理（例如只檢查新版本的存檔）。
 - **F3 — 移除 GameCore 的方格**（進行中；2026-10-03 作者決定提前到 F2、U-min 之前，ARCHITECTURE 決策 51；盤點見 [F3_GRID_INVENTORY](research/F3_GRID_INVENTORY.md)）：方格的鐵軌、方格上的列車位置與路徑、方格車站，以及相關的 golden、測試與差分模型。完整移除、不改任何遊戲行為（票價照舊以點車站底下的格算距離；一格 1024 單位不變）；手做、含方格內容的舊存檔在 F3c 之後拒絕。
   - **F3a — golden 搬到路網**（GameCore 不動）：4 份只用方格車站的改成點車站 ✅；12 份規則和軌道無關的在路網上重寫，預期值的變化逐一說明 ✅（[GoldenScenarios/README](../GoldenScenarios/README.md#f3fixture-搬到路網schema-不變)）；只有一部分能搬或只屬於方格的 9 份，能表達的規則寫成路網的 golden ✅（六份 `network-*.json`），方格的原檔留到 F3c。
-  - **F3b — 測試搬到路網**（GameCore 不動）：路網的世界產生器、campaign、存檔變異 campaign 與差分模型；新的 digest 記在文件。
+  - **F3b — 測試搬到路網**（GameCore 不動）：只把方格當布景的單元測試搬到路網 ✅（F3b-1，預期值的變化與暫時沒改的地方見 [F3_GRID_INVENTORY §7](research/F3_GRID_INVENTORY.md#7-f3b-進度)）；路網的世界產生器、campaign、存檔變異 campaign 與差分模型；新的 digest 記在文件。
   - **F3c — 刪掉方格**：GameCore、GamePresentation 與 App 的方格程式，golden schema 28，`Web/WasmProbe`。
 
 ## Stage E — 大地圖與實景模式

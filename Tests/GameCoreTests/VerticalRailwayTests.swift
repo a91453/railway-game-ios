@@ -423,8 +423,8 @@ final class VerticalRailwayTests: XCTestCase {
     /// long) and a ramp.
     private func makeStations() throws -> (GameWorld, surface: TrackEdgeID, viaduct: TrackEdgeID, tunnel: TrackEdgeID, ramp: TrackEdgeID) {
         var world = try makeWorld()
-        try world.buildStation(named: "Hub", at: GridPosition(x: 1, y: 1))
-        try world.buildStation(named: "Annex", at: GridPosition(x: 3, y: 1))
+        try world.buildStation(named: "Hub", at: TestLine.centre(1, 1))
+        try world.buildStation(named: "Annex", at: TestLine.centre(3, 1))
         let nodes = try [
             (2_048, 20_480, 0), (10_240, 20_480, 0), (2_048, 22_528, 512), (10_240, 22_528, 512),
             (2_048, 24_576, -512), (10_240, 24_576, -512), (23_040, 20_480, 512),
@@ -640,7 +640,7 @@ final class VerticalRailwayTests: XCTestCase {
     func testTheSnapshotHoldsEverythingARendererNeeds() throws {
         let (tunnelWorld, s, t, _, portal) = try makeTunnel()
         var world = tunnelWorld
-        try world.buildStation(named: "Pit", at: GridPosition(x: 0, y: 0))
+        try world.buildStation(named: "Pit", at: TestLine.centre(0, 0))
         try world.addTrackPlatform(StationID(rawValue: 1), on: .edge(3), from: 1_024, to: 3_072)
         try world.purchaseTrain(named: "Mole")
         try world.setTrainCars(first, to: 3)

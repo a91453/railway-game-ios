@@ -3,16 +3,18 @@ import GameCore
 import XCTest
 
 final class PersistenceAndDeterminismTests: XCTestCase {
-    /// A fixed sequence of player actions used by several tests.
+    /// A fixed sequence of player actions used by several tests, on the
+    /// track network (Stage F3b): stations at points, a line of nodes from
+    /// the centre of tile (0, 5) to (8, 5), and a branch built and removed.
     private func playScript(on world: inout GameWorld) throws {
         world.setSpeed(.normal)
-        try world.buildStation(named: "West", at: GridPosition(x: 1, y: 5))
-        for x in 2...8 {
-            try world.buildTrack(at: GridPosition(x: x, y: 5), connections: [.east, .west])
-        }
-        try world.buildStation(named: "East", at: GridPosition(x: 9, y: 5))
-        try world.buildTrack(at: GridPosition(x: 5, y: 6), connections: [.north, .south])
-        try world.removeTrack(at: GridPosition(x: 5, y: 6))
+        try world.buildStation(named: "West", at: TestLine.centre(1, 5))
+        try TestLine(tiles: 9, row: 5).build(in: &world)
+        try world.buildStation(named: "East", at: TestLine.centre(9, 5))
+        let branch = try world.buildTrackNode(at: WorldCoordinate(x: TestLine.centre(5, 6).x, y: TestLine.centre(5, 6).y))
+        let spur = try world.buildTrackEdge(from: TestLine(tiles: 9, row: 5).node(5), to: branch)
+        try world.removeTrackEdge(spur)
+        try world.removeTrackNode(branch)
         try world.purchaseTrain(named: "Local 1")
         try world.advance(ticks: 90)
         world.setSpeed(.double)
@@ -41,7 +43,7 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         try playScript(on: &world)
         var decoded = try JSONDecoder().decode(GameWorld.self, from: try encode(world))
 
-        let station = try decoded.buildStation(named: "North", at: GridPosition(x: 5, y: 0))
+        let station = try decoded.buildStation(named: "North", at: TestLine.centre(5, 0))
 
         XCTAssertFalse(world.stations.map(\.id).contains(station.id))
     }
@@ -77,7 +79,7 @@ final class PersistenceAndDeterminismTests: XCTestCase {
     /// A saved world with its JSON object edited by `change`.
     private func savedWorld(_ change: (inout [String: Any]) throws -> Void) throws -> Data {
         var world = try makeWorld(balance: 100_000)
-        try world.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
+        try TestLine(tiles: 2).build(in: &world)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: try encode(world)) as? [String: Any])
         try change(&object)
         return try JSONSerialization.data(withJSONObject: object)
