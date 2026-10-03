@@ -2411,6 +2411,55 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 乘客走較短的方向（`runBetween`）；現在乘客搭哪個方向都可以，只要這一圈會到。
 - 指定月台（Stage V）：一站多月台時，列車停在路線經過的第一個合適的月台。
 
+### 50. 實景地圖：地理錨點、存檔版本 4、跟著遊戲相機的 Apple 地圖（Stage E2）
+
+2026-10-03。遊戲分成空白與實景兩種地圖（作者 2026-10-02 的決定）：實景的新遊戲選一個真實的地點，16 公里的地圖中心放在那裡，Apple 地圖畫在鐵路下面。作者這次決定照路線圖先用 MapKit，MapLibre 留給 E3。
+
+**參考**（2026-10-03 唯讀檢查三份，私有 repo `1563ad0`，對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-e2實景地圖)）：
+
+- `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`：兩套地圖引擎，`osm` 是 MapLibre 加 OpenFreeMap 的向量圖磚（`initOsmMapEngine`，樣式 `positron`、`liberty`、`dark`、`fiord`、`satellite`），`amap` 是高德的 JS API 2.0（`initAMap`）。`getMapEnginePolicy` 只在「中國的 IP、中國大陸的城市」用高德，其他一律 MapLibre；載入失敗時換另一套，玩家可以設預設。遊戲的座標是經緯度，中國大陸是 GCJ-02，給 MapLibre 時換成 WGS-84（`gameGcjToOsmWgs`）。開局的城市是 `CITIES`（53 座，`center`、`zoom`、人口與行政區），「任意城市」由伺服器的 manifest 給中心或範圍（`startGameAnyCity`、`registerAnycityFromManifest`；選點的 `anycity-ui.js`、`anycity-bbox-map.js` 不在快照裡）；虛構海島城市是 `lng: 0, lat: 0`。地圖的標示「OpenFreeMap © OpenMapTiles © OpenStreetMap」。
+- `Railway/site_archive_clean/index.html`：只用 MapLibre GL v5.9.0（自己打包在 `vendor/`，預設樣式 `vendor/ofm-positron.json`），CARTO 的點陣圖磚備援，衛星是要 token 的 Esri World Imagery；沒有網路時底圖是純色（`offline-land`）。`data/tra.json` 是 OpenStreetMap 的台鐵站點（七位小數）。
+- `Railway/railway_game_reference_clean/`：沒有地圖。
+
+**Apple 的條款**（Apple Developer Program License Agreement，2026-10-03 從 Apple 網站的 PDF 讀；MapKit 照 §3.3 受 Attachment 6 約束）：
+- Attachment 6 §2.1：不能移除、遮住或改動 Apple 與合作者的標誌、法律聲明與連結；§4 舉例「遮住或移除 Apple 地圖的標誌或內嵌的連結」可以被撤銷使用權。
+- §2.4、§2.5：地圖資料（明列包含經緯度）只能和 Apple 地圖一起顯示，除了暫時、為了使用服務所必需之外不能快取、預先抓取或儲存。
+- §2.2、§2.3：不能大量下載、不能拿來做衍生資料庫或另一個地圖服務；§2.6 不能單獨為地圖收費；§2.7 Apple 可以限制用量。
+- 主約的 §3.3（iii）：疊在 Apple 地圖上的自己的資料（例如路線），由開發者負責對齊。
+- 所以：地點清單用參考自己的資料；搜尋結果（名字、地址、座標）只在選點的畫面上和地圖一起顯示，不存；存檔只存玩家停下來的地圖中心；Apple 的標誌與法律聲明放在一條不被遊戲蓋住的帶子裡；鐵路與地圖用 MapKit 自己的換算對齊。
+
+**1. GameCore：`GeoAnchor`**：地圖中心的緯度與經度，整數的千萬分之一度（約 1 公分）：緯度 ±90°、經度 −180° 到 180°（不含 180°，東經 180° 寫成西經 180°）；超出的 `GeoAnchor(latitude:longitude:)` 是 `nil`，讀檔拒絕。`GameWorld.geoAnchor`（新的世界是 `nil`，空白地圖）與 `setGeoAnchor(_:)`（免費，只改錨點）。**沒有規則讀它**：世界照舊是整數的世界座標，GameCore 不知道地圖在哪裡、也沒有浮點數；同一個世界加不加錨點，模擬完全相同（`GeoAnchorTests`）。錨點不是 golden 的指令（golden 釘的是規則），差分模型與 property digest 都不變。存檔的 `"geoAnchor": {"latitude", "longitude"}` 只寫在實景地圖上，明寫的 `null` 拒絕。
+
+**2. 存檔版本 4**：只讀得懂版本 3 的 build 會丟掉錨點，下一次存檔就把實景的遊戲變成空白的，所以改成說「較新版本的存檔」；版本 3 的世界是空白地圖，不需要轉換。`SaveFixtures/v4-real-world-demo-90-minutes.json` 是這個 build 寫的：示範地圖放在台北車站（`Railway/` 的 `tra.json`），跑 90 分鐘，除了版本與錨點之外和版本 3 的存檔位元組相同。存檔清單的摘要多一個 `"realWorld": true`（只在實景地圖），顯示「實景地圖 · …」；之前的摘要沒有這個鍵，讀成空白地圖。
+
+**3. GamePresentation**：
+- `RealWorldFrame`：地圖中心在錨點，x 東、y 南，一個世界單位 1/64 公尺。底下的地圖是 Web Mercator（Apple 地圖，參考的 MapLibre 與高德也是）：App 把世界的一公尺畫成錨點緯度上的一公尺，整張地圖都用這個比例，所以鐵路和地圖處處對齊；離錨點的緯度越遠，世界的一公尺和地面的一公尺差一點（Mercator 的比例隨緯度變），16 公里的地圖在台北的緯度最多 0.06%，60° 是 0.22%。
+- `GeoAnchor(latitudeDegrees:longitudeDegrees:)`：四捨五入到千萬分之一度，經度轉回 −180° 到 180°（地圖繞過地球時會回報 190°）。
+- `RealWorldPlace`：64 個地點，`Railway/` 的 11 個台鐵主要車站（台灣，每個站名第一次出現的點）與 `Ci/` 的 53 座城市（`center`，名字改成台灣用語的繁體），依地區分組；座標和兩份參考逐一比對過，完全相同。預設是臺北車站。
+- `GameWorld.newGame(anchor:)`、`GameLauncher.startNewGame(at:)`：實景的新遊戲就是放在地球上的新遊戲，資金、價格、城市都一樣。
+
+**4. App**：
+- 開始畫面多一個「實景地圖」，打開選點的畫面（`RealWorldPicker`）：上面是 Apple 地圖，畫出 16 公里的方框與中心的十字；下面是地點清單與搜尋（`MKLocalSearch`，按下搜尋才查）。點清單或搜尋結果把地圖移過去，玩家可以再拖，按「在這裡建造」時地圖中心就是錨點。
+- 遊戲的地圖（`MapView`）在實景時：底下是 `AppleMapBackground`（`MKMapView`，平面、北朝上，自己的手勢全部關掉），遊戲的 canvas 不填土地的顏色、只畫地圖的邊界；地圖 view 底部 30 點是標示的帶子，遊戲的畫面與手勢不蓋它，Apple 的標誌與「法律聲明」連結在那裡、可以點。左下角的按鈕選地圖的樣式（地圖、衛星（含標示）、衛星；是 App 的設定，不是遊戲的）。街道圖用 `.muted` 讓鐵路突出，對應參考預設的淺色 `positron`。
+- 換算：`FollowingMapView.mapRect`：遊戲相機的左上與右下在世界的哪裡 → 離錨點幾公尺（`RealWorldFrame`）→ 乘上 `MKMapPointsPerMeterAtLatitude(錨點的緯度)`，加上錨點的 `MKMapPoint`，就是 `setVisibleMapRect` 的範圍。選點畫面的方框用同一個換算。
+
+**5. 為什麼相機在我們這邊**：第 0 步原本設想實景時由 MapKit 的相機實作 `MapProjection`（手勢交給 MapKit，畫面用 `MapProxy` 逐點換算）。實作時改成反過來：遊戲的 `PlanCamera` 照舊決定看哪裡，Apple 地圖跟著它。理由：
+- 手勢、縮放按鈕、地圖邊界、教學的「移動與縮放地圖」與既有的 UI 測試全部不變，空白與實景是同一套操作。
+- 鐵路與地圖在同一次畫面更新裡由同一個相機決定，不會有疊在 MapKit 上的 SwiftUI 畫面常見的延遲一幀、拖曳時漂移。
+- 地圖只能平面、北朝上；可以旋轉、傾斜的相機（MapKit 的 3D 建築與地形）留給之後，`MapProjection` 仍然支援它。
+- 遊戲的最大縮放（每格 64 點，每公尺 4 點，約 MapKit 的第 19 級）在 MapKit 可以顯示的範圍內，所以地圖跟得上；實機沒有驗證。
+
+**教學**：教學在空白的新遊戲上進行，模式在開始畫面就選了，所以沒有加步驟（第 0 步寫的「視需要」）。
+
+**驗證**：GameCore 與 GamePresentation 在 Linux 上測試（`GeoAnchorTests`、`RealWorldMapTests`、`SavedGameTests` 的版本 4）。App 的程式只在 macOS 的 CI 編譯與測試（`ios-build.yml`；`RealWorldMapUITests` 在完整的那一輪：從清單選台北開局、換衛星、回開始畫面看到「實景地圖」、繼續仍是實景），地圖的圖磚要網路，測試不看圖磚。實機上地圖與鐵路是否對齊、拖曳時是否跟得上，要 TestFlight。
+
+**已知限制與留給之後**：
+- 地圖不能旋轉、傾斜，沒有 3D 建築與地形高度（Phase 8 前可以先用 MapKit 的）。
+- 沒有 GCJ-02 的換算：錨點是 MapKit 給的座標。中國大陸的存檔之後換到 MapLibre（E3）可能偏約 500 公尺，那時照 `Ci/` 的 `gameGcjToOsmWgs` 處理。
+- 沒有網路時 MapKit 只畫它自己的空白格，沒有另外的提示（`Railway/` 是純色底圖）；搜尋也需要網路。
+- 錨點只記點，不記地名；參考依城市設定的票價基準（`metroFareDemandBaselineForCity`）、城市的人口與起訖需求（Phase 5、6）沒有接上。
+- 已經開始的遊戲不能換錨點（GameCore 允許，畫面沒有）。
+
 ## 目前規則摘要
 
 - 地圖尺寸：每邊 `1...GridMap.maximumSideLength`（1024，E1 起是新遊戲的大小）；地圖只記不是空地的格子，存檔也只寫它們（決策 48）。
@@ -2443,6 +2492,6 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站直線距離分段，0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·列車公里 + 18·車站`、維修 `12·路線公里 + 9·列車公里 + 8·列車`，車站是每條線路各自的停靠站），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（720 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求，以公司所在城市的基準票價比較（預設 0.75 美元，決策 46）。金額是美分。
 - 行駛曲線（決策 40）：列車與線路各有性能（加速、煞車、最高速度，可以有備用值與惰行；預設是標準性能），服務執行中不能換列車的性能。服務離開一站時得到一段行駛（出發時刻、長度、秒數），存檔；被擋住時丟掉，能動時從停止狀態以最少的秒數重新出發。
 - 車站可以建在世界座標的任意一點（`buildStation(named:at: PlanPoint)`）：不佔格、沒有方格的月台、不能長到格上，只在路網的邊上有月台；點必須在地圖上，收一座車站的費用（決策 44）。
-- 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的線路可以是環線（決策 49）。
+- 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的線路可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。

@@ -10,51 +10,78 @@ struct MapView: View {
     /// The parent keeps this view state across portrait/landscape layouts.
     @Binding var camera: PlanCamera?
     @State private var edges: [TrackEdgeID: MapEdgeDrawing] = [:]
+    /// How Apple's map under a real-world game looks (Stage E2): a view
+    /// preference, the same for every game.
+    @AppStorage("realWorldMapStyle") private var mapStyle: AppleMapStyle = .standard
 
     var body: some View {
         GeometryReader { proxy in
             let map = session.world.map
-            let viewport = ScreenSize(width: proxy.size.width, height: proxy.size.height)
+            // A real-world map (Stage E2) keeps a strip at its bottom for
+            // Apple's logo and legal link; the game's map is the rest.
+            let realWorld = RealWorldFrame(world: session.world)
+            let strip = realWorld == nil ? 0 : AppleMapBackground.attributionHeight
+            let viewport = ScreenSize(width: proxy.size.width, height: max(proxy.size.height - strip, 1))
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
-            MapCanvas(
-                world: session.world,
-                selectedTrainID: session.selectedTrainID,
-                selection: session.selection,
-                selectedStationID: session.selectedStation?.id,
-                network: session.networkOverlay,
-                camera: projection,
-                edges: edges
-            )
-            .equatable()
-            .overlay {
-                MapGestures(camera: projection, onCameraChange: { moved in
-                    camera = moved
-                    session.mapDidMove()
-                }) { location in
-                    let point = projection.planPoint(at: location)
-                    let reach = projection.worldDistance(NetworkBuilding.touchRadius)
-                    if session.tool == .network {
-                        session.tapNetwork(at: point, reach: reach)
-                    } else {
-                        session.tapMap(at: point, reach: reach)
+            VStack(spacing: 0) {
+                MapCanvas(
+                    world: session.world,
+                    selectedTrainID: session.selectedTrainID,
+                    selection: session.selection,
+                    selectedStationID: session.selectedStation?.id,
+                    network: session.networkOverlay,
+                    camera: projection,
+                    edges: edges,
+                    drawsLand: realWorld == nil
+                )
+                .equatable()
+                .overlay {
+                    MapGestures(camera: projection, onCameraChange: { moved in
+                        camera = moved
+                        session.mapDidMove()
+                    }) { location in
+                        let point = projection.planPoint(at: location)
+                        let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                        if session.tool == .network {
+                            session.tapNetwork(at: point, reach: reach)
+                        } else {
+                            session.tapMap(at: point, reach: reach)
+                        }
+                    }
+                    .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
+                .accessibilityIdentifier(TutorialTarget.map.rawValue)
+                .accessibilityValue(selectionDescription)
+                .accessibilityHint("Use the actions to move the selected tile.")
+                .accessibilityAction(named: "Select tile to the north") { moveSelection(.north, camera: projection) }
+                .accessibilityAction(named: "Select tile to the east") { moveSelection(.east, camera: projection) }
+                .accessibilityAction(named: "Select tile to the south") { moveSelection(.south, camera: projection) }
+                .accessibilityAction(named: "Select tile to the west") { moveSelection(.west, camera: projection) }
+                .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
+                .clipped()
+                .overlay(alignment: .bottomTrailing) {
+                    zoomControls(camera: projection)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    if realWorld != nil {
+                        mapStyleMenu
                     }
                 }
-                .accessibilityHidden(true)
+                .frame(height: viewport.height)
+                if strip > 0 {
+                    // Nothing of the game over the strip: Apple's map shows
+                    // through, and its legal link can be tapped.
+                    Color.clear
+                        .frame(height: strip)
+                }
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
-            .accessibilityIdentifier(TutorialTarget.map.rawValue)
-            .accessibilityValue(selectionDescription)
-            .accessibilityHint("Use the actions to move the selected tile.")
-            .accessibilityAction(named: "Select tile to the north") { moveSelection(.north, camera: projection) }
-            .accessibilityAction(named: "Select tile to the east") { moveSelection(.east, camera: projection) }
-            .accessibilityAction(named: "Select tile to the south") { moveSelection(.south, camera: projection) }
-            .accessibilityAction(named: "Select tile to the west") { moveSelection(.west, camera: projection) }
-            .background(Color(uiColor: .secondarySystemBackground))
-            .clipped()
-            .overlay(alignment: .bottomTrailing) {
-                zoomControls(camera: projection)
+            .background {
+                if let realWorld {
+                    AppleMapBackground(realWorld: realWorld, camera: projection, style: mapStyle)
+                }
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
@@ -102,6 +129,26 @@ struct MapView: View {
         }
     }
 
+    /// Chooses how Apple's map under a real-world game looks.
+    private var mapStyleMenu: some View {
+        Menu {
+            Picker("Map Style", selection: $mapStyle) {
+                ForEach(AppleMapStyle.allCases) { style in
+                    Text(style.title)
+                        .tag(style)
+                }
+            }
+        } label: {
+            Image(systemName: "map")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(.regularMaterial, in: Circle())
+        }
+        .accessibilityLabel("Map Style")
+        .accessibilityIdentifier("map.style")
+        .padding(12)
+    }
+
     private func zoomControls(camera: PlanCamera) -> some View {
         HStack(spacing: 0) {
             Button {
@@ -143,6 +190,8 @@ private struct MapCanvas: View, Equatable {
     let network: NetworkOverlay?
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
+    /// Whether the land is filled in: not over Apple's map (Stage E2).
+    let drawsLand: Bool
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.map == rhs.world.map
@@ -155,11 +204,12 @@ private struct MapCanvas: View, Equatable {
             && lhs.network == rhs.network
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
+            && lhs.drawsLand == rhs.drawsLand
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, selection = selection
-        let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges
+        let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges, drawsLand = drawsLand
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             TileArt.drawMap(
@@ -170,6 +220,7 @@ private struct MapCanvas: View, Equatable {
                 network: network,
                 projection: camera,
                 edges: edges,
+                drawsLand: drawsLand,
                 in: context
             )
         }

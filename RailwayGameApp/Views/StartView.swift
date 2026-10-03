@@ -5,8 +5,9 @@ import UniformTypeIdentifiers
 
 /// The start screen (Stage C4), after the `Ci/` reference's home screen and
 /// its saved-game card (`screen-save-load-ui`: go on with the saved game,
-/// or start fresh): continue the autosave, start a new game, open the demo
-/// map, load one of the saves or import a save file.
+/// or start fresh): continue the autosave, start a new game on a blank or a
+/// real-world map (Stage E2), open the demo map, load one of the saves or
+/// import a save file.
 ///
 /// Every action calls a ``GameLauncher`` method; the screen keeps nothing
 /// of the games but what it shows.
@@ -14,6 +15,7 @@ struct StartView: View {
     let launcher: GameLauncher
     @State private var showsSaves = false
     @State private var importsSave = false
+    @State private var choosesPlace = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -42,6 +44,14 @@ struct StartView: View {
                     }
                     // Stable across localizations for the UI smoke tests.
                     .accessibilityIdentifier("start.newGame")
+                    StartButton(
+                        title: String(localized: "Real-World Map"),
+                        detail: String(localized: "Build on a map of a real place"),
+                        systemImage: "globe.asia.australia"
+                    ) {
+                        choosesPlace = true
+                    }
+                    .accessibilityIdentifier("start.realWorld")
                     StartButton(
                         title: String(localized: "Tutorial"),
                         detail: String(localized: "Learn to build and run a railway step by step"),
@@ -102,6 +112,9 @@ struct StartView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesPlace) {
+            RealWorldPicker(launcher: launcher)
         }
         .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
             launcher.importSave {

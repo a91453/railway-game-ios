@@ -46,6 +46,10 @@ public struct GameWorld: Equatable, Sendable {
     /// mode and fare rules, the hour being accrued and the ledger. Free and
     /// empty in a new world. Set by the economy rules (`Economy/`) only.
     public internal(set) var accounts: CompanyAccounts
+    /// Where the map lies on the Earth, for a real-world game (Stage E2,
+    /// ARCHITECTURE decision 50); `nil`, a blank map, in a new world. No
+    /// rule reads it. Set by ``setGeoAnchor(_:)`` only.
+    public internal(set) var geoAnchor: GeoAnchor?
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -79,6 +83,7 @@ public struct GameWorld: Equatable, Sendable {
         self.passengers = []
         self.riders = []
         self.accounts = CompanyAccounts()
+        self.geoAnchor = nil
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -2467,7 +2472,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, accounts
+        case passengers, riders, accounts, geoAnchor
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -2512,6 +2517,7 @@ extension GameWorld: Codable {
         passengers = container.contains(.passengers) ? try container.decode([StationPassengers].self, forKey: .passengers) : []
         riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
+        geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         for track in saved.tracks {
             network.lay(track)
         }
@@ -2529,10 +2535,11 @@ extension GameWorld: Codable {
     /// lines existed, and those saves read as having none, handing out line
     /// IDs from 1, with the standard day. Likewise a world whose track
     /// network never had a node or an edge has no `"network"` key (Stage
-    /// S3), and a save without one reads as an empty network; and a world
+    /// S3), and a save without one reads as an empty network; a world
     /// with traffic control off has no `"trafficControl"` key (Stage T),
-    /// which is also how saves made before it read. An explicit `null` for
-    /// any of them is rejected.
+    /// which is also how saves made before it read; and a blank map has no
+    /// `"geoAnchor"` (Stage E2). An explicit `null` for any of them is
+    /// rejected.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(SavedMap(land: map, tracks: network.tracks), forKey: .map)
@@ -2565,6 +2572,9 @@ extension GameWorld: Codable {
         }
         if !accounts.isPristine {
             try container.encode(accounts, forKey: .accounts)
+        }
+        if let geoAnchor {
+            try container.encode(geoAnchor, forKey: .geoAnchor)
         }
     }
 

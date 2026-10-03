@@ -4,7 +4,8 @@ import XCTest
 
 /// Stage C4: the versioned save. Version 1 is the world's `Codable` form;
 /// version 2 (Stage E1) writes only the map's occupied tiles; version 3
-/// (decision 49) can hold ring lines. Unknown versions are refused, and
+/// (decision 49) can hold ring lines; version 4 (Stage E2) a real-world
+/// map's anchor. Unknown versions are refused, and
 /// every committed save in `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private func makeWorld() throws -> GameWorld {
@@ -29,8 +30,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 3)
-        XCTAssertEqual(SavedGame.currentVersion, 3)
+        XCTAssertEqual(object["saveVersion"] as? Int, 4)
+        XCTAssertEqual(SavedGame.currentVersion, 4)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -45,7 +46,8 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 1, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 2, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 3, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 4, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertNoThrow(try decode(#"{"saveVersion": 4, "world": \#(world)}"#))
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 5, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -210,6 +212,31 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNotNil(ring.outerLastDispatch)
         XCTAssertTrue(world.isTrafficControlEnabled)
         XCTAssertEqual(world.accounts.mode, .management)
+    }
+
+    /// The version 4 save (Stage E2): the same demo map after 90 minutes,
+    /// laid over the Earth with its middle at Taipei Main Station.
+    func testTheVersionFourSaveReadsAsItWasWritten() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v4-real-world-demo-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 4)
+        let anchor = try XCTUnwrap((object["world"] as? [String: Any])?["geoAnchor"] as? [String: Int64])
+        XCTAssertEqual(anchor, ["latitude": 250_479_308, "longitude": 1_215_170_046])
+
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world.geoAnchor, GeoAnchor(latitude: 250_479_308, longitude: 1_215_170_046))
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
+        XCTAssertEqual(world.map.width, 1_024)
+        XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
+        XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
+        XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
+        XCTAssertEqual(world.economy.balance, Money(69_962_900))
+
+        // The anchor is the only difference from the version 3 save.
+        let three = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v3-demo-90-minutes.json"))).world
+        var blank = world
+        blank.setGeoAnchor(nil)
+        XCTAssertEqual(blank, three)
     }
 
     /// `SaveFixtures/` at the repository root, found from this source file.

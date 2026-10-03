@@ -261,7 +261,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `ensureStationNameUnique`、`metroInstantStationSeedName` | 名字重複時換成預設名加編號 | `GameSession.suggestedStationName`（「車站 N」，跳過已用的）；GameCore 只拒絕空白的名字 | — | 部分 faithful：建議的名字不重複，玩家輸入的名字可以重複（與 C1 相同） |
 | `Ci` 沒有格線 | 地圖不畫格線 | `TileArt.drawMap` 只畫地圖邊界；方格的軌道與車站（相容層）照舊畫在格上 | — | faithful |
 | 參考包 `CmdBuildRailStation`、`CmdRemoveFromRailStation`（OpenTTD，以方格為單位，只有符號）；`01_MIGRATION_MAP.md` §3 `BuildStationCommand` | 方格車站；建造指令回傳結果 | 方格車站留作相容層（`buildStation(named:at: GridPosition)`、`extendStation`，F3 另議）；新指令一樣是 `GameWorld` 的指令，失敗不改變世界 | — | 不移植方格（作者決定）；指令的形式 faithful |
-| `Railway/site_archive_clean/` 的 `stations/*`、`api/*.json` | 真實車站的經緯度 | 不用 | — | 延後：E2 實景模式把世界原點對到經緯度 |
+| `Railway/site_archive_clean/` 的 `stations/*`、`api/*.json` | 真實車站的經緯度 | 不用 | — | 延後：E2 實景模式把地圖中心對到經緯度（E2 ✅ 用 `data/tra.json` 的台鐵站點當開局的地點，[對照](#stage-e2實景地圖)） |
 | 沒有參考 | 車站的規模 | `GameWorld.stationSummary(_:in:)`：路網上月台的數量與總長 | 世界單位 → 公尺 | **gap**：`Ci` 的車站沒有月台的數量；照 ROADMAP F1 以月台表示規模 |
 | 沒有參考（`Ci` 沒有方格） | 方格的軌道、車站、拆除工具，方格道岔與單雙線資訊 | App 不再提供（`ConstructionTool.networkTools`）；GamePresentation 的相容層保留到 F3 | — | **改變**（作者決定） |
 
@@ -360,6 +360,28 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Railway` `runBetween`：環線走較短的方向 | 乘客的方向 | 沒有：乘客搭哪個方向都可以，只要這一圈會到 | — | **gap** |
 | `Railway` `DWELL_SEC` = 25 | 停站 | 沒有採用：照 `Ci` 的 36 秒與決策 22 的 1 分鐘 | — | 不採用 |
 | （參考沒有） | 示範地圖的環線 | `DemoWorld`：兩圈軌道（半徑 12、13 格）各一個方向，每站三個月台 | — | gap：這裡的配置 |
+
+### Stage E2：實景地圖
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 50。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`（城市表 `CITIES` 用 Node 從原始碼取出比對）；`Railway` 是 `Railway/site_archive_clean/index.html`、`vendor/` 與 `data/tra.json`；參考包 `Railway/railway_game_reference_clean/` 沒有地圖。座標的倍率：千萬分之一度（1e-7°），兩份參考的小數（`Ci` 四位、`tra.json` 七位）都換得精確。
+
+| 參考 | 行為 | Swift（E2） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` `CITIES`（53 座：`name`、`center: [lat, lng]`、`zoom`、`pop`、`districts`） | 開局的城市 | `RealWorldPlace.ciCities`：依原本的順序，`center` 換成 `GeoAnchor`；名字改成台灣用語的繁體，加上英文 | 1e-7° | faithful（座標逐一比對）；`zoom` 不用（開局的相機照 E1），`pop`、`districts` 留給 Phase 5、6 |
+| `Railway` `data/tra.json`（OpenStreetMap 的台鐵站點，`lines[].stations[]` 的 `name`、`lat`、`lon`） | 台灣的真實車站 | `RealWorldPlace.taiwan`：基隆、臺北、桃園、新竹、臺中、嘉義、臺南、高雄、宜蘭、花蓮、臺東，每個站名第一次出現的點 | 1e-7° | faithful（座標逐一比對）；挑哪幾站是這裡的 |
+| `Ci` `startGameAnyCity(cityKey, {lng, lat})`、`fetchAnycityManifest`、`registerAnycityFromManifest`（`center` 或 `bbox` 的中心） | 任意地點開局 | `RealWorldPicker`：清單或搜尋把地圖移過去，玩家拖到想要的中心，「在這裡建造」→ `GameLauncher.startNewGame(at:)` | — | 部分 faithful：選點的 `anycity-ui.js`、`anycity-bbox-map.js` 不在快照裡（gap）；搜尋用 Apple 的 `MKLocalSearch`；只存中心 |
+| `Ci` `anycity-virtual-island`（`lng: 0, lat: 0`，creative） | 不在真實地點的城市 | 空白地圖：`GameWorld.geoAnchor == nil`，開始畫面的「新遊戲」 | — | 對應：空白地圖不放在地球上 |
+| `Ci` `promptMetroGameModeChoice`（進城市前選 creative／management） | 進入前選模式 | 開始畫面分成「新遊戲」（空白）與「實景地圖」；經營模式照 G1d，兩種地圖相同 | — | 改寫：這裡的模式是地圖，不是經濟 |
+| `Ci` `getMapEnginePolicy`（中國 IP 加中國大陸城市只用高德，其他只用 `osm`）、`setPreferredMapEngineFromMenu`、失敗時自動換另一套 | 地圖引擎 | MapKit（Apple 地圖；Attachment 6 說它在中國由高德提供） | — | **改變**（作者決定先用 MapKit）；E3 視需要照參考加 MapLibre |
+| `Ci` `initOsmMapEngine` 加 OpenFreeMap 的 `positron`／`liberty`／`dark`／`fiord`／`satellite`；`Railway` `vendor/maplibre-gl.js`（v5.9.0）、`vendor/ofm-positron.json`、CARTO 點陣備援、Esri World Imagery（`needsToken: 'esri'`） | 底圖與樣式 | `AppleMapStyle`：地圖（`MKStandardMapConfiguration`，`.muted`）、衛星（含標示）、衛星，都是平面；App 的設定 | — | 部分 faithful：淺色街道圖對應預設的 `positron`，衛星對應 `satellite`；沒有 `dark`、`fiord` |
+| `Ci` 車站的 `latlng`（遊戲座標就是經緯度） | 世界與地球 | 世界照舊是整數的世界座標；只有地圖中心釘在 `GeoAnchor`（`RealWorldFrame`：x 東、y 南，地圖中心在錨點） | 1/64 公尺 | **改變**：GameCore 不用經緯度（決定性、既有的 golden 與存檔） |
+| `Ci` `gameGcjToOsmWgs`、`initialCenterGcj`（中國大陸的遊戲座標是 GCJ-02，給 MapLibre 時換成 WGS-84） | 座標系統 | 沒有換算：錨點是 MapKit 給的座標，鐵路與地圖都經過 MapKit 換算（`MKMapPoint`、`MKMapPointsPerMeterAtLatitude`） | — | **gap**：換到 MapLibre（E3）時中國大陸的存檔可能偏約 500 公尺 |
+| `Ci`／`Railway` 由 MapLibre 的相機處理平移、縮放與旋轉 | 地圖的相機 | 遊戲的 `PlanCamera` 決定看哪裡，`FollowingMapView` 用 `setVisibleMapRect` 跟著；平面、北朝上 | MapKit 的 map point | **改變**：相機在遊戲這邊（理由見決策 50 第 5 點）；旋轉與傾斜留給之後 |
+| `Ci` entry-save-map 的「OpenFreeMap © OpenMapTiles © OpenStreetMap」 | 地圖的標示 | Apple 的標誌與「法律聲明」在地圖 view 底部 30 點的帶子裡，遊戲的畫面不蓋它、連結可以點（Attachment 6 §2.1） | 點 | faithful（保留地圖的標示） |
+| `Railway` `offline-land`（沒有網路時的純色底圖） | 離線 | MapKit 畫它自己的空白格，路網照畫 | — | 部分 faithful：沒有另外的提示 |
+| `Ci` `serializeGameState` 存 `cityKey`；`persistLastAnycityEntryOptions` | 存檔裡的地點 | `GameWorld.geoAnchor`（`{"latitude","longitude"}`），存檔版本 4；Apple 搜尋的名字、地址與識別碼不存（Attachment 6 §2.5） | 1e-7° | 部分 faithful：存點，不存城市名 |
+| `Ci` `metroFareDemandBaselineForCity`（依城市的票價基準） | 城市決定票價基準 | 沒有：實景與空白的新遊戲都是標準票價（G1d） | — | **gap**：錨點不記城市 |
+| `Railway` `TW_BOX`（整個台灣的平移範圍） | 地圖的範圍 | 新遊戲的 16 公里地圖（E1） | — | 不採用（E1 已決定） |
 
 ### 折返
 
@@ -477,7 +499,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

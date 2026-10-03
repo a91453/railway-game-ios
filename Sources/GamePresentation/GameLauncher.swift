@@ -59,8 +59,10 @@ public final class GameLauncher {
 
     // MARK: - Starting a game
 
-    public func startNewGame() {
-        begin(.newGame(), keepingAutosave: true)
+    /// Starts a new game: on a blank map, or with `anchor` on a real-world
+    /// map with its middle there (Stage E2).
+    public func startNewGame(at anchor: GeoAnchor? = nil) {
+        begin(.newGame(anchor: anchor), keepingAutosave: true)
     }
 
     /// Opens ``DemoWorld``: two lines already running.
