@@ -13,6 +13,10 @@ final class TutorialUITests: XCTestCase {
         checkNavigation(language: "zh-Hant", locale: "zh_TW", tutorialLabel: "教學", nextLabel: "下一步", backLabel: "上一步", skipLabel: "略過")
     }
 
+    func testLargeTextTutorialNavigation() {
+        checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip", largeText: true)
+    }
+
     func testBuildingTrackEnablesDoneAndFinishes() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
@@ -25,6 +29,7 @@ final class TutorialUITests: XCTestCase {
         start.tap()
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10))
+        checkToolIsUncovered(app, identifier: "tool.network")
         app.buttons["tool.network"].tap()
         waitForEnabled(next, true)
         next.tap()
@@ -55,11 +60,15 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
     }
 
-    private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String) {
+    private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false) {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+        if largeText {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
+        }
+        let screenshotPrefix = largeText ? "en-large-text" : language
         app.launch()
         defer {
             app.terminate()
@@ -81,19 +90,22 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(back.exists, "The first step has no Back button")
 
         // The outlined button must receive the touch underneath the overlay.
+        checkToolIsUncovered(app, identifier: "tool.network")
         app.buttons["tool.network"].tap()
         waitForEnabled(next, true)
+        XCTAssertTrue(app.buttons["tool.network"].isSelected)
+        checkToolIsUncovered(app, identifier: "tool.select")
         app.buttons["tool.select"].tap()
         waitForEnabled(next, false)
         app.buttons["tool.network"].tap()
         waitForEnabled(next, true)
-        capture(app, name: "\(language)-tutorial-tool")
+        capture(app, name: "\(screenshotPrefix)-tutorial-tool")
         next.tap()
 
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         XCTAssertEqual(back.label, backLabel)
         waitForEnabled(next, false)
-        capture(app, name: "\(language)-tutorial-map")
+        capture(app, name: "\(screenshotPrefix)-tutorial-map")
         back.tap()
         XCTAssertFalse(back.exists)
         waitForEnabled(next, true)
@@ -102,7 +114,12 @@ final class TutorialUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(skip.waitForExistence(timeout: 5))
         XCTAssertTrue(skip.isHittable)
-        capture(app, name: "\(language)-tutorial-landscape")
+        checkToolIsUncovered(app, identifier: "tool.network")
+        app.buttons["tool.select"].tap()
+        waitForEnabled(next, false)
+        app.buttons["tool.network"].tap()
+        waitForEnabled(next, true)
+        capture(app, name: "\(screenshotPrefix)-tutorial-landscape")
         skip.tap()
         XCTAssertFalse(next.exists)
         app.buttons["tool.select"].tap()
@@ -118,6 +135,15 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(next, false)
         skip.tap()
         XCTAssertFalse(next.exists)
+    }
+
+    private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {
+        let tool = app.buttons[identifier]
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        XCTAssertTrue(tool.waitForExistence(timeout: 5))
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(tool.isHittable)
+        XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 
     private func waitForEnabled(_ element: XCUIElement, _ enabled: Bool, _ message: String = "") {

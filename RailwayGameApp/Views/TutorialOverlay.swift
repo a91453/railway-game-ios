@@ -74,6 +74,10 @@ private struct TutorialCardLayout: Layout {
         var origin = centred
 
         if let target {
+            // Anchors are local to the overlay's GeometryReader. Layout's
+            // placement bounds can have a nonzero origin, so put the target
+            // in that same coordinate space before comparing candidates.
+            let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
             let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
             let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
             let candidates = [
@@ -84,7 +88,7 @@ private struct TutorialCardLayout: Layout {
             ]
             origin = candidates.first { available.contains(CGRect(origin: $0, size: size)) } ?? centred
         }
-        card.place(at: origin, anchor: .topLeading, proposal: cardProposal)
+        card.place(at: origin, anchor: .topLeading, proposal: ProposedViewSize(size))
     }
 }
 
