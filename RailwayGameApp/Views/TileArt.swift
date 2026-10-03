@@ -110,7 +110,12 @@ enum TileArt {
             }
         }
         for drawing in edges {
-            drawEdge(polyline(drawing.geometry.points, projection: projection), structure: drawing.edge.structure, detail: detail, tileSize: tileSize, in: context)
+            // A tunnel is dashed: cut where the view ends, its dashes would
+            // restart at the cut and shift as the map pans. Draw it whole.
+            let line = drawing.edge.structure == .tunnel
+                ? wholePolyline(drawing.geometry.points, projection: projection)
+                : polyline(drawing.geometry.points, projection: projection)
+            drawEdge(line, structure: drawing.edge.structure, detail: detail, tileSize: tileSize, in: context)
         }
         guard detail == .full else { return }
         let radius = max(1.5, tileSize * 0.08)
@@ -142,7 +147,8 @@ enum TileArt {
                 context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: tileSize * 0.5, lineCap: .round, lineJoin: .round))
                 context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             } else {
-                context.stroke(line, with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, tileSize * 0.25), max(2, tileSize * 0.2)]))
+                // Dashed, so drawn whole (see the tunnels in drawNetwork).
+                context.stroke(wholePolyline(overlay.preview, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, tileSize * 0.25), max(2, tileSize * 0.2)]))
             }
         }
         let radius = max(5, tileSize * 0.2)
@@ -166,6 +172,19 @@ enum TileArt {
         for run in runs {
             path.move(to: cgPoint(run[0]))
             for point in run.dropFirst() { path.addLine(to: cgPoint(point)) }
+        }
+        return path
+    }
+
+    /// Every point, uncut, for a dashed line: the dashes then start at its
+    /// first point wherever the view is. The callers draw only lines that
+    /// reach the view.
+    private static func wholePolyline(_ points: [WorldCoordinate], projection: some MapProjection) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: cgPoint(projection.screenPoint(of: first)))
+        for point in points.dropFirst() {
+            path.addLine(to: cgPoint(projection.screenPoint(of: point)))
         }
         return path
     }
@@ -266,6 +285,14 @@ enum TileArt {
         let center = projection.screenPoint(of: station.location)
         let radius = max(5, projection.tileSize * 0.32)
         let badgeRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        // Resolving and measuring a name is the costly part, and every pan
+        // frame redraws: first rule out stations whose badge and name cannot
+        // reach the view. A caption2 character is under 24 points wide and a
+        // line under 48 high at the largest text size, so this bound needs no
+        // measuring.
+        let reach = max(radius + 6, Double(station.name.count) * 12)
+        let largest = CGRect(x: center.x - reach, y: center.y - radius - 6, width: reach * 2, height: radius * 2 + 10 + 48)
+        guard largest.intersects(context.clipBoundingRect) else { return }
         let name = projection.detail == .full
             ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.rail)) : nil
         let nameSize = name?.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity)) ?? .zero

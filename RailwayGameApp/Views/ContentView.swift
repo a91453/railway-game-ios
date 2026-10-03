@@ -101,6 +101,9 @@ struct ContentView: View {
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
+            // A new game is a new map view: its cached track geometry
+            // belongs to the world it was drawn from.
+            .id(ObjectIdentifier(session))
             .tutorialTarget(.map)
             .overlay(alignment: .top) {
                 StatusBanner(session: session)
