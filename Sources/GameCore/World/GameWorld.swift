@@ -1122,7 +1122,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidLineStops`` to make a ring of fewer than three
     ///   stops or of one calling at the same station first and last, or
     ///   ``GameError/invalidLinePattern`` to make a ring of a line with
-    ///   patterns (the reference's rings have no short workings).
+    ///   patterns (the reference keeps a ring's route legs to one over the
+    ///   whole ring, `consolidateRingRouteLegs`; its ring express is not
+    ///   ported).
     public mutating func setLineRing(_ id: LineID, to isRing: Bool) throws(GameError) {
         let index = try lineIndex(of: id)
         if isRing {

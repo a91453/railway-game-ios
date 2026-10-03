@@ -8,7 +8,7 @@ import XCTest
 /// fares are charged. Its stations share platforms on several tracks and
 /// levels, round Central and a double ring.
 final class DemoWorldTests: XCTestCase {
-    func testTheDemoMapIsBuiltOnTheNetworkWithStationsAtPoints() {
+    func testTheDemoMapIsBuiltOnTheNetworkWithStationsAtPoints() throws {
         let world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertTrue(world.stations.allSatisfy { $0.point != nil && $0.tiles.isEmpty }, "no station takes a tile")
@@ -28,7 +28,12 @@ final class DemoWorldTests: XCTestCase {
         // Nothing crosses at its own height: the lines end inside the ring.
         let heights = world.network.nodes.map(\.position.z)
         XCTAssertEqual(heights, [0, 0, 512, 512] + Array(repeating: 0, count: 8))
-        XCTAssertEqual(WorldRegion.built(in: world).map { ($0.minX + $0.maxX) / 2 }, Double(world.stations[1].location.x), "Central is the middle")
+        // Central is the middle of the map and of what the demo builds
+        // (UI_INTERFACES: UI tests may rely on it).
+        XCTAssertEqual(world.stations[1].point, PlanPoint(x: 512 * 1_024, y: 512 * 1_024))
+        let built = try XCTUnwrap(WorldRegion.built(in: world))
+        XCTAssertEqual((built.minX + built.maxX) / 2, Double(world.stations[1].location.x), "Central is the middle")
+        XCTAssertEqual((built.minY + built.maxY) / 2, Double(world.stations[1].location.y), "Central is the middle")
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
         XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
         XCTAssertEqual(world.trains.map(\.cars), [4, 4, 2, 2])
