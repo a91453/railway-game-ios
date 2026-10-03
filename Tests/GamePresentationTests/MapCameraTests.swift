@@ -4,9 +4,9 @@ import XCTest
 
 /// The map's camera (set ahead of Stage E1): world points to the screen and
 /// back, the region in view, and zooming and panning within the zoom range
-/// and the map's edges. It keeps the scrolling map's fixed steps, so with
-/// the map's corner in the view's corner it draws exactly what
-/// ``MapScale`` drew.
+/// and the map's edges. With the map's corner in the view's corner it draws
+/// exactly what ``MapScale`` drew. Stage E1: it opens in the middle of the
+/// map or on what is built, and the zoom buttons double or halve the size.
 final class MapCameraTests: XCTestCase {
     /// 32 × 24 tiles: 32768 × 24576 world units.
     private let map = try! GridMap(width: 32, height: 24)
@@ -22,13 +22,16 @@ final class MapCameraTests: XCTestCase {
 
     // MARK: - The scrolling map's steps
 
-    /// On a phone the map opens at ``MapScale/compactSize`` with its
-    /// north-west corner in the view's corner, and everything is drawn and
-    /// tapped where ``MapScale`` put it.
-    func testAPhoneStartsAtTheCompactSizeFromTheNorthWestCorner() {
-        let camera = PlanCamera(map: map, viewport: phone)
+    /// On a phone the map opens at ``MapScale/compactSize`` in its middle.
+    /// With the map's north-west corner in the view's corner, everything is
+    /// drawn and tapped where ``MapScale`` put it.
+    func testAPhoneStartsAtTheCompactSizeInTheMiddle() {
+        let opening = PlanCamera(map: map, viewport: phone)
+        XCTAssertEqual(opening.tileSize, MapScale.compactSize)
+        XCTAssertEqual(opening.centerX, 16_384)
+        XCTAssertEqual(opening.centerY, 12_288)
 
-        XCTAssertEqual(camera.tileSize, MapScale.compactSize)
+        let camera = opening.panned(byX: 1e7, y: 1e7)
         XCTAssertEqual(camera.pointsPerUnit, 32.0 / 1_024)
         assertEqual(camera.screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, 0))
         for point in [WorldCoordinate(x: 2_048, y: 2_048), WorldCoordinate(x: 6_144, y: 1_000, z: 640), WorldCoordinate(x: 31_000, y: 24_000)] {
@@ -57,14 +60,14 @@ final class MapCameraTests: XCTestCase {
         XCTAssertTrue(camera.canZoomIn)
     }
 
-    /// The buttons step by ``MapScale/zoomStep`` within the zoom range,
-    /// about the middle of the view.
+    /// The buttons multiply or divide by ``MapScale/zoomFactor`` within
+    /// the zoom range, about the middle of the view.
     func testTheZoomButtonsStepAboutTheMiddle() {
         let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
         let middle = ScreenPoint(x: 201, y: 210)
 
         let closer = camera.zoomedIn()
-        XCTAssertEqual(closer.tileSize, 40)
+        XCTAssertEqual(closer.tileSize, 64)
         XCTAssertEqual(closer.worldPosition(at: middle).x, 16_384, accuracy: 1e-9)
         XCTAssertEqual(closer.worldPosition(at: middle).y, 12_288, accuracy: 1e-9)
         XCTAssertEqual(closer.zoomedOut().tileSize, 32)
@@ -172,6 +175,53 @@ final class MapCameraTests: XCTestCase {
         XCTAssertGreaterThan(empty.pointsPerUnit, 0)
         XCTAssertEqual(empty.viewport, ScreenSize(width: 1, height: 1))
         XCTAssertGreaterThan(empty.zoomedOut().zoomedOut().zoomedOut().zoomedOut().pointsPerUnit, 0)
+    }
+
+    /// Stage E1: a camera opens on `showing`, what is built: centred on it,
+    /// zoomed out until it fits with ``PlanCamera/focusPadding`` points to
+    /// spare, but never closer than it would open without it, and kept on
+    /// the map.
+    func testACameraOpensOnWhatIsBuilt() throws {
+        let large = try GridMap(width: 1_024, height: 1_024)
+        // The demo map's 28 × 20 tiles in the middle of a 16 km map.
+        let demo = WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024)
+        let camera = PlanCamera(map: large, viewport: phone, showing: demo)
+        XCTAssertEqual(camera.centerX, 512 * 1_024)
+        XCTAssertEqual(camera.centerY, 512 * 1_024)
+        // (402 - 60) / 28 = 12.2 across, (420 - 60) / 20 = 18 down.
+        XCTAssertEqual(camera.tileSize, 342.0 / 28, accuracy: 1e-9)
+        let corner = camera.screenPoint(worldX: demo.minX, worldY: demo.minY)
+        XCTAssertEqual(corner.x, 30, accuracy: 1e-9)
+        XCTAssertGreaterThan(corner.y, 30)
+        XCTAssertEqual(camera.detail, .overview)
+
+        // One station: the size it opens at without one, centred on it.
+        let station = WorldRegion(enclosing: [WorldCoordinate(x: 300_000, y: 200_000)])!
+        let single = PlanCamera(map: large, viewport: phone, showing: station)
+        XCTAssertEqual(single.tileSize, MapScale.compactSize)
+        XCTAssertEqual(single.centerX, 300_000)
+        XCTAssertEqual(single.centerY, 200_000)
+        XCTAssertEqual(PlanCamera(map: large, viewport: phone).centerX, 512 * 1_024, "nothing built: the middle")
+
+        // At the map's corner the view stops at its edges.
+        let cornerStation = WorldRegion(enclosing: [WorldCoordinate(x: 0, y: 0)])!
+        assertEqual(PlanCamera(map: large, viewport: phone, showing: cornerStation).screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, 0))
+        // More than the whole map stops at the whole map.
+        let everything = WorldRegion(minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9)
+        XCTAssertFalse(PlanCamera(map: large, viewport: phone, showing: everything).canZoomOut)
+    }
+
+    /// What a game has built: its track nodes and stations, and an old
+    /// save's grid track; nothing for a new game.
+    func testTheBuiltRegionHoldsTheNetworkAndTheStations() throws {
+        XCTAssertNil(WorldRegion.built(in: .newGame()))
+        let demo = try XCTUnwrap(WorldRegion.built(in: DemoWorld.make(in: .english)))
+        XCTAssertEqual(demo, WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024))
+
+        var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        try world.buildTrack(at: GridPosition(x: 3, y: 2), connections: [.east, .west])
+        try world.buildStation(named: "Far", at: PlanPoint(x: 10_240, y: 6_144))
+        XCTAssertEqual(WorldRegion.built(in: world), WorldRegion(minX: 3_584, minY: 2_560, maxX: 10_240, maxY: 6_144))
     }
 
     /// The level of detail follows the zoom, as ``MapScale`` decides it.

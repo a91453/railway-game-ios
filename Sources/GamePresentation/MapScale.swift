@@ -11,8 +11,11 @@ public enum MapScale {
     /// Default tile size when the whole map would be too small (phones).
     public static let compactSize = 32.0
     public static let largestSize = 64.0
-    /// How much one zoom step changes the tile size.
-    public static let zoomStep = 8.0
+    /// How many times one zoom button step changes the tile size (Stage E1):
+    /// one zoom level of the references' web maps (MapLibre's `zoomIn`). A
+    /// new game's 16 km map is a few hundred times smaller on a phone than
+    /// at ``largestSize``, too far for steps of a fixed size.
+    public static let zoomFactor = 2.0
 
     /// The tile size at which a `columns` × `rows` map exactly fits a
     /// `width` × `height` viewport.
@@ -39,11 +42,11 @@ public enum MapScale {
     }
 
     public static func zoomedIn(from size: Double, fitting fittingSize: Double) -> Double {
-        clamped(size + zoomStep, fitting: fittingSize)
+        clamped(size * zoomFactor, fitting: fittingSize)
     }
 
     public static func zoomedOut(from size: Double, fitting fittingSize: Double) -> Double {
-        clamped(size - zoomStep, fitting: fittingSize)
+        clamped(size / zoomFactor, fitting: fittingSize)
     }
 
     /// The tile under a point in map coordinates, where `(0, 0)` is the

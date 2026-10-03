@@ -70,17 +70,18 @@ final class SaveLibraryTests: XCTestCase {
         let good = String(decoding: try SaveLibrary.encode(.newGame(), at: date(0)), as: UTF8.self)
         try write("garbage.json", "not json")
         try write("other-app.json", good.replacingOccurrences(of: #""app":"RailwayGame""#, with: #""app":"Other""#))
-        try write("newer.json", good.replacingOccurrences(of: #""saveVersion":1"#, with: #""saveVersion":2"#))
-        try write("damaged.json", good.replacingOccurrences(of: #""width":32"#, with: #""width":-1"#))
+        let newer = SavedGame.currentVersion + 1
+        try write("newer.json", good.replacingOccurrences(of: #""saveVersion":\#(SavedGame.currentVersion)"#, with: #""saveVersion":\#(newer)"#))
+        try write("damaged.json", good.replacingOccurrences(of: #""width":\#(GameWorld.newGame().map.width)"#, with: #""width":-1"#))
         try write("notes.txt", "ignored")
         let entries = Dictionary(uniqueKeysWithValues: library.entries().map { ($0.id, $0) })
         XCTAssertEqual(Set(entries.keys), ["garbage.json", "other-app.json", "newer.json", "damaged.json"])
         XCTAssertEqual(entries["garbage.json"]?.problem, .notASave)
         XCTAssertEqual(entries["other-app.json"]?.problem, .notASave)
-        XCTAssertEqual(entries["newer.json"]?.problem, .newerVersion(2))
+        XCTAssertEqual(entries["newer.json"]?.problem, .newerVersion(newer))
         XCTAssertNil(entries["damaged.json"]?.problem, "the header reads; the world is only checked on loading")
         XCTAssertThrowsError(try library.load(entries["damaged.json"]!)) { XCTAssertEqual($0 as? SaveError, .damaged) }
-        XCTAssertThrowsError(try library.load(entries["newer.json"]!)) { XCTAssertEqual($0 as? SaveError, .newerVersion(2)) }
+        XCTAssertThrowsError(try library.load(entries["newer.json"]!)) { XCTAssertEqual($0 as? SaveError, .newerVersion(newer)) }
         XCTAssertEqual(
             library.entries().map(\.id), ["damaged.json", "garbage.json", "newer.json", "other-app.json"],
             "files with a date first, then the unreadable ones by name"

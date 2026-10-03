@@ -224,10 +224,10 @@ final class IDAllocationTests: XCTestCase {
             if list == "stations" {
                 // Keep the map agreeing with the station, so only the ID is wrong.
                 var map = try XCTUnwrap(saved["map"] as? [String: Any])
-                var tiles = try XCTUnwrap(map["tiles"] as? [Any])
-                let index = 1 * world.map.width + 3
-                tiles[index] = ["station": ["id": Int.max]]
-                map["tiles"] = tiles
+                var tiles = try XCTUnwrap(map["occupied"] as? [[String: Any]])
+                let index = try XCTUnwrap(tiles.firstIndex { ($0["x"] as? Int, $0["y"] as? Int) == (3, 1) })
+                tiles[index]["tile"] = ["station": ["id": Int.max]]
+                map["occupied"] = tiles
                 saved["map"] = map
             }
             assertDataCorrupted(try JSONSerialization.data(withJSONObject: saved), "\(list) ID Int.max")

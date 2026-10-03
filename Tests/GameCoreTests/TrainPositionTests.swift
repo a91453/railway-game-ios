@@ -708,10 +708,10 @@ final class TrainPositionTests: XCTestCase {
         try world.placeTrain(first, at: .onLink(from: center, to: south, offset: 10))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: try encode(world)) as? [String: Any])
         var map = try XCTUnwrap(object["map"] as? [String: Any])
-        var tiles = try XCTUnwrap(map["tiles"] as? [Any])
-        let width = try XCTUnwrap(map["width"] as? Int)
-        tiles[south.y * width + south.x] = ["empty": [String: Any]()]
-        map["tiles"] = tiles
+        let tiles = try XCTUnwrap(map["occupied"] as? [[String: Any]])
+        let remaining = tiles.filter { ($0["x"] as? Int, $0["y"] as? Int) != (south.x, south.y) }
+        XCTAssertEqual(remaining.count, tiles.count - 1)
+        map["occupied"] = remaining
         object["map"] = map
 
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))) { error in

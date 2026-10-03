@@ -69,9 +69,11 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
         XCTAssertEqual(world, before)
     }
 
-    /// A save in the format every save has had since Stage I, with grid
-    /// track in the map's tiles: its track goes into the railway network on
-    /// loading and comes back out byte for byte on saving.
+    /// A save in the format every save had from Stage I to save version 1,
+    /// with grid track in the map's tiles: its track goes into the railway
+    /// network on loading, and comes back out on saving as the map's
+    /// occupied tiles (save version 2, Stage E1), each tile byte for byte as
+    /// before.
     func testASavedMapsTrackMovesIntoTheNetworkAndSavesBackExactly() throws {
         var world = try GameWorld(width: 4, height: 1, economy: GameEconomy(balance: 10_000, costs: testCosts))
         try world.buildTrack(at: p(0, 0), connections: .east)
@@ -79,8 +81,14 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
         try world.buildCrossing(at: p(2, 0))
         try world.buildStation(named: "S", at: p(3, 0))
         let saved = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":8700,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[{"track":{"connections":2}},{"turnout":{"connections":14,"stem":{"west":{}}}},{"crossing":{}},{"station":{"id":1}}],"width":4},"nextStationID":2,"nextTrainID":1,"stations":[{"id":1,"name":"S","position":{"x":3,"y":0}}],"trains":[]}"#
+        let savedNow = saved.replacingOccurrences(
+            of: #""tiles":[{"track":{"connections":2}},{"turnout":{"connections":14,"stem":{"west":{}}}},{"crossing":{}},{"station":{"id":1}}]"#,
+            with: #""occupied":[{"tile":{"track":{"connections":2}},"x":0,"y":0},{"tile":{"turnout":{"connections":14,"stem":{"west":{}}}},"x":1,"y":0},{"tile":{"crossing":{}},"x":2,"y":0},{"tile":{"station":{"id":1}},"x":3,"y":0}]"#
+        )
+        XCTAssertNotEqual(savedNow, saved)
 
-        XCTAssertEqual(String(decoding: try encode(world), as: UTF8.self), saved)
+        XCTAssertEqual(String(decoding: try encode(world), as: UTF8.self), savedNow)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(savedNow.utf8)), world)
         let loaded = try JSONDecoder().decode(GameWorld.self, from: Data(saved.utf8))
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(loaded.map.tiles.map(\.type), [.empty, .empty, .empty, .station(id: StationID(rawValue: 1))])
@@ -89,7 +97,7 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
             Track(position: p(1, 0), connections: [.east, .south, .west], layout: .turnout(stem: .west)),
             Track(position: p(2, 0), connections: [.north, .east, .south, .west], layout: .crossing),
         ])
-        XCTAssertEqual(String(decoding: try encode(loaded), as: UTF8.self), saved)
+        XCTAssertEqual(String(decoding: try encode(loaded), as: UTF8.self), savedNow)
     }
 
     func testSavedTrackThatBreaksTheRulesIsRefused() throws {

@@ -6,8 +6,8 @@
 | --- | --- | --- |
 | CX-6：開始畫面、示範地圖、存檔流程的 UI 測試 | Codex | 不依賴這兩個介面 |
 | CX-5：教學畫面（高亮框、步驟卡、按鈕） | Codex | [教學](#1-教學gamepresentation)、[識別碼](#2-識別碼tutorialtarget)、[App 端的標記](#3-app-端的標記與讀法) |
-| CX-4：大地圖繪製（只畫畫面內、依縮放顯示細節、雙指縮放） | Codex | [相機](#4-相機gamepresentation) |
-| 經濟平衡核對；C5 的真正步驟與判斷；E1 的 16 公里地圖；E2 | Claude Code | — |
+| CX-4 ✅：大地圖繪製（只畫畫面內、依縮放顯示細節、雙指縮放；PR #69–#71） | Codex | [相機](#4-相機gamepresentation) |
+| 經濟平衡核對 ✅；C5 的真正步驟與判斷 ✅；E1 的 16 公里地圖 ✅（存檔、開局的相機、縮放步長、教學的一步）；E2 | Claude Code | — |
 
 介面之後如果要改，由 Claude Code 連同其他代理已經寫好的畫面一起改，不讓它們重做。
 
@@ -44,24 +44,27 @@
 
 ### 步驟
 
-C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內容步驟改寫成觸控與這個 App 的工具，共十步。步驟的 `id`、框出的控制項與做完的條件：
+C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內容步驟改寫成觸控與這個 App 的工具；E1 加入第三步（移動地圖），共十一步。步驟的 `id`、框出的控制項與做完的條件：
 
 | # | `id` | 框出 | 做完的條件（`goal`） |
 | --- | --- | --- | --- |
 | 1 | `build.network` | `tool.network` | 選了路網工具（`.chooseTool(.network)`） |
 | 2 | `build.track` | `map`、`panel.action` | 這一步出現之後蓋了新的軌段（`.buildTrack`） |
-| 3 | `build.firstStation` | `network.modes`、`map`、`panel.action` | 這一步出現之後蓋了新的車站（`.buildStation`） |
-| 4 | `build.secondStation` | `network.modes`、`map`、`panel.action` | 同上（`.buildStation`） |
-| 5 | `line.create` | `hud.lines` | 這一步出現之後建了新的路線（`.createLine`） |
-| 6 | `train.place` | `tool.train`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
-| 7 | `line.service` | `hud.lines` | 新指派了列車給一條設了上線列車數的路線（`.startService`） |
-| 8 | `station.ridership` | `map` | 讀完就好（`.read`） |
-| 9 | `time.speed` | `hud.speed` | 速度（含暫停）和這一步出現時不同（`.changeSpeed`） |
-| 10 | `end` | `hud.menu` | 讀完就好（`.read`） |
+| 3 | `map.move` | `map`、`map.zoom` | 這一步顯示時玩家移動了地圖：捏合、拖曳或縮放按鈕（`.moveMap`，E1） |
+| 4 | `build.firstStation` | `network.modes`、`map`、`panel.action` | 這一步出現之後蓋了新的車站（`.buildStation`） |
+| 5 | `build.secondStation` | `network.modes`、`map`、`panel.action` | 同上（`.buildStation`） |
+| 6 | `line.create` | `hud.lines` | 這一步出現之後建了新的路線（`.createLine`） |
+| 7 | `train.place` | `tool.train`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
+| 8 | `line.service` | `hud.lines` | 新指派了列車給一條設了上線列車數的路線（`.startService`） |
+| 9 | `station.ridership` | `map` | 讀完就好（`.read`） |
+| 10 | `time.speed` | `hud.speed` | 速度（含暫停）和這一步出現時不同（`.changeSpeed`） |
+| 11 | `end` | `hud.menu` | 讀完就好（`.read`） |
 
 做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。要求「蓋了什麼」的條件比較的是這一步**第一次出現時**的世界（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次。
 
-C5 沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 5、7 框「路線」按鈕，面板裡的操作用文字說明。E1 會加入縮放與平移的步驟（`map.zoom` 已經標好），E2 視需要加實景模式的步驟。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
+C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 視需要加實景模式的步驟。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
+
+**移動地圖（`.moveMap`，E1）**：相機是地圖 view 的狀態，不在 session 裡，所以地圖 view 在玩家捏合、拖曳或按縮放按鈕時呼叫 `session.mapDidMove()`（`MapView.swift` 已接好）。它只在等這個動作的那一步第一次呼叫時改變 session，手勢的每一幀都呼叫也沒關係。旋轉裝置、改變大小、選到遠方的車站時自動置中不要呼叫。
 
 ## 2. 識別碼（`TutorialTarget`）
 
@@ -142,15 +145,15 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 | 成員 | 用途 |
 | --- | --- |
-| `PlanCamera(map:viewport:)` | 第一次排版時建立：手機每格 `compactSize`（32 點）、從地圖西北角開始；iPad 整張地圖置中（和現在一樣） |
+| `PlanCamera(map:viewport:showing:)` | 第一次排版時建立（E1）：`showing` 傳 `WorldRegion.built(in: session.world)`。有東西時置中在它上面、縮小到它放得下（四周各留 `focusPadding` 30 點），但不比沒有它時更近；沒有東西時在地圖中央。大小是 `automaticSize`：整張地圖放得下而每格不小於 22 點時整張（iPad 上的舊 32 × 24 地圖），否則每格 `compactSize`（32 點） |
 | `resized(to:)` | 地圖 view 的大小改變時（旋轉、分割畫面）：保留中心與縮放，超出範圍就收回 |
-| `zoomedIn()`、`zoomedOut()`、`canZoomIn`、`canZoomOut` | 縮放按鈕：每次 8 點，以畫面中央為準 |
+| `zoomedIn()`、`zoomedOut()`、`canZoomIn`、`canZoomOut` | 縮放按鈕：每次 × 2（`MapScale.zoomFactor`，參考的一個縮放等級，E1），以畫面中央為準 |
 | `zoomed(by:around:)` | 雙指縮放：用手勢開始時的相機、目前的倍率與手指一開始的位置；手指下的點不動 |
 | `panned(byX:y:)` | 拖曳：用手勢開始時的相機與目前的位移；手指下的點跟著手指，到地圖邊緣停住，整張地圖放得下的方向置中 |
 | `centered(on:)` | 把某一點移到畫面中央（例如選到的車站），到邊緣停住 |
 | `centerX`、`centerY`、`viewport`、`mapRegion` | 唯讀 |
 
-**目前是固定比例的版本**：縮放範圍與步長照 `MapScale`（每格最多 64 點；最少到整張地圖放得下，但不小於必要；按鈕每次 8 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和現在的 `MapScale.center(of:tileSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住），所以換成相機時畫面不會跳。E1 放大地圖時可能調整縮放範圍，介面不變。
+**縮放範圍**：每格最多 64 點；最少到整張地圖放得下，但不小於必要（新遊戲 16 公里的地圖在手機上每格不到 0.4 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和 `MapScale.center(of:tileSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住）。E1 只改了開局的位置與按鈕的步長，其餘介面不變。
 
 ### CX-4 怎麼接
 

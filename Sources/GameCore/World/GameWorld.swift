@@ -2517,13 +2517,23 @@ extension GameWorld: Codable {
     }
 
     /// The map as a save holds it (Stage S3A): each tile's land or grid
-    /// track, in the format every save has had since Stage I. It is only a
-    /// way of writing the two down: the land is the ``GridMap``'s and the
-    /// track the ``RailwayNetwork``'s, and neither is kept here.
+    /// track. It is only a way of writing the two down: the land is the
+    /// ``GridMap``'s and the track the ``RailwayNetwork``'s, and neither is
+    /// kept here.
+    ///
+    /// Two forms (Stage E1, ARCHITECTURE decision 48):
+    ///
+    /// - `{"width", "height", "occupied"}`, written since save version 2:
+    ///   only the tiles that are not empty ground, each with its position,
+    ///   in row-major order. A new game's map is 1024 tiles a side, and
+    ///   writing every one of them made a save of an empty map 13 MB.
+    /// - `{"width", "height", "tiles"}`: every tile in row-major order, the
+    ///   form every save had from Stage I to save version 1. Still read, so
+    ///   older saves load as they were written.
     private struct SavedMap: Codable {
         /// A saved tile: the land, or a grid track piece on it. The cases and
         /// their labels are the saved form of the map's tiles before Stage
-        /// S3A, so saves read and write byte for byte as before.
+        /// S3A, so a tile reads and writes byte for byte as before.
         private enum Tile: Codable, Equatable {
             case empty
             case track(connections: TrackConnections)
@@ -2532,8 +2542,15 @@ extension GameWorld: Codable {
             case crossing
         }
 
+        /// A tile that is not empty ground, and where it is.
+        private struct Occupied: Codable {
+            let x: Int
+            let y: Int
+            let tile: Tile
+        }
+
         private enum CodingKeys: String, CodingKey {
-            case width, height, tiles
+            case width, height, occupied, tiles
         }
 
         let land: GridMap
@@ -2545,68 +2562,100 @@ extension GameWorld: Codable {
             self.tracks = tracks
         }
 
-        /// Decodes `{"width", "height", "tiles"}`, the tiles in row-major
-        /// order, rejecting a size the map cannot have, a tile count that
-        /// does not match it, a track piece without exits and a turnout
-        /// that is not one.
+        /// Decodes either form, rejecting a size the map cannot have, both
+        /// forms or neither, a tile count that does not match the size, an
+        /// occupied tile off the map, out of row-major order, repeated or
+        /// empty, a track piece without exits and a turnout that is not one.
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let width = try container.decode(Int.self, forKey: .width)
             let height = try container.decode(Int.self, forKey: .height)
-            let tiles = try container.decode([Tile].self, forKey: .tiles)
-            func corrupt(_ description: String) -> DecodingError {
-                DecodingError.dataCorruptedError(forKey: .tiles, in: container, debugDescription: description)
+            func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
+                DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: description)
             }
-            guard let map = try? GridMap(width: width, height: height), tiles.count == width * height else {
-                throw corrupt("Tile count \(tiles.count) does not match a valid \(width)x\(height) map.")
+            guard let map = try? GridMap(width: width, height: height) else {
+                throw corrupt(.width, "\(width)x\(height) is not a size a map can have.")
             }
             var land = map
             var tracks: [Track] = []
-            for (index, tile) in tiles.enumerated() {
-                let position = GridPosition(x: index % width, y: index / width)
+            func place(_ tile: Tile, at position: GridPosition, key: CodingKeys) throws {
                 switch tile {
                 case .empty:
                     break
                 case .station(let id):
                     land.setType(.station(id: id), at: position)
                 case .track(let connections):
-                    guard !connections.isEmpty else { throw corrupt("Track tiles must have at least one connection.") }
+                    guard !connections.isEmpty else { throw corrupt(key, "Track tiles must have at least one connection.") }
                     tracks.append(Track(position: position, connections: connections))
                 case .turnout(let connections, let stem):
                     guard GameWorld.isTurnout(connections, stem: stem) else {
-                        throw corrupt("A turnout needs three exits or more, its stem among them.")
+                        throw corrupt(key, "A turnout needs three exits or more, its stem among them.")
                     }
                     tracks.append(Track(position: position, connections: connections, layout: .turnout(stem: stem)))
                 case .crossing:
                     tracks.append(Track(position: position, connections: [.north, .east, .south, .west], layout: .crossing))
                 }
             }
+            switch (container.contains(.occupied), container.contains(.tiles)) {
+            case (true, false):
+                let occupied = try container.decode([Occupied].self, forKey: .occupied)
+                var previous = -1
+                for entry in occupied {
+                    let position = GridPosition(x: entry.x, y: entry.y)
+                    guard map.contains(position) else {
+                        throw corrupt(.occupied, "Tile (\(entry.x), \(entry.y)) lies off the \(width)x\(height) map.")
+                    }
+                    // Row-major order, each tile once: one way to write a map.
+                    let index = entry.y * width + entry.x
+                    guard index > previous else {
+                        throw corrupt(.occupied, "Tile (\(entry.x), \(entry.y)) is repeated or out of row-major order.")
+                    }
+                    guard entry.tile != .empty else {
+                        throw corrupt(.occupied, "Tile (\(entry.x), \(entry.y)) is listed as occupied but empty.")
+                    }
+                    previous = index
+                    try place(entry.tile, at: position, key: .occupied)
+                }
+            case (false, true):
+                let tiles = try container.decode([Tile].self, forKey: .tiles)
+                guard tiles.count == width * height else {
+                    throw corrupt(.tiles, "Tile count \(tiles.count) does not match a valid \(width)x\(height) map.")
+                }
+                for (index, tile) in tiles.enumerated() {
+                    try place(tile, at: GridPosition(x: index % width, y: index / width), key: .tiles)
+                }
+            case (true, true):
+                throw corrupt(.occupied, "A map has its occupied tiles or every tile, not both.")
+            case (false, false):
+                throw corrupt(.occupied, "A map needs its occupied tiles.")
+            }
             self.land = land
             self.tracks = tracks
         }
 
+        /// Encodes the occupied form: the land's occupied tiles and the grid
+        /// track, in row-major order.
         func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(land.width, forKey: .width)
             try container.encode(land.height, forKey: .height)
-            var pieces: [GridPosition: Track] = [:]
+            var tiles: [GridPosition: Tile] = [:]
+            for tile in land.occupiedTiles {
+                if case .station(let id) = tile.type {
+                    tiles[tile.position] = .station(id: id)
+                }
+            }
             for track in tracks {
-                pieces[track.position] = track
-            }
-            let tiles = land.tiles.map { tile -> Tile in
-                if let track = pieces[tile.position] {
-                    switch track.layout {
-                    case .open: return .track(connections: track.connections)
-                    case .turnout(let stem): return .turnout(connections: track.connections, stem: stem)
-                    case .crossing: return .crossing
-                    }
-                }
-                switch tile.type {
-                case .empty: return .empty
-                case .station(let id): return .station(id: id)
+                switch track.layout {
+                case .open: tiles[track.position] = .track(connections: track.connections)
+                case .turnout(let stem): tiles[track.position] = .turnout(connections: track.connections, stem: stem)
+                case .crossing: tiles[track.position] = .crossing
                 }
             }
-            try container.encode(tiles, forKey: .tiles)
+            let occupied = tiles
+                .sorted { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }
+                .map { Occupied(x: $0.key.x, y: $0.key.y, tile: $0.value) }
+            try container.encode(occupied, forKey: .occupied)
         }
     }
 
@@ -2651,7 +2700,7 @@ extension GameWorld: Codable {
                 return "Station \(station.id.rawValue) does not match the map tile at \(station.position)."
             }
         }
-        let stationTileCount = map.tiles.count { tile in
+        let stationTileCount = map.occupiedTiles.count { tile in
             if case .station = tile.type { return true }
             return false
         }

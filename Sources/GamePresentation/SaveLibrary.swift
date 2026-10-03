@@ -12,7 +12,7 @@ import GameCore
 /// player's own saves, one file each.
 ///
 /// A file is `{"app": "RailwayGame", "savedAt": "…", "summary": {…},
-/// "game": {"saveVersion": 1, "world": {…}}}`. The summary repeats a few
+/// "game": {"saveVersion": 2, "world": {…}}}`. The summary repeats a few
 /// facts of the world so a list of saves reads without decoding every
 /// world; `game` is GameCore's ``SavedGame`` and alone decides what loads.
 public struct SaveLibrary: Sendable {

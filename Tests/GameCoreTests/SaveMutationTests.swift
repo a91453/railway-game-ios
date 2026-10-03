@@ -127,8 +127,8 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            // Half the mutations avoid the (many) map tiles.
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            // Half the mutations avoid the map's tiles (the grid track of these worlds).
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             for _ in 0..<40 {
                 let path = c.random.chance(1, in: 2) ? c.random.element(of: outsideTiles) : c.random.element(of: all)
                 var described = ""
@@ -201,7 +201,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let inTimetables = all.filter { $0.map(\.description).joined().contains(".timetable") }
             let trainObjects = all.filter { path in
                 let text = path.map(\.description).joined()
@@ -283,7 +283,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let inServices = all.filter { $0.map(\.description).joined().contains(".execution") }
             let trainObjects = all.filter { path in
                 path.map(\.description).joined().hasPrefix(".trains[") && path.count == 2
@@ -384,7 +384,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let inRepeats = all.filter { path in
                 let text = path.map(\.description).joined()
                 return text.contains(".period") || text.contains(".reverse") || text.contains(".execution")
@@ -491,7 +491,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let inLines = all.filter { path in
                 let text = path.map(\.description).joined()
                 return text.hasPrefix(".lines") || text.hasPrefix(".serviceDay") || text.hasPrefix(".nextLineID")
@@ -571,7 +571,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let targeted = all.filter { path in
                 let text = path.map(\.description).joined()
                 return text.hasPrefix(".lines") || text.contains("timetable") || text.contains("execution") || text.hasPrefix(".clock")
@@ -650,7 +650,7 @@ final class SaveMutationTests: XCTestCase {
             }
             let json = try JSONSerialization.jsonObject(with: try encoder.encode(world))
             let all = Self.paths(in: json)
-            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.tiles") }
+            let outsideTiles = all.filter { !$0.map(\.description).joined().hasPrefix(".map.occupied") }
             let targeted = all.filter { path in
                 let text = path.map(\.description).joined()
                 return text.contains("patterns") || (text.hasPrefix(".lines") && text.contains("stops"))
