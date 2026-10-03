@@ -485,7 +485,7 @@ final class VerticalRailwayTests: XCTestCase {
         try world.unplaceTrain(first)
         try world.placeTrain(first, at: .onEdge(backward(tunnel), offset: 3_071))
         XCTAssertEqual(world.trackPlatformsAlongWholeTrain(first), [], "its tail is 1 past the platform")
-        XCTAssertEqual(world.stationsBesideWholeTrain(first), [], "the grid's platforms are the grid's")
+        XCTAssertEqual(world.stationsBesideWholeTrain(first), [], "not beside it with its whole length")
 
         // Removing platforms.
         refused(.invalidPlatform, in: world) { try $0.removeTrackPlatform(hub, on: surface, from: 1_025) }
@@ -661,12 +661,6 @@ final class VerticalRailwayTests: XCTestCase {
             position: WorldCoordinate(x: 7_168, y: 12_288, z: -41), direction: PlanVector(dx: 12_800, dy: 0), grade: TrackGrade(rise: -1, run: 25)
         ))
         XCTAssertEqual(snapshot.trains.first?.body, world.bodyPath(of: first))
-        // The grid is still there for renderers, one link at a time.
-        try world.buildTrack(at: GridPosition(x: 5, y: 5), connections: [.east])
-        try world.buildTrack(at: GridPosition(x: 6, y: 5), connections: [.west])
-        let link = TrackEdgeID.link(between: GridPosition(x: 5, y: 5), and: GridPosition(x: 6, y: 5))
-        XCTAssertEqual(world.trackAlignment(of: link)?.edge.structure, .surface)
-        XCTAssertEqual(world.trackAlignment(of: link)?.segments, [TrackProfileSegment(kind: .level, start: 0, end: 1_024)])
         XCTAssertNil(world.trackAlignment(of: .edge(99)))
         // Deterministic: the same commands give the same snapshot.
         XCTAssertEqual(try makeTunnel().0.railwaySnapshot(), try makeTunnel().0.railwaySnapshot())

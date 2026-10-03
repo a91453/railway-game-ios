@@ -115,12 +115,12 @@ final class GoldenScenarioTests: XCTestCase {
         }
     }
 
-    /// A station's expected annexes and a train's expected cars and body
-    /// are compared exactly: one more, one fewer or another order is
-    /// reported once.
+    /// A station's expected point and a train's expected cars and body are
+    /// compared exactly: one more, one fewer or another order is reported
+    /// once. (Stage F3c-3b: no fixture has a station on tiles or a grid
+    /// body any more; their mutations stay until the schema drops them.)
     func testChangedStationFacilityExpectationsAreReported() throws {
-        var annexCount = 0
-        var trailCount = 0
+        var trailEdgeCount = 0
         for url in try GoldenScenarioFixtures.urls() {
             let name = url.lastPathComponent
             let committed = try GoldenScenario.decode(Data(contentsOf: url))
@@ -134,7 +134,6 @@ final class GoldenScenarioTests: XCTestCase {
                     continue
                 }
                 guard let annexes = station.annexes else { continue }
-                if annexes.count > 1 { annexCount += 1 }
                 var wrongAnnexes = [annexes + [PositionSummary(GridPosition(x: 99, y: 99))]]
                 if annexes.count > 1 { wrongAnnexes += [Array(annexes.dropLast()), annexes.reversed()] }
                 for wrong in wrongAnnexes {
@@ -144,7 +143,6 @@ final class GoldenScenarioTests: XCTestCase {
                 }
             }
             for (index, train) in committed.expectedFinalState.trains.enumerated() {
-                if train.trail.count > 1 { trailCount += 1 }
                 var scenario = committed
                 scenario.expectedFinalState.trains[index].cars += 1
                 XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) with another car")
@@ -155,10 +153,19 @@ final class GoldenScenarioTests: XCTestCase {
                     scenario.expectedFinalState.trains[index].trail = wrong
                     XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) expecting \(wrong)")
                 }
+                // A body on the track network: the edges behind the head's.
+                if !train.trailEdges.isEmpty { trailEdgeCount += 1 }
+                var wrongTrailEdges = [train.trailEdges + [99]]
+                if !train.trailEdges.isEmpty { wrongTrailEdges.append(Array(train.trailEdges.dropLast())) }
+                if train.trailEdges.count > 1 { wrongTrailEdges.append(train.trailEdges.reversed()) }
+                for wrong in wrongTrailEdges {
+                    scenario = committed
+                    scenario.expectedFinalState.trains[index].trailEdges = wrong
+                    XCTAssertEqual(scenario.differences().count, 1, "\(name) train \(train.id) expecting body edges \(wrong)")
+                }
             }
         }
-        XCTAssertGreaterThan(annexCount, 0, "No fixture expects a station of three tiles or more")
-        XCTAssertGreaterThan(trailCount, 0, "No fixture expects a train body over two nodes or more")
+        XCTAssertGreaterThan(trailEdgeCount, 0, "No fixture expects a train body over two edges or more")
     }
 
     /// A train's expected movement is compared exactly: another rate, cursor
@@ -307,16 +314,14 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     /// Every observation's expectation is compared exactly: a flipped answer,
-    /// a missing, extra or repeated neighbour, the same neighbours in another
-    /// order, or any change to a train's position or movement is reported at
-    /// that step and nowhere else.
+    /// a missing, extra or repeated element, the same elements in another
+    /// order, or any change to a train's position, movement or path is
+    /// reported at that step and nowhere else.
     func testChangedObservationExpectationsAreReported() throws {
         var observationCount = 0
-        var orderedAnswerCount = 0
         var trainAnswerCount = 0
-        var routeAnswerCount = 0
-        var platformAnswerCount = 0
-        var stationRouteCount = 0
+        var pathAnswerCount = 0
+        var stationPathCount = 0
         var sharedStopCount = 0
         var timetableAnswerCount = 0
         var executionAnswerCount = 0
@@ -324,13 +329,9 @@ final class GoldenScenarioTests: XCTestCase {
         var headwayAnswerCount = 0
         var sharedLoadCount = 0
         var patternAnswerCount = 0
-        var turnoutExitCount = 0
-        var sectionAnswerCount = 0
         var conflictAnswerCount = 0
-        var doubleTrackCount = 0
-        var longRouteCount = 0
+        var longPathCount = 0
         var wholeTrainCount = 0
-        var platformTrackCount = 0
         var gradeCount = 0
         var curveAlignmentCount = 0
         var portalCount = 0
@@ -360,20 +361,14 @@ final class GoldenScenarioTests: XCTestCase {
             for (index, step) in committed.steps.enumerated() {
                 guard case .observe(let observation, let expect) = step else { continue }
                 observationCount += 1
-                if case .neighbors(let neighbors) = expect, neighbors.count > 1 {
-                    orderedAnswerCount += 1
-                }
                 if case .train = expect {
                     trainAnswerCount += 1
                 }
-                if case .route(let nodes?) = expect, nodes.count > 1 {
-                    routeAnswerCount += 1
+                if case .trainPath(let path?) = expect, path.traversals.count > 1 {
+                    pathAnswerCount += 1
                 }
-                if case .platforms(let platforms) = expect, !platforms.isEmpty {
-                    platformAnswerCount += 1
-                }
-                if case .routeToStation = observation, case .route(let nodes?) = expect, nodes.count > 1 {
-                    stationRouteCount += 1
+                if case .pathToStation = observation, case .trainPath(let path?) = expect, path.traversals.count > 1 {
+                    stationPathCount += 1
                 }
                 if case .stations(let stations) = expect, stations.count > 1 {
                     sharedStopCount += 1
@@ -401,13 +396,9 @@ final class GoldenScenarioTests: XCTestCase {
                 default:
                     break
                 }
-                if case .exits(let exits) = expect, exits.count > 1 { turnoutExitCount += 1 }
-                if case .sections(let sections) = expect, sections.count > 2 { sectionAnswerCount += 1 }
                 if case .conflicts(let conflicts) = expect, !conflicts.isEmpty { conflictAnswerCount += 1 }
-                if case .tracks(let count) = expect, count >= 2 { doubleTrackCount += 1 }
-                if case .routeToStation(_, _, let cars) = observation, cars > 2, case .route(let nodes?) = expect, !nodes.isEmpty { longRouteCount += 1 }
+                if case .pathToStation(_, _, let cars) = observation, cars > 2, case .trainPath(_?) = expect { longPathCount += 1 }
                 if case .wholeTrainStops = observation, case .stations(let stations) = expect, !stations.isEmpty { wholeTrainCount += 1 }
-                if case .platformTracks(let tracks) = expect, tracks.count > 1, tracks.contains(where: { $0.count > 1 }) { platformTrackCount += 1 }
                 if case .pose(let pose?) = expect, pose.rise != 0, pose.z != 0 { gradeCount += 1 }
                 if case .alignment(let alignment?) = expect, alignment.segments.contains(where: { $0.kind == "transition" }) { curveAlignmentCount += 1 }
                 if case .reservation = observation, case .resources(let resources) = expect, !resources.isEmpty { reservationCount += 1 }
@@ -439,12 +430,10 @@ final class GoldenScenarioTests: XCTestCase {
                 }
             }
         }
-        XCTAssertGreaterThan(observationCount, 0, "No fixture observes track connectivity")
-        XCTAssertGreaterThan(orderedAnswerCount, 0, "No fixture pins the order of connected neighbours")
+        XCTAssertGreaterThan(observationCount, 0, "No fixture observes anything")
         XCTAssertGreaterThan(trainAnswerCount, 0, "No fixture observes a train")
-        XCTAssertGreaterThan(routeAnswerCount, 0, "No fixture pins a route of more than one node")
-        XCTAssertGreaterThan(platformAnswerCount, 0, "No fixture pins a station's platforms")
-        XCTAssertGreaterThan(stationRouteCount, 0, "No fixture pins a route to a station of more than one node")
+        XCTAssertGreaterThan(pathAnswerCount, 0, "No fixture pins a path over more than one edge")
+        XCTAssertGreaterThan(stationPathCount, 0, "No fixture pins a path to a station over more than one edge")
         XCTAssertGreaterThan(sharedStopCount, 0, "No fixture pins a train stopped at more than one station")
         XCTAssertGreaterThan(timetableAnswerCount, 0, "No fixture pins a timetable of more than one stop")
         XCTAssertGreaterThan(executionAnswerCount, 0, "No fixture observes an active service")
@@ -452,13 +441,9 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertGreaterThan(headwayAnswerCount, 0, "No fixture pins a line's headway")
         XCTAssertGreaterThan(sharedLoadCount, 0, "No fixture pins a line's segments filled by several services")
         XCTAssertGreaterThan(patternAnswerCount, 0, "No fixture observes a pattern")
-        XCTAssertGreaterThan(turnoutExitCount, 0, "No fixture pins exits of more than one tile")
-        XCTAssertGreaterThan(sectionAnswerCount, 0, "No fixture pins three sections or more")
         XCTAssertGreaterThan(conflictAnswerCount, 0, "No fixture pins a conflict")
-        XCTAssertGreaterThan(doubleTrackCount, 0, "No fixture pins double track")
-        XCTAssertGreaterThan(longRouteCount, 0, "No fixture pins a route for a long train")
+        XCTAssertGreaterThan(longPathCount, 0, "No fixture pins a path for a long train")
         XCTAssertGreaterThan(wholeTrainCount, 0, "No fixture pins a train beside a station with its whole length")
-        XCTAssertGreaterThan(platformTrackCount, 0, "No fixture pins two platform tracks, one of several tiles")
         XCTAssertGreaterThan(gradeCount, 0, "No fixture pins a pose on a slope")
         XCTAssertGreaterThan(curveAlignmentCount, 0, "No fixture pins a vertical curve")
         XCTAssertGreaterThan(portalCount, 0, "No fixture pins a tunnel portal")

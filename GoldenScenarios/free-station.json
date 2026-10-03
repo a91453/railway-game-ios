@@ -1,6 +1,6 @@
 {
   "schemaVersion": 27,
-  "description": "Stations at a point (Stage F1). Grid track runs from (2,1) to (3,1). Central is built at the point (2600, 1100) and Annex at (2100, 1500): both over the grid track's tile (2,1), which neither takes, so the land, the track and the tile station rules are unchanged (a tile station is still refused there) and grid track beside the tile is no platform of theirs. A station at a point needs a name and a point on the map (else the tile under the point, rounding down, is out of bounds), costs a station, and cannot grow onto tiles. On the track network, edge 1 runs straight from (1024, 3072) to (7168, 3072), 6144 long, six tiles of track; Central has a platform from 1024 to 3072 on it and Annex one from 4096 to 5120. A path from the start of edge 1 to Annex ends at the far end of its platform, 5120. A train placed at Central's berth (3072 forward) with a path ending where it stands is stopped at Central.",
+  "description": "Stations at a point (Stage F1). Central is built at the point (2600, 1100) and Annex at (2100, 1500), both over the tile (2,1), which neither takes. A station at a point needs a name and a point on the map (else the tile under the point, rounding down, is out of bounds) and costs a station. On the track network, edge 1 runs straight from (1024, 3072) to (7168, 3072), 6144 long, six tiles of track; Central has a platform from 1024 to 3072 on it and Annex one from 4096 to 5120. A path from the start of edge 1 to Annex ends at the far end of its platform, 5120. A train placed at Central's berth (3072 forward) with a path ending where it stands is stopped at Central. (Stage F3c-3b took out the grid track at (2,1) and (3,1), the tile station refused there, the grid platforms and growing onto a tile: the grid went, so the balance ends 200 higher, the two tiles of grid track not bought.)",
   "initialState": {
     "mapWidth": 8,
     "mapHeight": 4,
@@ -10,16 +10,11 @@
     "speed": "paused"
   },
   "steps": [
-    { "command": { "type": "buildTrack", "x": 2, "y": 1, "connections": ["east", "west"] }, "expect": { "result": "ok" } },
-    { "command": { "type": "buildTrack", "x": 3, "y": 1, "connections": ["east", "west"] }, "expect": { "result": "ok" } },
     { "command": { "type": "buildStationAt", "name": "Central", "point": { "x": 2600, "y": 1100 } }, "expect": { "result": "ok" } },
     { "command": { "type": "buildStationAt", "name": "Annex", "point": { "x": 2100, "y": 1500 } }, "expect": { "result": "ok" } },
     { "command": { "type": "buildStationAt", "name": " ", "point": { "x": 0, "y": 0 } }, "expect": { "result": "invalidName" } },
     { "command": { "type": "buildStationAt", "name": "East", "point": { "x": 8192, "y": 0 } }, "expect": { "result": "outOfBounds", "x": 8, "y": 0 } },
     { "command": { "type": "buildStationAt", "name": "West", "point": { "x": -1, "y": 4095 } }, "expect": { "result": "outOfBounds", "x": -1, "y": 3 } },
-    { "command": { "type": "buildStation", "name": "Tile", "x": 2, "y": 1 }, "expect": { "result": "tileOccupied", "x": 2, "y": 1 } },
-    { "observe": { "type": "platforms", "station": 1 }, "expect": { "platforms": [] } },
-    { "command": { "type": "extendStation", "station": 1, "x": 2, "y": 2 }, "expect": { "result": "invalidStationTile", "x": 2, "y": 2 } },
     { "command": { "type": "buildTrackNode", "x": 1024, "y": 3072, "z": 0 }, "expect": { "result": "ok" } },
     { "command": { "type": "buildTrackNode", "x": 7168, "y": 3072, "z": 0 }, "expect": { "result": "ok" } },
     { "command": { "type": "buildTrackEdge", "from": 1, "to": 2, "curve": { "type": "straight" } }, "expect": { "result": "ok" } },
@@ -34,15 +29,12 @@
   "expectedFinalState": {
     "gameMinutes": 0,
     "speed": "paused",
-    "balance": 2200,
+    "balance": 2400,
     "stations": [
       { "id": 1, "name": "Central", "point": { "x": 2600, "y": 1100 } },
       { "id": 2, "name": "Annex", "point": { "x": 2100, "y": 1500 } }
     ],
-    "tracks": [
-      { "x": 2, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } },
-      { "x": 3, "y": 1, "connections": ["east", "west"], "layout": { "type": "open" } }
-    ],
+    "tracks": [],
     "trains": [
       {
         "id": 1,

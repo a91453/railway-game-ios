@@ -1,43 +1,34 @@
 import GameCore
 import XCTest
 
+/// Building stations and buying trains. Stations stand at points since
+/// Stage F3c (a station on tiles went with the grid); the tile under a
+/// point is what an out-of-bounds error names.
 final class StationAndTrainTests: XCTestCase {
     func testBuildingStationRecordsItAndChargesCost() throws {
         var world = try makeWorld(balance: 10_000)
-        let position = GridPosition(x: 2, y: 5)
+        let point = PlanPoint(x: 2_560, y: 5_632)
 
-        let station = try world.buildStation(named: "Central", at: position)
+        let station = try world.buildStation(named: "Central", at: point)
 
         XCTAssertEqual(station.name, "Central")
-        XCTAssertEqual(station.position, position)
+        XCTAssertEqual(station.location, point)
         XCTAssertEqual(world.stations, [station])
         XCTAssertEqual(world.station(id: station.id), station)
-        XCTAssertEqual(world.station(at: position), station)
-        XCTAssertEqual(world.map.tile(at: position)?.type, .station(id: station.id))
+        XCTAssertEqual(world.map.tile(at: GridPosition(x: 2, y: 5))?.type, .empty, "a station at a point takes no tile")
         XCTAssertEqual(world.economy.balance, 9_000)
     }
 
     func testStationIDsAreUniqueAndNotReusedAfterFailures() throws {
-        var world = try makeWorld(balance: 10_000)
+        var world = try makeWorld(width: 5, height: 5, balance: 10_000)
 
-        let first = try world.buildStation(named: "A", at: GridPosition(x: 0, y: 0))
-        XCTAssertThrowsError(try world.buildStation(named: "Dup", at: GridPosition(x: 0, y: 0)))
-        let second = try world.buildStation(named: "B", at: GridPosition(x: 1, y: 0))
-        let third = try world.buildStation(named: "C", at: GridPosition(x: 2, y: 0))
+        let first = try world.buildStation(named: "A", at: PlanPoint(x: 512, y: 512))
+        XCTAssertThrowsError(try world.buildStation(named: "Off", at: PlanPoint(x: 5_120, y: 512)))
+        let second = try world.buildStation(named: "B", at: PlanPoint(x: 512, y: 512))
+        let third = try world.buildStation(named: "C", at: PlanPoint(x: 2_560, y: 512))
 
         let ids = [first.id, second.id, third.id]
-        XCTAssertEqual(Set(ids).count, 3)
-        XCTAssertEqual(ids, ids.sorted())
-    }
-
-    func testStationCannotOverlapTrack() throws {
-        var world = try makeWorld()
-        let position = GridPosition(x: 4, y: 4)
-        try world.buildTrack(at: position, connections: [.east, .west])
-        let before = world
-
-        XCTAssertThrowsGameError(try world.buildStation(named: "Central", at: position), .tileOccupied(position))
-        XCTAssertEqual(world, before)
+        XCTAssertEqual(ids.map(\.rawValue), [1, 2, 3])
     }
 
     func testStationFailuresLeaveWorldUnchanged() throws {
@@ -45,12 +36,12 @@ final class StationAndTrainTests: XCTestCase {
         let before = world
 
         XCTAssertThrowsGameError(
-            try world.buildStation(named: "Central", at: GridPosition(x: 1, y: 1)),
+            try world.buildStation(named: "Central", at: PlanPoint(x: 1_536, y: 1_536)),
             .insufficientFunds(required: 1_000, available: 999)
         )
-        XCTAssertThrowsGameError(try world.buildStation(named: "  ", at: GridPosition(x: 1, y: 1)), .invalidName)
+        XCTAssertThrowsGameError(try world.buildStation(named: "  ", at: PlanPoint(x: 1_536, y: 1_536)), .invalidName)
         XCTAssertThrowsGameError(
-            try world.buildStation(named: "Central", at: GridPosition(x: 5, y: 1)),
+            try world.buildStation(named: "Central", at: PlanPoint(x: 5_632, y: 1_536)),
             .outOfBounds(GridPosition(x: 5, y: 1))
         )
         XCTAssertEqual(world, before)

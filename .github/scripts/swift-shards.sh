@@ -44,22 +44,24 @@ set -euo pipefail
 # 37099689824, 37099911383), shard totals about 520 to 595 s:
 #   campaigns-1  EconomyPropertyTests 513, ContinuousTrackPropertyTests 66
 #   campaigns-2  BoardingPropertyTests 435, ServicePropertyTests 139
-#   campaigns-3  SaveMutationTests 406, VerticalRailwayPropertyTests 157,
-#                StationFacilityPropertyTests 29
+#   campaigns-3  SaveMutationTests 406, VerticalRailwayPropertyTests 157
 #   campaigns-4  LineDispatchPropertyTests 356, LinePatternPropertyTests 182,
 #                PassengerPropertyTests 36, TimetablePropertyTests 21
 #   campaigns-5  NetworkServicePropertyTests 348, TrafficControlPropertyTests 200,
-#                TrackResourcePropertyTests 30, NetworkSectionPropertyTests (Stage
-#                F3c, 52 s on a local run, not yet timed on a runner)
+#                NetworkSectionPropertyTests (Stage F3c, 52 s on a local run, not
+#                yet timed on a runner)
+# Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
+# TrackResourcePropertyTests here, and the grid's position, movement, route
+# and topology campaigns from rest) with the grid's tests.
 #   rest         ServiceLinePropertyTests 402, KernelDifferentialTests 25, and
 #                about 95 for everything else
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests" ;;
     campaigns-2) echo "BoardingPropertyTests ServicePropertyTests" ;;
-    campaigns-3) echo "SaveMutationTests VerticalRailwayPropertyTests StationFacilityPropertyTests" ;;
+    campaigns-3) echo "SaveMutationTests VerticalRailwayPropertyTests" ;;
     campaigns-4) echo "LineDispatchPropertyTests LinePatternPropertyTests PassengerPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests TrackResourcePropertyTests NetworkSectionPropertyTests" ;;
+    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests NetworkSectionPropertyTests" ;;
     *) return 1 ;;
   esac
 }

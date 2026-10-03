@@ -35,38 +35,28 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
 
     // MARK: - One authority
 
+    /// Laying and removing track on the network, and building stations at
+    /// points, never touch the land (Stage F3c-3b: the grid's track and
+    /// stations, which took a tile each, are gone from this test).
     func testTheMapHoldsLandAndTheNetworkHoldsEveryTrack() throws {
-        var world = try makeWorld(width: 4, height: 2)
-        let station = try world.buildStation(named: "S", at: p(3, 0))
+        var world = try makeWorld(width: 4, height: 2, balance: 100_000)
         let land = world.map
-
-        let plain = try world.buildTrack(at: p(0, 0), connections: .east)
-        let turnout = try world.buildTurnout(at: p(1, 0), connections: [.east, .south, .west], stem: .west)
-        let crossing = try world.buildCrossing(at: p(1, 1))
+        try world.buildStation(named: "S", at: PlanPoint(x: 3_584, y: 512))
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 512))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 512))
+        let c = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 1_536))
+        let main = try world.buildTrackEdge(from: a, to: b)
+        let spur = try world.buildTrackEdge(from: b, to: c)
 
         XCTAssertEqual(world.map, land, "laying track never touches the land")
-        XCTAssertEqual(world.map.tiles.map(\.type), [.empty, .empty, .empty, .station(id: station.id), .empty, .empty, .empty, .empty])
-        XCTAssertEqual(world.tracks, [plain, turnout, crossing], "row-major order")
-        XCTAssertEqual(world.network.tracks, world.tracks)
-        XCTAssertEqual(world.network.track(at: p(1, 0)), turnout)
-        XCTAssertNil(world.track(at: p(3, 0)), "a station is land, not track")
+        XCTAssertEqual(world.map.tiles.map(\.type), Array(repeating: .empty, count: 8))
+        XCTAssertEqual(world.network.edges.map(\.id), [main, spur])
+        XCTAssertEqual(world.network.nodes.map(\.id), [a, b, c])
 
-        try world.removeTrack(at: p(1, 1))
+        try world.removeTrackEdge(spur)
+        try world.removeTrackNode(c)
         XCTAssertEqual(world.map, land)
-        XCTAssertEqual(world.tracks, [plain, turnout])
-    }
-
-    func testGridTrackAndStationsStillTakeATileEach() throws {
-        var world = try makeWorld(width: 3, height: 1)
-        try world.buildStation(named: "S", at: p(0, 0))
-        try world.buildTrack(at: p(1, 0), connections: [.east, .west])
-        let before = world
-
-        XCTAssertThrowsGameError(try world.buildTrack(at: p(0, 0), connections: .east), .tileOccupied(p(0, 0)))
-        XCTAssertThrowsGameError(try world.buildTrack(at: p(1, 0), connections: .east), .tileOccupied(p(1, 0)))
-        XCTAssertThrowsGameError(try world.buildCrossing(at: p(1, 0)), .tileOccupied(p(1, 0)))
-        XCTAssertThrowsGameError(try world.buildStation(named: "T", at: p(1, 0)), .tileOccupied(p(1, 0)))
-        XCTAssertEqual(world, before)
+        XCTAssertEqual(world.network.edges.map(\.id), [main])
     }
 
     /// A save in the format every save had from Stage I to save version 1,
@@ -144,22 +134,6 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
         }
     }
 
-    func testAGridLinkIsOneSpanAndItsResourceIsUnchanged() throws {
-        var world = try makeWorld(width: 3, height: 1)
-        try world.buildTrack(at: p(0, 0), connections: .east)
-        try world.buildTrack(at: p(1, 0), connections: [.east, .west])
-        let link = TrackEdgeID.link(between: p(0, 0), and: p(1, 0))
-
-        XCTAssertEqual(world.trackSpans(of: link), [TrackSpan(edge: link, start: 0, end: 1_024)])
-        XCTAssertEqual(TrackResource.link(between: p(1, 0), and: p(0, 0)), .span(TrackSpan(edge: link, start: 0, end: 1_024)))
-        XCTAssertEqual(world.trackSpans(of: .link(between: p(1, 0), and: p(2, 0))), [], "no track at (2, 0)")
-        XCTAssertEqual(world.trackSpans(of: .edge(1)), [], "no such edge")
-
-        try world.purchaseTrain(named: "A")
-        try world.placeTrain(first, at: .onLink(from: p(0, 0), to: p(1, 0), offset: 300))
-        XCTAssertEqual(world.occupiedResources(of: first), [.link(between: p(0, 0), and: p(1, 0))])
-    }
-
     /// A 2048 edge from (512, 512) to (2560, 512): two spans, 0–1024 and
     /// 1024–2048.
     private func makeLongEdge() throws -> (world: GameWorld, edge: TrackEdgeID, from: TrackNodeID, to: TrackNodeID) {
@@ -229,22 +203,10 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
 
     // MARK: - The way ahead
 
-    func testPathAheadListsTheTraversalsStillToComeOnEitherKindOfTrack() throws {
-        var world = try makeWorld(width: 5, height: 1)
-        for x in 0..<5 {
-            try world.buildTrack(at: p(x, 0), connections: x == 0 ? .east : x == 4 ? .west : [.east, .west])
-        }
-        try world.purchaseTrain(named: "A")
-        XCTAssertEqual(world.pathAhead(of: first), [], "not placed")
-        XCTAssertEqual(world.pathAhead(of: TrainID(rawValue: 9)), [], "no such train")
-        try world.placeTrain(first, at: .onLink(from: p(0, 0), to: p(1, 0), offset: 100))
-        try world.setTrainContinuation(first, to: [p(2, 0), p(3, 0), p(4, 0)])
-        XCTAssertEqual(world.pathAhead(of: first), [.link(from: p(1, 0), to: p(2, 0)), .link(from: p(2, 0), to: p(3, 0)), .link(from: p(3, 0), to: p(4, 0))])
-        // A removed link is still ahead: the train waits for it.
-        try world.removeTrack(at: p(3, 0))
-        XCTAssertEqual(world.pathAhead(of: first).count, 3)
-
+    func testPathAheadListsTheTraversalsStillToCome() throws {
         var (network, edge, _, b) = try makeLongEdge()
+        XCTAssertEqual(network.pathAhead(of: first), [], "not placed")
+        XCTAssertEqual(network.pathAhead(of: TrainID(rawValue: 9)), [], "no such train")
         let c = try network.buildTrackNode(at: WorldCoordinate(x: 3_584, y: 512))
         let beyond = try network.buildTrackEdge(from: b, to: c)
         try network.placeTrain(first, at: .onEdge(forward(edge), offset: 100))

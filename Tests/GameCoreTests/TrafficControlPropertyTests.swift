@@ -5,11 +5,11 @@ import XCTest
 /// Stage T (ARCHITECTURE decision 32): route reservation under traffic
 /// control, on GameCore and on ``ReferenceWorld`` side by side.
 ///
-/// Every case builds a grid layout (a main line with a turnout and branch,
-/// a level crossing, stations two tiles long) or a network layout (a line
-/// of straight, curved and sloping edges on the surface, a viaduct or in a
-/// tunnel, a siding off a turnout, sometimes a diamond crossing and a
-/// flyover, stations with platforms), puts trains of one to four cars on it
+/// Every case builds a network layout (a line of straight, curved and
+/// sloping edges on the surface, a viaduct or in a tunnel, a siding off a
+/// turnout, sometimes a diamond crossing and a flyover, stations with
+/// platforms; Stage F3c-3b dropped the grid layout every other case built),
+/// puts trains of one to four cars on it
 /// and runs generated operations: traffic control on and off, placing,
 /// paths by hand and to stations, turning round, taking off, timetables,
 /// lines and patterns, time, and removing and adding track and platforms.
@@ -24,7 +24,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         case unplace(TrainID)
         case reverse(TrainID)
         case rate(TrainID, Int64)
-        case gridPath(TrainID, [GridPosition])
         case path(TrainID, [TrackTraversal], Int64?)
         /// A timetable, then its service started.
         case run(TrainID, [ScheduledStop], Int64?)
@@ -36,8 +35,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         case patternRun(LineID, [Int])
         case assign(TrainID, LineID, Int?)
         case unassign(TrainID)
-        case removeTrack(GridPosition)
-        case buildTrack(GridPosition, TrackConnections)
         case removeEdge(TrackEdgeID)
         case addPlatform(StationID, TrackEdgeID, Int64, Int64)
         case removePlatform(StationID, TrackEdgeID, Int64)
@@ -61,47 +58,6 @@ final class TrafficControlPropertyTests: XCTestCase {
     /// Builds the same thing on both, which must agree.
     private static func both(_ world: inout GameWorld, _ model: inout ReferenceWorld, _ operation: Operation) {
         XCTAssertEqual(apply(operation, to: &world), apply(operation, to: &model), "\(operation)")
-    }
-
-    /// A grid: a main line along row 3 with dead ends, a turnout at `bx`
-    /// with a branch south to a dead end, a level crossing at `cx` on a
-    /// north–south line; A (two tiles) at the west end, B (two tiles) at the
-    /// east end, C beside the branch's end, D beside the crossing line's
-    /// north end.
-    private static func beginGrid(_ testCase: inout PropertyCase, world: inout GameWorld, model: inout ReferenceWorld) throws {
-        let width = world.map.width
-        let bx = 3 + testCase.random.below(2)
-        let cx = bx + 2 + testCase.random.below(max(1, width - bx - 7))
-        let stemWest = testCase.random.chance(1, in: 2)
-        testCase.note("grid \(width) wide, turnout at \(bx) (stem \(stemWest ? "west" : "east")), crossing at \(cx)")
-        for x in 0..<width {
-            let p = GridPosition(x: x, y: 3)
-            if x == bx {
-                let connections: TrackConnections = [.west, .east, .south]
-                try world.buildTurnout(at: p, connections: connections, stem: stemWest ? .west : .east)
-                XCTAssertNil(model.buildTurnout(at: p, mask: connections.rawValue, stem: stemWest ? .west : .east))
-            } else if x == cx {
-                try world.buildCrossing(at: p)
-                XCTAssertNil(model.buildCrossing(at: p))
-            } else {
-                let connections: TrackConnections = x == 0 ? .east : x == width - 1 ? .west : [.east, .west]
-                both(&world, &model, .buildTrack(p, connections))
-            }
-        }
-        both(&world, &model, .buildTrack(GridPosition(x: bx, y: 4), [.north, .south]))
-        both(&world, &model, .buildTrack(GridPosition(x: bx, y: 5), .north))
-        for (y, connections) in [(1, TrackConnections.south), (2, [.north, .south]), (4, [.north, .south]), (5, .north)] {
-            both(&world, &model, .buildTrack(GridPosition(x: cx, y: y), connections))
-        }
-        for (name, tiles) in [("A", [(1, 2), (2, 2)]), ("B", [(width - 3, 2), (width - 2, 2)]), ("C", [(bx + 1, 5)]), ("D", [(cx + 1, 1)])] {
-            _ = try world.buildStation(named: name, at: GridPosition(x: tiles[0].0, y: tiles[0].1))
-            XCTAssertNil(model.buildStation(named: name, at: GridPosition(x: tiles[0].0, y: tiles[0].1)))
-            for tile in tiles.dropFirst() {
-                let id = StationID(rawValue: world.stations.count)
-                try world.extendStation(id, to: GridPosition(x: tile.0, y: tile.1))
-                XCTAssertNil(model.extendStation(id, to: GridPosition(x: tile.0, y: tile.1)))
-            }
-        }
     }
 
     /// A network: a line east along y = 8192 of four to six edges
@@ -217,45 +173,26 @@ final class TrafficControlPropertyTests: XCTestCase {
         }
     }
 
-    /// A place on the grid: a platform tile of a station, facing any way,
-    /// or anywhere on the track.
-    private static func gridPlace(in world: GameWorld, using random: inout SplitMix64) -> TrainPosition? {
-        if random.chance(2, in: 3), !world.stations.isEmpty {
-            let platforms = world.platforms(of: random.element(of: world.stations).id)
-            if !platforms.isEmpty { return .atNode(random.element(of: platforms), heading: random.element(of: TrackDirection.allCases)) }
-        }
-        return PositionGenerator.validPosition(in: world, using: &random)
-    }
-
-    private static func begin(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld, grid: Bool) {
-        let grid = testCase.index % 2 == 1
+    private static func begin(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
         let minute = Int64(testCase.random.below(1_440))
-        let (width, height) = grid ? (11 + testCase.random.below(4), 7) : (128, 16)
+        let (width, height) = (128, 16)
         var world = try GameWorld(width: width, height: height, economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
         var model = ReferenceWorld(width: width, height: height, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
-        if grid {
-            try beginGrid(&testCase, world: &world, model: &model)
-        } else {
-            try beginNetwork(&testCase, world: &world, model: &model)
-        }
+        try beginNetwork(&testCase, world: &world, model: &model)
         // Traffic control on from the start, mostly.
         if testCase.random.chance(3, in: 4) { both(&world, &model, .trafficControl(true)) }
         for id in 1...(3 + testCase.random.below(2)) {
             let train = TrainID(rawValue: id)
             _ = try world.purchaseTrain(named: "T")
             _ = model.purchaseTrain(named: "T")
-            let cars = grid ? 1 + testCase.random.below(3) : 1 + testCase.random.below(4)
+            let cars = 1 + testCase.random.below(4)
             try world.setTrainCars(train, to: cars)
             _ = model.setCars(train, cars)
             // Beside a platform where its body fits (a few tries), stopped
             // there, and given a rate.
             for _ in 0..<6 where world.train(id: train)?.position == nil {
                 let station = StationID(rawValue: 1 + testCase.random.below(world.stations.count))
-                let platforms = world.platforms(of: station)
-                let position = grid
-                    ? (platforms.isEmpty ? nil : TrainPosition.atNode(testCase.random.element(of: platforms), heading: testCase.random.element(of: TrackDirection.allCases)))
-                    : berth(for: Int64(cars - 1) * 1_024, of: station, in: world, using: &testCase.random)
-                guard let position else { continue }
+                guard let position = berth(for: Int64(cars - 1) * 1_024, of: station, in: world, using: &testCase.random) else { continue }
                 both(&world, &model, .place(train, position))
                 if case .onEdge(let traversal, let offset) = position, world.train(id: train)?.position != nil,
                    let length = world.trackEdge(traversal.edge)?.length {
@@ -264,7 +201,7 @@ final class TrafficControlPropertyTests: XCTestCase {
             }
             both(&world, &model, .rate(train, testCase.random.element(of: [1_024, 2_048, 3_072] as [Int64])))
         }
-        return (world, model, grid)
+        return (world, model)
     }
 
     // MARK: - Operations
@@ -307,7 +244,7 @@ final class TrafficControlPropertyTests: XCTestCase {
         return (stops, period)
     }
 
-    static func operation(in world: GameWorld, grid: Bool, using random: inout SplitMix64) -> Operation {
+    static func operation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
         let trains = world.trains
         let stations = world.stations.map(\.id)
         // A mutated save (SaveMutationTests) of point stations may load
@@ -346,21 +283,23 @@ final class TrafficControlPropertyTests: XCTestCase {
         case 42..<48:
             // A walk by hand.
             let train = driven()
-            guard let position = train.position else { return .place(train.id, .atNode(GridPosition(x: 0, y: 0), heading: .east)) }
-            if case .onEdge(let traversal, let offset) = position {
-                var walk: [TrackTraversal] = []
-                var last = traversal
-                for _ in 0..<random.below(3) {
-                    let options = world.transitions(after: last)
-                    guard !options.isEmpty else { break }
-                    last = random.element(of: options)
-                    walk.append(last)
-                }
-                let length = world.trackEdge(last.edge)?.length ?? 1
-                let end: Int64? = random.chance(1, in: 4) ? nil : random.int64(in: (walk.isEmpty ? offset : 1)...max(walk.isEmpty ? offset : 1, length - 1))
-                return .path(train.id, walk, end)
+            // An unplaced train is placed on an edge that does not exist
+            // (refused); until Stage F3c-3b, at a grid node off the track,
+            // refused the same way.
+            guard case .onEdge(let traversal, let offset)? = train.position else {
+                return .place(train.id, .onEdge(TrackTraversal(edge: .edge(999_999), direction: .forward), offset: 0))
             }
-            return .gridPath(train.id, PositionGenerator.walk(in: world, from: position, length: random.below(5), using: &random))
+            var walk: [TrackTraversal] = []
+            var last = traversal
+            for _ in 0..<random.below(3) {
+                let options = world.transitions(after: last)
+                guard !options.isEmpty else { break }
+                last = random.element(of: options)
+                walk.append(last)
+            }
+            let length = world.trackEdge(last.edge)?.length ?? 1
+            let end: Int64? = random.chance(1, in: 4) ? nil : random.int64(in: (walk.isEmpty ? offset : 1)...max(walk.isEmpty ? offset : 1, length - 1))
+            return .path(train.id, walk, end)
         case 48..<58:
             // A timetable started at once, mostly for a free train stopped at
             // a station.
@@ -425,10 +364,7 @@ final class TrafficControlPropertyTests: XCTestCase {
             let train = random.element(of: unplaced)
             var fallback: TrainPosition?
             for _ in 0..<8 {
-                let position = grid
-                    ? gridPlace(in: world, using: &random)
-                    : berth(for: train.length, of: random.element(of: stations), in: world, using: &random)
-                guard let position else { continue }
+                guard let position = berth(for: train.length, of: random.element(of: stations), in: world, using: &random) else { continue }
                 fallback = fallback ?? position
                 var trial = world
                 if (try? trial.placeTrain(train.id, at: position)) != nil { return .place(train.id, position) }
@@ -438,22 +374,6 @@ final class TrafficControlPropertyTests: XCTestCase {
             return .rate(anyTrain(), random.element(of: [0, 512, 1_024, 2_048] as [Int64]))
         case 81..<89:
             // Infrastructure, mostly where trains are going.
-            if grid {
-                if random.chance(1, in: 3) {
-                    // Put back missing track on the main line or a branch.
-                    let missing = (0..<world.map.width).map { GridPosition(x: $0, y: 3) }.filter { world.track(at: $0) == nil }
-                    if let tile = missing.first {
-                        let width = world.map.width
-                        let connections: TrackConnections = tile.x == 0 ? .east : tile.x == width - 1 ? .west : [.east, .west]
-                        return .buildTrack(tile, connections)
-                    }
-                }
-                let reserved = trains.flatMap(\.reservation).compactMap { resource -> GridPosition? in
-                    if case .node(.tile(let tile)) = resource { tile } else { nil }
-                }
-                let tiles = random.chance(2, in: 3) && !reserved.isEmpty ? reserved : world.tracks.map(\.position)
-                return tiles.isEmpty ? .advance(1) : .removeTrack(random.element(of: tiles))
-            }
             let edges = world.network.edges
             switch random.below(4) {
             case 0:
@@ -486,7 +406,6 @@ final class TrafficControlPropertyTests: XCTestCase {
             case .unplace(let id): try world.unplaceTrain(id)
             case .reverse(let id): try world.reverseTrain(id)
             case .rate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
-            case .gridPath(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
             case .path(let id, let path, let end): try world.setTrainContinuation(id, along: path, stoppingAt: end)
             case .run(let id, let stops, let period):
                 try world.setTrainTimetable(id, to: stops, repeatingEvery: periodSeconds(period))
@@ -502,8 +421,6 @@ final class TrafficControlPropertyTests: XCTestCase {
                 try world.setLineTrainsInService(id, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: pattern)
             case .assign(let id, let line, let pattern): try world.assignTrain(id, to: line, pattern: pattern)
             case .unassign(let id): try world.unassignTrain(id)
-            case .removeTrack(let p): try world.removeTrack(at: p)
-            case .buildTrack(let p, let connections): try world.buildTrack(at: p, connections: connections)
             case .removeEdge(let id): try world.removeTrackEdge(id)
             case .addPlatform(let station, let edge, let start, let end): try world.addTrackPlatform(station, on: edge, from: start, to: end)
             case .removePlatform(let station, let edge, let start): try world.removeTrackPlatform(station, on: edge, from: start)
@@ -526,7 +443,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         case .unplace(let id): return model.unplaceTrain(id)
         case .reverse(let id): return model.reverseTrain(id)
         case .rate(let id, let rate): return model.setRate(id, rate)
-        case .gridPath(let id, let nodes): return model.setContinuation(id, nodes)
         case .path(let id, let path, let end): return model.setContinuation(id, along: path, stoppingAt: end)
         case .run(let id, let stops, let period): return model.setTimetable(id, stops, period: periodSeconds(period)) ?? model.startService(id)
         case .stop(let id): return model.stopService(id)
@@ -540,8 +456,6 @@ final class TrafficControlPropertyTests: XCTestCase {
             )
         case .assign(let id, let line, let pattern): return model.assign(id, to: line, pattern: pattern)
         case .unassign(let id): return model.unassign(id)
-        case .removeTrack(let p): return model.removeTrack(at: p)
-        case .buildTrack(let p, let connections): return model.buildTrack(at: p, mask: connections.rawValue)
         case .removeEdge(let id): return model.removeNetworkEdge(id)
         case .addPlatform(let station, let edge, let start, let end): return model.addTrackPlatform(station, on: edge, from: start, to: end)
         case .removePlatform(let station, let edge, let start): return model.removeTrackPlatform(station, on: edge, from: start)
@@ -567,9 +481,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         if world.isTrafficControlEnabled != model.trafficControl { problems.append("traffic control \(world.isTrafficControlEnabled) vs \(model.trafficControl)") }
         if world.network.platforms != model.allTrackPlatforms { problems.append("platforms") }
         if world.network.edges.map(\.id.number) != model.networkEdges.keys.sorted() { problems.append("edges") }
-        if world.tracks.map(\.position) != model.tiles.keys.filter({ model.mask(at: $0) != nil }).sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) }) {
-            problems.append("grid track")
-        }
         if world.trains.map(\.id.rawValue) != model.trains.map(\.id) { problems.append("train IDs") }
         for (train, expected) in zip(world.trains, model.trains) {
             let id = train.id.rawValue
@@ -613,14 +524,13 @@ final class TrafficControlPropertyTests: XCTestCase {
     }
 
     /// A world of this campaign's layouts after `operations` generated
-    /// operations, and whether it is laid on the grid; for the save
-    /// mutation campaign.
-    static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> (world: GameWorld, grid: Bool) {
-        var (world, _, grid) = try Self.begin(&testCase)
+    /// operations; for the save mutation campaign.
+    static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> GameWorld {
+        var (world, _) = try Self.begin(&testCase)
         for _ in 0..<operations {
-            _ = Self.apply(Self.operation(in: world, grid: grid, using: &testCase.random), to: &world)
+            _ = Self.apply(Self.operation(in: world, using: &testCase.random), to: &world)
         }
-        return (world, grid)
+        return world
     }
 
     func testRouteReservationMatchesTheReferenceAtEveryStep() throws {
@@ -628,9 +538,9 @@ final class TrafficControlPropertyTests: XCTestCase {
         var tally: [String: Int] = [:]
         var operations = 0
         let ran = try runCampaign("traffic.reservation", cases: 40) { testCase in
-            var (world, model, grid) = try Self.begin(&testCase)
+            var (world, model) = try Self.begin(&testCase)
             for step in 0..<80 {
-                let operation = Self.operation(in: world, grid: grid, using: &testCase.random)
+                let operation = Self.operation(in: world, using: &testCase.random)
                 testCase.note("\(step): \(operation)")
                 let before = world
                 let outcome = Self.apply(operation, to: &world)
@@ -643,9 +553,9 @@ final class TrafficControlPropertyTests: XCTestCase {
                 let name = "\(operation)".components(separatedBy: "(")[0]
                 tally["\(outcome.map { "\($0)".components(separatedBy: "(")[0] } ?? "ok") \(name)", default: 0] += 1
                 if case .trackReserved? = outcome {
-                    tally[grid ? "grid conflicts" : "network span conflicts", default: 0] += 1
+                    tally["network span conflicts", default: 0] += 1
                     switch operation {
-                    case .removeTrack, .removeEdge, .addPlatform, .removePlatform, .spur: tally["infrastructure refusals", default: 0] += 1
+                    case .removeEdge, .addPlatform, .removePlatform, .spur: tally["infrastructure refusals", default: 0] += 1
                     default: tally["refused acquisitions", default: 0] += 1
                     }
                 }
@@ -688,7 +598,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         assertVolume(tally["taken by departures and dispatch", default: 0] > 120, "services and lines take routes")
         assertVolume(tally["service waits", default: 0] > 50, "services wait for their routes")
         assertVolume(tally["line dispatch waits", default: 0] > 10, "lines wait to send trains out")
-        assertVolume(tally["grid conflicts", default: 0] > 50, "trains meet on the grid")
         assertVolume(tally["network span conflicts", default: 0] > 50, "trains meet on the network")
         assertVolume(tally["long-train reservations", default: 0] > 300, "long trains reserve")
         assertVolume(tally["mid-edge berth reservations", default: 0] > 100, "paths end at berths along edges")
