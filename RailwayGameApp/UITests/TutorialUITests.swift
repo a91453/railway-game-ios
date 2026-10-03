@@ -176,7 +176,9 @@ final class TutorialUITests: XCTestCase {
     }
 
     private func capture(_ app: XCUIApplication, name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        // A window screenshot can use stale portrait bounds after rotating
+        // on iOS 26, cropping the game and filling the rest with black.
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
