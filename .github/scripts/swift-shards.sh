@@ -11,14 +11,15 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-5   the long property, differential and mutation
+#   campaigns-1 .. campaigns-8   the long property, differential and mutation
 #                                campaigns, named below; Swift 6.4 only
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
 #                                GamePresentation tests, and whatever is added
 #                                later, which therefore always runs somewhere.
-#                                It also holds the campaigns left unnamed on
-#                                purpose to balance it (ServiceLine*, Kernel*)
+#                                Its campaigns are named too since Stage F3b
+#                                (it was the slowest shard once they ran on
+#                                the track network)
 #   light                        Swift 6.0: everything except the campaigns
 #                                ($LIGHT_SKIP); the minimum-toolchain job
 #   all                          everything, for a local full run
@@ -40,32 +41,44 @@ set -euo pipefail
 # of this table. Take each class's time from the slower of several runs: the
 # same class takes about 1.8 times as long on a slower runner (EconomyPropertyTests
 # 302 s on one, 513 s on another), and the slow runners are the ones that set
-# the wall time. Seconds on a slow runner (2026-10, runs 37087310644,
-# 37099689824, 37099911383), shard totals about 520 to 595 s:
-#   campaigns-1  EconomyPropertyTests 513, ContinuousTrackPropertyTests 66
-#   campaigns-2  BoardingPropertyTests 435, ServicePropertyTests 139
-#   campaigns-3  SaveMutationTests 406, VerticalRailwayPropertyTests 157
-#   campaigns-4  LineDispatchPropertyTests 356, LinePatternPropertyTests 182,
-#                PassengerPropertyTests 36, TimetablePropertyTests 21
-#   campaigns-5  NetworkServicePropertyTests 348, TrafficControlPropertyTests 200,
-#                NetworkSectionPropertyTests (Stage F3c, 52 s on a local run, not
-#                yet timed on a runner)
+# the wall time.
+#
+# Stage F3b moved the campaigns to the track network, which made several of
+# them slower, and five campaign shards no longer fitted the 20-minute job
+# limit (campaigns-2 was cancelled after 18 minutes of tests). Seconds on the
+# runner of run 37156617604 (2026-10-03), and, marked ~, estimated from a
+# local run at 0.81 times the local time (LinePatternPropertyTests: 427 s
+# there, 530 s locally):
+#   campaigns-1  EconomyPropertyTests 341, ContinuousTrackPropertyTests 34,
+#                PassengerPropertyTests 29, KernelDifferentialTests 105
+#   campaigns-2  BoardingPropertyTests ~510
+#   campaigns-3  SaveMutationTests 538
+#   campaigns-4  LinePatternPropertyTests 427
+#   campaigns-5  LineDispatchPropertyTests 409, TimetablePropertyTests 106
+#   campaigns-6  ServicePropertyTests ~285, VerticalRailwayPropertyTests 132,
+#                NetworkSectionPropertyTests ~42 (Stage F3c, 52 s locally)
+#   campaigns-7  ServiceRepeatingPropertyTests ~395, TrafficControlPropertyTests 98
+#   campaigns-8  NetworkServicePropertyTests 160, ServiceLinePropertyTests 322
+#   rest         GoldenScenarioTests 35, WorldStateMachineTests 31, and the
+#                rest, about 170 in all
+# so about 400 to 540 s a shard there, up to about 970 s on a slower runner.
 # Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
 # TrackResourcePropertyTests here, and the grid's position, movement, route
 # and topology campaigns from rest) with the grid's tests.
-#   rest         ServiceLinePropertyTests 402, KernelDifferentialTests 25, and
-#                about 95 for everything else
 classes_of() {
   case "$1" in
-    campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests" ;;
-    campaigns-2) echo "BoardingPropertyTests ServicePropertyTests" ;;
-    campaigns-3) echo "SaveMutationTests VerticalRailwayPropertyTests" ;;
-    campaigns-4) echo "LineDispatchPropertyTests LinePatternPropertyTests PassengerPropertyTests TimetablePropertyTests" ;;
-    campaigns-5) echo "NetworkServicePropertyTests TrafficControlPropertyTests NetworkSectionPropertyTests" ;;
+    campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
+    campaigns-2) echo "BoardingPropertyTests" ;;
+    campaigns-3) echo "SaveMutationTests" ;;
+    campaigns-4) echo "LinePatternPropertyTests" ;;
+    campaigns-5) echo "LineDispatchPropertyTests TimetablePropertyTests" ;;
+    campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
+    campaigns-7) echo "ServiceRepeatingPropertyTests TrafficControlPropertyTests" ;;
+    campaigns-8) echo "NetworkServicePropertyTests ServiceLinePropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 # The long-standing Swift 6.0 exclusion: the campaigns check logic, which does
 # not depend on the compiler, so only the current release runs them.
