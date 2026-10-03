@@ -587,7 +587,7 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 
 - **測試裡碰到 GameCore 方格型別的地方**：ContinuousTrackTests 與 VerticalRailwayTests 拒絕 `.tile`／`.link` 當路網的 ID、DisplayText 等對方格 case 的完整 switch、Golden 執行器的方格指令與摘要、`ReferenceWorld` 與其 extension 的方格模型、`PropertySupport` 的方格產生器與 `WorldInvariants` 的方格分支、KernelDifferentialTests 不再產生的方格 `Operation`：和 GameCore 的方格一起在 F3c-3c 刪（編譯器會找出每一處）。
 - **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的兩個舊地圖存檔測試）：F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」。
-- **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；另外處理（重新分 shard），不在這個 PR。
+- **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；已在 #86 改成八個 campaign shard（見 §7.4 末段），這裡只把刪掉的兩個方格 campaign 從 shard 拿掉。
 
 ## 驗證紀錄
 
