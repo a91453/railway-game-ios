@@ -141,7 +141,10 @@ private struct MapCanvas: View, Equatable {
     }
 
     var body: some View {
-        Canvas { context, _ in
+        let world = world, selectedTrainID = selectedTrainID, selection = selection
+        let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges
+        return Canvas { context, size in
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
             TileArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
