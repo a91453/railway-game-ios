@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="RailwayGameApp/Resources/Localizable.xcstrings" source-language="en" target-language="zh-Hant" datatype="plaintext">
+    <body>
+      <trans-unit id="Train &amp; station">
+        <source>Train &amp; station</source>
+        <target state="translated">列車與車站</target>
+      </trans-unit>
+      <trans-unit id="%lld trains">
+        <source>%lld trains</source>
+        <target>%lld 列車</target>
+      </trans-unit>
+    </body>
+  </file>
+  <file original="Resources/en.lproj/RailwayGame-InfoPlist.strings" source-language="en" target-language="zh-Hant" datatype="plaintext">
+    <body>
+      <trans-unit id="CFBundleDisplayName"><source>Railway Game</source></trans-unit>
+      <trans-unit id="CFBundleName"><source>RailwayGame</source></trans-unit>
+    </body>
+  </file>
+</xliff>
