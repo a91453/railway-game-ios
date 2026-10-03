@@ -16,10 +16,11 @@ import XCTest
 /// running curve in the time its timetable gives the run (Stage W2c,
 /// decision 40), or as fast as it can when that is too short.
 final class ServiceDwellTests: XCTestCase {
-    // a(0,1) to g(6,1), dead ends at both ends; Alpha(1,0) has platform b,
-    // Beta(3,0) d, Gamma(5,0) f.
-    private let b = GridPosition(x: 1, y: 1)
-    private let c = GridPosition(x: 2, y: 1)
+    // On the track network (Stage F3b): nodes a (512, 1536) to g (6656,
+    // 1536) a tile apart, edges 1 to 6 between them, dead ends at both
+    // ends; Alpha, Beta and Gamma at the centres of tiles (1, 0), (3, 0) and
+    // (5, 0), each with a platform either side of node b, d or f.
+    private let line = TestLine(tiles: 7)
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -30,16 +31,12 @@ final class ServiceDwellTests: XCTestCase {
         var world = try GameWorld(
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
-        try world.buildStation(named: "Gamma", at: GridPosition(x: 5, y: 0))
+        try line.build(in: &world)
+        try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try line.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
         let train = try world.purchaseTrain(named: "T1")
-        try world.placeTrain(train.id, at: .atNode(b, heading: .east))
+        try world.placeTrain(train.id, at: line.at(1, facingEast: true))
         return world
     }
 
@@ -240,7 +237,7 @@ final class ServiceDwellTests: XCTestCase {
         XCTAssertEqual(batch, single)
         XCTAssertEqual(batch.train(id: one)?.execution, .travellingToStop(1))
         XCTAssertEqual(batch.train(id: one)?.times, times(0, departure: 129, run: (129, 2048, 111)))
-        XCTAssertEqual(batch.train(id: one)?.position, .onLink(from: b, to: c, offset: runDistance(2048, in: 111, after: 51)))
+        XCTAssertEqual(batch.train(id: one)?.position, line.between(1, 2, offset: runDistance(2048, in: 111, after: 51)))
     }
 
     /// A save in the middle of a dwell, of the exchange or with the doors

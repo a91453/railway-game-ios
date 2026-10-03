@@ -21,18 +21,23 @@ import XCTest
 /// 24.79 for five (25 s). The fastest of these, 522 units/s (29 km/h)
 /// for eight links, is far below the 110 km/h top speed.
 final class ServiceLineTests: XCTestCase {
-    // The line of `TrainServiceTests`, dead ends at both ends:
+    // The line of `TrainServiceTests`, dead ends at both ends, on the track
+    // network (Stage F3b, see `TestLine`): a node at each tile centre, edges
+    // 1 to 6 of 1024 between them, and a platform either side of b, d and
+    // f. Delta's platform is the second half of edge 6, touching Gamma's
+    // past f at 512 (two stations cannot share a platform on the network);
+    // Far has none.
     //
     //   Alpha(1,0)  Beta(3,0)  Gamma(5,0)
     //       |           |          |
     //   a - b - c - d - e - f - g
     //                          |
     //                      Delta(5,2)        Far(7,3): no platform
-    private let b = GridPosition(x: 1, y: 1)
-    private let c = GridPosition(x: 2, y: 1)
-    private let d = GridPosition(x: 3, y: 1)
-    private let e = GridPosition(x: 4, y: 1)
-    private let f = GridPosition(x: 5, y: 1)
+    //
+    // A line plans its journey from the berth that makes the shortest round
+    // trip: the end of its first station's platform past the node going
+    // east, 512 on, so its first leg is 512 shorter than from node to node.
+    private let line = TestLine(tiles: 7)
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -44,16 +49,13 @@ final class ServiceLineTests: XCTestCase {
 
     private func makeLineWorld() throws -> GameWorld {
         var world = try GameWorld(width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for tile in [b, c, d, e, f] {
-            try world.buildTrack(at: tile, connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
-        try world.buildStation(named: "Gamma", at: GridPosition(x: 5, y: 0))
-        try world.buildStation(named: "Delta", at: GridPosition(x: 5, y: 2))
-        try world.buildStation(named: "Far", at: GridPosition(x: 7, y: 3))
+        try line.build(in: &world)
+        try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try line.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let delta = try world.buildStation(named: "Delta", at: TestLine.centre(5, 2)).id
+        try world.addTrackPlatform(delta, on: line.edge(6), from: 512, to: 1_024)
+        try world.buildStation(named: "Far", at: TestLine.centre(7, 3))
         return world
     }
 
@@ -212,53 +214,64 @@ final class ServiceLineTests: XCTestCase {
 
     // MARK: - Journeys
 
-    /// Alpha to Gamma by Beta and back, with the standard performance: each
-    /// leg is two links, 16 s; four legs (64 s), a minute at Beta each way
-    /// and two at each end (360 s) make 424 s, 8 minutes rounded up. Facing
-    /// north, east or south at b all drive it (only west, towards the dead
-    /// end, cannot); north comes first.
+    /// Alpha to Gamma by Beta and back, with the standard performance, from
+    /// the end of Alpha's platform past b (edge 2 forward, 512): the first
+    /// leg is 1536 units, √(2 × 1536 × 0.06) = 13.58, so 14 s, and the
+    /// others two links, 2048, 16 s; four legs (62 s), a minute at Beta each
+    /// way and two at each end (360 s) make 422 s, 8 minutes rounded up.
+    /// From b itself (edge 1 forward, 1024), the first berth along the
+    /// track, the round trip is 424 s; the shorter wins.
     func testALineRoundTripIsItsLegsAndItsDwells() throws {
         var world = try makeLineWorld()
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         let journey = try XCTUnwrap(world.lineJourney(first))
-        XCTAssertEqual(journey.start, .atNode(b, heading: .north))
-        XCTAssertEqual(gridLegs(journey), [
-            GridLeg(from: 0, to: 1, route: [c, d], seconds: 16),
-            GridLeg(from: 1, to: 2, route: [e, f], seconds: 16),
-            GridLeg(from: 2, to: 1, route: [e, d], seconds: 16),
-            GridLeg(from: 1, to: 0, route: [c, b], seconds: 16),
+        XCTAssertEqual(journey.start, .onEdge(TrackTraversal(edge: line.edge(2), direction: .forward), offset: 512))
+        XCTAssertEqual(networkLegs(journey), [
+            NetworkLeg(from: 0, to: 1, traversals: line.path(from: 2, through: [3]), distance: 1_536, seconds: 14),
+            NetworkLeg(from: 1, to: 2, traversals: line.path(from: 3, through: [4, 5]), distance: 2_048, seconds: 16),
+            // Turned round at Gamma it stands at f on edge 5 going back.
+            NetworkLeg(from: 2, to: 1, traversals: line.path(from: 4, through: [3]), distance: 2_048, seconds: 16),
+            NetworkLeg(from: 1, to: 0, traversals: line.path(from: 3, through: [2, 1]), distance: 2_048, seconds: 16),
         ])
-        XCTAssertEqual(journey.roundTripSeconds, 424)
+        XCTAssertEqual(journey.roundTripSeconds, 422)
         XCTAssertEqual(journey.roundTripMinutes, 8)
 
-        // Other performances, over the same 2048 units:
-        // - metro (3.96 and 4.68 km/h/s): 1/a + 1/b = 0.02622, √(4096 ×
-        //   0.02622) = 10.36 s, so 11 s a leg and 404 s, 7 minutes;
-        // - the forest railway (0.7 and 1.1): 0.13149, 23.21 s, so 24 s and
-        //   456 s, 8 minutes;
-        // - a top speed of 2 km/h (35⅑ units/s), which it reaches: 2048 ÷
-        //   35⅑ = 57.6 s cruising, plus 35⅑ × 0.06 ÷ 2 = 1.07 s lost speeding
-        //   up and slowing down, 58.67 s, so 59 s and 596 s, 10 minutes.
+        // Other performances, over the same 1536 and 2048 units:
+        // - metro (3.96 and 4.68 km/h/s): 1/a + 1/b = 0.02622, √(3072 ×
+        //   0.02622) = 8.98 s and √(4096 × 0.02622) = 10.36 s, so 9 and 11 s,
+        //   402 s, 7 minutes;
+        // - the forest railway (0.7 and 1.1): 0.13149, 20.10 and 23.21 s, so
+        //   21 and 24 s, 453 s, 8 minutes;
+        // - a top speed of 2 km/h (35⅑ units/s), which it reaches: 1536 ÷
+        //   35⅑ = 43.2 s and 2048 ÷ 35⅑ = 57.6 s cruising, plus 35⅑ × 0.06 ÷
+        //   2 = 1.07 s lost speeding up and slowing down, 44.27 and 58.67 s,
+        //   so 45 and 59 s, 582 s, 10 minutes.
         let crawl = TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 2)
-        for (performance, leg, roundTrip): (TrainPerformance, Int64, Int64) in [(.metro, 11, 7), (.forestRailway, 24, 8), (crawl, 59, 10)] {
+        for (performance, firstLeg, leg, roundTrip): (TrainPerformance, Int64, Int64, Int64) in [(.metro, 9, 11, 7), (.forestRailway, 21, 24, 8), (crawl, 45, 59, 10)] {
             try world.setLinePerformance(first, to: performance)
-            XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [leg, leg, leg, leg], "\(performance)")
+            XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [firstLeg, leg, leg, leg], "\(performance)")
             XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, roundTrip, "\(performance)")
         }
 
-        // Two stops: four links each way (23 s), and the two ends: 286 s,
-        // 5 minutes.
+        // Two stops: 3584 out (√430.08 = 20.74, 21 s) and four links back
+        // (4096, 23 s), and the two ends: 284 s, 5 minutes.
         try world.setLinePerformance(first, to: .standard)
         try world.setLineStops(first, to: [alpha, gamma])
-        XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [23, 23])
+        XCTAssertEqual(world.lineJourney(first)?.legs.map(\.seconds), [21, 23])
         XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 5)
-        // Stations sharing a platform: no travel, only the ends.
+        // Stations whose platforms touch: from the end of Gamma's platform
+        // past f (edge 6, 512), where Delta's begins, 512 to the end of
+        // Delta's (√61.44 = 7.84, 8 s), turned round there, 1024 back to f,
+        // Gamma's berth going back (√122.88 = 11.09, 12 s): 260 s, 5 minutes.
         try world.setLineStops(first, to: [gamma, delta])
         let shared = try XCTUnwrap(world.lineJourney(first))
-        XCTAssertEqual(gridLegs(shared), [GridLeg(from: 0, to: 1, route: [], seconds: 0), GridLeg(from: 1, to: 0, route: [], seconds: 0)])
-        XCTAssertEqual(shared.roundTripSeconds, 240)
-        XCTAssertEqual(shared.roundTripMinutes, 4)
-        XCTAssertEqual(shared.start, .atNode(f, heading: .north))
+        XCTAssertEqual(networkLegs(shared), [
+            NetworkLeg(from: 0, to: 1, traversals: [], distance: 512, seconds: 8),
+            NetworkLeg(from: 1, to: 0, traversals: [], distance: 1_024, seconds: 12),
+        ])
+        XCTAssertEqual(shared.roundTripSeconds, 260)
+        XCTAssertEqual(shared.roundTripMinutes, 5)
+        XCTAssertEqual(shared.start, .onEdge(TrackTraversal(edge: line.edge(6), direction: .forward), offset: 512))
     }
 
     /// A line whose journey cannot be driven has none, nor a maximum,
@@ -277,47 +290,44 @@ final class ServiceLineTests: XCTestCase {
 
         let main = LineID(rawValue: 2)
         XCTAssertNotNil(world.lineJourney(main))
-        try world.removeTrack(at: e)
+        // Edge 4, d to e, carries Beta's platform past d: that goes first.
+        try world.removeTrackPlatform(beta, on: line.edge(4), from: 0)
+        try world.removeTrackEdge(line.edge(4))
         XCTAssertNil(world.lineJourney(main), "Gamma is cut off")
-        try world.buildTrack(at: e, connections: [.east, .west])
+        // Rebuilt, it is a new edge (7) without the platform. Back from
+        // Gamma the train stops at Beta's other platform, 512 short of d
+        // (2560, √307.2 = 17.53, 18 s), and goes on 1536 to Alpha (14 s):
+        // 14 + 16 + 18 + 14 + 360 = 422 s, 8 minutes again.
+        try world.buildTrackEdge(from: line.node(3), to: line.node(4))
+        XCTAssertEqual(world.lineJourney(main)?.legs.map(\.seconds), [14, 16, 18, 14])
         XCTAssertEqual(world.lineJourney(main)?.roundTripMinutes, 8, "derived again from the map")
     }
 
     /// Of the starts that can drive the line, the shortest round trip wins,
-    /// even when an earlier start drives it the long way round.
+    /// even when an earlier start drives it the long way round. Alpha's
+    /// platforms are, in order along the track, the one on edge 1 (its
+    /// berths at b going east and 512 back from b going west) and the one on
+    /// edge 2 (512 past b going east, at b going west). Going west from
+    /// either platform the train meets a's dead end; going east, from b on
+    /// edge 1, the earlier start, the round trip is 424 s (four legs of
+    /// 2048, back to b on Alpha's second platform); from 512 past b, 422 s.
     func testTheShortestRoundTripIsChosen() throws {
-        // A ring, with A's platform (1,2) on its west side, running north
-        // and south, and B's platform (3,3) on its south-east corner:
-        //
-        //   (1,1)-(2,1)-(3,1)
-        //     |           |
-        //  A (1,2)      (3,2)
-        //     |           |
-        //   (1,3)-(2,3)-(3,3) B
-        var world = try GameWorld(width: 5, height: 5, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
-        let ring: [(Int, Int, TrackConnections)] = [
-            (1, 1, [.east, .south]), (2, 1, [.east, .west]), (3, 1, [.west, .south]), (3, 2, [.north, .south]),
-            (3, 3, [.north, .west]), (2, 3, [.east, .west]), (1, 3, [.east, .north]), (1, 2, [.north, .south]),
-        ]
-        for (x, y, connections) in ring {
-            try world.buildTrack(at: GridPosition(x: x, y: y), connections: connections)
-        }
-        try world.buildStation(named: "A", at: GridPosition(x: 0, y: 2))
-        try world.buildStation(named: "B", at: GridPosition(x: 4, y: 3))
-        try world.createLine(named: "Ring", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
-
-        // Facing north, the train must go round the top: five links out
-        // (25 s), three back (20 s; turned round at B it may leave west),
-        // 285 s. Facing east it may leave south: three links each way, 280
-        // s. Both are 5 minutes rounded up; the seconds decide.
+        var world = try makeLineWorld()
+        try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         let journey = try XCTUnwrap(world.lineJourney(first))
-        XCTAssertEqual(journey.start, .atNode(GridPosition(x: 1, y: 2), heading: .east))
-        XCTAssertEqual(gridLegs(journey), [
-            GridLeg(from: 0, to: 1, route: [GridPosition(x: 1, y: 3), GridPosition(x: 2, y: 3), GridPosition(x: 3, y: 3)], seconds: 20),
-            GridLeg(from: 1, to: 0, route: [GridPosition(x: 2, y: 3), GridPosition(x: 1, y: 3), GridPosition(x: 1, y: 2)], seconds: 20),
-        ])
-        XCTAssertEqual(journey.roundTripSeconds, 280)
-        XCTAssertEqual(journey.roundTripMinutes, 5)
+        XCTAssertEqual(journey.start, .onEdge(TrackTraversal(edge: line.edge(2), direction: .forward), offset: 512))
+        XCTAssertEqual(journey.roundTripSeconds, 422)
+
+        // Without the second platform only the first is left: from b, three
+        // legs of 2048 (16 s each), and back going west the train stops at
+        // the far end of that platform, 512 short of b, 2560 (√307.2 =
+        // 17.53, 18 s): 426 s.
+        try world.removeTrackPlatform(alpha, on: line.edge(2), from: 0)
+        let fromB = try XCTUnwrap(world.lineJourney(first))
+        XCTAssertEqual(fromB.start, line.at(1, facingEast: true))
+        XCTAssertEqual(fromB.legs.map(\.seconds), [16, 16, 16, 18])
+        XCTAssertEqual(fromB.legs.map(\.path.distance), [2_048, 2_048, 2_048, 2_560])
+        XCTAssertEqual(fromB.roundTripSeconds, 426)
     }
 
     // MARK: - Trains and headway
@@ -338,13 +348,14 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertNil(world.lineHeadway(first, at: .low), "no trains, no headway")
         XCTAssertEqual(world.line(id: first)?.trainsInService.peak, 10, "the count set is kept as it is")
 
-        // A round trip shorter than the minimum headway still allows one.
+        // A short round trip, 5 minutes (Gamma and Delta, see above), allows
+        // two trains, 3 minutes apart (5 ÷ 2 rounded up).
         try world.setLineStops(first, to: [gamma, delta])
-        XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 4)
+        XCTAssertEqual(world.lineJourney(first)?.roundTripMinutes, 5)
         XCTAssertEqual(world.lineMaximumTrains(first), 2)
         try world.setServiceDay(.standard)
-        XCTAssertEqual(world.lineHeadway(first, at: .peak), 2)
-        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 2)
+        XCTAssertEqual(world.lineHeadway(first, at: .peak), 3)
+        XCTAssertEqual(world.lineHeadway(first, at: .offPeak), 3)
 
         // Slower (a top speed of 2 km/h, see above): 10 minutes allow 5
         // trains; three are 4 minutes apart.
@@ -475,16 +486,17 @@ final class ServiceLineTests: XCTestCase {
     }
 }
 
-/// A leg of a journey on the grid as these tests read it (Stage S5 keeps the
-/// leg's path as a ``TrainPath``; on the grid its route is the tiles the
-/// links lead to).
-private struct GridLeg: Equatable {
+/// A leg of a journey on the track network as these tests read it: the
+/// calls it joins, the traversals it enters after the edge it starts on,
+/// how far it runs and in how many seconds.
+private struct NetworkLeg: Equatable {
     let from: Int
     let to: Int
-    let route: [GridPosition]
+    let traversals: [TrackTraversal]
+    let distance: Int64
     let seconds: Int64
 }
 
-private func gridLegs(_ journey: LineJourney) -> [GridLeg] {
-    journey.legs.map { GridLeg(from: $0.from, to: $0.to, route: $0.route, seconds: $0.seconds) }
+private func networkLegs(_ journey: LineJourney) -> [NetworkLeg] {
+    journey.legs.map { NetworkLeg(from: $0.from, to: $0.to, traversals: $0.path.traversals, distance: $0.path.distance, seconds: $0.seconds) }
 }

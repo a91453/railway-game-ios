@@ -6,7 +6,8 @@ import XCTest
 /// and the ledger, on the line of `BoardingTests`. Every expectation is
 /// worked out by hand from the reference's legacy formulas, in cents.
 final class EconomyAccountsTests: XCTestCase {
-    // Alpha(1,0) Beta(3,0) Gamma(5,0) on a(0,1)–g(6,1); line 1 calls at all
+    // Alpha(1,0) Beta(3,0) Gamma(5,0) on a(0,1)–g(6,1), on the track network
+    // (Stage F3b, see `TestLine`); line 1 calls at all
     // three, one train of one car. Each leg is 2 links (2048 world units,
     // 32 m), which the line's standard performance plans at 16 s (Stage
     // W2c: √(2 × 2048 × 0.06) = 15.7). A trip sent out at T leaves Alpha
@@ -15,6 +16,7 @@ final class EconomyAccountsTests: XCTestCase {
     // ends at T+6:28. The line's round trip is 424 s, planned as 8 minutes,
     // so trains leave at 0, 8, 16, 24, … A trip leaves four stops for
     // another (Alpha, Beta, Gamma, Beta) and ends at Alpha.
+    private let line = TestLine(tiles: 7)
     private let alpha = StationID(rawValue: 1)
     private let beta = StationID(rawValue: 2)
     private let gamma = StationID(rawValue: 3)
@@ -26,19 +28,15 @@ final class EconomyAccountsTests: XCTestCase {
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
-        try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-        try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
-        try world.buildStation(named: "Gamma", at: GridPosition(x: 5, y: 0))
+        try line.build(in: &world)
+        try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try line.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         try world.setLineServiceWindow(main, to: .allDay)
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "T1")
-        try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+        try world.placeTrain(train.id, at: line.at(1, facingEast: true))
         try world.setTrainMovementRate(train.id, to: 1024)
         try world.assignTrain(train.id, to: main)
         if managed {
@@ -114,8 +112,10 @@ final class EconomyAccountsTests: XCTestCase {
     /// at 56 (Alpha at 56:42, Beta at 57:58; Gamma at 60:14 is in the next
     /// hour): 30 departures, 30 × 2048 = 61440 world units. Operating
     /// round(75·30 + 42·61440/64000 + 18·3) = round(2344.32) = 2344;
-    /// maintenance round(12·4096/64000 + 9·61440/64000 + 8·1) =
-    /// round(17.408) = 17. Three passengers paid 5 each at Alpha at 0.
+    /// maintenance round(12·3584/64000 + 9·61440/64000 + 8·1) =
+    /// round(17.312) = 17 (the route is the line's planned journey out,
+    /// from its shortest berth: on the track network the end of Alpha's
+    /// platform past b, 512 on, so 3584, not the 4096 of the grid). Three passengers paid 5 each at Alpha at 0.
     func testAnHourIsSettledIntoOneRowAtTheTopOfTheNext() throws {
         var world = try makeWorld()
         try wait(&world, 3, at: alpha, for: beta)
@@ -144,8 +144,9 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.accounts.openedAt, GameTime(minutes: 60))
     }
 
-    /// The day's end: energy round(220·4096/64000 + 360·1) = round(374.08) =
-    /// 374 (route 14, trains 360); staff 620·3 + 480·1 = 2340. Written at
+    /// The day's end: energy round(220·3584/64000 + 360·1) = round(372.32) =
+    /// 372 (route 12, trains 360; the route is 3584 on the track network,
+    /// see above); staff 620·3 + 480·1 = 2340. Written at
     /// minute 1439, after the hour.
     func testADayEndsWithEnergyAndStaffAndTheBalanceMayGoBelowZero() throws {
         var world = try makeWorld()
@@ -154,8 +155,8 @@ final class EconomyAccountsTests: XCTestCase {
         let daily = world.accounts.entries.suffix(2)
         XCTAssertEqual(Array(daily), [
             LedgerEntry(
-                kind: .dailyEnergy, time: GameTime(minutes: 1_439), amount: -37_400,
-                breakdown: [LedgerLine(item: .routeEnergy, amount: -1_400), LedgerLine(item: .trainEnergy, amount: -36_000)]
+                kind: .dailyEnergy, time: GameTime(minutes: 1_439), amount: -37_200,
+                breakdown: [LedgerLine(item: .routeEnergy, amount: -1_200), LedgerLine(item: .trainEnergy, amount: -36_000)]
             ),
             LedgerEntry(
                 kind: .dailyStaff, time: GameTime(minutes: 1_439), amount: -234_000,
@@ -168,7 +169,7 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.accounts.days.map(\.day), [0], "the hour settled at midnight is the ended day's")
         let report = world.financeReport(.day)
         XCTAssertEqual(report.current.index, 1)
-        XCTAssertEqual(report.previous.energyCost, 37_400)
+        XCTAssertEqual(report.previous.energyCost, 37_200)
         XCTAssertEqual(report.previous.staffCost, 234_000)
     }
 
@@ -194,7 +195,7 @@ final class EconomyAccountsTests: XCTestCase {
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
         }
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         world.setEconomyMode(.management)
@@ -213,7 +214,7 @@ final class EconomyAccountsTests: XCTestCase {
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
         }
         try world.createLine(named: "Main", stops: [alpha, beta, alpha])
         try world.createLine(named: "Branch", stops: [beta, gamma])
@@ -232,7 +233,7 @@ final class EconomyAccountsTests: XCTestCase {
             width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
         }
         try world.createLine(named: "Main", stops: [alpha, beta, gamma])
         world.setEconomyMode(.management)

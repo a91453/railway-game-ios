@@ -18,7 +18,11 @@ import XCTest
 /// load. Before this was handled, the allocation after `Int.max - 1`
 /// trapped on overflow, after the cost had been charged.
 final class IDAllocationTests: XCTestCase {
-    private let free = GridPosition(x: 5, y: 5)
+    // Track on the network (Stage F3b, see `TestLine`): nodes at the
+    // centres of tiles (0, 1) to (2, 1), edges 1 and 2 between them.
+    // Stations stand at points (Stage F1).
+    private let line = TestLine(tiles: 3)
+    private let free = TestLine.centre(5, 5)
 
     private func encode(_ world: GameWorld) throws -> Data {
         let encoder = JSONEncoder()
@@ -40,11 +44,10 @@ final class IDAllocationTests: XCTestCase {
     /// saved with the given counters and loaded again.
     private func world(nextStationID: Int = 2, nextTrainID: Int = 2) throws -> GameWorld {
         var world = try makeWorld(balance: 10_000_000)
-        try world.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
-        try world.buildTrack(at: GridPosition(x: 2, y: 1), connections: [.east, .west])
-        try world.buildStation(named: "Yard", at: GridPosition(x: 3, y: 1))
+        try line.build(in: &world)
+        try world.buildStation(named: "Yard", at: TestLine.centre(3, 1))
         let train = try world.purchaseTrain(named: "Local")
-        try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+        try world.placeTrain(train.id, at: line.at(1, facingEast: true))
         world.setSpeed(.normal)
         var saved = try object(world)
         saved["nextStationID"] = nextStationID
@@ -59,9 +62,9 @@ final class IDAllocationTests: XCTestCase {
         XCTAssertEqual(try counters(world).station, 1)
         XCTAssertEqual(try counters(world).train, 1)
 
-        XCTAssertEqual(try world.buildStation(named: "A", at: GridPosition(x: 0, y: 0)).id.rawValue, 1)
+        XCTAssertEqual(try world.buildStation(named: "A", at: TestLine.centre(0, 0)).id.rawValue, 1)
         XCTAssertEqual(try world.purchaseTrain(named: "A").id.rawValue, 1)
-        XCTAssertEqual(try world.buildStation(named: "B", at: GridPosition(x: 1, y: 0)).id.rawValue, 2)
+        XCTAssertEqual(try world.buildStation(named: "B", at: TestLine.centre(1, 0)).id.rawValue, 2)
         XCTAssertEqual(try world.purchaseTrain(named: "B").id.rawValue, 2)
         XCTAssertEqual(try world.purchaseTrain(named: "C").id.rawValue, 3)
 
@@ -72,7 +75,7 @@ final class IDAllocationTests: XCTestCase {
     func testIDsNearTheEndAreHandedOutAsUsual() throws {
         var world = try world(nextStationID: .max - 6, nextTrainID: .max - 5)
         let stations = try (0..<3).map { index in
-            try world.buildStation(named: "S\(index)", at: GridPosition(x: index, y: 3)).id.rawValue
+            try world.buildStation(named: "S\(index)", at: TestLine.centre(index, 3)).id.rawValue
         }
         let trains = try (0..<3).map { index in try world.purchaseTrain(named: "T\(index)").id.rawValue }
 
@@ -95,7 +98,7 @@ final class IDAllocationTests: XCTestCase {
         XCTAssertEqual(world.trains.map(\.id), before.trains.map(\.id) + [train.id])
         XCTAssertEqual(station.id, StationID(rawValue: .max - 1))
         XCTAssertEqual(world.stations.map(\.id), before.stations.map(\.id) + [station.id])
-        XCTAssertEqual(world.map.tile(at: free)?.type, .station(id: station.id))
+        XCTAssertEqual(world.station(id: station.id)?.point, free)
         XCTAssertEqual(world.economy.balance, before.economy.balance - testCosts.train - testCosts.station)
         XCTAssertEqual(try counters(world).station, .max)
         XCTAssertEqual(try counters(world).train, .max)
@@ -104,8 +107,8 @@ final class IDAllocationTests: XCTestCase {
     // MARK: - Exhaustion
 
     /// The allocation after the last one is refused, every time, and the
-    /// world stays exactly as it was: no charge, no train, no station tile,
-    /// no counter change. It used to trap on overflow.
+    /// world stays exactly as it was: no charge, no train, no station, no
+    /// counter change. It used to trap on overflow.
     func testAfterTheLastIDBuildingAndBuyingAreRefusedAndChangeNothing() throws {
         var world = try world(nextStationID: .max - 1, nextTrainID: .max - 1)
         try world.purchaseTrain(named: "Last train")
@@ -115,7 +118,7 @@ final class IDAllocationTests: XCTestCase {
 
         for attempt in 1...3 {
             XCTAssertThrowsGameError(try world.purchaseTrain(named: "One too many"), .idsExhausted)
-            XCTAssertThrowsGameError(try world.buildStation(named: "One too many", at: GridPosition(x: 6, y: 6)), .idsExhausted)
+            XCTAssertThrowsGameError(try world.buildStation(named: "One too many", at: TestLine.centre(6, 6)), .idsExhausted)
             XCTAssertEqual(world, exhausted, "attempt \(attempt)")
             XCTAssertEqual(try encode(world), saved, "attempt \(attempt)")
         }
@@ -124,9 +127,10 @@ final class IDAllocationTests: XCTestCase {
         XCTAssertEqual(world.stations.map(\.id.rawValue), [1, .max - 1])
 
         // The rest of the world still works.
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: [.east])
+        let node = try world.buildTrackNode(at: WorldCoordinate(x: TestLine.centre(3, 1).x, y: TestLine.centre(3, 1).y))
+        let edge = try world.buildTrackEdge(from: line.node(2), to: node)
         try world.setTrainMovementRate(TrainID(rawValue: 1), to: 512)
-        try world.setTrainContinuation(TrainID(rawValue: 1), to: [GridPosition(x: 2, y: 1)])
+        try world.setTrainContinuation(TrainID(rawValue: 1), along: line.path(from: 1, through: [2]) + [TrackTraversal(edge: edge, direction: .forward)])
         try world.advance(ticks: 1)
         XCTAssertNotEqual(world.train(id: TrainID(rawValue: 1))?.position, exhausted.train(id: TrainID(rawValue: 1))?.position)
     }
@@ -143,17 +147,17 @@ final class IDAllocationTests: XCTestCase {
         XCTAssertEqual(try stationsExhausted.purchaseTrain(named: "Yes").id, TrainID(rawValue: 2))
     }
 
-    /// Rejections keep their order: a bad name or tile is reported first,
+    /// Rejections keep their order: a bad name or point is reported first,
     /// then running out of IDs, and only then the price, which is checked
-    /// last because paying is the first change a command makes.
+    /// last because paying is the first change a command makes. (A station
+    /// at a point takes no tile, so track under it refuses nothing.)
     func testExhaustionIsCheckedAfterTheInputsAndBeforeThePrice() throws {
         let world = try world(nextStationID: .max, nextTrainID: .max)
 
         var copy = world
         XCTAssertThrowsGameError(try copy.purchaseTrain(named: "  "), .invalidName)
         XCTAssertThrowsGameError(try copy.buildStation(named: "  ", at: free), .invalidName)
-        XCTAssertThrowsGameError(try copy.buildStation(named: "Off", at: GridPosition(x: -1, y: 0)), .outOfBounds(GridPosition(x: -1, y: 0)))
-        XCTAssertThrowsGameError(try copy.buildStation(named: "On track", at: GridPosition(x: 1, y: 1)), .tileOccupied(GridPosition(x: 1, y: 1)))
+        XCTAssertThrowsGameError(try copy.buildStation(named: "Off", at: PlanPoint(x: -1, y: 0)), .outOfBounds(GridPosition(x: -1, y: 0)))
         XCTAssertEqual(copy, world)
 
         // Without the money either, running out of IDs is what is reported.
@@ -221,15 +225,6 @@ final class IDAllocationTests: XCTestCase {
             entries[0]["id"] = Int.max
             saved[list] = entries
             saved[key] = Int.max
-            if list == "stations" {
-                // Keep the map agreeing with the station, so only the ID is wrong.
-                var map = try XCTUnwrap(saved["map"] as? [String: Any])
-                var tiles = try XCTUnwrap(map["occupied"] as? [[String: Any]])
-                let index = try XCTUnwrap(tiles.firstIndex { ($0["x"] as? Int, $0["y"] as? Int) == (3, 1) })
-                tiles[index]["tile"] = ["station": ["id": Int.max]]
-                map["occupied"] = tiles
-                saved["map"] = map
-            }
             assertDataCorrupted(try JSONSerialization.data(withJSONObject: saved), "\(list) ID Int.max")
         }
 

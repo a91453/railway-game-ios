@@ -59,7 +59,7 @@ final class NetworkServiceTests: XCTestCase {
             try world.buildTrackEdge(from: nodes[index], to: nodes[index + 1])
         }
         for (index, name) in ["West", "Mid", "East", "Terminus"].enumerated() {
-            try world.buildStation(named: name, at: GridPosition(x: index + 1, y: 6))
+            try world.buildStation(named: name, at: TestLine.centre(index + 1, 6))
         }
         try world.addTrackPlatform(west, on: e1, from: 1_024, to: 5_120)
         try world.addTrackPlatform(mid, on: e2, from: 3_000, to: 5_048)
@@ -127,7 +127,7 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertNil(world.path(from: .onEdge(forward(e1), offset: 6_000), toStation: west))
         // No platform on the network, no station, off the network.
         var bare = world
-        try bare.buildStation(named: "Bare", at: GridPosition(x: 9, y: 6))
+        try bare.buildStation(named: "Bare", at: TestLine.centre(9, 6))
         XCTAssertNil(bare.path(from: .onEdge(forward(e1), offset: 0), toStation: StationID(rawValue: 5)))
         XCTAssertNil(world.path(from: .onEdge(forward(e1), offset: 0), toStation: StationID(rawValue: 9)))
         XCTAssertNil(world.path(from: .onEdge(forward(e1), offset: 8_193), toStation: mid))
@@ -169,7 +169,7 @@ final class NetworkServiceTests: XCTestCase {
             try world.buildTrackEdge(from: y, to: northFirst ? south : north)
             XCTAssertEqual(world.trackEdge(e2)?.length, 8_202)
             XCTAssertEqual(world.trackEdge(e3)?.length, 8_202)
-            let fork = try world.buildStation(named: "Fork", at: GridPosition(x: 1, y: 7)).id
+            let fork = try world.buildStation(named: "Fork", at: TestLine.centre(1, 7)).id
             try world.addTrackPlatform(fork, on: e3, from: 4_000, to: 6_048)
             try world.addTrackPlatform(fork, on: e2, from: 4_000, to: 6_048)
             XCTAssertEqual(
@@ -509,8 +509,8 @@ final class NetworkServiceTests: XCTestCase {
         try world.buildTrackEdge(from: n2, to: n3, curve: .cubic(PlanPoint(x: 14_336, y: 4_096), PlanPoint(x: 16_384, y: 6_144)))
         try world.buildTrackEdge(from: n3, to: n4, structure: .tunnel)
         try world.buildTrackEdge(from: n4, to: n5, curve: .cubic(PlanPoint(x: 16_384, y: 43_008), PlanPoint(x: 14_336, y: 45_056)), structure: .tunnel)
-        try world.buildStation(named: "Harbour", at: GridPosition(x: 1, y: 60))
-        try world.buildStation(named: "Deep", at: GridPosition(x: 2, y: 60))
+        try world.buildStation(named: "Harbour", at: TestLine.centre(1, 60))
+        try world.buildStation(named: "Deep", at: TestLine.centre(2, 60))
         try world.addTrackPlatform(harbour, on: e1, from: 2_048, to: 6_144)
         try world.addTrackPlatform(deep, on: e4, from: 1_024, to: 4_096)
         return world
@@ -619,7 +619,7 @@ final class NetworkServiceTests: XCTestCase {
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024, z: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 1_024, z: 512))
         try world.buildTrackEdge(from: a, to: b, structure: .elevated)
-        let high = try world.buildStation(named: "High", at: GridPosition(x: 1, y: 3)).id
+        let high = try world.buildStation(named: "High", at: TestLine.centre(1, 3)).id
         try world.addTrackPlatform(high, on: e1, from: 2_048, to: 6_144)
         XCTAssertEqual(world.railwaySnapshot().platforms.map(\.height), [512])
 
