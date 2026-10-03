@@ -161,19 +161,16 @@ final class TimetableEditingTests: XCTestCase {
 private let alpha = StationID(rawValue: 1)
 private let beta = StationID(rawValue: 2)
 
-/// Track (0,1)–(4,1), Alpha (1,0) and Beta (3,0) beside it, train T1
-/// standing at Alpha.
+/// A line of the track network from (0,1) to (4,1) (see `TestLine`),
+/// Alpha (1,0) and Beta (3,0) beside it, train T1 standing at Alpha.
 private func makeLine() throws -> GameWorld {
     var world = try makeWorld(width: 6, height: 3, balance: 100_000)
-    try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-    for x in 1...3 {
-        try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-    }
-    try world.buildTrack(at: GridPosition(x: 4, y: 1), connections: .west)
-    try world.buildStation(named: "Alpha", at: GridPosition(x: 1, y: 0))
-    try world.buildStation(named: "Beta", at: GridPosition(x: 3, y: 0))
+    let line = TestLine(tiles: 5, row: 1)
+    try line.build(in: &world)
+    try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+    try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
     let train = try world.purchaseTrain(named: "T1")
-    try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+    try world.placeTrain(train.id, at: line.at(1, facingEast: true))
     return world
 }
 

@@ -234,11 +234,9 @@ extension GameWorld {
 
 extension GameSession {
     /// The selected station, read from the world: the one picked
-    /// (``selectedStationID``), or else the station that takes the selected
-    /// tile, also when it was built or grew there after the tile was
-    /// selected.
+    /// (``selectedStationID``).
     public var selectedStation: Station? {
-        selectedStationID.flatMap { world.station(id: $0) } ?? selection.flatMap { world.station(at: $0) }
+        selectedStationID.flatMap { world.station(id: $0) }
     }
 
     /// Whether the player may change stations' ridership: only in free

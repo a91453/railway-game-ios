@@ -43,14 +43,13 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     /// The game menu: save, export, back to the start screen.
     case gameMenu = "hud.menu"
 
-    /// The tool picker's button for `tool`; `nil` for the grid's tools,
-    /// which the app does not offer (``ConstructionTool/networkTools``).
+    /// The tool picker's button for `tool`. Optional because the grid's
+    /// tools had none until Stage F3c removed them; every tool has one now.
     public init?(tool: ConstructionTool) {
         switch tool {
         case .select: self = .selectTool
         case .network: self = .networkTool
         case .train: self = .trainTool
-        case .buildTrack, .buildStation, .removeTrack: return nil
         }
     }
 }

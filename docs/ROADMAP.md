@@ -553,6 +553,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - **F3b — 測試搬到路網**（GameCore 不動）：只把方格當布景的單元測試搬到路網 ✅（F3b-1，預期值的變化與暫時沒改的地方見 [F3_GRID_INVENTORY §7](research/F3_GRID_INVENTORY.md#7-f3b-進度)）；路網的世界產生器、campaign 與存檔變異 campaign ✅（F3b-2，新的 digest 與改了的量下限在 §7.3）；方格本身是主題的 campaign 留到 F3c。移植參考的 desync 重播：五份 [`ReplayFixtures/`](../ReplayFixtures/README.md)，F3c 必須原樣重播 ✅（F3b-3）。
   - **F3c — 刪掉方格**：GameCore、GamePresentation 與 App 的方格程式，golden schema 28，`Web/WasmProbe`。
     - **F3c-1 — 方格才有的查詢先有路網版** ✅：區段（`networkSections()`，移植參考 `topology.js` 的 `trackGroups`）與單雙線（`parallelTracks` 也數路網）；線路面板的單雙線在路網世界不再一律是「方格上沒有軌道」。細節與暫時沒有改的地方見 [F3_GRID_INVENTORY §8](research/F3_GRID_INVENTORY.md#8-f3c-進度)。
+    - **F3c-2 — GamePresentation 與 App 不再用方格** ✅：方格工具、方格選取與文字、方格繪圖與「選取北邊的格子」的 VoiceOver 動作拿掉；放置方向改成 GamePresentation 自己的 `CompassHeading`；列車只放在、只送到車站。GameCore 不動。
 
 ## Stage E — 大地圖與實景模式
 

@@ -10,7 +10,7 @@ import Observation
 /// own copy of game state.
 ///
 /// Besides the world, the session keeps only transient UI state: the selected
-/// tile and station, the active tool, the track piece being placed, the draft station name,
+/// tile and station, the active tool, the drafts of the network tool, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
 /// stops picked for a new line, the copied station demand, the tutorial on
 /// screen, and the last action's message, written in ``language``. Anything shown about the game,
@@ -34,7 +34,9 @@ public final class GameSession {
     /// restarts an app whose language changes.
     public let language: DisplayLanguage
 
-    /// The tile the player last selected. Always inside the map when set.
+    /// The tile under the player's last tap, or under the station they
+    /// picked: where on the map the selection is. Always inside the map
+    /// when set. Only land: the railway is on the track network.
     public private(set) var selection: GridPosition?
 
     /// The station the player last picked (Stage F1): an ID only, never a
@@ -44,28 +46,12 @@ public final class GameSession {
     /// (``selectStation(_:)``), not by the tile alone.
     public private(set) var selectedStationID: StationID?
 
-    /// What the action button does to the selected tile.
+    /// What the action button does.
     public private(set) var tool: ConstructionTool = .select
-
-    /// The directions the next track piece connects. May be empty while the
-    /// player edits it; GameCore rejects building an empty piece.
-    public private(set) var trackConnections: TrackConnections = TrackPiece.straight.connections
-
-    /// Whether the next track piece is plain, a turnout or a level crossing
-    /// (Stage C2).
-    public private(set) var trackPieceKind: TrackPieceKind = .plain
-
-    /// The exit of the next turnout that joins every other one. Always one
-    /// of ``trackConnections`` while the kind is a turnout and it has any.
-    public private(set) var turnoutStem: TrackDirection = .west
 
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
-
-    /// Whether the station tool grows the station beside the selected tile
-    /// onto it, rather than building a new station there.
-    public var growsStation = false
 
     /// The train the train tool acts on: an ID only, never a copy of the
     /// train. Read the train itself through ``selectedTrain``.
@@ -76,9 +62,10 @@ public final class GameSession {
     /// command selects a station or a tile instead.
     public private(set) var tappedTrainID: TrainID?
 
-    /// The heading the selected train gets when it is placed. Only used by
+    /// The way the selected train faces when it is placed: along its
+    /// platform, the way nearer this compass point. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
-    public private(set) var placementHeading: TrackDirection = .east
+    public private(set) var placementHeading: CompassHeading = .east
 
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another tile or tool.
@@ -155,17 +142,6 @@ public final class GameSession {
 
     // MARK: - Selection
 
-    /// The land of the selected tile, read from the world.
-    public var selectedTile: MapTile? {
-        selection.flatMap { world.map.tile(at: $0) }
-    }
-
-    /// The grid track on the selected tile, read from the world's railway
-    /// network (Stage S3A: track is not on the map).
-    public var selectedTrack: Track? {
-        selection.flatMap { world.track(at: $0) }
-    }
-
     /// Selects the tile at `position` and the station on it (see
     /// ``station(onTile:)``); positions outside the map are ignored.
     public func select(_ position: GridPosition) {
@@ -179,20 +155,20 @@ public final class GameSession {
     }
 
     /// A tap on the map at `point` with the select or train tool (Stage
-    /// F1), reaching `reach` world units: selects the station that takes
-    /// the tile under the point or whose mark is within half the reach;
-    /// or else the train drawn nearest within reach
-    /// (`GameWorld.train(near:within:)`, see ``tapTrain(_:)``); or else
-    /// the nearest station within reach (`GameWorld.station(near:within:)`),
-    /// or one at a point inside that tile (see ``station(onTile:)``), and
-    /// the tile. A station right under the finger wins over a train beside
-    /// it, so a station's mark always selects it. Taps off the map are
-    /// ignored. Never changes the world.
+    /// F1), reaching `reach` world units: selects the station whose mark
+    /// is within half the reach; or else the train drawn nearest within
+    /// reach (`GameWorld.train(near:within:)`, see ``tapTrain(_:)``); or
+    /// else the nearest station within reach
+    /// (`GameWorld.station(near:within:)`), or one at a point inside the
+    /// tile under the point (see ``station(onTile:)``), and the tile. A
+    /// station right under the finger wins over a train beside it, so a
+    /// station's mark always selects it. Taps off the map are ignored.
+    /// Never changes the world.
     public func tapMap(at point: PlanPoint, reach: Int64) {
         let size = WorldCoordinate.tileSize
         guard point.x >= 0, point.y >= 0, point.x < Int64(world.map.width) * size, point.y < Int64(world.map.height) * size else { return }
         let tile = GridPosition(x: Int(point.x / size), y: Int(point.y / size))
-        var station = (world.station(at: tile) ?? world.station(near: point, within: reach / 2))?.id
+        var station = world.station(near: point, within: reach / 2)?.id
         if station == nil, let train = world.train(near: point, within: reach) {
             tapTrain(train)
             return
@@ -220,9 +196,8 @@ public final class GameSession {
         message = nil
     }
 
-    /// Selects station `id` and the tile it stands on: its first tile, or
-    /// the tile under its point. Never changes the world; an ID the world
-    /// does not have is ignored.
+    /// Selects station `id` and the tile under its point. Never changes
+    /// the world; an ID the world does not have is ignored.
     public func selectStation(_ id: StationID) {
         guard let station = world.station(id: id), id != selectedStationID || station.position != selection || tappedTrainID != nil else { return }
         selection = station.position
@@ -238,28 +213,10 @@ public final class GameSession {
         message = nil
     }
 
-    /// The station on the tile at `position`: the station that takes the
-    /// tile, or else the first, in ID order, of the stations at a point
-    /// inside it.
+    /// The station on the tile at `position`: the first, in ID order, of
+    /// the stations at a point inside it.
     func station(onTile position: GridPosition) -> Station? {
-        world.station(at: position) ?? world.stations.first { $0.tiles.isEmpty && $0.position == position }
-    }
-
-    /// Moves the selection one tile toward `direction`, staying inside the map.
-    /// Selects the north-west corner if nothing is selected yet.
-    public func moveSelection(_ direction: TrackDirection) {
-        guard let current = selection else {
-            select(GridPosition(x: 0, y: 0))
-            return
-        }
-        var next = current
-        switch direction {
-        case .north: next.y -= 1
-        case .east: next.x += 1
-        case .south: next.y += 1
-        case .west: next.x -= 1
-        }
-        select(next)
+        world.stations.first { $0.position == position }
     }
 
     // MARK: - Tools
@@ -269,88 +226,6 @@ public final class GameSession {
         guard newTool != tool else { return }
         tool = newTool
         message = nil
-    }
-
-    /// Adds or removes one direction of the next track piece. A crossing
-    /// has all four, so changing one makes the piece plain.
-    public func toggleTrackDirection(_ direction: TrackDirection) {
-        trackConnections.formSymmetricDifference(TrackConnections(direction))
-        if trackPieceKind == .crossing {
-            trackPieceKind = .plain
-        }
-        keepTurnoutStem()
-    }
-
-    /// Starts the next piece from `piece`. Only the four-way piece can be a
-    /// crossing, and a turnout needs three exits or more, so otherwise the
-    /// piece becomes plain.
-    public func selectTrackPiece(_ piece: TrackPiece) {
-        trackConnections = piece.connections
-        if (trackPieceKind == .crossing && piece != .fourWay) || (trackPieceKind == .turnout && piece.connections.directions.count < 3) {
-            trackPieceKind = .plain
-        }
-        keepTurnoutStem()
-    }
-
-    /// Turns the next track piece, and a turnout's stem, a quarter turn
-    /// clockwise.
-    public func rotateTrackPiece() {
-        trackConnections = trackConnections.rotatedClockwise
-        turnoutStem = turnoutStem.clockwise
-    }
-
-    /// Makes the next piece plain, a turnout or a level crossing (Stage
-    /// C2). A turnout of fewer than three exits starts as a T-junction, and
-    /// a crossing has all four.
-    public func setTrackPieceKind(_ kind: TrackPieceKind) {
-        trackPieceKind = kind
-        switch kind {
-        case .plain: break
-        case .turnout:
-            if trackConnections.directions.count < 3 {
-                trackConnections = TrackPiece.junction.connections
-            }
-            keepTurnoutStem()
-        case .crossing:
-            trackConnections = TrackPiece.fourWay.connections
-        }
-    }
-
-    /// The next piece's kind as the track tool's menu shows it: "Plain",
-    /// "Turnout · stem W" or "Crossing"; "道岔 · 共用端 西".
-    public var trackPieceKindText: String {
-        switch trackPieceKind {
-        case .plain, .crossing:
-            return trackPieceKind.title(in: language)
-        case .turnout:
-            let stem = turnoutStem.abbreviation(in: language)
-            return language.text("Turnout · stem \(stem)", "道岔 · 共用端 \(stem)")
-        }
-    }
-
-    /// The layout the next piece gets: what the preview draws.
-    public var trackPieceLayout: TrackLayout {
-        switch trackPieceKind {
-        case .plain: .open
-        case .turnout: .turnout(stem: turnoutStem)
-        case .crossing: .crossing
-        }
-    }
-
-    /// Makes `stem` the next turnout's stem, if the piece has that exit.
-    public func setTurnoutStem(_ stem: TrackDirection) {
-        guard trackConnections.contains(TrackConnections(stem)) else { return }
-        turnoutStem = stem
-    }
-
-    /// Keeps the turnout's stem among the piece's exits: the first exit,
-    /// west, north, east then south, that a straight track runs through,
-    /// or else the first exit.
-    private func keepTurnoutStem() {
-        guard !trackConnections.contains(TrackConnections(turnoutStem)) else { return }
-        let order: [TrackDirection] = [.west, .north, .east, .south]
-        let exits = order.filter { trackConnections.contains(TrackConnections($0)) }
-        turnoutStem = exits.first { trackConnections.contains(TrackConnections($0.opposite)) } ?? exits.first ?? turnoutStem
     }
 
     // MARK: - Speed
@@ -517,7 +392,7 @@ public final class GameSession {
     }
 
     /// Chooses the heading for the next placement. Never changes the world.
-    public func setPlacementHeading(_ heading: TrackDirection) {
+    public func setPlacementHeading(_ heading: CompassHeading) {
         placementHeading = heading
     }
 
@@ -538,41 +413,20 @@ public final class GameSession {
 
     /// Puts the selected train on a platform of the selected station on
     /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
-    ///
-    /// Without such a station, on the grid (the compatibility layer, Stage
-    /// F1), it goes at the centre of the selected tile, facing
-    /// ``placementHeading``, through `GameWorld.placeTrain(_:at:)`. GameCore
-    /// decides whether the tile can take it.
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        guard let tile = selection else {
+        guard let station = selectedStation else {
             message = StatusMessage(kind: .failure, text: language.text("Select a station to place \(train.name) at.", "請選擇要放置 \(train.name) 的車站。"))
             return
         }
-        // Stage C1: a station with platforms on the track network takes
-        // the train at one of them.
-        if let station = selectedStation {
-            if !world.trackPlatforms(of: station.id).isEmpty {
-                place(train, atPlatformOf: station)
-                return
-            }
-            // Stage F1: a station at a point has no tile to stand on.
-            if station.tiles.isEmpty {
-                message = StatusMessage(kind: .failure, text: language.text(
-                    "\(station.name) has no platform yet. Add one with the network tool.",
-                    "\(station.name) 還沒有月台。請用路網工具加上月台。"
-                ))
-                return
-            }
+        guard !world.trackPlatforms(of: station.id).isEmpty else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "\(station.name) has no platform yet. Add one with the network tool.",
+                "\(station.name) 還沒有月台。請用路網工具加上月台。"
+            ))
+            return
         }
-        let heading = placementHeading
-        perform { world throws(GameError) in
-            try world.placeTrain(train.id, at: .atNode(tile, heading: heading))
-            return language.text(
-                "Placed \(train.name) at \(tile), facing \(heading.name(in: language).lowercased()).",
-                "已將 \(train.name) 放在 \(tile)，面向\(heading.name(in: language))。"
-            )
-        }
+        place(train, atPlatformOf: station)
     }
 
     /// Sets how many cars the selected train has through
@@ -603,100 +457,25 @@ public final class GameSession {
         }
     }
 
-    /// Sends the selected train to the selected station, or to the
-    /// selected tile.
+    /// Sends the selected train to the selected station: to where it stops
+    /// at one of the station's platforms on the track network that it
+    /// fits, along `GameWorld.path(from:toStation:length:)`, committed
+    /// unchanged with `GameWorld.setTrainContinuation(_:along:stoppingAt:)`
+    /// (Stage S5). Both run against the same world within this one call,
+    /// with nothing in between, so the path can never be stale. The session
+    /// never finds or edits a path itself.
     ///
-    /// Asks GameCore for the route from where the train is now
-    /// (`GameWorld.route(from:to:)` for a track tile, or
-    /// `GameWorld.route(from:toStation:length:)` for a station tile, which
-    /// reaches the nearest of the station's platforms and pulls a train of
-    /// several cars along them) and commits exactly that route
-    /// with `GameWorld.setTrainContinuation(_:to:)`. Both run against the same
-    /// world within this one call, with nothing in between, so the route can
-    /// never be stale or reach another train. The session never finds or
-    /// edits a path itself.
-    ///
-    /// A train on the track network (Stage S5) goes only to a station: to
-    /// where it stops at one of the station's platforms on the network that
-    /// it fits, along `GameWorld.path(from:toStation:length:)`, committed
-    /// unchanged with `GameWorld.setTrainContinuation(_:along:stoppingAt:)`.
-    ///
-    /// Without a route (the tile is neither track nor a station with track
-    /// beside it, or the train cannot get there without turning straight
-    /// back) nothing changes, and the train keeps the continuation it had.
+    /// Without a path (no platform as long as the train that it can reach
+    /// without turning back) nothing changes, and the train keeps the path
+    /// it had.
     public func sendSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        guard let destination = selection else {
+        guard let station = selectedStation else {
             message = StatusMessage(kind: .failure, text: language.text("Select the station to send \(train.name) to.", "請選擇 \(train.name) 要前往的車站。"))
             return
         }
         guard let position = train.position else {
             message = StatusMessage(kind: .failure, text: GameError.trainNotPlaced(train.id).playerMessage(in: language))
-            return
-        }
-        // A station is not track: the train goes to one of its platforms.
-        let station = selectedStation
-        if case .onEdge = position {
-            send(train, from: position, to: station, at: destination)
-            return
-        }
-        let found: [GridPosition]?
-        if let station {
-            found = world.route(from: position, toStation: station.id, length: train.length)
-        } else {
-            found = world.route(from: position, to: destination)
-        }
-        guard let route = found else {
-            let target = station?.name ?? "\(destination)"
-            let text = station == nil
-                ? language.text(
-                    "No route for \(train.name) to \(target): it must be track the train can reach without turning back. Its path is unchanged.",
-                    "\(train.name) 沒有路可以到 \(target)：目的地必須是列車不折返就能到達的軌道。路徑沒有改變。"
-                )
-                : language.text(
-                    "No route for \(train.name) to \(target): it needs track beside the station that the train can reach without turning back. Its path is unchanged.",
-                    "\(train.name) 沒有路可以到 \(target)：車站旁要有列車不折返就能到達的軌道。路徑沒有改變。"
-                )
-            message = StatusMessage(kind: .failure, text: text)
-            return
-        }
-        // The route starts after this node: the one the train stands on, or
-        // the far end of its link.
-        let start: GridPosition
-        switch position {
-        case .atNode(let tile, _): start = tile
-        case .onLink(_, let to, _): start = to
-        // A train on the track network was sent above.
-        case .onEdge: return
-        }
-        // For a station, name it and the platform the route ends at.
-        let target = station.map { language.text("\($0.name), platform \(route.last ?? start)", "\($0.name) 的月台 \(route.last ?? start)") }
-            ?? "\(destination)"
-        perform { world throws(GameError) in
-            try world.setTrainContinuation(train.id, to: route)
-            let sent: String
-            switch language {
-            case .english:
-                let links = route.count == 1 ? "1 link" : "\(route.count) links"
-                sent = route.isEmpty ? "\(train.name) stops at \(target)." : "Sent \(train.name) to \(target), \(links) from \(start)."
-            case .traditionalChinese:
-                sent = route.isEmpty ? "\(train.name) 停在 \(target)。" : "已派 \(train.name) 前往 \(target)，從 \(start) 起 \(route.count) 段連結。"
-            }
-            return train.movement.rate == 0 ? sent + language.text(" Set a rate to start.", "設定速率後出發。") : sent
-        }
-    }
-
-    /// ``sendSelectedTrain()`` for `train` at `position` on the track
-    /// network: to `station`, the station at `destination` if there is one.
-    private func send(_ train: Train, from position: TrainPosition, to station: Station?, at destination: GridPosition) {
-        guard let station else {
-            message = StatusMessage(
-                kind: .failure,
-                text: language.text(
-                    "No route for \(train.name) to \(destination): a train on the track network goes only to a station. Its path is unchanged.",
-                    "\(train.name) 沒有路可以到 \(destination)：路網上的列車只能前往車站。路徑沒有改變。"
-                )
-            )
             return
         }
         guard let path = world.path(from: position, toStation: station.id, length: train.length) else {
@@ -993,86 +772,26 @@ public final class GameSession {
 
     // MARK: - Actions
 
-    /// Applies the current tool to the selected tile through the matching
+    /// Applies the current tool to the selection through the matching
     /// `GameWorld` command, and reports the outcome in ``message``.
     ///
     /// The session does not pre-check game rules: GameCore decides whether an
     /// action is allowed, and a rejected action leaves the world unchanged.
-    /// Does nothing without a selection or in ``ConstructionTool/select`` mode.
+    /// Does nothing without a selection, in ``ConstructionTool/select``
+    /// mode, or with the network tool, which acts on what its taps picked.
     public func applyTool() {
-        guard let position = selection else { return }
+        guard selection != nil else { return }
         switch tool {
-        case .select:
-            return
-        case .buildTrack:
-            perform { world throws(GameError) in
-                switch trackPieceKind {
-                case .plain:
-                    let track = try world.buildTrack(at: position, connections: trackConnections)
-                    let shape = track.connections.shapeName(in: language)
-                    return language.text("Built \(shape.lowercased()) track at \(position).", "已在 \(position) 鋪設\(shape)軌道。")
-                case .turnout:
-                    let track = try world.buildTurnout(at: position, connections: trackConnections, stem: turnoutStem)
-                    let exits = track.connections.abbreviation(in: language)
-                    let stem = turnoutStem.abbreviation(in: language)
-                    return language.text(
-                        "Built a turnout at \(position): \(exits), stem \(stem).",
-                        "已在 \(position) 鋪設道岔：\(exits)，共用端 \(stem)。"
-                    )
-                case .crossing:
-                    try world.buildCrossing(at: position)
-                    return language.text("Built a level crossing at \(position).", "已在 \(position) 鋪設平面交叉。")
-                }
-            }
-        case .buildStation where growsStation:
-            growStation(onto: position)
-        case .buildStation:
-            let built = perform { world throws(GameError) in
-                // The world allocates the station's ID; a managed company's
-                // city gives it ridership, all or nothing.
-                var draft = world
-                let station = try draft.buildStation(named: stationName, at: position)
-                if draft.accounts.mode == .management {
-                    try draft.setStationDemand(station.id, to: .cityDefault)
-                }
-                world = draft
-                return language.text("Built station “\(station.name)” at \(position).", "已在 \(position) 建造車站「\(station.name)」。")
-            }
-            if built {
-                stationName = Self.suggestedStationName(for: world, in: language)
-            }
-        case .removeTrack:
-            perform { world throws(GameError) in
-                try world.removeTrack(at: position)
-                return language.text("Removed track at \(position).", "已拆除 \(position) 的軌道。")
-            }
-        case .network:
-            // The network tool acts on what its taps picked, not on the tile.
+        case .select, .network:
             return
         case .train:
-            // The selected tile is where an unplaced train goes, or where a
-            // placed one is sent.
+            // The selected station is where an unplaced train goes, or
+            // where a placed one is sent.
             if selectedTrain?.position == nil {
                 placeSelectedTrain()
             } else {
                 sendSelectedTrain()
             }
-        }
-    }
-
-    /// Grows the first station, in ID order, with a tile beside `position`
-    /// onto it through `GameWorld.extendStation(_:to:)`.
-    private func growStation(onto position: GridPosition) {
-        let beside = world.stations.filter { station in
-            station.tiles.contains { abs($0.x - position.x) + abs($0.y - position.y) == 1 }
-        }
-        guard let station = beside.min(by: { $0.id < $1.id }) else {
-            message = StatusMessage(kind: .failure, text: language.text("There is no station beside \(position) to grow.", "\(position) 旁邊沒有可擴建的車站。"))
-            return
-        }
-        perform { world throws(GameError) in
-            try world.extendStation(station.id, to: position)
-            return language.text("“\(station.name)” now covers \(station.tiles.count + 1) tiles.", "「\(station.name)」現在佔 \(station.tiles.count + 1) 格。")
         }
     }
 

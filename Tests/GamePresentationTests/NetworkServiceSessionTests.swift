@@ -35,10 +35,11 @@ final class NetworkServiceSessionTests: XCTestCase {
         let c = try world.buildTrackNode(at: WorldCoordinate(x: 15_360, y: 3_072))
         try world.buildTrackEdge(from: a, to: b)
         try world.buildTrackEdge(from: b, to: c)
-        try world.buildStation(named: "West", at: Self.westTile)
-        try world.buildStation(named: "East", at: Self.eastTile)
-        let halt = try world.buildStation(named: "Halt", at: Self.haltTile)
-        try world.buildStation(named: "Depot", at: Self.depotTile)
+        // At the centres of their tiles (Stage F3c: no station takes one).
+        try world.buildStation(named: "West", at: TestLine.centre(Self.westTile.x, Self.westTile.y))
+        try world.buildStation(named: "East", at: TestLine.centre(Self.eastTile.x, Self.eastTile.y))
+        let halt = try world.buildStation(named: "Halt", at: TestLine.centre(Self.haltTile.x, Self.haltTile.y))
+        try world.buildStation(named: "Depot", at: TestLine.centre(Self.depotTile.x, Self.depotTile.y))
         try world.addTrackPlatform(Self.west, on: Self.e1, from: 1_024, to: 5_120)
         try world.addTrackPlatform(Self.east, on: Self.e2, from: 2_048, to: 5_120)
         try world.addTrackPlatform(halt.id, on: Self.e2, from: 0, to: 512)
@@ -115,14 +116,11 @@ final class NetworkServiceSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
-            // A plain tile: a train on the network goes only to stations.
+            // A plain tile: a train goes only to stations.
             session.select(GridPosition(x: 7, y: 1))
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(
-                session.message,
-                StatusMessage(kind: .failure, text: "No route for Tram to (7, 1): a train on the track network goes only to a station. Its path is unchanged.")
-            )
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select the station to send Tram to."))
             // Halt's platform is shorter than the train; Depot has none on
             // the network.
             for tile in [Self.haltTile, Self.depotTile] {

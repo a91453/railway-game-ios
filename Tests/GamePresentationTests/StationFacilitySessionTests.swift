@@ -2,57 +2,36 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Growing stations and trains of several cars through the session (Stage
-/// S2): each action is one `GameWorld` command, and the texts are derived
-/// from the world.
+/// Trains of several cars through the session (Stage S2): each action is
+/// one `GameWorld` command, and the texts are derived from the world.
+/// Stage F3c moved them onto the track network; growing a station onto a
+/// tile went with the grid.
 final class StationFacilitySessionTests: XCTestCase {
-    //   row 0:  .  .  .  A  .  .  .      A = Central (3,0)
-    //   row 1:  o - o - o - o - o - o - o
-    private static func p(_ x: Int, _ y: Int) -> GridPosition {
-        GridPosition(x: x, y: y)
-    }
-
+    //   row 0:        .  W  .  .  C  .
+    //   row 1:  o - o - o - o - o ---- o      nodes 1–6 at columns 0–4 and 6
+    //
+    // Edges 1–4 join columns 0 to 4, 1024 each; edge 5 runs from column 4
+    // to 6, 2048 long. West (W) has a platform along all of edge 3, Central
+    // (C) one along all of edge 5.
     private static func makeLine() throws -> GameWorld {
         var world = try GameWorld(width: 7, height: 3, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
-        try world.buildTrack(at: p(0, 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: p(x, 1), connections: [.east, .west])
+        for x in [0, 1, 2, 3, 4, 6] {
+            let centre = TestLine.centre(x, 1)
+            try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))
         }
-        try world.buildTrack(at: p(6, 1), connections: .west)
-        try world.buildStation(named: "Central", at: p(3, 0))
+        for node in 1...5 {
+            try world.buildTrackEdge(from: .node(node), to: .node(node + 1))
+        }
+        let west = try world.buildStation(named: "West", at: TestLine.centre(2, 0)).id
+        try world.addTrackPlatform(west, on: .edge(3), from: 0, to: 1_024)
+        let central = try world.buildStation(named: "Central", at: TestLine.centre(5, 0)).id
+        try world.addTrackPlatform(central, on: .edge(5), from: 0, to: 2_048)
         return world
     }
 
-    func testTheStationToolGrowsTheStationBesideTheTile() async throws {
+    func testCarsAreSetOffTheTrackAndALongTrainIsSentToAPlatformItFits() async throws {
         let world = try Self.makeLine()
         await MainActor.run {
-            let session = GameSession(world: world)
-            session.selectTool(.buildStation)
-            session.growsStation = true
-
-            session.select(Self.p(5, 0))
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "There is no station beside (5, 0) to grow."))
-
-            session.select(Self.p(4, 0))
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "“Central” now covers 2 tiles."))
-            XCTAssertEqual(session.world.stations.first?.annexes, [Self.p(4, 0)])
-            XCTAssertEqual(session.world.economy.balance, Money(997_300))
-            XCTAssertEqual(session.world.tileSummary(at: Self.p(4, 0), in: .english), "Station · Central · 2 tiles")
-            XCTAssertEqual(session.world.platforms(of: StationID(rawValue: 1)), [Self.p(3, 1), Self.p(4, 1)])
-
-            // Growing onto track is GameCore's refusal.
-            session.select(Self.p(4, 1))
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tile (4, 1) is already occupied."))
-        }
-    }
-
-    func testCarsAreSetOffTheTrackAndALongTrainIsSentAlongThePlatforms() async throws {
-        var world = try Self.makeLine()
-        try world.extendStation(StationID(rawValue: 1), to: Self.p(4, 0))
-        await MainActor.run { [world] in
             let session = GameSession(world: world)
             session.selectTool(.train)
             session.purchaseTrain()
@@ -64,51 +43,51 @@ final class StationFacilitySessionTests: XCTestCase {
             session.setSelectedTrainCars(17)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "A train has 1 to 16 cars."))
 
-            // Facing east at (1,1), its second car at (0,1).
+            // Facing east at West: its head at the end of edge 3, its
+            // second car at the start of edge 3, the whole of it on the
+            // platform.
             session.setPlacementHeading(.east)
-            session.select(Self.p(1, 1))
+            session.selectStation(StationID(rawValue: 1))
             session.applyTool()
-            XCTAssertEqual(session.selectedTrain?.trail, [Self.p(0, 1)])
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at West, on edge #3 going forward."))
+            XCTAssertEqual(session.selectedTrain?.position, .onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 1_024))
+            XCTAssertEqual(session.selectedTrain?.trailEdges, [])
             session.setSelectedTrainCars(3)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Train #1 is already on the track."))
 
-            // To Central: (2,1), the first platform (3,1), and one more for
-            // the second car.
-            session.select(Self.p(3, 0))
+            // To Central: along edge 4, then all of edge 5, so both cars
+            // stand on its platform.
+            session.selectStation(StationID(rawValue: 2))
             session.applyTool()
-            XCTAssertEqual(session.selectedTrain?.movement.continuation, [Self.p(2, 1), Self.p(3, 1), Self.p(4, 1)])
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Central, platform (4, 1), 3 links from (1, 1). Set a rate to start."))
+            XCTAssertEqual(session.selectedTrain?.movement.edges, [.edge(4), .edge(5)])
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Central, 3072 units along the track. Set a rate to start."))
         }
     }
 
     func testAStopTellsWhenThePlatformIsTooShort() throws {
         var world = try Self.makeLine()
         let id = try world.purchaseTrain(named: "Long").id
-        try world.setTrainCars(id, to: 2)
-        try world.placeTrain(id, at: .atNode(Self.p(3, 1), heading: .east))
-        XCTAssertEqual(world.stationStopText(of: id, in: .english), "Stopped at Central · the platform is too short for all its cars")
+        // Three cars, 2048 from head to tail: West's platform holds half.
+        try world.setTrainCars(id, to: 3)
+        try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 1_024))
+        XCTAssertEqual(world.stationStopText(of: id, in: .english), "Stopped at West · the platform is too short for all its cars")
 
-        try world.extendStation(StationID(rawValue: 1), to: Self.p(2, 0))
+        try world.unplaceTrain(id)
+        try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(5), direction: .forward), offset: 2_048))
         XCTAssertEqual(world.stationStopText(of: id, in: .english), "Stopped at Central")
     }
 
-    /// The body is drawn from the head through the trail's centres to the
-    /// tail: at a node, whole links; on a link, the tail part way.
+    /// The body is drawn from the head along the edges to the tail.
     func testTheBodyIsDrawnBackToTheTail() throws {
         var world = try Self.makeLine()
         let id = try world.purchaseTrain(named: "Long").id
-        XCTAssertTrue(MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), tileSize: 10).isEmpty)
+        XCTAssertTrue(MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, tileSize: 10).isEmpty)
         try world.setTrainCars(id, to: 3)
-        try world.placeTrain(id, at: .atNode(Self.p(3, 1), heading: .east))
-        var points = MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), tileSize: 10)
-        XCTAssertEqual(points.map(\.x), [35, 25, 15])
+        // 1024 along edge 5: the head at x 5632, the node at 4608, and the
+        // tail 2048 back at the node at 3584.
+        try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(5), direction: .forward), offset: 1_024))
+        let points = MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, tileSize: 10)
+        XCTAssertEqual(points.map(\.x), [55, 45, 35])
         XCTAssertEqual(points.map(\.y), [15, 15, 15])
-
-        // 256 along (3,1) → (4,1): (3,1) at 256, (2,1) at 1280, (1,1) at
-        // 2304, the tail 2048 back, three quarters of the way to (1,1).
-        try world.unplaceTrain(id)
-        try world.placeTrain(id, at: .onLink(from: Self.p(3, 1), to: Self.p(4, 1), offset: 256))
-        points = MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), tileSize: 10)
-        XCTAssertEqual(points.map(\.x), [37.5, 35, 25, 17.5])
     }
 }

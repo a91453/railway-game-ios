@@ -180,7 +180,7 @@ struct TrainControls: View {
             Text("Faces")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            ForEach(TrackDirection.allCases, id: \.self) { heading in
+            ForEach(CompassHeading.allCases, id: \.self) { heading in
                 let isActive = session.placementHeading == heading
                 Button {
                     session.setPlacementHeading(heading)

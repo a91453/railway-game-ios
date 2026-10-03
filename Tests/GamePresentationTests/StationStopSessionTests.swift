@@ -3,45 +3,35 @@ import GamePresentation
 import XCTest
 
 /// Stage N in the train tool: selecting a station sends the train to the
-/// station with `GameWorld.route(from:toStation:)`, committed unchanged, and
-/// the stop shown is read from `GameWorld.stationsStoppedAt(by:)`.
+/// station with `GameWorld.path(from:toStation:length:)`, committed
+/// unchanged, and the stop shown is read from
+/// `GameWorld.stationsStoppedAt(by:)`. On the track network since Stage
+/// F3c.
 ///
 /// Each test compares the session's world with the same commands applied to
 /// GameCore directly.
 final class StationStopSessionTests: XCTestCase {
-    // A dead-end line on row 2 with stations beside it:
+    // A dead-end line of the track network on row 2 (nodes at columns
+    // 0–5, edges 1–5 eastward, see `TestLine`) with stations beside it:
     //
-    //            C       M
-    //   a - b - c - d - e      T
-    //                    H
+    //   row 1:           C       M
+    //   row 2:   o - o - o - o - o - o      T
     //
-    // Central is north of b; Market and Hill are north and south of d;
-    // Terminus has no track beside it.
-    private static let a = GridPosition(x: 1, y: 2)
-    private static let b = GridPosition(x: 2, y: 2)
-    private static let c = GridPosition(x: 3, y: 2)
-    private static let d = GridPosition(x: 4, y: 2)
-    private static let e = GridPosition(x: 5, y: 2)
-    private static let centralTile = GridPosition(x: 2, y: 1)
-    private static let marketTile = GridPosition(x: 4, y: 1)
-    private static let hillTile = GridPosition(x: 4, y: 3)
-    private static let terminusTile = GridPosition(x: 7, y: 2)
+    // Central beside column 2 and Market beside column 4, each with
+    // platforms on the half of each edge there nearer it; Terminus has no
+    // platform.
+    private static let line = TestLine(tiles: 6, row: 2)
     private static let central = StationID(rawValue: 1)
     private static let market = StationID(rawValue: 2)
-    private static let hill = StationID(rawValue: 3)
+    private static let terminus = StationID(rawValue: 3)
     private static let first = TrainID(rawValue: 1)
 
     private func makeStationWorld(trainAt position: TrainPosition? = nil, rate: Int64 = 0) throws -> GameWorld {
         var world = try makeWorld(balance: 100_000, speed: .normal)
-        try world.buildTrack(at: Self.a, connections: .east)
-        for tile in [Self.b, Self.c, Self.d] {
-            try world.buildTrack(at: tile, connections: [.east, .west])
-        }
-        try world.buildTrack(at: Self.e, connections: .west)
-        try world.buildStation(named: "Central", at: Self.centralTile)
-        try world.buildStation(named: "Market", at: Self.marketTile)
-        try world.buildStation(named: "Hill", at: Self.hillTile)
-        try world.buildStation(named: "Terminus", at: Self.terminusTile)
+        try Self.line.build(in: &world)
+        try Self.line.buildStation(named: "Central", beside: 2, at: 1, in: &world)
+        try Self.line.buildStation(named: "Market", beside: 4, at: 1, in: &world)
+        try world.buildStation(named: "Terminus", at: TestLine.centre(7, 2))
         if let position {
             try world.purchaseTrain(named: "Train 1")
             try world.placeTrain(Self.first, at: position)
@@ -50,68 +40,77 @@ final class StationStopSessionTests: XCTestCase {
         return world
     }
 
-    func testSendingToAStationCommitsGameCoresStationRouteUnchanged() async throws {
-        let world = try makeStationWorld(trainAt: .atNode(Self.a, heading: .east))
-        let route = try XCTUnwrap(world.route(from: .atNode(Self.a, heading: .east), toStation: Self.market))
-        XCTAssertEqual(route, [Self.b, Self.c, Self.d])
-        var expected = world
-        try expected.setTrainContinuation(Self.first, to: route)
+    /// `world` with Train 1 sent to `station` along GameCore's path.
+    private static func sent(_ world: GameWorld, to station: StationID) throws -> GameWorld {
+        var world = world
+        let train = try XCTUnwrap(world.train(id: first))
+        let path = try XCTUnwrap(world.path(from: try XCTUnwrap(train.position), toStation: station, length: train.length))
+        try world.setTrainContinuation(first, along: path.traversals, stoppingAt: path.end)
+        return world
+    }
+
+    func testSendingToAStationCommitsGameCoresPathUnchanged() async throws {
+        let world = try makeStationWorld(trainAt: Self.line.at(1, facingEast: true))
+        let path = try XCTUnwrap(world.path(from: Self.line.at(1, facingEast: true), toStation: Self.market, length: 0))
+        // To the end of Market's platform on edge 4, at column 4.
+        XCTAssertEqual(path.traversals, Self.line.path(from: 1, through: [2, 3, 4]))
+        XCTAssertEqual(path.distance, 3_072)
+        let expected = try Self.sent(world, to: Self.market)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
-            session.select(Self.marketTile)
+            session.selectStation(Self.market)
 
             session.sendSelectedTrain()
 
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Market, platform (4, 2), 3 links from (1, 2). Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Market, 3072 units along the track. Set a rate to start.")
             )
         }
     }
 
-    func testSendingToAStationTheTrainIsAtOrHeadingForCommitsTheEmptyRoute() async throws {
-        let atPlatform = try makeStationWorld(trainAt: .atNode(Self.d, heading: .west), rate: 100)
-        var onLink = try makeStationWorld(trainAt: .onLink(from: Self.a, to: Self.b, offset: 512), rate: 0)
-        try onLink.setTrainContinuation(Self.first, to: [Self.c, Self.d])
-        var onLinkExpected = onLink
-        try onLinkExpected.setTrainContinuation(Self.first, to: [])
-        await MainActor.run { [onLink, onLinkExpected] in
+    func testSendingToAStationTheTrainIsAtOrHeadingForStopsItThere() async throws {
+        let atPlatform = try makeStationWorld(trainAt: Self.line.at(4, facingEast: true), rate: 100)
+        XCTAssertEqual(atPlatform.stationsStoppedAt(by: Self.first), [Self.market])
+        let atPlatformExpected = try Self.sent(atPlatform, to: Self.market)
+        let onEdge = try Self.sent(try makeStationWorld(trainAt: Self.line.between(1, 2, offset: 512)), to: Self.market)
+        let onEdgeExpected = try Self.sent(onEdge, to: Self.central)
+        await MainActor.run { [onEdge, onEdgeExpected] in
             let session = GameSession(world: atPlatform)
-            session.select(Self.hillTile)
+            session.selectStation(Self.market)
             session.sendSelectedTrain()
-            XCTAssertEqual(session.world, atPlatform, "already stopped there: nothing to change")
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Train 1 stops at Hill, platform (4, 2)."))
+            XCTAssertEqual(session.world, atPlatformExpected, "already stopped there: nowhere to go")
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Train 1 stops at Market."))
 
-            let heading = GameSession(world: onLink)
-            heading.select(Self.centralTile)
+            let heading = GameSession(world: onEdge)
+            heading.selectStation(Self.central)
             heading.sendSelectedTrain()
-            XCTAssertEqual(heading.world, onLinkExpected, "its path is cleared; it runs to the platform and stops")
+            XCTAssertEqual(heading.world, onEdgeExpected, "the rest of edge 2 to Central's platform end")
             XCTAssertEqual(
                 heading.message,
-                StatusMessage(kind: .success, text: "Train 1 stops at Central, platform (2, 2). Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 512 units along the track. Set a rate to start.")
             )
         }
     }
 
-    func testNoRouteToAStationChangesNothing() async throws {
-        var world = try makeStationWorld(trainAt: .atNode(Self.c, heading: .east), rate: 64)
-        try world.setTrainContinuation(Self.first, to: [Self.d])
+    func testNoPathToAStationChangesNothing() async throws {
+        let world = try Self.sent(try makeStationWorld(trainAt: Self.line.at(3, facingEast: true), rate: 64), to: Self.market)
         await MainActor.run { [world] in
             let session = GameSession(world: world)
             // Central is behind the train, past a dead end.
-            session.select(Self.centralTile)
+            session.selectStation(Self.central)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(
                 session.message,
                 StatusMessage(
                     kind: .failure,
-                    text: "No route for Train 1 to Central: it needs track beside the station that the train can reach without turning back. Its path is unchanged."
+                    text: "No route for Train 1 to Central: it needs a platform on the track network as long as the train, that it can reach without turning back. Its path is unchanged."
                 )
             )
             // Terminus has no platform at all.
-            session.select(Self.terminusTile)
+            session.selectStation(Self.terminus)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message?.kind, .failure)
@@ -119,20 +118,19 @@ final class StationStopSessionTests: XCTestCase {
     }
 
     func testTheTrainToolSendsAPlacedTrainToTheSelectedStation() async throws {
-        let world = try makeStationWorld(trainAt: .atNode(Self.a, heading: .east))
-        var expected = world
-        try expected.setTrainContinuation(Self.first, to: [Self.b])
+        let world = try makeStationWorld(trainAt: Self.line.at(1, facingEast: true))
+        let expected = try Self.sent(world, to: Self.central)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.train)
-            session.select(Self.centralTile)
+            session.selectStation(Self.central)
 
             session.applyTool()
 
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Central, platform (2, 2), 1 link from (1, 2). Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 1024 units along the track. Set a rate to start.")
             )
         }
     }
@@ -140,30 +138,28 @@ final class StationStopSessionTests: XCTestCase {
     /// Send to a station, advance with the game loop, read the stop: the
     /// whole Stage N flow, checked against GameCore run directly.
     func testTheGameLoopBringsASentTrainToAStop() async throws {
-        let world = try makeStationWorld(trainAt: .atNode(Self.a, heading: .east), rate: 384)
-        var expected = world
-        let route = try XCTUnwrap(expected.route(from: .atNode(Self.a, heading: .east), toStation: Self.hill))
-        try expected.setTrainContinuation(Self.first, to: route)
+        let world = try makeStationWorld(trainAt: Self.line.at(1, facingEast: true), rate: 384)
+        let expected = try Self.sent(world, to: Self.market)
         var arrived = expected
         try arrived.advance(ticks: 8)
-        XCTAssertEqual(arrived.stationsStoppedAt(by: Self.first), [Self.market, Self.hill])
+        XCTAssertEqual(arrived.stationsStoppedAt(by: Self.first), [Self.market])
         await MainActor.run { [expected, arrived] in
             let session = GameSession(world: world)
-            session.select(Self.hillTile)
+            session.selectStation(Self.market)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, expected)
             XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "departing")
 
-            // 3 links of 1024 at 384 a minute: 8 minutes.
+            // 3072 units at 384 a minute: 8 minutes.
             for _ in 0..<7 {
                 session.advance(realElapsed: .milliseconds(100))
             }
             XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "not there yet")
             session.advance(realElapsed: .milliseconds(100))
             XCTAssertEqual(session.world, arrived)
-            XCTAssertEqual(session.world.stationStopText(of: Self.first, in: .english), "Stopped at Market, Hill")
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "At (4, 2), facing East")
-            XCTAssertEqual(session.selectedTrain?.movement.pathText(in: .english), "No path ahead")
+            XCTAssertEqual(session.world.stationStopText(of: Self.first, in: .english), "Stopped at Market")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #4 forward, 1024 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
         }
     }
 
@@ -172,15 +168,12 @@ final class StationStopSessionTests: XCTestCase {
         XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "no such train")
         try world.purchaseTrain(named: "Train 1")
         XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "unplaced")
-        try world.placeTrain(Self.first, at: .atNode(Self.c, heading: .east))
+        try world.placeTrain(Self.first, at: Self.line.at(3, facingEast: true))
         XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "not at a platform")
         try world.unplaceTrain(Self.first)
-        try world.placeTrain(Self.first, at: .atNode(Self.b, heading: .east))
+        try world.placeTrain(Self.first, at: Self.line.at(2, facingEast: true))
         XCTAssertEqual(world.stationStopText(of: Self.first, in: .english), "Stopped at Central")
-        try world.unplaceTrain(Self.first)
-        try world.placeTrain(Self.first, at: .atNode(Self.d, heading: .north))
-        XCTAssertEqual(world.stationStopText(of: Self.first, in: .english), "Stopped at Market, Hill")
-        try world.setTrainContinuation(Self.first, to: [Self.e])
+        try world.setTrainContinuation(Self.first, along: Self.line.path(from: 2, through: [3]), stoppingAt: nil)
         XCTAssertNil(world.stationStopText(of: Self.first, in: .english), "given somewhere to go")
     }
 }

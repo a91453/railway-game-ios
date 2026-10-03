@@ -51,21 +51,10 @@ final class LocalizationTests: XCTestCase {
 
     func testTheMapAndTrainsReadInChinese() throws {
         var world = try makeWorld()
-        try world.buildTrack(at: GridPosition(x: 1, y: 0), connections: [.east, .west])
-        try world.buildStation(named: "Central", at: GridPosition(x: 2, y: 0))
-        try world.buildTurnout(at: GridPosition(x: 3, y: 1), connections: [.east, .south, .west], stem: .west)
-        try world.buildCrossing(at: GridPosition(x: 4, y: 1))
+        try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))
         let zh = DisplayLanguage.traditionalChinese
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 0, y: 0), in: zh), "空地")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 1, y: 0), in: zh), "軌道 · 直線 東–西")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 2, y: 0), in: zh), "車站 · Central")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 3, y: 1), in: zh), "道岔 · 東–南–西，共用端 西")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 4, y: 1), in: zh), "平面交叉 · 北–南 跨 東–西")
-        XCTAssertEqual(world.tileSummary(at: GridPosition(x: 99, y: 0), in: zh), "地圖外")
-        XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 3 格軌道")
-        XCTAssertEqual(TrackConnections([.north, .east]).summary(in: zh), "彎道 北–東")
-        XCTAssertEqual(TrackPiece.allCases.map { $0.title(in: zh) }, ["直線", "彎道", "T 字岔", "十字"])
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "軌道", "車站", "拆除", "路網", "列車"])
+        XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 個軌段")
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車"])
 
         let position = TrainPosition.atNode(GridPosition(x: 1, y: 0), heading: .east)
         XCTAssertEqual(position.displayText(in: zh), "在 (1, 0)，面向東")
@@ -76,7 +65,7 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(train.positionText(in: zh), "不在軌道上")
         XCTAssertEqual(train.carsText(in: zh), "1 節車廂")
         XCTAssertEqual(train.movement.rateText(in: zh), "速率 0／分鐘")
-        XCTAssertEqual(train.movement.pathText(in: zh), "前方沒有路徑")
+        XCTAssertEqual(train.pathText(in: zh), "前方沒有路徑")
     }
 
     func testTimeSpeedsAndMoneyReadInChinese() {
@@ -126,7 +115,9 @@ final class LocalizationTests: XCTestCase {
     /// The session writes its messages and suggests names in its language.
     func testTheSessionSpeaksItsLanguage() async throws {
         var built = try makeWorld(width: 8, height: 4, balance: 100_000)
-        try built.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
+        let west = try built.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
+        let east = try built.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 1_536))
+        try built.buildTrackEdge(from: west, to: east)
         let world = built
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
@@ -138,20 +129,19 @@ final class LocalizationTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇要放置它的車站。"))
             session.select(GridPosition(x: 1, y: 1))
             session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已將 列車 1 放在 (1, 1)，面向東。"))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "請選擇要放置 列車 1 的車站。"))
 
-            session.selectTool(.buildTrack)
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "(1, 1) 這一格已經有東西了。"))
-            session.select(GridPosition(x: 2, y: 1))
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (2, 1) 鋪設直線軌道。"))
-
-            session.selectTool(.buildStation)
-            session.select(GridPosition(x: 1, y: 0))
-            session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已在 (1, 0) 建造車站「車站 1」。"))
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 4_096, y: 1_536), reach: 256)
+            session.addNetworkPlatform()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已建造車站「車站 1」，月台 64 公尺，位於軌段 #1。"))
             XCTAssertEqual(session.stationName, "車站 2")
+
+            session.selectTool(.train)
+            session.selectStation(StationID(rawValue: 1))
+            session.applyTool()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已將 列車 1 放在 車站 1，位於軌段 #1正向。"))
 
             // The English session is unchanged.
             XCTAssertEqual(GameSession(world: world).stationName, "Station 1")

@@ -134,24 +134,22 @@ final class EconomyDisplayTests: XCTestCase {
         }
     }
 
-    /// Alpha(1,0) Beta(3,0) Gamma(5,0) on track (0,1)–(6,1), line Main
-    /// calling at all three, one train of one car running it all day.
+    /// Alpha(1,0) Beta(3,0) Gamma(5,0) beside a line of the track network
+    /// from (0,1) to (6,1) (see `TestLine`), line Main calling at all
+    /// three, one train of one car running it all day.
     private func makeLine() throws -> GameWorld {
         var world = try makeWorld(width: 8, height: 4, balance: 1_000_000, speed: .normal)
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...5 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 6, y: 1), connections: .west)
+        let line = TestLine(tiles: 7, row: 1)
+        try line.build(in: &world)
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try line.buildStation(named: name, beside: x, at: 0, in: &world)
         }
         let main = LineID(rawValue: 1)
         try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2), StationID(rawValue: 3)])
         try world.setLineServiceWindow(main, to: .allDay)
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "T1")
-        try world.placeTrain(train.id, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+        try world.placeTrain(train.id, at: line.at(1, facingEast: true))
         try world.setTrainMovementRate(train.id, to: 1_024)
         try world.assignTrain(train.id, to: main)
         return world

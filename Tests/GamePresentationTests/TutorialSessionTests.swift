@@ -308,12 +308,9 @@ final class TutorialSessionTests: XCTestCase {
             "tool.select", "tool.network", "tool.train", "network.modes", "panel.action",
             "map", "map.zoom", "hud.lines", "hud.speed", "hud.menu",
         ])
-        for tool in ConstructionTool.networkTools {
-            XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)")
+        for tool in ConstructionTool.allCases {
+            XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
         }
-        XCTAssertNil(TutorialTarget(tool: .buildTrack), "the grid's tools are not offered")
-        XCTAssertNil(TutorialTarget(tool: .buildStation))
-        XCTAssertNil(TutorialTarget(tool: .removeTrack))
     }
 
     /// Each step reads in both languages, the Chinese written out by hand,

@@ -9,13 +9,13 @@ import XCTest
 /// GameCore directly, so the session can neither add, drop nor alter one.
 /// Expected text is written out by hand.
 final class LineSessionTests: XCTestCase {
-    // A dead-end line, stations above every other tile:
+    // A dead-end line of the track network on row 1 (nodes at columns
+    // 0–8, edges 1–8 eastward, see `TestLine`), stations above every other
+    // node, each with platforms on the half of each edge there nearer it:
     //
-    //       A(1,0)  B(3,0)  C(5,0)  D(7,0)
-    //         |       |       |       |
-    //   o  -  a - o - b - o - c - o - d  -  o
-    private static let a = GridPosition(x: 1, y: 1)
-    private static let b = GridPosition(x: 3, y: 1)
+    //   row 0:      A       B       C       D
+    //   row 1:  o - o - o - o - o - o - o - o - o
+    private static let line = TestLine(tiles: 9, row: 1)
     private static let stationA = StationID(rawValue: 1)
     private static let stationB = StationID(rawValue: 2)
     private static let stationC = StationID(rawValue: 3)
@@ -32,13 +32,9 @@ final class LineSessionTests: XCTestCase {
             width: 9, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...7 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 8, y: 1), connections: .west)
+        try Self.line.build(in: &world)
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
-            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+            try Self.line.buildStation(named: name, beside: x, at: 0, in: &world)
         }
         return world
     }
@@ -128,9 +124,11 @@ final class LineSessionTests: XCTestCase {
         XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 480), in: .english), "Peak")
         XCTAssertEqual(world.lineStatusText(Self.main, at: GameTime(minutes: 60), in: .english), "Closed")
 
-        // Without a route a service says so.
+        // Without a route a service says so: edge 7, between Gamma and
+        // Delta, and Delta's platform on it, removed.
         var cut = world
-        try cut.removeTrack(at: GridPosition(x: 6, y: 1))
+        try cut.removeTrackPlatform(Self.stationD, on: .edge(7), from: 512)
+        try cut.removeTrackEdge(.edge(7))
         XCTAssertEqual(cut.lineServiceSummaries(Self.main, in: .english)[0].levels[0].text(in: .english), "No route")
     }
 
@@ -140,7 +138,7 @@ final class LineSessionTests: XCTestCase {
     func testATrainsServiceShowsWhereItIsAndHowLate() throws {
         var world = try Self.makeLineWorld()
         let shuttle = try world.purchaseTrain(named: "Shuttle").id
-        try world.placeTrain(shuttle, at: .atNode(Self.b, heading: .east))
+        try world.placeTrain(shuttle, at: Self.line.at(3, facingEast: true))
         XCTAssertNil(world.trainServiceStatus(of: shuttle, in: .english), "no line, no service")
         XCTAssertNil(world.trainServiceStatus(of: TrainID(rawValue: 9), in: .english))
 
@@ -174,7 +172,7 @@ final class LineSessionTests: XCTestCase {
         // A train of its own that arrived (started) before its scheduled
         // arrival is early: by 2 minutes, while its doors open.
         let own = try world.purchaseTrain(named: "Own").id
-        try world.placeTrain(own, at: .atNode(Self.a, heading: .east))
+        try world.placeTrain(own, at: Self.line.at(1, facingEast: true))
         try world.setTrainTimetable(own, to: [ScheduledStop(station: Self.stationA, arrival: GameTime(minutes: 490), departure: GameTime(minutes: 495))])
         try world.startTrainService(own)
         XCTAssertEqual(
@@ -282,7 +280,7 @@ final class LineSessionTests: XCTestCase {
         try await MainActor.run {
             var expected = try Self.makeLineWorld()
             try expected.purchaseTrain(named: "Blue")
-            try expected.placeTrain(Self.first, at: .atNode(Self.a, heading: .east))
+            try expected.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
             let session = GameSession(world: expected)
 
             session.assignSelectedTrainToSelectedLine(pattern: 1)

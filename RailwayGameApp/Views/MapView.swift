@@ -28,7 +28,6 @@ struct MapView: View {
                 MapCanvas(
                     world: session.world,
                     selectedTrainID: session.selectedTrainID,
-                    selection: session.selection,
                     selectedStationID: session.selectedStation?.id,
                     network: session.networkOverlay,
                     camera: projection,
@@ -55,11 +54,6 @@ struct MapView: View {
                 .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
                 .accessibilityIdentifier(TutorialTarget.map.rawValue)
                 .accessibilityValue(selectionDescription)
-                .accessibilityHint("Use the actions to move the selected tile.")
-                .accessibilityAction(named: "Select tile to the north") { moveSelection(.north, camera: projection) }
-                .accessibilityAction(named: "Select tile to the east") { moveSelection(.east, camera: projection) }
-                .accessibilityAction(named: "Select tile to the south") { moveSelection(.south, camera: projection) }
-                .accessibilityAction(named: "Select tile to the west") { moveSelection(.west, camera: projection) }
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
                 .clipped()
                 .overlay(alignment: .bottomTrailing) {
@@ -122,13 +116,6 @@ struct MapView: View {
         session.selectionText() ?? String(localized: "Nothing selected")
     }
 
-    private func moveSelection(_ direction: TrackDirection, camera: PlanCamera) {
-        session.moveSelection(direction)
-        if let selection = session.selection {
-            self.camera = camera.centered(on: WorldCoordinate(centreOf: selection))
-        }
-    }
-
     /// Chooses how Apple's map under a real-world game looks.
     private var mapStyleMenu: some View {
         Menu {
@@ -185,7 +172,6 @@ struct MapView: View {
 private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
-    let selection: GridPosition?
     let selectedStationID: StationID?
     let network: NetworkOverlay?
     let camera: PlanCamera
@@ -199,7 +185,6 @@ private struct MapCanvas: View, Equatable {
             && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
             && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.selection == rhs.selection
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
             && lhs.camera == rhs.camera
@@ -208,14 +193,13 @@ private struct MapCanvas: View, Equatable {
     }
 
     var body: some View {
-        let world = world, selectedTrainID = selectedTrainID, selection = selection
+        let world = world, selectedTrainID = selectedTrainID
         let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges, drawsLand = drawsLand
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             TileArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
-                selection: network == nil ? selection : nil,
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
                 projection: camera,

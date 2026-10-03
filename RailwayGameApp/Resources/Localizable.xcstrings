@@ -1629,46 +1629,6 @@
         }
       }
     },
-    "Select tile to the east" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選取東邊的格子"
-          }
-        }
-      }
-    },
-    "Select tile to the north" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選取北邊的格子"
-          }
-        }
-      }
-    },
-    "Select tile to the south" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選取南邊的格子"
-          }
-        }
-      }
-    },
-    "Select tile to the west" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選取西邊的格子"
-          }
-        }
-      }
-    },
     "Select tool" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2175,16 +2135,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已有兩條路線在營運，也有乘客"
-          }
-        }
-      }
-    },
-    "Use the actions to move the selected tile." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用動作來移動選取的格子。"
           }
         }
       }

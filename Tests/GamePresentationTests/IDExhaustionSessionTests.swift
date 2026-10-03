@@ -33,18 +33,23 @@ final class IDExhaustionSessionTests: XCTestCase {
     }
 
     func testBuildingAStationWithNoIDsLeftChangesNothing() async throws {
-        let world = try exhaustedWorld()
-        await MainActor.run {
+        var world = try exhaustedWorld()
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 3_072))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 3_072))
+        try world.buildTrackEdge(from: west, to: east)
+        await MainActor.run { [world] in
             let session = GameSession(world: world)
-            session.select(GridPosition(x: 2, y: 2))
-            session.selectTool(.buildStation)
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 4_096, y: 3_072), reach: 256)
+            let picked = session.networkEdgePoint
             let name = session.stationName
 
-            session.applyTool()
+            session.addNetworkPlatform()
 
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.stationName, name)
-            XCTAssertEqual(session.selection, GridPosition(x: 2, y: 2))
+            XCTAssertEqual(session.networkEdgePoint, picked)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.idsExhausted.playerMessage(in: .english)))
         }
     }

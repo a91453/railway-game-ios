@@ -41,17 +41,6 @@ final class MapScaleTests: XCTestCase {
         XCTAssertEqual(MapScale.clamped(1, fitting: fitting), fitting)
     }
 
-    func testPointsMapToColumnsAlongXAndRowsAlongY() {
-        XCTAssertEqual(MapScale.position(atX: 0, y: 0, tileSize: 30), GridPosition(x: 0, y: 0))
-        XCTAssertEqual(MapScale.position(atX: 29.9, y: 30, tileSize: 30), GridPosition(x: 0, y: 1))
-        XCTAssertEqual(MapScale.position(atX: 95, y: 5, tileSize: 30), GridPosition(x: 3, y: 0))
-        XCTAssertEqual(MapScale.position(atX: 5, y: 95, tileSize: 30), GridPosition(x: 0, y: 3))
-    }
-
-    func testPointsLeftOfOrAboveTheMapAreOutside() {
-        XCTAssertEqual(MapScale.position(atX: -0.5, y: -0.5, tileSize: 30), GridPosition(x: -1, y: -1))
-    }
-
     /// Small tiles draw an overview; the compact phone size and larger draw
     /// everything.
     func testSmallTilesDrawAnOverview() {

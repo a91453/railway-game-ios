@@ -49,19 +49,6 @@ public enum MapScale {
         clamped(size / zoomFactor, fitting: fittingSize)
     }
 
-    /// The tile under a point in map coordinates, where `(0, 0)` is the
-    /// north-west corner and x grows east, y south. The result may lie
-    /// outside the map; callers check it against the map.
-    public static func position(atX x: Double, y: Double, tileSize: Double) -> GridPosition {
-        precondition(tileSize > 0, "position(atX:y:tileSize:) requires a positive tile size")
-        return GridPosition(x: Int((x / tileSize).rounded(.down)), y: Int((y / tileSize).rounded(.down)))
-    }
-
-    /// The centre of the tile at `position`, in map coordinates.
-    public static func center(of position: GridPosition, tileSize: Double) -> (x: Double, y: Double) {
-        ((Double(position.x) + 0.5) * tileSize, (Double(position.y) + 0.5) * tileSize)
-    }
-
     /// Where the world point `point` is drawn, in map coordinates: a tile
     /// is ``WorldCoordinate/tileSize`` world units wide, and the map is
     /// drawn from above, so the height is not shown (a top-down debug
@@ -71,99 +58,35 @@ public enum MapScale {
         return (Double(point.x) * scale, Double(point.y) * scale)
     }
 
-    /// Where a train at `position` is drawn, in map coordinates: the centre
-    /// of its tile, or `offset / linkLength` of the way from the centre of
-    /// `from` to the centre of `to`; on the track network (Stage S3), its
-    /// point on the edge's centre line in `world` (see
-    /// ``GameWorld/location(of:)``), or the map's corner without a world
-    /// that has it. A position on the grid needs no world.
+    /// Where a train at `position` is drawn, in map coordinates: its point
+    /// on the edge's centre line in `world` (see ``GameWorld/location(of:)``),
+    /// or the map's corner without a world that has it.
     ///
     /// Display only: worked out from the authoritative position each time
     /// the map is drawn, never stored, and never fed back into GameCore.
     public static func center(of position: TrainPosition, in world: GameWorld? = nil, tileSize: Double) -> (x: Double, y: Double) {
-        switch position {
-        case .atNode(let tile, _):
-            return center(of: tile, tileSize: tileSize)
-        case .onLink(let from, let to, let offset):
-            let start = center(of: from, tileSize: tileSize)
-            let end = center(of: to, tileSize: tileSize)
-            let fraction = Double(offset) / Double(TrainPosition.linkLength)
-            return (start.x + (end.x - start.x) * fraction, start.y + (end.y - start.y) * fraction)
-        case .onEdge:
-            return world?.location(of: position).map { center(of: $0.position, tileSize: tileSize) } ?? (0, 0)
-        }
+        world?.location(of: position).map { center(of: $0.position, tileSize: tileSize) } ?? (0, 0)
     }
 
-    /// The line a train's body is drawn along, in map coordinates: from
-    /// where its head is drawn (see ``center(of:tileSize:)``) through
-    /// the centre of each node of its trail to its tail, `length` behind
-    /// the head. Just the head for a train of one car; empty for an
-    /// unplaced train.
-    ///
-    /// On the track network (Stage S3) it follows the edges' centre lines
-    /// in `world` (see ``GameWorld/bodyPath(of:)``); without a world that
-    /// has the train, just the corner. A train on the grid needs no world.
+    /// The line a train's body is drawn along, in map coordinates: along
+    /// the edges' centre lines in `world` (see ``GameWorld/bodyPath(of:)``)
+    /// from its head to its tail; without a world that has the train, just
+    /// the corner. Empty for an unplaced train.
     ///
     /// Display only, like ``center(of:in:tileSize:)``.
     public static func bodyPoints(of train: Train, in world: GameWorld? = nil, tileSize: Double) -> [(x: Double, y: Double)] {
-        guard let position = train.position else { return [] }
-        if case .onEdge = position {
-            let path = world?.bodyPath(of: train.id) ?? []
-            return path.isEmpty ? [(0, 0)] : path.map { center(of: $0, tileSize: tileSize) }
-        }
-        var points = [center(of: position, in: world, tileSize: tileSize)]
-        let length = train.length
-        var distance: Int64 = 0
-        var next: Int64
-        switch position {
-        case .atNode: next = TrainPosition.linkLength
-        case .onLink(_, _, let offset): next = offset
-        case .onEdge: return points
-        }
-        for node in train.trail {
-            let previous = points[points.count - 1]
-            let target = center(of: node, tileSize: tileSize)
-            if next <= length {
-                points.append(target)
-            } else {
-                // The tail lies on the way to this node.
-                let fraction = Double(length - distance) / Double(next - distance)
-                points.append((previous.x + (target.x - previous.x) * fraction, previous.y + (target.y - previous.y) * fraction))
-                break
-            }
-            distance = next
-            next += TrainPosition.linkLength
-        }
-        return points
+        guard train.position != nil else { return [] }
+        let path = world?.bodyPath(of: train.id) ?? []
+        return path.isEmpty ? [(0, 0)] : path.map { center(of: $0, tileSize: tileSize) }
     }
 
     /// The unit vector, in map coordinates, of the way a train at `position`
-    /// faces: its heading at a node, or from `from` toward `to` on a link;
-    /// on the track network (Stage S3), the way its edge runs there in
-    /// `world` (see ``GameWorld/location(of:)``), or east without a world
-    /// that has it. A position on the grid needs no world.
+    /// faces: the way its edge runs there in `world` (see
+    /// ``GameWorld/location(of:)``), or east without a world that has it.
     public static func facing(of position: TrainPosition, in world: GameWorld? = nil) -> (dx: Double, dy: Double) {
-        switch position {
-        case .onEdge:
-            guard let direction = world?.location(of: position)?.direction else { return (1, 0) }
-            let length = (Double(direction.dx) * Double(direction.dx) + Double(direction.dy) * Double(direction.dy)).squareRoot()
-            return length > 0 ? (Double(direction.dx) / length, Double(direction.dy) / length) : (1, 0)
-        case .atNode(_, let heading):
-            switch heading {
-            case .north: return (0, -1)
-            case .east: return (1, 0)
-            case .south: return (0, 1)
-            case .west: return (-1, 0)
-            }
-        case .onLink(let from, let to, _):
-            // The ends of a link on the track are orthogonal neighbours.
-            // Comparing rather than subtracting cannot overflow.
-            return (step(from: from.x, to: to.x), step(from: from.y, to: to.y))
-        }
-    }
-
-    private static func step(from start: Int, to end: Int) -> Double {
-        end > start ? 1 : end < start ? -1 : 0
+        guard let direction = world?.location(of: position)?.direction else { return (1, 0) }
+        let length = (Double(direction.dx) * Double(direction.dx) + Double(direction.dy) * Double(direction.dy)).squareRoot()
+        return length > 0 ? (Double(direction.dx) / length, Double(direction.dy) / length) : (1, 0)
     }
 
     /// Below this tile size the map is drawn as an overview (see

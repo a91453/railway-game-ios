@@ -12,21 +12,19 @@ final class PerformanceSessionTests: XCTestCase {
     private static let tram = TrainID(rawValue: 1)
 
     /// Alpha (1, 0), Beta (3, 0), Gamma (5, 0), Delta (7, 0) above a
-    /// straight track along y = 1, two links apart; line Main calls at all
-    /// four, as in `LineSessionTests`.
+    /// straight line of the track network along y = 1, two edges apart
+    /// (see `TestLine`); line Main calls at all four, as in
+    /// `LineSessionTests`.
     private func makeLineWorld() throws -> GameWorld {
         var world = try GameWorld(
             width: 9, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 480), speed: .normal)
         )
-        try world.buildTrack(at: GridPosition(x: 0, y: 1), connections: .east)
-        for x in 1...7 {
-            try world.buildTrack(at: GridPosition(x: x, y: 1), connections: [.east, .west])
-        }
-        try world.buildTrack(at: GridPosition(x: 8, y: 1), connections: .west)
+        let line = TestLine(tiles: 9, row: 1)
+        try line.build(in: &world)
         var stops: [StationID] = []
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
-            stops.append(try world.buildStation(named: name, at: GridPosition(x: x, y: 0)).id)
+            stops.append(try line.buildStation(named: name, beside: x, at: 0, in: &world))
         }
         try world.createLine(named: "Main", stops: stops)
         return world
@@ -66,16 +64,20 @@ final class PerformanceSessionTests: XCTestCase {
 
     // MARK: - Lines
 
-    /// Two links between stops: 16 s at the standard performance
+    /// Two edges between stops: 16 s at the standard performance
     /// (√(2 × 2048 × 0.06) = 15.7), 120 s at a 1 km/h crawl; the rest of a
-    /// round trip, 480 s, is the stops.
+    /// round trip, 480 s, is the stops. On the track network (Stage F3c)
+    /// the journey starts from Alpha's berth that makes the round trip
+    /// shortest, the end of its platform east of the node, so the first leg
+    /// is 512 shorter (as GameCore's `ServiceLineTests`, F3b-1): 14 s, and
+    /// 91 s at the crawl.
     func testALinesPerformanceSetsItsJourney() async throws {
         let world = try makeLineWorld()
         var expected = world
         try expected.setLinePerformance(Self.main, to: Self.crawl)
         XCTAssertEqual(
             world.lineJourneyText(Self.main, in: .english),
-            "Round trip 9 min 36 s · legs 16 s, 16 s, 16 s, 16 s, 16 s, 16 s"
+            "Round trip 9 min 34 s · legs 14 s, 16 s, 16 s, 16 s, 16 s, 16 s"
         )
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
@@ -84,11 +86,11 @@ final class PerformanceSessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Main plans its journeys as Custom · 1 km/h · 0.25 / 0.25 km/h/s."))
             XCTAssertEqual(
                 session.world.lineJourneyText(Self.main, in: .english),
-                "Round trip 20 min · legs 2 min, 2 min, 2 min, 2 min, 2 min, 2 min"
+                "Round trip 19 min 31 s · legs 1 min 31 s, 2 min, 2 min, 2 min, 2 min, 2 min"
             )
             XCTAssertEqual(
                 session.world.lineJourneyText(Self.main, in: .traditionalChinese),
-                "來回 20 分 · 各段 2 分、2 分、2 分、2 分、2 分、2 分"
+                "來回 19 分 31 秒 · 各段 1 分 31 秒、2 分、2 分、2 分、2 分、2 分"
             )
             session.setSelectedLinePerformance(TrainPerformance(acceleration: 0, braking: 1, topSpeed: 1))
             XCTAssertEqual(session.world, expected, "an invalid performance changes nothing")
@@ -118,9 +120,9 @@ final class PerformanceSessionTests: XCTestCase {
         }
 
         // Placed at Alpha facing east, given a rate and sent out by the
-        // line at 08:00, it leaves at 08:00:42 for Beta, two links (32 m)
+        // line at 08:00, it leaves at 08:00:42 for Beta, two edges (32 m)
         // in 120 s.
-        try expected.placeTrain(Self.tram, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
+        try expected.placeTrain(Self.tram, at: TestLine(tiles: 9, row: 1).at(1, facingEast: true))
         try expected.setTrainMovementRate(Self.tram, to: 128)
         try expected.assignTrain(Self.tram, to: Self.main)
         try expected.advance(ticks: 1)

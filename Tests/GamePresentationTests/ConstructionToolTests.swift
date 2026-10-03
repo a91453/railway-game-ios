@@ -3,13 +3,13 @@ import GamePresentation
 import XCTest
 
 final class ConstructionToolTests: XCTestCase {
-    func testSessionStartsInSelectModeWithAStraightPiece() async throws {
+    func testSessionStartsInSelectMode() async throws {
         let world = try makeWorld()
         await MainActor.run {
             let session = GameSession(world: world)
 
             XCTAssertEqual(session.tool, .select)
-            XCTAssertEqual(session.trackConnections, [.east, .west])
+            XCTAssertEqual(session.placementHeading, .east)
         }
     }
 
@@ -29,72 +29,19 @@ final class ConstructionToolTests: XCTestCase {
         }
     }
 
-    func testEditingTheTrackPieceDoesNotChangeTheWorld() async throws {
-        let world = try makeWorld()
-        await MainActor.run {
-            let session = GameSession(world: world)
-
-            session.selectTool(.buildTrack)
-            session.selectTrackPiece(.fourWay)
-            session.rotateTrackPiece()
-            session.toggleTrackDirection(.north)
-
-            XCTAssertEqual(session.world, world)
-        }
+    /// Stage F3c: the grid's track, station and remove tools are gone;
+    /// the app offers every tool there is.
+    func testTheToolsAreSelectNetworkAndTrain() {
+        XCTAssertEqual(ConstructionTool.allCases, [.select, .network, .train])
+        XCTAssertEqual(ConstructionTool.networkTools, ConstructionTool.allCases)
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .english) }, ["Select", "Network", "Train"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .traditionalChinese) }, ["選取", "路網", "列車"])
     }
 
-    func testTogglingDirectionsBuildsTheMatchingConnections() async throws {
-        let world = try makeWorld()
-        await MainActor.run {
-            let session = GameSession(world: world)
-
-            session.toggleTrackDirection(.east)
-            session.toggleTrackDirection(.west)
-            XCTAssertEqual(session.trackConnections, [], "toggling both ends of the straight clears it")
-
-            session.toggleTrackDirection(.north)
-            session.toggleTrackDirection(.east)
-            XCTAssertEqual(session.trackConnections, [.north, .east])
-            XCTAssertEqual(session.trackConnections.rawValue, 0b0011)
-
-            session.toggleTrackDirection(.north)
-            XCTAssertEqual(session.trackConnections, .east)
-        }
-    }
-
-    func testPiecesAndRotation() async throws {
-        let world = try makeWorld()
-        await MainActor.run {
-            let session = GameSession(world: world)
-
-            session.selectTrackPiece(.curve)
-            XCTAssertEqual(session.trackConnections, [.south, .east])
-            session.rotateTrackPiece()
-            XCTAssertEqual(session.trackConnections, [.south, .west])
-            session.rotateTrackPiece()
-            XCTAssertEqual(session.trackConnections, [.west, .north])
-
-            session.selectTrackPiece(.straight)
-            session.rotateTrackPiece()
-            XCTAssertEqual(session.trackConnections, [.north, .south])
-        }
-    }
-
-    func testPieceShapesMatchTheirNames() {
-        XCTAssertEqual(TrackPiece.straight.connections.shapeName(in: .english), "Straight")
-        XCTAssertEqual(TrackPiece.curve.connections.shapeName(in: .english), "Curve")
-        XCTAssertEqual(TrackPiece.junction.connections.shapeName(in: .english), "T-junction")
-        XCTAssertEqual(TrackPiece.fourWay.connections.shapeName(in: .english), "Four-way")
-    }
-
-    func testRotatingFourTimesReturnsTheSamePiece() {
-        for piece in TrackPiece.allCases {
-            var connections = piece.connections
-            for _ in 0..<4 { connections = connections.rotatedClockwise }
-            XCTAssertEqual(connections, piece.connections)
-        }
-        XCTAssertEqual(TrackConnections().rotatedClockwise, [])
-        XCTAssertEqual(TrackConnections.north.rotatedClockwise, .east)
-        XCTAssertEqual(TrackConnections.west.rotatedClockwise, .north)
+    func testCompassHeadingsAreNamed() {
+        XCTAssertEqual(CompassHeading.allCases.map { $0.name(in: .english) }, ["North", "East", "South", "West"])
+        XCTAssertEqual(CompassHeading.allCases.map { $0.abbreviation(in: .english) }, ["N", "E", "S", "W"])
+        XCTAssertEqual(CompassHeading.allCases.map { $0.name(in: .traditionalChinese) }, ["北", "東", "南", "西"])
+        XCTAssertEqual(CompassHeading.allCases.map { $0.abbreviation(in: .traditionalChinese) }, ["北", "東", "南", "西"])
     }
 }

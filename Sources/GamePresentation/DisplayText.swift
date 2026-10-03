@@ -5,7 +5,8 @@ import GameCore
 // these strings as they are.
 
 extension TrackDirection {
-    /// "North", or "北".
+    /// "North", or "北": a grid train's heading, for its position text
+    /// until the grid leaves GameCore (Stage F3c).
     public func name(in language: DisplayLanguage) -> String {
         switch self {
         case .north: language.text("North", "北")
@@ -14,86 +15,16 @@ extension TrackDirection {
         case .west: language.text("West", "西")
         }
     }
-
-    /// "N", or "北".
-    public func abbreviation(in language: DisplayLanguage) -> String {
-        switch self {
-        case .north: language.text("N", "北")
-        case .east: language.text("E", "東")
-        case .south: language.text("S", "南")
-        case .west: language.text("W", "西")
-        }
-    }
-}
-
-extension TrackConnections {
-    /// The kind of track piece these connections form, such as "Straight".
-    public func shapeName(in language: DisplayLanguage) -> String {
-        let directions = directions
-        switch directions.count {
-        case 0: return language.text("No connections", "沒有連接")
-        case 1: return language.text("Dead end", "盡頭")
-        case 2:
-            let isStraight = self == [.north, .south] || self == [.east, .west]
-            return isStraight ? language.text("Straight", "直線") : language.text("Curve", "彎道")
-        case 3: return language.text("T-junction", "T 字岔")
-        default: return language.text("Four-way", "十字")
-        }
-    }
-
-    /// The connected directions, such as "N–E".
-    public func abbreviation(in language: DisplayLanguage) -> String {
-        directions.map { $0.abbreviation(in: language) }.joined(separator: "–")
-    }
-
-    /// Shape and directions, such as "Curve N–E".
-    public func summary(in language: DisplayLanguage) -> String {
-        isEmpty ? shapeName(in: language) : "\(shapeName(in: language)) \(abbreviation(in: language))"
-    }
 }
 
 extension GameWorld {
-    /// What is on the tile at `position`, such as "Empty", "Track · Straight N–S",
-    /// "Turnout · E–S–W, stem W", "Level crossing · N–S over E–W",
-    /// "Station · Central" or, for a station grown onto more tiles,
-    /// "Station · Central · 3 tiles".
-    public func tileSummary(at position: GridPosition, in language: DisplayLanguage) -> String {
-        // The railway first (Stage S3A: it is not on the map), then the land.
-        if let track = track(at: position) {
-            switch track.layout {
-            case .open:
-                return language.text("Track · ", "軌道 · ") + track.connections.summary(in: language)
-            case .turnout(let stem):
-                let exits = track.connections.abbreviation(in: language)
-                return language.text(
-                    "Turnout · \(exits), stem \(stem.abbreviation(in: language))",
-                    "道岔 · \(exits)，共用端 \(stem.abbreviation(in: language))"
-                )
-            case .crossing:
-                return language.text("Level crossing · N–S over E–W", "平面交叉 · 北–南 跨 東–西")
-            }
-        }
-        switch map.tile(at: position)?.type {
-        case nil: return language.text("Outside the map", "地圖外")
-        case .empty?: return language.text("Empty", "空地")
-        case .station(let id)?: return stationSummary(id, in: language)
-        }
-    }
-}
-
-extension GameWorld {
-    /// What station `id` is: "Station · Central", with its tiles when it
-    /// takes several, "Station · Central · 2 tiles", and its platforms on
-    /// the track network once it has any (Stage F1: their number and length
+    /// What station `id` is: "Station · Central", and its platforms on the
+    /// track network once it has any (Stage F1: their number and length
     /// tell its size), "Station · Central · 2 platforms, 128 m".
     public func stationSummary(_ id: StationID, in language: DisplayLanguage) -> String {
         let label = language.text("Station", "車站")
         guard let station = station(id: id) else { return "\(label) · #\(id.rawValue)" }
         var parts = [label, station.name]
-        let tiles = station.tiles.count
-        if tiles > 1 {
-            parts.append(language.text("\(tiles) tiles", "\(tiles) 格"))
-        }
         let platforms = trackPlatforms(of: id)
         if !platforms.isEmpty {
             let length = NetworkBuilding.lengthText(platforms.reduce(0) { $0 + $1.length }, in: language)
@@ -117,21 +48,18 @@ extension Station {
 }
 
 extension GameWorld {
-    /// How much has been built, such as "3 stations · 17 track tiles", and
-    /// the track network's edges once there are any (Stage C1): "3
-    /// stations · 17 track tiles · 4 edges".
+    /// How much has been built: the stations and the track network's
+    /// edges, such as "3 stations · 4 edges"; "3 座車站 · 4 個軌段".
     public func networkSummary(in language: DisplayLanguage) -> String {
         let stationCount = stations.count
-        let trackCount = tracks.count
         let edgeCount = network.edges.count
         switch language {
         case .english:
             let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
-            let trackText = trackCount == 1 ? "1 track tile" : "\(trackCount) track tiles"
-            let edgeText = edgeCount == 1 ? " · 1 edge" : edgeCount > 1 ? " · \(edgeCount) edges" : ""
-            return "\(stationText) · \(trackText)\(edgeText)"
+            let edgeText = edgeCount == 1 ? "1 edge" : "\(edgeCount) edges"
+            return "\(stationText) · \(edgeText)"
         case .traditionalChinese:
-            return "\(stationCount) 座車站 · \(trackCount) 格軌道" + (edgeCount > 0 ? " · \(edgeCount) 個軌段" : "")
+            return "\(stationCount) 座車站 · \(edgeCount) 個軌段"
         }
     }
 }
@@ -212,13 +140,13 @@ extension Train {
         language.text(cars == 1 ? "1 car" : "\(cars) cars", "\(cars) 節車廂")
     }
 
-    /// The path the train has left. On the grid, ``TrainMovement/pathText(in:)``.
-    /// On the track network: "No path ahead", "Path: 1 more edge, Edge #4",
+    /// The path the train has left on the track network: "No path ahead",
+    /// "Path: 1 more edge, Edge #4",
     /// "Path: 3 more edges, ending on Edge #9", with ", stopping 3000 units
     /// along it" when it stops part of the way along the last (Stage S5),
     /// or "Path: stops 1024 units ahead" on the edge it is on.
     public func pathText(in language: DisplayLanguage) -> String {
-        guard case .onEdge(_, let offset)? = position else { return movement.pathText(in: language) }
+        guard case .onEdge(_, let offset)? = position else { return language.text("No path ahead", "前方沒有路徑") }
         let edges = movement.remainingEdges
         guard let last = edges.last else {
             guard let end = movement.end, end > offset else { return language.text("No path ahead", "前方沒有路徑") }
@@ -244,25 +172,6 @@ extension TrainMovement {
     /// where ``TrainPosition/linkLength`` units are one tile.
     public func rateText(in language: DisplayLanguage) -> String {
         language.text("Rate \(rate) / min", "速率 \(rate)／分鐘")
-    }
-
-    /// The continuation entries the train has not entered yet, such as
-    /// "No path ahead", "Path: 1 more node, (4, 2)" or "Path: 5 more nodes,
-    /// ending at (8, 3)": the grid's path (see ``Train/pathText(in:)`` for
-    /// the track network's).
-    public func pathText(in language: DisplayLanguage) -> String {
-        let remaining = remainingContinuation
-        guard let last = remaining.last else { return language.text("No path ahead", "前方沒有路徑") }
-        switch language {
-        case .english:
-            return remaining.count == 1
-                ? "Path: 1 more node, \(last)"
-                : "Path: \(remaining.count) more nodes, ending at \(last)"
-        case .traditionalChinese:
-            return remaining.count == 1
-                ? "路徑：再 1 個節點，\(last)"
-                : "路徑：再 \(remaining.count) 個節點，終點 \(last)"
-        }
     }
 }
 
@@ -555,9 +464,8 @@ extension GameSession {
     /// selected station (see ``GameWorld/stationSummary(_:in:)``) and who
     /// waits there by line and direction (G1c); or the train a tap on the
     /// map picked (``GameSession/tappedTrainID``, see
-    /// ``GameWorld/trainSummary(of:in:)``); or, on the grid (the
-    /// compatibility layer), a selected tile with track, "x 3, y 4 · Track
-    /// · E–W". `nil` when none is selected.
+    /// ``GameWorld/trainSummary(of:in:)``). `nil` when neither is
+    /// selected.
     public func selectionText() -> String? {
         if let station = selectedStation {
             let summary = world.stationSummary(station.id, in: language)
@@ -567,7 +475,6 @@ extension GameSession {
         if let train = tappedTrainID, let summary = world.trainSummary(of: train, in: language) {
             return summary
         }
-        guard let position = selection, world.track(at: position) != nil else { return nil }
-        return "x \(position.x), y \(position.y) · \(world.tileSummary(at: position, in: language))"
+        return nil
     }
 }
