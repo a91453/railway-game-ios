@@ -100,6 +100,10 @@ private struct TutorialCardLayout: Layout {
                 CGPoint(x: available.maxX - size.width, y: centred.y),
                 CGPoint(x: centred.x, y: available.minY),
                 CGPoint(x: centred.x, y: available.maxY - size.height),
+                CGPoint(x: available.minX, y: available.minY),
+                CGPoint(x: available.maxX - size.width, y: available.minY),
+                CGPoint(x: available.minX, y: available.maxY - size.height),
+                CGPoint(x: available.maxX - size.width, y: available.maxY - size.height),
             ]
             origin = candidates.first {
                 let frame = CGRect(origin: $0, size: size)
