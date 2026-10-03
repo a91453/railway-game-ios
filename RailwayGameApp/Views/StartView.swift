@@ -30,6 +30,7 @@ struct StartView: View {
                         ) {
                             launcher.continueGame()
                         }
+                        .accessibilityIdentifier("start.continue")
                     }
                     StartButton(
                         title: String(localized: "New Game"),
@@ -56,6 +57,7 @@ struct StartView: View {
                     ) {
                         launcher.openDemo()
                     }
+                    .accessibilityIdentifier("start.demoMap")
                     if !launcher.otherSaves.isEmpty {
                         StartButton(
                             title: String(localized: "Saved Games"),
@@ -64,6 +66,7 @@ struct StartView: View {
                         ) {
                             showsSaves = true
                         }
+                        .accessibilityIdentifier("start.savedGames")
                     }
                     StartButton(
                         title: String(localized: "Import a Save"),

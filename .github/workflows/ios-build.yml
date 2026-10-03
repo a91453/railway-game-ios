@@ -146,7 +146,9 @@ jobs:
 
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
-        timeout-minutes: 10
+        # The eight toolbar, start/save and tutorial tests also need time for
+        # cold XCTest startup and Xcode to finish writing the result bundle.
+        timeout-minutes: 15
         run: |
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \

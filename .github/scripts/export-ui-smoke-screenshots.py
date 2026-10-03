@@ -13,6 +13,15 @@ def export(source: Path, destination: Path, *, tutorial_only: bool = False) -> N
         for language in ("en", "zh-Hant")
         for index, tool in enumerate(("select", "network", "train"), 1)
     }
+    if not tutorial_only:
+        expected.update(
+            f"{language}-flow-{index:02d}-{step}"
+            for language in ("en", "zh-Hant")
+            for index, step in enumerate((
+                "start-empty", "demo-map", "menu-save", "game-saved",
+                "menu-return", "start-saved", "continued-map", "start-reset",
+            ), 1)
+        )
     expected.update(
         f"{language}-tutorial-{screen}"
         for language in ("en", "zh-Hant", "en-large-text")

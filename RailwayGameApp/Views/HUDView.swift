@@ -74,6 +74,7 @@ struct HUDView: View {
             } label: {
                 Label("Save Game", systemImage: "square.and.arrow.down")
             }
+            .accessibilityIdentifier("menu.saveGame")
             ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Railway Game save"))) {
                 Label("Export Save", systemImage: "square.and.arrow.up")
             }
@@ -90,6 +91,7 @@ struct HUDView: View {
             } label: {
                 Label("Back to Start", systemImage: "house")
             }
+            .accessibilityIdentifier("menu.backToStart")
         } label: {
             Image(systemName: "line.3.horizontal")
                 .font(.subheadline.weight(.bold))
@@ -97,6 +99,7 @@ struct HUDView: View {
         }
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
+        .accessibilityIdentifier("hud.menu")
         .tutorialTarget(.gameMenu)
     }
 
