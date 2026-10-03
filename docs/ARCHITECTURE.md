@@ -2366,7 +2366,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 相機的開局：`PlanCamera(map:viewport:showing:)`，`showing` 是 `WorldRegion.built(in:)`（路網的節點、車站，以及舊存檔的方格鐵軌）。有東西時置中在它上面、縮小到它放得下而四周各留 `focusPadding`（30 點，`Railway/` 的 padding；`Ci/` 的 72 是桌面的螢幕）；但不比沒有它時的開局大小（`automaticSize`）更近，對應 `Ci/` 的 `maxZoom`。沒有東西時在地圖中央（原本是西北角）。手機打開示範地圖約每格 12 點，是概覽。
 - 縮放按鈕：`MapScale.zoomStep`（每次 ± 8 點）改成 `zoomFactor`（× 2），照參考的一個縮放等級。手機上 16 公里的地圖整張放得下時每格不到 0.4 點，到最大的 64 點約 7 步；固定 8 點的步長一步就從 8 點跳到整張地圖。縮放範圍不變：最大每格 64 點，最小到整張地圖放得下。
 - 教學的第三步 `map.move`（「移動與縮放地圖」，框 `map` 與 `map.zoom`）：參考沒有這一步（gap），文字照 `Ci/` 說明畫面的縮放與移動改成觸控。新的 `TutorialGoal.moveMap`：相機是地圖 view 的狀態，不在 session 裡，所以地圖 view 在玩家捏合、拖曳或按縮放按鈕時呼叫 `GameSession.mapDidMove()`；只有在等這個動作的那一步第一次呼叫時才改變 session（手勢的每一幀都呼叫也只觸發一次畫面更新）。旋轉裝置、改變大小、選到遠方的車站時自動置中都不算。回到上一步沿用，和決策 47 的快照一樣。
-**5. App**：`MapView` 用 `showing` 開局，手勢與縮放按鈕呼叫 `mapDidMove()`；iPad 直向的地圖 view 固定 4:3（`ContentView`；原本跟著地圖的長寬比，正方形的大地圖會吃掉控制項的空間）。UI 測試：教學的「鋪了軌道之後」改成先按放大鍵通過地圖這一步；縮放按鈕的測試改成一次就到最大（32 → 64 點）。
+**5. App**：`MapView` 用 `showing` 開局，手勢與縮放按鈕呼叫 `mapDidMove()`；iPad 直向的地圖 view 固定 4:3（`ContentView`；原本跟著地圖的長寬比，正方形的大地圖會吃掉控制項的空間）。
+- 教學的標記 `tutorialTarget(_:)` 改成和裡面的標記合併（`transformAnchorPreference`）：原本的 `anchorPreference` 會取代子 view 回報的值，`ContentView` 給整個地圖的 `map` 蓋掉了地圖裡縮放按鈕的 `map.zoom`。第 0 步以來沒有步驟用到 `map.zoom`，直到地圖這一步的 UI 測試在 iPhone 上發現卡片蓋住縮放按鈕（卡片不知道它們在那裡）。UI 測試：教學的「鋪了軌道之後」改成先按放大鍵通過地圖這一步；縮放按鈕的測試改成一次就到最大（32 → 64 點）。
 
 **效能**：模擬不因地圖變大而變慢。GameCore 不掃描整張地圖（只查個別的格子，例如方格車站）；路網的求路只走訪可達的軌道（決策 16、31），成本跟著蓋了多少軌道，不跟地圖大小；`GridMap` 的大小只決定邊界。繪製只畫畫面內的東西（CX-4）。實機的繪製效能沒有在 Linux 驗證（TestFlight）。
 

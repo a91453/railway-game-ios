@@ -90,7 +90,7 @@ C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。�
 檔案：`RailwayGameApp/Views/TutorialTargets.swift`。
 
 - `TutorialTargetBounds`：`PreferenceKey`，值是 `[TutorialTarget: TutorialTargetAnchor]`。`TutorialTargetAnchor` 是控制項的範圍（`bounds`），加上它所在的每個捲動區的範圍（`clips`）；`visibleFrame(in:viewport:)` 取畫面上看得到的部分，捲出捲動區的控制項就沒有。
-- `tutorialTarget(_:)`：`View` 的 modifier，把這個 view 的範圍以它的識別碼回報上去；傳 `nil` 就不標記。
+- `tutorialTarget(_:)`：`View` 的 modifier，把這個 view 的範圍以它的識別碼回報上去；傳 `nil` 就不標記。它和裡面標記的控制項合併（`transformAnchorPreference`）：地圖是 `map`，地圖裡的縮放按鈕是 `map.zoom`，兩個都找得到（E1 之前用 `anchorPreference`，外層的 `map` 蓋掉了 `map.zoom`）。
 - `tutorialClip()`：掛在 `ScrollView` 上，裡面標記的控制項只算它露出來的部分（iPad 直向的控制面板、橫向的側欄）。
 
 CX-5 的覆蓋層這樣讀（示意）：
