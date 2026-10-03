@@ -70,9 +70,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func assertGame(in app: XCUIApplication) {
+        // The demo map's accessibility tree is large: on a slow runner one
+        // query of it took 9 s, so its waits allow longer than a button's.
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10), "Missing game map")
-        assertHittable(map, message: "Game map is not visible")
+        XCTAssertTrue(map.waitForExistence(timeout: 30), "Missing game map")
+        assertHittable(map, timeout: 30, message: "Game map is not visible")
         for identifier in ["tool.select", "tool.network", "tool.train", "hud.menu"] {
             _ = requiredButton(identifier, in: app)
         }
@@ -105,10 +107,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         return query.firstMatch
     }
 
-    private func assertHittable(_ element: XCUIElement, message: String) {
+    private func assertHittable(_ element: XCUIElement, timeout: TimeInterval, message: String) {
         // Existence can precede the end of a menu or screen transition.
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, message)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed, message)
     }
 
     private func capture(_ app: XCUIApplication, name: String) {
