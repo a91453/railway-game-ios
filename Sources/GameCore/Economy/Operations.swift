@@ -117,7 +117,9 @@ extension GameWorld {
     // MARK: - Settlement
 
     /// The network's fixed assets at the moment of a settlement: its
-    /// stations (each once, however many lines call there), its route
+    /// stations (each line's own, once each: a station two lines call at
+    /// counts for both, as the reference counts each line's stations,
+    /// `metroEconomyFixedAssets`), its route
     /// length (each line's own service, out to its far end, in world
     /// units; 0 for one that cannot be driven) and its trains (each
     /// service's most at any level).
@@ -128,11 +130,11 @@ extension GameWorld {
     }
 
     func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
-        var stations: Set<StationID> = []
+        var stations: Int64 = 0
         var length: Int64 = 0
         var trains: Int64 = 0
         for line in lines {
-            stations.formUnion(line.stops)
+            stations += Int64(Set(line.stops).count)
             let journey: LineJourney?
             if let known = memo.journeys[line.id]?[0] {
                 journey = known
@@ -148,7 +150,7 @@ extension GameWorld {
                 trains += Int64(max(counts.peak, counts.offPeak, counts.low))
             }
         }
-        return FixedAssets(stations: Int64(stations.count), routeLength: length, trains: trains)
+        return FixedAssets(stations: stations, routeLength: length, trains: trains)
     }
 
     /// World units in a kilometre.

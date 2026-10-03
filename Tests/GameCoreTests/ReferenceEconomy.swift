@@ -9,8 +9,8 @@ import GameCore
 /// - the fare rules are checked step by step against the engine's messages,
 ///   not by one predicate;
 /// - days are a dictionary, summed for the report on demand;
-/// - fixed assets are counted from the stations of every line's own stops
-///   as a set of numbers, and the route from the reference's own journey.
+/// - fixed assets are counted from each line's stops, sorted with the
+///   repeats dropped, and the route from the reference's own journey.
 ///
 /// Only the demand table (``FareRules/demandFactor(fare:)``) is shared:
 /// `EconomyAccountsTests` checks it against the reference's formula.
@@ -118,11 +118,12 @@ extension ReferenceWorld {
     mutating func settle(memo: inout DispatchMemo) {
         guard accounts.managed, clockSeconds % 3600 == 0, let opened = accounts.opened, opened < clockSeconds else { return }
         accounts.opened = clockSeconds
-        var stationSet: Set<Int> = []
+        var stations: Int64 = 0
         var route: Int64 = 0
         var trainCount: Int64 = 0
         for line in lines {
-            for stop in line.stops { stationSet.insert(stop.rawValue) }
+            let stops = line.stops.map(\.rawValue).sorted()
+            stations += Int64(stops.indices.filter { $0 == 0 || stops[$0] != stops[$0 - 1] }.count)
             let key = ServiceKey(line: line.id, service: 0)
             if memo.journeys[key] == nil { memo.journeys[key] = .some(serviceJourney(line, 0)) }
             if let journey = memo.journeys[key]! {
@@ -133,7 +134,6 @@ extension ReferenceWorld {
                 trainCount += Int64([pattern.trains[.peak]!, pattern.trains[.offPeak]!, pattern.trains[.low]!].max()!)
             }
         }
-        let stations = Int64(stationSet.count)
         func round(_ sixtyFourThousandths: Int64) -> Int64 {
             ((sixtyFourThousandths + 32_000) / 64_000) * 100
         }

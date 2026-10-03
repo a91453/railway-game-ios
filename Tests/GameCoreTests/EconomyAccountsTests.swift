@@ -205,6 +205,26 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.economy.balance, balance - Money(24 * 5_400 + 186_000))
     }
 
+    /// A station two lines call at is staffed and run for each of them, as
+    /// the reference counts each line's stations (`metroEconomyFixedAssets`);
+    /// a line calling twice at one station counts it once.
+    func testAStationOfTwoLinesCountsForEach() throws {
+        var world = try GameWorld(
+            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+        )
+        for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
+            try world.buildStation(named: name, at: GridPosition(x: x, y: 0))
+        }
+        try world.createLine(named: "Main", stops: [alpha, beta, alpha])
+        try world.createLine(named: "Branch", stops: [beta, gamma])
+        world.setEconomyMode(.management)
+        let balance = world.economy.balance
+        try world.advance(ticks: 1_441)
+        // Main has 2 stations and Branch 2: 4, so 24 hours of 18 × 4, then
+        // a day's staff of 620 × 4.
+        XCTAssertEqual(world.economy.balance, balance - Money(24 * 7_200 + 248_000))
+    }
+
     /// The year report's previous year stays whole through the next year:
     /// two years of days are kept.
     func testTheYearReportKeepsTheWholePreviousYear() throws {
@@ -247,7 +267,9 @@ final class EconomyAccountsTests: XCTestCase {
         try world.setFareRules(.flat(75))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "at the baseline")
         try world.setFareRules(.flat(0))
-        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_080)
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "a free trip is taken as the baseline")
+        try world.setFareRules(.flat(1))
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_078, "the cheapest fare: 1080 to 1076 at 13 thousandths of the baseline")
         try world.setFareRules(.flat(150))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 487, "twice the baseline")
         world.setEconomyMode(.free)
@@ -272,7 +294,7 @@ final class EconomyAccountsTests: XCTestCase {
             let ratio = Double(cents) / 75
             XCTAssertLessThanOrEqual(abs(Double(FareRules.demandFactor(fare: Money(cents))) - reference(ratio) * 1_000), 2.5, "fare \(cents)")
         }
-        XCTAssertEqual(FareRules.demandFactor(fare: 0), 1_080)
+        XCTAssertEqual(FareRules.demandFactor(fare: 0), 1_000, "taken as the baseline, as the reference's caller does")
         XCTAssertEqual(FareRules.demandFactor(fare: 100_000), 10)
     }
 

@@ -127,14 +127,16 @@ extension FareRules {
     public static let demandBaseline: Money = 75
 
     /// How much of a pair's demand a fare of `fare` keeps, in thousandths
-    /// (`metroFareDemandPenaltyForFare` against ``demandBaseline``): 1080
-    /// for a free trip, rising to 1000 at the baseline, then falling with
-    /// `exp(−0.72·(a − 1)^1.35)`, and faster from 4 times the baseline, never
-    /// below 10. GameCore has no `exp`: the curve is a table at every 0.05
-    /// of the ratio, interpolated linearly (within 1.6 thousandths of the
-    /// formula; `EconomyAccountsTests` checks it).
+    /// (`metroFareDemandPenaltyForFare` against ``demandBaseline``): up to
+    /// 1080 for the cheapest trip, falling to 1000 at the baseline, then
+    /// with `exp(−0.72·(a − 1)^1.35)`, and faster from 4 times the baseline,
+    /// never below 10. A fare of 0 or less is taken as the baseline, 1000
+    /// (the reference's only caller, `metroFareDemandPenaltyForTrip`,
+    /// replaces it so). GameCore has no `exp`: the curve is a table at every
+    /// 0.05 of the ratio, interpolated linearly (within 1.6 thousandths of
+    /// the formula; `EconomyAccountsTests` checks it).
     public static func demandFactor(fare: Money) -> Int64 {
-        guard fare > .zero else { return 1_080 }
+        guard fare > .zero else { return 1_000 }
         // The ratio fare / baseline in thousandths, rounded down.
         let ratio = fare.amount * 1_000 / demandBaseline.amount
         let index = ratio / 50
