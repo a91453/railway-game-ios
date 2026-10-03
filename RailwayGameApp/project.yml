@@ -41,7 +41,6 @@ targets:
         product: GameCore
       - package: RailwayGame
         product: GamePresentation
-    scheme: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGame
@@ -71,3 +70,28 @@ targets:
           UIInterfaceOrientationPortraitUpsideDown
           UIInterfaceOrientationLandscapeLeft
           UIInterfaceOrientationLandscapeRight
+
+  RailwayGameUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: RailwayGame
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGameUITests
+        GENERATE_INFOPLIST_FILE: "YES"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+
+schemes:
+  RailwayGame:
+    build:
+      targets:
+        RailwayGame: all
+        # Keep the UI runner out of Release archives and ordinary app builds.
+        RailwayGameUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - RailwayGameUITests

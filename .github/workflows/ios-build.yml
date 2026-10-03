@@ -1,7 +1,7 @@
 name: iOS App Build
 
-# Compile-only validation of the native app against the real Apple SDK, and a
-# check that the committed Xcode project still matches project.yml.
+# Build and UI smoke tests against the real Apple SDK, and a check that the
+# committed Xcode project still matches project.yml.
 # GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
 # lives in release-archive.yml.
 
@@ -16,6 +16,11 @@ on:
       - "**/*.md"
       - "docs/**"
   workflow_dispatch:
+    inputs:
+      verify_missing_button:
+        description: Temporarily remove Select and prove the English smoke test fails
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -108,3 +113,89 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Select an available iPhone Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          iphones = [device for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone Simulator")
+          device = iphones[0]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_UDID={device['udid']}\n")
+          PY
+
+      # Boot explicitly before XCTest installs its runner. A cold Simulator
+      # otherwise leaves xcodebuild waiting without any test progress logs.
+      - name: Boot the selected iPhone Simulator
+        timeout-minutes: 8
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
+      - name: UI smoke tests (English and Traditional Chinese)
+        id: ui-smoke
+        timeout-minutes: 10
+        run: |
+          xcodebuild test \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
+            -parallel-testing-enabled NO \
+            -disableAutomaticPackageResolution \
+            CODE_SIGN_IDENTITY=-
+
+      - name: Export UI screenshots as PNG
+        if: always() && steps.ui-smoke.outcome != 'skipped'
+        run: |
+          xcrun xcresulttool export attachments \
+            --path "$RUNNER_TEMP/ui-smoke.xcresult" \
+            --output-path "$RUNNER_TEMP/ui-smoke-attachments"
+          python3 .github/scripts/export-ui-smoke-screenshots.py \
+            "$RUNNER_TEMP/ui-smoke-attachments" "$RUNNER_TEMP/ui-smoke-screenshots"
+
+      - name: Upload UI screenshots
+        if: always() && steps.ui-smoke.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-smoke-screenshots
+          path: ${{ runner.temp }}/ui-smoke-screenshots
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload failed UI test results
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-smoke-xcresult
+          path: ${{ runner.temp }}/ui-smoke.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
+      # Regression proof on PRs (also available manually). Restore the source
+      # afterwards; this broken build never replaces the normal screenshot run.
+      - name: Prove a missing toolbar button fails the smoke test
+        id: missing-button
+        timeout-minutes: 5
+        if: github.event_name == 'pull_request' || inputs.verify_missing_button
+        run: bash .github/scripts/ui-smoke-missing-button.sh
+
+      - name: Upload missing-button failure evidence
+        if: always() && (github.event_name == 'pull_request' || inputs.verify_missing_button) && steps.missing-button.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-smoke-missing-button-evidence
+          path: |
+            ${{ runner.temp }}/ui-smoke-missing-button.xcresult
+            ${{ runner.temp }}/ui-smoke-missing-button-summary.json
+            ${{ runner.temp }}/ui-smoke-missing-button.log
+          if-no-files-found: error
+          retention-days: 7

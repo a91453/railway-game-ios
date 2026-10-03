@@ -71,6 +71,8 @@ private struct ToolPicker: View {
                 }
                 .buttonStyle(SelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
+                // Stable across localizations for screenshot-only UI tests.
+                .accessibilityIdentifier("tool.\(tool)")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }
