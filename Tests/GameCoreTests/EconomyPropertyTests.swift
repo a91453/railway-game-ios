@@ -25,7 +25,9 @@ final class EconomyPropertyTests: XCTestCase {
     typealias Operation = KernelDifferentialTests.Operation
 
     static func generate(_ c: inout PropertyCase, operations count: Int) throws -> (KernelDifferentialTests.Setup, [Operation]) {
-        let (setup, base) = try BoardingPropertyTests.generate(&c, operations: count)
+        var (setup, base) = try BoardingPropertyTests.generate(&c, operations: count)
+        // Cars bought by the car, now and then dearer than the balance.
+        setup.carPrice = c.random.element(of: [0, 50, 300, 5_000, 1_000_000])
         var operations: [Operation] = []
         if c.random.chance(9, in: 10) { operations.append(.setEconomyMode(.management)) }
         if c.random.chance(1, in: 2) { operations.append(.setFareRules(fareRules(using: &c.random))) }
@@ -101,6 +103,9 @@ final class EconomyPropertyTests: XCTestCase {
                     counts[error == nil ? "fare rules set" : "fare rules refused", default: 0] += 1
                 case .setFareBaseline:
                     counts[error == nil ? "fare baseline set" : "fare baseline refused", default: 0] += 1
+                case .setCars:
+                    if world.economy.balance < before.economy.balance { counts["cars paid for", default: 0] += 1 }
+                    if case .insufficientFunds = error { counts["cars beyond the balance", default: 0] += 1 }
                 case .advance(let ticks) where error == nil:
                     Self.countEvents(before: before, after: world, into: &counts)
                     if let problem = ServicePropertyTests.batchProblem(ticks: ticks, from: before, batch: world) {
@@ -126,7 +131,7 @@ final class EconomyPropertyTests: XCTestCase {
         assertVolume(ran == 12 * PropertySeeds.active.count, "every case should run")
         for (event, least) in [
             ("hours settled", 200), ("hours with fares", 60), ("days settled", 20), ("fare rules set", 60), ("fare rules refused", 5),
-            ("fare baseline set", 20), ("fare baseline refused", 2), ("below zero", 10),
+            ("fare baseline set", 20), ("fare baseline refused", 2), ("cars paid for", 10), ("cars beyond the balance", 2), ("below zero", 10),
         ] {
             assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
         }

@@ -146,8 +146,15 @@ final class KernelDifferentialTests: XCTestCase {
         /// The clock, in seconds (Stage W2a).
         var seconds: Int64
         var speed: GameSpeed
+        /// What each added car costs (decision 46); the campaigns before it
+        /// add cars for nothing.
+        var carPrice: Int64 = 0
 
-        var costs: ConstructionCosts { NetworkGenerator.costs }
+        var costs: ConstructionCosts {
+            var costs = NetworkGenerator.costs
+            costs.car = Money(carPrice)
+            return costs
+        }
 
         /// The same network built on both sides, each through its own
         /// commands, with just enough money plus `extraBalance`.
