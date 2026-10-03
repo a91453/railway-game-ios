@@ -94,12 +94,16 @@ public struct WorldRegion: Hashable, Sendable {
     }
 
     /// The part of `world` something is built on, seen from above: its
-    /// track nodes and stations (and an old save's grid track); `nil` for a
-    /// world with none. Where a game's map opens (``PlanCamera``'s
-    /// `showing`): on a 16 km map (Stage E1), the built network may be
-    /// anywhere.
+    /// track nodes, the points along its edges (a curve may bow out past
+    /// its ends: a ring's arcs between nodes on its diagonals), and its
+    /// stations (and an old save's grid track); `nil` for a world with
+    /// none. Where a game's map opens (``PlanCamera``'s `showing`): on a
+    /// 16 km map (Stage E1), the built network may be anywhere.
     public static func built(in world: GameWorld) -> WorldRegion? {
         var points = world.network.nodes.map(\.position)
+        for edge in world.network.edges {
+            points += world.trackGeometry(of: edge.id)?.points ?? []
+        }
         points += world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
         points += world.network.tracks.map { WorldCoordinate(centreOf: $0.position) }
         return WorldRegion(enclosing: points)

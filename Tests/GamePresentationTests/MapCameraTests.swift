@@ -183,7 +183,7 @@ final class MapCameraTests: XCTestCase {
     /// the map.
     func testACameraOpensOnWhatIsBuilt() throws {
         let large = try GridMap(width: 1_024, height: 1_024)
-        // The demo map's 28 × 20 tiles in the middle of a 16 km map.
+        // A network 28 × 20 tiles in the middle of a 16 km map.
         let demo = WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024)
         let camera = PlanCamera(map: large, viewport: phone, showing: demo)
         XCTAssertEqual(camera.centerX, 512 * 1_024)
@@ -211,12 +211,14 @@ final class MapCameraTests: XCTestCase {
         XCTAssertFalse(PlanCamera(map: large, viewport: phone, showing: everything).canZoomOut)
     }
 
-    /// What a game has built: its track nodes and stations, and an old
-    /// save's grid track; nothing for a new game.
+    /// What a game has built: its track nodes, the points along its edges,
+    /// its stations, and an old save's grid track; nothing for a new game.
     func testTheBuiltRegionHoldsTheNetworkAndTheStations() throws {
         XCTAssertNil(WorldRegion.built(in: .newGame()))
+        // The demo's ring, 20 tiles round Central (tile 512, 512): its nodes
+        // are on the diagonals, 14 tiles out each way, but its arcs reach 20.
         let demo = try XCTUnwrap(WorldRegion.built(in: DemoWorld.make(in: .english)))
-        XCTAssertEqual(demo, WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024))
+        XCTAssertEqual(demo, WorldRegion(minX: 492 * 1_024, minY: 492 * 1_024, maxX: 532 * 1_024, maxY: 532 * 1_024))
 
         var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
         try world.buildTrack(at: GridPosition(x: 3, y: 2), connections: [.east, .west])

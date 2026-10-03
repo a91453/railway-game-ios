@@ -50,6 +50,6 @@ final class NewGameBalanceTests: XCTestCase {
     func testTheDemoMapFitsTheStartingMoney() {
         let demo = DemoWorld.make(in: .english)
         XCTAssertEqual(demo.economy.costs, .newGame)
-        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(168_080_000), "$1,680,800")
+        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(196_240_000), "$1,962,400")
     }
 }

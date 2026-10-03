@@ -4,16 +4,29 @@ import XCTest
 
 /// Stage C4: the demo map is built on the track network only (Stage F1),
 /// with ordinary commands, and runs at once: both lines send their trains
-/// out, passengers ride and fares are charged.
+/// out, passengers ride and fares are charged. Its stations share
+/// platforms on several tracks and levels, round Central and a ring.
 final class DemoWorldTests: XCTestCase {
     func testTheDemoMapIsBuiltOnTheNetworkWithStationsAtPoints() {
         let world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertTrue(world.stations.allSatisfy { $0.point != nil && $0.tiles.isEmpty }, "no station takes a tile")
         XCTAssertTrue(world.tracks.isEmpty, "no grid track")
-        XCTAssertEqual(world.network.edges.map(\.structure), [.surface, .elevated])
-        let central = world.stations[1].id
-        XCTAssertEqual(world.trackPlatforms(of: central).map(\.edge), [.edge(1), .edge(2)], "a platform on each line")
+        // Line 1 on the ground, Line 2 on a viaduct, and the ring's four arcs.
+        XCTAssertEqual(world.network.edges.map(\.structure), [.surface, .elevated, .surface, .surface, .surface, .surface])
+        let ids = world.stations.map(\.id)
+        let platforms = ids.map { world.trackPlatforms(of: $0).map(\.edge) }
+        XCTAssertEqual(platforms, [
+            [.edge(1), .edge(6)],  // West: Line 1 and the ring, side by side on the ground
+            [.edge(1), .edge(2)],  // Central: Line 1 below, Line 2 above
+            [.edge(1), .edge(4)],  // East
+            [.edge(2), .edge(3)],  // North: Line 2 above, the ring below
+            [.edge(2), .edge(5)],  // South
+        ])
+        // Nothing crosses at its own height: the lines end inside the ring.
+        let heights = world.network.nodes.map(\.position.z)
+        XCTAssertEqual(heights, [0, 0, 512, 512, 0, 0, 0, 0])
+        XCTAssertEqual(WorldRegion.built(in: world).map { ($0.minX + $0.maxX) / 2 }, Double(world.stations[1].location.x), "Central is the middle")
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2"])
         XCTAssertEqual(world.trains.map(\.cars), [4, 4])
         XCTAssertTrue(world.isTrafficControlEnabled)
