@@ -55,7 +55,7 @@ struct ContentView: View {
                 // iPad portrait: the whole map across the full width, and
                 // the controls get the rest of the height.
                 map
-                    .aspectRatio(mapAspectRatio, contentMode: .fit)
+                    .aspectRatio(Self.mapAspectRatio, contentMode: .fit)
                     .layoutPriority(1)
                 Divider()
                 ScrollView {
@@ -74,10 +74,10 @@ struct ContentView: View {
         }
     }
 
-    private var mapAspectRatio: CGFloat {
-        let map = session.world.map
-        return CGFloat(map.width) / CGFloat(map.height)
-    }
+    /// The map view's shape on an iPad in portrait: 4:3, the shape of the
+    /// 32 × 24 map before Stage E1. The view is a window on the map now, so
+    /// a new game's square 16 km map does not take the controls' room.
+    private static let mapAspectRatio: CGFloat = 4.0 / 3.0
 
     private var wideLayout: some View {
         HStack(spacing: 0) {

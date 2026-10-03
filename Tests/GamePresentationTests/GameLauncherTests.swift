@@ -96,7 +96,7 @@ final class GameLauncherTests: XCTestCase {
         let library = SaveLibrary(directory: directory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let newer = String(decoding: try SaveLibrary.encode(.newGame(), at: Date()), as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion":1"#, with: #""saveVersion":9"#)
+            .replacingOccurrences(of: #""saveVersion":\#(SavedGame.currentVersion)"#, with: #""saveVersion":9"#)
         try Data(newer.utf8).write(to: directory.appendingPathComponent("autosave.json"))
         await MainActor.run {
             let launcher = GameLauncher(library: library, language: .english)

@@ -31,9 +31,12 @@ final class MapScaleTests: XCTestCase {
     func testZoomStaysWithinRange() {
         let fitting = 12.5
 
-        XCTAssertEqual(MapScale.zoomedIn(from: 32, fitting: fitting), 40)
-        XCTAssertEqual(MapScale.zoomedIn(from: 60, fitting: fitting), MapScale.largestSize)
-        XCTAssertEqual(MapScale.zoomedOut(from: 32, fitting: fitting), 24)
+        // Stage E1: a step doubles or halves the size, as the references'
+        // zoom buttons go one zoom level.
+        XCTAssertEqual(MapScale.zoomFactor, 2)
+        XCTAssertEqual(MapScale.zoomedIn(from: 16, fitting: fitting), 32)
+        XCTAssertEqual(MapScale.zoomedIn(from: 40, fitting: fitting), MapScale.largestSize)
+        XCTAssertEqual(MapScale.zoomedOut(from: 32, fitting: fitting), 16)
         XCTAssertEqual(MapScale.zoomedOut(from: 16, fitting: fitting), fitting)
         XCTAssertEqual(MapScale.clamped(1, fitting: fitting), fitting)
     }
@@ -121,7 +124,9 @@ final class MapScaleTests: XCTestCase {
 
     func testMaximumSizeMapCullsDistantTrackAndRetainsACrossing() throws {
         let map = try GridMap(width: 1024, height: 1024)
-        let camera = PlanCamera(map: map, viewport: ScreenSize(width: 402, height: 420))
+        // The map's north-west corner in the view's (a new camera opens in
+        // the middle of the map).
+        let camera = PlanCamera(map: map, viewport: ScreenSize(width: 402, height: 420)).panned(byX: 1e7, y: 1e7)
         let distant = [WorldCoordinate(x: 600_000, y: 600_000), WorldCoordinate(x: 700_000, y: 700_000)]
         XCTAssertTrue(MapScale.visiblePolylines(distant, projection: camera, margin: 32).isEmpty)
         let crossing = [WorldCoordinate(x: -1_024, y: 4_096), WorldCoordinate(x: 1_048_576, y: 4_096)]

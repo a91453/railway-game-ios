@@ -59,8 +59,19 @@ final class TutorialUITests: XCTestCase {
         build.tap()
         waitForEnabled(next, true)
         next.tap()
+        // Stage E1: the map step waits until the player moves the map. The
+        // zoom buttons are among its controls, so the card leaves them free.
+        waitForEnabled(next, false, "The map step waits for the map to move")
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 5))
+        XCTAssertTrue(zoomIn.isHittable)
+        XCTAssertFalse(card.frame.intersects(zoomIn.frame), "The tutorial card covers the zoom buttons")
+        capture(app, name: "en-tutorial-map-step")
+        zoomIn.tap()
+        waitForEnabled(next, true)
+        next.tap()
         // The next step asks for a station, so Next waits again; Done is the
-        // last of ten steps and is checked in TutorialSessionTests.
+        // last of eleven steps and is checked in TutorialSessionTests.
         XCTAssertEqual(next.label, "Next")
         waitForEnabled(next, false, "The station step waits for a station")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)

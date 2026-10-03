@@ -13,9 +13,18 @@
 ///
 /// A save of a later version than this build knows is refused rather than
 /// guessed at, and so is any version below 1.
+///
+/// The versions:
+///
+/// 1. Stage C4: the world's form, with every tile of the map written out.
+/// 2. Stage E1 (ARCHITECTURE decision 48): the map's occupied tiles only,
+///    each with its position. A new game's map is 1024 tiles a side, and
+///    writing them all made a save of an empty map 13 MB; a build that
+///    reads only version 1 says the save is newer than it rather than
+///    calling it damaged.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public let world: GameWorld
 
@@ -46,7 +55,9 @@ extension SavedGame: Codable {
                 debugDescription: "The save is version \(version); this build reads up to version \(Self.currentVersion)."
             )
         }
-        // Version 1 is the current form; later versions add their steps here.
+        // Version 1 to 2: the world reads the map with every tile written
+        // out as well as with only its occupied tiles, so a version 1 world
+        // needs no step of its own. Later versions add their steps here.
         world = try container.decode(GameWorld.self, forKey: .world)
     }
 

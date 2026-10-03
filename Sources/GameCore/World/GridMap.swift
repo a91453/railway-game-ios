@@ -1,17 +1,24 @@
-/// A fixed-size rectangular grid of tiles, stored densely in row-major order:
-/// the land (empty ground and the tiles stations stand on). Railway track is
-/// in ``RailwayNetwork`` (Stage S3A).
+/// A fixed-size rectangular grid of tiles: the land (empty ground and the
+/// tiles stations stand on). Railway track is in ``RailwayNetwork`` (Stage
+/// S3A).
+///
+/// Only the tiles that are not empty are stored (Stage E1): a new game's map
+/// is 1024 tiles a side, about 16 km, and since Stage F1 stations stand at
+/// points rather than on tiles, so nearly all of it stays empty ground.
 ///
 /// Only ``GameWorld`` mutates a map, so every change goes through validated
 /// game rules. Callers read tiles via ``tile(at:)`` or ``tiles``.
 public struct GridMap: Equatable, Sendable {
-    /// Upper bound for either side, keeping allocations bounded. Provisional;
-    /// revisit once rendering and simulation performance are measured.
+    /// Upper bound for either side, keeping allocations bounded: 1024 tiles
+    /// of 16 m, a new game's map since Stage E1.
     public static let maximumSideLength = 1024
 
     public let width: Int
     public let height: Int
-    private var storage: [TileType]
+    /// The tiles that are not ``TileType/empty``, by their index in
+    /// row-major order. Never holds `.empty`, so equal maps have equal
+    /// storage.
+    private var occupied: [Int: TileType]
 
     /// Creates a map with every tile empty.
     ///
@@ -23,7 +30,7 @@ public struct GridMap: Equatable, Sendable {
         }
         self.width = width
         self.height = height
-        self.storage = Array(repeating: .empty, count: width * height)
+        self.occupied = [:]
     }
 
     public func contains(_ position: GridPosition) -> Bool {
@@ -33,16 +40,22 @@ public struct GridMap: Equatable, Sendable {
     /// The tile at `position`, or `nil` if it lies outside the map.
     public func tile(at position: GridPosition) -> MapTile? {
         guard contains(position) else { return nil }
-        return MapTile(position: position, type: storage[index(of: position)])
+        return MapTile(position: position, type: occupied[index(of: position)] ?? .empty)
     }
 
-    /// Every tile in row-major order (row `y == 0` first).
+    /// Every tile in row-major order (row `y == 0` first): `width × height`
+    /// of them, over a million on a new game's map. ``occupiedTiles`` has
+    /// only the ones that are not empty.
     public var tiles: [MapTile] {
-        storage.indices.map { index in
-            MapTile(
-                position: GridPosition(x: index % width, y: index / width),
-                type: storage[index]
-            )
+        (0..<(width * height)).map { index in
+            MapTile(position: position(of: index), type: occupied[index] ?? .empty)
+        }
+    }
+
+    /// The tiles that are not ``TileType/empty``, in row-major order.
+    public var occupiedTiles: [MapTile] {
+        occupied.keys.sorted().map { index in
+            MapTile(position: position(of: index), type: occupied[index]!)
         }
     }
 
@@ -66,11 +79,15 @@ public struct GridMap: Equatable, Sendable {
     /// Replaces the tile at `position`. Callers must validate the position.
     mutating func setType(_ type: TileType, at position: GridPosition) {
         precondition(contains(position), "setType(_:at:) called with \(position) outside the map")
-        storage[index(of: position)] = type
+        occupied[index(of: position)] = type == .empty ? nil : type
     }
 
     private func index(of position: GridPosition) -> Int {
         position.y * width + position.x
+    }
+
+    private func position(of index: Int) -> GridPosition {
+        GridPosition(x: index % width, y: index / width)
     }
 
     private static func isValidSize(width: Int, height: Int) -> Bool {
@@ -98,13 +115,16 @@ extension GridMap: Codable {
         }
         self.width = width
         self.height = height
-        self.storage = tiles
+        self.occupied = [:]
+        for (index, tile) in tiles.enumerated() where tile != .empty {
+            occupied[index] = tile
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(width, forKey: .width)
         try container.encode(height, forKey: .height)
-        try container.encode(storage, forKey: .tiles)
+        try container.encode(tiles.map(\.type), forKey: .tiles)
     }
 }

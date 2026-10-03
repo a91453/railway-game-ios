@@ -476,8 +476,9 @@ final class TrainTimetableTests: XCTestCase {
         XCTAssertEqual(explicit, old)
     }
 
-    /// A world without timetables saves exactly as it did before Stage O,
-    /// and a save in that form loads with every timetable empty.
+    /// A world without timetables saves exactly as it did before Stage O
+    /// but for the map's occupied tiles (save version 2, Stage E1), and a
+    /// save in the form before Stage O loads with every timetable empty.
     func testASaveWithoutTimetablesKeepsItsFormat() throws {
         var world = try GameWorld(width: 2, height: 1, economy: GameEconomy(balance: 10_000, costs: testCosts))
         try world.buildTrack(at: GridPosition(x: 0, y: 0), connections: .east)
@@ -486,8 +487,14 @@ final class TrainTimetableTests: XCTestCase {
         try world.placeTrain(first, at: .atNode(GridPosition(x: 0, y: 0), heading: .east))
         try world.setTrainMovementRate(first, to: 5)
         let saved = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":3900,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[{"track":{"connections":2}},{"station":{"id":1}}],"width":2},"nextStationID":2,"nextTrainID":2,"stations":[{"id":1,"name":"S","position":{"x":1,"y":0}}],"trains":[{"id":1,"movement":{"continuation":[],"cursor":0,"rate":5},"name":"T","position":{"atNode":{"heading":{"east":{}},"tile":{"x":0,"y":0}}}}]}"#
+        let savedNow = saved.replacingOccurrences(
+            of: #""tiles":[{"track":{"connections":2}},{"station":{"id":1}}]"#,
+            with: #""occupied":[{"tile":{"track":{"connections":2}},"x":0,"y":0},{"tile":{"station":{"id":1}},"x":1,"y":0}]"#
+        )
+        XCTAssertNotEqual(savedNow, saved)
 
-        XCTAssertEqual(String(decoding: try encode(world), as: UTF8.self), saved)
+        XCTAssertEqual(String(decoding: try encode(world), as: UTF8.self), savedNow)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(savedNow.utf8)), world)
         let loaded = try JSONDecoder().decode(GameWorld.self, from: Data(saved.utf8))
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(loaded.trains.map(\.timetable), [[]])

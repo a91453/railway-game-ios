@@ -15,7 +15,7 @@ struct MapView: View {
         GeometryReader { proxy in
             let map = session.world.map
             let viewport = ScreenSize(width: proxy.size.width, height: proxy.size.height)
-            let projection = camera?.resized(to: viewport) ?? PlanCamera(map: map, viewport: viewport)
+            let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
             MapCanvas(
                 world: session.world,
@@ -28,7 +28,10 @@ struct MapView: View {
             )
             .equatable()
             .overlay {
-                MapGestures(camera: projection, onCameraChange: { camera = $0 }) { location in
+                MapGestures(camera: projection, onCameraChange: { moved in
+                    camera = moved
+                    session.mapDidMove()
+                }) { location in
                     let point = projection.planPoint(at: location)
                     let reach = projection.worldDistance(NetworkBuilding.touchRadius)
                     if session.tool == .network {
@@ -54,10 +57,10 @@ struct MapView: View {
                 zoomControls(camera: projection)
             }
             .onChange(of: viewport, initial: true) { _, size in
-                camera = camera?.resized(to: size) ?? PlanCamera(map: map, viewport: size)
+                camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
             }
             .onChange(of: WorldRegion(map: map)) { _, _ in
-                camera = PlanCamera(map: map, viewport: viewport)
+                camera = openingCamera(viewport: viewport)
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
                 // A station chosen in the overview may be kilometres away.
@@ -82,6 +85,12 @@ struct MapView: View {
         }
     }
 
+    /// The camera a game opens on (Stage E1): what it has built, or the
+    /// middle of its map.
+    private func openingCamera(viewport: ScreenSize) -> PlanCamera {
+        PlanCamera(map: session.world.map, viewport: viewport, showing: WorldRegion.built(in: session.world))
+    }
+
     private var selectionDescription: String {
         session.selectionText() ?? String(localized: "Nothing selected")
     }
@@ -97,6 +106,7 @@ struct MapView: View {
         HStack(spacing: 0) {
             Button {
                 self.camera = camera.zoomedOut()
+                session.mapDidMove()
             } label: {
                 Image(systemName: "minus.magnifyingglass")
                     .frame(width: 44, height: 44)
@@ -108,6 +118,7 @@ struct MapView: View {
 
             Button {
                 self.camera = camera.zoomedIn()
+                session.mapDidMove()
             } label: {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)

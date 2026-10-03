@@ -40,10 +40,13 @@ struct TutorialTargetAnchor {
 
 extension View {
     /// Marks this view as `target` for the tutorial; `nil` marks nothing.
+    /// The controls marked inside it stay marked: the map is `map` and its
+    /// zoom buttons `map.zoom` (setting the preference instead would
+    /// replace theirs, and the card would not know the buttons are there).
     func tutorialTarget(_ target: TutorialTarget?) -> some View {
-        anchorPreference(key: TutorialTargetBounds.self, value: .bounds) { (bounds: Anchor<CGRect>) -> [TutorialTarget: TutorialTargetAnchor] in
-            guard let target else { return [:] }
-            return [target: TutorialTargetAnchor(bounds: bounds)]
+        transformAnchorPreference(key: TutorialTargetBounds.self, value: .bounds) { (targets: inout [TutorialTarget: TutorialTargetAnchor], bounds: Anchor<CGRect>) in
+            guard let target else { return }
+            targets[target] = TutorialTargetAnchor(bounds: bounds)
         }
     }
 

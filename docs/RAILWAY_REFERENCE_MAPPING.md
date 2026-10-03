@@ -322,6 +322,23 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `Ci` `metrobuilder_tutorial_done`、`openUI`、`cardPosition` | 看過就不再自動開啟、步驟開面板、卡片位置 | — | 還沒有（決策 47 第 4 點） |
 | 沒有對應 | — | `train.place`（購買並放置列車）、`station.ridership`（乘客） | gap：這個遊戲的列車要自己買，客流在車站面板 |
 
+### Stage E1：大地圖
+
+2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 48；繪製（只畫畫面內、分級、雙指縮放）是 CX-4（PR #69–#71），對照見 [UI_INTERFACES](UI_INTERFACES.md#6-參考對照)。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，虛構城市是 `lib/virtual_island_city__q_21ffa7f6ae58fc9e.js`，說明文字在 `lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`（英文的 `en.js` 在清單上但沒有被抓下來）；`Railway/site_archive_clean/index.html`；參考包 `Railway/railway_game_reference_clean/` 只有 `web_runtime/touch_pinch_zoom.js` 與 `binary_reference/relevant_source_paths.txt` 的 `src/viewport.cpp` 檔名，沒有相機的數值。
+
+| 參考 | 行為 | Swift（E1） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci` 虛構海島城市：`E=[[-.1124,-.18],[.1124,.18]]`、圖例「25 × 40 km · 虚构海岛城市」 | 虛構城市的大小 | `GameWorld.newGameMapSize` = 1024 格（16,384 公尺） | 一格 16 公尺（1024 單位 × 1/64 公尺） | 部分 faithful：取 `GridMap` 的上限，比參考小 |
+| `Railway` `TW_BOX`、`ROAM_PAD`、`setMaxBounds(state._panFence)` | 平移的範圍 | `PlanCamera` 的 `clampCenter`：停在地圖邊緣，放得下的方向置中 | — | faithful（第 0 步） |
+| `Ci` `#custom-zoom-in`／`#custom-zoom-out`：`g.zoomIn()`／`g.zoomOut()`；`Railway` `NavigationControl({showZoom:true})` | 一個縮放等級 | `MapScale.zoomFactor` = 2：`zoomedIn()`／`zoomedOut()` | MapLibre 一級 = 比例 × 2 | faithful（取代第 0 步的每次 ± 8 點） |
+| `Ci` `createAmapMapSafe` 的 `zooms:[2,20]`；虛構城市 `minZoom:9.1, maxZoom:18`；`Railway` `setMaxZoom(19/20)`、`applyTaiwanFloor`（開局再縮一級） | 縮放範圍 | 最大每格 `MapScale.largestSize`（64 點），最小到整張地圖放得下（`minimumSize(fitting:)`） | — | 機制 faithful；值沿用第 0 步 |
+| `Ci` `fitAnycityImportedSaveNetworkView`：`fitBounds(所有車站, {padding:72, maxZoom:12})`，太小時各加 0.02° | 讀入存檔時對準路網 | `PlanCamera(map:viewport:showing:)`，`WorldRegion.built(in:)`（節點、車站、方格鐵軌）；不比 `automaticSize` 更近 | padding：點 | faithful；padding 照 `Railway`，`maxZoom` 對應 `automaticSize` |
+| `Railway` `fitData(pts, …)`：`M.fitBounds(b, {padding:[30,30]})` | 開局對準車站 | `PlanCamera.focusPadding` = 30 點 | — | faithful |
+| `Ci` 新城市：`initialCenterGcj` 或城市中心、`initialZoom` 或城市的縮放；`metroOsmCityOverviewZoom` | 沒有存檔時的開局 | 沒有東西時在地圖中央，`automaticSize`（手機每格 32 點） | — | 部分 faithful：沒有城市，中心是地圖中央 |
+| `Ci` `persistLastAnycityEntryOptions`（localStorage `metro:anycity:last-entry:v1`）；`serializeGameState` 不存相機 | 相機不進存檔 | 相機是 view 的狀態，不存檔 | — | faithful；「上次的位置」還沒有 |
+| `Ci` `guide.metro.shortcut.1`「缩放地图：滚动鼠标滚轮以放大或缩小地图。」、`guide.flight.shortcut.5`「移动地图：使用 W / A / S / D 平移地图。」；`TUTORIAL_STEPS` 沒有這一步 | 說明畫面的縮放與平移 | 教學的第三步 `map.move`（`TutorialGoal.moveMap`，框 `map` 與 `map.zoom`）；`GameSession.mapDidMove()` | — | gap：參考的教學沒有這一步，文字照說明畫面改成觸控 |
+| `Ci` `serializeGameState`（地圖是真實的經緯度，沒有格子） | 存檔裡的地圖 | `SavedGame` 版本 2：`{"width","height","occupied":[{"x","y","tile"}]}`，版本 1 的 `tiles` 照舊讀 | — | gap：參考沒有格子地圖；格式是這裡的（量測見決策 48） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -438,7 +455,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 → E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ E2 空白／實景（MapKit）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

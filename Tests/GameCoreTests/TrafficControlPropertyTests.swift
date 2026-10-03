@@ -287,7 +287,12 @@ final class TrafficControlPropertyTests: XCTestCase {
         let calls = repeating || random.chance(1, in: 2) ? [here, there, here] : [here, there]
         let turnFirst = train.position.map { world.path(from: $0, toStation: there, length: train.length) == nil } ?? false
         let turns = [turnFirst, true] + (calls.count == 3 ? [repeating ? !turnFirst : random.chance(1, in: 2)] : [])
-        var time = max(0, world.clock.now.minute) + Int64(random.below(3))
+        // A mutated save may load with the clock near the end of time (the
+        // save mutation campaign): keep every call's minute within seconds
+        // that fit, so GameCore refuses the timetable rather than the
+        // generator trapping. Ordinary worlds are far below the cap.
+        let latest = Int64.max / GameTime.secondsPerMinute - 1_000
+        var time = min(max(0, world.clock.now.minute), latest) + Int64(random.below(3))
         var stops: [ScheduledStop] = []
         for (index, station) in calls.enumerated() {
             if index > 0 { time += Int64(4 + random.below(25)) }

@@ -85,6 +85,11 @@ public enum TutorialGoal: Hashable, Sendable {
     /// (the reference's `speedOrPause`): it differs from what it was when
     /// the step was shown.
     case changeSpeed
+    /// Move the map, by pinching, dragging or a zoom button, while the step
+    /// is shown (Stage E1). The camera is the map view's, so the view tells
+    /// the session (``GameSession/mapDidMove()``); a turned device or a
+    /// station centred for the player does not count.
+    case moveMap
 }
 
 /// One step of the tutorial: its card's title and text in both languages,
@@ -137,6 +142,9 @@ public struct Tutorial: Hashable, Sendable {
     /// first snapshot: a new one would hide what was built for it, and
     /// Next would wait for a second one.
     private var whenFirstShown: [Int: Snapshot]
+    /// The steps the player moved the map on (``TutorialGoal/moveMap``).
+    /// Kept when going back, as the snapshots are.
+    private var movedMapOn: Set<Int> = []
 
     /// The first of `steps`, shown over `world`.
     ///
@@ -175,6 +183,17 @@ public struct Tutorial: Hashable, Sendable {
         }
     }
 
+    /// Whether the step on screen asks the player to move the map and they
+    /// have not yet.
+    var awaitsMapMove: Bool {
+        step.goal == .moveMap && !movedMapOn.contains(index)
+    }
+
+    /// The player moved the map while the step on screen was shown.
+    mutating func noteMapMoved() {
+        movedMapOn.insert(index)
+    }
+
     /// Whether the player has done what the step on screen asks, in
     /// `world` with `tool` active.
     func isStepDone(in world: GameWorld, tool: ConstructionTool) -> Bool {
@@ -202,6 +221,8 @@ public struct Tutorial: Hashable, Sendable {
             }
         case .changeSpeed:
             return world.clock.speed != before.speed
+        case .moveMap:
+            return movedMapOn.contains(index)
         }
     }
 
@@ -233,8 +254,10 @@ extension Tutorial {
     /// counterpart.
     ///
     /// The first two steps keep the order the app's UI tests rely on (the
-    /// network tool, then a stretch of track); the zoom and pan steps join
-    /// them with the large map (Stage E1).
+    /// network tool, then a stretch of track). Moving the map follows them
+    /// (Stage E1): the reference has no step for it, only its guide's
+    /// shortcuts (`guide.metro.shortcut.1`, the mouse wheel zooms), and on
+    /// the 16 km map the second station and longer lines need it.
     public static let standardSteps: [TutorialStep] = [
         // Reference step 0, "开始建线": the reference opens its line builder.
         TutorialStep(
@@ -259,6 +282,19 @@ extension Tutorial {
                     + "Turns over 90° and stretches under 22 m are refused.",
                 "在「鋪設」模式下，點地圖上軌道的起點，再點終點，然後按「鋪設軌道」。"
                     + "終點會變成下一段的起點，可以接著點下去延伸或轉彎。轉彎超過 90 度或短於 22 公尺會被拒絕。"
+            )
+        ),
+        // No reference step: the guide's "缩放地图" (the mouse wheel zooms)
+        // and the flight mode's "移动地图" (W/A/S/D pans), for touch.
+        TutorialStep(
+            id: "map.move",
+            targets: [.map, .zoomControls],
+            goal: .moveMap,
+            title: ("Move around the map", "移動與縮放地圖"),
+            body: (
+                "The map is about 16 km across. Pinch to zoom in or out and drag with one finger to move it, "
+                    + "or use the magnifying glass buttons. Try moving it.",
+                "地圖大約 16 公里見方。用兩指開合放大或縮小，用一指拖曳移動地圖，也可以用放大鏡按鈕。試著移動一下。"
             )
         ),
         // Reference step 1, placing a station.

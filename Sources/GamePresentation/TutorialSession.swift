@@ -43,4 +43,15 @@ extension GameSession {
     public func skipTutorial() {
         tutorial = nil
     }
+
+    /// The player moved the map: pinched, dragged or tapped a zoom button
+    /// (Stage E1). The camera is the map view's own state, so the view
+    /// calls this for the tutorial's ``TutorialGoal/moveMap``. Changes the
+    /// session only the first time on such a step, so calling it on every
+    /// frame of a gesture costs nothing.
+    public func mapDidMove() {
+        guard var shown = tutorial, shown.awaitsMapMove else { return }
+        shown.noteMapMoved()
+        tutorial = shown
+    }
 }

@@ -1,0 +1,655 @@
+{
+  "saveVersion" : 2,
+  "world" : {
+    "accounts" : {
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 135500,
+          "maintenanceCost" : 9700,
+          "operatingCost" : 450200,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : -324400,
+          "breakdown" : [
+            {
+              "amount" : 135500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -450200,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -9700,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 6,
+            "maxWaiting" : 7
+          },
+          "kind" : "hourlyNet",
+          "time" : 3600
+        }
+      ],
+      "fareBaseline" : 500,
+      "mode" : "management",
+      "openedAt" : 3600,
+      "pending" : {
+        "departures" : 26,
+        "fareRevenue" : 65500,
+        "fareTrips" : 131,
+        "passengers" : 164,
+        "seats" : 33280,
+        "trainDistance" : 251904
+      }
+    },
+    "clock" : {
+      "now" : 5400,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 131595600,
+      "costs" : {
+        "car" : 4000000,
+        "station" : 20000000,
+        "track" : 160000,
+        "train" : 15000000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "lastDispatch" : 4860,
+        "name" : "Line 1",
+        "stops" : [
+          1,
+          2,
+          3
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      },
+      {
+        "id" : 2,
+        "lastDispatch" : 4860,
+        "name" : "Line 2",
+        "stops" : [
+          4,
+          2,
+          5
+        ],
+        "trains" : [
+          2
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "map" : {
+      "height" : 1024,
+      "occupied" : [
+
+      ],
+      "width" : 1024
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 2,
+          "structure" : "elevated",
+          "to" : 4
+        }
+      ],
+      "nextEdgeID" : 3,
+      "nextNodeID" : 5,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 509952,
+          "y" : 524288,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 538624,
+          "y" : 524288,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 524288,
+          "y" : 514048,
+          "z" : 512
+        },
+        {
+          "id" : 4,
+          "x" : 524288,
+          "y" : 534528,
+          "z" : 512
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 5120,
+          "start" : 1024,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 16384,
+          "start" : 12288,
+          "station" : 2
+        },
+        {
+          "edge" : 1,
+          "end" : 27648,
+          "start" : 23552,
+          "station" : 3
+        },
+        {
+          "edge" : 2,
+          "end" : 5120,
+          "start" : 1024,
+          "station" : 4
+        },
+        {
+          "edge" : 2,
+          "end" : 12288,
+          "start" : 8192,
+          "station" : 2
+        },
+        {
+          "edge" : 2,
+          "end" : 19456,
+          "start" : 15360,
+          "station" : 5
+        }
+      ]
+    },
+    "nextLineID" : 3,
+    "nextStationID" : 6,
+    "nextTrainID" : 3,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "arrived" : 99,
+        "demand" : {
+          "dailyTrips" : 20000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 109,
+        "remainders" : [
+          {
+            "destination" : 3,
+            "value" : 1800
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 4920
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 4980
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5040
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5040
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5100
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5160
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5220
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5280
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5280
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5340
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "arrived" : 155,
+        "demand" : {
+          "dailyTrips" : 30000,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 161,
+        "remainders" : [
+          {
+            "destination" : 4,
+            "value" : 1800
+          },
+          {
+            "destination" : 5,
+            "value" : 1800
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5160
+          },
+          {
+            "count" : 1,
+            "destination" : 5,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5220
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 5280
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 5340
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 5340
+          },
+          {
+            "count" : 1,
+            "destination" : 4,
+            "direction" : "inbound",
+            "line" : 2,
+            "since" : 5340
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "arrived" : 48,
+        "demand" : {
+          "dailyTrips" : 10000,
+          "kind" : "shopping"
+        },
+        "overflowed" : 0,
+        "released" : 50,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1800
+          },
+          {
+            "destination" : 2,
+            "value" : 1800
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 5220
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 5280
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "arrived" : 75,
+        "demand" : {
+          "dailyTrips" : 15000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 84,
+        "remainders" : [
+
+        ],
+        "station" : 4,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 4920
+          },
+          {
+            "count" : 1,
+            "destination" : 5,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 4920
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 4980
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5040
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5160
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5220
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5280
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5340
+          },
+          {
+            "count" : 1,
+            "destination" : 5,
+            "direction" : "outbound",
+            "line" : 2,
+            "since" : 5340
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "arrived" : 25,
+        "demand" : {
+          "dailyTrips" : 5000,
+          "kind" : "scenic"
+        },
+        "overflowed" : 0,
+        "released" : 27,
+        "remainders" : [
+
+        ],
+        "station" : 5,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 2,
+            "since" : 5340
+          },
+          {
+            "count" : 1,
+            "destination" : 4,
+            "direction" : "inbound",
+            "line" : 2,
+            "since" : 5340
+          }
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 513024,
+          "y" : 524288
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Central",
+        "point" : {
+          "x" : 524288,
+          "y" : 524288
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "East",
+        "point" : {
+          "x" : 535552,
+          "y" : 524288
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "North",
+        "point" : {
+          "x" : 524288,
+          "y" : 517120
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "South",
+        "point" : {
+          "x" : 524288,
+          "y" : 531456
+        }
+      }
+    ],
+    "trafficControl" : true,
+    "trains" : [
+      {
+        "cars" : 4,
+        "id" : 1,
+        "movement" : {
+          "continuation" : [
+
+          ],
+          "cursor" : 0,
+          "end" : 4096,
+          "rate" : 512
+        },
+        "name" : "Train 1",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 4096
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 4860,
+            "departure" : 4902,
+            "station" : 1
+          },
+          {
+            "arrival" : 4941,
+            "departure" : 5001,
+            "station" : 2
+          },
+          {
+            "arrival" : 5038,
+            "departure" : 5158,
+            "reverse" : true,
+            "station" : 3
+          },
+          {
+            "arrival" : 5197,
+            "departure" : 5257,
+            "station" : 2
+          },
+          {
+            "arrival" : 5294,
+            "departure" : 5294,
+            "reverse" : true,
+            "station" : 1
+          }
+        ]
+      },
+      {
+        "cars" : 4,
+        "id" : 2,
+        "movement" : {
+          "continuation" : [
+
+          ],
+          "cursor" : 0,
+          "end" : 4096,
+          "rate" : 512
+        },
+        "name" : "Train 2",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 2,
+            "offset" : 4096
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 4860,
+            "departure" : 4902,
+            "station" : 4
+          },
+          {
+            "arrival" : 4934,
+            "departure" : 4994,
+            "station" : 2
+          },
+          {
+            "arrival" : 5024,
+            "departure" : 5144,
+            "reverse" : true,
+            "station" : 5
+          },
+          {
+            "arrival" : 5176,
+            "departure" : 5236,
+            "station" : 2
+          },
+          {
+            "arrival" : 5266,
+            "departure" : 5266,
+            "reverse" : true,
+            "station" : 4
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -92,6 +92,18 @@ public struct WorldRegion: Hashable, Sendable {
     public func expanded(by margin: Double) -> WorldRegion {
         WorldRegion(minX: minX - margin, minY: minY - margin, maxX: maxX + margin, maxY: maxY + margin)
     }
+
+    /// The part of `world` something is built on, seen from above: its
+    /// track nodes and stations (and an old save's grid track); `nil` for a
+    /// world with none. Where a game's map opens (``PlanCamera``'s
+    /// `showing`): on a 16 km map (Stage E1), the built network may be
+    /// anywhere.
+    public static func built(in world: GameWorld) -> WorldRegion? {
+        var points = world.network.nodes.map(\.position)
+        points += world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
+        points += world.network.tracks.map { WorldCoordinate(centreOf: $0.position) }
+        return WorldRegion(enclosing: points)
+    }
 }
 
 /// Where the world is drawn on the map view, and back: everything the map's
@@ -170,11 +182,11 @@ extension MapProjection {
 /// The camera of the map seen from above, straight down and north up: the
 /// blank map's camera (Stage E1).
 ///
-/// For now it keeps the fixed steps of the map view before E1 (see
-/// ``MapScale``): a tile is ``MapScale/largestSize`` points at most, and at
-/// least the size at which the whole map fits the view (but never smaller
-/// than necessary, ``MapScale/minimumSize(fitting:)``); the zoom buttons
-/// step by ``MapScale/zoomStep``. Panning stops at the map's edges, and
+/// A tile is ``MapScale/largestSize`` points at most, and at least the size
+/// at which the whole map fits the view (but never smaller than necessary,
+/// ``MapScale/minimumSize(fitting:)``): a new game's 16 km map fits a phone
+/// at well under a point a tile. The zoom buttons multiply or divide the
+/// size by ``MapScale/zoomFactor``. Panning stops at the map's edges, and
 /// along a side where the whole map fits it is centred, as the scrolling
 /// map was.
 ///
@@ -190,21 +202,47 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
     /// The map: the part of the world the camera shows.
     public let mapRegion: WorldRegion
 
-    /// The camera on a new map view: ``MapScale/automaticSize(fitting:)``
-    /// (the whole map on tablets, ``MapScale/compactSize`` on phones), with
-    /// the map's north-west corner in the view's top-left corner, or the
-    /// map centred along a side where it fits.
-    public init(map: GridMap, viewport: ScreenSize) {
+    /// The camera on a new map view, at ``MapScale/automaticSize(fitting:)``
+    /// (the whole map when it fits at a size comfortable to tap,
+    /// ``MapScale/compactSize`` otherwise) in the middle of the map, or
+    /// centred on `focus` and zoomed out until it fits with
+    /// ``focusPadding`` to spare, when it does not at that size. The map is
+    /// centred along a side where it fits.
+    ///
+    /// Stage E1: a game opens on what it has built (see
+    /// ``WorldRegion/built(in:)``), as the references fit their map to the
+    /// stations when a save or scene opens (`Ci/`
+    /// `fitAnycityImportedSaveNetworkView`, `Railway/` `fitData`), never
+    /// closer than a set zoom (`Ci/`'s `maxZoom: 12`, here the automatic
+    /// size).
+    public init(map: GridMap, viewport: ScreenSize, showing focus: WorldRegion? = nil) {
         mapRegion = WorldRegion(map: map)
         self.viewport = Self.usable(viewport)
         pointsPerUnit = 1
         centerX = 0
         centerY = 0
-        pointsPerUnit = MapScale.automaticSize(fitting: fittingTileSize) / Double(WorldCoordinate.tileSize)
-        centerX = mapRegion.minX + visibleWidth / 2
-        centerY = mapRegion.minY + visibleHeight / 2
+        var size = MapScale.automaticSize(fitting: fittingTileSize)
+        if let focus {
+            // Room inside the padding; a view too small for it uses all of
+            // itself.
+            let room = (
+                width: self.viewport.width > 4 * Self.focusPadding ? self.viewport.width - 2 * Self.focusPadding : self.viewport.width,
+                height: self.viewport.height > 4 * Self.focusPadding ? self.viewport.height - 2 * Self.focusPadding : self.viewport.height
+            )
+            let fitting = min(room.width / focus.width, room.height / focus.height) * Double(WorldCoordinate.tileSize)
+            size = MapScale.clamped(min(size, fitting), fitting: fittingTileSize)
+        }
+        pointsPerUnit = size / Double(WorldCoordinate.tileSize)
+        let middle = focus ?? mapRegion
+        centerX = (middle.minX + middle.maxX) / 2
+        centerY = (middle.minY + middle.maxY) / 2
         clampCenter()
     }
+
+    /// Room left around what a camera opens on, in points on each side:
+    /// `Railway/`'s `fitBounds` padding (`Ci/` leaves 72 on a desktop
+    /// screen, too much on a phone).
+    public static let focusPadding = 30.0
 
     // MARK: - Projection
 
@@ -240,14 +278,14 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
         tileSize > MapScale.minimumSize(fitting: fittingTileSize)
     }
 
-    /// One ``MapScale/zoomStep`` closer, about the middle of the view (the
-    /// zoom-in button).
+    /// ``MapScale/zoomFactor`` times closer, about the middle of the view
+    /// (the zoom-in button).
     public func zoomedIn() -> PlanCamera {
         zoomed(toTileSize: MapScale.zoomedIn(from: tileSize, fitting: fittingTileSize), around: middle)
     }
 
-    /// One ``MapScale/zoomStep`` farther, about the middle of the view (the
-    /// zoom-out button).
+    /// ``MapScale/zoomFactor`` times farther, about the middle of the view
+    /// (the zoom-out button).
     public func zoomedOut() -> PlanCamera {
         zoomed(toTileSize: MapScale.zoomedOut(from: tileSize, fitting: fittingTileSize), around: middle)
     }
