@@ -2,6 +2,63 @@ import XCTest
 
 @MainActor
 final class MapInteractionTests: XCTestCase {
+    func testDemoMapOpensOnItsNetwork() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let demoMap = app.buttons["start.demoMap"]
+        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
+        demoMap.tap()
+        let select = app.buttons["tool.select"]
+        XCTAssertTrue(select.waitForExistence(timeout: 10))
+        select.tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue((map.value as? String)?.contains("Central") == true,
+                      "The opening camera must put Central at the map view's center; value: \(String(describing: map.value))")
+    }
+
+    func testZoomingOutShowsTheWholeLargeMap() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let demoMap = app.buttons["start.demoMap"]
+        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
+        demoMap.tap()
+        let select = app.buttons["tool.select"]
+        XCTAssertTrue(select.waitForExistence(timeout: 10))
+        select.tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        let zoomOut = app.buttons["Zoom out"]
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+
+        for _ in 0..<12 {
+            if !zoomOut.isEnabled { break }
+            zoomOut.tap()
+        }
+        XCTAssertFalse(zoomOut.isEnabled, "The whole 1024 × 1024 map must fit within 12 zoom-out taps")
+        XCTAssertTrue(zoomIn.isEnabled)
+        XCTAssertTrue(zoomIn.isHittable)
+
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "en-large-map-whole"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue((map.value as? String)?.contains("Central") == true,
+                      "Tapping the whole map's center must still select Central; value: \(String(describing: map.value))")
+    }
+
     /// A drag or pinch must not become the first/second tap of a new
     /// construction. After navigation, ordinary taps must still build.
     func testNavigationDoesNotChooseConstructionPoints() {
