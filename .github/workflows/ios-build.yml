@@ -46,7 +46,9 @@ jobs:
   build:
     name: Xcode build (iOS Simulator)
     runs-on: macos-26
-    timeout-minutes: 30
+    # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
+    # on a slower runner, so the limit only catches a hang.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -163,9 +165,11 @@ jobs:
 
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
-        # The eight toolbar, start/save and tutorial tests also need time for
+        # The toolbar, start/save, tutorial and map tests also need time for
         # cold XCTest startup and Xcode to finish writing the result bundle.
-        timeout-minutes: 15
+        # Measured 7m42s to 12m29s as tests were added (12m29s with the map
+        # interaction tests); a slower runner can take 1.8 times as long.
+        timeout-minutes: 25
         run: |
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -214,7 +218,8 @@ jobs:
       # It reuses the iPhone Simulator the smoke tests already booted.
       - name: Prove a missing toolbar button fails the smoke test
         id: missing-button
-        timeout-minutes: 5
+        # It rebuilds the app without Select first: 2m03s to 4m11s measured.
+        timeout-minutes: 10
         if: github.event_name == 'pull_request' || inputs.verify_missing_button
         run: |
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
@@ -237,7 +242,8 @@ jobs:
   ipad-tutorial:
     name: iPad tutorial tests (iOS Simulator)
     runs-on: macos-26
-    timeout-minutes: 30
+    # Room for the step limits below (boot 8, tests 20) and the rest.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
