@@ -55,7 +55,7 @@ jobs:
             -configuration Release \
             -sdk iphoneos >"$settings"
           grep -E '^ +(PRODUCT_BUNDLE_IDENTIFIER|MARKETING_VERSION|CURRENT_PROJECT_VERSION|CODE_SIGN_STYLE|DEVELOPMENT_TEAM|SWIFT_ACTIVE_COMPILATION_CONDITIONS|TARGETED_DEVICE_FAMILY|IPHONEOS_DEPLOYMENT_TARGET|ASSETCATALOG_COMPILER_APPICON_NAME) = ' "$settings" || true
-          # DEBUG would compile in the Debug-only demo layout (DemoLayout.swift).
+          # DEBUG would compile in the Debug-only -demo-layout launch argument.
           if grep -Eq '^ +SWIFT_ACTIVE_COMPILATION_CONDITIONS = .*\bDEBUG\b' "$settings"; then
             echo "::error::The Release configuration defines DEBUG."
             exit 1

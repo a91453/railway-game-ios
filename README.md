@@ -90,23 +90,25 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 
 ```
 Sources/GameCore/
-  World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError
+  World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError、SavedGame（帶版本的存檔）
   Geometry/  WorldCoordinate / PlanPoint / PlanVector（整數世界座標）、TrackCurve 與 TrackGeometry（曲線的取樣、長度、位置、高度與坡度）、TrackProfile（縱斷面、坡度、結構物）、TrackClearance（立體交叉的淨空）、FixedPoint（整數平方根等）
   Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、TrackGraph（TrackNodeID、TrackEdgeID、TrackTraversal）、RailwayNetwork（連續路網）、RailwayNetworkTrains（路網上的列車與 renderer 查詢）、TrackPlatform（路網上的月台）、RailwaySnapshot（給 renderer 的唯讀快照）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
   GameSession（持有 GameWorld、UI 暫時狀態、game loop）、TickAccumulator、
-  ConstructionTool / TrackPiece、MapScale、DisplayText（玩家看到的文字）
+  ConstructionTool / TrackPiece、MapScale、DisplayText（玩家看到的文字）、
+  GameLauncher（開始畫面、自動存檔）、SaveLibrary（存檔檔案）、NewGame（新遊戲與示範地圖）
 Tests/GameCoreTests/
 Tests/GamePresentationTests/
 GoldenScenarios/  可移植的 golden scenario（JSON，schema 見該目錄的 README）
+SaveFixtures/     每個存檔版本的回歸存檔，之後的版本都必須讀得進來（見該目錄的 README）
 RailwayGameApp/
   project.yml   XcodeGen spec（專案設定的唯一來源）
   RailwayGame.xcodeproj  由 project.yml 產生並提交（Xcode Cloud 需要），不要手改
   Resources/    Assets.xcassets（App Icon）、Localizable.xcstrings（畫面字串的繁體中文，決策 38）
-  App/          RailwayGameApp（@main，持有 GameSession）、DemoLayout（僅 Debug，用 `-demo-layout` 啟動參數開啟的示範配置）
-  Views/        ContentView、HUDView、MapView / TileArt、ControlPanel、TrackPieceEditor、TrainControls
+  App/          RailwayGameApp（@main，持有 GameLauncher：開始畫面、存檔與目前的 GameSession）
+  Views/        StartView、ContentView、HUDView、MapView / TileArt、ControlPanel、TrainControls
 ```
 
 ## 開發流程（cloud-first）
@@ -136,7 +138,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS �
 
 畫面由專案擁有者以**人工**在實機檢查：`testflight.yml`（手動、只能從 `main`）上傳的 build 經內部 TestFlight 安裝到 iPhone / iPad 後自行查看。這是人工檢視，**不是**自動化的回歸測試：CI 不比對畫面，也沒有 Simulator 截圖；曾有的 Visual Smoke（手動 Simulator 截圖 artifact）已移除。
 
-Debug build（例如在本機 Xcode 執行）可以用啟動參數 `-demo-layout` 開啟 Debug 限定的示範配置：以一般 GameCore 指令、照常付費建好的鐵軌與車站、正在行駛的列車、東側的連續軌道環線與跨越它的高架、南側的隧道。Release 與 TestFlight build 不含它。
+開始畫面的「示範地圖」（Stage C4，Release 與 TestFlight 也有）開啟一張用一般 GameCore 指令、照常付費建好的路網：地面的 1 號線與跨越它的高架 2 號線，各有一列四節列車在營運，車站都有客流（`DemoWorld`）。Debug build（例如在本機 Xcode 執行）也可以用啟動參數 `-demo-layout` 直接開啟它；Release build 不含這個啟動參數。
 
 ## Building
 

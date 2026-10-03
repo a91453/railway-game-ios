@@ -7,7 +7,8 @@ Instructions for coding agents other than Claude Code (for example Codex).
 [`CLAUDE.md`](CLAUDE.md) is the rule book for every agent in this repository,
 not only Claude Code. Read it first and follow it. In particular:
 
-- Never edit an expected value in `GoldenScenarios/` to make a test pass.
+- Never edit an expected value in `GoldenScenarios/` to make a test pass, and
+  never edit or regenerate a save in `SaveFixtures/`.
 - `Sources/GameCore/` imports no Foundation, SwiftUI, UIKit, AppKit, SpriteKit
   or Metal, and stays deterministic. `GameWorld` is the only authority for
   game state.
@@ -38,7 +39,8 @@ Agents work in parallel on separate branches, so some files must change in
 one place only (2026-10-02, the author's decision):
 
 - **Claude Code** owns the game rules and the records of design: GameCore
-  rule changes, `GoldenScenarios/` (fixtures and schema versions), the
+  rule changes, `GoldenScenarios/` (fixtures and schema versions), the save
+  format (`SavedGame`, `SaveFixtures/`), the
   differential reference model (`Tests/GameCoreTests/ReferenceWorld.swift`),
   the decisions in `docs/ARCHITECTURE.md`, the stage status in
   `docs/ROADMAP.md` and `docs/RAILWAY_REFERENCE_MAPPING.md`.
