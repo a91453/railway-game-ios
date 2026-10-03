@@ -555,3 +555,13 @@ GameCore 與 golden 執行器沒有改，schema 仍是 27。方格的規則都�
 ### F3c-3b 之後暫時沒有改的地方
 
 - **Golden 執行器的方格指令、觀察與寫法**（`buildTrack`、`buildStation`、`extendStation`、`setTrainContinuation`、`node`／`link` 位置、`platforms`、`route`、`trackSections`……與最終狀態的 `tracks`）：已經沒有 fixture 用它們，和 GameCore 的方格一起在 F3c-3c 拿掉；fixture 仍是 schema 27（最終狀態的 `tracks`、列車的 `trail` 與 `continuation` 照寫，但只能是 `[]`），F3c-4 的 schema 28 才把這些鍵刪掉。
+
+## F3c-3c：GameCore 與執行器拿掉方格（schema 仍是 27）
+
+fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenario.swift`）不再有方格的指令、觀察與寫法，遇到時拒絕並說明方格在 Stage F3c 移除：
+
+- 指令 `buildTrack`、`buildTurnout`、`buildCrossing`、`removeTrack`、`buildStation`、`extendStation`、`setTrainContinuation`；觀察 `connectedNeighbors`、`isConnected`、`route`、`routeToStation`、`platforms`、`platformTracks`、`exits`、`trackSections`；結果 `tileOccupied`、`invalidTrackConnections`、`noTrackToRemove`、`trackInUse`、`invalidStationTile`。
+- `node`／`link` 位置、`node`／`link` 資源、`{x, y, annexes}` 的車站。
+- schema 27 還寫的最終狀態 `tracks`、列車的 `trail` 與 `movement.continuation`：照舊讀寫，但只能是 `[]`。線路行程的一段只有 `path`（方格的 `route` 拿掉）。
+
+schema 28（拿掉這三個鍵與方格的寫法）在 F3c-4。

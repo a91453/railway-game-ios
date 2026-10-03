@@ -1318,7 +1318,7 @@ final class GoldenScenarioTests: XCTestCase {
         }
         let malformed = [
             #"{"command": {"type": "setTrainCars", "train": 2}, "expect": {"result": "ok"}}"#,
-            #"{"command": {"type": "setTrainCars", "train": 2, "cars": 4}, "expect": {"result": "invalidTrainPosition", "x": 1}}"#,
+            #"{"command": {"type": "setTrainCars", "train": 2, "cars": 4}, "expect": {"result": "trainAlreadyPlaced"}}"#,
             #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1, "cars": 0}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1, "cars": null}, "expect": {"found": false}}"#,
             #"{"observe": {"type": "wholeTrainStops"}, "expect": {"stations": []}}"#,
