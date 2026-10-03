@@ -554,4 +554,4 @@ GameCore 與 golden 執行器沒有改，schema 仍是 27。方格的規則都�
 
 ### F3c-3b 之後暫時沒有改的地方
 
-- **Golden 執行器的方格指令、觀察與寫法**（`buildTrack`、`buildStation`、`extendStation`、`setTrainContinuation`、`node`／`link` 位置、`platforms`、`route`、`trackSections`……與最終狀態的 `tracks`）：已經沒有 fixture 用它們，和 GameCore 的方格一起在 F3c-3c 拿掉（schema 28）。
+- **Golden 執行器的方格指令、觀察與寫法**（`buildTrack`、`buildStation`、`extendStation`、`setTrainContinuation`、`node`／`link` 位置、`platforms`、`route`、`trackSections`……與最終狀態的 `tracks`）：已經沒有 fixture 用它們，和 GameCore 的方格一起在 F3c-3c 拿掉；fixture 仍是 schema 27（最終狀態的 `tracks`、列車的 `trail` 與 `continuation` 照寫，但只能是 `[]`），F3c-4 的 schema 28 才把這些鍵刪掉。

@@ -454,6 +454,8 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 - **`ReferenceWorld` 的方格模型**：只剩上面那些 campaign 用，F3c 一起刪。
 - **觀察到的 GameCore 行為**（§7.2 的三條）照舊，F3b 不改 GameCore。
 
+**CI 的 shard**：搬到路網之後幾個 campaign 變慢（Boarding 約 510 秒、兩個 service campaign 合計約 680 秒），五個 campaign shard 裝不下 20 分鐘的上限，`campaigns-2`（Boarding 加 Service）在 PR #86–#89 跑了 18 分鐘後被取消。改成八個 campaign shard，`ServiceLinePropertyTests` 與 `KernelDifferentialTests` 也從 `rest` 移到具名的 shard；`service.repeating` 移到自己的類別 `ServiceRepeatingPropertyTests`（只為了能放進另一個 shard，campaign 名稱、檢查與 digest 都不變）。每個 shard 的秒數與估計方式記在 `.github/scripts/swift-shards.sh`。
+
 ### 7.5 F3b-3：重播 fixture（移植參考的 desync 重播）
 
 參考包的除錯工具（`Railway/railway_game_reference_clean/docs/desync.md` §2.1 快取檢查、§2.2 指令紀錄、§3.1 重播、§3.2 比對 checksum 找出分歧的區間；`01_MIGRATION_MAP.md` 的「Determinism / debugging」）以獨立實作移植成 [`ReplayFixtures/`](../../ReplayFixtures/README.md)：五個路網 campaign case 的起始世界、指令紀錄，以及每 10 個指令一個遊戲狀態的 checksum。`ReplayFixtureTests` 逐段重播，每個世界都檢查不變量；checksum 對不上時指出分歧的那一段指令。
@@ -585,7 +587,7 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 
 - **測試裡碰到 GameCore 方格型別的地方**：ContinuousTrackTests 與 VerticalRailwayTests 拒絕 `.tile`／`.link` 當路網的 ID、DisplayText 等對方格 case 的完整 switch、Golden 執行器的方格指令與摘要、`ReferenceWorld` 與其 extension 的方格模型、`PropertySupport` 的方格產生器與 `WorldInvariants` 的方格分支、KernelDifferentialTests 不再產生的方格 `Operation`：和 GameCore 的方格一起在 F3c-3c 刪（編譯器會找出每一處）。
 - **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的兩個舊地圖存檔測試）：F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」。
-- **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；另外處理（重新分 shard），不在這個 PR。
+- **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；已在 #86 改成八個 campaign shard（見 §7.4 末段），這裡只把刪掉的兩個方格 campaign 從 shard 拿掉。
 
 ## 驗證紀錄
 
