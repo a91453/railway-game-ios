@@ -54,7 +54,7 @@ final class RingLineTests: XCTestCase {
 
     private func makeLoopWorld(minute: Int64 = 0) throws -> GameWorld {
         var world = try GameWorld(
-            width: 7, height: 5, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 7_168, height: 5_120), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
         let corner: Int64 = 1_338

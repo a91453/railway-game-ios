@@ -632,6 +632,25 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 - **票價的距離**：照舊用點車站底下那一格（決策 51 第 2 點）。
 - **`Web/WasmProbe` 的 Wasm 與瀏覽器部分**：本機沒有 `swift-6.4.0-RELEASE_wasm` SDK 與瀏覽器，只跑了 native；Wasm、Node WASI 與三個瀏覽器的比對由 `wasm-probe.yml` 在 CI 跑。
 
+### 8.13 F3d：拿掉殘留的方格語意
+
+ARCHITECTURE 決策 54（2026-10-04 作者決定，F2b 之後、U-min 之前）。8.12 與決策 51 第 2 點留下的都拿掉了：
+
+| F3c 之後保留的 | F3d 之後 |
+| --- | --- |
+| `GridMap`（地圖的大小與邊界）、`MapTile`／`TileType`（只剩 `.empty`）、`tiles`、`occupiedTiles` | `WorldBounds`（世界單位，半開區間）；`GameWorld.bounds` |
+| `GridPosition`（越界錯誤、點車站底下的格、GameSession 的選取） | `outOfBounds(PlanPoint)`；`GameSession.selectedPoint`、`selectStation`、`tapMap`；只剩舊存檔解碼器的 `LegacyGrid.Cell` |
+| `Station.position`、票價從底下那一格算（決策 51 第 2 點） | 票價與需求用兩站的點之間精確的距離 |
+| `TrainPosition.linkLength`、`WorldCoordinate.tileSize`、`FareRules.unitsPerMeter` | `WorldCoordinate.unitsPerMetre`、`Train.carLength`、`RailwayNetwork.spanLength`、`ConstructionCosts.trackPricingLength`、`MapScale.referenceLength`（數值不變） |
+| 存檔的 `"map"` 與 `"continuation": []` | 存檔版本 6：`"bounds"`，不寫 `"continuation"`；版本 1–5 照舊讀 |
+| golden 的 `mapWidth`、`mapHeight` 與 `outOfBounds` 的格 | golden schema 30：`worldWidth`、`worldHeight`，`outOfBounds` 帶點；沒有預期值改變 |
+
+### 8.14 F3d 之後暫時沒有改的地方
+
+- **舊的名字**：`GameError.invalidMapSize`、`outOfBounds`（玩家看到的錯誤，名字不提格）、`setTrainContinuation(_:along:)`、`TrackNodeID`／`TrackEdgeID` 單一 case 的列舉。決策 51 的改名另議照舊。
+- **ReplayFixtures 的起始世界**：照舊是 `"map"`（版本 6 之前的寫法），由解碼器讀成範圍；checksum 不含範圍，逐一不變、不重錄。`Web/WasmProbe/Probe.swift` 的世界改成 `WorldBounds(width: 32_768, height: 32_768)`（原本 32 × 32 格），同樣大。
+- **campaign 的產生器**：照舊以 1024 的步長抽點（`TestLine.centre`、`KernelNetwork.centre`），建世界時乘上 1024，抽籤順序不變；之後要抽任意的點另外做。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

@@ -166,7 +166,7 @@ extension ReferenceWorld {
     /// A train of `length` (in whole cars) at `position` with body
     /// `trailEdges`, to drive a journey with.
     static func driver(at position: TrainPosition, trailEdges: [Int], length: Int64) -> Train {
-        Train(id: 0, name: "", position: position, cars: Int(length / linkLength) + 1, trailEdges: trailEdges)
+        Train(id: 0, name: "", position: position, cars: Int(length / Self.carLength) + 1, trailEdges: trailEdges)
     }
 
     // MARK: - Services

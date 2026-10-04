@@ -120,14 +120,12 @@ public enum FareRules: Hashable, Sendable {
         case .distance(let bands):
             for band in bands {
                 guard let to = band.toMeters else { return band.fare }
-                let limit = to * Self.unitsPerMeter
+                let limit = to * WorldCoordinate.unitsPerMetre
                 if squaredDistance < limit * limit { return band.fare }
             }
             return bands.last?.fare ?? .zero
         }
     }
-
-    static let unitsPerMeter: Int64 = 64
 
     /// The fare charged for a trip of the rule's fare `fare`: the legacy
     /// path charges 5 for a fare of 0 or less.

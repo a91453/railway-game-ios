@@ -43,10 +43,10 @@ final class PassengerPropertyTests: XCTestCase {
         let count = 3 + testCase.random.below(4)
         testCase.note("\(count) stations, from minute \(start)")
         var world = try GameWorld(
-            width: 2 * count + 1, height: 3, economy: GameEconomy(balance: 1_000_000, costs: costs),
+            bounds: WorldBounds(width: Int64(2 * count + 1) * 1_024, height: 3_072), economy: GameEconomy(balance: 1_000_000, costs: costs),
             clock: GameClock(now: GameTime(minutes: start), speed: .normal)
         )
-        var model = ReferenceWorld(width: 2 * count + 1, height: 3, balance: 1_000_000, costs: costs, minutes: start, speed: .normal)
+        var model = ReferenceWorld(width: Int64(2 * count + 1) * 1_024, height: 3_072, balance: 1_000_000, costs: costs, minutes: start, speed: .normal)
         for index in 0..<count {
             // At points (Stage F3b): the tile under each, for fares, as before.
             let point = TestLine.centre(2 * index + 1, 1)

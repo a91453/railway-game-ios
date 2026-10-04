@@ -48,14 +48,14 @@ final class PersistenceAndDeterminismTests: XCTestCase {
         XCTAssertFalse(world.stations.map(\.id).contains(station.id))
     }
 
-    func testDecodingRejectsMapWithWrongTileCount() throws {
-        let json = Data(#"{"width":2,"height":2,"tiles":[{"empty":{}}]}"#.utf8)
-
-        XCTAssertThrowsError(try JSONDecoder().decode(GridMap.self, from: json)) { error in
-            guard case DecodingError.dataCorrupted = error else {
-                return XCTFail("Expected dataCorrupted, got \(error)")
-            }
+    /// A world before save version 6 gives its size as a map of tiles
+    /// (Stage F3d); one whose tiles do not fill it is still refused.
+    func testDecodingRejectsALegacyMapWithTheWrongTileCount() throws {
+        let data = try savedWorld { object in
+            object["bounds"] = nil
+            object["map"] = ["width": 2, "height": 2, "tiles": [["empty": [String: Any]()]]]
         }
+        assertDataCorrupted(GameWorld.self, data)
     }
 
     /// A station on a tile, which only a save made by hand could hold since

@@ -14,7 +14,7 @@ final class StationFacilitySessionTests: XCTestCase {
     // to 6, 2048 long. West (W) has a platform along all of edge 3, Central
     // (C) one along all of edge 5.
     private static func makeLine() throws -> GameWorld {
-        var world = try GameWorld(width: 7, height: 3, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 7_168, height: 3_072), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
         for x in [0, 1, 2, 3, 4, 6] {
             let centre = TestLine.centre(x, 1)
             try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))
@@ -81,12 +81,12 @@ final class StationFacilitySessionTests: XCTestCase {
     func testTheBodyIsDrawnBackToTheTail() throws {
         var world = try Self.makeLine()
         let id = try world.purchaseTrain(named: "Long").id
-        XCTAssertTrue(MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, tileSize: 10).isEmpty)
+        XCTAssertTrue(MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, referenceSize: 10).isEmpty)
         try world.setTrainCars(id, to: 3)
         // 1024 along edge 5: the head at x 5632, the node at 4608, and the
         // tail 2048 back at the node at 3584.
         try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(5), direction: .forward), offset: 1_024))
-        let points = MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, tileSize: 10)
+        let points = MapScale.bodyPoints(of: try XCTUnwrap(world.train(id: id)), in: world, referenceSize: 10)
         XCTAssertEqual(points.map(\.x), [55, 45, 35])
         XCTAssertEqual(points.map(\.y), [15, 15, 15])
     }

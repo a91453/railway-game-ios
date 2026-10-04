@@ -3,8 +3,8 @@
 /// Prices are never negative: spending a negative amount is a programming
 /// error (see ``GameEconomy/spend(_:)``), and decoding refuses one.
 public struct ConstructionCosts: Hashable, Codable, Sendable {
-    /// Each tile of a track's length (times its structure's
-    /// ``TrackStructure/costFactor`` on the track network).
+    /// Each ``trackPricingLength`` of a track's length, or part of one
+    /// (times its structure's ``TrackStructure/costFactor``).
     public var track: Money
     public var station: Money
     /// A new train, with its first car.
@@ -20,6 +20,11 @@ public struct ConstructionCosts: Hashable, Codable, Sendable {
         self.train = train
         self.car = car
     }
+
+    /// The length of track ``track`` is the price of: 1024 units, 16 m.
+    /// Track has cost this much a 16 m since the first track was laid, when
+    /// that was a tile's width; it is only a price now (Stage F3d).
+    public static let trackPricingLength: Int64 = 1_024
 
     /// GameCore's prices for its own new worlds and tests. The app's new
     /// game sets its own (`GameWorld.newGame()`, ARCHITECTURE decision 46).

@@ -15,34 +15,32 @@ final class NetworkServiceSessionTests: XCTestCase {
     //   a ------- e1 (8192) ------- b ----- e2 (6144) ----- c
     //        [West 1024–5120]           [Halt 0–512][East 2048–5120]
     //
-    // West's tile is (2, 3), East's (12, 3), Halt's (9, 3); Depot (5, 5)
-    // has no platform on the network. Tram has two cars (1024 long) and
-    // stands at West's berth going east: 5120 along e1.
-    private static let westTile = GridPosition(x: 2, y: 3)
-    private static let eastTile = GridPosition(x: 12, y: 3)
-    private static let haltTile = GridPosition(x: 9, y: 3)
-    private static let depotTile = GridPosition(x: 5, y: 5)
+    // West stands at (2560, 3584), East at (12800, 3584), Halt at
+    // (9728, 3584); Depot, at (5632, 5632), has no platform on the network.
+    // Tram has two cars (1024 long) and stands at West's berth going east:
+    // 5120 along e1.
     private static let west = StationID(rawValue: 1)
     private static let east = StationID(rawValue: 2)
+    private static let halt = StationID(rawValue: 3)
+    private static let depot = StationID(rawValue: 4)
     private static let tram = TrainID(rawValue: 1)
     private static let e1 = TrackEdgeID.edge(1)
     private static let e2 = TrackEdgeID.edge(2)
 
     private func makeNetworkWorld(rate: Int64 = 0) throws -> GameWorld {
-        var world = try makeWorld(width: 16, height: 6, balance: 1_000_000, speed: .normal)
+        var world = try makeWorld(width: 16_384, height: 6_144, balance: 1_000_000, speed: .normal)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 3_072))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 3_072))
         let c = try world.buildTrackNode(at: WorldCoordinate(x: 15_360, y: 3_072))
         try world.buildTrackEdge(from: a, to: b)
         try world.buildTrackEdge(from: b, to: c)
-        // At the centres of their tiles (Stage F3c: no station takes one).
-        try world.buildStation(named: "West", at: TestLine.centre(Self.westTile.x, Self.westTile.y))
-        try world.buildStation(named: "East", at: TestLine.centre(Self.eastTile.x, Self.eastTile.y))
-        let halt = try world.buildStation(named: "Halt", at: TestLine.centre(Self.haltTile.x, Self.haltTile.y))
-        try world.buildStation(named: "Depot", at: TestLine.centre(Self.depotTile.x, Self.depotTile.y))
+        try world.buildStation(named: "West", at: PlanPoint(x: 2_560, y: 3_584))
+        try world.buildStation(named: "East", at: PlanPoint(x: 12_800, y: 3_584))
+        try world.buildStation(named: "Halt", at: PlanPoint(x: 9_728, y: 3_584))
+        try world.buildStation(named: "Depot", at: PlanPoint(x: 5_632, y: 5_632))
         try world.addTrackPlatform(Self.west, on: Self.e1, from: 1_024, to: 5_120)
         try world.addTrackPlatform(Self.east, on: Self.e2, from: 2_048, to: 5_120)
-        try world.addTrackPlatform(halt.id, on: Self.e2, from: 0, to: 512)
+        try world.addTrackPlatform(Self.halt, on: Self.e2, from: 0, to: 512)
         try world.purchaseTrain(named: "Tram")
         try world.setTrainCars(Self.tram, to: 2)
         try world.placeTrain(Self.tram, at: .onEdge(TrackTraversal(edge: Self.e1, direction: .forward), offset: 5_120))
@@ -65,7 +63,7 @@ final class NetworkServiceSessionTests: XCTestCase {
             session.selectTrain(Self.tram)
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
             XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at West")
-            session.select(Self.eastTile)
+            session.selectStation(Self.east)
 
             session.sendSelectedTrain()
 
@@ -84,7 +82,7 @@ final class NetworkServiceSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
-            session.select(Self.eastTile)
+            session.selectStation(Self.east)
             session.sendSelectedTrain()
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track."))
             // Five minutes (a tick is 100 ms): 5120 of the 8192 run, 2048
@@ -104,7 +102,7 @@ final class NetworkServiceSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
-            session.select(Self.westTile)
+            session.selectStation(Self.west)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world, "already at the berth: the same path, ending where it stands")
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Tram stops at West."))
@@ -116,15 +114,15 @@ final class NetworkServiceSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
-            // A plain tile: a train goes only to stations.
-            session.select(GridPosition(x: 7, y: 1))
+            // A plain point: a train goes only to stations.
+            session.tapMap(at: PlanPoint(x: 7_680, y: 1_536), reach: 0)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select the station to send Tram to."))
             // Halt's platform is shorter than the train; Depot has none on
             // the network.
-            for tile in [Self.haltTile, Self.depotTile] {
-                session.select(tile)
+            for station in [Self.halt, Self.depot] {
+                session.selectStation(station)
                 session.sendSelectedTrain()
                 XCTAssertEqual(session.world, world)
             }

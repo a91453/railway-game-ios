@@ -176,8 +176,8 @@ final class TrafficControlPropertyTests: XCTestCase {
     private static func begin(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
         let minute = Int64(testCase.random.below(1_440))
         let (width, height) = (128, 16)
-        var world = try GameWorld(width: width, height: height, economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
-        var model = ReferenceWorld(width: width, height: height, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
+        var world = try GameWorld(bounds: WorldBounds(width: Int64(width) * 1_024, height: Int64(height) * 1_024), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
+        var model = ReferenceWorld(width: Int64(width) * 1_024, height: Int64(height) * 1_024, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
         try beginNetwork(&testCase, world: &world, model: &model)
         // Traffic control on from the start, mostly.
         if testCase.random.chance(3, in: 4) { both(&world, &model, .trafficControl(true)) }

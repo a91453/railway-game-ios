@@ -13,7 +13,7 @@ final class VerticalRailwayTests: XCTestCase {
     /// balance and track at 100 a tile.
     private func makeWorld() throws -> GameWorld {
         try GameWorld(
-            width: 32, height: 32, economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
+            bounds: WorldBounds(width: 32_768, height: 32_768), economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
             clock: GameClock(speed: .normal)
         )
     }

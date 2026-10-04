@@ -184,16 +184,16 @@ final class KernelDifferentialTests: XCTestCase {
         /// in that order. What the edges cost depends on their lengths, so
         /// it is found by building them once with money to spare.
         private func build(_ network: KernelNetwork) throws -> (GameWorld, ReferenceWorld) {
-            var priced = try GameWorld(width: width, height: height, economy: GameEconomy(balance: Money(Int64.max / 2), costs: costs))
+            var priced = try GameWorld(bounds: WorldBounds(width: Int64(width) * 1_024, height: Int64(height) * 1_024), economy: GameEconomy(balance: Money(Int64.max / 2), costs: costs))
             var none: ReferenceWorld?
             try Self.build(network, on: &priced, &none)
             let balance = Int64.max / 2 - priced.economy.balance.amount + extraBalance
             var world = try GameWorld(
-                width: width, height: height,
+                bounds: WorldBounds(width: Int64(width) * 1_024, height: Int64(height) * 1_024),
                 economy: GameEconomy(balance: Money(balance), costs: costs),
                 clock: GameClock(now: GameTime(seconds: seconds), speed: speed)
             )
-            var model: ReferenceWorld? = ReferenceWorld(width: width, height: height, balance: balance, costs: costs, seconds: seconds, speed: speed)
+            var model: ReferenceWorld? = ReferenceWorld(width: Int64(width) * 1_024, height: Int64(height) * 1_024, balance: balance, costs: costs, seconds: seconds, speed: speed)
             try Self.build(network, on: &world, &model)
             return (world, model!)
         }
@@ -265,8 +265,8 @@ final class KernelDifferentialTests: XCTestCase {
             ? TrainID(rawValue: random.element(of: unknownIDs))
             : random.element(of: trains).id
         let position = world.train(id: id)?.position
-        let width = world.map.width
-        let height = world.map.height
+        let width = Int(world.bounds.width / 1_024)
+        let height = Int(world.bounds.height / 1_024)
         func anyNode() -> TrackNodeID {
             network.nodes.isEmpty || random.chance(1, in: 10) ? .node(random.element(of: [0, 99, Int.max])) : random.element(of: network.nodes).id
         }
@@ -454,7 +454,7 @@ final class KernelDifferentialTests: XCTestCase {
                 encoder.outputFormatting = [.sortedKeys]
                 guard let data = try? encoder.encode(world), let loaded = try? JSONDecoder().decode(GameWorld.self, from: data) else {
                     // Reported by the caller as a difference.
-                    world = try GameWorld(width: 1, height: 1, economy: GameEconomy(balance: 0))
+                    world = try GameWorld(bounds: WorldBounds(width: 1_024, height: 1_024), economy: GameEconomy(balance: 0))
                     return nil
                 }
                 world = loaded
@@ -540,11 +540,9 @@ final class KernelDifferentialTests: XCTestCase {
         check(world.clock.pendingTenths == model.pendingTenths, "pending tenths \(world.clock.pendingTenths) vs \(model.pendingTenths)")
         check(world.clock.speed == model.speed, "speed \(world.clock.speed) vs \(model.speed)")
         check(world.economy.balance.amount == model.balance, "balance \(world.economy.balance.amount) vs \(model.balance)")
-        check(world.map.width == model.width && world.map.height == model.height, "map size")
-        // The land holds nothing since Stage F3c: stations stand at points.
-        check(world.map.tiles.allSatisfy { $0.type == .empty }, "a tile is taken")
+        check(world.bounds.width == model.width && world.bounds.height == model.height, "world size")
         check(
-            world.stations.map { [$0.id.rawValue, $0.position.x, $0.position.y] } == model.stations.map { [$0.id, $0.position.x, $0.position.y] }
+            world.stations.map(\.id.rawValue) == model.stations.map(\.id)
                 && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.point) == model.stations.map(\.point),
             "stations \(world.stations) vs \(model.stations)"
         )

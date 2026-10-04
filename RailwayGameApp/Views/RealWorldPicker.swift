@@ -183,7 +183,7 @@ struct RealWorldPicker: View {
     }
 
     /// How far a new game's map reaches from its middle, in metres.
-    private static let newMapHalfExtent = RealWorldFrame.halfExtent(of: GameWorld.newGame().map)
+    private static let newMapHalfExtent = RealWorldFrame.halfExtent(of: GameWorld.newGameBounds)
 }
 
 /// A place found by a search: shown, then dropped.

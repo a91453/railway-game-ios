@@ -65,7 +65,7 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// while ``execution`` is. Only ``GameWorld`` changes it, with the
     /// execution.
     public internal(set) var times: ServiceTimes?
-    /// How many cars the train has (Phase 4.5 Stage S2), one to a tile:
+    /// How many cars the train has (Phase 4.5 Stage S2), ``carLength`` apart:
     /// 1, as every newly bought train has, up to ``maximumCars``. Set by
     /// ``GameWorld/setTrainCars(_:to:)`` while the train is unplaced.
     public internal(set) var cars: Int
@@ -255,7 +255,7 @@ extension Train: Codable {
             : nil
         times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
-        let gridTrail = container.contains(.trail) ? try container.decode([GridPosition].self, forKey: .trail) : []
+        let gridTrail = container.contains(.trail) ? try container.decode([LegacyGrid.Cell].self, forKey: .trail) : []
         guard gridTrail.isEmpty else {
             throw DecodingError.dataCorruptedError(
                 forKey: .trail, in: container,

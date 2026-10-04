@@ -9,7 +9,7 @@
 // The only changes are the mechanical ones GameCore needs. Floating point
 // becomes integers at stated scales:
 //
-// - distance: world units (1/64 m, 1024 to a tile);
+// - distance: world units (1/64 m, WorldCoordinate.unitsPerMetre);
 // - time: milliseconds;
 // - acceleration, braking and coasting deceleration: thousandths of a
 //   km/h per second (the reference's values have at most three decimals);

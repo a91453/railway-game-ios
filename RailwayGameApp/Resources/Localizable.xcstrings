@@ -559,6 +559,16 @@
         }
       }
     },
+    "Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每節車廂長 16 公尺。多節的列車後方要有軌道，月台也要和列車一樣長。"
+          }
+        }
+      }
+    },
     "Ease the grade" : {
       "localizations" : {
         "zh-Hant" : {
@@ -909,16 +919,6 @@
         }
       }
     },
-    "Map, %lld by %lld tiles" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "地圖，%lld × %lld 格"
-          }
-        }
-      }
-    },
     "Mode" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1135,16 +1135,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "離開路線"
-          }
-        }
-      }
-    },
-    "One car to a tile. A train of several cars needs track behind it, and platforms as long as it." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一節車廂佔一格。多節的列車後方要有軌道，月台也要和列車一樣長。"
           }
         }
       }

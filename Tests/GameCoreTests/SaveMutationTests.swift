@@ -761,7 +761,7 @@ final class SaveMutationTests: XCTestCase {
                 var current = loaded
                 for step in 0..<6 {
                     let operation = ContinuousTrackPropertyTests.operation(
-                        in: current, using: &c.random, width: current.map.width, height: current.map.height
+                        in: current, using: &c.random, width: Int(current.bounds.width / 1_024), height: Int(current.bounds.height / 1_024)
                     )
                     let before = current
                     if ContinuousTrackPropertyTests.apply(operation, to: &current) != nil {
@@ -836,7 +836,7 @@ final class SaveMutationTests: XCTestCase {
                 var current = loaded
                 for step in 0..<6 {
                     let operation = VerticalRailwayPropertyTests.operation(
-                        in: current, using: &c.random, width: current.map.width, height: current.map.height
+                        in: current, using: &c.random, width: Int(current.bounds.width / 1_024), height: Int(current.bounds.height / 1_024)
                     )
                     let before = current
                     if VerticalRailwayPropertyTests.apply(operation, to: &current) != nil {

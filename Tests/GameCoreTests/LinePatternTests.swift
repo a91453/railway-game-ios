@@ -48,7 +48,7 @@ final class LinePatternTests: XCTestCase {
 
     private func makeWorld(minute: Int64 = 480) throws -> GameWorld {
         var world = try GameWorld(
-            width: 9, height: 2, economy: GameEconomy(balance: 2_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 9_216, height: 2_048), economy: GameEconomy(balance: 2_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
         try line.build(in: &world)

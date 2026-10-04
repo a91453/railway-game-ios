@@ -29,7 +29,7 @@ final class ServiceDwellTests: XCTestCase {
 
     private func makeWorld(speed: GameSpeed = .x10) throws -> GameWorld {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
         )
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)

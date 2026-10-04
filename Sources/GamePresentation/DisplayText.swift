@@ -28,7 +28,32 @@ extension Station {
     /// Where the station stands, for lists: its point (Stage F1) in metres
     /// east and south of the map's north-west corner, "x 41 m, y 17 m".
     public func placeText(in language: DisplayLanguage) -> String {
-        "x \(NetworkBuilding.lengthText(point.x, in: language)), y \(NetworkBuilding.lengthText(point.y, in: language))"
+        point.placeText(in: language)
+    }
+}
+
+extension PlanPoint {
+    /// The point in metres east and south of the map's north-west corner,
+    /// "x 41 m, y 17 m".
+    public func placeText(in language: DisplayLanguage) -> String {
+        "x \(NetworkBuilding.lengthText(x, in: language)), y \(NetworkBuilding.lengthText(y, in: language))"
+    }
+}
+
+extension WorldBounds {
+    /// The map view's accessibility label (Stage F3d): how far the world
+    /// reaches, "Map, 16.4 by 16.4 kilometres", to the nearest tenth of a
+    /// kilometre. The world has no cells to count.
+    public func mapLabel(in language: DisplayLanguage) -> String {
+        let east = Self.kilometresText(width), south = Self.kilometresText(height)
+        return language.text("Map, \(east) by \(south) kilometres", "地圖，\(east) × \(south) 公里")
+    }
+
+    /// `units` in kilometres, to the nearest tenth: "16.4".
+    static func kilometresText(_ units: Int64) -> String {
+        let tenth = 100 * WorldCoordinate.unitsPerMetre
+        let tenths = (units + tenth / 2) / tenth
+        return "\(tenths / 10).\(tenths % 10)"
     }
 }
 
@@ -145,8 +170,8 @@ extension Train {
 }
 
 extension TrainMovement {
-    /// The rate, such as "Rate 128 / min": logical units per game minute,
-    /// where ``TrainPosition/linkLength`` units are one tile.
+    /// The rate, such as "Rate 128 / min": world units per game minute
+    /// (``WorldCoordinate/unitsPerMetre`` to a metre).
     public func rateText(in language: DisplayLanguage) -> String {
         language.text("Rate \(rate) / min", "速率 \(rate)／分鐘")
     }
@@ -158,9 +183,12 @@ extension GameError {
     public func playerMessage(in language: DisplayLanguage) -> String {
         switch self {
         case .invalidMapSize(let width, let height):
-            language.text("A \(width) × \(height) map is not supported.", "不支援 \(width) × \(height) 的地圖。")
-        case .outOfBounds(let position):
-            language.text("\(position) is outside the map.", "\(position) 在地圖外。")
+            language.text(
+                "A map \(NetworkBuilding.lengthText(width, in: language)) by \(NetworkBuilding.lengthText(height, in: language)) is not supported.",
+                "不支援 \(NetworkBuilding.lengthText(width, in: language)) × \(NetworkBuilding.lengthText(height, in: language)) 的地圖。"
+            )
+        case .outOfBounds(let point):
+            language.text("\(point.placeText(in: language)) is outside the map.", "\(point.placeText(in: language)) 在地圖外。")
         case .invalidName:
             language.text("Enter a name.", "請輸入名稱。")
         case .insufficientFunds(let required, let available):

@@ -153,7 +153,7 @@ extension ReferenceWorld {
 
     /// Whether `point` lies over the map.
     func overMap(_ point: PlanPoint) -> Bool {
-        point.x >= 0 && point.y >= 0 && point.x < Int64(width) * 1024 && point.y < Int64(height) * 1024
+        inWorld(PlanPoint(x: point.x, y: point.y))
     }
 
     /// The way edge `number` leaves node `node`, or `nil` if it does not end

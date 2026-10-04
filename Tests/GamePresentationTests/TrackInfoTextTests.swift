@@ -15,7 +15,7 @@ final class TrackInfoTextTests: XCTestCase {
     /// loop's edge 9; Delta on edge 10; Epsilon (7, 4) is away from the
     /// track.
     private func makeBypass() throws -> GameWorld {
-        var world = try makeWorld(width: 8, height: 5, balance: 1_000_000)
+        var world = try makeWorld(width: 8_192, height: 5_120, balance: 1_000_000)
         for (x, y) in [(0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (3, 3), (4, 3)] {
             let centre = TestLine.centre(x, y)
             try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))
@@ -55,7 +55,7 @@ final class TrackInfoTextTests: XCTestCase {
     /// A ring of a straight, two quarter turns, a straight and two quarter
     /// turns back: every node plain.
     func testARingWithoutABranchPointIsALoop() throws {
-        var world = try makeWorld(width: 8, height: 5, balance: 1_000_000)
+        var world = try makeWorld(width: 8_192, height: 5_120, balance: 1_000_000)
         for (x, y) in [(1, 1), (2, 1), (3, 2), (2, 3), (1, 3), (0, 2)] {
             let centre = TestLine.centre(x, y)
             try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))

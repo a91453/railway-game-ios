@@ -9,7 +9,7 @@ import XCTest
 /// map or on what is built, and the zoom buttons double or halve the size.
 final class MapCameraTests: XCTestCase {
     /// 32 × 24 tiles: 32768 × 24576 world units.
-    private let map = try! GridMap(width: 32, height: 24)
+    private let map = try! WorldBounds(width: 32_768, height: 24_576)
     /// A portrait phone's map area: the map is wider and taller than it.
     private let phone = ScreenSize(width: 402, height: 420)
     /// An iPad's map area: the whole map fits.
@@ -26,8 +26,8 @@ final class MapCameraTests: XCTestCase {
     /// With the map's north-west corner in the view's corner, everything is
     /// drawn and tapped where ``MapScale`` put it.
     func testAPhoneStartsAtTheCompactSizeInTheMiddle() {
-        let opening = PlanCamera(map: map, viewport: phone)
-        XCTAssertEqual(opening.tileSize, MapScale.compactSize)
+        let opening = PlanCamera(bounds: map, viewport: phone)
+        XCTAssertEqual(opening.referenceSize, MapScale.compactSize)
         XCTAssertEqual(opening.centerX, 16_384)
         XCTAssertEqual(opening.centerY, 12_288)
 
@@ -35,12 +35,12 @@ final class MapCameraTests: XCTestCase {
         XCTAssertEqual(camera.pointsPerUnit, 32.0 / 1_024)
         assertEqual(camera.screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, 0))
         for point in [WorldCoordinate(x: 2_048, y: 2_048), WorldCoordinate(x: 6_144, y: 1_000, z: 640), WorldCoordinate(x: 31_000, y: 24_000)] {
-            assertEqual(camera.screenPoint(of: point), MapScale.center(of: point, tileSize: camera.tileSize))
+            assertEqual(camera.screenPoint(of: point), MapScale.center(of: point, referenceSize: camera.referenceSize))
         }
         for (x, y) in [(0.0, 0.0), (100.4, 37.6), (401.0, 419.0)] {
-            XCTAssertEqual(camera.planPoint(at: ScreenPoint(x: x, y: y)), MapScale.worldPoint(atX: x, y: y, tileSize: camera.tileSize))
+            XCTAssertEqual(camera.planPoint(at: ScreenPoint(x: x, y: y)), MapScale.worldPoint(atX: x, y: y, referenceSize: camera.referenceSize))
         }
-        XCTAssertEqual(camera.worldDistance(NetworkBuilding.touchRadius), MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: camera.tileSize))
+        XCTAssertEqual(camera.worldDistance(NetworkBuilding.touchRadius), MapScale.worldDistance(NetworkBuilding.touchRadius, referenceSize: camera.referenceSize))
         XCTAssertEqual(camera.detail, .full)
         XCTAssertEqual(camera.visibleRegion, WorldRegion(minX: 0, minY: 0, maxX: 402 * 32, maxY: 420 * 32))
     }
@@ -48,10 +48,10 @@ final class MapCameraTests: XCTestCase {
     /// On a tablet the whole map fits, centred along the side with room to
     /// spare, as the scrolling map centred a map smaller than the view.
     func testATabletShowsTheWholeMapCentred() {
-        let camera = PlanCamera(map: map, viewport: tablet)
+        let camera = PlanCamera(bounds: map, viewport: tablet)
 
         // 834 / 32 = 26.0625 across, 700 / 24 = 29.17 down: the width fits.
-        XCTAssertEqual(camera.tileSize, 26.0625)
+        XCTAssertEqual(camera.referenceSize, 26.0625)
         XCTAssertEqual(camera.centerX, 16_384)
         XCTAssertEqual(camera.centerY, 12_288)
         assertEqual(camera.screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, (700 - 24 * 26.0625) / 2))
@@ -63,51 +63,51 @@ final class MapCameraTests: XCTestCase {
     /// The buttons multiply or divide by ``MapScale/zoomFactor`` within
     /// the zoom range, about the middle of the view.
     func testTheZoomButtonsStepAboutTheMiddle() {
-        let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
         let middle = ScreenPoint(x: 201, y: 210)
 
         let closer = camera.zoomedIn()
-        XCTAssertEqual(closer.tileSize, 64)
+        XCTAssertEqual(closer.referenceSize, 64)
         XCTAssertEqual(closer.worldPosition(at: middle).x, 16_384, accuracy: 1e-9)
         XCTAssertEqual(closer.worldPosition(at: middle).y, 12_288, accuracy: 1e-9)
-        XCTAssertEqual(closer.zoomedOut().tileSize, 32)
+        XCTAssertEqual(closer.zoomedOut().referenceSize, 32)
 
         var farthest = camera
         while farthest.canZoomOut {
             farthest = farthest.zoomedOut()
         }
-        let fitting = MapScale.fittingSize(width: phone.width, height: phone.height, columns: 32, rows: 24)
-        XCTAssertEqual(farthest.tileSize, MapScale.minimumSize(fitting: fitting))
+        let fitting = MapScale.fittingSize(width: phone.width, height: phone.height, worldWidth: 32_768, worldHeight: 24_576)
+        XCTAssertEqual(farthest.referenceSize, MapScale.minimumSize(fitting: fitting))
         XCTAssertEqual(farthest.zoomedOut(), farthest)
 
         var nearest = camera
         while nearest.canZoomIn {
             nearest = nearest.zoomedIn()
         }
-        XCTAssertEqual(nearest.tileSize, MapScale.largestSize)
+        XCTAssertEqual(nearest.referenceSize, MapScale.largestSize)
         XCTAssertEqual(nearest.zoomedIn(), nearest)
     }
 
     /// A pinch keeps the world point under the fingers where it is, and
     /// stops at the ends of the zoom range.
     func testAPinchKeepsThePointUnderTheFingers() {
-        let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
         let fingers = ScreenPoint(x: 120, y: 300)
         let under = camera.worldPosition(at: fingers)
 
         let pinched = camera.zoomed(by: 1.5, around: fingers)
-        XCTAssertEqual(pinched.tileSize, 48)
+        XCTAssertEqual(pinched.referenceSize, 48)
         assertEqual(pinched.screenPoint(worldX: under.x, worldY: under.y), (120, 300), accuracy: 1e-6)
 
-        XCTAssertEqual(camera.zoomed(by: 100, around: fingers).tileSize, MapScale.largestSize)
-        XCTAssertEqual(camera.zoomed(by: 0.001, around: fingers).tileSize, camera.zoomed(by: 0.002, around: fingers).tileSize, "the smallest size")
+        XCTAssertEqual(camera.zoomed(by: 100, around: fingers).referenceSize, MapScale.largestSize)
+        XCTAssertEqual(camera.zoomed(by: 0.001, around: fingers).referenceSize, camera.zoomed(by: 0.002, around: fingers).referenceSize, "the smallest size")
         XCTAssertEqual(camera.zoomed(by: 0, around: fingers), camera)
         XCTAssertEqual(camera.zoomed(by: .nan, around: fingers), camera)
     }
 
     /// A drag moves the map with the finger and stops at the map's edges.
     func testADragMovesTheMapWithTheFingerUpToItsEdges() {
-        let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288))
         let finger = ScreenPoint(x: 200, y: 200)
         let under = camera.worldPosition(at: finger)
 
@@ -120,7 +120,7 @@ final class MapCameraTests: XCTestCase {
         assertEqual(farSouthEast.screenPoint(of: WorldCoordinate(x: 32_768, y: 24_576)), (402, 420))
         XCTAssertEqual(camera.panned(byX: .infinity, y: 0), camera)
 
-        let whole = PlanCamera(map: map, viewport: tablet)
+        let whole = PlanCamera(bounds: map, viewport: tablet)
         XCTAssertEqual(whole.panned(byX: 50, y: 50), whole, "a map that fits stays centred")
     }
 
@@ -129,7 +129,7 @@ final class MapCameraTests: XCTestCase {
     /// The screen never sends a point that is not a number, but turning one
     /// into world units must not trap; infinities stop at the world's limit.
     func testPointsThatAreNotNumbersDoNotTrap() {
-        let camera = PlanCamera(map: map, viewport: phone)
+        let camera = PlanCamera(bounds: map, viewport: phone)
         let point = camera.planPoint(at: ScreenPoint(x: .nan, y: .nan))
         XCTAssertEqual(point, PlanPoint(x: 0, y: 0))
         XCTAssertEqual(camera.worldDistance(.nan), 0)
@@ -138,7 +138,7 @@ final class MapCameraTests: XCTestCase {
     }
 
     func testTheVisibleRegionIsWhatTheViewShows() {
-        let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288)).zoomedIn()
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 16_384, y: 12_288)).zoomedIn()
         let region = camera.visibleRegion
         let topLeft = camera.worldPosition(at: ScreenPoint(x: 0, y: 0))
         let bottomRight = camera.worldPosition(at: ScreenPoint(x: 402, y: 420))
@@ -159,19 +159,19 @@ final class MapCameraTests: XCTestCase {
     /// A new view size keeps the middle and the zoom where the new range and
     /// the edges allow; a view of no size still has a positive scale.
     func testResizingKeepsTheMiddleAndZoom() {
-        let camera = PlanCamera(map: map, viewport: phone).centered(on: WorldCoordinate(x: 10_000, y: 9_000))
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 10_000, y: 9_000))
         let landscape = camera.resized(to: ScreenSize(width: 420, height: 402))
-        XCTAssertEqual(landscape.tileSize, camera.tileSize)
+        XCTAssertEqual(landscape.referenceSize, camera.referenceSize)
         XCTAssertEqual(landscape.centerX, 10_000)
         XCTAssertEqual(landscape.centerY, 9_000)
 
         // 2000 / 32 = 62.5: zooming out stops where the whole map fits.
         let wide = camera.resized(to: ScreenSize(width: 2_000, height: 2_000))
-        XCTAssertEqual(wide.tileSize, 62.5)
+        XCTAssertEqual(wide.referenceSize, 62.5)
         XCTAssertEqual(wide.centerX, 16_384, "the whole map, centred")
         XCTAssertEqual(wide.centerY, 12_288)
 
-        let empty = PlanCamera(map: map, viewport: ScreenSize(width: 0, height: 0))
+        let empty = PlanCamera(bounds: map, viewport: ScreenSize(width: 0, height: 0))
         XCTAssertGreaterThan(empty.pointsPerUnit, 0)
         XCTAssertEqual(empty.viewport, ScreenSize(width: 1, height: 1))
         XCTAssertGreaterThan(empty.zoomedOut().zoomedOut().zoomedOut().zoomedOut().pointsPerUnit, 0)
@@ -182,14 +182,14 @@ final class MapCameraTests: XCTestCase {
     /// spare, but never closer than it would open without it, and kept on
     /// the map.
     func testACameraOpensOnWhatIsBuilt() throws {
-        let large = try GridMap(width: 1_024, height: 1_024)
+        let large = WorldBounds.maximum
         // A network 28 × 20 tiles in the middle of a 16 km map.
         let demo = WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024)
-        let camera = PlanCamera(map: large, viewport: phone, showing: demo)
+        let camera = PlanCamera(bounds: large, viewport: phone, showing: demo)
         XCTAssertEqual(camera.centerX, 512 * 1_024)
         XCTAssertEqual(camera.centerY, 512 * 1_024)
         // (402 - 60) / 28 = 12.2 across, (420 - 60) / 20 = 18 down.
-        XCTAssertEqual(camera.tileSize, 342.0 / 28, accuracy: 1e-9)
+        XCTAssertEqual(camera.referenceSize, 342.0 / 28, accuracy: 1e-9)
         let corner = camera.screenPoint(worldX: demo.minX, worldY: demo.minY)
         XCTAssertEqual(corner.x, 30, accuracy: 1e-9)
         XCTAssertGreaterThan(corner.y, 30)
@@ -197,18 +197,18 @@ final class MapCameraTests: XCTestCase {
 
         // One station: the size it opens at without one, centred on it.
         let station = WorldRegion(enclosing: [WorldCoordinate(x: 300_000, y: 200_000)])!
-        let single = PlanCamera(map: large, viewport: phone, showing: station)
-        XCTAssertEqual(single.tileSize, MapScale.compactSize)
+        let single = PlanCamera(bounds: large, viewport: phone, showing: station)
+        XCTAssertEqual(single.referenceSize, MapScale.compactSize)
         XCTAssertEqual(single.centerX, 300_000)
         XCTAssertEqual(single.centerY, 200_000)
-        XCTAssertEqual(PlanCamera(map: large, viewport: phone).centerX, 512 * 1_024, "nothing built: the middle")
+        XCTAssertEqual(PlanCamera(bounds: large, viewport: phone).centerX, 512 * 1_024, "nothing built: the middle")
 
         // At the map's corner the view stops at its edges.
         let cornerStation = WorldRegion(enclosing: [WorldCoordinate(x: 0, y: 0)])!
-        assertEqual(PlanCamera(map: large, viewport: phone, showing: cornerStation).screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, 0))
+        assertEqual(PlanCamera(bounds: large, viewport: phone, showing: cornerStation).screenPoint(of: WorldCoordinate(x: 0, y: 0)), (0, 0))
         // More than the whole map stops at the whole map.
         let everything = WorldRegion(minX: -1e9, minY: -1e9, maxX: 1e9, maxY: 1e9)
-        XCTAssertFalse(PlanCamera(map: large, viewport: phone, showing: everything).canZoomOut)
+        XCTAssertFalse(PlanCamera(bounds: large, viewport: phone, showing: everything).canZoomOut)
     }
 
     /// What a game has built: its track nodes, the points along its edges,
@@ -221,7 +221,7 @@ final class MapCameraTests: XCTestCase {
         let demo = try XCTUnwrap(WorldRegion.built(in: DemoWorld.make(in: .english)))
         XCTAssertEqual(demo, WorldRegion(minX: 499 * 1_024, minY: 499 * 1_024, maxX: 525 * 1_024, maxY: 525 * 1_024))
 
-        var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        var world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
         try world.buildTrackNode(at: WorldCoordinate(x: 3_584, y: 2_560))
         try world.buildStation(named: "Far", at: PlanPoint(x: 10_240, y: 6_144))
         XCTAssertEqual(WorldRegion.built(in: world), WorldRegion(minX: 3_584, minY: 2_560, maxX: 10_240, maxY: 6_144))
@@ -229,12 +229,12 @@ final class MapCameraTests: XCTestCase {
 
     /// The level of detail follows the zoom, as ``MapScale`` decides it.
     func testTheDetailFollowsTheZoom() {
-        let camera = PlanCamera(map: try! GridMap(width: 1_024, height: 1_024), viewport: phone)
+        let camera = PlanCamera(bounds: WorldBounds.maximum, viewport: phone)
         var farther = camera
         while farther.canZoomOut {
             farther = farther.zoomedOut()
         }
-        XCTAssertLessThan(farther.tileSize, 1, "a 16 km map fits a phone")
+        XCTAssertLessThan(farther.referenceSize, 1, "a 16 km map fits a phone")
         XCTAssertEqual(farther.detail, .overview)
         XCTAssertEqual(camera.detail, .full)
     }

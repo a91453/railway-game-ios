@@ -111,7 +111,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 
 ### Stage U：列車只能進入預約到的軌道
 
-U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對 `1563ad0` 重新檢查三份參考：
+U1（通過後釋放）已經實作（ARCHITECTURE 決策 55）。2026-10-04 對 `1563ad0` 重新檢查三份參考：
 
 - `Railway/site_archive_clean/`：只有下表的 `updateBlockHolds`（畫面層），沒有預約的釋放；
 - `Ci/reference_snapshot/`：`MIN_TRAIN_GAP` 等常數只有定義；`PROJECT_ABSORPTION_GUIDE.md` 只有流程（departure due → request authority → reserve resources → approved continuation → movement）與「reservation release」這個詞，沒有程式；
@@ -335,7 +335,7 @@ U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對
 
 | 參考 | 行為 | Swift（E1） | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
-| `Ci` 虛構海島城市：`E=[[-.1124,-.18],[.1124,.18]]`、圖例「25 × 40 km · 虚构海岛城市」 | 虛構城市的大小 | `GameWorld.newGameMapSize` = 1024 格（16,384 公尺） | 一格 16 公尺（1024 單位 × 1/64 公尺） | 部分 faithful：取 `GridMap` 的上限，比參考小 |
+| `Ci` 虛構海島城市：`E=[[-.1124,-.18],[.1124,.18]]`、圖例「25 × 40 km · 虚构海岛城市」 | 虛構城市的大小 | `GameWorld.newGameMapSize` = 1024 格（16,384 公尺；F3d 起 `GameWorld.newGameBounds` = `WorldBounds.maximum`，2^20 單位，數值不變） | 一格 16 公尺（1024 單位 × 1/64 公尺） | 部分 faithful：取 `GridMap` 的上限，比參考小 |
 | `Railway` `TW_BOX`、`ROAM_PAD`、`setMaxBounds(state._panFence)` | 平移的範圍 | `PlanCamera` 的 `clampCenter`：停在地圖邊緣，放得下的方向置中 | — | faithful（第 0 步） |
 | `Ci` `#custom-zoom-in`／`#custom-zoom-out`：`g.zoomIn()`／`g.zoomOut()`；`Railway` `NavigationControl({showZoom:true})` | 一個縮放等級 | `MapScale.zoomFactor` = 2：`zoomedIn()`／`zoomedOut()` | MapLibre 一級 = 比例 × 2 | faithful（取代第 0 步的每次 ± 8 點） |
 | `Ci` `createAmapMapSafe` 的 `zooms:[2,20]`；虛構城市 `minZoom:9.1, maxZoom:18`；`Railway` `setMaxZoom(19/20)`、`applyTaiwanFloor`（開局再縮一級） | 縮放範圍 | 最大每格 `MapScale.largestSize`（64 點），最小到整張地圖放得下（`minimumSize(fitting:)`） | — | 機制 faithful；值沿用第 0 步 |
@@ -399,7 +399,7 @@ U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對
 | `Ci` 車站的 `latlng` 與線路的折線（`placeStation`、`metroBuildStationPlatformRingGcj`） | 鐵路是地圖上的點與線，沒有格 | 路網的節點與邊（`TrackNodeID.node`、`TrackEdgeID.edge`）、點車站（`buildStation(named:at: PlanPoint)`）、邊上的月台 | 世界單位（1/64 公尺） | faithful（決策 28、29、44 已經是這樣；F3 拿掉另一種） |
 | `Railway/site_archive_clean/` `data/tra.json` 等：沿線形的累積距離（`d`）與經緯度內插 | 列車位置是沿線的距離 | 列車位置 `onEdge(行進方向, offset)`：哪條邊、哪個方向、沿邊多遠 | 世界單位 | faithful（S3 起） |
 | 參考包 `Railway/railway_game_reference_clean/`（OpenTTD／RailwayCore 15.3）：tile 上的 track piece、`trackdir`、`src/pathfinder/yapf/*` | 方格的軌道與尋路 | 不移植方格；選路、號誌與進路的規則之後照決策 28 轉成節點、邊與行進方向（U-min、V） | — | **不移植**（F1、F3 作者決定）；`01_MIGRATION_MAP.md` 要求移植行為與演算法結構，不是原實作 |
-| （參考沒有） | 一格 1024 單位、地圖的大小與邊界 | 保留：`GridMap`、`GridPosition`、`TrainPosition.linkLength`、`WorldCoordinate.tileSize` | — | 保留（決策 51；改名另議） |
+| （參考沒有） | 一格 1024 單位、地圖的大小與邊界 | 保留：`GridMap`、`GridPosition`、`TrainPosition.linkLength`、`WorldCoordinate.tileSize` | — | 保留（決策 51；改名另議）。**F3d（決策 54）拿掉**，見 [Stage F3d](#stage-f3d拿掉殘留的方格語意) |
 
 **F3c 要補的缺口，參考裡已有的做法**（2026-10-03 為 F3a-3 列出的缺口再查三份參考；F3c 照這些移植，不自己另訂規則）：
 
@@ -427,6 +427,22 @@ U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對
 | `Railway/railway_game_reference_clean/binary_reference/`：`station.station_spread`、`ERR_STATION_TOO_CLOSE_TO_ANOTHER_STATION` | OpenTTD 的方格車站，平行的月台各佔一格 | 沒有數值可移植；方格不搬回來（決策 51） | — | 不移植 |
 | （參考沒有） | 平行軌道的最小中心距、沿軌道多近才算同一個交會點分開的軌道、拆邊、F2 之前的存檔 | `TrackSpacing.isSpaced(_:_:distance:)`、`RailwayNetwork.trackDistances(from:within:)`、`firstTooClose(...)`、`firstPairLeftTooClose(removing:)`、`tooClosePairs(geometries:)`、`spacingExemptions`、`GameError.trackTooClose`、`tracksWouldBeTooClose`、存檔版本 5 | 256 單位、沿軌道 32768、檢查點每 64 | 自訂（缺口） |
 | （參考沒有） | 警衝標：太近的兩段軌道上的列車互相排斥（F2b） | `RailwayNetwork.foulingLength`、`foulingSpans`、`fouls(_:_:)`；`GameWorld.holder(of:)`、`setTrafficControl`、拆邊的檢查 | 沿軌道 512 | 自訂（缺口；site_archive 的 `map3d.js` 第 347–348 行只說不橫移列車掩蓋衝突） |
+
+### Stage F3d：拿掉殘留的方格語意
+
+2026-10-04 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 54。F3d 不移植新的玩法，只把 F3c 留下的「一格 1024 單位」換成連續的世界；這張表記下三份參考的做法與它們在 GameCore 的對應。
+
+| 參考 | 行為 | GameCore（F3d 之後） | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `metroFareMatrixOpen`：`stationDistanceM(a, b) / 1e3` → `calculateMetroFare({distanceKm})`；`stationDistanceM` → `haversine`（兩站經緯度的大圓距離） | 依兩站之間的實際距離分段收費，不量化 | `GameWorld.squaredDistance(from:to:)`（兩站**點**之間精確的平方距離）→ `FareRules.fare(squaredDistance:)`；`tripFare`、`demandFactor` 都讀它（F3d 之前用兩站底下的格） | 公尺 → 64 單位（`WorldCoordinate.unitsPerMetre`）；平面的直線距離取代大圓距離（世界是平面） | faithful（距離不再量化） |
+| 同檔 `lineInfoFareDefaultDistanceBands`：0–6、6–12、12–22、22–32、32+ 公里 | 預設的距離分段 | `FareRules.standardBands`（不變，G1c 已移植） | 公里 → 公尺 × 64 | 已涵蓋 |
+| 同檔 `_collectUniqueStationsByDistanceAround`、`ANCHOR_PICK_RADIUS_M` 與 `haversine` | 選站／選錨點：半徑內最近的 | `GameSession.tapMap(at:reach:)`：半個 reach 內的車站、否則 reach 內最近的列車、否則 reach 內最近的車站；點本身照原樣保留（`selectedPoint`） | 觸控半徑換成世界單位（`MapProjection.worldDistance`） | faithful（拿掉「點底下那一格的車站」） |
+| `Railway/site_archive_clean/rail-3d/geo.js` 的 `distanceToSegment`、`rail-3d/integration/landscape-trees.js` 的 `MX = 101700`、`MY = 111320` | 經緯度換成公尺後的平面距離 | 整數世界座標的平面距離（`PlanPoint`），64 單位一公尺 | 公尺 → 64 單位 | 一致 |
+| `rail-3d/geo.js` 的 `polygonIndex`（0.002° 的格子）、`randomAt`（「固定世界格網讓樹木不因鏡頭移動而重新亂數定位」） | 格子只當空間索引與擺樹的亂數，不是遊戲規則 | 一致：GameCore 沒有格子；畫面的縮放以 `MapScale.referenceLength`（1024 單位，16 公尺）為單位，只影響呈現 | — | 一致 |
+| 參考包 `Railway/railway_game_reference_clean/docs/savegame_format.md` 的 MAP chunk（每格的位元資料）、`binary_reference/relevant_symbols_and_settings.txt` 的 `pf.yapf.rail_shorter_platform_per_tile_penalty`、`relevant_source_paths.txt` 的 `src/map.cpp` | OpenTTD 的 tile 地圖與以格為單位的月台、尋路懲罰 | 不移植（決策 51 已決定不沿用 tile）；F3d 沒有要搬的東西 | — | 不移植 |
+| （參考沒有） | 世界的範圍以世界單位表示、半開區間的邊界 | `WorldBounds`（`width`、`height`、`contains`、`maximumSide` = 2^20）；`GameWorld.bounds`；`invalidMapSize`、`outOfBounds(PlanPoint)` | 世界單位 | 自訂（缺口） |
+| （參考沒有） | 各子系統的長度常數 | `Train.carLength`、`RailwayNetwork.spanLength`、`ConstructionCosts.trackPricingLength`、`MapScale.referenceLength`（都是 1024）、`WorldCoordinate.unitsPerMetre`（64） | 數值不變 | 自訂（拆開 `linkLength`／`tileSize`） |
+| （參考沒有） | 舊存檔的地圖 | 存檔版本 6；版本 1–5 的 `w × h` 格讀成 `1024w × 1024h` 單位（`LegacyGrid.tileLength`），只在解碼器裡 | 1 格 = 1024 單位 | 自訂（遷移） |
 
 ### 折返
 
@@ -511,7 +527,7 @@ U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對
    - **決定（2026-10-02）**：每台列車與每條線路都有自己的性能，預設 `standard`，以指令更換（`setTrainPerformance`、`setLinePerformance`）；畫面的選擇之後與車種一起做。
    - **W2c 的實作**（決策 40）：另加 `Ci/` 的地鐵列車（`metro`：1.1、1.3 m/s²，80 km/h）。列車的性能只在不是標準時存檔。
 5. **跟車規則的角色。** `updateBlockHolds` 是畫面層、隨畫格改變的顯示延後。U 若要採用它的距離（0.4 km、兩車長度的平均），要以基本步長重新表達；若 U 只用預約的資源，這組常數就只給畫面用。
-   - **U1 的實作**（決策 54）：只用預約的資源（通過後釋放），沒有用到這組常數；U2 的站間跟車再決定是否把 0.4 km 當作授權終點前的保留距離。
+   - **U1 的實作**（決策 55）：只用預約的資源（通過後釋放），沒有用到這組常數；U2 的站間跟車再決定是否把 0.4 km 當作授權終點前的保留距離。
 6. **沒有號誌與閉塞。** 兩個網站都沒有號誌機、固定閉塞或聯鎖。U 的授權終點（到下一站、或到下一個可以停車的地方）是 gap，照 ARCHITECTURE 決策 29 第 12 點與 PR #31 的語義處理，並在 PR 裡列出。
 7. **限速區段與觀測曲線。** 參考的限速區段綁定真實地名，觀測曲線要用實測資料；兩者都可以移植，W1 還沒做。虛擬地圖上的曲率限速參考沒有，要由我們的幾何推導，這是 gap。
 8. **通過站。** 參考的通過站有推導出的通過時刻，我們的 Q3 快車通過站沒有時刻。V 的交會推估需要它。
@@ -546,7 +562,7 @@ V 實際放行 → T、U（保證不互穿）
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
 7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F3 移除方格 ✅（[對照](#stage-f3移除方格)）→ F2 線間距 ✅（[對照](#stage-f2線間距)）；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
-8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。U1（通過後釋放）✅（ARCHITECTURE 決策 54，[對照](#stage-u列車只能進入預約到的軌道)）；U2（站間跟車，依曲線在授權終點前停下）是下一步。
+8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。U1（通過後釋放）✅（ARCHITECTURE 決策 55，[對照](#stage-u列車只能進入預約到的軌道)）；U2（站間跟車，依曲線在授權終點前停下）是下一步。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
 **順序（2026-10-01 作者決定）**：W2 先於 U-min。兩者互不依賴（U → T，W2 → W1），但後做的那個要處理「列車依曲線在授權終點前停下」；W2 先做，U-min 就直接建立在最終的移動方式上，不必先為固定的 rate 設計停車。

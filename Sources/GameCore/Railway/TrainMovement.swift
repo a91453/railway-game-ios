@@ -19,7 +19,7 @@
 /// ``GameWorld/unplaceTrain(_:)``, which clear the path (unplacing also
 /// resets the rate).
 public struct TrainMovement: Hashable, Sendable {
-    /// Logical units (``TrainPosition/linkLength`` to a tile's width) the
+    /// World units (``WorldCoordinate/unitsPerMetre`` to a metre) the
     /// train may travel per game minute, shared out over the minute's seconds
     /// (see ``distance(at:fromSecond:toSecond:)``). Never negative; 0 keeps
     /// the train where it is without discarding its path.
@@ -205,7 +205,7 @@ extension TrainMovement: Codable {
         case rate, continuation, cursor, edges, end
     }
 
-    /// Decodes `{"rate", "continuation", "cursor"}`, plus `"edges"` (edge
+    /// Decodes `{"rate", "cursor"}`, plus `"edges"` (edge
     /// numbers, Stage S3); without them, which is also how movements saved
     /// before Stage S3 read, there are none, and an explicit `null` is
     /// rejected. Since Stage S5 also `"end"` for a path that ends part of
@@ -217,14 +217,15 @@ extension TrainMovement: Codable {
     /// and that the edges were built, and `"end"` lies within the last one,
     /// by the ``GameWorld`` decoder.
     ///
-    /// `"continuation"` is the grid's path, which every save has and which
-    /// is always `[]` for a train on the track network (ARCHITECTURE
-    /// decision 51 keeps the key). A continuation of tiles, which only a
-    /// save made by hand could hold, is refused with that reason: the grid
-    /// went in Stage F3c.
+    /// `"continuation"` was the grid's path. Saves before version 6 write it,
+    /// always `[]` for a train on the track network (ARCHITECTURE decision
+    /// 51 kept the key); since then it is not written (Stage F3d), and an
+    /// empty one is still read. A continuation of tiles, which only a save
+    /// made by hand could hold, is refused with that reason: the grid went
+    /// in Stage F3c.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        guard try container.decode([GridPosition].self, forKey: .continuation).isEmpty else {
+        if container.contains(.continuation), try !container.decode([LegacyGrid.Cell].self, forKey: .continuation).isEmpty {
             throw DecodingError.dataCorruptedError(
                 forKey: .continuation, in: container,
                 debugDescription: "A path on the grid (\"continuation\") is no longer supported: the grid was removed in Stage F3c. Only a save made by hand could hold one."
@@ -247,7 +248,6 @@ extension TrainMovement: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(rate, forKey: .rate)
-        try container.encode([GridPosition](), forKey: .continuation)
         try container.encode(cursor, forKey: .cursor)
         if !edges.isEmpty {
             try container.encode(edges.map { $0.networkNumber }, forKey: .edges)

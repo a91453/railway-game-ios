@@ -51,7 +51,7 @@ final class NetworkServiceTests: XCTestCase {
 
     private func makeStraightWorld(minute: Int64 = 0) throws -> GameWorld {
         var world = try GameWorld(
-            width: 32, height: 8, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 32_768, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
         let nodes = try [1_024, 9_216, 17_408, 25_600].map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: 1_024)) }
@@ -159,7 +159,7 @@ final class NetworkServiceTests: XCTestCase {
     /// to 6048 on each: 8192 + 6048 = 14240 either way.
     func testEqualRoutesAreDecidedByEdgeNumber() throws {
         for northFirst in [true, false] {
-            var world = try GameWorld(width: 20, height: 8, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+            var world = try GameWorld(bounds: WorldBounds(width: 20_480, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
             let x = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
             let y = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 4_096))
             let north = try world.buildTrackNode(at: WorldCoordinate(x: 17_408, y: 3_696))
@@ -490,7 +490,7 @@ final class NetworkServiceTests: XCTestCase {
 
     private func makeDeepWorld() throws -> GameWorld {
         var world = try GameWorld(
-            width: 64, height: 64, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 65_536, height: 65_536), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 4_096, y: 4_096))
@@ -608,7 +608,7 @@ final class NetworkServiceTests: XCTestCase {
     /// of one car at 2048 a minute from the edge's start stops at its far
     /// end each way.
     func testAnElevatedPlatformServesTrainsBothWays() throws {
-        var world = try GameWorld(width: 12, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024, z: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 1_024, z: 512))
         try world.buildTrackEdge(from: a, to: b, structure: .elevated)

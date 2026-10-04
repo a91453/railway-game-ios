@@ -1,31 +1,39 @@
 import GameCore
 
-/// Chooses how large one map tile is drawn, and maps touch locations back to
-/// tiles. Sizes are in points.
+/// Chooses how large the world is drawn. Sizes are in points, given for
+/// ``referenceLength`` of the world (the ``MapProjection/referenceSize``).
 ///
-/// Presentation-only: the map itself has no notion of screen size.
+/// Presentation-only: the world itself has no notion of screen size.
 public enum MapScale {
-    /// Below this, tiles are too small to tap reliably, so the whole map is
-    /// not shown at once by default.
+    /// The length of the world the map's sizes are given for: 1024 world
+    /// units, 16 m. The zoom range, the levels of detail and the widths of
+    /// lines and marks are sizes per 16 m. A drawing measure only: the world
+    /// has no cells (Stage F3d). It was a tile's width until then, and the
+    /// sizes kept their values.
+    public static let referenceLength: Int64 = 1_024
+
+    /// Below this, 16 m of the world is too small to tap reliably, so the
+    /// whole map is not shown at once by default.
     public static let smallestComfortableSize = 22.0
-    /// Default tile size when the whole map would be too small (phones).
+    /// The default size when the whole map would be too small (phones).
     public static let compactSize = 32.0
     public static let largestSize = 64.0
-    /// How many times one zoom button step changes the tile size (Stage E1):
+    /// How many times one zoom button step changes the size (Stage E1):
     /// one zoom level of the references' web maps (MapLibre's `zoomIn`). A
     /// new game's 16 km map is a few hundred times smaller on a phone than
     /// at ``largestSize``, too far for steps of a fixed size.
     public static let zoomFactor = 2.0
 
-    /// The tile size at which a `columns` × `rows` map exactly fits a
-    /// `width` × `height` viewport.
-    public static func fittingSize(width: Double, height: Double, columns: Int, rows: Int) -> Double {
-        guard columns > 0, rows > 0 else { return compactSize }
-        return max(0, min(width / Double(columns), height / Double(rows)))
+    /// The size at which a world `worldWidth` × `worldHeight` units
+    /// exactly fits a `width` × `height` viewport.
+    public static func fittingSize(width: Double, height: Double, worldWidth: Double, worldHeight: Double) -> Double {
+        guard worldWidth > 0, worldHeight > 0 else { return compactSize }
+        let reference = Double(referenceLength)
+        return max(0, min(width / (worldWidth / reference), height / (worldHeight / reference)))
     }
 
-    /// The default tile size: the whole map when its tiles stay comfortably
-    /// tappable (tablets), otherwise ``compactSize`` with scrolling (phones).
+    /// The default size: the whole map when it stays comfortably tappable
+    /// (tablets), otherwise ``compactSize`` with scrolling (phones).
     public static func automaticSize(fitting fittingSize: Double) -> Double {
         fittingSize >= smallestComfortableSize ? min(fittingSize, largestSize) : compactSize
     }
@@ -49,12 +57,12 @@ public enum MapScale {
         clamped(size / zoomFactor, fitting: fittingSize)
     }
 
-    /// Where the world point `point` is drawn, in map coordinates: a tile
-    /// is ``WorldCoordinate/tileSize`` world units wide, and the map is
-    /// drawn from above, so the height is not shown (a top-down debug
-    /// projection of the track network, Stage S3).
-    public static func center(of point: WorldCoordinate, tileSize: Double) -> (x: Double, y: Double) {
-        let scale = tileSize / Double(WorldCoordinate.tileSize)
+    /// Where the world point `point` is drawn, in map coordinates, with
+    /// ``referenceLength`` of the world `referenceSize` points long: the
+    /// map is drawn from above, so the height is not shown (a top-down
+    /// debug projection of the track network, Stage S3).
+    public static func center(of point: WorldCoordinate, referenceSize: Double) -> (x: Double, y: Double) {
+        let scale = referenceSize / Double(referenceLength)
         return (Double(point.x) * scale, Double(point.y) * scale)
     }
 
@@ -64,8 +72,8 @@ public enum MapScale {
     ///
     /// Display only: worked out from the authoritative position each time
     /// the map is drawn, never stored, and never fed back into GameCore.
-    public static func center(of position: TrainPosition, in world: GameWorld? = nil, tileSize: Double) -> (x: Double, y: Double) {
-        world?.location(of: position).map { center(of: $0.position, tileSize: tileSize) } ?? (0, 0)
+    public static func center(of position: TrainPosition, in world: GameWorld? = nil, referenceSize: Double) -> (x: Double, y: Double) {
+        world?.location(of: position).map { center(of: $0.position, referenceSize: referenceSize) } ?? (0, 0)
     }
 
     /// The line a train's body is drawn along, in map coordinates: along
@@ -73,11 +81,11 @@ public enum MapScale {
     /// from its head to its tail; without a world that has the train, just
     /// the corner. Empty for an unplaced train.
     ///
-    /// Display only, like ``center(of:in:tileSize:)``.
-    public static func bodyPoints(of train: Train, in world: GameWorld? = nil, tileSize: Double) -> [(x: Double, y: Double)] {
+    /// Display only, like ``center(of:in:referenceSize:)``.
+    public static func bodyPoints(of train: Train, in world: GameWorld? = nil, referenceSize: Double) -> [(x: Double, y: Double)] {
         guard train.position != nil else { return [] }
         let path = world?.bodyPath(of: train.id) ?? []
-        return path.isEmpty ? [(0, 0)] : path.map { center(of: $0, tileSize: tileSize) }
+        return path.isEmpty ? [(0, 0)] : path.map { center(of: $0, referenceSize: referenceSize) }
     }
 
     /// The unit vector, in map coordinates, of the way a train at `position`
@@ -89,16 +97,16 @@ public enum MapScale {
         return length > 0 ? (Double(direction.dx) / length, Double(direction.dy) / length) : (1, 0)
     }
 
-    /// Below this tile size the map is drawn as an overview (see
-    /// ``detail(forTileSize:)``).
+    /// Below this size the map is drawn as an overview (see
+    /// ``detail(forReferenceSize:)``).
     public static let overviewBelow = 20.0
 
-    /// How much of the map to draw at `tileSize` (Stage R's levels of
-    /// detail): ``MapDetail/overview`` for small tiles, where only the lines
-    /// of track, the stations as marks and the trains stay readable, and
-    /// ``MapDetail/full`` otherwise.
-    public static func detail(forTileSize tileSize: Double) -> MapDetail {
-        tileSize < overviewBelow ? .overview : .full
+    /// How much of the map to draw at `referenceSize` (Stage R's levels of
+    /// detail): ``MapDetail/overview`` when 16 m is small on the screen,
+    /// where only the lines of track, the stations as marks and the trains
+    /// stay readable, and ``MapDetail/full`` otherwise.
+    public static func detail(forReferenceSize referenceSize: Double) -> MapDetail {
+        referenceSize < overviewBelow ? .overview : .full
     }
 
     /// Projects only segments touching the view (including the stroke's

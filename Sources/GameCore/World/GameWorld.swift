@@ -8,9 +8,10 @@
 /// Presentation and rendering layers read from a world and send it commands;
 /// they must not keep a separate copy of game state as the source of truth.
 public struct GameWorld: Equatable, Sendable {
-    /// The land. It holds no railway (Stage S3A; see ``network``) and no
-    /// station: stations stand at points (Stage F1).
-    public private(set) var map: GridMap
+    /// How far the world reaches (Stage F3d): every track node and station
+    /// stands in it. The railway is the ``network``, and stations stand at
+    /// points (Stage F1); the world has no cells.
+    public private(set) var bounds: WorldBounds
     /// All stations, ordered by ascending ``StationID``.
     public private(set) var stations: [Station]
     /// All trains, ordered by ascending ``TrainID``.
@@ -60,17 +61,13 @@ public struct GameWorld: Equatable, Sendable {
     private var nextTrainID: Int
     private var nextLineID: Int
 
-    /// Creates an empty world.
-    ///
-    /// - Throws: ``GameError/invalidMapSize(width:height:)`` for unsupported
-    ///   dimensions.
+    /// Creates an empty world reaching as far as `bounds`.
     public init(
-        width: Int,
-        height: Int,
+        bounds: WorldBounds,
         economy: GameEconomy,
         clock: GameClock = GameClock()
-    ) throws(GameError) {
-        self.map = try GridMap(width: width, height: height)
+    ) {
+        self.bounds = bounds
         self.stations = []
         self.trains = []
         self.lines = []
@@ -118,16 +115,15 @@ public struct GameWorld: Equatable, Sendable {
     /// edges. Returns the new node's ID, ``TrackNodeID/node(_:)``, numbered
     /// in order from 1 and never reused.
     ///
-    /// The node must lie on the map (`0 <= x < width × 1024` and
-    /// `0 <= y < height × 1024`; see ``WorldCoordinate``), at a height in
+    /// The node must lie in the world's ``bounds``, at a height in
     /// ``RailwayNetwork/heightRange`` (Stage S4; 0 is the ground), where no
-    /// node stands yet. A node can stand over any tile.
+    /// node stands yet.
     ///
     /// - Throws, checked in this order: ``GameError/invalidTrackGeometry``
     ///   or ``GameError/idsExhausted``.
     @discardableResult
     public mutating func buildTrackNode(at position: WorldCoordinate) throws(GameError) -> TrackNodeID {
-        guard isOnMap(position), !network.hasNode(at: position) else { throw .invalidTrackGeometry }
+        guard isInWorld(position), !network.hasNode(at: position) else { throw .invalidTrackGeometry }
         let (_, next) = try Self.allocateID(from: network.nextNodeNumber)
 
         return network.addNode(at: position, next: next)
@@ -137,13 +133,14 @@ public struct GameWorld: Equatable, Sendable {
     /// shaped in plan by `curve` (Phase 4.5 Stage S3) and in height by
     /// `profile`, carried by `structure` (Stage S4), and charges
     /// ``ConstructionCosts/track`` times the structure's
-    /// ``TrackStructure/costFactor`` for every tile of its length (1024
-    /// units), rounded up. Returns the new edge's ID,
+    /// ``TrackStructure/costFactor`` for every
+    /// ``ConstructionCosts/trackPricingLength`` of its length (1024 units,
+    /// 16 m), rounded up. Returns the new edge's ID,
     /// ``TrackEdgeID/edge(_:)``, numbered in order from 1 and never reused.
     ///
     /// The edge's length, centre line and heights are worked out from its
     /// end nodes, curve and profile (see ``TrackGeometry``); its control
-    /// points must lie on the map. Which edges it joins at each end follows
+    /// points must lie in the world's ``bounds``. Which edges it joins at each end follows
     /// from the way it leaves the node (see ``TrackNodeEnd``): an edge that
     /// meets others at an angle joins none of them there. Edges that cross
     /// in plan without a shared node never join, and must pass one over the
@@ -155,7 +152,7 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)``
     ///   for `from`, then for `to`; ``GameError/invalidTrackGeometry`` (the
-    ///   same node twice, a control point off the map, or a curve or profile
+    ///   same node twice, a control point outside the bounds, or a curve or profile
     ///   that does not make an edge); ``GameError/trackTooSteep``;
     ///   ``GameError/invalidTrackStructure``;
     ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
@@ -173,7 +170,7 @@ public struct GameWorld: Equatable, Sendable {
     ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
-        guard from != to, curve.controlPoints.allSatisfy(isOnMap),
+        guard from != to, curve.controlPoints.allSatisfy(bounds.contains),
               let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
         guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
@@ -363,49 +360,43 @@ public struct GameWorld: Equatable, Sendable {
             && geometry.height(at: platform.start) == geometry.height(at: platform.end)
     }
 
-    /// Whether a node at `position` would lie on the map, at a height in
-    /// ``RailwayNetwork/heightRange``.
-    private func isOnMap(_ position: WorldCoordinate) -> Bool {
-        RailwayNetwork.heightRange.contains(position.z) && isOnMap(position.plan)
-    }
-
-    /// Whether `point` lies over the map: `0 <= x < width × 1024` and
-    /// `0 <= y < height × 1024`.
-    private func isOnMap(_ point: PlanPoint) -> Bool {
-        point.x >= 0 && point.y >= 0 && point.x < Int64(map.width) * WorldCoordinate.tileSize && point.y < Int64(map.height) * WorldCoordinate.tileSize
+    /// Whether a node at `position` would lie in the world's ``bounds``, at
+    /// a height in ``RailwayNetwork/heightRange``.
+    private func isInWorld(_ position: WorldCoordinate) -> Bool {
+        RailwayNetwork.heightRange.contains(position.z) && bounds.contains(position.plan)
     }
 
     /// What an edge `length` long on `structure` costs:
     /// ``ConstructionCosts/track`` times the structure's
-    /// ``TrackStructure/costFactor`` for every tile of its length, rounded
-    /// up, and at least one.
+    /// ``TrackStructure/costFactor`` for every
+    /// ``ConstructionCosts/trackPricingLength`` of its length, rounded up,
+    /// and at least one.
     ///
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
     ///   the price does not even fit in a ``Money``, so no balance could pay
     ///   it; `required` is then the largest amount there is.
     private func edgeCost(length: Int64, structure: TrackStructure) throws(GameError) -> Money {
-        let tiles = max(1, (length + WorldCoordinate.tileSize - 1) / WorldCoordinate.tileSize)
-        let (units, overflowFactor) = tiles.multipliedReportingOverflow(by: structure.costFactor)
+        let priced = ConstructionCosts.trackPricingLength
+        let lengths = max(1, (length + priced - 1) / priced)
+        let (units, overflowFactor) = lengths.multipliedReportingOverflow(by: structure.costFactor)
         let (price, overflow) = economy.costs.track.amount.multipliedReportingOverflow(by: units)
         guard !overflowFactor, !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
         return Money(price)
     }
 
     /// Builds a station standing at `point` (Stage F1) and charges
-    /// ``ConstructionCosts/station``. It takes no tile: the land under it is
-    /// unchanged, and other stations may stand over the same tile. It has no
-    /// platforms until the track network gives it some
+    /// ``ConstructionCosts/station``. Other stations may stand anywhere
+    /// near it. It has no platforms until the track network gives it some
     /// (``addTrackPlatform(_:on:from:to:)``).
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
-    ///   ``GameError/outOfBounds(_:)`` naming the tile under `point` when it
-    ///   lies off the map (`0 <= x < width × 1024`, `0 <= y < height ×
-    ///   1024`), ``GameError/idsExhausted``, or
+    ///   ``GameError/outOfBounds(_:)`` naming `point` when it lies outside
+    ///   the world's ``bounds``, ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildStation(named name: String, at point: PlanPoint) throws(GameError) -> Station {
         guard Self.isValidName(name) else { throw .invalidName }
-        guard isOnMap(point) else { throw .outOfBounds(Self.tile(under: point)) }
+        guard bounds.contains(point) else { throw .outOfBounds(point) }
         let (id, nextID) = try Self.allocateID(from: nextStationID)
         try economy.spend(economy.costs.station)
 
@@ -413,15 +404,6 @@ public struct GameWorld: Equatable, Sendable {
         nextStationID = nextID
         stations.append(station)
         return station
-    }
-
-    /// The tile under `point`, rounding down, also off the map.
-    static func tile(under point: PlanPoint) -> GridPosition {
-        let size = WorldCoordinate.tileSize
-        func floor(_ value: Int64) -> Int {
-            Int(value >= 0 ? value / size : -((-value + size - 1) / size))
-        }
-        return GridPosition(x: floor(point.x), y: floor(point.y))
     }
 
     /// Buys a new train and charges ``ConstructionCosts/train``.
@@ -488,8 +470,8 @@ public struct GameWorld: Equatable, Sendable {
         try admit(train, at: index)
     }
 
-    /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2), a
-    /// tile's width apart: ``Train/minimumCars`` to ``Train/maximumCars``. Each car
+    /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2),
+    /// ``Train/carLength`` apart: ``Train/minimumCars`` to ``Train/maximumCars``. Each car
     /// added costs ``ConstructionCosts/car``; taking cars off refunds
     /// nothing. Cars that cost nothing are added whatever the balance, even
     /// a negative one. A train of more than one car is placed with its body behind
@@ -2142,7 +2124,7 @@ public struct GameWorld: Equatable, Sendable {
         }
     }
 
-    /// Stage U (ARCHITECTURE decision 54): once train `index` has moved,
+    /// Stage U (ARCHITECTURE decision 55): once train `index` has moved,
     /// its reservation keeps only the track it still needs (see
     /// ``routeEnvelope(of:)``): what it stands on, what its head has still
     /// to pass over and the junctions all that fouls. Track its tail has
@@ -2276,13 +2258,13 @@ extension GameWorld {
 
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
-        case map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
+        case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, accounts, geoAnchor
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
     /// (IDs must be unique and below the next ID to allocate; every station
-    /// must stand on the map; every placed train must be on this world's
+    /// must stand in the world's bounds; every placed train must be on this world's
     /// track, as ``placeTrain(_:at:)`` requires; every timetable stop must
     /// name one of this world's stations, as
     /// ``setTrainTimetable(_:to:repeatingEvery:)`` requires; a waiting
@@ -2304,6 +2286,11 @@ extension GameWorld: Codable {
     /// station on tiles, a train or a reservation on the grid, a body or a
     /// path on the grid.
     ///
+    /// The world's extent is `"bounds"` in world units (Stage F3d, save
+    /// version 6). A world saved before that has a `"map"` of tiles instead,
+    /// read as the bounds its tiles cover (see `LegacyMap`); exactly one of
+    /// the two is accepted.
+    ///
     /// Under traffic control (Stage T) every reservation must fit its train
     /// and this world, and no two trains may hold the same track (see
     /// `trafficProblem()`); without it, no train may have a reservation.
@@ -2319,7 +2306,17 @@ extension GameWorld: Codable {
     /// 52).
     init(from decoder: any Decoder, madeBeforeSpacing: Bool) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        map = try container.decode(SavedMap.self, forKey: .map).land
+        switch (container.contains(.bounds), container.contains(.map)) {
+        case (true, false):
+            bounds = try container.decode(WorldBounds.self, forKey: .bounds)
+        case (false, true):
+            bounds = try container.decode(LegacyMap.self, forKey: .map).bounds
+        default:
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "A world has its bounds (\"bounds\"), or, in a save before version 6, its map (\"map\"): exactly one of them."
+            ))
+        }
         stations = try container.decode([Station].self, forKey: .stations)
         trains = try container.decode([Train].self, forKey: .trains)
         clock = try container.decode(GameClock.self, forKey: .clock)
@@ -2362,10 +2359,11 @@ extension GameWorld: Codable {
     /// with traffic control off has no `"trafficControl"` key (Stage T),
     /// which is also how saves made before it read; and a blank map has no
     /// `"geoAnchor"` (Stage E2). An explicit `null` for any of them is
-    /// rejected.
+    /// rejected. The world's extent is written as `"bounds"`, in world units
+    /// (Stage F3d).
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(SavedMap(land: map), forKey: .map)
+        try container.encode(bounds, forKey: .bounds)
         try container.encode(stations, forKey: .stations)
         try container.encode(trains, forKey: .trains)
         if !lines.isEmpty {
@@ -2401,26 +2399,27 @@ extension GameWorld: Codable {
         }
     }
 
-    /// The map as a save holds it: its size and its land.
+    /// The world's size as a save before version 6 holds it: a map of
+    /// tiles (``LegacyGrid/tileLength`` units a tile) with its land, read as
+    /// the bounds it covers and never written (Stage F3d, ARCHITECTURE
+    /// decision 54).
     ///
     /// Two forms (Stage E1, ARCHITECTURE decision 48):
     ///
-    /// - `{"width", "height", "occupied"}`, written since save version 2:
-    ///   only the tiles that are not empty ground, each with its position,
-    ///   in row-major order. A new game's map is 1024 tiles a side, and
-    ///   writing every one of them made a save of an empty map 13 MB.
+    /// - `{"width", "height", "occupied"}`, written from save version 2 to
+    ///   5: only the tiles that are not empty ground, each with its
+    ///   position, in row-major order.
     /// - `{"width", "height", "tiles"}`: every tile in row-major order, the
-    ///   form every save had from Stage I to save version 1. Still read, so
-    ///   older saves load as they were written.
+    ///   form every save had from Stage I to save version 1.
     ///
-    /// Every tile is empty ground now, so `"occupied"` is always `[]`. Until
-    /// Stage F3c a tile could hold grid track (`"track"`, `"turnout"`,
-    /// `"crossing"`) or a station (`"station"`); a save with any, which only
-    /// a save made by hand could hold, is refused with that reason
-    /// (ARCHITECTURE decision 51).
-    private struct SavedMap: Codable {
-        /// A saved tile, read but never written: `{"empty": {}}`, or one of
-        /// the grid's kinds, refused.
+    /// Every tile is empty ground, so `"occupied"` is `[]`. Until Stage F3c
+    /// a tile could hold grid track (`"track"`, `"turnout"`, `"crossing"`)
+    /// or a station (`"station"`); a save with any, which only a save made
+    /// by hand could hold, is refused with that reason (ARCHITECTURE
+    /// decision 51).
+    private struct LegacyMap: Decodable {
+        /// A saved tile: `{"empty": {}}`, or one of the grid's kinds,
+        /// refused.
         private struct Tile: Decodable {
             private struct Key: CodingKey {
                 let stringValue: String
@@ -2459,15 +2458,13 @@ extension GameWorld: Codable {
             case width, height, occupied, tiles
         }
 
-        let land: GridMap
+        /// The bounds the map covers.
+        let bounds: WorldBounds
 
-        init(land: GridMap) {
-            self.land = land
-        }
-
-        /// Decodes either form, rejecting a size the map cannot have, both
-        /// forms or neither, a tile count that does not match the size, an
-        /// occupied tile off the map, and any tile that is not empty ground.
+        /// Decodes either form, rejecting a size the map could not have
+        /// (1 to ``LegacyGrid/maximumTiles`` tiles a side), both forms or
+        /// neither, a tile count that does not match the size, an occupied
+        /// tile off the map, and any tile that is not empty ground.
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let width = try container.decode(Int.self, forKey: .width)
@@ -2475,7 +2472,8 @@ extension GameWorld: Codable {
             func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
                 DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: description)
             }
-            guard let map = try? GridMap(width: width, height: height) else {
+            let sides = 1...LegacyGrid.maximumTiles
+            guard sides.contains(width), sides.contains(height) else {
                 throw corrupt(.width, "\(width)x\(height) is not a size a map can have.")
             }
             switch (container.contains(.occupied), container.contains(.tiles)) {
@@ -2483,7 +2481,7 @@ extension GameWorld: Codable {
                 // A tile that is not empty is refused while it is read; one
                 // that is empty is not occupied.
                 if let entry = try container.decode([Occupied].self, forKey: .occupied).first {
-                    guard map.contains(GridPosition(x: entry.x, y: entry.y)) else {
+                    guard (0..<width).contains(entry.x), (0..<height).contains(entry.y) else {
                         throw corrupt(.occupied, "Tile (\(entry.x), \(entry.y)) lies off the \(width)x\(height) map.")
                     }
                     throw corrupt(.occupied, "Tile (\(entry.x), \(entry.y)) is listed as occupied but empty.")
@@ -2498,15 +2496,8 @@ extension GameWorld: Codable {
             case (false, false):
                 throw corrupt(.occupied, "A map needs its occupied tiles.")
             }
-            self.land = map
-        }
-
-        /// Encodes the occupied form: the size, and no occupied tiles.
-        func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(land.width, forKey: .width)
-            try container.encode(land.height, forKey: .height)
-            try container.encode([Int](), forKey: .occupied)
+            // At most 1024 × 1024 units a side: within the bounds' limit.
+            bounds = try WorldBounds(width: Int64(width) * LegacyGrid.tileLength, height: Int64(height) * LegacyGrid.tileLength)
         }
     }
 
@@ -2547,20 +2538,20 @@ extension GameWorld: Codable {
         }
         for station in stations {
             guard Self.isValidName(station.name) else { return "Station \(station.id.rawValue) has an invalid name." }
-            guard isOnMap(station.point) else {
-                return "Station \(station.id.rawValue) stands off the map."
+            guard bounds.contains(station.point) else {
+                return "Station \(station.id.rawValue) stands outside the world's bounds."
             }
         }
         guard trains.allSatisfy({ Self.isValidName($0.name) }) else {
             return "A train has an invalid name."
         }
-        // Stage S3: the network lies over the map; Stage S4: at the heights
-        // a world allows.
-        guard network.nodes.allSatisfy({ isOnMap($0.position) }) else {
-            return "A track node lies off the map or beyond the heights track may have."
+        // Stage S3: the network lies in the world's bounds; Stage S4: at the
+        // heights a world allows.
+        guard network.nodes.allSatisfy({ isInWorld($0.position) }) else {
+            return "A track node lies outside the world's bounds or beyond the heights track may have."
         }
-        guard network.edges.allSatisfy({ $0.curve.controlPoints.allSatisfy(isOnMap) }) else {
-            return "A track edge's curve leaves the map."
+        guard network.edges.allSatisfy({ $0.curve.controlPoints.allSatisfy(bounds.contains) }) else {
+            return "A track edge's curve leaves the world's bounds."
         }
         if let problem = networkRuleProblem() {
             return problem

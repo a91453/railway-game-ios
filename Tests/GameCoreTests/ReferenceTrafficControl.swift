@@ -2,7 +2,7 @@ import GameCore
 
 /// Decision 32 (Stage T), written a second time for ``ReferenceWorld``:
 /// traffic control and route reservation, released behind a train as it
-/// goes (decision 54, Stage U). Written from the rules, not from
+/// goes (decision 55, Stage U). Written from the rules, not from
 /// GameCore, and differently where it can be:
 ///
 /// - what a train needs is read off one window of absolute distance along
@@ -134,7 +134,7 @@ extension ReferenceWorld {
         }
     }
 
-    /// After a train's move in a second (decision 54, Stage U): its
+    /// After a train's move in a second (decision 55, Stage U): its
     /// reservation becomes what it needs from where it is now, so the track
     /// behind its tail goes, and a train whose route has no distance left
     /// drops it all (decision 32). Its reservation always holds what it

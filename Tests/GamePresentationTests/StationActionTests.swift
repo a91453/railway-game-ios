@@ -10,7 +10,7 @@ final class StationActionTests: XCTestCase {
     /// One straight edge along y = 3072, 7168 long (7 tiles of track),
     /// with `left` cash once it is built.
     private func makeLine(left: Money = 100_000) throws -> GameWorld {
-        var world = try makeWorld(width: 8, height: 6, balance: left + 700)
+        var world = try makeWorld(width: 8_192, height: 6_144, balance: left + 700)
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 3_072))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 3_072))
         try world.buildTrackEdge(from: west, to: east)

@@ -11,7 +11,8 @@ final class NewGameBalanceTests: XCTestCase {
     /// $44,800 of track, $600,000 of stations and $270,000 for the train.
     func testAFirstLinePaysForItselfInAboutTenDays() throws {
         var world = GameWorld.newGame()
-        let tile = WorldCoordinate.tileSize
+        // The test layout's spacing: 1024 units, 16 m (the world has no cells).
+        let tile = Int64(1_024)
         let cars = 4
         let platform = Int64(cars) * Train.carLength
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 2 * tile, y: 12 * tile))

@@ -43,8 +43,8 @@ extension GeoAnchor {
 }
 
 /// How a real-world game's world lies over the Earth: the middle of its
-/// map at the anchor, x east and y south, a world unit 1/64 m
-/// (``NetworkBuilding/unitsPerMetre``).
+/// bounds at the anchor, x east and y south, a world unit 1/64 m
+/// (``WorldCoordinate/unitsPerMetre``).
 ///
 /// The app's map under the world is Web Mercator (Apple's maps, as the
 /// references' MapLibre and AMap): it draws a metre of the world as a metre
@@ -59,10 +59,10 @@ public struct RealWorldFrame: Hashable, Sendable {
     public let middleX: Double
     public let middleY: Double
 
-    /// `map` with its middle at `anchor`.
-    public init(anchor: GeoAnchor, map: GridMap) {
+    /// A world reaching as far as `bounds`, its middle at `anchor`.
+    public init(anchor: GeoAnchor, bounds: WorldBounds) {
         self.anchor = anchor
-        let region = WorldRegion(map: map)
+        let region = WorldRegion(bounds: bounds)
         middleX = (region.minX + region.maxX) / 2
         middleY = (region.minY + region.maxY) / 2
     }
@@ -70,28 +70,29 @@ public struct RealWorldFrame: Hashable, Sendable {
     /// `world`'s frame, or `nil` for a blank map.
     public init?(world: GameWorld) {
         guard let anchor = world.geoAnchor else { return nil }
-        self.init(anchor: anchor, map: world.map)
+        self.init(anchor: anchor, bounds: world.bounds)
     }
 
     /// How far the world point (`x`, `y`) lies east and south of the
     /// anchor, in metres.
     public func metresFromAnchor(worldX x: Double, worldY y: Double) -> (east: Double, south: Double) {
-        let unitsPerMetre = Double(NetworkBuilding.unitsPerMetre)
+        let unitsPerMetre = Double(WorldCoordinate.unitsPerMetre)
         return ((x - middleX) / unitsPerMetre, (y - middleY) / unitsPerMetre)
     }
 
     /// The world point `east` and `south` metres from the anchor, in world
     /// units.
     public func worldPosition(east: Double, south: Double) -> (x: Double, y: Double) {
-        let unitsPerMetre = Double(NetworkBuilding.unitsPerMetre)
+        let unitsPerMetre = Double(WorldCoordinate.unitsPerMetre)
         return (middleX + east * unitsPerMetre, middleY + south * unitsPerMetre)
     }
 
-    /// Half the width and height of `map` in metres: how far its edges lie
-    /// from the anchor. A new game's map is 16,384 m a side, so 8,192 m.
-    public static func halfExtent(of map: GridMap) -> (east: Double, south: Double) {
-        let region = WorldRegion(map: map)
-        let unitsPerMetre = Double(NetworkBuilding.unitsPerMetre)
+    /// Half the width and height of a world reaching as far as `bounds`, in
+    /// metres: how far its edges lie from the anchor. A new game's world is
+    /// 16,384 m a side, so 8,192 m.
+    public static func halfExtent(of bounds: WorldBounds) -> (east: Double, south: Double) {
+        let region = WorldRegion(bounds: bounds)
+        let unitsPerMetre = Double(WorldCoordinate.unitsPerMetre)
         return (region.width / 2 / unitsPerMetre, region.height / 2 / unitsPerMetre)
     }
 }

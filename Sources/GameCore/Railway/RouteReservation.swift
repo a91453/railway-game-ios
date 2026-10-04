@@ -9,7 +9,7 @@
 // at every step.
 //
 // The reservation is authoritative state kept on the train. Since Stage U
-// (ARCHITECTURE decision 54) it is released behind the train as it goes:
+// (ARCHITECTURE decision 55) it is released behind the train as it goes:
 // after every move it keeps only what the train still needs, so track the
 // train's tail has left is free for others at once, and all of it is
 // released when the route ends.

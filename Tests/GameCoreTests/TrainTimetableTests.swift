@@ -31,7 +31,7 @@ final class TrainTimetableTests: XCTestCase {
     private let third = TrainID(rawValue: 3)
 
     private func makeLineWorld(trainCount: Int = 1) throws -> GameWorld {
-        var world = try makeWorld(width: 6, height: 3, balance: 100_000)
+        var world = try makeWorld(width: 6_144, height: 3_072, balance: 100_000)
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
         try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
@@ -309,7 +309,7 @@ final class TrainTimetableTests: XCTestCase {
         XCTAssertEqual(world.train(id: first)?.position, line.between(1, 2, offset: 476))
         XCTAssertEqual(world.train(id: first)?.movement, before.train(id: first)?.movement)
         XCTAssertEqual(world.train(id: first)?.movement.cursor, 1)
-        XCTAssertEqual(world.map, before.map)
+        XCTAssertEqual(world.bounds, before.bounds)
         XCTAssertEqual(world.stations, before.stations)
         XCTAssertEqual(world.clock, before.clock)
         XCTAssertEqual(world.economy, before.economy)

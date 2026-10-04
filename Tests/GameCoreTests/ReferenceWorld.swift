@@ -43,11 +43,9 @@ struct ReferenceWorld: Equatable {
     struct Station: Equatable {
         var id: Int
         var name: String
-        /// The tile under its point, which fares measure from.
-        var position: GridPosition
         /// Decision 30: its platforms on the track network, in order.
         var trackPlatforms: [TrackPlatform] = []
-        /// Stage F1: where it stands; it takes no tile.
+        /// Stage F1: where it stands. Fares measure from it (Stage F3d).
         var point: PlanPoint
     }
 
@@ -113,8 +111,9 @@ struct ReferenceWorld: Equatable {
         var seconds: Int64
     }
 
-    let width: Int
-    let height: Int
+    /// Stage F3d: how far the world reaches east and south, in world units.
+    let width: Int64
+    let height: Int64
     var stations: [Station] = []
     var trains: [Train] = []
     var balance: Int64
@@ -229,9 +228,10 @@ struct ReferenceWorld: Equatable {
         }
     }
 
-    static let linkLength: Int64 = 1024
+    /// One car from the next, centre to centre (decision 46).
+    static let carLength: Int64 = 1024
 
-    init(width: Int, height: Int, balance: Int64, costs: ConstructionCosts, seconds: Int64, speed: GameSpeed) {
+    init(width: Int64, height: Int64, balance: Int64, costs: ConstructionCosts, seconds: Int64, speed: GameSpeed) {
         self.width = width
         self.height = height
         self.balance = balance
@@ -241,7 +241,7 @@ struct ReferenceWorld: Equatable {
         self.resumeSpeed = speed == .paused ? .normal : speed
     }
 
-    init(width: Int, height: Int, balance: Int64, costs: ConstructionCosts, minutes: Int64, speed: GameSpeed) {
+    init(width: Int64, height: Int64, balance: Int64, costs: ConstructionCosts, minutes: Int64, speed: GameSpeed) {
         self.init(width: width, height: height, balance: balance, costs: costs, seconds: minutes * 60, speed: speed)
     }
 
@@ -265,8 +265,10 @@ struct ReferenceWorld: Equatable {
 
     // MARK: - Geometry
 
-    func inMap(_ p: GridPosition) -> Bool {
-        p.x >= 0 && p.y >= 0 && p.x < width && p.y < height
+    /// Stage F3d: whether `point` lies in the world, `0 <= x < width` and
+    /// `0 <= y < height`.
+    func inWorld(_ point: PlanPoint) -> Bool {
+        point.x >= 0 && point.y >= 0 && point.x < width && point.y < height
     }
 
     func isOnTrack(_ position: TrainPosition) -> Bool {
@@ -294,19 +296,15 @@ struct ReferenceWorld: Equatable {
         balance >= cost ? nil : .insufficientFunds(required: Money(cost), available: Money(balance))
     }
 
-    /// Stage F1: in the order name, point on the map (else the tile under
-    /// it, rounding down, is out of bounds), ID, money. The station takes
-    /// no tile.
+    /// Stage F1: in the order name, point in the world (Stage F3d: else
+    /// that point is out of bounds), ID, money.
     mutating func buildStation(named name: String, at point: PlanPoint) -> GameError? {
         guard Self.isValidName(name) else { return .invalidName }
-        let tile = GridPosition(
-            x: Int((Double(point.x) / 1_024).rounded(.down)), y: Int((Double(point.y) / 1_024).rounded(.down))
-        )
-        guard point.x >= 0, point.y >= 0, point.x < Int64(width) * 1_024, point.y < Int64(height) * 1_024 else { return .outOfBounds(tile) }
+        guard inWorld(point) else { return .outOfBounds(point) }
         guard nextStationID != Int.max else { return .idsExhausted }
         if let error = funds(costs.station) { return error }
         balance -= costs.station
-        stations.append(Station(id: nextStationID, name: name, position: tile, point: point))
+        stations.append(Station(id: nextStationID, name: name, point: point))
         nextStationID += 1
         return nil
     }
@@ -564,7 +562,7 @@ struct ReferenceWorld: Equatable {
                 let distance = travel(i, second: second)
                 guard distance > 0 else { continue }
                 trains[i] = steppedOnNetwork(trains[i], distance: distance)
-                // Decisions 32 and 54: the track behind the train is
+                // Decisions 32 and 55: the track behind the train is
                 // released, and all of it at the end of its route.
                 releaseBehind(i)
             }

@@ -60,9 +60,7 @@ enum NetworkInvariants {
         if edgeNumbers != edgeNumbers.sorted() || Set(edgeNumbers).count != edgeNumbers.count || edgeNumbers.contains(where: { $0 < 1 }) {
             problems.append("track edge IDs not unique, positive and ascending: \(edgeNumbers)")
         }
-        let limitX = Int64(world.map.width) * 1024
-        let limitY = Int64(world.map.height) * 1024
-        func overMap(_ x: Int64, _ y: Int64) -> Bool { x >= 0 && y >= 0 && x < limitX && y < limitY }
+        func overMap(_ x: Int64, _ y: Int64) -> Bool { world.bounds.contains(PlanPoint(x: x, y: y)) }
         if Set(network.nodes.map(\.position)).count != network.nodes.count { problems.append("two track nodes at one point") }
         for node in network.nodes {
             if abs(node.position.z) > 4_096 || !overMap(node.position.x, node.position.y) {

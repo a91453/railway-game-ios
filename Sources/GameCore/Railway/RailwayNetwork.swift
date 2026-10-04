@@ -4,15 +4,15 @@
 // held the grid's track pieces, anchored to tiles; they went with the grid
 // (decision 51).
 //
-// The land is the GridMap's; the railway is only here. Nodes are points in
-// the world; edges run between two of them along a TrackCurve, any length
-// and any heading. Only a shared node joins two
-// edges: edges that cross in plan without one never meet. Which edges a
-// train may pass between at a node is derived once, when an edge is built or
-// a save is loaded, from the way each edge leaves the node: two edge ends
-// that leave in opposite directions (to within 1 in 16) join. That one rule
-// gives plain track, turnouts (one end joining two or more), diamond
-// crossings (two pairs that do not join each other) and slips. Routes,
+// The railway is only here; the world itself is only its bounds
+// (WorldBounds, Stage F3d). Nodes are points in the world; edges run between
+// two of them along a TrackCurve, any length and any heading. Only a shared
+// node joins two edges: edges that cross in plan without one never meet.
+// Which edges a train may pass between at a node is derived once, when an
+// edge is built or a save is loaded, from the way each edge leaves the node:
+// two edge ends that leave in opposite directions (to within 1 in 16) join.
+// That one rule gives plain track, turnouts (one end joining two or more),
+// diamond crossings (two pairs that do not join each other) and slips. Routes,
 // movement and occupancy read only the result, never the geometry.
 //
 // Stage S4 (ARCHITECTURE decision 30) gives nodes heights and edges a
@@ -148,7 +148,7 @@ public struct RailwayNetwork: Hashable, Sendable {
     public static let heightRange: ClosedRange<Int64> = -4_096...4_096
 
     /// How far from a node two edges that end there may meet in plan at
-    /// any height (Stage S4): 1024 units, one tile. Branches of a turnout
+    /// any height (Stage S4): 1024 units, 16 m. Branches of a turnout
     /// leave a node side by side, so this stretch is the turnout and the
     /// space it needs, not a crossing (see ``TrackClearance``).
     public static let junctionZone: Int64 = 1_024
@@ -161,7 +161,7 @@ public struct RailwayNetwork: Hashable, Sendable {
     public static let trackSpacing: Int64 = 256
 
     /// How far apart along the track two points closer than
-    /// ``trackSpacing`` may be (Stage F2): 32768 units (512 m, 32 tiles).
+    /// ``trackSpacing`` may be (Stage F2): 32768 units (512 m).
     /// Within it they are one junction's tracks parting, a turnout's
     /// branches or a ladder of turnouts, which leave each other gently; a
     /// branch 1 in 64 off the line is 4 m away after 256 m along each, 512 m
@@ -177,7 +177,9 @@ public struct RailwayNetwork: Hashable, Sendable {
 
     // MARK: - Spans (Stage S3A)
 
-    /// The longest a span of an edge is: 1024, a tile's width.
+    /// The longest a span of an edge is: 1024 units, 16 m, the length a
+    /// train holds track in (Stage S3A; it was a tile's width then, and is
+    /// the railway's own measure since Stage F3d).
     public static let spanLength: Int64 = 1_024
 
     /// The spans of edge `edge`, `length` long, from its `from` node: the

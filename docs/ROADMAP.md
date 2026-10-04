@@ -1,6 +1,6 @@
 # Roadmap
 
-各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作。2026-10-02 作者決定，U、V 之前先做 [Stage C](#stage-c--已完成核心的操作畫面)：補上已完成的核心還沒有的操作畫面，讓所有功能都能在實機上測試；C1（任意角度的建造）、C2（營運與乘客的設定畫面）與 C3（性能）已實作。C2 合併之後，作者再決定鐵軌全部改用路網、車站與土地自由擺設，並分成空白與實景兩種遊戲模式；之後的順序見[目前的優先順序](#目前的優先順序)：F1 全面路網（已實作）→ C4 測試輔助（已實作）→ [G1d 經濟平衡](#g1d--經濟平衡-)（已實作）→ C5 最小教學（已實作）→ E1 大地圖（已實作）→ 環線（已實作，2026-10-03 作者要求）→ E2 空白／實景（已實作，實機確認）→ [F3 移除 GameCore 的方格](#stage-f--全面路網與自由擺設)（2026-10-03 作者決定提前，已實作）→ F2 線間距（已實作）→ U-min（U1 通過後釋放已實作）→ V（E3 MapLibre 視需要）。目前 App 的地圖畫面是原型：連續路網的俯視除錯投影（F1 起不畫格線；F3 起沒有方格的軌道與車站），不是最終的 renderer（見 Phase 8）。
+各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務線路的資料與推導）、Stage Q2b（自動派車）、Stage Q3（交路與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作。2026-10-02 作者決定，U、V 之前先做 [Stage C](#stage-c--已完成核心的操作畫面)：補上已完成的核心還沒有的操作畫面，讓所有功能都能在實機上測試；C1（任意角度的建造）、C2（營運與乘客的設定畫面）與 C3（性能）已實作。C2 合併之後，作者再決定鐵軌全部改用路網、車站與土地自由擺設，並分成空白與實景兩種遊戲模式；之後的順序見[目前的優先順序](#目前的優先順序)：F1 全面路網（已實作）→ C4 測試輔助（已實作）→ [G1d 經濟平衡](#g1d--經濟平衡-)（已實作）→ C5 最小教學（已實作）→ E1 大地圖（已實作）→ 環線（已實作，2026-10-03 作者要求）→ E2 空白／實景（已實作，實機確認）→ [F3 移除 GameCore 的方格](#stage-f--全面路網與自由擺設)（2026-10-03 作者決定提前，已實作）→ F2 線間距（已實作）→ F3d 拿掉殘留的方格語意（已實作）→ U-min（U1 通過後釋放已實作）→ V（E3 MapLibre 視需要）。目前 App 的地圖畫面是原型：連續路網的俯視除錯投影（F1 起不畫格線；F3 起沒有方格的軌道與車站；F3d 起世界沒有格子），不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
 
@@ -40,7 +40,7 @@ S5 是 S3/S4 與既有 O–Q 營運系統（operational system）之間的 bridg
   - 路網已經能做方格能做的一切：道岔是一個節點接多條邊，平面交叉是共用的節點；另外還有任意角度、高架與隧道。
   - 方格在 GameCore 暫時保留為相容層（舊存檔與 golden），移除另外決定。
 - **遊戲分成空白與實景兩種模式**（[Stage E](#stage-e--大地圖與實景模式)）。實景以真實地圖當背景，先用 MapKit；不夠用時再加 MapLibre。
-- **地圖要大**：約 16 公里見方（`GridMap` 的上限 1024 格 × 16 公尺），新遊戲目前只有 32 × 24 格（約 512 × 384 公尺）。
+- **地圖要大**：約 16 公里見方（當時 `GridMap` 的上限 1024 格 × 16 公尺；F3d 起是 `WorldBounds.maximum`，2^20 世界單位），新遊戲當時只有 32 × 24 格（約 512 × 384 公尺）。
 
 綜合之前的順序（Stage C、Phase 4.6 的 U 與 V、Phase 5–8）與這次的決定，依相依關係、對實機測試的價值與成本排成：
 
@@ -54,7 +54,8 @@ S5 是 S3/S4 與既有 O–Q 營運系統（operational system）之間的 bridg
 | 5 | **E2 空白／實景** ✅ | 開新遊戲時選模式；實景用 MapKit 當背景，地圖中心的經緯度跟著存檔 | 需要 E1 的大地圖與 C4 的存檔；和 E1 是同一套畫面，接著做 |
 | 5b | **F3 移除 GameCore 的方格** ✅ | 方格的鐵軌、方格上的列車位置與方格車站從 GameCore、測試與 App 拿掉；分 F3a（golden 搬到路網）、F3b（測試搬到路網）、F3c（刪除）三步，不改任何遊戲行為 | 2026-10-03 作者決定提前（決策 51）：U-min、V 會大改的移動、預約與停站正是帶著方格分支的共用函式；方格留著，之後每一步都要顧兩種軌道 |
 | 6 | **F2 線間距** ✅ | 平行的軌道靠得太近時拒絕（F2a）；太近的兩段軌道上的列車互相排斥（F2b） | 新的 GameCore 規則，會改到差分 campaign 的參考模型；沒有其他工作依賴它；排在 U-min 之前 |
-| 7 | **U-min** | movement authority：U1 通過後釋放 ✅（決策 54）→ U2 站間跟車 | 處理多台車的跟車，等玩家能蓋長的線、放多台車時才用得上；建立在共用的軌道模型上，晚做不用重寫 |
+| 6b | **F3d 拿掉殘留的方格語意** ✅ | 世界是世界單位的範圍（`WorldBounds`）；`GridMap`、`GridPosition`、`MapTile`、`Station.position` 拿掉；票價與需求用兩站的點之間精確的距離；一格 1024 拆成各自用途的常數；選取是點與實體；存檔版本 6 | 2026-10-04 作者決定（決策 54）：F3c 之後只剩「一格」的世界、票價的量化與選取；U-min、V 之前清掉，之後的規則只看連續的世界 |
+| 7 | **U-min** | movement authority：U1 通過後釋放 ✅（決策 55）→ U2 站間跟車 | 處理多台車的跟車，等玩家能蓋長的線、放多台車時才用得上；建立在共用的軌道模型上，晚做不用重寫 |
 | 8 | **V** | 待避、交會與月台分配 | 依賴 T、U |
 | 9 | **Phase 5–7** | 在 G1 上深化乘客、城市與公司；實景模式的真實人口需求 | 建立在 G1 與 E2 上 |
 | 10 | **Phase 8** | 真正的 3D renderer | 城市與建物會改變畫面上要畫的東西，先做它們再做 3D，避免重做；E2 的實景模式可以先用 MapKit 的地形與 3D 建築當立體背景 |
@@ -418,7 +419,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 ### Stage U — Movement authority
 
 - 列車只能進入預約到的資源，通過後釋放。
-- **U1 ✅ — 通過後釋放**（ARCHITECTURE 決策 54）：
+- **U1 ✅ — 通過後釋放**（ARCHITECTURE 決策 55）：
   - 交通控制下，列車每次移動之後，預約只留下它從現在的位置還需要的部分（佔用、車頭還要走過的路與它們碰到的限界）；車尾離開的軌道立刻釋放，走到路的終點時全部釋放。授權仍照 T 一次取得到下一個停靠點，所以授權終點就是路的終點，W2c 的曲線本來就在那裡停下。
   - 效果：後車不必等前車走完整條路，前車的車尾一離開後車需要的軌道就能出發（站間的閉塞：從「兩個站間一台」變成「一個站間一台」）。通過的邊可以拆、加減月台。
   - 以秒批次推進仍然精確：批次在等待中的出發需要的軌道空出來的那一秒結束。
@@ -567,13 +568,21 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
     - **F3c-3b — 刪掉方格的測試與 fixture** ✅：方格是主題的單元測試、campaign、存檔變異與八份 golden 刪掉，`free-station.json` 拿掉方格的步驟（餘額 2200 → 2400），`traffic.reservation` 只剩路網（新的 digest），其餘用到方格車站的路網測試改成點車站。GameCore 不動。見 [F3_GRID_INVENTORY §8.7](research/F3_GRID_INVENTORY.md#87-f3c-3b刪掉方格的測試與-fixture)。
     - **F3c-3c — 刪掉 GameCore 的方格** ✅：方格的型別、case、指令、查詢、錯誤與存檔格式拿掉，手做的方格存檔拒絕並說明原因；golden 執行器、差分模型與 campaign 支援一起拿掉方格。fixture 仍是 schema 27，所有 golden、存檔與重播 fixture、campaign digest 都不變。見 [F3_GRID_INVENTORY §8.9](research/F3_GRID_INVENTORY.md#89-f3c-3c刪掉-gamecore-的方格)。
     - **F3c-4 — golden schema 28 與 `Web/WasmProbe`** ✅：fixture 拿掉只能是 `[]` 的 `tracks`、`trail`、`continuation`，其他內容逐一不變；`Web/WasmProbe` 不用改。見 [F3_GRID_INVENTORY §8.11](research/F3_GRID_INVENTORY.md#811-f3c-4golden-schema-28)。
+  - **F3d — Remove residual grid semantics（拿掉殘留的方格語意）** ✅（2026-10-04 作者決定，排在 F2b 之後、U-min 之前；ARCHITECTURE 決策 54；[參考對照](RAILWAY_REFERENCE_MAPPING.md#stage-f3d拿掉殘留的方格語意)）：
+    - 世界 → 連續的世界座標 → 節點／邊／曲線 → 車站的點與月台 → 列車在邊上的位置。世界只有 `WorldBounds`（世界單位，半開區間），驗證、相機、MapKit 框、新遊戲大小、越界檢查與存讀檔都用它。
+    - `GridMap`、`GridPosition`、`MapTile`／`TileType`、`Station.position`、`TrainPosition.linkLength`、`WorldCoordinate.tileSize` 拿掉；舊存檔的格只在解碼器裡讀（`LegacyGrid`）。
+    - 票價與需求用兩站的點之間精確的距離（Ci 的 `stationDistanceM` 也不量化）；golden 的車站都在格子中心，所以沒有預期值改變。
+    - 一格 1024 拆成 `Train.carLength`、`RailwayNetwork.spanLength`、`ConstructionCosts.trackPricingLength`、`MapScale.referenceLength`，比例只有 `WorldCoordinate.unitsPerMetre`（64），數值都不變。
+    - GamePresentation 以點與實體選取（`selectedPoint`、`selectStation`、`tapMap`）；VoiceOver 說公里。
+    - 存檔版本 6（`"bounds"`），版本 1–5 的地圖讀成 1024 倍的範圍；golden schema 30（`worldWidth`、`worldHeight`、`outOfBounds` 帶點）。
+    - 接下來：**U-min → V**。
 
 ## Stage E — 大地圖與實景模式
 
 2026-10-02 作者決定：遊戲分成空白與實景兩種模式，地圖要大。
 
 - **E1 ✅ — 大地圖**（ARCHITECTURE 決策 48；[參考對照](RAILWAY_REFERENCE_MAPPING.md#stage-e1大地圖)）：
-  - 新遊戲的地圖從 32 × 24 格放大到 1024 × 1024 格（`GridMap` 的上限，每格 16 公尺，約 16 公里見方）；示範地圖搬到地圖中央。E1 之前的存檔照舊是 32 × 24。
+  - 新遊戲的地圖從 32 × 24 格放大到 1024 × 1024 格（`GridMap` 的上限，每格 16 公尺，約 16 公里見方；F3d 起是 `WorldBounds.maximum`，數值不變）；示範地圖搬到地圖中央。E1 之前的存檔照舊是 32 × 24。
   - 只畫畫面內的部分、依縮放分級顯示細節、雙指縮放與平移（Phase 8 原本列的效能手段，提早做）：CX-4（PR #69–#71）照第 0 步的相機介面做好。效能設定只影響呈現，不影響模擬結果。
   - 「世界座標換成畫面座標」抽成相機（`MapProjection`、`PlanCamera`，第 0 步，[UI_INTERFACES.md](UI_INTERFACES.md)）：空白模式由我們的相機決定，E2 的實景模式原本設想由 MapKit 的相機決定（E2 改成由我們的相機帶著 Apple 地圖，決策 50），E2 就不用重寫畫面。
   - **存檔版本 2**：地圖只記、只存不是空地的格子。改之前 16 公里的空地圖存檔 13.6 MB、編碼 3.6 秒（Linux debug），改之後幾百位元組；版本 1 的存檔照舊讀得進來，`SaveFixtures/` 多一份版本 2。GameCore 的規則、golden 與 property digest 都沒有改。

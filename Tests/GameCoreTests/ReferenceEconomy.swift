@@ -74,14 +74,15 @@ extension ReferenceWorld {
 
     // MARK: - Fares
 
-    /// The rule's fare between two stations, before the minimum.
+    /// The rule's fare between two stations, before the minimum. Stage
+    /// F3d: the trip is the straight line between the stations' points, in
+    /// whole world units rounded down (a step's end is whole units too, so
+    /// "shorter than the end" is the same on the rounded length).
     func ruleFare(from origin: Int, to destination: Int) -> Int64? {
         guard origin != destination,
               let a = stations.first(where: { $0.id == origin }), let b = stations.first(where: { $0.id == destination })
         else { return nil }
-        let dx = Int64(a.position.x - b.position.x) * 1024
-        let dy = Int64(a.position.y - b.position.y) * 1024
-        let squared = dx * dx + dy * dy
+        let length = Self.floorRoot((a.point.x - b.point.x) * (a.point.x - b.point.x) + (a.point.y - b.point.y) * (a.point.y - b.point.y))
         switch accounts.rules ?? .flat(500) {
         case .flat(let fare):
             return fare.amount
@@ -89,8 +90,7 @@ extension ReferenceWorld {
             // The first step whose end lies beyond the trip.
             for band in bands {
                 guard let to = band.toMeters else { return band.fare.amount }
-                let end = to * 64
-                if squared < end * end { return band.fare.amount }
+                if length < to * 64 { return band.fare.amount }
             }
             return 0
         }
