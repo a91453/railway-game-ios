@@ -11,6 +11,7 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
         case run(TrainID, [ScheduledStop])
         case advance(Int)
         case line(TrainID)
+        case opposingLine(TrainID)
 
         func apply(to world: inout GameWorld) -> GameError? {
             do throws(GameError) {
@@ -25,6 +26,11 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                     try world.setLineServiceWindow(line, to: .allDay)
                     try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
                     try world.assignTrain(id, to: line)
+                case .opposingLine(let id):
+                    let line = try world.createLine(named: "B", stops: [DoubleTrackCrossover.outer, DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]).id
+                    try world.setLineServiceWindow(line, to: .hours(open: 2, close: 1_440))
+                    try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+                    try world.assignTrain(id, to: line)
                 }
                 return nil
             } catch { return error }
@@ -36,10 +42,17 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
             case .run(let id, let stops): return model.setTimetable(id, stops, period: nil) ?? model.startService(id)
             case .advance(let ticks): return model.advance(ticks: ticks)
             case .line(let id):
+                let line = LineID(rawValue: model.lines.count + 1)
                 return model.createLine(named: "L", stops: [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east])
-                    ?? model.setLineWindow(.init(rawValue: 1), .allDay)
-                    ?? model.setLineTrains(.init(rawValue: 1), TrainsInService(peak: 1, offPeak: 1, low: 1))
-                    ?? model.assign(id, to: .init(rawValue: 1))
+                    ?? model.setLineWindow(line, .allDay)
+                    ?? model.setLineTrains(line, TrainsInService(peak: 1, offPeak: 1, low: 1))
+                    ?? model.assign(id, to: line)
+            case .opposingLine(let id):
+                let line = LineID(rawValue: model.lines.count + 1)
+                return model.createLine(named: "B", stops: [DoubleTrackCrossover.outer, DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west])
+                    ?? model.setLineWindow(line, .hours(open: 2, close: 1_440))
+                    ?? model.setLineTrains(line, TrainsInService(peak: 1, offPeak: 1, low: 1))
+                    ?? model.assign(id, to: line)
             }
         }
     }
@@ -47,11 +60,14 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
     func testServicesChooseUnblockedBerthsAndMatchTheReferenceAtEveryStep() throws {
         var tally: [String: Int] = [:]
         var digest = Digest()
-        let cases = 8
+        let cases = 10
         let ran = try runCampaign("traffic.occupiedRouting", cases: cases) { testCase in
             let doubleTrack = testCase.index >= 6
-            var world = try doubleTrack ? DoubleTrackCrossover.world() : SingleTrackMeet.world()
-            var model = doubleTrack ? DoubleTrackCrossover.model() : SingleTrackMeet.model()
+            let extended = testCase.index >= 8
+            let futureLine = testCase.index == 9
+            var opposingCompleted = false
+            var world = try doubleTrack ? DoubleTrackCrossover.world(extended: extended) : SingleTrackMeet.world()
+            var model = doubleTrack ? DoubleTrackCrossover.model(extended: extended) : SingleTrackMeet.model()
             func compare() -> [String] {
                 var problems = KernelDifferentialTests.differences(world, model, lineAnswers: false)
                 if world.isTrafficControlEnabled != model.trafficControl { problems.append("traffic control") }
@@ -79,7 +95,10 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
             // times and whether W is sent by a line.
             if doubleTrack {
                 tally["double track cases", default: 0] += 1
-                for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(4), 4_096)].enumerated() {
+                if extended { tally["two legs away cases", default: 0] += 1 }
+                if futureLine { tally["future line cases", default: 0] += 1 }
+                let places: [(TrackTraversal, Int64)] = [(SingleTrackMeet.forward(2), 13_312), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(extended ? 7 : 4), extended ? 6_144 : 4_096)]
+                for (number, place) in places.enumerated() {
                     let cars = 1 + testCase.random.below(3)
                     let id = try SingleTrackMeet.stand(&world, edge: place.0, offset: place.1, cars: cars)
                     XCTAssertEqual(id.rawValue, number + 1)
@@ -92,9 +111,15 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                 try world.setTrafficControl(true)
                 XCTAssertNil(model.setTrafficControl(true))
                 let delay = Int64(testCase.random.below(31))
-                guard perform(.run(.init(rawValue: 1), DoubleTrackCrossover.calls([(SingleTrackMeet.middle, 180 + delay), (SingleTrackMeet.east, 420 + delay)]))),
-                      perform(.run(.init(rawValue: 3), DoubleTrackCrossover.calls([(SingleTrackMeet.east, 60), (SingleTrackMeet.middle, 300), (SingleTrackMeet.west, 540)]))) else { return }
-                let follower: Operation = testCase.index == 7 ? .line(.init(rawValue: 2))
+                guard perform(.run(.init(rawValue: 1), DoubleTrackCrossover.calls([(SingleTrackMeet.middle, 180 + delay), (SingleTrackMeet.east, 420 + delay)]))) else { return }
+                let opposingCalls: [(StationID, Int64)]
+                if extended {
+                    opposingCalls = [(DoubleTrackCrossover.outer, 60), (SingleTrackMeet.east, 240), (SingleTrackMeet.middle, 420), (SingleTrackMeet.west, 660)]
+                } else {
+                    opposingCalls = [(SingleTrackMeet.east, 60), (SingleTrackMeet.middle, 300), (SingleTrackMeet.west, 540)]
+                }
+                guard perform(futureLine ? .opposingLine(.init(rawValue: 3)) : .run(.init(rawValue: 3), DoubleTrackCrossover.calls(opposingCalls))) else { return }
+                let follower: Operation = testCase.index == 7 || futureLine ? .line(.init(rawValue: 2))
                     : .run(.init(rawValue: 2), DoubleTrackCrossover.calls([(SingleTrackMeet.west, 0), (SingleTrackMeet.middle, 180), (SingleTrackMeet.east, 420)]))
                 guard perform(follower) else { return }
             } else {
@@ -126,6 +151,16 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                     guard perform(.run(id, stops)) else { return }
                 }
             }
+            if futureLine {
+                // Readiness and waiting queries must protect B before the
+                // closed line is due, independent of train ID/dispatch order.
+                guard perform(.advance(1)) else { return }
+                guard world.line(id: .init(rawValue: 1))?.lastDispatch == nil,
+                      !world.train(id: .init(rawValue: 2))!.movement.edges.contains(.edge(5)) else {
+                    testCase.fail("closed opposing line did not protect its route"); return
+                }
+                tally["protected before window", default: 0] += 1
+            }
             for step in 0..<36 {
                 let before = world
                 let operation: Operation
@@ -145,6 +180,9 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                     operation = .advance(1)
                 }
                 guard perform(operation) else { return }
+                if futureLine, before.line(id: .init(rawValue: 1))?.lastDispatch == nil, world.line(id: .init(rawValue: 1))?.lastDispatch != nil {
+                    tally["future line dispatches", default: 0] += 1
+                }
                 for (old, new) in zip(before.trains, world.trains) {
                     if !doubleTrack, new.times?.departure != nil, new.times?.departure != old.times?.departure, new.movement.edges.contains(.edge(5)) {
                         tally["alternative platform departures", default: 0] += 1
@@ -157,12 +195,16 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                     }
                     if doubleTrack, new.id.rawValue == 3, old.execution != nil, new.execution == nil {
                         tally["opposing services completed", default: 0] += 1
+                        opposingCompleted = true
                     }
                     if !world.stationsStoppedAt(by: new.id).isEmpty, world.stationsStoppedAt(by: new.id) != before.stationsStoppedAt(by: old.id) {
                         tally["arrivals", default: 0] += 1
                     }
                     if case .waitingAtStop? = new.execution, world.trainHoldingRoute(of: new.id) != nil { tally["waiting", default: 0] += 1 }
                 }
+            }
+            if doubleTrack, !opposingCompleted {
+                testCase.fail("the opposing service did not complete in this case"); return
             }
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
@@ -173,8 +215,12 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
         assertVolume(tally["alternative platform departures", default: 0] >= 16, "services used the alternative platform")
         assertVolume(tally["arrivals", default: 0] >= 40, "services reached stations")
         assertVolume(tally["waiting", default: 0] >= 4, "unavailable routes waited")
-        assertVolume(tally["double track cases", default: 0] == 2 * PropertySeeds.active.count, "both double-track cases ran for every seed")
-        assertVolume(tally["protected default departures", default: 0] >= 8, "eastbound trains stayed on their default track")
-        assertVolume(tally["opposing services completed", default: 0] >= 8, "opposing trains completed without a circular wait")
+        assertVolume(tally["double track cases", default: 0] == 4 * PropertySeeds.active.count, "all four double-track cases ran for every seed")
+        assertVolume(tally["two legs away cases", default: 0] == 2 * PropertySeeds.active.count, "both distant cases ran")
+        assertVolume(tally["future line cases", default: 0] == PropertySeeds.active.count, "closed line case ran")
+        assertVolume(tally["protected before window", default: 0] >= 4, "closed lines protected before dispatch")
+        assertVolume(tally["future line dispatches", default: 0] >= 4, "closed lines eventually dispatched")
+        assertVolume(tally["protected default departures", default: 0] >= 16, "eastbound trains stayed on their default track")
+        assertVolume(tally["opposing services completed", default: 0] >= 16, "opposing trains completed without a circular wait")
     }
 }
