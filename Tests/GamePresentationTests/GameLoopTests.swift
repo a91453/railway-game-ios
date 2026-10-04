@@ -39,7 +39,7 @@ final class GameLoopTests: XCTestCase {
 
     func testTimeThatCannotAdvanceChangesNothingAndIsReported() async throws {
         let world = try GameWorld(
-            width: 8, height: 6,
+            bounds: WorldBounds(width: 8_192, height: 6_144),
             economy: GameEconomy(balance: 10_000, costs: testCosts),
             clock: GameClock(now: GameTime(seconds: .max - 60), speed: .normal)
         )

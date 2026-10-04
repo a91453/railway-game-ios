@@ -147,7 +147,7 @@ final class NetworkRuleTests: XCTestCase {
     /// unit a minute, 1 unit along edge 1.
     private static func worldNearTheEndOfTime(secondsLeft: Int64, speed: GameSpeed) throws -> GameWorld {
         var world = try GameWorld(
-            width: 20, height: 20,
+            bounds: WorldBounds(width: 20_480, height: 20_480),
             economy: GameEconomy(balance: 100_000, costs: testCosts),
             clock: GameClock(now: GameTime(seconds: .max - secondsLeft), speed: speed)
         )
@@ -319,7 +319,7 @@ final class NetworkRuleTests: XCTestCase {
     /// `testALargeGridIsSearchedWithoutTrouble`: a route along a line of
     /// 199 edges, and none to a node no track reaches.
     func testALongLineIsSearchedWithoutTrouble() throws {
-        var world = try makeWorld(width: 200, height: 3, balance: 1_000_000_000)
+        var world = try makeWorld(width: 204_800, height: 3_072, balance: 1_000_000_000)
         let long = TestLine(tiles: 200, row: 1)
         try long.build(in: &world)
         let island = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 2_560))

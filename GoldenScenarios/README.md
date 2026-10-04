@@ -12,15 +12,15 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 29`）
+## Schema（`schemaVersion: 30`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與線路的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的線路 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `29` |
+| `schemaVersion` | `30` |
 | `description` | 這個情境驗證什麼（給人看） |
-| `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
+| `initialState` | `worldWidth`、`worldHeight`（世界的範圍，世界單位，每邊 1 到 2^20；schema 30）、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
 | `expectedFinalState` | `gameMinutes` 或 `gameSeconds`、`pendingTenths`（可以省略）、`speed`、`balance`、`stations`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl`、`passengers`、`riders`、`accounts` |
 
@@ -34,7 +34,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 時刻表停靠的時間（schema 24，Stage W2b）可以落在兩分鐘之間：線路的時刻表在派車 42 秒後才離開第一站。這樣的時間寫成 `arrivalSeconds`、`departureSeconds`（開局以來的秒），取代 `arrival`、`departure`；和時鐘一樣，整分鐘一律寫成分鐘，每一站的到達與離開各恰好一種寫法。
   - 服務時刻（`times`，schema 24）一律是開局以來的秒。
   - `ticks` 是模擬 tick 數。每個 tick 在 `paused` / `x1` / `x10` / `x60` / `normal` / `double` 下推進 0 / 0.1 / 1 / 6 / 60 / 120 秒（宿主每 100 ms 一個 tick，所以 `x1` 是真實時間）。不到一秒的部分累積在 `pendingTenths`（十分之一秒，1 到 9），跨過速度的改變與暫停；是 0 時不寫這個 key。
-- **格子座標**（只用在 `outOfBounds` 的結果）：`x`、`y`，`x` 向東、`y` 向南，`(0, 0)` 是西北角；一格 1024 世界單位。
+- **被拒絕的點**（`outOfBounds` 的結果，schema 30）：`x`、`y`，指令裡那一點的世界座標（`x` 向東、`y` 向南，`(0, 0)` 是西北角）。點在世界裡是 `0 <= x < worldWidth`、`0 <= y < worldHeight`；世界沒有格子（Stage F3d）。
 - **速度**：`"paused"`、`"x1"`、`"x10"`、`"x60"`（schema 23）、`"normal"`、`"double"`。
 - **布林值**：JSON 的 `true` / `false`（用在觀察的答案、停靠的 `reverse`、`setTrafficControl` 的 `enabled` 與最終狀態的 `trafficControl`）。
 - **ID**：車站、列車 ID 是世界依序配發的整數，從 1 開始、失敗的指令不消耗 ID。列車指令與結果以 `train` 欄位寫列車 ID；車站觀察、時刻表的停靠與 `unknownStation` 結果以 `station` 欄位寫車站 ID。
@@ -85,7 +85,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **服務日**：`[{ "start", "level" }, ...]`，每一段從一天中的某分鐘開始，到下一段開始為止。
 - **軌道資源**（schema 16）：`{ "type": "networkNode", "node" }` 或 `{ "type": "networkSpan", "edge", "start", "end" }`（邊的編號與 span 的里程，從邊的 `from` 節點量起）。邊切成 n = ⌈長度 ÷ 1024⌉ 段，第 k 個分界在 ⌊k × 長度 ÷ n⌋（Stage S3A）。資源的順序是先所有節點、依編號，再所有 span、依邊的編號、同一條邊依里程（見決策 26、29）。
 - **連續路網**（schema 16，決策 29）：
-  - 世界座標：`x` 向東、`y` 向南、`z` 向上的整數，一格是 1024 單位；格 (x, y) 的中心是 (1024x + 512, 1024y + 512, 0)。
+  - 世界座標：`x` 向東、`y` 向南、`z` 向上的整數，64 單位一公尺（1024 單位是 16 公尺）；世界沒有格子，只有範圍 `worldWidth` × `worldHeight`（Stage F3d）。
   - 節點與邊依建造順序從 1 編號，失敗的指令不消耗編號，拆除的編號不再使用。指令、結果與觀察以 `node`、`edge` 欄位寫編號。
   - 曲線（`curve`）：`{ "type": "straight" }`，或 `{ "type": "cubic", "control1": { "x", "y" }, "control2": { "x", "y" } }`（兩個平面控制點，世界座標）。
   - 行進方向（traversal）：`{ "edge", "direction" }`，`direction` 是 `"forward"` 或 `"backward"`。
@@ -161,7 +161,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `result` | 其他欄位 | 意義 |
 | --- | --- | --- |
 | `ok` | — | 指令成功 |
-| `outOfBounds` | `x`、`y` | 位置在地圖外 |
+| `outOfBounds` | `x`、`y` | 點在世界的範圍外；`x`、`y` 是那一點（schema 30 之前是底下的格） |
 | `invalidName` | — | 名稱是空白 |
 | `insufficientFunds` | `required`、`available` | 資金不足 |
 | `unknownTrain` | `train` | 沒有這個 ID 的列車 |
@@ -172,7 +172,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidContinuation` | — | 路的某一條邊不能從前一條（第一條是車頭所在的邊）進入，或 `end` 不合法（見下面「路網上的營運規則」） |
 | `clockOverflow` | — | 推進後的遊戲秒超出時鐘上限（`Int64`），整批不執行。可移植整數（≤ 2^53 − 1）無法表達這個情境，目前只在 Swift 單元測試驗證 |
 | `idsExhausted` | — | 這類 ID（車站或列車）已配發到最後一個（`Int.max − 1`），建造或購買整個不執行、不扣款。fixture 只能從 1 開始配發，無法走到這裡，目前只在 Swift 單元測試驗證 |
-| `invalidMapSize` | `width`、`height` | 地圖尺寸不支援（目前指令不會產生） |
+| `invalidMapSize` | `width`、`height` | 世界的範圍不支援（世界單位；目前指令不會產生） |
 | `invalidTimetable` | — | 時刻表的時間倒流：某站 `arrival` 為負數或晚於 `departure`，或某站 `arrival` 早於前一站的 `departure`；或重複的週期不合法：時刻表是空的、週期小於 1，或最後一站的 `departure` 晚於下一輪第一站的 `arrival` |
 | `unknownStation` | `station` | 時刻表的這一站不是存在的車站（依時刻表順序的第一個） |
 | `trainServiceActive` | `train` | 列車正在執行時刻表服務：不能再啟動、設定路、反向、取下或替換時刻表，要先停止服務 |
@@ -344,7 +344,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **性能（performance）**：寫成預設的名稱 `"standard"`、`"metro"`、`"local"`、`"express"`、`"semiExpress"`、`"ordinary"`、`"highSpeed"`、`"dieselRailcar"`、`"dieselExpress"`、`"forestRailway"`、`"tiltingTaroko"`、`"tiltingPuyuma"`、`"pushPull"`、`"emu3000"`（值見 `TrainPerformance`），或物件 `{ "acceleration", "braking", "topSpeed" }`，另外可以有 `"alternativeAcceleration"`、`"alternativeBraking"` 與 `"coast": { "deceleration", "speedRatio" }`。加速度、減速度、惰行的減速度以千分之一 km/h／秒計，最高速度以 km/h 計，速度比以千分之一計。等於某個預設時，寫入端寫成它的名稱（同值時取上面清單裡最先的）；讀取端兩種都接受，指令裡照原樣讀取，是否合法由 GameCore 判定。
 - 合法的性能：每個加速度、減速度與最高速度都在 1 到 2^20；有惰行時，它的減速度在 1 到 2^20 且小於 `braking`，速度比在 0 到 999。新購的列車與新線路是標準性能（`standard`：1500、2500、110）。
 - `setTrainPerformance` 的檢查順序：`unknownTrain` → `trainServiceActive`（服務執行中不能換）→ `invalidTrainPerformance`。`setLinePerformance`：`unknownLine` → `invalidTrainPerformance`。
-- 單位：一格 1024 單位，1 km/h 是每秒 160/9 單位。曲線是 Railway 參考的 `buildProfile`（Stage W1，`RunningCurve`）：加速、等速、有惰行時惰行、減速到停；位置是曲線在那一刻的距離，無條件捨去到整數單位。
+- 單位：64 單位一公尺（1024 單位是 16 公尺），1 km/h 是每秒 160/9 單位。曲線是 Railway 參考的 `buildProfile`（Stage W1，`RunningCurve`）：加速、等速、有惰行時惰行、減速到停；位置是曲線在那一刻的距離，無條件捨去到整數單位。
 - 列車離開一站（`travelling` 開始）時得到一段行駛（`run`）：排定的時間 T 是下一站在該輪的 `arrival` 減這一站的 `departure`（秒）。T 在 1 到 4294967 而且列車的性能做得出 T 秒的曲線時，這一段走 T 秒；否則走性能做得出曲線的最少整秒（盡快跑）；連最少的也沒有時沒有行駛曲線，列車照 rate 移動。所以晚出發的列車整段往後移、晚到同樣多；排得太緊的一段以最少的秒數跑完而晚到。
 - 跟著行駛曲線時，每一秒走曲線在這一秒結束與開始時的距離差（rate 只要大於 0；rate 為 0 不動）。被擋住（rate 為 0，或前方鐵軌被拆）而在這一步結束時剩下的路比曲線剩下的長時，丟掉這段行駛；之後 rate 大於 0、還有路、而且能往前走 1 單位時，從停止狀態以最少的整秒重新出發，走剩下的路。
 - 線路的性能決定線路的時刻表給每一段的時間；列車的性能決定它跑不跑得完：做得到時照時刻表的時間跑，做不到時以自己的最少秒數跑而晚到。
@@ -443,6 +443,45 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **28**（Stage F3c，ARCHITECTURE 決策 51）：GameCore 拿掉方格。最終狀態不再有 `tracks`、列車的 `trail` 與移動的 `continuation`（schema 27 時它們只能是 `[]`）；方格的指令、觀察與結果，`node`／`link` 位置與資源，`{ "x", "y", "annexes" }` 的車站都不屬於 schema（讀取端拒絕並說明方格已經移除）；線路行程的一段只有 `path`。二十五個 fixture 把 `schemaVersion` 從 27 改成 28，並拿掉這三個一律是空陣列的 key（`tracks` 25 處、`trail` 44 處、`continuation` 134 處，共 203 處；逐檔以 JSON 比對確認其餘內容不變），其他預期值都沒有改變。
 - **29**（Stage F2，ARCHITECTURE 決策 52）：新增線間距（上面「線間距」）與 `trackTooClose`、`tracksWouldBeTooClose` 結果，以及手算的 `track-spacing.json`（最終狀態、長度、餘額與每一個沿軌道的距離都照規則手算）。二十五個既有 fixture 把 `schemaVersion` 從 28 改成 29，其他預期值都沒有改變：唯一在平面上不到 256 的地方是 `network-construction.json` 的 c 離支線 b–d 約 255.5，沿軌道約 8200，是道岔分開的那一段。
 
+- **30**（Stage F3d，ARCHITECTURE 決策 54）：世界沒有格子。`initialState` 的 `mapWidth`、`mapHeight`（格）改成 `worldWidth`、`worldHeight`（世界單位）；`outOfBounds` 的結果帶被拒絕的那一點（以前是底下的格）。票價從兩站的點之間精確的距離算（以前從底下的格），但每份 fixture 的車站都在格子中心，所以距離一樣：**沒有任何指令的結果、觀察的答案或最終狀態改變**。逐檔見下面「F3d」。
+
+## F3d：拿掉殘留的方格語意（schema 30）
+
+ARCHITECTURE 決策 54。二十七份 fixture 都把 `schemaVersion` 從 29 改成 30，起始的範圍換成世界單位（格數 × 1024，世界一樣大）：
+
+| fixture | `mapWidth` × `mapHeight`（格） | `worldWidth` × `worldHeight`（單位） | 其他 |
+| --- | --- | --- | --- |
+| `boarding.json` | 8 × 4 | 8192 × 4096 | 說明文字：「a tile」→「1024 units」、「half tile」→「512 units」 |
+| `clock-seconds.json` | 8 × 3 | 8192 × 3072 | 說明文字 |
+| `clock-speed-and-pause.json` | 1 × 1 | 1024 × 1024 | — |
+| `continuous-track.json` | 16 × 16 | 16384 × 16384 | 說明文字（一公尺 64 單位、世界的範圍） |
+| `economy.json` | 8 × 4 | 8192 × 4096 | 說明文字。Alpha (1536, 512)、Beta (3584, 512)、Gamma (5632, 512) 都在格子中心：Alpha–Beta 2048、Alpha–Gamma 4096，和格算的一樣，票價 40、90、500 與帳都不變 |
+| `free-station.json` | 8 × 4 | 8192 × 4096 | `outOfBounds`：East (8192, 0) 的結果 `x` 8 → **8192**、`y` 0 → 0；West (−1, 4095) 的結果 `x` −1 → **−1**、`y` 3 → **4095**。說明文字：Central 與 Annex 相距約 640（不再說「在同一格上」） |
+| `line-dispatch.json` | 8 × 4 | 8192 × 4096 | 說明文字 |
+| `line-patterns.json` | 9 × 2 | 9216 × 2048 | 說明文字 |
+| `network-construction.json` | 12 × 8 | 12288 × 8192 | `outOfBounds`：East (12288, 512) 的結果 `x` 12 → **12288**、`y` 0 → **512**。說明文字 |
+| `network-junctions.json` | 18 × 8 | 18432 × 8192 | 說明文字 |
+| `network-route.json` | 16 × 8 | 16384 × 8192 | 說明文字 |
+| `network-service.json` | 64 × 64 | 65536 × 65536 | — |
+| `network-station-stop.json` | 9 × 5 | 9216 × 5120 | 說明文字（「(cars - 1) times 1024」，只用 ASCII） |
+| `network-train-movement.json` | 10 × 4 | 10240 × 4096 | 說明文字 |
+| `network-train-position.json` | 8 × 5 | 8192 × 5120 | 說明文字 |
+| `ring-line.json` | 7 × 5 | 7168 × 5120 | — |
+| `service-line.json` | 8 × 4 | 8192 × 4096 | 說明文字 |
+| `service-run.json` | 8 × 3 | 8192 × 3072 | 說明文字 |
+| `station-demand.json` | 12 × 3 | 12288 × 3072 | — |
+| `station-dwell.json` | 8 × 3 | 8192 × 3072 | 說明文字 |
+| `track-fouling.json` | 16 × 6 | 16384 × 6144 | 說明文字 |
+| `track-spacing.json` | 28 × 8 | 28672 × 8192 | 說明文字（「lengths of 1024」） |
+| `traffic-reservation.json` | 20 × 16 | 20480 × 16384 | — |
+| `train-repeat.json` | 8 × 4 | 8192 × 4096 | 說明文字 |
+| `train-service.json` | 8 × 4 | 8192 × 4096 | — |
+| `train-timetable.json` | 6 × 3 | 6144 × 3072 | 說明文字 |
+| `vertical-railway.json` | 32 × 32 | 32768 × 32768 | 說明文字 |
+
+- 只有 `free-station.json` 與 `network-construction.json` 的三個 `outOfBounds` 結果改了寫法（底下的格 → 指令裡那一點）；被拒絕的指令、順序與世界都一樣。
+- 每一份的票價、需求、帳、最終狀態與觀察的答案都沒有改變（`GoldenScenarioTests` 與獨立的參考模型 `ReferenceWorldGoldenTests` 都通過）。票價改用點的距離只在車站不在格子中心時看得出來，由單元測試釘住（`EconomyAccountsTests.testFaresMeasureTheExactDistanceBetweenThePoints`：同一格上相距 20 公尺的兩站以前算 0、跨一條格線相距 1 單位的兩站以前算 16 公尺，參考模型另算一次）。
+- 執行器（`Tests/GameCoreTests/GoldenScenario.swift`）只讀 schema 30；schema 29 的 fixture 以 `unsupportedSchemaVersion(29)` 拒絕。
 
 ## F2b：太近的軌道互相妨礙（schema 不變）
 
@@ -494,7 +533,7 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
 - **GamePresentation 與 App** 的方格相容層；`TrackInfoText` 用的 `parallelTracks`、`lineTrackCounts` 只算方格月台，路網上的車站一律是 0。→ F3c 照參考的做法改成路網版（單線／雙線照 `tra_track_sections.json` 的規則，區段照 `topology.js` 的 `trackGroups`；見 [RAILWAY_REFERENCE_MAPPING](../docs/RAILWAY_REFERENCE_MAPPING.md) 的 Stage F3）。
 - **`Web/WasmProbe`**：跑的是同一批 fixture，照決策 51 在 F3c 一起處理。
 - **`SaveFixtures/` 沒改**：四份存檔都只有路網與點車站（v1 還帶著空地的 `map.tiles`），F3c 之後也必須照常載入。
-- **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。
+- **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。（F3d，決策 54，把這些都拿掉了：見上面「F3d」。）
 
 ## F3c-3b：刪掉方格的 fixture（schema 不變）
 

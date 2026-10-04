@@ -157,7 +157,7 @@ final class IDAllocationTests: XCTestCase {
         var copy = world
         XCTAssertThrowsGameError(try copy.purchaseTrain(named: "  "), .invalidName)
         XCTAssertThrowsGameError(try copy.buildStation(named: "  ", at: free), .invalidName)
-        XCTAssertThrowsGameError(try copy.buildStation(named: "Off", at: PlanPoint(x: -1, y: 0)), .outOfBounds(GridPosition(x: -1, y: 0)))
+        XCTAssertThrowsGameError(try copy.buildStation(named: "Off", at: PlanPoint(x: -1, y: 0)), .outOfBounds(PlanPoint(x: -1, y: 0)))
         XCTAssertEqual(copy, world)
 
         // Without the money either, running out of IDs is what is reported.

@@ -7,7 +7,7 @@ import XCTest
 /// no rule reads it.
 final class GeoAnchorTests: XCTestCase {
     private func makeWorld() throws -> GameWorld {
-        var world = try GameWorld(width: 16, height: 8, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 3_072))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 3_072))
         try world.buildTrackEdge(from: a, to: b)

@@ -22,14 +22,25 @@ final class DisplayTextTests: XCTestCase {
         XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 edges")
         XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 個軌段")
     }
+
+    /// Stage F3d: the map's VoiceOver label gives how far the world reaches
+    /// in kilometres, to the nearest tenth, not a count of tiles.
+    func testTheMapLabelGivesTheWorldsSizeInKilometres() throws {
+        XCTAssertEqual(WorldBounds.maximum.mapLabel(in: .english), "Map, 16.4 by 16.4 kilometres")
+        XCTAssertEqual(WorldBounds.maximum.mapLabel(in: .traditionalChinese), "地圖，16.4 × 16.4 公里")
+        // An old save's 512 × 384 m: 0.512 and 0.384 km.
+        XCTAssertEqual(try WorldBounds(width: 32_768, height: 24_576).mapLabel(in: .english), "Map, 0.5 by 0.4 kilometres")
+        // 50 m rounds up to a tenth; a unit rounds down to none.
+        XCTAssertEqual(try WorldBounds(width: 1, height: 3_200).mapLabel(in: .traditionalChinese), "地圖，0.0 × 0.1 公里")
+    }
 }
 
 final class ErrorMessageTests: XCTestCase {
     func testEveryGameErrorHasAPlayerMessage() {
-        let position = GridPosition(x: 4, y: 7)
+        let point = PlanPoint(x: 4_096, y: 7_168)
         let messages: [GameError: String] = [
-            .invalidMapSize(width: 0, height: 5): "A 0 × 5 map is not supported.",
-            .outOfBounds(position): "(4, 7) is outside the map.",
+            .invalidMapSize(width: 0, height: 5_120): "A map 0 m by 80 m is not supported.",
+            .outOfBounds(point): "x 64 m, y 112 m is outside the map.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
                 "Not enough cash: this costs $ 500.00 and you have $ 12.34.",

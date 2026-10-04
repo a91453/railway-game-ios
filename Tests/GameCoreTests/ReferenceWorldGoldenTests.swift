@@ -14,7 +14,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             let name = url.lastPathComponent
             let initial = scenario.initialState
             var model = ReferenceWorld(
-                width: initial.mapWidth, height: initial.mapHeight, balance: initial.balance,
+                width: initial.worldWidth, height: initial.worldHeight, balance: initial.balance,
                 costs: initial.costs.constructionCosts, seconds: initial.seconds, speed: initial.speed.speed
             )
             for (index, step) in scenario.steps.enumerated() {

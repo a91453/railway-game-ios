@@ -14,31 +14,29 @@ public struct StationID: RawRepresentable, Hashable, Comparable, Codable, Sendab
     }
 }
 
-/// A station: a point of the world it stands at (Stage F1), taking no tile.
+/// A station: a point of the world it stands at (Stage F1).
 ///
 /// Its platforms are on the track network (Stage S4,
-/// ``GameWorld/trackPlatforms(of:)``), and several stations may stand over
-/// the same tile. Until Stage F3c a station could also be built on a tile
-/// and grow onto the tiles beside it, with the grid track beside them as its
-/// platforms; that went with the grid (ARCHITECTURE decision 51).
+/// ``GameWorld/trackPlatforms(of:)``), and stations may stand anywhere,
+/// however near each other. Fares and demand measure the distance between
+/// their points (Stage F3d). Until Stage F3c a station could also be built
+/// on a tile and grow onto the tiles beside it, with the grid track beside
+/// them as its platforms; that went with the grid (ARCHITECTURE decision
+/// 51), and until Stage F3d a station also kept the tile under its point
+/// (decision 54).
 public struct Station: Identifiable, Hashable, Sendable {
     public let id: StationID
     public let name: String
-    /// The tile under the station's point, which it does not take. Fares and
-    /// demand still measure distance between these tiles (decision 51).
-    public let position: GridPosition
     /// Where the station stands.
     public let point: PlanPoint
 
-    /// A station standing at `point`, taking no tile. Its ``position`` is the
-    /// tile under the point.
+    /// A station standing at `point`.
     ///
     /// - Precondition: both components of `point` are 0 or more.
     public init(id: StationID, name: String, point: PlanPoint) {
-        precondition(point.x >= 0 && point.y >= 0, "A station's point lies on the map")
+        precondition(point.x >= 0 && point.y >= 0, "A station's point lies in the world")
         self.id = id
         self.name = name
-        self.position = GridPosition(x: Int(point.x / WorldCoordinate.tileSize), y: Int(point.y / WorldCoordinate.tileSize))
         self.point = point
     }
 
@@ -54,8 +52,8 @@ extension Station: Codable {
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
-    /// point with a negative component; that the point lies on the map is
-    /// checked by the ``GameWorld`` decoder.
+    /// point with a negative component; that the point lies in the world's
+    /// bounds is checked by the ``GameWorld`` decoder.
     ///
     /// A station on tiles (`"position"`, and `"annexes"` once it had grown),
     /// which only a save made by hand could hold (the app has built stations
@@ -74,7 +72,7 @@ extension Station: Codable {
         let point = try container.decode(PlanPoint.self, forKey: .point)
         guard point.x >= 0, point.y >= 0 else {
             throw DecodingError.dataCorruptedError(
-                forKey: .point, in: container, debugDescription: "Station \(id.rawValue) stands off the map."
+                forKey: .point, in: container, debugDescription: "Station \(id.rawValue) stands outside the world."
             )
         }
         self.init(id: id, name: name, point: point)

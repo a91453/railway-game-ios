@@ -12,9 +12,9 @@
 
 App 目前能做到：
 
-- 顯示 `GameWorld` 的真實地圖（預設 32 × 24），空地 / 鐵軌 / 車站以不同形狀繪製；可捲動、縮放
-- 點選格子，顯示座標與內容
-- 工具：選取、鋪軌、建站、拆軌；以 N / E / S / W 開關、常用形狀（直線、彎道、T 字、十字）與旋轉選擇鐵軌連接方向
+- 顯示 `GameWorld` 的世界（新遊戲 16 公里見方，示範地圖在中央），路網、車站與列車以不同形狀繪製；可捲動、縮放
+- 點選地圖：選到手指附近的車站或列車，並記下點選的那一點（F3d 起不再以格為單位）
+- 工具：選取、路網（建節點與邊、月台、車站）、列車
 - 建設透過 GameCore 指令執行；失敗時顯示玩家看得懂的訊息，世界不變
 - 繁體中文與英文：跟著系統語言切換（ARCHITECTURE 決策 38）
 - HUD：現金、遊戲時間（`Day 1 · 08:30`／`第 1 日 · 08:30`，慢速或在分鐘中間時加上秒）、暫停／播放與速度選單（1× 真實時間、10×、60×、600×、1200×；新遊戲是 600×）
@@ -23,8 +23,8 @@ App 目前能做到：
 
 GameCore 目前能做到：
 
-- 建立指定尺寸的地圖（1…1024 × 1…1024 格，一格 1024 單位）；地圖只有土地，鐵軌在路網上
-- 建造車站：在世界座標的一點，不佔格（唯一、可保存的 Station ID）
+- 建立指定範圍的世界（`WorldBounds`：每邊 1…2^20 世界單位，64 單位一公尺，最大 16,384 公尺；F3d 起沒有格子）；鐵軌在路網上
+- 建造車站：在世界座標的一點（唯一、可保存的 Station ID）
 - 購買列車（新車未放置）；把列車放到路網的邊上、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`）
 - 遊戲時間：開局以來的遊戲秒（Stage W2a），基本步長一秒；速度是每 tick 的十分之一秒，宿主每 100 ms 一個 tick，所以 `x1` 是真實時間，不足一秒的部分留到下一個 tick。到站、停站與發車每秒判定，派車、乘客釋出與帳在整分鐘處理
 - 列車與線路的性能（Stage W2c）：加速度、減速度、最高速度（可以有備用值與惰行），預設是標準性能，另有作者參考資料裡的車種（含 `Ci/` 的地鐵列車）；`setTrainPerformance`、`setLinePerformance` 更換
@@ -36,13 +36,13 @@ GameCore 目前能做到：
 - 折返與重複：停靠可以標記「在這站折返」，服務離開時先讓列車原地反向（找不到路時不反向），讓列車能從死路的終點站往回開。時刻表可以每隔固定週期重複（`setTrainTimetable(_:to:repeatingEvery:)`），一輪接一輪執行，執行進度同時記錄第幾輪；重複的服務從下一個準時的輪次開始
 - 服務線路：依序的車站、規劃行程用的性能、營運時間，以及尖峰／離峰／低峰各跑幾台列車或目標班距；世界的服務日決定每分鐘是哪個等級。由地圖推導線路的來回行程（每一段是性能建得出行駛曲線的最少整秒，Stage W2c）、最多列車數（最短班距 2 分鐘）、實際列車數與班距
 - 自動派車：用 `assignTrain` 把列車交給線路後，線路每分鐘檢查一次：營運中、這個等級有車要跑、距上次發車已過一個班距、跑車中的列車少於該等級的列車數時，就讓停在第一站的列車跑一個來回（產生該趟的時刻表並啟動服務）。列車回到第一站後原地折返等待，減車時多出的列車就停在那裡；線路的列車不能手動設定時刻表或啟停服務
-- 連續軌道（Phase 4.5 Stage S3）：以整數世界座標（一格 1024 單位）建造節點，節點之間以直線或兩個整數控制點的三次曲線建造邊（`buildTrackNode`、`buildTrackEdge`）；長度與取樣由固定的整數規則推導。只有共用節點的邊才會相接，離開節點方向相反的邊端互通，所以道岔、平面交叉自然成立，平面上交叉但沒有共用節點的邊互不相干。列車可以放在邊上、沿邊移動（`setTrainContinuation(_:along:)`）、反向，車身跨越多條邊
+- 連續軌道（Phase 4.5 Stage S3）：以整數世界座標（64 單位一公尺，世界沒有格子，F3d）建造節點，節點之間以直線或兩個整數控制點的三次曲線建造邊（`buildTrackNode`、`buildTrackEdge`）；長度與取樣由固定的整數規則推導。只有共用節點的邊才會相接，離開節點方向相反的邊端互通，所以道岔、平面交叉自然成立，平面上交叉但沒有共用節點的邊互不相干。列車可以放在邊上、沿邊移動（`setTrainContinuation(_:along:)`）、反向，車身跨越多條邊
 - 立體鐵路（Phase 4.5 Stage S4）：節點可以在地面上下 64 公尺（4096 單位）以內；邊沿水平里程有縱斷面（固定坡度，或兩端的拋物線豎曲線），最陡 40‰；結構物（地面、高架、橋、隧道）決定可以蓋的高度與費用。兩條鐵軌在平面上相遇時要相差 8 公尺以上（立體交叉，不共用資源），同一高度的交叉必須共用節點（平面交叉）。隧道口由邊推導；車站可以在路網上平坦的一段邊上有地面、高架或地下的月台（`addTrackPlatform`）。位置帶坡度（pitch），車身路徑是 3D 的
 - 路網上的營運（Phase 4.5 Stage S5）：停站、時刻表（折返與重複）、線路、自動派車、交路與快車都能在路網上運作。以車站為目的地的路（`path(from:toStation:length:)`，`TrainPath`）停在行進方向上月台的末端，只找放得下整列車的月台，距離是整數的實際里程；列車的路可以停在邊的中段（`setTrainContinuation(_:along:stoppingAt:)`）。服務正在使用的月台不能拆
 - 進路預約（Phase 4.6 Stage T）：交通控制開啟時（`setTrafficControl`，App 的新遊戲預設開啟），列車出發、被派車或拿到新的路之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（`reservedResources(of:)`）；被其他列車持有（`heldResources(of:)`）時整個不取得，服務原地等待並每步重試（`trainHoldingRoute(of:)` 回答在等哪一台）。經過道岔與平面交叉的進路在共用節點衝突，停在交會點附近的列車也持有它，立體交叉互不衝突；預約中的鐵軌不能拆或改月台。預約存檔，走完路時釋放
 - 車站需求與乘客（G1a）：`setStationDemand` 設定車站的類型（住宅、辦公、商業、景點）與每天的旅次。每天的旅次分給同一條線路能到的車站，再依一天的形狀與兩端類型的曲線（移植自作者的 `Ci/` 網站）分到 24 小時；每分鐘以整數釋出，任何連續 24 小時正好是一天的量。乘客在起點依線路、方向、迄點成組排隊（先來的在前，一站最多 4000 人，放不下的記為溢出）；線路改變而不再載他們時記為放棄。每一站 `released = 等車 + 溢出 + 放棄`（`passengerLedger(of:)`）。
 - 上下車與容量（G1b）：列車每離開一站，先讓坐到那一站的人下車，再讓等它的線路與方向、要去它到下一次折返前會停的站的人上車（下車站遠的先上，移植自 `Ci/` 的 `allocateSeats`），最多到容量（每輛 352 人：額定 320 × 1.1）；上不去的記為被拒絕。車上的人記在列車上（`riders(of:)`），每一站 `released = 等車 + 車上 + 到達 + 溢出 + 放棄`。
-- 票價、帳本與經營（G1c）：新的世界是自由模式；經營模式（App 的新遊戲）下乘客上車時付票價（均一或依兩站直線距離分段，移植自 `Ci/` 的地鐵經濟），每個整點結算營運與維修、每個午夜結算能源與人事（餘額可以變成負數），寫進帳本與每日的帳（`financeReport(_:)` 的日、週、月、年）；設定過票價時票價影響需求。金額是美分，畫面以美元顯示。
+- 票價、帳本與經營（G1c）：新的世界是自由模式；經營模式（App 的新遊戲）下乘客上車時付票價（均一或依兩站的點之間精確的直線距離分段，移植自 `Ci/` 的地鐵經濟，F3d 起不再以格量化），每個整點結算營運與維修、每個午夜結算能源與人事（餘額可以變成負數），寫進帳本與每日的帳（`financeReport(_:)` 的日、週、月、年）；設定過票價時票價影響需求。金額是美分，畫面以美元顯示。
 - 整數金額的資金與建設成本
 - 可暫停、1x、2x 的 deterministic 遊戲時鐘（2x 為每 tick 兩個基本步長；時間溢位時整批拒絕）
 - 所有核心狀態可 `Codable` 編碼 / 解碼
@@ -51,18 +51,20 @@ GameCore 目前能做到：
 
 | 動作 | 條件 | 成本 |
 | --- | --- | --- |
-| 鋪軌 | 位置在地圖內、該格為空、至少一個連接方向（只能是北、東、南、西）、資金足夠；不需要與鄰格相接 | `ConstructionCosts.track` |
-| 拆軌 | 該格必須是鐵軌（空格與車站都會被拒絕），且沒有列車停在該格或以該格為所在連結的一端 | 免費，**不退款** |
-| 建站 | 名稱非空白、位置在地圖內、該格為空、資金足夠 | `ConstructionCosts.station` |
+| 建節點 | 點在世界範圍內（`0 <= x < 寬`、`0 <= y < 高`，世界單位）、高度在地面上下 4096 以內、該點沒有節點 | 免費 |
+| 建邊 | 兩端的節點存在且不同；曲線的控制點在世界範圍內；坡度、立體交叉的淨空與線間距合法；資金足夠 | 每 1024 單位（16 公尺，`ConstructionCosts.trackPricingLength`）或不足的部分收一次 `ConstructionCosts.track`，乘上結構物的倍數 |
+| 拆邊 / 拆節點 | 邊上沒有列車、月台，交通控制下沒有被預約；節點上沒有邊 | 免費，**不退款** |
+| 建站 | 名稱非空白、點在世界範圍內、資金足夠；車站是一點，月台另外加在路網的邊上 | `ConstructionCosts.station` |
+| 加月台 | 車站與邊存在；範圍在邊上、不與其他月台重疊、平坦 | 免費 |
 | 購買列車 | 名稱非空白、資金足夠 | `ConstructionCosts.train` |
-| 放置列車 | 列車存在且未放置；位置是鐵軌格中心，或兩格相接鐵軌之間 `0 < offset < 1024` | 免費 |
+| 放置列車 | 列車存在且未放置；位置在路網的邊上（`0 <= offset <=` 邊長），後方的軌道放得下整列 | 免費 |
 | 取下 / 反向列車 | 列車存在且已放置 | 免費 |
-| 設定 rate / continuation | 列車存在且已放置；rate 非負；continuation 從列車前方節點起每一步都相接、不折返 | 免費 |
+| 設定 rate / 路 | 列車存在且已放置；rate 非負；路從列車前方起每一步都相接、不折返 | 免費 |
 | 設定時刻表 | 列車存在（放置與否皆可）且不屬於任何線路；時間從 0 起不倒流（每站 arrival ≤ departure ≤ 下一站 arrival）；每站都是存在的車站；`[]` 清除 | 免費 |
 | 指派列車到線路 | 列車與線路存在；列車不屬於任何線路，也沒有自己的服務在執行 | 免費 |
 | 開關交通控制 | 開啟時任兩台列車需要的軌道不重疊；開啟後，放置、反向與設定路要取得的軌道不能被其他列車持有，預約中的鐵軌不能拆、持有的邊不能加減月台、持有的交會點不能加邊 | 免費 |
 
-任何失敗都會丟出 `GameError`，且世界狀態（地圖、資金、車站、列車與時刻表）完全不變。餘額永遠不會因建設變成負數。
+任何失敗都會丟出 `GameError`，且世界狀態（路網、資金、車站、列車與時刻表）完全不變。餘額永遠不會因建設變成負數。
 
 ## 技術方向
 
@@ -88,14 +90,14 @@ Swift 版 GameCore 是目前的參考實作；`GoldenScenarios/` 的 JSON 情境
 
 ```
 Sources/GameCore/
-  World/     GameWorld、GridMap、GridPosition、MapTile/TileType、GameError、SavedGame（帶版本的存檔）
+  World/     GameWorld、WorldBounds（世界的範圍，世界單位）、GameError、SavedGame（帶版本的存檔）、GeoAnchor、LegacyGrid（只給舊存檔解碼）
   Geometry/  WorldCoordinate / PlanPoint / PlanVector（整數世界座標）、TrackCurve 與 TrackGeometry（曲線的取樣、長度、位置、高度與坡度）、TrackProfile（縱斷面、坡度、結構物）、TrackClearance（立體交叉的淨空）、FixedPoint（整數平方根等）
-  Railway/   TrackDirection/TrackConnections、Track、TrackConnectivity（連通查詢）、TrackGraph（TrackNodeID、TrackEdgeID、TrackTraversal）、RailwayNetwork（連續路網）、RailwayNetworkTrains（路網上的列車與 renderer 查詢）、TrackPlatform（路網上的月台）、RailwaySnapshot（給 renderer 的唯讀快照）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
+  Railway/   TrackGraph（TrackNodeID、TrackEdgeID、TrackTraversal）、RailwayNetwork（連續路網）、RailwayNetworkTrains（路網上的列車與 renderer 查詢）、TrackPlatform（路網上的月台）、RailwaySnapshot（給 renderer 的唯讀快照）、Station、Train、TrainPosition、TrainMovement、TrainRoute（路徑搜尋）、StationStop（月台與停站）、Timetable（ScheduledStop）、TimetableExecution（服務的執行進度）
   Economy/   Money、GameEconomy、ConstructionCosts
   Time/      GameClock、GameSpeed、GameTime
 Sources/GamePresentation/
   GameSession（持有 GameWorld、UI 暫時狀態、game loop）、TickAccumulator、
-  ConstructionTool / TrackPiece、MapScale、DisplayText（玩家看到的文字）、
+  ConstructionTool、MapScale / MapCamera、NetworkSession（路網工具）、DisplayText（玩家看到的文字）、
   GameLauncher（開始畫面、自動存檔）、SaveLibrary（存檔檔案）、NewGame（新遊戲與示範地圖）
 Tests/GameCoreTests/
 Tests/GamePresentationTests/
@@ -179,7 +181,7 @@ GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案
 
 另有 deterministic 的 property 測試（`*PropertyTests`、`WorldStateMachineTests`、`TrainSessionPropertyTests`）：以固定的 seed（SplitMix64，`Tests/GameCoreTests/PropertySupport.swift`）產生地圖、列車位置、路徑與指令序列，和獨立寫成的參考模型（逐單位移動、另一種最短路徑算法、窮舉所有最短路徑）及世界不變量比對。CI 每次都跑同一批 seed，不會隨機挑選；失敗訊息會寫出 suite、seed、case 編號與產生的參數。
 
-- `KernelDifferentialTests`：同一串產生的指令同時交給 GameCore 與另外重寫的整個核心（`ReferenceWorld`：格子存在字典裡、每一步的移動以除法一次算出且每分鐘都逐步執行、路徑以鬆弛法求出），每個指令之後比對結果（包括錯誤種類與檢查順序）與所有可觀察的狀態（時間、金額、每一格、車站、列車、連通、月台、停站），並檢查停站只因決策 18 列出的指令開始或結束。失敗時先把指令序列縮到仍會失敗的最少指令，再連同 seed 與 case 回報。參考模型本身也要通過所有 golden scenario（`ReferenceWorldGoldenTests`）。
+- `KernelDifferentialTests`：同一串產生的指令同時交給 GameCore 與另外重寫的整個核心（`ReferenceWorld`：每一步的移動以除法一次算出且每分鐘都逐步執行、路徑以鬆弛法求出），每個指令之後比對結果（包括錯誤種類與檢查順序）與所有可觀察的狀態（時間、金額、世界的範圍、車站、列車、路網、月台、停站），並檢查停站只因決策 18 列出的指令開始或結束。失敗時先把指令序列縮到仍會失敗的最少指令，再連同 seed 與 case 回報。參考模型本身也要通過所有 golden scenario（`ReferenceWorldGoldenTests`）。
 - `SaveMutationTests`：把產生的世界存檔後改掉 JSON 裡的一個值（數字、名稱、key、陣列元素、`null`），壞資料必須被拒絕；讀得進來的世界必須維持所有不變量、能再次存讀，之後的指令也維持原子性。另一組優先改動時刻表裡的值（沒有車站或列車的世界沒有時刻表可改）。
 - `ServicePropertyTests`：在上面的指令序列中混入從停靠車站開始的時刻表、服務的啟動與停止與長短不一的推進，同時與參考模型比對（參考模型逐分鐘步進、沒有快轉、每次出發都重新求路），並檢查每次 `advance(n)` 等於 n 次 `advance(1)`、2× 等於兩倍的 1×，以及服務的不變量。`SaveMutationTests` 另有一組專門改動或寫入 `execution` 的變異存檔。
 - `LineDispatchPropertyTests`（`line.dispatch`）：在小型路網上建立有列車的線路，混入目標班距、列車數、營運時間、服務日的改變、指派與取回、手動移動列車與拆鋪軌，和長短不一的推進，逐步與參考模型比對（參考模型每分鐘檢查每條線路的派車），並檢查每次 `advance(n)` 等於 n 次 `advance(1)`、2× 等於兩倍的 1×，確認快轉不會跳過任何派車。`SaveMutationTests` 另有一組改動線路列車、目標班距、上次發車與服務的變異存檔。

@@ -16,7 +16,7 @@ struct MapView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let map = session.world.map
+            let bounds = session.world.bounds
             // A real-world map (Stage E2) keeps a strip at its bottom for
             // Apple's logo and legal link; the game's map is the rest.
             let realWorld = RealWorldFrame(world: session.world)
@@ -51,7 +51,7 @@ struct MapView: View {
                     .accessibilityHidden(true)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Map, \(map.width) by \(map.height) tiles")
+                .accessibilityLabel(bounds.mapLabel(in: session.language))
                 .accessibilityIdentifier(TutorialTarget.map.rawValue)
                 .accessibilityValue(selectionDescription)
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
@@ -80,7 +80,7 @@ struct MapView: View {
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
             }
-            .onChange(of: WorldRegion(map: map)) { _, _ in
+            .onChange(of: bounds) { _, _ in
                 camera = openingCamera(viewport: viewport)
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
@@ -107,9 +107,9 @@ struct MapView: View {
     }
 
     /// The camera a game opens on (Stage E1): what it has built, or the
-    /// middle of its map.
+    /// middle of its world.
     private func openingCamera(viewport: ScreenSize) -> PlanCamera {
-        PlanCamera(map: session.world.map, viewport: viewport, showing: WorldRegion.built(in: session.world))
+        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.built(in: session.world))
     }
 
     private var selectionDescription: String {
@@ -180,7 +180,7 @@ private struct MapCanvas: View, Equatable {
     let drawsLand: Bool
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
-        lhs.world.map == rhs.world.map
+        lhs.world.bounds == rhs.world.bounds
             && lhs.world.stations == rhs.world.stations
             && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
@@ -197,7 +197,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges, drawsLand = drawsLand
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            TileArt.drawMap(
+            MapArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
                 selectedStationID: network == nil ? selectedStationID : nil,

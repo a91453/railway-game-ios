@@ -13,8 +13,8 @@ import SwiftUI
 /// move only when the game loop advances the world (the HUD's speed
 /// controls).
 struct TrainControls: View {
-    /// What one press of the rate control changes, in logical units per game
-    /// minute (1024 units are one tile; at 600× a game minute is 100 ms). An
+    /// What one press of the rate control changes, in world units per game
+    /// minute (64 units are a metre; at 600× a game minute is 100 ms). An
     /// `Int`, because that is `Int64`'s stride.
     static let rateStep = 32
     static let maximumRate: Int64 = 1_024
@@ -46,7 +46,7 @@ struct TrainControls: View {
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     }
-                    .accessibilityHint("One car to a tile. A train of several cars needs track behind it, and platforms as long as it.")
+                    .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
                     if let price = session.world.carPriceText(in: session.language) {
                         Text(price)
                             .font(.caption)

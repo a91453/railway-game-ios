@@ -181,8 +181,8 @@ extension GameWorld {
     // MARK: - The resources along an edge (Stage S3A)
 
     /// The spans of edge `id`, from its `from` node to its `to` node (see
-    /// ``RailwayNetwork/spans(of:length:)``): one for every tile's length or
-    /// less of the edge, cut again at the ends of its platforms (Stage S4).
+    /// ``RailwayNetwork/spans(of:length:)``): one for every
+    /// ``RailwayNetwork/spanLength`` or less of the edge, cut again at the ends of its platforms (Stage S4).
     /// Empty if there is no such edge.
     public func trackSpans(of id: TrackEdgeID) -> [TrackSpan] {
         guard let edge = trackEdge(id) else { return [] }

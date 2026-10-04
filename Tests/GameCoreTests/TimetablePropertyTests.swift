@@ -160,7 +160,7 @@ final class TimetablePropertyTests: XCTestCase {
     /// described if anything else changed.
     static func isolationProblem(id: TrainID, stops: [ScheduledStop], before: GameWorld, after: GameWorld) -> String? {
         guard after.train(id: id)?.timetable == stops else { return "the timetable is not the one given" }
-        guard after.map == before.map, after.stations == before.stations, after.clock == before.clock, after.economy == before.economy else {
+        guard after.bounds == before.bounds, after.stations == before.stations, after.clock == before.clock, after.economy == before.economy else {
             return "the map, stations, clock or money changed"
         }
         guard after.trains.map(\.id) == before.trains.map(\.id) else { return "the trains changed" }

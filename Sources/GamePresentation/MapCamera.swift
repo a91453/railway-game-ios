@@ -67,11 +67,9 @@ public struct WorldRegion: Hashable, Sendable {
         self = region
     }
 
-    /// The whole map: ``GridMap/width`` × ``GridMap/height`` tiles of
-    /// ``WorldCoordinate/tileSize`` units from the north-west corner.
-    public init(map: GridMap) {
-        let tile = Double(WorldCoordinate.tileSize)
-        self.init(minX: 0, minY: 0, maxX: Double(map.width) * tile, maxY: Double(map.height) * tile)
+    /// The whole world: its ``WorldBounds`` from the north-west corner.
+    public init(bounds: WorldBounds) {
+        self.init(minX: 0, minY: 0, maxX: Double(bounds.width), maxY: Double(bounds.height))
     }
 
     public var width: Double { maxX - minX }
@@ -161,16 +159,16 @@ extension MapProjection {
         return Self.wholeUnits(points / pointsPerUnit)
     }
 
-    /// Points on the screen per tile (``WorldCoordinate/tileSize`` units):
-    /// the `tileSize` the map's drawing is sized by.
-    public var tileSize: Double {
-        pointsPerUnit * Double(WorldCoordinate.tileSize)
+    /// Points on the screen per ``MapScale/referenceLength`` (16 m) of the
+    /// world: the size the map's drawing is sized by.
+    public var referenceSize: Double {
+        pointsPerUnit * Double(MapScale.referenceLength)
     }
 
     /// How much of the map to draw at this zoom (see
-    /// ``MapScale/detail(forTileSize:)``).
+    /// ``MapScale/detail(forReferenceSize:)``).
     public var detail: MapDetail {
-        MapScale.detail(forTileSize: tileSize)
+        MapScale.detail(forReferenceSize: referenceSize)
     }
 
     private static func wholeUnits(_ value: Double) -> Int64 {
@@ -185,10 +183,11 @@ extension MapProjection {
 /// The camera of the map seen from above, straight down and north up: the
 /// blank map's camera (Stage E1).
 ///
-/// A tile is ``MapScale/largestSize`` points at most, and at least the size
-/// at which the whole map fits the view (but never smaller than necessary,
-/// ``MapScale/minimumSize(fitting:)``): a new game's 16 km map fits a phone
-/// at well under a point a tile. The zoom buttons multiply or divide the
+/// 16 m of the world (``MapScale/referenceLength``) is
+/// ``MapScale/largestSize`` points at most, and at least the size at which
+/// the whole map fits the view (but never smaller than necessary,
+/// ``MapScale/minimumSize(fitting:)``): a new game's 16 km world fits a phone
+/// at well under a point per 16 m. The zoom buttons multiply or divide the
 /// size by ``MapScale/zoomFactor``. Panning stops at the map's edges, and
 /// along a side where the whole map fits it is centred, as the scrolling
 /// map was.
@@ -218,13 +217,13 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
     /// `fitAnycityImportedSaveNetworkView`, `Railway/` `fitData`), never
     /// closer than a set zoom (`Ci/`'s `maxZoom: 12`, here the automatic
     /// size).
-    public init(map: GridMap, viewport: ScreenSize, showing focus: WorldRegion? = nil) {
-        mapRegion = WorldRegion(map: map)
+    public init(bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion? = nil) {
+        mapRegion = WorldRegion(bounds: bounds)
         self.viewport = Self.usable(viewport)
         pointsPerUnit = 1
         centerX = 0
         centerY = 0
-        var size = MapScale.automaticSize(fitting: fittingTileSize)
+        var size = MapScale.automaticSize(fitting: fittingReferenceSize)
         if let focus {
             // Room inside the padding; a view too small for it uses all of
             // itself.
@@ -232,10 +231,10 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
                 width: self.viewport.width > 4 * Self.focusPadding ? self.viewport.width - 2 * Self.focusPadding : self.viewport.width,
                 height: self.viewport.height > 4 * Self.focusPadding ? self.viewport.height - 2 * Self.focusPadding : self.viewport.height
             )
-            let fitting = min(room.width / focus.width, room.height / focus.height) * Double(WorldCoordinate.tileSize)
-            size = MapScale.clamped(min(size, fitting), fitting: fittingTileSize)
+            let fitting = min(room.width / focus.width, room.height / focus.height) * Double(MapScale.referenceLength)
+            size = MapScale.clamped(min(size, fitting), fitting: fittingReferenceSize)
         }
-        pointsPerUnit = size / Double(WorldCoordinate.tileSize)
+        pointsPerUnit = size / Double(MapScale.referenceLength)
         let middle = focus ?? mapRegion
         centerX = (middle.minX + middle.maxX) / 2
         centerY = (middle.minY + middle.maxY) / 2
@@ -273,24 +272,24 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
 
     /// Whether the zoom-in button can zoom further.
     public var canZoomIn: Bool {
-        tileSize < MapScale.largestSize
+        referenceSize < MapScale.largestSize
     }
 
     /// Whether the zoom-out button can zoom further.
     public var canZoomOut: Bool {
-        tileSize > MapScale.minimumSize(fitting: fittingTileSize)
+        referenceSize > MapScale.minimumSize(fitting: fittingReferenceSize)
     }
 
     /// ``MapScale/zoomFactor`` times closer, about the middle of the view
     /// (the zoom-in button).
     public func zoomedIn() -> PlanCamera {
-        zoomed(toTileSize: MapScale.zoomedIn(from: tileSize, fitting: fittingTileSize), around: middle)
+        zoomed(toReferenceSize: MapScale.zoomedIn(from: referenceSize, fitting: fittingReferenceSize), around: middle)
     }
 
     /// ``MapScale/zoomFactor`` times farther, about the middle of the view
     /// (the zoom-out button).
     public func zoomedOut() -> PlanCamera {
-        zoomed(toTileSize: MapScale.zoomedOut(from: tileSize, fitting: fittingTileSize), around: middle)
+        zoomed(toReferenceSize: MapScale.zoomedOut(from: referenceSize, fitting: fittingReferenceSize), around: middle)
     }
 
     /// `factor` times as close, within the zoom range, keeping the world
@@ -299,7 +298,7 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
     /// fingers began).
     public func zoomed(by factor: Double, around anchor: ScreenPoint) -> PlanCamera {
         guard factor.isFinite, factor > 0 else { return self }
-        return zoomed(toTileSize: MapScale.clamped(tileSize * factor, fitting: fittingTileSize), around: anchor)
+        return zoomed(toReferenceSize: MapScale.clamped(referenceSize * factor, fitting: fittingReferenceSize), around: anchor)
     }
 
     // MARK: - Pan
@@ -333,28 +332,27 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
     public func resized(to viewport: ScreenSize) -> PlanCamera {
         var camera = self
         camera.viewport = Self.usable(viewport)
-        camera.pointsPerUnit = MapScale.clamped(tileSize, fitting: camera.fittingTileSize) / Double(WorldCoordinate.tileSize)
+        camera.pointsPerUnit = MapScale.clamped(referenceSize, fitting: camera.fittingReferenceSize) / Double(MapScale.referenceLength)
         camera.clampCenter()
         return camera
     }
 
     // MARK: - Private
 
-    /// The tile size at which the whole map fits the view
-    /// (``MapScale/fittingSize(width:height:columns:rows:)``).
-    private var fittingTileSize: Double {
-        let tile = Double(WorldCoordinate.tileSize)
-        return min(viewport.width / (mapRegion.width / tile), viewport.height / (mapRegion.height / tile))
+    /// The size at which the whole map fits the view
+    /// (``MapScale/fittingSize(width:height:worldWidth:worldHeight:)``).
+    private var fittingReferenceSize: Double {
+        MapScale.fittingSize(width: viewport.width, height: viewport.height, worldWidth: mapRegion.width, worldHeight: mapRegion.height)
     }
 
     private var visibleWidth: Double { viewport.width / pointsPerUnit }
     private var visibleHeight: Double { viewport.height / pointsPerUnit }
     private var middle: ScreenPoint { ScreenPoint(x: viewport.width / 2, y: viewport.height / 2) }
 
-    private func zoomed(toTileSize size: Double, around anchor: ScreenPoint) -> PlanCamera {
+    private func zoomed(toReferenceSize size: Double, around anchor: ScreenPoint) -> PlanCamera {
         let fixed = worldPosition(at: anchor)
         var camera = self
-        camera.pointsPerUnit = size / Double(WorldCoordinate.tileSize)
+        camera.pointsPerUnit = size / Double(MapScale.referenceLength)
         camera.centerX = fixed.x - (anchor.x - viewport.width / 2) / camera.pointsPerUnit
         camera.centerY = fixed.y - (anchor.y - viewport.height / 2) / camera.pointsPerUnit
         camera.clampCenter()

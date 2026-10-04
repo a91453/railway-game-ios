@@ -3,16 +3,12 @@ import GameCore
 import XCTest
 
 /// Stage S3A (ARCHITECTURE decision 29): the railway network is the one
-/// record of all track, the map holds only land, and the resources along an
-/// edge are its spans. Expected values are worked out by hand from the
+/// record of all track, the world besides it is only its bounds (Stage
+/// F3d), and the resources along an edge are its spans. Expected values are worked out by hand from the
 /// rules.
 final class RailwayNetworkAuthorityTests: XCTestCase {
     private let first = TrainID(rawValue: 1)
     private let second = TrainID(rawValue: 2)
-
-    private func p(_ x: Int, _ y: Int) -> GridPosition {
-        GridPosition(x: x, y: y)
-    }
 
     private func forward(_ edge: TrackEdgeID) -> TrackTraversal {
         TrackTraversal(edge: edge, direction: .forward)
@@ -36,11 +32,13 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
     // MARK: - One authority
 
     /// Laying and removing track on the network, and building stations at
-    /// points, never touch the land (Stage F3c-3b: the grid's track and
-    /// stations, which took a tile each, are gone from this test).
-    func testTheMapHoldsLandAndTheNetworkHoldsEveryTrack() throws {
-        var world = try makeWorld(width: 4, height: 2, balance: 100_000)
-        let land = world.map
+    /// points, never change the world's bounds (Stage F3c-3b: the grid's
+    /// track and stations, which took a tile each, are gone from this test;
+    /// Stage F3d: the land went with them, and the world is only its
+    /// bounds).
+    func testTheBoundsStayAndTheNetworkHoldsEveryTrack() throws {
+        var world = try makeWorld(width: 4_096, height: 2_048, balance: 100_000)
+        let bounds = world.bounds
         try world.buildStation(named: "S", at: PlanPoint(x: 3_584, y: 512))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 512))
@@ -48,33 +46,33 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
         let main = try world.buildTrackEdge(from: a, to: b)
         let spur = try world.buildTrackEdge(from: b, to: c)
 
-        XCTAssertEqual(world.map, land, "laying track never touches the land")
-        XCTAssertEqual(world.map.tiles.map(\.type), Array(repeating: .empty, count: 8))
+        XCTAssertEqual(world.bounds, bounds, "laying track never changes the bounds")
         XCTAssertEqual(world.network.edges.map(\.id), [main, spur])
         XCTAssertEqual(world.network.nodes.map(\.id), [a, b, c])
 
         try world.removeTrackEdge(spur)
         try world.removeTrackNode(c)
-        XCTAssertEqual(world.map, land)
+        XCTAssertEqual(world.bounds, bounds)
         XCTAssertEqual(world.network.edges.map(\.id), [main])
     }
 
     /// A save in the format every save had from Stage I to save version 1,
-    /// every tile written out: a map of empty ground loads, and saves back
-    /// as the map's occupied tiles (save version 2, Stage E1), of which
-    /// there are none. Until Stage F3c grid track in those tiles went into
+    /// every tile written out: a map of empty ground 2 × 1 tiles loads as a
+    /// world 2048 × 1024 units, and saves back as its bounds (save version
+    /// 6, Stage F3d). Until Stage F3c grid track in those tiles went into
     /// the railway network; a map with grid track or a station on a tile,
     /// which only a save made by hand could hold, is now refused with the
     /// reason (decision 51).
     func testAnOldMapLoadsAndGridTrackInItIsRefused() throws {
-        let world = try GameWorld(width: 2, height: 1, economy: GameEconomy(balance: 0, costs: testCosts))
+        let world = try GameWorld(bounds: WorldBounds(width: 2_048, height: 1_024), economy: GameEconomy(balance: 0, costs: testCosts))
         let saved = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":0,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[TILES],"width":2},"nextStationID":1,"nextTrainID":1,"stations":[],"trains":[]}"#
         func load(_ tiles: String) throws -> GameWorld {
             try JSONDecoder().decode(GameWorld.self, from: Data(saved.replacingOccurrences(of: "TILES", with: tiles).utf8))
         }
         let loaded = try load(#"{"empty":{}},{"empty":{}}"#)
         XCTAssertEqual(loaded, world)
-        let savedNow = saved.replacingOccurrences(of: #""tiles":[TILES]"#, with: #""occupied":[]"#)
+        let savedNow = #"{"bounds":{"height":1024,"width":2048},"#
+            + saved.replacingOccurrences(of: #"{"#, with: "", options: .anchored).replacingOccurrences(of: #""map":{"height":1,"tiles":[TILES],"width":2},"#, with: "")
         XCTAssertEqual(String(decoding: try encode(loaded), as: UTF8.self), savedNow)
         for tiles in [
             #"{"track":{"connections":2}},{"empty":{}}"#,
@@ -124,7 +122,7 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
     /// A 2048 edge from (512, 512) to (2560, 512): two spans, 0–1024 and
     /// 1024–2048.
     private func makeLongEdge() throws -> (world: GameWorld, edge: TrackEdgeID, from: TrackNodeID, to: TrackNodeID) {
-        var world = try makeWorld(width: 4, height: 2, balance: 100_000)
+        var world = try makeWorld(width: 4_096, height: 2_048, balance: 100_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 512))
         let edge = try world.buildTrackEdge(from: a, to: b)
@@ -174,7 +172,7 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
     }
 
     func testSpansComeFromTheLengthAloneNeverFromTheSamples() throws {
-        var world = try makeWorld(width: 16, height: 16, balance: 1_000_000)
+        var world = try makeWorld(width: 16_384, height: 16_384, balance: 1_000_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 8_704, y: 512))
         let c = try world.buildTrackNode(at: WorldCoordinate(x: 8_704, y: 8_704))

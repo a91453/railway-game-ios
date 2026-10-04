@@ -61,8 +61,8 @@ extension GameWorld {
     // MARK: - Queries
 
     /// The fare a passenger from `origin` to `destination` pays: the rule's
-    /// fare for the straight-line distance between the stations, or 5 if
-    /// that is 0 or less. `nil` for the same station or an unknown one.
+    /// fare for the straight-line distance between the stations' points, or
+    /// 5 if that is 0 or less. `nil` for the same station or an unknown one.
     public func tripFare(from origin: StationID, to destination: StationID) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
         return FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
@@ -75,11 +75,14 @@ extension GameWorld {
     }
 
     /// The square of the straight-line distance between two stations'
-    /// tiles, in world units (1024 to a tile).
+    /// points, in world units, exactly (Stage F3d; until then it was the
+    /// distance between the 1024-unit tiles under them). Stations stand in
+    /// the world's bounds, so each difference is below 2^20 and the sum of
+    /// the squares below 2^41.
     func squaredDistance(from origin: StationID, to destination: StationID) -> Int64? {
         guard let a = station(id: origin), let b = station(id: destination) else { return nil }
-        let dx = Int64(a.position.x - b.position.x) * TrainPosition.linkLength
-        let dy = Int64(a.position.y - b.position.y) * TrainPosition.linkLength
+        let dx = a.point.x - b.point.x
+        let dy = a.point.y - b.point.y
         return dx * dx + dy * dy
     }
 
@@ -166,7 +169,7 @@ extension GameWorld {
     }
 
     /// World units in a kilometre.
-    static let unitsPerKilometre: Int64 = 64_000
+    static let unitsPerKilometre: Int64 = 1_000 * WorldCoordinate.unitsPerMetre
 
     /// The settlements due at the start of the minute from `now`: the hour
     /// that ended, if `now` is on the hour, then the day that ended, if

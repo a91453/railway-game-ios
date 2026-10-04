@@ -10,7 +10,7 @@ import Observation
 /// own copy of game state.
 ///
 /// Besides the world, the session keeps only transient UI state: the selected
-/// tile and station, the active tool, the drafts of the network tool, the draft station name,
+/// point and station, the active tool, the drafts of the network tool, the draft station name,
 /// the selected train, the heading for placing it, the selected line, the
 /// stops picked for a new line, the copied station demand, the tutorial on
 /// screen, and the last action's message, written in ``language``. Anything shown about the game,
@@ -34,16 +34,16 @@ public final class GameSession {
     /// restarts an app whose language changes.
     public let language: DisplayLanguage
 
-    /// The tile under the player's last tap, or under the station they
-    /// picked: where on the map the selection is. Always inside the map
-    /// when set. Only land: the railway is on the track network.
-    public private(set) var selection: GridPosition?
+    /// Where the selection is: the point of the player's last tap on the
+    /// map, or where the station they picked stands, exactly as it is (Stage
+    /// F3d: never rounded to anything coarser). Always in the world's
+    /// bounds when set.
+    public private(set) var selectedPoint: PlanPoint?
 
     /// The station the player last picked (Stage F1): an ID only, never a
     /// copy of the station. Read the selected station through
-    /// ``selectedStation``. A station at a point takes no tile, so it is
-    /// picked by where it stands (``tapMap(at:reach:)``) or by name
-    /// (``selectStation(_:)``), not by the tile alone.
+    /// ``selectedStation``. A station is picked by where it stands
+    /// (``tapMap(at:reach:)``) or by name (``selectStation(_:)``).
     public private(set) var selectedStationID: StationID?
 
     /// What the action button does.
@@ -59,7 +59,7 @@ public final class GameSession {
 
     /// The train the last tap on the map picked (see ``tapMap(at:reach:)``),
     /// which the select tool's inspector shows; `nil` once a tap or a
-    /// command selects a station or a tile instead.
+    /// command selects a station or a point instead.
     public private(set) var tappedTrainID: TrainID?
 
     /// The way the selected train faces when it is placed: along its
@@ -68,7 +68,7 @@ public final class GameSession {
     public private(set) var placementHeading: CompassHeading = .east
 
     /// The outcome of the last action, for the status line. Cleared when the
-    /// player selects another tile or tool.
+    /// player selects another point or tool.
     public internal(set) var message: StatusMessage?
 
     /// The line the line panel shows: an ID only, never a copy of the line.
@@ -142,40 +142,26 @@ public final class GameSession {
 
     // MARK: - Selection
 
-    /// Selects the tile at `position` and the station on it (see
-    /// ``station(onTile:)``); positions outside the map are ignored.
-    public func select(_ position: GridPosition) {
-        guard world.map.contains(position) else { return }
-        let station = station(onTile: position)?.id
-        guard position != selection || station != selectedStationID || tappedTrainID != nil else { return }
-        selection = position
-        selectedStationID = station
-        tappedTrainID = nil
-        message = nil
-    }
-
     /// A tap on the map at `point` with the select or train tool (Stage
     /// F1), reaching `reach` world units: selects the station whose mark
     /// is within half the reach; or else the train drawn nearest within
     /// reach (`GameWorld.train(near:within:)`, see ``tapTrain(_:)``); or
     /// else the nearest station within reach
-    /// (`GameWorld.station(near:within:)`), or one at a point inside the
-    /// tile under the point (see ``station(onTile:)``), and the tile. A
-    /// station right under the finger wins over a train beside it, so a
-    /// station's mark always selects it. Taps off the map are ignored.
-    /// Never changes the world.
+    /// (`GameWorld.station(near:within:)`), and the point itself. A station
+    /// right under the finger wins over a train beside it, so a station's
+    /// mark always selects it. Only distance decides what a tap picks; the
+    /// point is kept exactly (Stage F3d). Taps outside the world's bounds
+    /// are ignored. Never changes the world.
     public func tapMap(at point: PlanPoint, reach: Int64) {
-        let size = WorldCoordinate.tileSize
-        guard point.x >= 0, point.y >= 0, point.x < Int64(world.map.width) * size, point.y < Int64(world.map.height) * size else { return }
-        let tile = GridPosition(x: Int(point.x / size), y: Int(point.y / size))
+        guard world.bounds.contains(point) else { return }
         var station = world.station(near: point, within: reach / 2)?.id
         if station == nil, let train = world.train(near: point, within: reach) {
             tapTrain(train)
             return
         }
-        station = station ?? (world.station(near: point, within: reach) ?? self.station(onTile: tile))?.id
-        guard tile != selection || station != selectedStationID || tappedTrainID != nil else { return }
-        selection = tile
+        station = station ?? world.station(near: point, within: reach)?.id
+        guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil else { return }
+        selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
         message = nil
@@ -183,40 +169,34 @@ public final class GameSession {
 
     /// A tap that picked train `id`: it becomes the train the train tool
     /// acts on, and the select tool's inspector shows it. The select tool
-    /// lets go of the station or tile it had; the train tool keeps it, as
+    /// lets go of the station or point it had; the train tool keeps it, as
     /// the place it sends the train to.
     private func tapTrain(_ id: TrainID) {
-        guard tappedTrainID != id || selectedTrainID != id || (tool == .select && selection != nil) else { return }
+        guard tappedTrainID != id || selectedTrainID != id || (tool == .select && selectedPoint != nil) else { return }
         selectedTrainID = id
         tappedTrainID = id
         if tool == .select {
-            selection = nil
+            selectedPoint = nil
             selectedStationID = nil
         }
         message = nil
     }
 
-    /// Selects station `id` and the tile under its point. Never changes
-    /// the world; an ID the world does not have is ignored.
+    /// Selects station `id` and the point it stands at. Never changes the
+    /// world; an ID the world does not have is ignored.
     public func selectStation(_ id: StationID) {
-        guard let station = world.station(id: id), id != selectedStationID || station.position != selection || tappedTrainID != nil else { return }
-        selection = station.position
+        guard let station = world.station(id: id), id != selectedStationID || station.point != selectedPoint || tappedTrainID != nil else { return }
+        selectedPoint = station.point
         selectedStationID = id
         tappedTrainID = nil
         message = nil
     }
 
     public func clearSelection() {
-        selection = nil
+        selectedPoint = nil
         selectedStationID = nil
         tappedTrainID = nil
         message = nil
-    }
-
-    /// The station on the tile at `position`: the first, in ID order, of
-    /// the stations at a point inside it.
-    func station(onTile position: GridPosition) -> Station? {
-        world.stations.first { $0.position == position }
     }
 
     // MARK: - Tools
@@ -780,7 +760,7 @@ public final class GameSession {
     /// Does nothing without a selection, in ``ConstructionTool/select``
     /// mode, or with the network tool, which acts on what its taps picked.
     public func applyTool() {
-        guard selection != nil else { return }
+        guard selectedPoint != nil else { return }
         switch tool {
         case .select, .network:
             return

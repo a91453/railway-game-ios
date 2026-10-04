@@ -21,7 +21,7 @@ struct MapEdgeDrawing: Equatable, Sendable {
 /// Viewport drawing through MapProjection, also for a future rotated or
 /// tilted map. Full detail has ballast, platforms, nodes and station names;
 /// overview keeps thin routes and readable station/train marks.
-enum TileArt {
+enum MapArt {
     static func drawMap(
         _ world: GameWorld,
         selectedTrainID: TrainID?,
@@ -32,10 +32,10 @@ enum TileArt {
         drawsLand: Bool = true,
         in context: GraphicsContext
     ) {
-        let tileSize = projection.tileSize
+        let referenceSize = projection.referenceSize
         let detail = projection.detail
         let region = drawingRegion(projection)
-        let bounds = WorldRegion(map: world.map)
+        let bounds = WorldRegion(bounds: world.bounds)
         let land = polygon([
             screenPoint(bounds.minX, bounds.minY, projection),
             screenPoint(bounds.maxX, bounds.minY, projection),
@@ -61,7 +61,7 @@ enum TileArt {
             if detail == .full,
                region.expanded(by: Double(train.length)).contains(location.position) {
                 let body = polyline(world.bodyPath(of: train.id), projection: projection)
-                context.stroke(body, with: .color(Palette.train.opacity(0.75)), style: StrokeStyle(lineWidth: max(3, tileSize * 0.3), lineCap: .round, lineJoin: .round))
+                context.stroke(body, with: .color(Palette.train.opacity(0.75)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.3), lineCap: .round, lineJoin: .round))
             }
             if region.contains(location.position) {
                 drawTrain(at: location, isSelected: train.id == selectedTrainID, projection: projection, in: context)
@@ -71,7 +71,7 @@ enum TileArt {
 
     private static func drawNetwork(_ world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
         let region = drawingRegion(projection)
-        let tileSize = projection.tileSize
+        let referenceSize = projection.referenceSize
         let detail = projection.detail
         let edges = world.network.edges.compactMap { edge -> MapEdgeDrawing? in
             // A command can reach Canvas before onChange refreshes the cache.
@@ -86,7 +86,7 @@ enum TileArt {
             for platform in world.network.platforms {
                 guard let points = geometries[platform.edge]?.points(from: platform.start, to: platform.end),
                       let bounds = WorldRegion(enclosing: points), region.intersects(bounds) else { continue }
-                context.stroke(polyline(points, projection: projection), with: .color(Palette.station.opacity(0.85)), style: StrokeStyle(lineWidth: max(3, tileSize * 0.75), lineCap: .butt, lineJoin: .round))
+                context.stroke(polyline(points, projection: projection), with: .color(Palette.station.opacity(0.85)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
         for drawing in edges {
@@ -95,10 +95,10 @@ enum TileArt {
             let line = drawing.edge.structure == .tunnel
                 ? wholePolyline(drawing.geometry.points, projection: projection)
                 : polyline(drawing.geometry.points, projection: projection)
-            drawEdge(line, structure: drawing.edge.structure, detail: detail, tileSize: tileSize, in: context)
+            drawEdge(line, structure: drawing.edge.structure, detail: detail, referenceSize: referenceSize, in: context)
         }
         guard detail == .full else { return }
-        let radius = max(1.5, tileSize * 0.08)
+        let radius = max(1.5, referenceSize * 0.08)
         for node in world.network.nodes where region.contains(node.position) {
             let dot = disc(at: projection.screenPoint(of: node.position), radius: radius)
             context.fill(dot, with: .color(Palette.rail))
@@ -109,29 +109,29 @@ enum TileArt {
     }
 
     private static func drawNetworkOverlay(_ overlay: NetworkOverlay, projection: some MapProjection, in context: GraphicsContext) {
-        let tileSize = projection.tileSize
+        let referenceSize = projection.referenceSize
         if overlay.highlight.count > 1 {
             let band = polyline(overlay.highlight, projection: projection)
             switch overlay.highlightKind {
             case .removal:
-                context.stroke(band, with: .color(Color.red.opacity(0.6)), style: StrokeStyle(lineWidth: max(6, tileSize * 0.6), lineCap: .round, lineJoin: .round))
+                context.stroke(band, with: .color(Color.red.opacity(0.6)), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.6), lineCap: .round, lineJoin: .round))
             case .platform:
-                context.stroke(band, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(6, tileSize * 0.85), lineCap: .butt, lineJoin: .round))
-                context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, tileSize * 0.75), lineCap: .butt, lineJoin: .round))
+                context.stroke(band, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.85), lineCap: .butt, lineJoin: .round))
+                context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
         if overlay.preview.count > 1 {
             let line = polyline(overlay.preview, projection: projection)
-            let width = max(2, tileSize * 0.12)
+            let width = max(2, referenceSize * 0.12)
             if overlay.previewIsBuildable {
-                context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: tileSize * 0.5, lineCap: .round, lineJoin: .round))
+                context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
                 context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             } else {
                 // Dashed, so drawn whole (see the tunnels in drawNetwork).
-                context.stroke(wholePolyline(overlay.preview, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, tileSize * 0.25), max(2, tileSize * 0.2)]))
+                context.stroke(wholePolyline(overlay.preview, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }
         }
-        let radius = max(5, tileSize * 0.2)
+        let radius = max(5, referenceSize * 0.2)
         let region = drawingRegion(projection)
         for (index, anchor) in overlay.anchors.enumerated() where region.contains(anchor) {
             let dot = disc(at: projection.screenPoint(of: anchor), radius: radius)
@@ -147,7 +147,7 @@ enum TileArt {
 
     /// Segment culling also handles long edges with both ends offscreen.
     private static func polyline(_ points: [WorldCoordinate], projection: some MapProjection) -> Path {
-        let runs = MapScale.visiblePolylines(points, projection: projection, margin: max(12, projection.tileSize), minimumSpacing: projection.detail == .overview ? 2 : 0)
+        let runs = MapScale.visiblePolylines(points, projection: projection, margin: max(12, projection.referenceSize), minimumSpacing: projection.detail == .overview ? 2 : 0)
         var path = Path()
         for run in runs {
             path.move(to: cgPoint(run[0]))
@@ -169,26 +169,26 @@ enum TileArt {
         return path
     }
 
-    private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, tileSize: Double, in context: GraphicsContext) {
-        let rail = StrokeStyle(lineWidth: max(1.5, tileSize * 0.1), lineCap: .round, lineJoin: .round)
+    private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, in context: GraphicsContext) {
+        let rail = StrokeStyle(lineWidth: max(1.5, referenceSize * 0.1), lineCap: .round, lineJoin: .round)
         switch (structure, detail) {
         case (.tunnel, _):
-            context.stroke(line, with: .color(Palette.rail.opacity(0.55)), style: StrokeStyle(lineWidth: rail.lineWidth, lineCap: .butt, lineJoin: .round, dash: [max(2, tileSize * 0.3), max(2, tileSize * 0.2)]))
+            context.stroke(line, with: .color(Palette.rail.opacity(0.55)), style: StrokeStyle(lineWidth: rail.lineWidth, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))
         case (_, .overview):
-            context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, tileSize * 0.12), lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, referenceSize * 0.12), lineCap: .round, lineJoin: .round))
         case (.surface, .full):
-            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .round, lineJoin: .round))
             context.stroke(line, with: .color(Palette.rail), style: rail)
         case (.elevated, .full), (.bridge, .full):
-            context.stroke(line, with: .color(Palette.rail.opacity(0.35)), style: StrokeStyle(lineWidth: tileSize * 0.58, lineCap: .butt, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: tileSize * 0.42, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.rail.opacity(0.35)), style: StrokeStyle(lineWidth: referenceSize * 0.58, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .butt, lineJoin: .round))
             context.stroke(line, with: .color(Palette.rail), style: rail)
         }
     }
 
     private static func drawTrain(at location: TrackLocation, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
         let center = projection.screenPoint(of: location.position)
-        let radius = max(2.5, projection.tileSize * 0.26)
+        let radius = max(2.5, projection.referenceSize * 0.26)
         if projection.detail == .full {
             let dx = Double(location.direction.dx), dy = Double(location.direction.dy)
             let length = (dx * dx + dy * dy).squareRoot()
@@ -198,7 +198,7 @@ enum TileArt {
                 var nose = Path()
                 nose.move(to: cgPoint(center))
                 nose.addLine(to: cgPoint(end))
-                context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: max(2, projection.tileSize * 0.12), lineCap: .round))
+                context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
             }
         }
         let dot = disc(at: center, radius: radius)
@@ -208,7 +208,7 @@ enum TileArt {
 
     private static func drawPointStation(_ station: Station, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
         let center = projection.screenPoint(of: station.location)
-        let radius = max(5, projection.tileSize * 0.32)
+        let radius = max(5, projection.referenceSize * 0.32)
         let badgeRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         // Resolving and measuring a name is the costly part, and every pan
         // frame redraws: first rule out stations whose badge and name cannot
@@ -251,7 +251,7 @@ enum TileArt {
     }
 
     private static func drawingRegion(_ projection: some MapProjection) -> WorldRegion {
-        projection.visibleRegion.expanded(by: max(12, projection.tileSize) / projection.pointsPerUnit)
+        projection.visibleRegion.expanded(by: max(12, projection.referenceSize) / projection.pointsPerUnit)
     }
 
     private static func screenPoint(_ x: Double, _ y: Double, _ projection: some MapProjection) -> CGPoint {

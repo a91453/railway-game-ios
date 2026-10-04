@@ -17,10 +17,10 @@ final class LocalizationTests: XCTestCase {
 
     /// One of every error: each reads in Chinese, not as the English text.
     func testEveryGameErrorHasAChineseMessage() {
-        let position = GridPosition(x: 4, y: 7)
+        let point = PlanPoint(x: 4_096, y: 7_168)
         let train = TrainID(rawValue: 3)
         let errors: [GameError] = [
-            .invalidMapSize(width: 0, height: 5), .outOfBounds(position), .invalidName,
+            .invalidMapSize(width: 0, height: 5_120), .outOfBounds(point), .invalidName,
             .insufficientFunds(required: 50_000, available: 1_234), .unknownTrain(train), .trainAlreadyPlaced(train),
             .trainNotPlaced(train), .invalidTrainPosition, .invalidMovementRate, .invalidContinuation, .clockOverflow,
             .idsExhausted, .invalidTimetable, .unknownStation(StationID(rawValue: 3)), .trainServiceActive(train),
@@ -111,7 +111,7 @@ final class LocalizationTests: XCTestCase {
 
     /// The session writes its messages and suggests names in its language.
     func testTheSessionSpeaksItsLanguage() async throws {
-        var built = try makeWorld(width: 8, height: 4, balance: 100_000)
+        var built = try makeWorld(width: 8_192, height: 4_096, balance: 100_000)
         let west = try built.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
         let east = try built.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 1_536))
         try built.buildTrackEdge(from: west, to: east)
@@ -124,7 +124,7 @@ final class LocalizationTests: XCTestCase {
             session.selectTool(.train)
             session.purchaseTrain()
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇要放置它的車站。"))
-            session.select(GridPosition(x: 1, y: 1))
+            session.tapMap(at: PlanPoint(x: 1_536, y: 512), reach: 0)
             session.applyTool()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "請選擇要放置 列車 1 的車站。"))
 

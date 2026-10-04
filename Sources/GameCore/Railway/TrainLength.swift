@@ -10,14 +10,15 @@
 // decision 51).
 
 extension Train {
-    /// How far apart two cars' centres are, in logical units: a tile's
-    /// width.
-    public static let carLength: Int64 = TrainPosition.linkLength
+    /// How far apart two cars' centres are, in world units: 1024, 16 m.
+    /// A train's own measure since Stage S2 (it was a tile's width then;
+    /// Stage F3d keeps the number and drops the tie).
+    public static let carLength: Int64 = 1_024
     /// The fewest and the most cars a train may have.
     public static let minimumCars = 1
     public static let maximumCars = 16
 
-    /// The train's length, in logical units: from its first car's centre
+    /// The train's length, in world units: from its first car's centre
     /// to its last car's, ``carLength`` for each car after the first. 0 for
     /// a train of one car.
     public var length: Int64 {

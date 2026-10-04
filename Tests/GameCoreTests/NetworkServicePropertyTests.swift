@@ -471,8 +471,8 @@ final class NetworkServicePropertyTests: XCTestCase {
         testCase.note("\(layout.nodes.count) nodes, \(layout.edges.count) edges, level edges \(layout.level)")
         let costs = ConstructionCosts(track: 100, station: 1_000, train: 500)
         let minute = Int64(testCase.random.below(1_440))
-        var world = try GameWorld(width: 128, height: 16, economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
-        var model = ReferenceWorld(width: 128, height: 16, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 16_384), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
+        var model = ReferenceWorld(width: 131_072, height: 16_384, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
         for node in layout.nodes {
             _ = try world.buildTrackNode(at: node)
             XCTAssertNil(model.buildNetworkNode(at: node))

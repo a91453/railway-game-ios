@@ -51,3 +51,11 @@ Rules, as for the golden scenarios and the save fixtures:
 Stage F3c removes the grid from GameCore without changing any game
 behaviour. These files hold no grid command and no grid content, so they
 must replay unchanged across it.
+
+Stage F3d (ARCHITECTURE decision 54) makes the world its bounds in world
+units and measures fares between stations' points. The starting worlds here
+keep the `"map"` of tiles a world was saved with before save version 6;
+GameCore reads it as bounds of 1024 units a tile, and a checksum does not
+cover the bounds. Every station in these files stands at the centre of what
+was a tile, so its fares are the same. They replay unchanged and were not
+recorded again.

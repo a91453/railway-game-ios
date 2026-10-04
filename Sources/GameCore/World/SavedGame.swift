@@ -38,9 +38,17 @@
 ///    must list exactly its pairs too close, and a build that reads only
 ///    version 4 would drop the list and refuse those pairs on its next load,
 ///    so it says the save is newer than it instead.
+/// 6. The world's bounds (Stage F3d, ARCHITECTURE decision 54): the world
+///    is `"bounds": {"width", "height"}` in world units, no longer a
+///    `"map"` of tiles, and a train's movement no longer writes the grid's
+///    empty `"continuation"`. A version 5 world's map of `w × h` tiles is
+///    read as bounds `1024w × 1024h` units (every tile of it was empty
+///    ground), and an empty `"continuation"` is still read. A build that
+///    reads only version 5 would find no map in a version 6 world and call
+///    it damaged, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 5
+    public static let currentVersion = 6
 
     public let world: GameWorld
 
@@ -78,7 +86,10 @@ extension SavedGame: Codable {
         // either. Version 3 to 4: a version 3 world is a blank map, and a
         // world without `"geoAnchor"` is one. Version 4 to 5: the pairs of
         // edges a version 4 world has closer than the track spacing become
-        // its spacing exemptions. Later versions add their steps here.
+        // its spacing exemptions. Version 5 to 6: a world before version 6
+        // has its map of tiles, which the world reads as the bounds it
+        // covers, and its movements' empty continuations, which it reads
+        // and drops. Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
 

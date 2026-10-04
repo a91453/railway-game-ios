@@ -772,10 +772,10 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongNetworkExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 29,
+              "schemaVersion": 30,
               "description": "Deliberately wrong: expects another length and a way on from a dead end.",
               "initialState": {
-                "mapWidth": 2, "mapHeight": 1, "balance": 2000,
+                "worldWidth": 2048, "worldHeight": 1024, "balance": 2000,
                 "costs": { "track": 1000, "station": 50000, "train": 200000 },
                 "gameMinutes": 0, "speed": "paused"
               },
@@ -894,7 +894,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1179,7 +1179,7 @@ final class GoldenScenarioTests: XCTestCase {
         }
 
         let results: [(String, StepOutcome)] = [
-            (#"{"result": "outOfBounds", "x": 1, "y": -2}"#, .rejected(.outOfBounds(GridPosition(x: 1, y: -2)))),
+            (#"{"result": "outOfBounds", "x": 1, "y": -2}"#, .rejected(.outOfBounds(PlanPoint(x: 1, y: -2)))),
             (#"{"result": "unknownTrain", "train": 9}"#, .rejected(.unknownTrain(TrainID(rawValue: 9)))),
             (#"{"result": "trainAlreadyPlaced", "train": 1}"#, .rejected(.trainAlreadyPlaced(TrainID(rawValue: 1)))),
             (#"{"result": "trainNotPlaced", "train": 1}"#, .rejected(.trainNotPlaced(TrainID(rawValue: 1)))),

@@ -8,8 +8,8 @@ import GameCore
 // when shown; nothing is kept.
 
 extension TrackResource {
-    /// "Tile (3, 1)", "Link (3, 1)–(4, 1)", "Node #2", or for part of an
-    /// edge of the track network "Edge #4, 1024–2048".
+    /// "Node #2", or for part of an edge of the track network
+    /// "Edge #4, 1024–2048".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .node(let node):
@@ -53,7 +53,7 @@ extension GameWorld {
     }
 
     /// The track two trains or more occupy at once (``occupancyConflicts()``):
-    /// "T1 and T2 on tile (3, 1)"; "T1、T2 都在格 (3, 1)". Empty when none do.
+    /// "T1 and T2 on node #2"; "T1、T2 都在節點 #2". Empty when none do.
     public func occupancyConflictTexts(in language: DisplayLanguage) -> [String] {
         occupancyConflicts().map { conflict in
             let names = conflict.trains.map { train(id: $0)?.name ?? "#\($0.rawValue)" }

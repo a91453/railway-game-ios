@@ -29,7 +29,7 @@ final class EconomyTests: XCTestCase {
 final class CarPriceTests: XCTestCase {
     private func makeWorld(balance: Money, car: Money) throws -> (GameWorld, TrainID) {
         var world = try GameWorld(
-            width: 4, height: 2, economy: GameEconomy(balance: balance, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: car))
+            bounds: WorldBounds(width: 4_096, height: 2_048), economy: GameEconomy(balance: balance, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: car))
         )
         let train = try world.purchaseTrain(named: "T").id
         return (world, train)
@@ -64,7 +64,7 @@ final class CarPriceTests: XCTestCase {
     /// line cost more to run than the one train earns.
     private func makeCompanyInTheRed(car: Money) throws -> (GameWorld, TrainID) {
         var world = try GameWorld(
-            width: 8, height: 4,
+            bounds: WorldBounds(width: 8_192, height: 4_096),
             economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: car)),
             clock: GameClock(speed: .normal)
         )

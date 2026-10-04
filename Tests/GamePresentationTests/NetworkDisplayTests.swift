@@ -7,7 +7,7 @@ import XCTest
 final class NetworkDisplayTests: XCTestCase {
     /// A west–east edge of 2048 along row 1 and a three-car train on it.
     private func makeNetworkWorld() throws -> (GameWorld, TrackEdgeID, TrainID) {
-        var world = try makeWorld(width: 8, height: 6, balance: 100_000)
+        var world = try makeWorld(width: 8_192, height: 6_144, balance: 100_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 1_536))
         let c = try world.buildTrackNode(at: WorldCoordinate(x: 4_608, y: 1_536))
@@ -20,8 +20,8 @@ final class NetworkDisplayTests: XCTestCase {
     }
 
     func testWorldPointsAreDrawnATileFor1024Units() {
-        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 512), tileSize: 32) == (48, 16))
-        XCTAssertTrue(MapScale.center(of: WorldCoordinate(centreOf: GridPosition(x: 3, y: 2)), tileSize: 32) == (112, 80), "a tile's centre")
+        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 512), referenceSize: 32) == (48, 16))
+        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 3_584, y: 2_560), referenceSize: 32) == (112, 80), "a tile's centre")
     }
 
     func testTrainsOnTheNetworkAreDrawnWhereGameCoreHasThem() throws {
@@ -29,20 +29,20 @@ final class NetworkDisplayTests: XCTestCase {
         let train = try XCTUnwrap(world.train(id: id))
         let position = try XCTUnwrap(train.position)
         // 1024 along B–C: (3584, 1536), a tile of 32 points for 1024 units.
-        XCTAssertTrue(MapScale.center(of: position, in: world, tileSize: 32) == (112, 48))
+        XCTAssertTrue(MapScale.center(of: position, in: world, referenceSize: 32) == (112, 48))
         XCTAssertTrue(MapScale.facing(of: position, in: world) == (1, 0))
         // Head, B, then the tail 1024 back along A–B.
-        let points = MapScale.bodyPoints(of: train, in: world, tileSize: 32)
+        let points = MapScale.bodyPoints(of: train, in: world, referenceSize: 32)
         XCTAssertEqual(points.map(\.x), [112, 80, 48])
         XCTAssertEqual(points.map(\.y), [48, 48, 48])
         XCTAssertEqual(train.trailEdges, [ab])
         // Without the world there is nothing to place it by.
-        XCTAssertTrue(MapScale.center(of: position, tileSize: 32) == (0, 0))
+        XCTAssertTrue(MapScale.center(of: position, referenceSize: 32) == (0, 0))
         XCTAssertTrue(MapScale.facing(of: position) == (1, 0))
     }
 
     func testTrainsOffTheGroundAreDrawnWhereTheyAreSeenFromAbove() throws {
-        var world = try makeWorld(width: 8, height: 6, balance: 1_000_000)
+        var world = try makeWorld(width: 8_192, height: 6_144, balance: 1_000_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536, z: 512))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 6_656, y: 1_536, z: 512))
         let viaduct = try world.buildTrackEdge(from: a, to: b, structure: .elevated)
@@ -50,8 +50,8 @@ final class NetworkDisplayTests: XCTestCase {
         try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: viaduct, direction: .forward), offset: 1_024))
         let position = try XCTUnwrap(world.train(id: train.id)?.position)
         // Height does not move a point seen from above.
-        XCTAssertTrue(MapScale.center(of: position, in: world, tileSize: 32) == (48, 48))
-        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 1_536, z: 512), tileSize: 32) == (48, 48))
+        XCTAssertTrue(MapScale.center(of: position, in: world, referenceSize: 32) == (48, 48))
+        XCTAssertTrue(MapScale.center(of: WorldCoordinate(x: 1_536, y: 1_536, z: 512), referenceSize: 32) == (48, 48))
     }
 
     func testNetworkPositionsAndRefusalsReadInWords() throws {

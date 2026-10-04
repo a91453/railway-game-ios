@@ -2,7 +2,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Stage M, differentially: generated sequences of UI actions (tiles,
+/// Stage M, differentially: generated sequences of UI actions (map taps,
 /// stations, tools, trains, headings, rates, sends, reversing, taking off,
 /// time passing) drive a `GameSession`, while a shadow `GameWorld` receives the
 /// GameCore commands each action stands for. After every action the two
@@ -65,7 +65,7 @@ final class TrainSessionPropertyTests: XCTestCase {
     }
 
     private enum Action: CustomStringConvertible {
-        case select(GridPosition)
+        case tap(PlanPoint)
         case selectStation(StationID)
         case clearSelection
         case selectTool(ConstructionTool)
@@ -84,7 +84,7 @@ final class TrainSessionPropertyTests: XCTestCase {
 
         var description: String {
             switch self {
-            case .select(let tile): "select \(tile)"
+            case .tap(let point): "tap (\(point.x), \(point.y))"
             case .selectStation(let id): "select station \(id.rawValue)"
             case .clearSelection: "clear selection"
             case .selectTool(let tool): "tool \(tool)"
@@ -106,7 +106,10 @@ final class TrainSessionPropertyTests: XCTestCase {
 
     private static func nextAction(_ random: inout Random, trains: Int) -> Action {
         switch random.below(100) {
-        case 0..<8: return .select(GridPosition(x: random.below(10) - 1, y: random.below(8) - 1))
+        case 0..<8:
+            // Inside the world and just outside it, a tap on 1024-unit steps.
+            let x = Int64(random.below(10) - 1), y = Int64(random.below(8) - 1)
+            return .tap(PlanPoint(x: x * 1_024 + 512, y: y * 1_024 + 512))
         case 8..<14: return .selectStation(StationID(rawValue: 1 + random.below(4)))
         case 14..<16: return .clearSelection
         case 16..<22: return .selectTool(random.element(of: ConstructionTool.allCases))
@@ -166,7 +169,7 @@ final class TrainSessionPropertyTests: XCTestCase {
             try? shadow.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
         }
         switch action {
-        case .select, .selectStation, .clearSelection, .selectTool, .selectTrain, .heading:
+        case .tap, .selectStation, .clearSelection, .selectTool, .selectTrain, .heading:
             return
         case .purchase:
             _ = try? shadow.purchaseTrain(named: "Train \(shadow.trains.count + 1)")
@@ -177,7 +180,7 @@ final class TrainSessionPropertyTests: XCTestCase {
         case .send:
             send()
         case .applyTool:
-            guard session.selection != nil else { return }
+            guard session.selectedPoint != nil else { return }
             switch session.tool {
             case .select, .network: return
             case .train:
@@ -197,7 +200,7 @@ final class TrainSessionPropertyTests: XCTestCase {
     @MainActor
     private static func perform(_ action: Action, on session: GameSession) {
         switch action {
-        case .select(let tile): session.select(tile)
+        case .tap(let point): session.tapMap(at: point, reach: 512)
         case .selectStation(let id): session.selectStation(id)
         case .clearSelection: session.clearSelection()
         case .selectTool(let tool): session.selectTool(tool)
@@ -242,7 +245,7 @@ final class TrainSessionPropertyTests: XCTestCase {
                 problems.append("selectedTrain is not the world's train")
             }
             if session.selectedTrainRate != (session.selectedTrain?.movement.rate ?? 0) { problems.append("the bound rate is not GameCore's") }
-            if let tile = session.selection, !session.world.map.contains(tile) { problems.append("selection \(tile) left the map") }
+            if let point = session.selectedPoint, !session.world.bounds.contains(point) { problems.append("selection \(point) left the world") }
             for train in session.world.trains {
                 if let position = train.position {
                     var onTrack = false

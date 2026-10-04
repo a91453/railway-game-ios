@@ -40,7 +40,7 @@ final class TrainRepeatTests: XCTestCase {
 
     private func makeLineWorld(minute: Int64 = 0) throws -> GameWorld {
         var world = try GameWorld(
-            width: 8, height: 4,
+            bounds: WorldBounds(width: 8_192, height: 4_096),
             economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )

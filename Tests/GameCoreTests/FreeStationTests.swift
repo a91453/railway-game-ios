@@ -2,39 +2,37 @@ import Foundation
 import GameCore
 import XCTest
 
-/// Stage F1: stations built at a point of the world, taking no tile. They
+/// Stage F1: stations built at a point of the world. They
 /// have platforms only on the track network, and stops, paths, lines and
 /// passengers treat them as any other station.
 final class FreeStationTests: XCTestCase {
     private let e1 = TrackEdgeID.edge(1)
 
-    func testAStationAtAPointTakesNoTile() throws {
-        var world = try makeWorld(width: 8, height: 4)
-        // Two stations over the same tile, (2, 1).
+    func testAStationKeepsItsExactPoint() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096)
+        // Two stations the grid once put on one tile, (2, 1).
         let central = try world.buildStation(named: "Central", at: PlanPoint(x: 2_600, y: 1_100))
         let annex = try world.buildStation(named: "Annex", at: PlanPoint(x: 2_100, y: 1_500))
         XCTAssertEqual(central, Station(id: StationID(rawValue: 1), name: "Central", point: PlanPoint(x: 2_600, y: 1_100)))
-        XCTAssertEqual(central.position, GridPosition(x: 2, y: 1), "the tile under the point")
         XCTAssertEqual(central.location, PlanPoint(x: 2_600, y: 1_100))
         XCTAssertEqual(annex.id, StationID(rawValue: 2))
         XCTAssertEqual(world.economy.balance, Money(10_000 - 2 * 1_000))
-        XCTAssertEqual(world.map.tile(at: GridPosition(x: 2, y: 1))?.type, .empty, "the land is unchanged")
         XCTAssertEqual(world.trackPlatforms(of: central.id), [], "no platform until the network gives it one")
     }
 
     func testAStationAtAPointIsRefusedOffTheMapAndWithoutAName() throws {
-        var world = try makeWorld(width: 8, height: 4)
+        var world = try makeWorld(width: 8_192, height: 4_096)
         let before = world
         XCTAssertThrowsGameError(try world.buildStation(named: " ", at: PlanPoint(x: -5, y: 0)), .invalidName)
-        XCTAssertThrowsGameError(try world.buildStation(named: "East", at: PlanPoint(x: 8_192, y: 0)), .outOfBounds(GridPosition(x: 8, y: 0)))
-        XCTAssertThrowsGameError(try world.buildStation(named: "South", at: PlanPoint(x: 0, y: 4_096)), .outOfBounds(GridPosition(x: 0, y: 4)))
-        XCTAssertThrowsGameError(try world.buildStation(named: "West", at: PlanPoint(x: -1, y: 0)), .outOfBounds(GridPosition(x: -1, y: 0)))
-        XCTAssertThrowsGameError(try world.buildStation(named: "North", at: PlanPoint(x: 0, y: -1_025)), .outOfBounds(GridPosition(x: 0, y: -2)))
+        XCTAssertThrowsGameError(try world.buildStation(named: "East", at: PlanPoint(x: 8_192, y: 0)), .outOfBounds(PlanPoint(x: 8_192, y: 0)))
+        XCTAssertThrowsGameError(try world.buildStation(named: "South", at: PlanPoint(x: 0, y: 4_096)), .outOfBounds(PlanPoint(x: 0, y: 4_096)))
+        XCTAssertThrowsGameError(try world.buildStation(named: "West", at: PlanPoint(x: -1, y: 0)), .outOfBounds(PlanPoint(x: -1, y: 0)))
+        XCTAssertThrowsGameError(try world.buildStation(named: "North", at: PlanPoint(x: 0, y: -1_025)), .outOfBounds(PlanPoint(x: 0, y: -1_025)))
         XCTAssertEqual(world, before)
         // The last unit inside the map is on it.
         XCTAssertNoThrow(try world.buildStation(named: "Corner", at: PlanPoint(x: 8_191, y: 4_095)))
 
-        var poor = try makeWorld(width: 8, height: 4, balance: 999)
+        var poor = try makeWorld(width: 8_192, height: 4_096, balance: 999)
         let unchanged = poor
         XCTAssertThrowsGameError(
             try poor.buildStation(named: "Dear", at: PlanPoint(x: 0, y: 0)),
@@ -46,7 +44,7 @@ final class FreeStationTests: XCTestCase {
     /// The nearest station by location, the lowest ID of equally near ones,
     /// and none beyond reach.
     func testTheNearestStationIsFoundByItsLocation() throws {
-        var world = try makeWorld(width: 8, height: 4)
+        var world = try makeWorld(width: 8_192, height: 4_096)
         try world.buildStation(named: "Point", at: PlanPoint(x: 2_048, y: 512))
         try world.buildStation(named: "Twin", at: PlanPoint(x: 2_048, y: 1_536))
         XCTAssertEqual(world.station(near: PlanPoint(x: 2_048, y: 600), within: 100)?.name, "Point")
@@ -62,7 +60,7 @@ final class FreeStationTests: XCTestCase {
     /// a path ends at the far end of its platform, a train stops there, and
     /// a line between two such stations carries passengers.
     func testAStationAtAPointIsServedOnTheNetwork() throws {
-        var world = try makeWorld(width: 16, height: 4, balance: 100_000)
+        var world = try makeWorld(width: 16_384, height: 4_096, balance: 100_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 1_024))
         try world.buildTrackEdge(from: a, to: b)
@@ -86,7 +84,7 @@ final class FreeStationTests: XCTestCase {
     }
 
     func testAStationAtAPointIsSavedAsItsPoint() throws {
-        var world = try makeWorld(width: 8, height: 4)
+        var world = try makeWorld(width: 8_192, height: 4_096)
         try world.buildStation(named: "Point", at: PlanPoint(x: 2_600, y: 1_100))
         let data = try JSONEncoder().encode(world)
         let stations = try XCTUnwrap((try JSONSerialization.jsonObject(with: data) as? [String: Any])?["stations"] as? [[String: Any]])
@@ -110,12 +108,12 @@ final class FreeStationTests: XCTestCase {
         XCTAssertThrowsError(try decodeStation(#"{"id": 3, "name": "P"}"#), "neither")
 
         // On the world: the point must lie on its map.
-        var world = try makeWorld(width: 8, height: 4)
+        var world = try makeWorld(width: 8_192, height: 4_096)
         try world.buildStation(named: "Point", at: PlanPoint(x: 8_000, y: 100))
         let data = try JSONEncoder().encode(world)
         let text = try XCTUnwrap(String(data: data, encoding: .utf8))
         let moved = text.replacingOccurrences(of: #""x":8000"#, with: #""x":8192"#)
         XCTAssertNotEqual(moved, text)
-        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(moved.utf8)), "off an 8-tile map")
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(moved.utf8)), "off a world 8192 units wide")
     }
 }

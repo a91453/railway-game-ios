@@ -35,7 +35,7 @@ final class BoardingTests: XCTestCase {
 
     private func makeWorld(cars: Int = 1) throws -> GameWorld {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         try line.build(in: &world)

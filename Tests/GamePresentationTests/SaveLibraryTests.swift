@@ -72,7 +72,7 @@ final class SaveLibraryTests: XCTestCase {
         try write("other-app.json", good.replacingOccurrences(of: #""app":"RailwayGame""#, with: #""app":"Other""#))
         let newer = SavedGame.currentVersion + 1
         try write("newer.json", good.replacingOccurrences(of: #""saveVersion":\#(SavedGame.currentVersion)"#, with: #""saveVersion":\#(newer)"#))
-        try write("damaged.json", good.replacingOccurrences(of: #""width":\#(GameWorld.newGame().map.width)"#, with: #""width":-1"#))
+        try write("damaged.json", good.replacingOccurrences(of: #""width":\#(GameWorld.newGame().bounds.width)"#, with: #""width":-1"#))
         try write("notes.txt", "ignored")
         let entries = Dictionary(uniqueKeysWithValues: library.entries().map { ($0.id, $0) })
         XCTAssertEqual(Set(entries.keys), ["garbage.json", "other-app.json", "newer.json", "damaged.json"])

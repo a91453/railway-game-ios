@@ -18,7 +18,8 @@ struct TestLine {
     let tiles: Int
     var row = 1
 
-    static let tile = WorldCoordinate.tileSize
+    // The test layout's spacing: 1024 units, 16 m (the world has no cells).
+    static let tile = Int64(1_024)
 
     /// The node at column `x`.
     func node(_ x: Int) -> TrackNodeID { .node(x + 1) }

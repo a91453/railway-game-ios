@@ -48,7 +48,7 @@ final class ServiceLineTests: XCTestCase {
     private let unknown = LineID(rawValue: 9)
 
     private func makeLineWorld() throws -> GameWorld {
-        var world = try GameWorld(width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
         try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
@@ -88,7 +88,7 @@ final class ServiceLineTests: XCTestCase {
         XCTAssertEqual(world.economy, before.economy, "lines are free")
         XCTAssertEqual(world.trains, before.trains)
         XCTAssertEqual(world.stations, before.stations)
-        XCTAssertEqual(world.map, before.map)
+        XCTAssertEqual(world.bounds, before.bounds)
 
         // A station may come back later, just not twice in a row.
         let loop = try world.createLine(named: "Loop", stops: [alpha, beta, alpha, gamma])

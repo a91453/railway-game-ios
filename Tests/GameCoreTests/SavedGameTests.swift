@@ -5,12 +5,14 @@ import XCTest
 /// Stage C4: the versioned save. Version 1 is the world's `Codable` form;
 /// version 2 (Stage E1) writes only the map's occupied tiles; version 3
 /// (decision 49) can hold ring lines; version 4 (Stage E2) a real-world
-/// map's anchor. Unknown versions are refused, and
-/// every committed save in `SaveFixtures/` keeps loading (see its README).
+/// map's anchor; version 5 (Stage F2) the spacing exemptions; version 6
+/// (Stage F3d) the world's bounds in world units instead of a map of tiles.
+/// Unknown versions are refused, and every committed save in
+/// `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private func makeWorld() throws -> GameWorld {
         var world = try GameWorld(
-            width: 16, height: 8, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 3_072))
@@ -30,8 +32,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 5)
-        XCTAssertEqual(SavedGame.currentVersion, 5)
+        XCTAssertEqual(object["saveVersion"] as? Int, 6)
+        XCTAssertEqual(SavedGame.currentVersion, 6)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -48,7 +50,8 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 3, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 4, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 5, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 6, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 7, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -57,33 +60,94 @@ final class SavedGameTests: XCTestCase {
         XCTAssertThrowsError(try decode(#"{"saveVersion": 1, "world": {}}"#), "GameCore refuses the world")
     }
 
-    /// Version 2 (Stage E1): the map is its size and the tiles that are not
-    /// empty ground, each with its position, in row-major order: none since
-    /// Stage F3c, when the grid's track and tile stations went. The form
-    /// before it, every tile written out, still reads into the same world.
-    func testTheMapIsSavedAsItsOccupiedTiles() throws {
-        let world = try makeWorld()
+    /// Version 6 (Stage F3d): the world is saved as its bounds in world
+    /// units, with no map of tiles, and a train's movement no longer writes
+    /// the grid's empty path. The forms before it, the map as its occupied
+    /// tiles (version 2) and with every tile written out (version 1), still
+    /// read into the same world, at 1024 units a tile.
+    func testTheWorldIsSavedAsItsBoundsInWorldUnits() throws {
+        var world = try makeWorld()
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 2_048))
+        try world.setTrainMovementRate(train, to: 64)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
-        let map = try XCTUnwrap(object["map"] as? [String: Any])
-        XCTAssertEqual(Set(map.keys), ["width", "height", "occupied"])
-        XCTAssertEqual(map["width"] as? Int, 16)
-        XCTAssertEqual(map["height"] as? Int, 8)
-        XCTAssertEqual((map["occupied"] as? [Any])?.count, 0)
+        XCTAssertNil(object["map"])
+        let bounds = try XCTUnwrap(object["bounds"] as? [String: Any])
+        XCTAssertEqual(bounds as? [String: Int], ["width": 16_384, "height": 8_192])
+        let movement = try XCTUnwrap((object["trains"] as? [[String: Any]])?.first?["movement"] as? [String: Any])
+        XCTAssertNil(movement["continuation"], "the grid's path is no longer written")
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(Self.replacingMap(of: world, with: Self.denseMap(of: world)).utf8)), world)
+        XCTAssertEqual(
+            try JSONDecoder().decode(GameWorld.self, from: Data(Self.replacingMap(of: world, with: #"{"width":16,"height":8,"occupied":[]}"#).utf8)),
+            world
+        )
+    }
+
+    /// Stage F3d's step from version 5: a world's map of `w × h` tiles is
+    /// read as bounds `1024w × 1024h` units, whatever version says so, and
+    /// a movement's empty `"continuation"` is read and dropped. A node or a
+    /// station the map would not have held is refused as before.
+    func testAMapOfTilesMigratesToBoundsAtTheTilesWidth() throws {
+        let world = try makeWorld()
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        object["bounds"] = nil
+        func load(width: Int, height: Int, version: Int = 5) throws -> GameWorld {
+            var old = object
+            old["map"] = ["width": width, "height": height, "occupied": [Any]()]
+            let save = try JSONSerialization.data(withJSONObject: ["saveVersion": version, "world": old])
+            return try JSONDecoder().decode(SavedGame.self, from: save).world
+        }
+        for version in 1...6 {
+            XCTAssertEqual(try load(width: 16, height: 8, version: version), world, "version \(version)")
+        }
+        XCTAssertEqual(try load(width: 1_024, height: 1_024).bounds, .maximum)
+        XCTAssertEqual(try load(width: 1_024, height: 9).bounds, try WorldBounds(width: 1_048_576, height: 9_216))
+        XCTAssertEqual(try load(width: 10, height: 5).bounds, try WorldBounds(width: 10_240, height: 5_120), "the last node, at x 9216, and East, at y 4608, inside")
+        // The line's last node, at x 9216, lies outside a map 9 tiles wide,
+        // and East's point, at y 4608, outside one 4 tiles high.
+        XCTAssertThrowsError(try load(width: 9, height: 5))
+        XCTAssertThrowsError(try load(width: 10, height: 4))
+        XCTAssertThrowsError(try load(width: 1_025, height: 8), "a map larger than any build wrote")
+
+        // A version 6 save of the migrated world writes its bounds.
+        let migrated = try load(width: 16, height: 8)
+        let saved = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: migrated))) as? [String: Any])
+        XCTAssertEqual(saved["saveVersion"] as? Int, 6)
+        let savedWorld = try XCTUnwrap(saved["world"] as? [String: Any])
+        XCTAssertNil(savedWorld["map"])
+        XCTAssertEqual(savedWorld["bounds"] as? [String: Int], ["width": 16_384, "height": 8_192])
+    }
+
+    /// A world gives its bounds or its legacy map, exactly one of them.
+    func testAWorldNeedsItsBoundsOrItsMapButNotBoth() throws {
+        let world = try makeWorld()
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        func load(_ change: (inout [String: Any]) -> Void) -> GameWorld? {
+            var changed = object
+            change(&changed)
+            return try? JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: changed))
+        }
+        XCTAssertEqual(load { _ in }, world)
+        XCTAssertNil(load { $0["bounds"] = nil }, "neither")
+        XCTAssertNil(load { $0["map"] = ["width": 16, "height": 8, "occupied": [Any]()] }, "both")
+        XCTAssertNil(load { $0["bounds"] = ["width": 16_384, "height": 0] }, "no height")
+        XCTAssertNil(load { $0["bounds"] = ["width": 1_048_577, "height": 8_192] }, "too wide")
+        XCTAssertNil(load { $0["bounds"] = ["width": 9_215, "height": 8_192] }, "the line's last node, at x 9216, outside")
+        XCTAssertEqual(load { $0["bounds"] = ["width": 9_217, "height": 4_609] }?.bounds, try WorldBounds(width: 9_217, height: 4_609), "a unit beyond the last node and East")
     }
 
     /// A new game's 16 km map (Stage E1) saves in a few hundred bytes: the
     /// map that wrote every tile made it 13 MB.
     func testALargeMapSavesOnlyWhatStandsOnIt() throws {
-        var world = try GameWorld(width: 1_024, height: 1_024, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 1_048_576, height: 1_048_576), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
         try world.buildStation(named: "Far", at: PlanPoint(x: 1_024_512, y: 1_044_992))
         let data = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertLessThan(data.count, 1_000)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
     }
 
-    func testMalformedMapsAreRefused() throws {
+    func testMalformedLegacyMapsAreRefused() throws {
         let world = try makeWorld()
         func load(_ map: String) -> GameWorld? {
             try? JSONDecoder().decode(GameWorld.self, from: Data(Self.replacingMap(of: world, with: map).utf8))
@@ -143,10 +207,11 @@ final class SavedGameTests: XCTestCase {
         var movement = (saved["trains"] as! [[String: Any]])[0]["movement"] as? [String: Any] ?? ["rate": 0, "cursor": 0]
         movement["continuation"] = [tile]
         let changes: [(String, (inout [String: Any]) -> Void)] = [
-            ("grid track on the map", { $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 1, "y": 1, "tile": ["track": ["connections": 10]]]]] }),
-            ("a station on a tile of the map", { $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 7, "y": 4, "tile": ["station": ["id": 2]]]]] }),
+            ("grid track on the map", { $0["bounds"] = nil; $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 1, "y": 1, "tile": ["track": ["connections": 10]]]]] }),
+            ("a station on a tile of the map", { $0["bounds"] = nil; $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 7, "y": 4, "tile": ["station": ["id": 2]]]]] }),
             ("a turnout in the old form of the map", { object in
                 let tiles = (0..<(16 * 8)).map { $0 == 9 ? ["turnout": ["connections": 11, "stem": 1]] : ["empty": [String: Any]()] }
+                object["bounds"] = nil
                 object["map"] = ["width": 16, "height": 8, "tiles": tiles]
             }),
             ("a station on tiles", changingStation { $0["position"] = ["x": 7, "y": 4]; $0["point"] = nil }),
@@ -165,20 +230,24 @@ final class SavedGameTests: XCTestCase {
         }
         XCTAssertNil(refusal { _ in }, "the save as written loads")
         XCTAssertNil(refusal(changingTrain("trail", to: [Any]())), "an empty body on the grid is no body")
+        movement["continuation"] = [Any]()
+        XCTAssertNil(refusal(changingTrain("movement", to: movement)), "an empty path on the grid, as saves before version 6 wrote it")
     }
 
-    /// `world`'s JSON with its map replaced by `map`.
+    /// `world`'s JSON with its bounds replaced by the legacy `map`.
     private static func replacingMap(of world: GameWorld, with map: String) throws -> String {
         var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        object["bounds"] = nil
         object["map"] = try JSONSerialization.jsonObject(with: Data(map.utf8))
         return String(decoding: try JSONSerialization.data(withJSONObject: object), as: UTF8.self)
     }
 
-    /// `world`'s map with every tile written out, as saves of version 1
-    /// wrote it: every tile empty ground.
+    /// `world`'s bounds as a map of 1024-unit tiles with every tile written
+    /// out, as saves of version 1 wrote it: every tile empty ground.
     private static func denseMap(of world: GameWorld) throws -> String {
-        let tiles = Array(repeating: #"{"empty":{}}"#, count: world.map.width * world.map.height)
-        return #"{"width":\#(world.map.width),"height":\#(world.map.height),"tiles":[\#(tiles.joined(separator: ","))]}"#
+        let (width, height) = (Int(world.bounds.width / 1_024), Int(world.bounds.height / 1_024))
+        let tiles = Array(repeating: #"{"empty":{}}"#, count: width * height)
+        return #"{"width":\#(width),"height":\#(height),"tiles":[\#(tiles.joined(separator: ","))]}"#
     }
 
     /// Every committed save of every version still loads, round-trips and
@@ -227,7 +296,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual((map["occupied"] as? [Any])?.count, 0)
 
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world.map.width, 1_024)
+        XCTAssertEqual(world.bounds, .maximum, "1024 tiles of 1024 units a side")
         XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertEqual(world.stations[1].point, PlanPoint(x: 524_288, y: 524_288))
@@ -277,7 +346,7 @@ final class SavedGameTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world.geoAnchor, GeoAnchor(latitude: 250_479_308, longitude: 1_215_170_046))
         XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
-        XCTAssertEqual(world.map.width, 1_024)
+        XCTAssertEqual(world.bounds, .maximum)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
         XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
@@ -292,8 +361,8 @@ final class SavedGameTests: XCTestCase {
 
     /// A version 4 save with a siding 192 (3 m) beside Line 1 (Stage F2,
     /// ARCHITECTURE decision 52): the version 4 build allowed it. It loads
-    /// with that pair exempt, and saving it again gives the version 5 save
-    /// byte for byte.
+    /// with that pair exempt, and saving it again gives the version 6 save
+    /// byte for byte (the version 5 build gave the version 5 save).
     func testTheVersionFourSidingSaveKeepsItsSiding() throws {
         let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v4-demo-siding-90-minutes.json"))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -312,8 +381,8 @@ final class SavedGameTests: XCTestCase {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let five = try Data(contentsOf: Self.fixtures.appendingPathComponent("v5-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), five)
+        let six = try Data(contentsOf: Self.fixtures.appendingPathComponent("v6-demo-siding-90-minutes.json"))
+        XCTAssertEqual(try encoder.encode(game), six)
     }
 
     /// The version 5 save (Stage F2): the same game, listing the siding and
@@ -329,6 +398,31 @@ final class SavedGameTests: XCTestCase {
         let four = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v4-demo-siding-90-minutes.json"))).world
         XCTAssertEqual(world, four)
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
+    }
+
+    /// The version 6 save (Stage F3d): the version 5 save read by the
+    /// Stage F3d build and saved again. Its world is `"bounds"` of 2^20
+    /// units a side, the version 5 map of 1024 tiles; it has no `"map"`, and
+    /// no movement writes `"continuation"`. It is the same world, and saving
+    /// it again gives it byte for byte.
+    func testTheVersionSixSaveReadsAsItWasWritten() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v6-demo-siding-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 6)
+        let saved = try XCTUnwrap(object["world"] as? [String: Any])
+        XCTAssertNil(saved["map"])
+        XCTAssertEqual(saved["bounds"] as? [String: Int], ["width": 1_048_576, "height": 1_048_576])
+        let movements = try XCTUnwrap(saved["trains"] as? [[String: Any]]).compactMap { $0["movement"] as? [String: Any] }
+        XCTAssertFalse(movements.isEmpty)
+        XCTAssertTrue(movements.allSatisfy { $0["continuation"] == nil })
+
+        let game = try JSONDecoder().decode(SavedGame.self, from: data)
+        let five = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v5-demo-siding-90-minutes.json"))).world
+        XCTAssertEqual(game.world, five)
+        XCTAssertEqual(game.world.bounds, .maximum)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        XCTAssertEqual(try encoder.encode(game), data)
     }
 
     /// `SaveFixtures/` at the repository root, found from this source file.

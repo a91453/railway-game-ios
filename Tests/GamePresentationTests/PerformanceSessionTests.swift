@@ -17,7 +17,7 @@ final class PerformanceSessionTests: XCTestCase {
     /// `LineSessionTests`.
     private func makeLineWorld() throws -> GameWorld {
         var world = try GameWorld(
-            width: 9, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 9_216, height: 2_048), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 480), speed: .normal)
         )
         let line = TestLine(tiles: 9, row: 1)

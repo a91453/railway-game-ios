@@ -29,7 +29,7 @@ final class LineSessionTests: XCTestCase {
 
     private static func makeStationWorld(minute: Int64 = 480) throws -> GameWorld {
         var world = try GameWorld(
-            width: 9, height: 2, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 9_216, height: 2_048), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minute), speed: .normal)
         )
         try Self.line.build(in: &world)
@@ -196,10 +196,10 @@ final class LineSessionTests: XCTestCase {
 
             session.addSelectedStationToLineDraft()
             XCTAssertEqual(session.message?.kind, .failure, "nothing selected")
-            session.select(GridPosition(x: 2, y: 1))
+            session.tapMap(at: PlanPoint(x: 2_560, y: 1_536), reach: 0)
             session.addSelectedStationToLineDraft()
             XCTAssertEqual(session.message?.text, "Select a station on the map to add it to the new line.")
-            session.select(GridPosition(x: 1, y: 0))
+            session.selectStation(Self.stationA)
             session.addSelectedStationToLineDraft()
             session.addSelectedStationToLineDraft()
             XCTAssertEqual(session.message?.kind, .failure, "the same station twice in a row")
@@ -211,7 +211,7 @@ final class LineSessionTests: XCTestCase {
             XCTAssertEqual(session.world, start)
             XCTAssertEqual(session.lineDraft, [Self.stationA])
 
-            session.select(GridPosition(x: 5, y: 0))
+            session.selectStation(Self.stationC)
             session.addSelectedStationToLineDraft()
             session.createLineFromDraft()
             var expected = start

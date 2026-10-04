@@ -11,7 +11,7 @@ final class StationDemandSessionTests: XCTestCase {
     func testAPresetGivesTheDefaultTripsAndKeepsTheStationsOwnAfterwards() async throws {
         try await MainActor.run {
             let session = GameSession(world: try makeStations())
-            session.selectedStationDemandKind(.residential, at: GridPosition(x: 1, y: 0))
+            session.selectedStationDemandKind(.residential, at: alpha)
             XCTAssertEqual(session.world.stationDemand(of: alpha), StationDemand(kind: .residential, dailyTrips: 10_000))
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Alpha: Residential · 10,000 trips a day."))
 
@@ -30,7 +30,7 @@ final class StationDemandSessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Choose what kind of place Alpha serves first."))
             XCTAssertNil(session.world.stationDemand(of: alpha))
 
-            session.select(GridPosition(x: 0, y: 3))
+            session.tapMap(at: PlanPoint(x: 512, y: 3_584), reach: 0)
             session.setSelectedStationDemandKind(.scenic)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select a station on the map first."))
         }
@@ -98,23 +98,23 @@ final class StationDemandSessionTests: XCTestCase {
             try world.setStationDemand(beta, to: StationDemand(kind: .residential, dailyTrips: 7_000))
             let session = GameSession(world: world)
 
-            session.select(GridPosition(x: 5, y: 0))
+            session.selectStation(gamma)
             session.pasteDemandToSelectedStation()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Copy a station's ridership first."))
             session.copySelectedStationDemand()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Gamma has no ridership to copy."))
             XCTAssertNil(session.demandClipboard)
 
-            session.select(GridPosition(x: 1, y: 0))
+            session.selectStation(alpha)
             session.copySelectedStationDemand()
             XCTAssertEqual(session.demandClipboard, StationDemand(kind: .office, dailyTrips: 2_000))
             XCTAssertEqual(session.message?.text, "Copied Alpha's ridership: Office · 2,000 trips a day.")
             XCTAssertEqual(session.world, world, "copying never changes the world")
 
-            session.select(GridPosition(x: 3, y: 0))
+            session.selectStation(beta)
             session.pasteDemandToSelectedStation()
             XCTAssertEqual(session.world.stationDemand(of: beta), StationDemand(kind: .office, dailyTrips: 7_000), "Beta keeps its total")
-            session.select(GridPosition(x: 5, y: 0))
+            session.selectStation(gamma)
             session.pasteDemandToSelectedStation()
             XCTAssertEqual(session.world.stationDemand(of: gamma), StationDemand(kind: .office, dailyTrips: 2_000), "Gamma had none")
         }
@@ -129,14 +129,14 @@ final class StationDemandSessionTests: XCTestCase {
             try world.setStationDemand(gamma, to: StationDemand(kind: .residential, dailyTrips: 9_000))
             let session = GameSession(world: world)
 
-            session.select(GridPosition(x: 7, y: 0))
+            session.selectStation(delta)
             session.applySelectedStationDemandToItsLines()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Delta has no ridership to apply."))
             session.setSelectedStationDemandKind(.scenic)
             session.applySelectedStationDemandToItsLines()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "No line calls at Delta."))
 
-            session.select(GridPosition(x: 3, y: 0))
+            session.selectStation(beta)
             session.applySelectedStationDemandToItsLines()
             XCTAssertEqual(session.message?.text, "Applied shopping to 2 lines, 3 stations.")
             XCTAssertEqual(session.world.stationDemand(of: alpha), StationDemand(kind: .shopping, dailyTrips: 3_000), "Alpha had none")
@@ -150,7 +150,7 @@ final class StationDemandSessionTests: XCTestCase {
             XCTAssertEqual(session.world, direct, "the same commands applied to GameCore directly")
 
             let chinese = GameSession(world: world, language: .traditionalChinese)
-            chinese.select(GridPosition(x: 3, y: 0))
+            chinese.selectStation(beta)
             chinese.applySelectedStationDemandToItsLines()
             XCTAssertEqual(chinese.message?.text, "已套用購物中心到 2 條路線，共 3 座車站。")
         }
@@ -216,8 +216,8 @@ final class StationDemandSessionTests: XCTestCase {
 }
 
 private extension GameSession {
-    func selectedStationDemandKind(_ kind: StationDemandKind, at position: GridPosition) {
-        select(position)
+    func selectedStationDemandKind(_ kind: StationDemandKind, at station: StationID) {
+        selectStation(station)
         setSelectedStationDemandKind(kind)
     }
 }
@@ -229,7 +229,7 @@ private let delta = StationID(rawValue: 4)
 
 /// Alpha (1,0), Beta (3,0), Gamma (5,0) and Delta (7,0), no track.
 private func makeStations() throws -> GameWorld {
-    var world = try makeWorld(width: 8, height: 4, balance: 100_000)
+    var world = try makeWorld(width: 8_192, height: 4_096, balance: 100_000)
     for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
         try world.buildStation(named: name, at: TestLine.centre(x, 0))
     }

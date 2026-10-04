@@ -14,7 +14,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
     private static let c = PlanPoint(x: 10_240, y: 4_096)
 
     private func makeNetworkWorld(balance: Money = 1_000_000) throws -> GameWorld {
-        try makeWorld(width: 16, height: 8, balance: balance, speed: .paused)
+        try makeWorld(width: 16_384, height: 8_192, balance: balance, speed: .paused)
     }
 
     // MARK: - Curves
@@ -246,7 +246,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
     /// at each end; the middle is steeper (4/3 of 512 over 16,384: 42‰),
     /// so it needs a longer stretch.
     func testEasingTheGradeAddsVerticalCurvesAtBothEnds() async throws {
-        var world = try makeWorld(width: 24, height: 8, balance: 10_000_000)
+        var world = try makeWorld(width: 24_576, height: 8_192, balance: 10_000_000)
         let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
         await MainActor.run { [world] in
             let session = GameSession(world: world)
@@ -353,7 +353,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
                 let session = GameSession(world: world)
                 session.selectTool(.train)
                 session.setPlacementHeading(heading)
-                session.select(GridPosition(x: 4, y: 3))
+                session.tapMap(at: PlanPoint(x: 4_700, y: 3_500), reach: 256)
                 session.applyTool()
 
                 XCTAssertEqual(session.world, expected, "\(heading)")
@@ -437,9 +437,9 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testTheMapTurnsTapsIntoWorldPointsAndAFingertipsReach() {
         // 32 points a tile: 32 world units a point.
-        XCTAssertEqual(MapScale.worldPoint(atX: 48, y: 16.5, tileSize: 32), PlanPoint(x: 1_536, y: 528))
-        XCTAssertEqual(MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: 32), 768)
-        XCTAssertEqual(MapScale.worldDistance(NetworkBuilding.touchRadius, tileSize: 64), 384, "closer in, a finger reaches less of the world")
+        XCTAssertEqual(MapScale.worldPoint(atX: 48, y: 16.5, referenceSize: 32), PlanPoint(x: 1_536, y: 528))
+        XCTAssertEqual(MapScale.worldDistance(NetworkBuilding.touchRadius, referenceSize: 32), 768)
+        XCTAssertEqual(MapScale.worldDistance(NetworkBuilding.touchRadius, referenceSize: 64), 384, "closer in, a finger reaches less of the world")
     }
 
     func testTheOverlayDrawsWhatTheNetworkToolPicked() async throws {

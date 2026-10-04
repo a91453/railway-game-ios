@@ -4,12 +4,13 @@ import XCTest
 /// Costs used across tests so expected balances are easy to read.
 let testCosts = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
 
+/// A world `width` × `height` world units (320 m a side by default).
 func makeWorld(
-    width: Int = 20,
-    height: Int = 20,
+    width: Int64 = 20_480,
+    height: Int64 = 20_480,
     balance: Money = 10_000
 ) throws -> GameWorld {
-    try GameWorld(width: width, height: height, economy: GameEconomy(balance: balance, costs: testCosts))
+    GameWorld(bounds: try WorldBounds(width: width, height: height), economy: GameEconomy(balance: balance, costs: testCosts))
 }
 
 /// Asserts that `expression` throws exactly `expected`.

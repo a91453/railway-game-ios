@@ -6,7 +6,7 @@ import XCTest
 /// F3c: the grid's track, station and remove tools are gone, and these
 /// rules moved here from their tests).
 final class ToolActionTests: XCTestCase {
-    private static let tile = GridPosition(x: 3, y: 2)
+    private static let point = PlanPoint(x: 3_584, y: 2_560)
 
     func testActionsNeedASelectionAndDoNothingInSelectOrNetworkMode() async throws {
         var world = try makeWorld()
@@ -18,7 +18,7 @@ final class ToolActionTests: XCTestCase {
             XCTAssertEqual(session.world, world, "nothing selected")
             XCTAssertNil(session.message)
 
-            session.select(Self.tile)
+            session.tapMap(at: Self.point, reach: 0)
             for tool in [ConstructionTool.select, .network] {
                 session.selectTool(tool)
                 session.applyTool()
@@ -28,19 +28,19 @@ final class ToolActionTests: XCTestCase {
         }
     }
 
-    func testSelectingAnotherTileOrToolClearsTheMessage() async throws {
+    func testSelectingAnotherPointOrToolClearsTheMessage() async throws {
         var world = try makeWorld()
         try world.purchaseTrain(named: "T1")
         await MainActor.run { [world] in
             let session = GameSession(world: world)
             session.selectTool(.train)
-            session.select(Self.tile)
+            session.tapMap(at: Self.point, reach: 0)
 
             session.applyTool()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select a station to place T1 at."))
-            session.select(Self.tile)
-            XCTAssertNotNil(session.message, "re-selecting the same tile keeps the message")
-            session.select(GridPosition(x: 0, y: 0))
+            session.tapMap(at: Self.point, reach: 0)
+            XCTAssertNotNil(session.message, "tapping the same point keeps the message")
+            session.tapMap(at: PlanPoint(x: 512, y: 512), reach: 0)
             XCTAssertNil(session.message)
 
             session.applyTool()

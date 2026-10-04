@@ -12,7 +12,7 @@ final class TrackSpacingTests: XCTestCase {
     /// track at 100 a tile.
     private func makeWorld() throws -> GameWorld {
         try GameWorld(
-            width: 32, height: 32, economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
+            bounds: WorldBounds(width: 32_768, height: 32_768), economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
             clock: GameClock(speed: .normal)
         )
     }
@@ -236,13 +236,13 @@ final class TrackSpacingTests: XCTestCase {
             XCTAssertTrue("\(error)".contains("closer than the track spacing"), "\(error)")
         }
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: save(world, version: 5)))
-        // A version 4 save loads with them exempt, and saves as version 5
-        // listing them.
+        // A version 4 save loads with them exempt, and saves in the current
+        // version (5 when Stage F2 came, 6 since Stage F3d) listing them.
         var loaded = try JSONDecoder().decode(SavedGame.self, from: save(world, version: 4)).world
         XCTAssertEqual(loaded.network.spacingExemptions, [pair])
         let again = try JSONEncoder().encode(SavedGame(world: loaded))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: again) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 5)
+        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
         let network = try XCTUnwrap((object["world"] as? [String: Any])?["network"] as? [String: Any])
         XCTAssertEqual(network["spacingExemptions"] as? [[Int]], [[1, 2]])
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: again).world, loaded)
