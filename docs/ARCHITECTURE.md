@@ -2625,14 +2625,14 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 2026-10-04。服務出發與線路派車的就緒判斷，在交通控制下依序嘗試：預設的最近停車位置的路整條取得；到同站任何合適停車位置、避開其他列車持有軌道的最短路整條取得；在預設路上跟車（決策 56）；原地等待。只有 `GameWorld` 提交最後取得的候選列車。手動路、放置、反向與交通控制關閉時照舊。
 
 - **搜尋**：移植 `Railway/site_archive_clean/rail-3d/physical/topology.js` 的 `shortestPath({blocked})`。`ServicePath.networkPath` 每一步（到當前邊的終點或一個停車位置）以 `resources(covering:) ∪ foulingNodes(covering:)` 對 `blockedTrack(except:)` 做 `network.fouls` 判定；被持有的 span、限界節點、F2b 妨礙與 U2 等著的軌道都避開。停車位置之前沒有衝突時，即使同邊後段被擋也能停靠。平手沿用決策 31 的順序。找到路後仍以 `reserving` 檢查整個 envelope（含車身）；失敗時不提交，也不在替代路上部分取得。
-- **出發**：`reservingDeparture` 共用於 `departService`、`readyTrain` 和批次喚醒。替代路的行駛曲線按新距離與原排定的段間秒數重算；經營的離站距離讀實際採用的路。反向仍先在候選位置求路，不能取得時不反向。
+- **出發**：`reservingDeparture` 共用於 `departService`、`readyTrain`、等待查詢和批次喚醒；能整條取得替代路時，等待查詢不回報預設路的持有者。替代路的行駛曲線按新距離與原排定的段間秒數重算；經營的離站距離讀實際採用的路。反向仍先在候選位置求路，不能取得時不反向。
 - **快轉**：等待出發的批次喚醒也重試替代路，在它首次可取得的秒數結束；否則整分鐘批次可能錯過已空出的另一月台。其他列車在批次內只釋放軌道，可取得性仍為單調。
 - **長度方案 / gap**：不設額外繞路上限，和參考的 `maxLength = Infinity` 一致。沒有營運距離上限或成本規則可支持任意倍數；短路的有限搜尋狀態與 checked 整數加法仍限制搜尋。將來若產品定義服務繞路預算，應以明確的距離或時間規則與測試加入。參考的 crossover 額外 `length × 4` 懲罰沒有移植，因為路網沒有 crossover 軌道種類；本次成本是實際整數距離，不另加曲線或號誌懲罰。
 - **狀態 / 存檔**：只改決定出發時選哪條既有 `TrainPath`；沒有新權威欄位、key 或驗證格式，`SavedGame.currentVersion` 保持 7。避占用路不快取，ownership 每秒可能改變；span 使用 `RailwayNetwork` 已有快取，不重切。
 - **參考檢查**：三份乾淨參考於私有 repo `1563ad0` 唯讀讀取。Ci 的 absorption guide 提供 request/reserve/approved continuation 流程與月台分配目標，snapshot 的 `MIN_TRAIN_GAP` 只有定義；RailwayCore migration map 提供 path cost/PBS 概念，只有編譯符號而無此選路原始碼。完整對照與倍率見 [Stage V 對照](RAILWAY_REFERENCE_MAPPING.md#stage-v避占用選路與月台分配)。
 - **獨立模型**：`ReferenceNetworkService.distancesToBerths` 在鬆弛前排除被擋住的 run 區間，保留可達的近端 berth，再依距離貪婪選第一個選項；`ReferenceTrafficControl.unblocked` 使用它自己的絕對距離資源窗口。不能呼叫 GameCore 選路。
 
-**驗證狀態**：UNVERIFIED（實作中的 checkpoint；完成後補上 Linux 執行結果）。既有 golden、SaveFixtures 與 ReplayFixtures 不修改；新增短 schema 30 `single-track-meet.json`，由 GameCore 取值、`ReferenceWorldGoldenTests` 獨立確認。
+**驗證狀態**：VERIFIED（Linux workspace，Swift 6.4）：warnings-as-errors 建置、37 個 `TrafficControlTests`、`ReferenceWorldGoldenTests`（含新 golden）、`traffic.occupiedRouting` 差分 campaign（6 case × 4 seed，912 操作，替代月台出發 63、到站 255、等待 313，digest `824A121F362EDABE`，約 30 秒）；每一步比較結果與整個狀態、持有、預約、等待、不變量及存讀。shard 腳本 self-test 通過；新增 `campaigns-10`，Swift 6.0 light 繼續排除 PropertyTests。完整 Linux shards、Swift 6.0 light 與 macOS CI 的最終 VERIFIED / UNVERIFIED 結果記在本 PR；Xcode / iOS Simulator 在 Linux 本機是 UNVERIFIED。既有 golden、SaveFixtures 與 ReplayFixtures 不修改；新增 49 步 / 7 遊戲分鐘的 schema 30 `single-track-meet.json`，由 GameCore 取值、`ReferenceWorldGoldenTests` 獨立確認。
 
 **Deferred（暫時沒有改的地方）**：排定的等待與時刻表交會、待避推估（`inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic`）；死結的偵測與解除（V2）；單線區段的線路容量（決策 22 的限制）；畫面顯示授權範圍。V1 解決有空替代路的交會，不保證任意拓撲與時刻表都無死結。
 

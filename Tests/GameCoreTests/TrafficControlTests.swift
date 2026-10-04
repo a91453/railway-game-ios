@@ -1066,7 +1066,7 @@ final class TrafficControlTests: XCTestCase {
 extension TrafficControlTests {
     /// Decision 57, hand arithmetic: 5120 left on e1 + 9216 to M's
     /// forward berth on e2 = 14336; the westbound default is also e2.
-    /// Once the first train reserves it the second uses e4. Both continue
+    /// Once the first train reserves it the second uses e6 → e5. Both continue
     /// across M and finish at the opposite terminal without intervention.
     func testOpposingServicesMeetOnDifferentPlatformsAndReachTheOtherEnd() throws {
         var world = try SingleTrackMeet.world()
@@ -1197,5 +1197,38 @@ extension TrafficControlTests {
         // The branch's early spans lie beside the main track as it parts;
         // resource identity alone would miss this F2b conflict.
         XCTAssertNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0, avoiding: [span(2, 0, 1_024)]))
+    }
+}
+
+extension TrafficControlTests {
+    func testBatchedAdvanceWakesWhenAnAlternativePlatformFrees() throws {
+        var world = try SingleTrackMeet.world()
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        let leader = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(5), offset: 5_120)
+        let follower = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        try world.setTrainTimetable(leader, to: [
+            ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 0), departure: .init(seconds: 0)),
+            ScheduledStop(station: SingleTrackMeet.east, arrival: .init(seconds: 240), departure: .init(seconds: 240)),
+        ])
+        try world.setTrainTimetable(follower, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try world.startTrainService(leader)
+        try world.startTrainService(follower)
+        try world.setTrafficControl(true)
+        var seconds = world
+        seconds.setSpeed(.x1)
+        // The alternate berth at 5120 touches the 5120–6144 span too.
+        // The leader's 1024-long body frees that span only when its head
+        // has gone strictly beyond 7168: 2048 on from its starting point.
+        // Its route is 3072 + 4732 + 7168 = 14972, in 240 seconds.
+        let curve = try XCTUnwrap(RunningCurve(length: 14_972, duration: 240_000, performance: .standard))
+        let clear = try XCTUnwrap((1...120).first { curve.distance(at: Int64($0) * 1_000) > 2_048 })
+        try world.advance(ticks: 3)
+        for _ in 0..<180 { try seconds.advance(ticks: 10) }
+        XCTAssertEqual(world.train(id: follower)?.times?.departure, GameTime(seconds: 42 + Int64(clear)))
+        guard case .onEdge(let traversal, _)? = world.train(id: follower)?.position else { return XCTFail("follower must be on the passing loop") }
+        XCTAssertEqual(traversal, SingleTrackMeet.forward(5))
+        world.setSpeed(.x1)
+        XCTAssertEqual(world, seconds)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 }

@@ -366,8 +366,9 @@ extension ReferenceWorld {
     }
 
     /// One departure of `train` from its waiting stop, on a copy of the
-    /// world without traffic control: the train as it would leave, or `nil`
-    /// if it cannot.
+    /// world: without traffic control by default for the planned route,
+    /// or with it for dispatch readiness and waiting queries (V1). Returns
+    /// the train as it would leave, or `nil` if it cannot.
     func firstLeaving(_ train: Train, withTrafficControl: Bool = false) -> Train? {
         var trial = self
         trial.trafficControl = withTrafficControl && trafficControl

@@ -1505,7 +1505,8 @@ public struct GameWorld: Equatable, Sendable {
     /// whole round trip from there (see ``trip(of:service:for:)``); with
     /// its index and that trip. Under traffic control (Stage T) it must
     /// also be able to take the route of its first departure now; one whose
-    /// route is held is not ready, and tries again at the next step.
+    /// default and alternative routes cannot be taken is not ready, and
+    /// tries again at the next step.
     private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }),
@@ -1732,9 +1733,10 @@ public struct GameWorld: Equatable, Sendable {
     /// is due (see ``departureDue(of:)``); see ``leaving(_:stop:cycle:)``.
     /// Returns whether the service changed.
     ///
-    /// Under traffic control (Stage T) the departure takes the whole route
-    /// to the next call at once (see ``reserving(_:)``). Where another train
-    /// holds some of it, nothing changes: the train is not turned round
+    /// Under traffic control the departure tries the default route whole,
+    /// an unblocked route to the same station whole (V1), then following
+    /// on the default route (U2). If none can be taken, nothing changes:
+    /// the train is not turned round
     /// either, and it tries again at the next step; the route it waits for
     /// joins `held`. Unlike a departure without a route, this is not
     /// remembered for the rest of the call: trains move and free track
