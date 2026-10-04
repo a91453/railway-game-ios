@@ -145,8 +145,54 @@ extension ReferenceWorld {
     }
 
     /// Everything the other trains keep train `id` from, together.
-    private func blocked(for id: Int) -> Set<TrackResource> {
+    func blocked(for id: Int) -> Set<TrackResource> {
         trains.filter { $0.id != id && $0.position != nil }.reduce(into: []) { $0.formUnion(blocking($1, for: id)) }
+    }
+
+    /// Decision 57: test a single run interval using the reference's
+    /// absolute-distance resource window, including junction fouling.
+    func unblocked(_ run: Run, from: Int64, to: Int64, by blocked: Set<TrackResource>) -> Bool {
+        blocked.isEmpty || !foul(track(along: [run], from: from, to: to), blocked)
+    }
+
+    /// Decision 57: remove runs opposite another service's current leg.
+    /// Read moving trains off their absolute-distance window. For waiting
+    /// services (even before due) or a due idle line, independently plan
+    /// the next default leg, without admission or GameCore's routing.
+    mutating func contraryRuns(except id: Int) -> Set<Run> {
+        var forbidden: Set<Run> = []
+        for other in trains where other.id != id && other.position != nil {
+            var requesting = other
+            if requesting.service == nil, let (l, k) = lineService(of: other.id),
+               let trip = readyTrip(of: other, line: l, service: k) {
+                requesting.timetable = trip
+                requesting.period = nil
+                requesting.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
+            }
+            guard let service = requesting.service else { continue }
+            var ways: [Run] = []
+            if !service.waiting, let window = routeWindow(requesting) {
+                for (run, span) in zip(window.path, spans(window.path)) where span.end > window.head && span.start < window.finish {
+                    ways.append(run)
+                }
+            } else if service.waiting {
+                var next = (stop: service.stop + 1, cycle: service.cycle)
+                if next.stop == requesting.timetable.count {
+                    next = (0, service.cycle + 1)
+                    guard requesting.period != nil, Self.fits(requesting, cycle: next.cycle) else { continue }
+                }
+                let start = requesting.timetable[service.stop].reverses ? turnedOnNetwork(requesting) : requesting
+                guard case .onEdge(let traversal, let offset)? = start.position, let run = Run(traversal) else { continue }
+                let key = RouteMemo.Key(start: start.position!, station: requesting.timetable[next.stop].station, length: Self.length(start))
+                let found = routeMemo.network[key] ?? networkPathToStation(from: key.start, station: key.station, length: key.length)
+                routeMemo.network[key] = .some(found)
+                guard let found, found.distance > 0 else { continue }
+                if offset < networkEdges[run.edge]!.length { ways.append(run) }
+                ways += found.traversals.map { Run($0)! }
+            }
+            for run in ways { forbidden.insert(Run(edge: run.edge, forward: !run.forward)) }
+        }
+        return forbidden
     }
 
     /// `candidate` with the reservation its route needs, or the train that
@@ -340,6 +386,7 @@ extension ReferenceWorld {
             return holder(of: needs(train).resources, except: train.id).map(TrainID.init(rawValue:))
         }
         var leaving: Train?
+        var requesting = train
         if let service = train.service {
             // Stage W2b: due once its doors have closed.
             guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
@@ -350,18 +397,21 @@ extension ReferenceWorld {
             sent.timetable = trip
             sent.period = nil
             sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
+            requesting = sent
             leaving = firstLeaving(sent)
         }
         guard let leaving else { return nil }
+        if let available = firstLeaving(requesting, withTrafficControl: true), !following(available) { return nil }
         return holder(of: needs(leaving).resources, except: train.id).map(TrainID.init(rawValue:))
     }
 
     /// One departure of `train` from its waiting stop, on a copy of the
-    /// world without traffic control: the train as it would leave, or `nil`
-    /// if it cannot.
-    func firstLeaving(_ train: Train) -> Train? {
+    /// world: without traffic control by default for the planned route,
+    /// or with it for dispatch readiness and waiting queries (V1). Returns
+    /// the train as it would leave, or `nil` if it cannot.
+    func firstLeaving(_ train: Train, withTrafficControl: Bool = false) -> Train? {
         var trial = self
-        trial.trafficControl = false
+        trial.trafficControl = withTrafficControl && trafficControl
         guard let i = trial.trains.firstIndex(where: { $0.id == train.id }) else { return nil }
         trial.trains[i] = train
         let before = trial.trains[i]

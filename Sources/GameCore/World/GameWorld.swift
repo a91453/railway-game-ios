@@ -1505,14 +1505,15 @@ public struct GameWorld: Equatable, Sendable {
     /// whole round trip from there (see ``trip(of:service:for:)``); with
     /// its index and that trip. Under traffic control (Stage T) it must
     /// also be able to take the route of its first departure now; one whose
-    /// route is held is not ready, and tries again at the next step.
+    /// default and alternative routes cannot be taken is not ready, and
+    /// tries again at the next step.
     private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }),
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reserving(leaving, following: true) {
+               case .held = reservingDeparture(leaving) {
                 continue
             }
             return (index, trip)
@@ -1732,9 +1733,10 @@ public struct GameWorld: Equatable, Sendable {
     /// is due (see ``departureDue(of:)``); see ``leaving(_:stop:cycle:)``.
     /// Returns whether the service changed.
     ///
-    /// Under traffic control (Stage T) the departure takes the whole route
-    /// to the next call at once (see ``reserving(_:)``). Where another train
-    /// holds some of it, nothing changes: the train is not turned round
+    /// Under traffic control the departure tries the default route whole,
+    /// an unblocked route to the same station whole (V1), then following
+    /// on the default route (U2). If none can be taken, nothing changes:
+    /// the train is not turned round
     /// either, and it tries again at the next step; the route it waits for
     /// joins `held`. Unlike a departure without a route, this is not
     /// remembered for the rest of the call: trains move and free track
@@ -1753,7 +1755,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         let train: Train
-        switch reserving(moved, following: true) {
+        switch reservingDeparture(moved) {
         case .granted(let granted):
             train = granted
         case .held:
@@ -1761,7 +1763,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         trains[index] = train
-        serve(departureOf: train.id, from: stop, distance: departure.distance)
+        serve(departureOf: train.id, from: stop, distance: departure.distance.map { $0 == 0 ? 0 : routeLength(of: train) })
         return true
     }
 
@@ -1866,7 +1868,7 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Gives `train` `path` as its path, from the start: its edges and
     /// where it stops. The rest of its movement stays.
-    private func follow(_ path: TrainPath, _ train: inout Train) {
+    func follow(_ path: TrainPath, _ train: inout Train) {
         train.movement.edges = path.traversals.map(\.edge)
         train.movement.end = path.end
         train.movement.cursor = 0
@@ -2220,7 +2222,7 @@ public struct GameWorld: Equatable, Sendable {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            if held.contains(where: { if case .granted = moved.reserving($0.candidate, following: true) { true } else { false } }) {
+            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate) { true } else { false } }) {
                 return true
             }
             return moved.canExtendAnyAuthority()

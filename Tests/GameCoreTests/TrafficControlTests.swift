@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import XCTest
 
 /// Route reservation under traffic control (Phase 4.6 Stage T, ARCHITECTURE
@@ -1060,5 +1060,259 @@ final class TrafficControlTests: XCTestCase {
         let extra = mutated { _, trains in trains[0]["reservation"] = valid + [["edge": 2, "start": 2_000, "end": 3_000]] }
         XCTAssertEqual(try decode(extra).reservedResources(of: one), [span(1, 0, 1_024), span(1, 1_024, 2_048), span(2, 2_000, 3_000)])
         _ = two
+    }
+}
+
+extension TrafficControlTests {
+    /// Decision 57, hand arithmetic: 5120 left on e1 + 9216 to M's
+    /// forward berth on e2 = 14336; the westbound default is also e2.
+    /// Once the first train reserves it the second uses e6 → e5. Both continue
+    /// across M and finish at the opposite terminal without intervention.
+    func testOpposingServicesMeetOnDifferentPlatformsAndReachTheOtherEnd() throws {
+        var world = try SingleTrackMeet.world()
+        let eastbound = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let westbound = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.backward(3), offset: 3_072)
+        for (id, east) in [(eastbound, true), (westbound, false)] {
+            let path = try XCTUnwrap(world.path(from: world.train(id: id)!.position!, toStation: SingleTrackMeet.middle, length: 1_024))
+            XCTAssertEqual(path.traversals.map(\.edge), [.edge(2)])
+            XCTAssertEqual(path.distance, 14_336)
+            try world.setTrainTimetable(id, to: SingleTrackMeet.timetable(eastbound: east))
+            try world.startTrainService(id)
+        }
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: eastbound)?.movement.edges, [.edge(2)])
+        XCTAssertEqual(world.train(id: westbound)?.movement.edges, [.edge(6), .edge(5)])
+        XCTAssertEqual(world.train(id: eastbound)?.times?.run?.length, 14_336)
+        let exit = world.network.edge(.edge(6))!.length
+        // Westbound stops at the near chainage end of the centred platform.
+        XCTAssertEqual(world.train(id: westbound)?.times?.run?.length, 5_120 + exit + 5_120)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        try world.advance(ticks: 6)
+        XCTAssertEqual(world.stationsStoppedAt(by: eastbound), [SingleTrackMeet.east])
+        XCTAssertEqual(world.stationsStoppedAt(by: westbound), [SingleTrackMeet.west])
+        XCTAssertNil(world.train(id: eastbound)?.execution)
+        XCTAssertNil(world.train(id: westbound)?.execution)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    func testAServiceUsesAnotherPlatformWhenTheNearestIsOccupied() throws {
+        var world = try SingleTrackMeet.world()
+        let service = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        try world.setTrainTimetable(service, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try world.startTrainService(service)
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: service)?.movement.edges, [.edge(4), .edge(5)])
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.stationsStoppedAt(by: service), [SingleTrackMeet.middle])
+    }
+
+    func testAServiceWaitsWhenBothPlatformsAreOccupiedAndManualPathsStayExplicit() throws {
+        var world = try SingleTrackMeet.world()
+        let service = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let first = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(5), offset: 5_120)
+        try world.setTrafficControl(true)
+        let before = world
+        XCTAssertThrowsGameError(try world.setTrainContinuation(service, along: [SingleTrackMeet.forward(2)], stoppingAt: 9_216), .trackReserved(first))
+        XCTAssertEqual(world, before)
+        try world.setTrainTimetable(service, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try world.startTrainService(service)
+        try world.advance(ticks: 3)
+        XCTAssertEqual(world.train(id: service)?.execution, .waitingAtStop(0))
+        XCTAssertEqual(world.train(id: service)?.position, .onEdge(SingleTrackMeet.forward(1), offset: 3_072))
+        XCTAssertEqual(world.reservedResources(of: service), [])
+    }
+
+    func testTrafficControlOffKeepsTheDefaultPlatformForOpposingServices() throws {
+        var world = try SingleTrackMeet.world()
+        for east in [true, false] {
+            let id = try SingleTrackMeet.stand(&world, edge: east ? SingleTrackMeet.forward(1) : SingleTrackMeet.backward(3), offset: 3_072)
+            try world.setTrainTimetable(id, to: SingleTrackMeet.timetable(eastbound: east))
+            try world.startTrainService(id)
+        }
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.trains.map { $0.movement.edges }, [[.edge(2)], [.edge(2)]])
+        XCTAssertTrue(world.trains.allSatisfy { $0.reservation.isEmpty })
+    }
+}
+
+extension TrafficControlTests {
+    func testALineIsReadyWhenOnlyTheAlternativePlatformCanBeReserved() throws {
+        var world = try SingleTrackMeet.world()
+        let service = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        let line = try world.createLine(named: "L", stops: [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(service, to: line)
+        try world.setTrafficControl(true)
+        XCTAssertNil(world.trainHoldingRoute(of: service), "an available alternate route is not a route wait")
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(seconds: 0))
+        XCTAssertEqual(world.train(id: service)?.execution, .travellingToStop(1))
+        XCTAssertEqual(world.train(id: service)?.movement.edges, [.edge(4), .edge(5)])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+}
+
+extension TrafficControlTests {
+    func testBlockedSearchCanStopBeforeABlockedPartOfTheSameEdge() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(2), offset: 4_096)
+        let blocked: Set<TrackResource> = [span(2, 12_288, 13_312)]
+        // 9216 - 4096 = 5120, stopping before the blocked far end.
+        let path = try XCTUnwrap(world.path(from: start, toStation: SingleTrackMeet.middle, length: 1_024, avoiding: blocked))
+        XCTAssertEqual(path, TrainPath(traversals: [], end: 9_216, distance: 5_120))
+    }
+
+    func testBlockedSearchRejectsAFouledJunctionWithoutReachingIt() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(4), offset: 500)
+        // The head goes away from n2 and never touches it, but its first
+        // interval lies inside n2's 1024-unit fouling zone on the branch.
+        XCTAssertNotNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0))
+        XCTAssertNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0, avoiding: [node(2)]))
+    }
+
+    func testBlockedSearchRetainsTheNearestBerthTieOrder() throws {
+        var world = try SingleTrackMeet.world()
+        try world.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072)
+        // e4 is 4732; 4732 + 4484 along e5 equals e2's 9216.
+        // Both routes are 5120 + 9216 = 14336 from the head. At n2,
+        // e2 comes before e4 and remains the default when neither is held.
+        XCTAssertEqual(world.network.edge(.edge(4))?.length, 4_732)
+        try world.addTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_460, to: 4_484)
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(1), offset: 3_072)
+        let path = try XCTUnwrap(world.path(from: start, toStation: SingleTrackMeet.middle, length: 1_024, avoiding: [node(4)]))
+        XCTAssertEqual(path.traversals, [SingleTrackMeet.forward(2)])
+        XCTAssertEqual(path.distance, 14_336)
+    }
+
+    func testBlockedSearchAvoidsTrackThatFoulsAnotherSpan() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(4), offset: 500)
+        // The branch's early spans lie beside the main track as it parts;
+        // resource identity alone would miss this F2b conflict.
+        XCTAssertNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0, avoiding: [span(2, 0, 1_024)]))
+    }
+}
+
+extension TrafficControlTests {
+    func testBatchedAdvanceWakesWhenAnAlternativePlatformFrees() throws {
+        var world = try SingleTrackMeet.world()
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        let leader = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(5), offset: 5_120)
+        let follower = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        try world.setTrainTimetable(leader, to: [
+            ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 0), departure: .init(seconds: 0)),
+            ScheduledStop(station: SingleTrackMeet.east, arrival: .init(seconds: 240), departure: .init(seconds: 240)),
+        ])
+        try world.setTrainTimetable(follower, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try world.startTrainService(leader)
+        try world.startTrainService(follower)
+        try world.setTrafficControl(true)
+        var model = SingleTrackMeet.model()
+        for (number, place) in [(2, Int64(9_216)), (5, 5_120), (1, 3_072)].enumerated() {
+            let id = TrainID(rawValue: number + 1)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(SingleTrackMeet.forward(place.0), offset: place.1)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+            XCTAssertNil(model.setRate(id, 1_024))
+        }
+        for id in [leader, follower] {
+            XCTAssertNil(model.setTimetable(id, world.train(id: id)!.timetable))
+            XCTAssertNil(model.startService(id))
+        }
+        XCTAssertNil(model.setTrafficControl(true))
+        var seconds = world
+        seconds.setSpeed(.x1)
+        // The alternate berth at 5120 touches the 5120–6144 span too.
+        // The leader's 1024-long body frees that span only when its head
+        // has gone strictly beyond 7168: 2048 on from its starting point.
+        // Its route is 3072 + 4732 + 7168 = 14972, in 240 seconds.
+        let curve = try XCTUnwrap(RunningCurve(length: 14_972, duration: 240_000, performance: .standard))
+        let clear = try XCTUnwrap((1...120).first { curve.distance(at: Int64($0) * 1_000) > 2_048 })
+        try world.advance(ticks: 3)
+        for _ in 0..<180 { try seconds.advance(ticks: 10) }
+        XCTAssertEqual(world.train(id: follower)?.times?.departure, GameTime(seconds: 42 + Int64(clear)))
+        guard case .onEdge(let traversal, _)? = world.train(id: follower)?.position else { return XCTFail("follower must be on the passing loop") }
+        XCTAssertEqual(traversal, SingleTrackMeet.forward(5))
+        world.setSpeed(.x1)
+        XCTAssertEqual(world, seconds)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        // Within this single reference advance the alternative is first
+        // blocked, then freed. A cached failed route must be invalidated
+        // when the leader releases the berth's span.
+        XCTAssertNil(model.advance(ticks: 3))
+        model.setSpeed(.x1)
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        for train in world.trains {
+            XCTAssertEqual(world.reservedResources(of: train.id), model.reservedResources(of: train.id))
+            XCTAssertEqual(world.heldResources(of: train.id), model.heldResources(of: train.id))
+        }
+    }
+}
+
+extension TrafficControlTests {
+    func testAnAlternativeRouteDoesNotRunAgainstTheOpposingTrack() throws {
+        var world = try DoubleTrackCrossover.world()
+        let lead = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(2), direction: .forward), at: 13_312)
+        let follower = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(1), direction: .forward), at: 3_072)
+        let opposer = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(4), direction: .backward), at: 27_648 - 23_552)
+        try world.setTrainTimetable(lead, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(follower, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(opposer, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.east, 60), (DoubleTrackCrossover.middle, 300), (DoubleTrackCrossover.west, 540)]))
+        for id in [lead, follower, opposer] { try world.startTrainService(id) }
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertNotEqual(world.train(id: follower)?.movement.edges, [.edge(5), .edge(4)], "eastbound service took westbound track B")
+        try world.advance(ticks: 19)
+        XCTAssertNil(world.train(id: opposer)?.execution, "the opposing service never finished")
+        XCTAssertFalse(world.trainHoldingRoute(of: follower) == opposer && world.trainHoldingRoute(of: opposer) == follower, "circular wait")
+    }
+
+    func testAlternativeReadinessProtectsADueOpposingLineBeforeItIsDispatched() throws {
+        var world = try DoubleTrackCrossover.world()
+        var model = DoubleTrackCrossover.model()
+        for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(4), 4_096)].enumerated() {
+            let id = try DoubleTrackCrossover.stand(&world, place.0, at: place.1)
+            XCTAssertEqual(id.rawValue, number + 1)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(place.0, offset: place.1)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+            XCTAssertNil(model.setRate(id, 1_024))
+        }
+        let lead = TrainID(rawValue: 1)
+        let calls = DoubleTrackCrossover.calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)])
+        try world.setTrainTimetable(lead, to: calls)
+        try world.startTrainService(lead)
+        XCTAssertNil(model.setTimetable(lead, calls))
+        XCTAssertNil(model.startService(lead))
+        // Eastbound readiness is examined first. The due westbound line
+        // must protect its first leg before dispatch has given it a service.
+        for (number, stops) in [[DoubleTrackCrossover.west, DoubleTrackCrossover.middle, DoubleTrackCrossover.east],
+                                [DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]].enumerated() {
+            let line = try world.createLine(named: "L", stops: stops).id
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+            try world.assignTrain(TrainID(rawValue: number + 2), to: line)
+            XCTAssertNil(model.createLine(named: "L", stops: stops))
+            XCTAssertNil(model.setLineWindow(line, .allDay))
+            XCTAssertNil(model.setLineTrains(line, TrainsInService(peak: 1, offPeak: 1, low: 1)))
+            XCTAssertNil(model.assign(TrainID(rawValue: number + 2), to: line))
+        }
+        try world.setTrafficControl(true)
+        XCTAssertNil(model.setTrafficControl(true))
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        XCTAssertNil(world.line(id: .init(rawValue: 1))?.lastDispatch)
+        XCTAssertEqual(world.line(id: .init(rawValue: 2))?.lastDispatch, .init(seconds: 0))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 }

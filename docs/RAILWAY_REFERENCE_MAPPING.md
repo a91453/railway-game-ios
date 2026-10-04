@@ -140,15 +140,38 @@ U2（站間跟車）已經實作（ARCHITECTURE 決策 56）。2026-10-04 唯讀
 | （參考沒有） | 後車還沒預約到的路，別的列車不能插進來 | `holder(of:except:)` 與 `claim(of:)` | — | **gap**：自訂（參考沒有預約） |
 | （參考沒有） | 依煞車曲線在授權終點前減速 | 沒有：到授權終點就停下，延長後從停止重新出發（決策 40 被擋住的列車） | — | **gap**，留給之後 |
 
-### Stage V：待避、交會、月台分配與排定的等待
+
+### Stage V：避占用選路與月台分配
+
+V1（決策 57），2026-10-04 唯讀檢查私有參考 repo `1563ad0` 的三份乾淨參考。只取下列流程與演算法；沒有引入參考的網頁、資料或渲染狀態。
+
+| 參考檔案 / 函式 | Swift 檔案 / 函式 | 倍率與採用範圍 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` / `shortestPath({blocked})` | `ServicePath.swift` / `networkPath`、`path(...avoiding:)` | m × 64 → 世界單位（km × 64000）；沿用既有整數邊長，每一步排除衝突的 span 與限界節點，仍用既有搜尋平手順序 |
+| 同檔 / `directed(edge, from)`、`tags.oneway`、`edgeAllowed` | `RouteReservation.swift` / `opposingServiceTraversals(except:)`；`ServicePath.swift` / `networkPath` 的 forbidden traversal；獨立 `ReferenceTrafficControl.contraryRuns` | 無倍率，方向翻轉；gap：無永久 one-way tag，從其他服務的當前剩餘路、下一次預設出發及到派車時間的線路第一段推導；只限制替代路 |
+| 同檔 / `stopCandidates` | `ServicePath.swift` / `berths(of:length:)` | 停車點對應同站月台的方向性 berth；不是靠經緯度、站名近似或半徑推估；列車長度以 1024 單位 / 車間距（16 m）篩選 |
+| 同檔 / `maxLength = Infinity`、crossover `length × 4` | `ServicePath.swift` / `networkPath` | 不設額外繞路上限；沒有 crossover 軌道種類，因此不加該額外懲罰；成本仍是實際整數距離 |
+| `Ci/PROJECT_ABSORPTION_GUIDE.md` / D 的 request → reserve → approved continuation；U 的 platform assignment | `RouteReservation.swift` / `reservingDeparture`；`GameWorld.swift` / `departService`、`readyTrain` | 無數值倍率；完整取得預設或替代路，再退回 U2 跟車、等待，只有 `GameWorld` 提交 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` / `MIN_TRAIN_GAP` | 既有 `RouteReservation.swift` / `followingGap`（U2） | snapshot 常數只有定義，沒有可移植的避占用選路；本次不採用其比例，U2 仍為 0.4 km × 64000 = 25600 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` / §7 path cost / PBS；`binary_reference/relevant_symbols_and_settings.txt` / `rail_pbs_*`、platform penalties | `RouteReservation.swift` / `reserving`、`reservingDeparture`；`ReferenceNetworkService.swift` / `distancesToBerths` | 概念與符號，沒有選路原始碼或權重數值；不猜號誌、曲線、長短月台的懲罰 |
+| `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic` | Deferred | 參考秒 × 1 → 遊戲秒、km × 64000 → 單位；V1 不移植排定交會、待避或多輪時刻表重排 |
+
+**gap**：參考 `blocked` 是整個 resource key，Swift 改成一個 head interval 的 span / fouling 檢查與 `network.fouls`；整個車身 envelope、原子取得、替代路優先於 U2、精確批次喚醒、換路後的曲線與離站距離是本專案自己的規則。參考沒有長度政策可支持任意繞路倍率，故保持 Infinity；將來若有服務距離或時間預算再設上限。沒有 crossover 種類及其 4 倍額外懲罰，沒有一般 penalties API。方向限制採當下服務意圖，沒有永久軌道方向，也不推估下一段以後的交會。獨立模型用 blocked run 區間及禁止方向的反向距離鬆弛與貪婪重建，不呼叫 GameCore 選路。
+
+**Deferred（暫時沒有改的地方）**：排定等待與時刻表交會、待避推估；V2 死結的偵測與解除；決策 22 的單線容量；畫面上的授權範圍。規劃查詢與手動路、放置、反向仍照既有規則。
+
+
+**待作者決定（本次不改）**：同向可跟車時是否讓 U2 優先於替代路；是否加入繞路距離或時間預算。既有順序與 Infinity 保持不變。
+
+#### Deferred：排定的等待、交會與待避推估
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- | --- |
-| `dispatch.json` 的 `holds[i] = {arrival, departure}` 與 `departureHolds`；`motion.js` `record` 的套用方式 | 排定的等待：第 i 站的到達與出發各自加上一個秒數，不自動往後傳遞（預設 `arrival` = 前一站的出發等待） | 決策 20 的出發閘門：`departure(i) ≤ now` 才出發 | V：閘門改成 `departure(i) + hold(i)` | 秒 → 分鐘：無條件進位，才不會早走 | faithful（語義）；等待的數值由 V 的規劃產生，參考的資料這次沒有移植 |
-| `index.html` `inferMeetPassTimes` / `inferMeetRun`（8435–8563 行），常數 `MEET_HEADWAY_SEC = 300`、`MEET_NEAR_SEC = 1800` | 單線交會：在兩個停靠站之間的一段跑段裡，挪動通過站的通過時刻，讓對向車先到或先開。對向車在站上至少停 30 秒（終點站除外）；安全間隔 m = 30 秒，或 min(30, ⌊停留 ÷ 3⌋)；挪動不超過 300 秒；每段最多 8 輪，依挪動量、再依站序取最小；挪動後用 `reanchorRunProfile` 重建曲線 | 單雙線：`parallelTracks`、`lineTrackCounts`（S1）；時刻表沒有「有時刻的通過站」 | V：`Railway/Dispatcher.swift` 的交會推估 | 秒；距離單位 | faithful（演算法）+ **gap**：我們的時刻表以分鐘計，沒有有時刻的通過站；它依賴 W 的曲線 |
-| `index.html` `planSameDirectionOvertakes`（8642 行）、`overtakeRunBuildable`、`resolveTraTraffic`（8716 行），常數 `OVERTAKE_LOOKAHEAD_KM = 25`、`OVERTAKE_CLEAR_SEC = 30`、`OVERTAKE_MAX_WAIT_SEC = 600` | 同向待避：找出在相鄰兩個共同車站之間先後順序對調的一對車（後車追越前車）。往回 25 km 內找前車的一個通過站，條件是前車領先至少 `30 + v/b` 秒；前車在那裡停到後車出發後 30 秒，最多等 600 秒；兩段曲線都要建得出來。整個流程先做交會，再做最多 8 輪待避 | Q3 的快車與慢車；列車互相穿過 | V：`Railway/Dispatcher.swift` 的待避推估 | 秒；km × 64000 → 單位；v/b 以 W1 的整數性能計算 | faithful；依賴 W1（`buildProfile`） |
+| `dispatch.json` 的 `holds[i] = {arrival, departure}` 與 `departureHolds`；`motion.js` `record` 的套用方式 | 排定的等待：第 i 站的到達與出發各自加上一個秒數，不自動往後傳遞（預設 `arrival` = 前一站的出發等待） | 決策 20 的出發閘門：`departure(i) ≤ now` 才出發 | V：閘門改成 `departure(i) + hold(i)` | 秒 × 1 → 遊戲秒（W2a 之後） | faithful（語義）；等待的數值由 V 的規劃產生，參考的資料這次沒有移植 |
+| `index.html` `inferMeetPassTimes` / `inferMeetRun`（8435–8563 行），常數 `MEET_HEADWAY_SEC = 300`、`MEET_NEAR_SEC = 1800` | 單線交會：在兩個停靠站之間的一段跑段裡，挪動通過站的通過時刻，讓對向車先到或先開。對向車在站上至少停 30 秒（終點站除外）；安全間隔 m = 30 秒，或 min(30, ⌊停留 ÷ 3⌋)；挪動不超過 300 秒；每段最多 8 輪，依挪動量、再依站序取最小；挪動後用 `reanchorRunProfile` 重建曲線 | 單雙線：`parallelTracks`、`lineTrackCounts`（S1）；時刻表沒有「有時刻的通過站」 | V：`Railway/Dispatcher.swift` 的交會推估 | 秒；距離單位 | faithful（演算法）+ **gap**：時刻表沒有有時刻的通過站；它依賴 W 的曲線 |
+| `index.html` `planSameDirectionOvertakes`（8642 行）、`overtakeRunBuildable`、`resolveTraTraffic`（8716 行），常數 `OVERTAKE_LOOKAHEAD_KM = 25`、`OVERTAKE_CLEAR_SEC = 30`、`OVERTAKE_MAX_WAIT_SEC = 600` | 同向待避：找出在相鄰兩個共同車站之間先後順序對調的一對車（後車追越前車）。往回 25 km 內找前車的一個通過站，條件是前車領先至少 `30 + v/b` 秒；前車在那裡停到後車出發後 30 秒，最多等 600 秒；兩段曲線都要建得出來。整個流程先做交會，再做最多 8 輪待避 | Q3 的快車與慢車；T / U2 阻擋與跟車 | V：`Railway/Dispatcher.swift` 的待避推估 | 秒；km × 64000 → 單位；v/b 以 W1 的整數性能計算 | faithful；依賴 W1（`buildProfile`） |
 | `plan-binding.js` `createPlanBinding` | 班表綁定實體路徑：完全相同 → 只改時刻 → 同車次改點 → 借同系統別班的路徑 → 分段接力借用（動態規劃：型態不符最少、段數最少、key 穩定）；`templateEligible: false` 的股道不借給別班 | 每次出發都重新求路（S5），同線班次不共用路徑 | V：同一條線路的班次共用各段的路徑 | — | 部分 faithful：「同線共用路徑、限定車種的股道不借」可以移植；比對真實班表改版的部分對虛擬地圖沒有意義，是 **gap** |
-| 更新紀錄（`index.html` 4641、4667 行等） | 高鐵：停靠列車停外側到發線，通過列車走內側正線；待避優先利用前車原本的停站時間；依車種的煞車性能選待避站 | 沒有月台分配 | V：月台分配的規則 | — | 規則只有文字，程式在建置腳本裡：**gap**（可以照文字設計） |
+| 更新紀錄（`index.html` 4641、4667 行等） | 高鐵：停靠列車停外側到發線，通過列車走內側正線；待避優先利用前車原本的停站時間；依車種的煞車性能選待避站 | V1 依空閒軌道分配停車位置 | 之後：按停靠 / 通過分配月台的規則 | — | 規則只有文字，程式在建置腳本裡：**gap**（可以照文字設計） |
 
 ### Stage W：行駛曲線
 
