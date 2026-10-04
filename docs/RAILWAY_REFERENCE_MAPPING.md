@@ -111,9 +111,16 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 
 ### Stage U：列車只能進入預約到的軌道
 
-| 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
+U1（通過後釋放）已經實作（ARCHITECTURE 決策 54）。2026-10-04 對 `1563ad0` 重新檢查三份參考：
+
+- `Railway/site_archive_clean/`：只有下表的 `updateBlockHolds`（畫面層），沒有預約的釋放；
+- `Ci/reference_snapshot/`：`MIN_TRAIN_GAP` 等常數只有定義；`PROJECT_ABSORPTION_GUIDE.md` 只有流程（departure due → request authority → reserve resources → approved continuation → movement）與「reservation release」這個詞，沒有程式；
+- `Railway/railway_game_reference_clean/`：OpenTTD 的 path-based signalling 只有名稱（`pf.yapf.rail_pbs_*`、`rail_look_ahead_max_signals`、`CmdBuildSingleSignal`、`CmdBuildSignalTrack`、`src/train_cmd.cpp`），沒有原始碼。照它的結構（預約到可以安全停下的地方，最後一節離開一段軌道時釋放那一段）：T 預約到下一個停靠點，U1 在車尾離開時釋放。
+
+| 參考 | 行為 | 現有 GameCore | Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- | --- |
-| `index.html` `updateBlockHolds`（8856 行），常數 `BLOCK_GAP_KM = 0.4`、`BLOCK_GAP_MIN_KM = 0.02`、`BLOCK_GAP_GROW = 10/3600`、`BLOCK_CAP_SEC = 120`、`BLOCK_MIN_V = 5/3600`、`BLOCK_AT_STOP_KM = 0.1`、`BLOCK_SNAP_SEC = 300`；`blockClearance3d`：min(0.4 km, 兩車編組長度的平均) | 同線同向的列車依位置排序。後車離前車太近時，它的**顯示時間**延後（最多 120 秒），距離門檻逐步回到 0.4 km；停在站上的車當作障礙物 | 列車互不阻擋 | U：movement authority 用預約的資源；跟車距離可以當作授權終點前的保留距離 | 距離：km × 64000 → 單位；時間：秒 | **呈現** + **gap**：它在畫面每一格執行，結果隨畫格間隔（`dSim`）改變。它延後的是顯示位置，不是模擬。移進 GameCore 就改變了它的角色，要作者決定 |
+| 參考包 `binary_reference/relevant_symbols_and_settings.txt` 的 `pf.yapf.rail_pbs_*`、`rail_look_ahead_max_signals`、`CmdBuildSingleSignal`；`relevant_source_paths.txt` 的 `src/train_cmd.cpp` | path-based signalling：列車預約到一個可以安全停下的地方；最後一節離開一段軌道時釋放那一段（只有名稱，行為照 OpenTTD 的結構） | T：`Train.reservation`，`routeEnvelope(of:)`，走到路的終點時清空 | U1：`GameWorld.releasePassedTrack(_:)`（每次移動之後，預約 ∩ `routeEnvelope`）、`secondsUntilARouteFrees(_:from:within:)`（批次在等待的路空出來的那一秒結束）、`Reserving.held(by:needs:)`；差分模型 `ReferenceWorld.releaseBehind(_:)` | 資源是 span（最多 1024 單位）與節點，不是 tile；時間是秒 | 結構 faithful；**gap**：沒有原始碼，釋放的粒度、時機與批次的精確性照決策 32 的語義自訂；沒有號誌，`look_ahead` 與號誌的懲罰沒有對應（U2、V） |
+| `index.html` `updateBlockHolds`（8856 行），常數 `BLOCK_GAP_KM = 0.4`、`BLOCK_GAP_MIN_KM = 0.02`、`BLOCK_GAP_GROW = 10/3600`、`BLOCK_CAP_SEC = 120`、`BLOCK_MIN_V = 5/3600`、`BLOCK_AT_STOP_KM = 0.1`、`BLOCK_SNAP_SEC = 300`（8780–8787 行）；`blockClearance3d`：min(0.4 km, 兩車編組長度的平均) | 同線同向的列車依位置排序。後車離前車太近時，它的**顯示時間**延後（最多 120 秒），距離門檻逐步回到 0.4 km；停在站上的車當作障礙物 | T、U1：交通控制下列車不共用軌道，後車在前車的車尾離開它需要的軌道之後才出發 | U2：站間跟車時，跟車距離可以當作授權終點前的保留距離（U1 沒有用到） | 距離：km × 64000 → 單位；時間：秒 | **呈現** + **gap**：它在畫面每一格執行，結果隨畫格間隔（`dSim`）改變。它延後的是顯示位置，不是模擬。移進 GameCore 就改變了它的角色，要作者決定 |
 | `motion.js` `sample` | 依時間取樣位置：`arrSec + holds[i].arrival`、`depSec + holds[i].departure`；跨午夜；交接班次 | 位置由 `advance` 推進 | 不進 GameCore（Web 宿主的畫面可以沿用） | — | **呈現**（WEB_PORT_READINESS 已註明：宿主只插值） |
 
 ### Stage V：待避、交會、月台分配與排定的等待
@@ -504,6 +511,7 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
    - **決定（2026-10-02）**：每台列車與每條線路都有自己的性能，預設 `standard`，以指令更換（`setTrainPerformance`、`setLinePerformance`）；畫面的選擇之後與車種一起做。
    - **W2c 的實作**（決策 40）：另加 `Ci/` 的地鐵列車（`metro`：1.1、1.3 m/s²，80 km/h）。列車的性能只在不是標準時存檔。
 5. **跟車規則的角色。** `updateBlockHolds` 是畫面層、隨畫格改變的顯示延後。U 若要採用它的距離（0.4 km、兩車長度的平均），要以基本步長重新表達；若 U 只用預約的資源，這組常數就只給畫面用。
+   - **U1 的實作**（決策 54）：只用預約的資源（通過後釋放），沒有用到這組常數；U2 的站間跟車再決定是否把 0.4 km 當作授權終點前的保留距離。
 6. **沒有號誌與閉塞。** 兩個網站都沒有號誌機、固定閉塞或聯鎖。U 的授權終點（到下一站、或到下一個可以停車的地方）是 gap，照 ARCHITECTURE 決策 29 第 12 點與 PR #31 的語義處理，並在 PR 裡列出。
 7. **限速區段與觀測曲線。** 參考的限速區段綁定真實地名，觀測曲線要用實測資料；兩者都可以移植，W1 還沒做。虛擬地圖上的曲率限速參考沒有，要由我們的幾何推導，這是 gap。
 8. **通過站。** 參考的通過站有推導出的通過時刻，我們的 Q3 快車通過站沒有時刻。V 的交會推估需要它。
@@ -538,7 +546,7 @@ V 實際放行 → T、U（保證不互穿）
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
 7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F3 移除方格 ✅（[對照](#stage-f3移除方格)）→ F2 線間距 ✅（[對照](#stage-f2線間距)）；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
-8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
+8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。U1（通過後釋放）✅（ARCHITECTURE 決策 54，[對照](#stage-u列車只能進入預約到的軌道)）；U2（站間跟車，依曲線在授權終點前停下）是下一步。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 
 **順序（2026-10-01 作者決定）**：W2 先於 U-min。兩者互不依賴（U → T，W2 → W1），但後做的那個要處理「列車依曲線在授權終點前停下」；W2 先做，U-min 就直接建立在最終的移動方式上，不必先為固定的 rate 設計停車。

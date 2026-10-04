@@ -564,8 +564,9 @@ struct ReferenceWorld: Equatable {
                 let distance = travel(i, second: second)
                 guard distance > 0 else { continue }
                 trains[i] = steppedOnNetwork(trains[i], distance: distance)
-                // Decision 32: a route that has come to its end is released.
-                releaseIfArrived(i)
+                // Decisions 32 and 54: the track behind the train is
+                // released, and all of it at the end of its route.
+                releaseBehind(i)
             }
             // Stage W2c: a train that fell behind its run drops it.
             for i in trains.indices {

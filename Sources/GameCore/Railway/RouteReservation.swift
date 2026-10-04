@@ -8,9 +8,11 @@
 // service or a line whose route is held waits where it is and tries again
 // at every step.
 //
-// The reservation is authoritative state kept on the train (it holds track
-// the train has passed as well as track ahead) and is released only when
-// the route ends: Stage U will release it behind the train as it goes.
+// The reservation is authoritative state kept on the train. Since Stage U
+// (ARCHITECTURE decision 54) it is released behind the train as it goes:
+// after every move it keeps only what the train still needs, so track the
+// train's tail has left is free for others at once, and all of it is
+// released when the route ends.
 // Everything here reads topology and integer chainage only: traversals,
 // spans, edge lengths, platforms and where paths end, never geometry.
 
@@ -85,17 +87,17 @@ extension GameWorld {
 
     /// `candidate`, a train about to be given a place or a route, with the
     /// reservation traffic control gives it, or the lowest numbered other
-    /// train that holds track it needs. With traffic control off, the
-    /// candidate as it is.
+    /// train that holds track it needs, with all the track it needs. With
+    /// traffic control off, the candidate as it is.
     enum Reserving {
         case granted(Train)
-        case held(by: TrainID)
+        case held(by: TrainID, needs: Set<TrackResource>)
     }
 
     func reserving(_ candidate: Train) -> Reserving {
         guard isTrafficControlEnabled else { return .granted(candidate) }
         let envelope = routeEnvelope(of: candidate)
-        if let holder = holder(of: envelope.resources, except: candidate.id) { return .held(by: holder) }
+        if let holder = holder(of: envelope.resources, except: candidate.id) { return .held(by: holder, needs: envelope.resources) }
         var train = candidate
         train.reservation = envelope.moves ? envelope.resources.sorted() : []
         return .granted(train)
