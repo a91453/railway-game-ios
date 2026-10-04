@@ -169,6 +169,12 @@ struct ReferenceWorld: Equatable {
             var repeats: Bool
         }
         var directions: [Order: Set<Run>] = [:]
+        /// A running service's walk on from where it stands.
+        struct Walk: Hashable {
+            var order: Order
+            var seed: ReferenceWorld.DirectionState
+        }
+        var walks: [Walk: Set<Run>] = [:]
         /// V1: only reused within one advance (unchanged network), and
         /// only while every blocking resource is exactly the same.
         struct BlockedKey: Hashable {
