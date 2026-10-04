@@ -2636,7 +2636,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **驗證狀態**：VERIFIED（Linux workspace，Swift 6.4）：第二輪 review 的「Z→E→M→W 兩段之外對向服務」及「營運時間尚未到的線路」在修正前共五個失敗斷言；修正後通過，保留上一輪雙線回歸、單線交會／改月台、等待、就緒與批次喚醒。另驗證空 roster 線路仍保護完整路，刪除線路後下一次 advance 清除推導保護。`traffic.occupiedRouting` 保留原六組單線與兩組雙線 case，新增兩段之外服務及未營運線路兩組，10 case × 4 seed，逐步比較結果／整個狀態／持有／預約／等待、不變量與存讀，量的下限保持或增加。warnings-as-errors、42 個 TrafficControlTests、campaigns-10、rest、campaigns-9、Swift 6.0 light 與最終 CI 結果記在本次修正 PR；未執行的標 UNVERIFIED。所有 golden（含 49 步 / 7 遊戲分鐘的 schema 30 `single-track-meet.json`）、SaveFixtures、ReplayFixtures 與存檔版本 7 保持不變。
 
-**定案後的驗證**（Stage V2 PR）：VERIFICATION57_PLACEHOLDER
+**定案後的驗證**（Stage V2 PR）：VERIFIED（Linux workspace，Swift 6.4）：warnings-as-errors 建置；44 個 `TrafficControlTests`，含兩個定案測試 `testAServiceFollowsAMovingLeaderBeforeTakingAnotherPlatform`（GameCore 與獨立模型逐步比較）及 `testAnAlternativeMoreThanTheDetourAllowanceLongerIsNotTaken`。`traffic.occupiedRouting` 的 digest 仍是 `C084C3CBDA88B0CB`，數量也相同：它的情境裡沒有一處同時能跟車又能改月台，用到的替代路都在 400 m 以內，也沒有被送去待避站的死結，所以兩個定案與 V2 不改變它任何一步的狀態。`traffic.following`（`1EF4AAB19D63FDE2`）、`traffic.reservation`（`7916D02C7E554D3C`）與其他 campaign 的 digest 不變。所有既有 golden（含 `single-track-meet.json`）、SaveFixtures 與 ReplayFixtures 的值不變。
 
 **Deferred（暫時沒有改的地方）**：排定的等待與時刻表交會、待避推估（`inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic`）；單線區段的線路容量（決策 22 的限制）；畫面顯示授權範圍。死結的偵測與解除見決策 58。
 
@@ -2658,7 +2658,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **驗證**：VERIFIED（Linux workspace，Swift 6.4）：
 - `DeadlockTests`（8 個）：對向快車在 M 主線待避後錯開並完成服務（手算：W 到 M 主線 5120 + 9216 = 14336，續行 7168 + 7168 = 14336，全程 28672，等於預設路）；沒有待避線時死結保留並回報；等一台會開走的列車不是死結；以分鐘批次與逐秒結果相同；參考模型逐秒一致（含 `deadlockedTrains`、`trainHoldingRoute` 與預約）；在待避站存讀後繼續跑結果相同；關閉交通控制後立刻續行。
-- `traffic.deadlock` campaign（`DeadlockPropertyTests`，新的 CI shard `campaigns-11`）：8 case × 4 seed，對向的快車與站站停列車、待避線被停著的列車占住的情形，以及跑完後換向再開；每一步比較結果與整個狀態、持有、預約、等待、死結清單、不變量及存讀。digest `42AE3745A3FF09E8`（死結步數 424、留下的死結 11、操作 1352、待避 37、完成服務 111），約 2.5 分鐘。
+- `traffic.deadlock` campaign（`DeadlockPropertyTests`，新的 CI shard `campaigns-11`）：8 case × 4 seed，對向的快車與站站停列車、待避線被停著的列車占住的情形，以及跑完後換向再開；每一步比較結果與整個狀態、持有、預約、等待、死結清單、不變量及存讀。digest `366A22C95DBC8D3F`（死結步數 618、留下的死結 14、操作 1352、待避 24、完成服務 101），約 2.5 分鐘。
 - golden `single-track-passing.json`（schema 30，47 步、10 遊戲分鐘），GameCore 取值、`ReferenceWorldGoldenTests` 獨立確認。
 - `SavedGameTests`（版本 8 fixture 與版本 4、6、7 重存逐位元組相同）、GamePresentation 的 `testADeadlockAndAPassingPlaceAreToldInThePlayersWords`。
 
