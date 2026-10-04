@@ -220,7 +220,7 @@ extension ReferenceWorld {
         }
         if trafficControl, case .failure = admitted(routed(path)) {
             let blocked = blocked(for: start.id)
-            let forbidden = contraryRuns(except: start.id)
+            let forbidden = contraryRuns(for: routed(path))
             let avoiding = RouteMemo.BlockedKey(route: key, track: blocked, forbidden: forbidden)
             let other = routeMemo.unblocked[avoiding]
                 ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked, forbidden: forbidden)

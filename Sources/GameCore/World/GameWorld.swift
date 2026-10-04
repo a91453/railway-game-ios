@@ -1330,7 +1330,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             // Stage W2b: every service's dwell, and the departures due now.
             held = []
-            if runServices(at: start, unroutable: &unroutable, held: &held) {
+            if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
                 changed = true
             }
             // The seconds to the end of this minute, or of the batch, or to
@@ -1352,7 +1352,7 @@ public struct GameWorld: Equatable, Sendable {
             // for its route, which then tries again, or (Stage U2) for a
             // train following them to take more of its route.
             if span > 1, !held.isEmpty || trains.contains(where: isFollowing),
-               let freed = secondsUntilARouteFrees(held, from: start, within: span) {
+               let freed = secondsUntilARouteFrees(held, from: start, within: span, memo: &memo) {
                 span = freed
             }
             if moveTrains(from: start, for: span) {
@@ -1417,6 +1417,8 @@ public struct GameWorld: Equatable, Sendable {
         /// Each service's journey (see ``lineJourney(_:pattern:)``), by line
         /// and service (see ``ServiceLine/serviceCount``), once looked up.
         var journeys: [LineID: [Int: LineJourney?]] = [:]
+        /// V1 complete direction plans, local to this advance.
+        var directions = DirectionMemo()
         /// Each train's round trip from where it stood idle (its position
         /// and body) when it was looked up, or
         /// `nil` if it had none.
@@ -1513,7 +1515,7 @@ public struct GameWorld: Equatable, Sendable {
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reservingDeparture(leaving) {
+               case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
             }
             return (index, trip)
@@ -1597,13 +1599,13 @@ public struct GameWorld: Equatable, Sendable {
     /// (see ``departService(_:at:unroutable:held:)``); every train whose service
     /// travels and was held up on its run sets off again if it can (Stage
     /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
-    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute]) -> Bool {
+    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
         var changed = false
         for index in trains.indices where trains[index].execution != nil {
             if stepDwell(index, at: now) {
                 changed = true
             }
-            if departService(index, at: now, unroutable: &unroutable, held: &held) {
+            if departService(index, at: now, unroutable: &unroutable, held: &held, memo: &memo) {
                 changed = true
             }
             if resumeRun(index, at: now) {
@@ -1742,7 +1744,7 @@ public struct GameWorld: Equatable, Sendable {
     /// remembered for the rest of the call: trains move and free track
     /// within one.
     @discardableResult
-    private mutating func departService(_ index: Int, at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute]) -> Bool {
+    private mutating func departService(_ index: Int, at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
         guard case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
               let due = departureDue(of: trains[index]), due <= now,
               !unroutable.contains(trains[index].id),
@@ -1755,7 +1757,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         let train: Train
-        switch reservingDeparture(moved) {
+        switch reservingDeparture(moved, memo: &memo.directions) {
         case .granted(let granted):
             train = granted
         case .held:
@@ -2218,11 +2220,11 @@ public struct GameWorld: Equatable, Sendable {
     /// does, so once free the track stays free.
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
-    private func secondsUntilARouteFrees(_ held: [HeldRoute], from start: GameTime, within span: Int64) -> Int64? {
+    private func secondsUntilARouteFrees(_ held: [HeldRoute], from start: GameTime, within span: Int64, memo: inout DispatchMemo) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate) { true } else { false } }) {
+            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions) { true } else { false } }) {
                 return true
             }
             return moved.canExtendAnyAuthority()
