@@ -614,9 +614,23 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 
 ### 8.10 F3c-3c 之後暫時沒有改的地方
 
-- **golden schema 28**：fixture 拿掉 `tracks`、`trail`、`continuation`，README 的 schema 歷史，以及 `Web/WasmProbe`（它直接複製 `GoldenScenario.swift` 與 `NetworkSupport.swift` 的前半，這一步之後照樣能編譯，但沒有在 Linux 上跑）。→ F3c-4。
+- **golden schema 28**：fixture 拿掉 `tracks`、`trail`、`continuation`，README 的 schema 歷史，以及 `Web/WasmProbe`（它直接複製 `GoldenScenario.swift` 與 `NetworkSupport.swift` 的前半，這一步之後照樣能編譯，但沒有在 Linux 上跑）。→ F3c-4（§8.11）。
 - **改名**：`TrackNodeID`／`TrackEdgeID` 單一 case 的列舉、`TrainPosition.linkLength`、`TrainMovement` 的 `continuation` 鍵名與 `setTrainContinuation(_:along:)`。決策 51 規定和刪除分開做。
 - **票價的距離**：照舊用點車站底下那一格（決策 51 第 2 點）。
+
+### 8.11 F3c-4：golden schema 28
+
+- **fixture**：25 份都從 schema 27 改成 28，拿掉只能是 `[]` 的三個方格鍵：最終狀態的 `tracks`（25 處）、列車的 `trail`（44 處）與列車移動的 `continuation`（134 處，含觀察的答案）。拿掉這三個鍵、把版本換回 27 之後，每一份都和改之前的 JSON 完全相同（以 Python 逐份比較），所以沒有任何預期值改變。
+- **執行器**（`GoldenScenario.swift`）：`schemaVersion` 28；`RemovedGridEntry` 與 `WorldSummary.tracks`、`TrainSummary.trail`、`TrainMovementSummary.continuation` 拿掉。方格的指令、觀察、結果、位置與資源照舊拒絕並說明方格在 F3c 移除（`testTheGridsStepsAndValuesAreRefused`）；schema 27 和其他舊版本一樣拒絕（`testUnsupportedSchemaVersionIsRejected`）。
+- **README**：schema 28 的欄位、值的表示、指令與結果表拿掉方格，schema 歷史加上 **28**。
+- **`Web/WasmProbe`**：`prepare.mjs` 照原樣複製執行器、`NetworkSupport.swift` 的前半與全部 fixture，`Probe.swift` 只用路網的指令，所以不用改；本機的 native probe 跑過全部 25 份（下面的驗證）。
+- **存檔不變**：`TrainMovement` 照舊寫 `"continuation": []`（決策 51 第 3 點）；golden 的 schema 和存檔格式是兩回事。
+
+### 8.12 F3c-4 之後暫時沒有改的地方
+
+- **改名**：`TrackNodeID`／`TrackEdgeID` 單一 case 的列舉、`TrainPosition.linkLength`、存檔的 `continuation` 鍵名與 `setTrainContinuation(_:along:)`。決策 51 規定和刪除分開做；存檔的鍵名要改就是存檔格式的變更（新的存檔版本、遷移與 fixture）。
+- **票價的距離**：照舊用點車站底下那一格（決策 51 第 2 點）。
+- **`Web/WasmProbe` 的 Wasm 與瀏覽器部分**：本機沒有 `swift-6.4.0-RELEASE_wasm` SDK 與瀏覽器，只跑了 native；Wasm、Node WASI 與三個瀏覽器的比對由 `wasm-probe.yml` 在 CI 跑。
 
 ## 驗證紀錄
 

@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 27
+    static let schemaVersion = 28
 
     var description: String
     var initialState: InitialState
@@ -1395,20 +1395,6 @@ struct TrainState: Equatable {
     }
 }
 
-/// An entry of a list that held the grid's values, which schema 27 still
-/// writes (the final state's `"tracks"`, a train's `"trail"` and a
-/// movement's `"continuation"`): always `[]` since Stage F3c removed the
-/// grid (ARCHITECTURE decision 51), so any entry is rejected.
-enum RemovedGridEntry: Codable, Equatable {
-    init(from decoder: any Decoder) throws {
-        throw DecodingError.dataCorrupted(DecodingError.Context(
-            codingPath: decoder.codingPath, debugDescription: "This lists the grid's values, which Stage F3c removed: it is always []."
-        ))
-    }
-
-    func encode(to encoder: any Encoder) throws {}
-}
-
 // MARK: - Final state
 
 /// The externally meaningful state of a world: time, money, what has been
@@ -1428,8 +1414,6 @@ struct WorldSummary: Codable, Equatable {
     var speed: SpeedName
     var balance: Int64
     var stations: [StationSummary]
-    /// The grid's track (schema 27 still writes it): always `[]`.
-    var tracks: [RemovedGridEntry]
     var trains: [TrainSummary]
     var lines: [LineSummary]
     var serviceDay: [BandSummary]
@@ -1494,8 +1478,6 @@ struct WorldSummary: Codable, Equatable {
         var times: TimesSummary?
         /// Its cars; `1` for a train of one car.
         var cars: Int
-        /// The grid's body (schema 27 still writes it): always `[]`.
-        var trail: [RemovedGridEntry]
         /// On the track network (schema 16): the edges its body lies over
         /// behind its head's edge, nearest first, by number.
         var trailEdges: [Int]
@@ -1507,7 +1489,7 @@ struct WorldSummary: Codable, Equatable {
         var performance: PerformanceSummary
 
         private enum CodingKeys: String, CodingKey {
-            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trail, trailEdges, reservation, performance
+            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trailEdges, reservation, performance
         }
 
         init(
@@ -1524,7 +1506,6 @@ struct WorldSummary: Codable, Equatable {
             self.execution = execution
             self.times = times
             self.cars = cars
-            self.trail = []
             self.trailEdges = trailEdges
             self.reservation = reservation
             self.performance = PerformanceSummary(performance)
@@ -1544,7 +1525,6 @@ struct WorldSummary: Codable, Equatable {
             execution = try container.decode(ExecutionSummary.self, forKey: .execution)
             times = try container.contains(.times) ? container.decode(TimesSummary.self, forKey: .times) : nil
             cars = try container.decode(Int.self, forKey: .cars)
-            trail = try container.decode([RemovedGridEntry].self, forKey: .trail)
             trailEdges = try container.decode([Int].self, forKey: .trailEdges)
             reservation = try container.decode([ResourceSummary].self, forKey: .reservation)
             performance = try container.contains(.performance)
@@ -1562,7 +1542,6 @@ struct WorldSummary: Codable, Equatable {
             try container.encode(execution, forKey: .execution)
             try container.encodeIfPresent(times, forKey: .times)
             try container.encode(cars, forKey: .cars)
-            try container.encode(trail, forKey: .trail)
             try container.encode(trailEdges, forKey: .trailEdges)
             try container.encode(reservation, forKey: .reservation)
             if performance.performance != .standard {
@@ -1626,7 +1605,6 @@ struct WorldSummary: Codable, Equatable {
         stations = world.stations
             .map { StationSummary(id: $0.id.rawValue, name: $0.name, point: $0.point) }
             .sorted { $0.id < $1.id }
-        tracks = []
         trains = world.trains
             .map {
                 TrainSummary(
@@ -2295,24 +2273,21 @@ struct TrainPositionSummary: Codable, Equatable {
     }
 }
 
-/// A train's movement as a fixture value: `{"rate", "continuation": [],
-/// "cursor", "edges", "end"}`, in GameCore's terms (see `TrainMovement`):
-/// `rate` units per basic step, the edges of its path in order (schema 16),
-/// how many of them have been entered, and where the path stops on its last
-/// edge (schema 18; absent when it runs to that edge's end). A spent path
-/// is `[]` with cursor 0; an idle train is `{"rate": 0, "continuation": [],
-/// "cursor": 0, "edges": []}`. `"continuation"`, the grid's path, is always
-/// `[]` (schema 27 still writes it; Stage F3c removed the grid).
+/// A train's movement as a fixture value: `{"rate", "cursor", "edges",
+/// "end"}`, in GameCore's terms (see `TrainMovement`): `rate` units per
+/// basic step, the edges of its path in order (schema 16), how many of them
+/// have been entered, and where the path stops on its last edge (schema 18;
+/// absent when it runs to that edge's end). A spent path is `[]` with
+/// cursor 0; an idle train is `{"rate": 0, "cursor": 0, "edges": []}`.
+/// (Until schema 28 it also had `"continuation"`, the grid's path.)
 struct TrainMovementSummary: Codable, Equatable {
     var rate: Int64
-    var continuation: [RemovedGridEntry]
     var cursor: Int
     var edges: [Int]
     var end: Int64?
 
     init(rate: Int64, cursor: Int, edges: [Int] = [], end: Int64? = nil) {
         self.rate = rate
-        self.continuation = []
         self.cursor = cursor
         self.edges = edges
         self.end = end

@@ -772,7 +772,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongNetworkExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 27,
+              "schemaVersion": 28,
               "description": "Deliberately wrong: expects another length and a way on from a dead end.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -802,7 +802,7 @@ final class GoldenScenarioTests: XCTestCase {
                 }
               ],
               "expectedFinalState": {
-                "gameMinutes": 0, "speed": "paused", "balance": 1000, "stations": [], "tracks": [],
+                "gameMinutes": 0, "speed": "paused", "balance": 1000, "stations": [],
                 "trains": [],
                 "lines": [],
                 "serviceDay": [
@@ -839,8 +839,7 @@ final class GoldenScenarioTests: XCTestCase {
 
     /// Stage F3c removed the grid (ARCHITECTURE decision 51): its commands,
     /// observations, errors, positions, resources and stations on tiles are
-    /// refused with that reason, and the lists schema 27 still writes for it
-    /// (`"tracks"`, `"trail"`, `"continuation"`) must be empty.
+    /// not part of schema 28, and are refused with that reason.
     func testTheGridsStepsAndValuesAreRefused() {
         let commands = [
             #"{"type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "west"]}"#,
@@ -892,15 +891,10 @@ final class GoldenScenarioTests: XCTestCase {
                 XCTAssertTrue("\(error)".contains("Stage F3c"), "\(error)")
             }
         }
-        XCTAssertNoThrow(try JSONDecoder().decode(TrainMovementSummary.self, from: Data(#"{"rate": 0, "continuation": [], "cursor": 0, "edges": []}"#.utf8)))
-        XCTAssertThrowsError(try JSONDecoder().decode(TrainMovementSummary.self, from: Data(#"{"rate": 0, "continuation": [{"x": 1, "y": 0}], "cursor": 0, "edges": []}"#.utf8))) { error in
-            XCTAssertTrue("\(error)".contains("Stage F3c"), "\(error)")
-        }
-        XCTAssertThrowsError(try JSONDecoder().decode([RemovedGridEntry].self, from: Data(#"[{"x": 0, "y": 0, "connections": ["east"], "layout": {"type": "open"}}]"#.utf8)))
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -1018,11 +1012,11 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "conflicts"}, "expect": {"conflicts": ["east"]}}"#,
             // A train is answered by its position and movement, both required,
             // and by nothing else.
-            #"{"observe": {"type": "train"}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}}}"#,
+            #"{"observe": {"type": "train"}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "cursor": 0, "edges": []}}}"#,
             #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}}}"#,
-            #"{"observe": {"type": "train", "train": 1}, "expect": {"movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}}}"#,
-            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": []}}}"#,
-            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"movement": {"rate": 0, "cursor": 0, "edges": []}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0}}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "cursor": 0}}}"#,
             // Schema 16: the track network's observations answer only in
             // their own shapes.
             #"{"observe": {"type": "trackEdge", "edge": 1}, "expect": {"found": true}}"#,
@@ -1054,7 +1048,7 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": false, "trainPath": {"traversals": [], "distance": 0}}}"#,
             #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": true, "trainPath": {"traversals": []}}}"#,
             #"{"observe": {"type": "pathToStation", "from": {"type": "edge", "edge": 1, "direction": "forward", "offset": 0}, "station": 1}, "expect": {"found": true, "path": []}}"#,
-            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "tracks": 1}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "cursor": 0, "edges": []}, "tracks": 1}}"#,
             #"{"observe": {"type": "conflicts"}, "expect": {"conflicts": [], "position": {"type": "unplaced"}}}"#,
             // Station stops have answers of their own.
             #"{"observe": {"type": "stationStops"}, "expect": {"stations": []}}"#,
@@ -1068,7 +1062,7 @@ final class GoldenScenarioTests: XCTestCase {
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [], "stations": []}}"#,
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": [{"station": 1, "arrival": 0}]}}"#,
             #"{"observe": {"type": "timetable", "train": 1}, "expect": {"timetable": null}}"#,
-            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "continuation": [], "cursor": 0, "edges": []}, "timetable": []}}"#,
+            #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "unplaced"}, "movement": {"rate": 0, "cursor": 0, "edges": []}, "timetable": []}}"#,
             // A service is answered by its type, with "stop" and "cycle"
             // exactly when active, and by nothing else.
             #"{"observe": {"type": "execution"}, "expect": {"execution": {"type": "inactive"}}}"#,
@@ -1131,7 +1125,7 @@ final class GoldenScenarioTests: XCTestCase {
             )
         }
 
-        let train = #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "edge", "edge": 2, "direction": "backward", "offset": 532}, "movement": {"rate": 1300, "continuation": [], "cursor": 1, "edges": [2, 3], "end": 40}}}"#
+        let train = #"{"observe": {"type": "train", "train": 1}, "expect": {"position": {"type": "edge", "edge": 2, "direction": "backward", "offset": 532}, "movement": {"rate": 1300, "cursor": 1, "edges": [2, 3], "end": 40}}}"#
         XCTAssertEqual(
             try JSONDecoder().decode(GoldenScenario.Step.self, from: Data(train.utf8)),
             .observe(.train(TrainID(rawValue: 1)), expect: .train(TrainState(
