@@ -583,9 +583,11 @@ final class TrainRepeatTests: XCTestCase {
         }
 
         // Travelling to stop 0 is fine in a later cycle: the journey from the
-        // last stop back to the first. It still has to end at Alpha, which
-        // this one (to f) does not.
-        XCTAssertThrowsError(try decode { $0["execution"] = ["phase": "travelling", "stop": 0, "cycle": 1] })
+        // last stop back to the first. It still has to end at a berth: at
+        // Alpha's, or (Stage V2, ARCHITECTURE decision 58) at another
+        // station's, a passing place on the way, as this one (to f, Gamma's)
+        // does.
+        XCTAssertNoThrow(try decode { $0["execution"] = ["phase": "travelling", "stop": 0, "cycle": 1] })
         // The last cycle that fits is a valid cycle.
         XCTAssertNoThrow(try decode { $0["execution"] = ["phase": "travelling", "stop": 1, "cycle": 12_810_238_940_076_076] })
         // Without "cycle", cycle 0: a different but valid service.

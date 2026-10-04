@@ -1160,7 +1160,14 @@ public struct GameWorld: Equatable, Sendable {
     ///
     ///    A travelling train held up on its run (see phase 2) sets off on a
     ///    new one from a stand over the way left, as fast as it can, once
-    ///    it has a rate and can move (see ``resumeRun(_:at:)``).
+    ///    it has a rate and can move (see ``resumeRun(_:at:)``). A service
+    ///    stopped at a passing place (Stage V2) goes on to its call once it
+    ///    can take the route there, as fast as it can (see ``goOn(_:held:memo:)``).
+    /// 1b. **The dispatcher at `T`** (Stage V2), only at a whole minute,
+    ///    under traffic control: of the trains in a deadlock (see
+    ///    ``deadlockedTrains()``), the first whose service is due to leave
+    ///    or stands at a passing place, and has a passing place that lets
+    ///    another of them go, sets off for it (see ``resolveDeadlock(memo:)``).
     /// 2. **Movement.** Every train with a rate above 0 travels its share
     ///    for second `t`: along its service's run, the curve's distance at
     ///    `t + 1` less at `t`; otherwise its share of its rate (see
@@ -1333,6 +1340,12 @@ public struct GameWorld: Equatable, Sendable {
             if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
                 changed = true
             }
+            // Stage V2: once a minute, the dispatcher sends a service of a
+            // deadlock to a passing place.
+            if start.isWholeMinute, let resolved = resolveDeadlock(memo: &memo) {
+                held.removeAll { $0.candidate.id == resolved }
+                changed = true
+            }
             // The seconds to the end of this minute, or of the batch, or to
             // the next second at which a service's dwell moves on or a
             // train comes to the end of its route: they move the trains
@@ -1367,8 +1380,10 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             if !changed, span == minute {
-                let wake = [wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo)]
-                    .compactMap { $0 }.min()
+                let wake = [
+                    wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
+                    minutesUntilLineWaitsChange(memo: &memo),
+                ].compactMap { $0 }.min()
                 let idle = min(remaining / minute, wake ?? remaining / minute)
                 if release != nil || accounts.mode == .management {
                     // Releasing passengers (G1a) and settling the accounts
@@ -1593,6 +1608,44 @@ public struct GameWorld: Equatable, Sendable {
         return soonest
     }
 
+    /// Stage V2: the whole minutes from now, the start of a minute, until
+    /// the first minute at or after now at which a line's service with a
+    /// train that only its route keeps from being ready (see
+    /// ``readyTrain(of:_:memo:)``) starts or stops being due to send it out,
+    /// or `nil` if there is none. Such a train waits for its route while
+    /// the line is due (see ``trainHoldingRoute(of:)``), so it may complete
+    /// a deadlock, and the dispatcher looks only at whole minutes: an idle
+    /// stretch must not skip the minute it starts or stops waiting. The
+    /// minutes are those of ``minutesUntilNextDispatch(memo:)``.
+    private func minutesUntilLineWaitsChange(memo: inout DispatchMemo) -> Int64? {
+        guard isTrafficControlEnabled else { return nil }
+        let now = clock.now
+        var soonest: Int64?
+        for line in lines {
+            for stream in line.dispatchStreams where !line.trains(of: stream).isEmpty {
+                let waits = line.trains(of: stream).contains { id in
+                    guard let train = train(id: id) else { return false }
+                    return readyTrip(of: train, on: line, stream.service, memo: &memo) != nil
+                }
+                guard waits, readyTrain(of: line, stream, memo: &memo) == nil else { continue }
+                var wake: GameTime?
+                if now.seconds < 0 {
+                    wake = .zero
+                } else {
+                    wake = line.nextChange(after: now, in: serviceDay)
+                    if !isDispatchDue(line, stream, at: now, memo: &memo), let last = line.lastDispatch(of: stream),
+                       let planned = plannedService(of: line, stream.service, at: now, memo: &memo),
+                       let due = Self.time(last, plusMinutes: planned.headway), due > now {
+                        wake = min(wake ?? due, due)
+                    }
+                }
+                guard let wake else { continue }
+                soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake))
+            }
+        }
+        return soonest
+    }
+
     /// The services' phase of a basic step (Stage W2b): every train whose
     /// service waits at a stop, in ascending ID order, moves its dwell on
     /// (see ``stepDwell(_:at:)``) and then leaves if its departure is due
@@ -1611,8 +1664,79 @@ public struct GameWorld: Equatable, Sendable {
             if resumeRun(index, at: now) {
                 changed = true
             }
+            if goOn(index, held: &held, memo: &memo) {
+                changed = true
+            }
         }
         return changed
+    }
+
+    /// Stage V2 (ARCHITECTURE decision 58): train `index`'s service,
+    /// stopped at a passing place on its way (see ``isAtPassingPlace(_:)``),
+    /// sets off again for its call once it can take the route there as a
+    /// departure does (see ``reservingDeparture(_:)``): whole, following
+    /// the trains ahead, or to another berth of the call's station. It is
+    /// off its timetable, so it runs as fast as it can. Otherwise it waits
+    /// there, and the route it waits for joins `held`. Without traffic
+    /// control it always can. Returns whether the service changed.
+    private mutating func goOn(_ index: Int, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
+        guard let going = goingOn(trains[index]) else { return false }
+        switch reservingDeparture(going, memo: &memo.directions) {
+        case .granted(var granted):
+            let fastest = run(of: granted, length: routeLength(of: granted))
+            granted.times?.run = fastest
+            trains[index] = granted
+            return true
+        case .held:
+            held.append(HeldRoute(candidate: going))
+            return false
+        }
+    }
+
+    /// Stage V2 (ARCHITECTURE decision 58): the dispatcher's phase, at a
+    /// whole minute after the services' phase. Of the trains in a deadlock
+    /// (see ``deadlock(memo:)``), the first in ID order whose service is due to
+    /// leave a stop, or is stopped at a passing place, and that has a
+    /// passing place letting another of them go (see
+    /// ``passingPlace(for:in:memo:)``) sets off for it, taking the way there
+    /// whole, as fast as it can: one train at most each minute. Leaving a
+    /// stop so is a departure like any other (G1b, G1c), counted over the
+    /// whole way to its call. Returns the train's ID, or `nil`.
+    private mutating func resolveDeadlock(memo: inout DispatchMemo) -> TrainID? {
+        // Only such a service is ever sent: without one, nothing to find.
+        guard isTrafficControlEnabled, trains.contains(where: { train in
+            if case .waitingAtStop? = train.execution, let due = departureDue(of: train), due <= clock.now { return true }
+            return isAtPassingPlace(train)
+        }) else { return nil }
+        let stuck = deadlock(memo: &memo.directions)
+        for id in stuck.keys.sorted() {
+            guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
+                  trains[index].execution != nil,
+                  let passing = passingPlace(for: request.candidate, in: stuck, memo: &memo.directions)
+            else { continue }
+            var aside = request.candidate
+            follow(passing.path, &aside)
+            let fastest = run(of: aside, length: passing.path.distance)
+            aside.times?.run = fastest
+            guard case .granted(let granted) = reserving(aside) else { continue }
+            let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
+            trains[index] = granted
+            if let left {
+                serve(departureOf: id, from: left, distance: passing.distance)
+            }
+            return id
+        }
+        return nil
+    }
+
+    /// This world with `train` in place of the train of its ID: for asking
+    /// what would follow from it (Stage V2), never committed.
+    func replacing(_ train: Train) -> GameWorld {
+        var world = self
+        if let index = world.trains.firstIndex(where: { $0.id == train.id }) {
+            world.trains[index] = train
+        }
+        return world
     }
 
     /// Moves on the dwell of train `index`, if its service waits at a stop
@@ -2767,7 +2891,9 @@ extension GameWorld: Codable {
     /// path is not spent, and it ends at a berth of a platform of the
     /// station of the stop it travels to that the train fits (Stage S5), as every path from the service does; such a platform
     /// cannot be removed while the service needs it (see
-    /// ``removeTrackPlatform(_:on:from:)``). Where an edge on the way was
+    /// ``removeTrackPlatform(_:on:from:)``). Since Stage V2 a travelling
+    /// train may also be on its way to, or stand at, a passing place: a
+    /// berth of another station (see ``isAtPassingPlace(_:)``). Where an edge on the way was
     /// removed, so the path can no longer be followed to its last edge, that
     /// edge still has such a berth, one way or the other, where it ends.
     private func serviceProblem(of train: Train) -> String? {
@@ -2780,14 +2906,28 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service waits at a station the train is not stopped at."
             }
         case .travellingToStop:
-            guard standingPoint(of: train) == nil else {
-                return "Train \(train.id.rawValue)'s service travels, but its path is spent."
-            }
-            guard pathEndsAtBerth(of: train, for: station.id) else {
-                return "Train \(train.id.rawValue)'s service travels on a path that does not end at its next stop."
+            if standingPoint(of: train) != nil {
+                // Stage V2: only at a passing place, a berth of another
+                // station than its call's.
+                guard !isStopped(train, at: station.id), stations.contains(where: { standsAtBerth(train, of: $0.id) }) else {
+                    return "Train \(train.id.rawValue)'s service travels, but its path is spent."
+                }
+            } else {
+                // Stage V2: or to a passing place.
+                guard pathEndsAtBerth(of: train, for: station.id) || stations.contains(where: { pathEndsAtBerth(of: train, for: $0.id) }) else {
+                    return "Train \(train.id.rawValue)'s service travels on a path that does not end at its next stop."
+                }
             }
         }
         return nil
+    }
+
+    /// Whether `train` stands at a berth of station `id` for its length
+    /// (see ``berths(of:length:)``): its head exactly there, the way it
+    /// faces.
+    private func standsAtBerth(_ train: Train, of id: StationID) -> Bool {
+        guard case .onEdge(let traversal, let offset)? = train.position else { return false }
+        return berths(of: id, length: train.length).contains(Berth(traversal: traversal, offset: offset))
     }
 
     /// Whether the path of `train` ends at a berth

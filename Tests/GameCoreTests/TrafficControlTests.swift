@@ -1403,3 +1403,88 @@ extension TrafficControlTests {
         XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
     }
 }
+
+/// Decision 57 as settled for Stage V2: following comes before another
+/// platform, and an alternative is at most 400 m longer than the default
+/// route.
+extension TrafficControlTests {
+    /// The same meeting station at eight times the size, so that a train
+    /// can follow another 400 m behind. The leader leaves M's main platform
+    /// for E as the follower is due at W: the follower follows it on the
+    /// main track (U2) instead of taking the free loop (V1), and arrives
+    /// at the main platform once the leader has gone.
+    func testAServiceFollowsAMovingLeaderBeforeTakingAnotherPlatform() throws {
+        var world = try SingleTrackMeet.world(scale: 8)
+        var model = SingleTrackMeet.model(scale: 8)
+        for (edge, offset) in [(2, Int64(9_216 * 8)), (1, 3_072 * 8)] {
+            let id = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(edge), offset: offset)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(SingleTrackMeet.forward(edge), offset: offset)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: offset))
+            XCTAssertNil(model.setRate(id, 1_024))
+        }
+        let (leader, follower) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        let lead = [ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 0), departure: .init(seconds: 0)),
+                    ScheduledStop(station: SingleTrackMeet.east, arrival: .init(seconds: 240), departure: .init(seconds: 240))]
+        let follow = [ScheduledStop(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 0)),
+                      ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 240), departure: .init(seconds: 240))]
+        for (id, stops) in [(leader, lead), (follower, follow)] {
+            try world.setTrainTimetable(id, to: stops)
+            try world.startTrainService(id)
+            XCTAssertNil(model.setTimetable(id, stops))
+            XCTAssertNil(model.startService(id))
+        }
+        try world.setTrafficControl(true)
+        XCTAssertNil(model.setTrafficControl(true))
+        // Both leave at 42 s, the leader first: the follower only follows
+        // it, 400 m behind, while the leader's body is still at M.
+        world.setSpeed(.x1)
+        for _ in 0..<43 { try world.advance(ticks: 10) }
+        XCTAssertEqual(world.train(id: follower)?.times?.departure, GameTime(seconds: 42))
+        XCTAssertEqual(world.train(id: follower)?.movement.edges, [.edge(2)])
+        XCTAssertTrue(world.isFollowing(world.train(id: follower)!))
+        XCTAssertEqual(world.trainHoldingRoute(of: follower), leader)
+        try world.advance(ticks: 3_170)
+        XCTAssertNil(model.advance(ticks: 6))
+        model.setSpeed(.x1)
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        // It arrived at the main platform, where its service ends.
+        XCTAssertNil(world.train(id: follower)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: follower), [SingleTrackMeet.middle])
+        guard case .onEdge(let traversal, _)? = world.train(id: follower)?.position else { return XCTFail("placed") }
+        XCTAssertEqual(traversal, SingleTrackMeet.forward(2))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    /// The loop of the meeting station pulled 40000 units off the main
+    /// track: the way through it is far more than 400 m longer than the
+    /// main platform's, so the service waits for the train on the main
+    /// platform instead of going round.
+    func testAnAlternativeMoreThanTheDetourAllowanceLongerIsNotTaken() throws {
+        var world = try SingleTrackMeet.world(loop: 40_000)
+        let service = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        let candidate = try XCTUnwrap(world.path(from: world.train(id: service)!.position!, toStation: SingleTrackMeet.middle, length: 2_048))
+        let loop = try XCTUnwrap(world.path(from: world.train(id: service)!.position!, toStation: SingleTrackMeet.middle, length: 2_048,
+                                            avoiding: [.span(world.trackSpans(of: .edge(2)).last { $0.start < 9_216 }!)]))
+        XCTAssertEqual(loop.traversals.map(\.edge), [.edge(4), .edge(5)])
+        XCTAssertGreaterThan(loop.distance - candidate.distance, GameWorld.detourAllowance)
+        try world.setTrainTimetable(service, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try world.startTrainService(service)
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 3)
+        XCTAssertEqual(world.train(id: service)?.execution, .waitingAtStop(0))
+        XCTAssertEqual(world.trainHoldingRoute(of: service), TrainID(rawValue: 2))
+        // Within the allowance (the usual loop) it goes round.
+        var near = try SingleTrackMeet.world()
+        let other = try SingleTrackMeet.stand(&near, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        _ = try SingleTrackMeet.stand(&near, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        try near.setTrainTimetable(other, to: Array(SingleTrackMeet.timetable(eastbound: true).prefix(2)))
+        try near.startTrainService(other)
+        try near.setTrafficControl(true)
+        try near.advance(ticks: 1)
+        XCTAssertEqual(near.train(id: other)?.movement.edges, [.edge(4), .edge(5)])
+    }
+}

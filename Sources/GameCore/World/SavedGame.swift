@@ -51,9 +51,15 @@
 ///    way, following the trains ahead. The format is the same; a build that
 ///    reads only version 6 would refuse such a reservation as not holding
 ///    the rest of its route, so it says the save is newer than it instead.
+/// 8. Passing places (Stage V2, ARCHITECTURE decision 58): a service on its
+///    way to a call may be on its way to, or stand at, a berth of another
+///    station, where it stands aside out of a deadlock. The format is the
+///    same; a build that reads only version 7 would refuse such a service
+///    as travelling on a path that does not end at its next stop, or that
+///    is spent, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 7
+    public static let currentVersion = 8
 
     public let world: GameWorld
 
@@ -96,8 +102,10 @@ extension SavedGame: Codable {
         // covers, and its movements' empty continuations, which it reads
         // and drops. Version 6 to 7: a version 6 world has no train
         // following another, and every reservation holds its whole route,
-        // which version 7 reads as before. Later versions add their steps
-        // here.
+        // which version 7 reads as before. Version 7 to 8: a version 7
+        // world has no service at a passing place, and every travelling
+        // service's path ends at its next stop, which version 8 reads as
+        // before. Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
 

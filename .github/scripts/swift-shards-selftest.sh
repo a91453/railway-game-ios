@@ -109,7 +109,7 @@ FAKE_LIST="$work/renamed.txt" WHY='NetworkServicePropertyTests .* has no tests' 
 { cat "$work/list.txt"; echo 'GameCoreTests.SwiftTestingSuite/test()'; } >"$work/other-format.txt"
 FAKE_LIST="$work/other-format.txt" WHY='cannot follow' expect fail "a test ID in another format fails" "$script" run rest
 
-WHY="Unknown shard 'campaigns-11'" expect fail "an unknown shard fails" "$script" run campaigns-11
+WHY="Unknown shard 'campaigns-12'" expect fail "an unknown shard fails" "$script" run campaigns-12
 
 # The shard selections must split a list exactly; a class named twice would not.
 # (Checked offline: the five selections of the synthetic list add up to it.)

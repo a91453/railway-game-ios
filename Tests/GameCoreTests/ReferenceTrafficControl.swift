@@ -132,7 +132,7 @@ extension ReferenceWorld {
     /// The track `other` keeps train `id` from: all it holds and, while it
     /// follows a train ahead and train `id` holds none of its route, the
     /// rest of that route nobody holds.
-    private func blocking(_ other: Train, for id: Int) -> Set<TrackResource> {
+    func blocking(_ other: Train, for id: Int) -> Set<TrackResource> {
         let own = held(other)
         guard following(other) else { return own }
         let route = needs(other).resources
@@ -421,7 +421,17 @@ extension ReferenceWorld {
         }
         var leaving: Train?
         var requesting = train
-        if let service = train.service {
+        if let service = train.service, !service.waiting {
+            // Decision 58: at a passing place, the way on to its call.
+            var world = self
+            guard let going = world.goingOn(train), let goingService = going.service else { return nil }
+            let start = world.standing(going)
+            if let path = world.chosenRoute(from: start, to: going.timetable[goingService.stop].station),
+               case .success(let off) = world.admitted(world.routed(start, path), following: true), !world.following(off) {
+                return nil
+            }
+            return holder(of: needs(going).resources, except: train.id).map(TrainID.init(rawValue:))
+        } else if let service = train.service {
             // Stage W2b: due once its doors have closed.
             guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
             leaving = firstLeaving(train)

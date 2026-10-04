@@ -152,6 +152,50 @@ final class TrafficControlSessionTests: XCTestCase {
         XCTAssertNil(world.routeWaitText(of: leader, in: .english))
     }
 
+    /// Stage V2: two expresses face each other across a single track with
+    /// a passing loop at M. Each waits for the other (a deadlock) until the
+    /// dispatcher sends Eastbound to stand aside at M.
+    func testADeadlockAndAPassingPlaceAreToldInThePlayersWords() throws {
+        var world = try makeWorld(width: 36_864, height: 12_288, balance: 100_000_000, speed: .normal)
+        for (x, y) in [(1_024, 4_096), (9_216, 4_096), (25_600, 4_096), (33_792, 4_096), (13_312, 6_144), (21_504, 6_144)] as [(Int64, Int64)] {
+            try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
+        }
+        for edge in 1...3 { try world.buildTrackEdge(from: .node(edge), to: .node(edge + 1)) }
+        try world.buildTrackEdge(from: .node(2), to: .node(5), curve: .cubic(PlanPoint(x: 11_264, y: 4_096), PlanPoint(x: 11_264, y: 6_144)))
+        try world.buildTrackEdge(from: .node(5), to: .node(6))
+        try world.buildTrackEdge(from: .node(6), to: .node(3), curve: .cubic(PlanPoint(x: 23_552, y: 6_144), PlanPoint(x: 23_552, y: 4_096)))
+        var stations: [StationID] = []
+        for (name, x) in [("W", Int64(3_072)), ("M", 17_408), ("E", 31_744)] {
+            stations.append(try world.buildStation(named: name, at: PlanPoint(x: x, y: 8_192)).id)
+        }
+        for (station, edge, start) in [(0, 1, Int64(1_024)), (1, 2, 7_168), (1, 5, 3_072), (2, 3, 5_120)] {
+            try world.addTrackPlatform(stations[station], on: .edge(edge), from: start, to: start + 2_048)
+        }
+        for (name, traversal, stops) in [
+            ("Eastbound", TrackTraversal(edge: .edge(1), direction: .forward), [stations[0], stations[2]]),
+            ("Westbound", TrackTraversal(edge: .edge(3), direction: .backward), [stations[2], stations[0]]),
+        ] {
+            let id = try world.purchaseTrain(named: name).id
+            try world.setTrainCars(id, to: 2)
+            try world.placeTrain(id, at: .onEdge(traversal, offset: 3_072))
+            try world.setTrainContinuation(id, along: [], stoppingAt: 3_072)
+            try world.setTrainMovementRate(id, to: 1_024)
+            try world.setTrainTimetable(id, to: stops.enumerated().map {
+                ScheduledStop(station: $0.element, arrival: GameTime(minutes: Int64($0.offset) * 4), departure: GameTime(minutes: Int64($0.offset) * 4))
+            })
+            try world.startTrainService(id)
+        }
+        try world.setTrafficControl(true)
+        let (east, west) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.routeWaitText(of: east, in: .english), "Deadlocked with Westbound")
+        XCTAssertEqual(world.routeWaitText(of: west, in: .traditionalChinese), "與 Eastbound 互相卡住（死結）")
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.passingPlace(of: east), stations[1])
+        XCTAssertEqual(world.routeWaitText(of: east, in: .english), "Standing aside at M until Westbound clears the route")
+        XCTAssertEqual(world.routeWaitText(of: east, in: .traditionalChinese), "在 M 待避，等待 Westbound 讓出進路")
+    }
+
     func testARouteAnotherTrainHoldsIsRefusedInThePlayersWords() async throws {
         var world = try makeLineWorld()
         try world.stopTrainService(Self.local)

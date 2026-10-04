@@ -58,7 +58,9 @@ extension TimetableExecution {
     /// (``TrainMovement/end``); for one that runs to the end of the edge,
     /// whether the head is there is checked by the ``GameWorld`` decoder. So
     /// a waiting train has no edges left and is at its path's end if it has
-    /// one, and a travelling train is not known to be there.
+    /// one. A travelling train was not there before Stage V2; since then it
+    /// may be, at a passing place (ARCHITECTURE decision 58), which only
+    /// the ``GameWorld`` decoder can tell.
     ///
     /// - Precondition: `timetable` and `period` form a timetable (see
     ///   ``ScheduledStop/isTimetable(_:period:)``).
@@ -67,18 +69,17 @@ extension TimetableExecution {
         if cycle > 0 {
             guard let period, cycle <= ScheduledStop.lastCycle(of: timetable, period: period) else { return false }
         }
-        // Whether the journey may have ended, and whether it has for certain.
-        let (mayHaveEnded, hasEnded): (Bool, Bool)
+        // Whether the journey may have ended.
+        let mayHaveEnded: Bool
         switch position {
         case .onEdge(_, let offset):
-            let spent = movement.remainingEdges.isEmpty
-            (mayHaveEnded, hasEnded) = (spent && (movement.end ?? offset) == offset, spent && movement.end == offset)
+            mayHaveEnded = movement.remainingEdges.isEmpty && (movement.end ?? offset) == offset
         }
         switch self {
         case .waitingAtStop:
             return mayHaveEnded
         case .travellingToStop(let stop, let cycle):
-            return (stop >= 1 || cycle >= 1) && !hasEnded
+            return stop >= 1 || cycle >= 1
         }
     }
 }

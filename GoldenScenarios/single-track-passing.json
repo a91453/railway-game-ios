@@ -1,0 +1,944 @@
+{
+  "description": "Facing expresses on the single track (Stage V2, decision 58). Neither calls at M, so each route to the other's terminal needs the other's platform: a deadlock. At the next whole minute the dispatcher sends Eastbound to stand aside at M's main platform, Westbound passes it through the loop (V1), and both finish at the opposite terminal. New expectations obtained from GameCore and independently checked by ReferenceWorldGoldenTests.",
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 995500,
+    "gameMinutes": 10,
+    "lines": [],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 8192,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 16384,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 3,
+          "id": 3,
+          "length": 8192,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 4
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 11264,
+              "y": 4096
+            },
+            "control2": {
+              "x": 11264,
+              "y": 6144
+            },
+            "type": "cubic"
+          },
+          "from": 2,
+          "id": 4,
+          "length": 4732,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 5
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 5,
+          "id": 5,
+          "length": 8192,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 6
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 23552,
+              "y": 6144
+            },
+            "control2": {
+              "x": 23552,
+              "y": 4096
+            },
+            "type": "cubic"
+          },
+          "from": 6,
+          "id": 6,
+          "length": 4732,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 1024,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 9216,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 25600,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 4,
+          "x": 33792,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 5,
+          "x": 13312,
+          "y": 6144,
+          "z": 0
+        },
+        {
+          "id": 6,
+          "x": 21504,
+          "y": 6144,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 3072,
+          "start": 1024,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 9216,
+          "start": 7168,
+          "station": 2
+        },
+        {
+          "edge": 3,
+          "end": 7168,
+          "start": 5120,
+          "station": 3
+        },
+        {
+          "edge": 5,
+          "end": 5120,
+          "start": 3072,
+          "station": 2
+        }
+      ]
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "W",
+        "point": {
+          "x": 3072,
+          "y": 8192
+        }
+      },
+      {
+        "id": 2,
+        "name": "M",
+        "point": {
+          "x": 17408,
+          "y": 8192
+        }
+      },
+      {
+        "id": 3,
+        "name": "E",
+        "point": {
+          "x": 31744,
+          "y": 8192
+        }
+      }
+    ],
+    "trafficControl": true,
+    "trains": [
+      {
+        "cars": 2,
+        "execution": {
+          "type": "inactive"
+        },
+        "id": 1,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "end": 7168,
+          "rate": 1024
+        },
+        "name": "Eastbound",
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 7168,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrival": 4,
+            "departure": 4,
+            "reverse": false,
+            "station": 3
+          }
+        ],
+        "trailEdges": []
+      },
+      {
+        "cars": 2,
+        "execution": {
+          "type": "inactive"
+        },
+        "id": 2,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "end": 7168,
+          "rate": 1024
+        },
+        "name": "Westbound",
+        "position": {
+          "direction": "backward",
+          "edge": 1,
+          "offset": 7168,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false,
+            "station": 3
+          },
+          {
+            "arrival": 4,
+            "departure": 4,
+            "reverse": false,
+            "station": 1
+          }
+        ],
+        "trailEdges": []
+      }
+    ]
+  },
+  "initialState": {
+    "balance": 1000000,
+    "costs": {
+      "station": 1000,
+      "track": 10,
+      "train": 500
+    },
+    "gameMinutes": 0,
+    "speed": "normal",
+    "worldHeight": 12288,
+    "worldWidth": 36864
+  },
+  "schemaVersion": 30,
+  "steps": [
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 9216,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 25600,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 33792,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 13312,
+        "y": 6144,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 21504,
+        "y": 6144,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 1,
+        "to": 2,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 2,
+        "to": 3,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 3,
+        "to": 4,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "control1": {
+            "x": 11264,
+            "y": 4096
+          },
+          "control2": {
+            "x": 11264,
+            "y": 6144
+          },
+          "type": "cubic"
+        },
+        "from": 2,
+        "to": 5,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 5,
+        "to": 6,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "control1": {
+            "x": 23552,
+            "y": 6144
+          },
+          "control2": {
+            "x": 23552,
+            "y": 4096
+          },
+          "type": "cubic"
+        },
+        "from": 6,
+        "to": 3,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "W",
+        "point": {
+          "x": 3072,
+          "y": 8192
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "M",
+        "point": {
+          "x": 17408,
+          "y": 8192
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "E",
+        "point": {
+          "x": 31744,
+          "y": 8192
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 1,
+        "end": 3072,
+        "start": 1024,
+        "station": 1,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 2,
+        "end": 9216,
+        "start": 7168,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 5,
+        "end": 5120,
+        "start": 3072,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 3,
+        "end": 7168,
+        "start": 5120,
+        "station": 3,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Eastbound",
+        "type": "purchaseTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "cars": 2,
+        "train": 1,
+        "type": "setTrainCars"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "position": {
+          "direction": "forward",
+          "edge": 1,
+          "offset": 3072,
+          "type": "edge"
+        },
+        "train": 1,
+        "type": "placeTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "end": 3072,
+        "path": [],
+        "train": 1,
+        "type": "setTrainPath"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "rate": 1024,
+        "train": 1,
+        "type": "setTrainMovementRate"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "repeat": {
+          "type": "once"
+        },
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrival": 4,
+            "departure": 4,
+            "reverse": false,
+            "station": 3
+          }
+        ],
+        "train": 1,
+        "type": "setTrainTimetable"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "train": 1,
+        "type": "startTrainService"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Westbound",
+        "type": "purchaseTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "cars": 2,
+        "train": 2,
+        "type": "setTrainCars"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "position": {
+          "direction": "backward",
+          "edge": 3,
+          "offset": 3072,
+          "type": "edge"
+        },
+        "train": 2,
+        "type": "placeTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "end": 3072,
+        "path": [],
+        "train": 2,
+        "type": "setTrainPath"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "rate": 1024,
+        "train": 2,
+        "type": "setTrainMovementRate"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "repeat": {
+          "type": "once"
+        },
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false,
+            "station": 3
+          },
+          {
+            "arrival": 4,
+            "departure": 4,
+            "reverse": false,
+            "station": 1
+          }
+        ],
+        "train": 2,
+        "type": "setTrainTimetable"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "train": 2,
+        "type": "startTrainService"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "enabled": true,
+        "type": "setTrafficControl"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "ticks": 1,
+        "type": "advance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 0,
+          "type": "waiting"
+        }
+      },
+      "observe": {
+        "train": 1,
+        "type": "execution"
+      }
+    },
+    {
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 0,
+          "type": "waiting"
+        }
+      },
+      "observe": {
+        "train": 2,
+        "type": "execution"
+      }
+    },
+    {
+      "command": {
+        "ticks": 1,
+        "type": "advance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "end": 9216,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 2,
+          "offset": 9216,
+          "type": "edge"
+        }
+      },
+      "observe": {
+        "train": 1,
+        "type": "train"
+      }
+    },
+    {
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "travelling"
+        }
+      },
+      "observe": {
+        "train": 1,
+        "type": "execution"
+      }
+    },
+    {
+      "expect": {
+        "stations": [
+          2
+        ]
+      },
+      "observe": {
+        "train": 1,
+        "type": "stationStops"
+      }
+    },
+    {
+      "expect": {
+        "movement": {
+          "cursor": 0,
+          "edges": [
+            6,
+            5,
+            4,
+            1
+          ],
+          "end": 7168,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "backward",
+          "edge": 3,
+          "offset": 7207,
+          "type": "edge"
+        }
+      },
+      "observe": {
+        "train": 2,
+        "type": "train"
+      }
+    },
+    {
+      "command": {
+        "ticks": 8,
+        "type": "advance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "stations": [
+          3
+        ]
+      },
+      "observe": {
+        "train": 1,
+        "type": "stationStops"
+      }
+    },
+    {
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      },
+      "observe": {
+        "train": 1,
+        "type": "execution"
+      }
+    },
+    {
+      "expect": {
+        "stations": [
+          1
+        ]
+      },
+      "observe": {
+        "train": 2,
+        "type": "stationStops"
+      }
+    },
+    {
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      },
+      "observe": {
+        "train": 2,
+        "type": "execution"
+      }
+    }
+  ]
+}

@@ -369,10 +369,22 @@ extension GameWorld {
     /// while train `id` is due to leave on a route another train holds
     /// (see ``trainHoldingRoute(of:)``), naming that train, or "Following
     /// Express" while it is on its way behind it (Stage U2: only a train
-    /// following another waits for its route on the way); `nil` otherwise.
+    /// following another waits for its route on the way). Stage V2:
+    /// "Standing aside at M until Express clears the route" while it waits
+    /// at a passing place (see ``passingPlace(of:)``), and "Deadlocked with
+    /// Express" while it is in a deadlock (see ``deadlockedTrains()``):
+    /// the trains it waits for wait for it too, and no passing place lets
+    /// any of them go. `nil` otherwise.
     public func routeWaitText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let holder = trainHoldingRoute(of: id) else { return nil }
         let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
+        if deadlockedTrains().contains(id) {
+            return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
+        }
+        if let place = passingPlace(of: id) {
+            let station = station(id: place)?.name ?? "#\(place.rawValue)"
+            return language.text("Standing aside at \(station) until \(name) clears the route", "在 \(station) 待避，等待 \(name) 讓出進路")
+        }
         if case .travellingToStop? = train(id: id)?.execution {
             return language.text("Following \(name)", "跟在 \(name) 後面")
         }

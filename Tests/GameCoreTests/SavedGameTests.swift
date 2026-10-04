@@ -32,8 +32,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 7)
-        XCTAssertEqual(SavedGame.currentVersion, 7)
+        XCTAssertEqual(object["saveVersion"] as? Int, 8)
+        XCTAssertEqual(SavedGame.currentVersion, 8)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -52,7 +52,8 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 5, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 8, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 9, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -383,8 +384,8 @@ final class SavedGameTests: XCTestCase {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let seven = try Data(contentsOf: Self.fixtures.appendingPathComponent("v7-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), seven)
+        let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
+        XCTAssertEqual(try encoder.encode(game), eight)
     }
 
     /// The version 5 save (Stage F2): the same game, listing the siding and
@@ -424,13 +425,13 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(game.world.bounds, .maximum)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let seven = try Data(contentsOf: Self.fixtures.appendingPathComponent("v7-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), seven, "saved again by a later build, the current version")
+        let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
+        XCTAssertEqual(try encoder.encode(game), eight, "saved again by a later build, the current version")
     }
 
     /// The version 7 save (Stage U2): the version 6 save read by the
     /// Stage U2 build and saved again: only its version differs, as no train
-    /// in it follows another. Saving it again gives it byte for byte.
+    /// in it follows another. Saving it again gives the version 8 save.
     func testTheVersionSevenSaveReadsAsItWasWritten() throws {
         let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v7-demo-siding-90-minutes.json"))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -441,6 +442,26 @@ final class SavedGameTests: XCTestCase {
 
         let game = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertEqual(game.world, try JSONDecoder().decode(SavedGame.self, from: six).world)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
+        XCTAssertEqual(try encoder.encode(game), eight, "saved again by a later build, the current version")
+    }
+
+    /// The version 8 save (Stage V2): the version 7 save read by the
+    /// Stage V2 build and saved again: only its version differs, as no
+    /// service in it stands aside at a passing place. Saving it again gives
+    /// it byte for byte.
+    func testTheVersionEightSaveReadsAsItWasWritten() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 8)
+        let seven = try Data(contentsOf: Self.fixtures.appendingPathComponent("v7-demo-siding-90-minutes.json"))
+        let sevenText = String(decoding: seven, as: UTF8.self)
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), sevenText.replacingOccurrences(of: #""saveVersion" : 7"#, with: #""saveVersion" : 8"#))
+
+        let game = try JSONDecoder().decode(SavedGame.self, from: data)
+        XCTAssertEqual(game.world, try JSONDecoder().decode(SavedGame.self, from: seven).world)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         XCTAssertEqual(try encoder.encode(game), data)

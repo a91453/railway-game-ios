@@ -914,9 +914,14 @@ final class NetworkServiceTests: XCTestCase {
             ("end behind the head", mutated(1, movementChange("end", 4_000))),
             ("waiting short of its path's end", mutated(1, movementChange("end", 5_000))),
             ("travelling to no berth", mutated(0, movementChange("end", 4_000))),
-            ("travelling on a spent path", mutated(1, { train in
+            // Stage V2: a spent path is a passing place only at another
+            // station than the call's; at the call's own, it has arrived.
+            ("travelling on a spent path at its call", mutated(1, { train in
                 train["execution"] = ["phase": "travelling", "stop": 1]
                 train["times"] = ["arrival": 0, "departure": 0]
+                var timetable = train["timetable"] as! [[String: Any]]
+                timetable[1]["station"] = timetable[0]["station"]
+                train["timetable"] = timetable
             })),
             // Stage W2c: a run its train's performance builds no curve for,
             // one set off before the train left, and one while it waits.
@@ -928,6 +933,13 @@ final class NetworkServiceTests: XCTestCase {
         for (name, bytes) in refused {
             XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: bytes), name)
         }
+        // Stage V2: the waiting train travelling on to harbour, standing at
+        // deep's berth: a passing place, which loads.
+        let aside = try mutated(1, { train in
+            train["execution"] = ["phase": "travelling", "stop": 1]
+            train["times"] = ["arrival": 0, "departure": 0]
+        })
+        XCTAssertNotNil(try JSONDecoder().decode(GameWorld.self, from: aside).passingPlace(of: waiting))
         // A save without "end" (as every save before Stage S5) runs the
         // path to the end of its last edge.
         let old = try mutated(0, { train in

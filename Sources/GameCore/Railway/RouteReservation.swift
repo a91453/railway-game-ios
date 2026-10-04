@@ -62,7 +62,9 @@ extension GameWorld {
     /// next call. A line's train waits
     /// for its route when it has no service, stands at its service's first
     /// call ready to go, and the line is due to send a train out: along the
-    /// first leg of its trip. `nil` when traffic control is off, for a
+    /// first leg of its trip. A service stopped at a passing place (Stage
+    /// V2, see ``deadlockedTrains()``) waits for its route on to its call.
+    /// `nil` when traffic control is off, for a
     /// train not waiting for a route (not due, without a route, or with its
     /// route free), and for an unknown ID. Derived on every call, never
     /// saved.
@@ -73,21 +75,7 @@ extension GameWorld {
             // route.
             return holder(of: routeEnvelope(of: train).resources, except: id)
         }
-        let departing: Train?
-        if case .waitingAtStop(let stop, let cycle)? = train.execution {
-            guard let due = departureDue(of: train), due <= clock.now else { return nil }
-            departing = leaving(train, stop: stop, cycle: cycle).train
-        } else if train.execution == nil, let line = lines.first(where: { assignedLine(of: id) == $0.id }),
-                  let stream = line.dispatchStream(of: id) {
-            var memo = DispatchMemo()
-            guard isDispatchDue(line, stream, at: clock.now, memo: &memo),
-                  let trip = readyTrip(of: train, on: line, stream.service, memo: &memo)
-            else { return nil }
-            departing = firstDeparture(of: train, on: trip, calling: line.stops)
-        } else {
-            return nil
-        }
-        guard let departing else { return nil }
+        guard let departing = departureRequest(of: train) else { return nil }
         if case .granted(let granted) = reservingDeparture(departing), !isFollowing(granted) { return nil }
         return holder(of: routeEnvelope(of: departing).resources, except: id)
     }
@@ -121,36 +109,59 @@ extension GameWorld {
         return .granted(train)
     }
 
-    /// Decision 57: a service takes its default route whole, then the
-    /// shortest unblocked route to any berth of the same station whole,
-    /// then follows on the default route (U2), or waits. Manual commands
-    /// keep using `reserving` directly. No route or reservation is committed
-    /// until the final candidate has been admitted.
+    /// Decision 57: a service's departure takes its default route whole,
+    /// or follows the trains ahead on it (Stage U2) where it may; failing
+    /// both, it takes the shortest unblocked route to any berth of the same
+    /// station whole (see ``alternativeRoute(of:to:avoiding:memo:)``);
+    /// failing that, it waits. Manual commands keep using `reserving`
+    /// directly. No route or reservation is committed until the final
+    /// candidate has been admitted.
     func reservingDeparture(_ candidate: Train) -> Reserving {
         var memo = DirectionMemo()
         return reservingDeparture(candidate, memo: &memo)
     }
 
     func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
-        let whole = reserving(candidate)
-        guard isTrafficControlEnabled, case .held = whole,
+        let planned = reserving(candidate, following: true)
+        guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution,
-              let position = candidate.position
-        else { return whole }
-        if let alternative = path(from: position, toStation: candidate.timetable[stop].station,
-                                  length: candidate.length, avoiding: blockedTrack(except: candidate.id),
-                                  forbidden: opposingServiceTraversals(for: candidate, memo: &memo)) {
-            var rerouted = candidate
-            follow(alternative, &rerouted)
-            let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
-            let previousCycle = stop == 0 ? cycle - 1 : cycle
-            let scheduled = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
-                - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
-            let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
-            rerouted.times?.run = reroutedRun
-            if case .granted(let granted) = reserving(rerouted) { return .granted(granted) }
-        }
-        return reserving(candidate, following: true)
+              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+                                                 avoiding: blockedTrack(except: candidate.id), memo: &memo)
+        else { return planned }
+        var rerouted = candidate
+        follow(alternative, &rerouted)
+        let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
+        let previousCycle = stop == 0 ? cycle - 1 : cycle
+        let scheduled = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+            - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
+        let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
+        rerouted.times?.run = reroutedRun
+        if case .granted(let granted) = reserving(rerouted) { return .granted(granted) }
+        return planned
+    }
+
+    /// How much longer than a service's default route an alternative
+    /// route (decision 57) or a way through a passing place (Stage V2) may
+    /// be: 25,600 units, 400 m, the Railway reference's `BLOCK_GAP_KM`.
+    /// Going to another platform of a station, or into a passing loop,
+    /// adds only the turnouts' few metres; a route that leaves the line for
+    /// another adds kilometres, and is not taken.
+    public static let detourAllowance: Int64 = 25_600
+
+    /// Decision 57: the shortest route for `candidate`, a service about to
+    /// set off along its default route (see
+    /// ``path(from:toStation:length:)``), to a berth of `station` that
+    /// avoids `blocked` (see ``path(from:toStation:length:avoiding:forbidden:)``),
+    /// that never borrows track against another train's planned direction
+    /// (see ``opposingServiceTraversals(for:memo:)``), and that is at most
+    /// ``detourAllowance`` longer than the default route; or `nil`.
+    func alternativeRoute(of candidate: Train, to station: StationID, avoiding blocked: Set<TrackResource>, memo: inout DirectionMemo) -> TrainPath? {
+        guard let position = candidate.position,
+              let path = path(from: position, toStation: station, length: candidate.length,
+                              avoiding: blocked, forbidden: opposingServiceTraversals(for: candidate, memo: &memo))
+        else { return nil }
+        let (limit, overflow) = routeLength(of: candidate).addingReportingOverflow(Self.detourAllowance)
+        return overflow || path.distance <= limit ? path : nil
     }
 
     /// The lowest numbered train other than `id` that holds any of
