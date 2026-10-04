@@ -28,7 +28,8 @@ struct StartView: View {
                             title: String(localized: "Continue"),
                             detail: detail(of: autosave),
                             systemImage: "play.fill",
-                            isPrimary: true
+                            isPrimary: true,
+                            accentColor: Palette.metroGreen
                         ) {
                             launcher.continueGame()
                         }
@@ -38,7 +39,8 @@ struct StartView: View {
                         title: String(localized: "New Game"),
                         detail: String(localized: "An empty map and \(GameWorld.newGame().economy.balance.moneyText) to build with"),
                         systemImage: "plus",
-                        isPrimary: launcher.autosave == nil
+                        isPrimary: launcher.autosave == nil,
+                        accentColor: Palette.metroBlue
                     ) {
                         launcher.startNewGame()
                     }
@@ -47,7 +49,8 @@ struct StartView: View {
                     StartButton(
                         title: String(localized: "Real-World Map"),
                         detail: String(localized: "Build on a map of a real place"),
-                        systemImage: "globe.asia.australia"
+                        systemImage: "globe.asia.australia",
+                        accentColor: Palette.metroCyan
                     ) {
                         choosesPlace = true
                     }
@@ -55,7 +58,8 @@ struct StartView: View {
                     StartButton(
                         title: String(localized: "Tutorial"),
                         detail: String(localized: "Learn to build and run a railway step by step"),
-                        systemImage: "hand.point.up.left"
+                        systemImage: "hand.point.up.left",
+                        accentColor: Palette.metroAmber
                     ) {
                         launcher.startTutorial()
                     }
@@ -63,7 +67,8 @@ struct StartView: View {
                     StartButton(
                         title: String(localized: "Demo Map"),
                         detail: String(localized: "Two lines already running, with passengers"),
-                        systemImage: "tram.fill"
+                        systemImage: "tram.fill",
+                        accentColor: Palette.metroPurple
                     ) {
                         launcher.openDemo()
                     }
@@ -72,7 +77,8 @@ struct StartView: View {
                         StartButton(
                             title: String(localized: "Saved Games"),
                             detail: String(localized: "\(launcher.otherSaves.count) saves"),
-                            systemImage: "tray.full"
+                            systemImage: "tray.full",
+                            accentColor: Palette.station
                         ) {
                             showsSaves = true
                         }
@@ -81,16 +87,25 @@ struct StartView: View {
                     StartButton(
                         title: String(localized: "Import a Save"),
                         detail: String(localized: "A save file from Files or another device"),
-                        systemImage: "square.and.arrow.down"
+                        systemImage: "square.and.arrow.down",
+                        accentColor: Palette.metroBlue
                     ) {
                         importsSave = true
                     }
                 }
                 if let message = launcher.message {
-                    Label(message.text, systemImage: message.kind == .success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(message.kind == .success ? Color.green : Color.orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Image(systemName: message.kind == .success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .font(.footnote.weight(.bold))
+                        Text(message.text)
+                            .font(.footnote.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(message.kind == .success ? Palette.metroGreen : Palette.metroAmber)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.12), in: Capsule())
+                    .overlay(Capsule().strokeBorder((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.35), lineWidth: 1))
                 }
                 // iOS keeps each app's language in Settings (the reference's
                 // home screen has a language menu instead).
@@ -100,7 +115,12 @@ struct StartView: View {
                     }
                 } label: {
                     Label("Language", systemImage: "globe")
-                        .font(.footnote)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Palette.chipBackground, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
                 }
                 .accessibilityHint("Opens Settings, where the game's language is chosen.")
             }
@@ -133,18 +153,32 @@ struct StartView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "tram.fill")
-                .font(.system(size: 52, weight: .semibold))
-                .foregroundStyle(Palette.station)
-                .accessibilityHidden(true)
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Palette.station, Palette.metroAmber],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 80, height: 80)
+                    .shadow(color: Palette.station.opacity(0.35), radius: 12, x: 0, y: 6)
+                Image(systemName: "tram.fill")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityHidden(true)
             Text(verbatim: "Railway Game")
-                .font(.largeTitle.weight(.bold))
+                .font(.system(.largeTitle, design: .rounded).weight(.heavy))
             Text("Build a railway, run its trains and carry the city's passengers.")
-                .font(.subheadline)
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
         }
+        .padding(.bottom, 8)
     }
 
     /// The save's game time, cash and size, and when it was saved.
@@ -161,32 +195,67 @@ private struct StartButton: View {
     let detail: String
     let systemImage: String
     var isPrimary = false
+    var accentColor: Color = Color.accentColor
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: systemImage)
-                    .font(.title3.weight(.semibold))
-                    .frame(width: 32)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(accentColor.opacity(0.16))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: systemImage)
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(accentColor)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.headline)
+                        .foregroundStyle(.primary)
                     Text(detail)
                         .font(.footnote)
-                        .opacity(0.8)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isPrimary ? accentColor.opacity(0.65) : Palette.cardBorder,
+                        lineWidth: isPrimary ? 2 : 1
+                    )
+            }
+            .shadow(
+                color: isPrimary ? accentColor.opacity(0.16) : Color.black.opacity(0.04),
+                radius: isPrimary ? 8 : 4,
+                x: 0,
+                y: isPrimary ? 3 : 2
+            )
         }
-        .buttonStyle(SelectableButtonStyle(isActive: isPrimary))
+        .buttonStyle(CardTapButtonStyle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+private struct CardTapButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -247,22 +316,34 @@ struct SaveListView: View {
     }
 
     private func row(_ entry: SaveLibrary.Entry) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(verbatim: title(of: entry))
-                .font(.body.weight(.semibold))
-                .foregroundStyle(entry.problem == nil ? Color.primary : Color.secondary)
-            if let problem = entry.problem {
-                Text(problem.playerMessage(in: launcher.language))
-                    .font(.footnote)
-                    .foregroundStyle(Color.orange)
-            } else if let summary = entry.summary {
-                Text(summary.text(in: launcher.language))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill((entry.problem != nil ? Palette.metroAmber : (entry.kind == .autosave ? Palette.metroGreen : Palette.metroBlue)).opacity(0.14))
+                    .frame(width: 36, height: 36)
+                Image(systemName: entry.problem != nil ? "exclamationmark.triangle.fill" : (entry.kind == .autosave ? "clock.arrow.circlepath" : "tram.fill"))
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(entry.problem != nil ? Palette.metroAmber : (entry.kind == .autosave ? Palette.metroGreen : Palette.metroBlue))
+            }
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: title(of: entry))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(entry.problem == nil ? Color.primary : Color.secondary)
+                if let problem = entry.problem {
+                    Text(problem.playerMessage(in: launcher.language))
+                        .font(.footnote)
+                        .foregroundStyle(Color.orange)
+                } else if let summary = entry.summary {
+                    Text(summary.text(in: launcher.language))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
     private func title(of entry: SaveLibrary.Entry) -> String {

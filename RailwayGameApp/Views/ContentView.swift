@@ -48,8 +48,8 @@ struct ContentView: View {
         VStack(spacing: 0) {
             HUDView(session: session, launcher: launcher)
                 .padding(.horizontal)
-                .padding(.vertical, 10)
-                .background(.bar)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial)
             Divider()
             if horizontalSizeClass == .regular {
                 // iPad portrait: the whole map across the full width, and
@@ -63,7 +63,7 @@ struct ContentView: View {
                         .padding()
                 }
                 .tutorialClip()
-                .background(.bar)
+                .background(.ultraThinMaterial)
             } else {
                 // Phones: the map keeps a fixed share of the height and the
                 // controls scroll below it. When the map took whatever the
@@ -81,7 +81,7 @@ struct ContentView: View {
                                 .padding()
                         }
                         .tutorialClip()
-                        .background(.bar)
+                        .background(.ultraThinMaterial)
                     }
                 }
             }
@@ -112,7 +112,7 @@ struct ContentView: View {
             }
             .tutorialClip()
             .frame(width: 360)
-            .background(.bar)
+            .background(.ultraThinMaterial)
         }
     }
 
