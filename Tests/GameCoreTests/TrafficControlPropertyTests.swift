@@ -560,6 +560,12 @@ final class TrafficControlPropertyTests: XCTestCase {
                 }
                 if case .trainsShareTrack? = outcome { tally["enable failures", default: 0] += 1 }
                 for (old, new) in zip(before.trains, world.trains) where !new.reservation.isEmpty && new.reservation != old.reservation {
+                    // Stage U: a reservation that only lost track was
+                    // released behind its train, not taken.
+                    if case .advance = operation, Set(new.reservation).isSubset(of: old.reservation) {
+                        tally["released behind a moving train", default: 0] += 1
+                        continue
+                    }
                     tally["reservations taken", default: 0] += 1
                     if new.cars >= 2 { tally["long-train reservations", default: 0] += 1 }
                     if new.movement.end != nil { tally["mid-edge berth reservations", default: 0] += 1 }
@@ -574,6 +580,10 @@ final class TrafficControlPropertyTests: XCTestCase {
                     }
                     for (old, new) in zip(before.trains, world.trains) {
                         if case .waitingAtStop? = old.execution, new.execution != old.execution { tally["service departures", default: 0] += 1 }
+                        if case .travellingToStop? = new.execution, case .waitingAtStop? = old.execution,
+                           let ahead = before.trainHoldingRoute(of: old.id), world.train(id: ahead)?.reservation.isEmpty == false {
+                            tally["left while the train it waited for still moved", default: 0] += 1
+                        }
                     }
                 }
                 let problems = Self.differences(world, model, tally: &tally) + WorldInvariants.violations(in: world)
@@ -603,6 +613,7 @@ final class TrafficControlPropertyTests: XCTestCase {
         assertVolume(tally["enable failures", default: 0] > 10, "traffic control is refused over shared track")
         assertVolume(tally["infrastructure refusals", default: 0] > 30, "held track stays")
         assertVolume(tally["released at the end of a route", default: 0] > 200, "routes end")
+        assertVolume(tally["released behind a moving train", default: 0] > 200, "track behind moving trains is released")
     }
 }
 

@@ -656,7 +656,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func admit(_ candidate: Train, at index: Int) throws(GameError) {
         switch reserving(candidate) {
         case .granted(let train): trains[index] = train
-        case .held(let holder): throw .trackReserved(holder)
+        case .held(let holder, _): throw .trackReserved(holder)
         }
     }
 
@@ -1176,7 +1176,8 @@ public struct GameWorld: Equatable, Sendable {
     /// Without traffic control trains do not interact, so the order only
     /// fixes when each is updated. Between the seconds at which something
     /// happens (a whole minute, a dwell moving on, a run's end, a train
-    /// coming to the end of its route) only movement does, and it depends
+    /// coming to the end of its route, and under traffic control the track
+    /// a waiting departure needs coming free) only movement does, and it depends
     /// on the map and the clock alone, so those seconds are taken together:
     /// they move every train exactly as far as one second at a time would. Whenever the clock can
     /// hold the whole batch, `advance(ticks: n)` is the same as `n` calls
@@ -1236,10 +1237,12 @@ public struct GameWorld: Equatable, Sendable {
     /// step. A line's train is ready only if its first departure could take
     /// its route when it is sent out; one that cannot is not sent out, and
     /// the line's last dispatch stays as it was. Earlier departures in a
-    /// step take their routes first, in train ID order. A train's reservation is
-    /// released when it comes to the end of its route, in phase 2. Trains
-    /// move as they always have: the whole route was theirs before they
-    /// set off.
+    /// step take their routes first, in train ID order. Trains move as they
+    /// always have: the whole route was theirs before they set off. As a
+    /// train moves on in phase 2, its reservation keeps only what it still
+    /// needs (Stage U, see ``reservedResources(of:)``): track its tail has
+    /// left is free for other trains from the next step on, and all of it
+    /// is once it comes to the end of its route.
     ///
     /// **Dispatch** (see ``assignTrain(_:to:pattern:)``). Each service of a
     /// line (its own, then its patterns in order) sends a train out at `T`
@@ -1301,6 +1304,9 @@ public struct GameWorld: Equatable, Sendable {
         // looking again would give the same answer.
         var unroutable: Set<TrainID> = []
         var memo = DispatchMemo()
+        // Departures due now whose routes other trains hold (Stage T), each
+        // with the track it waits for: tried again at the next step.
+        var held: [HeldRoute] = []
         // Worked out only when the call steps at all: a paused game's calls
         // cost nothing.
         var release = remaining > 0 ? passengerRelease() : nil
@@ -1318,7 +1324,8 @@ public struct GameWorld: Equatable, Sendable {
                 }
             }
             // Stage W2b: every service's dwell, and the departures due now.
-            if runServices(at: start, unroutable: &unroutable) {
+            held = []
+            if runServices(at: start, unroutable: &unroutable, held: &held) {
                 changed = true
             }
             // The seconds to the end of this minute, or of the batch, or to
@@ -1334,6 +1341,12 @@ public struct GameWorld: Equatable, Sendable {
             }
             if let end = secondsUntilARouteEnds(from: start, within: span) {
                 span = end
+            }
+            // Stage U: or to the second at which trains moving on have
+            // released enough track behind them for a departure that waits
+            // for its route, which then tries again.
+            if !held.isEmpty, span > 1, let freed = secondsUntilARouteFrees(held, from: start, within: span) {
+                span = freed
             }
             if moveTrains(from: start, for: span) {
                 changed = true
@@ -1573,16 +1586,16 @@ public struct GameWorld: Equatable, Sendable {
     /// The services' phase of a basic step (Stage W2b): every train whose
     /// service waits at a stop, in ascending ID order, moves its dwell on
     /// (see ``stepDwell(_:at:)``) and then leaves if its departure is due
-    /// (see ``departService(_:at:unroutable:)``); every train whose service
+    /// (see ``departService(_:at:unroutable:held:)``); every train whose service
     /// travels and was held up on its run sets off again if it can (Stage
     /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
-    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>) -> Bool {
+    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute]) -> Bool {
         var changed = false
         for index in trains.indices where trains[index].execution != nil {
             if stepDwell(index, at: now) {
                 changed = true
             }
-            if departService(index, at: now, unroutable: &unroutable) {
+            if departService(index, at: now, unroutable: &unroutable, held: &held) {
                 changed = true
             }
             if resumeRun(index, at: now) {
@@ -1715,11 +1728,12 @@ public struct GameWorld: Equatable, Sendable {
     /// Under traffic control (Stage T) the departure takes the whole route
     /// to the next call at once (see ``reserving(_:)``). Where another train
     /// holds some of it, nothing changes: the train is not turned round
-    /// either, and it tries again at the next step. Unlike a departure
-    /// without a route, this is not remembered for the rest of the call:
-    /// trains move and free track within one.
+    /// either, and it tries again at the next step; the route it waits for
+    /// joins `held`. Unlike a departure without a route, this is not
+    /// remembered for the rest of the call: trains move and free track
+    /// within one.
     @discardableResult
-    private mutating func departService(_ index: Int, at now: GameTime, unroutable: inout Set<TrainID>) -> Bool {
+    private mutating func departService(_ index: Int, at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute]) -> Bool {
         guard case .waitingAtStop(let stop, let cycle)? = trains[index].execution,
               let due = departureDue(of: trains[index]), due <= now,
               !unroutable.contains(trains[index].id),
@@ -1731,7 +1745,14 @@ public struct GameWorld: Equatable, Sendable {
             unroutable.insert(trains[index].id)
             return false
         }
-        guard case .granted(let train) = reserving(moved) else { return false }
+        let train: Train
+        switch reserving(moved) {
+        case .granted(let granted):
+            train = granted
+        case .held(_, let needs):
+            held.append(HeldRoute(train: moved.id, needs: needs))
+            return false
+        }
         trains[index] = train
         serve(departureOf: train.id, from: stop, distance: departure.distance)
         return true
@@ -2039,7 +2060,7 @@ public struct GameWorld: Equatable, Sendable {
             } else {
                 trains[index].movement.cursor = travel.cursor
             }
-            releaseEndedRoute(index)
+            releasePassedTrack(index)
             moved = true
         }
         return moved
@@ -2103,14 +2124,58 @@ public struct GameWorld: Equatable, Sendable {
         }
     }
 
-    /// Stage T: once train `index` has come to the end of its route (it
-    /// stands, with no distance left to go; see
-    /// ``routeStretches(of:)``), its reservation is released. What it stands
-    /// on stays held as long as it stands there. Stage U will release track
-    /// behind a train as it goes, here in the movement step.
-    private mutating func releaseEndedRoute(_ index: Int) {
-        guard !trains[index].reservation.isEmpty, !routeStretches(of: trains[index]).moves else { return }
-        trains[index].reservation = []
+    /// Stage U (ARCHITECTURE decision 55): once train `index` has moved,
+    /// its reservation keeps only the track it still needs (see
+    /// ``routeEnvelope(of:)``): what it stands on, what its head has still
+    /// to pass over and the junctions all that fouls. Track its tail has
+    /// left behind is released at once, and once it has come to the end of
+    /// its route (it stands, with no distance left to go) all of it is
+    /// (Stage T). What it stands on stays held as long as it stands there.
+    /// A train only ever goes on along its route, so what it needs only
+    /// ever shrinks: nothing is taken here, and nothing the train will
+    /// still use is released.
+    private mutating func releasePassedTrack(_ index: Int) {
+        guard !trains[index].reservation.isEmpty else { return }
+        let envelope = routeEnvelope(of: trains[index])
+        trains[index].reservation = envelope.moves ? trains[index].reservation.filter(envelope.resources.contains) : []
+    }
+
+    /// A departure due at the start of a step whose route another train
+    /// holds (Stage T): the train, and all the track it needs (see
+    /// ``routeEnvelope(of:)``).
+    struct HeldRoute {
+        let train: TrainID
+        let needs: Set<TrackResource>
+    }
+
+    /// The seconds, from `start` and at most `span`, after which no other
+    /// train holds the track of one of `held` any more, or `nil` if that
+    /// does not happen within `span` (Stage U): trains moving on release
+    /// the track behind them (see ``releasePassedTrack(_:)``), so the step
+    /// ends there and the departure tries again at the next, as it would
+    /// one second at a time. Every other train only moves on in the step,
+    /// and what it holds only shrinks as it does, so once free the track
+    /// stays free.
+    ///
+    /// - Precondition: `start.secondOfMinute + span <= 60`.
+    private func secondsUntilARouteFrees(_ held: [HeldRoute], from start: GameTime, within span: Int64) -> Int64? {
+        func frees(after seconds: Int64) -> Bool {
+            var moved = self
+            _ = moved.moveTrains(from: start, for: seconds)
+            return held.contains { moved.holder(of: $0.needs, except: $0.train) == nil }
+        }
+        guard frees(after: span) else { return nil }
+        // The least `k` after which one is free.
+        var (low, high) = (Int64(1), span)
+        while low < high {
+            let middle = (low + high) / 2
+            if frees(after: middle) {
+                high = middle
+            } else {
+                low = middle + 1
+            }
+        }
+        return low
     }
 
     // MARK: - Validation
