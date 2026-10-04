@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import XCTest
 
 /// Route reservation under traffic control (Phase 4.6 Stage T, ARCHITECTURE
@@ -1149,10 +1149,53 @@ extension TrafficControlTests {
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         try world.assignTrain(service, to: line)
         try world.setTrafficControl(true)
+        XCTAssertNil(world.trainHoldingRoute(of: service), "an available alternate route is not a route wait")
         try world.advance(ticks: 1)
         XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(seconds: 0))
         XCTAssertEqual(world.train(id: service)?.execution, .travellingToStop(1))
         XCTAssertEqual(world.train(id: service)?.movement.edges, [.edge(4), .edge(5)])
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+}
+
+extension TrafficControlTests {
+    func testBlockedSearchCanStopBeforeABlockedPartOfTheSameEdge() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(2), offset: 4_096)
+        let blocked: Set<TrackResource> = [span(2, 12_288, 13_312)]
+        // 9216 - 4096 = 5120, stopping before the blocked far end.
+        let path = try XCTUnwrap(world.path(from: start, toStation: SingleTrackMeet.middle, length: 1_024, avoiding: blocked))
+        XCTAssertEqual(path, TrainPath(traversals: [], end: 9_216, distance: 5_120))
+    }
+
+    func testBlockedSearchRejectsAFouledJunctionWithoutReachingIt() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(4), offset: 500)
+        // The head goes away from n2 and never touches it, but its first
+        // interval lies inside n2's 1024-unit fouling zone on the branch.
+        XCTAssertNotNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0))
+        XCTAssertNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0, avoiding: [node(2)]))
+    }
+
+    func testBlockedSearchRetainsTheNearestBerthTieOrder() throws {
+        var world = try SingleTrackMeet.world()
+        try world.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072)
+        // e4 is 4732; 4732 + 4484 along e5 equals e2's 9216.
+        // Both routes are 5120 + 9216 = 14336 from the head. At n2,
+        // e2 comes before e4 and remains the default when neither is held.
+        XCTAssertEqual(world.network.edge(.edge(4))?.length, 4_732)
+        try world.addTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_460, to: 4_484)
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(1), offset: 3_072)
+        let path = try XCTUnwrap(world.path(from: start, toStation: SingleTrackMeet.middle, length: 1_024, avoiding: [node(4)]))
+        XCTAssertEqual(path.traversals, [SingleTrackMeet.forward(2)])
+        XCTAssertEqual(path.distance, 14_336)
+    }
+
+    func testBlockedSearchAvoidsTrackThatFoulsAnotherSpan() throws {
+        let world = try SingleTrackMeet.world()
+        let start = TrainPosition.onEdge(SingleTrackMeet.forward(4), offset: 500)
+        // The branch's early spans lie beside the main track as it parts;
+        // resource identity alone would miss this F2b conflict.
+        XCTAssertNil(world.path(from: start, toStation: SingleTrackMeet.middle, length: 0, avoiding: [span(2, 0, 1_024)]))
     }
 }

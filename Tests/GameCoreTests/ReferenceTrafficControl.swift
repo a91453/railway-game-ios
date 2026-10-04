@@ -346,6 +346,7 @@ extension ReferenceWorld {
             return holder(of: needs(train).resources, except: train.id).map(TrainID.init(rawValue:))
         }
         var leaving: Train?
+        var requesting = train
         if let service = train.service {
             // Stage W2b: due once its doors have closed.
             guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
@@ -356,9 +357,11 @@ extension ReferenceWorld {
             sent.timetable = trip
             sent.period = nil
             sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
+            requesting = sent
             leaving = firstLeaving(sent)
         }
         guard let leaving else { return nil }
+        if let available = firstLeaving(requesting, withTrafficControl: true), !following(available) { return nil }
         return holder(of: needs(leaving).resources, except: train.id).map(TrainID.init(rawValue:))
     }
 

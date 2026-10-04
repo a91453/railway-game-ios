@@ -12,6 +12,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
+## V1：單線交會（`single-track-meet.json`）
+
+49 步、7 遊戲分鐘的短情境（schema 30，決策 57）：W — M — E 的單線，M 有主線 e2 與交會線 e5 的兩個月台，e4 / e6 是兩端的曲線道岔支線。兩車都是兩節（車間距 1024），從兩端向 M 出發，無占用時都選 e2。第 42 秒先出發的 Eastbound 整條取得 e2，14336 單位；同一秒 Westbound 避開其持有，整條取得 e6 → e5，14972 單位，兩車都用原排定的 120 秒段間曲線。第 3 分鐘都停妥在 M，之後各自開到對面，第 7 分鐘都完成服務。
+
+新 fixture 的值先由 GameCore 取得，再由 `ReferenceWorldGoldenTests` 的獨立鬆弛選路與逐秒推進確認。沒有修改任何既有 golden 預期值，也沒有修改 SaveFixtures 或 ReplayFixtures；golden schema 維持 30，存檔版本維持 7。既有 `train-following.json` 繼續驗證沒有替代路時的 U2 跟車。
+
 ## Schema（`schemaVersion: 30`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與線路的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的線路 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。

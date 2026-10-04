@@ -88,6 +88,7 @@ extension GameWorld {
             return nil
         }
         guard let departing else { return nil }
+        if case .granted(let granted) = reservingDeparture(departing), !isFollowing(granted) { return nil }
         return holder(of: routeEnvelope(of: departing).resources, except: id)
     }
 

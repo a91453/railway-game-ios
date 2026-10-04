@@ -140,6 +140,26 @@ U2（站間跟車）已經實作（ARCHITECTURE 決策 56）。2026-10-04 唯讀
 | （參考沒有） | 後車還沒預約到的路，別的列車不能插進來 | `holder(of:except:)` 與 `claim(of:)` | — | **gap**：自訂（參考沒有預約） |
 | （參考沒有） | 依煞車曲線在授權終點前減速 | 沒有：到授權終點就停下，延長後從停止重新出發（決策 40 被擋住的列車） | — | **gap**，留給之後 |
 
+
+### Stage V：避占用選路與月台分配
+
+V1（決策 57），2026-10-04 唯讀檢查私有參考 repo `1563ad0` 的三份乾淨參考。只取下列流程與演算法；沒有引入參考的網頁、資料或渲染狀態。
+
+| 參考檔案 / 函式 | Swift 檔案 / 函式 | 倍率與採用範圍 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` / `shortestPath({blocked})` | `ServicePath.swift` / `networkPath`、`path(...avoiding:)` | m × 64 → 世界單位（km × 64000）；沿用既有整數邊長，每一步排除衝突的 span 與限界節點，仍用既有搜尋平手順序 |
+| 同檔 / `stopCandidates` | `ServicePath.swift` / `berths(of:length:)` | 停車點對應同站月台的方向性 berth；不是靠經緯度、站名近似或半徑推估；列車長度以 1024 單位 / 車間距（16 m）篩選 |
+| 同檔 / `maxLength = Infinity`、crossover `length × 4` | `ServicePath.swift` / `networkPath` | 不設額外繞路上限；沒有 crossover 軌道種類，因此不加該額外懲罰；成本仍是實際整數距離 |
+| `Ci/PROJECT_ABSORPTION_GUIDE.md` / D 的 request → reserve → approved continuation；U 的 platform assignment | `RouteReservation.swift` / `reservingDeparture`；`GameWorld.swift` / `departService`、`readyTrain` | 無數值倍率；完整取得預設或替代路，再退回 U2 跟車、等待，只有 `GameWorld` 提交 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` / `MIN_TRAIN_GAP` | 既有 `RouteReservation.swift` / `followingGap`（U2） | snapshot 常數只有定義，沒有可移植的避占用選路；本次不採用其比例，U2 仍為 0.4 km × 64000 = 25600 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` / §7 path cost / PBS；`binary_reference/relevant_symbols_and_settings.txt` / `rail_pbs_*`、platform penalties | `RouteReservation.swift` / `reserving`、`reservingDeparture`；`ReferenceNetworkService.swift` / `distancesToBerths` | 概念與符號，沒有選路原始碼或權重數值；不猜號誌、曲線、長短月台的懲罰 |
+| `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic` | Deferred | 參考秒 × 1 → 遊戲秒、km × 64000 → 單位；V1 不移植排定交會、待避或多輪時刻表重排 |
+
+**gap**：參考 `blocked` 是整個 resource key，Swift 改成一個 head interval 的 span / fouling 檢查與 `network.fouls`；整個車身 envelope、原子取得、替代路優先於 U2、精確批次喚醒、換路後的曲線與離站距離是本專案自己的規則。參考沒有長度政策可支持任意繞路倍率，故保持 Infinity；將來若有服務距離或時間預算再設上限。沒有 crossover 種類及其 4 倍額外懲罰，沒有一般 penalties API。獨立模型用 blocked run 區間的反向距離鬆弛與貪婪重建，不呼叫 GameCore 選路。
+
+**Deferred（暫時沒有改的地方）**：排定等待與時刻表交會、待避推估；V2 死結的偵測與解除；決策 22 的單線容量；畫面上的授權範圍。規劃查詢與手動路、放置、反向仍照既有規則。
+
+
 ### Stage V：待避、交會、月台分配與排定的等待
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
