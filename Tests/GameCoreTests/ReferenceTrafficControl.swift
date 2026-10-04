@@ -155,42 +155,76 @@ extension ReferenceWorld {
         blocked.isEmpty || !foul(track(along: [run], from: from, to: to), blocked)
     }
 
-    /// Decision 57: remove runs opposite another service's current leg.
-    /// Read moving trains off their absolute-distance window. For waiting
-    /// services (even before due) or a due idle line, independently plan
-    /// the next default leg, without admission or GameCore's routing.
-    mutating func contraryRuns(except id: Int) -> Set<Run> {
-        var forbidden: Set<Run> = []
-        for other in trains where other.id != id && other.position != nil {
-            var requesting = other
-            if requesting.service == nil, let (l, k) = lineService(of: other.id),
-               let trip = readyTrip(of: other, line: l, service: k) {
-                requesting.timetable = trip
-                requesting.period = nil
-                requesting.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
-            }
-            guard let service = requesting.service else { continue }
-            var ways: [Run] = []
-            if !service.waiting, let window = routeWindow(requesting) {
+    /// Complete direction plans, written independently as reachability
+    /// over (stop index, head/body placement) states. Every fitting first
+    /// berth seeds the worklist. The route oracle is our distance relaxation,
+    /// never GameCore's search. No clock, service progress or dispatch gate.
+    private mutating func directionRuns(_ order: RouteMemo.Order) -> Set<Run> {
+        if let known = routeMemo.directions[order] { return known }
+        guard let first = order.stations.first else { return [] }
+        struct State: Hashable {
+            var place: Place
+            var stop: Int
+        }
+        var queue = berthsForStation(first, length: order.length).flatMap { run, offsets in
+            offsets.map { State(place: Place(position: .onEdge(run.traversal, offset: $0), trailEdges: []), stop: 0) }
+        }
+        var seen: Set<State> = []
+        var result: Set<Run> = []
+        while let state = queue.popLast() {
+            guard seen.insert(state).inserted else { continue }
+            let next = (state.stop + 1) % order.stations.count
+            if next == 0 && !order.repeats { continue }
+            var driver = Self.driver(at: state.place.position, trailEdges: state.place.trailEdges, length: order.length)
+            if order.turns.contains(state.stop) { driver = turnedOnNetwork(driver) }
+            let key = RouteMemo.Key(start: driver.position!, station: order.stations[next], length: order.length)
+            let found = routeMemo.network[key] ?? networkPathToStation(from: key.start, station: key.station, length: key.length)
+            routeMemo.network[key] = .some(found)
+            guard let found else { continue }
+            var moving = standing(driver)
+            moving.edges = found.traversals.map { Run($0)!.edge }
+            moving.end = found.end
+            if let window = routeWindow(moving) {
                 for (run, span) in zip(window.path, spans(window.path)) where span.end > window.head && span.start < window.finish {
-                    ways.append(run)
+                    result.insert(run)
                 }
-            } else if service.waiting {
-                var next = (stop: service.stop + 1, cycle: service.cycle)
-                if next.stop == requesting.timetable.count {
-                    next = (0, service.cycle + 1)
-                    guard requesting.period != nil, Self.fits(requesting, cycle: next.cycle) else { continue }
-                }
-                let start = requesting.timetable[service.stop].reverses ? turnedOnNetwork(requesting) : requesting
-                guard case .onEdge(let traversal, let offset)? = start.position, let run = Run(traversal) else { continue }
-                let key = RouteMemo.Key(start: start.position!, station: requesting.timetable[next.stop].station, length: Self.length(start))
-                let found = routeMemo.network[key] ?? networkPathToStation(from: key.start, station: key.station, length: key.length)
-                routeMemo.network[key] = .some(found)
-                guard let found, found.distance > 0 else { continue }
-                if offset < networkEdges[run.edge]!.length { ways.append(run) }
-                ways += found.traversals.map { Run($0)! }
             }
-            for run in ways { forbidden.insert(Run(edge: run.edge, forward: !run.forward)) }
+            driver = followed(driver, along: found)
+            queue.append(State(place: Place(position: driver.position!, trailEdges: driver.trailEdges), stop: next))
+        }
+        routeMemo.directions[order] = result
+        return result
+    }
+
+    mutating func contraryRuns(for candidate: Train) -> Set<Run> {
+        var planned: Set<Run> = []
+        for train in trains where train.id != candidate.id {
+            if !train.timetable.isEmpty {
+                let order = RouteMemo.Order(stations: train.timetable.map(\.station), turns: Set(train.timetable.indices.filter { train.timetable[$0].reverses }), length: Self.length(train), repeats: train.period != nil)
+                planned.formUnion(directionRuns(order))
+            }
+            if train.service?.waiting == false, let window = routeWindow(train) {
+                for (run, span) in zip(window.path, spans(window.path)) where span.end > window.head && span.start < window.finish { planned.insert(run) }
+            }
+        }
+        for line in lines {
+            for service in 0...line.patterns.count {
+                let pattern = line.service(service)
+                let lengths = Set([Int64(0)] + trains.filter { pattern.roster.contains($0.id) }.map { Self.length($0) })
+                let sequences = line.ring ? [Self.lap(line, outer: false), Self.lap(line, outer: true)]
+                    : [pattern.calls + pattern.calls.dropLast().reversed()]
+                for sequence in sequences {
+                    let turns: Set<Int> = line.ring ? [] : [sequence.count / 2, sequence.count - 1]
+                    for length in lengths {
+                        planned.formUnion(directionRuns(.init(stations: sequence.map { line.stops[$0] }, turns: turns, length: length, repeats: true)))
+                    }
+                }
+            }
+        }
+        var forbidden = Set(planned.map { Run(edge: $0.edge, forward: !$0.forward) })
+        // Shared default corridors remain usable; restrict additional track.
+        if let window = routeWindow(candidate) {
+            for (run, span) in zip(window.path, spans(window.path)) where span.end > window.head && span.start < window.finish { forbidden.remove(run) }
         }
         return forbidden
     }

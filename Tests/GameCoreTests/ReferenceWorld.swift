@@ -162,6 +162,13 @@ struct ReferenceWorld: Equatable {
         }
 
         var network: [Key: TrainPath?] = [:]
+        struct Order: Hashable {
+            var stations: [StationID]
+            var turns: Set<Int>
+            var length: Int64
+            var repeats: Bool
+        }
+        var directions: [Order: Set<Run>] = [:]
         /// V1: only reused within one advance (unchanged network), and
         /// only while every blocking resource is exactly the same.
         struct BlockedKey: Hashable {

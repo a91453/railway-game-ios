@@ -1316,3 +1316,90 @@ extension TrafficControlTests {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 }
+
+
+extension TrafficControlTests {
+    func testAnOpposingServiceTwoLegsAwayStillCompletes() throws {
+        var world = try DoubleTrackCrossover.world(extended: true)
+        let lead = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.forward(2), at: 13_312)
+        let follower = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.forward(1), at: 3_072)
+        let opposer = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.backward(7), at: 6_144)
+        let calls = DoubleTrackCrossover.calls
+        try world.setTrainTimetable(lead, to: calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(follower, to: calls([(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(opposer, to: calls([(DoubleTrackCrossover.outer, 60), (DoubleTrackCrossover.east, 240), (DoubleTrackCrossover.middle, 420), (DoubleTrackCrossover.west, 660)]))
+        for id in [lead, follower, opposer] { try world.startTrainService(id) }
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertFalse(world.train(id: follower)!.movement.edges.contains(.edge(5)), "eastbound service borrowed track B before its opposing service reached E")
+        try world.advance(ticks: 29)
+        XCTAssertNil(world.train(id: opposer)?.execution, "the opposing service never finished")
+        XCTAssertFalse(world.trainHoldingRoute(of: follower) == opposer && world.trainHoldingRoute(of: opposer) == follower, "circular wait")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    func testAnOpposingLineProtectsItsRouteBeforeItsWindowOpens() throws {
+        var world = try DoubleTrackCrossover.world(extended: true)
+        let lead = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.forward(2), at: 13_312)
+        let follower = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.forward(1), at: 3_072)
+        let opposer = try DoubleTrackCrossover.stand(&world, SingleTrackMeet.backward(7), at: 6_144)
+        try world.setTrainTimetable(lead, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(follower, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        for id in [lead, follower] { try world.startTrainService(id) }
+        let line = try world.createLine(named: "B", stops: [DoubleTrackCrossover.outer, DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]).id
+        try world.setLineServiceWindow(line, to: .hours(open: 2, close: 1_440))
+        try world.setLineTrainsInService(line, to: .init(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(opposer, to: line)
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertNil(world.line(id: line)?.lastDispatch)
+        XCTAssertFalse(world.train(id: follower)!.movement.edges.contains(.edge(5)), "future opposing line was ignored")
+        try world.advance(ticks: 29)
+        XCTAssertNotNil(world.line(id: line)?.lastDispatch)
+        XCTAssertFalse(world.trainHoldingRoute(of: follower) == opposer && world.trainHoldingRoute(of: opposer) == follower, "circular wait")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+}
+
+
+extension TrafficControlTests {
+    func testRemovingAnUnassignedLineReleasesItsDerivedDirectionProtection() throws {
+        var world = try DoubleTrackCrossover.world(extended: true)
+        var model = DoubleTrackCrossover.model(extended: true)
+        for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072)].enumerated() {
+            let id = try DoubleTrackCrossover.stand(&world, place.0, at: place.1)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(place.0, offset: place.1)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+            XCTAssertNil(model.setRate(id, 1_024))
+            let stops: [(StationID, Int64)]
+            if number == 0 { stops = [(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)] }
+            else { stops = [(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)] }
+            let calls = DoubleTrackCrossover.calls(stops)
+            try world.setTrainTimetable(id, to: calls)
+            try world.startTrainService(id)
+            XCTAssertNil(model.setTimetable(id, calls))
+            XCTAssertNil(model.startService(id))
+        }
+        let stops = [DoubleTrackCrossover.outer, DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]
+        let line = try world.createLine(named: "B", stops: stops).id
+        XCTAssertNil(model.createLine(named: "B", stops: stops))
+        // No roster, no operating trains, and the window is closed: this is
+        // plan data. Removing it between calls must invalidate the memo.
+        try world.setTrafficControl(true)
+        XCTAssertNil(model.setTrafficControl(true))
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        XCTAssertFalse(world.train(id: .init(rawValue: 2))!.movement.edges.contains(.edge(5)))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        try world.removeLine(line)
+        XCTAssertNil(model.removeLine(line))
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        XCTAssertTrue(world.train(id: .init(rawValue: 2))!.movement.edges.contains(.edge(5)))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
+    }
+}
