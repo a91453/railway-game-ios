@@ -4,20 +4,20 @@ import XCTest
 
 final class MapScaleTests: XCTestCase {
     func testFittingSizeIsLimitedByTheTighterAxis() {
-        XCTAssertEqual(MapScale.fittingSize(width: 320, height: 1_000, columns: 32, rows: 24), 10)
-        XCTAssertEqual(MapScale.fittingSize(width: 1_000, height: 240, columns: 32, rows: 24), 10)
+        XCTAssertEqual(MapScale.fittingSize(width: 320, height: 1_000, worldWidth: 32_768, worldHeight: 24_576), 10)
+        XCTAssertEqual(MapScale.fittingSize(width: 1_000, height: 240, worldWidth: 32_768, worldHeight: 24_576), 10)
     }
 
     func testPhoneSizedViewportsScrollAtATappableSize() {
-        // A 32 × 24 map in a portrait phone's map area.
-        let fitting = MapScale.fittingSize(width: 402, height: 420, columns: 32, rows: 24)
+        // A 512 × 384 m map (32 768 × 24 576 units) in a portrait phone's map area.
+        let fitting = MapScale.fittingSize(width: 402, height: 420, worldWidth: 32_768, worldHeight: 24_576)
 
         XCTAssertEqual(MapScale.automaticSize(fitting: fitting), MapScale.compactSize)
         XCTAssertEqual(MapScale.minimumSize(fitting: fitting), fitting, "zooming out can show the whole map")
     }
 
     func testTabletSizedViewportsShowTheWholeMap() {
-        let fitting = MapScale.fittingSize(width: 834, height: 700, columns: 32, rows: 24)
+        let fitting = MapScale.fittingSize(width: 834, height: 700, worldWidth: 32_768, worldHeight: 24_576)
 
         XCTAssertEqual(fitting, 26.0625)
         XCTAssertEqual(MapScale.automaticSize(fitting: fitting), fitting)
@@ -44,11 +44,11 @@ final class MapScaleTests: XCTestCase {
     /// Small tiles draw an overview; the compact phone size and larger draw
     /// everything.
     func testSmallTilesDrawAnOverview() {
-        XCTAssertEqual(MapScale.detail(forTileSize: 8), .overview)
-        XCTAssertEqual(MapScale.detail(forTileSize: 19.9), .overview)
-        XCTAssertEqual(MapScale.detail(forTileSize: 20), .full)
-        XCTAssertEqual(MapScale.detail(forTileSize: MapScale.compactSize), .full)
-        XCTAssertEqual(MapScale.detail(forTileSize: MapScale.largestSize), .full)
+        XCTAssertEqual(MapScale.detail(forReferenceSize: 8), .overview)
+        XCTAssertEqual(MapScale.detail(forReferenceSize: 19.9), .overview)
+        XCTAssertEqual(MapScale.detail(forReferenceSize: 20), .full)
+        XCTAssertEqual(MapScale.detail(forReferenceSize: MapScale.compactSize), .full)
+        XCTAssertEqual(MapScale.detail(forReferenceSize: MapScale.largestSize), .full)
     }
 
     func testOffscreenSegmentsAreNotEvenProjected() {
@@ -112,10 +112,10 @@ final class MapScaleTests: XCTestCase {
     }
 
     func testMaximumSizeMapCullsDistantTrackAndRetainsACrossing() throws {
-        let map = try GridMap(width: 1024, height: 1024)
+        let map = WorldBounds.maximum
         // The map's north-west corner in the view's (a new camera opens in
         // the middle of the map).
-        let camera = PlanCamera(map: map, viewport: ScreenSize(width: 402, height: 420)).panned(byX: 1e7, y: 1e7)
+        let camera = PlanCamera(bounds: map, viewport: ScreenSize(width: 402, height: 420)).panned(byX: 1e7, y: 1e7)
         let distant = [WorldCoordinate(x: 600_000, y: 600_000), WorldCoordinate(x: 700_000, y: 700_000)]
         XCTAssertTrue(MapScale.visiblePolylines(distant, projection: camera, margin: 32).isEmpty)
         let crossing = [WorldCoordinate(x: -1_024, y: 4_096), WorldCoordinate(x: 1_048_576, y: 4_096)]

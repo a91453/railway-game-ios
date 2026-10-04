@@ -11,7 +11,8 @@ import XCTest
 /// track: its head 4 tiles west of Central, its four cars back to 8 tiles
 /// west, over West's point 6 tiles west.
 final class TrainPickingTests: XCTestCase {
-    private static let tile = WorldCoordinate.tileSize
+    // The test layout's spacing: 1024 units, 16 m (the world has no cells).
+    private static let tile = Int64(1_024)
 
     private static func point(_ x: Int64, _ y: Int64, in world: GameWorld) -> PlanPoint {
         let central = world.stations[1].location
@@ -56,7 +57,7 @@ final class TrainPickingTests: XCTestCase {
             XCTAssertEqual(session.tappedTrainID, train1)
             XCTAssertEqual(session.selectedTrainID, train1)
             XCTAssertNil(session.selectedStation, "the select tool lets go of the station")
-            XCTAssertNil(session.selection)
+            XCTAssertNil(session.selectedPoint)
             XCTAssertEqual(session.selectionText(), "Train · Train 1 · Stopped at West · Line 1")
 
             session.clearSelection()

@@ -14,7 +14,7 @@ final class TrainControlTests: XCTestCase {
     // A dead-end line of the track network on row 2 (nodes at columns 0–5,
     // edges 1–5 eastward, see `TestLine`), three stations beside it on
     // row 1 with platforms either side of a node, one away from it, and an
-    // empty tile:
+    // empty point:
     //
     //   row 1:        W       M       E        T (row 4), empty (3, 4)
     //   row 2:   o - o - o - o - o - o
@@ -23,7 +23,7 @@ final class TrainControlTests: XCTestCase {
     private static let mid = StationID(rawValue: 2)
     private static let east = StationID(rawValue: 3)
     private static let terminus = StationID(rawValue: 4)
-    private static let emptyTile = GridPosition(x: 3, y: 4)
+    private static let emptyPoint = TestLine.centre(3, 4)
     private static let first = TrainID(rawValue: 1)
     private static let second = TrainID(rawValue: 2)
 
@@ -168,7 +168,7 @@ final class TrainControlTests: XCTestCase {
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Terminus has no platform yet. Add one with the network tool."))
 
-            session.select(Self.emptyTile)
+            session.tapMap(at: Self.emptyPoint, reach: 0)
             session.placeSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select a station to place Train 1 at."))
@@ -181,7 +181,7 @@ final class TrainControlTests: XCTestCase {
         }
     }
 
-    func testChoosingAHeadingStationsOrTilesNeverMovesAPlacedTrain() async throws {
+    func testChoosingAHeadingStationsOrPointsNeverMovesAPlacedTrain() async throws {
         let world = try makePlacedWorld(at: 2)
         await MainActor.run {
             let session = GameSession(world: world)
@@ -192,7 +192,7 @@ final class TrainControlTests: XCTestCase {
             for station in [Self.west, Self.east, Self.terminus] {
                 session.selectStation(station)
             }
-            session.select(Self.emptyTile)
+            session.tapMap(at: Self.emptyPoint, reach: 0)
             for tool in ConstructionTool.allCases {
                 session.selectTool(tool)
             }
@@ -348,7 +348,7 @@ final class TrainControlTests: XCTestCase {
                     )
                 )
             }
-            session.select(Self.emptyTile)
+            session.tapMap(at: Self.emptyPoint, reach: 0)
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select the station to send Train 1 to."))
@@ -529,7 +529,7 @@ final class TrainControlTests: XCTestCase {
                 _ = train?.movement.rateText
                 _ = session.selectedTrainRate
                 if let position = train?.position {
-                    _ = MapScale.center(of: position, in: session.world, tileSize: 32)
+                    _ = MapScale.center(of: position, in: session.world, referenceSize: 32)
                     _ = MapScale.facing(of: position, in: session.world)
                 }
             }

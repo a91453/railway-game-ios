@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 29
+    static let schemaVersion = 30
 
     var description: String
     var initialState: InitialState
@@ -59,8 +59,9 @@ struct GoldenScenario: Decodable {
     var expectedFinalState: WorldSummary
 
     struct InitialState: Decodable {
-        var mapWidth: Int
-        var mapHeight: Int
+        /// Schema 30 (Stage F3d): how far the world reaches, in world units.
+        var worldWidth: Int64
+        var worldHeight: Int64
         var balance: Int64
         var costs: Costs
         /// The clock, in whole minutes or (schema 23) in seconds: exactly
@@ -75,9 +76,8 @@ struct GoldenScenario: Decodable {
         }
 
         func makeWorld() throws(GameError) -> GameWorld {
-            try GameWorld(
-                width: mapWidth,
-                height: mapHeight,
+            GameWorld(
+                bounds: try WorldBounds(width: worldWidth, height: worldHeight),
                 economy: GameEconomy(balance: Money(balance), costs: costs.constructionCosts),
                 clock: GameClock(now: GameTime(seconds: seconds), speed: speed.speed)
             )
@@ -709,10 +709,11 @@ extension StepOutcome: Codable {
         case "ok":
             self = .ok
         case "invalidMapSize":
-            let width = try container.decode(Int.self, forKey: .width)
-            self = try .rejected(.invalidMapSize(width: width, height: container.decode(Int.self, forKey: .height)))
+            let width = try container.decode(Int64.self, forKey: .width)
+            self = try .rejected(.invalidMapSize(width: width, height: container.decode(Int64.self, forKey: .height)))
         case "outOfBounds":
-            self = try .rejected(.outOfBounds(container.decodePosition(x: .x, y: .y)))
+            // Schema 30 (Stage F3d): the point, in world units.
+            self = try .rejected(.outOfBounds(container.decodePoint(x: .x, y: .y)))
         case "tileOccupied", "invalidTrackConnections", "noTrackToRemove", "trackInUse", "invalidStationTile":
             // The grid's errors, which no command can give since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -821,9 +822,9 @@ extension StepOutcome: Codable {
 
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        func encode(_ position: GridPosition) throws {
-            try container.encode(position.x, forKey: .x)
-            try container.encode(position.y, forKey: .y)
+        func encode(_ point: PlanPoint) throws {
+            try container.encode(point.x, forKey: .x)
+            try container.encode(point.y, forKey: .y)
         }
         // Exhaustive on purpose: a new GameError case must be given a
         // portable name here before the tests compile again.
@@ -834,9 +835,9 @@ extension StepOutcome: Codable {
             try container.encode("invalidMapSize", forKey: .result)
             try container.encode(width, forKey: .width)
             try container.encode(height, forKey: .height)
-        case .rejected(.outOfBounds(let position)):
+        case .rejected(.outOfBounds(let point)):
             try container.encode("outOfBounds", forKey: .result)
-            try encode(position)
+            try encode(point)
         case .rejected(.invalidName):
             try container.encode("invalidName", forKey: .result)
         case .rejected(.insufficientFunds(let required, let available)):
@@ -2621,9 +2622,9 @@ struct ExecutionSummary: Codable, Equatable {
 }
 
 extension KeyedDecodingContainer {
-    /// A grid position stored as two flat integer fields.
-    fileprivate func decodePosition(x: Key, y: Key) throws -> GridPosition {
-        try GridPosition(x: decode(Int.self, forKey: x), y: decode(Int.self, forKey: y))
+    /// A point stored as two flat integer fields, in world units.
+    fileprivate func decodePoint(x: Key, y: Key) throws -> PlanPoint {
+        try PlanPoint(x: decode(Int64.self, forKey: x), y: decode(Int64.self, forKey: y))
     }
 
     /// A train ID stored as a plain integer.

@@ -46,12 +46,14 @@ final class RealWorldMapTests: XCTestCase {
     /// 8,192 m away, and a world metre is 64 units.
     func testTheMapsMiddleIsAtTheAnchor() throws {
         let world = GameWorld.newGame(anchor: taipei)
+        XCTAssertEqual(world.bounds, .maximum, "16,384 m a side, as the map of 1024 tiles was (Stage F3d)")
+        XCTAssertEqual(GameWorld.newGame().bounds, .maximum)
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         XCTAssertEqual(frame.anchor, taipei)
         XCTAssertEqual(frame.middleX, 524_288)
         XCTAssertEqual(frame.middleY, 524_288)
-        XCTAssertEqual(RealWorldFrame.halfExtent(of: world.map).east, 8_192)
-        XCTAssertEqual(RealWorldFrame.halfExtent(of: world.map).south, 8_192)
+        XCTAssertEqual(RealWorldFrame.halfExtent(of: world.bounds).east, 8_192)
+        XCTAssertEqual(RealWorldFrame.halfExtent(of: world.bounds).south, 8_192)
 
         let middle = frame.metresFromAnchor(worldX: 524_288, worldY: 524_288)
         XCTAssertEqual(middle.east, 0)
@@ -69,10 +71,15 @@ final class RealWorldMapTests: XCTestCase {
 
     /// An old save's 32 × 24 map has its middle at the anchor too.
     func testAnySizeOfMapHasItsMiddleThere() throws {
-        let frame = RealWorldFrame(anchor: taipei, map: try GridMap(width: 32, height: 24))
+        let frame = RealWorldFrame(anchor: taipei, bounds: try WorldBounds(width: 32_768, height: 24_576))
         XCTAssertEqual(frame.middleX, 16_384)
         XCTAssertEqual(frame.middleY, 12_288)
-        XCTAssertEqual(RealWorldFrame.halfExtent(of: try GridMap(width: 32, height: 24)).east, 256)
+        XCTAssertEqual(RealWorldFrame.halfExtent(of: try WorldBounds(width: 32_768, height: 24_576)).east, 256)
+        // Bounds need not be whole tiles (Stage F3d).
+        let odd = RealWorldFrame(anchor: taipei, bounds: try WorldBounds(width: 1_000, height: 333))
+        XCTAssertEqual(odd.middleX, 500)
+        XCTAssertEqual(odd.middleY, 166.5)
+        XCTAssertEqual(RealWorldFrame.halfExtent(of: try WorldBounds(width: 1_000, height: 333)).south, 2.6015625)
     }
 
     func testABlankMapHasNoFrame() {

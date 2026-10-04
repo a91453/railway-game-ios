@@ -25,7 +25,7 @@ final class TrafficControlSessionTests: XCTestCase {
     private static let east = StationID(rawValue: 2)
 
     private func makeLineWorld() throws -> GameWorld {
-        var world = try makeWorld(width: 8, height: 3, balance: 100_000, speed: .normal)
+        var world = try makeWorld(width: 8_192, height: 3_072, balance: 100_000, speed: .normal)
         try Self.line.build(in: &world)
         let west = try Self.line.buildStation(named: "West", beside: 1, at: 0, in: &world)
         let east = try Self.line.buildStation(named: "East", beside: 5, at: 0, in: &world)

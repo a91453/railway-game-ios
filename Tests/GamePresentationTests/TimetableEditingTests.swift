@@ -164,7 +164,7 @@ private let beta = StationID(rawValue: 2)
 /// A line of the track network from (0,1) to (4,1) (see `TestLine`),
 /// Alpha (1,0) and Beta (3,0) beside it, train T1 standing at Alpha.
 private func makeLine() throws -> GameWorld {
-    var world = try makeWorld(width: 6, height: 3, balance: 100_000)
+    var world = try makeWorld(width: 6_144, height: 3_072, balance: 100_000)
     let line = TestLine(tiles: 5, row: 1)
     try line.build(in: &world)
     try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)

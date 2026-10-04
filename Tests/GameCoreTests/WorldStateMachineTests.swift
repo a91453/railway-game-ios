@@ -48,9 +48,11 @@ final class WorldStateMachineTests: XCTestCase {
         }
     }
 
-    /// A tile centre, or now and then a point just off the map.
+    /// A point on a 1024-unit lattice, or now and then one just off the
+    /// world.
     private func randomPoint(in world: GameWorld, using random: inout SplitMix64) -> PlanPoint {
-        PlanPoint(x: Int64(random.below(world.map.width + 2) - 1) * 1_024 + 512, y: Int64(random.below(world.map.height + 2) - 1) * 1_024 + 512)
+        let (columns, rows) = (Int(world.bounds.width / 1_024), Int(world.bounds.height / 1_024))
+        return PlanPoint(x: Int64(random.below(columns + 2) - 1) * 1_024 + 512, y: Int64(random.below(rows + 2) - 1) * 1_024 + 512)
     }
 
     /// A node of the network, now and then one that does not exist.

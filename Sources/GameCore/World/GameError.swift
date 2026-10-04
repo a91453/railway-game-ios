@@ -4,10 +4,11 @@
 /// errors. Cases carry structured data rather than user-facing text so the
 /// presentation layer can localise them.
 public enum GameError: Error, Hashable, Sendable {
-    /// Map dimensions must lie in `1...GridMap.maximumSideLength`.
-    case invalidMapSize(width: Int, height: Int)
-    /// The position is not inside the map.
-    case outOfBounds(GridPosition)
+    /// Each side of the world, in world units, must lie in
+    /// `1...WorldBounds.maximumSide`.
+    case invalidMapSize(width: Int64, height: Int64)
+    /// The point is not inside the world's bounds.
+    case outOfBounds(PlanPoint)
     /// Names must contain at least one non-whitespace character.
     case invalidName
     /// The balance cannot cover the cost.

@@ -155,7 +155,7 @@ final class TutorialSessionTests: XCTestCase {
     /// track that was already there; choosing another tool undoes the
     /// first step's goal.
     func testGoalsAreReadFromTheWorldAndTheSessionAsTheyAreNow() async throws {
-        var world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        var world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 2_048))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 2_048))
         try world.buildTrackEdge(from: a, to: b)
@@ -182,7 +182,7 @@ final class TutorialSessionTests: XCTestCase {
     /// Back to a step the player finished leaves it finished: Next must not
     /// wait for a second stretch of track because the step was shown again.
     func testBackToTheTrackStepKeepsItDone() async throws {
-        let world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        let world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
         await MainActor.run {
             let session = GameSession(world: world)
             session.startTutorial()
@@ -218,7 +218,7 @@ final class TutorialSessionTests: XCTestCase {
     /// changes nothing, and going back keeps the step done. The world is
     /// never touched.
     func testTheMapStepWaitsForTheMapToMove() async throws {
-        let world = try makeWorld(width: 16, height: 8, balance: 1_000_000)
+        let world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
         await MainActor.run {
             let session = GameSession(world: world)
             session.mapDidMove()

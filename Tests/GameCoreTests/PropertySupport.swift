@@ -229,16 +229,9 @@ enum WorldInvariants {
         if ids != ids.sorted() || Set(ids).count != ids.count {
             problems.append("train IDs not unique and ascending: \(ids)")
         }
-        // Stage F1: a station takes no tile; its position is the tile under
-        // its point. Since Stage F3c no tile holds anything.
-        for station in world.stations {
-            let point = station.point
-            if station.position != GridPosition(x: Int(point.x / 1_024), y: Int(point.y / 1_024)) {
-                problems.append("station \(station.id.rawValue) at \(point) has position \(station.position)")
-            }
-        }
-        if !world.map.tiles.allSatisfy({ $0.type == .empty }) {
-            problems.append("a tile of the map is taken")
+        // Stage F3d: every station stands at a point in the world's bounds.
+        for station in world.stations where !world.bounds.contains(station.point) {
+            problems.append("station \(station.id.rawValue) at \(station.point) is outside the world")
         }
         // Decision 22: lines in ID order, each with two stops or more (none
         // twice in a row) at known stations, a rate of 1 or more, a window

@@ -21,7 +21,7 @@ struct RailwayWasmProbe {
     static func main() throws {
         var checks: [String] = []
         var world = try GameWorld(
-            width: 32, height: 32,
+            bounds: WorldBounds(width: 32_768, height: 32_768),
             economy: GameEconomy(balance: Money(9_007_199_254_740_993), costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
             clock: GameClock(speed: .normal)
         )

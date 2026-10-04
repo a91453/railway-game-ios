@@ -12,10 +12,10 @@
 /// one does after turning round at a dead end). Every other place on an edge
 /// has one representation.
 ///
-/// Distances are logical units, not metres, points or pixels, and imply no
-/// speed: ``linkLength`` of them make a tile's width. Until Stage F3c a train
-/// could also stand on the grid (at a track tile's centre, or on the link
-/// between two); the grid went with ARCHITECTURE decision 51.
+/// Distances are world units (``WorldCoordinate/unitsPerMetre`` to a metre)
+/// and imply no speed. Until Stage F3c a train could also stand on the grid
+/// (at a track tile's centre, or on the link between two); the grid went
+/// with ARCHITECTURE decision 51.
 ///
 /// The enum accepts any values. Validity is checked where a position enters
 /// a world: ``GameWorld/placeTrain(_:at:)`` and decoding, which also require
@@ -26,11 +26,6 @@ public enum TrainPosition: Hashable, Sendable {
     /// (the edge's `from` node going forward, its `to` node going
     /// backward).
     case onEdge(TrackTraversal, offset: Int64)
-
-    /// A tile's width in logical units: a car's length, the longest span of
-    /// an edge and the unit of the price of track (decision 51 keeps it).
-    /// 1024 makes halves, quarters and eighths exact.
-    public static let linkLength: Int64 = 1024
 }
 
 extension TrainPosition {

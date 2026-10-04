@@ -36,10 +36,9 @@ extension GameSession {
     /// where it ends: the nearest node within reach, or a new point there.
     /// Tapping the start again forgets both. Placing a platform or
     /// removing, a tap picks the nearest place on an edge within reach.
-    /// Taps off the map are ignored.
+    /// Taps outside the world's bounds are ignored.
     public func tapNetwork(at point: PlanPoint, reach: Int64) {
-        let size = WorldCoordinate.tileSize
-        guard point.x >= 0, point.y >= 0, point.x < Int64(world.map.width) * size, point.y < Int64(world.map.height) * size else { return }
+        guard world.bounds.contains(point) else { return }
         message = nil
         switch networkMode {
         case .build:
@@ -203,8 +202,8 @@ extension GameSession {
     /// Adds a platform along ``networkPlatformStretch`` through
     /// `GameWorld.addTrackPlatform(_:on:from:to:)` for the station
     /// ``platformStationID``, or for a new station built first through
-    /// `GameWorld.buildStation(named:at:)` at the middle of the platform,
-    /// taking no tile (Stage F1); a managed company's city gives the new
+    /// `GameWorld.buildStation(named:at:)` at the middle of the platform
+    /// (Stage F1); a managed company's city gives the new
     /// station its ridership (``StationDemand/cityDefault``). All or
     /// nothing. A new station then serves the next platform, so a second
     /// track beside it joins the same station.
@@ -258,12 +257,16 @@ extension GameSession {
         }
     }
 
+    /// How far from a new platform's middle a station may stand to be the
+    /// one it belongs to by default: 2048 units, 32 m (Stage C1).
+    public static let platformStationReach: Int64 = 2_048
+
     /// The station nearest the place `point` on the network, by where it
-    /// stands (``Station/location``), if one lies within two tiles; the
-    /// lowest ID of equally near ones.
+    /// stands (``Station/location``), if one lies within
+    /// ``platformStationReach``; the lowest ID of equally near ones.
     private func nearestStation(to point: NetworkEdgePoint) -> StationID? {
         guard let position = world.trackGeometry(of: point.edge)?.location(at: point.distance).position else { return nil }
-        let reach = 2 * WorldCoordinate.tileSize
+        let reach = Self.platformStationReach
         var best: (id: StationID, distance: Int64)?
         for station in world.stations {
             let centre = station.location
@@ -407,6 +410,7 @@ extension NetworkBuilding {
     /// A length or height in world units as metres, such as "75 m" (64
     /// units to a metre, rounded to the nearest).
     public static func lengthText(_ units: Int64, in language: DisplayLanguage) -> String {
+        let unitsPerMetre = WorldCoordinate.unitsPerMetre
         let metres = (units + (units >= 0 ? 1 : -1) * unitsPerMetre / 2) / unitsPerMetre
         return language.text("\(metres) m", "\(metres) 公尺")
     }
@@ -604,17 +608,17 @@ extension GameSession {
 
 extension MapScale {
     /// The world point under a point in map coordinates (see
-    /// ``center(of:tileSize:)-(WorldCoordinate,_)``), rounded to whole
+    /// ``center(of:referenceSize:)-(WorldCoordinate,_)``), rounded to whole
     /// units.
-    public static func worldPoint(atX x: Double, y: Double, tileSize: Double) -> PlanPoint {
-        precondition(tileSize > 0, "worldPoint(atX:y:tileSize:) requires a positive tile size")
-        let scale = Double(WorldCoordinate.tileSize) / tileSize
+    public static func worldPoint(atX x: Double, y: Double, referenceSize: Double) -> PlanPoint {
+        precondition(referenceSize > 0, "worldPoint(atX:y:referenceSize:) requires a positive size")
+        let scale = Double(referenceLength) / referenceSize
         return PlanPoint(x: Int64((x * scale).rounded()), y: Int64((y * scale).rounded()))
     }
 
-    /// `points` of the screen in world units at `tileSize`, rounded.
-    public static func worldDistance(_ points: Double, tileSize: Double) -> Int64 {
-        precondition(tileSize > 0, "worldDistance(_:tileSize:) requires a positive tile size")
-        return Int64((points * Double(WorldCoordinate.tileSize) / tileSize).rounded())
+    /// `points` of the screen in world units at `referenceSize`, rounded.
+    public static func worldDistance(_ points: Double, referenceSize: Double) -> Int64 {
+        precondition(referenceSize > 0, "worldDistance(_:referenceSize:) requires a positive size")
+        return Int64((points * Double(referenceLength) / referenceSize).rounded())
     }
 }

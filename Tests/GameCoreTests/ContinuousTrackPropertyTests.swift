@@ -273,7 +273,7 @@ final class ContinuousTrackPropertyTests: XCTestCase {
     static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> GameWorld {
         let layout = Self.layout(using: &testCase.random)
         var world = try GameWorld(
-            width: layout.width, height: layout.height,
+            bounds: WorldBounds(width: Int64(layout.width) * 1_024, height: Int64(layout.height) * 1_024),
             economy: GameEconomy(balance: 1_000_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000)),
             clock: GameClock(speed: .normal)
         )
@@ -301,8 +301,8 @@ final class ContinuousTrackPropertyTests: XCTestCase {
             let layout = Self.layout(using: &testCase.random)
             testCase.note("map \(layout.width)x\(layout.height), \(layout.nodes.count) nodes, \(layout.edges.count) edges")
             let costs = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
-            var world = try GameWorld(width: layout.width, height: layout.height, economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(speed: .normal))
-            var model = ReferenceWorld(width: layout.width, height: layout.height, balance: 1_000_000_000, costs: costs, minutes: 0, speed: .normal)
+            var world = try GameWorld(bounds: WorldBounds(width: Int64(layout.width) * 1_024, height: Int64(layout.height) * 1_024), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(speed: .normal))
+            var model = ReferenceWorld(width: Int64(layout.width) * 1_024, height: Int64(layout.height) * 1_024, balance: 1_000_000_000, costs: costs, minutes: 0, speed: .normal)
             var steps: [Operation] = layout.nodes.map { .buildNode($0) }
             steps += layout.edges.map { .buildEdge(.node($0.0 + 1), .node($0.1 + 1), $0.2) }
             let trainCount = 2 + testCase.random.below(3)

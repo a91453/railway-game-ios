@@ -129,7 +129,7 @@ public enum TrackStructure: String, Hashable, CaseIterable, Sendable {
         }
     }
 
-    /// What a tile of track on this structure costs, as a multiple of
+    /// What track on this structure costs, as a multiple of
     /// ``ConstructionCosts/track``: the cost hook for structures. Placeholder
     /// values until balancing work starts; surface track is 1, as in Stage
     /// S3.

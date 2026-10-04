@@ -1,18 +1,18 @@
 // World coordinates (Phase 4.5 Stage S3, ARCHITECTURE decisions 28 and 29).
-// One world frame holds the map's tiles and the track network: x grows east,
-// y south (as the map's rows run) and z up, in the logical units trains move
-// in. A tile is `tileSize` units wide, so the centre of tile
-// (x, y) is (1024x + 512, 1024y + 512, 0). Nominally a unit is 1/64 m (a tile
-// is 16 m); only renderers and grades care, the simulation does not.
+// One world frame holds the track network and the stations: x grows east,
+// y south and z up, from the world's north-west corner at ground level, in
+// world units. A metre is ``WorldCoordinate/unitsPerMetre`` (64) units; the
+// world has no cells (Stage F3d, decision 54), only its bounds
+// (``WorldBounds``).
 //
 // Every coordinate is an integer. Floating point never holds a position:
 // renderers convert these values for display and never write back.
 
-/// A point in the world, in logical units.
+/// A point in the world, in world units.
 ///
-/// Like ``TrackConnections``, the type accepts any values; where a point
-/// enters a world (a command or a decoded save) it must lie within
-/// ``limit`` and, for track, on the map (see ``GameWorld/buildTrackNode(at:)``).
+/// The type accepts any values; where a point enters a world (a command or a
+/// decoded save) it must lie within ``limit`` and, for track and stations,
+/// in the world's bounds (see ``GameWorld/buildTrackNode(at:)``).
 public struct WorldCoordinate: Hashable, Sendable {
     /// East.
     public let x: Int64
@@ -28,8 +28,10 @@ public struct WorldCoordinate: Hashable, Sendable {
         self.z = z
     }
 
-    /// The width of a tile in world units: the length of a grid link.
-    public static let tileSize: Int64 = TrainPosition.linkLength
+    /// World units in a metre: the world's one scale (Stage F3d). Lengths
+    /// in metres (fares, grades, real-world maps, construction steps) are
+    /// converted with it, and nothing else.
+    public static let unitsPerMetre: Int64 = 64
 
     /// The largest magnitude any component may have. Within it every
     /// difference fits in 2^30, every square in 2^60 and the sum of three
@@ -43,18 +45,6 @@ public struct WorldCoordinate: Hashable, Sendable {
 
     static func isWithinLimits(_ value: Int64) -> Bool {
         -limit <= value && value <= limit
-    }
-
-    /// The centre of the tile at `tile`, at ground level.
-    ///
-    /// - Precondition: `tile` lies on a map (both coordinates in
-    ///   `0..<GridMap.maximumSideLength`), so the result is within ``limit``.
-    public init(centreOf tile: GridPosition) {
-        precondition(
-            (0..<GridMap.maximumSideLength).contains(tile.x) && (0..<GridMap.maximumSideLength).contains(tile.y),
-            "init(centreOf:) needs a tile on a map"
-        )
-        self.init(x: Int64(tile.x) * Self.tileSize + Self.tileSize / 2, y: Int64(tile.y) * Self.tileSize + Self.tileSize / 2)
     }
 
     /// The point seen from above: its x and y.

@@ -100,10 +100,10 @@ final class EconomyDisplayTests: XCTestCase {
     /// The cars stepper charges on every step up and never pays back, so the
     /// price is shown beside it (nothing when cars are free).
     func testTheCarPriceIsShownBesideTheStepperWhenCarsCostMoney() throws {
-        var world = try GameWorld(width: 4, height: 2, economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: 4_000_000)))
+        var world = try GameWorld(bounds: WorldBounds(width: 4_096, height: 2_048), economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: 4_000_000)))
         XCTAssertEqual(world.carPriceText(in: .english), "Each car added costs $ 40,000; taking cars off refunds nothing.")
         XCTAssertEqual(world.carPriceText(in: .traditionalChinese), "每加一節車廂 $ 40,000；減少車廂不退費。")
-        world = try GameWorld(width: 4, height: 2, economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000)))
+        world = try GameWorld(bounds: WorldBounds(width: 4_096, height: 2_048), economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000)))
         XCTAssertNil(world.carPriceText(in: .english), "free cars: nothing to say")
     }
 
@@ -138,7 +138,7 @@ final class EconomyDisplayTests: XCTestCase {
     /// from (0,1) to (6,1) (see `TestLine`), line Main calling at all
     /// three, one train of one car running it all day.
     private func makeLine() throws -> GameWorld {
-        var world = try makeWorld(width: 8, height: 4, balance: 1_000_000, speed: .normal)
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000, speed: .normal)
         let line = TestLine(tiles: 7, row: 1)
         try line.build(in: &world)
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {

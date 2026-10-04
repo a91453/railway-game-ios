@@ -123,7 +123,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 座標：
 
-- **世界座標**：`WorldCoordinate`、`PlanPoint`，整數，1 單位 = 1/64 公尺，一格 1024 單位，x 向東、y 向南。只有它會送進 `GameWorld`。
+- **世界座標**：`WorldCoordinate`、`PlanPoint`，整數，1 單位 = 1/64 公尺（`WorldCoordinate.unitsPerMetre`），x 向東、y 向南；世界沒有格子，只有範圍（`WorldBounds`，F3d）。只有它會送進 `GameWorld`。
 - **螢幕座標**：`ScreenPoint`，地圖 view 左上角起算的點（points），x 向右、y 向下。`ScreenSize` 是地圖 view 的大小。
 - **`WorldRegion`**：俯視的世界矩形（`Double`），只用來決定畫什麼。
 
@@ -136,8 +136,8 @@ CX-5 的覆蓋層這樣讀（示意）：
 | `planPoint(at:)` | 螢幕 → 世界，捨入成整數，送 `GameWorld` 指令；取代 `MapScale.worldPoint` |
 | `worldDistance(_:)` | 手指的觸控半徑換成世界單位；取代 `MapScale.worldDistance` |
 | `visibleRegion` | 畫面看得到的範圍：只畫和它相交的東西 |
-| `pointsPerUnit`、`tileSize` | 目前的縮放；原本依 `tileSize` 算的線寬、圓點大小照舊 |
-| `detail` | 細節等級（`MapDetail`，由 `MapScale.detail(forTileSize:)` 決定） |
+| `pointsPerUnit`、`referenceSize` | 目前的縮放；`referenceSize` 是 16 公尺（`MapScale.referenceLength`，1024 單位）畫成幾點，線寬、圓點大小依它算（F3d 前叫 `tileSize`，數值不變） |
+| `detail` | 細節等級（`MapDetail`，由 `MapScale.detail(forReferenceSize:)` 決定） |
 
 ### `PlanCamera`：空白模式的相機
 
@@ -145,7 +145,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 | 成員 | 用途 |
 | --- | --- |
-| `PlanCamera(map:viewport:showing:)` | 第一次排版時建立（E1）：`showing` 傳 `WorldRegion.built(in: session.world)`。有東西時置中在它上面、縮小到它放得下（四周各留 `focusPadding` 30 點），但不比沒有它時更近；沒有東西時在地圖中央。大小是 `automaticSize`：整張地圖放得下而每格不小於 22 點時整張（iPad 上的舊 32 × 24 地圖），否則每格 `compactSize`（32 點） |
+| `PlanCamera(bounds:viewport:showing:)` | 第一次排版時建立（E1；F3d 起收世界的範圍 `WorldBounds`）：`showing` 傳 `WorldRegion.built(in: session.world)`。有東西時置中在它上面、縮小到它放得下（四周各留 `focusPadding` 30 點），但不比沒有它時更近；沒有東西時在地圖中央。大小是 `automaticSize`：整張地圖放得下而每 16 公尺不小於 22 點時整張（iPad 上的舊 32 × 24 地圖），否則每 16 公尺 `compactSize`（32 點） |
 | `resized(to:)` | 地圖 view 的大小改變時（旋轉、分割畫面）：保留中心與縮放，超出範圍就收回 |
 | `zoomedIn()`、`zoomedOut()`、`canZoomIn`、`canZoomOut` | 縮放按鈕：每次 × 2（`MapScale.zoomFactor`，參考的一個縮放等級，E1），以畫面中央為準 |
 | `zoomed(by:around:)` | 雙指縮放：用手勢開始時的相機、目前的倍率與手指一開始的位置；手指下的點不動 |
@@ -155,22 +155,22 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 **示範地圖的中心**（2026-10-03 起的約定）：`DemoWorld` 的中心永遠是叫 Central（中文「中央」）的車站，在地圖的正中央（第 (512, 512) 格的西北角），`WorldRegion.built(in:)` 的中心就是它（`DemoWorldTests` 釘住），所以打開示範地圖時畫面中央是 Central。UI 測試可以依賴這一點；示範地圖的其他配置（站數、線路、環線的大小）之後還會改，不要依賴。
 
-**縮放範圍**：每格最多 64 點；最少到整張地圖放得下，但不小於必要（新遊戲 16 公里的地圖在手機上每格不到 0.4 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和 `MapScale.center(of:tileSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住）。E1 只改了開局的位置與按鈕的步長，其餘介面不變。
+**縮放範圍**：每 16 公尺最多 64 點；最少到整張地圖放得下，但不小於必要（新遊戲 16 公里的地圖在手機上每 16 公尺不到 0.4 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和 `MapScale.center(of:referenceSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住）。E1 只改了開局的位置與按鈕的步長，其餘介面不變。
 
 ### CX-4 怎麼接
 
-- **繪製收 `some MapProjection`**：`TileArt` 的函式改收 `some MapProjection`，不要收 `PlanCamera`。E2 的實景模式原本設想用 MapKit 的相機實作同一個 protocol；實作時改成照舊用 `PlanCamera`，Apple 地圖（`AppleMapBackground`）跟著它（決策 50），畫面一樣不用重寫。之後可以旋轉與傾斜的相機仍然走這個 protocol，所以每個點都用 `screenPoint` 換算，不要假設整個畫面同一個比例、也不要用位移量自己推。
+- **繪製收 `some MapProjection`**：`TileArt`（F3d 起叫 `MapArt`）的函式改收 `some MapProjection`，不要收 `PlanCamera`。E2 的實景模式原本設想用 MapKit 的相機實作同一個 protocol；實作時改成照舊用 `PlanCamera`，Apple 地圖（`AppleMapBackground`）跟著它（決策 50），畫面一樣不用重寫。之後可以旋轉與傾斜的相機仍然走這個 protocol，所以每個點都用 `screenPoint` 換算，不要假設整個畫面同一個比例、也不要用位移量自己推。
 - **只畫畫面內**：路網的邊用 `WorldRegion(enclosing: geometry.points)` 和 `visibleRegion.expanded(by:)` 比，相交才畫；車站、月台、列車同理。
 - **相機是 view 的狀態**：地圖 view 用 `@State` 保存 `PlanCamera?`，在 `GeometryReader` 第一次拿到大小時建立，大小改變時 `resized(to:)`。不放進 `GameSession`，也不放進 GameCore。
 - **點擊**：`session.tapMap(at: camera.planPoint(at: location), reach: camera.worldDistance(NetworkBuilding.touchRadius))`，路網工具用 `tapNetwork`，和現在一樣。
 - **縮放按鈕保留**（VoiceOver、沒辦法用兩指時），並保留 `.tutorialTarget(.zoomControls)`。
-- **細節等級**：現在的 `MapDetail` 有 `overview` 與 `full` 兩級。需要更多級時，CX-4 可以改 `MapScale.swift` 的 `MapDetail`、`detail(forTileSize:)` 與 `MapScaleTests`（只影響呈現，不影響模擬）。
+- **細節等級**：現在的 `MapDetail` 有 `overview` 與 `full` 兩級。需要更多級時，CX-4 可以改 `MapScale.swift` 的 `MapDetail`、`detail(forReferenceSize:)`（F3d 前叫 `detail(forTileSize:)`）與 `MapScaleTests`（只影響呈現，不影響模擬）。
 
 ## 5. 檔案歸屬與合併
 
 | 誰 | 改這些 | 不改這些 |
 | --- | --- | --- |
-| CX-4 | `MapView.swift`、`TileArt.swift`、`NetworkOverview.swift`；需要時 `MapScale.swift` 的細節等級與 `MapScaleTests.swift` | 相機與教學的介面、`.tutorialTarget` 標記 |
+| CX-4 | `MapView.swift`、`TileArt.swift`（F3d 起 `MapArt.swift`）、`NetworkOverview.swift`；需要時 `MapScale.swift` 的細節等級與 `MapScaleTests.swift` | 相機與教學的介面、`.tutorialTarget` 標記 |
 | CX-5 | 新增自己的教學檔案（例如 `RailwayGameApp/Views/TutorialOverlay.swift`）；`ContentView.swift` 只加一行掛上覆蓋層；開始畫面加教學入口（`launcher.startTutorial()`）；遊戲選單加「教學」（`session.startTutorial()`）；自己的 String Catalog 字串 | 教學的介面（`Tutorial.swift`、`TutorialSession.swift`、`TutorialTargets.swift`）、其他畫面上的標記 |
 | CX-6 | 開始畫面與遊戲選單的識別碼、UI 測試 | `.tutorialTarget` 標記 |
 | Claude Code | 介面（`MapCamera.swift`、`Tutorial.swift`、`TutorialSession.swift`、`TutorialTargets.swift`）與識別碼；C5 的步驟與判斷；E1、E2 的 GameCore、golden 與存檔 | — |
@@ -191,12 +191,12 @@ CX-5 的覆蓋層這樣讀（示意）：
 | `Ci/` `dismissTutorial(skip)` | `skipTutorial()`；最後一步的「完成」 |
 | `Ci/` 卡片位置（`getBoundingClientRect`，目標下方或上方 12px，放不下就置中） | CX-5 的覆蓋層 |
 | `Railway/` `map.getBounds()`，`map3d.js` 的邊界 `margin` | `visibleRegion`、`WorldRegion.expanded(by:)` |
-| `Railway/` `getZoom() >= 14`、`Ci/` `MAP_STATION_PLATFORM_MIN_ZOOM` | `detail`（`MapScale.detail(forTileSize:)`） |
+| `Railway/` `getZoom() >= 14`、`Ci/` `MAP_STATION_PLATFORM_MIN_ZOOM` | `detail`（`MapScale.detail(forReferenceSize:)`） |
 | MapLibre `project`／`unproject` | `screenPoint(of:)`／`worldPosition(at:)`、`planPoint(at:)` |
 | MapLibre `getCenter`、`flyTo({center, zoom})` | `centerX`、`centerY`、`centered(on:)`、`zoomed(by:around:)` |
 | `Railway/railway_game_reference_clean/web_runtime/touch_pinch_zoom.js`：兩指的距離每變 5% 縮放一格，以兩指的中點為準 | `zoomed(by:around:)`：倍率連續，手指下的點不動（CX-4 可以照它把一格的縮放換成倍率） |
 
-比例：世界座標照舊是 1/64 公尺、一格 1024 單位。相機的 `Double` 只留在畫面，送回 GameCore 前捨入成整數（`planPoint(at:)`、`worldDistance(_:)`，並限制在 `WorldCoordinate.limit` 內）。
+比例：世界座標照舊是 1/64 公尺；畫面的縮放以 16 公尺（1024 單位，`MapScale.referenceLength`）為單位，世界本身沒有格子（F3d）。相機的 `Double` 只留在畫面，送回 GameCore 前捨入成整數（`planPoint(at:)`、`worldDistance(_:)`，並限制在 `WorldCoordinate.limit` 內）。
 
 參考沒有、這裡自己定的：
 

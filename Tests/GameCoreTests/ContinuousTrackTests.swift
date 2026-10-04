@@ -12,7 +12,7 @@ final class ContinuousTrackTests: XCTestCase {
     /// balance and track at 100 a tile.
     private func makeWorld() throws -> GameWorld {
         try GameWorld(
-            width: 16, height: 16, economy: GameEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
+            bounds: WorldBounds(width: 16_384, height: 16_384), economy: GameEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500)),
             clock: GameClock(speed: .normal)
         )
     }
@@ -193,14 +193,14 @@ final class ContinuousTrackTests: XCTestCase {
         refused(.unknownTrackEdge(.edge(1))) { try $0.removeTrackEdge(.edge(1)) }
         refused(.unknownTrackNode(.node(3))) { try $0.removeTrackNode(.node(3)) }
 
-        var poor = try GameWorld(width: 16, height: 16, economy: GameEconomy(balance: 150, costs: ConstructionCosts(track: 100, station: 1, train: 1)))
+        var poor = try GameWorld(bounds: WorldBounds(width: 16_384, height: 16_384), economy: GameEconomy(balance: 150, costs: ConstructionCosts(track: 100, station: 1, train: 1)))
         let c = try node(512, 512, in: &poor)
         let d = try node(2_560, 512, in: &poor)
         XCTAssertThrowsError(try poor.buildTrackEdge(from: c, to: d)) { error in
             XCTAssertEqual(error as? GameError, .insufficientFunds(required: 200, available: 150), "2048 units: two tiles")
         }
         // A price that does not fit in Money is more than any balance.
-        var rich = try GameWorld(width: 16, height: 16, economy: GameEconomy(balance: Money(.max), costs: ConstructionCosts(track: Money(.max / 2), station: 1, train: 1)))
+        var rich = try GameWorld(bounds: WorldBounds(width: 16_384, height: 16_384), economy: GameEconomy(balance: Money(.max), costs: ConstructionCosts(track: Money(.max / 2), station: 1, train: 1)))
         let e = try node(512, 512, in: &rich)
         let f = try node(4_608, 512, in: &rich)
         XCTAssertThrowsError(try rich.buildTrackEdge(from: e, to: f)) { error in

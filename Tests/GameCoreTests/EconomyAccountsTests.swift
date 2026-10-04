@@ -25,7 +25,7 @@ final class EconomyAccountsTests: XCTestCase {
 
     private func makeWorld(managed: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         try line.build(in: &world)
@@ -75,8 +75,8 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertNil(world.tripFare(from: alpha, to: StationID(rawValue: 9)))
         try world.setFareRules(.distance(FareRules.standardBands))
         XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 55, "64 m is in the first step")
-        // Alpha to Gamma is 4 tiles: 64 m. A step ending exactly there does
-        // not take the trip; one ending a metre later does.
+        // Alpha to Gamma is 4096 units: 64 m. A step ending exactly there
+        // does not take the trip; one ending a metre later does.
         try world.setFareRules(.distance([
             FareBand(fromMeters: 0, toMeters: 64, fare: 30), FareBand(fromMeters: 64, toMeters: nil, fare: 90),
         ]))
@@ -84,6 +84,62 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.tripFare(from: alpha, to: beta), 30)
         try world.setFareRules(.flat(0))
         XCTAssertEqual(world.tripFare(from: alpha, to: beta), 500, "a fare of 0 is charged as 5")
+    }
+
+    /// Stage F3d: a fare measures the straight line between the stations'
+    /// points to the unit, not between the 1024-unit tiles once under them.
+    /// Two stations the grid put on one tile are as far apart as they stand
+    /// (20 m here, which the grid called 0); two a unit apart across a
+    /// tile's edge are a unit apart (the grid called it 16 m). The fare's
+    /// demand factor reads the same exact fare, and the independent
+    /// reference model agrees.
+    func testFaresMeasureTheExactDistanceBetweenThePoints() throws {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts)
+        )
+        var model = ReferenceWorld(width: 8_192, height: 4_096, balance: 1_000_000, costs: testCosts, seconds: 0, speed: .paused)
+        let points = [
+            ("North-west", PlanPoint(x: 100, y: 100)), ("South-east", PlanPoint(x: 1_000, y: 1_000)),
+            ("Last", PlanPoint(x: 1_023, y: 2_000)), ("First", PlanPoint(x: 1_024, y: 2_000)),
+        ]
+        for (name, point) in points {
+            try world.buildStation(named: name, at: point)
+            XCTAssertNil(model.buildStation(named: name, at: point))
+        }
+        let (northWest, southEast, last, first) = (StationID(rawValue: 1), StationID(rawValue: 2), StationID(rawValue: 3), StationID(rawValue: 4))
+        world.setEconomyMode(.management)
+        model.setEconomyMode(.management)
+        // Up to 10 m, 30; beyond, 90.
+        let rules = FareRules.distance([FareBand(fromMeters: 0, toMeters: 10, fare: 30), FareBand(fromMeters: 10, toMeters: nil, fare: 90)])
+        try world.setFareRules(rules)
+        XCTAssertNil(model.setFareRules(rules))
+
+        // 900 east and 900 south: 1272.8 units, 19.9 m.
+        XCTAssertEqual(world.squaredDistance(from: northWest, to: southEast), 1_620_000)
+        XCTAssertEqual(world.tripFare(from: northWest, to: southEast), 90, "not 30, as the one tile (0, 0) under both made it")
+        // One unit, across what was the edge of tiles (0, 1) and (1, 1).
+        XCTAssertEqual(world.squaredDistance(from: last, to: first), 1)
+        XCTAssertEqual(world.tripFare(from: last, to: first), 30, "not 90, as a whole tile apart made it")
+        // A step's end, 10 m = 640 units: 640 away is in the next step.
+        try world.buildStation(named: "Ten metres", at: PlanPoint(x: 1_664, y: 2_000))
+        XCTAssertNil(model.buildStation(named: "Ten metres", at: PlanPoint(x: 1_664, y: 2_000)))
+        try world.buildStation(named: "Just short", at: PlanPoint(x: 1_663, y: 2_000))
+        XCTAssertNil(model.buildStation(named: "Just short", at: PlanPoint(x: 1_663, y: 2_000)))
+        XCTAssertEqual(world.tripFare(from: first, to: StationID(rawValue: 5)), 90, "640 units: not shorter than 10 m")
+        XCTAssertEqual(world.tripFare(from: first, to: StationID(rawValue: 6)), 30, "639 units")
+        for origin in 1...6 {
+            for destination in 1...6 {
+                let (a, b) = (StationID(rawValue: origin), StationID(rawValue: destination))
+                XCTAssertEqual(world.tripFare(from: a, to: b)?.amount, model.tripFare(from: origin, to: destination), "\(origin) to \(destination)")
+                XCTAssertEqual(world.demandFactor(from: a, to: b), model.demandFactor(from: origin, to: destination), "\(origin) to \(destination)")
+            }
+        }
+        // The demand factor is the exact fare's.
+        let ninety = world.demandFactor(from: northWest, to: southEast)
+        try world.setFareRules(.flat(90))
+        XCTAssertEqual(world.demandFactor(from: northWest, to: southEast), ninety)
+        try world.setFareRules(.flat(30))
+        XCTAssertNotEqual(world.demandFactor(from: northWest, to: southEast), ninety)
     }
 
     func testFareRulesAreCheckedAsTheEngineDoes() throws {
@@ -192,7 +248,7 @@ final class EconomyAccountsTests: XCTestCase {
     /// `advance` skips its idle minutes.
     func testAQuietWorldStillSettlesEveryHour() throws {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
             try world.buildStation(named: name, at: TestLine.centre(x, 0))
@@ -211,7 +267,7 @@ final class EconomyAccountsTests: XCTestCase {
     /// a line calling twice at one station counts it once.
     func testAStationOfTwoLinesCountsForEach() throws {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
             try world.buildStation(named: name, at: TestLine.centre(x, 0))
@@ -230,7 +286,7 @@ final class EconomyAccountsTests: XCTestCase {
     /// two years of days are kept.
     func testTheYearReportKeepsTheWholePreviousYear() throws {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal)
         )
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
             try world.buildStation(named: name, at: TestLine.centre(x, 0))

@@ -31,7 +31,7 @@ final class ServiceRunTests: XCTestCase {
 
     private func makeWorld(speed: GameSpeed = .x10) throws -> GameWorld {
         var world = try GameWorld(
-            width: 8, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: speed)
         )
         try line.build(in: &world)
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {

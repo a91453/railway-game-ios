@@ -109,10 +109,10 @@ final class MapInteractionTests: XCTestCase {
         let zoomIn = app.buttons["Zoom in"]
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
-        // A step doubles the size (Stage E1): 32 points a tile to 64, the
+        // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
         // maximum zoom.
         zoomIn.tap()
-        XCTAssertFalse(zoomIn.isEnabled, "64 points per tile is the maximum zoom")
+        XCTAssertFalse(zoomIn.isEnabled, "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)

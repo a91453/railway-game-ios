@@ -169,7 +169,7 @@ private struct ActionButton: View {
     }
 
     private var isReady: Bool {
-        guard session.tool == .network else { return session.selection != nil }
+        guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
         case .platform, .remove: return session.networkEdgePoint != nil

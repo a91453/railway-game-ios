@@ -81,13 +81,10 @@ public struct NetworkPreview: Hashable, Sendable {
 /// is a suggestion in whole world units that GameCore then checks like any
 /// other command.
 public enum NetworkBuilding {
-    /// World units in a metre: a tile is 1024 units and 16 m.
-    public static let unitsPerMetre: Int64 = 64
-
     /// The closest a new node may be to the node it is joined from: 22 m,
     /// the reference's `ANCHOR_MIN_SPACING_M` ("too close to an existing
     /// node", `metro.edit.node.too_close`).
-    public static let minimumSpacing: Int64 = 22 * unitsPerMetre
+    public static let minimumSpacing: Int64 = 22 * WorldCoordinate.unitsPerMetre
 
     /// How far, in screen points, a tap reaches to an existing node or
     /// edge. The reference picks within 50 m (`ANCHOR_PICK_RADIUS_M`) on a
@@ -97,7 +94,7 @@ public enum NetworkBuilding {
 
     /// The height steps the tool offers for a new node: 2 m, from 64 m below
     /// the ground to 64 m above it (GameCore's height range).
-    public static let heightStep: Int64 = 2 * unitsPerMetre
+    public static let heightStep: Int64 = 2 * WorldCoordinate.unitsPerMetre
     public static let heightRange: ClosedRange<Int64> = -4_096...4_096
 
     /// The curve from `start` to `end`: straight, or a cubic Bézier that

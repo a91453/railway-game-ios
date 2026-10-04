@@ -56,7 +56,7 @@ final class TrafficControlTests: XCTestCase {
     // at 1000 and 2000. n2 is plain track, n1 and n3 dead ends.
 
     private func makeLineWorld() throws -> GameWorld {
-        var world = try GameWorld(width: 12, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
         let n2 = try world.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 1_024))
         let n3 = try world.buildTrackNode(at: WorldCoordinate(x: 9_144, y: 1_024))
@@ -162,7 +162,7 @@ final class TrafficControlTests: XCTestCase {
     //   1024 cut again at 1500 and 5596.
 
     private func makeLevelsWorld() throws -> (world: GameWorld, deep: StationID) {
-        var world = try GameWorld(width: 20, height: 20, economy: GameEconomy(balance: 10_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 20_480, height: 20_480), economy: GameEconomy(balance: 10_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let c1 = try world.buildTrackNode(at: WorldCoordinate(x: 12_288, y: 4_096))
         let c2 = try world.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 8_192))
         try world.buildTrackEdge(from: c1, to: c2, curve: .cubic(PlanPoint(x: 14_336, y: 4_096), PlanPoint(x: 16_384, y: 6_144)))
@@ -240,7 +240,7 @@ final class TrafficControlTests: XCTestCase {
     // and s's is not. b's spans are cut at ⌊k × 8720 ÷ 9⌋: 968, 1937, ...
 
     private func makeJunctionWorld() throws -> GameWorld {
-        var world = try GameWorld(width: 20, height: 12, economy: GameEconomy(balance: 10_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 20_480, height: 12_288), economy: GameEconomy(balance: 10_000_000, costs: testCosts))
         let j0 = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 8_192))
         let junction = try world.buildTrackNode(at: WorldCoordinate(x: 7_168, y: 8_192))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 15_360, y: 8_192))
@@ -341,7 +341,7 @@ final class TrafficControlTests: XCTestCase {
     // not. A viaduct g 512 up runs north–south over e at x = 8192.
 
     private func makeCrossingWorld() throws -> GameWorld {
-        var world = try GameWorld(width: 16, height: 16, economy: GameEconomy(balance: 10_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 16_384), economy: GameEconomy(balance: 10_000_000, costs: testCosts))
         let w = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 8_192))
         let c = try world.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 8_192))
         let e = try world.buildTrackNode(at: WorldCoordinate(x: 10_240, y: 8_192))
@@ -422,7 +422,7 @@ final class TrafficControlTests: XCTestCase {
     /// A timetable on the network waits for its route and turns round only
     /// once it can go.
     func testANetworkServiceWaitsAndTurnsRoundOnlyToGo() throws {
-        var world = try GameWorld(width: 20, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 20_480, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let nodes = try [1_024, 9_216, 17_408].map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: 1_024)) }
         try world.buildTrackEdge(from: nodes[0], to: nodes[1])
         try world.buildTrackEdge(from: nodes[1], to: nodes[2])
@@ -588,7 +588,7 @@ final class TrafficControlTests: XCTestCase {
     // on e2 from 3072 to 7168. Every span is 1024 long. The stations stand
     // at points, as every station will once the grid is gone.
     private func makeStationsWorld() throws -> (world: GameWorld, west: StationID, east: StationID) {
-        var world = try GameWorld(width: 20, height: 4, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 20_480, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         let nodes = try [1_024, 9_216, 17_408].map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: 1_024)) }
         try world.buildTrackEdge(from: nodes[0], to: nodes[1])
         try world.buildTrackEdge(from: nodes[1], to: nodes[2])
@@ -679,7 +679,7 @@ final class TrafficControlTests: XCTestCase {
     /// back exactly, including track a train has passed but still holds.
     func testSavesKeepTrafficControlAndReservations() throws {
         var world = try makeLineWorld()
-        let unused = try GameWorld(width: 4, height: 4, economy: GameEconomy(balance: 1_000, costs: testCosts))
+        let unused = try GameWorld(bounds: WorldBounds(width: 4_096, height: 4_096), economy: GameEconomy(balance: 1_000, costs: testCosts))
         XCTAssertNil(try encoded(unused)["trafficControl"])
         try world.setTrafficControl(true)
         let one = try buy(&world)

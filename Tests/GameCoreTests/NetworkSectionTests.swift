@@ -8,7 +8,8 @@ import XCTest
 /// nodes, between branch points. Every expected value is worked out by hand
 /// in the comments.
 final class NetworkSectionTests: XCTestCase {
-    private static let tile = WorldCoordinate.tileSize
+    // The test layout's spacing: 1024 units, 16 m (the world has no cells).
+    private static let tile = Int64(1_024)
     /// The handle of a quarter turn of radius 1024 (as `KernelNetwork`).
     private static let quarter: Int64 = 563
 
@@ -21,7 +22,7 @@ final class NetworkSectionTests: XCTestCase {
     }
 
     private func makeWorld() throws -> GameWorld {
-        try GameWorld(width: 9, height: 5, economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+        try GameWorld(bounds: WorldBounds(width: 9_216, height: 5_120), economy: GameEconomy(balance: 100_000_000, costs: testCosts))
     }
 
     /// Builds a node at the centre of each tile, in order: node 1, 2, …

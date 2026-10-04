@@ -129,7 +129,7 @@ private let gamma = StationID(rawValue: 3)
 
 /// Alpha, Beta and Gamma, no track; line Main calling at Alpha and Beta.
 private func makeLine() throws -> GameWorld {
-    var world = try makeWorld(width: 8, height: 4, balance: 100_000)
+    var world = try makeWorld(width: 8_192, height: 4_096, balance: 100_000)
     for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
         try world.buildStation(named: name, at: TestLine.centre(x, 0))
     }

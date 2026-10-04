@@ -17,7 +17,7 @@ final class ConstructionToolTests: XCTestCase {
         let world = try makeWorld()
         await MainActor.run {
             let session = GameSession(world: world)
-            session.select(GridPosition(x: 1, y: 1))
+            session.tapMap(at: PlanPoint(x: 1_536, y: 1_536), reach: 0)
 
             for tool in ConstructionTool.allCases {
                 session.selectTool(tool)
@@ -25,7 +25,7 @@ final class ConstructionToolTests: XCTestCase {
             }
 
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.selection, GridPosition(x: 1, y: 1), "switching tools keeps the selection")
+            XCTAssertEqual(session.selectedPoint, PlanPoint(x: 1_536, y: 1_536), "switching tools keeps the selection")
         }
     }
 

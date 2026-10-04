@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 29,
+  "schemaVersion": 30,
   "description": "Advances game time in whole ticks across speed changes. A tick is 0, 1 or 2 game minutes when paused, at normal or at double speed; resuming returns to the last running speed (normal if the game started paused), and setting the speed to paused keeps that resume speed.",
   "initialState": {
-    "mapWidth": 1,
-    "mapHeight": 1,
+    "worldWidth": 1024,
+    "worldHeight": 1024,
     "balance": 0,
     "costs": { "track": 1000, "station": 50000, "train": 200000 },
     "gameMinutes": 480,

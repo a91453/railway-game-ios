@@ -36,7 +36,7 @@ final class IDAllocationPropertyTests: XCTestCase {
         var digest = Digest()
         var created = 0, refused = 0, lastIDs = 0, roundTrips = 0
         let ran = try runCampaign("ids.allocation", cases: 40) { c in
-            var world = try makeWorld(width: Self.side, height: Self.side, balance: 1_000_000_000)
+            var world = try makeWorld(width: Int64(Self.side) * 1_024, height: Int64(Self.side) * 1_024, balance: 1_000_000_000)
             try TestLine(tiles: 2, row: 0).build(in: &world)
             try world.buildStation(named: "Yard", at: TestLine.centre(2, 0))
             try world.purchaseTrain(named: "Local")
@@ -59,12 +59,12 @@ final class IDAllocationPropertyTests: XCTestCase {
                     continue
                 }
                 let kind: Kind = roll < 6 ? .station : .train
-                let tile = GridPosition(x: c.random.below(Self.side + 1) - 1, y: c.random.below(Self.side))
-                c.note("\(step): \(kind)\(kind == .station ? " at \(tile)" : "")")
+                let point = TestLine.centre(c.random.below(Self.side + 1) - 1, c.random.below(Self.side))
+                c.note("\(step): \(kind)\(kind == .station ? " at \(point)" : "")")
 
                 let expected: GameError?
-                if kind == .station, !world.map.contains(tile) {
-                    expected = .outOfBounds(tile)
+                if kind == .station, !world.bounds.contains(point) {
+                    expected = .outOfBounds(point)
                 } else if next[kind] == Int.max {
                     expected = .idsExhausted
                 } else {
@@ -73,7 +73,7 @@ final class IDAllocationPropertyTests: XCTestCase {
 
                 let outcome = Result { () throws(GameError) -> Int in
                     switch kind {
-                    case .station: try world.buildStation(named: "S\(step)", at: TestLine.centre(tile.x, tile.y)).id.rawValue
+                    case .station: try world.buildStation(named: "S\(step)", at: point).id.rawValue
                     case .train: try world.purchaseTrain(named: "T\(step)").id.rawValue
                     }
                 }

@@ -79,7 +79,8 @@ struct KernelNetwork: Equatable {
     var edges: [Edge]
     var stations: [StationSpec]
 
-    static let tile = WorldCoordinate.tileSize
+    // The test layout's spacing: 1024 units, 16 m (the world has no cells).
+    static let tile = Int64(1_024)
 
     static func centre(_ x: Int, _ y: Int) -> WorldCoordinate {
         WorldCoordinate(x: Int64(x) * tile + tile / 2, y: Int64(y) * tile + tile / 2)

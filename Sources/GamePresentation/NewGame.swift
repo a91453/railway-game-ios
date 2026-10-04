@@ -1,7 +1,7 @@
 import GameCore
 
 extension GameWorld {
-    /// The world a new game starts with: a map ``newGameMapSize`` tiles a
+    /// The world a new game starts with: ``newGameBounds``, 16.384 km a
     /// side, running at 600× (`normal`), with traffic control on (Phase 4.6
     /// Stage T): trains take their whole route before they leave, and a
     /// managed company (G1c) in a city whose fare baseline is the standard
@@ -12,9 +12,8 @@ extension GameWorld {
     /// (Stage E2): the same game either way, laid over the Earth or not.
     public static func newGame(anchor: GeoAnchor? = nil) -> GameWorld {
         do {
-            var world = try GameWorld(
-                width: newGameMapSize,
-                height: newGameMapSize,
+            var world = GameWorld(
+                bounds: newGameBounds,
                 economy: GameEconomy(balance: startingBalance, costs: .newGame),
                 clock: GameClock(speed: .normal)
             )
@@ -29,18 +28,17 @@ extension GameWorld {
             world.setGeoAnchor(anchor)
             return world
         } catch {
-            // The size is a constant within GridMap's limits and an empty
-            // world has no trains to share track, so failing here is a
-            // programming error.
+            // An empty world has no trains to share track, so failing here
+            // is a programming error.
             preconditionFailure("Could not create the new-game world: \(error)")
         }
     }
 
-    /// A new game's map, tiles a side (Stage E1): the most a map may have,
-    /// 1024 tiles of 16 m, about 16 km, so lines kilometres long have room
-    /// to speed up and slow down. Saves of games begun before E1 keep their
-    /// 32 × 24 tiles.
-    public static let newGameMapSize = GridMap.maximumSideLength
+    /// A new game's world (Stage E1): the largest a world may be,
+    /// 1,048,576 units (16.384 km) a side, so lines kilometres long have
+    /// room to speed up and slow down. Saves of games begun before E1 keep
+    /// their 512 × 384 m.
+    public static let newGameBounds = WorldBounds.maximum
 
     /// What a new game starts with: $3,000,000, a first line and some to
     /// spare (ARCHITECTURE decision 46; the reference's starting cash is in
@@ -94,12 +92,14 @@ public enum DemoWorld {
         return world
     }
 
-    private static let tile = WorldCoordinate.tileSize
+    /// The demo's layout step: 1024 units, 16 m. Its distances are whole
+    /// steps (the map's tiles when it was first laid out, Stage C4).
+    private static let step: Int64 = 1_024
     private static let cars = 4
     private static let ringCars = 2
     /// The inner ring track's radius and how far Lines 1 and 2 reach from
-    /// Central, in tiles: the lines end three tiles inside the ring, so no
-    /// track crosses another at its height. The outer ring track is a tile
+    /// Central, in steps: the lines end three steps inside the ring, so no
+    /// track crosses another at its height. The outer ring track is a step
     /// further out.
     private static let ringRadius: Int64 = 12
     private static let reach: Int64 = 9
@@ -107,17 +107,17 @@ public enum DemoWorld {
     private static func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
         let platform = Int64(cars) * Train.carLength
         let ringPlatform = Int64(ringCars) * Train.carLength
-        // Central, the middle of the map: the demo is built around it.
-        let cx = Int64(world.map.width / 2) * tile, cy = Int64(world.map.height / 2) * tile
-        let span = 2 * reach * tile
+        // Central, the middle of the world: the demo is built around it.
+        let cx = world.bounds.width / 2, cy = world.bounds.height / 2
+        let span = 2 * reach * step
         // Line 1: west to east through Central, on the ground.
-        let west = try world.buildTrackNode(at: WorldCoordinate(x: cx - reach * tile, y: cy))
-        let east = try world.buildTrackNode(at: WorldCoordinate(x: cx + reach * tile, y: cy))
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: cx - reach * step, y: cy))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: cx + reach * step, y: cy))
         let ground = try world.buildTrackEdge(from: west, to: east)
         // Line 2: north to south through Central, 8 m up all the way.
         let height: Int64 = 512
-        let north = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy - reach * tile, z: height))
-        let south = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy + reach * tile, z: height))
+        let north = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy - reach * step, z: height))
+        let south = try world.buildTrackNode(at: WorldCoordinate(x: cx, y: cy + reach * step, z: height))
         let viaduct = try world.buildTrackEdge(from: north, to: south, structure: .elevated)
         // The ring: two circles round Central on the ground, one track each
         // way (the inner one the inner way round, clockwise on the map, the
@@ -130,8 +130,8 @@ public enum DemoWorld {
         func plan(_ x: Double, _ y: Double) -> PlanPoint {
             PlanPoint(x: cx + Int64(x.rounded()), y: cy + Int64(y.rounded()))
         }
-        func circle(radius tiles: Int64) throws(GameError) -> [TrackEdgeID] {
-            let radius = Double(tiles * tile)
+        func circle(radius steps: Int64) throws(GameError) -> [TrackEdgeID] {
+            let radius = Double(steps * step)
             let d = radius / 2.0.squareRoot()
             let m = 4.0 / 3.0 * (2.0.squareRoot() - 1) * radius / 2.0.squareRoot()
             var nodes: [TrackNodeID] = []
@@ -161,7 +161,7 @@ public enum DemoWorld {
         func station(_ name: String, at x: Int64, _ y: Int64) throws(GameError) -> StationID {
             try world.buildStation(named: name, at: PlanPoint(x: x, y: y)).id
         }
-        let first = reach * tile - tile - platform / 2
+        let first = reach * step - step - platform / 2
         let westStation = try station(names[0], at: cx - first, cy)
         let central = try station(names[1], at: cx, cy)
         let eastStation = try station(names[2], at: cx + first, cy)
@@ -169,9 +169,9 @@ public enum DemoWorld {
         let southStation = try station(names[4], at: cx, cy + first)
         // Offsets along each edge, measured from its first node.
         for (edge, stations) in [(ground, (westStation, eastStation)), (viaduct, (northStation, southStation))] {
-            try world.addTrackPlatform(stations.0, on: edge, from: tile, to: tile + platform)
+            try world.addTrackPlatform(stations.0, on: edge, from: step, to: step + platform)
             try world.addTrackPlatform(central, on: edge, from: span / 2 - platform / 2, to: span / 2 + platform / 2)
-            try world.addTrackPlatform(stations.1, on: edge, from: span - tile - platform, to: span - tile)
+            try world.addTrackPlatform(stations.1, on: edge, from: span - step - platform, to: span - step)
         }
         // The ring calls at the four ends, a platform on each track in the
         // middle of its arc: at North and South below Line 2's, at West and
@@ -220,9 +220,9 @@ public enum DemoWorld {
             return line
         }
         let line1 = try run(lines[0], calling: [westStation, central, eastStation])
-        try world.assignTrain(try place(trains[0], at: (ground, .forward, tile + platform)), to: line1)
+        try world.assignTrain(try place(trains[0], at: (ground, .forward, step + platform)), to: line1)
         let line2 = try run(lines[1], calling: [northStation, central, southStation])
-        try world.assignTrain(try place(trains[1], at: (viaduct, .forward, tile + platform)), to: line2)
+        try world.assignTrain(try place(trains[1], at: (viaduct, .forward, step + platform)), to: line2)
         // The ring from West: its first train the inner way round on the
         // inner track (clockwise, north first), its second the outer way on
         // the outer track, both at West's platform on the arc through West.
