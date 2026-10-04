@@ -1512,7 +1512,7 @@ public struct GameWorld: Equatable, Sendable {
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reserving(leaving, following: true) {
+               case .held = reservingDeparture(leaving) {
                 continue
             }
             return (index, trip)
@@ -1753,7 +1753,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         let train: Train
-        switch reserving(moved, following: true) {
+        switch reservingDeparture(moved) {
         case .granted(let granted):
             train = granted
         case .held:
@@ -1761,7 +1761,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         trains[index] = train
-        serve(departureOf: train.id, from: stop, distance: departure.distance)
+        serve(departureOf: train.id, from: stop, distance: departure.distance.map { $0 == 0 ? 0 : routeLength(of: train) })
         return true
     }
 
@@ -1866,7 +1866,7 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Gives `train` `path` as its path, from the start: its edges and
     /// where it stops. The rest of its movement stays.
-    private func follow(_ path: TrainPath, _ train: inout Train) {
+    func follow(_ path: TrainPath, _ train: inout Train) {
         train.movement.edges = path.traversals.map(\.edge)
         train.movement.end = path.end
         train.movement.cursor = 0
@@ -2220,7 +2220,7 @@ public struct GameWorld: Equatable, Sendable {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            if held.contains(where: { if case .granted = moved.reserving($0.candidate, following: true) { true } else { false } }) {
+            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate) { true } else { false } }) {
                 return true
             }
             return moved.canExtendAnyAuthority()

@@ -145,8 +145,14 @@ extension ReferenceWorld {
     }
 
     /// Everything the other trains keep train `id` from, together.
-    private func blocked(for id: Int) -> Set<TrackResource> {
+    func blocked(for id: Int) -> Set<TrackResource> {
         trains.filter { $0.id != id && $0.position != nil }.reduce(into: []) { $0.formUnion(blocking($1, for: id)) }
+    }
+
+    /// Decision 57: test a single run interval using the reference's
+    /// absolute-distance resource window, including junction fouling.
+    func unblocked(_ run: Run, from: Int64, to: Int64, by blocked: Set<TrackResource>) -> Bool {
+        blocked.isEmpty || !foul(track(along: [run], from: from, to: to), blocked)
     }
 
     /// `candidate` with the reservation its route needs, or the train that
@@ -359,9 +365,9 @@ extension ReferenceWorld {
     /// One departure of `train` from its waiting stop, on a copy of the
     /// world without traffic control: the train as it would leave, or `nil`
     /// if it cannot.
-    func firstLeaving(_ train: Train) -> Train? {
+    func firstLeaving(_ train: Train, withTrafficControl: Bool = false) -> Train? {
         var trial = self
-        trial.trafficControl = false
+        trial.trafficControl = withTrafficControl && trafficControl
         guard let i = trial.trains.firstIndex(where: { $0.id == train.id }) else { return nil }
         trial.trains[i] = train
         let before = trial.trains[i]

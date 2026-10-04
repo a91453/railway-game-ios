@@ -75,17 +75,18 @@ extension ReferenceWorld {
     /// The distance from the start of every run to the nearest of `berths`
     /// ahead of it, relaxed until nothing changes; runs that lead to none
     /// are left out.
-    func distancesToBerths(_ berths: [Run: [Int64]]) -> [Run: Int64] {
+    func distancesToBerths(_ berths: [Run: [Int64]], blocked: Set<TrackResource> = []) -> [Run: Int64] {
         let allRuns = networkEdges.keys.sorted().flatMap { [Run(edge: $0, forward: true), Run(edge: $0, forward: false)] }
         var best: [Run: Int64] = [:]
         for run in allRuns {
-            if let nearest = berths[run]?.first { best[run] = nearest }
+            if let nearest = berths[run]?.first(where: { unblocked(run, from: 0, to: $0, by: blocked) }) { best[run] = nearest }
         }
         var changed = true
         while changed {
             changed = false
             for run in allRuns {
                 let length = networkEdges[run.edge]!.length
+                guard unblocked(run, from: 0, to: length, by: blocked) else { continue }
                 for next in runs(after: run) {
                     guard let beyond = best[next], length + beyond < best[run] ?? .max else { continue }
                     best[run] = length + beyond
@@ -101,11 +102,11 @@ extension ReferenceWorld {
     /// and, among equals, the choices that come first step by step (a berth
     /// ahead on the same run, nearest first, before any turn; turns by
     /// ascending edge number).
-    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64) -> TrainPath? {
+    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = []) -> TrainPath? {
         guard case .onEdge(let traversal, let offset) = position, let start = Run(traversal), isOnNetwork(traversal, offset) else { return nil }
         let berths = berthsForStation(id, length: length)
         guard !berths.isEmpty else { return nil }
-        let best = distancesToBerths(berths)
+        let best = distancesToBerths(berths, blocked: blocked)
         var (run, at) = (start, offset)
         var taken: [Run] = []
         var total: Int64 = 0
@@ -113,10 +114,10 @@ extension ReferenceWorld {
             let runLength = networkEdges[run.edge]!.length
             // In the order that breaks ties: berths ahead, then turns.
             var choices: [(berth: Int64?, next: Run?, cost: Int64, beyond: Int64)] = []
-            for berth in berths[run] ?? [] where berth >= at {
+            for berth in berths[run] ?? [] where berth >= at && unblocked(run, from: at, to: berth, by: blocked) {
                 choices.append((berth, nil, berth - at, 0))
             }
-            for next in runs(after: run) {
+            for next in runs(after: run) where unblocked(run, from: at, to: runLength, by: blocked) {
                 if let beyond = best[next] { choices.append((nil, next, runLength - at, beyond)) }
             }
             guard let least = choices.map({ $0.cost + $0.beyond }).min() else { return nil }
@@ -201,7 +202,21 @@ extension ReferenceWorld {
         let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
         let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
         routeMemo.network[key] = .some(found)
-        guard let path = found else { return false }
+        guard var path = found else { return false }
+        // V1 is deliberately outside RouteMemo: ownership changes each
+        // second. Relax distances with blocked run intervals removed, then
+        // admit the complete body's envelope before choosing that path.
+        func routed(_ path: TrainPath) -> Train {
+            var candidate = standing(start)
+            candidate.edges = path.traversals.map { Run($0)!.edge }
+            candidate.end = path.end
+            return candidate
+        }
+        if trafficControl, case .failure = admitted(routed(path)),
+           let other = networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked(for: start.id)),
+           case .success = admitted(routed(other)) {
+            path = other
+        }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }

@@ -136,7 +136,7 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = []) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
@@ -154,9 +154,16 @@ extension GameWorld {
             case .entered(let entered): (traversal, from) = (entered, 0)
             case .berth: return []
             }
-            let rest = network.edge(traversal.edge)!.length - from
-            let stops = (berthsAlong[traversal] ?? []).filter { $0 >= from }.map { (BerthSearch.berth(traversal, $0), $0 - from) }
-            return stops + transitions(after: traversal).map { (.entered($0), rest) }
+            let edgeLength = network.edge(traversal.edge)!.length
+            func allowed(to end: Int64) -> Bool {
+                guard !blocked.isEmpty else { return true }
+                let step = [TrackStretch(traversal: traversal, from: from, to: end)]
+                let track = Set(resources(covering: step)).union(foulingNodes(covering: step))
+                return !network.fouls(track, blocked)
+            }
+            let stops = (berthsAlong[traversal] ?? []).filter { $0 >= from && allowed(to: $0) }
+                .map { (BerthSearch.berth(traversal, $0), $0 - from) }
+            return stops + (allowed(to: edgeLength) ? transitions(after: traversal).map { (.entered($0), edgeLength - from) } : [])
         }
         guard let route, case .berth(let last, let end)? = route.last else { return nil }
         let traversals = route.dropLast().map { place -> TrackTraversal in
@@ -175,6 +182,17 @@ extension GameWorld {
             distance = sum
         }
         return TrainPath(traversals: traversals, end: stop, distance: distance)
+    }
+
+    /// Stage V1: the same shortest-path order, excluding each head step
+    /// whose spans or fouling nodes conflict with the other trains' track.
+    /// A berth short of a blocked span on the same edge remains reachable.
+    /// The caller must still reserve the whole envelope, including the body.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked)
+        }
     }
 
     // MARK: - Trains and their bodies

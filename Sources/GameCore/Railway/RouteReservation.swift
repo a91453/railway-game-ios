@@ -120,6 +120,32 @@ extension GameWorld {
         return .granted(train)
     }
 
+    /// Decision 57: a service takes its default route whole, then the
+    /// shortest unblocked route to any berth of the same station whole,
+    /// then follows on the default route (U2), or waits. Manual commands
+    /// keep using `reserving` directly. No route or reservation is committed
+    /// until the final candidate has been admitted.
+    func reservingDeparture(_ candidate: Train) -> Reserving {
+        let whole = reserving(candidate)
+        guard isTrafficControlEnabled, case .held = whole,
+              case .travellingToStop(let stop, let cycle)? = candidate.execution,
+              let position = candidate.position
+        else { return whole }
+        if let alternative = path(from: position, toStation: candidate.timetable[stop].station,
+                                  length: candidate.length, avoiding: blockedTrack(except: candidate.id)) {
+            var rerouted = candidate
+            follow(alternative, &rerouted)
+            let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
+            let previousCycle = stop == 0 ? cycle - 1 : cycle
+            let scheduled = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+                - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
+            let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
+            rerouted.times?.run = reroutedRun
+            if case .granted(let granted) = reserving(rerouted) { return .granted(granted) }
+        }
+        return reserving(candidate, following: true)
+    }
+
     /// The lowest numbered train other than `id` that holds any of
     /// `resources` (see ``held(_:)``), or track that fouls any of them
     /// (Stage F2b, see ``RailwayNetwork/fouls(_:_:)``), or that follows
