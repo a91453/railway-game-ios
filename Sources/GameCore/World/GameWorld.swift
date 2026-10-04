@@ -197,6 +197,23 @@ public struct GameWorld: Equatable, Sendable {
         return id
     }
 
+    /// The lower numbered of the first two placed trains, in ID order, whose
+    /// held track would foul without edge `id` but does not now (Stage F2b):
+    /// removing an edge makes ways along the track longer, so track near
+    /// each other along it may come to foul. `nil` when there are none.
+    private func firstTrainFouled(removing id: TrackEdgeID) -> TrainID? {
+        var after = network
+        after.removeEdge(id)
+        guard !after.foulingSpans.isEmpty else { return nil }
+        let placed = trains.filter { $0.position != nil }.map { ($0.id, held($0)) }
+        for j in placed.indices {
+            for i in placed.indices where i < j {
+                if after.fouls(placed[i].1, placed[j].1), !network.fouls(placed[i].1, placed[j].1) { return placed[i].0 }
+            }
+        }
+        return nil
+    }
+
     /// Removes edge `id` of the track network (Stage S3). Removal is free and
     /// not refunded. Its nodes stay; the edges it joined there no longer join
     /// it. A train whose path names it stops at the node before it and waits
@@ -208,7 +225,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trackEdgeHasPlatform(_:)`` while a station has a
     ///   platform on it (Stage S4); or, under traffic control (Stage T),
     ///   ``GameError/trackReserved(_:)`` while a train has reserved some of
-    ///   it for its route; or ``GameError/tracksWouldBeTooClose(_:_:)`` when
+    ///   it for its route, or (Stage F2b) when without it track two trains
+    ///   hold would foul (see ``RailwayNetwork/fouls(_:_:)``): the lower
+    ///   numbered of the first two such trains; or
+    ///   ``GameError/tracksWouldBeTooClose(_:_:)`` when
     ///   two edges part from each other only by way of it, so that without
     ///   it they would be too close (Stage F2, ARCHITECTURE decision 52).
     public mutating func removeTrackEdge(_ id: TrackEdgeID) throws(GameError) {
@@ -220,6 +240,9 @@ public struct GameWorld: Equatable, Sendable {
         guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
         if isTrafficControlEnabled, let train = trains.first(where: { $0.reservation.contains { $0.isSpan(of: id) } }) {
             throw .trackReserved(train.id)
+        }
+        if isTrafficControlEnabled, let train = firstTrainFouled(removing: id) {
+            throw .trackReserved(train)
         }
         if let pair = network.firstPairLeftTooClose(removing: id) {
             throw .tracksWouldBeTooClose(pair.first, pair.second)
@@ -687,7 +710,7 @@ public struct GameWorld: Equatable, Sendable {
         var needs: [(index: Int, resources: Set<TrackResource>, moves: Bool)] = []
         for index in trains.indices where trains[index].position != nil {
             let envelope = routeEnvelope(of: trains[index])
-            if let earlier = needs.first(where: { !$0.resources.isDisjoint(with: envelope.resources) }) {
+            if let earlier = needs.first(where: { network.fouls($0.resources, envelope.resources) }) {
                 throw .trainsShareTrack(trains[earlier.index].id, trains[index].id)
             }
             needs.append((index, envelope.resources, envelope.moves))
