@@ -130,3 +130,106 @@ extension ReferenceWorld {
         return 2 * 256 * root * e + e * e < 65_536 * (lengthSquared - root * root)
     }
 }
+
+/// The reference's fouling (decision 53) of one network: worked out when
+/// first asked for and kept while the network (its edges and platforms) is
+/// the same, so that worlds that never ask, without traffic control, never
+/// pay for it. Shared by copies of a world; keyed by the network itself, so
+/// a copy with another network never reads another's.
+final class ReferenceFoulingMemo: Equatable {
+    private var edges: [Int: ReferenceWorld.NetworkEdge]?
+    private var platforms: [TrackPlatform] = []
+    private var value: Set<[TrackSpan]> = []
+
+    func fouling(of world: ReferenceWorld) -> Set<[TrackSpan]> {
+        let platforms = world.stations.flatMap(\.trackPlatforms)
+        if edges == world.networkEdges, self.platforms == platforms { return value }
+        value = world.workOutFouling()
+        edges = world.networkEdges
+        self.platforms = platforms
+        return value
+    }
+
+    /// The memo is not part of a world's value.
+    static func == (lhs: ReferenceFoulingMemo, rhs: ReferenceFoulingMemo) -> Bool {
+        true
+    }
+}
+
+extension ReferenceWorld {
+    /// Decision 53: every pair of spans that foul each other, both ways
+    /// round.
+    var fouling: Set<[TrackSpan]> {
+        foulingMemo.fouling(of: self)
+    }
+
+    /// Decision 53 (Stage F2b): whether track in `a` and track in `b` are the
+    /// same, or a span of one fouls a span of the other.
+    func foul(_ a: Set<TrackResource>, _ b: Set<TrackResource>) -> Bool {
+        if a.contains(where: b.contains) { return true }
+        let spansB = b.compactMap { if case .span(let y) = $0 { y } else { nil } }
+        guard a.contains(where: { if case .span = $0 { true } else { false } }), !spansB.isEmpty else { return false }
+        let fouling = self.fouling
+        for case .span(let x) in a {
+            for y in spansB where fouling.contains([x, y]) { return true }
+        }
+        return false
+    }
+
+    /// Decision 53: every pair of spans of two edges with a point of one
+    /// less than 256 in plan from a point of the other, less than 512 apart
+    /// in height there, more than 512 apart along the track (or not joined
+    /// by track at all), both ways round. Every ordered pair of edges is
+    /// looked at, so each checkpoint of each edge is tried against the
+    /// other; only pairs whose sampled lines come within 256 of each other's
+    /// extent (from the samples themselves) can have such points.
+    func workOutFouling() -> Set<[TrackSpan]> {
+        var found: Set<[TrackSpan]> = []
+        let numbers = networkEdges.keys.sorted()
+        var ways: [Int: [Int: Int64]]?
+        func extent(_ edge: NetworkEdge) -> (Int64, Int64, Int64, Int64) {
+            (edge.points.map(\.x).min()!, edge.points.map(\.x).max()!, edge.points.map(\.y).min()!, edge.points.map(\.y).max()!)
+        }
+        for a in numbers {
+            let ea = networkEdges[a]!
+            let spansA = resourceSpans(of: a, length: ea.length)
+            let boxA = extent(ea)
+            for b in numbers where b != a {
+                let eb = networkEdges[b]!
+                let boxB = extent(eb)
+                if boxA.1 + 256 <= boxB.0 || boxB.1 + 256 <= boxA.0 || boxA.3 + 256 <= boxB.2 || boxB.3 + 256 <= boxA.2 { continue }
+                var s: Int64 = 0
+                var marks: [Int64] = []
+                while s < ea.length {
+                    marks.append(s)
+                    s += 64
+                }
+                marks.append(ea.length)
+                for s in marks {
+                    let close = Self.near(ea, at: s, to: eb)
+                    guard !close.isEmpty else { continue }
+                    if ways == nil { ways = trackWays() }
+                    var toNode: [Int: Int64] = [:]
+                    for (end, out) in [(ea.from, s), (ea.to, ea.length - s)] {
+                        for (node, way) in ways![end] ?? [:] where out + way < toNode[node] ?? Int64.max {
+                            toNode[node] = out + way
+                        }
+                    }
+                    for t in close {
+                        let paths = [toNode[eb.from].map { $0 + t }, toNode[eb.to].map { $0 + eb.length - t }].compactMap { $0 }
+                        guard !paths.contains(where: { $0 <= 512 }) else { continue }
+                        for x in spansA where x.start <= s && s <= x.end {
+                            for y in resourceSpans(of: b, length: eb.length) where y.start <= t && t <= y.end {
+                                let p = TrackSpan(edge: .edge(a), start: x.start, end: x.end)
+                                let q = TrackSpan(edge: .edge(b), start: y.start, end: y.end)
+                                found.insert([p, q])
+                                found.insert([q, p])
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return found
+    }
+}

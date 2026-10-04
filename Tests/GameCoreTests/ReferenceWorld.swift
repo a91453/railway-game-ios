@@ -133,6 +133,9 @@ struct ReferenceWorld: Equatable {
     /// Decision 29: the track network, in dictionaries by number.
     var networkNodes: [Int: WorldCoordinate] = [:]
     var networkEdges: [Int: NetworkEdge] = [:]
+    /// Decision 53 (Stage F2b): the fouling of the network as it last was
+    /// asked for (see `fouling`), kept by the network it belongs to.
+    let foulingMemo = ReferenceFoulingMemo()
     var nextNetworkNode = 1
     var nextNetworkEdge = 1
     /// Decision 32: traffic control.

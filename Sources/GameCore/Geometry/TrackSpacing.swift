@@ -92,13 +92,14 @@ enum TrackSpacing {
         }
 
         /// Whether the point `s` along the first edge (`length` long) is
-        /// within the reach along the track of the point `t` along the second
+        /// within `limit` along the track of the point `t` along the second
         /// (`otherLength` long): out through an end of the first, along the
         /// shortest way to an end of the second, and along it to `t`.
-        func isWithinReach(_ s: Int64, of length: Int64, _ t: Int64, of otherLength: Int64) -> Bool {
+        /// `limit` is at most the reach the ways were found within.
+        func isWithin(_ limit: Int64, _ s: Int64, of length: Int64, _ t: Int64, of otherLength: Int64) -> Bool {
             for (i, out) in [s, length - s].enumerated() {
                 for (j, back) in [t, otherLength - t].enumerated() {
-                    if let between = ways[i][j], out + between + back <= RailwayNetwork.partingReach { return true }
+                    if let between = ways[i][j], out + between + back <= limit { return true }
                 }
             }
             return false
@@ -114,7 +115,7 @@ enum TrackSpacing {
         let otherLength = b.geometry.length
         for s in checkpoints(along: length) {
             for t in closePieces(to: a.geometry.location(at: s).position, of: pieces)
-            where !ends.isWithinReach(s, of: length, t, of: otherLength) {
+            where !ends.isWithin(RailwayNetwork.partingReach, s, of: length, t, of: otherLength) {
                 return false
             }
         }
@@ -122,10 +123,37 @@ enum TrackSpacing {
     }
 
     /// The pieces of an edge's sampled centre line that come within the
-    /// track spacing of another edge's box.
+    /// track spacing of another edge's box, filed by the cells of
+    /// ``cellSize`` their boxes widened by the spacing touch: every piece
+    /// less than the spacing from a point is filed under the point's cell,
+    /// so a point is only tried against the pieces there. Only a way to find
+    /// them faster; which pieces are close does not depend on it.
     struct Pieces {
+        static let cellSize: Int64 = 1_024
+
         let shape: ClearanceShape
         let indices: [Int]
+        private let cells: [Cell: [Int]]
+
+        struct Cell: Hashable {
+            let x: Int64
+            let y: Int64
+
+            init(_ x: Int64, _ y: Int64) {
+                self.x = x
+                self.y = y
+            }
+
+            /// The cell `point` lies in.
+            init(of point: PlanPoint) {
+                self.init(Self.cell(point.x), Self.cell(point.y))
+            }
+
+            /// `⌊v ÷ cellSize⌋`.
+            static func cell(_ v: Int64) -> Int64 {
+                v >= 0 ? v / Pieces.cellSize : -((-v + Pieces.cellSize - 1) / Pieces.cellSize)
+            }
+        }
 
         init(_ shape: ClearanceShape, near other: ClearanceShape) {
             self.shape = shape
@@ -136,6 +164,22 @@ enum TrackSpacing {
                 return min(p.x, q.x) - w < other.maximum.x && other.minimum.x - w < max(p.x, q.x)
                     && min(p.y, q.y) - w < other.maximum.y && other.minimum.y - w < max(p.y, q.y)
             }
+            var cells: [Cell: [Int]] = [:]
+            for i in indices {
+                let (p, q) = (points[i].plan, points[i + 1].plan)
+                for x in Cell.cell(min(p.x, q.x) - w)...Cell.cell(max(p.x, q.x) + w) {
+                    for y in Cell.cell(min(p.y, q.y) - w)...Cell.cell(max(p.y, q.y) + w) {
+                        cells[Cell(x, y), default: []].append(i)
+                    }
+                }
+            }
+            self.cells = cells
+        }
+
+        /// The pieces that may be less than the spacing from `point`, in
+        /// order along the edge.
+        func near(_ point: PlanPoint) -> [Int] {
+            cells[Cell(of: point)] ?? []
         }
     }
 
@@ -154,7 +198,7 @@ enum TrackSpacing {
         let geometry = pieces.shape.geometry
         let p = point.plan
         var found: [Int64] = []
-        for i in pieces.indices {
+        for i in pieces.near(p) {
             let (r, s) = (geometry.points[i].plan, geometry.points[i + 1].plan)
             guard min(r.x, s.x) - w < p.x, p.x < max(r.x, s.x) + w, min(r.y, s.y) - w < p.y, p.y < max(r.y, s.y) + w else { continue }
             let way = s.vector(from: r)
@@ -210,9 +254,10 @@ extension RailwayNetwork {
     /// is never shorter than one leaving the point along it.
     func firstTooClose(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, geometry: TrackGeometry) -> TrackEdgeID? {
         let shape = ClearanceShape(from: from, to: to, curve: curve, geometry: geometry)
+        let box = PlanBox(shape)
         var reach: [TrackNodeID: [TrackNodeID: Int64]] = [:]
         for edge in edges {
-            guard let other = clearanceShape(of: edge.id) else { continue }
+            guard let near = planBox(of: edge), near.mayComeClose(to: box), let other = clearanceShape(of: edge.id) else { continue }
             let spaced = TrackSpacing.isSpaced(shape, other) { a, b in
                 if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.partingReach) }
                 return reach[a]?[b]
@@ -258,16 +303,22 @@ extension RailwayNetwork {
         let near = Set(trackDistances(from: removed.from, within: Self.partingReach).keys)
             .union(trackDistances(from: removed.to, within: Self.partingReach).keys)
         var after = self
-        after.removeEdge(id)
-        let shapes = after.edges
-            .filter { near.contains($0.from) || near.contains($0.to) }
-            .compactMap { edge in after.clearanceShape(of: edge.id).map { (edge.id, $0) } }
+        after.removeEdge(id, updatingFouling: false)
+        let candidates = after.edges.filter { near.contains($0.from) || near.contains($0.to) }
+        let boxes = candidates.map { after.planBox(of: $0) }
+        var shapes: [TrackEdgeID: ClearanceShape] = [:]
+        func shape(_ edge: TrackEdge) -> ClearanceShape? {
+            if shapes[edge.id] == nil { shapes[edge.id] = after.clearanceShape(of: edge.id) }
+            return shapes[edge.id]
+        }
         var reach: [TrackNodeID: [TrackNodeID: Int64]] = [:]
-        for i in shapes.indices {
-            for j in shapes.indices where j > i {
-                let pair = TrackEdgePair(shapes[i].0, shapes[j].0)
-                guard !spacingExemptions.contains(pair) else { continue }
-                let spaced = TrackSpacing.isSpaced(shapes[i].1, shapes[j].1) { a, b in
+        for i in candidates.indices {
+            for j in candidates.indices where j > i {
+                let pair = TrackEdgePair(candidates[i].id, candidates[j].id)
+                guard !spacingExemptions.contains(pair), let a = boxes[i], let b = boxes[j], a.mayComeClose(to: b),
+                      let first = shape(candidates[i]), let second = shape(candidates[j])
+                else { continue }
+                let spaced = TrackSpacing.isSpaced(first, second) { a, b in
                     if reach[a] == nil { reach[a] = after.trackDistances(from: a, within: Self.partingReach) }
                     return reach[a]?[b]
                 }
@@ -291,5 +342,49 @@ extension RailwayNetwork {
             }
         }
         exemptFromSpacing(kept)
+    }
+
+    /// The box in plan an edge's centre line stays within, from its end
+    /// nodes and control points (a curve lies within the hull of its
+    /// control points), and the lowest and highest it runs (its ends):
+    /// the same box ``ClearanceShape`` has, without sampling the curve.
+    func planBox(of edge: TrackEdge) -> PlanBox? {
+        guard let from = node(edge.from), let to = node(edge.to) else { return nil }
+        let corners = [from.position.plan, to.position.plan] + edge.curve.controlPoints
+        return PlanBox(
+            minimum: PlanPoint(x: corners.map(\.x).min()!, y: corners.map(\.y).min()!),
+            maximum: PlanPoint(x: corners.map(\.x).max()!, y: corners.map(\.y).max()!),
+            lowest: min(from.position.z, to.position.z), highest: max(from.position.z, to.position.z)
+        )
+    }
+}
+
+/// An edge's box in plan and the heights it runs between, to pass over
+/// pairs of edges that can have no points close before sampling them.
+struct PlanBox {
+    let minimum: PlanPoint
+    let maximum: PlanPoint
+    let lowest: Int64
+    let highest: Int64
+
+    init(minimum: PlanPoint, maximum: PlanPoint, lowest: Int64, highest: Int64) {
+        self.minimum = minimum
+        self.maximum = maximum
+        self.lowest = lowest
+        self.highest = highest
+    }
+
+    init(_ shape: ClearanceShape) {
+        self.init(minimum: shape.minimum, maximum: shape.maximum, lowest: shape.lowest, highest: shape.highest)
+    }
+
+    /// Whether some point of the one edge can be less than the track
+    /// spacing in plan and less than the clearance in height from some
+    /// point of the other: the test ``TrackSpacing`` makes first.
+    func mayComeClose(to other: PlanBox) -> Bool {
+        let w = RailwayNetwork.trackSpacing
+        return minimum.x - w < other.maximum.x && other.minimum.x - w < maximum.x
+            && minimum.y - w < other.maximum.y && other.minimum.y - w < maximum.y
+            && lowest - other.highest < TrackStructure.clearance && other.lowest - highest < TrackStructure.clearance
     }
 }

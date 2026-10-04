@@ -296,10 +296,18 @@ final class TrafficControlTests: XCTestCase {
         let before = world
         XCTAssertThrowsGameError(try world.setTrainContinuation(one, along: [forward(3)], stoppingAt: 4_000), .trackReserved(branch))
         XCTAssertEqual(world, before)
-        // Past the zone the branch is free to share the junction.
+        // Past the zone a train on a no longer holds the junction, but until
+        // a and b have parted (b is less than 256 from a up to about 4228
+        // along it) it fouls a route along b there (Stage F2b).
         try world.unplaceTrain(branch)
-        let far = try stand(&world, at: forward(2), 1_024)
-        XCTAssertEqual(world.heldResources(of: far), [span(2, 0, 1_024), span(2, 1_024, 2_048)])
+        let near = try stand(&world, at: forward(2), 1_024)
+        XCTAssertEqual(world.heldResources(of: near), [span(2, 0, 1_024), span(2, 1_024, 2_048)])
+        XCTAssertThrowsGameError(try world.setTrainContinuation(one, along: [forward(3)], stoppingAt: 4_000), .trackReserved(near))
+        // Beyond the parting (b is 310 from a at 5120 along a) the branch is
+        // free to share the junction.
+        try world.unplaceTrain(near)
+        let far = try stand(&world, at: forward(2), 6_144)
+        XCTAssertEqual(world.heldResources(of: far), [span(2, 5_120, 6_144), span(2, 6_144, 7_168)])
         try world.setTrainContinuation(one, along: [forward(3)], stoppingAt: 4_000)
 
         // Two trains within the zone on the two branches cannot both stand

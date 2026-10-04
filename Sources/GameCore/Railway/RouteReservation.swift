@@ -102,9 +102,10 @@ extension GameWorld {
     }
 
     /// The lowest numbered train other than `id` that holds any of
-    /// `resources` (see ``held(_:)``), or `nil`.
+    /// `resources` (see ``held(_:)``), or track that fouls any of them
+    /// (Stage F2b, see ``RailwayNetwork/fouls(_:_:)``), or `nil`.
     func holder(of resources: Set<TrackResource>, except id: TrainID) -> TrainID? {
-        trains.first { $0.id != id && $0.position != nil && !held($0).isDisjoint(with: resources) }?.id
+        trains.first { $0.id != id && $0.position != nil && network.fouls(held($0), resources) }?.id
     }
 
     /// The track `train` holds: what it stands on, the junctions its body

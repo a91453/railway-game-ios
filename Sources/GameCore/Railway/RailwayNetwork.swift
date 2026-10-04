@@ -124,6 +124,13 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// either edge removes the pair, a new edge that joins them within the
     /// reach removes it too, and no new edge may come too close to either.
     public private(set) var spacingExemptions: [TrackEdgePair]
+    /// For every span that fouls spans of other edges, those spans (Stage
+    /// F2b, ARCHITECTURE decision 53): spans of two edges at one level less
+    /// than ``trackSpacing`` apart in plan at points more than
+    /// ``foulingLength`` apart along the track, where trains on both would
+    /// touch. Worked out again whenever an edge or a platform changes, never
+    /// saved.
+    private(set) var foulingSpans: [TrackSpan: Set<TrackSpan>]
 
     /// An empty network, handing out numbers from 1.
     public init() {
@@ -133,6 +140,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         nextEdgeNumber = 1
         platforms = []
         spacingExemptions = []
+        foulingSpans = [:]
     }
 
     /// The heights a node may stand at in a world (Stage S4): 4096 units
@@ -214,11 +222,13 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// overlaps no other.
     mutating func addPlatform(_ platform: TrackPlatform) {
         platforms.insert(platform, at: platforms.firstIndex { platform < $0 } ?? platforms.count)
+        foulingSpans = foulingAfterChange(to: [platform.edge])
     }
 
     /// Removes the platform at `index` of ``platforms``.
     mutating func removePlatform(at index: Int) {
-        platforms.remove(at: index)
+        let platform = platforms.remove(at: index)
+        foulingSpans = foulingAfterChange(to: [platform.edge])
     }
 
     // MARK: - The continuous network
@@ -305,19 +315,26 @@ public struct RailwayNetwork: Hashable, Sendable {
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
         attach(id, direction: geometry.endDirection, at: to)
+        // Ways along the track through the new edge are shorter now.
+        foulingSpans = foulingAfterChange(to: edgesNear(from, to).union([id]))
         return id
     }
 
     /// Removes the edge `id`, which exists, its ends at its nodes, and the
     /// spacing exemptions it is in.
-    mutating func removeEdge(_ id: TrackEdgeID) {
+    mutating func removeEdge(_ id: TrackEdgeID, updatingFouling: Bool = true) {
         guard let index = edgeIndex(id) else { preconditionFailure("removeEdge(_:) needs an edge of the network") }
+        // Ways along the track through it get longer.
+        let changed = updatingFouling ? edgesNear(edges[index].from, edges[index].to) : []
         let edge = edges.remove(at: index)
         spacingExemptions.removeAll { $0.contains(id) }
         for node in [edge.from, edge.to] {
             guard let nodeIndex = nodeIndex(node) else { continue }
             nodes[nodeIndex].ends.removeAll { $0.edge == id }
             Self.join(&nodes[nodeIndex].ends)
+        }
+        if updatingFouling {
+            foulingSpans = foulingAfterChange(to: changed)
         }
     }
 
@@ -455,6 +472,7 @@ extension RailwayNetwork: Codable {
             }
             spacingExemptions.append(next)
         }
+        foulingSpans = workOutFouling()
     }
 
     public func encode(to encoder: any Encoder) throws {

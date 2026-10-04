@@ -299,11 +299,22 @@ extension ReferenceWorld {
         }) {
             return .trackReserved(TrainID(rawValue: holder.id))
         }
+        var after = self
+        after.networkEdges[number] = nil
+        // Decision 53: nor, under traffic control, a way along the track
+        // without which two trains' track would foul.
+        if trafficControl {
+            let placed = trains.filter { $0.position != nil }.sorted { $0.id < $1.id }
+            let holding = placed.map { held($0) }
+            for j in placed.indices {
+                for i in 0..<j where after.foul(holding[i], holding[j]) && !foul(holding[i], holding[j]) {
+                    return .trackReserved(TrainID(rawValue: placed[i].id))
+                }
+            }
+        }
         // Decision 52: nor the only way along the track between two edges
         // that would then be too close. (The reference has no spacing
         // exemptions: those come only from saves made before Stage F2.)
-        var after = self
-        after.networkEdges[number] = nil
         let ways = after.trackWays()
         let remaining = after.networkEdges.keys.sorted()
         for (k, a) in remaining.enumerated() {

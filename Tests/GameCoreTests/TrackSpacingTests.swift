@@ -301,4 +301,60 @@ final class TrackSpacingTests: XCTestCase {
             XCTAssertTrue("\(error)".contains("keep the track spacing"), "\(error)")
         }
     }
+
+    // MARK: - Fouling (Stage F2b)
+
+    private func standing(_ name: String, on edge: TrackEdgeID, at offset: Int64, in world: inout GameWorld) throws -> TrainID {
+        let id = try world.purchaseTrain(named: name).id
+        try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: offset))
+        try world.setTrainContinuation(id, along: [], stoppingAt: offset)
+        return id
+    }
+
+    func testRemovingAnEdgeCannotMakeTwoTrainsFoul() throws {
+        var world = try makeWorld()
+        // Two short edges 200 apart, 150 long, joined at their west ends p
+        // and q by a connector 200 long: their points are at most 150 + 200
+        // + 150 = 500 apart along the track, so they do not foul. They are
+        // also joined the long way round, along two edges 4096 west and a
+        // second connector there (within the reach, so the spacing allows
+        // removing the first connector).
+        let p = try node(8_192, 8_192, in: &world)
+        let q = try node(8_192, 8_392, in: &world)
+        let connector = try world.buildTrackEdge(from: p, to: q)
+        let east = try world.buildTrackEdge(from: p, to: try node(8_342, 8_192, in: &world))
+        let eastBelow = try world.buildTrackEdge(from: q, to: try node(8_342, 8_392, in: &world))
+        let w1 = try node(4_096, 8_192, in: &world)
+        let w2 = try node(4_096, 8_392, in: &world)
+        try world.buildTrackEdge(from: w1, to: p)
+        try world.buildTrackEdge(from: w2, to: q)
+        try world.buildTrackEdge(from: w1, to: w2)
+        let first = try standing("One", on: east, at: 100, in: &world)
+        _ = try standing("Two", on: eastBelow, at: 100, in: &world)
+        try world.setTrafficControl(true)
+        // Without the connector the two short edges are 150 + 4096 + 200 +
+        // 4096 + 150 apart along the track at most: they foul, so the
+        // connector cannot go while both trains are there.
+        refused(.trackReserved(first), in: world) { try $0.removeTrackEdge(connector) }
+        // Without traffic control it can.
+        try world.setTrafficControl(false)
+        XCTAssertNoThrow(try world.removeTrackEdge(connector))
+        // And then traffic control cannot come on: the two need track that
+        // fouls.
+        refused(.trainsShareTrack(first, TrainID(rawValue: 2)), in: world) { try $0.setTrafficControl(true) }
+    }
+
+    func testTrainsOnAnExemptPairFoulEachOther() throws {
+        // Two edges 128 apart joined by nothing, from a save made before the
+        // spacing: a train on each fouls the other.
+        var world = try JSONDecoder().decode(SavedGame.self, from: save(try closeWorldJSON(), version: 4)).world
+        let one = try standing("One", on: .edge(1), at: 2_048, in: &world)
+        let two = try standing("Two", on: .edge(2), at: 2_048, in: &world)
+        refused(.trainsShareTrack(one, two), in: world) { try $0.setTrafficControl(true) }
+        // Far apart along the edges they do not.
+        try world.unplaceTrain(two)
+        try world.placeTrain(two, at: .onEdge(TrackTraversal(edge: .edge(2), direction: .forward), offset: 10_240))
+        try world.setTrainContinuation(two, along: [], stoppingAt: 10_240)
+        XCTAssertNoThrow(try world.setTrafficControl(true))
+    }
 }

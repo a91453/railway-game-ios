@@ -106,8 +106,7 @@ extension ReferenceWorld {
     /// of `resources`.
     func holder(of resources: Set<TrackResource>, except id: Int) -> Int? {
         for other in trains.sorted(by: { $0.id < $1.id }) where other.id != id && other.position != nil {
-            let theirs = held(other)
-            if resources.contains(where: theirs.contains) { return other.id }
+            if foul(resources, held(other)) { return other.id }
         }
         return nil
     }
@@ -152,7 +151,7 @@ extension ReferenceWorld {
         let placed = trains.filter { $0.position != nil }.sorted { $0.id < $1.id }
         let wanted = placed.map { needs($0) }
         for later in placed.indices {
-            for earlier in 0..<later where !wanted[earlier].resources.isDisjoint(with: wanted[later].resources) {
+            for earlier in 0..<later where foul(wanted[earlier].resources, wanted[later].resources) {
                 return .trainsShareTrack(TrainID(rawValue: placed[earlier].id), TrainID(rawValue: placed[later].id))
             }
         }

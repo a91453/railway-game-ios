@@ -305,7 +305,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - 取得：`placeTrain`、`reverseTrain`、`setTrainContinuation`、`setTrainPath`、服務的出發、線路的派車與開啟交通控制，一次取得整個預約範圍，取代舊的預約；路的長度為 0 時預約是 `[]`。被拒絕的指令回報 `trackReserved`，錯誤順序排在既有的檢查之後。服務的出發被擋時什麼都不改（也不折返），下一個基本步長再試；線路的列車取不到時不就緒，不派出、不改 `lastDispatch`。派出的列車在同一段立刻出發。
 - 解除：列車走到路的終點的那一步移動之後、`unplaceTrain`、關閉交通控制。`setTrainMovementRate`（包括 0）與 `stopTrainService` 不動預約。
 - 基礎設施：交通控制開啟時，`removeTrackEdge`（預約了那條邊的 span）、`addTrackPlatform` 與 `removeTrackPlatform`（持有那條邊的 span）、`buildTrackEdge`（持有新邊一端的節點，或那個節點上某條邊離它不到 1024 的 span，檢查排在 `idsExhausted` 之後、扣款之前）回報 `trackReserved`。
-- `setTrafficControl` 開啟時依 ID 為每台已放置的列車算出它應有的持有，任兩台相交就是 `trainsShareTrack`，世界不變；關閉一定成功並清除所有預約。
+- `setTrafficControl` 開啟時依 ID 為每台已放置的列車算出它應有的持有，任兩台相交（或互相妨礙，見下）就是 `trainsShareTrack`，世界不變；關閉一定成功並清除所有預約。
+- 妨礙（Stage F2b，ARCHITECTURE 決策 53，schema 不變）：兩條不同的邊上，同一高度（高差不到 512）、平面上不到 256 的兩點，沿軌道相距超過 512（或沒有軌道相連）時，兩點所在的 span 互相妨礙（量法同上面「線間距」，點落在 span 分界上時兩邊的 span 都算）。交通控制下，需要的軌道與別台持有的軌道相同或互相妨礙時就是 `trackReserved` / `trainsShareTrack`；`heldResources`、`reservation`、`occupancy` 只列列車自己的軌道。交通控制下拆邊會讓兩台已持有的軌道變成互相妨礙時是 `trackReserved`（依 ID 第一對的較小編號），在 `trackReserved`（預約了那條邊）之後、`tracksWouldBeTooClose` 之前。
 - `routeHolder`：服務停在某站、排定出發已到時，或線路的列車就緒只差預約、線路該派車時，第一個出發的預約範圍被哪台列車持有（編號最小的一台）；其他情況（包括交通控制關閉）是 `{ "found": false }`。
 
 車站需求與乘客規則（schema 20，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 34）：
@@ -441,6 +442,19 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **27**（環線，決策 49）：`setLineRing` 指令，線路的 `ring` 與 `outerLastDispatch`、環線行程的 `ring`，以及手算的 `ring-line.json`（方格上的一圈軌道與四站：設定環線的檢查與偶數化、整圈的行程與規劃、兩個方向各自派車與各自的時刻表）。既有的二十六個 fixture 只把 `schemaVersion` 從 26 改成 27，其他預期值都沒有改變：它們沒有環線。
 - **28**（Stage F3c，ARCHITECTURE 決策 51）：GameCore 拿掉方格。最終狀態不再有 `tracks`、列車的 `trail` 與移動的 `continuation`（schema 27 時它們只能是 `[]`）；方格的指令、觀察與結果，`node`／`link` 位置與資源，`{ "x", "y", "annexes" }` 的車站都不屬於 schema（讀取端拒絕並說明方格已經移除）；線路行程的一段只有 `path`。二十五個 fixture 把 `schemaVersion` 從 27 改成 28，並拿掉這三個一律是空陣列的 key（`tracks` 25 處、`trail` 44 處、`continuation` 134 處，共 203 處；逐檔以 JSON 比對確認其餘內容不變），其他預期值都沒有改變。
 - **29**（Stage F2，ARCHITECTURE 決策 52）：新增線間距（上面「線間距」）與 `trackTooClose`、`tracksWouldBeTooClose` 結果，以及手算的 `track-spacing.json`（最終狀態、長度、餘額與每一個沿軌道的距離都照規則手算）。二十五個既有 fixture 把 `schemaVersion` 從 28 改成 29，其他預期值都沒有改變：唯一在平面上不到 256 的地方是 `network-construction.json` 的 c 離支線 b–d 約 255.5，沿軌道約 8200，是道岔分開的那一段。
+
+
+## F2b：太近的軌道互相妨礙（schema 不變）
+
+ARCHITECTURE 決策 53。schema 仍是 29（沒有新的指令、觀察或結果名稱）。
+
+- 新增手算的 `track-fouling.json`：1/16 的支線分開之前，停在支線上的列車讓沿主線的路被拒絕（`trackReserved`），停在分開之後的列車不會；放置與開啟交通控制同樣被拒絕。
+- **刻意的行為改變**：`traffic-reservation.json`。South 的月台原本在 e3 的 3875–5813，Down 停在它靠 J 的一端（e3 的 3875，backward offset 4845），那裡 e3 離 e2 約 235（3875 × 528 ÷ 8704 ≈ 235，不到 256），沿軌道離 e2 旁邊的點約 7700：Down 佔用的 span 2906–3875 與 3875–4844 妨礙 e2。新規則下 Up 在第 1 分鐘無法取得到 East 的路（要經過整條 e2），Down 要等 Up 讓出 e1 與 J，兩台從此互相等待，fixture 要測的「單線輪流使用」就不成立了。所以：
+  - 第 18 步：South 的月台改成 e3 的 **5813–7751**（同樣 1938 長、兩端都是既有的 span 分界）。e3 在 4844 之後離 e2 超過 294，Down 佔用的 span 4844–5813 與 5813–6782 都不妨礙 e2。
+  - 第 25、32 步：Down 改放在 backward offset **2907**（8720 − 5813，也就是 e3 的 5813），路停在 2907。
+  - 第 66 步：Down 在第 10 分鐘出發後的第一分鐘，從 2907 走到 **4139**（原本從 4845 走到 5837）：它的路是 5813 + 4096 = 9909（原本 7971），時刻表一樣給 8 分鐘，所以跑得比較快。
+  - 第 67 步：Down 的預約多了 e3 的 4844–5813 與 5813–6782 兩個 span（車尾到出發點的那一段，現在在 5813 之後）。
+  - 最終狀態：South 的月台是 5813–7751。其他預期值（Up 在第 1 分鐘取得路、Down 晚 9 分鐘在第 10 分鐘出發、第 18 分鐘到 West、每台列車最後的位置與時刻）都沒有改變；說明文字同步更新。
 
 ## F3：fixture 搬到路網（schema 不變）
 
