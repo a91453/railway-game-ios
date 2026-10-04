@@ -1314,6 +1314,11 @@ public struct GameWorld: Equatable, Sendable {
         while remaining > 0 {
             let start = clock.now
             var changed = false
+            // Stage U2: trains following others take what has freed ahead of
+            // them first, before any train sets off.
+            if extendAuthorities() {
+                changed = true
+            }
             if start.isWholeMinute {
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {
@@ -1344,8 +1349,10 @@ public struct GameWorld: Equatable, Sendable {
             }
             // Stage U: or to the second at which trains moving on have
             // released enough track behind them for a departure that waits
-            // for its route, which then tries again.
-            if !held.isEmpty, span > 1, let freed = secondsUntilARouteFrees(held, from: start, within: span) {
+            // for its route, which then tries again, or (Stage U2) for a
+            // train following them to take more of its route.
+            if span > 1, !held.isEmpty || trains.contains(where: isFollowing),
+               let freed = secondsUntilARouteFrees(held, from: start, within: span) {
                 span = freed
             }
             if moveTrains(from: start, for: span) {
@@ -1505,7 +1512,7 @@ public struct GameWorld: Equatable, Sendable {
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reserving(leaving) {
+               case .held = reserving(leaving, following: true) {
                 continue
             }
             return (index, trip)
@@ -1746,11 +1753,11 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         let train: Train
-        switch reserving(moved) {
+        switch reserving(moved, following: true) {
         case .granted(let granted):
             train = granted
-        case .held(_, let needs):
-            held.append(HeldRoute(train: moved.id, needs: needs))
+        case .held:
+            held.append(HeldRoute(candidate: moved))
             return false
         }
         trains[index] = train
@@ -2111,8 +2118,11 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Where placed train `train` ends up after travelling up to `distance`
     /// units, and its cursor: each edge as long as it is (Stage S3), up to
-    /// where its path ends. It depends on the network alone.
-    private func travelling(_ train: Train, distance: Int64) -> (position: TrainPosition, cursor: Int) {
+    /// where its path ends, and under traffic control no farther than its
+    /// movement authority (Stage U2, see ``authorityLeft(of:)``). It depends
+    /// on the network and the train's reservation alone.
+    func travelling(_ train: Train, distance: Int64) -> (position: TrainPosition, cursor: Int) {
+        let distance = authorityLeft(of: train).map { min(distance, $0) } ?? distance
         let movement = train.movement
         switch train.position! {
         case .onEdge(let traversal, let offset):
@@ -2140,32 +2150,86 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].reservation = envelope.moves ? trains[index].reservation.filter(envelope.resources.contains) : []
     }
 
-    /// A departure due at the start of a step whose route another train
-    /// holds (Stage T): the train, and all the track it needs (see
-    /// ``routeEnvelope(of:)``).
-    struct HeldRoute {
-        let train: TrainID
-        let needs: Set<TrackResource>
+    /// Stage U2: every train that follows another, in ascending ID order,
+    /// takes more of its route if it can: all of it once no other train
+    /// holds any of it (it no longer follows), or else as far as
+    /// ``followingGap`` short of the first track another holds, if that is
+    /// farther than it holds now. Comes first in each step, before any
+    /// train sets off: trains already on the way go on first. Returns
+    /// whether any reservation changed.
+    mutating func extendAuthorities() -> Bool {
+        var extended = false
+        for index in trains.indices {
+            guard let held = authorityLeft(of: trains[index]) else { continue }
+            let envelope = routeEnvelope(of: trains[index])
+            if holder(of: envelope.resources, except: trains[index].id) == nil {
+                trains[index].reservation = envelope.resources.sorted()
+                extended = true
+                continue
+            }
+            let blocked = blockedTrack(except: trains[index].id)
+            let envelopes = authorityEnvelopes(of: trains[index])
+            var (low, high) = (held, envelopes.length)
+            while low < high {
+                let middle = low + (high - low + 1) / 2
+                if !network.fouls(authorityEnvelope(envelopes, to: middle), blocked) {
+                    low = middle
+                } else {
+                    high = middle - 1
+                }
+            }
+            let authority = low - Self.followingGap
+            guard authority > held else { continue }
+            trains[index].reservation = Set(trains[index].reservation).union(authorityEnvelope(envelopes, to: authority)).sorted()
+            extended = true
+        }
+        return extended
     }
 
-    /// The seconds, from `start` and at most `span`, after which no other
-    /// train holds the track of one of `held` any more, or `nil` if that
-    /// does not happen within `span` (Stage U): trains moving on release
-    /// the track behind them (see ``releasePassedTrack(_:)``), so the step
-    /// ends there and the departure tries again at the next, as it would
-    /// one second at a time. Every other train only moves on in the step,
-    /// and what it holds only shrinks as it does, so once free the track
-    /// stays free.
+    /// Whether ``extendAuthorities()`` would give any train more of its
+    /// route now: some following train's track as far as just beyond
+    /// ``followingGap`` past its authority is free. One train taking more
+    /// only ever leaves the others less, so the first that could is the
+    /// first that does.
+    private func canExtendAnyAuthority() -> Bool {
+        trains.contains { train in
+            guard let held = authorityLeft(of: train) else { return false }
+            let (reach, overflow) = held.addingReportingOverflow(Self.followingGap + 1)
+            return !network.fouls(authorityEnvelope(of: train, to: overflow ? .max : reach), blockedTrack(except: train.id))
+        }
+    }
+
+    /// A departure due at the start of a step whose route another train
+    /// holds (Stage T): the train as it would set off.
+    struct HeldRoute {
+        let candidate: Train
+    }
+
+    /// The seconds, from `start` and at most `span`, after which one of
+    /// `held` could set off (wholly, or following the trains ahead, Stage
+    /// U2), or a train following others could take more of its route, or
+    /// `nil` if that does not happen within `span` (Stage U): trains moving
+    /// on release the track behind them (see ``releasePassedTrack(_:)``),
+    /// so the step ends there and the departure or the following train
+    /// tries again at the next, as it would one second at a time. Every
+    /// train only moves on in the step, and what it holds only shrinks as it
+    /// does, so once free the track stays free.
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
     private func secondsUntilARouteFrees(_ held: [HeldRoute], from start: GameTime, within span: Int64) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            return held.contains { moved.holder(of: $0.needs, except: $0.train) == nil }
+            if held.contains(where: { if case .granted = moved.reserving($0.candidate, following: true) { true } else { false } }) {
+                return true
+            }
+            return moved.canExtendAnyAuthority()
         }
+        // The least `k` after which one is free. A train following another
+        // moving on takes more of its route almost every second, so then
+        // the first second is tried first.
+        if trains.contains(where: isFollowing), frees(after: 1) { return 1 }
         guard frees(after: span) else { return nil }
-        // The least `k` after which one is free.
         var (low, high) = (Int64(1), span)
         while low < high {
             let middle = (low + high) / 2
@@ -2620,7 +2684,11 @@ extension GameWorld: Codable {
                     : "Train \(id) stands but keeps a reservation."
             }
             if envelope.moves, !envelope.resources.isSubset(of: Set(train.reservation)) {
-                return "Train \(id)'s reservation does not hold the rest of its route."
+                // Stage U2: a train following another holds its route part
+                // of the way, from where it stands.
+                guard authorityEnvelope(of: train, to: 0).isSubset(of: Set(train.reservation)) else {
+                    return "Train \(id)'s reservation does not hold the rest of its route."
+                }
             }
             for resource in train.reservation where !resourceExists(resource) && !envelope.resources.contains(resource) {
                 return "Train \(id) has reserved \(resource), which is not track of this world."

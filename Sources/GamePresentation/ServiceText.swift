@@ -367,10 +367,15 @@ extension GameWorld {
 extension GameWorld {
     /// Under traffic control, "Waiting for Express to clear the route"
     /// while train `id` is due to leave on a route another train holds
-    /// (see ``trainHoldingRoute(of:)``), naming that train; `nil` otherwise.
+    /// (see ``trainHoldingRoute(of:)``), naming that train, or "Following
+    /// Express" while it is on its way behind it (Stage U2: only a train
+    /// following another waits for its route on the way); `nil` otherwise.
     public func routeWaitText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let holder = trainHoldingRoute(of: id) else { return nil }
         let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
+        if case .travellingToStop? = train(id: id)?.execution {
+            return language.text("Following \(name)", "跟在 \(name) 後面")
+        }
         return language.text("Waiting for \(name) to clear the route", "等待 \(name) 讓出進路")
     }
 }

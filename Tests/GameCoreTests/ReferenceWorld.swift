@@ -544,6 +544,8 @@ struct ReferenceWorld: Equatable {
         defer { routeMemo = RouteMemo() }
         for _ in 0..<seconds {
             let second = clockSeconds - minutes * 60
+            // Decision 56: following trains take what has freed first.
+            extendFollowing()
             if second == 0 {
                 // Decision 36: the hour and the day that ended are settled first.
                 settle(memo: &memo)
@@ -558,8 +560,11 @@ struct ReferenceWorld: Equatable {
                 leave(i)
                 resume(i)
             }
+            // Decision 56: no farther than its authority, all moving at once
+            // from where the second found them.
+            let limits = trains.map(authority)
             for i in trains.indices where trains[i].position != nil {
-                let distance = travel(i, second: second)
+                let distance = min(travel(i, second: second), limits[i] ?? .max)
                 guard distance > 0 else { continue }
                 trains[i] = steppedOnNetwork(trains[i], distance: distance)
                 // Decisions 32 and 55: the track behind the train is

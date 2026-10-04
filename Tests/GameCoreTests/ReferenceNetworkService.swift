@@ -211,7 +211,7 @@ extension ReferenceWorld {
             stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds,
             run: setOff(trains[i], length: path.distance, from: (service.stop, service.cycle), to: next)
         )
-        _ = admit(off, at: i)
+        _ = admit(off, at: i, following: true)
         return false
     }
 

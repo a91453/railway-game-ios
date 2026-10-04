@@ -46,9 +46,14 @@
 ///    ground), and an empty `"continuation"` is still read. A build that
 ///    reads only version 5 would find no map in a version 6 world and call
 ///    it damaged, so it says the save is newer than it instead.
+/// 7. Following (Stage U2, ARCHITECTURE decision 56): under traffic control
+///    a service on its way to a call may hold its route only part of the
+///    way, following the trains ahead. The format is the same; a build that
+///    reads only version 6 would refuse such a reservation as not holding
+///    the rest of its route, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 6
+    public static let currentVersion = 7
 
     public let world: GameWorld
 
@@ -89,7 +94,10 @@ extension SavedGame: Codable {
         // its spacing exemptions. Version 5 to 6: a world before version 6
         // has its map of tiles, which the world reads as the bounds it
         // covers, and its movements' empty continuations, which it reads
-        // and drops. Later versions add their steps here.
+        // and drops. Version 6 to 7: a version 6 world has no train
+        // following another, and every reservation holds its whole route,
+        // which version 7 reads as before. Later versions add their steps
+        // here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
 

@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-8   the long property, differential and mutation
+#   campaigns-1 .. campaigns-9   the long property, differential and mutation
 #                                campaigns, named below; Swift 6.4 only
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -57,8 +57,12 @@ set -euo pipefail
 #   campaigns-5  LineDispatchPropertyTests 409, TimetablePropertyTests 106
 #   campaigns-6  ServicePropertyTests ~285, VerticalRailwayPropertyTests 132,
 #                NetworkSectionPropertyTests ~42 (Stage F3c, 52 s locally)
-#   campaigns-7  ServiceRepeatingPropertyTests ~395, TrafficControlPropertyTests 98
+#   campaigns-7  ServiceRepeatingPropertyTests ~395
 #   campaigns-8  NetworkServicePropertyTests 160, ServiceLinePropertyTests 322
+#   campaigns-9  TrafficControlPropertyTests ~370 (Stage U2: with the
+#                following campaign, 196 s locally, 455 s locally in all,
+#                it no longer fitted beside ServiceRepeatingPropertyTests in
+#                campaigns-7)
 #   rest         GoldenScenarioTests 35, WorldStateMachineTests 31, and the
 #                rest, about 170 in all
 # so about 400 to 540 s a shard there, up to about 970 s on a slower runner.
@@ -73,12 +77,13 @@ classes_of() {
     campaigns-4) echo "LinePatternPropertyTests" ;;
     campaigns-5) echo "LineDispatchPropertyTests TimetablePropertyTests" ;;
     campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
-    campaigns-7) echo "ServiceRepeatingPropertyTests TrafficControlPropertyTests" ;;
+    campaigns-7) echo "ServiceRepeatingPropertyTests" ;;
     campaigns-8) echo "NetworkServicePropertyTests ServiceLinePropertyTests" ;;
+    campaigns-9) echo "TrafficControlPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 # The long-standing Swift 6.0 exclusion: the campaigns check logic, which does
 # not depend on the compiler, so only the current release runs them.

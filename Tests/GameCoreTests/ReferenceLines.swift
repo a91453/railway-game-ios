@@ -506,7 +506,7 @@ extension ReferenceWorld {
                 // Stage W2b: sent out as if it had just arrived; it dwells
                 // at the first call before it leaves.
                 sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
-                if trafficControl, let leaving = firstLeaving(sent), holder(of: needs(leaving).resources, except: sent.id) != nil { continue }
+                if trafficControl, let leaving = firstLeaving(sent), case .failure = admitted(leaving, following: true) { continue }
                 trains[i] = sent
                 if outer == true {
                     lines[l].outerLastDispatch = minutes
