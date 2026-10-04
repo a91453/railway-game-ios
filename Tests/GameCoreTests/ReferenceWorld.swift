@@ -162,6 +162,13 @@ struct ReferenceWorld: Equatable {
         }
 
         var network: [Key: TrainPath?] = [:]
+        /// V1: only reused within one advance (unchanged network), and
+        /// only while every blocking resource is exactly the same.
+        struct BlockedKey: Hashable {
+            var route: Key
+            var track: Set<TrackResource>
+        }
+        var unblocked: [BlockedKey: TrainPath?] = [:]
 
         static func == (lhs: RouteMemo, rhs: RouteMemo) -> Bool { true }
     }

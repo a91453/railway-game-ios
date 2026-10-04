@@ -81,13 +81,16 @@ extension ReferenceWorld {
         for run in allRuns {
             if let nearest = berths[run]?.first(where: { unblocked(run, from: 0, to: $0, by: blocked) }) { best[run] = nearest }
         }
+        // An interval's resources do not change during relaxation. Work
+        // out the usable runs and their successors once for this search.
+        let usable = allRuns.filter { unblocked($0, from: 0, to: networkEdges[$0.edge]!.length, by: blocked) }
+            .map { (run: $0, next: runs(after: $0)) }
         var changed = true
         while changed {
             changed = false
-            for run in allRuns {
+            for (run, nextRuns) in usable {
                 let length = networkEdges[run.edge]!.length
-                guard unblocked(run, from: 0, to: length, by: blocked) else { continue }
-                for next in runs(after: run) {
+                for next in nextRuns {
                     guard let beyond = best[next], length + beyond < best[run] ?? .max else { continue }
                     best[run] = length + beyond
                     changed = true
@@ -117,8 +120,10 @@ extension ReferenceWorld {
             for berth in berths[run] ?? [] where berth >= at && unblocked(run, from: at, to: berth, by: blocked) {
                 choices.append((berth, nil, berth - at, 0))
             }
-            for next in runs(after: run) where unblocked(run, from: at, to: runLength, by: blocked) {
-                if let beyond = best[next] { choices.append((nil, next, runLength - at, beyond)) }
+            if unblocked(run, from: at, to: runLength, by: blocked) {
+                for next in runs(after: run) {
+                    if let beyond = best[next] { choices.append((nil, next, runLength - at, beyond)) }
+                }
             }
             guard let least = choices.map({ $0.cost + $0.beyond }).min() else { return nil }
             let pick = choices.first { $0.cost + $0.beyond == least }!
@@ -203,19 +208,23 @@ extension ReferenceWorld {
         let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
         routeMemo.network[key] = .some(found)
         guard var path = found else { return false }
-        // V1 is deliberately outside RouteMemo: ownership changes each
-        // second. Relax distances with blocked run intervals removed, then
-        // admit the complete body's envelope before choosing that path.
+        // V1: relax distances with blocked run intervals removed. The
+        // memo's key includes every blocked resource, so releasing any
+        // track causes a new search. Admission still checks the complete
+        // body's envelope against the current world on every attempt.
         func routed(_ path: TrainPath) -> Train {
             var candidate = standing(start)
             candidate.edges = path.traversals.map { Run($0)!.edge }
             candidate.end = path.end
             return candidate
         }
-        if trafficControl, case .failure = admitted(routed(path)),
-           let other = networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked(for: start.id)),
-           case .success = admitted(routed(other)) {
-            path = other
+        if trafficControl, case .failure = admitted(routed(path)) {
+            let blocked = blocked(for: start.id)
+            let avoiding = RouteMemo.BlockedKey(route: key, track: blocked)
+            let other = routeMemo.unblocked[avoiding]
+                ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked)
+            routeMemo.unblocked[avoiding] = .some(other)
+            if let other, case .success = admitted(routed(other)) { path = other }
         }
         departedDistance = path.distance
         var off = standing(start)

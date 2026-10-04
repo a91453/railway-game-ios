@@ -1214,6 +1214,20 @@ extension TrafficControlTests {
         try world.startTrainService(leader)
         try world.startTrainService(follower)
         try world.setTrafficControl(true)
+        var model = SingleTrackMeet.model()
+        for (number, place) in [(2, Int64(9_216)), (5, 5_120), (1, 3_072)].enumerated() {
+            let id = TrainID(rawValue: number + 1)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(SingleTrackMeet.forward(place.0), offset: place.1)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+            XCTAssertNil(model.setRate(id, 1_024))
+        }
+        for id in [leader, follower] {
+            XCTAssertNil(model.setTimetable(id, world.train(id: id)!.timetable))
+            XCTAssertNil(model.startService(id))
+        }
+        XCTAssertNil(model.setTrafficControl(true))
         var seconds = world
         seconds.setSpeed(.x1)
         // The alternate berth at 5120 touches the 5120–6144 span too.
@@ -1230,5 +1244,15 @@ extension TrafficControlTests {
         world.setSpeed(.x1)
         XCTAssertEqual(world, seconds)
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        // Within this single reference advance the alternative is first
+        // blocked, then freed. A cached failed route must be invalidated
+        // when the leader releases the berth's span.
+        XCTAssertNil(model.advance(ticks: 3))
+        model.setSpeed(.x1)
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        for train in world.trains {
+            XCTAssertEqual(world.reservedResources(of: train.id), model.reservedResources(of: train.id))
+            XCTAssertEqual(world.heldResources(of: train.id), model.heldResources(of: train.id))
+        }
     }
 }
