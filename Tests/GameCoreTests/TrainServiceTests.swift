@@ -817,12 +817,14 @@ final class TrainServiceTests: XCTestCase {
         let malformedTravel: [(String, Any)] = [
             ("waiting between nodes", ["phase": "waiting", "stop": 1]),
             ("travelling to stop 0", ["phase": "travelling", "stop": 0]),
-            // Stop 2 is Gamma, but the journey ends at b.
-            ("a journey that ends elsewhere", ["phase": "travelling", "stop": 2]),
         ]
         for (what, value) in malformedTravel {
             XCTAssertThrowsError(try decode { $0[1]["execution"] = value }, what)
         }
+        // Stop 2 is Gamma, but the journey ends at b, Alpha's berth. Before
+        // Stage V2 that was a journey that ends elsewhere; since then it is
+        // the way to a passing place at Alpha (ARCHITECTURE decision 58).
+        XCTAssertNoThrow(try decode { $0[1]["execution"] = ["phase": "travelling", "stop": 2] })
         // Not without a timetable, a placed train, or with a path left while waiting.
         XCTAssertThrowsError(try decode { $0[0]["timetable"] = nil })
         XCTAssertThrowsError(try decode { trains in

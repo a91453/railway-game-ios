@@ -530,7 +530,8 @@ enum WorldInvariants {
     /// its latest time still fits in a game minute. Decision 31: on the
     /// track network a travelling train's path is not spent and ends at the
     /// far end, the way it travels, of a platform of that station no shorter
-    /// than the train.
+    /// than the train. Decision 58: or of another station's, a passing
+    /// place, where its path may also be spent.
     static func serviceViolations(of train: Train, in world: GameWorld) -> [String] {
         guard let execution = train.execution else { return [] }
         let id = train.id.rawValue
@@ -579,14 +580,21 @@ enum WorldInvariants {
         let left = train.movement.remainingEdges
         guard let lastEdge = world.trackEdge(left.last ?? traversal.edge) else { return ["train \(id) travels along a path whose last edge is gone"] }
         let end = train.movement.end ?? lastEdge.length
-        if left.isEmpty, offset == end { return ["train \(id) travels but its path is spent"] }
         let ahead = world.pathAhead(of: train.id)
         let lastWay: TrackEdgeDirection? = left.isEmpty ? traversal.direction : ahead.count == left.count ? ahead.last?.direction : nil
         let length = Int64(train.cars - 1) * 1024
-        let fits = world.trackPlatforms(of: target).filter { $0.edge == lastEdge.id && $0.end - $0.start >= length }
-        let berths = fits.flatMap { platform -> [(TrackEdgeDirection, Int64)] in [(.forward, platform.end), (.backward, lastEdge.length - platform.start)] }
-        let ends = berths.contains { berth in berth.1 == end && (lastWay == nil || berth.0 == lastWay) }
-        return ends ? [] : ["train \(id) travels to station \(target.rawValue) on a path that ends at \(end) on \(lastEdge.id), no berth of it"]
+        func endsAtBerth(of station: StationID) -> Bool {
+            let fits = world.trackPlatforms(of: station).filter { $0.edge == lastEdge.id && $0.end - $0.start >= length }
+            let berths = fits.flatMap { platform -> [(TrackEdgeDirection, Int64)] in [(.forward, platform.end), (.backward, lastEdge.length - platform.start)] }
+            return berths.contains { berth in berth.1 == end && (lastWay == nil || berth.0 == lastWay) }
+        }
+        // Decision 58: a passing place is a berth of another station.
+        let passing = world.stations.contains { $0.id != target && endsAtBerth(of: $0.id) }
+        if left.isEmpty, offset == end {
+            guard passing, !world.stationsStoppedAt(by: train.id).contains(target) else { return ["train \(id) travels but its path is spent"] }
+            return []
+        }
+        return endsAtBerth(of: target) || passing ? [] : ["train \(id) travels to station \(target.rawValue) on a path that ends at \(end) on \(lastEdge.id), no berth of it"]
     }
 
     /// The world survives a save and load unchanged: the decoder accepts

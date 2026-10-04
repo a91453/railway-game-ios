@@ -143,25 +143,24 @@ U2（站間跟車）已經實作（ARCHITECTURE 決策 56）。2026-10-04 唯讀
 
 ### Stage V：避占用選路與月台分配
 
-V1（決策 57），2026-10-04 唯讀檢查私有參考 repo `1563ad0` 的三份乾淨參考。只取下列流程與演算法；沒有引入參考的網頁、資料或渲染狀態。
+V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 repo `1563ad0` 的三份乾淨參考。只取下列流程與演算法；沒有引入參考的網頁、資料或渲染狀態。
 
 | 參考檔案 / 函式 | Swift 檔案 / 函式 | 倍率與採用範圍 |
 | --- | --- | --- |
-| `Railway/site_archive_clean/rail-3d/physical/topology.js` / `shortestPath({blocked})` | `ServicePath.swift` / `networkPath`、`path(...avoiding:)` | m × 64 → 世界單位（km × 64000）；沿用既有整數邊長，每一步排除衝突的 span 與限界節點，仍用既有搜尋平手順序 |
-| 同檔 / `directed(edge, from)`、`tags.oneway`、`edgeAllowed` | `ServiceDirections.swift` / `opposingServiceTraversals(for:memo:)`、`plannedDirections`；`ServicePath.swift` / `networkPath` 的 forbidden traversal；獨立 `ReferenceTrafficControl.contraryRuns` | 無倍率，方向翻轉；gap：無永久 one-way tag，從完整時刻表、所有線路／服務模式／雙向環線及剩餘實際路推導，不讀時間／派車就緒；只限制替代路新借用的 traversal，候選車預設走廊保留 |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` / `shortestPath({blocked})` | `ServicePath.swift` / `networkPath`、`path(...avoiding:forbidden:)` | m × 64 → 世界單位（km × 64000）；沿用既有整數邊長，每一步排除衝突的 span 與限界節點，仍用既有搜尋平手順序 |
+| 同檔 / `directed(edge, from)`、`tags.oneway`、`edgeAllowed` | `ServiceDirections.swift` / `opposingServiceTraversals(for:memo:)`、`plannedDirections`；`ServicePath.swift` / `networkPath` 的 forbidden traversal；獨立 `ReferenceTrafficControl.contraryRuns` | 無倍率，方向翻轉；gap：無永久 one-way tag，從完整時刻表、所有線路／服務模式／雙向環線及剩餘實際路推導，不讀時間／派車就緒；只限制替代路新借用的 traversal，候選車預設走廊保留 ；替代路與待避路（決策 58）都守它 |
 | 同檔 / `stopCandidates` | `ServicePath.swift` / `berths(of:length:)` | 停車點對應同站月台的方向性 berth；不是靠經緯度、站名近似或半徑推估；列車長度以 1024 單位 / 車間距（16 m）篩選 |
-| 同檔 / `maxLength = Infinity`、crossover `length × 4` | `ServicePath.swift` / `networkPath` | 不設額外繞路上限；沒有 crossover 軌道種類，因此不加該額外懲罰；成本仍是實際整數距離 |
-| `Ci/PROJECT_ABSORPTION_GUIDE.md` / D 的 request → reserve → approved continuation；U 的 platform assignment | `RouteReservation.swift` / `reservingDeparture`；`GameWorld.swift` / `departService`、`readyTrain` | 無數值倍率；完整取得預設或替代路，再退回 U2 跟車、等待，只有 `GameWorld` 提交 |
+| 同檔 / `maxLength`（預設 Infinity）、crossover `length × 4` | `RouteReservation.swift` / `detourAllowance`、`alternativeRoute(of:to:avoiding:)` | 參考的 `maxLength` 是呼叫者給的上限；本專案定為預設路加 25,600 單位（400 m，與 `BLOCK_GAP_KM` 0.4 km × 64000 同一尺度）。沒有 crossover 軌道種類，不加 4 倍懲罰：方向限制已排除逆向借線 |
+| `Ci/PROJECT_ABSORPTION_GUIDE.md` / D 的 request → reserve → approved continuation；U 的 platform assignment | `RouteReservation.swift` / `reservingDeparture`；`GameWorld.swift` / `departService`、`readyTrain`、`goOn` | 無數值倍率；完整取得預設路，或在預設路上 U2 跟車，再取得替代路，最後等待；只有 `GameWorld` 提交 |
+| `Railway/site_archive_clean/index.html` / `updateBlockHolds`（同線同向依位置跟車） | 決策 57 的「先跟車，再改月台」 | 無倍率；同向前車一定讓出時留在預設路跟車，不改月台 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` / `MIN_TRAIN_GAP` | 既有 `RouteReservation.swift` / `followingGap`（U2） | snapshot 常數只有定義，沒有可移植的避占用選路；本次不採用其比例，U2 仍為 0.4 km × 64000 = 25600 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` / §7 path cost / PBS；`binary_reference/relevant_symbols_and_settings.txt` / `rail_pbs_*`、platform penalties | `RouteReservation.swift` / `reserving`、`reservingDeparture`；`ReferenceNetworkService.swift` / `distancesToBerths` | 概念與符號，沒有選路原始碼或權重數值；不猜號誌、曲線、長短月台的懲罰 |
-| `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic` | Deferred | 參考秒 × 1 → 遊戲秒、km × 64000 → 單位；V1 不移植排定交會、待避或多輪時刻表重排 |
+| （三份參考都沒有死結的偵測或解除） | `Deadlock.swift` / `waitingRoute(of:memo:)`、`deadlock(memo:)`、`deadlockedTrains()`、`passingPlace(for:in:memo:)`、`isAtPassingPlace(_:)`、`passingPlace(of:)`；`GameWorld.swift` / `resolveDeadlock(memo:)`、`goOn`；獨立 `ReferenceDeadlock.swift` | **gap**（決策 58）：經典的死結偵測（reduction）；每個整分鐘把一台服務送到途中某站的待避站；倍率同 V1（400 m） |
+| `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic` | Deferred | 參考秒 × 1 → 遊戲秒、km × 64000 → 單位；V1、V2 不移植事前的排定交會、待避或多輪時刻表重排 |
 
-**gap**：參考 `blocked` 是整個 resource key，Swift 改成一個 head interval 的 span / fouling 檢查與 `network.fouls`；整個車身 envelope、原子取得、替代路優先於 U2、精確批次喚醒、換路後的曲線與離站距離是本專案自己的規則。參考沒有長度政策可支持任意繞路倍率，故保持 Infinity；將來若有服務距離或時間預算再設上限。沒有 crossover 種類及其 4 倍額外懲罰，沒有一般 penalties API。方向限制採完整計畫，沒有永久軌道方向，也不推估時刻表交會。獨立模型用 blocked run 區間及禁止方向的反向距離鬆弛與貪婪重建，不呼叫 GameCore 選路。
+**gap**：參考 `blocked` 是整個 resource key，Swift 改成一個 head interval 的 span / fouling 檢查與 `network.fouls`；整個車身 envelope、原子取得、先跟車再改月台、繞路 400 m 上限、精確批次喚醒、換路後的曲線與離站距離是本專案自己的規則。參考的 `maxLength` 由呼叫者決定（預設 Infinity）；本專案定為預設路加 400 m。沒有 crossover 種類及其 4 倍額外懲罰，沒有一般 penalties API。方向限制採完整計畫，沒有永久軌道方向，也不推估時刻表交會。死結的偵測與待避站解除（V2）參考完全沒有。獨立模型用 blocked run 區間及禁止方向的反向距離鬆弛與貪婪重建，死結以回合找出，不呼叫 GameCore 選路。
 
-**Deferred（暫時沒有改的地方）**：排定等待與時刻表交會、待避推估；V2 死結的偵測與解除；決策 22 的單線容量；畫面上的授權範圍。規劃查詢與手動路、放置、反向仍照既有規則。
-
-
-**待作者決定（本次不改）**：同向可跟車時是否讓 U2 優先於替代路；是否加入繞路距離或時間預算。既有順序與 Infinity 保持不變。
+**Deferred（暫時沒有改的地方）**：事前的排定等待與時刻表交會、待避推估；需要換向的折返與調車解法；決策 22 的單線容量；畫面上的授權範圍與地圖上的死結標示。規劃查詢與手動路、放置、反向仍照既有規則。
 
 
 第二輪修正 gap：完整計畫從第一站所有放得下車身的 berth 逐段推導預設路，包含折返、重複接縫與完整循環（位置／停靠狀態重複才停止），不採固定 N 段前瞻；空 roster、關閉營運時段、無上線數的線路也保護其計畫。名義第一站位置無法由已執行的列車唯一重建，所以枚舉 berth 是保守策略。替代路只禁「新增借用」的對向 traversal，候選車預設路的同向 traversal 保留，讓單線交會仍能使用共用入口；每一步 blocked span／限界與完整 envelope 的安全檢查仍在。這些是本專案 gap，參考 directed 是永久 oneway tag，並沒有此名義計畫政策。

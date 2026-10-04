@@ -204,29 +204,7 @@ extension ReferenceWorld {
             departedDistance = 0
             return admit(there, at: i) == nil
         }
-        let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
-        let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
-        routeMemo.network[key] = .some(found)
-        guard var path = found else { return false }
-        // V1: relax distances with blocked run intervals removed. The
-        // memo's key includes every blocked resource, so releasing any
-        // track causes a new search. Admission still checks the complete
-        // body's envelope against the current world on every attempt.
-        func routed(_ path: TrainPath) -> Train {
-            var candidate = standing(start)
-            candidate.edges = path.traversals.map { Run($0)!.edge }
-            candidate.end = path.end
-            return candidate
-        }
-        if trafficControl, case .failure = admitted(routed(path)) {
-            let blocked = blocked(for: start.id)
-            let forbidden = contraryRuns(for: routed(path))
-            let avoiding = RouteMemo.BlockedKey(route: key, track: blocked, forbidden: forbidden)
-            let other = routeMemo.unblocked[avoiding]
-                ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked, forbidden: forbidden)
-            routeMemo.unblocked[avoiding] = .some(other)
-            if let other, case .success = admitted(routed(other)) { path = other }
-        }
+        guard let path = chosenRoute(from: start, to: target) else { return false }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
@@ -238,6 +216,57 @@ extension ReferenceWorld {
         )
         _ = admit(off, at: i, following: true)
         return false
+    }
+
+    /// `start`, standing, with `path` as its path.
+    func routed(_ start: Train, _ path: TrainPath) -> Train {
+        var candidate = standing(start)
+        candidate.edges = path.traversals.map { Run($0)!.edge }
+        candidate.end = path.end
+        return candidate
+    }
+
+    /// The default way from `start` (standing) to where it stops for
+    /// station `target`, as every departure looks it up; `nil` with none.
+    mutating func defaultRoute(from start: Train, to target: StationID) -> TrainPath? {
+        let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
+        let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
+        routeMemo.network[key] = .some(found)
+        return found
+    }
+
+    /// Decision 57: the route a departure from `start` (standing, turned
+    /// already where its stop says) to station `target` takes: the default
+    /// way when traffic control lets it take it whole or follow on it;
+    /// otherwise, under traffic control, the alternative (see
+    /// `alternative(from:to:default:avoiding:)`) if it can take that whole;
+    /// otherwise the default way, which it then cannot take. `nil` with no
+    /// way at all.
+    mutating func chosenRoute(from start: Train, to target: StationID) -> TrainPath? {
+        guard let path = defaultRoute(from: start, to: target) else { return nil }
+        guard trafficControl, case .failure = admitted(routed(start, path), following: true) else { return path }
+        if let other = alternative(from: start, to: target, default: path, avoiding: blocked(for: start.id)),
+           case .success = admitted(routed(start, other)) {
+            return other
+        }
+        return path
+    }
+
+    /// Decision 57: the shortest way from `start` to a berth of `target`
+    /// avoiding `blocked`, never against a direction another train's plan
+    /// takes except along `path`, the default way's own runs, and at most
+    /// 400 m (25,600) longer than it; or `nil`. Relaxed with the blocked
+    /// run intervals and the forbidden runs left out; kept for the call by
+    /// everything it was worked out from.
+    mutating func alternative(from start: Train, to target: StationID, default path: TrainPath, avoiding blocked: Set<TrackResource>) -> TrainPath? {
+        let forbidden = contraryRuns(for: routed(start, path))
+        let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
+        let avoiding = RouteMemo.BlockedKey(route: key, track: blocked, forbidden: forbidden)
+        let other = routeMemo.unblocked[avoiding]
+            ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start), blocked: blocked, forbidden: forbidden)
+        routeMemo.unblocked[avoiding] = .some(other)
+        guard let other, other.distance - path.distance <= 25_600 else { return nil }
+        return other
     }
 
     /// Decision 31: whether removing `platform` would take a platform from

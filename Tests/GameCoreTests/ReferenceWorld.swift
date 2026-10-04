@@ -574,6 +574,12 @@ struct ReferenceWorld: Equatable {
                 dwell(i, second: second)
                 leave(i)
                 resume(i)
+                // Decision 58: from a passing place, on to the call.
+                goOn(i)
+            }
+            // Decision 58: once a minute, a way out of a deadlock.
+            if second == 0 {
+                resolveDeadlock()
             }
             // Decision 56: no farther than its authority, all moving at once
             // from where the second found them.
