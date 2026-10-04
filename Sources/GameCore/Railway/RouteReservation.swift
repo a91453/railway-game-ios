@@ -133,7 +133,8 @@ extension GameWorld {
               let position = candidate.position
         else { return whole }
         if let alternative = path(from: position, toStation: candidate.timetable[stop].station,
-                                  length: candidate.length, avoiding: blockedTrack(except: candidate.id)) {
+                                  length: candidate.length, avoiding: blockedTrack(except: candidate.id),
+                                  forbidden: opposingServiceTraversals(except: candidate.id)) {
             var rerouted = candidate
             follow(alternative, &rerouted)
             let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
@@ -145,6 +146,37 @@ extension GameWorld {
             if case .granted(let granted) = reserving(rerouted) { return .granted(granted) }
         }
         return reserving(candidate, following: true)
+    }
+
+    /// Decision 57: an alternative must not borrow another service's way
+    /// in reverse, even while that service waits for its departure time.
+    /// Moving services protect their remaining actual route; waiting ones
+    /// their next default leg. A due line protects its ready first leg.
+    /// This is a derived filter, not a reservation or a permanent one-way
+    /// track tag. Default paths and manual commands remain unchanged.
+    func opposingServiceTraversals(except id: TrainID) -> Set<TrackTraversal> {
+        var forbidden: Set<TrackTraversal> = []
+        var memo = DispatchMemo()
+        for other in trains where other.id != id && other.position != nil {
+            let planned: Train?
+            switch other.execution {
+            case .travellingToStop?: planned = other
+            case .waitingAtStop(let stop, let cycle)?: planned = leaving(other, stop: stop, cycle: cycle).train
+            case nil:
+                if let line = lines.first(where: { assignedLine(of: other.id) == $0.id }),
+                   let stream = line.dispatchStream(of: other.id),
+                   isDispatchDue(line, stream, at: clock.now, memo: &memo),
+                   let trip = readyTrip(of: other, on: line, stream.service, memo: &memo) {
+                    planned = firstDeparture(of: other, on: trip, calling: line.stops)
+                } else { planned = nil }
+            }
+            if let planned {
+                for stretch in routeStretches(of: planned).stretches where stretch.to > stretch.from {
+                    forbidden.insert(stretch.traversal.reversed)
+                }
+            }
+        }
+        return forbidden
     }
 
     /// The lowest numbered train other than `id` that holds any of

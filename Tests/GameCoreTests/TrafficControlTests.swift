@@ -1256,3 +1256,63 @@ extension TrafficControlTests {
         }
     }
 }
+
+extension TrafficControlTests {
+    func testAnAlternativeRouteDoesNotRunAgainstTheOpposingTrack() throws {
+        var world = try DoubleTrackCrossover.world()
+        let lead = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(2), direction: .forward), at: 13_312)
+        let follower = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(1), direction: .forward), at: 3_072)
+        let opposer = try DoubleTrackCrossover.stand(&world, TrackTraversal(edge: .edge(4), direction: .backward), at: 27_648 - 23_552)
+        try world.setTrainTimetable(lead, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(follower, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)]))
+        try world.setTrainTimetable(opposer, to: DoubleTrackCrossover.calls([(DoubleTrackCrossover.east, 60), (DoubleTrackCrossover.middle, 300), (DoubleTrackCrossover.west, 540)]))
+        for id in [lead, follower, opposer] { try world.startTrainService(id) }
+        try world.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertNotEqual(world.train(id: follower)?.movement.edges, [.edge(5), .edge(4)], "eastbound service took westbound track B")
+        try world.advance(ticks: 19)
+        XCTAssertNil(world.train(id: opposer)?.execution, "the opposing service never finished")
+        XCTAssertFalse(world.trainHoldingRoute(of: follower) == opposer && world.trainHoldingRoute(of: opposer) == follower, "circular wait")
+    }
+
+    func testAlternativeReadinessProtectsADueOpposingLineBeforeItIsDispatched() throws {
+        var world = try DoubleTrackCrossover.world()
+        var model = DoubleTrackCrossover.model()
+        for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(4), 4_096)].enumerated() {
+            let id = try DoubleTrackCrossover.stand(&world, place.0, at: place.1)
+            XCTAssertEqual(id.rawValue, number + 1)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(place.0, offset: place.1)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+            XCTAssertNil(model.setRate(id, 1_024))
+        }
+        let lead = TrainID(rawValue: 1)
+        let calls = DoubleTrackCrossover.calls([(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)])
+        try world.setTrainTimetable(lead, to: calls)
+        try world.startTrainService(lead)
+        XCTAssertNil(model.setTimetable(lead, calls))
+        XCTAssertNil(model.startService(lead))
+        // Eastbound readiness is examined first. The due westbound line
+        // must protect its first leg before dispatch has given it a service.
+        for (number, stops) in [[DoubleTrackCrossover.west, DoubleTrackCrossover.middle, DoubleTrackCrossover.east],
+                                [DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]].enumerated() {
+            let line = try world.createLine(named: "L", stops: stops).id
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+            try world.assignTrain(TrainID(rawValue: number + 2), to: line)
+            XCTAssertNil(model.createLine(named: "L", stops: stops))
+            XCTAssertNil(model.setLineWindow(line, .allDay))
+            XCTAssertNil(model.setLineTrains(line, TrainsInService(peak: 1, offPeak: 1, low: 1)))
+            XCTAssertNil(model.assign(TrainID(rawValue: number + 2), to: line))
+        }
+        try world.setTrafficControl(true)
+        XCTAssertNil(model.setTrafficControl(true))
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        XCTAssertNil(world.line(id: .init(rawValue: 1))?.lastDispatch)
+        XCTAssertEqual(world.line(id: .init(rawValue: 2))?.lastDispatch, .init(seconds: 0))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+}

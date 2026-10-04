@@ -47,10 +47,11 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
     func testServicesChooseUnblockedBerthsAndMatchTheReferenceAtEveryStep() throws {
         var tally: [String: Int] = [:]
         var digest = Digest()
-        let cases = 6
+        let cases = 8
         let ran = try runCampaign("traffic.occupiedRouting", cases: cases) { testCase in
-            var world = try SingleTrackMeet.world()
-            var model = SingleTrackMeet.model()
+            let doubleTrack = testCase.index >= 6
+            var world = try doubleTrack ? DoubleTrackCrossover.world() : SingleTrackMeet.world()
+            var model = doubleTrack ? DoubleTrackCrossover.model() : SingleTrackMeet.model()
             func compare() -> [String] {
                 var problems = KernelDifferentialTests.differences(world, model, lineAnswers: false)
                 if world.isTrafficControlEnabled != model.trafficControl { problems.append("traffic control") }
@@ -76,39 +77,61 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
             // Alternate opposing services with a train already at M heading
             // east and one behind it. Vary cars, departure delay, running
             // times and whether W is sent by a line.
-            let opposing = testCase.index % 2 == 0
-            for number in 1...2 {
-                let run = number == 1 ? SingleTrackMeet.forward(1) : opposing ? SingleTrackMeet.backward(3) : SingleTrackMeet.forward(2)
-                let offset: Int64 = number == 2 && !opposing ? 9_216 : 3_072
-                let cars = 1 + testCase.random.below(3)
-                let id = try SingleTrackMeet.stand(&world, edge: run, offset: offset, cars: cars)
-                XCTAssertNil(model.purchaseTrain(named: "T"))
-                XCTAssertNil(model.setCars(id, cars))
-                XCTAssertNil(model.placeTrain(id, at: .onEdge(run, offset: offset)))
-                XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: offset))
-                XCTAssertNil(model.setRate(id, 1_024))
-            }
-            try world.setTrafficControl(true)
-            XCTAssertNil(model.setTrafficControl(true))
-            for number in 1...2 {
-                let id = TrainID(rawValue: number)
-                if number == 1, testCase.index % 3 == 2 {
-                    guard perform(.line(id)) else { return }
-                    continue
+            if doubleTrack {
+                tally["double track cases", default: 0] += 1
+                for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(4), 4_096)].enumerated() {
+                    let cars = 1 + testCase.random.below(3)
+                    let id = try SingleTrackMeet.stand(&world, edge: place.0, offset: place.1, cars: cars)
+                    XCTAssertEqual(id.rawValue, number + 1)
+                    XCTAssertNil(model.purchaseTrain(named: "T"))
+                    XCTAssertNil(model.setCars(id, cars))
+                    XCTAssertNil(model.placeTrain(id, at: .onEdge(place.0, offset: place.1)))
+                    XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
+                    XCTAssertNil(model.setRate(id, 1_024))
                 }
-                var stops = SingleTrackMeet.timetable(eastbound: number == 1 || !opposing, delay: Int64(testCase.random.below(16)))
-                if number == 2, !opposing { stops.removeFirst() }
-                // Keep first departure close enough for simultaneous route
-                // requests, but vary the second leg and M's dwell.
-                if number == 2, !opposing { stops[0] = ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 0), departure: .init(seconds: 60)) }
-                guard perform(.run(id, stops)) else { return }
+                try world.setTrafficControl(true)
+                XCTAssertNil(model.setTrafficControl(true))
+                let delay = Int64(testCase.random.below(31))
+                guard perform(.run(.init(rawValue: 1), DoubleTrackCrossover.calls([(SingleTrackMeet.middle, 180 + delay), (SingleTrackMeet.east, 420 + delay)]))),
+                      perform(.run(.init(rawValue: 3), DoubleTrackCrossover.calls([(SingleTrackMeet.east, 60), (SingleTrackMeet.middle, 300), (SingleTrackMeet.west, 540)]))) else { return }
+                let follower: Operation = testCase.index == 7 ? .line(.init(rawValue: 2))
+                    : .run(.init(rawValue: 2), DoubleTrackCrossover.calls([(SingleTrackMeet.west, 0), (SingleTrackMeet.middle, 180), (SingleTrackMeet.east, 420)]))
+                guard perform(follower) else { return }
+            } else {
+                let opposing = testCase.index % 2 == 0
+                for number in 1...2 {
+                    let run = number == 1 ? SingleTrackMeet.forward(1) : opposing ? SingleTrackMeet.backward(3) : SingleTrackMeet.forward(2)
+                    let offset: Int64 = number == 2 && !opposing ? 9_216 : 3_072
+                    let cars = 1 + testCase.random.below(3)
+                    let id = try SingleTrackMeet.stand(&world, edge: run, offset: offset, cars: cars)
+                    XCTAssertNil(model.purchaseTrain(named: "T"))
+                    XCTAssertNil(model.setCars(id, cars))
+                    XCTAssertNil(model.placeTrain(id, at: .onEdge(run, offset: offset)))
+                    XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: offset))
+                    XCTAssertNil(model.setRate(id, 1_024))
+                }
+                try world.setTrafficControl(true)
+                XCTAssertNil(model.setTrafficControl(true))
+                for number in 1...2 {
+                    let id = TrainID(rawValue: number)
+                    if number == 1, testCase.index % 3 == 2 {
+                        guard perform(.line(id)) else { return }
+                        continue
+                    }
+                    var stops = SingleTrackMeet.timetable(eastbound: number == 1 || !opposing, delay: Int64(testCase.random.below(16)))
+                    if number == 2, !opposing { stops.removeFirst() }
+                    // Keep first departure close enough for simultaneous route
+                    // requests, but vary the second leg and M's dwell.
+                    if number == 2, !opposing { stops[0] = ScheduledStop(station: SingleTrackMeet.middle, arrival: .init(seconds: 0), departure: .init(seconds: 60)) }
+                    guard perform(.run(id, stops)) else { return }
+                }
             }
             for step in 0..<36 {
                 let before = world
                 let operation: Operation
                 if step > 4, testCase.random.chance(1, in: 8) {
-                    operation = .rate(testCase.random.element(of: world.trains).id, testCase.random.element(of: [0, 1_024, 2_048]))
-                } else if step > 8, let idle = world.trains.first(where: { $0.execution == nil && world.assignedLine(of: $0.id) == nil }),
+                    operation = .rate(testCase.random.element(of: world.trains).id, testCase.random.element(of: doubleTrack ? [1_024, 2_048] : [0, 1_024, 2_048]))
+                } else if !doubleTrack, step > 8, let idle = world.trains.first(where: { $0.execution == nil && world.assignedLine(of: $0.id) == nil }),
                           let here = world.stationsStoppedAt(by: idle.id).first,
                           here == SingleTrackMeet.west || here == SingleTrackMeet.east {
                     let east = here == SingleTrackMeet.west
@@ -123,8 +146,17 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
                 }
                 guard perform(operation) else { return }
                 for (old, new) in zip(before.trains, world.trains) {
-                    if new.times?.departure != nil, new.times?.departure != old.times?.departure, new.movement.edges.contains(.edge(5)) {
+                    if !doubleTrack, new.times?.departure != nil, new.times?.departure != old.times?.departure, new.movement.edges.contains(.edge(5)) {
                         tally["alternative platform departures", default: 0] += 1
+                    }
+                    if doubleTrack, new.id.rawValue == 2, old.times?.departure == nil, new.times?.departure != nil {
+                        guard !new.movement.edges.contains(.edge(5)), !new.movement.edges.contains(.edge(4)) else {
+                            testCase.fail("eastbound departure borrowed the opposing track"); return
+                        }
+                        tally["protected default departures", default: 0] += 1
+                    }
+                    if doubleTrack, new.id.rawValue == 3, old.execution != nil, new.execution == nil {
+                        tally["opposing services completed", default: 0] += 1
                     }
                     if !world.stationsStoppedAt(by: new.id).isEmpty, world.stationsStoppedAt(by: new.id) != before.stationsStoppedAt(by: old.id) {
                         tally["arrivals", default: 0] += 1
@@ -141,5 +173,8 @@ final class OccupiedRoutingPropertyTests: XCTestCase {
         assertVolume(tally["alternative platform departures", default: 0] >= 16, "services used the alternative platform")
         assertVolume(tally["arrivals", default: 0] >= 40, "services reached stations")
         assertVolume(tally["waiting", default: 0] >= 4, "unavailable routes waited")
+        assertVolume(tally["double track cases", default: 0] == 2 * PropertySeeds.active.count, "both double-track cases ran for every seed")
+        assertVolume(tally["protected default departures", default: 0] >= 8, "eastbound trains stayed on their default track")
+        assertVolume(tally["opposing services completed", default: 0] >= 8, "opposing trains completed without a circular wait")
     }
 }

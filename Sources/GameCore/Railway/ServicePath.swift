@@ -136,7 +136,7 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = []) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = []) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
@@ -156,6 +156,7 @@ extension GameWorld {
             }
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
+                if end > from, forbidden.contains(traversal) { return false }
                 guard !blocked.isEmpty else { return true }
                 let step = [TrackStretch(traversal: traversal, from: from, to: end)]
                 let track = Set(resources(covering: step)).union(foulingNodes(covering: step))
@@ -188,10 +189,10 @@ extension GameWorld {
     /// whose spans or fouling nodes conflict with the other trains' track.
     /// A berth short of a blocked span on the same edge remains reachable.
     /// The caller must still reserve the whole envelope, including the body.
-    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>) -> TrainPath? {
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>, forbidden: Set<TrackTraversal> = []) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
-            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked)
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked, forbidden: forbidden)
         }
     }
 

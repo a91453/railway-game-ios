@@ -167,6 +167,7 @@ struct ReferenceWorld: Equatable {
         struct BlockedKey: Hashable {
             var route: Key
             var track: Set<TrackResource>
+            var forbidden: Set<Run>
         }
         var unblocked: [BlockedKey: TrainPath?] = [:]
 
