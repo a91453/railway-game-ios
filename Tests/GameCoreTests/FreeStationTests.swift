@@ -10,24 +10,16 @@ final class FreeStationTests: XCTestCase {
 
     func testAStationAtAPointTakesNoTile() throws {
         var world = try makeWorld(width: 8, height: 4)
-        try world.buildTrack(at: GridPosition(x: 2, y: 1), connections: [.east, .west])
-        // Over the grid track at (2, 1), and a second station over the same tile.
+        // Two stations over the same tile, (2, 1).
         let central = try world.buildStation(named: "Central", at: PlanPoint(x: 2_600, y: 1_100))
         let annex = try world.buildStation(named: "Annex", at: PlanPoint(x: 2_100, y: 1_500))
         XCTAssertEqual(central, Station(id: StationID(rawValue: 1), name: "Central", point: PlanPoint(x: 2_600, y: 1_100)))
         XCTAssertEqual(central.position, GridPosition(x: 2, y: 1), "the tile under the point")
-        XCTAssertEqual(central.tiles, [])
-        XCTAssertEqual(central.annexes, [])
         XCTAssertEqual(central.location, PlanPoint(x: 2_600, y: 1_100))
         XCTAssertEqual(annex.id, StationID(rawValue: 2))
-        XCTAssertEqual(world.economy.balance, Money(10_000 - 100 - 2 * 1_000))
+        XCTAssertEqual(world.economy.balance, Money(10_000 - 2 * 1_000))
         XCTAssertEqual(world.map.tile(at: GridPosition(x: 2, y: 1))?.type, .empty, "the land is unchanged")
-        XCTAssertNotNil(world.track(at: GridPosition(x: 2, y: 1)), "so is the grid track")
-        XCTAssertNil(world.station(at: GridPosition(x: 2, y: 1)), "no tile is the station's")
-        // Grid track beside its tile never becomes its platform.
-        try world.buildTrack(at: GridPosition(x: 2, y: 2), connections: [.east, .west])
-        XCTAssertEqual(world.platforms(of: central.id), [])
-        XCTAssertEqual(world.platforms(of: annex.id), [])
+        XCTAssertEqual(world.trackPlatforms(of: central.id), [], "no platform until the network gives it one")
     }
 
     func testAStationAtAPointIsRefusedOffTheMapAndWithoutAName() throws {
@@ -51,26 +43,15 @@ final class FreeStationTests: XCTestCase {
         XCTAssertEqual(poor, unchanged, "no ID used, nothing spent")
     }
 
-    func testAStationAtAPointCannotGrowOntoTiles() throws {
-        var world = try makeWorld(width: 8, height: 4)
-        let station = try world.buildStation(named: "Central", at: PlanPoint(x: 2_600, y: 1_100))
-        let before = world
-        XCTAssertThrowsGameError(try world.extendStation(station.id, to: GridPosition(x: 3, y: 1)), .invalidStationTile(GridPosition(x: 3, y: 1)))
-        XCTAssertThrowsGameError(try world.extendStation(station.id, to: GridPosition(x: 2, y: 1)), .invalidStationTile(GridPosition(x: 2, y: 1)))
-        XCTAssertEqual(world, before)
-    }
-
-    /// The nearest station by location, a tile's centre for a station on
-    /// tiles, the lowest ID of equally near ones, and none beyond reach.
+    /// The nearest station by location, the lowest ID of equally near ones,
+    /// and none beyond reach.
     func testTheNearestStationIsFoundByItsLocation() throws {
         var world = try makeWorld(width: 8, height: 4)
-        try world.buildStation(named: "Tile", at: GridPosition(x: 0, y: 0))
         try world.buildStation(named: "Point", at: PlanPoint(x: 2_048, y: 512))
         try world.buildStation(named: "Twin", at: PlanPoint(x: 2_048, y: 1_536))
-        // (512, 512) is Tile's centre.
-        XCTAssertEqual(world.station(near: PlanPoint(x: 600, y: 512), within: 100)?.name, "Tile")
-        XCTAssertNil(world.station(near: PlanPoint(x: 700, y: 512), within: 100), "188 away")
-        XCTAssertEqual(world.station(near: PlanPoint(x: 1_200, y: 512), within: 2_000)?.name, "Tile", "688 from Tile, 848 from Point")
+        XCTAssertEqual(world.station(near: PlanPoint(x: 2_048, y: 600), within: 100)?.name, "Point")
+        XCTAssertNil(world.station(near: PlanPoint(x: 2_048, y: 700), within: 100), "188 away")
+        XCTAssertEqual(world.station(near: PlanPoint(x: 1_200, y: 512), within: 2_000)?.name, "Point", "848 from Point, about 1330 from Twin")
         // Point and Twin are both 512 from (2048, 1024): the lower ID.
         XCTAssertEqual(world.station(near: PlanPoint(x: 2_048, y: 1_024), within: 512)?.name, "Point")
         XCTAssertNil(world.station(near: PlanPoint(x: 2_048, y: 1_024), within: 511))
@@ -106,13 +87,12 @@ final class FreeStationTests: XCTestCase {
 
     func testAStationAtAPointIsSavedAsItsPoint() throws {
         var world = try makeWorld(width: 8, height: 4)
-        try world.buildStation(named: "Tile", at: GridPosition(x: 0, y: 0))
         try world.buildStation(named: "Point", at: PlanPoint(x: 2_600, y: 1_100))
         let data = try JSONEncoder().encode(world)
         let stations = try XCTUnwrap((try JSONSerialization.jsonObject(with: data) as? [String: Any])?["stations"] as? [[String: Any]])
-        XCTAssertEqual(stations[1]["point"] as? [String: Int], ["x": 2_600, "y": 1_100])
-        XCTAssertNil(stations[1]["position"], "a point, not a tile")
-        XCTAssertNil(stations[1]["annexes"])
+        XCTAssertEqual(stations[0]["point"] as? [String: Int], ["x": 2_600, "y": 1_100])
+        XCTAssertNil(stations[0]["position"], "a point, not a tile")
+        XCTAssertNil(stations[0]["annexes"])
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
     }
 

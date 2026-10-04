@@ -189,6 +189,6 @@ GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案
 
 ```sh
 PROPERTY_STRESS=20 swift test --filter PropertyTests                       # 本機多跑 20 組衍生的 seed
-PROPERTY_REPLAY=route.reference@5EEDA001@17 swift test --filter RoutePropertyTests   # 只重跑一個失敗的 case
+PROPERTY_REPLAY=network.differential@5EEDA001@17 swift test --filter ContinuousTrackPropertyTests   # 只重跑一個失敗的 case
 PROPERTY_REPLAY=kernel.differential@5EEDA002@3 swift test --filter KernelDifferentialTests   # 同上，會印出縮減後的指令序列
 ```

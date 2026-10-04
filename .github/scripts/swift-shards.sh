@@ -53,25 +53,27 @@ set -euo pipefail
 #                PassengerPropertyTests 29, KernelDifferentialTests 105
 #   campaigns-2  BoardingPropertyTests ~510
 #   campaigns-3  SaveMutationTests 538
-#   campaigns-4  LinePatternPropertyTests 427, StationFacilityPropertyTests 30
+#   campaigns-4  LinePatternPropertyTests 427
 #   campaigns-5  LineDispatchPropertyTests 409, TimetablePropertyTests 106
 #   campaigns-6  ServicePropertyTests ~285, VerticalRailwayPropertyTests 132,
 #                NetworkSectionPropertyTests ~42 (Stage F3c, 52 s locally)
-#   campaigns-7  ServiceRepeatingPropertyTests ~395, TrafficControlPropertyTests 98,
-#                TrackResourcePropertyTests 22
+#   campaigns-7  ServiceRepeatingPropertyTests ~395, TrafficControlPropertyTests 98
 #   campaigns-8  NetworkServicePropertyTests 160, ServiceLinePropertyTests 322
 #   rest         GoldenScenarioTests 35, WorldStateMachineTests 31, and the
 #                rest, about 170 in all
 # so about 400 to 540 s a shard there, up to about 970 s on a slower runner.
+# Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
+# TrackResourcePropertyTests here, and the grid's position, movement, route
+# and topology campaigns from rest) with the grid's tests.
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
     campaigns-2) echo "BoardingPropertyTests" ;;
     campaigns-3) echo "SaveMutationTests" ;;
-    campaigns-4) echo "LinePatternPropertyTests StationFacilityPropertyTests" ;;
+    campaigns-4) echo "LinePatternPropertyTests" ;;
     campaigns-5) echo "LineDispatchPropertyTests TimetablePropertyTests" ;;
     campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
-    campaigns-7) echo "ServiceRepeatingPropertyTests TrafficControlPropertyTests TrackResourcePropertyTests" ;;
+    campaigns-7) echo "ServiceRepeatingPropertyTests TrafficControlPropertyTests" ;;
     campaigns-8) echo "NetworkServicePropertyTests ServiceLinePropertyTests" ;;
     *) return 1 ;;
   esac

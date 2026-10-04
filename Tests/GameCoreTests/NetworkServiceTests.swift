@@ -235,9 +235,9 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertEqual(try train(world, id).position, .onEdge(backward(e3), offset: 3_072))
     }
 
-    /// A path to stop on the network is checked: the grid has no end, and
-    /// on the network the end lies before the end of its last edge, after
-    /// its start once an edge is entered, and not behind the train.
+    /// A path to stop on the network is checked: the end lies before the
+    /// end of its last edge, after its start once an edge is entered, and
+    /// not behind the train.
     func testAPathEndIsChecked() throws {
         var world = try makeStraightWorld()
         let id = try world.purchaseTrain(named: "One").id
@@ -257,13 +257,6 @@ final class NetworkServiceTests: XCTestCase {
         try world.placeTrain(other, at: .onEdge(backward(e3), offset: 0))
         try world.setTrainContinuation(other, along: [], stoppingAt: 0)
         XCTAssertEqual(try train(world, other).movement.end, 0)
-
-        var grid = try GameWorld(width: 4, height: 4, economy: GameEconomy(balance: 10_000, costs: testCosts))
-        try grid.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
-        try grid.buildTrack(at: GridPosition(x: 2, y: 1), connections: [.east, .west])
-        let onGrid = try grid.purchaseTrain(named: "Grid").id
-        try grid.placeTrain(onGrid, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
-        XCTAssertThrowsGameError(try grid.setTrainContinuation(onGrid, along: [], stoppingAt: 0), .invalidContinuation)
     }
 
     // MARK: - Timetables

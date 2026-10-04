@@ -563,6 +563,32 @@ GameCore 沒有改。刪方格的單元測試之前，先盤點每個方格測�
 - **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的舊 map codec）：它們測的就是方格的存檔內容，和 F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」（決策 51 第 3 點）一起改。
 - **TrainTimetableTests `testASaveWithoutTimetablesKeepsItsFormat`** 逐位元釘住一份方格世界的存檔；路網世界的整份格式由 `SaveFixtures/` 釘住，「沒有時刻表的列車不寫 `timetable`、舊存檔讀成空」由 `testEmptyTimetablesAreNotSavedAndOldSavesReadAsEmpty` 在路網上測，這個方格測試在 F3c-3b 刪。
 
+### 8.7 F3c-3b：刪掉方格的測試與 fixture
+
+GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它們測的規則在路網上都有測試（F3a-3 的 `network-*.json`、F3b、F3c-3a 的 §8.5）。
+
+| 刪掉的 | 路網上測同一條規則的 |
+| --- | --- |
+| 單元測試 TrackConstructionTests、TrackConnectivityTests、TrainPositionTests、TrainMovementTests、TrainRouteTests、TrackResourceTests、StationStopTests、StationFacilityTests | NetworkRuleTests、ContinuousTrackTests、NetworkServiceTests、NetworkSectionTests、TrafficControlTests 與 `network-*.json`（§8.5 的對照表） |
+| campaign `topology.*`、`position.*`、`movement.*`、`route.*`、`composition.*`（TopologyPropertyTests、TrainPositionPropertyTests、MovementPropertyTests、RoutePropertyTests、RouteMovementPropertyTests）、`stationStop.routes`、`track.resources`、`station.facilities` | `network.differential`、`service.network`、`traffic.reservation`、`network.sections`、`vertical.differential` |
+| 存檔變異 `save.trackMutation`、`save.facilityMutation` | `save.networkMutation`、`save.networkServiceMutation`、`save.trafficMutation`、`save.verticalMutation` |
+| 單一測試：TrafficControlTests 的方格段落（十個測試與存檔測試裡的方格預約）、ContinuousTrackTests `testTheGridIsSeenAsNodesAndLinksWithItsOwnTurningRules`、RailwayNetworkAuthorityTests `testGridTrackAndStationsStillTakeATileEach` 與 `testAGridLinkIsOneSpanAndItsResourceIsUnchanged`、FreeStationTests `testAStationAtAPointCannotGrowOntoTiles`、TrainTimetableTests `testASaveWithoutTimetablesKeepsItsFormat`、NetworkServiceTests 與 VerticalRailwayTests 裡的方格斷言 | 同一個檔的路網測試 |
+| golden：八份方格 fixture；`free-station.json` 的方格步驟 | 見 [GoldenScenarios/README](../../GoldenScenarios/README.md#f3c-3b刪掉方格的-fixtureschema-不變) |
+
+**改寫成路網或點車站、規則不變的**：StationAndTrainTests（建站、ID、拒絕的原子性改用點車站；「車站不能蓋在方格軌道上」刪掉）、FreeStationTests（不再有佔格的車站與方格軌道）、RailwayNetworkAuthorityTests `testTheMapHoldsLandAndTheNetworkHoldsEveryTrack`（路網的鋪設與拆除不碰土地）與 `testPathAheadListsTheTraversalsStillToCome`（只剩路網）、TrafficControlTests 路網段落的佔格車站改成同一格中心的點車站。
+
+**Golden 執行器的自我檢查**（GoldenScenarioTests）：「每種預期值至少有一份 fixture 用到」原本要求方格的鄰格順序、方格路徑、方格月台、出口、區段、雙線、月台軌道、擴站與方格車身；換成路網的：跨兩條邊以上的路徑、到車站的這種路徑、長列車的路徑、跨兩條邊以上的車身（`trailEdges`，也加上它的變異：多一條、少一條、反序）。方格那幾種的變異留著（沒有 fixture 會進去），F3c-3c 和 schema 一起刪。
+
+**`traffic.reservation` 只剩路網**：原本奇數 case 建方格、偶數 case 建路網；現在 40 個 case 都是路網。偶數 case 的指令流不變（沒有方格時它們從來沒有抽過方格的亂數）；給未放置列車的「放到方格節點 (0, 0)」（一定被拒絕 `invalidTrainPosition`）換成同樣被拒絕、也不抽亂數的「放到不存在的邊」。digest `B4ACB2397A8CFAD1` → `BDDE41B7E5A824DB`（奇數 case 換成路網）。量：拿到預約 1027、被拒絕的取得 358、出發與派車拿到 186、服務等待 2330、線路派車等待 305、路網 span 衝突 489、長列車預約 691、月台中段的停車點 490、打開被拒絕 113、設施被拒絕 131、路線結束時釋放 445；「方格上的衝突」的下限拿掉，其餘下限不變。`save.trafficMutation` 跟著只剩路網：載入 399、拒絕 1041、瞄準 1084、翻轉 63、有預約的世界 151，下限不變。
+
+其他 campaign 的 digest 都不變（它們從 F3b-2 起就只在路網上）。
+
+### 8.8 F3c-3b 之後暫時沒有改的地方
+
+- **測試裡碰到 GameCore 方格型別的地方**：ContinuousTrackTests 與 VerticalRailwayTests 拒絕 `.tile`／`.link` 當路網的 ID、DisplayText 等對方格 case 的完整 switch、Golden 執行器的方格指令與摘要、`ReferenceWorld` 與其 extension 的方格模型、`PropertySupport` 的方格產生器與 `WorldInvariants` 的方格分支、KernelDifferentialTests 不再產生的方格 `Operation`：和 GameCore 的方格一起在 F3c-3c 刪（編譯器會找出每一處）。
+- **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的兩個舊地圖存檔測試）：F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」。
+- **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；已在 #86 改成八個 campaign shard（見 §7.4 末段），這裡只把刪掉的兩個方格 campaign 從 shard 拿掉。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

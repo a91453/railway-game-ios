@@ -543,3 +543,15 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
 - **`Web/WasmProbe`**：跑的是同一批 fixture，照決策 51 在 F3c 一起處理。
 - **`SaveFixtures/` 沒改**：四份存檔都只有路網與點車站（v1 還帶著空地的 `map.tiles`），F3c 之後也必須照常載入。
 - **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。
+
+## F3c-3b：刪掉方格的 fixture（schema 不變）
+
+GameCore 與 golden 執行器沒有改，schema 仍是 27。方格的規則都已經有路網的 fixture（F3a-3）或單元測試（F3c-3a），所以：
+
+- **刪掉八份方格 fixture**：`build-starter-line`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`。它們的路網版本見上面 F3a-3 的對照。
+- **`free-station.json` 拿掉方格的部分**：方格軌道 (2,1)、(3,1) 兩格、在那裡被拒絕的方格車站（`tileOccupied`）、`platforms` 觀察（點車站沒有方格月台）與長到格上（`extendStation` 的 `invalidStationTile`）。點車站與路網月台的步驟一個都沒動。唯一改變的預期值：**最終餘額 2200 → 2400**，因為不再買兩格方格軌道（每格 100）；最終狀態的 `tracks` 變成 `[]`。
+- **`network-station-stop.json` 補上 `station-facilities.json` 原本獨有的檢查**：`setTrainCars` 的 17 節與 0 節（`invalidTrainLength`）、不存在的列車（`unknownTrain`），以及放上軌道之後再設定（`trainAlreadyPlaced`）。四步都是被拒絕的指令，世界不變，其他預期值與最終狀態都沒有改變；描述加上這條檢查順序。
+
+### F3c-3b 之後暫時沒有改的地方
+
+- **Golden 執行器的方格指令、觀察與寫法**（`buildTrack`、`buildStation`、`extendStation`、`setTrainContinuation`、`node`／`link` 位置、`platforms`、`route`、`trackSections`……與最終狀態的 `tracks`）：已經沒有 fixture 用它們，和 GameCore 的方格一起在 F3c-3c 拿掉；fixture 仍是 schema 27（最終狀態的 `tracks`、列車的 `trail` 與 `continuation` 照寫，但只能是 `[]`），F3c-4 的 schema 28 才把這些鍵刪掉。
