@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 28,
+  "schemaVersion": 29,
   "description": "Stations at a point (Stage F1). Central is built at the point (2600, 1100) and Annex at (2100, 1500), both over the tile (2,1), which neither takes. A station at a point needs a name and a point on the map (else the tile under the point, rounding down, is out of bounds) and costs a station. On the track network, edge 1 runs straight from (1024, 3072) to (7168, 3072), 6144 long, six tiles of track; Central has a platform from 1024 to 3072 on it and Annex one from 4096 to 5120. A path from the start of edge 1 to Annex ends at the far end of its platform, 5120. A train placed at Central's berth (3072 forward) with a path ending where it stands is stopped at Central. (Stage F3c-3b took out the grid track at (2,1) and (3,1), the tile station refused there, the grid platforms and growing onto a tile: the grid went, so the balance ends 200 higher, the two tiles of grid track not bought.)",
   "initialState": {
     "mapWidth": 8,

@@ -772,7 +772,7 @@ final class GoldenScenarioTests: XCTestCase {
     func testAWrongNetworkExpectationIsReported() throws {
         let json = #"""
             {
-              "schemaVersion": 28,
+              "schemaVersion": 29,
               "description": "Deliberately wrong: expects another length and a way on from a dead end.",
               "initialState": {
                 "mapWidth": 2, "mapHeight": 1, "balance": 2000,
@@ -839,7 +839,7 @@ final class GoldenScenarioTests: XCTestCase {
 
     /// Stage F3c removed the grid (ARCHITECTURE decision 51): its commands,
     /// observations, errors, positions, resources and stations on tiles are
-    /// not part of schema 28, and are refused with that reason.
+    /// not part of the schema since 28, and are refused with that reason.
     func testTheGridsStepsAndValuesAreRefused() {
         let commands = [
             #"{"type": "buildTrack", "x": 1, "y": 1, "connections": ["east", "west"]}"#,
@@ -894,7 +894,7 @@ final class GoldenScenarioTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejected() {
-        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29] {
+        for version in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30] {
             let data = Data(#"{"schemaVersion": \#(version)}"#.utf8)
 
             XCTAssertThrowsError(try GoldenScenario.decode(data)) { error in
@@ -978,9 +978,14 @@ final class GoldenScenarioTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownTrain"}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation"}"#.utf8)))
         XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "unknownStation", "station": "Alpha"}"#.utf8)))
-        // Schema 17: a conflict and a platform on an edge name the edge.
-        for result in ["trackConflict", "trackEdgeHasPlatform"] {
+        // Schema 17: a conflict and a platform on an edge name the edge;
+        // schema 29: so does an edge too close.
+        for result in ["trackConflict", "trackEdgeHasPlatform", "trackTooClose"] {
             XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "\#(result)"}"#.utf8)), result)
+        }
+        // A removal that would leave two edges too close names both.
+        for json in [#"{"result": "tracksWouldBeTooClose"}"#, #"{"result": "tracksWouldBeTooClose", "edges": [3]}"#, #"{"result": "tracksWouldBeTooClose", "edge": 3}"#] {
+            XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(json.utf8)), json)
         }
         for result in ["trainServiceActive", "trainServiceNotActive", "noTimetable", "trainNotAtFirstStop"] {
             XCTAssertThrowsError(try JSONDecoder().decode(StepOutcome.self, from: Data(#"{"result": "\#(result)"}"#.utf8)), result)

@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 28
+    static let schemaVersion = 29
 
     var description: String
     var initialState: InitialState
@@ -699,7 +699,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, trains
+        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains
     }
 
     init(from decoder: any Decoder) throws {
@@ -790,6 +790,14 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidTrackStructure)
         case "trackConflict":
             self = try .rejected(.trackConflict(.edge(container.decode(Int.self, forKey: .edge))))
+        case "trackTooClose":
+            self = try .rejected(.trackTooClose(.edge(container.decode(Int.self, forKey: .edge))))
+        case "tracksWouldBeTooClose":
+            let ids = try container.decode([Int].self, forKey: .edges)
+            guard ids.count == 2 else {
+                throw DecodingError.dataCorruptedError(forKey: .edges, in: container, debugDescription: "tracksWouldBeTooClose names two edges.")
+            }
+            self = .rejected(.tracksWouldBeTooClose(.edge(ids[0]), .edge(ids[1])))
         case "trackEdgeHasPlatform":
             self = try .rejected(.trackEdgeHasPlatform(.edge(container.decode(Int.self, forKey: .edge))))
         case "invalidPlatform":
@@ -920,6 +928,12 @@ extension StepOutcome: Codable {
         case .rejected(.trackConflict(let edge)):
             try container.encode("trackConflict", forKey: .result)
             try encodeEdge(edge)
+        case .rejected(.trackTooClose(let edge)):
+            try container.encode("trackTooClose", forKey: .result)
+            try encodeEdge(edge)
+        case .rejected(.tracksWouldBeTooClose(let first, let second)):
+            try container.encode("tracksWouldBeTooClose", forKey: .result)
+            try container.encode([first.number, second.number], forKey: .edges)
         case .rejected(.trackEdgeHasPlatform(let edge)):
             try container.encode("trackEdgeHasPlatform", forKey: .result)
             try encodeEdge(edge)

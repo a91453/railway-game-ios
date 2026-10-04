@@ -30,8 +30,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 4)
-        XCTAssertEqual(SavedGame.currentVersion, 4)
+        XCTAssertEqual(object["saveVersion"] as? Int, 5)
+        XCTAssertEqual(SavedGame.currentVersion, 5)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -47,7 +47,8 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 2, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 3, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 4, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 5, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertNoThrow(try decode(#"{"saveVersion": 5, "world": \#(world)}"#))
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 6, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -287,6 +288,47 @@ final class SavedGameTests: XCTestCase {
         var blank = world
         blank.setGeoAnchor(nil)
         XCTAssertEqual(blank, three)
+    }
+
+    /// A version 4 save with a siding 192 (3 m) beside Line 1 (Stage F2,
+    /// ARCHITECTURE decision 52): the version 4 build allowed it. It loads
+    /// with that pair exempt, and saving it again gives the version 5 save
+    /// byte for byte.
+    func testTheVersionFourSidingSaveKeepsItsSiding() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v4-demo-siding-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 4)
+        let network = try XCTUnwrap((object["world"] as? [String: Any])?["network"] as? [String: Any])
+        XCTAssertNil(network["spacingExemptions"])
+
+        let game = try JSONDecoder().decode(SavedGame.self, from: data)
+        let world = game.world
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
+        XCTAssertEqual(world.network.edges.count, 11)
+        let siding = try XCTUnwrap(world.network.edge(.edge(11)))
+        XCTAssertEqual(world.network.node(siding.from)?.position, WorldCoordinate(x: 526_336, y: 524_096, z: 0))
+        XCTAssertEqual(world.network.node(siding.to)?.position, WorldCoordinate(x: 529_408, y: 524_096, z: 0))
+        XCTAssertEqual(world.network.spacingExemptions, [TrackEdgePair(.edge(1), .edge(11))])
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let five = try Data(contentsOf: Self.fixtures.appendingPathComponent("v5-demo-siding-90-minutes.json"))
+        XCTAssertEqual(try encoder.encode(game), five)
+    }
+
+    /// The version 5 save (Stage F2): the same game, listing the siding and
+    /// Line 1 as built too close before the rule.
+    func testTheVersionFiveSaveReadsAsItWasWritten() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v5-demo-siding-90-minutes.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 5)
+        let network = try XCTUnwrap((object["world"] as? [String: Any])?["network"] as? [String: Any])
+        XCTAssertEqual(network["spacingExemptions"] as? [[Int]], [[1, 11]])
+
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        let four = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v4-demo-siding-90-minutes.json"))).world
+        XCTAssertEqual(world, four)
+        XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
     }
 
     /// `SaveFixtures/` at the repository root, found from this source file.

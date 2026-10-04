@@ -12,13 +12,13 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
    - 觀察步驟：向執行到這一步為止的世界提出唯讀查詢，答案必須等於 `expect`。觀察不是指令，不會改變世界。
 3. 全部執行完後，世界必須等於 `expectedFinalState`。
 
-## Schema（`schemaVersion: 28`）
+## Schema（`schemaVersion: 29`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與線路的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的線路 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
-| `schemaVersion` | `28` |
+| `schemaVersion` | `29` |
 | `description` | 這個情境驗證什麼（給人看） |
 | `initialState` | `mapWidth`、`mapHeight`、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
@@ -199,6 +199,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trackTooSteep` | — | 邊的固定坡度超過 40‰（schema 17） |
 | `invalidTrackStructure` | — | 結構物不能在兩端的高度承載鐵軌（schema 17） |
 | `trackConflict` | `edge` | 新邊會在平面上與這條邊相遇（不在共用節點附近），高度差不到 512；是編號最小的一條（schema 17） |
+| `trackTooClose` | `edge` | 新邊會在高度差不到 512 的地方離這條邊不到 256（4 公尺），而且不是從共用的節點分開的那一段；是編號最小的一條（schema 29，見下面「線間距」） |
+| `tracksWouldBeTooClose` | `edges`（`[a, b]`） | 拆掉這條邊會留下兩條太近的邊（下面「線間距」）：依序第一對，編號小的在前（schema 29） |
 | `trackEdgeHasPlatform` | `edge` | 有車站的月台在這條邊上，要先移除月台（schema 17） |
 | `invalidPlatform` | — | 月台不在邊內、不是平的、長度不為正、與同一條邊上的月台重疊，或要移除的月台不存在（schema 17） |
 | `trackReserved` | `train` | 交通控制開啟時，這台列車（編號最小的一台）持有指令需要的軌道：新的路或放置要取得的預約範圍，或要拆除、改變的鐵軌（schema 19） |
@@ -270,15 +272,16 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `pathToNode`：從列車所在邊的終點出發、第一次到達 `node` 為止，總長最短；同樣最短時，在每個節點依邊的編號從起點逐步比較，取最先的一條。不會立即折返。
 - 車身：`trailEdges` 由放置時從車頭所在邊的起點往回走（分岔時選編號最小、而且能通往前一條邊的邊）得到，移動時跟著車頭走過的邊，反向時車頭移到車尾、車身沿同一段鐵軌往原車頭延伸。
 - 佔用：車頭與車尾之間經過或到達的每個節點，以及車身有一部分嚴格落在其中的每條邊；1 節的列車在節點時是那個節點，在邊的中間時是那條邊。
-- `removeTrackEdge`：`unknownTrackEdge` → `trackEdgeInUse` → `trackEdgeHasPlatform`（schema 17）；`removeTrackNode`：`unknownTrackNode` → `trackNodeInUse`。拆除免費、不退款。
+- `removeTrackEdge`：`unknownTrackEdge` → `trackEdgeInUse` → `trackEdgeHasPlatform`（schema 17）→ `trackReserved`（交通控制下，schema 19）→ `tracksWouldBeTooClose`（schema 29）；`removeTrackNode`：`unknownTrackNode` → `trackNodeInUse`。拆除免費、不退款。
 
 立體鐵路規則（schema 17，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 30）：
 
 - 節點的高度 `z` 在 −4096…4096；地面是 0。邊的長度仍是水平里程，移動、路徑與佔用都不讀高度。
 - 高度：R 是兩端的高差、L 是長度、T₀、T₁ 是兩端的豎曲線、D = 2L − T₀ − T₁。從 `from` 端量起 s 處比 `from` 高：`s < T₀` 時 `R·s² / (T₀·D)`；`s > L − T₁` 時 `R·(T₁·D − (L − s)²) / (T₁·D)`；其他 `R·(2s − T₀) / D`；各自四捨五入（一半進位）一次。坡度是這條規則的精確斜率：`2R·s / (T₀·D)`、`2R·(L − s) / (T₁·D)` 或 `2R / D`，約成最簡分數。`edgePose` 的高度與坡度不在取樣點之間內插。
-- `buildTrackEdge` 的檢查順序：`unknownTrackNode` → `invalidTrackGeometry` → `trackTooSteep`（`2|R| × 1000 > 40 × D`）→ `invalidTrackStructure` → `trackConflict` → `idsExhausted` → `insufficientFunds`。費用是鐵軌的費用乘上結構物的係數（地面 1、高架 3、橋 4、隧道 5）再乘上格數。
+- `buildTrackEdge` 的檢查順序：`unknownTrackNode` → `invalidTrackGeometry` → `trackTooSteep`（`2|R| × 1000 > 40 × D`）→ `invalidTrackStructure` → `trackConflict` → `trackTooClose`（schema 29）→ `idsExhausted` → `insufficientFunds`。費用是鐵軌的費用乘上結構物的係數（地面 1、高架 3、橋 4、隧道 5）再乘上格數。
 - 結構物的高度帶（只看兩端，高度沿邊單調）：`surface` 是 |z| ≤ 128，`elevated`、`bridge` 是 z ≥ 0，`tunnel` 是 z ≤ 0。
 - 淨空：兩條邊在平面上相交、端點落在另一條上或共線重疊的每一處，除了兩條邊共用的節點 1024 以內（兩端各自從那個節點量起），一條邊在相遇點的最低高度必須比另一條的最高高度高至少 512；否則是 `trackConflict`。相遇點在每一段上的里程是那一段兩端里程之間的線性內插，四捨五入（一半進位）。同一高度的交叉要共用節點（平面交叉），那個節點是兩方共用的資源。
+- 線間距（schema 29，Stage F2，ARCHITECTURE 決策 52）：兩條邊在高度差不到 512 的地方，中心線在平面上至少相距 256（4 公尺），比這近的兩點沿著軌道必須相距不超過 32768（同一個交會點分開的軌道）。檢查點是每條邊從 `from` 端起每 64 一個，加上 `to` 端（位置是取樣折線上的內插，四捨五入；高度照縱斷面）。一個檢查點離另一條邊的某一段取樣折線不到 256（到那一段最近的點：端點，或垂足），而且另一條邊在那個最近點（垂足的里程是那一段兩端里程的內插，四捨五入）的高度和檢查點的高度差不到 512，這兩點就「太近」。兩點沿軌道的距離是從檢查點沿它的邊到一端、沿路網最短的路（不管邊相不相接、往哪個方向）到另一條邊的一端、再沿那條邊到最近點；共用的節點距離是 0。兩條邊互相檢查；太近而沿軌道超過 32768（或沒有軌道相連）就是 `trackTooClose`，`trackConflict` 先檢查。拆邊會讓兩條留下的邊變成這樣時是 `tracksWouldBeTooClose`（在 `trackReserved` 之後）。F2 之前的存檔可以留著太近的邊對（`spacingExemptions`，見 ARCHITECTURE 決策 52）；golden 的世界都是指令蓋出來的，不會有，所以最終狀態沒有這個欄位。
 - 隧道口：同時有隧道的邊與非隧道的邊接在上面的節點。
 - 月台：`addTrackPlatform` 的檢查順序 `unknownStation` → `unknownTrackEdge` → `invalidPlatform`（`0 <= start < end <=` 邊長、兩端高度相同、與同一條邊上任何車站的月台不重疊，端點相接可以）；`removeTrackPlatform`：`unknownStation` → `invalidPlatform`。免費。車頭在月台的邊上、車身不離開那條邊，而且車頭到車尾都在月台的起訖之間（含端點）時，`trackPlatformsAlongTrain` 列出它。月台的兩端也是那條邊的 span 分界（Stage S3A 的等分再切開），所以整列停在月台上的列車只佔用月台內的 span。
 
@@ -437,6 +440,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **26**（Stage F1）：建在任意座標的車站（決策 44）：`buildStationAt` 指令，最終狀態車站的 `point` 形式，以及手算的 `free-station.json`（點上的車站不占格：同一格可以有兩個點上的車站，土地、方格軌道與方格車站的規則不變，旁邊的方格軌道不是它的月台；沒有名字、點在地圖外時拒絕，地圖外報點所在的格（向下取整）；一樣花一個車站的錢；不能長到格上；路網上的月台、往車站的路徑與停靠和其他車站相同）。既有的二十五個 fixture 只把 `schemaVersion` 從 25 改成 26，其他預期值都沒有改變。
 - **27**（環線，決策 49）：`setLineRing` 指令，線路的 `ring` 與 `outerLastDispatch`、環線行程的 `ring`，以及手算的 `ring-line.json`（方格上的一圈軌道與四站：設定環線的檢查與偶數化、整圈的行程與規劃、兩個方向各自派車與各自的時刻表）。既有的二十六個 fixture 只把 `schemaVersion` 從 26 改成 27，其他預期值都沒有改變：它們沒有環線。
 - **28**（Stage F3c，ARCHITECTURE 決策 51）：GameCore 拿掉方格。最終狀態不再有 `tracks`、列車的 `trail` 與移動的 `continuation`（schema 27 時它們只能是 `[]`）；方格的指令、觀察與結果，`node`／`link` 位置與資源，`{ "x", "y", "annexes" }` 的車站都不屬於 schema（讀取端拒絕並說明方格已經移除）；線路行程的一段只有 `path`。二十五個 fixture 把 `schemaVersion` 從 27 改成 28，並拿掉這三個一律是空陣列的 key（`tracks` 25 處、`trail` 44 處、`continuation` 134 處，共 203 處；逐檔以 JSON 比對確認其餘內容不變），其他預期值都沒有改變。
+- **29**（Stage F2，ARCHITECTURE 決策 52）：新增線間距（上面「線間距」）與 `trackTooClose`、`tracksWouldBeTooClose` 結果，以及手算的 `track-spacing.json`（最終狀態、長度、餘額與每一個沿軌道的距離都照規則手算）。二十五個既有 fixture 把 `schemaVersion` 從 28 改成 29，其他預期值都沒有改變：唯一在平面上不到 256 的地方是 `network-construction.json` 的 c 離支線 b–d 約 255.5，沿軌道約 8200，是道岔分開的那一段。
 
 ## F3：fixture 搬到路網（schema 不變）
 

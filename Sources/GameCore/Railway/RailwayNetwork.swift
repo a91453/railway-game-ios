@@ -116,6 +116,14 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// The stations' platforms on the continuous network (Stage S4), in
     /// order along the track (see ``TrackPlatform``). None overlap.
     public private(set) var platforms: [TrackPlatform]
+    /// The pairs of edges too close (closer than ``trackSpacing`` at points
+    /// farther apart than ``partingReach`` along the track) that were built
+    /// before Stage F2 made that a rule (ARCHITECTURE decision 52), in
+    /// order: exactly the pairs too close, and only in a world first loaded
+    /// from a save made before it. They stay as they were built; removing
+    /// either edge removes the pair, a new edge that joins them within the
+    /// reach removes it too, and no new edge may come too close to either.
+    public private(set) var spacingExemptions: [TrackEdgePair]
 
     /// An empty network, handing out numbers from 1.
     public init() {
@@ -124,6 +132,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         nextNodeNumber = 1
         nextEdgeNumber = 1
         platforms = []
+        spacingExemptions = []
     }
 
     /// The heights a node may stand at in a world (Stage S4): 4096 units
@@ -135,6 +144,22 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// leave a node side by side, so this stretch is the turnout and the
     /// space it needs, not a crossing (see ``TrackClearance``).
     public static let junctionZone: Int64 = 1_024
+
+    /// The least distance in plan between the centre lines of two edges at
+    /// one level (Stage F2, ARCHITECTURE decision 52): 256 units (4 m),
+    /// the widest train of the references (3.38 m) with room to spare.
+    /// Closer points must be within ``partingReach`` of each other along the
+    /// track (see ``TrackSpacing``).
+    public static let trackSpacing: Int64 = 256
+
+    /// How far apart along the track two points closer than
+    /// ``trackSpacing`` may be (Stage F2): 32768 units (512 m, 32 tiles).
+    /// Within it they are one junction's tracks parting, a turnout's
+    /// branches or a ladder of turnouts, which leave each other gently; a
+    /// branch 1 in 64 off the line is 4 m away after 256 m along each, 512 m
+    /// apart along the track. Points farther apart along the track, or not
+    /// joined by track at all, belong to tracks laid too close.
+    public static let partingReach: Int64 = 32_768
 
     /// Whether the network has no nodes and has never handed out a number,
     /// so a world saves it by leaving it out. (A platform needs an edge.)
@@ -283,15 +308,23 @@ public struct RailwayNetwork: Hashable, Sendable {
         return id
     }
 
-    /// Removes the edge `id`, which exists, and its ends at its nodes.
+    /// Removes the edge `id`, which exists, its ends at its nodes, and the
+    /// spacing exemptions it is in.
     mutating func removeEdge(_ id: TrackEdgeID) {
         guard let index = edgeIndex(id) else { preconditionFailure("removeEdge(_:) needs an edge of the network") }
         let edge = edges.remove(at: index)
+        spacingExemptions.removeAll { $0.contains(id) }
         for node in [edge.from, edge.to] {
             guard let nodeIndex = nodeIndex(node) else { continue }
             nodes[nodeIndex].ends.removeAll { $0.edge == id }
             Self.join(&nodes[nodeIndex].ends)
         }
+    }
+
+    /// Sets the spacing exemptions to `pairs`: the pairs of edges too close
+    /// in a world loaded from a save made before Stage F2.
+    mutating func exemptFromSpacing(_ pairs: [TrackEdgePair]) {
+        spacingExemptions = pairs
     }
 
     /// Removes the node `id`, which exists and has no edges.
@@ -326,7 +359,7 @@ public struct RailwayNetwork: Hashable, Sendable {
 
 extension RailwayNetwork: Codable {
     private enum CodingKeys: String, CodingKey {
-        case nodes, edges, nextNodeID, nextEdgeID, platforms
+        case nodes, edges, nextNodeID, nextEdgeID, platforms, spacingExemptions
     }
 
     private enum NodeKeys: String, CodingKey {
@@ -352,10 +385,12 @@ extension RailwayNetwork: Codable {
     /// ``TrackGeometry/init(from:to:curve:profile:)``); an unknown
     /// structure; and an explicit `null`. Since Stage S4 also `"platforms"`,
     /// when there are any: `{"station", "edge", "start", "end"}` in order
-    /// along the track, on edges of the network. The world's rules (the
-    /// map, heights, grades, structures, clearance, and platforms that fit
-    /// their edges and stations that exist) are checked by the ``GameWorld``
-    /// decoder.
+    /// along the track, on edges of the network. Since Stage F2 also
+    /// `"spacingExemptions"`, when there are any: pairs of edge numbers
+    /// `[a, b]` with `a < b`, in order, on edges of the network. The world's
+    /// rules (the map, heights, grades, structures, clearance, spacing, and
+    /// platforms that fit their edges and stations that exist) are checked by
+    /// the ``GameWorld`` decoder.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         func corrupt(_ description: String) -> DecodingError {
@@ -409,6 +444,17 @@ extension RailwayNetwork: Codable {
             throw corrupt("Platforms must be in order along the track and must not overlap.")
         }
         guard platforms.allSatisfy({ edge($0.edge) != nil }) else { throw corrupt("A platform lies on an edge that does not exist.") }
+        let exempted = container.contains(.spacingExemptions) ? try container.decode([[Int]].self, forKey: .spacingExemptions) : []
+        for pair in exempted {
+            guard pair.count == 2, pair[0] < pair[1], edge(.edge(pair[0])) != nil, edge(.edge(pair[1])) != nil else {
+                throw corrupt("A spacing exemption must be two edges of the network, the lower numbered first.")
+            }
+            let next = TrackEdgePair(.edge(pair[0]), .edge(pair[1]))
+            guard spacingExemptions.last.map({ $0 < next }) ?? true else {
+                throw corrupt("Spacing exemptions must be in order, each once.")
+            }
+            spacingExemptions.append(next)
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -439,6 +485,9 @@ extension RailwayNetwork: Codable {
         try container.encode(nextEdgeNumber, forKey: .nextEdgeID)
         if !platforms.isEmpty {
             try container.encode(platforms, forKey: .platforms)
+        }
+        if !spacingExemptions.isEmpty {
+            try container.encode(spacingExemptions.map { [$0.first.networkNumber, $0.second.networkNumber] }, forKey: .spacingExemptions)
         }
     }
 }

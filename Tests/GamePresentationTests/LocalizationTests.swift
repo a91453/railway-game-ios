@@ -29,10 +29,10 @@ final class LocalizationTests: XCTestCase {
             .invalidHeadway, .trainOnLine(train), .trainNotOnLine(train), .invalidLinePattern, .unknownLinePattern(2),
             .invalidTrainLength, .unknownTrackNode(.node(7)), .unknownTrackEdge(.edge(3)),
             .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep,
-            .invalidTrackStructure, .trackConflict(.edge(4)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
+            .invalidTrackStructure, .trackConflict(.edge(4)), .trackTooClose(.edge(6)), .tracksWouldBeTooClose(.edge(6), .edge(7)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
         ]
-        XCTAssertEqual(Set(errors).count, 44, "one of every case")
+        XCTAssertEqual(Set(errors).count, 46, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")
