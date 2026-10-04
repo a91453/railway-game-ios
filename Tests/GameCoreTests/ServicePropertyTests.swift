@@ -195,7 +195,7 @@ final class ServicePropertyTests: XCTestCase {
                 case .setTimetable:
                     if case .trainServiceActive? = error { counts["refused while running", default: 0] += 1 }
                     if repeating, case .invalidTimetable? = error { counts["invalidTimetable", default: 0] += 1 }
-                case .setContinuation, .reverse, .unplace, .sendToTile, .sendToStation:
+                case .reverse, .unplace, .sendToStation:
                     if case .trainServiceActive? = error { counts["refused while running", default: 0] += 1 }
                 case .advance(let ticks):
                     if error == nil {

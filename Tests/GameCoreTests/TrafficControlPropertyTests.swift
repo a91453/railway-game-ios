@@ -485,11 +485,10 @@ final class TrafficControlPropertyTests: XCTestCase {
         for (train, expected) in zip(world.trains, model.trains) {
             let id = train.id.rawValue
             if train.position != expected.position { problems.append("train \(id) at \(String(describing: train.position)) vs \(String(describing: expected.position))") }
-            if train.trail != expected.trail || train.trailEdges.map(\.number) != expected.trailEdges { problems.append("train \(id) body") }
+            if train.trailEdges.map(\.number) != expected.trailEdges { problems.append("train \(id) body") }
             let movement = train.movement
-            if movement.rate != expected.rate || movement.continuation != expected.continuation || movement.edges.map(\.number) != expected.edges
-                || movement.cursor != expected.cursor || movement.end != expected.end {
-                problems.append("train \(id) movement \(movement) vs \(expected.continuation) \(expected.edges) \(expected.cursor) \(String(describing: expected.end))")
+            if movement.rate != expected.rate || movement.edges.map(\.number) != expected.edges || movement.cursor != expected.cursor || movement.end != expected.end {
+                problems.append("train \(id) movement \(movement) vs \(expected.edges) \(expected.cursor) \(String(describing: expected.end))")
             }
             if train.execution != expected.service?.execution { problems.append("train \(id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))") }
             if train.times != expected.service?.times { problems.append("train \(id) times \(String(describing: train.times)) vs \(String(describing: expected.service?.times))") }

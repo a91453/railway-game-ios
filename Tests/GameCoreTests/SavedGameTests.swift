@@ -17,7 +17,7 @@ final class SavedGameTests: XCTestCase {
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 3_072))
         let edge = try world.buildTrackEdge(from: a, to: b)
         let west = try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 3_072)).id
-        let east = try world.buildStation(named: "East", at: GridPosition(x: 7, y: 4)).id
+        let east = try world.buildStation(named: "East", at: PlanPoint(x: 7_680, y: 4_608)).id
         try world.addTrackPlatform(west, on: edge, from: 1_024, to: 3_072)
         try world.addTrackPlatform(east, on: edge, from: 6_144, to: 8_192)
         try world.createLine(named: "Main", stops: [west, east])
@@ -57,30 +57,26 @@ final class SavedGameTests: XCTestCase {
     }
 
     /// Version 2 (Stage E1): the map is its size and the tiles that are not
-    /// empty ground, each with its position, in row-major order. The form
+    /// empty ground, each with its position, in row-major order: none since
+    /// Stage F3c, when the grid's track and tile stations went. The form
     /// before it, every tile written out, still reads into the same world.
     func testTheMapIsSavedAsItsOccupiedTiles() throws {
-        var world = try makeWorld()
-        // Grid track from an old save stays on the map as a tile.
-        world = try JSONDecoder().decode(GameWorld.self, from: Data(try Self.replacingMap(of: world, with: Self.denseMap(of: world, track: (x: 2, y: 6))).utf8))
-        XCTAssertEqual(world.network.tracks.map(\.position), [GridPosition(x: 2, y: 6)])
+        let world = try makeWorld()
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
         let map = try XCTUnwrap(object["map"] as? [String: Any])
         XCTAssertEqual(Set(map.keys), ["width", "height", "occupied"])
         XCTAssertEqual(map["width"] as? Int, 16)
         XCTAssertEqual(map["height"] as? Int, 8)
-        let occupied = try XCTUnwrap(map["occupied"] as? [[String: Any]])
-        XCTAssertEqual(occupied.map { [$0["x"] as? Int, $0["y"] as? Int] }, [[7, 4], [2, 6]])
-        XCTAssertEqual(occupied[0]["tile"] as? [String: [String: Int]], ["station": ["id": 2]])
-        XCTAssertEqual(occupied[1]["tile"] as? [String: [String: Int]], ["track": ["connections": 10]])
+        XCTAssertEqual((map["occupied"] as? [Any])?.count, 0)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(Self.replacingMap(of: world, with: Self.denseMap(of: world)).utf8)), world)
     }
 
     /// A new game's 16 km map (Stage E1) saves in a few hundred bytes: the
     /// map that wrote every tile made it 13 MB.
     func testALargeMapSavesOnlyWhatStandsOnIt() throws {
         var world = try GameWorld(width: 1_024, height: 1_024, economy: GameEconomy(balance: 1_000_000, costs: testCosts))
-        try world.buildStation(named: "Far", at: GridPosition(x: 1_000, y: 1_020))
+        try world.buildStation(named: "Far", at: PlanPoint(x: 1_024_512, y: 1_044_992))
         let data = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertLessThan(data.count, 1_000)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
@@ -91,21 +87,83 @@ final class SavedGameTests: XCTestCase {
         func load(_ map: String) -> GameWorld? {
             try? JSONDecoder().decode(GameWorld.self, from: Data(Self.replacingMap(of: world, with: map).utf8))
         }
-        let station = #"{"station":{"id":2}}"#
-        XCTAssertEqual(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4,"tile":\#(station)}]}"#), world)
+        XCTAssertEqual(load(#"{"width":16,"height":8,"occupied":[]}"#), world)
         XCTAssertEqual(load(try Self.denseMap(of: world)), world)
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[]}"#), "the station's tile is missing")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":16,"y":4,"tile":\#(station)}]}"#), "off the map")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":-1,"y":4,"tile":\#(station)}]}"#), "off the map")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4,"tile":\#(station)},{"x":7,"y":4,"tile":\#(station)}]}"#), "repeated")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4,"tile":\#(station)},{"x":1,"y":1,"tile":{"track":{"connections":10}}}]}"#), "out of order")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":1,"y":1,"tile":{"empty":{}}},{"x":7,"y":4,"tile":\#(station)}]}"#), "an empty tile listed")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":1,"y":1,"tile":{"track":{"connections":0}}},{"x":7,"y":4,"tile":\#(station)}]}"#), "track without exits")
+        let empty = #"{"empty":{}}"#
+        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":1,"y":1,"tile":\#(empty)}]}"#), "an empty tile listed")
+        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":16,"y":4,"tile":\#(empty)}]}"#), "off the map")
         XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4}]}"#), "no tile")
+        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4,"tile":{"lake":{}}}]}"#), "an unknown kind of tile")
+        XCTAssertNil(load(#"{"width":16,"height":8,"tiles":[\#(empty)]}"#), "too few tiles")
         XCTAssertNil(load(#"{"width":16,"height":8}"#), "neither form")
-        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[{"x":7,"y":4,"tile":\#(station)}],"tiles":[]}"#), "both forms")
-        XCTAssertNil(load(#"{"width":1025,"height":8,"occupied":[{"x":7,"y":4,"tile":\#(station)}]}"#), "too wide")
+        XCTAssertNil(load(#"{"width":16,"height":8,"occupied":[],"tiles":[]}"#), "both forms")
+        XCTAssertNil(load(#"{"width":1025,"height":8,"occupied":[]}"#), "too wide")
         XCTAssertNil(load(#"{"width":0,"height":8,"occupied":[]}"#), "no size")
+    }
+
+    /// ARCHITECTURE decision 51: a save with anything of the grid in it,
+    /// which only a save made by hand could hold (the app built nothing on
+    /// the grid in any save it wrote, see `SaveFixtures/`), is refused with
+    /// the reason, not loaded without it: grid track or a station on a tile
+    /// in the map, a station on tiles, a train at a grid node or on a grid
+    /// link, with a body or a path on the grid, or holding grid track. A
+    /// path that is `[]`, as every save writes it, still loads.
+    func testHandMadeSavesWithGridContentAreRefusedWithTheReason() throws {
+        var world = try makeWorld()
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 2_048))
+        let saved = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        func refusal(_ change: (inout [String: Any]) -> Void) -> String? {
+            var object = saved
+            change(&object)
+            do {
+                let data = try JSONSerialization.data(withJSONObject: object)
+                _ = try JSONDecoder().decode(GameWorld.self, from: data)
+                return nil
+            } catch {
+                return "\(error)"
+            }
+        }
+        func changingTrain(_ key: String, to value: Any) -> (inout [String: Any]) -> Void {
+            { object in
+                var trains = object["trains"] as! [[String: Any]]
+                trains[0][key] = value
+                object["trains"] = trains
+            }
+        }
+        func changingStation(_ change: @escaping (inout [String: Any]) -> Void) -> (inout [String: Any]) -> Void {
+            { object in
+                var stations = object["stations"] as! [[String: Any]]
+                change(&stations[1])
+                object["stations"] = stations
+            }
+        }
+        let tile: [String: Any] = ["x": 1, "y": 1]
+        var movement = (saved["trains"] as! [[String: Any]])[0]["movement"] as? [String: Any] ?? ["rate": 0, "cursor": 0]
+        movement["continuation"] = [tile]
+        let changes: [(String, (inout [String: Any]) -> Void)] = [
+            ("grid track on the map", { $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 1, "y": 1, "tile": ["track": ["connections": 10]]]]] }),
+            ("a station on a tile of the map", { $0["map"] = ["width": 16, "height": 8, "occupied": [["x": 7, "y": 4, "tile": ["station": ["id": 2]]]]] }),
+            ("a turnout in the old form of the map", { object in
+                let tiles = (0..<(16 * 8)).map { $0 == 9 ? ["turnout": ["connections": 11, "stem": 1]] : ["empty": [String: Any]()] }
+                object["map"] = ["width": 16, "height": 8, "tiles": tiles]
+            }),
+            ("a station on tiles", changingStation { $0["position"] = ["x": 7, "y": 4]; $0["point"] = nil }),
+            ("a station grown onto tiles", changingStation { $0["annexes"] = [tile] }),
+            ("a train at a grid node", changingTrain("position", to: ["atNode": ["tile": tile, "heading": "east"]])),
+            ("a train on a grid link", changingTrain("position", to: ["onLink": ["from": tile, "to": ["x": 2, "y": 1], "offset": 512]])),
+            ("a train with a body on the grid", changingTrain("trail", to: [tile])),
+            ("a train with a path on the grid", changingTrain("movement", to: movement)),
+            ("a train holding a grid tile", changingTrain("reservation", to: [["tile": tile]])),
+            ("a train holding a grid link", changingTrain("reservation", to: [["link": [tile, ["x": 2, "y": 1]]]])),
+        ]
+        for (what, change) in changes {
+            let reason = refusal(change)
+            XCTAssertNotNil(reason, "\(what) loaded")
+            XCTAssertTrue(reason?.contains("the grid was removed in Stage F3c") == true, "\(what): \(reason ?? "loaded")")
+        }
+        XCTAssertNil(refusal { _ in }, "the save as written loads")
+        XCTAssertNil(refusal(changingTrain("trail", to: [Any]())), "an empty body on the grid is no body")
     }
 
     /// `world`'s JSON with its map replaced by `map`.
@@ -116,17 +174,9 @@ final class SavedGameTests: XCTestCase {
     }
 
     /// `world`'s map with every tile written out, as saves of version 1
-    /// wrote it, and an east–west grid track piece at `track` if given.
-    private static func denseMap(of world: GameWorld, track: (x: Int, y: Int)? = nil) throws -> String {
-        let tiles = world.map.tiles.map { tile -> String in
-            if let track, tile.position == GridPosition(x: track.x, y: track.y) {
-                return #"{"track":{"connections":10}}"#
-            }
-            switch tile.type {
-            case .empty: return #"{"empty":{}}"#
-            case .station(let id): return #"{"station":{"id":\#(id.rawValue)}}"#
-            }
-        }
+    /// wrote it: every tile empty ground.
+    private static func denseMap(of world: GameWorld) throws -> String {
+        let tiles = Array(repeating: #"{"empty":{}}"#, count: world.map.width * world.map.height)
         return #"{"width":\#(world.map.width),"height":\#(world.map.height),"tiles":[\#(tiles.joined(separator: ","))]}"#
     }
 

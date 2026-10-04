@@ -199,77 +199,7 @@ struct Digest {
     var hex: String { String(value, radix: 16, uppercase: true) }
 }
 
-// MARK: - Geometry
-
-/// The direction from `position` to `neighbor` when they are orthogonal
-/// neighbours, worked out here rather than taken from GameCore. Comparing
-/// instead of subtracting cannot overflow.
-func stepDirection(from position: GridPosition, to neighbor: GridPosition) -> TrackDirection? {
-    if position.x == neighbor.x {
-        if position.y != .min, neighbor.y == position.y - 1 { return .north }
-        if position.y != .max, neighbor.y == position.y + 1 { return .south }
-    } else if position.y == neighbor.y {
-        if position.x != .max, neighbor.x == position.x + 1 { return .east }
-        if position.x != .min, neighbor.x == position.x - 1 { return .west }
-    }
-    return nil
-}
-
-func step(_ position: GridPosition, _ direction: TrackDirection) -> GridPosition {
-    switch direction {
-    case .north: GridPosition(x: position.x, y: position.y - 1)
-    case .east: GridPosition(x: position.x + 1, y: position.y)
-    case .south: GridPosition(x: position.x, y: position.y + 1)
-    case .west: GridPosition(x: position.x - 1, y: position.y)
-    }
-}
-
-/// The node a train stands on or is heading for, and the way it faces there.
-func ahead(of position: TrainPosition) -> (node: GridPosition, heading: TrackDirection) {
-    switch position {
-    case .atNode(let tile, let heading):
-        return (tile, heading)
-    case .onLink(let from, let to, _):
-        guard let heading = stepDirection(from: from, to: to) else {
-            preconditionFailure("\(position) is not a link between neighbours")
-        }
-        return (to, heading)
-    case .onEdge:
-        preconditionFailure("ahead(of:) is for positions on the grid")
-    }
-}
-
-// MARK: - Generated networks
-
-/// A tile of a generated network, built through the public commands.
-struct TileSpec {
-    enum Kind {
-        case track(TrackConnections)
-        case station
-        /// Only the track-resource campaign (`TrackResourcePropertyTests`) draws these.
-        case turnout(TrackConnections, stem: TrackDirection)
-        case crossing
-    }
-
-    let position: GridPosition
-    let kind: Kind
-}
-
-/// The shapes of network the campaigns generate.
-enum NetworkShape: CaseIterable {
-    /// Random track, a few stations, joined neighbours, dangling exits.
-    case random
-    /// One straight line, dead ends at both ends.
-    case line
-    /// A rectangle loop with tails leaving it through junctions.
-    case loopWithTails
-    /// Every tile a four-way junction: many cycles and equal routes.
-    case grid
-    /// Two parallel lines joined by rungs: equal-length alternatives.
-    case ladder
-    /// Two random networks with an empty column between them.
-    case twoComponents
-}
+// MARK: - Generated values
 
 /// Stage W2c: performances the campaigns give trains and lines: presets of
 /// every kind (with and without coasting and alternatives), and some that
@@ -288,335 +218,6 @@ enum PerformanceSamples {
     ]
 }
 
-enum NetworkGenerator {
-    static let costs = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
-
-    /// A world of the given size with the generated tiles built in order.
-    static func build(_ specs: [TileSpec], width: Int, height: Int) throws -> GameWorld {
-        var world = try GameWorld(
-            width: width,
-            height: height,
-            economy: GameEconomy(balance: 1_000_000_000, costs: costs),
-            clock: GameClock(speed: .normal)
-        )
-        for spec in specs {
-            switch spec.kind {
-            case .track(let connections):
-                try world.buildTrack(at: spec.position, connections: connections)
-            case .station:
-                try world.buildStation(named: "S\(spec.position.x)-\(spec.position.y)", at: spec.position)
-            case .turnout(let connections, let stem):
-                try world.buildTurnout(at: spec.position, connections: connections, stem: stem)
-            case .crossing:
-                try world.buildCrossing(at: spec.position)
-            }
-        }
-        return world
-    }
-
-    /// Tiles for a generated network of `shape`, and the map size.
-    static func specs(_ shape: NetworkShape, using random: inout SplitMix64) -> (specs: [TileSpec], width: Int, height: Int) {
-        switch shape {
-        case .random:
-            let width = 3 + random.below(5)
-            let height = 3 + random.below(5)
-            return (randomSpecs(width: width, height: height, originX: 0, using: &random), width, height)
-        case .line:
-            let length = 2 + random.below(7)
-            let vertical = random.chance(1, in: 2)
-            var exits: [GridPosition: TrackConnections] = [:]
-            let tiles = (0..<length).map { vertical ? GridPosition(x: 1, y: $0) : GridPosition(x: $0, y: 1) }
-            for (a, b) in zip(tiles, tiles.dropFirst()) {
-                join(a, b, in: &exits)
-            }
-            let size = length + 1
-            return (tiles.map { TileSpec(position: $0, kind: .track(exits[$0] ?? .north)) }, size, size)
-        case .loopWithTails:
-            let width = 2 + random.below(4)
-            let height = 2 + random.below(4)
-            var exits: [GridPosition: TrackConnections] = [:]
-            var ring: [GridPosition] = []
-            for x in 0..<width { ring.append(GridPosition(x: x + 1, y: 1)) }
-            for y in 1..<height { ring.append(GridPosition(x: width, y: y + 1)) }
-            for x in stride(from: width - 1, through: 1, by: -1) where height > 1 { ring.append(GridPosition(x: x, y: height)) }
-            for y in stride(from: height - 1, through: 2, by: -1) where width > 1 { ring.append(GridPosition(x: 1, y: y)) }
-            for (a, b) in zip(ring, ring.dropFirst() + [ring[0]]) where a != b && stepDirection(from: a, to: b) != nil {
-                join(a, b, in: &exits)
-            }
-            // Tails: straight spurs leaving the ring outward from some tiles.
-            for tile in ring where random.chance(1, in: 4) {
-                let outward: [TrackDirection] = [
-                    tile.y == 1 ? .north : nil, tile.x == width ? .east : nil,
-                    tile.y == height ? .south : nil, tile.x == 1 ? .west : nil,
-                ].compactMap { $0 }
-                guard let way = outward.first else { continue }
-                var previous = tile
-                for _ in 0..<(1 + random.below(2)) {
-                    let next = step(previous, way)
-                    guard next.x >= 0, next.y >= 0, exits[next] == nil else { break }
-                    join(previous, next, in: &exits)
-                    previous = next
-                }
-            }
-            return (sortedSpecs(exits), width + 4, height + 4)
-        case .grid:
-            let width = 2 + random.below(4)
-            let height = 2 + random.below(4)
-            var specs: [TileSpec] = []
-            for y in 0..<height {
-                for x in 0..<width {
-                    var connections: TrackConnections = []
-                    if y > 0 { connections.insert(.north) }
-                    if x < width - 1 { connections.insert(.east) }
-                    if y < height - 1 { connections.insert(.south) }
-                    if x > 0 { connections.insert(.west) }
-                    specs.append(TileSpec(position: GridPosition(x: x, y: y), kind: .track(connections.isEmpty ? .north : connections)))
-                }
-            }
-            return (specs, width + 1, height + 1)
-        case .ladder:
-            let length = 3 + random.below(5)
-            var exits: [GridPosition: TrackConnections] = [:]
-            for x in 0..<(length - 1) {
-                join(GridPosition(x: x, y: 0), GridPosition(x: x + 1, y: 0), in: &exits)
-                join(GridPosition(x: x, y: 2), GridPosition(x: x + 1, y: 2), in: &exits)
-            }
-            for x in 0..<length where x == 0 || x == length - 1 || random.chance(1, in: 3) {
-                join(GridPosition(x: x, y: 0), GridPosition(x: x, y: 1), in: &exits)
-                join(GridPosition(x: x, y: 1), GridPosition(x: x, y: 2), in: &exits)
-            }
-            return (sortedSpecs(exits), length + 1, 4)
-        case .twoComponents:
-            let height = 3 + random.below(3)
-            let left = 2 + random.below(3)
-            let right = 2 + random.below(3)
-            let specs = randomSpecs(width: left, height: height, originX: 0, using: &random)
-                + randomSpecs(width: right, height: height, originX: left + 1, using: &random)
-            return (specs, left + 1 + right, height)
-        }
-    }
-
-    /// Mostly track, a few stations; neighbouring track joined both ways
-    /// with some probability, and some exits left dangling.
-    static func randomSpecs(width: Int, height: Int, originX: Int, using random: inout SplitMix64) -> [TileSpec] {
-        var kinds: [GridPosition: Int] = [:]
-        var exits: [GridPosition: TrackConnections] = [:]
-        for y in 0..<height {
-            for x in originX..<(originX + width) {
-                let roll = random.below(20)
-                kinds[GridPosition(x: x, y: y)] = roll < 15 ? 0 : (roll < 16 ? 1 : 2)
-            }
-        }
-        for y in 0..<height {
-            for x in originX..<(originX + width) {
-                let tile = GridPosition(x: x, y: y)
-                guard kinds[tile] == 0 else { continue }
-                for way in [TrackDirection.east, .south] {
-                    let neighbor = step(tile, way)
-                    if kinds[neighbor] == 0, random.chance(6, in: 10) {
-                        join(tile, neighbor, in: &exits)
-                    }
-                }
-                if random.chance(1, in: 5) {
-                    exits[tile, default: []].insert(TrackConnections(random.element(of: TrackDirection.allCases)))
-                }
-            }
-        }
-        var specs: [TileSpec] = []
-        for y in 0..<height {
-            for x in originX..<(originX + width) {
-                let tile = GridPosition(x: x, y: y)
-                if kinds[tile] == 0 {
-                    let connections = exits[tile] ?? TrackConnections(random.element(of: TrackDirection.allCases))
-                    specs.append(TileSpec(position: tile, kind: .track(connections)))
-                } else if kinds[tile] == 1 {
-                    specs.append(TileSpec(position: tile, kind: .station))
-                }
-            }
-        }
-        return specs
-    }
-
-    private static func join(_ a: GridPosition, _ b: GridPosition, in exits: inout [GridPosition: TrackConnections]) {
-        guard let way = stepDirection(from: a, to: b) else { return }
-        exits[a, default: []].insert(TrackConnections(way))
-        exits[b, default: []].insert(TrackConnections(way.opposite))
-    }
-
-    /// Specs in row-major order, so building never depends on dictionary order.
-    private static func sortedSpecs(_ exits: [GridPosition: TrackConnections]) -> [TileSpec] {
-        exits.keys
-            .sorted { ($0.y, $0.x) < ($1.y, $1.x) }
-            .map { TileSpec(position: $0, kind: .track(exits[$0] ?? .north)) }
-    }
-}
-
-// MARK: - Positions and paths
-
-enum PositionGenerator {
-    /// Offsets on both sides of every boundary, and the middle.
-    static let edgeOffsets: [Int64] = [1, 2, 3, 255, 256, 511, 512, 513, 767, 768, 1021, 1022, 1023]
-
-    /// A valid position on the world's track, or `nil` without track.
-    static func validPosition(in world: GameWorld, using random: inout SplitMix64) -> TrainPosition? {
-        let tracks = world.tracks
-        guard !tracks.isEmpty else { return nil }
-        let tile = random.element(of: tracks).position
-        let neighbors = world.connectedNeighbors(of: tile)
-        if !neighbors.isEmpty, random.chance(1, in: 2) {
-            let offset = random.chance(1, in: 2) ? random.element(of: edgeOffsets) : random.int64(in: 1...1023)
-            return .onLink(from: tile, to: random.element(of: neighbors), offset: offset)
-        }
-        return .atNode(tile, heading: random.element(of: TrackDirection.allCases))
-    }
-
-    /// A walk of up to `length` joined links from the node ahead of
-    /// `position`, never turning straight back: a valid continuation.
-    static func walk(in world: GameWorld, from position: TrainPosition, length: Int, using random: inout SplitMix64) -> [GridPosition] {
-        var (node, heading) = ahead(of: position)
-        var nodes: [GridPosition] = []
-        for _ in 0..<length {
-            let options = world.connectedNeighbors(of: node).filter { stepDirection(from: node, to: $0) != heading.opposite }
-            guard !options.isEmpty else { break }
-            let next = random.element(of: options)
-            heading = stepDirection(from: node, to: next)!
-            node = next
-            nodes.append(next)
-        }
-        return nodes
-    }
-}
-
-// MARK: - Reference movement
-
-/// Train movement written a second way, one unit at a time, straight from
-/// the rules of ARCHITECTURE decision 15 rather than from the kernel's
-/// arithmetic: travel the link; at a node with distance left, enter the next
-/// entry only if it is a joined neighbour that is not straight back; else stop
-/// and drop the rest.
-enum ReferenceMovement {
-    struct Result: Equatable {
-        var position: TrainPosition
-        /// Entries entered, counted from the start of the continuation.
-        var cursor: Int
-        /// Units actually travelled.
-        var travelled: Int64
-    }
-
-    /// Only for distances of a few thousand units: it steps unit by unit.
-    static func travel(
-        in world: GameWorld,
-        from start: TrainPosition,
-        distance: Int64,
-        continuation: [GridPosition],
-        cursor startCursor: Int
-    ) -> Result {
-        enum Place {
-            case node(GridPosition, TrackDirection)
-            case link(GridPosition, GridPosition, Int64)
-        }
-        var place: Place
-        switch start {
-        case .atNode(let tile, let heading): place = .node(tile, heading)
-        case .onLink(let from, let to, let offset): place = .link(from, to, offset)
-        case .onEdge: preconditionFailure("ReferenceMovement is for positions on the grid")
-        }
-        var cursor = startCursor
-        var remaining = distance
-        var travelled: Int64 = 0
-        walking: while remaining > 0 {
-            switch place {
-            case .link(let from, let to, let offset):
-                remaining -= 1
-                travelled += 1
-                if offset + 1 == TrainPosition.linkLength {
-                    place = .node(to, stepDirection(from: from, to: to)!)
-                } else {
-                    place = .link(from, to, offset + 1)
-                }
-            case .node(let node, let heading):
-                guard cursor < continuation.count else { break walking }
-                let next = continuation[cursor]
-                guard let way = stepDirection(from: node, to: next), way != heading.opposite,
-                      world.isConnected(node, to: next)
-                else { break walking }
-                cursor += 1
-                // The next unit moves it off the node.
-                place = .link(node, next, 0)
-            }
-        }
-        switch place {
-        case .node(let tile, let heading):
-            return Result(position: .atNode(tile, heading: heading), cursor: cursor, travelled: travelled)
-        case .link(let from, let to, let offset):
-            precondition(offset > 0, "a link is only entered with distance to travel")
-            return Result(position: .onLink(from: from, to: to, offset: offset), cursor: cursor, travelled: travelled)
-        }
-    }
-}
-
-// MARK: - Reference route
-
-/// Route finding written a second way (moved from TrainRouteTests): the
-/// distance in links from every (node, heading) to the destination by
-/// relaxing until nothing changes, then from the start the first direction
-/// in north, east, south, west order that keeps the distance falling by one.
-enum ReferenceRoute {
-    private struct State: Hashable {
-        var node: GridPosition
-        var heading: TrackDirection
-    }
-
-    static func route(in world: GameWorld, from start: TrainPosition, to destination: GridPosition) -> [GridPosition]? {
-        let startState: State
-        switch start {
-        case .atNode(let tile, let heading):
-            guard world.track(at: tile) != nil else { return nil }
-            startState = State(node: tile, heading: heading)
-        case .onLink(let from, let to, let offset):
-            guard (1...1023).contains(offset), world.isConnected(from, to: to), let heading = stepDirection(from: from, to: to) else { return nil }
-            startState = State(node: to, heading: heading)
-        case .onEdge:
-            return nil
-        }
-        guard world.track(at: destination) != nil else { return nil }
-
-        func moves(from state: State) -> [State] {
-            world.connectedNeighbors(of: state.node).compactMap { neighbor in
-                guard let way = stepDirection(from: state.node, to: neighbor), way != state.heading.opposite else { return nil }
-                return State(node: neighbor, heading: way)
-            }
-        }
-        let states = world.tracks.flatMap { track in TrackDirection.allCases.map { State(node: track.position, heading: $0) } }
-        var distance: [State: Int] = [:]
-        for state in states where state.node == destination {
-            distance[state] = 0
-        }
-        var changed = true
-        while changed {
-            changed = false
-            for state in states where state.node != destination {
-                let best = moves(from: state).compactMap { distance[$0] }.min().map { $0 + 1 }
-                if let best, best < distance[state] ?? Int.max {
-                    distance[state] = best
-                    changed = true
-                }
-            }
-        }
-
-        guard var remaining = distance[startState] else { return nil }
-        var state = startState
-        var route: [GridPosition] = []
-        while remaining > 0 {
-            guard let next = moves(from: state).first(where: { distance[$0] == remaining - 1 }) else { return nil }
-            route.append(next.node)
-            state = next
-            remaining -= 1
-        }
-        return route
-    }
-}
-
 // MARK: - World invariants
 
 enum WorldInvariants {
@@ -628,49 +229,16 @@ enum WorldInvariants {
         if ids != ids.sorted() || Set(ids).count != ids.count {
             problems.append("train IDs not unique and ascending: \(ids)")
         }
-        // Stage F1: a station at a point takes no tile; its position is the
-        // tile under the point, and it never grows onto others.
+        // Stage F1: a station takes no tile; its position is the tile under
+        // its point. Since Stage F3c no tile holds anything.
         for station in world.stations {
-            if let point = station.point {
-                if station.position != GridPosition(x: Int(point.x / 1_024), y: Int(point.y / 1_024)) || !station.annexes.isEmpty {
-                    problems.append("station \(station.id.rawValue) at \(point) has position \(station.position) and annexes \(station.annexes)")
-                }
-            } else if world.map.tile(at: station.position)?.type != .station(id: station.id) {
-                problems.append("station \(station.id.rawValue) does not match its tile")
+            let point = station.point
+            if station.position != GridPosition(x: Int(point.x / 1_024), y: Int(point.y / 1_024)) {
+                problems.append("station \(station.id.rawValue) at \(point) has position \(station.position)")
             }
         }
-        // Decision 27: every tile of a station is its tile on the map, each
-        // annex beside an earlier tile, none twice; no other station tiles.
-        for station in world.stations {
-            var earlier = [station.position]
-            for annex in station.annexes {
-                if world.map.tile(at: annex)?.type != .station(id: station.id) {
-                    problems.append("station \(station.id.rawValue) annex \(annex) does not match its tile")
-                }
-                if earlier.contains(annex) || !earlier.contains(where: { stepDirection(from: $0, to: annex) != nil }) {
-                    problems.append("station \(station.id.rawValue) annex \(annex) is not beside an earlier tile")
-                }
-                earlier.append(annex)
-            }
-        }
-        let stationTiles = world.map.tiles.filter { if case .station = $0.type { true } else { false } }.count
-        if stationTiles != world.stations.reduce(0, { $0 + ($1.point == nil ? 1 + $1.annexes.count : 0) }) {
-            problems.append("\(stationTiles) station tiles for \(world.stations.count) stations")
-        }
-        // Decision 29 (S3A): the railway network holds the grid's track, one
-        // piece a tile, in row-major order, each on the map's empty land.
-        let positions = world.tracks.map(\.position)
-        if positions != positions.sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) }) || Set(positions).count != positions.count {
-            problems.append("grid track not one piece a tile in row-major order")
-        }
-        for track in world.tracks where world.map.tile(at: track.position)?.type != .empty || world.track(at: track.position) != track {
-            problems.append("grid track at \(track.position) is not on empty land or not found there")
-        }
-        // Decision 26: a turnout has three exits or more, its stem among them.
-        for track in world.tracks {
-            if case .turnout(let stem) = track.layout, track.connections.directions.count < 3 || !track.connections.contains(TrackConnections(stem)) {
-                problems.append("turnout at \(track.position) with exits \(track.connections) and stem \(stem)")
-            }
+        if !world.map.tiles.allSatisfy({ $0.type == .empty }) {
+            problems.append("a tile of the map is taken")
         }
         // Decision 22: lines in ID order, each with two stops or more (none
         // twice in a row) at known stations, a rate of 1 or more, a window
@@ -770,47 +338,12 @@ enum WorldInvariants {
             }
             problems += serviceViolations(of: train, in: world)
             problems += bodyViolations(of: train, in: world)
-            let movement = train.movement
-            guard let position = train.position else {
-                if movement != .idle { problems.append("unplaced train \(train.id.rawValue) is not idle") }
+            guard train.position != nil else {
+                if train.movement != .idle { problems.append("unplaced train \(train.id.rawValue) is not idle") }
                 continue
             }
-            switch position {
-            case .atNode(let tile, _):
-                if world.track(at: tile) == nil { problems.append("train \(train.id.rawValue) at \(tile) is not on track") }
-            case .onLink(let from, let to, let offset):
-                if !(1...1023).contains(offset) { problems.append("train \(train.id.rawValue) offset \(offset)") }
-                if !world.isConnected(from, to: to) { problems.append("train \(train.id.rawValue) link \(from)->\(to) not joined") }
-            case .onEdge:
-                // Decision 29: checked with the network's own invariants.
-                problems += NetworkInvariants.trainViolations(of: train, in: world)
-                continue
-            }
-            if movement.rate < 0 { problems.append("train \(train.id.rawValue) negative rate") }
-            let count = movement.continuation.count
-            if !(count == 0 && movement.cursor == 0) && !(0..<count).contains(movement.cursor) {
-                problems.append("train \(train.id.rawValue) cursor \(movement.cursor) of \(count)")
-                continue
-            }
-            let (node, heading) = ahead(of: position)
-            if movement.cursor >= 1, movement.continuation[movement.cursor - 1] != node {
-                problems.append("train \(train.id.rawValue) last entered entry is not the node ahead")
-            }
-            if movement.cursor >= 2,
-               stepDirection(from: movement.continuation[movement.cursor - 2], to: movement.continuation[movement.cursor - 1]) != heading {
-                problems.append("train \(train.id.rawValue) heading disagrees with the last entered link")
-            }
-            var (current, facing) = (node, heading)
-            for next in movement.remainingContinuation {
-                guard let way = stepDirection(from: current, to: next), way != facing.opposite else {
-                    problems.append("train \(train.id.rawValue) remaining continuation is not a path from \(node)")
-                    break
-                }
-                (current, facing) = (next, way)
-            }
-            if !movement.continuation.allSatisfy(world.map.contains) {
-                problems.append("train \(train.id.rawValue) continuation leaves the map")
-            }
+            // Decision 29: checked with the network's own invariants.
+            problems += NetworkInvariants.trainViolations(of: train, in: world)
         }
         return problems
     }
@@ -947,10 +480,9 @@ enum WorldInvariants {
     /// Decision 32: without traffic control nothing is reserved. With it,
     /// no two trains hold the same track; a reservation is in resource
     /// order without repeats, belongs to a placed train and holds what the
-    /// train stands on; a train plainly standing (at a node with nothing
-    /// left to enter, or at the end of its path on its own edge) has none,
-    /// and one plainly on its way (on a grid link, with grid steps left, or
-    /// short of where its path ends on its own edge) has one.
+    /// train stands on; a train plainly standing (at the end of its path on
+    /// its own edge) has none, and one plainly on its way (short of where
+    /// its path ends on its own edge) has one.
     static func trafficViolations(in world: GameWorld) -> [String] {
         guard world.isTrafficControlEnabled else {
             return world.trains.contains { !$0.reservation.isEmpty } ? ["a reservation while traffic control is off"] : []
@@ -980,10 +512,6 @@ enum WorldInvariants {
             let movement = train.movement
             var stands: Bool?
             switch position {
-            case .atNode:
-                stands = movement.remainingContinuation.isEmpty
-            case .onLink:
-                stands = false
             case .onEdge(let traversal, let offset):
                 if movement.cursor == movement.edges.count, let length = world.trackEdge(traversal.edge)?.length {
                     stands = offset == (movement.end ?? length)
@@ -995,62 +523,10 @@ enum WorldInvariants {
         return problems
     }
 
-    /// Decision 27: 1 to 16 cars; no body off the track; on it, the body
-    /// starts right behind the head (the tile behind a train at a node, the
-    /// `from` end of a link), runs over joined track by turns a train may
-    /// take, and ends at the first node at or beyond the tail.
+    /// Decision 27: 1 to 16 cars. The body on the track network is checked
+    /// with the network's own invariants (``NetworkInvariants``).
     static func bodyViolations(of train: Train, in world: GameWorld) -> [String] {
-        let id = train.id.rawValue
-        var problems: [String] = []
-        if !(1...16).contains(train.cars) { problems.append("train \(id) has \(train.cars) cars") }
-        guard let position = train.position else {
-            if !train.trail.isEmpty { problems.append("unplaced train \(id) has a body") }
-            return problems
-        }
-        // One car to a tile: a link between car centres.
-        let length = Int64(train.cars - 1) * 1024
-        var spine: [GridPosition]
-        var distance: Int64
-        switch position {
-        case .atNode(let tile, let heading):
-            if let first = train.trail.first, stepDirection(from: tile, to: first) != heading.opposite {
-                problems.append("train \(id)'s body does not start behind it")
-            }
-            spine = [tile]
-            distance = 1024
-        case .onLink(let from, let to, let offset):
-            if let first = train.trail.first, first != from {
-                problems.append("train \(id)'s body does not start at its link's far end")
-            }
-            spine = [to]
-            distance = offset
-        case .onEdge:
-            if !train.trail.isEmpty { problems.append("train \(id) on the track network has a grid trail") }
-            return problems
-        }
-        // The distances of the nodes: each must be short of the tail but
-        // the last, which must reach it.
-        for (index, node) in train.trail.enumerated() {
-            let last = index == train.trail.count - 1
-            if last ? distance < length : distance >= length {
-                problems.append("train \(id)'s body of \(train.trail.count) nodes does not fit \(train.cars) cars")
-                break
-            }
-            distance += 1024
-            spine.append(node)
-        }
-        if length > 0, train.trail.isEmpty { problems.append("train \(id) of \(train.cars) cars has no body") }
-        if length == 0, !train.trail.isEmpty { problems.append("train \(id) of one car has a body") }
-        for index in spine.indices.dropFirst() where !world.isConnected(spine[index - 1], to: spine[index]) {
-            problems.append("train \(id)'s body crosses \(spine[index - 1])-\(spine[index]), which is not joined")
-        }
-        for index in spine.indices.dropFirst().dropLast() {
-            let heading = stepDirection(from: spine[index + 1], to: spine[index])!
-            if !world.exits(from: spine[index], facing: heading).contains(spine[index - 1]) {
-                problems.append("train \(id)'s body turns at \(spine[index]) where no train may")
-            }
-        }
-        return problems
+        (1...16).contains(train.cars) ? [] : ["train \(train.id.rawValue) has \(train.cars) cars"]
     }
 
     /// Decision 20: a service points at an entry of the timetable of a
@@ -1094,17 +570,10 @@ enum WorldInvariants {
         case .travellingToStop(let stop, let cycle):
             var problems: [String] = []
             if stop < 1, cycle < 1 { problems.append("train \(id) travels to the service's first stop") }
-            if case .onEdge(let traversal, let offset) = position {
+            switch position {
+            case .onEdge(let traversal, let offset):
                 return problems + networkServiceViolations(of: train, at: traversal, offset: offset, to: target, in: world)
             }
-            let remaining = train.movement.remainingContinuation
-            if case .atNode = position, remaining.isEmpty { problems.append("train \(id) travels but its journey has ended") }
-            let end = remaining.last ?? ahead(of: position).node
-            // Decision 27: beside any tile of the station.
-            if let station = world.station(id: target), !station.tiles.contains(where: { stepDirection(from: end, to: $0) != nil }) {
-                problems.append("train \(id) travels to station \(target.rawValue) but its journey ends at \(end)")
-            }
-            return problems
         }
     }
 

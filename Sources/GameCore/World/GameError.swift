@@ -8,21 +8,10 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidMapSize(width: Int, height: Int)
     /// The position is not inside the map.
     case outOfBounds(GridPosition)
-    /// Something is already built at the position.
-    case tileOccupied(GridPosition)
-    /// A track piece must connect in at least one direction, and only in the
-    /// four known directions (no other bits set).
-    case invalidTrackConnections
     /// Names must contain at least one non-whitespace character.
     case invalidName
     /// The balance cannot cover the cost.
     case insufficientFunds(required: Money, available: Money)
-    /// Track removal was requested where there is no track (an empty tile or
-    /// a station).
-    case noTrackToRemove(GridPosition)
-    /// The track at the position carries a placed train (it is the train's
-    /// node, or an end of its link), so it cannot be removed.
-    case trackInUse(GridPosition)
     /// No train with this ID exists.
     case unknownTrain(TrainID)
     /// The train is already on the track. Placement does not move a train;
@@ -31,15 +20,15 @@ public enum GameError: Error, Hashable, Sendable {
     /// The train is not on the track, so there is nothing to unplace or
     /// reverse.
     case trainNotPlaced(TrainID)
-    /// A train cannot be placed there: the position is not at a track tile
-    /// or strictly inside a link between two joined track tiles (see
+    /// A train cannot be placed there: the position is not on an edge of the
+    /// track network, or its body does not fit the track behind it (see
     /// ``TrainPosition``).
     case invalidTrainPosition
     /// A train's movement rate must not be negative.
     case invalidMovementRate
-    /// A continuation must name, in order, nodes the train can enter from
-    /// where it is: each joined to the one before (starting from the train's
-    /// node, or the end of its link), with no immediate U-turn.
+    /// A path must name, in order, edges the train can enter from where it
+    /// is, each joining the one before at the node they share, and end within
+    /// its last edge, not behind the train.
     case invalidContinuation
     /// Advancing that many ticks at the current speed would take game time
     /// past the largest minute the clock can hold. Nothing was advanced.
@@ -55,8 +44,8 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidTimetable
     /// No station with this ID exists.
     case unknownStation(StationID)
-    /// The train is running its timetable, and the service owns its
-    /// continuation and timetable: it cannot be given a path, reversed,
+    /// The train is running its timetable, and the service owns its path
+    /// and timetable: it cannot be given a path, reversed,
     /// taken off the track, given another timetable or started again. Stop
     /// the service first.
     case trainServiceActive(TrainID)
@@ -103,15 +92,11 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLinePattern
     /// The line has no pattern at this index.
     case unknownLinePattern(Int)
-    /// A station grows only onto a tile beside one of its tiles.
-    case invalidStationTile(GridPosition)
     /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.
     case invalidTrainLength
-    /// No node of the track network has this ID (Stage S3). A grid tile is
-    /// not a node of the network.
+    /// No node of the track network has this ID (Stage S3).
     case unknownTrackNode(TrackNodeID)
-    /// No edge of the track network has this ID (Stage S3). A grid link is
-    /// not an edge of the network.
+    /// No edge of the track network has this ID (Stage S3).
     case unknownTrackEdge(TrackEdgeID)
     /// The track network cannot have that geometry (Stage S3): a point
     /// outside the map or, since Stage S4, outside

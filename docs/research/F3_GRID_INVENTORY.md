@@ -589,6 +589,35 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 - **存檔與地圖格式的測試**（SavedGameTests 的地圖、PersistenceAndDeterminismTests `testDecodingRejectsStationWithoutMatchingTile`、ContinuousTrackTests `testGridOnlySavesAreUnchangedAndOldSavesRead`、RailwayNetworkAuthorityTests 的兩個舊地圖存檔測試）：F3c-3c 的「手做、含方格內容的舊存檔拒絕並說明原因」。
 - **CI 的 shard 時間**：F3b-2 之後路網的 campaign 比方格慢，`campaigns-2` 在 #86–#89 超過 20 分鐘被取消；已在 #86 改成八個 campaign shard（見 §7.4 末段），這裡只把刪掉的兩個方格 campaign 從 shard 拿掉。
 
+### 8.9 F3c-3c：刪掉 GameCore 的方格
+
+照決策 51 第 1–3 點完整移除，遊戲行為不變。golden、存檔與重播 fixture 一個位元組都沒動，每個 campaign 的 digest 也不變：這一步只刪掉已經沒有測試或 fixture 走到的程式。
+
+| 刪掉或改成只有路網的 | 在哪裡 |
+| --- | --- |
+| `Track`、`TrackDirection`、`TrackConnections`（整個 `Track.swift`、`TrackDirection.swift`、`TrackConnectivity.swift`）、`TrackLayout`、`TrackSection`、`trackSections()`、方格的單雙線 | GameCore |
+| `TrackNodeID.tile`、`TrackEdgeID.link`、`TrainPosition.atNode`／`.onLink`、`TrackResource` 的格與連結 | 列舉只剩路網的 case；名字照舊（決策 51：改名另外處理） |
+| `GameWorld` 的 `buildTrack`、`buildTurnout`、`buildCrossing`、`removeTrack`、佔格的 `buildStation(named:at: GridPosition)`、`extendStation`、`setTrainContinuation(_:to: [GridPosition])`；`track(at:)`、`tracks`、`station(at:)`、`connectedNeighbors`、`isConnected`、`exits`、`platforms(of:)`、`platformTracks(of:)`、方格的 `route` | GameWorld |
+| `GameError` 的 `tileOccupied`、`invalidTrackConnections`、`noTrackToRemove`、`trackInUse`、`invalidStationTile` | 只有方格的指令會給 |
+| `Station.annexes`、`tiles`、可選的 `point`；`Train.trail`；`TrainMovement.continuation`、`remainingContinuation`；`LineLeg.route`；`TileType.station` | 車站只有點，`position` 是點底下的格（票價照舊用它） |
+| GamePresentation 對上面這些 case 的文字與錯誤訊息；`invalidTrainPosition` 的訊息改成「只能放在軌道上」 | `DisplayText.swift` |
+| App：`TileArt` 畫點車站時不再判斷 `point != nil` | 唯一碰到的 App 檔 |
+
+**存檔**：路網世界的存檔格式逐位元組不變（`map.occupied` 是 `[]`、點車站寫 `{id, name, point}`、`movement` 照舊寫 `"continuation": []`）。讀檔照舊接受空的 `"continuation"` 與 `"trail"`、版本 1 的每格 `tiles`（全是空地）。手做的方格內容依第 3 點拒絕，訊息都說明「方格在 Stage F3c 移除，只有手做的存檔才會有」：地圖上的 `track`／`turnout`／`crossing`／`station` 格（兩種地圖寫法都是）、有 `position` 或 `annexes` 的車站、`atNode`／`onLink` 位置、非空的 `trail` 或 `continuation`、預約裡的 `tile`／`link`。`SaveFixtures/` 的四份都沒有方格內容，照常載入；存檔版本不變（新的 build 讀得了所有 App 寫過的存檔）。
+
+**測試**：
+- `SavedGameTests.testHandMadeSavesWithGridContentAreRefusedWithTheReason`（新）：上面每一種方格內容各一次，檢查拒絕而且訊息帶原因；照原樣的存檔與空的 `trail` 照常載入。
+- 地圖的測試改寫：`testTheMapIsSavedAsItsOccupiedTiles`（`occupied` 是 `[]`、每格的舊寫法讀得回同一個世界）、`testMalformedMapsAreRefused`、RailwayNetworkAuthorityTests `testAnOldMapLoadsAndGridTrackInItIsRefused`（取代兩個「方格鐵軌搬進路網」的舊地圖測試）、PersistenceAndDeterminismTests `testDecodingRejectsAStationOnATile`（取代 `testDecodingRejectsStationWithoutMatchingTile`）、ContinuousTrackTests `testAWorldThatNeverUsedTheNetworkSavesNoNetwork`（取代 `testGridOnlySavesAreUnchangedAndOldSavesRead`）。
+- Golden 執行器（`GoldenScenario.swift`）：方格的指令、觀察、錯誤、`node`／`link` 位置、格與連結資源、佔格車站都拒絕並說明（`testTheGridsStepsAndValuesAreRefused`）；最終狀態的 `tracks`、列車的 `trail` 與 `movement.continuation` 照 schema 27 讀寫，但只能是 `[]`。`testAWrongTopologyExpectationIsReported` 改成路網的 `testAWrongNetworkExpectationIsReported`。
+- 差分模型（`ReferenceWorld` 與 extension）、KernelDifferentialTests、`PropertySupport`（方格產生器、`ReferenceMovement`、`ReferenceRoute`、`WorldInvariants` 的方格分支）刪掉方格。路網 campaign 抽亂數的順序沒變，所以 digest 不變。
+- `ReplayCommand` 不再有「方格指令沒有紀錄形式」的情況；重播 checksum 的車站一行本來就是點車站的寫法，checksum 不變。
+
+### 8.10 F3c-3c 之後暫時沒有改的地方
+
+- **golden schema 28**：fixture 拿掉 `tracks`、`trail`、`continuation`，README 的 schema 歷史，以及 `Web/WasmProbe`（它直接複製 `GoldenScenario.swift` 與 `NetworkSupport.swift` 的前半，這一步之後照樣能編譯，但沒有在 Linux 上跑）。→ F3c-4。
+- **改名**：`TrackNodeID`／`TrackEdgeID` 單一 case 的列舉、`TrainPosition.linkLength`、`TrainMovement` 的 `continuation` 鍵名與 `setTrainContinuation(_:along:)`。決策 51 規定和刪除分開做。
+- **票價的距離**：照舊用點車站底下那一格（決策 51 第 2 點）。
+
 ## 驗證紀錄
 
 - **VERIFIED — Linux `/workspace/railway-game-ios` 靜態盤點**：`rg -n` 搜尋並讀取定義、使用分支與 generator；全部 27 份 golden 與 4 份 save 使用 Python `json` 解析，逐份計數／檢查型態。這是靜態查核，不是 Swift 執行結果。

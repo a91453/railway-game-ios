@@ -115,7 +115,6 @@ final class NetworkSectionTests: XCTestCase {
             NetworkSection(traversals: [t(7, true), t(8, true), t(9, true)], nodes: [.node(2), .node(9), .node(10), .node(7)], isLoop: false),
             NetworkSection(traversals: [t(10, true)], nodes: [.node(7), .node(8)], isLoop: false),
         ])
-        XCTAssertEqual(world.trackSections(), [], "no grid track")
     }
 
     func testCuttingTheLoopMakesTwoDeadEnds() throws {

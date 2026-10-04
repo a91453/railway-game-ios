@@ -68,7 +68,7 @@ final class NetworkDisplayTests: XCTestCase {
         for error in [GameError.trackTooSteep, .invalidTrackStructure, .invalidPlatform] {
             XCTAssertFalse(error.playerMessage(in: .english).isEmpty)
         }
-        XCTAssertEqual(TrackNodeID.tile(GridPosition(x: 1, y: 2)).displayText(in: .english), "Tile (1, 2)")
-        XCTAssertEqual(TrackEdgeID.link(GridPosition(x: 1, y: 2), GridPosition(x: 2, y: 2)).displayText(in: .english), "Link (1, 2)–(2, 2)")
+        XCTAssertEqual(TrackNodeID.node(1).displayText(in: .english), "Node #1")
+        XCTAssertEqual(TrackEdgeID.edge(2).displayText(in: .english), "Edge #2")
     }
 }

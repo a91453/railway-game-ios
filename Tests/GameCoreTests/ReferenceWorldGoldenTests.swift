@@ -37,38 +37,15 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.pendingTenths, final.pendingTenths ?? 0, name)
             XCTAssertEqual(model.speed, final.speed.speed, name)
             XCTAssertEqual(model.balance, final.balance, name)
-            XCTAssertEqual(
-                model.stations.map { station in
-                    station.point.map { WorldSummary.StationSummary(id: station.id, name: station.name, point: $0) }
-                        ?? WorldSummary.StationSummary(
-                            id: station.id, name: station.name, x: station.position.x, y: station.position.y,
-                            annexes: station.annexes.map(PositionSummary.init)
-                        )
-                },
-                final.stations, name
-            )
-            let tracks = model.tiles.compactMap { position, tile -> WorldSummary.TrackSummary? in
-                let layout: TrackLayout
-                switch tile {
-                case .track: layout = .open
-                case .turnout(_, let stem): layout = .turnout(stem: stem)
-                case .crossing: layout = .crossing
-                case .station: return nil
-                }
-                let mask = model.mask(at: position)!
-                return WorldSummary.TrackSummary(
-                    x: position.x, y: position.y, connections: Directions(TrackConnections(rawValue: mask)), layout: LayoutSummary(layout)
-                )
-            }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
-            XCTAssertEqual(tracks, final.tracks, name)
+            XCTAssertEqual(model.stations.map { WorldSummary.StationSummary(id: $0.id, name: $0.name, point: $0.point) }, final.stations, name)
+            XCTAssertEqual(final.tracks, [], name)
             XCTAssertEqual(
                 model.trains.map {
                     WorldSummary.TrainSummary(
                         id: $0.id, name: $0.name, position: TrainPositionSummary($0.position),
-                        movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end),
+                        movement: TrainMovementSummary(rate: $0.rate, cursor: $0.cursor, edges: $0.edges, end: $0.end),
                         timetable: $0.timetable.map(StopSummary.init), repeat: RepeatSummary($0.period.map { $0 / GameTime.secondsPerMinute }),
                         execution: ExecutionSummary($0.service?.execution), times: $0.service.map { TimesSummary($0.times) }, cars: $0.cars,
-                        trail: $0.trail.map(PositionSummary.init),
                         trailEdges: $0.trailEdges, reservation: $0.reservation.map(ResourceSummary.init), performance: $0.performance
                     )
                 },
@@ -102,20 +79,13 @@ final class ReferenceWorldGoldenTests: XCTestCase {
     private static func apply(_ command: ScenarioCommand, to model: inout ReferenceWorld) -> StepOutcome {
         var error: GameError?
         switch command {
-        case .buildTrack(let p, let connections): error = model.buildTrack(at: p, mask: connections.rawValue)
-        case .buildTurnout(let p, let connections, let stem): error = model.buildTurnout(at: p, mask: connections.rawValue, stem: stem)
-        case .buildCrossing(let p): error = model.buildCrossing(at: p)
-        case .removeTrack(let p): error = model.removeTrack(at: p)
-        case .buildStation(let name, let p): error = model.buildStation(named: name, at: p)
         case .buildStationAt(let name, let point): error = model.buildStation(named: name, at: point)
-        case .extendStation(let id, let p): error = model.extendStation(id, to: p)
         case .purchaseTrain(let name): error = model.purchaseTrain(named: name)
         case .setTrainCars(let id, let cars): error = model.setCars(id, cars)
         case .placeTrain(let id, let position): error = model.placeTrain(id, at: position)
         case .unplaceTrain(let id): error = model.unplaceTrain(id)
         case .reverseTrain(let id): error = model.reverseTrain(id)
         case .setTrainMovementRate(let id, let rate): error = model.setRate(id, rate)
-        case .setTrainContinuation(let id, let nodes): error = model.setContinuation(id, nodes)
         case .setTrainTimetable(let id, let stops, let period): error = model.setTimetable(id, stops, period: periodSeconds(period))
         case .startTrainService(let id): error = model.startService(id)
         case .stopTrainService(let id): error = model.stopService(id)
@@ -155,29 +125,17 @@ final class ReferenceWorldGoldenTests: XCTestCase {
 
     private static func answer(_ observation: ScenarioObservation, in model: ReferenceWorld) -> ObservationAnswer {
         switch observation {
-        case .connectedNeighbors(let p):
-            return .neighbors(model.neighbors(of: p))
-        case .isConnected(let p, let q):
-            return .connected(model.joined(p, q))
         case .train(let id):
             return .train(model.trains.first { $0.id == id.rawValue }.map {
                 TrainState(
                     position: TrainPositionSummary($0.position),
-                    movement: TrainMovementSummary(rate: $0.rate, continuation: $0.continuation, cursor: $0.cursor, edges: $0.edges, end: $0.end)
+                    movement: TrainMovementSummary(rate: $0.rate, cursor: $0.cursor, edges: $0.edges, end: $0.end)
                 )
             })
-        case .route(let start, let destination):
-            return .route(model.route(from: start, to: destination))
-        case .platforms(let station):
-            return .platforms(model.platforms(of: station))
-        case .routeToStation(let start, let station, let cars):
-            return .route(model.route(from: start, toStation: station, length: ReferenceWorld.length(cars: cars)))
         case .stationStops(let train):
             return .stations(model.stationsStoppedAt(by: train))
         case .wholeTrainStops(let train):
             return .stations(model.stationsBesideWholeTrain(train))
-        case .platformTracks(let station):
-            return .platformTracks(model.platformTracks(of: station))
         case .timetable(let id):
             return .timetable(model.trains.first { $0.id == id.rawValue }?.timetable)
         case .execution(let id):
@@ -194,18 +152,14 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .minutes(model.lineHeadway(id, at: level, pattern: pattern))
         case .lineSegmentLoads(let id, let level):
             return .loads(model.lineSegmentLoads(id, at: level))
-        case .exits(let p, let heading):
-            return .exits(model.neighbors(of: p).filter { model.mayTurn(at: p, facing: heading, to: stepDirection(from: p, to: $0)!) })
         case .occupancy(let id):
             return .resources(model.occupiedResources(of: id))
         case .conflicts:
             return .conflicts(model.occupancyConflicts())
-        case .trackSections:
-            return .sections(model.trackSections())
         case .parallelTracks(let a, let b):
             return .tracks(model.parallelTracks(between: a, and: b))
         case .trackEdge(let id):
-            guard case .edge(let number) = id, let edge = model.networkEdges[number] else { return .edge(nil) }
+            guard let edge = model.networkEdges[id.number] else { return .edge(nil) }
             return .edge(EdgeInfoSummary(from: edge.from, to: edge.to, length: edge.length))
         case .edgeLocation(let traversal, let distance):
             return .location(model.networkLocation(traversal, offset: distance).map(LocationSummary.init))
@@ -218,7 +172,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .edgePose(let traversal, let distance):
             return .pose(model.networkLocation(traversal, offset: distance).map(PoseSummary.init))
         case .edgeAlignment(let id):
-            guard case .edge(let number) = id, let edge = model.networkEdges[number] else { return .alignment(nil) }
+            guard let edge = model.networkEdges[id.number] else { return .alignment(nil) }
             return .alignment(AlignmentSummary(model.alignment(of: edge)))
         case .tunnelPortals:
             return .nodes(model.tunnelPortals)

@@ -188,11 +188,9 @@ final class ContinuousTrackTests: XCTestCase {
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -4_097)) }
         refused(.unknownTrackNode(.node(9))) { _ = try $0.buildTrackEdge(from: .node(9), to: .node(8)) }
         refused(.unknownTrackNode(.node(8))) { _ = try $0.buildTrackEdge(from: a, to: .node(8)) }
-        refused(.unknownTrackNode(.tile(GridPosition(x: 0, y: 0)))) { _ = try $0.buildTrackEdge(from: a, to: .tile(GridPosition(x: 0, y: 0))) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackEdge(from: a, to: a) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackEdge(from: a, to: b, curve: .cubic(PlanPoint(x: 1_024, y: -1), PlanPoint(x: 2_048, y: 512))) }
         refused(.unknownTrackEdge(.edge(1))) { try $0.removeTrackEdge(.edge(1)) }
-        refused(.unknownTrackEdge(.link(GridPosition(x: 0, y: 0), GridPosition(x: 1, y: 0)))) { try $0.removeTrackEdge(.link(GridPosition(x: 0, y: 0), GridPosition(x: 1, y: 0))) }
         refused(.unknownTrackNode(.node(3))) { try $0.removeTrackNode(.node(3)) }
 
         var poor = try GameWorld(width: 16, height: 16, economy: GameEconomy(balance: 150, costs: ConstructionCosts(track: 100, station: 1, train: 1)))
@@ -388,15 +386,12 @@ final class ContinuousTrackTests: XCTestCase {
         try world.advance(ticks: 1)
         // 584 to C, all 512 of C–D; 404 left over, dropped at D.
         XCTAssertEqual(world.train(id: first)?.position, .onEdge(forward(cd), offset: 512))
-        XCTAssertEqual(world.train(id: first)?.movement, TrainMovement(rate: 1_500, continuation: [], cursor: 0))
+        XCTAssertEqual(world.train(id: first)?.movement, TrainMovement(rate: 1_500, cursor: 0))
         // The spur leaves D at a right angle: no continuation onto it.
         XCTAssertThrowsError(try world.setTrainContinuation(first, along: [forward(dn)])) {
             XCTAssertEqual($0 as? GameError, .invalidContinuation)
         }
         XCTAssertNil(world.route(from: .onEdge(forward(cd), offset: 512), to: nodes[4]))
-        XCTAssertThrowsError(try world.setTrainContinuation(first, to: [GridPosition(x: 0, y: 0)])) {
-            XCTAssertEqual($0 as? GameError, .invalidContinuation, "a train on the network follows edges")
-        }
         XCTAssertEqual(world.location(of: world.train(id: first)!.position!)?.position, WorldCoordinate(x: 4_608, y: 1_536))
     }
 
@@ -561,11 +556,9 @@ final class ContinuousTrackTests: XCTestCase {
         XCTAssertNotNil(position["onEdge"])
     }
 
-    func testGridOnlySavesAreUnchangedAndOldSavesRead() throws {
+    func testAWorldThatNeverUsedTheNetworkSavesNoNetwork() throws {
         var world = try makeWorld()
-        try world.buildTrack(at: GridPosition(x: 1, y: 1), connections: [.east, .west])
         try world.purchaseTrain(named: "A")
-        try world.placeTrain(first, at: .atNode(GridPosition(x: 1, y: 1), heading: .east))
         let object = try json(world)
         XCTAssertNil(object["network"], "no network key while the network was never used")
         let train = try XCTUnwrap((object["trains"] as? [[String: Any]])?.first)

@@ -4,19 +4,6 @@ import GameCore
 // (see ``DisplayLanguage``). GameCore stays free of UI copy; the app shows
 // these strings as they are.
 
-extension TrackDirection {
-    /// "North", or "北": a grid train's heading, for its position text
-    /// until the grid leaves GameCore (Stage F3c).
-    public func name(in language: DisplayLanguage) -> String {
-        switch self {
-        case .north: language.text("North", "北")
-        case .east: language.text("East", "東")
-        case .south: language.text("South", "南")
-        case .west: language.text("West", "西")
-        }
-    }
-}
-
 extension GameWorld {
     /// What station `id` is: "Station · Central", and its platforms on the
     /// track network once it has any (Stage F1: their number and length
@@ -38,12 +25,10 @@ extension GameWorld {
 }
 
 extension Station {
-    /// Where the station stands, for lists: its tile, "x 3, y 4", or, at a
-    /// point (Stage F1), the point in metres east and south of the map's
-    /// north-west corner, "x 41 m, y 17 m".
+    /// Where the station stands, for lists: its point (Stage F1) in metres
+    /// east and south of the map's north-west corner, "x 41 m, y 17 m".
     public func placeText(in language: DisplayLanguage) -> String {
-        guard let point else { return "x \(position.x), y \(position.y)" }
-        return "x \(NetworkBuilding.lengthText(point.x, in: language)), y \(NetworkBuilding.lengthText(point.y, in: language))"
+        "x \(NetworkBuilding.lengthText(point.x, in: language)), y \(NetworkBuilding.lengthText(point.y, in: language))"
     }
 }
 
@@ -85,16 +70,10 @@ extension GameWorld {
 }
 
 extension TrainPosition {
-    /// Where a train is, exactly as GameCore records it: "At (3, 2), facing
-    /// East" at a node, or "(3, 2) → (4, 2), 256 / 1024" on a link (the
-    /// offset from the first tile, out of ``TrainPosition/linkLength``); on
-    /// the track network, "Edge #3 forward, 256 units along".
+    /// Where a train is, exactly as GameCore records it: "Edge #3 forward,
+    /// 256 units along".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .atNode(let tile, let heading):
-            language.text("At \(tile), facing \(heading.name(in: language))", "在 \(tile)，面向\(heading.name(in: language))")
-        case .onLink(let from, let to, let offset):
-            "\(from) → \(to), \(offset) / \(TrainPosition.linkLength)"
         case .onEdge(let traversal, let offset):
             language.text(
                 "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along",
@@ -105,20 +84,18 @@ extension TrainPosition {
 }
 
 extension TrackNodeID {
-    /// "Node #3" on the track network, or "Tile (3, 2)" on the grid.
+    /// "Node #3".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .tile(let tile): language.text("Tile \(tile)", "格 \(tile)")
         case .node(let number): language.text("Node #\(number)", "節點 #\(number)")
         }
     }
 }
 
 extension TrackEdgeID {
-    /// "Edge #3" on the track network, or "Link (3, 2)–(4, 2)" on the grid.
+    /// "Edge #3".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .link(let a, let b): language.text("Link \(a)–\(b)", "連結 \(a)–\(b)")
         case .edge(let number): language.text("Edge #\(number)", "軌段 #\(number)")
         }
     }
@@ -130,7 +107,7 @@ extension Train {
         position?.displayText(in: language) ?? language.text("Not on the track", "不在軌道上")
     }
 
-    /// How many cars it has, one to a tile: "1 car", "3 cars".
+    /// How many cars it has: "1 car", "3 cars".
     public func carsText(in language: DisplayLanguage) -> String {
         Self.carsText(cars, in: language)
     }
@@ -184,25 +161,12 @@ extension GameError {
             language.text("A \(width) × \(height) map is not supported.", "不支援 \(width) × \(height) 的地圖。")
         case .outOfBounds(let position):
             language.text("\(position) is outside the map.", "\(position) 在地圖外。")
-        case .tileOccupied(let position):
-            language.text("Tile \(position) is already occupied.", "\(position) 這一格已經有東西了。")
-        case .invalidTrackConnections:
-            // The app builds pieces only from the four named directions, so
-            // an empty piece is the only way a player can get this error.
-            language.text("Choose at least one direction for the track.", "請為軌道選擇至少一個方向。")
         case .invalidName:
             language.text("Enter a name.", "請輸入名稱。")
         case .insufficientFunds(let required, let available):
             language.text(
                 "Not enough cash: this costs \(required.centsText) and you have \(available.centsText).",
                 "餘額不足：需要 \(required.centsText)，目前只有 \(available.centsText)。"
-            )
-        case .noTrackToRemove(let position):
-            language.text("There is no track to remove at \(position).", "\(position) 沒有可拆除的軌道。")
-        case .trackInUse(let position):
-            language.text(
-                "A train is on the track at \(position). Take the train off the track first.",
-                "\(position) 的軌道上有列車。請先把列車移出軌道。"
             )
         case .unknownTrain(let id):
             language.text("There is no train #\(id.rawValue).", "沒有列車 #\(id.rawValue)。")
@@ -212,8 +176,8 @@ extension GameError {
             language.text("Train #\(id.rawValue) is not on the track.", "列車 #\(id.rawValue) 不在軌道上。")
         case .invalidTrainPosition:
             language.text(
-                "A train can only be placed on a track tile or between two joined track tiles, with track behind it for all its cars.",
-                "列車只能放在軌道格上，或兩格相接的軌道之間，而且後方要有足夠的軌道容納所有車廂。"
+                "A train can only be placed on the track, with track behind it for all its cars.",
+                "列車只能放在軌道上，而且後方要有足夠的軌道容納所有車廂。"
             )
         case .invalidMovementRate:
             language.text("A train's rate cannot be negative.", "列車的速率不能是負數。")
@@ -287,11 +251,6 @@ extension GameError {
             )
         case .unknownLinePattern(let index):
             language.text("The line has no pattern #\(index + 1).", "這條路線沒有交路 #\(index + 1)。")
-        case .invalidStationTile(let position):
-            language.text(
-                "A station can only grow onto an empty tile beside one of its tiles, not \(position).",
-                "車站只能擴建到緊鄰車站的空地，不能擴建到 \(position)。"
-            )
         case .invalidTrainLength:
             language.text(
                 "A train has \(Train.minimumCars) to \(Train.maximumCars) cars.",

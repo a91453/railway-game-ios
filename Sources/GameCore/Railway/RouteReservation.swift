@@ -14,7 +14,7 @@
 // Everything here reads topology and integer chainage only: traversals,
 // spans, edge lengths, platforms and where paths end, never geometry.
 
-/// A stretch of one edge (or grid link) that a train covers: along
+/// A stretch of one edge that a train covers: along
 /// `traversal`, from `from` to `to`, both measured the way it is travelled
 /// from its start (`0 <= from <= to <=` its length).
 struct TrackStretch: Hashable, Sendable {
@@ -136,15 +136,11 @@ extension GameWorld {
 
     /// The stretches `train`'s head still covers by itself, in order, and
     /// whether there is any distance in them: its route (see
-    /// ``pathAhead(of:)``) as far as it can ever follow it.
-    ///
-    /// - On the grid: the rest of its link, then every link of its
-    ///   continuation, laid now or not (removed track may be rebuilt, and
-    ///   the train goes on then).
-    /// - On the track network: the rest of its edge, then the edges ahead it
-    ///   can enter, the last up to where the path ends (``TrainMovement/end``)
-    ///   or, with no path, or a path broken by a removed edge, to the end of
-    ///   the last edge it reaches: an edge that was removed never comes back.
+    /// ``pathAhead(of:)``) as far as it can ever follow it: the rest of its
+    /// edge, then the edges ahead it can enter, the last up to where the path
+    /// ends (``TrainMovement/end``) or, with no path, or a path broken by a
+    /// removed edge, to the end of the last edge it reaches: an edge that was
+    /// removed never comes back.
     func routeStretches(of train: Train) -> (stretches: [TrackStretch], moves: Bool) {
         guard let position = train.position else { return ([], false) }
         let ahead = pathAhead(of: train)
@@ -165,19 +161,12 @@ extension GameWorld {
             }
             stretches.append(TrackStretch(traversal: last, from: 0, to: lastStop(network.edge(last.edge)!.length)))
             return (stretches, true)
-        case .atNode, .onLink:
-            var stretches: [TrackStretch] = []
-            if case .onLink(let from, let to, let offset) = position {
-                stretches.append(TrackStretch(traversal: .link(from: from, to: to), from: offset, to: TrainPosition.linkLength))
-            }
-            stretches += ahead.map { TrackStretch(traversal: $0, from: 0, to: TrainPosition.linkLength) }
-            return (stretches, !stretches.isEmpty)
         }
     }
 
-    /// The stretches a train on the track network covers from its head back
-    /// to its tail: the head's edge, then its body's, nearest first. Empty
-    /// on the grid, whose trains are read by their tiles and links.
+    /// The stretches a train covers from its head back to its tail: the
+    /// head's edge, then its body's, nearest first. Empty for an unplaced
+    /// train.
     func bodyStretches(of train: Train) -> [TrackStretch] {
         guard case .onEdge(let traversal, let offset)? = train.position, network.edge(traversal.edge) != nil else { return [] }
         var stretches = [TrackStretch(traversal: traversal, from: max(0, offset - train.length), to: offset)]
@@ -193,17 +182,10 @@ extension GameWorld {
     // MARK: - The resources of a stretch
 
     /// The end nodes, length and resource spans of edge `id`, from its
-    /// `from` node: for a grid link its tiles, 1024 and its one span, laid
-    /// now or not (its identity is its two tiles); for an edge of the track
-    /// network what the network holds, or `nil` if it does not exist.
+    /// `from` node, or `nil` if it does not exist.
     private func stretchFacts(of id: TrackEdgeID) -> (from: TrackNodeID, to: TrackNodeID, length: Int64, spans: [TrackSpan])? {
-        switch id {
-        case .link(let a, let b):
-            return (.tile(a), .tile(b), TrainPosition.linkLength, [TrackSpan(edge: id, start: 0, end: TrainPosition.linkLength)])
-        case .edge:
-            guard let edge = network.edge(id) else { return nil }
-            return (edge.from, edge.to, edge.length, network.spans(of: id, length: edge.length))
-        }
+        guard let edge = network.edge(id) else { return nil }
+        return (edge.from, edge.to, edge.length, network.spans(of: id, length: edge.length))
     }
 
     /// The track `stretches` cover, the one rule for occupancy and
@@ -239,12 +221,11 @@ extension GameWorld {
     /// edge's end there is a fouling end (see ``isFoulingEnd(of:at:)``).
     /// Within that distance of a node two edges that end there may lie side
     /// by side (Stage S4 does not check their clearance there), so a train
-    /// there takes the node as well. None on the grid, whose links meet
-    /// only at their tiles.
+    /// there takes the node as well.
     func foulingNodes(covering stretches: [TrackStretch]) -> [TrackResource] {
         var nodes: [TrackResource] = []
         for stretch in stretches {
-            guard case .edge = stretch.traversal.edge, let edge = network.edge(stretch.traversal.edge) else { continue }
+            guard let edge = network.edge(stretch.traversal.edge) else { continue }
             let (low, high) = stretch.traversal.direction == .forward
                 ? (stretch.from, stretch.to)
                 : (edge.length - stretch.to, edge.length - stretch.from)
@@ -282,7 +263,7 @@ extension GameWorld {
 }
 
 extension TrackResource {
-    /// Whether this is a span of edge (or grid link) `edge`.
+    /// Whether this is a span of edge `edge`.
     func isSpan(of edge: TrackEdgeID) -> Bool {
         if case .span(let span) = self { span.edge == edge } else { false }
     }

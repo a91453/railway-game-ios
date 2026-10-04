@@ -649,7 +649,6 @@ final class NetworkServiceTests: XCTestCase {
             LineLeg(from: 0, to: 1, path: TrainPath(traversals: [forward(e2), forward(e3)], end: nil, distance: 19_456), seconds: 49),
             LineLeg(from: 1, to: 0, path: TrainPath(traversals: [backward(e2), backward(e1)], end: 7_168, distance: 23_552), seconds: 54),
         ])
-        XCTAssertEqual(journey.legs.map(\.route), [[], []], "no grid tiles")
         XCTAssertEqual(journey.roundTripSeconds, 343)
         XCTAssertEqual(journey.roundTripMinutes, 6)
         XCTAssertEqual(world.lineMaximumTrains(main), 3)

@@ -17,6 +17,12 @@ Rules, as for the golden scenarios:
   `01_MIGRATION_MAP.md`: "Every schema change should have an explicit
   migration function and regression fixture").
 
+None of these saves holds anything of the grid: the app never wrote one
+that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
+track, a station on tiles or a train on the grid, which only a save made by
+hand could hold, is refused with that reason
+(`SavedGameTests.testHandMadeSavesWithGridContentAreRefusedWithTheReason`).
+
 | File | Version | What it is |
 | --- | --- | --- |
 | `v1-demo-90-minutes.json` | 1 | The demo map (`DemoWorld`, English) after 90 game minutes: stations at points, one with two platforms; a surface and an elevated edge; two lines with a train each under traffic control; waiting passengers; a managed company's accounts. Its 32 × 24 map has every tile written out. |

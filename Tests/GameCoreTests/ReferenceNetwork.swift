@@ -299,30 +299,15 @@ extension ReferenceWorld {
         return nil
     }
 
-    /// A continuation of traversals: on the network each must be a run the
-    /// train may take after the one before; on the grid, links from the node
-    /// ahead, each checked as a grid continuation. Decision 31: on the
-    /// network it may stop at `end` along its last run (the train's own
-    /// when there are none): short of that run's end, not at its very start
-    /// once a run is entered, and not behind the train on its own run; never
-    /// on the grid.
+    /// A continuation of traversals: each must be a run the train may take
+    /// after the one before. Decision 31: it may stop at `end` along its
+    /// last run (the train's own when there are none): short of that run's
+    /// end, not at its very start once a run is entered, and not behind the
+    /// train on its own run.
     mutating func setContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) -> GameError? {
         guard let i = trains.firstIndex(where: { $0.id == id.rawValue }) else { return .unknownTrain(id) }
-        guard let position = trains[i].position else { return .trainNotPlaced(id) }
+        guard case .onEdge(let traversal, let offset)? = trains[i].position else { return .trainNotPlaced(id) }
         guard trains[i].service == nil else { return .trainServiceActive(id) }
-        guard case .onEdge(let traversal, let offset) = position else {
-            if end != nil { return .invalidContinuation }
-            var node = Self.ahead(position).0
-            var nodes: [GridPosition] = []
-            for next in traversals {
-                guard case .link(let a, let b) = next.edge, (a.y, a.x) < (b.y, b.x) else { return .invalidContinuation }
-                let (from, to) = next.direction == .forward ? (a, b) : (b, a)
-                guard from == node else { return .invalidContinuation }
-                nodes.append(to)
-                node = to
-            }
-            return setContinuation(id, nodes)
-        }
         var run = Run(traversal)!
         var numbers: [Int] = []
         for next in traversals {

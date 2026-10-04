@@ -115,12 +115,11 @@ struct ReplayCommand: Codable {
         self.kind = kind
     }
 
-    /// `operation`'s recorded form, or `nil` for a grid command.
-    init?(_ operation: KernelDifferentialTests.Operation) {
+    /// `operation`'s recorded form.
+    init(_ operation: KernelDifferentialTests.Operation) {
         switch operation {
         case .purchase(let name): self.init(kind: "purchase"); self.name = name
-        case .place(let id, let position):
-            guard case .onEdge(let traversal, let offset) = position else { return nil }
+        case .place(let id, .onEdge(let traversal, let offset)):
             self.init(kind: "place"); train = id.rawValue; at = Self.step(traversal); self.offset = offset
         case .unplace(let id): self.init(kind: "unplace"); train = id.rawValue
         case .reverse(let id): self.init(kind: "reverse"); train = id.rawValue
@@ -184,8 +183,6 @@ struct ReplayCommand: Codable {
         case .pause: self.init(kind: "pause")
         case .resume: self.init(kind: "resume")
         case .saveAndLoad: self.init(kind: "saveAndLoad")
-        case .buildTrack, .removeTrack, .buildStation, .setContinuation, .sendToTile, .buildTurnout, .buildCrossing, .extendStation:
-            return nil
         }
     }
 

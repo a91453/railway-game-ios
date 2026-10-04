@@ -1,7 +1,7 @@
 // World coordinates (Phase 4.5 Stage S3, ARCHITECTURE decisions 28 and 29).
-// One world frame holds the grid and the continuous track network: x grows
-// east, y south (as on the grid) and z up, in the logical units trains
-// already move in. A tile is `tileSize` units wide, so the centre of tile
+// One world frame holds the map's tiles and the track network: x grows east,
+// y south (as the map's rows run) and z up, in the logical units trains move
+// in. A tile is `tileSize` units wide, so the centre of tile
 // (x, y) is (1024x + 512, 1024y + 512, 0). Nominally a unit is 1/64 m (a tile
 // is 16 m); only renderers and grades care, the simulation does not.
 //

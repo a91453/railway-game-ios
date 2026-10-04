@@ -6,9 +6,9 @@
 
 **Early development — GameCore + native prototype UI（Phase 2B）；Phase 4.6 Stage T（進路預約）；G1a（車站需求與乘客）；G1b（上下車與容量）；G1c（票價、帳本與畫面）.**
 
-目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及與方格並存的連續軌道路網：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3），高程、坡度、地面／高架／橋／隧道等結構物、立體交叉的淨空、隧道口與多層月台（Phase 4.5 Stage S4），以及路網上的停站、時刻表、線路與自動派車：列車停在路網月台的末端、以整數的實際距離計算行程，方格與路網共用同一套營運規則（Phase 4.5 Stage S5），以及交通控制下的進路預約：列車出發前一次取得整條路的節點與 span，拿不到就等待（Phase 4.6 Stage T），以及車站的需求、每分鐘以整數釋出的乘客、車站的排隊與乘客守恆的稽核（G1a），列車離站時的上下車與容量（G1b），以及經營模式下的票價、每小時與每天的結算、帳本與經濟面板（G1c）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有 movement authority、待避與交會或城市模擬。
+目前有與畫面無關的模擬核心（`GameCore` Swift Package）、與平台無關的 Presentation 邏輯（`GamePresentation`），以及可操作的原生 SwiftUI prototype App（`RailwayGameApp/`，iPhone / iPad）。GameCore 已有列車位置、沿明確路徑移動、最短路徑搜尋與停站（Phase 3 Stage N）的核心，每台列車的時刻表資料（Phase 4 Stage O），依時刻表執行服務的核心（Phase 4 Stage P：到達、停留到排定出發、出發），在終點站折返、每隔固定週期重複的時刻表（Phase 4 Stage Q1），服務線路的資料與推導（Phase 4 Stage Q2a），依線路自動派車（Phase 4 Stage Q2b），交路與快慢車等服務模式、各段共用的容量（Phase 4 Stage Q3），道岔與平面交叉、列車佔用的軌道資源、區段與股道數（Phase 4.5 Stage S1），多格車站、月台股道與多節列車（Phase 4.5 Stage S2），以及連續軌道路網（Stage F3c 起是唯一的鐵軌，方格已移除）：任意方向的直線與曲線、由邊端方向推導的道岔與平面交叉、在不同長度的邊上連續行駛的多節列車（Phase 4.5 Stage S3），高程、坡度、地面／高架／橋／隧道等結構物、立體交叉的淨空、隧道口與多層月台（Phase 4.5 Stage S4），以及路網上的停站、時刻表、線路與自動派車：列車停在路網月台的末端、以整數的實際距離計算行程（Phase 4.5 Stage S5），以及交通控制下的進路預約：列車出發前一次取得整條路的節點與 span，拿不到就等待（Phase 4.6 Stage T），以及車站的需求、每分鐘以整數釋出的乘客、車站的排隊與乘客守恆的稽核（G1a），列車離站時的上下車與容量（G1b），以及經營模式下的票價、每小時與每天的結算、帳本與經濟面板（G1c）；App 以最小的工程畫面（Train 工具，Phase 3 Stage M）操作列車，並有線路面板（Stage R：線路、交路與快車、各等級的列車數與班距、覆蓋缺口）與列車的服務狀態（早到或誤點）。**尚未**有 movement authority、待避與交會或城市模擬。
 
-目前的地圖畫面是 **prototype**：SwiftUI Canvas 畫出方格，加上連續路網的俯視 debug 投影（沿取樣的中心線畫出邊與路網上的列車；高度只表現在由低到高的繪製順序與結構物的樣式：隧道是虛線、高架有陰影）。真正的 3D renderer、建造連續軌道的畫面與 spline 編輯器都還沒有開始；GameCore 只提供給 renderer 讀取的整數幾何查詢（`railwaySnapshot()`、`trackAlignment(of:)`、`trackGeometry(of:)`、`location(of:)`、`bodyPath(of:)`），它們是未來 3D renderer 的權威輸入。
+目前的地圖畫面是 **prototype**：SwiftUI Canvas 畫出土地與連續路網的俯視 debug 投影（沿取樣的中心線畫出邊與路網上的列車；高度只表現在由低到高的繪製順序與結構物的樣式：隧道是虛線、高架有陰影）。真正的 3D renderer、建造連續軌道的畫面與 spline 編輯器都還沒有開始；GameCore 只提供給 renderer 讀取的整數幾何查詢（`railwaySnapshot()`、`trackAlignment(of:)`、`trackGeometry(of:)`、`location(of:)`、`bodyPath(of:)`），它們是未來 3D renderer 的權威輸入。
 
 App 目前能做到：
 
@@ -19,28 +19,26 @@ App 目前能做到：
 - 繁體中文與英文：跟著系統語言切換（ARCHITECTURE 決策 38）
 - HUD：現金、遊戲時間（`Day 1 · 08:30`／`第 1 日 · 08:30`，慢速或在分鐘中間時加上秒）、暫停／播放與速度選單（1× 真實時間、10×、60×、600×、1200×；新遊戲是 600×）
 - `GameSession` 的 game loop 把真實時間換算成整數 tick 推進遊戲時間與列車；App 不在前景作用中（背景、控制中心、App 切換器）時停止，回來不補跑
-- Train 工具：購買列車、放置在選取的鐵軌格（選朝向）、設定 rate、把列車送到選取的鐵軌格或車站（GameCore 求路後原封不動提交為 continuation；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑、rate 與停在哪些車站，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
+- Train 工具：購買列車、放置在選取車站的路網月台（選朝向）、設定 rate、把列車送到選取的車站（GameCore 求路後原封不動提交為路；到不了時什麼都不改）、反向、取下；顯示 GameCore 記錄的位置、剩餘路徑、rate 與停在哪些車站，地圖在列車的權威位置畫出列車（每個 tick 跳一步，不插值）
 
 GameCore 目前能做到：
 
-- 建立指定尺寸的方格地圖（1…1024 × 1…1024）
-- 鋪設 / 拆除鐵軌（每格記錄連接方向，只能是北、東、南、西；不要求與鄰格相接）
-- 查詢鐵軌連通：由地圖推導相鄰鐵軌是否雙向相接（`connectedNeighbors(of:)`、`isConnected(_:to:)`）
-- 建造車站（唯一、可保存的 Station ID）
-- 購買列車（新車未放置）；把列車放到鐵軌格中心或兩格相接鐵軌之間、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`；每條連結 1024 單位）
+- 建立指定尺寸的地圖（1…1024 × 1…1024 格，一格 1024 單位）；地圖只有土地，鐵軌在路網上
+- 建造車站：在世界座標的一點，不佔格（唯一、可保存的 Station ID）
+- 購買列車（新車未放置）；把列車放到路網的邊上、取下、原地反向（`placeTrain`、`unplaceTrain`、`reverseTrain`）
 - 遊戲時間：開局以來的遊戲秒（Stage W2a），基本步長一秒；速度是每 tick 的十分之一秒，宿主每 100 ms 一個 tick，所以 `x1` 是真實時間，不足一秒的部分留到下一個 tick。到站、停站與發車每秒判定，派車、乘客釋出與帳在整分鐘處理
 - 列車與線路的性能（Stage W2c）：加速度、減速度、最高速度（可以有備用值與惰行），預設是標準性能，另有作者參考資料裡的車種（含 `Ci/` 的地鐵列車）；`setTrainPerformance`、`setLinePerformance` 更換
-- 列車移動：設定 rate（每遊戲分鐘的邏輯單位，分到每一秒）與明確的 continuation（`setTrainMovementRate`、`setTrainContinuation`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行
-- 路徑搜尋：`route(from:to:)` 找出到目的地鐵軌格的最短、不折返路徑（同長時依北、東、南、西順序），結果可直接交給 `setTrainContinuation`；只查詢、不改變世界
-- 停站：車站旁（正北、東、南、西）的鐵軌格是月台（`platforms(of:)`）；`route(from:toStation:)` 找出到最近月台的路徑；列車在月台格中心、行程結束時停在該站（`stationsStoppedAt(by:)`）。都由狀態推導，不另存
+- 列車移動：設定 rate（每遊戲分鐘的邏輯單位，分到每一秒）與明確的路（`setTrainMovementRate`、`setTrainContinuation(_:along:stoppingAt:)`），隨時間逐步沿指定路徑前進；不自動選路。前方鐵軌被拆時等待，補回後自動續行
+- 路徑搜尋：`route(from:to:)` 找出到路網節點的最短路，`path(from:toStation:)` 到車站的停車位置，結果可直接交給 `setTrainContinuation(_:along:stoppingAt:)`；只查詢、不改變世界
+- 停站：車站的月台在路網的邊上；列車的路走完、車頭在月台上時停在該站（`stationsStoppedAt(by:)`）。都由狀態推導，不另存
 - 時刻表：每台列車有依序的停靠（車站、排定的到達與離開，開局以來的遊戲秒），以 `setTrainTimetable` 整份替換；時間不倒流、車站必須存在。時刻表本身是計畫資料，只有明確啟動的服務會讀它
 - 時刻表服務：`startTrainService` 讓停在第一站的列車依時刻表跑一次（`stopTrainService` 結束）。每一站停站（Stage W2b）：到站 8 秒後開門、上下車（人越多越久）、至少停 36 秒（第一站、最後一站與折返的站 42 秒）、關門 9 秒；不會早於排定出發時刻離開，誤點時停完就走；兩站之間跟著列車性能的行駛曲線走（Stage W2c：加速、定速、惰行、煞車），走排定出發到排定到達的時間，準時出發就準時到達、晚出發整段往後移，排得太緊時盡快跑；已停在下一站時零距離到達（也停站），沒有路就關著門等待，最後一站停完、到了排定出發才結束。執行進度（第幾個停靠）與實際的到達、出發時刻是存檔的權威狀態，誤點由它們算出（`lateness(of:)`）；執行中不能手動改路、反向、取下或換時刻表
 - 折返與重複：停靠可以標記「在這站折返」，服務離開時先讓列車原地反向（找不到路時不反向），讓列車能從死路的終點站往回開。時刻表可以每隔固定週期重複（`setTrainTimetable(_:to:repeatingEvery:)`），一輪接一輪執行，執行進度同時記錄第幾輪；重複的服務從下一個準時的輪次開始
 - 服務線路：依序的車站、規劃行程用的性能、營運時間，以及尖峰／離峰／低峰各跑幾台列車或目標班距；世界的服務日決定每分鐘是哪個等級。由地圖推導線路的來回行程（每一段是性能建得出行駛曲線的最少整秒，Stage W2c）、最多列車數（最短班距 2 分鐘）、實際列車數與班距
 - 自動派車：用 `assignTrain` 把列車交給線路後，線路每分鐘檢查一次：營運中、這個等級有車要跑、距上次發車已過一個班距、跑車中的列車少於該等級的列車數時，就讓停在第一站的列車跑一個來回（產生該趟的時刻表並啟動服務）。列車回到第一站後原地折返等待，減車時多出的列車就停在那裡；線路的列車不能手動設定時刻表或啟停服務
-- 連續軌道（Phase 4.5 Stage S3）：以整數世界座標（一格 1024 單位）建造節點，節點之間以直線或兩個整數控制點的三次曲線建造邊（`buildTrackNode`、`buildTrackEdge`）；長度與取樣由固定的整數規則推導。只有共用節點的邊才會相接，離開節點方向相反的邊端互通，所以道岔、平面交叉自然成立，平面上交叉但沒有共用節點的邊互不相干。列車可以放在邊上、沿邊移動（`setTrainContinuation(_:along:)`）、反向，車身跨越多條邊；同一個最短路徑搜尋同時服務方格與路網
+- 連續軌道（Phase 4.5 Stage S3）：以整數世界座標（一格 1024 單位）建造節點，節點之間以直線或兩個整數控制點的三次曲線建造邊（`buildTrackNode`、`buildTrackEdge`）；長度與取樣由固定的整數規則推導。只有共用節點的邊才會相接，離開節點方向相反的邊端互通，所以道岔、平面交叉自然成立，平面上交叉但沒有共用節點的邊互不相干。列車可以放在邊上、沿邊移動（`setTrainContinuation(_:along:)`）、反向，車身跨越多條邊
 - 立體鐵路（Phase 4.5 Stage S4）：節點可以在地面上下 64 公尺（4096 單位）以內；邊沿水平里程有縱斷面（固定坡度，或兩端的拋物線豎曲線），最陡 40‰；結構物（地面、高架、橋、隧道）決定可以蓋的高度與費用。兩條鐵軌在平面上相遇時要相差 8 公尺以上（立體交叉，不共用資源），同一高度的交叉必須共用節點（平面交叉）。隧道口由邊推導；車站可以在路網上平坦的一段邊上有地面、高架或地下的月台（`addTrackPlatform`）。位置帶坡度（pitch），車身路徑是 3D 的
-- 路網上的營運（Phase 4.5 Stage S5）：停站、時刻表（折返與重複）、線路、自動派車、交路與快車都能在路網上運作，方格與路網是同一套規則。以車站為目的地的路（`path(from:toStation:length:)`，`TrainPath`）停在行進方向上月台的末端，只找放得下整列車的月台，距離是整數的實際里程；列車的路可以停在邊的中段（`setTrainContinuation(_:along:stoppingAt:)`）。服務正在使用的月台不能拆
+- 路網上的營運（Phase 4.5 Stage S5）：停站、時刻表（折返與重複）、線路、自動派車、交路與快車都能在路網上運作。以車站為目的地的路（`path(from:toStation:length:)`，`TrainPath`）停在行進方向上月台的末端，只找放得下整列車的月台，距離是整數的實際里程；列車的路可以停在邊的中段（`setTrainContinuation(_:along:stoppingAt:)`）。服務正在使用的月台不能拆
 - 進路預約（Phase 4.6 Stage T）：交通控制開啟時（`setTrafficControl`，App 的新遊戲預設開啟），列車出發、被派車或拿到新的路之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（`reservedResources(of:)`）；被其他列車持有（`heldResources(of:)`）時整個不取得，服務原地等待並每步重試（`trainHoldingRoute(of:)` 回答在等哪一台）。經過道岔與平面交叉的進路在共用節點衝突，停在交會點附近的列車也持有它，立體交叉互不衝突；預約中的鐵軌不能拆或改月台。預約存檔，走完路時釋放
 - 車站需求與乘客（G1a）：`setStationDemand` 設定車站的類型（住宅、辦公、商業、景點）與每天的旅次。每天的旅次分給同一條線路能到的車站，再依一天的形狀與兩端類型的曲線（移植自作者的 `Ci/` 網站）分到 24 小時；每分鐘以整數釋出，任何連續 24 小時正好是一天的量。乘客在起點依線路、方向、迄點成組排隊（先來的在前，一站最多 4000 人，放不下的記為溢出）；線路改變而不再載他們時記為放棄。每一站 `released = 等車 + 溢出 + 放棄`（`passengerLedger(of:)`）。
 - 上下車與容量（G1b）：列車每離開一站，先讓坐到那一站的人下車，再讓等它的線路與方向、要去它到下一次折返前會停的站的人上車（下車站遠的先上，移植自 `Ci/` 的 `allocateSeats`），最多到容量（每輛 352 人：額定 320 × 1.1）；上不去的記為被拒絕。車上的人記在列車上（`riders(of:)`），每一站 `released = 等車 + 車上 + 到達 + 溢出 + 放棄`。
@@ -82,7 +80,7 @@ GameCore 目前能做到：
 | --- | --- | --- |
 | **GameCore** | ✅ 本階段 | 權威遊戲狀態與規則；不依賴任何 UI / rendering framework |
 | Presentation | ✅ Phase 2B prototype UI | `GamePresentation`（session、tick 換算、顯示文字）與 SwiftUI 介面、輸入、HUD |
-| Rendering | 未開始（目前的 SwiftUI Canvas 地圖是 prototype：方格與連續路網的俯視 debug 投影） | 地圖與列車的繪製、動畫；只讀 GameCore 的幾何查詢 |
+| Rendering | 未開始（目前的 SwiftUI Canvas 地圖是 prototype：土地與連續路網的俯視 debug 投影） | 地圖與列車的繪製、動畫；只讀 GameCore 的幾何查詢 |
 
 Presentation 與 Rendering 只讀取 GameCore 狀態並送出指令，不持有另一份遊戲真實狀態。App 以 SwiftUI `@State` 持有唯一一個 `GameSession`，由它持有唯一一份 `GameWorld` 並執行所有指令與 game loop。詳見 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，未來規劃見 [docs/ROADMAP.md](docs/ROADMAP.md)。
 

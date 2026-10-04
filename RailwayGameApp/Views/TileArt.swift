@@ -49,7 +49,7 @@ enum TileArt {
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
         drawNetwork(world, projection: projection, cached: edges, in: context)
-        for station in world.stations where station.point != nil {
+        for station in world.stations {
             drawPointStation(station, isSelected: station.id == selectedStationID, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }

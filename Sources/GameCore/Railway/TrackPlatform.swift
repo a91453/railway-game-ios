@@ -1,7 +1,7 @@
 // Platforms on the railway network (Phase 4.5 Stage S4, ARCHITECTURE
-// decision 30). A Stage S2 platform is a grid track tile beside a station
-// tile, derived from the land and the track. On the continuous network a
-// platform is railway infrastructure in its own right, kept in the
+// decision 30). (A Stage S2 platform was a grid track tile beside a station
+// tile; it went with the grid in Stage F3c, decision 51.) A platform is
+// railway infrastructure in its own right, kept in the
 // RailwayNetwork like the edge it lies on (Stage S3A: the network is the one
 // record of the railway): a station's stretch of one edge, from where it
 // starts to where it ends. Its level (height and structure) follows from the
@@ -18,7 +18,6 @@
 public struct TrackPlatform: Hashable, Comparable, Sendable {
     /// The station it serves.
     public let station: StationID
-    /// Always ``TrackEdgeID/edge(_:)``: the grid has its own platforms.
     public let edge: TrackEdgeID
     public let start: Int64
     public let end: Int64

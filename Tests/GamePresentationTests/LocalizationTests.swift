@@ -20,20 +20,19 @@ final class LocalizationTests: XCTestCase {
         let position = GridPosition(x: 4, y: 7)
         let train = TrainID(rawValue: 3)
         let errors: [GameError] = [
-            .invalidMapSize(width: 0, height: 5), .outOfBounds(position), .tileOccupied(position),
-            .invalidTrackConnections, .invalidName, .insufficientFunds(required: 50_000, available: 1_234),
-            .noTrackToRemove(position), .trackInUse(position), .unknownTrain(train), .trainAlreadyPlaced(train),
+            .invalidMapSize(width: 0, height: 5), .outOfBounds(position), .invalidName,
+            .insufficientFunds(required: 50_000, available: 1_234), .unknownTrain(train), .trainAlreadyPlaced(train),
             .trainNotPlaced(train), .invalidTrainPosition, .invalidMovementRate, .invalidContinuation, .clockOverflow,
             .idsExhausted, .invalidTimetable, .unknownStation(StationID(rawValue: 3)), .trainServiceActive(train),
             .trainServiceNotActive(train), .noTimetable(train), .trainNotAtFirstStop(train), .unknownLine(LineID(rawValue: 3)),
             .invalidLineStops, .invalidTrainPerformance, .invalidServiceWindow, .invalidTrainsInService, .invalidServiceDay,
             .invalidHeadway, .trainOnLine(train), .trainNotOnLine(train), .invalidLinePattern, .unknownLinePattern(2),
-            .invalidStationTile(position), .invalidTrainLength, .unknownTrackNode(.node(7)), .unknownTrackEdge(.edge(3)),
+            .invalidTrainLength, .unknownTrackNode(.node(7)), .unknownTrackEdge(.edge(3)),
             .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep,
             .invalidTrackStructure, .trackConflict(.edge(4)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
         ]
-        XCTAssertEqual(Set(errors).count, 49, "one of every case")
+        XCTAssertEqual(Set(errors).count, 44, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")
@@ -44,7 +43,7 @@ final class LocalizationTests: XCTestCase {
             GameError.insufficientFunds(required: 50_000, available: 1_234).playerMessage(in: .traditionalChinese),
             "餘額不足：需要 $ 500.00，目前只有 $ 12.34。"
         )
-        XCTAssertEqual(GameError.trackInUse(position).playerMessage(in: .traditionalChinese), "(4, 7) 的軌道上有列車。請先把列車移出軌道。")
+        XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .traditionalChinese), "軌段 #2 上有列車。請先把列車移出軌道。")
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .traditionalChinese), "還有軌道接在節點 #2。請先拆除那段軌道。")
         XCTAssertEqual(GameError.invalidTrainLength.playerMessage(in: .traditionalChinese), "列車可以有 1 到 16 節車廂。")
     }
@@ -56,11 +55,9 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 個軌段")
         XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車"])
 
-        let position = TrainPosition.atNode(GridPosition(x: 1, y: 0), heading: .east)
-        XCTAssertEqual(position.displayText(in: zh), "在 (1, 0)，面向東")
         XCTAssertEqual(TrainPosition.onEdge(TrackTraversal(edge: .edge(2), direction: .backward), offset: 256).displayText(in: zh), "軌段 #2 反向，距起點 256 單位")
-        XCTAssertEqual(TrackNodeID.tile(GridPosition(x: 1, y: 2)).displayText(in: zh), "格 (1, 2)")
-        XCTAssertEqual(TrackEdgeID.link(GridPosition(x: 1, y: 2), GridPosition(x: 2, y: 2)).displayText(in: zh), "連結 (1, 2)–(2, 2)")
+        XCTAssertEqual(TrackNodeID.node(1).displayText(in: zh), "節點 #1")
+        XCTAssertEqual(TrackEdgeID.edge(2).displayText(in: zh), "軌段 #2")
         let train = try world.purchaseTrain(named: "T1")
         XCTAssertEqual(train.positionText(in: zh), "不在軌道上")
         XCTAssertEqual(train.carsText(in: zh), "1 節車廂")

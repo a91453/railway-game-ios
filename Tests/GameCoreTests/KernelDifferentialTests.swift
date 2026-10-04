@@ -6,11 +6,12 @@ import XCTest
 /// a `GameWorld` and on ``ReferenceWorld`` (the rules written a second way).
 /// After every command both must give the same outcome (the same
 /// `GameError`, in the documented order of checks) and the same observable
-/// state: time, speed, money, every tile, stations, trains with their
-/// position and movement, connectivity, platforms and station stops. Since
-/// Stage F3b the campaign runs on the track network (``KernelNetwork``):
-/// its nodes, edges and platforms, every train's path and body, and every
-/// train's way to every station are compared too.
+/// state: time, speed, money, stations, trains with their position and
+/// movement, and station stops. Since Stage F3b the campaign runs on the
+/// track network (``KernelNetwork``): its nodes, edges and platforms, every
+/// train's path and body, and every train's way to every station are
+/// compared too. (Stage F3c removed the grid, its operations and its
+/// comparisons, ARCHITECTURE decision 51.)
 ///
 /// The same run checks the Stage N stop transitions (decision 18): a train
 /// starts or stops being stopped at a station only through the commands that
@@ -22,9 +23,6 @@ import XCTest
 /// runs one case; `PROPERTY_STRESS=<n>` adds derived seeds.
 final class KernelDifferentialTests: XCTestCase {
     enum Operation: Equatable, CustomStringConvertible {
-        case buildTrack(GridPosition, UInt8)
-        case removeTrack(GridPosition)
-        case buildStation(String, GridPosition)
         case purchase(String)
         case place(TrainID, TrainPosition)
         case unplace(TrainID)
@@ -32,7 +30,6 @@ final class KernelDifferentialTests: XCTestCase {
         case setRate(TrainID, Int64)
         /// Stage W2c.
         case setPerformance(TrainID, TrainPerformance)
-        case setContinuation(TrainID, [GridPosition])
         /// Never drawn by ``nextOperation(in:using:)``; the timetable
         /// campaigns (`TimetablePropertyTests`) add it, and the repeating
         /// service campaign (`ServicePropertyTests`) gives it a period, in
@@ -42,9 +39,6 @@ final class KernelDifferentialTests: XCTestCase {
         /// campaigns (`ServicePropertyTests`) add them.
         case startService(TrainID)
         case stopService(TrainID)
-        /// The train tool's send to a tile: route from where the train is,
-        /// committed unchanged.
-        case sendToTile(TrainID, GridPosition)
         /// The train tool's send to a station.
         case sendToStation(TrainID, StationID)
         /// Never drawn by ``nextOperation(in:using:)``; the line campaign
@@ -68,13 +62,6 @@ final class KernelDifferentialTests: XCTestCase {
         /// Decision 49: only the dispatch campaign (`LineDispatchPropertyTests`)
         /// draws it.
         case setLineRing(LineID, Bool)
-        /// Only the track-resource campaign (`TrackResourcePropertyTests`)
-        /// draws these.
-        case buildTurnout(GridPosition, UInt8, TrackDirection)
-        case buildCrossing(GridPosition)
-        /// Only the station-facility campaign (`StationFacilityPropertyTests`)
-        /// draws these.
-        case extendStation(StationID, GridPosition)
         case setCars(TrainID, Int)
         /// The train tool's send to a station for a train with cars: the
         /// route that pulls it along the platforms.
@@ -85,8 +72,8 @@ final class KernelDifferentialTests: XCTestCase {
         case setEconomyMode(EconomyMode)
         case setFareRules(FareRules)
         case setFareBaseline(Money)
-        /// The track network (Stage F3b): what ``nextOperation(in:using:)``
-        /// draws in place of the grid's track, stations and continuations.
+        /// The track network (Stage F3b): its track, stations at points and
+        /// their platforms.
         case buildNode(WorldCoordinate)
         case buildEdge(TrackNodeID, TrackNodeID, TrackCurve)
         case removeEdge(TrackEdgeID)
@@ -107,21 +94,16 @@ final class KernelDifferentialTests: XCTestCase {
 
         var description: String {
             switch self {
-            case .buildTrack(let p, let mask): ".buildTrack(\(p), \(mask))"
-            case .removeTrack(let p): ".removeTrack(\(p))"
-            case .buildStation(let name, let p): ".buildStation(\"\(name)\", \(p))"
             case .purchase(let name): ".purchase(\"\(name)\")"
             case .place(let id, let position): ".place(\(id.rawValue), \(position))"
             case .unplace(let id): ".unplace(\(id.rawValue))"
             case .reverse(let id): ".reverse(\(id.rawValue))"
             case .setRate(let id, let rate): ".setRate(\(id.rawValue), \(rate))"
             case .setPerformance(let id, let performance): ".setPerformance(\(id.rawValue), \(performance))"
-            case .setContinuation(let id, let nodes): ".setContinuation(\(id.rawValue), \(nodes))"
             case .setTimetable(let id, let stops, let period):
                 ".setTimetable(\(id.rawValue), [\(stops.map { "\($0.station.rawValue)@\($0.arrival.seconds)-\($0.departure.seconds)s\($0.reverses ? "R" : "")" }.joined(separator: ", "))]\(period.map { ", every \($0) s" } ?? ""))"
             case .startService(let id): ".startService(\(id.rawValue))"
             case .stopService(let id): ".stopService(\(id.rawValue))"
-            case .sendToTile(let id, let p): ".sendToTile(\(id.rawValue), \(p))"
             case .sendToStation(let id, let station): ".sendToStation(\(id.rawValue), \(station.rawValue))"
             case .createLine(let name, let stops): ".createLine(\"\(name)\", \(stops.map(\.rawValue)))"
             case .removeLine(let id): ".removeLine(\(id.rawValue))"
@@ -137,9 +119,6 @@ final class KernelDifferentialTests: XCTestCase {
             case .addPattern(let id, let calls): ".addPattern(\(id.rawValue), \(calls))"
             case .removePattern(let id, let pattern): ".removePattern(\(id.rawValue), \(pattern))"
             case .setLineRing(let id, let ring): ".setLineRing(\(id.rawValue), \(ring))"
-            case .buildTurnout(let p, let mask, let stem): ".buildTurnout(\(p), \(mask), stem \(stem))"
-            case .buildCrossing(let p): ".buildCrossing(\(p))"
-            case .extendStation(let id, let p): ".extendStation(\(id.rawValue), \(p))"
             case .setCars(let id, let cars): ".setCars(\(id.rawValue), \(cars))"
             case .sendWholeTrainToStation(let id, let station): ".sendWholeTrainToStation(\(id.rawValue), \(station.rawValue))"
             case .unassign(let id): ".unassign(\(id.rawValue))"
@@ -167,11 +146,10 @@ final class KernelDifferentialTests: XCTestCase {
         }
     }
 
-    /// Everything a case starts from: grid tiles (the grid's own campaigns,
-    /// until Stage F3c) or a track network (Stage F3b).
+    /// Everything a case starts from: a track network (Stage F3b), money,
+    /// the clock and the speed.
     struct Setup {
-        var specs: [TileSpec]
-        var network: KernelNetwork?
+        var network: KernelNetwork
         var width: Int
         var height: Int
         var extraBalance: Int64
@@ -184,12 +162,14 @@ final class KernelDifferentialTests: XCTestCase {
 
         /// The map and what is built on it, for notes.
         var summary: String {
-            guard let network else { return "\(width)x\(height), \(specs.count) tiles" }
-            return "\(width)x\(height), \(network.nodes.count) nodes, \(network.edges.count) edges, \(network.stations.count) stations"
+            "\(width)x\(height), \(network.nodes.count) nodes, \(network.edges.count) edges, \(network.stations.count) stations"
         }
 
+        /// What the campaigns' track, stations, trains and cars cost.
+        static let baseCosts = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
+
         var costs: ConstructionCosts {
-            var costs = NetworkGenerator.costs
+            var costs = Self.baseCosts
             costs.car = Money(carPrice)
             return costs
         }
@@ -197,36 +177,7 @@ final class KernelDifferentialTests: XCTestCase {
         /// The same network built on both sides, each through its own
         /// commands, with just enough money plus `extraBalance`.
         func build() throws -> (GameWorld, ReferenceWorld) {
-            if let network { return try build(network) }
-            let needed = specs.reduce(Int64(0)) { sum, spec in
-                if case .track = spec.kind { return sum + costs.track.amount }
-                return sum + costs.station.amount
-            }
-            let balance = needed + extraBalance
-            var world = try GameWorld(
-                width: width, height: height,
-                economy: GameEconomy(balance: Money(balance), costs: costs),
-                clock: GameClock(now: GameTime(seconds: seconds), speed: speed)
-            )
-            var model = ReferenceWorld(width: width, height: height, balance: balance, costs: costs, seconds: seconds, speed: speed)
-            for spec in specs {
-                switch spec.kind {
-                case .track(let connections):
-                    try world.buildTrack(at: spec.position, connections: connections)
-                    guard model.buildTrack(at: spec.position, mask: connections.rawValue) == nil else { throw SetupError.modelRefused }
-                case .station:
-                    let name = "S\(spec.position.x)-\(spec.position.y)"
-                    try world.buildStation(named: name, at: spec.position)
-                    guard model.buildStation(named: name, at: spec.position) == nil else { throw SetupError.modelRefused }
-                case .turnout(let connections, let stem):
-                    try world.buildTurnout(at: spec.position, connections: connections, stem: stem)
-                    guard model.buildTurnout(at: spec.position, mask: connections.rawValue, stem: stem) == nil else { throw SetupError.modelRefused }
-                case .crossing:
-                    try world.buildCrossing(at: spec.position)
-                    guard model.buildCrossing(at: spec.position) == nil else { throw SetupError.modelRefused }
-                }
-            }
-            return (world, model)
+            try build(network)
         }
 
         /// A track network: its nodes, edges, stations and their platforms,
@@ -282,38 +233,11 @@ final class KernelDifferentialTests: XCTestCase {
 
     // MARK: - Generation
 
-    /// A setup on a network of one of `shapes` (with repeats to weight
-    /// them); the default draws exactly as the Stage I–N campaigns always
-    /// have.
-    static func makeSetup(shapes: [NetworkShape] = NetworkShape.allCases, using random: inout SplitMix64) -> Setup {
-        let shape = random.element(of: shapes)
-        var (specs, width, height) = NetworkGenerator.specs(shape, using: &random)
-        // Stations beside the network, so that platforms are common.
-        let occupied = Set(specs.map(\.position))
-        for y in 0..<height {
-            for x in 0..<width where !occupied.contains(GridPosition(x: x, y: y)) && random.chance(1, in: 4) {
-                specs.append(TileSpec(position: GridPosition(x: x, y: y), kind: .station))
-            }
-        }
-        let extra: Int64 = random.chance(1, in: 3) ? random.int64(in: 0...12_000) : 1_000_000
-        // Sometimes near the end of time, so that advancing can overflow;
-        // otherwise a whole minute, or for a quarter of the minutes a second
-        // between two (Stage W2a). The second comes from the minute rather
-        // than another draw, so the campaigns draw the same cases as before.
-        let seconds: Int64
-        if random.chance(1, in: 8) {
-            seconds = Int64.max - random.int64(in: 0...2_400)
-        } else {
-            let minute = random.int64(in: 0...100_000)
-            seconds = minute * 60 + (minute % 4 == 1 ? minute / 4 % 59 + 1 : 0)
-        }
-        let speed = random.element(of: GameSpeed.allCases)
-        return Setup(specs: specs, width: width, height: height, extraBalance: extra, seconds: seconds, speed: speed)
-    }
-
     /// A setup on a track network of one of `shapes` (with repeats to
-    /// weight them; Stage F3b), with the money, clock and speed drawn as
-    /// ``makeSetup(shapes:using:)`` draws them.
+    /// weight them; Stage F3b), with the money, clock and speed drawn as the
+    /// grid's campaigns drew them before Stage F3c: sometimes near the end
+    /// of time, so that advancing can overflow; otherwise a whole minute, or
+    /// for a quarter of the minutes a second between two (Stage W2a).
     static func makeNetworkSetup(shapes: [KernelNetwork.Shape] = KernelNetwork.Shape.allCases, using random: inout SplitMix64) -> Setup {
         let network = KernelNetwork.generate(random.element(of: shapes), using: &random)
         let extra: Int64 = random.chance(1, in: 3) ? random.int64(in: 0...12_000) : 1_000_000
@@ -325,19 +249,14 @@ final class KernelDifferentialTests: XCTestCase {
             seconds = minute * 60 + (minute % 4 == 1 ? minute / 4 % 59 + 1 : 0)
         }
         let speed = random.element(of: GameSpeed.allCases)
-        return Setup(specs: [], network: network, width: network.width, height: network.height, extraBalance: extra, seconds: seconds, speed: speed)
-    }
-
-    private static func randomTile(_ world: GameWorld, _ random: inout SplitMix64) -> GridPosition {
-        GridPosition(x: random.below(world.map.width + 2) - 1, y: random.below(world.map.height + 2) - 1)
+        return Setup(network: network, width: network.width, height: network.height, extraBalance: extra, seconds: seconds, speed: speed)
     }
 
     /// The next operation on a track network (Stage F3b), drawn with the
     /// current world in view: mostly sensible, sometimes invalid on
-    /// purpose. The same kinds of command as on the grid, in the same
-    /// shares: the network's track, stations at points and their
+    /// purpose: the network's track, stations at points and their
     /// platforms, positions along edges, and paths by hand, to a node or to
-    /// a station.
+    /// a station, in the shares the grid's operations had before Stage F3c.
     static func nextOperation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
         let trains = world.trains
         let network = world.network
@@ -368,8 +287,7 @@ final class KernelDifferentialTests: XCTestCase {
         case 5..<14:
             // Along an edge either way: at either end, at a berth, or
             // anywhere; now and then off its edge or on an edge that does
-            // not exist (no grid position: the network campaigns draw
-            // nothing the grid's removal in Stage F3c takes away).
+            // not exist.
             guard let edge = network.edges.isEmpty ? nil : random.element(of: network.edges), random.chance(7, in: 8) else {
                 return .place(id, .onEdge(TrackTraversal(edge: .edge(random.element(of: [0, 99, Int.max])), direction: random.chance(1, in: 2) ? .forward : .backward), offset: 0))
             }
@@ -474,129 +392,25 @@ final class KernelDifferentialTests: XCTestCase {
         }
     }
 
-    /// The next operation on the grid, drawn with the current world in
-    /// view: mostly sensible, sometimes invalid on purpose. Only the grid's
-    /// own campaigns draw it now, until Stage F3c.
-    static func nextGridOperation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
-        let trains = world.trains
-        let unknownIDs = [0, -1, trains.count + 1, trains.count + 2, Int.max]
-        let id = trains.isEmpty || random.chance(1, in: 12)
-            ? TrainID(rawValue: random.element(of: unknownIDs))
-            : random.element(of: trains).id
-        let position = world.train(id: id)?.position
-        switch random.below(100) {
-        case 0..<5:
-            return .purchase(random.chance(1, in: 10) ? random.element(of: ["", " ", "\n\t"]) : "T\(trains.count + 1)")
-        case 5..<14:
-            if random.chance(3, in: 4), let valid = PositionGenerator.validPosition(in: world, using: &random) {
-                return .place(id, valid)
-            }
-            let tile = randomTile(world, &random)
-            return random.chance(1, in: 2)
-                ? .place(id, .atNode(tile, heading: random.element(of: TrackDirection.allCases)))
-                : .place(id, .onLink(from: tile, to: step(tile, random.element(of: TrackDirection.allCases)), offset: random.element(of: [-1, 0, 1, 512, 1023, 1024])))
-        case 14..<16:
-            return .unplace(id)
-        case 16..<20:
-            return .reverse(id)
-        case 20..<30:
-            if random.chance(1, in: 5) {
-                return .setPerformance(id, random.element(of: PerformanceSamples.valid + PerformanceSamples.invalid))
-            }
-            let rate: Int64 = random.chance(1, in: 20)
-                ? -random.int64(in: 1...5)
-                : random.element(of: [0, 1, 511, 1023, 1024, 1025, 3_000, random.int64(in: 0...4_096), .max])
-            return .setRate(id, rate)
-        case 30..<37:
-            guard let position else { return .setContinuation(id, []) }
-            var walk = PositionGenerator.walk(in: world, from: position, length: random.below(8), using: &random)
-            if !walk.isEmpty, random.chance(1, in: 4) {
-                let index = random.below(walk.count)
-                switch random.below(3) {
-                case 0: walk.append(walk.count >= 2 ? walk[walk.count - 2] : ahead(of: position).node)
-                case 1: walk[index] = GridPosition(x: walk[index].x + 1, y: walk[index].y + 1)
-                default: walk[index] = GridPosition(x: -5, y: walk[index].y)
-                }
-            }
-            return .setContinuation(id, walk)
-        case 37..<44:
-            let tracks = world.tracks.map(\.position)
-            let destination = !tracks.isEmpty && random.chance(5, in: 6) ? random.element(of: tracks) : randomTile(world, &random)
-            return .sendToTile(id, destination)
-        case 44..<56:
-            let stations = world.stations.map(\.id)
-            let station = !stations.isEmpty && random.chance(9, in: 10)
-                ? random.element(of: stations)
-                : StationID(rawValue: random.element(of: [0, -1, stations.count + 1, Int.max]))
-            return .sendToStation(id, station)
-        case 56..<76:
-            return .advance(random.below(10))
-        case 76..<79:
-            return .setSpeed(random.element(of: GameSpeed.allCases))
-        case 79..<80:
-            return random.chance(1, in: 2) ? .pause : .resume
-        case 80..<86:
-            let mask: UInt8 = random.chance(1, in: 10) ? random.element(of: [0, 16, 31, 255]) : UInt8(1 + random.below(15))
-            return .buildTrack(randomTile(world, &random), mask)
-        case 86..<92:
-            if let position, random.chance(1, in: 3) {
-                switch position {
-                case .atNode(let tile, _): return .removeTrack(tile)
-                case .onLink(let from, let to, _): return .removeTrack(random.chance(1, in: 2) ? from : to)
-                case .onEdge: break
-                }
-            }
-            if random.chance(1, in: 2), !world.stations.isEmpty {
-                let station = random.element(of: world.stations)
-                // A platform, or the station itself.
-                let platforms = world.platforms(of: station.id)
-                return .removeTrack(platforms.isEmpty || random.chance(1, in: 4) ? station.position : random.element(of: platforms))
-            }
-            return .removeTrack(randomTile(world, &random))
-        case 92..<96:
-            // Often beside a train, to make a stop appear under it.
-            if let position, random.chance(1, in: 2) {
-                let (node, _) = ahead(of: position)
-                return .buildStation("B\(world.stations.count + 1)", step(node, random.element(of: TrackDirection.allCases)))
-            }
-            return .buildStation(random.chance(1, in: 10) ? " " : "B\(world.stations.count + 1)", randomTile(world, &random))
-        default:
-            return .saveAndLoad
-        }
-    }
-
     // MARK: - Applying
 
     /// Applies `operation` to the world, returning the refusal if any.
     static func apply(_ operation: Operation, to world: inout GameWorld) -> GameError? {
         do throws(GameError) {
             switch operation {
-            case .buildTrack(let p, let mask): try world.buildTrack(at: p, connections: TrackConnections(rawValue: mask))
-            case .removeTrack(let p): try world.removeTrack(at: p)
-            case .buildStation(let name, let p): try world.buildStation(named: name, at: p)
             case .purchase(let name): try world.purchaseTrain(named: name)
             case .place(let id, let position): try world.placeTrain(id, at: position)
             case .unplace(let id): try world.unplaceTrain(id)
             case .reverse(let id): try world.reverseTrain(id)
             case .setRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
             case .setPerformance(let id, let performance): try world.setTrainPerformance(id, to: performance)
-            case .setContinuation(let id, let nodes): try world.setTrainContinuation(id, to: nodes)
             case .setTimetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
             case .startService(let id): try world.startTrainService(id)
             case .stopService(let id): try world.stopTrainService(id)
-            case .sendToTile(let id, let p):
-                guard let position = world.train(id: id)?.position, let route = world.route(from: position, to: p) else { return nil }
-                try world.setTrainContinuation(id, to: route)
             case .sendToStation(let id, let station):
-                guard let position = world.train(id: id)?.position else { return nil }
-                if case .onEdge = position {
-                    // Stage F3b: on the network, a path to a berth.
-                    guard let path = world.path(from: position, toStation: station) else { return nil }
-                    try world.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
-                    return nil
-                }
-                guard let route = world.route(from: position, toStation: station) else { return nil }
-                try world.setTrainContinuation(id, to: route)
+                // Stage F3b: a path to a berth.
+                guard let position = world.train(id: id)?.position, let path = world.path(from: position, toStation: station) else { return nil }
+                try world.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
             case .createLine(let name, let stops): try world.createLine(named: name, stops: stops)
             case .removeLine(let id): try world.removeLine(id)
             case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
@@ -610,19 +424,12 @@ final class KernelDifferentialTests: XCTestCase {
             case .addPattern(let id, let calls): try world.addLinePattern(id, calling: calls)
             case .removePattern(let id, let pattern): try world.removeLinePattern(id, at: pattern)
             case .setLineRing(let id, let ring): try world.setLineRing(id, to: ring)
-            case .buildTurnout(let p, let mask, let stem): try world.buildTurnout(at: p, connections: TrackConnections(rawValue: mask), stem: stem)
-            case .buildCrossing(let p): try world.buildCrossing(at: p)
-            case .extendStation(let id, let p): try world.extendStation(id, to: p)
             case .setCars(let id, let cars): try world.setTrainCars(id, to: cars)
             case .sendWholeTrainToStation(let id, let station):
-                guard let train = world.train(id: id), let position = train.position else { return nil }
-                if case .onEdge = position {
-                    guard let path = world.path(from: position, toStation: station, length: train.length) else { return nil }
-                    try world.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
-                    return nil
-                }
-                guard let route = world.route(from: position, toStation: station, length: train.length) else { return nil }
-                try world.setTrainContinuation(id, to: route)
+                guard let train = world.train(id: id), let position = train.position,
+                      let path = world.path(from: position, toStation: station, length: train.length)
+                else { return nil }
+                try world.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
             case .setStationDemand(let id, let demand): try world.setStationDemand(id, to: demand)
             case .setEconomyMode(let mode): world.setEconomyMode(mode)
             case .setFareRules(let rules): try world.setFareRules(rules)
@@ -660,32 +467,20 @@ final class KernelDifferentialTests: XCTestCase {
 
     static func apply(_ operation: Operation, to model: inout ReferenceWorld) -> GameError? {
         switch operation {
-        case .buildTrack(let p, let mask): return model.buildTrack(at: p, mask: mask)
-        case .removeTrack(let p): return model.removeTrack(at: p)
-        case .buildStation(let name, let p): return model.buildStation(named: name, at: p)
         case .purchase(let name): return model.purchaseTrain(named: name)
         case .place(let id, let position): return model.placeTrain(id, at: position)
         case .unplace(let id): return model.unplaceTrain(id)
         case .reverse(let id): return model.reverseTrain(id)
         case .setRate(let id, let rate): return model.setRate(id, rate)
         case .setPerformance(let id, let performance): return model.setPerformance(id, performance)
-        case .setContinuation(let id, let nodes): return model.setContinuation(id, nodes)
         case .setTimetable(let id, let stops, let period): return model.setTimetable(id, stops, period: period)
         case .startService(let id): return model.startService(id)
         case .stopService(let id): return model.stopService(id)
-        case .sendToTile(let id, let p):
-            guard let position = model.trains.first(where: { $0.id == id.rawValue })?.position,
-                  let route = model.route(from: position, to: p)
-            else { return nil }
-            return model.setContinuation(id, route)
         case .sendToStation(let id, let station):
-            guard let position = model.trains.first(where: { $0.id == id.rawValue })?.position else { return nil }
-            if case .onEdge = position {
-                guard let path = model.pathToStation(from: position, station: station, length: 0) else { return nil }
-                return model.setContinuation(id, along: path.traversals, stoppingAt: path.end)
-            }
-            guard let route = model.route(from: position, toStation: station) else { return nil }
-            return model.setContinuation(id, route)
+            guard let position = model.trains.first(where: { $0.id == id.rawValue })?.position,
+                  let path = model.pathToStation(from: position, station: station, length: 0)
+            else { return nil }
+            return model.setContinuation(id, along: path.traversals, stoppingAt: path.end)
         case .createLine(let name, let stops): return model.createLine(named: name, stops: stops)
         case .removeLine(let id): return model.removeLine(id)
         case .setLineStops(let id, let stops): return model.setLineStops(id, stops)
@@ -699,18 +494,12 @@ final class KernelDifferentialTests: XCTestCase {
         case .addPattern(let id, let calls): return model.addPattern(id, calls)
         case .removePattern(let id, let pattern): return model.removePattern(id, pattern)
         case .setLineRing(let id, let ring): return model.setLineRing(id, ring)
-        case .buildTurnout(let p, let mask, let stem): return model.buildTurnout(at: p, mask: mask, stem: stem)
-        case .buildCrossing(let p): return model.buildCrossing(at: p)
-        case .extendStation(let id, let p): return model.extendStation(id, to: p)
         case .setCars(let id, let cars): return model.setCars(id, cars)
         case .sendWholeTrainToStation(let id, let station):
-            guard let train = model.trains.first(where: { $0.id == id.rawValue }), let position = train.position else { return nil }
-            if case .onEdge = position {
-                guard let path = model.pathToStation(from: position, station: station, length: ReferenceWorld.length(train)) else { return nil }
-                return model.setContinuation(id, along: path.traversals, stoppingAt: path.end)
-            }
-            guard let route = model.route(from: position, toStation: station, length: ReferenceWorld.length(train)) else { return nil }
-            return model.setContinuation(id, route)
+            guard let train = model.trains.first(where: { $0.id == id.rawValue }), let position = train.position,
+                  let path = model.pathToStation(from: position, station: station, length: ReferenceWorld.length(train))
+            else { return nil }
+            return model.setContinuation(id, along: path.traversals, stoppingAt: path.end)
         case .setStationDemand(let id, let demand): return model.setStationDemand(id, demand)
         case .setEconomyMode(let mode): model.setEconomyMode(mode); return nil
         case .setFareRules(let rules): return model.setFareRules(rules)
@@ -752,42 +541,22 @@ final class KernelDifferentialTests: XCTestCase {
         check(world.clock.speed == model.speed, "speed \(world.clock.speed) vs \(model.speed)")
         check(world.economy.balance.amount == model.balance, "balance \(world.economy.balance.amount) vs \(model.balance)")
         check(world.map.width == model.width && world.map.height == model.height, "map size")
-        // Stage S3A: the land holds stations; the railway network holds the
-        // grid's track pieces.
-        for tile in world.map.tiles {
-            let expected: TileType = switch model.tiles[tile.position] {
-            case .station(let id)?: .station(id: StationID(rawValue: id))
-            default: .empty
-            }
-            check(tile.type == expected, "tile \(tile.position): \(tile.type) vs \(expected)")
-            let track: Track? = switch model.tiles[tile.position] {
-            case .track(let mask)?: Track(position: tile.position, connections: TrackConnections(rawValue: mask))
-            case .turnout(let mask, let stem)?: Track(position: tile.position, connections: TrackConnections(rawValue: mask), layout: .turnout(stem: stem))
-            case .crossing?: Track(position: tile.position, connections: [.north, .east, .south, .west], layout: .crossing)
-            default: nil
-            }
-            check(world.track(at: tile.position) == track, "track \(tile.position): \(String(describing: world.track(at: tile.position))) vs \(String(describing: track))")
-        }
-        check(world.tracks.count == model.tiles.values.count { if case .station = $0 { false } else { true } }, "track count")
+        // The land holds nothing since Stage F3c: stations stand at points.
+        check(world.map.tiles.allSatisfy { $0.type == .empty }, "a tile is taken")
         check(
             world.stations.map { [$0.id.rawValue, $0.position.x, $0.position.y] } == model.stations.map { [$0.id, $0.position.x, $0.position.y] }
-                && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.annexes) == model.stations.map(\.annexes)
-                && world.stations.map(\.point) == model.stations.map(\.point),
+                && world.stations.map(\.name) == model.stations.map(\.name) && world.stations.map(\.point) == model.stations.map(\.point),
             "stations \(world.stations) vs \(model.stations)"
         )
         check(world.trains.map(\.id.rawValue) == model.trains.map(\.id), "train IDs \(world.trains.map(\.id.rawValue)) vs \(model.trains.map(\.id))")
         for (train, expected) in zip(world.trains, model.trains) {
             check(train.name == expected.name, "train \(expected.id) name")
             check(train.position == expected.position, "train \(expected.id) position \(String(describing: train.position)) vs \(String(describing: expected.position))")
-            // Decision 27: its cars and body.
+            // Decision 27: its cars.
             check(train.cars == expected.cars, "train \(expected.id) cars \(train.cars) vs \(expected.cars)")
-            check(train.trail == expected.trail, "train \(expected.id) trail \(train.trail) vs \(expected.trail)")
             check(train.movement.rate == expected.rate, "train \(expected.id) rate \(train.movement.rate) vs \(expected.rate)")
             check(train.performance == expected.performance, "train \(expected.id) performance")
-            check(
-                train.movement.continuation == expected.continuation && train.movement.cursor == expected.cursor,
-                "train \(expected.id) continuation \(train.movement.continuation)@\(train.movement.cursor) vs \(expected.continuation)@\(expected.cursor)"
-            )
+            check(train.movement.cursor == expected.cursor, "train \(expected.id) cursor \(train.movement.cursor) vs \(expected.cursor)")
             check(train.timetable == expected.timetable, "train \(expected.id) timetable \(train.timetable) vs \(expected.timetable)")
             check(
                 train.timetablePeriod == expected.period,
@@ -823,7 +592,7 @@ final class KernelDifferentialTests: XCTestCase {
         }
         check(world.network.platforms == model.allTrackPlatforms, "platforms \(world.network.platforms) vs \(model.allTrackPlatforms)")
         for train in world.trains {
-            guard let position = train.position, case .onEdge = position else { continue }
+            guard let position = train.position else { continue }
             for raw in world.stations.map(\.id.rawValue) + [Int.max] {
                 let station = StationID(rawValue: raw)
                 for length in Set([0, train.length]).sorted() {
@@ -916,22 +685,7 @@ final class KernelDifferentialTests: XCTestCase {
                 check(loads == all?.loads[level], "segment loads of line \(raw) at \(level): \(String(describing: loads)) vs \(String(describing: all?.loads[level]))")
             }
         }
-        // Derived answers: connectivity (a ring outside the map included),
-        // platforms and stops, for known and unknown IDs.
-        for y in -1...world.map.height {
-            for x in -1...world.map.width {
-                let p = GridPosition(x: x, y: y)
-                check(world.connectedNeighbors(of: p) == model.neighbors(of: p), "neighbours of \(p)")
-            }
-        }
-        for raw in world.stations.map(\.id.rawValue) + [0, -1, Int.max] {
-            let id = StationID(rawValue: raw)
-            check(world.platforms(of: id) == model.platforms(of: id), "platforms of \(raw): \(world.platforms(of: id)) vs \(model.platforms(of: id))")
-            check(
-                world.platformTracks(of: id) == model.platformTracks(of: id),
-                "platform tracks of \(raw): \(world.platformTracks(of: id)) vs \(model.platformTracks(of: id))"
-            )
-        }
+        // Derived answers: stops, for known and unknown IDs.
         for raw in world.trains.map(\.id.rawValue) + [0, Int.max] {
             let id = TrainID(rawValue: raw)
             check(
@@ -949,8 +703,9 @@ final class KernelDifferentialTests: XCTestCase {
     /// Decision 18's transitions: whose stop an operation may begin or end.
     /// Decision 20 adds one: `advance` may move a stopped train, and so end
     /// its stop, when a service was running it. Decision 23 another: when
-    /// the train is on a line, which may send it out. Decision 27 two more:
-    /// turning round a train with cars, and growing a station.
+    /// the train is on a line, which may send it out. On the track network
+    /// (Stage F3b) turning a train round, and adding or removing a platform
+    /// under it.
     static func stopTransitionProblems(
         _ operation: Operation,
         before: GameWorld,
@@ -968,23 +723,18 @@ final class KernelDifferentialTests: XCTestCase {
             }
             guard was != now else { continue }
             let isThis: (TrainID) -> Bool = { $0 == train.id }
-            let onNetwork: Bool = if case .onEdge? = train.position { true } else { false }
             let allowed: Bool = switch operation {
             case _ where refused: false
             case .advance: was.isEmpty || wasInService
             case .place(let id, _): isThis(id) && was.isEmpty
-            // Decision 27: a train with cars turns round with its head at
-            // its tail, which may be beside other stations or none.
             // Stage F3b: on the track network a train turned round runs on to
             // the end of its edge, so it is no longer stopped.
-            case .reverse(let id): isThis(id) && (was.isEmpty || train.cars > 0 || onNetwork)
+            case .reverse(let id): isThis(id)
             case .unplace(let id): isThis(id) && now.isEmpty
-            case .setContinuation(let id, _), .sendToTile(let id, _), .sendToStation(let id, _), .sendWholeTrainToStation(let id, _),
-                 .stand(let id, _, _), .sendToNode(let id, _): isThis(id)
-            // Decision 27: a station grown beside a stopped train is one it
-            // is stopped at, as one built there is; Stage F3b: so is a
-            // platform added under it.
-            case .buildStation, .extendStation, .addPlatform: now.count == was.count + 1 && Set(was).isSubset(of: Set(now))
+            case .sendToStation(let id, _), .sendWholeTrainToStation(let id, _), .stand(let id, _, _), .sendToNode(let id, _): isThis(id)
+            // Stage F3b: a platform added under a stopped train is one it is
+            // stopped at.
+            case .addPlatform: now.count == was.count + 1 && Set(was).isSubset(of: Set(now))
             // Stage F3b: a platform removed from under a train that no
             // service needs it for ends its stop there.
             case .removePlatform: now.count == was.count - 1 && Set(now).isSubset(of: Set(was))

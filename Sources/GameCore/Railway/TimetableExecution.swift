@@ -14,8 +14,8 @@
 /// `cycle` counts whole periods (``Train/timetablePeriod``) since the times
 /// the timetable holds: cycle `k` is scheduled `k × period` seconds later.
 /// It is 0 for a timetable that runs once. Nothing else is stored: the
-/// station and times are the timetable's, the route is the train's
-/// continuation, and being stopped is derived from the train's position
+/// station and times are the timetable's, the route is the train's path,
+/// and being stopped is derived from the train's position
 /// and movement (``GameWorld/stationsStoppedAt(by:)``).
 public enum TimetableExecution: Hashable, Sendable {
     /// The train is stopped at the station of timetable entry `stop` and
@@ -23,7 +23,7 @@ public enum TimetableExecution: Hashable, Sendable {
     case waitingAtStop(Int, cycle: Int64 = 0)
     /// The train has left the entry before `stop` (the last entry of the
     /// previous cycle when `stop` is 0) and is on its way to the station of
-    /// entry `stop`, following the continuation the service gave it.
+    /// entry `stop`, following the path the service gave it.
     case travellingToStop(Int, cycle: Int64 = 0)
 
     /// The index of the timetable entry the train is at or heading for.
@@ -48,19 +48,17 @@ extension TimetableExecution {
     /// entry ``stop``; the cycle is 0, or the timetable repeats and the
     /// cycle's times fit in a ``GameTime`` (see
     /// ``ScheduledStop/lastCycle(of:period:)``); and the train is placed. A
-    /// waiting train stands at a node with no continuation left; a travelling
-    /// train is heading for an entry after the service's very first one (not
-    /// entry 0 of cycle 0) and its journey has not ended there yet (it is on
-    /// a link, or has continuation left). Whether the stations and platforms
+    /// travelling train is heading for an entry after the service's very
+    /// first one (not entry 0 of cycle 0). Whether the stations and platforms
     /// agree is checked by the ``GameWorld`` decoder.
     ///
-    /// On the track network (Stage S5) the journey has ended when no edges
-    /// are left and the head is where the path ends. Without the map that
-    /// is known only for a path that ends part of the way along the train's
-    /// edge (``TrainMovement/end``); for one that runs to the end of the
-    /// edge, whether the head is there is checked by the ``GameWorld``
-    /// decoder. So a waiting train has no edges left and is at its path's
-    /// end if it has one, and a travelling train is not known to be there.
+    /// The journey has ended when no edges are left and the head is where
+    /// the path ends (Stage S5). Without the map that is known only for a
+    /// path that ends part of the way along the train's edge
+    /// (``TrainMovement/end``); for one that runs to the end of the edge,
+    /// whether the head is there is checked by the ``GameWorld`` decoder. So
+    /// a waiting train has no edges left and is at its path's end if it has
+    /// one, and a travelling train is not known to be there.
     ///
     /// - Precondition: `timetable` and `period` form a timetable (see
     ///   ``ScheduledStop/isTimetable(_:period:)``).
@@ -72,11 +70,6 @@ extension TimetableExecution {
         // Whether the journey may have ended, and whether it has for certain.
         let (mayHaveEnded, hasEnded): (Bool, Bool)
         switch position {
-        case .atNode:
-            let ended = movement.remainingContinuation.isEmpty
-            (mayHaveEnded, hasEnded) = (ended, ended)
-        case .onLink:
-            (mayHaveEnded, hasEnded) = (false, false)
         case .onEdge(_, let offset):
             let spent = movement.remainingEdges.isEmpty
             (mayHaveEnded, hasEnded) = (spent && (movement.end ?? offset) == offset, spent && movement.end == offset)

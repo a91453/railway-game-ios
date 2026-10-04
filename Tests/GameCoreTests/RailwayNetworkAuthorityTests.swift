@@ -60,47 +60,34 @@ final class RailwayNetworkAuthorityTests: XCTestCase {
     }
 
     /// A save in the format every save had from Stage I to save version 1,
-    /// with grid track in the map's tiles: its track goes into the railway
-    /// network on loading, and comes back out on saving as the map's
-    /// occupied tiles (save version 2, Stage E1), each tile byte for byte as
-    /// before.
-    func testASavedMapsTrackMovesIntoTheNetworkAndSavesBackExactly() throws {
-        var world = try GameWorld(width: 4, height: 1, economy: GameEconomy(balance: 10_000, costs: testCosts))
-        try world.buildTrack(at: p(0, 0), connections: .east)
-        try world.buildTurnout(at: p(1, 0), connections: [.east, .south, .west], stem: .west)
-        try world.buildCrossing(at: p(2, 0))
-        try world.buildStation(named: "S", at: p(3, 0))
-        let saved = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":8700,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[{"track":{"connections":2}},{"turnout":{"connections":14,"stem":{"west":{}}}},{"crossing":{}},{"station":{"id":1}}],"width":4},"nextStationID":2,"nextTrainID":1,"stations":[{"id":1,"name":"S","position":{"x":3,"y":0}}],"trains":[]}"#
-        let savedNow = saved.replacingOccurrences(
-            of: #""tiles":[{"track":{"connections":2}},{"turnout":{"connections":14,"stem":{"west":{}}}},{"crossing":{}},{"station":{"id":1}}]"#,
-            with: #""occupied":[{"tile":{"track":{"connections":2}},"x":0,"y":0},{"tile":{"turnout":{"connections":14,"stem":{"west":{}}}},"x":1,"y":0},{"tile":{"crossing":{}},"x":2,"y":0},{"tile":{"station":{"id":1}},"x":3,"y":0}]"#
-        )
-        XCTAssertNotEqual(savedNow, saved)
-
-        XCTAssertEqual(String(decoding: try encode(world), as: UTF8.self), savedNow)
-        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(savedNow.utf8)), world)
-        let loaded = try JSONDecoder().decode(GameWorld.self, from: Data(saved.utf8))
-        XCTAssertEqual(loaded, world)
-        XCTAssertEqual(loaded.map.tiles.map(\.type), [.empty, .empty, .empty, .station(id: StationID(rawValue: 1))])
-        XCTAssertEqual(loaded.network.tracks, [
-            Track(position: p(0, 0), connections: .east),
-            Track(position: p(1, 0), connections: [.east, .south, .west], layout: .turnout(stem: .west)),
-            Track(position: p(2, 0), connections: [.north, .east, .south, .west], layout: .crossing),
-        ])
-        XCTAssertEqual(String(decoding: try encode(loaded), as: UTF8.self), savedNow)
-    }
-
-    func testSavedTrackThatBreaksTheRulesIsRefused() throws {
-        let valid = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":0,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[TILES],"width":2},"nextStationID":1,"nextTrainID":1,"stations":[],"trains":[]}"#
-        func load(_ tiles: String) -> GameWorld? {
-            try? JSONDecoder().decode(GameWorld.self, from: Data(valid.replacingOccurrences(of: "TILES", with: tiles).utf8))
+    /// every tile written out: a map of empty ground loads, and saves back
+    /// as the map's occupied tiles (save version 2, Stage E1), of which
+    /// there are none. Until Stage F3c grid track in those tiles went into
+    /// the railway network; a map with grid track or a station on a tile,
+    /// which only a save made by hand could hold, is now refused with the
+    /// reason (decision 51).
+    func testAnOldMapLoadsAndGridTrackInItIsRefused() throws {
+        let world = try GameWorld(width: 2, height: 1, economy: GameEconomy(balance: 0, costs: testCosts))
+        let saved = #"{"clock":{"now":0,"resumeSpeed":"normal","speed":"paused"},"economy":{"balance":0,"costs":{"station":1000,"track":100,"train":5000}},"map":{"height":1,"tiles":[TILES],"width":2},"nextStationID":1,"nextTrainID":1,"stations":[],"trains":[]}"#
+        func load(_ tiles: String) throws -> GameWorld {
+            try JSONDecoder().decode(GameWorld.self, from: Data(saved.replacingOccurrences(of: "TILES", with: tiles).utf8))
         }
-        XCTAssertNotNil(load(#"{"track":{"connections":2}},{"crossing":{}}"#))
-        XCTAssertNil(load(#"{"track":{"connections":0}},{"empty":{}}"#), "no exits")
-        XCTAssertNil(load(#"{"track":{"connections":16}},{"empty":{}}"#), "not a direction")
-        XCTAssertNil(load(#"{"turnout":{"connections":10,"stem":{"north":{}}}},{"empty":{}}"#), "two exits")
-        XCTAssertNil(load(#"{"track":{"connections":2}}"#), "a tile short")
-        XCTAssertNil(load(#"{"station":{"id":1}},{"empty":{}}"#), "a station tile with no station")
+        let loaded = try load(#"{"empty":{}},{"empty":{}}"#)
+        XCTAssertEqual(loaded, world)
+        let savedNow = saved.replacingOccurrences(of: #""tiles":[TILES]"#, with: #""occupied":[]"#)
+        XCTAssertEqual(String(decoding: try encode(loaded), as: UTF8.self), savedNow)
+        for tiles in [
+            #"{"track":{"connections":2}},{"empty":{}}"#,
+            #"{"turnout":{"connections":14,"stem":{"west":{}}}},{"empty":{}}"#,
+            #"{"crossing":{}},{"empty":{}}"#,
+            #"{"empty":{}},{"station":{"id":1}}"#,
+        ] {
+            XCTAssertThrowsError(try load(tiles), tiles) { error in
+                XCTAssertTrue("\(error)".contains("the grid was removed in Stage F3c"), "\(tiles): \(error)")
+            }
+        }
+        XCTAssertThrowsError(try load(#"{"empty":{}}"#), "a tile short")
+        XCTAssertThrowsError(try load(#"{"pond":{}},{"empty":{}}"#), "not a kind of tile")
     }
 
     // MARK: - Spans

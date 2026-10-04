@@ -70,7 +70,7 @@ enum ReplayState {
         }
         for station in world.stations {
             let ledger = world.passengerLedger(of: station.id)
-            line("station \(station.id.rawValue) \(station.name) \(station.point.map { "\($0.x) \($0.y)" } ?? "tile")")
+            line("station \(station.id.rawValue) \(station.name) \(station.point.x) \(station.point.y)")
             line("  ledger \(ledger.released) \(ledger.waiting) \(ledger.riding) \(ledger.arrived) \(ledger.overflowed) \(ledger.abandoned) \(ledger.refused)")
         }
         for train in world.trains {

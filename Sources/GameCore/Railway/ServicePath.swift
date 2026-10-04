@@ -1,18 +1,18 @@
-// Service paths (Phase 4.5 Stage S5, ARCHITECTURE decision 31): the one
-// form a service's route takes on the grid and on the track network, and
-// the adapters that are the only place where services tell the two kinds
-// of track apart: where a station's trains stop, the route there, how a
-// route becomes a train's movement (`follow` and `stand` in GameWorld.swift,
-// the only file that sets trains), and where a train and its body are after
-// turning round or following a route. Timetables, dwells, repeats, lines,
-// dispatch and patterns are written once, on top of these.
+// Service paths (Phase 4.5 Stage S5, ARCHITECTURE decision 31): the form a
+// service's route takes, and the adapters services plan with: where a
+// station's trains stop, the route there, how a route becomes a train's
+// movement (`follow` and `stand` in GameWorld.swift, the only file that sets
+// trains), and where a train and its body are after turning round or
+// following a route. Timetables, dwells, repeats, lines, dispatch and
+// patterns are written on top of these. (Until Stage F3c they also told the
+// grid and the track network apart; the grid went, decision 51.)
 
-/// A path for a train (Phase 4.5 Stage S5): the edges or links its head
-/// enters after the one it is on, in order, where it stops on the last of
-/// them, and how far that is.
+/// A path for a train (Phase 4.5 Stage S5): the edges its head enters after
+/// the one it is on, in order, where it stops on the last of them, and how
+/// far that is.
 ///
-/// The one form a route to a station takes on the grid and on the track
-/// network (see ``GameWorld/path(from:toStation:length:)``), what a service
+/// The form a route to a station takes (see
+/// ``GameWorld/path(from:toStation:length:)``), what a service
 /// gives a train to follow, and what a line's journey is made of (see
 /// ``LineLeg``). It is topology only: traversals and integer distances, no
 /// geometry. A train keeps its path in its ``TrainMovement``; this value is
@@ -23,19 +23,16 @@
 /// ``GameWorld/setTrainContinuation(_:along:stoppingAt:)`` takes its
 /// traversals and end.
 public struct TrainPath: Hashable, Sendable {
-    /// The traversals the head enters, in order, after the edge or link it
-    /// is on (on the grid, after the node ahead of it). Empty when it stops
-    /// on the edge or link it is on.
+    /// The traversals the head enters, in order, after the edge it is on.
+    /// Empty when it stops on the edge it is on.
     public let traversals: [TrackTraversal]
     /// How far along the last traversal (or, when there are none, the one
     /// the train is on) the head stops, measured from where that traversal
-    /// starts, or `nil` at its end. Always `nil` on the grid, whose trains
-    /// stop at nodes.
+    /// starts, or `nil` at its end.
     public let end: Int64?
     /// How far the head travels to get there, in world units: the rest of
-    /// the edge or link it is on, every traversal in between in full, and
-    /// the last one up to where it stops. Exact integers, never a count of
-    /// edges times the length of a link.
+    /// the edge it is on, every traversal in between in full, and the last
+    /// one up to where it stops. Exact integers.
     public let distance: Int64
 
     public init(traversals: [TrackTraversal], end: Int64?, distance: Int64) {
@@ -45,23 +42,11 @@ public struct TrainPath: Hashable, Sendable {
     }
 }
 
-extension TrackTraversal {
-    /// The tile a grid link travelled this way leads to; `nil` for an edge
-    /// of the track network.
-    var tileAhead: GridPosition? {
-        guard case .link(let a, let b) = edge else { return nil }
-        return direction == .forward ? b : a
-    }
-}
-
 /// Where a train stands and how its body lies (Stage S5): its head, its
-/// body on the grid or on the track network, and its length. What services
-/// plan from, on either kind of track.
+/// body and its length. What services plan from.
 struct TrainPlacement: Hashable, Sendable {
     var position: TrainPosition
-    /// The body on the grid (see ``Train/trail``); empty on the network.
-    var trail: [GridPosition]
-    /// The body on the network (see ``Train/trailEdges``); empty on the grid.
+    /// The body (see ``Train/trailEdges``).
     var trailEdges: [TrackEdgeID]
     let length: Int64
 }
@@ -69,7 +54,7 @@ struct TrainPlacement: Hashable, Sendable {
 extension Train {
     /// Where the train stands, or `nil` while it is unplaced.
     var placement: TrainPlacement? {
-        position.map { TrainPlacement(position: $0, trail: trail, trailEdges: trailEdges, length: length) }
+        position.map { TrainPlacement(position: $0, trailEdges: trailEdges, length: length) }
     }
 }
 
@@ -106,48 +91,31 @@ extension GameWorld {
 
     /// The shortest path that takes a train `length` long at `start` to
     /// where it stops for the station `id` (Stage S5), or `nil` if there is
-    /// none: the route every service and line takes to a station, on the
-    /// grid and on the track network alike.
+    /// none: the route every service and line takes to a station.
     ///
-    /// - On the grid it is ``route(from:toStation:length:)`` written as
-    ///   links, ending at a node (`end` is `nil`), and just as long: the rest
-    ///   of the train's link, if it is on one, and 1024 for every link.
-    /// - On the track network it ends at a berth of one of the station's
-    ///   platforms that the train fits: its head at the platform's far end
-    ///   the way it travels (see ``TrackPlatform``). It is the shortest
-    ///   exact distance to any such berth; among paths of that distance, the
-    ///   one whose choices come first step by step, with a berth ahead on the
-    ///   same traversal before a turn and turns in ascending edge order at
-    ///   each node, as ``route(from:to:)`` does. It never turns straight back
-    ///   along an edge; it may loop. `end` is `nil` when the berth is the end
-    ///   of its edge.
+    /// It ends at a berth of one of the station's platforms that the train
+    /// fits: its head at the platform's far end the way it travels (see
+    /// ``TrackPlatform``). It is the shortest exact distance to any such
+    /// berth; among paths of that distance, the one whose choices come first
+    /// step by step, with a berth ahead on the same traversal before a turn
+    /// and turns in ascending edge order at each node, as
+    /// ``route(from:to:)`` does. It never turns straight back along an edge;
+    /// it may loop. `end` is `nil` when the berth is the end of its edge.
     ///
-    /// The grid and the network are not joined, so a train on one only
-    /// finds platforms on the same kind of track. No traversals and no
-    /// distance means the train is already where it stops for the station.
+    /// No traversals and no distance means the train is already where it
+    /// stops for the station.
     /// The result can be passed to
     /// ``setTrainContinuation(_:along:stoppingAt:)`` unchanged on this
     /// world, as `along: path.traversals, stoppingAt: path.end`.
     ///
     /// `nil` when `start` is not on this world's track, when the station
-    /// does not exist or has no platform on that kind of track (for the
-    /// network, none that the train fits), or when none can be reached
+    /// does not exist or has no platform that the train fits, or when none
+    /// can be reached
     /// without turning straight back. Pure: reads only topology, edge
     /// lengths and platforms, and explores only track no further than the
     /// nearest berth.
     public func path(from start: TrainPosition, toStation id: StationID, length: Int64 = 0) -> TrainPath? {
         switch start {
-        case .atNode, .onLink:
-            guard let nodes = route(from: start, toStation: id, length: length), let (node, _) = start.ahead else { return nil }
-            var ahead = node
-            let traversals = nodes.map { next in
-                defer { ahead = next }
-                return TrackTraversal.link(from: ahead, to: next)
-            }
-            // A route has at most four steps a tile, so this stays far
-            // inside an Int64.
-            let rest: Int64 = if case .onLink(_, _, let offset) = start { TrainPosition.linkLength - offset } else { 0 }
-            return TrainPath(traversals: traversals, end: nil, distance: rest + Int64(nodes.count) * TrainPosition.linkLength)
         case .onEdge(let traversal, let offset):
             return networkPath(from: traversal, offset: offset, toStation: id, length: length)
         }
@@ -161,7 +129,7 @@ extension GameWorld {
         case berth(TrackTraversal, Int64)
     }
 
-    /// ``path(from:toStation:length:)`` on the track network: the one search
+    /// ``path(from:toStation:length:)``: the one search
     /// of ``TrainRoute/shortest(from:isDestination:next:)`` over the start,
     /// the traversals the train could enter and the station's berths. Every
     /// step's length is the distance the head travels: from a traversal to
@@ -216,10 +184,9 @@ extension GameWorld {
     /// its head was. Turning round twice gives back the same placement.
     func turnedRound(_ placement: TrainPlacement) -> TrainPlacement {
         var turned = placement
-        if case .onEdge(let traversal, let offset) = placement.position {
+        switch placement.position {
+        case .onEdge(let traversal, let offset):
             (turned.position, turned.trailEdges) = reversedOnNetwork(traversal, offset: offset, trail: placement.trailEdges, length: placement.length)
-        } else {
-            (turned.position, turned.trail) = Self.reversed(placement.position, trail: placement.trail, length: placement.length)
         }
         return turned
     }
@@ -239,19 +206,6 @@ extension GameWorld {
             moved.trailEdges = networkTrail(
                 after: traversal.edge, trail: placement.trailEdges, entered: path.traversals.map(\.edge)[...], offset: end, length: placement.length
             )
-        case .atNode, .onLink:
-            let nodes = path.traversals.compactMap(\.tileAhead)
-            let (node, heading) = placement.position.ahead!
-            let arrived: TrainPosition
-            if let last = nodes.last {
-                let before = nodes.count >= 2 ? nodes[nodes.count - 2] : node
-                arrived = .atNode(last, heading: TrackDirection(from: before, to: last)!)
-            } else {
-                arrived = .atNode(node, heading: heading)
-            }
-            guard arrived != placement.position else { return placement }
-            moved.trail = Self.trail(after: placement.position, trail: placement.trail, to: arrived, entered: nodes[...], length: placement.length)
-            moved.position = arrived
         }
         return moved
     }
