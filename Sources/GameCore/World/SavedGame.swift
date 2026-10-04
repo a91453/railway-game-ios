@@ -30,9 +30,17 @@
 ///    have a `"geoAnchor"`. A build that reads only version 3 would drop
 ///    it, and its next save would turn a real-world game into a blank one,
 ///    so it says the save is newer than it instead.
+/// 5. The track spacing (Stage F2, ARCHITECTURE decision 52): edges at one
+///    level keep 4 m apart, and the network lists the pairs built closer
+///    before that rule (`"spacingExemptions"`). A version 4 world may hold
+///    such pairs and does not list them; it is read with every pair it has
+///    too close exempt, so old saves load as they were. A version 5 world
+///    must list exactly its pairs too close, and a build that reads only
+///    version 4 would drop the list and refuse those pairs on its next load,
+///    so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 4
+    public static let currentVersion = 5
 
     public let world: GameWorld
 
@@ -68,9 +76,10 @@ extension SavedGame: Codable {
         // needs no step of its own. Version 2 to 3: a version 2 world has no
         // rings, and a line without `"ring"` is not one, so it needs none
         // either. Version 3 to 4: a version 3 world is a blank map, and a
-        // world without `"geoAnchor"` is one. Later versions add their
-        // steps here.
-        world = try container.decode(GameWorld.self, forKey: .world)
+        // world without `"geoAnchor"` is one. Version 4 to 5: the pairs of
+        // edges a version 4 world has closer than the track spacing become
+        // its spacing exemptions. Later versions add their steps here.
+        world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
 
     /// Encodes the world in the current version.

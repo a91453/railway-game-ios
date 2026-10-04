@@ -296,6 +296,16 @@ extension GameError {
                 "That track would cross \(edge.displayText(in: language).lowercased()) without 8 m between them. Pass over or under it, or cross at a shared node.",
                 "這段軌道會與\(edge.displayText(in: language))交叉，但兩者的高度差不到 8 公尺。請從上方或下方通過，或在共用的節點交會。"
             )
+        case .trackTooClose(let edge):
+            language.text(
+                "That track would run less than 4 m beside \(edge.displayText(in: language).lowercased()). Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.",
+                "這段軌道與\(edge.displayText(in: language))並行時距離不到 4 公尺。平行的軌道中心之間至少要 4 公尺，或上下相差 8 公尺。"
+            )
+        case .tracksWouldBeTooClose(let first, let second):
+            language.text(
+                "Without that track, \(first.displayText(in: language).lowercased()) and \(second.displayText(in: language).lowercased()) would run less than 4 m apart with no junction near. Remove one of them first.",
+                "拆掉這段軌道之後，\(first.displayText(in: language))與\(second.displayText(in: language))之間不到 4 公尺，附近又沒有相接的交會點。請先拆掉其中一條。"
+            )
         case .trackEdgeHasPlatform(let edge):
             language.text(
                 "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first.",

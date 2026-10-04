@@ -147,8 +147,11 @@ public struct GameWorld: Equatable, Sendable {
     /// from the way it leaves the node (see ``TrackNodeEnd``): an edge that
     /// meets others at an angle joins none of them there. Edges that cross
     /// in plan without a shared node never join, and must pass one over the
-    /// other (see ``TrackClearance``). Several edges may join the same two
-    /// nodes.
+    /// other (see ``TrackClearance``). Since Stage F2 edges at one level keep
+    /// ``RailwayNetwork/trackSpacing`` apart but at points within
+    /// ``RailwayNetwork/partingReach`` of each other along the track, where
+    /// they are one junction's tracks parting (see ``TrackSpacing``). Several
+    /// edges may join the same two nodes.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)``
     ///   for `from`, then for `to`; ``GameError/invalidTrackGeometry`` (the
@@ -156,7 +159,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   that does not make an edge); ``GameError/trackTooSteep``;
     ///   ``GameError/invalidTrackStructure``;
     ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
-    ///   would meet without clearance; ``GameError/idsExhausted``; under
+    ///   would meet without clearance; ``GameError/trackTooClose(_:)`` for
+    ///   the lowest numbered edge it would run too close beside;
+    ///   ``GameError/idsExhausted``; under
     ///   traffic control (Stage T), ``GameError/trackReserved(_:)`` when a
     ///   train holds either end node, or track within
     ///   ``RailwayNetwork/junctionZone`` of it, since a new edge there may
@@ -176,6 +181,9 @@ public struct GameWorld: Equatable, Sendable {
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackConflict(other)
         }
+        if let other = network.firstTooClose(from: from, to: to, curve: curve, geometry: geometry) {
+            throw .trackTooClose(other)
+        }
         let (_, next) = try Self.allocateID(from: network.nextEdgeNumber)
         if isTrafficControlEnabled, let train = trains.first(where: { train in
             held(train).contains { resource in [from, to].contains { isWithinJunctionZone(resource, of: $0) } }
@@ -184,7 +192,9 @@ public struct GameWorld: Equatable, Sendable {
         }
         try economy.spend(try edgeCost(length: geometry.length, structure: structure))
 
-        return network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
+        let id = network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
+        network.dropSpacedExemptions()
+        return id
     }
 
     /// Removes edge `id` of the track network (Stage S3). Removal is free and
@@ -198,7 +208,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trackEdgeHasPlatform(_:)`` while a station has a
     ///   platform on it (Stage S4); or, under traffic control (Stage T),
     ///   ``GameError/trackReserved(_:)`` while a train has reserved some of
-    ///   it for its route.
+    ///   it for its route; or ``GameError/tracksWouldBeTooClose(_:_:)`` when
+    ///   two edges part from each other only by way of it, so that without
+    ///   it they would be too close (Stage F2, ARCHITECTURE decision 52).
     public mutating func removeTrackEdge(_ id: TrackEdgeID) throws(GameError) {
         guard network.edge(id) != nil else { throw .unknownTrackEdge(id) }
         guard !trains.contains(where: { train in
@@ -208,6 +220,9 @@ public struct GameWorld: Equatable, Sendable {
         guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
         if isTrafficControlEnabled, let train = trains.first(where: { $0.reservation.contains { $0.isSpan(of: id) } }) {
             throw .trackReserved(train.id)
+        }
+        if let pair = network.firstPairLeftTooClose(removing: id) {
+            throw .tracksWouldBeTooClose(pair.first, pair.second)
         }
 
         network.removeEdge(id)
@@ -2205,6 +2220,16 @@ extension GameWorld: Codable {
     /// and this world, and no two trains may hold the same track (see
     /// `trafficProblem()`); without it, no train may have a reservation.
     public init(from decoder: any Decoder) throws {
+        try self.init(from: decoder, madeBeforeSpacing: false)
+    }
+
+    /// Decodes a world as ``init(from:)`` does. When `madeBeforeSpacing`,
+    /// the world comes from a save made before Stage F2 (save version 4 or
+    /// below, see ``SavedGame``): it has no `"spacingExemptions"`, and
+    /// whatever pairs of edges it has closer than the track spacing become
+    /// its exemptions, so the save loads as it was (ARCHITECTURE decision
+    /// 52).
+    init(from decoder: any Decoder, madeBeforeSpacing: Bool) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         map = try container.decode(SavedMap.self, forKey: .map).land
         stations = try container.decode([Station].self, forKey: .stations)
@@ -2222,6 +2247,15 @@ extension GameWorld: Codable {
         riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
+        if madeBeforeSpacing {
+            guard network.spacingExemptions.isEmpty else {
+                throw DecodingError.dataCorrupted(DecodingError.Context(
+                    codingPath: decoder.codingPath, debugDescription: "A save made before Stage F2 has no spacing exemptions."
+                ))
+            }
+            let geometries = network.edges.compactMap { network.geometry(of: $0.id) }
+            network.exemptFromSpacing(network.tooClosePairs(geometries: geometries))
+        }
 
         if let problem = invariantViolation() {
             throw DecodingError.dataCorrupted(
@@ -2535,8 +2569,10 @@ extension GameWorld: Codable {
 
     /// Why the track network breaks a Stage S4 rule, or `nil`: an edge
     /// steeper than the maximum grade or on a structure that cannot carry it
-    /// at its heights, two edges meeting without clearance, or a platform
-    /// that does not fit its edge or overlaps another.
+    /// at its heights, two edges meeting without clearance, two edges closer
+    /// than the track spacing that are not exempt or exempt edges that are
+    /// not (Stage F2), or a platform that does not fit its edge or overlaps
+    /// another.
     private func networkRuleProblem() -> String? {
         var geometries: [TrackGeometry] = []
         for edge in network.edges {
@@ -2551,6 +2587,13 @@ extension GameWorld: Codable {
         }
         if let (a, b) = network.firstConflictingPair(geometries: geometries) {
             return "Track edges \(a) and \(b) meet without clearance."
+        }
+        let tooClose = network.tooClosePairs(geometries: geometries)
+        if tooClose != network.spacingExemptions {
+            if let pair = tooClose.first(where: { !network.spacingExemptions.contains($0) }) {
+                return "Track edges \(pair.first) and \(pair.second) are closer than the track spacing."
+            }
+            return "A spacing exemption lists two edges that keep the track spacing."
         }
         // The network's decoder has checked the platforms are in order and
         // do not overlap.

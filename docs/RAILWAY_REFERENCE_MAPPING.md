@@ -404,6 +404,22 @@ T 已經實作（PR #40，ARCHITECTURE 決策 32）。它和這個參考的關�
 | `topology.js` 的 `canTurn`（第 77–101 行）與 `stableVector` | OSM 節點上能不能轉線：同一條 way、只有兩個鄰點、`switch`、交叉只接最直的一支、未標記的三叉點用 cos 門檻推斷 | 不改：GameCore 的邊是遊戲自己建的幾何，節點上兩端反向 1/16 以內才相接（決策 29），已經涵蓋道岔、菱形交叉與 slip | — | 不同（參考的門檻是為了從 OSM 資料推斷道岔；F3 不改相接規則） |
 | `topology.js` 的 `shortestPath`（第 102–131 行） | Dijkstra，以「節點＋進入的邊」為狀態，每一步檢查 `canTurn`；路徑中重複的節點一律不要 | 不改：GameCore 同樣以進入的邊為狀態、不立即折返，但允許經過同一個節點兩次（折返線，`network-route.json`），同長依邊的編號遞增 | — | 不同，記給作者決定（F3 不改選路規則） |
 
+### Stage F2：線間距
+
+2026-10-04 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 52。三份都沒有線間距或側向淨空的建造規則，F2 的規則是缺口、自訂；這張表記下查到的值與它們在 GameCore 的對應。
+
+| 參考 | 行為 | GameCore | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` 第 13、98–108 行：`NEIGHBOR_M = 6.5`，側向 2–6.5 公尺、沿線 10 公尺內、方向餘弦 ≥ 0.9 的同向高架段算並行股道 | 只決定不畫哪一側的護欄（畫面） | 不移植成規則：GameCore 不畫護欄；renderer 之後（Phase 8）可以照它 | 公尺 → 64 單位 | 只是畫面 |
+| 同檔第 7–13 行：`GAUGE = 1.435`、`DECK_W = 5`（每股道一片 5 公尺的橋面，並排時重疊） | 3D 的尺寸，檔頭寫明不是實測工程資料 | 不移植成規則 | 公尺 | 只是畫面 |
+| `rail-3d/integration/formations.js` 第 9–40 行：車寬，最寬 3.38 公尺（700T） | 3D 的車身寬度 | `RailwayNetwork.trackSpacing` = 256（4 公尺）以它為依據：兩列最寬的車並排還有約 0.6 公尺 | 3.38 公尺 ≈ 216 單位 | 自訂（缺口） |
+| `rail-3d/physical/topology.js` 第 1 行、`rail-3d/integration/map3d.js` 第 347–348 行 | 不以座標接近合併股道，也不橫移列車掩蓋衝突 | 一致：太近的軌道在建造時拒絕，從不移動或合併 | — | 一致 |
+| `rail-3d/integration/tunnel-portals.js`、`portal-clearance.js` | 相鄰隧道口的外殼合併（畫面） | 不移植 | — | 只是畫面 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`：`metroBranchSharedTrackLaneLayout`、`METRO_BASE_LINE_WIDTH_PX = 5` | 共線路段在畫面上錯開 5 像素 | 不移植成規則（像素，只在畫面） | 像素 | 只是畫面 |
+| 同檔：`MIN_STATION_DISTANCE_M = 400`（預設關閉）、`ANCHOR_MIN_SPACING_M = 22`、`BAND_ANCHOR_MIN_SPACING_M = 20` | 車站、節點太近時拒絕 | `NetworkBuilding.minimumSpacing`（22 公尺，C1 已移植）；車站距離沒有移植（預設關閉） | 公尺 → 64 單位 | 已涵蓋（不是線間距） |
+| `Railway/railway_game_reference_clean/binary_reference/`：`station.station_spread`、`ERR_STATION_TOO_CLOSE_TO_ANOTHER_STATION` | OpenTTD 的方格車站，平行的月台各佔一格 | 沒有數值可移植；方格不搬回來（決策 51） | — | 不移植 |
+| （參考沒有） | 平行軌道的最小中心距、沿軌道多近才算同一個交會點分開的軌道、拆邊、F2 之前的存檔 | `TrackSpacing.isSpaced(_:_:distance:)`、`RailwayNetwork.trackDistances(from:within:)`、`firstTooClose(...)`、`firstPairLeftTooClose(removing:)`、`tooClosePairs(geometries:)`、`spacingExemptions`、`GameError.trackTooClose`、`tracksWouldBeTooClose`、存檔版本 5 | 256 單位、沿軌道 32768、檢查點每 64 | 自訂（缺口） |
+
 ### 折返
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
@@ -520,7 +536,7 @@ V 實際放行 → T、U（保證不互穿）
 4. **W2b** ✅（ARCHITECTURE 決策 39）：停站、上下車與誤點（gap 10）。驗收照參考包的 `02_W2_IMPLEMENTATION_CONTRACT.md`（見 ROADMAP 的 Stage W）。它是參考包的 P0，也是 G1 目前最明顯的缺口（上下車在離站時一次完成），只需要秒，不需要曲線。
 5. **W2c** ✅（ARCHITECTURE 決策 40）：曲線接到行程與移動（gap 1、4）。
 6. **C**（2026-10-02 作者決定）：已完成核心的操作畫面，讓所有功能都能在實機上測試；C1 是任意角度的建造（[對照](#stage-c1任意角度的建造畫面)），C2 是營運與乘客的設定畫面（[對照](#stage-c2營運與乘客的設定畫面)），C3 是性能的畫面（[對照](#stage-c3性能的畫面)）。見 ROADMAP 的 Stage C。
-7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F3 移除方格 ✅（[對照](#stage-f3移除方格)）→ F2 側向淨空；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
+7. **F、E**（2026-10-02 作者決定，見 ROADMAP 的「目前的優先順序」）：F1 全面路網 ✅（車站自由擺設，App 只用路網；[對照](#stage-f1全面路網)）→ C4 ✅（[對照](#stage-c4存檔開始畫面與示範地圖)）→ C5 最小教學 ✅（[對照](#stage-c5最小教學)）→ E1 大地圖 ✅（[對照](#stage-e1大地圖)）→ 環線 ✅（[對照](#環線)）→ E2 空白／實景 ✅（MapKit，[對照](#stage-e2實景地圖)）→ F3 移除方格 ✅（[對照](#stage-f3移除方格)）→ F2 線間距（F2a 規則 ✅，[對照](#stage-f2線間距)；F2b 交會點的佔用範圍）；E3 MapLibre 視需要（照 `Ci/` 的 MapLibre 加 OpenFreeMap）。
 8. **U-min**：建立在 T 上。參考只有畫面層的跟車距離（gap 5、6），授權規則照 T 的語義設計並標成 gap。
 9. **V**：翻譯 `inferMeetPassTimes`、`planSameDirectionOvertakes` 與 `holds` 的語義。它也負責 T 留下的死結：單線兩端互等、時刻表造成的循環等待。
 

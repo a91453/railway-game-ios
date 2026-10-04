@@ -65,6 +65,10 @@ final class NetworkDisplayTests: XCTestCase {
         // Stage S4: grades, structures, clearance and platforms.
         XCTAssertEqual(GameError.trackConflict(.edge(4)).playerMessage(in: .english), "That track would cross edge #4 without 8 m between them. Pass over or under it, or cross at a shared node.")
         XCTAssertEqual(GameError.trackEdgeHasPlatform(.edge(5)).playerMessage(in: .english), "A station has a platform on edge #5. Remove the platform first.")
+        // Stage F2: the track spacing.
+        XCTAssertEqual(GameError.trackTooClose(.edge(6)).playerMessage(in: .english), "That track would run less than 4 m beside edge #6. Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.")
+        XCTAssertEqual(GameError.trackTooClose(.edge(6)).playerMessage(in: .traditionalChinese), "這段軌道與軌段 #6並行時距離不到 4 公尺。平行的軌道中心之間至少要 4 公尺，或上下相差 8 公尺。")
+        XCTAssertEqual(GameError.tracksWouldBeTooClose(.edge(6), .edge(7)).playerMessage(in: .english), "Without that track, edge #6 and edge #7 would run less than 4 m apart with no junction near. Remove one of them first.")
         for error in [GameError.trackTooSteep, .invalidTrackStructure, .invalidPlatform] {
             XCTAssertFalse(error.playerMessage(in: .english).isEmpty)
         }

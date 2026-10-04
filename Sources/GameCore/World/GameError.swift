@@ -121,6 +121,18 @@ public enum GameError: Error, Hashable, Sendable {
     /// with less than ``TrackStructure/clearance`` between them (Stage S4).
     /// A level crossing needs a node both edges end at.
     case trackConflict(TrackEdgeID)
+    /// The edge would run closer than ``RailwayNetwork/trackSpacing`` beside
+    /// this edge in plan at one level, at points farther apart along the
+    /// track than ``RailwayNetwork/partingReach`` (or not joined by track at
+    /// all): not one junction's tracks parting (Stage F2, ARCHITECTURE
+    /// decision 52).
+    case trackTooClose(TrackEdgeID)
+    /// Removing the edge would leave these two edges, the lower numbered
+    /// first, closer than ``RailwayNetwork/trackSpacing`` at points farther
+    /// apart along the track than ``RailwayNetwork/partingReach``: the edge
+    /// is the junction they part from (Stage F2, ARCHITECTURE decision 52).
+    /// Remove one of them first.
+    case tracksWouldBeTooClose(TrackEdgeID, TrackEdgeID)
     /// A station has a platform on the edge, so it cannot be removed;
     /// remove the platform first (Stage S4).
     case trackEdgeHasPlatform(TrackEdgeID)

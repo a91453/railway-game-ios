@@ -241,6 +241,17 @@ extension ReferenceWorld {
         if let other = networkEdges.keys.sorted().first(where: { !Self.clear(edge, networkEdges[$0]!) }) {
             return .trackConflict(.edge(other))
         }
+        // Decision 52: and keep 256 beside every edge, but for points within
+        // 32768 of each other along the track.
+        let current = self
+        var ways: [Int: [Int: Int64]]?
+        let allWays = {
+            if ways == nil { ways = current.trackWays() }
+            return ways!
+        }
+        if let other = networkEdges.keys.sorted().first(where: { !Self.spaced(edge, networkEdges[$0]!, ways: allWays) }) {
+            return .trackTooClose(.edge(other))
+        }
         guard nextNetworkEdge != Int.max else { return .idsExhausted }
         // Decision 32: not at a junction a train holds, or holds track
         // close to.
@@ -287,6 +298,18 @@ extension ReferenceWorld {
             train.reservation.contains { if case .span(let span) = $0 { span.edge == id } else { false } }
         }) {
             return .trackReserved(TrainID(rawValue: holder.id))
+        }
+        // Decision 52: nor the only way along the track between two edges
+        // that would then be too close. (The reference has no spacing
+        // exemptions: those come only from saves made before Stage F2.)
+        var after = self
+        after.networkEdges[number] = nil
+        let ways = after.trackWays()
+        let remaining = after.networkEdges.keys.sorted()
+        for (k, a) in remaining.enumerated() {
+            for b in remaining[(k + 1)...] where !Self.spaced(after.networkEdges[a]!, after.networkEdges[b]!, ways: { ways }) {
+                return .tracksWouldBeTooClose(.edge(a), .edge(b))
+            }
         }
         networkEdges[number] = nil
         return nil
