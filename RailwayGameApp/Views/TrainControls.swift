@@ -85,8 +85,23 @@ struct TrainControls: View {
                         }
                     }
                 } label: {
-                    Label(train.name, systemImage: "train.side.front.car")
-                        .font(.subheadline.weight(.semibold))
+                    HStack(spacing: 6) {
+                        Image(systemName: "train.side.front.car")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Palette.metroBlue)
+                        Text(train.name)
+                            .font(.subheadline.weight(.bold))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                    )
                 }
                 .accessibilityLabel("Train: \(train.name)")
                 .accessibilityHint("Chooses the train to control.")
@@ -95,10 +110,18 @@ struct TrainControls: View {
             Button {
                 session.purchaseTrain()
             } label: {
-                Label("Buy · \(session.world.economy.costs.train.moneyText)", systemImage: "plus.circle")
-                    .font(.subheadline)
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.caption.weight(.bold))
+                    Text("Buy · \(session.world.economy.costs.train.moneyText)")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderedProminent)
+            .tint(Palette.metroBlue)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityLabel("Buy a train for \(session.world.economy.costs.train.moneyText)")
         }
     }
@@ -107,9 +130,9 @@ struct TrainControls: View {
     /// stopped at, exactly as GameCore records or derives them.
     private func status(of train: Train) -> some View {
         let language = session.language
-        return VStack(alignment: .leading, spacing: 2) {
+        return VStack(alignment: .leading, spacing: 3) {
             Text(verbatim: "\(train.positionText(in: language)) · \(train.carsText(in: language))")
-                .font(.subheadline)
+                .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
             if train.position != nil {
                 Text(train.pathText(in: language))
@@ -121,7 +144,7 @@ struct TrainControls: View {
                         .font(.footnote.weight(.semibold))
                 }
                 if let load = session.world.loadText(of: train.id, in: language) {
-                    Label(load, systemImage: "person.2")
+                    Label(load, systemImage: "person.2.fill")
                         .font(.footnote)
                         .monospacedDigit()
                 }
@@ -140,9 +163,10 @@ struct TrainControls: View {
             if let wait = session.world.routeWaitText(of: train.id, in: language) {
                 Label(wait, systemImage: "hourglass")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.orange)
+                    .foregroundStyle(Palette.metroAmber)
             }
         }
+        .metroCard(padding: 8, cornerRadius: 10)
         .accessibilityElement(children: .combine)
     }
 

@@ -49,8 +49,27 @@ struct EconomyPanel: View {
 
     private var balanceSection: some View {
         Section {
-            LabeledContent("Balance", value: session.world.economy.balance.moneyText)
-                .monospacedDigit()
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill((session.world.economy.balance < .zero ? Palette.metroRed : Palette.metroGreen).opacity(0.14))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "banknote.fill")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(session.world.economy.balance < .zero ? Palette.metroRed : Palette.metroGreen)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Balance")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(session.world.economy.balance.moneyText)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(session.world.economy.balance < .zero ? Palette.metroRed : Color.primary)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.vertical, 4)
+
             LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Free play cannot become managed again (decision 46), so the
             // switch goes one way, after a confirmation.

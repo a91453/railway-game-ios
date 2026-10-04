@@ -279,7 +279,7 @@ private struct HourlyBarChart: View {
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<24, id: \.self) { hour in
                     UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                        .fill(hour == shown ? Color.accentColor : Color.secondary.opacity(0.5))
+                        .fill(hour == shown ? Palette.metroBlue : Palette.metroBlue.opacity(0.25))
                         .frame(height: max(1, Self.height * CGFloat(hours[hour]) / top))
                         .frame(maxWidth: 24, maxHeight: .infinity, alignment: .bottom)
                 }

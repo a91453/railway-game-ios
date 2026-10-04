@@ -45,13 +45,13 @@ private struct TutorialOverlay: View {
         ZStack(alignment: .topLeading) {
             ForEach(frames.indices, id: \.self) { index in
                 let frame = frames[index]
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.accentColor, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Palette.metroAmber, lineWidth: 3)
                     .background {
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color(uiColor: .systemBackground), lineWidth: 5)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Color.black.opacity(0.35), lineWidth: 5)
                     }
-                    .frame(width: frame.width + 4, height: frame.height + 4)
+                    .frame(width: frame.width + 6, height: frame.height + 6)
                     .position(x: frame.midX, y: frame.midY)
             }
             .allowsHitTesting(false)
@@ -162,13 +162,13 @@ private struct TutorialCard: View {
         }
         .padding(16)
         .controlSize(.large)
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.primary.opacity(0.15))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Palette.cardBorder, lineWidth: 1)
                 .allowsHitTesting(false)
         }
-        .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.16), radius: 14, y: 5)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tutorial.card")
         // The card is new for each step (`.id`). Move VoiceOver to its title
@@ -181,14 +181,21 @@ private struct TutorialCard: View {
     }
 
     private var explanation: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .accessibilityIdentifier("tutorial.progress")
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Palette.metroBlue)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("tutorial.progress")
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Palette.metroBlue.opacity(0.12), in: Capsule())
+
             Text(verbatim: tutorial.step.title(in: session.language))
-                .font(.headline)
+                .font(.headline.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityFocused($focusesTitle)
                 .accessibilityIdentifier("tutorial.title")
@@ -196,10 +203,18 @@ private struct TutorialCard: View {
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
             if !session.isTutorialStepDone {
-                Label("Complete this step to continue.", systemImage: "hand.tap")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Palette.metroAmber)
+                    Text("Complete this step to continue.")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Palette.metroAmber)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -225,6 +240,7 @@ private struct TutorialCard: View {
             }
         }
         .buttonStyle(.borderedProminent)
+        .tint(Palette.metroBlue)
         .disabled(!session.isTutorialStepDone)
         .accessibilityIdentifier("tutorial.next")
     }

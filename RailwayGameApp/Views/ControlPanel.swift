@@ -56,7 +56,7 @@ private struct ToolPicker: View {
     var body: some View {
         let layout = showsDetails
             ? AnyLayout(VStackLayout(spacing: 6))
-            : AnyLayout(HStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 6))
         layout {
             ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
@@ -77,26 +77,36 @@ private struct ToolPicker: View {
                 .tutorialTarget(TutorialTarget(tool: tool))
             }
         }
+        .padding(3)
+        .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(Palette.cardBorder, lineWidth: 1)
+        )
     }
 
     private func compactLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
-        VStack(spacing: 2) {
+        HStack(spacing: 6) {
             Image(systemName: tool.systemImage)
-                .font(.body.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
             Text(tool.title(in: session.language))
-                .font(.caption.weight(isActive ? .bold : .regular))
+                .font(.subheadline.weight(isActive ? .bold : .medium))
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.85)
         }
-        .frame(maxWidth: .infinity, minHeight: 40)
+        .frame(maxWidth: .infinity, minHeight: 38)
     }
 
     private func detailedLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: tool.systemImage)
-                .font(.title3.weight(.semibold))
-                .frame(width: 32)
-            VStack(alignment: .leading, spacing: 1) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isActive ? Color.white.opacity(0.2) : Palette.chipBackground)
+                    .frame(width: 34, height: 34)
+                Image(systemName: tool.systemImage)
+                    .font(.body.weight(.semibold))
+            }
+            VStack(alignment: .leading, spacing: 2) {
                 Text(tool.title(in: session.language))
                     .font(.subheadline.weight(isActive ? .bold : .semibold))
                 Text(detail(for: tool))
@@ -106,7 +116,7 @@ private struct ToolPicker: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
     }
 
     private func detail(for tool: ConstructionTool) -> String {
@@ -152,12 +162,27 @@ private struct ActionButton: View {
             Button {
                 act()
             } label: {
-                Label(title, systemImage: session.tool.systemImage)
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 32)
+                HStack(spacing: 8) {
+                    Image(systemName: session.tool.systemImage)
+                        .font(.body.weight(.bold))
+                    Text(title)
+                        .font(.headline.weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
-            .tint(isRemoval ? Color.red : Color.accentColor)
+            .tint(isRemoval ? Palette.metroRed : Palette.metroBlue)
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .shadow(
+                color: isReady
+                    ? (isRemoval ? Palette.metroRed.opacity(0.3) : Palette.metroBlue.opacity(0.3))
+                    : Color.clear,
+                radius: 6,
+                x: 0,
+                y: 3
+            )
             .disabled(!isReady)
             .accessibilityHint(hint)
             .tutorialTarget(.actionButton)
@@ -233,9 +258,11 @@ struct StatusBanner: View {
     private func banner(for message: StatusMessage) -> some View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let tintColor = isSuccess ? Palette.metroGreen : Palette.metroAmber
+        return HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(isSuccess ? Color.green : Color.orange)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(tintColor)
                 .accessibilityLabel(kindName)
             Text(message.text)
                 .font(.footnote.weight(.medium))
@@ -245,20 +272,22 @@ struct StatusBanner: View {
                 session.dismissMessage()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.footnote.weight(.bold))
-                    .frame(width: 28, height: 28)
+                    .font(.caption.weight(.bold))
+                    .frame(width: 26, height: 26)
+                    .background(Palette.chipBackground, in: Circle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .accessibilityLabel("Dismiss message")
         }
-        .padding(.leading, 12)
-        .padding(.vertical, 4)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSuccess ? Color.green.opacity(0.5) : Color.orange.opacity(0.7))
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(tintColor.opacity(0.4), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 3)
         .accessibilityElement(children: .contain)
         .padding(10)
     }
@@ -269,13 +298,31 @@ struct SelectableButtonStyle: ButtonStyle {
     let isActive: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 10)
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         configuration.label
             .padding(.vertical, 4)
             .foregroundStyle(isActive ? Color.white : Color.primary)
-            .background(isActive ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.fill.tertiary), in: shape)
-            .overlay(shape.strokeBorder(isActive ? Color.clear : Color.secondary.opacity(0.35)))
-            .opacity(configuration.isPressed ? 0.7 : 1)
+            .background(
+                isActive
+                    ? AnyShapeStyle(Color.accentColor)
+                    : AnyShapeStyle(Palette.cardBackground),
+                in: shape
+            )
+            .overlay(
+                shape.strokeBorder(
+                    isActive ? Color.white.opacity(0.2) : Palette.cardBorder,
+                    lineWidth: 1
+                )
+            )
+            .shadow(
+                color: isActive ? Color.accentColor.opacity(0.3) : Color.black.opacity(0.04),
+                radius: isActive ? 4 : 2,
+                x: 0,
+                y: 1
+            )
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .contentShape(shape)
     }
 }

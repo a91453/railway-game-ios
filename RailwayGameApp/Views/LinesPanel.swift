@@ -162,7 +162,25 @@ struct LinesPanel: View {
 
     private func lineRow(_ line: ServiceLine) -> some View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
-        return HStack(spacing: 8) {
+        let colors: [Color] = [Palette.metroBlue, Palette.metroGreen, Palette.metroAmber, Palette.metroPurple, Palette.metroCyan, Palette.metroRed]
+        let color = colors[abs(Int(line.id.rawValue)) % colors.count]
+        return HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 28, height: 28)
+                if line.isRing {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                } else {
+                    Text(verbatim: "\(line.id.rawValue)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.name)
                     .font(.subheadline.weight(.semibold))

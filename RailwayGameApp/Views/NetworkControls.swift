@@ -68,15 +68,31 @@ struct NetworkControls: View {
             .buttonStyle(.bordered)
             .font(.footnote)
             if let preview = session.networkPreview {
-                Text(preview.text(in: session.language))
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-                if let problem = preview.problem {
-                    Label(problem, systemImage: "exclamationmark.triangle")
-                        .font(.footnote)
-                        .foregroundStyle(Color.orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "ruler")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Palette.metroBlue)
+                        Text(preview.text(in: session.language))
+                            .font(.footnote.weight(.semibold))
+                            .monospacedDigit()
+                    }
+                    if let problem = preview.problem {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Palette.metroAmber)
+                            Text(problem)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(Palette.metroAmber)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
                 }
+                .padding(.top, 2)
             }
         }
     }

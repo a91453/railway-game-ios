@@ -134,7 +134,14 @@ struct RealWorldPicker: View {
                         Button {
                             position = Self.camera(on: Self.coordinate(of: place.anchor))
                         } label: {
-                            Text(verbatim: place.name(in: launcher.language))
+                            HStack(spacing: 10) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Palette.station)
+                                Text(verbatim: place.name(in: launcher.language))
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                            }
                         }
                         .accessibilityIdentifier("place.\(place.id)")
                     }

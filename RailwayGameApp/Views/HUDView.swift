@@ -70,7 +70,7 @@ struct HUDView: View {
         } label: {
             Image(systemName: "point.3.connected.trianglepath.dotted")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 44, height: 32)
+                .frame(width: 40, height: 32)
         }
         .buttonStyle(SelectableButtonStyle(isActive: showsLines))
         .accessibilityLabel("Lines")
@@ -108,7 +108,12 @@ struct HUDView: View {
         } label: {
             Image(systemName: "line.3.horizontal")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 44, height: 32)
+                .frame(width: 38, height: 32)
+                .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                )
         }
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
@@ -119,11 +124,21 @@ struct HUDView: View {
     /// The balance in dollars; it opens the economy panel.
     private var cash: some View {
         let text = session.world.economy.balance.moneyText
+        let isNegative = session.world.economy.balance < .zero
         return Button {
             showsEconomy = true
         } label: {
-            Label(text, systemImage: "banknote")
-                .foregroundStyle(session.world.economy.balance < .zero ? Color.red : Color.primary)
+            HStack(spacing: 6) {
+                Image(systemName: "banknote.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(isNegative ? Palette.metroRed : Palette.metroGreen)
+                Text(text)
+                    .foregroundStyle(isNegative ? Palette.metroRed : Color.primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Palette.chipBackground, in: Capsule())
+            .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Cash \(text)")
@@ -132,8 +147,17 @@ struct HUDView: View {
 
     private var time: some View {
         let text = session.world.clock.displayText(in: session.language)
-        return Label(text, systemImage: "clock")
-            .accessibilityLabel("Game time \(text)")
+        return HStack(spacing: 6) {
+            Image(systemName: "clock.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.metroBlue)
+            Text(text)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Palette.chipBackground, in: Capsule())
+        .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
+        .accessibilityLabel("Game time \(text)")
     }
 }
 
@@ -152,7 +176,7 @@ private struct SpeedControl: View {
             } label: {
                 Image(systemName: clock.isPaused ? "play.fill" : "pause.fill")
                     .font(.subheadline.weight(.bold))
-                    .frame(width: 44, height: 32)
+                    .frame(width: 38, height: 32)
             }
             .buttonStyle(SelectableButtonStyle(isActive: clock.isPaused))
             .accessibilityLabel(clock.isPaused ? "Resume" : "Pause")
@@ -170,9 +194,22 @@ private struct SpeedControl: View {
                     .accessibilityLabel(speed.accessibilityName(in: language))
                 }
             } label: {
-                Text(clock.runningSpeed.label(in: language))
-                    .font(.subheadline.weight(.bold))
-                    .frame(minWidth: 56, minHeight: 32)
+                HStack(spacing: 4) {
+                    if clock.isPaused {
+                        Circle()
+                            .fill(Palette.metroAmber)
+                            .frame(width: 6, height: 6)
+                    }
+                    Text(clock.runningSpeed.label(in: language))
+                        .font(.subheadline.weight(.bold))
+                }
+                .padding(.horizontal, 8)
+                .frame(minWidth: 48, minHeight: 32)
+                .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                )
             }
             .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName(in: language))")
             .accessibilityHint("Chooses how fast game time runs.")

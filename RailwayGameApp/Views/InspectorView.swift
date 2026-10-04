@@ -12,6 +12,7 @@ struct InspectorView: View {
 
     var body: some View {
         inspector
+            .metroCard(padding: 10, cornerRadius: 12)
             .sheet(isPresented: $showsStation) {
                 StationPanel(session: session)
                     .presentationDetents([.medium, .large])
@@ -24,17 +25,24 @@ struct InspectorView: View {
     @ViewBuilder
     private var inspector: some View {
         if session.tool == .network {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "scope")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
+            HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Palette.metroBlue.opacity(0.14))
+                        .frame(width: 30, height: 30)
+                    Image(systemName: "pencil.and.ruler.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Palette.metroBlue)
+                }
+                .accessibilityHidden(true)
+
                 Text(session.networkDraftText())
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
-            .font(.subheadline)
             .accessibilityElement(children: .combine)
         } else {
             selectionInspector
@@ -42,18 +50,37 @@ struct InspectorView: View {
     }
 
     private var selectionInspector: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "scope")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
+        HStack(spacing: 10) {
+            HStack(spacing: 10) {
                 if let text = session.selectionText() {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Palette.station.opacity(0.18))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: "tram.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Palette.station)
+                    }
+                    .accessibilityHidden(true)
+
                     Text(verbatim: text)
+                        .font(.subheadline.weight(.semibold))
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Palette.chipBackground)
+                            .frame(width: 30, height: 30)
+                        Image(systemName: "scope")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityHidden(true)
+
                     Text("Tap a station to select it.")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -63,15 +90,19 @@ struct InspectorView: View {
                 Button {
                     showsStation = true
                 } label: {
-                    Image(systemName: "person.2.fill")
-                        .font(.subheadline.weight(.bold))
-                        .frame(width: 44, height: 28)
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                            .font(.caption.weight(.bold))
+                        Text("Ridership")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: 30)
                 }
                 .buttonStyle(SelectableButtonStyle(isActive: showsStation))
                 .accessibilityLabel("Ridership")
                 .accessibilityHint("Shows the station's ridership: what kind of place it serves, its trips and its passengers.")
             }
         }
-        .font(.subheadline)
     }
 }
