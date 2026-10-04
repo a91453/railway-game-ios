@@ -107,6 +107,51 @@ final class TrafficControlSessionTests: XCTestCase {
         }
     }
 
+    /// Stage U2: a service following another between calls says which
+    /// train it follows while it is on its way, not that it waits.
+    func testAFollowingTrainSaysWhichTrainItFollows() throws {
+        // Four edges of 32768 east along y = 1024; A's platform on e1, M's
+        // on e2. Leader stands at M and runs on to e4 slowly; Follower
+        // stands at A and runs past M, so it sets off behind Leader.
+        var world = try makeWorld(width: 133_120, height: 4_096, balance: 100_000_000, speed: .normal)
+        let nodes = try (0..<5).map { try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + Int64($0) * 32_768, y: 1_024)) }
+        for (from, to) in zip(nodes, nodes.dropFirst()) {
+            try world.buildTrackEdge(from: from, to: to)
+        }
+        var stations: [StationID] = []
+        for (name, edge, start) in [("A", 1, Int64(1_024)), ("M", 2, 14_336), ("N", 3, 14_336), ("B", 4, 28_672)] {
+            let station = try world.buildStation(named: name, at: PlanPoint(x: 1_024 + Int64(edge - 1) * 32_768 + start + 1_024, y: 2_048)).id
+            try world.addTrackPlatform(station, on: .edge(edge), from: start, to: start + 2_048)
+            stations.append(station)
+        }
+        try world.setTrafficControl(true)
+        for (name, edge, offset, stops) in [
+            ("Leader", 2, Int64(16_384), [(stations[1], Int64(0), Int64(1)), (stations[3], 21, 21)]),
+            ("Follower", 1, 3_072, [(stations[0], 0, 0), (stations[2], 7, 7)]),
+        ] {
+            let id = try world.purchaseTrain(named: name).id
+            try world.setTrainCars(id, to: 2)
+            try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(edge), direction: .forward), offset: offset))
+            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
+            try world.setTrainMovementRate(id, to: 1_024)
+            try world.setTrainTimetable(id, to: stops.map {
+                ScheduledStop(station: $0.0, arrival: GameTime(minutes: $0.1), departure: GameTime(minutes: $0.2))
+            })
+            try world.startTrainService(id)
+        }
+        let (leader, follower) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        // At 1:00 Leader still stands at M: Follower waits for it.
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.routeWaitText(of: follower, in: .english), "Waiting for Leader to clear the route")
+        // A minute later both are on their way, Follower behind Leader.
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: follower)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.trainHoldingRoute(of: follower), leader)
+        XCTAssertEqual(world.routeWaitText(of: follower, in: .english), "Following Leader")
+        XCTAssertEqual(world.routeWaitText(of: follower, in: .traditionalChinese), "跟在 Leader 後面")
+        XCTAssertNil(world.routeWaitText(of: leader, in: .english))
+    }
+
     func testARouteAnotherTrainHoldsIsRefusedInThePlayersWords() async throws {
         var world = try makeLineWorld()
         try world.stopTrainService(Self.local)

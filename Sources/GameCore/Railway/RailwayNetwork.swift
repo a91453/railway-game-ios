@@ -131,6 +131,9 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// touch. Worked out again whenever an edge or a platform changes, never
     /// saved.
     private(set) var foulingSpans: [TrackSpan: Set<TrackSpan>]
+    /// The spans of every edge (see ``spans(of:length:)``), worked out
+    /// again whenever an edge or a platform changes, never saved.
+    private var edgeSpans: [TrackEdgeID: [TrackSpan]]
 
     /// An empty network, handing out numbers from 1.
     public init() {
@@ -141,6 +144,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         platforms = []
         spacingExemptions = []
         foulingSpans = [:]
+        edgeSpans = [:]
     }
 
     /// The heights a node may stand at in a world (Stage S4): 4096 units
@@ -201,10 +205,27 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// (see ``spans(of:length:)``), cut again at the ends of every platform
     /// on it, so a platform is a whole number of spans.
     func spans(of id: TrackEdgeID, length: Int64) -> [TrackSpan] {
+        if let spans = edgeSpans[id], spans.last?.end == length { return spans }
+        return cutSpans(of: id, length: length)
+    }
+
+    /// Works out ``spans(of:length:)`` from the edge's length and platforms.
+    private func cutSpans(of id: TrackEdgeID, length: Int64) -> [TrackSpan] {
         let equal = Self.spans(of: id, length: length)
         let cuts = platforms(on: id).flatMap { [$0.start, $0.end] }
         guard !cuts.isEmpty else { return equal }
-        let boundaries = Set(equal.map(\.start) + cuts + [length]).sorted()
+        // Both lists of boundaries are in order (platforms are kept in order
+        // along the edge and never overlap), so they are merged as they are.
+        var boundaries: [Int64] = []
+        boundaries.reserveCapacity(equal.count + cuts.count + 1)
+        var next = cuts.startIndex
+        for boundary in equal.map(\.start) + [length] {
+            while next < cuts.endIndex, cuts[next] <= boundary {
+                if boundaries.last != cuts[next] { boundaries.append(cuts[next]) }
+                next += 1
+            }
+            if boundaries.last != boundary { boundaries.append(boundary) }
+        }
         return zip(boundaries, boundaries.dropFirst()).map { TrackSpan(edge: id, start: $0, end: $1) }
     }
 
@@ -224,13 +245,21 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// overlaps no other.
     mutating func addPlatform(_ platform: TrackPlatform) {
         platforms.insert(platform, at: platforms.firstIndex { platform < $0 } ?? platforms.count)
+        recutSpans(of: platform.edge)
         foulingSpans = foulingAfterChange(to: [platform.edge])
     }
 
     /// Removes the platform at `index` of ``platforms``.
     mutating func removePlatform(at index: Int) {
         let platform = platforms.remove(at: index)
+        recutSpans(of: platform.edge)
         foulingSpans = foulingAfterChange(to: [platform.edge])
+    }
+
+    /// Works out the spans of edge `id` again, or forgets them once it is
+    /// gone.
+    private mutating func recutSpans(of id: TrackEdgeID) {
+        edgeSpans[id] = edge(id).map { cutSpans(of: id, length: $0.length) }
     }
 
     // MARK: - The continuous network
@@ -317,6 +346,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
         attach(id, direction: geometry.endDirection, at: to)
+        recutSpans(of: id)
         // Ways along the track through the new edge are shorter now.
         foulingSpans = foulingAfterChange(to: edgesNear(from, to).union([id]))
         return id
@@ -329,6 +359,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         // Ways along the track through it get longer.
         let changed = updatingFouling ? edgesNear(edges[index].from, edges[index].to) : []
         let edge = edges.remove(at: index)
+        recutSpans(of: id)
         spacingExemptions.removeAll { $0.contains(id) }
         for node in [edge.from, edge.to] {
             guard let nodeIndex = nodeIndex(node) else { continue }
@@ -463,6 +494,9 @@ extension RailwayNetwork: Codable {
             throw corrupt("Platforms must be in order along the track and must not overlap.")
         }
         guard platforms.allSatisfy({ edge($0.edge) != nil }) else { throw corrupt("A platform lies on an edge that does not exist.") }
+        for edge in edges {
+            recutSpans(of: edge.id)
+        }
         let exempted = container.contains(.spacingExemptions) ? try container.decode([[Int]].self, forKey: .spacingExemptions) : []
         for pair in exempted {
             guard pair.count == 2, pair[0] < pair[1], edge(.edge(pair[0])) != nil, edge(.edge(pair[1])) != nil else {

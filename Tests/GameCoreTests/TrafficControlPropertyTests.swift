@@ -522,6 +522,183 @@ final class TrafficControlPropertyTests: XCTestCase {
         return problems
     }
 
+    // MARK: - Following (Stage U2)
+
+    /// A long line to follow on (Stage U2): six straight edges of 32768
+    /// (512 m) east along y = 8192, each with a station whose platform of
+    /// 4096 lies somewhere along it, traffic control on, and three to five
+    /// trains of one to three cars, each at the forward berth of a
+    /// different station, mostly in the western half.
+    private static func beginFollowing(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
+        let minute = Int64(testCase.random.below(1_440))
+        var world = try GameWorld(bounds: WorldBounds(width: 204_800, height: 16_384), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
+        var model = ReferenceWorld(width: 204_800, height: 16_384, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
+        for index in 0...6 {
+            let node = WorldCoordinate(x: 2_048 + Int64(index) * 32_768, y: 8_192, z: 0)
+            _ = try world.buildTrackNode(at: node)
+            XCTAssertNil(model.buildNetworkNode(at: node))
+        }
+        for index in 1...6 {
+            _ = try world.buildTrackEdge(from: .node(index), to: .node(index + 1))
+            XCTAssertNil(model.buildNetworkEdge(from: .node(index), to: .node(index + 1), curve: .straight))
+        }
+        var berths: [TrainPosition] = []
+        for index in 1...6 {
+            let point = PlanPoint(x: 2_048 + Int64(index - 1) * 32_768 + 16_384, y: 9_216)
+            _ = try world.buildStation(named: "S\(index)", at: point)
+            XCTAssertNil(model.buildStation(named: "S\(index)", at: point))
+            let start = Int64(1_024 * (2 + testCase.random.below(24)))
+            both(&world, &model, .addPlatform(StationID(rawValue: index), .edge(index), start, start + 4_096))
+            berths.append(.onEdge(TrackTraversal(edge: .edge(index), direction: .forward), offset: start + 4_096))
+        }
+        both(&world, &model, .trafficControl(true))
+        let count = 3 + testCase.random.below(3)
+        let stations = Array(testCase.random.shuffled([0, 0, 1, 1, 2, 2, 3, 4, 5]).reduce(into: [Int]()) { found, index in
+            if !found.contains(index) { found.append(index) }
+        }.prefix(count))
+        for (number, station) in stations.enumerated() {
+            let train = TrainID(rawValue: number + 1)
+            _ = try world.purchaseTrain(named: "T")
+            _ = model.purchaseTrain(named: "T")
+            let cars = 1 + testCase.random.below(3)
+            try world.setTrainCars(train, to: cars)
+            _ = model.setCars(train, cars)
+            both(&world, &model, .place(train, berths[station]))
+            if case .onEdge(_, let offset) = berths[station] { both(&world, &model, .path(train, [], offset)) }
+            both(&world, &model, .rate(train, testCase.random.element(of: [1_024, 2_048] as [Int64])))
+        }
+        // Each train not at the last station runs east from its station at
+        // once, calling everywhere, all in the same minute or the next, legs
+        // of 3 to 12 minutes, so that the ones behind set off while the ones
+        // ahead are still on their way and catch them up; mostly ending
+        // short of where the one ahead ends, so that they may follow it.
+        let now = max(0, world.clock.now.minute)
+        let order = stations.enumerated().filter { $0.element < 5 }.sorted { $0.element > $1.element }
+        var limit = 5
+        for (number, station) in order {
+            let last = max(station + 1, min(limit, station + 1 + testCase.random.below(3)))
+            limit = last - 1
+            var time = now + Int64(testCase.random.below(2))
+            var stops = [ScheduledStop(station: StationID(rawValue: station + 1), arrival: GameTime(minutes: time), departure: GameTime(minutes: time))]
+            for next in (station + 1)...last {
+                time += Int64(3 + testCase.random.below(10))
+                let arrival = time
+                time += Int64(testCase.random.below(2))
+                stops.append(ScheduledStop(station: StationID(rawValue: next + 1), arrival: GameTime(minutes: arrival), departure: GameTime(minutes: time)))
+            }
+            both(&world, &model, .run(TrainID(rawValue: number + 1), stops, nil))
+        }
+        testCase.note("trains at stations \(stations.map { $0 + 1 })")
+        return (world, model)
+    }
+
+    /// A timetable from the station `train` stands at on to one to three
+    /// stations further east (or, now and then, back west), legs of 2 to 20
+    /// minutes so that trains catch each other up, the last call turning
+    /// round now and then, repeating now and then.
+    private static func followingTimetable(for train: Train, in world: GameWorld, using random: inout SplitMix64) -> ([ScheduledStop], Int64?) {
+        let stations = world.stations.map(\.id)
+        guard let here = world.stationsStoppedAt(by: train.id).first ?? stations.first,
+              let index = stations.firstIndex(of: here)
+        else { return ([], nil) }
+        let east = random.chance(5, in: 6)
+        let ahead = east ? Array(stations[(index + 1)...]) : Array(stations[..<index].reversed())
+        guard !ahead.isEmpty else { return ([], nil) }
+        let calls = [here] + ahead.prefix(1 + random.below(3))
+        var time = max(0, world.clock.now.minute) + Int64(random.below(3))
+        var stops: [ScheduledStop] = []
+        for (number, station) in calls.enumerated() {
+            if number > 0 { time += Int64(2 + random.below(19)) }
+            let arrival = time
+            time += Int64(random.below(2))
+            let turns = (number == 0 && !east) || (number == calls.count - 1 && random.chance(1, in: 3))
+            stops.append(ScheduledStop(station: station, arrival: GameTime(minutes: arrival), departure: GameTime(minutes: time), reverses: turns))
+        }
+        let period: Int64? = random.chance(1, in: 6) ? time - stops[0].arrival.minutes + Int64(random.below(10)) : nil
+        return (stops, period)
+    }
+
+    static func followingOperation(in world: GameWorld, using random: inout SplitMix64) -> Operation {
+        let trains = world.trains
+        let stations = world.stations.map(\.id)
+        let idle = trains.filter { $0.execution == nil && $0.position != nil }
+        switch random.below(100) {
+        case 0..<45:
+            return .advance(1 + random.below(3))
+        case 45..<77:
+            let ready = idle.filter { !world.stationsStoppedAt(by: $0.id).isEmpty }
+            let train = ready.isEmpty || random.chance(1, in: 15) ? random.element(of: trains) : random.element(of: ready)
+            let (stops, period) = followingTimetable(for: train, in: world, using: &random)
+            return stops.isEmpty ? .advance(1) : .run(train.id, stops, period)
+        case 77..<80:
+            let running = trains.filter { $0.execution != nil }
+            return running.isEmpty ? .advance(1) : .stop(random.element(of: running).id)
+        case 80..<85:
+            return .rate(random.element(of: trains).id, random.element(of: [0, 1_024, 2_048, 3_072] as [Int64]))
+        case 85..<88:
+            return .trafficControl(!world.isTrafficControlEnabled || random.chance(1, in: 3) ? true : false)
+        case 88..<95:
+            // An idle train sent on by hand to a station.
+            guard let train = idle.isEmpty ? nil : random.element(of: idle),
+                  let path = world.path(from: train.position!, toStation: random.element(of: stations), length: train.length)
+            else { return .advance(1) }
+            return .path(train.id, path.traversals, path.end)
+        default:
+            return .advance(1)
+        }
+    }
+
+    /// Stage U2: services following the trains ahead of them on a long
+    /// line, on GameCore and on the reference side by side; every
+    /// operation's outcome and the whole state agree, invariants hold and
+    /// the world survives a save exactly.
+    func testFollowingMatchesTheReferenceAtEveryStep() throws {
+        var digest = Digest()
+        var tally: [String: Int] = [:]
+        let ran = try runCampaign("traffic.following", cases: 12) { testCase in
+            var (world, model) = try Self.beginFollowing(&testCase)
+            for step in 0..<60 {
+                let operation = Self.followingOperation(in: world, using: &testCase.random)
+                testCase.note("\(step): \(operation)")
+                let before = world
+                let outcome = Self.apply(operation, to: &world)
+                let expected = Self.apply(operation, to: &model)
+                guard outcome == expected else {
+                    return testCase.fail("\(operation): \(String(describing: outcome)) vs reference \(String(describing: expected))")
+                }
+                if outcome != nil, !operation.isCompound, world != before { return testCase.fail("refused \(operation) but changed the world") }
+                let name = "\(operation)".components(separatedBy: "(")[0]
+                tally["\(outcome.map { "\($0)".components(separatedBy: "(")[0] } ?? "ok") \(name)", default: 0] += 1
+                if case .advance = operation {
+                    for (old, new) in zip(before.trains, world.trains) {
+                        guard case .travellingToStop? = new.execution else { continue }
+                        let follows = world.trainHoldingRoute(of: new.id) != nil
+                        let followed = before.trainHoldingRoute(of: old.id) != nil
+                        if follows { tally["following a train ahead", default: 0] += 1 }
+                        if follows, case .waitingAtStop? = old.execution { tally["set off following", default: 0] += 1 }
+                        if follows, followed, Set(new.reservation).subtracting(old.reservation).isEmpty == false {
+                            tally["took more of its route", default: 0] += 1
+                        }
+                        if followed, !follows, case .travellingToStop? = old.execution { tally["took the rest of its route", default: 0] += 1 }
+                    }
+                }
+                var ignored: [String: Int] = [:]
+                let problems = Self.differences(world, model, tally: &ignored) + WorldInvariants.violations(in: world)
+                guard problems.isEmpty else { return testCase.fail(problems.joined(separator: "\n")) }
+                if let problem = WorldInvariants.roundTripProblem(of: world) { return testCase.fail(problem) }
+            }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
+        }
+        let summary = tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")
+        print("[digest] traffic.following \(digest.hex) (\(summary))")
+        assertVolume(ran == 12 * PropertySeeds.active.count, "every case ran")
+        assertVolume(tally["set off following", default: 0] > 15, "services set off following others")
+        assertVolume(tally["took more of its route", default: 0] > 10, "following trains take more of their routes")
+        assertVolume(tally["took the rest of its route", default: 0] > 10, "following trains take the rest of their routes")
+    }
+
     /// A world of this campaign's layouts after `operations` generated
     /// operations; for the save mutation campaign.
     static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> GameWorld {
@@ -583,6 +760,12 @@ final class TrafficControlPropertyTests: XCTestCase {
                         if case .travellingToStop? = new.execution, case .waitingAtStop? = old.execution,
                            let ahead = before.trainHoldingRoute(of: old.id), world.train(id: ahead)?.reservation.isEmpty == false {
                             tally["left while the train it waited for still moved", default: 0] += 1
+                        }
+                        // Stage U2: a service on its way that holds its route
+                        // only part of the way follows the trains ahead.
+                        if case .travellingToStop? = new.execution, world.trainHoldingRoute(of: new.id) != nil {
+                            tally["following a train ahead", default: 0] += 1
+                            if case .waitingAtStop? = old.execution { tally["set off following", default: 0] += 1 }
                         }
                     }
                 }

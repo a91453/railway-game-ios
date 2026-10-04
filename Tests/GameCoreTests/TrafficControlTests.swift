@@ -796,6 +796,143 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(single, world)
     }
 
+    // MARK: - Following (Stage U2)
+
+    /// Four straight edges of 32768 (512 m) in a line along y = 1024, n1
+    /// (1024, 1024) to n5 (132096, 1024), with a station on each: A on e1
+    /// from 1024 to 3072, M on e2, N on e3 and B on e4, each from 14336 to
+    /// 16384 (B from 28672 to 30720). Every span is 1024 long.
+    private func makeFollowingWorld() throws -> (world: GameWorld, stations: [StationID]) {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 133_120, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        let nodes = try (0..<5).map { try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + Int64($0) * 32_768, y: 1_024)) }
+        for (from, to) in zip(nodes, nodes.dropFirst()) {
+            try world.buildTrackEdge(from: from, to: to)
+        }
+        var stations: [StationID] = []
+        for (name, edge, start) in [("A", 1, Int64(1_024)), ("M", 2, 14_336), ("N", 3, 14_336), ("B", 4, 28_672)] {
+            let station = try world.buildStation(named: name, at: PlanPoint(x: 1_024 + Int64(edge - 1) * 32_768 + start + 1_024, y: 2_048)).id
+            try world.addTrackPlatform(station, on: .edge(edge), from: start, to: start + 2_048)
+            stations.append(station)
+        }
+        return (world, stations)
+    }
+
+    /// Stage U2: a service whose route a service ahead of it holds sets off
+    /// behind it, holding its route only as far as 400 m short of the track
+    /// the one ahead holds; it takes the rest as that is freed, and never
+    /// comes within 400 m of it while it follows. Under U1 it would have
+    /// waited at A until the leader's tail had left its whole route.
+    func testAServiceFollowsAServiceAheadOfItBetweenCalls() throws {
+        var (world, stations) = try makeFollowingWorld()
+        let (a, m, n, b) = (stations[0], stations[1], stations[2], stations[3])
+        try world.setTrafficControl(true)
+        // The leader stands at M's forward berth and runs on to B, slowly:
+        // 79872 units in 20 minutes.
+        let leader = try stand(&world, cars: 2, at: forward(2), 16_384)
+        try world.setTrainMovementRate(leader, to: 1_024)
+        try world.setTrainTimetable(leader, to: [
+            ScheduledStop(station: m, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: b, arrival: GameTime(minutes: 21), departure: GameTime(minutes: 21)),
+        ])
+        // The follower stands at A's and runs to N, past M, in 7 minutes.
+        let follower = try stand(&world, cars: 2, at: forward(1), 3_072)
+        try world.setTrainMovementRate(follower, to: 1_024)
+        try world.setTrainTimetable(follower, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+            ScheduledStop(station: n, arrival: GameTime(minutes: 7), departure: GameTime(minutes: 7)),
+        ])
+        try world.startTrainService(leader)
+        try world.startTrainService(follower)
+        world.setSpeed(.x10)
+        let start = world
+
+        // Due at 0:42, the follower waits while the leader stands at M: a
+        // train that stands is not one to follow.
+        try world.advance(ticks: 50)
+        XCTAssertEqual(world.train(id: follower)?.execution, .waitingAtStop(0, cycle: 0))
+        XCTAssertEqual(world.trainHoldingRoute(of: follower), leader)
+        // The leader leaves at 1:00, and the follower right behind it, in the
+        // same step. Its route is free up to 14335 along e2 (the leader's
+        // tail, at 15360 on a span boundary, holds the span ending there
+        // too), 44031 from its head; 400 m short of that is 18431 on, 21503
+        // along e1, and it holds its route to the end of the span there.
+        try world.advance(ticks: 11)
+        XCTAssertEqual(world.train(id: leader)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.train(id: follower)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.train(id: follower)?.times?.departure, GameTime(seconds: 60))
+        XCTAssertEqual(world.reservedResources(of: follower).last, span(1, 20_480, 21_504))
+        XCTAssertEqual(world.trainHoldingRoute(of: follower), leader)
+
+        // Second by second until the follower arrives at N: it never holds
+        // track the leader holds, and while it follows, its head stays 400 m
+        // short of the first span the leader holds, to the span: at least
+        // 25600 − 1023.
+        var seconds = 61
+        var following = 0
+        while world.train(id: follower)?.execution == .travellingToStop(1, cycle: 0), seconds < 2_000 {
+            try world.advance(ticks: 1)
+            seconds += 1
+            XCTAssertTrue(Set(world.heldResources(of: leader)).isDisjoint(with: Set(world.heldResources(of: follower))), "second \(seconds)")
+            guard world.trainHoldingRoute(of: follower) == leader,
+                  case .onEdge(let traversal, let offset)? = world.train(id: follower)?.position,
+                  case .onEdge(let ahead, let leaderHead)? = world.train(id: leader)?.position
+            else { continue }
+            following += 1
+            let along = { (edge: TrackEdgeID, offset: Int64) in Int64(edge.number - 1) * 32_768 + offset }
+            let tail = along(ahead.edge, leaderHead) - 1_024
+            let firstHeld = tail % 1_024 == 0 ? tail - 1_024 : tail / 1_024 * 1_024
+            XCTAssertGreaterThanOrEqual(firstHeld - along(traversal.edge, offset), 25_600 - 1_023, "second \(seconds)")
+        }
+        XCTAssertEqual(world.train(id: follower)?.execution, .waitingAtStop(1, cycle: 0), "arrived at N")
+
+        // Stepping by minutes gives the same world.
+        let minutesRun = Int(seconds / 60 + 1)
+        var minutes = start
+        minutes.setSpeed(.normal)
+        try minutes.advance(ticks: minutesRun)
+        minutes.setSpeed(.x10)
+        var byTicks = start
+        try byTicks.advance(ticks: minutesRun * 60)
+        XCTAssertEqual(minutes, byTicks)
+    }
+
+    /// Stage U2: a train coming the other way along a service's route is
+    /// never one to follow, even one that goes on from its stop there: the
+    /// service would only run towards it. It waits for its whole route.
+    func testAServiceNeverFollowsATrainComingTheOtherWay() throws {
+        var (world, stations) = try makeFollowingWorld()
+        let (a, m, n) = (stations[0], stations[1], stations[2])
+        try world.setTrafficControl(true)
+        // Oncoming stands at N's backward berth and runs west, calling at M
+        // and going on to A.
+        let oncoming = try stand(&world, cars: 2, at: backward(3), 32_768 - 14_336)
+        try world.setTrainMovementRate(oncoming, to: 1_024)
+        try world.setTrainTimetable(oncoming, to: [
+            ScheduledStop(station: n, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+            ScheduledStop(station: m, arrival: GameTime(minutes: 10), departure: GameTime(minutes: 11)),
+            ScheduledStop(station: a, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 20)),
+        ])
+        // The service stands at A and runs east to N, past M.
+        let service = try stand(&world, cars: 2, at: forward(1), 3_072)
+        try world.setTrainMovementRate(service, to: 1_024)
+        try world.setTrainTimetable(service, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: n, arrival: GameTime(minutes: 8), departure: GameTime(minutes: 8)),
+        ])
+        try world.startTrainService(oncoming)
+        try world.startTrainService(service)
+        // Oncoming leaves at 0:42 for M and holds the way there, which is
+        // on the service's route; due at 1:00, the service waits for it.
+        try world.advance(ticks: 2)
+        XCTAssertEqual(world.train(id: oncoming)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.train(id: service)?.execution, .waitingAtStop(0, cycle: 0))
+        XCTAssertEqual(world.trainHoldingRoute(of: service), oncoming)
+        XCTAssertEqual(world.reservedResources(of: service), [])
+    }
+
     /// A save from before Stage U may hold track its train has already
     /// passed (Stage T kept it until the route ended): it loads as it is,
     /// that track stays held, and the train lets it go when it next moves.
@@ -901,7 +1038,7 @@ final class TrafficControlTests: XCTestCase {
             ("unknown edge", mutated { _, trains in trains[0]["reservation"] = valid + [["edge": 9, "start": 0, "end": 1_024]] }),
             ("unknown node", mutated { _, trains in trains[0]["reservation"] = [["node": 9]] + valid }),
             ("not a span of the edge", mutated { _, trains in trains[0]["reservation"] = [["edge": 1, "start": 0, "end": 2_048]] }),
-            ("short of the route", mutated { _, trains in trains[0]["reservation"] = [valid[0]] }),
+            ("short of where it stands", mutated { _, trains in trains[0]["reservation"] = [valid[1]] }),
             ("over another train's track", mutated { _, trains in trains[0]["reservation"] = valid + [["edge": 1, "start": 2_048, "end": 3_072]] }),
             ("on a standing train", mutated { _, trains in trains[1]["reservation"] = [["edge": 1, "start": 2_048, "end": 3_072]] }),
             ("unplaced", mutated { _, trains in trains[1]["position"] = nil; trains[1]["movement"] = nil; trains[1]["reservation"] = [["node": 1]] }),
@@ -915,6 +1052,10 @@ final class TrafficControlTests: XCTestCase {
         for (name, broken) in cases {
             XCTAssertThrowsError(try decode(broken), name)
         }
+        // Stage U2: holding where it stands and only part of the rest of
+        // its route is a train following another (save version 7).
+        let following = mutated { _, trains in trains[0]["reservation"] = [valid[0]] }
+        XCTAssertEqual(try decode(following).reservedResources(of: one), [span(1, 0, 1_024)])
         // More than the route needs is a lock, not an error.
         let extra = mutated { _, trains in trains[0]["reservation"] = valid + [["edge": 2, "start": 2_000, "end": 3_000]] }
         XCTAssertEqual(try decode(extra).reservedResources(of: one), [span(1, 0, 1_024), span(1, 1_024, 2_048), span(2, 2_000, 3_000)])

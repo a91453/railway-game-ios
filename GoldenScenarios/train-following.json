@@ -1,0 +1,1995 @@
+{
+  "schemaVersion": 30,
+  "description": "Following between calls under traffic control (Stage U2, ARCHITECTURE decision 56). A straight line of four edges of 32768 (512 m) east along y = 1024, n1 to n5: A's platform on e1 from 1024 to 3072, M's on e2 and N's on e3 from 14336 to 16384, B's on e4 from 28672 to 30720. Leader (2 cars, 1024 long) stands at M's forward berth (16384 along e2) and runs M 0/1 to B 21/21, 16384 + 32768 + 30720 = 79872 in 20 minutes. Follower (2 cars) stands at A's (3072 along e1) and runs A 0/0 to N 7/7 past M without calling there, 29696 + 32768 + 16384 = 78848 in 7 minutes. Due at 0:42, the Follower waits at A while the Leader stands at M on its route: a train that stands is not one to follow (routeHolder 1, no reservation). At 1:00 the Leader, the lower ID, leaves first and takes its whole route; in the same second the Follower sets off following it: no train holds its route up to 14335 along e2 (the Leader's tail, at 15360 on a span boundary, holds the span ending there too), 44031 from its head; 400 m (25600, the Railway reference's BLOCK_GAP_KM) short of that is 18431 on, 21503 along e1, and it holds its route to the end of the span there (e1 from 2048 to 21504). Its run is the 420 seconds its timetable gives (Stage W2c), but it goes no farther than its reservation holds it. At 4:01 the Leader's tail is 27344 along e2, inside the span from 26624; 400 m short of 26623 is 1023 along e2, where the Follower's head stands, holding e1 from 31744, n2 and e2 to 1024. Each second, before anything sets off, it takes more of its route as the Leader frees it: at 9:01 the Leader's tail is 14577 along e3, inside the span from 14336; 400 m short of that is 21503 along e2, and the Follower holds its route to 21504, its head at 20599. Once the Leader's tail has left the Follower's route, the Follower takes the rest of it and arrives at N at 10:40 (second 640), 220 seconds late, releasing its route (Stage T): it holds its place alone, e3 from 14336 to 17408. The Leader is still on its way to B at the end.",
+  "initialState": {
+    "worldWidth": 133120,
+    "worldHeight": 4096,
+    "balance": 1000000,
+    "costs": {
+      "track": 10,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 1024,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 33792,
+        "y": 1024,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 66560,
+        "y": 1024,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 99328,
+        "y": 1024,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 132096,
+        "y": 1024,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 1,
+        "to": 2,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 2,
+        "to": 3,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 3,
+        "to": 4,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 4,
+        "to": 5,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "A",
+        "point": {
+          "x": 3072,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 1,
+        "edge": 1,
+        "start": 1024,
+        "end": 3072
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "M",
+        "point": {
+          "x": 49152,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 2,
+        "edge": 2,
+        "start": 14336,
+        "end": 16384
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "N",
+        "point": {
+          "x": 81920,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 3,
+        "edge": 3,
+        "start": 14336,
+        "end": 16384
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "B",
+        "point": {
+          "x": 129024,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 4,
+        "edge": 4,
+        "start": 28672,
+        "end": 30720
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "purchaseTrain",
+        "name": "Leader"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "purchaseTrain",
+        "name": "Follower"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainCars",
+        "train": 1,
+        "cars": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeTrain",
+        "train": 1,
+        "position": {
+          "type": "edge",
+          "edge": 2,
+          "direction": "forward",
+          "offset": 16384
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainPath",
+        "train": 1,
+        "path": [],
+        "end": 16384
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainMovementRate",
+        "train": 1,
+        "rate": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainCars",
+        "train": 2,
+        "cars": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeTrain",
+        "train": 2,
+        "position": {
+          "type": "edge",
+          "edge": 1,
+          "direction": "forward",
+          "offset": 3072
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainPath",
+        "train": 2,
+        "path": [],
+        "end": 3072
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainMovementRate",
+        "train": 2,
+        "rate": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrafficControl",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainTimetable",
+        "train": 1,
+        "timetable": [
+          {
+            "station": 2,
+            "arrival": 0,
+            "departure": 1,
+            "reverse": false
+          },
+          {
+            "station": 4,
+            "arrival": 21,
+            "departure": 21,
+            "reverse": false
+          }
+        ],
+        "repeat": {
+          "type": "once"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "startTrainService",
+        "train": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainTimetable",
+        "train": 2,
+        "timetable": [
+          {
+            "station": 1,
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false
+          },
+          {
+            "station": 3,
+            "arrival": 7,
+            "departure": 7,
+            "reverse": false
+          }
+        ],
+        "repeat": {
+          "type": "once"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "startTrainService",
+        "train": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 2
+      },
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 0,
+          "type": "waiting"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "routeHolder",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "train": 1
+      }
+    },
+    {
+      "observe": {
+        "type": "reservation",
+        "train": 2
+      },
+      "expect": {
+        "resources": []
+      }
+    },
+    {
+      "command": {
+        "type": "setSpeed",
+        "speed": "x10"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 1
+      },
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "travelling"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 2
+      },
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "travelling"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "serviceTimes",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "times": {
+          "arrival": 0,
+          "departure": 60,
+          "run": {
+            "length": 78848,
+            "seconds": 420,
+            "start": 60
+          }
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "train",
+        "train": 2
+      },
+      "expect": {
+        "movement": {
+          "cursor": 0,
+          "edges": [
+            2,
+            3
+          ],
+          "end": 16384,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 1,
+          "offset": 3085,
+          "type": "edge"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "reservation",
+        "train": 2
+      },
+      "expect": {
+        "resources": [
+          {
+            "edge": 1,
+            "end": 3072,
+            "start": 2048,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 4096,
+            "start": 3072,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 5120,
+            "start": 4096,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 6144,
+            "start": 5120,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 7168,
+            "start": 6144,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 8192,
+            "start": 7168,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 9216,
+            "start": 8192,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 10240,
+            "start": 9216,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 11264,
+            "start": 10240,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 12288,
+            "start": 11264,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 13312,
+            "start": 12288,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 14336,
+            "start": 13312,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 15360,
+            "start": 14336,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 18432,
+            "start": 17408,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 19456,
+            "start": 18432,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 1,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "routeHolder",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "train": 1
+      }
+    },
+    {
+      "observe": {
+        "type": "heldResources",
+        "train": 1
+      },
+      "expect": {
+        "resources": [
+          {
+            "node": 3,
+            "type": "networkNode"
+          },
+          {
+            "node": 4,
+            "type": "networkNode"
+          },
+          {
+            "edge": 2,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 18432,
+            "start": 17408,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 19456,
+            "start": 18432,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 22528,
+            "start": 21504,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 23552,
+            "start": 22528,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 24576,
+            "start": 23552,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 25600,
+            "start": 24576,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 26624,
+            "start": 25600,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 27648,
+            "start": 26624,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 28672,
+            "start": 27648,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 29696,
+            "start": 28672,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 30720,
+            "start": 29696,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 31744,
+            "start": 30720,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 32768,
+            "start": 31744,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 1024,
+            "start": 0,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 2048,
+            "start": 1024,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 3072,
+            "start": 2048,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 4096,
+            "start": 3072,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 5120,
+            "start": 4096,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 6144,
+            "start": 5120,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 7168,
+            "start": 6144,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 8192,
+            "start": 7168,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 9216,
+            "start": 8192,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 10240,
+            "start": 9216,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 11264,
+            "start": 10240,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 12288,
+            "start": 11264,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 13312,
+            "start": 12288,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 14336,
+            "start": 13312,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 15360,
+            "start": 14336,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 18432,
+            "start": 17408,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 19456,
+            "start": 18432,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 22528,
+            "start": 21504,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 23552,
+            "start": 22528,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 24576,
+            "start": 23552,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 25600,
+            "start": 24576,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 26624,
+            "start": 25600,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 27648,
+            "start": 26624,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 28672,
+            "start": 27648,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 29696,
+            "start": 28672,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 30720,
+            "start": 29696,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 31744,
+            "start": 30720,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 32768,
+            "start": 31744,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 1024,
+            "start": 0,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 2048,
+            "start": 1024,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 3072,
+            "start": 2048,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 4096,
+            "start": 3072,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 5120,
+            "start": 4096,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 6144,
+            "start": 5120,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 7168,
+            "start": 6144,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 8192,
+            "start": 7168,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 9216,
+            "start": 8192,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 10240,
+            "start": 9216,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 11264,
+            "start": 10240,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 12288,
+            "start": 11264,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 13312,
+            "start": 12288,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 14336,
+            "start": 13312,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 15360,
+            "start": 14336,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 18432,
+            "start": 17408,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 19456,
+            "start": 18432,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 22528,
+            "start": 21504,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 23552,
+            "start": 22528,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 24576,
+            "start": 23552,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 25600,
+            "start": 24576,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 26624,
+            "start": 25600,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 27648,
+            "start": 26624,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 28672,
+            "start": 27648,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 29696,
+            "start": 28672,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 30720,
+            "start": 29696,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 31744,
+            "start": 30720,
+            "type": "networkSpan"
+          }
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setSpeed",
+        "speed": "normal"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 3
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "train",
+        "train": 1
+      },
+      "expect": {
+        "movement": {
+          "cursor": 0,
+          "edges": [
+            3,
+            4
+          ],
+          "end": 30720,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 2,
+          "offset": 28368,
+          "type": "edge"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "train",
+        "train": 2
+      },
+      "expect": {
+        "movement": {
+          "cursor": 1,
+          "edges": [
+            2,
+            3
+          ],
+          "end": 16384,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 2,
+          "offset": 1023,
+          "type": "edge"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "reservation",
+        "train": 2
+      },
+      "expect": {
+        "resources": [
+          {
+            "node": 2,
+            "type": "networkNode"
+          },
+          {
+            "edge": 1,
+            "end": 32768,
+            "start": 31744,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 1024,
+            "start": 0,
+            "type": "networkSpan"
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "routeHolder",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "train": 1
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 5
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "train",
+        "train": 1
+      },
+      "expect": {
+        "movement": {
+          "cursor": 1,
+          "edges": [
+            3,
+            4
+          ],
+          "end": 30720,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 15601,
+          "type": "edge"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "train",
+        "train": 2
+      },
+      "expect": {
+        "movement": {
+          "cursor": 1,
+          "edges": [
+            2,
+            3
+          ],
+          "end": 16384,
+          "rate": 1024
+        },
+        "position": {
+          "direction": "forward",
+          "edge": 2,
+          "offset": 20599,
+          "type": "edge"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "reservation",
+        "train": 2
+      },
+      "expect": {
+        "resources": [
+          {
+            "edge": 2,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 2,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "routeHolder",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "train": 1
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 2
+      },
+      "expect": {
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "waiting"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "serviceTimes",
+        "train": 2
+      },
+      "expect": {
+        "found": true,
+        "times": {
+          "arrival": 640,
+          "departure": 60,
+          "exchangeEnd": 648
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "reservation",
+        "train": 2
+      },
+      "expect": {
+        "resources": []
+      }
+    },
+    {
+      "observe": {
+        "type": "heldResources",
+        "train": 2
+      },
+      "expect": {
+        "resources": [
+          {
+            "edge": 3,
+            "end": 15360,
+            "start": 14336,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "routeHolder",
+        "train": 2
+      },
+      "expect": {
+        "found": false
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 984720,
+    "gameSeconds": 661,
+    "lines": [],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 32768,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 32768,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 3,
+          "id": 3,
+          "length": 32768,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 4
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 4,
+          "id": 4,
+          "length": 32768,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 5
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 1024,
+          "y": 1024,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 33792,
+          "y": 1024,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 66560,
+          "y": 1024,
+          "z": 0
+        },
+        {
+          "id": 4,
+          "x": 99328,
+          "y": 1024,
+          "z": 0
+        },
+        {
+          "id": 5,
+          "x": 132096,
+          "y": 1024,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 3072,
+          "start": 1024,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 16384,
+          "start": 14336,
+          "station": 2
+        },
+        {
+          "edge": 3,
+          "end": 16384,
+          "start": 14336,
+          "station": 3
+        },
+        {
+          "edge": 4,
+          "end": 30720,
+          "start": 28672,
+          "station": 4
+        }
+      ]
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "A",
+        "point": {
+          "x": 3072,
+          "y": 2048
+        }
+      },
+      {
+        "id": 2,
+        "name": "M",
+        "point": {
+          "x": 49152,
+          "y": 2048
+        }
+      },
+      {
+        "id": 3,
+        "name": "N",
+        "point": {
+          "x": 81920,
+          "y": 2048
+        }
+      },
+      {
+        "id": 4,
+        "name": "B",
+        "point": {
+          "x": 129024,
+          "y": 2048
+        }
+      }
+    ],
+    "trafficControl": true,
+    "trains": [
+      {
+        "cars": 2,
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "travelling"
+        },
+        "id": 1,
+        "movement": {
+          "cursor": 1,
+          "edges": [
+            3,
+            4
+          ],
+          "end": 30720,
+          "rate": 1024
+        },
+        "name": "Leader",
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 23602,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [
+          {
+            "node": 4,
+            "type": "networkNode"
+          },
+          {
+            "edge": 3,
+            "end": 23552,
+            "start": 22528,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 24576,
+            "start": 23552,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 25600,
+            "start": 24576,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 26624,
+            "start": 25600,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 27648,
+            "start": 26624,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 28672,
+            "start": 27648,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 29696,
+            "start": 28672,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 30720,
+            "start": 29696,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 31744,
+            "start": 30720,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 3,
+            "end": 32768,
+            "start": 31744,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 1024,
+            "start": 0,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 2048,
+            "start": 1024,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 3072,
+            "start": 2048,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 4096,
+            "start": 3072,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 5120,
+            "start": 4096,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 6144,
+            "start": 5120,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 7168,
+            "start": 6144,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 8192,
+            "start": 7168,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 9216,
+            "start": 8192,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 10240,
+            "start": 9216,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 11264,
+            "start": 10240,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 12288,
+            "start": 11264,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 13312,
+            "start": 12288,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 14336,
+            "start": 13312,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 15360,
+            "start": 14336,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 16384,
+            "start": 15360,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 17408,
+            "start": 16384,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 18432,
+            "start": 17408,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 19456,
+            "start": 18432,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 20480,
+            "start": 19456,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 21504,
+            "start": 20480,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 22528,
+            "start": 21504,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 23552,
+            "start": 22528,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 24576,
+            "start": 23552,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 25600,
+            "start": 24576,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 26624,
+            "start": 25600,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 27648,
+            "start": 26624,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 28672,
+            "start": 27648,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 29696,
+            "start": 28672,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 30720,
+            "start": 29696,
+            "type": "networkSpan"
+          },
+          {
+            "edge": 4,
+            "end": 31744,
+            "start": 30720,
+            "type": "networkSpan"
+          }
+        ],
+        "times": {
+          "arrival": 0,
+          "departure": 60,
+          "run": {
+            "length": 79872,
+            "seconds": 1200,
+            "start": 60
+          }
+        },
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 1,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrival": 21,
+            "departure": 21,
+            "reverse": false,
+            "station": 4
+          }
+        ],
+        "trailEdges": []
+      },
+      {
+        "cars": 2,
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "waiting"
+        },
+        "id": 2,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "end": 16384,
+          "rate": 1024
+        },
+        "name": "Follower",
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 16384,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "times": {
+          "arrival": 640,
+          "departure": 60,
+          "exchangeEnd": 648
+        },
+        "timetable": [
+          {
+            "arrival": 0,
+            "departure": 0,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrival": 7,
+            "departure": 7,
+            "reverse": false,
+            "station": 3
+          }
+        ],
+        "trailEdges": []
+      }
+    ]
+  }
+}

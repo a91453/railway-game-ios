@@ -101,6 +101,7 @@ extension ReferenceWorld {
 
     /// Whether `train` can go on one unit now.
     func canMove(_ train: Train) -> Bool {
+        if let authority = authority(train), authority < 1 { return false }
         let moved = steppedOnNetwork(train, distance: 1)
         return moved.position != train.position || moved.cursor != train.cursor
     }
