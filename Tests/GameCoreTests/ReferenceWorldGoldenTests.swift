@@ -38,7 +38,6 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             XCTAssertEqual(model.speed, final.speed.speed, name)
             XCTAssertEqual(model.balance, final.balance, name)
             XCTAssertEqual(model.stations.map { WorldSummary.StationSummary(id: $0.id, name: $0.name, point: $0.point) }, final.stations, name)
-            XCTAssertEqual(final.tracks, [], name)
             XCTAssertEqual(
                 model.trains.map {
                     WorldSummary.TrainSummary(
