@@ -201,17 +201,24 @@ extension GameSession {
 
     /// The ridership a managed company gives a new station at `point`: on
     /// a real-world map the population grid covers, from the people living
-    /// around it (``StationDemand/realWorld(residents:)``); anywhere else
-    /// the city's (``StationDemand/cityDefault``).
+    /// around it (``StationDemand/realWorld(residents:kind:)``), of the
+    /// kind the places around it make it (homes without the places grid);
+    /// anywhere else the city's (``StationDemand/cityDefault``).
     public func newStationDemand(at point: PlanPoint) -> StationDemand {
         guard let population, let frame = RealWorldFrame(world: world) else { return .cityDefault }
         let place = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
-        guard let residents = population.people(
-            within: StationDemand.catchmentRadius,
-            ofLatitude: place.latitude,
-            longitude: place.longitude
-        ) else { return .cityDefault }
-        return .realWorld(residents: residents)
+        let radius = StationDemand.catchmentRadius
+        guard let residents = population.people(within: radius, ofLatitude: place.latitude, longitude: place.longitude) else {
+            return .cityDefault
+        }
+        guard let places else { return .realWorld(residents: residents) }
+        let kind = StationDemandKind.realWorld(
+            residents: residents,
+            places: places.places(within: radius, ofLatitude: place.latitude, longitude: place.longitude),
+            totals: Dictionary(uniqueKeysWithValues: PlaceGrid.Kind.allCases.map { ($0, places.total(of: $0)) }),
+            population: population.total
+        )
+        return .realWorld(residents: residents, kind: kind)
     }
 
     /// Adds a platform along ``networkPlatformStretch`` through

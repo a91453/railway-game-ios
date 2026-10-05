@@ -38,6 +38,10 @@ public final class GameLauncher {
     /// bundled grid.
     @ObservationIgnored public var population: PopulationGrid?
 
+    /// What there is around places on real-world maps in Taiwan, handed to
+    /// every game it starts (``GameSession/places``).
+    @ObservationIgnored public var places: PlaceGrid?
+
     @ObservationIgnored let library: SaveLibrary
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
@@ -144,6 +148,7 @@ public final class GameLauncher {
         session?.stopGameLoop()
         let started = GameSession(world: world, language: language)
         started.population = population
+        started.places = places
         session = started
         message = nil
         if isActive {

@@ -83,12 +83,12 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The shapes of the TRA lines, some metro lines and part of the Alishan Forest Railway, and the positions of stations, from OpenStreetMap’s contributors.",
-                            "台鐵、部分捷運與阿里山林鐵部分路段的軌道幾何，以及車站的座標，來自 OpenStreetMap 貢獻者。"
+                            "The shapes of the TRA lines, some metro lines and part of the Alishan Forest Railway, the positions of stations, and the shops, offices, schools and sights that decide what kind of place a company’s new station on a real-world map serves, from OpenStreetMap’s contributors.",
+                            "台鐵、部分捷運與阿里山林鐵部分路段的軌道幾何、車站的座標，以及決定公司在實景地圖上新建車站類型的商店、辦公、學校與景點，來自 OpenStreetMap 貢獻者。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The game’s railway files (track_lines.geojson and track_stations.geojson) are available under the same licence in its source repository.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲的鐵道資料檔（track_lines.geojson、track_stations.geojson）依同一授權，在遊戲的原始碼儲存庫提供。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The game’s railway and places files (track_lines.geojson, track_stations.geojson and taiwan_places.json) are available under the same licence in its source repository.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲的鐵道與地點資料檔（track_lines.geojson、track_stations.geojson、taiwan_places.json）依同一授權，在遊戲的原始碼儲存庫提供。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
