@@ -136,7 +136,7 @@ classes_of() {
     campaigns-19) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests" ;;
     campaigns-20) echo "EconomySecondHalfPropertyTests" ;;
     campaigns-21) echo "SaveMutationSecondHalfTests" ;;
-    campaigns-22) echo "SingleTrackCapacityPropertyTests" ;;
+    campaigns-22) echo "SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
     *) return 1 ;;
   esac
 }

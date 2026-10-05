@@ -118,6 +118,12 @@ public final class GameSession {
     /// bundled grid, set by the launcher; never saved.
     @ObservationIgnored public var population: PopulationGrid?
 
+    /// What there is around places on real-world maps in Taiwan, which
+    /// sets the kind of a managed company's new stations there (see
+    /// PlaceGrid.swift); `nil` makes them all serve homes. The app's
+    /// bundled grid, set by the launcher; never saved.
+    @ObservationIgnored public var places: PlaceGrid?
+
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?

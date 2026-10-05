@@ -19,73 +19,58 @@ import GameCore
 // through `GameWorld.setStationDemand(_:to:)`, and the world keeps that
 // number like any other, so a save never depends on the grid.
 
-/// People per cell of a grid of whole fractions of a degree, as WorldPop
-/// publishes it: rows from the north edge, columns from the west edge.
-public struct PopulationGrid: Sendable {
+/// Counts per cell of a grid of whole fractions of a degree, as WorldPop
+/// publishes its population: rows from the north edge, columns from the
+/// west edge. The population and the places on real-world maps share it.
+struct GridCounts: Sendable {
     struct Cell: Hashable, Sendable {
         let row: Int
         let column: Int
     }
 
+    /// A row's cells with something in them, from column `c` on.
+    struct Run: Decodable, Sendable {
+        let r: Int
+        let c: Int
+        let p: [Int]
+    }
+
     let north: Double
     let west: Double
     let cellDegrees: Double
-    let people: [Cell: Int]
-    /// Everyone in the grid.
-    public let total: Int
+    let counts: [Cell: Int]
+    let total: Int
 
-    /// Reads the app's grid file: its north-west corner, cell size in
-    /// degrees, and runs of people per cell along a row. Throws for a file
-    /// out of shape or a negative count.
-    public init(data: Data) throws {
-        struct File: Decodable {
-            struct Run: Decodable {
-                let r: Int
-                let c: Int
-                let p: [Int]
-            }
-
-            let north: Double
-            let west: Double
-            let cellDegrees: Double
-            let runs: [Run]
-        }
-        let file = try JSONDecoder().decode(File.self, from: data)
-        guard file.cellDegrees > 0, file.north.isFinite, file.west.isFinite else {
+    /// Throws for a grid without a corner or a positive cell size, or a
+    /// negative row, column or count.
+    init(north: Double, west: Double, cellDegrees: Double, runs: [Run]) throws {
+        guard cellDegrees > 0, north.isFinite, west.isFinite else {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "A grid needs a corner and a positive cell size."))
         }
-        var people: [Cell: Int] = [:]
+        var counts: [Cell: Int] = [:]
         var total = 0
-        for run in file.runs {
+        for run in runs {
             for (offset, count) in run.p.enumerated() {
                 guard count >= 0, run.r >= 0, run.c >= 0 else {
                     throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Rows, columns and counts are never negative."))
                 }
-                people[Cell(row: run.r, column: run.c + offset), default: 0] += count
+                counts[Cell(row: run.r, column: run.c + offset), default: 0] += count
                 total += count
             }
         }
-        north = file.north
-        west = file.west
-        cellDegrees = file.cellDegrees
-        self.people = people
+        self.north = north
+        self.west = west
+        self.cellDegrees = cellDegrees
+        self.counts = counts
         self.total = total
     }
 
-    /// How far around a place the grid must have someone living for the
-    /// place to count as covered, in metres: farther than this from
-    /// anyone, a place is taken to be outside the grid's country (WorldPop
-    /// counts one country), not empty land in it.
-    public static let coverage = 5_000.0
-
-    /// The people living within `radius` metres of `latitude`° north,
-    /// `longitude`° east, to the nearest person: each cell counts in
-    /// proportion to how much of the circle lies in it, sampled every
-    /// 50 m (each sample stands for an equal share of the circle's area).
-    /// `nil` where the grid does not cover the place (no one lives within
-    /// ``coverage`` of it).
-    public func people(within radius: Double, ofLatitude latitude: Double, longitude: Double) -> Int? {
-        guard covers(latitude: latitude, longitude: longitude), radius > 0 else { return nil }
+    /// How many there are within `radius` metres of `latitude`° north,
+    /// `longitude`° east: each cell counts in proportion to how much of the
+    /// circle lies in it, sampled every 50 m (each sample stands for an
+    /// equal share of the circle's area).
+    func count(within radius: Double, ofLatitude latitude: Double, longitude: Double) -> Double {
+        guard radius > 0 else { return 0 }
         let step = 50.0
         let steps = Int((radius / step).rounded(.up))
         var density = 0.0
@@ -98,24 +83,25 @@ public struct PopulationGrid: Sendable {
                 samples += 1
                 let point = Self.offset(latitude: latitude, longitude: longitude, east: x, south: y)
                 let cell = cell(latitude: point.latitude, longitude: point.longitude)
-                guard let count = people[cell], count > 0 else { continue }
+                guard let count = counts[cell], count > 0 else { continue }
                 density += Double(count) / area(of: cell)
             }
         }
         guard samples > 0 else { return 0 }
-        return Int((density / Double(samples) * Double.pi * radius * radius).rounded())
+        return density / Double(samples) * Double.pi * radius * radius
     }
 
-    /// Whether anyone lives within ``coverage`` of the place.
-    func covers(latitude: Double, longitude: Double) -> Bool {
+    /// Whether a cell within `distance` metres of the place (its middle)
+    /// has anything in it.
+    func hasAny(within distance: Double, ofLatitude latitude: Double, longitude: Double) -> Bool {
         let centre = cell(latitude: latitude, longitude: longitude)
-        let reach = Int((Self.coverage / (cellDegrees * Self.metresPerDegreeOfLatitude)).rounded(.up)) + 1
+        let reach = Int((distance / (cellDegrees * Self.metresPerDegreeOfLatitude)).rounded(.up)) + 1
         for row in centre.row - reach ... centre.row + reach {
             for column in centre.column - reach ... centre.column + reach {
                 let cell = Cell(row: row, column: column)
-                guard let count = people[cell], count > 0 else { continue }
+                guard let count = counts[cell], count > 0 else { continue }
                 let middle = middle(of: cell)
-                if Self.metres(fromLatitude: latitude, longitude: longitude, toLatitude: middle.latitude, longitude: middle.longitude) <= Self.coverage {
+                if Self.metres(fromLatitude: latitude, longitude: longitude, toLatitude: middle.latitude, longitude: middle.longitude) <= distance {
                     return true
                 }
             }
@@ -155,6 +141,46 @@ public struct PopulationGrid: Sendable {
     }
 }
 
+/// People per cell of WorldPop's grid of Taiwan.
+public struct PopulationGrid: Sendable {
+    let people: GridCounts
+
+    /// Everyone in the grid.
+    public var total: Int {
+        people.total
+    }
+
+    /// Reads the app's grid file: its north-west corner, cell size in
+    /// degrees, and runs of people per cell along a row. Throws for a file
+    /// out of shape or a negative count.
+    public init(data: Data) throws {
+        struct File: Decodable {
+            let north: Double
+            let west: Double
+            let cellDegrees: Double
+            let runs: [GridCounts.Run]
+        }
+        let file = try JSONDecoder().decode(File.self, from: data)
+        people = try GridCounts(north: file.north, west: file.west, cellDegrees: file.cellDegrees, runs: file.runs)
+    }
+
+    /// How far around a place the grid must have someone living for the
+    /// place to count as covered, in metres: farther than this from
+    /// anyone, a place is taken to be outside the grid's country (WorldPop
+    /// counts one country), not empty land in it.
+    public static let coverage = 5_000.0
+
+    /// The people living within `radius` metres of `latitude`° north,
+    /// `longitude`° east, to the nearest person (see
+    /// ``GridCounts/count(within:ofLatitude:longitude:)``). `nil` where the
+    /// grid does not cover the place (no one lives within ``coverage`` of
+    /// it).
+    public func people(within radius: Double, ofLatitude latitude: Double, longitude: Double) -> Int? {
+        guard radius > 0, people.hasAny(within: Self.coverage, ofLatitude: latitude, longitude: longitude) else { return nil }
+        return Int(people.count(within: radius, ofLatitude: latitude, longitude: longitude).rounded())
+    }
+}
+
 extension StationDemand {
     /// How far from a station on a real-world map its residents live, in
     /// metres: about ten minutes' walk.
@@ -165,13 +191,16 @@ extension StationDemand {
     public static let tripsPerHundredResidents: Int64 = 40
 
     /// The ridership a managed company's station on a real-world map gets
-    /// from the people living around it: residential, 40 trips a day for
-    /// every 100 residents, to the nearest 100 trips and at least 100 (the
-    /// smallest of ``dailyTripSteps``), at most ``maximumDailyTrips``.
-    public static func realWorld(residents: Int) -> StationDemand {
+    /// from the people living around it: of `kind` (homes unless the
+    /// places around it say otherwise, see
+    /// ``StationDemandKind/realWorld(residents:places:totals:population:)``),
+    /// 40 trips a day for every 100 residents, to the nearest 100 trips and
+    /// at least 100 (the smallest of ``dailyTripSteps``), at most
+    /// ``maximumDailyTrips``.
+    public static func realWorld(residents: Int, kind: StationDemandKind = .residential) -> StationDemand {
         let trips = Int64(max(0, residents)) * tripsPerHundredResidents / 100
         let rounded = (trips + 50) / 100 * 100
-        return StationDemand(kind: .residential, dailyTrips: min(max(rounded, 100), maximumDailyTrips))
+        return StationDemand(kind: kind, dailyTrips: min(max(rounded, 100), maximumDailyTrips))
     }
 }
 

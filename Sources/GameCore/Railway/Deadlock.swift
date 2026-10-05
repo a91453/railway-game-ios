@@ -57,7 +57,7 @@ extension GameWorld {
     /// A dead-end passing berth needs the same whole-body reversal as a
     /// timetable turnback. The ordinary facing always wins when reachable.
     /// The candidate is committed only after its departure is reserved.
-    private func passingContinuation(from place: TrainPlacement, to call: StationID) -> (start: TrainPlacement, path: TrainPath)? {
+    func passingContinuation(from place: TrainPlacement, to call: StationID) -> (start: TrainPlacement, path: TrainPath)? {
         for start in [place, turnedRound(place)] {
             if let path = path(from: start.position, toStation: call, length: start.length), path.distance > 0 {
                 return (start, path)

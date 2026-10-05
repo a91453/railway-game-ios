@@ -819,3 +819,10 @@ E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立�
 - 隨機性：之後需要時，由存檔在世界裡的種子，以（種子, 用途, 序號）的雜湊產生，不使用系統亂數
 - 整數分配一律用最大餘數法，以索引決定平手；乘客與金額的守恆寫成 property 測試
 - 分析指標優先由狀態推導，只有歷史彙總才存檔
+
+
+### Stage V4d 接續（2026-10-05，PR128）
+
+- 已實作，最新 head 驗證中（決策63）：中途全列折返、V2反向倒入側線；正向優先、反向枚舉全部可用berths、完整原子預約與限界／方向保護，dead-end續行取得授權後才翻向。
+- 新golden schema34（保留30–33）、save10不變；新768步campaign與實景玩家折返服務。既有fixtures／campaign量／workflow／timeout保留。
+- 精確VERIFIED／UNVERIFIED狀態見PR128及STAGE_V_HANDOFF。作者合併V4d後才開V4e：地圖上的movement authority、死結車與互等位置，保留文字。

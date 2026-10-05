@@ -39,7 +39,7 @@ extension ReferenceWorld {
         return going
     }
 
-    private mutating func passingExit(_ train: Train, call: StationID) -> (Train, TrainPath)? {
+    mutating func passingExit(_ train: Train, call: StationID) -> (Train, TrainPath)? {
         let forward = standing(train)
         if let path = defaultRoute(from: forward, to: call), path.distance > 0 { return (forward, path) }
         let reverse = turnedOnNetwork(forward)

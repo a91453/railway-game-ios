@@ -38,15 +38,21 @@ final class TurnbackTests: XCTestCase {
         return (world, model, line, train)
     }
 
-    static func reverseSiding() throws -> (GameWorld, ReferenceWorld, TrainID, TrainID) {
+    static func reverseSiding(shortSiding: Bool = false, shortStart: Bool = false) throws -> (GameWorld, ReferenceWorld, TrainID, TrainID) {
         var world = try SingleTrackMeet.world()
         var model = SingleTrackMeet.model()
         try world.removeTrackEdge(.edge(4)); XCTAssertNil(model.removeNetworkEdge(.edge(4)))
+        if shortSiding {
+            try world.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072)
+            XCTAssertNil(model.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072))
+            try world.addTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072, to: 3_584)
+            XCTAssertNil(model.addTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072, to: 3_584))
+        }
         let point = PlanPoint(x: 28_672, y: 8_192)
         let a = try world.buildStation(named: "A", at: point).id
         XCTAssertNil(model.buildStation(named: "A", at: point))
-        try world.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096)
-        XCTAssertNil(model.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096))
+        try world.addTrackPlatform(a, on: .edge(3), from: shortStart ? 2_560 : 2_048, to: 4_096)
+        XCTAssertNil(model.addTrackPlatform(a, on: .edge(3), from: shortStart ? 2_560 : 2_048, to: 4_096))
         var ids: [TrainID] = []
         for (track, calls) in [(SingleTrackMeet.forward(3), [a, SingleTrackMeet.east]),
                                (SingleTrackMeet.backward(3), [SingleTrackMeet.east, SingleTrackMeet.west])] {
@@ -95,6 +101,100 @@ final class TurnbackTests: XCTestCase {
         XCTAssertNil(world.train(id: west)?.execution)
         XCTAssertEqual(world.stationsStoppedAt(by: east), [SingleTrackMeet.east])
         XCTAssertEqual(world.stationsStoppedAt(by: west), [SingleTrackMeet.west])
+    }
+
+    func testBlockedOrShortSidingAndShortDeparturePlatformDoNotTurnTheTrain() throws {
+        for kind in 0..<4 {
+            var (world, model, east, west) = try Self.reverseSiding(shortSiding: kind == 1, shortStart: kind == 2)
+            if kind == 0 || kind == 3 {
+                // The fourth case holds the junction from the main track:
+                // the siding edge itself is empty, but its entrance fouls.
+                let track = SingleTrackMeet.forward(kind == 3 ? 2 : 5)
+                let offset: Int64 = kind == 3 ? 16_384 : 4_096
+                let parked = try world.purchaseTrain(named: "T").id
+                try world.setTrainCars(parked, to: 2)
+                try world.placeTrain(parked, at: .onEdge(track, offset: offset))
+                let end: Int64? = kind == 3 ? nil : offset
+                try world.setTrainContinuation(parked, along: [], stoppingAt: end)
+                try world.setTrainMovementRate(parked, to: 1_024)
+                XCTAssertNil(model.purchaseTrain(named: "T")); XCTAssertNil(model.setCars(parked, 2))
+                XCTAssertNil(model.placeTrain(parked, at: .onEdge(track, offset: offset)))
+                XCTAssertNil(model.setContinuation(parked, along: [], stoppingAt: end)); XCTAssertNil(model.setRate(parked, 1_024))
+            }
+            let position = world.train(id: east)?.position
+            let trail = world.train(id: east)?.trailEdges
+            for _ in 0..<180 {
+                try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+                XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+                XCTAssertEqual(world.train(id: east)?.position, position)
+                XCTAssertEqual(world.train(id: east)?.trailEdges, trail)
+                XCTAssertEqual(world.reservedResources(of: east), [])
+                XCTAssertEqual(WorldInvariants.violations(in: world), [])
+            }
+            XCTAssertEqual(world.deadlockedTrains(), [east, west])
+        }
+    }
+
+    func testSidingWaitKeepsItsFacingUntilAnAtomicDepartureAndSurvivesControlToggle() throws {
+        var (world, model, east, west) = try Self.reverseSiding()
+        var arrived = false
+        for _ in 0..<180 {
+            try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+            if world.passingPlace(of: east) == SingleTrackMeet.middle { arrived = true; break }
+        }
+        XCTAssertTrue(arrived)
+        let facing = world.train(id: east)?.position
+        XCTAssertEqual(facing, .onEdge(SingleTrackMeet.backward(5), offset: 5_120))
+        XCTAssertEqual(world.trainHoldingRoute(of: east), west)
+        let before = world
+        // Read-only planning can propose the reversed candidate; it cannot
+        // commit its orientation or a partial reservation while held.
+        _ = world.goingOn(try XCTUnwrap(world.train(id: east)))
+        XCTAssertEqual(world, before)
+        try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+        XCTAssertEqual(world.train(id: east)?.position, facing)
+        XCTAssertEqual(world.reservedResources(of: east), [])
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        var restored = try JSONDecoder().decode(SavedGame.self, from: data).world
+        try world.setTrafficControl(false); XCTAssertNil(model.setTrafficControl(false))
+        try restored.setTrafficControl(false)
+        try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10)); try restored.advance(ticks: 10)
+        XCTAssertEqual(world, restored)
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        guard case .onEdge(let track, _)? = world.train(id: east)?.position else { return XCTFail("missing train") }
+        XCTAssertEqual(track.direction, .forward)
+        XCTAssertEqual(world.reservedResources(of: east), [])
+    }
+
+    func testRateZeroFreezesABackingRunAndResumesWithoutLosingItsReservation() throws {
+        var (world, model, east, _) = try Self.reverseSiding()
+        try world.advance(ticks: 700); XCTAssertNil(model.advance(ticks: 700))
+        try world.setTrainMovementRate(east, to: 0); XCTAssertNil(model.setRate(east, 0))
+        let position = world.train(id: east)?.position
+        let reserved = world.reservedResources(of: east)
+        XCTAssertFalse(reserved.isEmpty)
+        try world.advance(ticks: 500); XCTAssertNil(model.advance(ticks: 500))
+        XCTAssertEqual(world.train(id: east)?.position, position)
+        XCTAssertEqual(world.reservedResources(of: east), reserved)
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
+        try world.setTrainMovementRate(east, to: 1_024); XCTAssertNil(model.setRate(east, 1_024))
+        try world.advance(ticks: 6_000); XCTAssertNil(model.advance(ticks: 6_000))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        XCTAssertNil(world.train(id: east)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: east), [SingleTrackMeet.east])
+    }
+
+    func testUndispatchedSwitchbackProtectsBothDirectionsOfItsFullPlan() throws {
+        var (world, model, _, _) = try Self.switchback()
+        let id = try world.purchaseTrain(named: "Probe").id
+        XCTAssertNil(model.purchaseTrain(named: "Probe"))
+        var memo = GameWorld.DirectionMemo()
+        let protected = world.opposingServiceTraversals(for: try XCTUnwrap(world.train(id: id)), memo: &memo)
+        XCTAssertEqual(protected, [SingleTrackMeet.forward(1), SingleTrackMeet.backward(1)])
+        let reference = model.contraryRuns(for: try XCTUnwrap(model.trains.first { $0.id == id.rawValue }))
+        XCTAssertEqual(Set(reference.map(\.traversal)), protected)
     }
 
     func testWholeTrainSwitchbackHasHandTimedLegsAndTurnsOnlyAtDeparture() throws {

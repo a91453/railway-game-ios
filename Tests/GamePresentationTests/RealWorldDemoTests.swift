@@ -22,6 +22,52 @@ final class RealWorldDemoTests: XCTestCase {
         return (railways, RealWorldDemo.make(in: .traditionalChinese, railways: railways))
     }
 
+    /// V4d on the bundled physical Pingxi track: Shifen -> Jingtong ->
+    /// Pingxi reverses at the intermediate terminal, then again on return.
+    /// The requested call order is a player scenario, not a real timetable.
+    func testAPlayerSwitchbackServiceReversesAtJingtongAndCompletesItsRoundTrip() throws {
+        var (_, world) = try Self.built.get()
+        for line in world.lines { try world.removeLine(line.id) }
+        for train in world.trains { try world.unplaceTrain(train.id) }
+        let ids = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.name, $0.id) })
+        let shifen = try XCTUnwrap(ids["十分"]), jingtong = try XCTUnwrap(ids["菁桐"]), pingxi = try XCTUnwrap(ids["平溪"])
+        let lineID = try world.createLine(named: "Player switchback", stops: [shifen, jingtong, pingxi]).id
+        try world.setLineServiceWindow(lineID, to: .allDay)
+        try world.setLineTrainsInService(lineID, to: .init(peak: 1, offPeak: 1, low: 1))
+        let journey = try XCTUnwrap(world.lineJourney(lineID))
+        XCTAssertEqual(journey.intermediateTurnbacks, [1, 3])
+        let train = try XCTUnwrap(world.trains.first).id
+        try world.placeTrain(train, at: journey.start)
+        guard case .onEdge(_, let offset) = journey.start else { return XCTFail("missing start") }
+        try world.setTrainContinuation(train, along: [], stoppingAt: offset)
+        try world.setTrainMovementRate(train, to: 1_024)
+        try world.assignTrain(train, to: lineID)
+        world.setSpeed(.x1)
+        let started = world.clock.now.seconds
+        var visits: Set<Int> = []
+        var departedReversed = false
+        for _ in 0..<Int((journey.roundTripSeconds + 600) / 10) {
+            try world.advance(ticks: 100)
+            let unit = try XCTUnwrap(world.train(id: train))
+            if case .waitingAtStop(let stop, _)? = unit.execution, stop == 1 || stop == 3 {
+                visits.insert(stop)
+                XCTAssertEqual(world.stationsBesideWholeTrain(train), [jingtong])
+                XCTAssertTrue(unit.timetable[stop].reverses)
+                let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+                XCTAssertEqual(world, loaded)
+            }
+            if case .travellingToStop(let stop, _)? = unit.execution, stop == 2 {
+                departedReversed = true
+                XCTAssertFalse(world.reservedResources(of: train).isEmpty)
+            }
+            if unit.execution == nil, world.clock.now.seconds > started + 60 { break }
+        }
+        XCTAssertEqual(visits, [1, 3])
+        XCTAssertTrue(departedReversed)
+        XCTAssertNil(world.train(id: train)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: train), [shifen])
+    }
+
     // MARK: - Where the world lies
 
     /// A point's place in the world is the same as on the app's map: the

@@ -1,3 +1,19 @@
+Stage V4d 接續 — 2026-10-05（本節優先，精確發布 head 看 PR128）
+
+已還原 /workspace/railway-game-ios、/workspace/railway-game-ios-v4d、私有參考固定25229af；Swift6.4.0在/workspace/swift。原PR128 head153eb514已本機VERIFIED build26.22s、2tests4.196s；遠端CI37347953348的22campaigns+rest、iOS PR gate37347953499、Wasm37347953491皆success。PR127已由作者合併，head2002eca full37345609975 iPhone及iPad VERIFIED success。main更新3fd1e9d（作者合併#127/#129/#130），已整合V4d分支，agent未merge PR／未auto-merge。
+
+已發布第一段5c704e6：反向fallback枚舉全部全列berths，原正向最近berth行為保留。反向側線重現首跑nil失敗，修正後VERIFIED 3tests6.316s，兩列車都完成、逐秒模型／batch=second／存讀一致。手算11900進側線、15996續行、27896全程。
+
+本輪後續：安全測試（blocked／短側線／起站短平台／junction fouling、等待不翻向、rate0恢復、控制切換與存读）、未派出線路與dead-end續行的方向保護、schema34可省略intermediateTurnbacks摘要與新增golden、768步traffic.turnbacks campaign置campaigns-22、實景玩家十分→菁桐→平溪折返並回十分、決策63與四來源mapping。save10不變。原fixtures／README、workflow／gate／timeout均未改，未縮任何campaign。
+
+驗證紀錄不可套用最新HEAD：初版安全6項9.427s成功；campaign22初版VERIFIED兩項47.168s、coverage成功，容量digest E974A083D5858C78、turnbacks E46C5001271E3303（768步、56reversed、255waiting、16completed）。之後新增方向保護須重跑。新golden首跑createLine預設none與手填count1不符，補明確setLineTrainsInService指令；沒有修改舊期望值。實景首跑因測試unplace後rate0而未發車，補setRate1024後單項VERIFIED通過。新fouling設置首跑invalidContinuation（端點end必須nil），已改合法設定，須重驗。所有失敗log保留。
+
+最終候選本機檢查執行中，完成前UNVERIFIED：/workspace/scratch/v4d-verified-build.log、v4d-verified-focused.log、v4d-verified-campaign22.log、v4d-verified-campaign11.log。完整最新HEAD CI待PR；iOS PR gate不代表full lane；實機UNVERIFIED。V4e等作者合併V4d才做。
+
+發布：git push無credentials；GitHub connector create_blob/tree/commit/update_ref可用，逐blob/tree核對後fetch，只soft reset自身branch對齊。整合main的發布須帶main為第二parent，保留作者新增資料來源／UI研究文件。來源私人檔不複製入public，只列路徑與語義。
+
+===== 以下為原WIP交接與歷史，pending狀態以本節/最新PR為準 =====
+
 Stage V 接手文件 — 2026-10-05 本次停止點
 
 作者最新指示：沒額度，先寫接手文件並上傳所有目前修改。已停止功能擴充；本次 V4d 是 WIP 保存點，不能當成完成或直接合併。本文取代舊文件的 pending 狀態，歷史設計仍參考 repo docs/STAGE_V_HANDOFF.txt 下方。
