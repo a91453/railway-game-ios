@@ -324,9 +324,9 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "places", "map"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "places", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "places", "appleMaps"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "places", "worldPop", "appleMaps"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -339,6 +339,10 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(openStreetMap.notice.contains("ODbL"))
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             XCTAssertTrue(credits.first { $0.id == "tdx" }?.links.contains { $0.url == "https://data.gov.tw/license" } == true)
+            let worldPop = try XCTUnwrap(credits.first { $0.id == "worldPop" })
+            XCTAssertTrue(worldPop.notice.contains("CC BY 4.0"))
+            XCTAssertTrue(worldPop.notice.contains("10.5258/SOTON/WP00840"))
+            XCTAssertTrue(worldPop.links.contains { $0.url == "https://creativecommons.org/licenses/by/4.0/" })
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")

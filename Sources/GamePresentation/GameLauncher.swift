@@ -33,6 +33,11 @@ public final class GameLauncher {
     /// The reference's `AUTOSAVE_INTERVAL_MS`: 15 minutes.
     public nonisolated static let autosaveInterval: Duration = .seconds(900)
 
+    /// Who lives where on real-world maps in Taiwan, handed to every game
+    /// it starts (``GameSession/population``); `nil` without the app's
+    /// bundled grid.
+    @ObservationIgnored public var population: PopulationGrid?
+
     @ObservationIgnored let library: SaveLibrary
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
@@ -138,6 +143,7 @@ public final class GameLauncher {
         }
         session?.stopGameLoop()
         let started = GameSession(world: world, language: language)
+        started.population = population
         session = started
         message = nil
         if isActive {
