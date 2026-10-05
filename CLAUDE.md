@@ -19,13 +19,12 @@ includes JavaScript/CSS/HTML, images, fonts, icons, station/network/service data
 raw timetables, live or real-time data and feeds, routing/operational logic,
 balance values, constants, and complete feature implementations.
 
-Do not reject a useful source feature merely because it was previously labeled
-"reference", "research", "not adopted", "later stage", or because an older
-roadmap expected a clean-room rewrite. Swift translation is required only where
-the target layer actually needs Swift (especially GameCore); otherwise direct
-reuse or an adapter is allowed. Existing Stage/Phase boundaries are sequencing
-guidance, not gates: when a reusable feature spans several stages, its required
-dependencies may be ported together.
+Do not reject a useful source feature because it was previously labeled
+"reference", "research", "not adopted", or "later stage". Swift translation is
+required only where the target layer actually needs Swift (especially
+GameCore); otherwise direct reuse or an adapter is allowed. Existing
+Stage/Phase boundaries are sequencing guidance, not gates: when a reusable
+feature spans several stages, its required dependencies may be ported together.
 
 Preserve source behavior and data semantics unless a deliberate project change
 is documented. GameCore's platform-independent/deterministic rules still apply
@@ -42,12 +41,14 @@ personal data remain excluded from source control.
 Where the reference has nothing for a feature, list the gap in the PR and
 implement the missing behavior as needed.
 
-Reference check (every new Stage): attach a91453/railway-reference-private
-read-only, read the files the Stage ports, and put a mapping table in the PR
-(reference file/function → Swift file/function, with any fixed-point scale).
-The references there are `Ci/reference_snapshot/`, `Railway/site_archive_clean/`
-and `Railway/railway_game_reference_clean/` (start with its
-`00_READ_ME_FIRST.md`); check all three.
+Reference check (every new Stage): attach or clone
+a91453/railway-reference-private, read the files the Stage can reuse, and put a
+mapping table in the PR (reference file/function → target file/function, with
+any fixed-point scale where relevant). Check all available implementation
+sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
+`Railway/railway_game_reference_clean/` (start with its
+`00_READ_ME_FIRST.md`), and `Railway/taipei_gta_reference/` (start with its
+`00_READ_ME_FIRST.md` and `source/`).
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
