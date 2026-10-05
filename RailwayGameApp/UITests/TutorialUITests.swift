@@ -46,9 +46,13 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         let visibleMap = map.frame.intersection(app.frame)
         let row = freeRow(in: visibleMap, avoiding: card.frame)
+        // The row can be the map's bottom edge, where the Map Layers button
+        // sits in the leading corner: start the track to its right.
+        let layers = app.buttons["map.layers"]
+        let left = layers.exists ? max(visibleMap.minX + 50, layers.frame.maxX + 24) : visibleMap.minX + 50
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        origin.withOffset(CGVector(dx: visibleMap.minX + 50, dy: row)).tap()
-        origin.withOffset(CGVector(dx: visibleMap.minX + 130, dy: row)).tap()
+        origin.withOffset(CGVector(dx: left, dy: row)).tap()
+        origin.withOffset(CGVector(dx: left + 80, dy: row)).tap()
         waitForEnabled(app, false, "Choosing the ends only previews track")
         let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
         XCTAssertTrue(build.waitForExistence(timeout: 5))
