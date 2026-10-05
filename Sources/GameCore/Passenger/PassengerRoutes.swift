@@ -1,17 +1,21 @@
 // Passenger service paths (Phase 5C, first part of 5F). The Ci global OD
 // dispatch cache stores a first ride or transfer link per origin/destination;
 // `metroExpandODDispatchPath` follows those links to the destination. Here
-// the equivalent graph is derived from GameWorld's lines, so it needs no
-// second authoritative copy and no save field. A change to the lines or
-// service is visible on the next query.
+// the graph uses GameWorld's existing physical LineJourney and capacity-aware
+// lineHeadway queries, so it needs no second service planner or save field.
+// A change to the network or service is visible on the next query.
 
 /// One uninterrupted ride in a passenger's planned path.
 public struct PassengerRouteLeg: Hashable, Sendable {
     public let line: LineID
+    /// `nil` for the line's own service; otherwise its pattern index.
+    public let pattern: Int?
     public let direction: LineDirection
     public let from: StationID
     public let to: StationID
-    public let rideMinutes: Int64
+    /// Actual running seconds from the service's ``LineJourney`` plus
+    /// intermediate station dwells. No rounding is done per track segment.
+    public let rideSeconds: Int64
 }
 
 /// A route between stations, with whole-minute costs. Consecutive legs on
@@ -74,83 +78,82 @@ private struct PassengerRouteGraph {
     // minutes is this first native graph's same-station interchange cost.
     static let sameStationTransferMinutes: Int64 = 4
 
-    let lines: [ServiceLine]
+    struct ServicePath {
+        let line: LineID
+        let pattern: Int?
+        let direction: LineDirection
+        let stations: [StationID]
+        let runSeconds: [Int64]
+        let headway: Int64
+        let isRing: Bool
+    }
+
+    let paths: [ServicePath]
     let stopsAt: [StationID: [PassengerRouteNode]]
-    let rideTimes: [[Int64]]
-    let headways: [Int64]
 
     init(world: GameWorld) {
-        let level = world.serviceDay.level(atMinuteOfDay: world.clock.now.minuteOfDay)
-        var included: [ServiceLine] = []
-        var times: [[Int64]] = []
-        var gaps: [Int64] = []
+        var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
-        for line in world.lines where line.window.contains(minuteOfDay: world.clock.now.minuteOfDay) {
-            var legs: [Int64] = []
-            for index in 0..<(line.stops.count - 1) {
-                let a = world.station(id: line.stops[index])!.point
-                let b = world.station(id: line.stops[index + 1])!.point
-                let dx = b.x - a.x
-                let dy = b.y - a.y
-                let length = max(1, FixedPoint.roundedSquareRoot(dx * dx + dy * dy))
-                let seconds = RunningCurve.leastSeconds(length: length, performance: line.performance) ?? 60
-                legs.append(max(1, passengerMinutesRoundingUp(seconds, by: 60)))
-            }
-            let running = legs.reduce(0, +)
-            let roundTrip: Int64
-            let plan: (trains: Int, headway: Int64)?
-            if line.isRing {
-                let a = world.station(id: line.stops.last!)!.point
-                let b = world.station(id: line.stops.first!)!.point
-                let dx = b.x - a.x
-                let dy = b.y - a.y
-                let length = max(1, FixedPoint.roundedSquareRoot(dx * dx + dy * dy))
-                let seconds = RunningCurve.leastSeconds(length: length, performance: line.performance) ?? 60
-                legs.append(max(1, passengerMinutesRoundingUp(seconds, by: 60)))
-                roundTrip = running + legs.last! + Int64(line.stops.count) * ServiceLine.dwellMinutes
-                plan = ServiceLine.ringService(line.trainsInService, line.targetHeadways, at: level, lap: roundTrip)
-            } else {
-                roundTrip = 2 * (running + Int64(max(0, line.stops.count - 2)) * ServiceLine.dwellMinutes
-                    + ServiceLine.terminalDwellMinutes)
-                plan = line.service(at: level, roundTrip: roundTrip)
-            }
-            guard let plan else { continue }
-            let lineIndex = included.count
-            included.append(line)
-            times.append(legs)
-            gaps.append(plan.headway)
-            for (stop, station) in line.stops.enumerated() {
-                for direction in [1, -1] {
-                    calls[station, default: []].append(PassengerRouteNode(line: lineIndex, stop: stop, direction: direction))
+        for line in world.lines {
+            guard let level = world.serviceLevel(of: line.id, at: world.clock.now) else { continue }
+            for service in 0..<line.serviceCount {
+                let pattern = service == 0 ? nil : service - 1
+                guard let headway = world.lineHeadway(line.id, at: level, pattern: pattern),
+                      let journey = world.lineJourney(line.id, pattern: pattern) else { continue }
+                if line.isRing {
+                    for direction in [RingDirection.inner, .outer] {
+                        guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
+                        let stationIDs = line.ringCalls(direction).map { line.stops[$0] }
+                        let path = ServicePath(line: line.id, pattern: nil,
+                                               direction: direction == .inner ? .outbound : .inbound,
+                                               stations: stationIDs, runSeconds: lap.legs.map(\.seconds),
+                                               headway: headway, isRing: true)
+                        Self.add(path, to: &included, calls: &calls)
+                    }
+                } else {
+                    let callIndices = line.calls(ofService: service)
+                    let half = callIndices.count - 1
+                    let forward = ServicePath(line: line.id, pattern: pattern, direction: .outbound,
+                                              stations: callIndices.map { line.stops[$0] },
+                                              runSeconds: Array(journey.legs.prefix(half).map(\.seconds)),
+                                              headway: headway, isRing: false)
+                    let backward = ServicePath(line: line.id, pattern: pattern, direction: .inbound,
+                                               stations: callIndices.reversed().map { line.stops[$0] },
+                                               runSeconds: Array(journey.legs.suffix(half).map(\.seconds)),
+                                               headway: headway, isRing: false)
+                    Self.add(forward, to: &included, calls: &calls)
+                    Self.add(backward, to: &included, calls: &calls)
                 }
             }
         }
-        lines = included
+        paths = included
         stopsAt = calls
-        rideTimes = times
-        headways = gaps
+    }
+
+    private static func add(_ path: ServicePath, to paths: inout [ServicePath], calls: inout [StationID: [PassengerRouteNode]]) {
+        let index = paths.count
+        paths.append(path)
+        for (stop, station) in path.stations.enumerated() {
+            calls[station, default: []].append(PassengerRouteNode(line: index, stop: stop,
+                                                                    direction: path.direction == .outbound ? 1 : -1))
+        }
     }
 
     private func station(_ node: PassengerRouteNode) -> StationID {
-        lines[node.line].stops[node.stop]
+        paths[node.line].stations[node.stop]
     }
 
     private func nextRide(_ node: PassengerRouteNode) -> (PassengerRouteNode, PassengerRideEdge, Int64)? {
-        let line = lines[node.line]
-        var next = node.stop + node.direction
-        if line.isRing {
-            if next == line.stops.count { next = 0 }
-            if next < 0 { next = line.stops.count - 1 }
-        } else if next < 0 || next == line.stops.count {
-            return nil
-        }
-        let segment = node.direction == 1 ? node.stop : next
+        let path = paths[node.line]
+        let next = node.stop + 1 == path.stations.count ? (path.isRing ? 1 : -1) : node.stop + 1
+        guard next >= 0 else { return nil }
+        let segment = next == 1 && node.stop == path.stations.count - 1 ? 0 : node.stop
         let edge = PassengerRideEdge(line: node.line, from: node.stop, to: next, direction: node.direction)
         return (PassengerRouteNode(line: node.line, stop: next, direction: node.direction), edge,
-                rideTimes[node.line][segment] + ServiceLine.dwellMinutes)
+                path.runSeconds[segment] + (node.stop == 0 ? 0 : ServiceLine.dwellMinutes * GameTime.secondsPerMinute))
     }
 
-    /// Dijkstra over (line, call, direction). A line change at the same
+    /// Dijkstra over (service, call, direction). A line change at the same
     /// station adds a transfer penalty and another expected wait. A reversal
     /// on the same line is possible only at a terminal, and also waits.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
@@ -168,7 +171,7 @@ private struct PassengerRouteGraph {
         }
 
         for node in starts {
-            let wait = max(1, passengerMinutesRoundingUp(headways[node.line], by: 2))
+            let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
             offer(PassengerRouteLabel(node: node, total: wait, ride: 0, wait: wait,
                                       transfer: 0, changes: 0, previous: nil, arrival: .board))
         }
@@ -182,7 +185,7 @@ private struct PassengerRouteGraph {
             }
             let node = open.removeFirst()
             let label = best[node]!
-            if station(node) == destination, label.ride > 0 {
+            if station(node) == destination {
                 return reconstruct(label, from: best)
             }
             if let (next, edge, minutes) = nextRide(node), !forbidden.contains(edge) {
@@ -192,14 +195,10 @@ private struct PassengerRouteGraph {
                                           previous: node, arrival: .ride(edge, minutes)))
             }
             for other in stopsAt[station(node)] ?? [] where other != node {
-                let sameLine = other.line == node.line
-                if sameLine {
-                    guard !lines[node.line].isRing,
-                          (node.stop == 0 || node.stop == lines[node.line].stops.count - 1),
-                          other.stop == node.stop, other.direction != node.direction else { continue }
-                }
-                let wait = max(1, passengerMinutesRoundingUp(headways[other.line], by: 2))
-                let transfer: Int64 = sameLine ? 0 : Self.sameStationTransferMinutes
+                guard other.line != node.line else { continue }
+                let sameLine = paths[other.line].line == paths[node.line].line
+                let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
+                let transfer: Int64 = sameLine ? 0 : Self.sameStationTransferMinutes * GameTime.secondsPerMinute
                 offer(PassengerRouteLabel(node: other, total: label.total + wait + transfer,
                                           ride: label.ride, wait: label.wait + wait,
                                           transfer: label.transfer + transfer,
@@ -222,21 +221,24 @@ private struct PassengerRouteGraph {
         for label in chain.reversed() {
             guard case .ride(let edge, let minutes) = label.arrival else { continue }
             edges.append(edge)
-            let line = lines[edge.line].id
-            let direction: LineDirection = edge.direction == 1 ? .outbound : .inbound
-            let from = lines[edge.line].stops[edge.from]
-            let to = lines[edge.line].stops[edge.to]
-            if let last = legs.last, last.line == line && last.direction == direction && last.to == from {
-                legs[legs.count - 1] = PassengerRouteLeg(line: line, direction: direction,
-                                                           from: last.from, to: to,
-                                                           rideMinutes: last.rideMinutes + minutes)
+            let path = paths[edge.line]
+            let from = path.stations[edge.from]
+            let to = path.stations[edge.to]
+            if let last = legs.last, last.line == path.line && last.pattern == path.pattern &&
+                last.direction == path.direction && last.to == from {
+                legs[legs.count - 1] = PassengerRouteLeg(line: path.line, pattern: path.pattern,
+                                                          direction: path.direction, from: last.from,
+                                                          to: to, rideSeconds: last.rideSeconds + minutes)
             } else {
-                legs.append(PassengerRouteLeg(line: line, direction: direction,
-                                              from: from, to: to, rideMinutes: minutes))
+                legs.append(PassengerRouteLeg(line: path.line, pattern: path.pattern,
+                                              direction: path.direction, from: from,
+                                              to: to, rideSeconds: minutes))
             }
         }
-        return (PassengerRoute(legs: legs, rideMinutes: end.ride,
-                               waitMinutes: end.wait, transferMinutes: end.transfer), edges)
+        return (PassengerRoute(legs: legs,
+                               rideMinutes: passengerMinutesRoundingUp(end.ride, by: GameTime.secondsPerMinute),
+                               waitMinutes: end.wait / GameTime.secondsPerMinute,
+                               transferMinutes: end.transfer / GameTime.secondsPerMinute), edges)
     }
 }
 

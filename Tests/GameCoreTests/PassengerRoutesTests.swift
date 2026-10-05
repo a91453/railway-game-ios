@@ -1,4 +1,4 @@
-import GameCore
+@testable import GameCore
 import XCTest
 
 final class PassengerRoutesTests: XCTestCase {
@@ -9,9 +9,10 @@ final class PassengerRoutesTests: XCTestCase {
 
     private func network() throws -> GameWorld {
         var world = try makeWorld(width: 20_480, height: 20_480)
-        for (index, point) in [PlanPoint(x: 1_000, y: 1_000), PlanPoint(x: 4_000, y: 1_000),
-                               PlanPoint(x: 7_000, y: 1_000), PlanPoint(x: 10_000, y: 1_000)].enumerated() {
-            try world.buildStation(named: "S\(index)", at: point)
+        let track = TestLine(tiles: 12)
+        try track.build(in: &world)
+        for (index, x) in [1, 4, 7, 10].enumerated() {
+            try track.buildStation(named: "S\(index)", beside: x, at: 1, in: &world)
         }
         return world
     }
@@ -38,6 +39,7 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(routes[0].legs.map(\.to), [b, c])
         XCTAssertEqual(routes[0].transfers, 1)
         XCTAssertEqual(routes[0].transferMinutes, 4)
+        XCTAssertEqual(routes[0].legs[0].rideSeconds, try XCTUnwrap(world.lineJourney(first)).legs[0].seconds)
         XCTAssertEqual(routes[0].totalMinutes,
                        routes[0].rideMinutes + routes[0].waitMinutes + routes[0].transferMinutes)
         XCTAssertNil(world.passengerTrip(from: a, to: c))
@@ -49,6 +51,85 @@ final class PassengerRoutesTests: XCTestCase {
         try world.setLineServiceWindow(second, to: .standard)
         XCTAssertEqual(world.passengerRoutes(from: a, to: c), [])
         XCTAssertEqual(world.passengerRoutes(from: a, to: d), [])
+    }
+
+    func testBrokenPhysicalRouteIsNotPassengerService() throws {
+        var world = try network()
+        let line = try world.createLine(named: "Broken", stops: [a, b]).id
+        try run(&world, line)
+        XCTAssertNotNil(world.lineJourney(line))
+        XCTAssertNotNil(world.passengerRoutes(from: a, to: b).first)
+        try world.removeTrackEdge(.edge(3))
+        XCTAssertNil(world.lineJourney(line))
+        XCTAssertNil(world.lineHeadway(line, at: .peak))
+        XCTAssertEqual(world.passengerRoutes(from: a, to: b), [])
+    }
+
+    func testJourneySecondsAreAccumulatedBeforeMinuteRounding() throws {
+        var world = try network()
+        let line = try world.createLine(named: "Through", stops: [a, b, c]).id
+        try run(&world, line)
+        let journey = try XCTUnwrap(world.lineJourney(line))
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        let seconds = journey.legs[0].seconds + 60 + journey.legs[1].seconds
+        let headway = try XCTUnwrap(world.lineHeadway(line, at: .peak))
+        XCTAssertEqual(route.legs[0].rideSeconds, seconds)
+        XCTAssertEqual(route.rideMinutes, (seconds + 59) / 60)
+        XCTAssertLessThan(route.rideMinutes,
+                          (journey.legs[0].seconds + 59) / 60 + 1 + (journey.legs[1].seconds + 59) / 60)
+        XCTAssertEqual(route.waitMinutes, (headway + 1) / 2)
+        XCTAssertEqual(route.legs[0].pattern, nil)
+    }
+
+    func testRunningPatternAloneAndExpressAlongsideTheMain() throws {
+        var world = try network()
+        let line = try world.createLine(named: "Shared", stops: [a, b, c, d]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        let short = try world.addLinePattern(line, calling: [1, 2])
+        let express = try world.addLinePattern(line, calling: [0, 3])
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2), pattern: short)
+        XCTAssertNil(world.lineHeadway(line, at: .peak))
+        XCTAssertEqual(world.passengerRoutes(from: b, to: c).first?.legs.first?.pattern, short)
+        XCTAssertEqual(world.passengerRoutes(from: a, to: d), [])
+
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2), pattern: express)
+        let expressRoute = try XCTUnwrap(world.passengerRoutes(from: a, to: d).first)
+        XCTAssertEqual(expressRoute.legs.map(\.pattern), [express])
+        XCTAssertEqual(expressRoute.legs[0].rideSeconds, try XCTUnwrap(world.lineJourney(line, pattern: express)).legs[0].seconds)
+
+        try world.setLineTrainsInService(line, to: .none, pattern: short)
+        try world.setLineTargetHeadways(line, to: TargetHeadways(peak: 30, offPeak: 30, low: 30))
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        let routes = world.passengerRoutes(from: a, to: d)
+        XCTAssertNotNil(world.lineHeadway(line, at: .peak, pattern: express))
+        XCTAssertTrue(routes.contains { $0.legs.map(\.pattern) == [express] })
+        XCTAssertTrue(routes.contains { $0.legs.map(\.pattern) == [nil] })
+    }
+
+    func testCapacityLimitedHeadwayChangesWaitingTime() throws {
+        var (world, line) = try SingleTrackCapacityTests.short()
+        try world.setLineServiceWindow(line, to: .allDay)
+        let west = StationID(rawValue: 1)
+        let east = StationID(rawValue: 2)
+        let before = try XCTUnwrap(world.passengerRoutes(from: west, to: east).first)
+        XCTAssertEqual(before.waitMinutes, (try XCTUnwrap(world.lineHeadway(line, at: .peak)) + 1) / 2)
+        try world.setTrafficControl(true)
+        let after = try XCTUnwrap(world.passengerRoutes(from: west, to: east).first)
+        XCTAssertEqual(after.waitMinutes, (try XCTUnwrap(world.lineHeadway(line, at: .peak)) + 1) / 2)
+        XCTAssertGreaterThan(after.waitMinutes, before.waitMinutes)
+    }
+
+    func testPhysicalRoutePreferenceChangesPassengerTime() throws {
+        var (world, _, line, _) = try LineRoutePreferenceTests.setup(traffic: false)
+        let before = try XCTUnwrap(world.passengerRoutes(from: SingleTrackMeet.west, to: SingleTrackMeet.middle).first)
+        let oldSeconds = try XCTUnwrap(world.lineJourney(line)).legs[0].seconds
+        XCTAssertEqual(before.legs[0].rideSeconds, oldSeconds)
+
+        try world.setLineRoutePreferences(line, to: [LineRoutePreferenceTests.loop(world)])
+        let after = try XCTUnwrap(world.passengerRoutes(from: SingleTrackMeet.west, to: SingleTrackMeet.middle).first)
+        let newSeconds = try XCTUnwrap(world.lineJourney(line)).legs[0].seconds
+        XCTAssertGreaterThan(newSeconds, oldSeconds)
+        XCTAssertEqual(after.legs[0].rideSeconds, newSeconds)
     }
 
     func testWaitCanMakeATransferQuickerThanADirectTrain() throws {
