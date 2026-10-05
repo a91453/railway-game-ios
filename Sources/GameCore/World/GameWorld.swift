@@ -510,6 +510,7 @@ public struct GameWorld: Equatable, Sendable {
         let (index, _) = try manuallyControlledTrain(id)
 
         trains[index].position = nil
+        trains[index].trafficVisits = []
         trains[index].movement = .idle
         trains[index].trailEdges = []
         trains[index].reservation = []
@@ -751,6 +752,7 @@ public struct GameWorld: Equatable, Sendable {
             throw .unknownStation(stop.station)
         }
 
+        trains[index].trafficVisits = []
         trains[index].timetable = stops
         trains[index].timetablePeriod = period
     }
@@ -790,6 +792,7 @@ public struct GameWorld: Equatable, Sendable {
         guard train.position != nil else { throw .trainNotPlaced(id) }
         guard isStopped(train, at: first.station) else { throw .trainNotAtFirstStop(id) }
 
+        trains[index].trafficVisits = []
         trains[index].execution = .waitingAtStop(0, cycle: train.startingCycle(at: clock.now))
         // Stage W2b: starting counts as arriving at the first stop now, so
         // the train dwells there before it leaves.
@@ -813,6 +816,7 @@ public struct GameWorld: Equatable, Sendable {
 
         trains[index].execution = nil
         trains[index].times = nil
+        trains[index].trafficVisits = []
         abandonRiders(of: id)
     }
 
@@ -1337,6 +1341,8 @@ public struct GameWorld: Equatable, Sendable {
             }
             // Stage W2b: every service's dwell, and the departures due now.
             held = []
+            if memo.traffic == nil { memo.traffic = trafficPlan() }
+            recordTrafficVisits(memo.traffic!, before: nil)
             if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
                 changed = true
             }
@@ -1368,6 +1374,8 @@ public struct GameWorld: Equatable, Sendable {
                let freed = secondsUntilARouteFrees(held, from: start, within: span, memo: &memo) {
                 span = freed
             }
+            if !memo.traffic!.waits.isEmpty { span = 1 }
+            let beforeTraffic = memo.traffic!.waits.isEmpty ? nil : trains
             if moveTrains(from: start, for: span) {
                 changed = true
             }
@@ -1376,10 +1384,11 @@ public struct GameWorld: Equatable, Sendable {
             }
             clock.advance(basicSteps: span)
             remaining -= span
+            recordTrafficVisits(memo.traffic!, before: beforeTraffic)
             if recordArrivals() {
                 changed = true
             }
-            if !changed, span == minute {
+            if !changed, span == minute, memo.traffic!.waits.isEmpty {
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
                     minutesUntilLineWaitsChange(memo: &memo),
@@ -1434,6 +1443,7 @@ public struct GameWorld: Equatable, Sendable {
         var journeys: [LineID: [Int: LineJourney?]] = [:]
         /// V1 complete direction plans, local to this advance.
         var directions = DirectionMemo()
+        var traffic: TrafficPlan?
         /// Each train's round trip from where it stood idle (its position
         /// and body) when it was looked up, or
         /// `nil` if it had none.
@@ -1465,6 +1475,8 @@ public struct GameWorld: Equatable, Sendable {
                       let (ready, trip) = readyTrain(of: line, stream, memo: &memo),
                       let timetable = trip.timetable(calling: line.stops, sentOutAt: now)
                 else { continue }
+                trains[ready].trafficVisits = []
+                memo.traffic = nil
                 trains[ready].timetable = timetable
                 trains[ready].timetablePeriod = nil
                 trains[ready].execution = .waitingAtStop(0)
@@ -1680,11 +1692,18 @@ public struct GameWorld: Equatable, Sendable {
     /// there, and the route it waits for joins `held`. Without traffic
     /// control it always can. Returns whether the service changed.
     private mutating func goOn(_ index: Int, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
-        guard let going = goingOn(trains[index]) else { return false }
+        let plan = memo.traffic ?? trafficPlan()
+        guard currentTrafficWait(trains[index], plan: plan) == nil,
+              var going = goingOn(trains[index]) else { return false }
+        if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan) {
+            follow(chosen.path, &going)
+            let plannedRun = run(of: going, length: chosen.path.distance, scheduled: chosen.seconds)
+            going.times?.run = plannedRun
+        }
         switch reservingDeparture(going, memo: &memo.directions) {
         case .granted(var granted):
-            let fastest = run(of: granted, length: routeLength(of: granted))
-            granted.times?.run = fastest
+            recordTrafficDeparture(index)
+            granted.trafficVisits = trains[index].trafficVisits
             trains[index] = granted
             return true
         case .held:
@@ -1874,7 +1893,9 @@ public struct GameWorld: Equatable, Sendable {
               !unroutable.contains(trains[index].id),
               trains[index].placement != nil
         else { return false }
-        let departure = leaving(trains[index], stop: stop, cycle: cycle)
+        let plan = memo.traffic ?? trafficPlan()
+        guard currentTrafficWait(trains[index], plan: plan) == nil else { return false }
+        let departure = leaving(trains[index], stop: stop, cycle: cycle, traffic: plan)
         guard let moved = departure.train else {
             // Nothing changes: the train is not turned round either.
             unroutable.insert(trains[index].id)
@@ -1888,7 +1909,10 @@ public struct GameWorld: Equatable, Sendable {
             held.append(HeldRoute(candidate: moved))
             return false
         }
-        trains[index] = train
+        recordTrafficDeparture(index)
+        var departed = train
+        departed.trafficVisits = trains[index].trafficVisits
+        trains[index] = departed
         serve(departureOf: train.id, from: stop, distance: departure.distance.map { $0 == 0 ? 0 : routeLength(of: train) })
         return true
     }
@@ -1933,7 +1957,7 @@ public struct GameWorld: Equatable, Sendable {
     /// ``turnedRound(_:)``). A train turned round stands there: its path
     /// ends where its head is.
     /// Without a path, the train is not turned round either.
-    func leaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving {
+    func leaving(_ train: Train, stop: Int, cycle: Int64, traffic: TrafficPlan? = nil) -> Leaving {
         guard let placement = train.placement else { return .noRoute }
         let start = train.timetable[stop].reverses ? turnedRound(placement) : placement
         var moved = train
@@ -1944,7 +1968,8 @@ public struct GameWorld: Equatable, Sendable {
             moved.times = nil
             return .completes(moved)
         }
-        guard let path = path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
+        let chosen = traffic.flatMap { scheduledPath(for: train, from: start.position, to: train.timetable[next.stop].station, plan: $0) }
+        guard let path = chosen?.path ?? path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
             return .noRoute
         }
         stand(&moved, at: start)
@@ -1964,7 +1989,7 @@ public struct GameWorld: Equatable, Sendable {
             - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
             arrival: train.times?.arrival ?? now, departure: now,
-            run: run(of: moved, length: path.distance, scheduled: scheduled)
+            run: run(of: moved, length: path.distance, scheduled: chosen?.seconds ?? scheduled)
         )
         return .setsOff(moved, distance: path.distance)
     }
@@ -2749,6 +2774,9 @@ extension GameWorld: Codable {
             return problem
         }
         for train in trains {
+            if train.trafficVisits.contains(where: { visit in station(id: visit.station) == nil || visit.arrival > clock.now || visit.departure.map { $0 > clock.now || $0 < visit.arrival } == true }) {
+                return "Traffic visit is invalid or after the clock."
+            }
             if let position = train.position, !isOnTrack(position) {
                 return "Train \(train.id.rawValue) is not on this map's track."
             }
@@ -2950,5 +2978,72 @@ extension GameWorld: Codable {
 
     private static func isStrictlyIncreasing(_ ids: [Int], below limit: Int) -> Bool {
         zip(ids, ids.dropFirst()).allSatisfy { $0 < $1 } && (ids.last ?? 0) < limit && (ids.first ?? 1) >= 1
+    }
+}
+
+// V3 actual traffic events, written only by GameWorld.
+extension GameWorld {
+    /// Record only actual visits needed by this plan. Crossing tests use
+    /// the physical path, so a zero rate or truncated authority never
+    /// creates a fictitious event. Called at one-second boundaries in V3.
+    mutating func recordTrafficVisits(_ plan: TrafficPlan, before: [Train]?) {
+        guard !plan.waits.isEmpty else { return }
+        for index in trains.indices {
+            let train = trains[index]
+            guard let service = plan.services.first(where: { $0.train.id == train.id }) else { continue }
+            let needed = service.points.filter { p in
+                plan.waits.contains { w in
+                    w.station == p.station && ((w.train == train.id && w.stop == p.stop && w.cycle == p.cycle)
+                                              || (w.other == train.id && w.otherStop == p.stop && w.otherCycle == p.cycle))
+                }
+            }
+            for point in needed {
+                var arrival: GameTime?, departure: GameTime?
+                if let execution = train.execution, execution.cycle == point.cycle, execution.stop == point.stop,
+                   isStopped(train, at: point.station) {
+                    arrival = point.calls ? train.times?.arrival : clock.now
+                }
+                if let old = before?.first(where: { $0.id == train.id }), let execution = old.execution {
+                    let fromStop = execution.stop
+                    let belongs = execution.cycle == point.cycle && (fromStop == point.stop || (point.calls && fromStop + 1 == point.stop))
+                    if belongs {
+                        let stretches = routeStretches(of: old).stretches
+                        let moved = max(0, routeLength(of: old) - routeLength(of: train))
+                        var distance: Int64 = 0
+                        for stretch in stretches {
+                            for berth in berths(of: point.station, length: train.length) where berth.traversal == stretch.traversal {
+                                let reach = distance + berth.offset - stretch.from
+                                if berth.offset >= stretch.from, berth.offset <= stretch.to, reach > 0, reach <= moved {
+                                    arrival = clock.now
+                                    if !(standingPoint(of: train) != nil && isStopped(train, at: point.station)) { departure = clock.now }
+                                }
+                            }
+                            distance += stretch.to - stretch.from
+                        }
+                    }
+                }
+                if let found = trains[index].trafficVisits.firstIndex(where: { $0.station == point.station && $0.stop == point.stop && $0.cycle == point.cycle }) {
+                    if let departure { trains[index].trafficVisits[found].departure = departure }
+                } else if let arrival {
+                    trains[index].trafficVisits.append(TrafficVisit(station: point.station, stop: point.stop, cycle: point.cycle, arrival: arrival, departure: departure))
+                }
+            }
+            trains[index].trafficVisits.sort {
+                if $0.cycle != $1.cycle { return $0.cycle < $1.cycle }
+                if $0.stop != $1.stop { return $0.stop < $1.stop }
+                return $0.station < $1.station
+            }
+        }
+    }
+
+    mutating func recordTrafficDeparture(_ index: Int) {
+        let train = trains[index]
+        for i in trains[index].trafficVisits.indices where trains[index].trafficVisits[i].departure == nil {
+            let visit = trains[index].trafficVisits[i]
+            if let execution = train.execution, visit.cycle == execution.cycle, visit.stop == execution.stop,
+               isStopped(train, at: visit.station) {
+                trains[index].trafficVisits[i].departure = clock.now
+            }
+        }
     }
 }

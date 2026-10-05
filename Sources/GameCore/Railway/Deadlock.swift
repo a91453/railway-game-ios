@@ -84,6 +84,7 @@ extension GameWorld {
     /// passing place (Stage V2, see ``goingOn(_:)``). `nil` for any other
     /// train.
     func departureRequest(of train: Train) -> Train? {
+        if currentTrafficWait(train, plan: trafficPlan()) != nil { return nil }
         switch train.execution {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }

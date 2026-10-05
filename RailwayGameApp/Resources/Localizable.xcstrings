@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Waiting at %@ to meet %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %@ 等候 %@ 交會"
+          }
+        }
+      }
+    },
+    "Standing aside at %@ for %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %@ 待避 %@"
+          }
+        }
+      }
+    },
     "%@ station, %@" : {
       "localizations" : {
         "zh-Hant" : {

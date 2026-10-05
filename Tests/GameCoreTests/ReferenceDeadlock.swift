@@ -44,13 +44,16 @@ extension ReferenceWorld {
     /// on to its call when its route lets it, chosen as any departure's is,
     /// as fast as it can.
     mutating func goOn(_ i: Int) {
-        guard let going = goingOn(trains[i]), let service = going.service else { return }
+        let plan = routeMemo.scheduled ?? scheduledPlan()
+        guard waitingScheduled(trains[i], plan: plan) == nil, let going = goingOn(trains[i]), let service = going.service else { return }
         let start = standing(going)
         guard let path = chosenRoute(from: start, to: going.timetable[service.stop].station) else { return }
         var off = routed(start, path)
         off.service = service
-        let fastest = run(off, length: path.distance, scheduled: nil)
-        off.service?.run = fastest
+        let chosen = scheduledRoute(trains[i], target: going.timetable[service.stop].station, plan: plan)
+        let plannedRun = run(off, length: path.distance, scheduled: chosen?.seconds)
+        off.service?.run = plannedRun
+        off.trafficVisits = scheduledDepartureHistory(trains[i])
         _ = admit(off, at: i, following: true)
     }
 
@@ -71,6 +74,7 @@ extension ReferenceWorld {
     /// without traffic control: a service due to leave, a line's train the
     /// line is due to send out, or a service at a passing place.
     mutating func departureCandidate(_ train: Train) -> Train? {
+        if waitingScheduled(train, plan: routeMemo.scheduled ?? scheduledPlan()) != nil { return nil }
         if let service = train.service {
             guard service.waiting else { return goingOn(train) }
             guard let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }

@@ -505,6 +505,8 @@ extension ReferenceWorld {
                 sent.period = nil
                 // Stage W2b: sent out as if it had just arrived; it dwells
                 // at the first call before it leaves.
+                sent.trafficVisits = []
+                routeMemo.scheduled = nil
                 sent.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
                 if trafficControl, firstLeaving(sent, withTrafficControl: true) == nil { continue }
                 trains[i] = sent

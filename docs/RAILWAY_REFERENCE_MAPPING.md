@@ -167,7 +167,21 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 
 計畫快取：GameCore 在單次 advance 的 DispatchMemo.directions 依停靠／折返順序、車長、重複旗標記住名義 traversal；ReferenceWorld 以獨立鬆弛搜尋及狀態工作清單求 run，RouteMemo.directions 返回前清空，blocked route key 仍包含全部禁止方向與資源。來源與當下實際路每次重合併，未快取 ownership；下一個指令或 advance 不沿用。存檔格式與版本 7 不變。
 
-#### Deferred：排定的等待、交會與待避推估
+#### V3：排定交會、待避與月台成本（決策 59）
+
+2026-10-05 唯讀檢查 main `ddff2be4b4daeee8de3ab31a0a9a6873ad71b79e` 的**四份**參考。下表是 V3 的實際對應；下方原 V1／V2 的 Deferred 表是歷史盤點，交會與待避已由 V3 移植，只有指定路徑留 V4。
+
+| 參考檔案／函式 | Swift 檔案／函式 | 倍率、移植與 gap |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`inferMeetRun`、`reanchorRunProfile`、`applyRunProfile` | `ScheduledTraffic.swift` / `trafficPoints`、`inferTrafficMeets`、`trafficConflict`、`inferTrafficDepartureMeets`、`trafficStopBuildable`、`applyTrafficAnchor` | 秒 ×1、m ×64；300／1800 秒、dwell/3／端點 30 秒、候選排序、單線 overlap／共同端點距離插值直接移植；sections→parallelTracks、通過點→W1；權威等待與趕它開的實際事件適配見決策 59 |
+| 同網站 / `planSameDirectionOvertakes`、`overtakeRunBuildable`、`resolveTraTraffic` | `ScheduledTraffic.swift` / `planTrafficOvertakes`、`trafficStopBuildable`、`trafficPlan`；`GameWorld.swift` / `recordTrafficVisits`、`departService`、`goOn` | km ×64000；25 km＝1,600,000 單位，30／600 秒；先後對調、backward scan、tooClose、rebuilt/reliedOn、最多八輪及每次重算交會直接移植。允許既有停靠延長；實際事件解除與 fixed-point 曲線為必要適配 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7；`binary_reference/relevant_symbols_and_settings.txt`／`railway_core_15_3.wasm` | `ScheduledTraffic.swift` / `scheduledPath`、`trafficStationPenalty`、`trafficMismatchPenalty`；`ServicePath.swift` / `trafficPath`／`networkPath` | 立即可移植的 station／PBS／停站、通過與月台不合成本。**gap：無可讀預設值**；自訂 400／800 m＝25,600／51,200，理由見決策 59，非參考值；不逆向 wasm。成本和物理距離分離；無計畫仍 V1 |
+| `Ci/PROJECT_ABSORPTION_GUIDE.md` Stage U；`Ci/reference_snapshot/` 更新記錄 | 無可翻譯實作；概念對應上述計畫與月台選路 | 優先順序、在哪裡等、快車越行、單線交會、月台分配清單；snapshot 只有快慢車與哪些車站需要越行的文字，列為概念，沒有數值倍率 |
+| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-*.js` 的 MRT | **無**（V3） | 雙線往返、終點 14 秒折返、同線跟車距離／煞車限速；確認沒有單線交會或同向待避。未移植／未冒充 V3 來源 |
+
+GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.swift`／`ReferenceTrafficCurve.swift` 不呼叫 production 規劃／曲線。派車與保存語義、正線的名義最短走廊推導、實際 witness 的版本 9 與所有調整，均列決策 59。兩份新 schema 31 golden 先取得 GameCore 值再由獨立模型確認；`traffic.scheduledMeets` 在 `campaigns-12`，既有 campaign 不縮小。
+
+#### V1／V2 歷史盤點：當時 Deferred 的排定等待（交會／待避已由 V3 接續）
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- | --- |

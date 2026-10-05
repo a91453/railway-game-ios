@@ -136,7 +136,7 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = []) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:]) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
@@ -163,8 +163,8 @@ extension GameWorld {
                 return !network.fouls(track, blocked)
             }
             let stops = (berthsAlong[traversal] ?? []).filter { $0 >= from && allowed(to: $0) }
-                .map { (BerthSearch.berth(traversal, $0), $0 - from) }
-            return stops + (allowed(to: edgeLength) ? transitions(after: traversal).map { (.entered($0), edgeLength - from) } : [])
+                .map { (BerthSearch.berth(traversal, $0), $0 - from + (berthPenalty[Berth(traversal: traversal, offset: $0)] ?? 0) + (edgePenalty[traversal.edge] ?? 0)) }
+            return stops + (allowed(to: edgeLength) ? transitions(after: traversal).map { (.entered($0), edgeLength - from + (edgePenalty[traversal.edge] ?? 0)) } : [])
         }
         guard let route, case .berth(let last, let end)? = route.last else { return nil }
         let traversals = route.dropLast().map { place -> TrackTraversal in
@@ -193,6 +193,17 @@ extension GameWorld {
         switch start {
         case .onEdge(let traversal, let offset):
             networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked, forbidden: forbidden)
+        }
+    }
+
+    /// V3 generalized path cost (migration map §7). The geometric length
+    /// in TrainPath remains exact; penalties affect selection only.
+    func trafficPath(from start: TrainPosition, toStation id: StationID, length: Int64,
+                     berthPenalty: [Berth: Int64], edgePenalty: [TrackEdgeID: Int64]) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length,
+                        berthPenalty: berthPenalty, edgePenalty: edgePenalty)
         }
     }
 

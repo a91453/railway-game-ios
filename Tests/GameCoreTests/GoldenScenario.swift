@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 30
+    static let schemaVersion = 31
 
     var description: String
     var initialState: InitialState
@@ -148,7 +148,7 @@ struct GoldenScenario: Decodable {
             var schemaVersion: Int
         }
         let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
-        guard version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
+        guard version == 30 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
         let scenario = try JSONDecoder().decode(GoldenScenario.self, from: data)
         try checkClock(minutes: scenario.initialState.gameMinutes, seconds: scenario.initialState.gameSeconds, in: "initialState")
         let final = scenario.expectedFinalState
@@ -215,7 +215,7 @@ extension GoldenScenario.Step: Decodable {
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
-        case times, lateness
+        case times, lateness, scheduledWaits
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -238,6 +238,9 @@ extension GoldenScenario.Step: Decodable {
                 }
             }
             switch observation {
+            case .scheduledWaits:
+                try requireOnly([.scheduledWaits], answering: "scheduledWaits")
+                self = try .observe(observation, expect: .scheduledWaits(expect.decode([TrafficWaitSummary].self, forKey: .scheduledWaits)))
             case .train:
                 try requireOnly([.position, .movement], answering: "train")
                 let state = try TrainState(
@@ -1009,10 +1012,13 @@ enum ScenarioObservation: Equatable {
     case financeReport(FinancePeriod)
     /// Schema 24 (Stage W2b): a train's service times, and its lateness.
     case serviceTimes(TrainID)
+    case scheduledWaits
     case lateness(TrainID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
+        case .scheduledWaits:
+            .scheduledWaits(world.scheduledTrafficWaits().map(TrafficWaitSummary.init))
         case .train(let id):
             .train(world.train(id: id).map(TrainState.init))
         case .stationStops(let train):
@@ -1111,6 +1117,8 @@ extension ScenarioObservation: Decodable {
             // The grid's observations, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "\"\(type)\" is an observation of the grid, which Stage F3c removed.")
+        case "scheduledWaits":
+            self = .scheduledWaits
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1277,6 +1285,7 @@ enum ObservationAnswer: Equatable {
     case report(ReportSummary)
     case times(TimesSummary?)
     case lateness(Int64?)
+    case scheduledWaits([TrafficWaitSummary])
 }
 
 extension ObservationAnswer: Encodable {
@@ -1286,12 +1295,14 @@ extension ObservationAnswer: Encodable {
         case edge, location, transitions, path, points
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
-        case times, lateness
+        case times, lateness, scheduledWaits
     }
 
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
+        case .scheduledWaits(let waits):
+            try container.encode(waits, forKey: .scheduledWaits)
         case .train(let state?):
             try container.encode(state.position, forKey: .position)
             try container.encode(state.movement, forKey: .movement)
@@ -3399,5 +3410,24 @@ struct ReportSummary: Codable, Equatable {
 
     init(_ report: (current: FinanceSummary, previous: FinanceSummary)) {
         self.init(current: PeriodSummary(report.current), previous: PeriodSummary(report.previous))
+    }
+}
+
+/// Portable V3 plan observations, independent of the Swift save schema.
+struct TrafficWaitSummary: Codable, Equatable {
+    var train: Int
+    var station: Int
+    var stop: Int
+    var cycle: Int64
+    var other: Int
+    var otherStop: Int
+    var otherCycle: Int64
+    var kind: String
+    var departureSeconds: Int64
+    var clearanceSeconds: Int64
+    init(_ wait: ScheduledTrafficWait) {
+        train = wait.train.rawValue; station = wait.station.rawValue; stop = wait.stop; cycle = wait.cycle
+        other = wait.other.rawValue; otherStop = wait.otherStop; otherCycle = wait.otherCycle; kind = wait.kind.rawValue
+        departureSeconds = wait.departure.seconds; clearanceSeconds = wait.clearance
     }
 }
