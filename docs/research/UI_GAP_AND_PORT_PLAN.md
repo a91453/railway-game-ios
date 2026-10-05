@@ -2,9 +2,10 @@
 
 > **文件狀態**：完整規格與移植計畫書（唯讀研究，無任何程式碼修改）  
 > **基準版本**：
-> - `railway-game-ios` `main` 分支（Commit: [`9454d12`](https://github.com/a91453/railway-game-ios/commit/9454d122c8273c60d91cccf5e1c63481d113eafb)）
-> - 私有參考資料夾：`railway-reference-private/`（`Railway/site_archive_clean`、`Railway/taipei_gta_reference`、`Ci/reference_snapshot`）  
-> **排除邊界**：全面排除 V 系列（V1–V4e 及後續 Dispatcher / 待避 / 死結 / 授權標示），標記為 `DEFER_TO_V`、`DEFER_DATA_MODEL`、`DEFER_DATA_PIPELINE`。
+> - `railway-game-ios` `main` 分支（Commit: [`3fd1e9d`](https://github.com/a91453/railway-game-ios/commit/3fd1e9d25c855948d663a5e2bcfa294617b33e13)）
+> - 私有參考資料夾：`railway-reference-private/`（`Railway/site_archive_clean`、`Railway/taipei_gta_reference`、`Railway/railway_game_reference_clean`、`Ci/reference_snapshot`）  
+> **排除邊界**：全面排除 V 系列（V1–V4e 及後續 Dispatcher / 待避 / 死結 / 授權標示），標記為 `DEFER_TO_V`、`DEFER_DATA_MODEL`、`DEFER_DATA_PIPELINE`。  
+> **PR #131 / V4d 協作邊界**：PR #131 正在修改 V4d 的 GameCore、測試、golden 與 V 文件；本計畫不修改其 changed-file set，不重定義 V4d 行為。V4d 相關 UI 維持獨立後續工作。
 
 ---
 
@@ -48,14 +49,11 @@
 | UI 名稱 | Main 現況 | Reference 來源 | 處理方式 | 為什麼值得加入 | 是否需要新 Backend 能力 | 優先度 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **地圖資訊圖層選擇器 (Map Layer Panel)** | `MISSING`<br>(目前僅有實景地圖底圖選單，無法開關覆蓋圖層) | `Ci/`：`#panel-map-layers`<br>`layer-toggle-*` | **PORT** | 玩家無法開關站名、候車人數、列車、軌道細節、人口網格，地圖容易雜亂或資訊不足。現代經營遊戲核心控制項。 | 否（僅控制 `MapArt` 與 Canvas 既有繪製旗標） | **P0** |
-| **建造軌道浮動數據 HUD (Track Floating HUD)** | `MISSING`<br>(數值被埋在下方可捲動面板，玩家手指遮住視線且要低頭看) | `Ci/`：`.place-distance-hud`<br>`.metro-cost-preview-pill` | **PORT** | 手指拖曳拉軌時，直接在畫布拖曳點旁以浮動氣泡顯示長度 (m)、曲率半徑 (m)、坡度 (%) 與即時費用，大幅提升觸控建造手感。 | 否（`GameSession.networkPreview` 已經有完整數值） | **P0** |
-| **建造動作復原/重做 (Undo / Redo HUD Buttons)** | `MISSING`<br>(蓋錯軌道只能手動切換到 remove 模式點選刪除並賠錢) | `Ci/`：頂部工具列復原/重做機制與快捷鍵 | **ADAPT** | 行動裝置觸控誤觸率高，蓋錯軌道缺乏即時 Undo 嚴重影響建造心流。可在 Presentation 層保留最後一次指令快照。 | 否（Presentation 層封裝指令逆向或調用 `GameWorld` 既有拆除/退款指令） | **P0** |
+| **建造軌道浮動數據 HUD (Track Floating HUD)** | `MISSING`<br>(數值被埋在下方可捲動面板，玩家手指遮住視線且要低頭看) | `Ci/`：`.place-distance-hud`<br>`.metro-cost-preview-pill` | **PORT / ADAPT** | 先直接顯示現有 `NetworkPreview` 已公開的長度、起訖高度、費用與拒絕原因；若要加入最小曲率半徑或最大坡度，需另做 Presentation derived calculation，不能假設 `NetworkPreview` 已提供。 | **不需 GameCore 變更**；半徑/坡度屬 Presentation 衍生資料 | **P0** |
 | **車站服務半徑 / 影響範圍圓圈 (Station Catchment Overlay)** | `MISSING`<br>(後端已計算 800m 人口，地圖上卻完全不畫圓) | `Ci/`：`stationCoverage` (200m/500m/800m/1500m 圈) | **PORT** | `PopulationGrid` 已將 800m 定為步行範圍，但在地圖上看不見，玩家不知道新車站涵蓋了哪些區域、是否與鄰站重疊。 | 否（`MapArt` 依車站座標繪製透明同心圓） | **P0** |
-| **人口密度網格覆蓋層 (Population Heatmap / Grid Overlay)** | `MISSING`<br>(檔案已打包 `taiwan_population.json`，但畫布完全無呈現) | `Ci/`：`#panel-poptravel`<br>`legend-poptravel-population`<br>`map.population.gridTitle` | **ADAPT** | 玩家在實景大地圖上不知道哪裡人口密集、哪裡該設站。將已載入的 `PopulationGrid` 繪製為可開關的彩色方格/熱力層。 | 否（`PopulationGrid` 資料已在記憶體中，僅需 Canvas 繪圖） | **P1** |
+| **人口密度網格覆蓋層 (Population Heatmap / Grid Overlay)** | `MISSING`<br>(檔案已打包 `taiwan_population.json`，但畫布完全無呈現) | `Ci/`：`#panel-poptravel`<br>`legend-poptravel-population`<br>`map.population.gridTitle` | **ADAPT** | 玩家在實景大地圖上不知道哪裡人口密集、哪裡該設站。先由 `GamePresentation` 對 App 暴露唯讀、可裁切的 population overlay cells，再由 Canvas 繪圖。 | **不需 GameCore 變更**；需要新的唯讀 Presentation overlay API（目前 cell 儲存在 internal `GridCounts`） | **P1** |
 | **列車視角追蹤跟隨 (Train Follow Camera)** | `MISSING`<br>(選取列車不會跟隨，列車開出螢幕就看不見) | `Railway/`：`#followBar` / `#followPanel` (`fpTrain`)<br>`Ci/`：`metro.train.follow` | **PORT** | 鐵路模擬遊戲最重要的觀賞與沉浸體驗。點選列車後相機自動鎖定該列車座標平移，再次拖曳地圖自動解除。 | 否（`PlanCamera.centered(on:)` 既有能力，僅需綁定 tick 驅動） | **P1** |
 | **全列車營運總覽表 (Train Fleet Roster)** | `MISSING`<br>(只能在 `TrainControls` 的下拉選單一台一台翻) | `Ci/`：`#panel-train` 列表模式<br>`Railway/`：`#recordBar` | **ADAPT** | 當車輛數達到 10 台以上時，下拉選單無法比較各車狀態。需要全車隊列表（顯示車名、路線、滿載率、準點狀態、當前狀態）。 | 否（直接讀取 `session.world.trains`） | **P1** |
-| **線路識別配色選擇器 (Line Color Picker)** | `MISSING`<br>(目前顏色依 Line ID 取餘數寫死 6 色，無法自訂) | `Ci/`：`line-info-badge` 與線路顏色色盤 | **ADAPT** | 路線經營的個人化核心體驗，允許玩家為每條路線指定捷運/台鐵代表色（紅/藍/綠/橘/黃/紫等 16 色）。 | 否（可存於 `Presentation` 或利用既有屬性擴充） | **P2** |
-| **車站更名與等級標籤 (Station Rename & Tier Badge)** | `MISSING`<br>(只能在初次建站時輸入名稱，建好後無法修改) | `Ci/`：`station.name.edit`<br>`Railway/`：`tra_station_class.json` | **PORT** | 蓋錯站名無法修改體驗極差；結合真實車站資料等級（特等/一等/二等/三等/簡易）顯示徽章。 | 否（`GameWorld.renameStation` 既有指令） | **P2** |
 | **獨立拆除推土機工具 (Bulldozer / Demolish Mode)** | `MISSING`<br>(藏在 Network -> SegmentedPicker 的第三項) | `Ci/`：底部工具列專用刪除按鈕 (`bb-tool-btn`) | **ADAPT** | 將拆除提升為工具列顯著模式或快捷按鈕，避免在選單中頻繁切換。 | 否（呼叫既有 `removeNetworkEdge`） | **P2** |
 
 ---
@@ -65,7 +63,7 @@
 | 現有檔案 / View | 現在的問題 | Reference 的優點 | 建議調整方向 | PORT / ADAPT |
 | :--- | :--- | :--- | :--- | :--- |
 | [`ContentView.swift`](../../RailwayGameApp/Views/ContentView.swift)<br>(iPhone Portrait 佈局) | iPhone 直向螢幕被死板地對半切（地圖固定 50%，控制台占 50%），地圖可視範圍極為侷促，操控體驗像桌面軟體而非現代手遊。 | `Ci/` 與現代地圖 App 採用**全螢幕地圖 + 浮動膠囊 HUD + 底部抽屜 (Interactive Bottom Sheet / Drawer)**。 | 將 iPhone 地圖改為滿版 (100%)，控制台改用可折疊的浮動卡片/BottomSheet，支援最小化（僅工具列）、半開（檢查器）與全開（詳細設定）。 | **ADAPT** |
-| [`StationPanel.swift`](../../RailwayGameApp/Views/StationPanel.swift)<br>(車站資訊面板) | 1. 完全不顯示該站所屬路線與行經班次。<br>2. 後端明明有 800m 人口計算，面板卻只顯示計算後的 `dailyTrips`，看不到腹地常住人口數。<br>3. 樣式偏向原生 iOS Settings 表單，缺乏遊戲卡片精緻度。 | `Ci/` 的 `station-hero-card` 與 `station-header-lines`：頂部有大站名、路線彩色圓標（如 BL / R）、周邊人口統計、轉乘路線列表。 | 頂部改為 Hero Card，列出停靠線路標籤、800m 腹地人口估算、車站等級徽章，下方保留既有的 24 小時長條圖與 OD 站對。 | **ADAPT** |
+| [`StationPanel.swift`](../../RailwayGameApp/Views/StationPanel.swift)<br>(車站資訊面板) | 1. 完全不顯示該站所屬路線與行經班次。<br>2. 後端明明有 800m 人口計算，面板卻只顯示計算後的 `dailyTrips`，看不到腹地常住人口數。<br>3. 樣式偏向原生 iOS Settings 表單，缺乏遊戲卡片精緻度。 | `Ci/` 的 `station-hero-card` 與 `station-header-lines`：頂部有大站名、路線彩色圓標（如 BL / R）、周邊人口統計、轉乘路線列表。 | 頂部改為 Hero Card，列出停靠線路標籤與 800m 腹地人口估算；只有在既有唯讀資料能直接取得等級時才顯示徽章，不為 UI 新增 authoritative station model。下方保留既有 24 小時長條圖與 OD 站對。 | **ADAPT** |
 | [`TrainControls.swift`](../../RailwayGameApp/Views/TrainControls.swift)<br>(列車資訊與控制) | 列車滿載狀態僅以純文字 `Label("Load 140 / 320", ...)` 顯示，缺乏直觀警示；行駛進度與車廂編組缺少視覺化。 | `Ci/` 的 `trainCard` 與 `metro.train.load_factor`：具備進度條式滿載率色條（綠 <70%、黃 70-90%、紅 >90%）與車廂編組小圖。 | 在狀態卡片中增加彩色滿載率進度條（`ProgressView`）及車廂編組示意圖卡片，並提供一鍵「相機跟隨」按鈕。 | **PORT** |
 | [`LinesPanel.swift`](../../RailwayGameApp/Views/LinesPanel.swift)<br>(路線管理面板) | 路線停站順序以純文字清單顯示，視覺上無法一目了然看出路線走勢、折返點與區間交路覆蓋範圍。 | `Ci/` 的 `metro-diagram-toolbar` 與帶連線的站點條狀圖（Metro Line Strip）。 | 改良停靠站列表，左側加上彩色路線豎線與車站端點空心/實心圓點，直觀表達起訖站與中途停站。 | **ADAPT** |
 | [`InspectorView.swift`](../../RailwayGameApp/Views/InspectorView.swift)<br>(選取檢查器) | 點選空地或軌道時資訊過於簡陋（僅顯示坐標或 "Tap a station..."），在建造模式下佔據版面。 | `Ci/` 的 Contextual Inspector：選取軌道顯示長度/速限/通過列車，選取車站顯示摘要快速按鈕。 | 精簡選取提示，若點選軌道邊顯示軌道邊長度與速限；若選取車站顯示快顯卡片與客流按鈕。 | **ADAPT** |
@@ -83,6 +81,9 @@
 | **單線交會/待避預排時刻視圖 (Scheduled Meets Gantt Chart)** | `Railway/`：`inferMeetPassTimes`<br>`index.html` 待避圖 | 顯示慢車在特定側線等待快車通過的排程甘特圖。 | 依賴 **Stage V3 / V4a** 的排定交會與待避完全穩定，不能在 UI 上硬造假排程。 | `DEFER_TO_V` |
 | **中途折返與側線調度介面 (Turnback / Siding UI)** | `Railway/`：`turnbacks.js`<br>`Ci/`：`shortTurn` | 在路線中途讓列車換向倒退進側線待命的控制介面。 | 依賴 **Stage V4d**（中途換向與倒進側線）。目前 GameCore 無法處理反向折返運動。 | `DEFER_TO_V` |
 | **進路信號燈與聯鎖控制 (Signal & Interlocking UI)** | `Railway/`：`signals.js`<br>`Ci/`：`block-signals` | 號誌機擺設與閉塞分區手動控制面板。 | 屬於 V 系列後續或獨立 Signal Phase，GameCore 目前為空間節點與預約制。 | `DEFER_TO_V` |
+| **建造 Undo / Redo** | `Ci/` 工具列；`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 的 `GameCommand` 架構 | Undo 必須逆轉 authoritative mutation、成本與相關狀態，不能只在 Presentation 層以「刪除＋退款」模擬。 | 先建立可逆 command / transaction 或等價 authoritative undo contract，再接 HUD。 | `DEFER_DATA_MODEL` |
+| **車站更名 (Station Rename)** | `Ci/`：`station.name.edit` | 目前 main 沒有 `GameWorld.renameStation`；更名若要保存必須是 authoritative world mutation。 | 需要正式 station rename command/API、存檔相容與測試；現階段不要做假 UI。 | `DEFER_DATA_MODEL` |
+| **持久化線路自訂色 (Persistent Line Color)** | `Ci/`：`line-info-badge` / 線路色盤 | Presentation-only 顏色重開遊戲會消失；玩家設定若屬遊戲狀態就必須保存。 | 先決定 line color 是否 authoritative saved field；若是，建立 migration/compatibility 後再做 picker。 | `DEFER_DATA_MODEL` |
 | **動態人口成長/衰退統計 (Dynamic Population Growth)** | `Ci/`：`metroWeeklyDemand`<br>`poptravel-tab-move` | 鐵路通車後周邊人口隨年齡/就業動態遷移與成長曲線。 | 依賴人口動態演化模型（目前為靜態 1km 網格）。 | `DEFER_DATA_MODEL` |
 | **真實 3D 建築輪廓與 GIS 載入 (3D Building Footprints Ingestion)** | `Ci/`：`mdBuildings`, `hkBuildings`<br>`Railway/`：`historic-buildings-v2` | 在地圖上即時下載並擠出數萬棟 OSM / Overture 3D 建築。 | 依賴向量圖磚管線與龐大 GIS 資料流。 | `DEFER_DATA_PIPELINE` |
 
@@ -113,7 +114,7 @@ flowchart LR
         V4["MapArt.drawPopulationGrid<br>(Canvas 熱力繪製)"]
         V5["MapView.camera<br>(跟隨選取列車 tick)"]
         V6["StationPanel.heroSection<br>(車站面板頂部升級)"]
-        V7["HUDView.undoRedo<br>(HUD 輔助按鈕)"]
+        V7["DEFER_DATA_MODEL<br>(Undo / Rename / Persistent Color)"]
         V8["DEFER_TO_V<br>(暫不實作)"]
     end
 
@@ -123,7 +124,7 @@ flowchart LR
     R5 -->|ADAPT| V4
     R6 -->|PORT| V5
     R7 -->|ADAPT| V6
-    R8 -->|ADAPT| V7
+    R8 -->|DEFER_DATA_MODEL| V7
     R9 -->|DEFER_TO_V| V8
 ```
 
@@ -134,11 +135,12 @@ flowchart LR
 | `panel-map-layers` (底圖、車站名、候車人數、圖層開關) | 地圖畫布浮動圖層按鈕與彈出選單 | **PORT** | 新增 `RailwayGameApp/Views/MapLayerSheet.swift`<br>修改 `MapView.swift` |
 | `place-distance-hud` + `metro-cost-preview-pill` | 軌道建造拖曳時的螢幕浮動測量氣泡 | **PORT** | 新增 `RailwayGameApp/Views/MapConstructionHUD.swift`<br>修改 `MapView.swift` |
 | `stationCoverage` (服務範圍圈) | 地圖車站 800m / 500m 半透明覆蓋圓圈 | **PORT** | 修改 `RailwayGameApp/Views/MapArt.swift`<br>讀取 `StationDemand.catchmentRadius` |
-| `panel-poptravel` (人口分佈、顏色圖例、透明度滑桿) | 人口熱力覆蓋圖層與圖例卡片 | **ADAPT** | 修改 `MapArt.swift`（支援 `drawPopulationGrid`）<br>新增 `PopulationLegendView.swift` |
+| `panel-poptravel` (人口分佈、顏色圖例、透明度滑桿) | 人口熱力覆蓋圖層與圖例卡片 | **ADAPT** | 先在 `Sources/GamePresentation/PopulationGrid.swift` 暴露唯讀 overlay-cell API，再修改 `MapArt.swift` 並新增 `PopulationLegendView.swift` |
 | `fpTrain` / `followBar` (列車跟隨) | 點擊列車後的相機動態鎖定 | **PORT** | 修改 `GameSession.swift`（增加 `isFollowingTrain`）<br>修改 `MapView.swift` |
 | `station-hero-card` + `station-header-lines` | 車站面板頂部卡片（停靠路線、腹地人口、等級徽章） | **ADAPT** | 修改 `RailwayGameApp/Views/StationPanel.swift` |
-| 建造歷史與 Undo / Redo | HUD 頂部或底部的復原/重做按鈕 | **ADAPT** | 修改 `GameSession.swift`<br>修改 `HUDView.swift` |
-| 路線顏色自訂與圓形標章 | 線路編輯面板中的顏色選擇器 | **ADAPT** | 修改 `RailwayGameApp/Views/LinesPanel.swift` |
+| 建造歷史與 Undo / Redo | HUD 頂部或底部的復原/重做按鈕 | **DEFER_DATA_MODEL** | 先建立 authoritative reversible command / transaction；不得只在 `GameSession` 反向拼操作 |
+| 路線顏色自訂與圓形標章 | 線路編輯面板中的顏色選擇器 | **DEFER_DATA_MODEL**（若需持久化） | 先決定並建立 saved line-color contract；純 session preview 不作為正式實作 |
+| 車站更名 | StationPanel 編輯名稱 | **DEFER_DATA_MODEL** | main 無 `GameWorld.renameStation`；需 authoritative rename API / save compatibility |
 | 3D 建築擠出與 GIS 屬性查詢 | 地圖建築圖層與區塊點選 | **DEFER_DATA_PIPELINE** | 需向量圖磚資料管線，現階段不排入 |
 | 移動授權 (Movement Authority) | 軌道鎖定綠色/黃色高亮 | **DEFER_TO_V** | 依賴 Stage V4e |
 | 死結標示 (Deadlock Markers) | 地圖紅色驚嘆號閃爍標記 | **DEFER_TO_V** | 依賴 Stage V4e |
@@ -150,41 +152,46 @@ flowchart LR
 本排序嚴格遵循：「先補主遊戲操作最明顯缺失 → 再改善資訊呈現 → 再處理外觀與 Polish」原則，且**完全不觸碰任何 V 系列程式碼**：
 
 ```
-[Phase 1: P0 - 建造與地圖基礎操控缺口]
-  ├─ 1.1 MapConstructionHUD (浮動長度/半徑/坡度/費用氣泡)
-  ├─ 1.2 MapLayerSheet (圖層開關：站名、候車數、服務圈)
-  ├─ 1.3 Station Catchment Rings (地圖繪製 800m 步行圈)
-  └─ 1.4 Construction Undo (基礎軌道建造復原支援)
+[Phase 1: P0 - 不碰 V / 不改 authoritative model]
+  ├─ 1.1 MapLayerSheet (圖層開關：站名、候車數、服務圈)
+  ├─ 1.2 Station Catchment Rings (地圖繪製 800m 步行圈)
+  └─ 1.3 MapConstructionHUD
+       └─ 只顯示現有 NetworkPreview：長度、起訖高度、費用、problem
 
 [Phase 2: P1 - 人口可視化與營運資訊增強]
-  ├─ 2.1 Population Grid Canvas Layer (WorldPop 人口彩色方格覆蓋層)
-  ├─ 2.2 StationPanel Catchment Info (車站面板顯示 800m 人口數與等級)
-  ├─ 2.3 Train Follow Camera (相機平滑跟隨列車)
-  └─ 2.4 Train Occupancy Progress Bar (列車載客率色彩警示條)
+  ├─ 2.1 PopulationGrid Read-Only Overlay API (GamePresentation only)
+  ├─ 2.2 Population Grid Canvas Layer + Legend
+  ├─ 2.3 StationPanel Catchment Population
+  ├─ 2.4 Train Follow Camera
+  └─ 2.5 Train Occupancy Progress Bar / Fleet Roster
 
-[Phase 3: P2 - 佈局適配與體驗 Polish]
-  ├─ 3.1 iPhone Adaptive Drawer (iPhone 滿版地圖 + 抽屜式控制台)
-  ├─ 3.2 Station Rename UI (車站面板支援直接重新命名)
-  ├─ 3.3 Line Color Picker (線路面板支援 16 色自訂)
-  └─ 3.4 Dedicated Bulldozer Tool (直覺拆除模式切換)
+[Phase 3: P2 - 佈局與 UI Polish]
+  ├─ 3.1 iPhone Adaptive Drawer
+  ├─ 3.2 Read-only Station Tier Badge (只有既有資料可直接取得時)
+  └─ 3.3 Dedicated Bulldozer Tool
+
+[Deferred - 先補 authoritative contract 才能做]
+  ├─ Construction Undo / Redo
+  ├─ Station Rename
+  ├─ Persistent Line Color Picker
+  └─ Real Block / Parcel interaction requiring vector-data pipeline
 ```
 
 ### 優先度定義
 
-- **P0（最高優先，主遊戲體驗關鍵缺陷）**：
-  1. **建造浮動 HUD**：大幅消除觸控盲操感。
-  2. **圖層選擇器**：解鎖被隱藏的地圖維度。
-  3. **車站 800m 服務圈繪製**：讓人口系統第一次在畫布上「被看見」。
-  4. **建造 Undo**：解決誤觸造成不可逆損失的挫折感。
-- **P1（次高優先，核心經營資訊可視化）**：
-  1. **人口方格熱力層**：讓選址設站具備真正的策略依據。
-  2. **車站腹地人口摘要**：將 WorldPop 數據具體呈現給玩家。
-  3. **相機跟隨列車**：大幅強化遊戲觀賞樂趣。
-  4. **列車滿載率色彩警示**：直觀診斷路線擁擠度。
-- **P2（優化與 Polish）**：
-  1. **iPhone 抽屜式佈局**：解放 iPhone 螢幕空間。
-  2. **車站自訂命名**與**線路顏色挑選**。
+- **P0（最高優先，且可與 PR #131/V4d 並行）**：
+  1. **圖層選擇器**：只新增 App / Presentation UI 狀態。
+  2. **車站 800m 服務圈繪製**：使用既有 `StationDemand.catchmentRadius`。
+  3. **建造浮動 HUD**：只消費 `NetworkPreview` 現有欄位，不新增 GameCore 規則。
+- **P1（人口與營運資訊）**：
+  1. **PopulationGrid 唯讀 overlay API + Heatmap**：API 只位於 `GamePresentation`，不改 GameCore / save。
+  2. **車站腹地人口摘要**。
+  3. **相機跟隨列車**與**列車載客資訊**。
+- **P2（外觀與操作 Polish）**：
+  1. **iPhone 抽屜式佈局**。
+  2. **既有資料可支援時的唯讀車站等級徽章**。
   3. **獨立推土機工具列按鈕**。
+- **Deferred**：Undo/Redo、車站更名、持久化線路配色都先建立 authoritative data/command contract；不要用 Presentation-only workaround 假裝完成。
 
 ---
 
@@ -197,7 +204,7 @@ flowchart LR
 | **全島/總人口數 (Total Population)** | `EXISTS` (資料層)<br>`MISSING` (UI 層) | `Ci/`：`panel-poptravel`<br>`total` 人數計數器 | **PORT** | `PopulationGrid.total` 已有 23,858,946 人，但 HUD / 任何面板都未顯示。可在 `NetworkOverview` 或 `MapLayerSheet` 中顯示。 |
 | **車站服務腹地人口 (Station Catchment Population)** | `PARTIAL`<br>(後端計算完轉為 dailyTrips，UI 上隱藏原始人口) | `Ci/`：`station.residentPopulation`<br>`map.overlay.tooltip.residentPopulation` | **PORT** | `PopulationGrid.people(within: 800, ...)` 運算已完備。只需在 `StationPanel` 頂部新增「800m 範圍常住人口：約 X 萬人」文字。 |
 | **車站服務圈可視化 (Catchment Overlay)** | `MISSING` | `Ci/`：`stationCoverage`<br>(200m / 500m / 1000m / 1500m) | **PORT** | 在 `MapArt.swift` 中以 `Palette.station` 繪製半透明 800m 圓形。支援重疊度觀察。 |
-| **人口密度覆蓋圖層 (Population Heatmap / Grid)** | `MISSING` | `Ci/`：`panel-poptravel`<br>LandScan 300m / 1km 方格 | **ADAPT** | 在 `MapArt` 增加畫布圖層：將 `taiwan_population.json` 的非零格子映射為淺藍到深紅的半透明方格。 |
+| **人口密度覆蓋圖層 (Population Heatmap / Grid)** | `MISSING` | `Ci/`：`panel-poptravel`<br>LandScan 300m / 1km 方格 | **ADAPT** | `PopulationGrid` 的 cell storage 目前由 internal `GridCounts` 持有；先在 `GamePresentation` 暴露唯讀、可裁切的 overlay cells，再由 `MapArt` 將非零格映射為半透明方格。 |
 | **人口與客流圖例 (Legend & Scale Bar)** | `MISSING` | `Ci/`：`poptravel-legend-bar`<br>`poptravel-legend-swatch` | **PORT** | 搭配熱力層在畫布角落或 Sheet 中顯示色階標籤（0 → 1k → 5k → 10k+ 人/km²）。 |
 | **區域/行政區人口 (District Population)** | `MISSING` | `Ci/`：`mdDistricts` / `hkDistricts` | `DEFER_DATA_PIPELINE` | 需要鄉鎮市區邊界 GeoJSON（目前 repo 僅有全島 raster，無向量行政邊界）。 |
 | **人口隨鐵路通車動態演化 (Dynamic Growth / Accessibility)** | `MISSING` | `Ci/`：`metroWeeklyDemand`<br>`poptravel-tab-move` | `DEFER_DATA_MODEL`<br>`DEFER_TO_V` | 目前 `PopulationGrid` 為靜態 WorldPop 資料，GameCore 尚未實作動態土地增值或人口遷移模型。 |
@@ -270,76 +277,78 @@ flowchart LR
 
 ---
 
-## 10. Claude Code / Codex Handoff（後續實作委派規格）
+## 10. Claude Code / Codex Handoff（修正版；後續實作委派規格）
 
-本節為交接給下一個 Coding Agent（Claude Code 或 Codex）的執行指令規格，**可直接作為 Prompt 輸入**。
+本節取代 PR #130 原本的 handoff。下一個 Coding Agent 可以直接依本節執行，但必須遵守以下邊界：
 
-### A. 實作任務清單
+- **不要修改 PR #131 正在修改的 V4d changed-file set。**
+- 如果 PR #131 已合併，仍不得為了 UI 改寫 V4d 行為、測試、golden 或 traffic-control 規則。
+- 本輪允許修改範圍以 `RailwayGameApp` 與必要的 `GamePresentation` 唯讀/顯示 API 為主。
+- 不新增或變更 `SavedGame` 欄位，不改 `GoldenScenarios/`，不新增 authoritative gameplay 規則。
 
-#### Task 1: 新增地圖資訊圖層控制列 (`MapLayerSheet.swift` & `MapView.swift`)
-- **檔案**：
-  - 新增：[`RailwayGameApp/Views/MapLayerSheet.swift`](../../RailwayGameApp/Views/MapLayerSheet.swift)
-  - 修改：[`RailwayGameApp/Views/MapView.swift`](../../RailwayGameApp/Views/MapView.swift)
-- **Reference 來源**：`Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html` 的 `#panel-map-layers`。
-- **作法**：
-  - 在 `MapView` 頂部或底部操作列加入圖層按鈕（SF Symbol: `square.3.layers.3d`）。
-  - 彈出選單支援開關：
-    - `showsStationNames`: 是否顯示站名文字。
-    - `showsCatchmentRings`: 是否顯示車站 800m 影響範圍圓圈。
-    - `showsPopulationGrid`: 是否顯示人口網格熱力圖。
-    - `showsWaitingCounts`: 是否顯示候車人數標記。
+### A. 可立即實作的安全任務
 
-#### Task 2: 繪製車站 800m 服務範圍圈 (`MapArt.swift`)
-- **檔案**：
-  - 修改：[`RailwayGameApp/Views/MapArt.swift`](../../RailwayGameApp/Views/MapArt.swift)
-- **Reference 來源**：`Ci/` `stationCoverage` 與 `StationDemand.catchmentRadius` (800.0m)。
-- **作法**：
-  - 在 `MapArt.drawPointStation` 或獨立的 `drawStationCatchment` 函數中，以車站坐標為圓心，`800.0` 公尺為半徑（透過 `projection.pointsPerUnit` 換算為螢幕像素），繪製淺藍色半透明填充圓（`Palette.station.opacity(0.12)`）與細描邊。
+#### Task 1: Map Layer Sheet
+- 新增 `RailwayGameApp/Views/MapLayerSheet.swift`。
+- 修改 `MapView.swift`，加入圖層入口。
+- 可先提供：站名、候車數、800m 服務圈等已存在資料的顯示開關。
+- Population toggle 只有 Task 4 完成後才啟用；不可用假資料。
 
-#### Task 3: 建造軌道浮動數據與費用氣泡 (`MapConstructionHUD.swift`)
-- **檔案**：
-  - 新增：[`RailwayGameApp/Views/MapConstructionHUD.swift`](../../RailwayGameApp/Views/MapConstructionHUD.swift)
-  - 修改：[`RailwayGameApp/Views/MapView.swift`](../../RailwayGameApp/Views/MapView.swift)
-- **Reference 來源**：`Ci/` `.place-distance-hud` 與 `.metro-cost-preview-pill`。
-- **作法**：
-  - 當 `session.tool == .network` 且 `session.networkPreview != nil` 時，在畫布頂部或端點旁浮動顯示膠囊卡片：
-    - 軌道長度、最小半徑、最大坡度。
-    - 建造預算費用（例如：`$1,200`）。
-    - 若有衝突（`problem != nil`），膠囊變為警告色（`Palette.metroAmber`）。
+#### Task 2: Station Catchment Overlay
+- 修改 `MapArt.swift`。
+- 直接讀取既有 `StationDemand.catchmentRadius == 800m`。
+- 僅做視覺疊加，不改 demand 計算與 GameCore。
 
-#### Task 4: 車站資訊面板顯示 800m 腹地人口 (`StationPanel.swift`)
-- **檔案**：
-  - 修改：[`RailwayGameApp/Views/StationPanel.swift`](../../RailwayGameApp/Views/StationPanel.swift)
-- **Reference 來源**：`Ci/` `station-hero-card` 與 `Sources/GamePresentation/PopulationGrid.swift`。
-- **作法**：
-  - 在 `demandSection` 頂部加入常住人口估算列。
-  - 若 `session.population` 存在且為實景地圖，查詢該站坐標 800m 內人數：
-    `session.population?.people(within: StationDemand.catchmentRadius, ofLatitude: lat, longitude: lon)`
-  - 顯示：「服務腹地人口：約 \(count) 人（800m 步行圈）」。
+#### Task 3: Construction Floating HUD
+- 新增 `MapConstructionHUD.swift`，修改 `MapView.swift`。
+- `NetworkPreview` 目前可靠可直接使用的欄位包括：`length`、`startHeight`、`endHeight`、`cost`、`problem`，以及只用於顯示/衍生的 `curve/profile/points`。
+- **不要宣稱 `NetworkPreview` 已直接提供 minimum radius 或 maximum grade。**
+- 若要顯示曲率半徑/最大坡度，只能另建立 deterministic Presentation derived calculation 並測試；不要修改 V4d 或 traffic-control。
 
-#### Task 5: 列車相機跟隨模式 (`MapView.swift` & `GameSession.swift`)
-- **檔案**：
-  - 修改：[`RailwayGameApp/Views/MapView.swift`](../../RailwayGameApp/Views/MapView.swift)
-  - 修改：[`Sources/GamePresentation/GameSession.swift`](../../Sources/GamePresentation/GameSession.swift)
-- **Reference 來源**：`Railway/` `#followBar` (`fpTrain`)。
-- **作法**：
-  - 在 `TrainControls` 中選取已放置的列車時，提供「跟隨視角」按鈕。
-  - 在每秒更新 tick 時，若處於跟隨狀態，將 `camera` 中心更新至列車當前位置。
-  - 若玩家主動觸發地圖拖曳手勢，自動關閉跟隨模式。
+#### Task 4: Population Read-Only Overlay API + Heatmap
+- 修改 `Sources/GamePresentation/PopulationGrid.swift`，新增**唯讀**、適合目前 viewport / region 的 population overlay-cell query/projection API。
+- 現況：`PopulationGrid` 對外有 `total`、`people(within:...)` 等能力，但實際 cell dictionary 在 internal `GridCounts` 中，App 不能直接遍歷。
+- API 不得改人口資料、不寫回 GameCore、不進 save。
+- 完成後才在 `MapArt.swift` 畫 heatmap，並可新增 `PopulationLegendView.swift`。
 
-### B. V Exclusion Boundary（嚴格禁止項目）
+#### Task 5: Station Catchment Population UI
+- 修改 `StationPanel.swift`。
+- 使用既有 `PopulationGrid.people(within: StationDemand.catchmentRadius, ...)` 顯示 800m 腹地人口。
+- 不新增人口成長、土地價值或 V 系列規則。
 
-下一個實作 Agent **不可觸碰**：
-1. **嚴禁修改任何 GameCore 核心交通/排程代碼**：包括 `ScheduledTraffic.swift`、`Deadlock.swift`、`ScheduledOvertakeTracks.swift`、`LineRoutePreference.swift`、`LineCapacity.swift` 等。
-2. **嚴禁變更存檔版本與 Golden Scenario**：不要更動 `SavedGame.swift` 版本號（維持 Version 10），不修改 `GoldenScenarios/`。
-3. **嚴禁偽造或提前實作 V 系列功能**：不要在 UI 加上假號誌、假死結排除按鈕、假移動授權區間。
-4. **所有 UI 狀態必須限制在 `GamePresentation` 或 `RailwayGameApp` 層級**。
+#### Task 6: Train Follow Camera / Read-only Train UI
+- 可修改 `MapView.swift`、`TrainControls.swift` 與必要的 Presentation-only UI state。
+- 使用既有 `PlanCamera.centered(on:)`。
+- 玩家主動 pan 時解除跟隨。
+- 不修改列車 movement / reservation / deadlock / turnback 行為。
 
-### C. Acceptance Criteria（驗收條件）
+### B. 現階段禁止直接實作
 
-1. `swift test` 全數通過，無任何 regression。
-2. 在 iPhone 與 iPad 模擬器上執行 `xcodebuild -scheme RailwayGame` 編譯無警告。
-3. 建造軌道時，手指在畫布上拖曳可即時看見浮動尺寸與費用 HUD。
-4. 開啟圖層選單後，勾選「車站服務圈」可在畫布清晰看到車站 800m 藍色半透明圈，不遮擋鐵軌與列車。
-5. 在實景地圖（如台灣或平溪 Demo）點開車站「Ridership」，面板能正確顯示該站 800m 範圍的人口數量。
-6. 選取運轉中的列車並啟用跟隨模式，地圖視野平滑跟隨列車前進，手動拖曳地圖能無縫解除鎖定。
+#### Construction Undo / Redo — `DEFER_DATA_MODEL`
+`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 已把 command-based world mutation 視為 Undo / Preview / Replay 的基礎。不要在 Presentation 層用「反向呼叫 remove + 手動退款」模擬真正 Undo。先建立 authoritative reversible command / transaction contract，再做 UI。
+
+#### Station Rename — `DEFER_DATA_MODEL`
+目前 main **沒有** `GameWorld.renameStation`。不要建立只有畫面名稱改變、存檔後消失的假更名。要做時需另開資料模型/command 工作，處理保存與相容性。
+
+#### Persistent Line Color — `DEFER_DATA_MODEL`
+如果線路顏色是玩家設定且重開後要保留，就必須有 saved model contract。可以研究 UI，但不要以 Presentation-only 顏色當成正式完成。
+
+#### Real Block / Parcel Interaction — `DEFER_DATA_PIPELINE`
+private reference 已有 building footprint / 3D / map 技術可供後續移植，但全台可互動 block/parcel 仍需要明確向量資料管線與 spatial query contract。不要用 Apple Map POI 假裝成 parcel。
+
+### C. PR #131 / V4d Exclusion Boundary
+
+PR #131 目前修改 `Deadlock.swift`、`LineJourney.swift`、`LineRoutePreference.swift`、`ServiceDirections.swift`、`ServicePath.swift`、`GameWorld.swift`、V4d 測試/golden，以及 `ARCHITECTURE.md`、`RAILWAY_REFERENCE_MAPPING.md`、`ROADMAP.md`、`STAGE_V_HANDOFF.txt` 等檔案。
+
+本 UI 工作**不得修改 PR #131 changed files**。若某項 UI 只能透過修改這些 V4d 檔案才能完成，停止該項並標記 `DEFER_TO_V`。
+
+### D. Acceptance Criteria
+
+1. PR 僅包含被選中的 UI / Presentation 任務，不含 V4d GameCore 檔案。
+2. `swift test` 無 regression；新增的 Presentation derived API 有對應單元測試。
+3. iPhone / iPad build warnings-as-errors 通過。
+4. MapConstructionHUD 只顯示有真實來源的數值；不顯示杜撰的曲率/坡度。
+5. Catchment overlay 與 population heatmap 都可獨立關閉，且不改 authoritative simulation。
+6. Population heatmap 的 cell 資料來自新的唯讀 `GamePresentation` API，不直接突破 internal storage。
+7. 不改 `SavedGame.currentVersion`、`GoldenScenarios/`、V4d traffic-control/turnback 行為。
+8. Undo/Redo、Station Rename、Persistent Line Color 若沒有先完成 authoritative contract，必須保持 deferred。
