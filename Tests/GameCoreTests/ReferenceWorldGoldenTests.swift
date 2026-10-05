@@ -124,6 +124,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
 
     private static func answer(_ observation: ScenarioObservation, in model: ReferenceWorld) -> ObservationAnswer {
         switch observation {
+        case .scheduledWaits:
+            return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))
         case .train(let id):
             return .train(model.trains.first { $0.id == id.rawValue }.map {
                 TrainState(

@@ -444,6 +444,11 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 手算測試、參考模型逐秒比較、`traffic.deadlock`（8 case × 4 seed，新的 `campaigns-11`）、golden `single-track-passing.json`、版本 8 存檔 fixture。
   - **Deferred**：事前規劃的排定交會與待避推估（`inferMeetPassTimes`、`planSameDirectionOvertakes`）、需要換向的折返與調車解法、單線區段的線路容量（決策 22）、畫面顯示授權範圍與地圖上的死結標示。
 
+- **V3 — 已實作，驗證結果見 PR**（ARCHITECTURE 決策 59）：直接翻譯四份參考中網站的交會／待避演算法；交通控制下推導 1800 秒內單線交會（每次 ≤300 秒）及 25 km 內同向待避（30 秒＋煞停時間的領先、最多 600 秒等待），先交會、最多八輪待避、每次重算該車交會。只在有排定的站用 RailwayCore §7 選路成本，停車走待避月台線、通過走名義正線。
+  - 解除需要對方實際到站／通過加 margin，誤點繼續等待；V1／V2 保留。計畫不存檔，版本 9 只記必要實際事件並遷移舊檔；沒有修改 Station／ScheduledStop。列車面板新增英語／繁體交會與待避文字。
+  - 手算／逐秒比較／誤點／門檻／ID 平手／存讀；schema 31 的兩份新短 golden、兩份版本 9 fixture；獨立差分 `traffic.scheduledMeets`（12 case ×4 seeds、1,728 操作），新增 `campaigns-12`。既有 campaign 未縮小，既有三種 fixture JSON 未修改。
+  - **V4 Deferred**：每段路徑／股道／月台指定與單線容量重算（決策 22）。需要換向的折返／調車、地圖授權範圍與死結標示、E3 也不在 V3。
+
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。
 - **T 留下的死結**：T 只保證不會「拿一半、等另一半」；單線上兩端的列車各自等對方、時刻表造成的循環等待、兩台站著的列車各自擋住對方，都由 V 解決（決策 32 第 15 點）。
 - **待避站的選擇**：後車追上前車之前，往回找一個安全間隔足夠的車站讓前車待避。

@@ -64,6 +64,8 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// its dwell at the call it waits at has got (Stage W2b); set exactly
     /// while ``execution`` is. Only ``GameWorld`` changes it, with the
     /// execution.
+    public internal(set) var trafficVisits: [TrafficVisit] = []
+
     public internal(set) var times: ServiceTimes?
     /// How many cars the train has (Phase 4.5 Stage S2), ``carLength`` apart:
     /// 1, as every newly bought train has, up to ``maximumCars``. Set by
@@ -176,7 +178,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation, performance
+        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation, performance, trafficVisits
     }
 
     /// Decodes a train.
@@ -253,6 +255,7 @@ extension Train: Codable {
         execution = container.contains(.execution)
             ? try container.decode(TimetableExecution.self, forKey: .execution)
             : nil
+        trafficVisits = container.contains(.trafficVisits) ? try container.decode([TrafficVisit].self, forKey: .trafficVisits) : []
         times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
         let gridTrail = container.contains(.trail) ? try container.decode([LegacyGrid.Cell].self, forKey: .trail) : []
@@ -315,6 +318,13 @@ extension Train: Codable {
                 debugDescription: "Train \(id.rawValue)'s service does not fit its timetable, period, position and movement."
             )
         }
+        guard trafficVisits.allSatisfy({ visit in
+            visit.stop >= 0 && timetable.indices.contains(visit.stop) && visit.cycle >= 0
+                && (visit.cycle == 0 || timetablePeriod.map { visit.cycle <= ScheduledStop.lastCycle(of: timetable, period: $0) } == true)
+                && visit.departure.map { $0 >= visit.arrival } != false
+        }), Set(trafficVisits.map { "\($0.cycle):\($0.stop):\($0.station.rawValue)" }).count == trafficVisits.count else {
+            throw DecodingError.dataCorruptedError(forKey: .trafficVisits, in: container, debugDescription: "Invalid or repeated traffic visit.")
+        }
         // Stage W2b: a service has its times, and they fit what it is doing.
         guard (execution == nil) == (times == nil), execution.map({ times!.fits($0) }) ?? true else {
             throw DecodingError.dataCorruptedError(
@@ -345,6 +355,7 @@ extension Train: Codable {
         try container.encodeIfPresent(timetablePeriod, forKey: .period)
         try container.encodeIfPresent(execution, forKey: .execution)
         try container.encodeIfPresent(times, forKey: .times)
+        if !trafficVisits.isEmpty { try container.encode(trafficVisits, forKey: .trafficVisits) }
         if cars != Self.minimumCars {
             try container.encode(cars, forKey: .cars)
         }

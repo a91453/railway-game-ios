@@ -2675,6 +2675,31 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **Deferred（暫時沒有改的地方）**：事前規劃的排定等待、時刻表交會與待避推估（`inferMeetPassTimes`、`planSameDirectionOvertakes`）：V2 是發生後才解除，不是事前避免；需要換向的折返與調車解法；單線區段的線路容量（決策 22）；地圖上標示死結與授權範圍。
 
+### 59. 排定交會、同向待避與月台成本（Stage V3）
+
+2026-10-05。作者授權本任務修改核心、獨立模型、schema 與存檔版本。從 PR #105 之後的 `origin/main`（`0158d52`）開工；唯讀檢查四份參考 repo main `ddff2be4b4daeee8de3ab31a0a9a6873ad71b79e`。V1／V2 是執行時後備；`ScheduledStop`、`Station` 與決策 22 的線路容量公式沒有改。
+
+**來源與直接移植。** `Railway/site_archive_clean/index.html` 的 `inferMeetPassTimes`／`inferMeetRun`、`reanchorRunProfile`／`applyRunProfile`、`planSameDirectionOvertakes`／`overtakeRunBuildable`、`resolveTraTraffic` 翻成 `ScheduledTraffic.swift`。保留共同站順序、相鄰共同區間先後次序對調、單線區間時間重疊、按距離插值對向通行時刻（沒有共同端點時用保守時間 envelope）、最小調整量／站序／ID 排序、跑段可建性，以及先交會、最多八輪待避、每次待避重算該車交會的順序。常數照搬：300 秒、1800 秒、25 km、30 秒、600 秒；m × 64、km × 64000、秒 × 1。性能沿用 W1 整數，煞停秒數向上取整 `ceil(topSpeed × 1000 / braking)`，加上 30 秒後才准待避。
+
+**必要調整及理由：**
+
+1. 參考的站名／`sections[tracks === 1]` 換成 StationID 與 `parallelTracks(between:and:)`。在名義跑段的相鄰站之間檢查單線；既有 S1 的排除中間車站、同方向可達走廊與平行軌數語義沿用，不另造一張 sections 表。待避／交會位置使用 V1 的 `berths(of:length:)`：同方向能續往下一停靠站、有另一條月台邊、且整個車身放得下，才是可等待站；同軌上兩個停車點不能讓快車越過，故不算第二條待避線。少了必要的月台或方向性續行路就不排，讓 V1／V2 處理。
+2. 本專案沒有有時刻的「通過站」。從完整時刻表的第一站各方向 berth 求各段無成本的名義最短路，總距離最短者為走廊；平手沿用 berth／edge ID 搜尋順序。沿走廊遇到的其他車站是虛擬通過點，從 W1 曲線反查第一個到達該距離的整秒。沒有物理可建曲線的跑段不插值。虛擬點隸屬前方真正停靠站的 stop／cycle；不修改時刻表。圖上的幾何距離是世界單位，毫秒只是 W1 曲線內部尺度。
+3. 參考主要重排通過時刻，遊戲要求列車真的停在區間入口等待。`交會(等它到)` 因此是虛擬站到站後的出發 anchor：對方到站加 `min(30, floor(dwell/3))`，終點 30 秒。`交會(趕它開)` 的同一個 hiMeet 約束改成對向停站車等待該通過車到站／通過加 margin；兩者所需調整量相同。理由是決策 20 不准提前離開排定停站，且誤點時只把通過車的名義曲線提前不能保證它真的趕得上；綁定實際事件才不會放對向車進入已被占用的單線。兩類每次調整仍 ≤300 秒，只看 1800 秒內。前後拆成從靜止起步的 W1 跑段，各自必須可建；保持下一真正停靠的排定到達 anchor，不把等待秒數任意向後傳遞。這是移植到權威執行模型的刻意調整，非照搬參考的浮點觀測 profile。
+4. 同向待避沿用來源的 backward scan、`tooClose`、25 km／600 秒與兩段曲線可建性，停到快車開出加 30 秒。來源只在通過站新增 dwell；本專案也准慢車原本停靠的站延長等待（符合任務的停站／待避月台需求）。領先時間仍從兩車到站時刻算，原停留時間能滿足 anchor 時不新增等待。參考 `rebuilt`／`reliedOn` 防止一輪互相循環依賴照搬；平手加 ID，沒有 randomness。
+5. 有排定衝突的站才啟用 RailwayCore `01_MIGRATION_MAP.md` §7 的 station、PBS station、停站／通過與月台不合之 generalized route cost。**binary_reference 只有設定名稱與 wasm，未找到可讀預設值**；沒有把自訂值稱為參考值，也沒有逆向 wasm。實作成本：走待避月台邊加 400 m（25,600），通過卻借待避線再加 800 m（51,200），需停站／等待卻選正線 berth 加 800 m。理由：停車位置不合的 800 m 壓過 V1 允許的 400 m 局部繞行，而一般站成本保留正線的優先；總幾何路徑仍不得超過無成本名義路加 V1 的 400 m，所以高成本不會授權任意繞遠路。成本只選路，TrainPath.distance、曲線與帳本仍用真實幾何長度。**正線**是該方向完整無成本名義最短走廊上該站的月台邊，其他平行月台邊為待避線；不是用最大／最小 edge ID 猜。沒有標籤的非典型布局由最短走廊定義，這是 gap 的定案，V4 指定股道可覆蓋它。沒有排定時完全走 V1 的原選擇；V1 避占用／U2 跟車與 V2 仍可作安全後備。
+6. 計畫是純狀態推導的 `TrafficPlan`，只在單次 advance 快取，不存檔、不寫 Station 或 ScheduledStop。來源只含已放置、執行中的時刻表及有已放置 roster 車、派車到期且有可執行下一趟的線路；沒有列車或未執行的手動時刻表不產生假想衝突。Web 的系統／日期集合由遊戲的 ID、時刻表 cycle 與遊戲時鐘替代；不引入真實日曆、TRA system filter 或真實站名正規化。
+7. 執行解除需要**實際到站**（交會）或**實際出發／通過**（待避），再加 margin；同時不得早於計畫出發 anchor。只到時刻而對方未到，繼續等待。完整 track-span／車身／fouling 預約安全檢查仍優先於出發。實際通過以當秒物理路徑越過該方向 berth 判定，rate 0 或授權截斷不會製造事件。交通控制關閉時不推導、不記新事件、不阻擋服務。
+8. **存檔版本 9** 僅新增 `Train.trafficVisits` 的必要實際見證（station、stop、cycle、arrival、可選 departure），空陣列不寫。理由：W2b 的 ServiceTimes 進入下一跑段或完成服務就換掉／清掉，讀檔後無法重建被等車究竟在何時通過、30 秒是否已過；這些事件是執行事實，不是存計畫。只記計畫涉及的訪站；時刻表重設、服務啟停、新派車與取下列車清除；服務完成保留供仍等待的車使用。讀取 1–8 缺欄位時明確遷移為空見證；已越過該真正停靠的舊服務用最後實際到達加 margin 作保守後備。拒絕 null、重複、無效 station／stop／cycle、出發早於到達與未來事件。新增 `v9-scheduled-meet.json`、`v9-scheduled-clearance.json`；所有既有 SaveFixtures 原字節保留。
+9. 有排定衝突時在每一整秒邊界處理實際事件與重試，批次不跨過實際解除秒；沒有計畫時沿用既有批次／閒置跳躍。這是精確性優先的必要調整，不增添任意喚醒容差。計畫出發秒與實際加餘裕秒取較晚者；每個 advance 重新推導，同一指令序列與分秒推進結果一致。
+10. 列車面板等待優先顯示「在 M 等候 X 交會」／「在 M 待避 X」，英文對應 `Waiting at M to meet X`／`Standing aside at M for X`。只新增本任務的兩個 xcstrings 條目；App 檔案結構和 project.yml 不變。
+
+**四份檢查的差異：**網站是 V3 演算法來源；RailwayCore 是立即可移植的成本結構，但預設數值為 gap；`Ci/PROJECT_ABSORPTION_GUIDE.md` Stage U 的優先順序／等待位置／快車越行／單線交會／月台分配是概念，snapshot 更新記錄沒有實作；`Railway/taipei_gta_reference/source/assets/actors-*.js` MRT 是兩條軌的往返、終點 14 秒折返與同線車距／煞車限制，沒有單線交會或待避，V3 對應為「無」。完整四份對照見 RAILWAY_REFERENCE_MAPPING 與 PR。
+
+**測試與驗證：**手算、逐秒獨立模型、誤點、關閉、邊界、ID 平手、存讀／解除精確秒、雙語文字；schema 31 新增 scheduledWaits 觀察、仍讀 schema 30，新增兩份短 golden 的值先由 GameCore 取得，再由 ReferenceWorldGoldenTests 確認。既有 GoldenScenarios／SaveFixtures／ReplayFixtures 的 JSON 一個都不改。獨立 `ReferenceScheduledTraffic` 使用 reverse relaxation 選路、native UInt128 的 `ReferenceTrafficCurve`、另寫的事件越站判定，V3 規劃不呼叫 GameWorld／RunningCurve。新 `traffic.scheduledMeets`：12 case ×4 seeds、1,728 操作，`campaigns-12`；既有 campaign 不縮小。最終 digest 與實際驗證結果記在 PR。
+
+**Deferred（V4 與以後）：**每段路徑／股道／月台指定、單線容量重算（決策 22）留 V4；需要換向的折返／調車解法、地圖授權範圍與死結標示、E3。W1 尚未有的 speed-zone／觀測 profile 不在本輪重新實作；直接用既有 fixed-point 曲線適配上述 anchors。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^20 單位，16,384 公尺，E1 起是新遊戲的大小）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

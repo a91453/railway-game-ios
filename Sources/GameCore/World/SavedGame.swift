@@ -57,9 +57,12 @@
 ///    same; a build that reads only version 7 would refuse such a service
 ///    as travelling on a path that does not end at its next stop, or that
 ///    is spent, so it says the save is newer than it instead.
+/// 9. Scheduled traffic (decision 59): actual station visits release meets
+///    and overtakes, including after a delayed train enters its next run.
+///    Version 8 would drop these events and release a wait too soon.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 8
+    public static let currentVersion = 9
 
     public let world: GameWorld
 
@@ -105,7 +108,10 @@ extension SavedGame: Codable {
         // which version 7 reads as before. Version 7 to 8: a version 7
         // world has no service at a passing place, and every travelling
         // service's path ends at its next stop, which version 8 reads as
-        // before. Later versions add their steps here.
+        // before. Version 8 to 9: missing actual traffic visits decode as an
+        // empty history; no plan is migrated or saved. Older running services
+        // conservatively use their last actual arrival where history is absent.
+        // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
 

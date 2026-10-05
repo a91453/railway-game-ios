@@ -10,6 +10,10 @@ import XCTest
 /// Unknown versions are refused, and every committed save in
 /// `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
+    private static func currentVersion(of data: Data) -> Data {
+        Data(String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 9"#).utf8)
+    }
+
     private func makeWorld() throws -> GameWorld {
         var world = try GameWorld(
             bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
@@ -32,8 +36,8 @@ final class SavedGameTests: XCTestCase {
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
-        XCTAssertEqual(object["saveVersion"] as? Int, 8)
-        XCTAssertEqual(SavedGame.currentVersion, 8)
+        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
+        XCTAssertEqual(SavedGame.currentVersion, 9)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -53,7 +57,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 9, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 10, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -385,7 +389,7 @@ final class SavedGameTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), eight)
+        XCTAssertEqual(try encoder.encode(game), Self.currentVersion(of: eight))
     }
 
     /// The version 5 save (Stage F2): the same game, listing the siding and
@@ -426,7 +430,7 @@ final class SavedGameTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), eight, "saved again by a later build, the current version")
+        XCTAssertEqual(try encoder.encode(game), Self.currentVersion(of: eight), "saved again by a later build, the current version")
     }
 
     /// The version 7 save (Stage U2): the version 6 save read by the
@@ -445,7 +449,7 @@ final class SavedGameTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
-        XCTAssertEqual(try encoder.encode(game), eight, "saved again by a later build, the current version")
+        XCTAssertEqual(try encoder.encode(game), Self.currentVersion(of: eight), "saved again by a later build, the current version")
     }
 
     /// The version 8 save (Stage V2): the version 7 save read by the
@@ -464,7 +468,57 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(game.world, try JSONDecoder().decode(SavedGame.self, from: seven).world)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        XCTAssertEqual(try encoder.encode(game), data)
+        XCTAssertEqual(try encoder.encode(game), Self.currentVersion(of: data))
+    }
+
+    func testVersionNineKeepsActualVisitsAndResumesAtTheExactClearanceSecond() throws {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        for name in ["v9-scheduled-meet.json", "v9-scheduled-clearance.json"] {
+            let data = try Data(contentsOf: Self.fixtures.appendingPathComponent(name))
+            let game = try JSONDecoder().decode(SavedGame.self, from: data)
+            XCTAssertEqual(try encoder.encode(game), data)
+            XCTAssertNotNil(game.world.scheduledTrafficWait(of: TrainID(rawValue: 1)))
+            var world = game.world
+            if name.contains("clearance") {
+                XCTAssertEqual(world.trains[1].trafficVisits.first?.departure, GameTime(seconds: 388))
+                try world.advance(ticks: 270)
+                XCTAssertNotNil(world.scheduledTrafficWait(of: TrainID(rawValue: 1)))
+                try world.advance(ticks: 10)
+                XCTAssertNil(world.scheduledTrafficWait(of: TrainID(rawValue: 1)))
+            } else {
+                try world.advance(ticks: 12_000)
+                XCTAssertTrue(world.trains.allSatisfy { $0.execution == nil })
+            }
+        }
+    }
+
+    func testVersionEightMigratesWithoutInventingActualVisits() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
+        let game = try JSONDecoder().decode(SavedGame.self, from: data)
+        XCTAssertTrue(game.world.trains.allSatisfy { $0.trafficVisits.isEmpty })
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(game)) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 9)
+    }
+
+    func testCorruptActualTrafficVisitsAreRefused() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v9-scheduled-clearance.json"))
+        let original = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        func altered(_ visits: Any) throws -> Data {
+            var object = original
+            var world = object["world"] as! [String: Any]
+            var trains = world["trains"] as! [[String: Any]]
+            trains[1]["trafficVisits"] = visits
+            world["trains"] = trains; object["world"] = world
+            return try JSONSerialization.data(withJSONObject: object)
+        }
+        let trains = (original["world"] as! [String: Any])["trains"] as! [[String: Any]]
+        let visit = (trains[1]["trafficVisits"] as! [[String: Any]])[0]
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: altered(NSNull())))
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: altered([visit, visit])))
+        for (key, value) in [("stop", -1), ("cycle", -1), ("station", 99), ("departure", 387), ("arrival", 391)] {
+            var bad = visit; bad[key] = value
+            XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: altered([bad])), key)
+        }
     }
 
     /// `SaveFixtures/` at the repository root, found from this source file.

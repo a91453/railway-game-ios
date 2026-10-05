@@ -75,11 +75,11 @@ extension ReferenceWorld {
     /// The distance from the start of every run to the nearest of `berths`
     /// ahead of it, relaxed until nothing changes; runs that lead to none
     /// are left out.
-    func distancesToBerths(_ berths: [Run: [Int64]], blocked: Set<TrackResource> = [], forbidden: Set<Run> = []) -> [Run: Int64] {
+    func distancesToBerths(_ berths: [Run: [Int64]], blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:]) -> [Run: Int64] {
         let allRuns = networkEdges.keys.sorted().flatMap { [Run(edge: $0, forward: true), Run(edge: $0, forward: false)] }.filter { !forbidden.contains($0) }
         var best: [Run: Int64] = [:]
         for run in allRuns {
-            if let nearest = berths[run]?.first(where: { unblocked(run, from: 0, to: $0, by: blocked) }) { best[run] = nearest }
+            if let nearest = berths[run]?.first(where: { unblocked(run, from: 0, to: $0, by: blocked) }) { best[run] = nearest + (berthCosts[run] ?? 0) + (edgeCosts[run.edge] ?? 0) }
         }
         // An interval's resources do not change during relaxation. Work
         // out the usable runs and their successors once for this search.
@@ -89,7 +89,7 @@ extension ReferenceWorld {
         while changed {
             changed = false
             for (run, nextRuns) in usable {
-                let length = networkEdges[run.edge]!.length
+                let length = networkEdges[run.edge]!.length + (edgeCosts[run.edge] ?? 0)
                 for next in nextRuns {
                     guard let beyond = best[next], length + beyond < best[run] ?? .max else { continue }
                     best[run] = length + beyond
@@ -105,11 +105,11 @@ extension ReferenceWorld {
     /// and, among equals, the choices that come first step by step (a berth
     /// ahead on the same run, nearest first, before any turn; turns by
     /// ascending edge number).
-    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = []) -> TrainPath? {
+    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:]) -> TrainPath? {
         guard case .onEdge(let traversal, let offset) = position, let start = Run(traversal), isOnNetwork(traversal, offset) else { return nil }
         let berths = berthsForStation(id, length: length)
         guard !berths.isEmpty else { return nil }
-        let best = distancesToBerths(berths, blocked: blocked, forbidden: forbidden)
+        let best = distancesToBerths(berths, blocked: blocked, forbidden: forbidden, berthCosts: berthCosts, edgeCosts: edgeCosts)
         var (run, at) = (start, offset)
         var taken: [Run] = []
         var total: Int64 = 0
@@ -118,16 +118,16 @@ extension ReferenceWorld {
             // In the order that breaks ties: berths ahead, then turns.
             var choices: [(berth: Int64?, next: Run?, cost: Int64, beyond: Int64)] = []
             for berth in berths[run] ?? [] where berth >= at && (berth == at || !forbidden.contains(run)) && unblocked(run, from: at, to: berth, by: blocked) {
-                choices.append((berth, nil, berth - at, 0))
+                choices.append((berth, nil, berth - at + (edgeCosts[run.edge] ?? 0) + (berthCosts[run] ?? 0), 0))
             }
             if (at == runLength || !forbidden.contains(run)), unblocked(run, from: at, to: runLength, by: blocked) {
                 for next in runs(after: run) {
-                    if let beyond = best[next] { choices.append((nil, next, runLength - at, beyond)) }
+                    if let beyond = best[next] { choices.append((nil, next, runLength - at + (edgeCosts[run.edge] ?? 0), beyond)) }
                 }
             }
             guard let least = choices.map({ $0.cost + $0.beyond }).min() else { return nil }
             let pick = choices.first { $0.cost + $0.beyond == least }!
-            total += pick.cost
+            total += pick.cost - (edgeCosts[run.edge] ?? 0) - (pick.berth == nil ? 0 : berthCosts[run] ?? 0)
             if let berth = pick.berth {
                 return TrainPath(traversals: taken.map(\.traversal), end: berth == runLength ? nil : berth, distance: total)
             }
@@ -214,6 +214,11 @@ extension ReferenceWorld {
             stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds,
             run: setOff(trains[i], length: path.distance, from: (service.stop, service.cycle), to: next)
         )
+        if let plan = routeMemo.scheduled, let chosen = scheduledRoute(trains[i], target: target, plan: plan) {
+            let selectedRun = run(off, length: path.distance, scheduled: chosen.seconds)
+            off.service?.run = selectedRun
+        }
+        off.trafficVisits = scheduledDepartureHistory(trains[i])
         _ = admit(off, at: i, following: true)
         return false
     }
@@ -229,6 +234,7 @@ extension ReferenceWorld {
     /// The default way from `start` (standing) to where it stops for
     /// station `target`, as every departure looks it up; `nil` with none.
     mutating func defaultRoute(from start: Train, to target: StationID) -> TrainPath? {
+        if let plan = routeMemo.scheduled, let chosen = scheduledRoute(start, target: target, plan: plan) { return chosen.path }
         let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
         let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
         routeMemo.network[key] = .some(found)

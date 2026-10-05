@@ -70,6 +70,7 @@ struct ReferenceWorld: Equatable {
         var end: Int64?
         /// Decision 32: the track it has reserved, in resource order.
         var reservation: [TrackResource] = []
+        var trafficVisits: [TrafficVisit] = []
         /// Stage W2c: how it accelerates, brakes and coasts.
         var performance: TrainPerformance = .standard
     }
@@ -162,6 +163,7 @@ struct ReferenceWorld: Equatable {
         }
 
         var network: [Key: TrainPath?] = [:]
+        var scheduled: ScheduledPlan?
         struct Order: Hashable {
             var stations: [StationID]
             var turns: Set<Int>
@@ -459,6 +461,7 @@ struct ReferenceWorld: Equatable {
             if let missing = stops.first(where: { !known.contains($0.station.rawValue) }) {
                 return .unknownStation(missing.station)
             }
+            trains[i].trafficVisits = []
             trains[i].timetable = stops
             trains[i].period = period
             return nil
@@ -492,6 +495,7 @@ struct ReferenceWorld: Equatable {
             if train.position == nil { return .trainNotPlaced(id) }
             if !stationsStoppedAt(by: id).contains(train.timetable[0].station) { return .trainNotAtFirstStop(id) }
             // Stage W2b: starting is arriving.
+            trains[i].trafficVisits = []
             trains[i].service = Service(stop: 0, waiting: true, cycle: startingCycle(train), arrival: clockSeconds)
             return nil
         }
@@ -516,6 +520,7 @@ struct ReferenceWorld: Equatable {
             if onLine(id) { return .trainOnLine(id) }
             if trains[i].service == nil { return .trainServiceNotActive(id) }
             trains[i].service = nil
+            trains[i].trafficVisits = []
             abandonRiders(i)
             return nil
         }
@@ -576,6 +581,8 @@ struct ReferenceWorld: Equatable {
                     dispatch(l, memo: &memo)
                 }
             }
+            if routeMemo.scheduled == nil { routeMemo.scheduled = scheduledPlan() }
+            recordScheduledVisits(routeMemo.scheduled!, before: nil)
             for i in trains.indices {
                 dwell(i, second: second)
                 leave(i)
@@ -589,6 +596,7 @@ struct ReferenceWorld: Equatable {
             }
             // Decision 56: no farther than its authority, all moving at once
             // from where the second found them.
+            let beforeTraffic = trains
             let limits = trains.map(authority)
             for i in trains.indices where trains[i].position != nil {
                 let distance = min(travel(i, second: second), limits[i] ?? .max)
@@ -603,6 +611,7 @@ struct ReferenceWorld: Equatable {
                 dropIfHeldUp(i)
             }
             clockSeconds += 1
+            recordScheduledVisits(routeMemo.scheduled!, before: beforeTraffic)
             for i in trains.indices {
                 guard let service = trains[i].service, !service.waiting else { continue }
                 let target = trains[i].timetable[service.stop].station
@@ -698,6 +707,7 @@ struct ReferenceWorld: Equatable {
         guard let service = trains[i].service, service.waiting, let closing = service.closing,
               clockSeconds >= Self.capped(closing, 9)
         else { return }
+        if waitingScheduled(trains[i], plan: routeMemo.scheduled ?? scheduledPlan()) != nil { return }
         let leaving = service.stop
         departedDistance = nil
         _ = departOnce(i)

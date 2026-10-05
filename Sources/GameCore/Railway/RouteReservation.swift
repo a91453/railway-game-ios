@@ -70,6 +70,7 @@ extension GameWorld {
     /// saved.
     public func trainHoldingRoute(of id: TrainID) -> TrainID? {
         guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
+        if let wait = scheduledTrafficWait(of: id) { return wait.other }
         if isFollowing(train) {
             // Stage U2: a train following others waits for the rest of its
             // route.
@@ -125,7 +126,7 @@ extension GameWorld {
         let planned = reserving(candidate, following: true)
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution,
-              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+              let alternative = alternativeRoute(of: candidate, to: reservationDestination(candidate, call: candidate.timetable[stop].station),
                                                  avoiding: blockedTrack(except: candidate.id), memo: &memo)
         else { return planned }
         var rerouted = candidate
@@ -138,6 +139,13 @@ extension GameWorld {
         rerouted.times?.run = reroutedRun
         if case .granted(let granted) = reserving(rerouted) { return .granted(granted) }
         return planned
+    }
+
+    func reservationDestination(_ candidate: Train, call: StationID) -> StationID {
+        guard let placement = candidate.placement else { return call }
+        let end = self.placement(placement, after: TrainPath(traversals: routeStretches(of: candidate).stretches.dropFirst().map(\.traversal), end: candidate.movement.end, distance: routeLength(of: candidate)))
+        guard case .onEdge(let traversal, let offset) = end.position else { return call }
+        return stations.first { berths(of: $0.id, length: candidate.length).contains(Berth(traversal: traversal, offset: offset)) }?.id ?? call
     }
 
     /// How much longer than a service's default route an alternative

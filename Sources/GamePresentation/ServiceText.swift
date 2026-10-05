@@ -376,6 +376,13 @@ extension GameWorld {
     /// the trains it waits for wait for it too, and no passing place lets
     /// any of them go. `nil` otherwise.
     public func routeWaitText(of id: TrainID, in language: DisplayLanguage) -> String? {
+        if let wait = scheduledTrafficWait(of: id) {
+            let station = station(id: wait.station)?.name ?? "#\(wait.station.rawValue)"
+            let name = train(id: wait.other)?.name ?? "#\(wait.other.rawValue)"
+            return wait.kind == .meet
+                ? language.text("Waiting at \(station) to meet \(name)", "在 \(station) 等候 \(name) 交會")
+                : language.text("Standing aside at \(station) for \(name)", "在 \(station) 待避 \(name)")
+        }
         guard let holder = trainHoldingRoute(of: id) else { return nil }
         let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
         if deadlockedTrains().contains(id) {

@@ -1,0 +1,232 @@
+import Foundation
+@testable import GameCore
+import XCTest
+
+final class ScheduledTrafficTests: XCTestCase {
+    static func meet() throws -> GameWorld {
+        var world = try SingleTrackMeet.world()
+        let east = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let west = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.backward(3), offset: 3_072)
+        try world.setTrainTimetable(east, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 660), departure: .init(seconds: 720)),
+        ])
+        try world.setTrainTimetable(west, to: [
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 0), departure: .init(seconds: 120)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 400), departure: .init(seconds: 460)),
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 760), departure: .init(seconds: 820)),
+        ])
+        try world.startTrainService(east)
+        try world.startTrainService(west)
+        try world.setTrafficControl(true)
+        return world
+    }
+
+    static func overtake(fastDeparture: Int64 = 180, fastArrival: Int64 = 600, scale: Int64 = 1) throws -> GameWorld {
+        var world = try SingleTrackMeet.world(scale: scale)
+        let beyond = try world.buildTrackNode(at: WorldCoordinate(x: 35_840 * scale, y: 4_096 * scale))
+        let edge = try world.buildTrackEdge(from: .node(4), to: beyond)
+        let terminus = try world.buildStation(named: "F", at: PlanPoint(x: 35_840 * scale, y: 8_192 * scale)).id
+        try world.addTrackPlatform(terminus, on: edge, from: 512 * scale, to: 1_536 * scale)
+        let slow = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072 * scale, cars: 1)
+        let fast = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 1_024 * scale, cars: 1)
+        try world.setTrainTimetable(slow, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 180), departure: .init(seconds: 180)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 900), departure: .init(seconds: 960)),
+        ])
+        try world.setTrainTimetable(fast, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: fastDeparture)),
+            .init(station: terminus, arrival: .init(seconds: fastArrival), departure: .init(seconds: fastArrival + 60)),
+        ])
+        try world.startTrainService(slow)
+        try world.startTrainService(fast)
+        try world.setTrafficControl(true)
+        return world
+    }
+
+    func testMeetUsesTheStationAtTheEndOfTheSingleTrack() throws {
+        var world = try Self.meet()
+        let plan = world.scheduledTrafficWaits()
+        XCTAssertEqual(plan.count, 1)
+        let wait = try XCTUnwrap(plan.first)
+        XCTAssertEqual(wait.train.rawValue, 1)
+        XCTAssertEqual(wait.other.rawValue, 2)
+        XCTAssertEqual(wait.station, SingleTrackMeet.middle)
+        XCTAssertEqual(wait.kind, .meet)
+        XCTAssertEqual(wait.clearance, 20) // floor((460 − 400) / 3)
+        XCTAssertEqual(wait.departure.seconds, 420)
+        try world.advance(ticks: 6)
+        world.setSpeed(.x1)
+        try world.advance(ticks: 20)
+        world.setSpeed(.normal)
+        XCTAssertEqual(world.scheduledTrafficWait(of: .init(rawValue: 1))?.station, SingleTrackMeet.middle)
+        try world.advance(ticks: 12)
+        XCTAssertTrue(world.trains.allSatisfy { $0.execution == nil })
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    func testSlowTrainWaitsOnTheLoopAndFastTrainUsesTheMain() throws {
+        var world = try Self.overtake()
+        let wait = try XCTUnwrap(world.scheduledTrafficWaits().first { $0.kind == .overtake })
+        XCTAssertEqual(wait.train.rawValue, 1)
+        XCTAssertEqual(wait.other.rawValue, 2)
+        XCTAssertEqual(wait.station, SingleTrackMeet.middle)
+        try world.advance(ticks: 5)
+        guard case .onEdge(let loop, _)? = world.train(id: .init(rawValue: 1))?.position else { return XCTFail("slow unplaced") }
+        XCTAssertEqual(loop.edge, .edge(5))
+        XCTAssertNotNil(world.scheduledTrafficWait(of: .init(rawValue: 1)))
+        try world.advance(ticks: 15)
+        XCTAssertTrue(world.trains.allSatisfy { $0.execution == nil })
+    }
+
+    static func model(for world: GameWorld) -> ReferenceWorld {
+        var model = SingleTrackMeet.model()
+        if world.stations.count == 4 {
+            precondition(model.buildNetworkNode(at: WorldCoordinate(x: 35_840, y: 4_096)) == nil)
+            precondition(model.buildNetworkEdge(from: .node(4), to: .node(7), curve: .straight) == nil)
+            precondition(model.buildStation(named: "F", at: PlanPoint(x: 35_840, y: 8_192)) == nil)
+            precondition(model.addTrackPlatform(StationID(rawValue: 4), on: .edge(7), from: 512, to: 1_536) == nil)
+        }
+        for train in world.trains {
+            precondition(model.purchaseTrain(named: train.name) == nil)
+            precondition(model.setCars(train.id, train.cars) == nil)
+            precondition(model.placeTrain(train.id, at: train.position!) == nil)
+            precondition(model.setContinuation(train.id, along: [], stoppingAt: train.movement.end) == nil)
+            precondition(model.setRate(train.id, train.movement.rate) == nil)
+            precondition(model.setTimetable(train.id, train.timetable) == nil)
+            precondition(model.startService(train.id) == nil)
+        }
+        precondition(model.setTrafficControl(true) == nil)
+        return model
+    }
+
+    func testIndependentModelAgreesAtEverySecond() throws {
+        for initial in [try Self.meet(), try Self.overtake()] {
+            var world = initial
+            var model = Self.model(for: initial)
+            world.setSpeed(.x1); model.setSpeed(.x1)
+            XCTAssertEqual(world.scheduledTrafficWaits(), model.scheduledPlan().waits)
+            for second in 0..<1_400 {
+                try world.advance(ticks: 10)
+                XCTAssertNil(model.advance(ticks: 10))
+                let differences = KernelDifferentialTests.differences(world, model)
+                guard differences.isEmpty else { return XCTFail("second \(second + 1): \(differences.joined(separator: "\n"))") }
+                XCTAssertEqual(world.scheduledTrafficWaits(), model.scheduledPlan().waits, "second \(second + 1)")
+            }
+        }
+    }
+
+    func testDelayedOpponentMustReallyArrive() throws {
+        var world = try Self.meet()
+        try world.setTrainMovementRate(TrainID(rawValue: 2), to: 0)
+        try world.advance(ticks: 10)
+        XCTAssertEqual(world.scheduledTrafficWait(of: TrainID(rawValue: 1))?.other.rawValue, 2)
+        XCTAssertTrue(world.train(id: TrainID(rawValue: 2))!.trafficVisits.isEmpty)
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        var resumed = loaded
+        try resumed.setTrainMovementRate(TrainID(rawValue: 2), to: 1_024)
+        try resumed.advance(ticks: 15)
+        XCTAssertNil(resumed.scheduledTrafficWait(of: TrainID(rawValue: 1)))
+        XCTAssertEqual(WorldInvariants.violations(in: resumed), [])
+    }
+
+    func testBatchesAndASaveInsideActualClearanceAreExact() throws {
+        var batch = try Self.overtake()
+        var singles = batch
+        singles.setSpeed(.x1)
+        try batch.advance(ticks: 20)
+        for _ in 0..<1_200 { try singles.advance(ticks: 10) }
+        batch.setSpeed(.x1)
+        XCTAssertEqual(batch, singles)
+        var atClearance = try Self.overtake()
+        atClearance.setSpeed(.x1)
+        try atClearance.advance(ticks: 3_900)
+        let peer = try XCTUnwrap(atClearance.train(id: TrainID(rawValue: 2))?.trafficVisits.first)
+        XCTAssertEqual(peer.departure, GameTime(seconds: 388))
+        XCTAssertNotNil(atClearance.scheduledTrafficWait(of: TrainID(rawValue: 1)))
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: atClearance))).world
+        try loaded.advance(ticks: 270)
+        XCTAssertNotNil(loaded.scheduledTrafficWait(of: TrainID(rawValue: 1))) // 417, before 388 + 30
+        try loaded.advance(ticks: 10)
+        XCTAssertNil(loaded.scheduledTrafficWait(of: TrainID(rawValue: 1))) // exactly 418
+    }
+
+    func testDepartureMeetWaitsForTheActualPassingTrain() throws {
+        var world = try Self.meet()
+        let peer = TrainID(rawValue: 2)
+        try world.stopTrainService(peer)
+        try world.setTrainTimetable(peer, to: [
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 0), departure: .init(seconds: 120)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 250), departure: .init(seconds: 310)),
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 760), departure: .init(seconds: 820)),
+        ])
+        try world.startTrainService(peer)
+        let wait = try XCTUnwrap(world.scheduledTrafficWaits().first)
+        XCTAssertEqual(wait.train, peer)
+        XCTAssertEqual(wait.other.rawValue, 1)
+        XCTAssertEqual(wait.departure.seconds, 381) // passing time 361 + dwell / 3
+        try world.setTrainMovementRate(wait.other, to: 0)
+        try world.advance(ticks: 10)
+        XCTAssertEqual(world.scheduledTrafficWait(of: peer), wait)
+    }
+
+    func testOvertakeLimitsAndTooCloseAreNotScheduled() throws {
+        var world = try Self.overtake(fastDeparture: 180, fastArrival: 1_600)
+        let slow = TrainID(rawValue: 1)
+        try world.stopTrainService(slow)
+        try world.setTrainTimetable(slow, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 180), departure: .init(seconds: 180)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 1_800), departure: .init(seconds: 1_860)),
+        ])
+        try world.startTrainService(slow)
+        XCTAssertFalse(world.scheduledTrafficWaits().contains { $0.kind == .overtake }, "over 600 s")
+        let close = try Self.overtake(fastDeparture: 60, fastArrival: 240)
+        XCTAssertFalse(close.scheduledTrafficWaits().contains { $0.kind == .overtake }, "insufficient braking lead")
+
+        // Hold the times/physical network fixed, vary only the common
+        // interval's distance: isolate the source's 25 km eligibility gate.
+        let eligible = try Self.overtake()
+        var plan = eligible.trafficPlan()
+        plan.waits = []
+        for i in plan.services.indices { plan.services[i].points[2].distance = 1_600_001 }
+        XCTAssertFalse(eligible.planTrafficOvertakes(&plan), "over 25 km")
+        XCTAssertTrue(plan.waits.isEmpty)
+    }
+
+    func testMeetWindowAdjustmentLimitAndIDTies() throws {
+        let world = try Self.meet()
+        var plan = world.trafficPlan()
+        plan.waits = []
+        plan.services[0].points[1].departure = 361
+        plan.services[1].points[1].arrival = 800
+        plan.services[1].points[1].departure = 860
+        world.inferTrafficMeets(&plan)
+        XCTAssertTrue(plan.waits.isEmpty, "adjustment over 300 s")
+        plan.services[1].points[1].arrival = 2_400
+        plan.services[1].points[1].departure = 2_460
+        world.inferTrafficMeets(&plan)
+        XCTAssertTrue(plan.waits.isEmpty, "outside 1800 s window")
+        var tied = world.trafficPlan()
+        tied.waits = []
+        tied.services[0].points[1].departure = 361
+        var other = tied.services[1]
+        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(other.train)) as? [String: Any])
+        json["id"] = 3
+        other.train = try JSONDecoder().decode(Train.self, from: JSONSerialization.data(withJSONObject: json))
+        tied.services.append(other)
+        world.inferTrafficMeets(&tied)
+        XCTAssertEqual(tied.waits.first?.other.rawValue, 2)
+    }
+
+    func testTrafficOffHasNoPlanOrTrafficEvents() throws {
+        var world = try Self.overtake()
+        try world.setTrafficControl(false)
+        XCTAssertEqual(world.scheduledTrafficWaits(), [])
+        try world.advance(ticks: 20)
+        XCTAssertTrue(world.trains.allSatisfy { $0.trafficVisits.isEmpty })
+    }
+}

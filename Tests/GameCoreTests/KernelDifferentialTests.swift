@@ -564,6 +564,7 @@ final class KernelDifferentialTests: XCTestCase {
                 train.execution == expected.service?.execution,
                 "train \(expected.id) service \(String(describing: train.execution)) vs \(String(describing: expected.service?.execution))"
             )
+            check(train.trafficVisits == expected.trafficVisits, "traffic visits for train \(expected.id)")
             // Stage W2b: its service's times.
             check(
                 train.times == expected.service?.times,

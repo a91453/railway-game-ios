@@ -464,6 +464,7 @@ extension ReferenceWorld {
     /// Decision 32, point 11: the service due to leave, or the line's train
     /// the line is due to send out, whose route another train holds.
     func trainHoldingRoute(of id: TrainID) -> TrainID? {
+        if let train = trains.first(where: { $0.id == id.rawValue }), let wait = waitingScheduled(train, plan: scheduledPlan()) { return wait.other }
         guard trafficControl, let i = trains.firstIndex(where: { $0.id == id.rawValue }), trains[i].position != nil else { return nil }
         let train = trains[i]
         if following(train) {
