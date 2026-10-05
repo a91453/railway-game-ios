@@ -97,7 +97,7 @@ final class ScheduledTrafficTests: XCTestCase {
             precondition(model.setTimetable(train.id, train.timetable, period: train.timetablePeriod) == nil)
             precondition(model.startService(train.id) == nil)
         }
-        precondition(model.setTrafficControl(true) == nil)
+        precondition(model.setTrafficControl(world.isTrafficControlEnabled) == nil)
         return model
     }
 

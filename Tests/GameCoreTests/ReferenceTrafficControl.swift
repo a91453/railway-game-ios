@@ -67,7 +67,7 @@ extension ReferenceWorld {
 
     /// Every node and span, and every fouled junction, of the stretch from
     /// `from` to `to` in absolute distance along `path`.
-    private func track(along path: [Run], from: Int64, to: Int64) -> Set<TrackResource> {
+    func track(along path: [Run], from: Int64, to: Int64) -> Set<TrackResource> {
         var found: Set<TrackResource> = []
         for (run, span) in zip(path, spans(path)) {
             if from <= span.start && span.start <= to { found.insert(.node(.node(startNode(run)))) }

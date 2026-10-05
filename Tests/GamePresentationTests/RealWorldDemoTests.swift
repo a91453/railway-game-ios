@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -117,4 +117,55 @@ final class RealWorldDemoTests: XCTestCase {
         let carried = world.stations.map { world.passengerLedger(of: $0.id).arrived }.reduce(0, +)
         XCTAssertGreaterThan(carried, 0, "passengers rode")
     }
+    /// V4a on the demo's own geometry: a slow train starts at Sijiaoting and calls at Houtong,
+    /// an express catches it before Sandiaoling. The waiting body must
+    /// clear the express's nominal corridor, on the other physical track.
+    func testAnOvertakeWaitsClearOfTheExpressAtHoutong() throws {
+        var (_, world) = try Self.built.get()
+        for line in world.lines { try world.removeLine(line.id) }
+        for train in world.trains { try world.unplaceTrain(train.id) }
+        try world.setTrafficControl(false)
+        let ids = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.name, $0.id) })
+        let origin = try XCTUnwrap(ids["四腳亭"]), middle = try XCTUnwrap(ids["猴硐"])
+        let end = try XCTUnwrap(ids["三貂嶺"]), beyond = try XCTUnwrap(ids["大華"])
+        let platform = try XCTUnwrap(world.trackPlatforms(of: origin).first)
+        let traversal = TrackTraversal(edge: platform.edge, direction: .forward)
+        func train(_ offset: Int64) throws -> TrainID {
+            let id = try world.purchaseTrain(named: "V4a").id
+            try world.setTrainCars(id, to: 1)
+            try world.placeTrain(id, at: .onEdge(traversal, offset: offset))
+            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
+            try world.setTrainMovementRate(id, to: 1_024)
+            return id
+        }
+        let slow = try train(platform.end), fast = try train(platform.start)
+        let now = world.clock.now.seconds
+        func call(_ station: StationID, _ arrival: Int64, _ departure: Int64) -> ScheduledStop {
+            .init(station: station, arrival: .init(seconds: now + arrival), departure: .init(seconds: now + departure))
+        }
+        try world.setTrainTimetable(slow, to: [call(origin, 0, 60), call(middle, 450, 450), call(end, 1_500, 1_560)])
+        try world.setTrainTimetable(fast, to: [call(origin, 0, 300), call(beyond, 1_100, 1_160)])
+        try world.startTrainService(slow); try world.startTrainService(fast)
+        try world.setTrafficControl(true)
+        XCTAssertTrue(world.scheduledTrafficWaits().contains { $0.train == slow && $0.station == middle && $0.kind == .overtake })
+        let express = try XCTUnwrap(world.path(from: .onEdge(traversal, offset: platform.end), toStation: beyond, length: Train.carLength))
+        let expressTrack = try XCTUnwrap(world.trackPlatforms(of: middle).first { express.traversals.map(\.edge).contains($0.edge) })
+        world.setSpeed(.x10)
+        var seen = false
+        for _ in 0..<120 {
+            try world.advance(ticks: 10)
+            if let wait = world.scheduledTrafficWait(of: slow), wait.kind == .overtake, wait.station == middle {
+                let waiting = try XCTUnwrap(world.train(id: slow))
+                guard case .onEdge(let run, _)? = waiting.position else { return XCTFail("waiting train is unplaced") }
+                XCTAssertTrue(world.trackPlatforms(of: middle).contains { $0.edge == run.edge })
+                XCTAssertNotEqual(run.edge, expressTrack.edge)
+                XCTAssertFalse(world.network.fouls(Set(world.heldResources(of: slow)), Set(world.reservedResources(of: fast))))
+                XCTAssertEqual(world.occupancyConflicts(), [])
+                seen = true
+                break
+            }
+        }
+        XCTAssertTrue(seen, "the planned wait uses Houtong's other physical track")
+    }
+
 }
