@@ -27,6 +27,7 @@ enum MapArt {
         selectedTrainID: TrainID?,
         selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
+        traffic: TrafficOverlay = TrafficOverlay(),
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
         drawsLand: Bool = true,
@@ -49,10 +50,12 @@ enum MapArt {
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
         drawNetwork(world, projection: projection, cached: edges, in: context)
+        drawAuthorities(traffic, selectedTrainID: selectedTrainID, projection: projection, in: context)
         for station in world.stations {
             drawPointStation(station, isSelected: station.id == selectedStationID, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
+        drawWaits(traffic, projection: projection, in: context)
 
         for train in world.trains {
             guard let position = train.position, let location = world.location(of: position) else { continue }
@@ -66,6 +69,82 @@ enum MapArt {
             if region.contains(location.position) {
                 drawTrain(at: location, isSelected: train.id == selectedTrainID, projection: projection, in: context)
             }
+        }
+        drawWaitMarks(traffic, projection: projection, in: context)
+    }
+
+    // MARK: - Traffic control (Stage V4e, decision 64)
+
+    /// How much of its colour an authority keeps when its train is not the
+    /// selected one: the `Railway/` site's `FOLLOW_DIM`.
+    private static let followDim = 0.62
+
+    /// The width of an authority's line; its casing is wider by the site's
+    /// 8.5 : 4.4, under the train's body and over the ballast.
+    private static func authorityWidth(_ projection: some MapProjection) -> Double {
+        max(2.5, projection.referenceSize * 0.2)
+    }
+
+    /// Each train's movement authority, drawn as the `Railway/` site draws a
+    /// followed train's route (index.html: an 8.5 casing in `followCase`,
+    /// then a 4.4 line in the train's colour dimmed by `FOLLOW_DIM`), over
+    /// the track and under stations and trains. The selected train's is
+    /// drawn last and undimmed.
+    private static func drawAuthorities(_ traffic: TrafficOverlay, selectedTrainID: TrainID?, projection: some MapProjection, in context: GraphicsContext) {
+        let width = authorityWidth(projection)
+        let ordered = traffic.authorities.filter { $0.train != selectedTrainID } + traffic.authorities.filter { $0.train == selectedTrainID }
+        for authority in ordered {
+            let color = authority.train == selectedTrainID ? Palette.metroGreen : Palette.metroGreen.opacity(followDim)
+            drawTrafficTrack(authority.track, color: color, width: width, projection: projection, in: context)
+        }
+    }
+
+    /// Where each waiting train meets the train holding its route, wider
+    /// than an authority: amber as the wait's words are, red in a
+    /// deadlock; and a dashed line from the waiting train's head to it.
+    private static func drawWaits(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let width = authorityWidth(projection) * 1.3
+        let region = drawingRegion(projection)
+        for wait in traffic.waits {
+            let color = wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber
+            drawTrafficTrack(wait.contested, color: color, width: width, projection: projection, in: context)
+            guard wait.from != wait.to, let reach = WorldRegion(enclosing: [wait.from, wait.to]), region.intersects(reach) else { continue }
+            // Dashed, so drawn whole (see the tunnels in drawNetwork).
+            let dash = max(3, projection.referenceSize * 0.3)
+            context.stroke(wholePolyline([wait.from, wait.to], projection: projection), with: .color(color), style: StrokeStyle(lineWidth: max(1.5, projection.referenceSize * 0.08), lineCap: .butt, dash: [dash, dash * 0.6]))
+        }
+    }
+
+    /// A ring round each waiting train's head, over the trains: red with a
+    /// warning sign for a deadlocked one.
+    private static func drawWaitMarks(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let region = drawingRegion(projection)
+        let radius = max(2.5, projection.referenceSize * 0.26) + 4
+        for wait in traffic.waits where region.contains(wait.from) {
+            let center = projection.screenPoint(of: wait.from)
+            let ring = disc(at: center, radius: radius)
+            context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
+            context.stroke(ring, with: .color(wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber), lineWidth: 3)
+            guard wait.isDeadlocked else { continue }
+            var sign = context.resolve(Image(systemName: "exclamationmark.triangle.fill"))
+            sign.shading = .color(Palette.metroRed)
+            let size = radius * 1.4
+            context.draw(sign, in: CGRect(x: center.x + radius * 0.6, y: center.y - radius * 0.6 - size, width: size, height: size))
+        }
+    }
+
+    private static func drawTrafficTrack(_ track: TrafficOverlay.Track, color: Color, width: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let region = drawingRegion(projection)
+        let full = projection.detail == .full
+        for line in track.lines where line.count > 1 {
+            let path = polyline(line, projection: projection)
+            if full {
+                context.stroke(path, with: .color(Palette.followCase), style: StrokeStyle(lineWidth: width * 8.5 / 4.4, lineCap: .round, lineJoin: .round))
+            }
+            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        }
+        for node in track.nodes where region.contains(node) {
+            context.stroke(disc(at: projection.screenPoint(of: node), radius: width), with: .color(color), lineWidth: max(1.5, width * 0.45))
         }
     }
 

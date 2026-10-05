@@ -87,6 +87,14 @@ final class DeadlockTests: XCTestCase {
         XCTAssertEqual(world.train(id: west)?.execution, .waitingAtStop(0))
         XCTAssertEqual(world.trainHoldingRoute(of: east), west)
         XCTAssertEqual(world.trainHoldingRoute(of: west), east)
+        // Decision 64: each waits for track the other stands on and fouls
+        // at its terminal, and for nothing the other does not hold.
+        for (id, other) in [(east, west), (west, east)] {
+            let contested = world.contestedResources(of: id)
+            XCTAssertFalse(contested.isEmpty)
+            XCTAssertTrue(Set(contested).isSubset(of: world.heldResources(of: other)))
+            XCTAssertTrue(Set(contested).isSuperset(of: world.occupiedResources(of: other)))
+        }
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
@@ -109,6 +117,9 @@ final class DeadlockTests: XCTestCase {
         try world.advance(ticks: 3)
         XCTAssertEqual(world.trainHoldingRoute(of: west), standing)
         XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertTrue(Set(world.contestedResources(of: west)).isSubset(of: world.heldResources(of: standing)))
+        XCTAssertFalse(world.contestedResources(of: west).isEmpty)
+        XCTAssertEqual(world.contestedResources(of: standing), [])
         _ = loop
     }
 
@@ -156,8 +167,10 @@ final class DeadlockTests: XCTestCase {
             let differences = KernelDifferentialTests.differences(world, model)
             XCTAssertEqual(differences, [], "second \(second)")
             XCTAssertEqual(world.deadlockedTrains(), model.deadlockedTrains(), "second \(second)")
+            XCTAssertEqual(world.routeWaits(), WorldInvariants.routeWaitsOneByOne(in: world), "second \(second)")
             for train in world.trains {
                 XCTAssertEqual(world.trainHoldingRoute(of: train.id), model.trainHoldingRoute(of: train.id), "second \(second)")
+                XCTAssertEqual(world.contestedResources(of: train.id), model.contestedResources(of: train.id), "second \(second)")
                 XCTAssertEqual(world.reservedResources(of: train.id), model.reservedResources(of: train.id), "second \(second)")
             }
             guard differences.isEmpty else { return }

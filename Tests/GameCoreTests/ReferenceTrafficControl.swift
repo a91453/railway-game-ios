@@ -472,11 +472,29 @@ extension ReferenceWorld {
     /// Decision 32, point 11: the service due to leave, or the line's train
     /// the line is due to send out, whose route another train holds.
     func trainHoldingRoute(of id: TrainID) -> TrainID? {
-        if let train = trains.first(where: { $0.id == id.rawValue }), let wait = waitingScheduled(train, plan: scheduledPlan()) { return wait.other }
+        awaited(id)?.holder
+    }
+
+    /// Decision 64: the track of the awaited route that its holder keeps
+    /// the train from, tried one resource at a time against the holder's
+    /// blocking set; nothing for a scheduled wait.
+    func contestedResources(of id: TrainID) -> [TrackResource] {
+        guard let wait = awaited(id), let route = wait.route, let holder = trains.first(where: { $0.id == wait.holder.rawValue }) else { return [] }
+        let blocking = blocking(holder, for: id.rawValue)
+        return route.filter { foul([$0], blocking) }.sorted()
+    }
+
+    /// The holder of the route train `id` waits for and that route's track
+    /// (`nil` for a scheduled wait).
+    func awaited(_ id: TrainID) -> (holder: TrainID, route: Set<TrackResource>?)? {
+        func held(along route: Set<TrackResource>, _ train: Int) -> (holder: TrainID, route: Set<TrackResource>?)? {
+            holder(of: route, except: train).map { (TrainID(rawValue: $0), route) }
+        }
+        if let train = trains.first(where: { $0.id == id.rawValue }), let wait = waitingScheduled(train, plan: scheduledPlan()) { return (wait.other, nil) }
         guard trafficControl, let i = trains.firstIndex(where: { $0.id == id.rawValue }), trains[i].position != nil else { return nil }
         let train = trains[i]
         if following(train) {
-            return holder(of: needs(train).resources, except: train.id).map(TrainID.init(rawValue:))
+            return held(along: needs(train).resources, train.id)
         }
         var leaving: Train?
         var requesting = train
@@ -489,7 +507,7 @@ extension ReferenceWorld {
                case .success(let off) = world.admitted(world.routed(start, path), following: true), !world.following(off) {
                 return nil
             }
-            return holder(of: needs(going).resources, except: train.id).map(TrainID.init(rawValue:))
+            return held(along: needs(going).resources, train.id)
         } else if let service = train.service {
             // Stage W2b: due once its doors have closed.
             guard service.waiting, let closing = service.closing, Self.capped(closing, 9) <= clockSeconds else { return nil }
@@ -505,7 +523,7 @@ extension ReferenceWorld {
         }
         guard let leaving else { return nil }
         if let available = firstLeaving(requesting, withTrafficControl: true), !following(available) { return nil }
-        return holder(of: needs(leaving).resources, except: train.id).map(TrainID.init(rawValue:))
+        return held(along: needs(leaving).resources, train.id)
     }
 
     /// One departure of `train` from its waiting stop, on a copy of the

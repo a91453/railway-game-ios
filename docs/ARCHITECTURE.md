@@ -2814,6 +2814,21 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **驗證狀態**：見 PR128、接手分支 `claude/takeover-and-complete-mp89w9` 的 draft PR 與 docs/STAGE_V_HANDOFF.txt 的實際 head/run。新重現首跑無候選失敗；修正後雙車完整完成。新 golden 首跑的 final requested count 與 createLine 預設 none 不符，改新增明確設定 count=1 指令，沒有改既有期望值或產品預設。實景新測試首跑 unplace 後 rate=0 未發車，補測試的 setRate 指令後重驗。保留所有失敗記錄，不以早期成功代替最新 head。V4e 仍等作者合併。
 
+### 64. 地圖上的行車授權與死結互等位置（Stage V4e）
+
+2026-10-05。作者合併 V4d（#131，main `812247b`）後開工。四來源固定私有 `25229af`，詳見 RAILWAY_REFERENCE_MAPPING 的 V4e 表。這是 Presentation／App 的顯示，GameCore 只補一個缺少的唯讀查詢，不改任何規則、存檔或 golden。
+
+1. **缺的查詢**：既有公開查詢已有預約（`reservedResources`，即 movement authority）、持有（`heldResources`）、擋住者（`trainHoldingRoute`）與死結（`deadlockedTrains`），沒有「等的那條路被擋在哪裡」。新增 `contestedResources(of:)`：等候路線所需資源中，擋住者持有或 foul（`RailwayNetwork.fouls`，逐一資源判定）的部分；擋住者是 U2 跟隨車時，含它仍在等的路段（與 `holder(of:except:)` 同一判定）。V3 排定等待是依計畫在站等車、不是等軌道，回空陣列。`trainHoldingRoute` 改由同一個 `awaitedRoute` 推導，行為不變。
+2. **一次算完**：地圖每次要所有列車，逐車呼叫三個查詢會各自重算交通計畫與方向 memo。新增 `routeWaits()`：同一個 memo 依 ID 順序給出每輛等候車的 holder、contested 與是否死結，必須等於逐一呼叫的結果（性質測試每步比對）。實景 demo 60 分鐘、4 列車：debug build 逐車三查詢約 227 ms／次，改 `routeWaits` 後約 95 ms（實測，Linux）。App 只在時間、列車、線路、路網或控制開關變動時重算，平移縮放不重算。
+3. **衍生模型**：GamePresentation 的 `TrafficOverlay`（`GameWorld.trafficOverlay()`）只含世界座標：每車預約的 span 依邊與里程合併相鄰段成折線，加上預約的 junction 節點；每輛等候車的 holder、死結旗標、contested 折線／節點、車頭位置，以及「等的位置」＝contested 上最近車頭的點，沒有 contested（排定等待）時是 holder 車頭。控制關閉為空。不保存、不進 GameSession 權威狀態。
+4. **畫法**：四來源都沒有畫 movement authority 或死結；只有 `Railway/site_archive_clean/index.html` 跟隨列車路線的樣式（`followCase` 8.5 寬外框、4.4 寬列車色線、`FOLLOW_DIM` 0.62），移植為授權的畫法：外框色照搬 `followCase`（#fffdf6／#10141c），線寬比 8.5 : 4.4 保留，線色用 `metroGreen`，非選取列車乘 0.62、選取的最後畫且不調暗。位置在路網之上、車站與列車之下。等候：contested 用 1.3 倍寬，黃（`metroAmber`，與既有等候文字同色），死結紅（`metroRed`）；車頭到等的位置畫虛線（整條畫，同隧道虛線理由）；列車之上畫等候車的外圈，死結再加警示符號。來源的 block hold 是畫面延遲（`trainPos` 減 `blockHoldSec`），不是預約，不移植；`_blockCapped` 永不清除，不仿。
+5. **文字保留**：列車面板的 `routeWaitText` 原文不變。地圖左上角的小圖例只顯示三種顏色的列車數，不擋點擊；VoiceOver 讀 `TrafficOverlay.summary`（「Movement authority for 2 trains · 1 waiting · 2 deadlocked」／「2 列車有行車授權 · 1 列等候 · 2 列死結」），identifier `map.traffic`。
+6. **契約**：save **10**、golden schema **34**、既有三種 fixture 與 README、workflow、gate、timeout 都不變。沒有新 App 檔案（不需重產 Xcode 專案）。
+7. **手算**：W–M–E（邊 1、2、3 直線，起點 x=1024、9216、25600，y=4096）。0:42 互等：東行車頭在邊 1 的 3072（x=4096），等西行車占用的邊 3 4096–7168（x=29696–32768）；西行車頭在邊 3 的 8192−3072=5120（x=30720），等東行車的邊 1 1024–4096（x=2048–5120）；各自等的位置是最近端 29696、5120，contested 恰為對方 held。1:00 東行在 M 正線（邊 2 的 9216，x=18432）待避，等 M 東端 junction 附近（邊 2 自 14336 起，最近點 x=23552，節點 3 在 x=25600），西行的授權含整條邊 1（x=1024–9216）。
+8. **獨立驗證**：ReferenceWorld 另做 `contestedResources`（對擋住者的 `blocking` 集合逐資源 `foul`），在 DeadlockTests 逐秒、`traffic.deadlock` 與 `traffic.turnbacks` campaign 每步比 production；兩個 campaign 也每步比 `routeWaits()` 與逐一查詢。實景 demo 首小時每分鐘檢查授權折線、等候與死結一致，每列車都有授權；新 UI 測試（實景 demo 出現 `map.traffic` 且含 Movement authority）只在 full lane。
+
+**限制**：只顯示目前狀態，沒有預測未來授權或號誌；畫面延遲式 block hold、平行同軌標籤錯位（`blockSideShift`）與死結閃爍仍是 gap。Canvas 繪圖本身不在 Linux 驗證，只由 macOS CI 編譯與 UI 測試。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^20 單位，16,384 公尺，E1 起是新遊戲的大小）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

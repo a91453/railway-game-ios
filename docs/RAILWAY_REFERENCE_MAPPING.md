@@ -728,3 +728,19 @@ V 實際放行 → T、U（保證不互穿）
 | Railway/taipei_gta_reference/source/assets/actors-Cx0CrTrM.js，MRT雙軌端點layover | 非直接移植；延續GameCore head/tail反轉與既有停留 | gap | 來源是兩軌捷運端點timer14，沒有玩家单線死結倒側線模型；不套14秒。 |
 
 新增 golden schema34：可省略的中途反轉出發leg indices；舊30–33繼續讀。save10不變，既有fixtures（含README）不改。新campaign 768步的每步獨立模型、batch=second、存讀；實景驗收用既有平溪幾何建玩家折返服務。多次調車、無平台倒車、全域最優解仍是gap，本階段只做一次反向待避與安全續行。驗證以PR128實際head/run為準。
+
+
+## Stage V4e：地圖上的行車授權與死結互等位置
+
+固定私有 commit `25229af377c5e60a19254cba208a836ec39a8a10`；已讀 clean `00_READ_ME_FIRST.md`／`01_MIGRATION_MAP.md` §7 與 GTA `00_READ_ME_FIRST.md`／source。四來源都沒有在地圖上畫預約、授權或死結；只有網站的跟隨列車路線樣式可直接移植。決策64列完整畫法、查詢與手算。
+
+| 來源／函式 | 目標 | 分類 | 必要調整／gap |
+| --- | --- | --- | --- |
+| Railway/site_archive_clean/index.html 跟隨列車路線（約 10372–10380 行：`followCase` 外框 lineWidth 8.5、`railDimColor(train.color, FOLLOW_DIM=0.62)` lineWidth 4.4、round cap/join；畫在基本軌道後、列車前）與 palette `followCase`（light #fffdf6、dark #10141c） | `MapArt.drawAuthorities`／`drawTrafficTrack`、`Palette.followCase` | faithful（顏色、比例、層次）／adapted（線色） | 外框色與 8.5 : 4.4 比例、0.62 調暗照搬；寬度按地圖 referenceSize 縮放；遊戲列車沒有各自顏色，線色用 `metroGreen`，選取車不調暗。來源畫整條跟隨路線，遊戲畫 GameCore 的實際預約。 |
+| 同檔 `blockHoldSec`／`updateBlockHolds`（8885–9125 行：`trainPos` 減 hold 秒數、`BLOCK_GAP_KM` 0.4、`BLOCK_CAP_SEC` 120、`_blockGap.lead`、`_blockCapped`） | 無直接移植；等候對象由 `trainHoldingRoute`／`routeWaits` | gap | 來源 block hold 是畫面時間延遲避免重疊，不是預約或授權；GameCore 早已用原子預約保證不互穿。`_blockGap.lead` 的「等誰」語義對應 holder；`_blockCapped` 永不清除，不仿。 |
+| 同檔 `blockSideShift`（10827 行，同組列車標籤側移 2 px／15 px、緩動 0.18） | 無 | gap | 遊戲地圖沒有列車標籤，不移植；列為之後畫面工作。 |
+| Railway/railway_game_reference_clean 01_MIGRATION_MAP §7、binary_reference `pf.reserve_paths`、`gui.show_track_reservation`、PBS 符號 | `contestedResources`／`routeWaits` 的概念依據 | gap | 只有設定與符號名稱，沒有可讀實作或顏色；不杜撰。 |
+| Railway/taipei_gta_reference/source/assets/actors-Cx0CrTrM.js（MRT 前車間距 −35 m、道路 `cons(e, why)` 的 `e.lead`、stuck/idle 計時） | 無直接移植 | gap | 雙軌捷運與道路車流的跟車限制，沒有地圖預約或死結標示；`e.lead` 同為「等誰」語義，無繪法。 |
+| Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js 共用軌道 headway ledger（`MIN_HEADWAY_MINUTES` 1.5、`_sharedTrackHeadwayWaiting`、`_blockedByFrontTrain`） | 無直接移植 | gap | 旗標只餵環境音效，不畫在地圖；沒有 deadlock 字樣。 |
+
+量綱：遊戲座標 m×64，只用世界座標折線，不引入新常數。新增查詢不保存，save10、golden 34 不變。
