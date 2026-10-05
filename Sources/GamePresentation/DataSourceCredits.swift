@@ -99,8 +99,8 @@ public enum DataSourceCredits {
                             "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）。"
                         ),
                         notice: language.text(
-                            "The lines and the English station names are compiled by the author’s Rail Island site; the game is not affiliated with any operator.",
-                            "路線與車站的英文名稱由作者的「軌島」網站整理；遊戲與各營運機構無關。"
+                            "The lines and the English station names are compiled by Railway Game; the game is not affiliated with any operator.",
+                            "路線與車站的英文名稱由 Railway Game 整理；遊戲與各營運機構無關。"
                         ),
                         links: []
                     ),
