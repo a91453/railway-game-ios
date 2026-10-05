@@ -185,14 +185,12 @@ extension GameWorld {
         var memo = DirectionMemo(), candidate = train
         follow(normal, &candidate)
         let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
-        var chosen: TrainPath?
-        for track in tracks where !network.fouls(track.body, avoid) {
-            guard let path = trafficPath(from: start, toStation: target, length: train.length,
-                                         berthPenalty: berthPenalty, edgePenalty: edgePenalty,
-                                         only: track.berth, forbidden: forbidden) else { continue }
-            if path.distance < chosen?.distance ?? .max { chosen = path }
-        }
-        return chosen
+        let eligible = Set(tracks.filter { !network.fouls($0.body, avoid) }.map(\.berth))
+        // One search across all safe berths retains V3's generalized costs
+        // and route-level tie order; geometric distance alone is insufficient.
+        return trafficPath(from: start, toStation: target, length: train.length,
+                           berthPenalty: berthPenalty, edgePenalty: edgePenalty,
+                           eligible: eligible, forbidden: forbidden)
     }
 
 }

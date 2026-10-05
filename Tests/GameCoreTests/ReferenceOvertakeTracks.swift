@@ -145,11 +145,13 @@ extension ReferenceWorld {
         }
         var world = self
         let forbidden = world.contraryRuns(for: routed(train, normal))
-        let routes = candidates.filter { !foul($0.body, avoid) }.compactMap {
-            networkPathToStation(from: train.position!, station: target, length: Self.length(train), forbidden: forbidden,
-                                 berthCosts: berthCosts, edgeCosts: edgeCosts, only: ($0.run, $0.offset))
+        var destinations: [Run: [Int64]] = [:]
+        for candidate in candidates where !foul(candidate.body, avoid) {
+            destinations[candidate.run, default: []].append(candidate.offset)
         }
-        return routes.enumerated().min { a, b in a.element.distance == b.element.distance ? a.offset < b.offset : a.element.distance < b.element.distance }?.element
+        destinations = destinations.mapValues { $0.sorted() }
+        return networkPathToStation(from: train.position!, station: target, length: Self.length(train), forbidden: forbidden,
+                                    berthCosts: berthCosts, edgeCosts: edgeCosts, eligible: destinations)
     }
 
 }

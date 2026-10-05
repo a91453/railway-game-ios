@@ -89,12 +89,12 @@ set -euo pipefail
 # V4a adds all six three-train cases (18 to 23) of traffic.scheduledMeets,
 # across four shards, without reducing any existing case. Swift 6.4 local
 # measurements on 2026-10-05, two to four shards running at a time:
-#   campaigns-12  ScheduledTrafficPropertyTests 377 s
-#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 375 s
-#   campaigns-15  ScheduledOvertakeTrackPropertyTests 170 s
-#   campaigns-16  ScheduledOvertakeTrackMiddlePropertyTests 181 s
-#   campaigns-17  ScheduledOvertakeTrackLastPropertyTests 138 s
-#   campaigns-18  ScheduledOvertakeTrackFinalPropertyTests 197 s
+#   campaigns-12  ScheduledTrafficPropertyTests 375 s
+#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 377 s
+#   campaigns-15  ScheduledOvertakeTrackPropertyTests 179 s
+#   campaigns-16  ScheduledOvertakeTrackMiddlePropertyTests 191 s
+#   campaigns-17  ScheduledOvertakeTrackLastPropertyTests 136 s
+#   campaigns-18  ScheduledOvertakeTrackFinalPropertyTests 195 s
 # The new shards stay below 560 s even at 1.8 times these local times.
 # Runner measurements are reported in the PR; keep the 20-minute job limit.
 classes_of() {

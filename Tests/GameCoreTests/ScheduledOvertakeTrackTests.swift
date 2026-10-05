@@ -137,6 +137,33 @@ final class ScheduledOvertakeTrackTests: XCTestCase {
         XCTAssertEqual(chosen?.traversals.last?.edge, .edge(5))
     }
 
+    /// Hand-built safe candidates isolate selection from the window oracle.
+    /// The main berth is nearer, but its 800 m cost makes the loop win.
+    /// An empty eligible set must not silently admit any station berth.
+    func testSafeBerthsKeepGeneralizedCostsAndEmptySelection() throws {
+        let world = try ScheduledTrafficTests.overtake(), model = ScheduledTrafficTests.model(for: world)
+        var plan = world.trafficPlan(), oracle = model.scheduledPlan()
+        let slow = try XCTUnwrap(world.train(id: .init(rawValue: 1))), start = try XCTUnwrap(slow.position)
+        let normal = try XCTUnwrap(world.path(from: start, toStation: SingleTrackMeet.middle, length: slow.length))
+        let main = plan.services[0].points[1].berth
+        let loop = try XCTUnwrap(world.trafficOvertakeTracks(&plan, service: 0, at: 1).first)
+        XCTAssertLessThan(normal.distance, try XCTUnwrap(world.trafficPath(from: start, toStation: SingleTrackMeet.middle, length: slow.length,
+                                                                         berthPenalty: [:], edgePenalty: [:], only: loop.berth)).distance)
+        plan.sidings[.init(service: 0, point: 1)] = [.init(berth: main, body: [], route: []), .init(berth: loop.berth, body: [], route: [])]
+        let mainRun = ReferenceWorld.Run(main.traversal)!, loopRun = ReferenceWorld.Run(loop.berth.traversal)!
+        oracle.places[.init(service: 0, visit: 1)] = [
+            .init(run: mainRun, offset: main.offset, body: [], route: [], directions: []),
+            .init(run: loopRun, offset: loop.berth.offset, body: [], route: [], directions: []),
+        ]
+        let chosen = world.scheduledBerthPath(slow, from: start, target: SingleTrackMeet.middle, stop: 1,
+                                              normal: normal, plan: plan, berthPenalty: [main: 51_200], edgePenalty: [:])
+        XCTAssertEqual(chosen, model.scheduledBerthRoute(model.trains[0], SingleTrackMeet.middle, 1, normal, oracle, [mainRun: 51_200], [:]))
+        XCTAssertEqual(chosen?.traversals.last?.edge, loop.berth.traversal.edge)
+        XCTAssertNil(world.trafficPath(from: start, toStation: SingleTrackMeet.middle, length: slow.length,
+                                      berthPenalty: [:], edgePenalty: [:], eligible: []))
+        XCTAssertNil(model.networkPathToStation(from: start, station: SingleTrackMeet.middle, length: slow.length, eligible: [:]))
+    }
+
     func testTrafficOffAndSaveRoundTripKeepTheThreeTrainState() throws {
         var world = try Self.threeTrains()
         try world.setTrafficControl(false)

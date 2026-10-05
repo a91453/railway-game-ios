@@ -105,9 +105,9 @@ extension ReferenceWorld {
     /// and, among equals, the choices that come first step by step (a berth
     /// ahead on the same run, nearest first, before any turn; turns by
     /// ascending edge number).
-    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:], only: (Run, Int64)? = nil) -> TrainPath? {
+    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:], only: (Run, Int64)? = nil, eligible: [Run: [Int64]]? = nil) -> TrainPath? {
         guard case .onEdge(let traversal, let offset) = position, let start = Run(traversal), isOnNetwork(traversal, offset) else { return nil }
-        let berths = only.map { [$0.0: [$0.1]] } ?? berthsForStation(id, length: length)
+        let berths = only.map { [$0.0: [$0.1]] } ?? eligible ?? berthsForStation(id, length: length)
         guard !berths.isEmpty else { return nil }
         let best = distancesToBerths(berths, blocked: blocked, forbidden: forbidden, berthCosts: berthCosts, edgeCosts: edgeCosts)
         var (run, at) = (start, offset)

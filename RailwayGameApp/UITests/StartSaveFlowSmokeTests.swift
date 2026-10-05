@@ -33,14 +33,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-03-menu-save")
 
-        requiredButton("menu.saveGame", in: app).tap()
+        tapMenuAction("menu.saveGame", in: app)
         assertGame(in: app)
         capture(app, name: "\(language)-flow-04-game-saved")
 
         openGameMenu(in: app)
         capture(app, name: "\(language)-flow-05-menu-return")
 
-        requiredButton("menu.backToStart", in: app).tap()
+        tapMenuAction("menu.backToStart", in: app)
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.continue", in: app)
         // Back to Start creates only an autosave. This separate button also
@@ -84,6 +84,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("hud.menu", in: app).tap()
         _ = requiredButton("menu.saveGame", in: app)
         _ = requiredButton("menu.backToStart", in: app)
+    }
+
+    private func tapMenuAction(_ identifier: String, in app: XCUIApplication) {
+        let button = requiredButton(identifier, in: app)
+        // XCTest can report a native SwiftUI Menu action as hittable yet
+        // fail to compute its activation point when tap() refreshes the
+        // tree. Touch the visible frame's center, keeping the hittable and
+        // enabled checks and the subsequent real save/return assertions.
+        let frame = button.frame, bounds = app.frame
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        XCTAssertGreaterThan(frame.width, 0)
+        XCTAssertGreaterThan(frame.height, 0)
+        XCTAssertTrue(bounds.contains(center), "Menu action is outside the app: \(identifier)")
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: center.x - bounds.minX, dy: center.y - bounds.minY)).tap()
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
