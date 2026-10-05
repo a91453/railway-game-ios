@@ -150,7 +150,7 @@ private struct PassengerRouteGraph {
         let segment = next == 1 && node.stop == path.stations.count - 1 ? 0 : node.stop
         let edge = PassengerRideEdge(line: node.line, from: node.stop, to: next, direction: node.direction)
         return (PassengerRouteNode(line: node.line, stop: next, direction: node.direction), edge,
-                path.runSeconds[segment] + (node.stop == 0 ? 0 : ServiceLine.dwellMinutes * GameTime.secondsPerMinute))
+                path.runSeconds[segment])
     }
 
     /// Dijkstra over (service, call, direction). A line change at the same
@@ -188,11 +188,18 @@ private struct PassengerRouteGraph {
             if station(node) == destination {
                 return reconstruct(label, from: best)
             }
-            if let (next, edge, minutes) = nextRide(node), !forbidden.contains(edge) {
-                offer(PassengerRouteLabel(node: next, total: label.total + minutes,
-                                          ride: label.ride + minutes, wait: label.wait,
+            if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
+                // A passenger already aboard stays through this stop's
+                // dwell. One boarding here has waited for departure already.
+                let dwell: Int64 = switch label.arrival {
+                case .board: 0
+                case .ride: ServiceLine.dwellMinutes * GameTime.secondsPerMinute
+                }
+                let seconds = run + dwell
+                offer(PassengerRouteLabel(node: next, total: label.total + seconds,
+                                          ride: label.ride + seconds, wait: label.wait,
                                           transfer: label.transfer, changes: label.changes,
-                                          previous: node, arrival: .ride(edge, minutes)))
+                                          previous: node, arrival: .ride(edge, seconds)))
             }
             for other in stopsAt[station(node)] ?? [] where other != node {
                 guard other.line != node.line else { continue }
@@ -219,7 +226,7 @@ private struct PassengerRouteGraph {
         var legs: [PassengerRouteLeg] = []
         var edges: [PassengerRideEdge] = []
         for label in chain.reversed() {
-            guard case .ride(let edge, let minutes) = label.arrival else { continue }
+            guard case .ride(let edge, let seconds) = label.arrival else { continue }
             edges.append(edge)
             let path = paths[edge.line]
             let from = path.stations[edge.from]
@@ -228,11 +235,11 @@ private struct PassengerRouteGraph {
                 last.direction == path.direction && last.to == from {
                 legs[legs.count - 1] = PassengerRouteLeg(line: path.line, pattern: path.pattern,
                                                           direction: path.direction, from: last.from,
-                                                          to: to, rideSeconds: last.rideSeconds + minutes)
+                                                          to: to, rideSeconds: last.rideSeconds + seconds)
             } else {
                 legs.append(PassengerRouteLeg(line: path.line, pattern: path.pattern,
                                               direction: path.direction, from: from,
-                                              to: to, rideSeconds: minutes))
+                                              to: to, rideSeconds: seconds))
             }
         }
         return (PassengerRoute(legs: legs,

@@ -79,6 +79,8 @@ final class PassengerRoutesTests: XCTestCase {
                           (journey.legs[0].seconds + 59) / 60 + 1 + (journey.legs[1].seconds + 59) / 60)
         XCTAssertEqual(route.waitMinutes, (headway + 1) / 2)
         XCTAssertEqual(route.legs[0].pattern, nil)
+        XCTAssertEqual(world.passengerRoutes(from: b, to: c).first?.legs[0].rideSeconds,
+                       journey.legs[1].seconds, "boarding at B does not include B's dwell twice")
     }
 
     func testRunningPatternAloneAndExpressAlongsideTheMain() throws {
