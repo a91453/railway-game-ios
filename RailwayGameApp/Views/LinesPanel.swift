@@ -372,10 +372,10 @@ struct LinesPanel: View {
     private func routeChoiceText(_ route: LineRoutePreference) -> String {
         let platform = trackNumber(route.platform.edge)
         if route.tracks.isEmpty {
-            return session.language.text("Platform track #\(platform) · automatic route", "月台股道 #\(platform)・自動選路")
+            return session.language == .traditionalChinese ? "月台股道 #\(platform)・自動選路" : "Platform track #\(platform) · automatic route"
         }
         let walk = route.tracks.map { "\(trackNumber($0.edge))\($0.direction == .forward ? "→" : "←")" }.joined(separator: " · ")
-        return session.language.text("Tracks \(walk) · platform #\(platform)", "股道 \(walk)・月台股道 #\(platform)")
+        return session.language == .traditionalChinese ? "股道 \(walk)・月台股道 #\(platform)" : "Tracks \(walk) · platform #\(platform)"
     }
 
     /// The trains a service is set to run at one level, with a stepper to
