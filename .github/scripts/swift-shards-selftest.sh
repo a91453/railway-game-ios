@@ -95,7 +95,7 @@ expect() {
   fi
 }
 
-for shard in $("$script" shards) light all; do
+for shard in $("$script" shards) all; do
   expect pass "$shard runs exactly its tests" "$script" run "$shard"
 done
 FAKE_MODE=drop WHY='not the tests the shard selects' expect fail "a selected test that does not run fails the shard" "$script" run campaigns-2

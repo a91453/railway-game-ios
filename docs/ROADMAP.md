@@ -93,7 +93,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS �
 驗證分層：
 
 1. Claude Code Cloud（Linux）：原始碼開發、GameCore `swift build` / `swift test`
-2. Linux CI：Swift 6.0 是最低相容版本（warnings as errors 的 build 與除了長 campaign 以外的測試）；Swift 6.4 是目前的完整正確性驗證（全部測試，campaign 不減量、分成平行 shard）
+2. Linux CI：只用 Swift 6.4（warnings as errors 的 build 與全部測試，campaign 不減量、分成平行 shard）；2026-10-05 起拿掉 Swift 6.0 job
 3. macOS CI：XcodeGen 產生專案，以真正的 Xcode / Apple SDK 編譯原生 SwiftUI App
 4. 實機人工檢視：內部 TestFlight（原本的手動 Visual Smoke Simulator 截圖已移除；人工檢視不是自動化的回歸測試）
 

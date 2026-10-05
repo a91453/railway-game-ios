@@ -67,13 +67,11 @@ sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
   at intervals (the reference's desync replay) that every later build must
   replay to the same states; run by
   `Tests/GameCoreTests/ReplayFixtureTests.swift` (`ReplayFixtures/README.md`).
-- `.github/workflows/` — `ci.yml` (the Swift package on Linux: Swift 6.0 is
-  the minimum-compatibility job, every test except the long property /
-  differential / mutation campaigns; Swift 6.4 is the full correctness suite,
-  every test with the campaigns not reduced, split into parallel shards by
-  `.github/scripts/swift-shards.sh`, which also proves each shard ran exactly
-  its tests; pull requests that change nothing the package builds or tests
-  skip the Swift jobs, and the `Swift CI (gate)` job always reports),
+- `.github/workflows/` — `ci.yml` (the Swift package on Linux with Swift 6.4
+  only: every test with the campaigns not reduced, split into parallel shards
+  by `.github/scripts/swift-shards.sh`, which also proves each shard ran
+  exactly its tests; pull requests that change nothing the package builds or
+  tests skip the Swift jobs, and the `Swift CI (gate)` job always reports),
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
   build, iPhone UI tests. A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's screens;
@@ -116,20 +114,23 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   a behavior change the PR must justify. A format change
   old saves cannot be read under raises `SavedGame.currentVersion`, adds the
   migration step and adds a fixture of the new version.
-- Do not raise `swift-tools-version` (6.0) or drop Swift 6.0 compatibility
-  without a concrete technical reason.
+- Build and test with Swift 6.4 only, in CI and locally: the owner removed
+  the Swift 6.0 job on 2026-10-05, and no other release is built or tested.
+  Do not install or run Swift 6.0.3 (or any other release) for checks. Leave
+  `swift-tools-version` (6.0) as it is unless a concrete technical reason
+  requires changing it.
 
 ## Environments and validation
 
 - Claude Code cloud sessions run on **Linux**: `swift build` and `swift test`
   work. The SessionStart hook (`.claude/hooks/session-start.sh`) installs the
   official swift.org toolchain, Swift 6.4.0 (CI's `swift:6.4-noble`), into
-  `/opt/swift` and puts it on the `PATH`. For anything else, such as Swift
-  6.0.3 for the minimum-compatibility check, use
-  `.github/scripts/install-swift-linux.sh 6.0.3 /opt/swift60` rather than
-  writing a download URL by hand: swift.org names every release with three
-  numbers (`swift-6.4.0-RELEASE`), so a URL built from `6.4` does not exist.
-  When CI moves to a new Swift, update the hook's version with it. Xcode,
+  `/opt/swift` and puts it on the `PATH`; it is the only toolchain checks use.
+  If it ever needs installing by hand, use
+  `.github/scripts/install-swift-linux.sh 6.4.0 /opt/swift` rather than
+  writing a download URL: swift.org names every release with three numbers
+  (`swift-6.4.0-RELEASE`), so a URL built from `6.4` does not exist. When CI
+  moves to a new Swift, update the hook's version with it. Xcode,
   `xcodebuild`, the iOS Simulator, SwiftUI and UIKit are **not** available
   there.
 - Apple-only checks run only in GitHub Actions on macOS (`ios-build.yml`,
