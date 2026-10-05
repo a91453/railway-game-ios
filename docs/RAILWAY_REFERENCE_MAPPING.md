@@ -473,7 +473,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 
 | 參考 | 行為 | Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
-| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列） | 度（WGS-84） | 直接重用（原檔） |
+| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列）。2026-10-05 起網站不再維護，與當天的 OSM 比對後，高捷紅線（機場段）、橘線（鹽埕埔段）與林鐵祝山線一段改用 OSM 重畫（`tools/real-railways/`） | 度（WGS-84） | 直接重用（原檔）；**改變**：三段改用 OSM |
 | `Railway` `data/track_stations.geojson`（608 個站點，同一站在每條線各一點） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫，用那條線的顏色）與 `stations`（每個系統每個站名的第一個，544 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
 | `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，五站沒有英文時用中文（含新的平鎮） | — | 直接重用（原檔） |
 | `Railway` `index.html` 的系統表（`id`、`label`）與 `i18n/translations.js` 的英文 | 系統的名稱與順序 | `RealRailways.System.all` | — | faithful |
