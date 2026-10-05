@@ -31,17 +31,21 @@ final class RealRailwaysTests: XCTestCase {
     func testTheBundledFilesReadWhole() throws {
         let railways = try Self.bundled()
         XCTAssertEqual(railways.lines.count, 79, "every piece of every line")
-        XCTAssertEqual(railways.stationMarks.count, 607, "every station on every line")
-        XCTAssertEqual(railways.stations.count, 543, "once for each name in each system")
+        XCTAssertEqual(railways.stationMarks.count, 608, "every station on every line")
+        XCTAssertEqual(railways.stations.count, 544, "once for each name in each system")
         XCTAssertEqual(railways.lines.map(\.id), Array(0 ..< 79), "in the file's order")
-        XCTAssertEqual(Set(railways.stations.map(\.id)).count, 543)
+        XCTAssertEqual(Set(railways.stations.map(\.id)).count, 544)
         XCTAssertEqual(Set(railways.lines.map(\.system)), Set(RealRailways.System.all), "every system has a line")
 
         let counts = Dictionary(grouping: railways.stations, by: \.system.id).mapValues(\.count)
         XCTAssertEqual(counts, [
-            "tra_sched": 241, "thsr_sched": 12, "afr_sched": 21, "mrt": 119, "tymc": 22,
+            "tra_sched": 242, "thsr_sched": 12, "afr_sched": 21, "mrt": 119, "tymc": 22,
             "ntdlrt": 14, "ntalrt": 9, "sanying": 12, "krtc": 75, "tmrt": 18,
         ])
+
+        // Pingzhen, on the trunk line since the 2026-10-05 snapshot.
+        let pingzhen = try XCTUnwrap(railways.stations.first { $0.id == "tra_sched|平鎮" })
+        XCTAssertEqual(pingzhen.coordinate, RealRailways.Coordinate(latitude: 24.944038, longitude: 121.215443))
 
         // All of it in Taiwan.
         let points = railways.lines.flatMap(\.points) + railways.stationMarks.map(\.coordinate)
@@ -198,12 +202,12 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(first.id, "tra_sched|基隆")
         XCTAssertEqual(first.name(in: .english), "Keelung")
 
-        // The site has no English name for these four: the Chinese one.
-        for id in ["tra_sched|左營(舊城)", "tra_sched|枋野", "tra_sched|新城 (太魯閣)", "tra_sched|新馬"] {
+        // The site has no English name for these five: the Chinese one.
+        for id in ["tra_sched|左營(舊城)", "tra_sched|枋野", "tra_sched|新城 (太魯閣)", "tra_sched|新馬", "tra_sched|平鎮"] {
             let station = try XCTUnwrap(railways.stations.first { $0.id == id }, id)
             XCTAssertEqual(station.name(in: .english), station.name(in: .traditionalChinese), id)
         }
-        XCTAssertEqual(railways.stations.filter { $0.name(in: .english) == $0.name(in: .traditionalChinese) }.count, 4)
+        XCTAssertEqual(railways.stations.filter { $0.name(in: .english) == $0.name(in: .traditionalChinese) }.count, 5)
     }
 
     /// The TRA's Taipei is the same point as the place the picker had
