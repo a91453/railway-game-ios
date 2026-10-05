@@ -105,26 +105,46 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(RealRailways.MapTheme.satellite.casing, RealRailways.RGB(hex: "#24382c"))
     }
 
-    /// Not the site's colours (2026-10-05, the author's request): each line
-    /// has one picked at random from its key, the same every time, shared
-    /// by its pieces and its stations.
-    func testEachLineHasARandomColourOfItsOwn() throws {
+    /// Not the site's colours (2026-10-05, the author's requests): the TRA,
+    /// High Speed Rail and Alishan Forest Railway lines have their
+    /// operator's colour, as its logo has it; every other line one picked
+    /// at random from its key, the same every time, shared by its pieces
+    /// and its stations.
+    func testEachLineHasItsOperatorsColourOrARandomOne() throws {
         let railways = try Self.bundled()
-        let first = try XCTUnwrap(railways.lines.first)
-        XCTAssertEqual(first.palette, RealRailways.Palette(key: "tra_sched|縱貫線北段"))
-        XCTAssertNotEqual(first.palette.color, RealRailways.RGB(hex: "#2E6FB0"), "not the site's blue")
         XCTAssertEqual(try Self.bundled().lines.map(\.palette), railways.lines.map(\.palette), "the same every time")
 
-        // The 13 pieces of the trunk line's northern part share one colour,
-        // and so do its stations.
-        let trunk = railways.lines.filter { $0.name == first.name }
-        XCTAssertEqual(trunk.count, 13)
-        XCTAssertEqual(Set(trunk.map(\.palette)), [first.palette])
-        let keelung = try XCTUnwrap(railways.stations.first)
-        XCTAssertEqual(keelung.palette, first.palette)
+        let operators = ["tra_sched": "#00529D", "thsr_sched": "#DB5009", "afr_sched": "#C41229"]
+        for system in RealRailways.System.all {
+            XCTAssertEqual(system.operatorColor, operators[system.id].flatMap(RealRailways.RGB.init(hex:)), system.id)
+        }
+        for line in railways.lines where line.system.operatorColor != nil {
+            XCTAssertEqual(line.palette, RealRailways.Palette(color: try XCTUnwrap(line.system.operatorColor)), line.name)
+        }
+        for mark in railways.stationMarks where mark.system.operatorColor != nil {
+            XCTAssertEqual(mark.palette, RealRailways.Palette(color: try XCTUnwrap(mark.system.operatorColor)))
+        }
+        let first = try XCTUnwrap(railways.lines.first)
+        XCTAssertEqual(first.palette.color, RealRailways.RGB(hex: "#00529D"), "the trunk line's northern part: Taiwan Railway's blue")
+        XCTAssertNotEqual(first.palette.color, RealRailways.RGB(hex: "#2E6FB0"), "not the site's blue")
+        XCTAssertEqual(try XCTUnwrap(railways.stations.first).palette, first.palette, "Keelung")
 
-        // The lines differ: at least 20 colours among them.
-        XCTAssertGreaterThanOrEqual(Set(railways.lines.map(\.palette.color)).count, 20)
+        // The Bannan Line's colour is picked from its key, and its pieces
+        // and stations share it.
+        let bannan = railways.lines.filter { $0.name == "板南線" }
+        XCTAssertFalse(bannan.isEmpty)
+        XCTAssertEqual(Set(bannan.map(\.palette)), [RealRailways.Palette(key: "mrt|BL")])
+        XCTAssertNotEqual(bannan.first?.palette.color, RealRailways.RGB(hex: "#0070BD"), "not the site's blue")
+        let dingpu = try XCTUnwrap(railways.stations.first { $0.id == "mrt|頂埔" })
+        XCTAssertEqual(dingpu.palette, RealRailways.Palette(key: "mrt|BL"))
+
+        // The other lines differ, but for one pair: 18 keys, 17 colours (the
+        // Circular Line's and the Airport MRT's hashes both give hue 197°),
+        // none an operator's.
+        let others = railways.lines.filter { $0.system.operatorColor == nil }
+        XCTAssertEqual(Set(others.map(\.palette.color)).count, 17)
+        XCTAssertEqual(RealRailways.Palette(key: "mrt|Y"), RealRailways.Palette(key: "tymc|A"))
+        XCTAssertTrue(Set(others.map(\.palette.color)).isDisjoint(with: RealRailways.System.all.compactMap(\.operatorColor)))
 
         // A colour from a hue: 65% saturation, 47% lightness.
         XCTAssertEqual(RealRailways.Palette(color: RealRailways.Palette(key: "x").color).color, RealRailways.Palette(key: "x").color)

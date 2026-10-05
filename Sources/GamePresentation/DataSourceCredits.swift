@@ -95,8 +95,8 @@ public enum DataSourceCredits {
                         id: "operators",
                         title: language.text("Railway operators", "鐵道營運機構"),
                         detail: language.text(
-                            "The station order of the TRA lines (TRA open data) and of the Sanying Line (New Taipei Metro).",
-                            "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）。"
+                            "The station order of the TRA lines (TRA open data) and of the Sanying Line (New Taipei Metro); the colours of the TRA, High Speed Rail and Alishan Forest Railway lines, from their operators’ logos.",
+                            "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）；台鐵、高鐵與阿里山林鐵路線的顏色，取自各營運機構的標誌。"
                         ),
                         notice: language.text(
                             "The lines and the English station names are compiled by Railway Game; the game is not affiliated with any operator.",

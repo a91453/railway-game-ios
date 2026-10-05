@@ -14,9 +14,10 @@ import GameCore
 // Sources (`Railway/site_archive_clean/`):
 // - `data/track_lines.geojson` and `data/track_stations.geojson`: every
 //   line's shape and stations. The colours the site draws them in are not
-//   used: each line has a colour picked at random from its key (2026-10-05,
-//   the author's request), mixed for each look as the site mixes its own
-//   (`index.html` `railMix`);
+//   used: each line has a colour picked at random from its key, and the
+//   TRA, High Speed Rail and Alishan Forest Railway lines their operator's
+//   colour (2026-10-05, the author's requests), mixed for each look as the
+//   site mixes its own (`index.html` `railMix`);
 // - `data/track_style_layers.json`: the casing, line and station widths and
 //   the casing colour of each map theme;
 // - `i18n/stations.json`: the stations' English names;
@@ -78,6 +79,18 @@ public struct RealRailways: Sendable {
         public let id: String
         let english: String
         let chinese: String
+        /// The colour all its lines are drawn in, where they have no official
+        /// colours of their own: its operator's, as the operator's logo on
+        /// its own website has it (2026-10-05, the author's request). `nil`
+        /// where each line has a colour of its own (``Palette/init(key:)``).
+        public let operatorColor: RGB?
+
+        init(id: String, english: String, chinese: String, operatorColor: RGB? = nil) {
+            self.id = id
+            self.english = english
+            self.chinese = chinese
+            self.operatorColor = operatorColor
+        }
 
         /// The site's label, and its English translation
         /// (`i18n/translations.js`).
@@ -86,9 +99,13 @@ public struct RealRailways: Sendable {
         }
 
         public static let all: [System] = [
-            System(id: "tra_sched", english: "TRA", chinese: "台鐵"),
-            System(id: "thsr_sched", english: "High Speed Rail", chinese: "高鐵"),
-            System(id: "afr_sched", english: "Alishan Forest Railway", chinese: "阿里山林鐵"),
+            // Taiwan Railway's blue (the logo at www.railway.gov.tw),
+            // Taiwan High Speed Rail's orange (www.thsrc.com.tw's logo.svg)
+            // and the Alishan Forest Railway's train red
+            // (afrch.forest.gov.tw's logo_ch.svg and favicon).
+            System(id: "tra_sched", english: "TRA", chinese: "台鐵", operatorColor: RGB(red: 0x00, green: 0x52, blue: 0x9D)),
+            System(id: "thsr_sched", english: "High Speed Rail", chinese: "高鐵", operatorColor: RGB(red: 0xDB, green: 0x50, blue: 0x09)),
+            System(id: "afr_sched", english: "Alishan Forest Railway", chinese: "阿里山林鐵", operatorColor: RGB(red: 0xC4, green: 0x12, blue: 0x29)),
             System(id: "mrt", english: "Taipei Metro", chinese: "台北捷運"),
             System(id: "tymc", english: "Taoyuan Airport MRT", chinese: "桃園機捷"),
             System(id: "ntdlrt", english: "Danhai Light Rail", chinese: "淡海輕軌"),
@@ -143,7 +160,9 @@ public struct RealRailways: Sendable {
     ///
     /// Not the site's: the author asked (2026-10-05) for colours of the
     /// game's own, so a line's colour is picked at random from its key
-    /// (``init(key:)``), the same every time. The dark, faint and hidden
+    /// (``init(key:)``), the same every time, except where its system has
+    /// an operator colour (``System/operatorColor``): then every line of the
+    /// system has that (``init(key:in:)``). The dark, faint and hidden
     /// looks are mixed from it toward the map theme's casing as the site
     /// mixes its own (`index.html` `railMix`, with `RAIL_DIM`,
     /// `FAINT_LIGHT`, `FAINT_GLOW`, `GHOST_LIGHT` and `GHOST_GLOW`).
@@ -166,6 +185,16 @@ public struct RealRailways: Sendable {
                 hash = hash &* 0x0000_0100_0000_01B3
             }
             self.init(color: Self.rgb(hue: Double(hash % 360), saturation: 0.65, lightness: 0.47))
+        }
+
+        /// The colours of the line with key `key` in `system`: the system's
+        /// operator colour where it has one, else one picked from the key.
+        public init(key: String, in system: System) {
+            if let color = system.operatorColor {
+                self.init(color: color)
+            } else {
+                self.init(key: key)
+            }
         }
 
         /// The colour for `style` on `theme` (the site's `trackLineColor`
@@ -311,21 +340,23 @@ public struct RealRailways: Sendable {
         lines = try lineFeatures.enumerated().map { index, feature in
             let points = try feature.geometry.coordinates.map(Self.coordinate)
             guard points.count >= 2 else { throw LoadError.invalidCoordinate }
+            let system = try Self.system(feature.properties.sys)
             return Line(
                 id: index,
-                system: try Self.system(feature.properties.sys),
+                system: system,
                 name: feature.properties.name,
                 sortKey: feature.properties.sortKey,
-                palette: Palette(key: feature.properties.lineKey),
+                palette: Palette(key: feature.properties.lineKey, in: system),
                 points: points,
                 box: Box(points)
             )
         }
         stationMarks = try stationFeatures.map { feature in
-            StationMark(
-                system: try Self.system(feature.properties.sys),
+            let system = try Self.system(feature.properties.sys)
+            return StationMark(
+                system: system,
                 coordinate: try Self.coordinate(feature.geometry.coordinates),
-                palette: Palette(key: feature.properties.lineKey)
+                palette: Palette(key: feature.properties.lineKey, in: system)
             )
         }
         var seen: Set<String> = []
