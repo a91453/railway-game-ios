@@ -66,13 +66,15 @@ public struct PlaceGrid: Sendable {
 extension StationDemandKind {
     /// How many times its share of the country's places (for its
     /// residents) a station's surroundings must have of one kind to serve
-    /// that kind rather than homes.
-    public static let realWorldThreshold = 2.0
+    /// that kind rather than homes: tuned on Taiwan's 544 real stations
+    /// (2026-10-05), where it makes 335 serve homes, 130 shops, 57 sights
+    /// and 22 offices.
+    public static let realWorldThreshold = 1.5
 
     /// The fewest places of each kind a station's surroundings are
     /// measured against: a handful of shops in a village is not a
     /// shopping district, however few live there.
-    static let realWorldMinimums: [PlaceGrid.Kind: Double] = [.shops: 30, .offices: 5, .schools: 3, .attractions: 2]
+    static let realWorldMinimums: [PlaceGrid.Kind: Double] = [.shops: 30, .offices: 5, .schools: 3, .attractions: 1]
 
     /// The kind of place a station on a real-world map serves, from the
     /// places within its catchment and the people living there.
@@ -80,8 +82,8 @@ extension StationDemandKind {
     /// For offices (offices and schools together), shops and sights, the
     /// places nearby are compared with what the station's residents would
     /// have at the country's rate (`totals` ÷ `population`), but never with
-    /// fewer than a minimum (30 shops, 5 offices plus 3 schools, 2
-    /// sights). The kind most above its expectation wins if it reaches
+    /// fewer than a minimum (30 shops, 5 offices plus 3 schools, 1
+    /// sight). The kind most above its expectation wins if it reaches
     /// ``realWorldThreshold`` times it; otherwise the station serves homes.
     /// Ties go to offices, then shops, then sights.
     public static func realWorld(

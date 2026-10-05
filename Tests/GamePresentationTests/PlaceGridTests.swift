@@ -53,8 +53,8 @@ final class PlaceGridTests: XCTestCase {
 
     func testAStationServesHomesUnlessOneKindStandsOut() {
         XCTAssertEqual(kind(residents: 10_000, [.shops: 100, .offices: 10, .schools: 10, .attractions: 5]), .residential, "the country's mix")
-        XCTAssertEqual(kind(residents: 10_000, [.shops: 199]), .residential, "just under twice the shops")
-        XCTAssertEqual(kind(residents: 10_000, [.shops: 200]), .shopping, "twice the shops")
+        XCTAssertEqual(kind(residents: 10_000, [.shops: 149]), .residential, "just under one and a half times the shops")
+        XCTAssertEqual(kind(residents: 10_000, [.shops: 150]), .shopping, "one and a half times the shops")
         XCTAssertEqual(kind(residents: 10_000, [.offices: 30, .schools: 10]), .office, "offices and schools together")
         XCTAssertEqual(kind(residents: 10_000, [.attractions: 10]), .scenic)
         XCTAssertEqual(kind(residents: 0, [:]), .residential, "nothing there")
@@ -66,9 +66,10 @@ final class PlaceGridTests: XCTestCase {
     func testAVillageIsMeasuredAgainstMinimums() {
         XCTAssertEqual(kind(residents: 300, [.shops: 20]), .residential, "20 shops against at least 30")
         XCTAssertEqual(kind(residents: 300, [.shops: 60]), .shopping)
-        XCTAssertEqual(kind(residents: 300, [.attractions: 4]), .scenic, "4 sights against at least 2")
-        XCTAssertEqual(kind(residents: 300, [.offices: 10, .schools: 5]), .residential, "15 against at least 8")
-        XCTAssertEqual(kind(residents: 300, [.offices: 12, .schools: 5]), .office, "17 against at least 8")
+        XCTAssertEqual(kind(residents: 300, [.attractions: 1]), .residential, "1 sight against at least 1")
+        XCTAssertEqual(kind(residents: 300, [.attractions: 2]), .scenic, "2 sights against at least 1")
+        XCTAssertEqual(kind(residents: 300, [.offices: 6, .schools: 5]), .residential, "11 against at least 8")
+        XCTAssertEqual(kind(residents: 300, [.offices: 7, .schools: 5]), .office, "12 against at least 8")
     }
 
     /// The kind most above its expectation wins; ties go to offices, then
@@ -77,6 +78,40 @@ final class PlaceGridTests: XCTestCase {
         XCTAssertEqual(kind(residents: 10_000, [.shops: 300, .attractions: 20]), .scenic, "4 times the sights beats 3 times the shops")
         XCTAssertEqual(kind(residents: 10_000, [.shops: 300, .offices: 40, .schools: 10]), .shopping, "3 times the shops beats 2.5 times the offices and schools")
         XCTAssertEqual(kind(residents: 10_000, [.shops: 300, .offices: 60]), .office, "a tie of 3 goes to offices")
+    }
+
+    // MARK: - Taiwan
+
+    /// The bundled grids decide real stations as they are: Taipei Main
+    /// among shops, Taipei City Hall among offices, Yong'an Market among
+    /// homes, Houtong (the cat village) among sights.
+    func testTaiwansStationsServeWhatIsAroundThem() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("RailwayGameApp/Resources/RealWorld")
+        let population = try PopulationGrid(data: Data(contentsOf: root.appendingPathComponent("taiwan_population.json")))
+        let places = try PlaceGrid(data: Data(contentsOf: root.appendingPathComponent("taiwan_places.json")))
+        // OpenStreetMap's places of 2026-10-05, counted once each.
+        XCTAssertEqual(PlaceGrid.Kind.allCases.map { places.total(of: $0) }, [102_090, 8_614, 4_588, 6_511])
+        let totals = Dictionary(uniqueKeysWithValues: PlaceGrid.Kind.allCases.map { ($0, places.total(of: $0)) })
+        let stations: [(String, Double, Double, StationDemandKind)] = [
+            ("Taipei Main", 25.047_931, 121.517_005, .shopping),
+            ("Taipei City Hall", 25.041_135, 121.565_685, .office),
+            ("Yong'an Market", 25.002_895, 121.511_225, .residential),
+            ("Houtong", 25.087_019, 121.827_214, .scenic),
+        ]
+        for (name, latitude, longitude, expected) in stations {
+            let residents = try XCTUnwrap(population.people(within: 800, ofLatitude: latitude, longitude: longitude))
+            let kind = StationDemandKind.realWorld(
+                residents: residents,
+                places: places.places(within: 800, ofLatitude: latitude, longitude: longitude),
+                totals: totals,
+                population: population.total
+            )
+            XCTAssertEqual(kind, expected, name)
+        }
     }
 
     func testTheKindComesWithTheResidentsRidership() {

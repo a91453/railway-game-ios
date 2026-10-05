@@ -12,7 +12,8 @@ mirror) for every 0.25° tile with people in the population grid, one tile
 at a time with pauses, and keeps each answer in the tiles folder: a run
 that stops part way picks up where it left off, and a folder of earlier
 answers is used as it is. A place is its node, or the centre of its way or
-relation; one that several tiles return counts once. Standard library only.
+relation; one that several tiles return counts once, and one north or west
+of the population grid not at all. Standard library only.
 """
 import json
 import math
@@ -41,11 +42,13 @@ def query(box):
 
 
 def fetch(box, path):
+    """The tile's answer: kept from an earlier run, or asked for now."""
     if os.path.exists(path):
         try:
             return json.load(open(path))
         except ValueError:
             pass
+    time.sleep(1)  # A pause between questions to a shared server.
     url = OVERPASS_URL + '?' + urllib.parse.urlencode({'data': query(box)})
     for wait in (10, 20, 40, 60, 90, 120, 180):
         try:
@@ -91,8 +94,9 @@ def main(population_path, tiles_dir, out):
             if 'lat' not in point:
                 continue
             cell = (math.floor((north - point['lat']) / size), math.floor((point['lon'] - west) / size))
+            if cell[0] < 0 or cell[1] < 0:
+                continue  # North or west of the population grid.
             counts[current][cell] = counts[current].get(cell, 0) + 1
-        time.sleep(1)
     layers = {}
     for name, cells in counts.items():
         runs = []
