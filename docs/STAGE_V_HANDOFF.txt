@@ -1,3 +1,39 @@
+Stage V4d 最終保存點 — 2026-10-05（作者因額度要求立刻寫接手並保存）
+
+本節取代下方「執行中」舊狀態。已停止功能擴充；PR128仍draft、尚未完成完整最新CI驗收，不可直接當merge-ready。沒有merge PR／auto-merge／commit main；V4e仍等作者合併V4d。
+
+精確原始碼head：ede884903d9a53e1b4ffa1cfc0425f004b64aaa7，tree 以git核對；分支codex/stage-v4d-turnbacks，https://github.com/a91453/railway-game-ios/pull/128。全數source/test/golden/mapping/決策/roadmap已發布；本文件另以純文件commit保存，最終head見PR。
+工作目錄 /workspace/railway-game-ios-v4d；main worktree /workspace/railway-game-ios，origin/main=3fd1e9d25c855948d663a5e2bcfa294617b33e13，已透過第二parent整合到ede8849；原作者新增population/place資料與UI研究保留。私有/workspace/railway-reference-private固定25229af377c5e60a19254cba208a836ec39a8a10。Swift6.4.0=/workspace/swift/usr/bin；export PATH=/workspace/swift/usr/bin:$PATH。
+
+本輪完成並保存：
+1. Deadlock反向fallback逐一枚舉全列berths，保留正向原行為；ServicePath blocked adapter新增only。原最近main berth漏掉可用loop的重現已修，兩車實際完成。
+2. 中途換向／時刻表WIP保留；補未派出線路方向保護（memo Plan/Order中intermediateTurnbacks）、dead-end待避續行的反向出口保護。普通零距離抵站續行仍保留，不誤用passingContinuation的正距離限制。
+3. TurnbackTests共7項：手算中途折返、關閉控制／過長車、側線完整通過、blocked/短側線/短起站平台/第三車在junction fouling、原子等待與控制切換、rate0暫停恢復、未派出完整雙向保護。ReferenceWorld獨立signed Run實作。
+4. schema34可省略intermediateTurnbacks摘要，保留30–33；新增GoldenScenarios/intermediate-turnbacks.json。save10不變。既有GoldenScenarios/SaveFixtures/ReplayFixtures含README均未改。
+5. TurnbackPropertyTests新traffic.turnbacks，6case×4seed×32步=768；每步全狀態、計畫、held/預約/holder/deadlock、invariants、實際存讀接續、batch=second。加在campaigns-22，既有容量campaign未縮。
+6. RealWorldDemoTests新增玩家十分→菁桐→平溪折返並回十分；兩次中途站訪問、存讀、取得預約和完整結束都驗證，非真實班表宣稱。原demo測試保留。
+7. ARCHITECTURE決策63、RAILWAY_REFERENCE_MAPPING四來源分類/量綱/gap、ROADMAP已發布。多次調車／無平台倒車／全域最優解仍gap。
+
+VERIFIED 最新原始碼ede8849（後續僅交接文件，不修改source）：
+- Linux Swift6.4 warnings-as-errors build3.65s，/workspace/scratch/v4d-verified-build.log。
+- 相關filter：Core54項、1既有record skip、0failure（40.702s）；Presentation/RealWorldDemo9項0failure（28.133s），合計63項。/workspace/scratch/v4d-verified-focused.log。含7TurnbackTests、Deadlock、LineRoutePreference、golden match/portable/unknown version、ReferenceWorld所有golden、SavedGame、ReplayFixtures、全部RealWorldDemo。
+- campaigns-22兩項47.267s，runner48s、coverage exit0；/workspace/scratch/v4d-verified-campaign22.log。容量576步digest E974A083D5858C78不變；turnbacks768步digest E46C5001271E3303（56reversed、255waiting、16completed），新test27.932s。
+- shard selftest、diff --check，/workspace/scratch/v4d-shards-selftest.log。
+- 所有發布blob SHA／整tree與local一致；包括保留executable mode的shard script。git push無憑證，connector API已成功保存。
+
+UNVERIFIED／下一位必查：
+- 本機campaigns-11（既有DeadlockPropertyTests）仍執行中，/workspace/scratch/v4d-verified-campaign11.log；task runner exec session36450，若環境尚存可讀log或poll，未觀察完成前不稱通過。其前面的build/filter/campaign22皆已成功。若新環境不存在這些logs需重跑，不可假稱本機仍在。
+- ede8849 GitHub最新：CI37366745477 pending、iOS PR gate37366745347 pending、Wasm37366745339 queued。完整結果待查；本handoff純文件head需查其實際run，不套用舊head。PR127 full37345609975（head2002eca）iPhone/iPad VERIFIED成功且已作者合併；它不等於最新V4d full lane。最新full UI／實機仍UNVERIFIED。
+- 先追最新PR128所有CI，修紅燈push；繼續審查direction/route preference/scheduled-wait與反向續行交互安全，最新新增的方向保護目前本機專項／完整模型已過，不以單項代替全套。
+- 依CI實際shard時間保持約560s/shard目標，不改20min timeout、不縮campaign；本機不要重跑全套。既有fixtures含README不能改；不碰testflight.yml／secrets。
+
+失敗紀錄（均保留，不隱藏）：原反向測試nil候選失敗後才改枚舉；新golden初版final count1但createLine預設none，新增明確setLineTrainsInService指令修測試設置（未改舊fixture）；實景首跑unplace後rate0未發車，補setRate1024；新fouling初版以edge.length作end拋invalidContinuation，修端點合法end=nil。最終上述63項全過。舊來源e6長4732，非4414；新名義點車golden551s，實際3cars542s，兩者不能混用。
+
+下一位直接prompt：
+讀本文件最新節、AGENTS.md/CLAUDE.md/ARCHITECTURE，延續Stage V授權可改Core/獨立模型/新fixtures/schema/設計文件，保留工作樹並fetch。從PR128最新head接手，不重做已發布內容。先查本機campaign11（若logs尚存）與GitHub最新head CI/iOS/Wasm，紅燈修復push，不merge、不auto-merge。已完成63項focused与campaign22驗證的source為ede8849；純交接commit不改source，但CI報告仍附實際head/run。補足剩餘review與最新CI證據，必要full lane不能用gate代替。四來源固定25229af，Swift6.4only、warnings-errors、舊fixtures/README/timeout/gate/testflight限制照舊。每小段保存push；作者合併V4d後才開V4e。
+
+===== 以下為本輪較早記錄與原交接，最新以以上為準 =====
+
 Stage V4d 接續 — 2026-10-05（本節優先，精確發布 head 看 PR128）
 
 已還原 /workspace/railway-game-ios、/workspace/railway-game-ios-v4d、私有參考固定25229af；Swift6.4.0在/workspace/swift。原PR128 head153eb514已本機VERIFIED build26.22s、2tests4.196s；遠端CI37347953348的22campaigns+rest、iOS PR gate37347953499、Wasm37347953491皆success。PR127已由作者合併，head2002eca full37345609975 iPhone及iPad VERIFIED success。main更新3fd1e9d（作者合併#127/#129/#130），已整合V4d分支，agent未merge PR／未auto-merge。
