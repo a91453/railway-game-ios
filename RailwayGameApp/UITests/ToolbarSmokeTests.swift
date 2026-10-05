@@ -76,7 +76,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let route = app.buttons["line.route.-1.0.1"]
         for _ in 0..<6 where !route.isHittable { app.swipeUp() }
         XCTAssertTrue(route.waitForExistence(timeout: 10)); XCTAssertTrue(route.isHittable)
+        recordRouteUI("before opening route menu", in: app)
         route.tap()
+        recordRouteUI("after opening route menu", in: app)
         let platform = app.buttons["line.route.choice.-1.0.1.0"]
         tapMenuAction(platform, in: app)
         XCTAssertTrue(route.waitForExistence(timeout: 10))
@@ -90,7 +92,11 @@ final class LineRoutePreferenceUITests: XCTestCase {
     }
 
     private func tapMenuAction(_ button: XCUIElement, in app: XCUIApplication) {
-        XCTAssertTrue(button.waitForExistence(timeout: 10))
+        guard button.waitForExistence(timeout: 10) else {
+            recordRouteUI("missing menu action", in: app)
+            XCTFail("Missing route menu action: \(button.identifier)")
+            return
+        }
         XCTAssertTrue(button.isEnabled)
         XCTAssertTrue(button.isHittable)
         let frame = button.frame
@@ -100,5 +106,16 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(app.frame.contains(center))
         app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
             .withOffset(CGVector(dx: center.x - app.frame.minX, dy: center.y - app.frame.minY)).tap()
+    }
+
+    private func recordRouteUI(_ phase: String, in app: XCUIApplication) {
+        // Keep the actual AX frames in the full-lane log, including when a
+        // native menu fails to expose the expected SwiftUI identifier.
+        let hierarchy = app.debugDescription
+        print("Route menu diagnostics (\(phase)):\n\(hierarchy)")
+        let attachment = XCTAttachment(string: hierarchy)
+        attachment.name = "Route menu — \(phase)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }
