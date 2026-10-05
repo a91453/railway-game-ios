@@ -1,5 +1,7 @@
 Stage V 接手更新（2026-10-05；本節取代下方歷史狀態）
 
+工作途中作者已合併 #120（head 50da302）、#121 inventory 更新與 #122 實景車站資料研究；最新 main／本機 main 均更新至 ed3dad20f0ae0c67713a0f7a9efab7445aec3cbc。agent 未合併。UI runtime／分片時間修正 487188c 是合併 #120 後才發布，尚不在 main；同工作分支再整合 ed3dad2，只剩六個後續修正檔，另開 draft PR 驗證。下方提到 #120 draft 是其合併前歷史。#121／#122 文件已閱讀並保留；它們使用 2db0c5a 的研究不取代本階段作者指定的私有 25229af。
+
 本次作者要求先更新 main 並繼續接手 V4b。新環境原本沒有 repo／scratch 備份，已從遠端還原；main 現在是 d2de3d5f814af3a3ecc6d6cf33e7b334226acfaf。作者已合併 #117、#118、#119；agent 未合併、未開 auto-merge。保留 backup/stage-v4b-published 指向遠端已發布 WIP ada70c3a56ddc1a96f7528cb3fe2e5d7b4a7496f，工作分支仍是 codex/stage-v4b-route-preferences，整合新 main 而未重寫 WIP 歷史。安全 berth 全域成本／平手修正保留；StartSaveFlow diff 已去重。#118 實景資料及 #117 inventory 保留。
 
 #119 VERIFIED（GitHub head dd45b084）：CI run 37312125653 success（UI-only gate）；localization 37312125692 success；iOS run 37312125830 success，Simulator build、English／zh-Hant UI smoke tests 均 success。iPad／missing-button proof skipped；實機 UNVERIFIED。
@@ -18,7 +20,7 @@ Economy分片初跑使用尚未拆量門檻的執行檔：6–11所有逐步檢�
 V4b尚未完整驗收；新的iOSbuild／gate與全套SwiftCI要追到最新head，full-lane選路test／實機仍UNVERIFIED。V4c／V4d／V4e必須等作者合併前段才開工。
 
 可直接貼給下一位的 prompt
-先讀本文件最新節、CLAUDE.md、AGENTS.md，保留工作樹並 fetch 最新 main。延續 2026-10-05 Stage V 授權（取代 AGENTS Division of work）：GameCore／獨立模型／新增 fixtures／存檔及 golden 版本／決策61起／ROADMAP／mapping 均可改；其他規範照舊。V4b 已保留 WIP、整合 main d2de3d5、按手算修正 fastPassed，CI時間重分配至campaigns-20；新UI選路test第一次runtime失敗後改ID／觸控／等待並移正確full-lane class，修正後full runtime未跑；先查 #120 的最新 head 與所有 CI，紅燈修好並 push，不合併、不開 auto-merge。只用 Swift6.4；warnings-errors／相關filter／新慢campaign shard 本機跑；全套交CI。既有 GoldenScenarios／SaveFixtures／ReplayFixtures（含 README）不可改；不碰 testflight.yml 或提交任何金鑰／私人資料。四源每階段重讀固定私有25229af（不用ddff2be），來源語義／常數／平手忠實保留，必要Swift調整與gap明列；由玩家路網推導，不以站名或OSM id作規則。若作者尚未合併V4b，不開V4c。
+先讀本文件最新節、CLAUDE.md、AGENTS.md，保留工作樹並 fetch 最新 main。延續 2026-10-05 Stage V 授權（取代 AGENTS Division of work）：GameCore／獨立模型／新增 fixtures／存檔及 golden 版本／決策61起／ROADMAP／mapping 均可改；其他規範照舊。V4b 的 #120 已由作者合併，main ed3dad2；按手算修正 fastPassed 已在 main。後續UI／分片修正另開draft PR：CI時間重分配至campaigns-20；新UI選路test第一次runtime失敗後改ID／觸控／等待並移正確full-lane class，修正後full runtime未跑；先查後續 PR 最新 head 與所有 CI，紅燈修好並 push，不合併、不開 auto-merge。只用 Swift6.4；warnings-errors／相關filter／新慢campaign shard 本機跑；全套交CI。既有 GoldenScenarios／SaveFixtures／ReplayFixtures（含 README）不可改；不碰 testflight.yml 或提交任何金鑰／私人資料。四源每階段重讀固定私有25229af（不用ddff2be），來源語義／常數／平手忠實保留，必要Swift調整與gap明列；由玩家路網推導，不以站名或OSM id作規則。
 作者合併V4b後從新main開V4c：parallelTracks／交會站推導單線最大列車數與班距，查tra_track_sections.json、traSectionKey／inferMeetPassTimes／inferMeetRun及1.5min來源，公式決策、獨立模型、平溪demo驗收。其後作者合併才開V4d（中途換向／V2倒入側線，turnbacks.js／turnbackProgress／reverse penalty，明確停留預約），再合併才開V4e（App／GamePresentation地圖movement authority／死結車與互等位置，保留文字；缺查詢才補Core與測試，新UI只full lane）。每段一draft PR，手算＋獨立模型＋每步全狀態／批次＝逐秒campaign＋存讀＋無控制舊行為＋RealWorldDemo；shard約560秒內、job20min，不縮舊campaign或拉timeout。
 
 下方為原交付歷史；其中本機路徑、失敗及 pending CI 狀態以最新節為準。
