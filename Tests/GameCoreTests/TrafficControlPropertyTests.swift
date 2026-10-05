@@ -473,7 +473,7 @@ final class TrafficControlPropertyTests: XCTestCase {
     // MARK: - Comparison
 
     /// Every difference between the world and the model.
-    private static func differences(_ world: GameWorld, _ model: ReferenceWorld, tally: inout [String: Int]) -> [String] {
+    fileprivate static func differences(_ world: GameWorld, _ model: ReferenceWorld, tally: inout [String: Int]) -> [String] {
         var problems: [String] = []
         if world.clock.now.seconds != model.clockSeconds || world.clock.pendingTenths != model.pendingTenths {
             problems.append("second \(world.clock.now.seconds) vs \(model.clockSeconds)")
@@ -529,7 +529,7 @@ final class TrafficControlPropertyTests: XCTestCase {
     /// 4096 lies somewhere along it, traffic control on, and three to five
     /// trains of one to three cars, each at the forward berth of a
     /// different station, mostly in the western half.
-    private static func beginFollowing(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
+    fileprivate static func beginFollowing(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
         let minute = Int64(testCase.random.below(1_440))
         var world = try GameWorld(bounds: WorldBounds(width: 204_800, height: 16_384), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
         var model = ReferenceWorld(width: 204_800, height: 16_384, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
@@ -648,57 +648,6 @@ final class TrafficControlPropertyTests: XCTestCase {
         }
     }
 
-    /// Stage U2: services following the trains ahead of them on a long
-    /// line, on GameCore and on the reference side by side; every
-    /// operation's outcome and the whole state agree, invariants hold and
-    /// the world survives a save exactly.
-    func testFollowingMatchesTheReferenceAtEveryStep() throws {
-        var digest = Digest()
-        var tally: [String: Int] = [:]
-        let ran = try runCampaign("traffic.following", cases: 12) { testCase in
-            var (world, model) = try Self.beginFollowing(&testCase)
-            for step in 0..<60 {
-                let operation = Self.followingOperation(in: world, using: &testCase.random)
-                testCase.note("\(step): \(operation)")
-                let before = world
-                let outcome = Self.apply(operation, to: &world)
-                let expected = Self.apply(operation, to: &model)
-                guard outcome == expected else {
-                    return testCase.fail("\(operation): \(String(describing: outcome)) vs reference \(String(describing: expected))")
-                }
-                if outcome != nil, !operation.isCompound, world != before { return testCase.fail("refused \(operation) but changed the world") }
-                let name = "\(operation)".components(separatedBy: "(")[0]
-                tally["\(outcome.map { "\($0)".components(separatedBy: "(")[0] } ?? "ok") \(name)", default: 0] += 1
-                if case .advance = operation {
-                    for (old, new) in zip(before.trains, world.trains) {
-                        guard case .travellingToStop? = new.execution else { continue }
-                        let follows = world.trainHoldingRoute(of: new.id) != nil
-                        let followed = before.trainHoldingRoute(of: old.id) != nil
-                        if follows { tally["following a train ahead", default: 0] += 1 }
-                        if follows, case .waitingAtStop? = old.execution { tally["set off following", default: 0] += 1 }
-                        if follows, followed, Set(new.reservation).subtracting(old.reservation).isEmpty == false {
-                            tally["took more of its route", default: 0] += 1
-                        }
-                        if followed, !follows, case .travellingToStop? = old.execution { tally["took the rest of its route", default: 0] += 1 }
-                    }
-                }
-                var ignored: [String: Int] = [:]
-                let problems = Self.differences(world, model, tally: &ignored) + WorldInvariants.violations(in: world)
-                guard problems.isEmpty else { return testCase.fail(problems.joined(separator: "\n")) }
-                if let problem = WorldInvariants.roundTripProblem(of: world) { return testCase.fail(problem) }
-            }
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys]
-            digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
-        }
-        let summary = tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")
-        print("[digest] traffic.following \(digest.hex) (\(summary))")
-        assertVolume(ran == 12 * PropertySeeds.active.count, "every case ran")
-        assertVolume(tally["set off following", default: 0] > 15, "services set off following others")
-        assertVolume(tally["took more of its route", default: 0] > 10, "following trains take more of their routes")
-        assertVolume(tally["took the rest of its route", default: 0] > 10, "following trains take the rest of their routes")
-    }
-
     /// A world of this campaign's layouts after `operations` generated
     /// operations; for the save mutation campaign.
     static func generateWorld(_ testCase: inout PropertyCase, operations: Int) throws -> GameWorld {
@@ -797,6 +746,62 @@ final class TrafficControlPropertyTests: XCTestCase {
         assertVolume(tally["infrastructure refusals", default: 0] > 30, "held track stays")
         assertVolume(tally["released at the end of a route", default: 0] > 200, "routes end")
         assertVolume(tally["released behind a moving train", default: 0] > 200, "track behind moving trains is released")
+    }
+}
+
+/// Stage U2's `traffic.following`, a class of its own so that it runs on a
+/// shard of its own (campaigns-13): beside `traffic.reservation` the two
+/// no longer fitted one job.
+final class TrafficFollowingPropertyTests: XCTestCase {
+    /// Stage U2: services following the trains ahead of them on a long
+    /// line, on GameCore and on the reference side by side; every
+    /// operation's outcome and the whole state agree, invariants hold and
+    /// the world survives a save exactly.
+    func testFollowingMatchesTheReferenceAtEveryStep() throws {
+        var digest = Digest()
+        var tally: [String: Int] = [:]
+        let ran = try runCampaign("traffic.following", cases: 12) { testCase in
+            var (world, model) = try TrafficControlPropertyTests.beginFollowing(&testCase)
+            for step in 0..<60 {
+                let operation = TrafficControlPropertyTests.followingOperation(in: world, using: &testCase.random)
+                testCase.note("\(step): \(operation)")
+                let before = world
+                let outcome = TrafficControlPropertyTests.apply(operation, to: &world)
+                let expected = TrafficControlPropertyTests.apply(operation, to: &model)
+                guard outcome == expected else {
+                    return testCase.fail("\(operation): \(String(describing: outcome)) vs reference \(String(describing: expected))")
+                }
+                if outcome != nil, !operation.isCompound, world != before { return testCase.fail("refused \(operation) but changed the world") }
+                let name = "\(operation)".components(separatedBy: "(")[0]
+                tally["\(outcome.map { "\($0)".components(separatedBy: "(")[0] } ?? "ok") \(name)", default: 0] += 1
+                if case .advance = operation {
+                    for (old, new) in zip(before.trains, world.trains) {
+                        guard case .travellingToStop? = new.execution else { continue }
+                        let follows = world.trainHoldingRoute(of: new.id) != nil
+                        let followed = before.trainHoldingRoute(of: old.id) != nil
+                        if follows { tally["following a train ahead", default: 0] += 1 }
+                        if follows, case .waitingAtStop? = old.execution { tally["set off following", default: 0] += 1 }
+                        if follows, followed, Set(new.reservation).subtracting(old.reservation).isEmpty == false {
+                            tally["took more of its route", default: 0] += 1
+                        }
+                        if followed, !follows, case .travellingToStop? = old.execution { tally["took the rest of its route", default: 0] += 1 }
+                    }
+                }
+                var ignored: [String: Int] = [:]
+                let problems = TrafficControlPropertyTests.differences(world, model, tally: &ignored) + WorldInvariants.violations(in: world)
+                guard problems.isEmpty else { return testCase.fail(problems.joined(separator: "\n")) }
+                if let problem = WorldInvariants.roundTripProblem(of: world) { return testCase.fail(problem) }
+            }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
+        }
+        let summary = tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")
+        print("[digest] traffic.following \(digest.hex) (\(summary))")
+        assertVolume(ran == 12 * PropertySeeds.active.count, "every case ran")
+        assertVolume(tally["set off following", default: 0] > 15, "services set off following others")
+        assertVolume(tally["took more of its route", default: 0] > 10, "following trains take more of their routes")
+        assertVolume(tally["took the rest of its route", default: 0] > 10, "following trains take the rest of their routes")
     }
 }
 

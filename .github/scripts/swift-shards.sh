@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-12   the long property, differential and mutation
+#   campaigns-1 .. campaigns-14   the long property, differential and mutation
 #                                campaigns, named below; Swift 6.4 only
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -69,6 +69,21 @@ set -euo pipefail
 # Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
 # TrackResourcePropertyTests here, and the grid's position, movement, route
 # and topology campaigns from rest) with the grid's tests.
+#
+# Stages V1 to V3 added campaigns-10 to campaigns-12 and made
+# TrafficControlPropertyTests slower (1052 s of tests in run 37260822506);
+# after the V3 fixes campaigns-9 and campaigns-12 were cancelled at the
+# limit (run 37269381885). So traffic.following has a class of its own,
+# TrafficFollowingPropertyTests, and traffic.scheduledMeets runs cases 0 to
+# 8 of each seed in ScheduledTrafficPropertyTests and 9 to 17 in
+# ScheduledTrafficSecondHalfPropertyTests. Seconds locally (Swift 6.4, two
+# shards at a time):
+#   campaigns-9   TrafficControlPropertyTests 578
+#   campaigns-10  OccupiedRoutingPropertyTests 100
+#   campaigns-11  DeadlockPropertyTests 153
+#   campaigns-12  ScheduledTrafficPropertyTests 563
+#   campaigns-13  TrafficFollowingPropertyTests 558
+#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 563
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
@@ -83,10 +98,12 @@ classes_of() {
     campaigns-10) echo "OccupiedRoutingPropertyTests" ;;
     campaigns-11) echo "DeadlockPropertyTests" ;;
     campaigns-12) echo "ScheduledTrafficPropertyTests" ;;
+    campaigns-13) echo "TrafficFollowingPropertyTests" ;;
+    campaigns-14) echo "ScheduledTrafficSecondHalfPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 # The long-standing Swift 6.0 exclusion: the campaigns check logic, which does
 # not depend on the compiler, so only the current release runs them.

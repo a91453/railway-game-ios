@@ -49,6 +49,14 @@ extension GameWorld {
     struct TrafficPlan {
         var services: [TrafficService] = []
         var waits: [ScheduledTrafficWait] = []
+        /// `parallelTracks(between:and:)` for the stations next to each
+        /// other on a service, kept as the plan is worked out (the network
+        /// cannot change meanwhile).
+        var tracks: [TrafficSection: Int] = [:]
+    }
+    struct TrafficSection: Hashable {
+        var from: StationID
+        var to: StationID
     }
 
     /// Scheduled meets and overtakes, including future visits, in train,
@@ -215,14 +223,16 @@ extension GameWorld {
     /// it cannot make a service leave before its timetable (decision 20).
     func inferTrafficMeets(_ plan: inout TrafficPlan, only id: TrainID? = nil) {
         for index in plan.services.indices where id == nil || plan.services[index].train.id == id {
+            // sections[tracks === 1], derived from the graph: asked only of
+            // a point another service calls at, and once, since it walks the
+            // network (anchoring moves the times, never the points).
+            var sidings = [Bool?](repeating: nil, count: plan.services[index].points.count)
             for _ in 0..<8 {
                 let x = plan.services[index]
                 guard x.train.execution != nil else { break }
                 var candidates: [(point: Int, peer: Int, peerPoint: Int, time: Int64, shift: Int64, clearance: Int64)] = []
                 for j in 0..<(x.points.count - 1) {
                     let p = x.points[j], next = x.points[j + 1]
-                    // sections[tracks === 1], derived from the graph.
-                    guard trafficHasSiding(at: p, train: x.train) else { continue }
                     for peer in plan.services.indices where peer != index {
                         let y = plan.services[peer]
                         for k in 1..<y.points.count {
@@ -235,10 +245,13 @@ extension GameWorld {
                             let near = min(Self.trafficDifference(p.arrival, q.arrival), Self.trafficDifference(p.arrival, q.departure))
                             let previousCall = (0..<k).reversed().first { y.points[$0].calls }
                             guard let previousCall, near <= 1800 else { continue }
+                            if sidings[j] == nil { sidings[j] = trafficHasSiding(at: p, train: x.train) }
+                            guard sidings[j] == true else { continue }
                             let end = ((j + 1)..<x.points.count).first { x.points[$0].station == y.points[previousCall].station }
                             guard p.arrival < Self.saturating(GameTime(seconds: q.arrival), plus: margin).seconds,
                                   trafficConflict(x.points, from: j, to: end ?? x.points.count - 1,
-                                                  otherFrom: q.arrival, otherTo: y.points[previousCall].departure, exact: end != nil) else { continue }
+                                                  otherFrom: q.arrival, otherTo: y.points[previousCall].departure, exact: end != nil,
+                                                  tracks: &plan.tracks) else { continue }
                             let target = Self.saturating(GameTime(seconds: q.arrival), plus: margin).seconds
                             let shift = target - p.departure
                             guard shift > 0, shift <= 300,
@@ -289,7 +302,8 @@ extension GameWorld {
                         guard let nextCall, p.arrival > q.departure - margin else { continue }
                         let start = (0..<j).reversed().first { x.points[$0].station == peer.points[nextCall].station }
                         guard trafficConflict(x.points, from: start ?? 0, to: j,
-                                              otherFrom: peer.points[nextCall].arrival, otherTo: q.departure, exact: start != nil) else { continue }
+                                              otherFrom: peer.points[nextCall].arrival, otherTo: q.departure, exact: start != nil,
+                                              tracks: &plan.tracks) else { continue }
                         let target = Self.saturating(GameTime(seconds: p.arrival), plus: margin).seconds
                         guard target - q.departure <= 300,
                               !plan.waits.contains(where: { $0.station == p.station && ($0.train == x.train.id || $0.train == peer.train.id) }),
@@ -307,14 +321,18 @@ extension GameWorld {
     /// inferMeetRun/conflictOn: inspect every single-track interval in
     /// the common run. Exact common endpoints use distance interpolation;
     /// an unmatched endpoint uses the source's conservative time envelope.
-    func trafficConflict(_ points: [TrafficPoint], from a: Int, to b: Int, otherFrom: Int64, otherTo: Int64, exact: Bool) -> Bool {
+    func trafficConflict(_ points: [TrafficPoint], from a: Int, to b: Int, otherFrom: Int64, otherTo: Int64, exact: Bool,
+                         tracks: inout [TrafficSection: Int]) -> Bool {
         guard a < b else { return false }
         let length = points[(a + 1)...b].reduce(Int64(0)) { $0 + $1.distance }
         var distance: Int64 = 0
         for i in a..<b {
             let nextDistance = distance + points[i + 1].distance
             defer { distance = nextDistance }
-            guard parallelTracks(between: points[i].station, and: points[i + 1].station) == 1 else { continue }
+            let section = TrafficSection(from: points[i].station, to: points[i + 1].station)
+            let count = tracks[section] ?? parallelTracks(between: section.from, and: section.to)
+            tracks[section] = count
+            guard count == 1 else { continue }
             let y0 = exact && length > 0 ? Self.trafficInterpolate(otherFrom, otherTo, nextDistance, length) : min(otherFrom, otherTo)
             let y1 = exact && length > 0 ? Self.trafficInterpolate(otherFrom, otherTo, distance, length) : max(otherFrom, otherTo)
             if (i == a ? points[a].departure : points[i].arrival) < y1 && y0 < points[i + 1].arrival { return true }
@@ -524,7 +542,9 @@ extension GameWorld {
     static let trafficMismatchPenalty: Int64 = 51_200
 
     func scheduledPath(for train: Train, from start: TrainPosition, to call: StationID, plan: TrafficPlan) -> (path: TrainPath, seconds: Int64?)? {
-        guard let execution = train.execution, let service = plan.services.first(where: { $0.train.id == train.id }),
+        // Without a wait nothing is costed or retimed, so there is no
+        // scheduled way to work out.
+        guard !plan.waits.isEmpty, let execution = train.execution, let service = plan.services.first(where: { $0.train.id == train.id }),
               let normal = path(from: start, toStation: call, length: train.length) else { return nil }
         let stop: Int
         if case .waitingAtStop = execution { stop = train.call(after: execution.stop, cycle: execution.cycle)?.stop ?? execution.stop }

@@ -448,6 +448,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 解除需要對方實際到站／通過加 margin，誤點繼續等待；V1／V2 保留。計畫不存檔，版本 9 只記必要實際事件並遷移舊檔；沒有修改 Station／ScheduledStop。列車面板新增英語／繁體交會與待避文字。
   - 手算／逐秒比較／誤點／門檻／ID 平手／存讀；schema 31 的兩份新短 golden、兩份版本 9 fixture；獨立差分 `traffic.scheduledMeets`（12 case ×4 seeds、1,728 操作），新增 `campaigns-12`。既有 campaign 未縮小，既有三種 fixture JSON 未修改。
   - 2026-10-05 修正（決策 59 第 11–13 點）：排定路線只在能整條取得時採用，否則照沒有計畫的規則（重複來回的服務不再永久停住）；不等等不到的車（V2 看得到）；計畫每一步從列車狀態推導（推進切法不影響結果）；待避站續行改走替代路時恢復最快曲線。
+  - 2026-10-05 CI 時間：#111 合併後 `campaigns-9`、`campaigns-12` 超過 20 分鐘被取消。計畫推導不再做結果用不到的工作（結果不變）；`traffic.following` 移到 `campaigns-13`，`traffic.scheduledMeets` 的後半 case 移到 `campaigns-14`。
   - **V4 Deferred**：每段路徑／股道／月台指定與單線容量重算（決策 22）。需要換向的折返／調車、地圖授權範圍與死結標示、E3 也不在 V3。
 
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。

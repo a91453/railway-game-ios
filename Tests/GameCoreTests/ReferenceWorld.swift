@@ -164,6 +164,9 @@ struct ReferenceWorld: Equatable {
 
         var network: [Key: TrainPath?] = [:]
         var scheduled: ScheduledPlan?
+        /// Decision 59: the last plan worked out, with what it was worked
+        /// out from.
+        var scheduledFrom: (key: ScheduledKey, plan: ScheduledPlan)?
         struct Order: Hashable {
             var stations: [StationID]
             var turns: Set<Int>
@@ -583,7 +586,7 @@ struct ReferenceWorld: Equatable {
             }
             // Decision 59: the plan as this second finds the world.
             routeMemo.scheduled = nil
-            routeMemo.scheduled = scheduledPlan()
+            routeMemo.scheduled = keptScheduledPlan()
             recordScheduledVisits(routeMemo.scheduled!, before: nil)
             for i in trains.indices {
                 dwell(i, second: second)
