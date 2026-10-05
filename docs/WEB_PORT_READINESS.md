@@ -2,10 +2,10 @@
 
 目的：讓同一份 Swift GameCore 未來能在瀏覽器執行，由 Babylon.js 繪製 3D 世界。這是準備規格，已加入 [最小 Wasm 探針](../Web/WasmProbe/README.md)，驗證核心編譯與瀏覽器 Worker 執行；尚未實作可玩的 Web App、持續執行的指令 bridge 或 renderer。
 
-這是把**我們自己的 Swift GameCore** 編譯成 Wasm 的準備，不是移植網站：
+這份準備目前以**我們自己的 Swift GameCore** 編譯成 Wasm 為主；網站內容的直接移植或包裝仍可由後續實作採用：
 
 - 主要產品是原生的 iPhone／iPad 遊戲。
-- 不用 WKWebView 把作者的網站包成 App（作者 2026-09 的決定：要原生地玩遊戲）。
+- WKWebView 包裝目前不是既有 baseline，但這只是歷史產品選擇，不是移植閘門；若後續功能適合，仍可評估整體或局部採用。
 - 作者網站的邏輯照 [WEB_REFERENCE_STUDY](WEB_REFERENCE_STUDY.md) 的 faithful-port 規則翻成 Swift，進 GameCore。Web 宿主與原生 App 跑的是同一份核心。
 
 ## 已有的基礎
@@ -65,7 +65,7 @@ Web/npm dependencies 不引入 repository root、GameCore 或 native App；根�
 - 第一版可使用 UTF-8 JSON bridge；明確定義 buffer 所有權、配置、長度、釋放與錯誤。不要把 Swift struct 記憶體 layout 當穩定 ABI。
 - `RailwaySnapshot` 目前是 Swift 值型別，沒有直接的 Web wire encoding。首次 renderer 實作時由 adapter 匯出需要的資料，不必改寫核心模擬型別或直接暴露整個 Train。
 - HUD 與線路查詢獨立於繪圖資料。未實作的地形、號誌、乘客與城市資料不先填假值，亦不當成目前功能。
-- 參考網站的取樣式定位（依時刻表與事先算好的等待算出位置，見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md)）不搬到 Web 宿主。列車位置一律由 GameCore 推進，宿主只插值顯示。
+- 參考網站的取樣式定位（依時刻表與事先算好的等待算出位置，見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md)）目前未整合進 Web 宿主；這是現況紀錄，不是移植閘門。現有 baseline 仍由 GameCore 推進、宿主插值顯示。
 
 ## 3D 座標與動畫
 
