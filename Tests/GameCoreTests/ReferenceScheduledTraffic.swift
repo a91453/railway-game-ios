@@ -2,7 +2,7 @@
 
 /// V3 independent model: network runs are relaxed to each berth, station
 /// visits are laid out by walking the resulting runs, profiles use native
-/// UInt128 arithmetic, and pass time inversion scans seconds. No GameWorld,
+/// UInt128 arithmetic, and pass time inversion brackets exponentially. No GameWorld,
 /// RunningCurve or production planner/routing function is called here.
 extension ReferenceWorld {
     struct PlannedVisit {
@@ -77,6 +77,9 @@ extension ReferenceWorld {
     func hasScheduledLoop(_ p: PlannedVisit, _ train: Train) -> Bool {
         let next = p.call ? p.stop + 1 : p.stop
         guard train.timetable.indices.contains(next) else { return false }
+        if p.call, p.stop == 0, train.service?.stop == 0,
+           networkStops(of: train).contains(p.station),
+           case .onEdge(let traversal, _)? = train.position, traversal.edge.number == p.run.edge { return false }
         let edge = networkEdges[p.run.edge]!
         let incoming = p.run.forward ? edge.from : edge.to
         let outgoing = p.run.forward ? edge.to : edge.from

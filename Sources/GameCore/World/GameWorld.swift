@@ -1345,6 +1345,7 @@ public struct GameWorld: Equatable, Sendable {
             // it, kept for every decision the step makes.
             memo.directions.stepTraffic = nil
             let traffic = trafficPlan(memo: &memo.directions)
+            let trafficKey = memo.directions.traffic?.key
             memo.directions.stepTraffic = traffic
             recordTrafficVisits(traffic, before: nil)
             if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
@@ -1378,7 +1379,17 @@ public struct GameWorld: Equatable, Sendable {
                let freed = secondsUntilARouteFrees(held, from: start, within: span, memo: &memo) {
                 span = freed
             }
-            if !traffic.waits.isEmpty { span = 1 }
+            if !traffic.waits.isEmpty {
+                span = 1
+            } else if span > 1, trafficPlanKey() != trafficKey {
+                // A departure or a visit in this step changed what the plan
+                // is derived from: when the plan it gives schedules a wait,
+                // the next second works it out again, as a step every second
+                // would (decision 59, point 13).
+                memo.directions.stepTraffic = nil
+                if !trafficPlan(memo: &memo.directions).waits.isEmpty { span = 1 }
+                memo.directions.stepTraffic = traffic
+            }
             let beforeTraffic = traffic.waits.isEmpty ? nil : trains
             if moveTrains(from: start, for: span) {
                 changed = true
