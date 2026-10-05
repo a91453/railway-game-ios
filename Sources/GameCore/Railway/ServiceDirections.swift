@@ -13,6 +13,7 @@ extension GameWorld {
             let calls: [Call]
             let length: Int64
             let repeats: Bool
+            var routes: [LineRoutePreference?] = []
         }
         /// A running service's way on through its plan: the call it is at
         /// (or bound for) and where it stands for it.
@@ -59,7 +60,8 @@ extension GameWorld {
             let next = stop + 1 == plan.calls.count ? 0 : stop + 1
             if next == 0 && !plan.repeats { break }
             let from = plan.calls[stop].reverses ? turnedRound(place) : place
-            guard let path = path(from: from.position, toStation: plan.calls[next].station, length: plan.length) else { break }
+            let specified = plan.routes.indices.contains(stop) ? plan.routes[stop].flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) } : nil
+            guard let path = specified ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length) else { break }
             directions.formUnion(self.directions(of: path, from: from))
             place = placement(from, after: path)
             stop = next
@@ -90,7 +92,8 @@ extension GameWorld {
     private func serviceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         guard let execution = train.execution, var start = train.placement else { return [] }
         let plan = DirectionMemo.Plan(calls: train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) },
-                                      length: train.length, repeats: train.timetablePeriod != nil)
+                                      length: train.length, repeats: train.timetablePeriod != nil,
+                                      routes: hasRoutePreferences(train) ? train.timetable.indices.map { routePreference(for: train, from: $0, to: ($0 + 1) % train.timetable.count) } : [])
         var directions: Set<TrackTraversal> = []
         let stop: Int
         switch execution {
@@ -138,7 +141,7 @@ extension GameWorld {
                         DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
                     }
                     for length in lengths {
-                        directions.formUnion(plannedDirections(.init(calls: calls, length: length, repeats: true), memo: &memo))
+                        directions.formUnion(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil]), memo: &memo))
                     }
                 }
             }

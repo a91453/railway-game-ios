@@ -140,7 +140,7 @@ extension GameWorld {
     /// splits the run; no shunting or new reversal is introduced.
     func trafficPoints(of train: Train, cycle: Int64) -> [TrafficPoint]? {
         let first = train.timetable[0]
-        var best: (points: [TrafficPoint], distance: Int64)?
+        var best: (points: [TrafficPoint], distance: Int64, matched: Int)?
         for berth in berths(of: first.station, length: train.length) {
             var placement = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: train.length)
             // The first platform contains the whole body.
@@ -148,12 +148,13 @@ extension GameWorld {
                                        arrival: train.scheduledArrival(of: 0, cycle: cycle).seconds,
                                        departure: train.scheduledDeparture(of: 0, cycle: cycle).seconds,
                                        calls: true, berth: berth, distance: 0, onward: 0)]
-            var total: Int64 = 0
+            var total: Int64 = 0, matched = 0
             var valid = true
             for stop in 1..<train.timetable.count {
                 if train.timetable[stop - 1].reverses { placement = turnedRound(placement) }
                 let target = train.timetable[stop].station
-                guard let path = path(from: placement.position, toStation: target, length: train.length) else { valid = false; break }
+                guard let path = plannedPath(for: train, from: placement.position, departing: stop - 1, to: stop) else { valid = false; break }
+                if let route = routePreference(for: train, from: stop - 1, to: stop), preferredPath(from: placement.position, preference: route, length: train.length) == path { matched += 1 }
                 let duration = train.scheduledArrival(of: stop, cycle: cycle).seconds - train.scheduledDeparture(of: stop - 1, cycle: cycle).seconds
                 // No interpolated points without a physically buildable run.
                 let curve = duration > 0 && duration <= RunningCurve.maximumSeconds
@@ -194,7 +195,7 @@ extension GameWorld {
                 guard !overflow else { valid = false; break }
                 total = sum
             }
-            if valid, total < best?.distance ?? .max { best = (points, total) }
+            if valid, matched > (best?.matched ?? -1) || matched == best?.matched && total < (best?.distance ?? .max) { best = (points, total, matched) }
         }
         return best?.points
     }
@@ -403,39 +404,47 @@ extension GameWorld {
                 for (j, p) in b.points.enumerated() {
                     if let i = a.points.firstIndex(where: { $0.station == p.station }) { common.append((i, j)) }
                 }
-                guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
-                for n in 0..<(common.count - 1) {
-                    let p = common[n], q = common[n + 1]
-                    guard q.ai == p.ai + 1, q.bi == p.bi + 1 else { continue }
-                    let d0 = a.points[p.ai].departure - b.points[p.bi].departure
-                    let d1 = a.points[q.ai].arrival - b.points[q.bi].arrival
-                    guard d0 != 0, d1 != 0, (d0 < 0) != (d1 < 0) else { continue }
-                    // Same physical corridor, in the same direction.
-                    guard a.points[p.ai].berth.traversal == b.points[p.bi].berth.traversal,
-                          a.points[q.ai].berth.traversal == b.points[q.bi].berth.traversal else { continue }
-                    let slow = d0 < 0 ? ia : ib, fast = d0 < 0 ? ib : ia
-                    let l = plan.services[slow], f = plan.services[fast]
-                    guard l.train.execution != nil else { continue }
-                    let perf = l.train.performance
-                    let need = 30 + (perf.topSpeed * 1000 + perf.braking - 1) / perf.braking
-                    var look: Int64 = 0
-                    for c in stride(from: n, through: 0, by: -1) {
-                        let lc = d0 < 0 ? common[c].ai : common[c].bi, fc = d0 < 0 ? common[c].bi : common[c].ai
-                        if c < n, (common[c + 1].ai != common[c].ai + 1 || common[c + 1].bi != common[c].bi + 1) { break }
-                        look += l.points[lc + 1].distance
-                        if look > 25 * 64_000 { break }
-                        let st = l.points[lc], fst = f.points[fc]
-                        let dep = Self.saturating(GameTime(seconds: fst.departure), plus: 30).seconds
-                        guard fst.arrival - st.arrival >= need, dep - st.arrival <= 600,
-                              dep > st.departure, trafficHasSiding(at: st, train: l.train),
-                              !plan.waits.contains(where: { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep })
-                        else { continue }
-                        guard overtakeTrackFree(&plan, service: slow, at: lc, departure: dep) else { continue }
-                        let proposal = Proposal(slow: slow, fast: fast, point: lc, fastPoint: fc, departure: dep, need: need)
-                        if let old = proposals.firstIndex(where: { $0.slow == slow && $0.point == lc }) {
-                            if proposals[old].departure < dep { proposals[old] = proposal }
-                        } else { proposals.append(proposal) }
-                        break
+                let physical = hasRoutePreferences(a.train) || hasRoutePreferences(b.train)
+                let runs = physical ? preferredTrafficCommon(a, b) : [common]
+                for common in runs {
+                    guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
+                    for n in 0..<(common.count - 1) {
+                        let p = common[n], q = common[n + 1]
+                        guard q.ai == p.ai + 1, q.bi == p.bi + 1 else { continue }
+                        let d0 = a.points[p.ai].departure - b.points[p.bi].departure
+                        let d1 = a.points[q.ai].arrival - b.points[q.bi].arrival
+                        guard d0 != 0, d1 != 0, (d0 < 0) != (d1 < 0) else { continue }
+                        // Same physical corridor, in the same direction.
+                        if physical {
+                            guard preferredTrafficSharesCorridor(a, from: p.ai, to: q.ai, b, from: p.bi, to: q.bi) else { continue }
+                        } else {
+                            guard a.points[p.ai].berth.traversal == b.points[p.bi].berth.traversal,
+                                  a.points[q.ai].berth.traversal == b.points[q.bi].berth.traversal else { continue }
+                        }
+                        let slow = d0 < 0 ? ia : ib, fast = d0 < 0 ? ib : ia
+                        let l = plan.services[slow], f = plan.services[fast]
+                        guard l.train.execution != nil else { continue }
+                        let perf = l.train.performance
+                        let need = 30 + (perf.topSpeed * 1000 + perf.braking - 1) / perf.braking
+                        var look: Int64 = 0
+                        for c in stride(from: n, through: 0, by: -1) {
+                            let lc = d0 < 0 ? common[c].ai : common[c].bi, fc = d0 < 0 ? common[c].bi : common[c].ai
+                            if c < n, (common[c + 1].ai != common[c].ai + 1 || common[c + 1].bi != common[c].bi + 1) { break }
+                            look += l.points[lc + 1].distance
+                            if look > 25 * 64_000 { break }
+                            let st = l.points[lc], fst = f.points[fc]
+                            let dep = Self.saturating(GameTime(seconds: fst.departure), plus: 30).seconds
+                            guard fst.arrival - st.arrival >= need, dep - st.arrival <= 600,
+                                  dep > st.departure, trafficHasSiding(at: st, train: l.train),
+                                  !plan.waits.contains(where: { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep })
+                            else { continue }
+                            guard overtakeTrackFree(&plan, service: slow, at: lc, departure: dep) else { continue }
+                            let proposal = Proposal(slow: slow, fast: fast, point: lc, fastPoint: fc, departure: dep, need: need)
+                            if let old = proposals.firstIndex(where: { $0.slow == slow && $0.point == lc }) {
+                                if proposals[old].departure < dep { proposals[old] = proposal }
+                            } else { proposals.append(proposal) }
+                            break
+                        }
                     }
                 }
             }

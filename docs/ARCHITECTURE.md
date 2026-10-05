@@ -2729,7 +2729,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 3. 窗口 `[慢車到站 − 30, 待避出發 + 30]`，其他車 `departure < lo` 或 `arrival > hi` 才排除，端點包含在內。秒 ×1；負的 lo 合法，hi 飽和避免 Int64 溢位。
 4. 來源 `moves` 是同「前站 > 後站｜停靠／通過」派過的所有路線，`dirs` 是各候選停車股道被哪些路線擋住。遊戲用相鄰名義訪站的 StationID、停靠／通過種類與資源集合表達；保持所有已知路線選項。來源 `reach` 的 OR mask 直接翻成 UInt32：只要有一個其他車路線組合可能覆蓋全部候選股道就拒絕，不能只挑對自己有利的一種。0 股拒絕，超過 30 股也照來源拒絕。
 5. 同窗口裡已有 `_plannedDwell` 的車，以到站時間、再以車次先後優先：較早者使新待避拒絕，較晚者忽略。遊戲對應 `.overtake` waits，車次依既有 TrainID 順序（決策 59）；proposal 接受後更新的 points／waits 在第二次檢查立即生效。
-6. `attachOvertakePeers`／`motion.sidingsFor` 不只關乎畫面：選進站路時列車必須真停到避開窗口內其他車進出資源的 berth。`scheduledBerthPath` 使用同一窗口及各車自己的名義實體路（第一站已停好的車使用實際位置），全車身與 span／限界節點均不得妨礙它們；照 `servedFirst` 忽略較晚／相同到站較大車次的已排定待避，避免互等對方選股。找不到偏好路或無法整條取得，依決策 59 第 11 點回 V1／V2；不提交半條路，不改 ScheduledStop 或 Station。
+6. `attachOvertakePeers`／`motion.sidingsFor` 不只關乎畫面：選進站路時列車必須真停到避開窗口內其他車進出資源的 berth。`scheduledBerthPath` 使用同一窗口及各車自己的名義實體路（第一站已停好的車使用實際位置），全車身與 span／限界節點均不得妨礙它們；照 `servedFirst` 忽略較晚／相同到站較大車次的已排定待避，避免互等對方選股。可用 berth 集合交回既有一次廣義成本搜尋，保留 V3 成本及逐步平手；不能逐股取路後只比幾何距離。找不到偏好路或無法整條取得，依決策 59 第 11 點回 V1／V2；不提交半條路，不改 ScheduledStop 或 Station。
 7. `noTrack` 是來源統計欄位，遊戲沒有來源的規劃統計面板，因此不新增權威計數器；規則上的拒絕完整保留。
 
 **必要調整及理由：**
@@ -2747,6 +2747,35 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **四份來源：**網站是函式與物理換股來源；Ci snapshot 只有快慢車／越行說明與一次 `MIN_TRAIN_GAP` 定義；RailwayCore §7 只有成本結構／設定符號，沒有此股道窗口原始碼；Taipei GTA source 的 MRT 是雙線往返、同線車距與煞車限制，沒有此待避窗口，後三者對 V4a 列為 gap。完整對照見 RAILWAY_REFERENCE_MAPPING 與 PR。
 
 **後續順序：**V4b 指定逐段路徑／股道／月台與存檔 10、schema 32；V4c 單線容量；V4d 中途換向與倒進側線；V4e 授權範圍與死結圖示。每階段各一個 draft PR，前階段經作者合併後才從新的 main 開下一階段；agent 不合併、不啟用 auto-merge。
+
+### 61. 線路與服務模式共用的逐段實體路徑偏好（Stage V4b）
+
+來源固定為私有參考 main `25229af`。`rail-3d/physical/dispatch.json` 的 `plans[trainKey].pathIds` 是逐段實體路徑，`network.json.paths.walk` 以有向 ways 範圍組成路徑；`assignmentBasis: inferred`、`conflictPolicy: scheduled-hold`，另有 arrival／departure holds、departureHolds、handoffs 與 groups。這些是來源資料的語義，不把台鐵站名、車次、OSM id 或現實派車表寫成遊戲規則輸入。四份來源的查核與對照見 RAILWAY_REFERENCE_MAPPING 的 V4b 表。
+
+1. **儲存位置**：新增 `LineRoutePreference`，`from`／`to` 是線路停站索引（交路也用線路索引），`tracks` 是包含起點邊與終點邊的有向股道 walk，`platform` 是目的站的 `TrackPlatform`（station／edge／start／end）。線路本線 `ServiceLine.routePreferences` 與每個 `LinePattern.routePreferences` 各有自己的偏好，所有同服務模式班次共用。空 walk 只指定月台，路徑仍自動；空偏好陣列全部自動。沒有往 ScheduledStop 或 Station 加資料（決策 20）。
+2. **有效性與原子性**：設定指令先檢查線路、交路，再檢查有向相鄰停靠對；快車的相鄰停靠可以跨越本線數段。往返、環線兩向分開設定。同一對不得重複；目的月台的 station 必須是 `stops[to]`；股道 id 從 1 起，月台 start≥0、end>start，非空 walk 的最後邊必須是月台邊。任何錯誤不改世界（`invalidLineRoutePreference`）。拓撲不連通、月台已拆或股道不存在的偏好可保留：它是計畫，不是基礎設施，讀檔不能因此丟掉玩家重建後仍可用的計畫。
+3. **取得路徑**：月台須仍存在且停得下全列。固定 walk 從列車所在有向邊的第一個可用出現位置開始，逐對檢查既有 transitions，不逆向即刻回頭，終點為該月台 V1 berth。距離逐段用 checked Int64 加法，保留真實幾何長度。月台偏好用 V1／V3 一次尋路的 eligible berth 集合，同距離仍取原本逐步股道順序。不能取得偏好就使用原本幾何尋路。
+4. **初始月台／朝向**：推導 lineJourney、實際 trip 和交通名義路徑時，先比較可滿足的逐段偏好數，多者先；同數仍比較原本來回秒數（交通名義路徑比較總距離），再保留原本初始 berth／朝向順序。必要理由：較長指定路不能被另一個起點的較短自動路徑蓋過。無偏好時分數都為 0，舊行為與平手完全不變。
+5. **執行優先**：V3 排定交會／待避的路徑與時間仍先嘗試；之後嘗試實體偏好，**只有可原子取得整條授權時採用**。拿不到就照決策 59 第 11 點回到原本 V1／U2／V2 路徑、跟車、替代股道或等待；不把偏好路當成永久硬限制，不拿一半偏好授權。交通控制關閉時指定可用 walk，但不建立預約；沒有偏好的關閉控制行為不變。
+6. **待避後續行與查詢**：在 V2 passing place 可由固定 walk 的後段重新接回，仍須整條授權；取得時以最快曲線續行，否則按原本 V1／V2。held／deadlock 查詢也檢查完整可用的偏好，不能把有可用偏好路的車報成互等。預約依舊保護 body、span 與限界節點。
+7. **名義進出／方向表**：ScheduledTraffic 的各站與通過時刻從指定路徑推導。V4a 的 moves／dirs 用這份 walk 到中間站 berth 的前綴與可重接後段，替代待避 berth 才回局部 V1 搜尋；不重新拿更短的通過路覆蓋指定走廊。方向保護的 memo key 含各段偏好，保護已放置線路與執行服務的全計畫。指定待避股已是名義 berth 時，若同向另一列的同站前後走廊使用不同股道，該名義 berth 也列候選，仍完整檢查 body／moves／dirs。來源是單向班表，遊戲往返重複訪同站；有偏好服務的共站序分成各折返點之間的有向 run，局部走廊用實際正向 head span 的正長度重疊辨識（不同月台可在站外匯合）。無偏好表仍是 V4a 的路徑與順序。
+8. **變更中的班次**：只有整份執行時刻表的站序等於當前線路／交路的完整往返或該環線方向，才依索引套用當前偏好。刪線／刪交路／改站序後，原班次仍按自己的時刻表跑完，不誤套另一段。改站序若使已有偏好無效，原子拒絕，先清除相關偏好；切換環線模式清除本線偏好，因其有向段集合改變。
+9. **月台成本**：沿用決策 59 的 station 400 m、mismatch 800 m 廣義成本及 detour 400 m；明確偏好是整條取路的優先項，不虛構另一組加權常數。RailwayCore §7 列出 `rail_shorter_platform_penalty`、`rail_longer_platform_penalty`／platformMismatchCost，但 clean pack 只有編譯符號與建議公式，沒有可讀的實作或預設值。短月台沿用 V1 全列可停限制，過長月台不加猜測成本。
+10. **畫面**：每個服務模式列出各有向路段，可選自動、只指定月台、或固定從各起站 berth 到該月台的有向 walk。選項由已建路網推導，按目的平台、起站 berth、目的 berth 順序去重；不依賴現實地名或股道資料。股道編號與箭頭讓玩家辨識實體路徑，設定由 GameSession 呼叫世界指令，無第二份權威計畫。新增字串有 zh-Hant 台灣用語；新增 UI 測試只放 full lane。
+11. **存檔／可攜契約**：版本 **10**，9→10 由線路／交路 validated decoder 將缺少 routePreferences 遷移為空陣列；explicit null 拒絕。非空陣列才編碼；有向邊寫 `{edge, forward}`，月台寫 `{station, edge, start, end}`。新增 `SaveFixtures/v10-line-route-preferences.json`。golden schema **32** 新增設定指令與線路／交路偏好觀測，繼續讀 30／31；新增 `GoldenScenarios/line-route-preference.json` 手算 3072／3584 單位、20／21 秒、來回 281 秒。新增 `ReplayFixtures/line-route-preferences.json`；checksum 只在非空偏好時加入相應行，舊 checksum 串不變。所有既有三種 fixture 檔案未修改。
+12. **交叉驗證**：ReferenceWorld 用 signed runs、絕對距離窗口及另一份設定／取路／班次匹配實作，不呼叫 GameWorld 或 production planner；每步比完整狀態、授權、held、deadlock、計畫、存讀，所有 advance 另比批次＝逐秒。`traffic.lineRoutes` 新 campaign（4 個單列車 case×4 seeds×20 步，加 2 個雙列車／完整往返 case×4 seeds×45 步，共 680 步），獨立 campaigns-19，既有 campaign 不縮減。實景圖新增猴硐指定原有月台的實際停靠驗收；原平溪／宜蘭／深澳發車與無永久停住測試保留。
+
+**必要調整及理由（逐來源）**：
+
+- dispatch 的逐車 pathIds 改為作者要求的線路／服務模式共用 walk；來源的 path→way→node 表改成遊戲有向 edge 與平台，距離 m×64、秒×1、車長 1024／車，整數 checked 加法代替浮點 lengthM。不能把真實 id 當成玩家路網 id。
+- `planSameDirectionOvertakes` 來源以單向班表的唯一共站排序與方向判定；有逐段偏好的遊戲服務是完整往返，不能讓回程重複站使去程失去待避。沿現有 reverses 點分向；固定月台不同時比同向實體 span 重疊，不能以月台邊相同當走廊相同。已指定待避股若安全，可留在原股等待，避免為了待避強迫換回正線。提案門檻、平手、重建順序與空股檢查均沿用；沒有偏好的既有 V4a 走原分支。
+- arrival／departure holds 仍由 V3 TrafficPlan 與 actual visits 推導，不保存 dispatch 表的派生秒數，避免讀檔後使用過期衝突計畫；scheduled-hold 保留完整預約與實際到站解除語義，偏好不可用退 V1／V2 是作者既有決策 59 第 11 點。
+- handoffs 的 matching-timetable-turnaround 用既有一台車跑往返、末站折返與下一趟派車；groups 的資料來源／日期分組沒有遊戲對應資料，不創造現實日期與車次鍵。需要中途換向／調車由 V4d 接續。
+- `rail-platform.resolvePlatform` 的 live feed 資料新鮮度與最新事件／矛盾拒選不是玩家設定：遊戲選已建實體月台，驗證目的站與路段，已拆月台回自動，不移植 Date.now 或網路資料到 GameCore。只有此事件歸屬語義是 adapted，feed 的 180000 ms 期限列 gap，不能稱已移植即時月台。
+- `stationTrackRef` 是畫面 nearest-track anchor；`sharedTrackGroups`／`boardSharedTrack` 識別共同站對與共線，不是派車路徑選擇。遊戲直接依相同實體 span／限界保護共享路徑，不用站名相等假設股道相等；這些畫面與統計資料沒有添加到規則。
+- `Ci/` routeLegs 是班型／班距段，Taipei GTA 的 platform spots 是可步行的捷運場景，兩者沒有逐段 physical dispatch 算法；列 gap，新增玩家選路 API／SwiftUI 操作與獨立 oracle 為本專案補足。
+
+**V4a 合併後修正一併承接**：作者已合併 #116 的 ee1b319；其後安全 berth 全域廣義成本／平手搜尋修正（第七項手算）與 macOS StartSaveFlow 原生 Menu 座標觸控修正尚未進 main，從新 main 77b0443 的 V4b 分支保留。後者保留可見／enabled／hittable 與真實存讀斷言、無 gate list 變更；需 macOS CI 驗證。
 
 ## 目前規則摘要
 

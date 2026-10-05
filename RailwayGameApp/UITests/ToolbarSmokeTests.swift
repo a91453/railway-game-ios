@@ -16,6 +16,35 @@ final class ToolbarSmokeTests: XCTestCase {
         ])
     }
 
+    /// Decision 61: a new UI test stays in the full lane. The menu binds a
+    /// platform to a real-world demo leg and can restore automatic routing.
+    func testALineLegCanSelectAPhysicalPlatform() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let demo = app.buttons["start.realWorldDemo"]
+        XCTAssertTrue(demo.waitForExistence(timeout: 15))
+        if !demo.isHittable { app.swipeUp() }
+        demo.tap()
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
+        let lines = app.buttons["Lines"]
+        XCTAssertTrue(lines.waitForExistence(timeout: 10)); lines.tap()
+        let route = app.buttons["line.route.-1.0.1"]
+        for _ in 0..<6 where !route.isHittable { app.swipeUp() }
+        XCTAssertTrue(route.waitForExistence(timeout: 10)); XCTAssertTrue(route.isHittable)
+        route.tap()
+        let platform = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "Platform track #", "automatic route")).firstMatch
+        XCTAssertTrue(platform.waitForExistence(timeout: 10)); platform.tap()
+        XCTAssertTrue(route.label.contains("Platform track #"))
+        route.tap()
+        let automatic = app.buttons["Automatic physical path"]
+        XCTAssertTrue(automatic.waitForExistence(timeout: 10)); automatic.tap()
+        XCTAssertTrue(route.label.contains("Automatic physical path"))
+    }
+
     private func captureToolbar(language: String, locale: String, queries: [String]) {
         continueAfterFailure = false
         let app = XCUIApplication()

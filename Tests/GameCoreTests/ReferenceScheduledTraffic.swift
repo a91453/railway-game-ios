@@ -26,7 +26,7 @@ extension ReferenceWorld {
 
     func plannedVisits(_ train: Train, cycle: Int64) -> [PlannedVisit]? {
         guard let first = train.timetable.first else { return nil }
-        var result: [PlannedVisit]?, least: Int64 = .max
+        var result: [PlannedVisit]?, least: Int64 = .max, mostMatched = -1
         let shift = cycle * (train.period ?? 0)
         for position in journeyStarts(onNetworkOf: first.station) {
             guard case .onEdge(let traversal, let offset) = position, let run = Run(traversal),
@@ -34,12 +34,13 @@ extension ReferenceWorld {
             var driver = standing(Train(id: train.id, name: train.name, position: position, cars: train.cars, performance: train.performance))
             var visits = [PlannedVisit(station: first.station, stop: 0, cycle: cycle, arr: first.arrival.seconds + shift,
                                       dep: first.departure.seconds + shift, call: true, run: run, offset: offset, distance: 0)]
-            var total: Int64 = 0, valid = true
+            var total: Int64 = 0, valid = true, matched = 0
             for stop in 1..<train.timetable.count {
                 if train.timetable[stop - 1].reverses { driver = turnedOnNetwork(driver) }
                 let target = train.timetable[stop].station
-                guard let path = networkPathToStation(from: driver.position!, station: target, length: Self.length(train)),
+                guard let path = nominalRoute(train, start: driver.position!, from: stop - 1, to: stop),
                       case .onEdge(let firstRun, let at)? = driver.position else { valid = false; break }
+                if let r = routePreference(train, from: stop - 1, to: stop), preferenceRoute(from: driver.position!, r, length: Self.length(train)) == path { matched += 1 }
                 let seconds = train.timetable[stop].arrival.seconds - train.timetable[stop - 1].departure.seconds
                 var passing: [(Int64, StationID, Run, Int64)] = []
                 if let profile = ReferenceTrafficCurve.build(path.distance, seconds, train.performance) {
@@ -74,7 +75,7 @@ extension ReferenceWorld {
                                            run: Run(last)!, offset: end, distance: path.distance - previousDistance))
                 total += path.distance
             }
-            if valid, total < least { least = total; result = visits }
+            if valid, matched > mostMatched || matched == mostMatched && total < least { least = total; result = visits; mostMatched = matched }
         }
         return result
     }
@@ -224,32 +225,39 @@ extension ReferenceWorld {
             for b in plan.services.indices where b > a {
                 let A = plan.services[a].visits, B = plan.services[b].visits
                 let common = B.enumerated().compactMap { j, p -> (Int, Int)? in A.firstIndex { $0.station == p.station }.map { ($0, j) } }
-                guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.0 < $1.0 }) else { continue }
-                for n in 0..<(common.count - 1) {
-                    let p = common[n], q = common[n + 1]
-                    guard q.0 == p.0 + 1, q.1 == p.1 + 1,
-                          A[p.0].run == B[p.1].run, A[q.0].run == B[q.1].run else { continue }
-                    let d = A[p.0].dep - B[p.1].dep, e = A[q.0].arr - B[q.1].arr
-                    guard d != 0, e != 0, (d < 0) != (e < 0) else { continue }
-                    let slow = d < 0 ? a : b, fast = d < 0 ? b : a
-                    let l = plan.services[slow], f = plan.services[fast]
-                    guard l.train.service != nil else { continue }
-                    let perf = l.train.performance
-                    let need = 30 + (perf.topSpeed * 1000 - 1) / perf.braking + 1
-                    var distance: Int64 = 0
-                    for c in (0...n).reversed() {
-                        if c < n, (common[c + 1].0 != common[c].0 + 1 || common[c + 1].1 != common[c].1 + 1) { break }
-                        let j = d < 0 ? common[c].0 : common[c].1, fj = d < 0 ? common[c].1 : common[c].0
-                        distance += l.visits[j + 1].distance
-                        if distance > 1_600_000 { break }
-                        let st = l.visits[j], ft = f.visits[fj], dep = Self.capped(f.visits[fj].dep, 30)
-                        guard ft.arr - st.arr >= need, dep - st.arr <= 600, dep > st.dep, hasScheduledLoop(st, l.train),
-                              !plan.waits.contains(where: { $0.train.rawValue == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep }) else { continue }
-                        guard freeOvertakeTrack(&plan, slow, j, dep) else { continue }
-                        if let old = proposed.firstIndex(where: { $0.slow == slow && $0.j == j }) {
-                            if proposed[old].dep < dep { proposed[old] = (slow, fast, j, fj, dep, need) }
-                        } else { proposed.append((slow, fast, j, fj, dep, need)) }
-                        break
+                let physical = hasRoutes(plan.services[a].train) || hasRoutes(plan.services[b].train)
+                for common in physical ? prescribedCommon(plan.services[a], plan.services[b]) : [common] {
+                    guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.0 < $1.0 }) else { continue }
+                    for n in 0..<(common.count - 1) {
+                        let p = common[n], q = common[n + 1]
+                        guard q.0 == p.0 + 1, q.1 == p.1 + 1 else { continue }
+                        if physical {
+                            guard prescribedCorridor(plan.services[a], p.0, q.0, plan.services[b], p.1, q.1) else { continue }
+                        } else {
+                            guard A[p.0].run == B[p.1].run, A[q.0].run == B[q.1].run else { continue }
+                        }
+                        let d = A[p.0].dep - B[p.1].dep, e = A[q.0].arr - B[q.1].arr
+                        guard d != 0, e != 0, (d < 0) != (e < 0) else { continue }
+                        let slow = d < 0 ? a : b, fast = d < 0 ? b : a
+                        let l = plan.services[slow], f = plan.services[fast]
+                        guard l.train.service != nil else { continue }
+                        let perf = l.train.performance
+                        let need = 30 + (perf.topSpeed * 1000 - 1) / perf.braking + 1
+                        var distance: Int64 = 0
+                        for c in (0...n).reversed() {
+                            if c < n, (common[c + 1].0 != common[c].0 + 1 || common[c + 1].1 != common[c].1 + 1) { break }
+                            let j = d < 0 ? common[c].0 : common[c].1, fj = d < 0 ? common[c].1 : common[c].0
+                            distance += l.visits[j + 1].distance
+                            if distance > 1_600_000 { break }
+                            let st = l.visits[j], ft = f.visits[fj], dep = Self.capped(f.visits[fj].dep, 30)
+                            guard ft.arr - st.arr >= need, dep - st.arr <= 600, dep > st.dep, hasScheduledLoop(st, l.train),
+                                  !plan.waits.contains(where: { $0.train.rawValue == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep }) else { continue }
+                            guard freeOvertakeTrack(&plan, slow, j, dep) else { continue }
+                            if let old = proposed.firstIndex(where: { $0.slow == slow && $0.j == j }) {
+                                if proposed[old].dep < dep { proposed[old] = (slow, fast, j, fj, dep, need) }
+                            } else { proposed.append((slow, fast, j, fj, dep, need)) }
+                            break
+                        }
                     }
                 }
             }

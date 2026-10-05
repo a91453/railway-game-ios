@@ -36,13 +36,13 @@ extension ReferenceWorld {
         }
         if j > 0 {
             let p = v[j - 1]
-            guard let incoming = networkPathToStation(from: .onEdge(p.run.traversal, offset: p.offset), station: v[j].station,
+            guard let incoming = prescribedStationRoute(service, v[j], start: .onEdge(p.run.traversal, offset: p.offset), run: run, offset: offset) ?? networkPathToStation(from: .onEdge(p.run.traversal, offset: p.offset), station: v[j].station,
                                                       length: length, only: (run, offset)) else { return nil }
             add(p.run, p.offset, incoming); normal += v[j].distance
         }
         if j < v.count - 1 {
             let next = v[j + 1]
-            guard let outgoing = networkPathToStation(from: position, station: next.station, length: length, only: (next.run, next.offset)) else { return nil }
+            guard let outgoing = prescribedStationRoute(service, next, start: position, run: next.run, offset: next.offset) ?? networkPathToStation(from: position, station: next.station, length: length, only: (next.run, next.offset)) else { return nil }
             add(run, offset, outgoing); normal += next.distance
         }
         return distance - normal <= 25_600 ? StationMove(run: run, offset: offset, body: body, route: route, directions: directions) : nil
@@ -86,11 +86,22 @@ extension ReferenceWorld {
             for run in nominal($1) { $0.insert(Run(edge: run.edge, forward: !run.forward)) }
         }.subtracting(own)
         var found: [StationMove] = []
+        var prescribedLoop = false
+        if point.stop > 0, j > 0, j + 1 < service.visits.count,
+           let r = routePreference(service.train, from: point.stop - 1, to: point.stop),
+           (r.platform.station == point.station && r.platform.edge.number == point.run.edge) || r.tracks.contains(point.run.traversal) {
+            let corridor = [service.visits[j - 1].station, point.station, service.visits[j + 1].station]
+            for peer in plan.services where peer.train.id != service.train.id {
+                for k in 1..<max(1, peer.visits.count - 1) where peer.visits[k].run.edge != point.run.edge {
+                    if [peer.visits[k - 1].station, peer.visits[k].station, peer.visits[k + 1].station] == corridor { prescribedLoop = true }
+                }
+            }
+        }
         for platform in stations.first(where: { $0.id == point.station.rawValue })!.trackPlatforms where platform.length >= Self.length(service.train) {
             for forward in [true, false] {
                 let run = Run(edge: platform.edge.number, forward: forward)
                 let offset = forward ? platform.end : networkEdges[run.edge]!.length - platform.start
-                if run.edge != point.run.edge, let choice = stationMove(service, j, run, offset), choice.directions.isDisjoint(with: opposite) { found.append(choice) }
+                if run.edge != point.run.edge || prescribedLoop, let choice = stationMove(service, j, run, offset), choice.directions.isDisjoint(with: opposite) { found.append(choice) }
             }
         }
         plan.places[key] = found
@@ -145,11 +156,13 @@ extension ReferenceWorld {
         }
         var world = self
         let forbidden = world.contraryRuns(for: routed(train, normal))
-        let routes = candidates.filter { !foul($0.body, avoid) }.compactMap {
-            networkPathToStation(from: train.position!, station: target, length: Self.length(train), forbidden: forbidden,
-                                 berthCosts: berthCosts, edgeCosts: edgeCosts, only: ($0.run, $0.offset))
+        var destinations: [Run: [Int64]] = [:]
+        for candidate in candidates where !foul(candidate.body, avoid) {
+            destinations[candidate.run, default: []].append(candidate.offset)
         }
-        return routes.enumerated().min { a, b in a.element.distance == b.element.distance ? a.offset < b.offset : a.element.distance < b.element.distance }?.element
+        destinations = destinations.mapValues { $0.sorted() }
+        return networkPathToStation(from: train.position!, station: target, length: Self.length(train), forbidden: forbidden,
+                                    berthCosts: berthCosts, edgeCosts: edgeCosts, eligible: destinations)
     }
 
 }

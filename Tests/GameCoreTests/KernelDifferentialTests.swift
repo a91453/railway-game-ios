@@ -46,6 +46,7 @@ final class KernelDifferentialTests: XCTestCase {
         case createLine(String, [StationID])
         case removeLine(LineID)
         case setLineStops(LineID, [StationID])
+        case setLineRoutes(LineID, [LineRoutePreference], Int?)
         case setLinePerformance(LineID, TrainPerformance)
         case setLineWindow(LineID, ServiceWindow)
         case setLineTrains(LineID, TrainsInService, pattern: Int? = nil)
@@ -108,6 +109,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .createLine(let name, let stops): ".createLine(\"\(name)\", \(stops.map(\.rawValue)))"
             case .removeLine(let id): ".removeLine(\(id.rawValue))"
             case .setLineStops(let id, let stops): ".setLineStops(\(id.rawValue), \(stops.map(\.rawValue)))"
+            case .setLineRoutes(let id, let routes, let pattern): ".setLineRoutes(\(id.rawValue), \(routes), \(String(describing: pattern)))"
             case .setLinePerformance(let id, let performance): ".setLinePerformance(\(id.rawValue), \(performance))"
             case .setLineWindow(let id, let window): ".setLineWindow(\(id.rawValue), \(window))"
             case .setLineTrains(let id, let trains, let pattern):
@@ -414,6 +416,7 @@ final class KernelDifferentialTests: XCTestCase {
             case .createLine(let name, let stops): try world.createLine(named: name, stops: stops)
             case .removeLine(let id): try world.removeLine(id)
             case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
+            case .setLineRoutes(let id, let routes, let pattern): try world.setLineRoutePreferences(id, to: routes, pattern: pattern)
             case .setLinePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)
             case .setLineWindow(let id, let window): try world.setLineServiceWindow(id, to: window)
             case .setLineTrains(let id, let trains, let pattern): try world.setLineTrainsInService(id, to: trains, pattern: pattern)
@@ -484,6 +487,7 @@ final class KernelDifferentialTests: XCTestCase {
         case .createLine(let name, let stops): return model.createLine(named: name, stops: stops)
         case .removeLine(let id): return model.removeLine(id)
         case .setLineStops(let id, let stops): return model.setLineStops(id, stops)
+        case .setLineRoutes(let id, let routes, let pattern): return model.setLineRoutes(id, routes, pattern: pattern)
         case .setLinePerformance(let id, let performance): return model.setLinePerformance(id, performance)
         case .setLineWindow(let id, let window): return model.setLineWindow(id, window)
         case .setLineTrains(let id, let trains, let pattern): return model.setLineTrains(id, trains, pattern: pattern)
@@ -610,6 +614,7 @@ final class KernelDifferentialTests: XCTestCase {
                 && world.lines.map(\.performance) == model.lines.map(\.performance) && world.lines.map(\.window) == model.lines.map(\.window)
                 && world.lines.map(\.trainsInService) == model.lines.map(\.trainsInService)
                 && world.lines.map(\.targetHeadways) == model.lines.map(\.targetHeadways)
+                && world.lines.map(\.routePreferences) == model.lines.map(\.routes)
                 && world.lines.map { $0.trains.map(\.rawValue) } == model.lines.map(\.roster)
                 && world.lines.map { $0.lastDispatch?.minutes } == model.lines.map(\.lastDispatch)
                 && world.lines.map(\.isRing) == model.lines.map(\.ring)
@@ -621,6 +626,7 @@ final class KernelDifferentialTests: XCTestCase {
             world.lines.map { $0.patterns.map(\.calls) } == model.lines.map { $0.patterns.map(\.calls) }
                 && world.lines.map { $0.patterns.map(\.trainsInService) } == model.lines.map { $0.patterns.map(\.trainsInService) }
                 && world.lines.map { $0.patterns.map(\.targetHeadways) } == model.lines.map { $0.patterns.map(\.targetHeadways) }
+                && world.lines.map { $0.patterns.map(\.routePreferences) } == model.lines.map { $0.patterns.map(\.routes) }
                 && world.lines.map { $0.patterns.map { $0.trains.map(\.rawValue) } } == model.lines.map { $0.patterns.map(\.roster) }
                 && world.lines.map { $0.patterns.map { $0.lastDispatch?.minutes } } == model.lines.map { $0.patterns.map(\.lastDispatch) },
             "patterns \(world.lines.map(\.patterns)) vs \(model.lines.map(\.patterns))"

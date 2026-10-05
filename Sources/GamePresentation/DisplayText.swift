@@ -272,6 +272,8 @@ extension GameError {
             )
         case .trainNotOnLine(let id):
             language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
+        case .invalidLineRoutePreference:
+            language.text("Choose a physical path for a leg of this service.", "請為這個服務模式的路段選擇股道與月台。")
         case .invalidLinePattern:
             language.text(
                 "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",

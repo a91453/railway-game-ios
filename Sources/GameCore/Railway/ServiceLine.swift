@@ -212,6 +212,8 @@ public struct LinePattern: Hashable, Sendable {
     /// The line's stops called at, as indices into ``ServiceLine/stops``:
     /// at least two, strictly increasing.
     public internal(set) var calls: [Int]
+    /// Shared directed physical paths for this service (decision 61).
+    public internal(set) var routePreferences: [LineRoutePreference]
     public internal(set) var trainsInService: TrainsInService
     /// The minutes the pattern aims to keep between its trains, at the
     /// levels where it has a target (see ``TargetHeadways``).
@@ -226,6 +228,7 @@ public struct LinePattern: Hashable, Sendable {
     /// headways and no trains assigned, as a new one has.
     public init(calls: [Int]) {
         self.calls = calls
+        self.routePreferences = []
         self.trainsInService = .none
         self.targetHeadways = .none
         self.trains = []
@@ -285,6 +288,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// in a row. The trains run from the first to the last and back, turning
     /// round at both ends.
     public internal(set) var stops: [StationID]
+    /// Shared directed physical paths for the base service (decision 61).
+    public internal(set) var routePreferences: [LineRoutePreference]
     /// The performance the line's journey times are worked out with (Stage
     /// W2c): each leg takes the least whole second it builds a running
     /// curve for (see ``RunningCurve/leastSeconds(length:performance:)``).
@@ -333,6 +338,7 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         self.id = id
         self.name = name
         self.stops = stops
+        self.routePreferences = []
         self.performance = .standard
         self.window = .standard
         self.trainsInService = .none
@@ -760,7 +766,7 @@ extension ServiceDay.Band: Codable {}
 
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -788,6 +794,7 @@ extension ServiceLine: Codable {
         id = try container.decode(LineID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         stops = try container.decode([StationID].self, forKey: .stops)
+        routePreferences = container.contains(.routePreferences) ? try container.decode([LineRoutePreference].self, forKey: .routePreferences) : []
         performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
         window = try container.decode(ServiceWindow.self, forKey: .window)
         trainsInService = try container.decode(TrainsInService.self, forKey: .trainsInService)
@@ -817,6 +824,9 @@ extension ServiceLine: Codable {
                 forKey: .patterns, in: container, debugDescription: "Line \(id.rawValue) has a pattern calling at a stop it does not have."
             )
         }
+        guard validRoutePreferences else {
+            throw DecodingError.dataCorruptedError(forKey: .routePreferences, in: container, debugDescription: "Route preferences must name distinct directed legs of their service and its destination station.")
+        }
         if isRing {
             guard Self.isRingStopList(stops), patterns.isEmpty,
                   ServiceLevel.allCases.allSatisfy({ trainsInService[$0] % 2 == 0 })
@@ -843,6 +853,7 @@ extension ServiceLine: Codable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(stops, forKey: .stops)
+        if !routePreferences.isEmpty { try container.encode(routePreferences, forKey: .routePreferences) }
         if performance != .standard {
             try container.encode(performance, forKey: .performance)
         }
@@ -867,7 +878,7 @@ extension ServiceLine: Codable {
 
 extension LinePattern: Codable {
     private enum CodingKeys: String, CodingKey {
-        case calls, trainsInService, targetHeadways, trains, lastDispatch
+        case calls, trainsInService, targetHeadways, trains, lastDispatch, routePreferences
     }
 
     /// Decodes a pattern, rejecting calls that are fewer than two or not
@@ -880,6 +891,7 @@ extension LinePattern: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         calls = try container.decode([Int].self, forKey: .calls)
+        routePreferences = container.contains(.routePreferences) ? try container.decode([LineRoutePreference].self, forKey: .routePreferences) : []
         trainsInService = try container.decode(TrainsInService.self, forKey: .trainsInService)
         targetHeadways = container.contains(.targetHeadways) ? try container.decode(TargetHeadways.self, forKey: .targetHeadways) : .none
         trains = container.contains(.trains) ? try container.decode([TrainID].self, forKey: .trains) : []
@@ -888,6 +900,12 @@ extension LinePattern: Codable {
             throw DecodingError.dataCorruptedError(
                 forKey: .calls, in: container, debugDescription: "A pattern calls at two stops or more, in strictly increasing order."
             )
+        }
+        let routeKeys = routePreferences.map { [$0.from, $0.to] }
+        guard Set(routeKeys).count == routeKeys.count, routePreferences.allSatisfy({ route in
+            zip(calls, calls.dropFirst()).contains { ($0 == route.from && $1 == route.to) || ($1 == route.from && $0 == route.to) }
+        }) else {
+            throw DecodingError.dataCorruptedError(forKey: .routePreferences, in: container, debugDescription: "Pattern preferences must name distinct directed adjacent calls.")
         }
         guard zip(trains, trains.dropFirst()).allSatisfy({ $0 < $1 }) else {
             throw DecodingError.dataCorruptedError(
@@ -904,6 +922,7 @@ extension LinePattern: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(calls, forKey: .calls)
+        if !routePreferences.isEmpty { try container.encode(routePreferences, forKey: .routePreferences) }
         try container.encode(trainsInService, forKey: .trainsInService)
         if targetHeadways != .none {
             try container.encode(targetHeadways, forKey: .targetHeadways)

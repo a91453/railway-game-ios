@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-18   the long property, differential and mutation
+#   campaigns-1 .. campaigns-19   the long property, differential and mutation
 #                                campaigns, named below
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -89,14 +89,17 @@ set -euo pipefail
 # V4a adds all six three-train cases (18 to 23) of traffic.scheduledMeets,
 # across four shards, without reducing any existing case. Swift 6.4 local
 # measurements on 2026-10-05, two to four shards running at a time:
-#   campaigns-12  ScheduledTrafficPropertyTests 377 s
-#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 375 s
-#   campaigns-15  ScheduledOvertakeTrackPropertyTests 170 s
-#   campaigns-16  ScheduledOvertakeTrackMiddlePropertyTests 181 s
-#   campaigns-17  ScheduledOvertakeTrackLastPropertyTests 138 s
-#   campaigns-18  ScheduledOvertakeTrackFinalPropertyTests 197 s
+#   campaigns-12  ScheduledTrafficPropertyTests 375 s
+#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 377 s
+#   campaigns-15  ScheduledOvertakeTrackPropertyTests 179 s
+#   campaigns-16  ScheduledOvertakeTrackMiddlePropertyTests 191 s
+#   campaigns-17  ScheduledOvertakeTrackLastPropertyTests 136 s
+#   campaigns-18  ScheduledOvertakeTrackFinalPropertyTests 195 s
 # The new shards stay below 560 s even at 1.8 times these local times.
 # Runner measurements are reported in the PR; keep the 20-minute job limit.
+# Stage V4b adds campaigns-19: LineRoutePreferencePropertyTests, 18.2 s
+# locally on Swift 6.4 (680 full-state/batch-second steps). Existing campaigns
+# are unchanged. All jobs keep their 20-minute timeout.
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
@@ -117,10 +120,11 @@ classes_of() {
     campaigns-16) echo "ScheduledOvertakeTrackMiddlePropertyTests" ;;
     campaigns-17) echo "ScheduledOvertakeTrackLastPropertyTests" ;;
     campaigns-18) echo "ScheduledOvertakeTrackFinalPropertyTests" ;;
+    campaigns-19) echo "LineRoutePreferencePropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""

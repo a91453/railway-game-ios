@@ -88,8 +88,11 @@ extension GameWorld {
         switch train.execution {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }
+            if let preferred = preferredLeaving(train, stop: stop, cycle: cycle)?.train,
+               case .granted = reserving(preferred) { return preferred }
             return leaving(train, stop: stop, cycle: cycle).train
         case .travellingToStop?:
+            if let preferred = preferredGoingOn(train), case .granted = reserving(preferred) { return preferred }
             return goingOn(train)
         case nil:
             guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }),

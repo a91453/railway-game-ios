@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 31
+    static let schemaVersion = 32
 
     var description: String
     var initialState: InitialState
@@ -148,7 +148,7 @@ struct GoldenScenario: Decodable {
             var schemaVersion: Int
         }
         let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
-        guard version == 30 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
+        guard version == 30 || version == 31 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
         let scenario = try JSONDecoder().decode(GoldenScenario.self, from: data)
         try checkClock(minutes: scenario.initialState.gameMinutes, seconds: scenario.initialState.gameSeconds, in: "initialState")
         let final = scenario.expectedFinalState
@@ -409,6 +409,7 @@ enum ScenarioCommand: Equatable {
     case setLineStops(LineID, [StationID])
     /// Makes a line a ring or a line again (schema 27, decision 49).
     case setLineRing(LineID, Bool)
+    case setLineRoutePreferences(LineID, [LineRoutePreference], pattern: Int?)
     case setLinePerformance(LineID, TrainPerformance)
     case setTrainPerformance(TrainID, TrainPerformance)
     case setLineServiceWindow(LineID, ServiceWindow)
@@ -467,6 +468,8 @@ enum ScenarioCommand: Equatable {
                 try world.setLineStops(id, to: stops)
             case .setLineRing(let id, let isRing):
                 try world.setLineRing(id, to: isRing)
+            case .setLineRoutePreferences(let id, let routes, let pattern):
+                try world.setLineRoutePreferences(id, to: routes, pattern: pattern)
             case .setLinePerformance(let id, let performance):
                 try world.setLinePerformance(id, to: performance)
             case .setTrainPerformance(let id, let performance):
@@ -531,7 +534,7 @@ extension ScenarioCommand: Decodable {
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, station, cars, ring
         case z, from, to, curve, edge, node, path
         case profile, structure, start, end, enabled, demand, mode, rules
-        case performance, point
+        case performance, point, routePreferences
     }
 
     init(from decoder: any Decoder) throws {
@@ -587,6 +590,8 @@ extension ScenarioCommand: Decodable {
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
         case "setLineRing":
             self = try .setLineRing(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .ring))
+        case "setLineRoutePreferences":
+            self = try .setLineRoutePreferences(container.decodeLine(forKey: .line), container.decode([LineRoutePreference].self, forKey: .routePreferences), pattern: container.decodeIfPresent(Int.self, forKey: .pattern))
         case "setLinePerformance":
             let performance = try container.decode(PerformanceSummary.self, forKey: .performance).performance
             self = try .setLinePerformance(container.decodeLine(forKey: .line), performance)
@@ -772,6 +777,8 @@ extension StepOutcome: Codable {
             self = try .rejected(.trainOnLine(container.decodeTrain(forKey: .train)))
         case "trainNotOnLine":
             self = try .rejected(.trainNotOnLine(container.decodeTrain(forKey: .train)))
+        case "invalidLineRoutePreference":
+            self = .rejected(.invalidLineRoutePreference)
         case "invalidLinePattern":
             self = .rejected(.invalidLinePattern)
         case "unknownLinePattern":
@@ -904,6 +911,8 @@ extension StepOutcome: Codable {
         case .rejected(.trainNotOnLine(let id)):
             try container.encode("trainNotOnLine", forKey: .result)
             try container.encode(id.rawValue, forKey: .train)
+        case .rejected(.invalidLineRoutePreference):
+            try container.encode("invalidLineRoutePreference", forKey: .result)
         case .rejected(.invalidLinePattern):
             try container.encode("invalidLinePattern", forKey: .result)
         case .rejected(.unknownLinePattern(let pattern)):
@@ -1886,6 +1895,7 @@ struct LineSummary: Codable, Equatable {
     var lastDispatch: Int64?
     var outerLastDispatch: Int64?
     var patterns: [PatternSummary]
+    var routePreferences: [LineRoutePreference] = []
 
     init(
         id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
@@ -1917,10 +1927,11 @@ struct LineSummary: Codable, Equatable {
         isRing = line.isRing
         outerLastDispatch = line.outerLastDispatch?.minutes
         patterns = line.patterns.map(PatternSummary.init)
+        routePreferences = line.routePreferences
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, routePreferences
         case isRing = "ring", outerLastDispatch
     }
 
@@ -1939,6 +1950,7 @@ struct LineSummary: Codable, Equatable {
         // dispatched.
         lastDispatch = try container.decodeNil(forKey: .lastDispatch) ? nil : container.decode(Int64.self, forKey: .lastDispatch)
         patterns = try container.decode([PatternSummary].self, forKey: .patterns)
+        routePreferences = container.contains(.routePreferences) ? try container.decode([LineRoutePreference].self, forKey: .routePreferences) : []
         // Schema 27: a ring says so, and its outer dispatch is then
         // required; a line that is not a ring writes neither.
         if container.contains(.isRing) {
@@ -1973,6 +1985,7 @@ struct LineSummary: Codable, Equatable {
             try container.encodeNil(forKey: .lastDispatch)
         }
         try container.encode(patterns, forKey: .patterns)
+        if !routePreferences.isEmpty { try container.encode(routePreferences, forKey: .routePreferences) }
         if isRing {
             try container.encode(true, forKey: .isRing)
             if let outerLastDispatch {
@@ -1990,6 +2003,7 @@ struct LineSummary: Codable, Equatable {
 /// that never sent a train out.
 struct PatternSummary: Codable, Equatable {
     var calls: [Int]
+    var routePreferences: [LineRoutePreference] = []
     var trainsInService: TrainsSummary
     var targetHeadways: TargetHeadwaysSummary
     var trains: [Int]
@@ -2005,6 +2019,7 @@ struct PatternSummary: Codable, Equatable {
 
     init(_ pattern: LinePattern) {
         calls = pattern.calls
+        routePreferences = pattern.routePreferences
         trainsInService = TrainsSummary(pattern.trainsInService)
         targetHeadways = TargetHeadwaysSummary(pattern.targetHeadways)
         trains = pattern.trains.map(\.rawValue)
@@ -2012,12 +2027,13 @@ struct PatternSummary: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case calls, trainsInService, targetHeadways, trains, lastDispatch
+        case calls, trainsInService, targetHeadways, trains, lastDispatch, routePreferences
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         calls = try container.decode([Int].self, forKey: .calls)
+        routePreferences = container.contains(.routePreferences) ? try container.decode([LineRoutePreference].self, forKey: .routePreferences) : []
         trainsInService = try container.decode(TrainsSummary.self, forKey: .trainsInService)
         targetHeadways = try container.decode(TargetHeadwaysSummary.self, forKey: .targetHeadways)
         trains = try container.decode([Int].self, forKey: .trains)
@@ -2027,6 +2043,7 @@ struct PatternSummary: Codable, Equatable {
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(calls, forKey: .calls)
+        if !routePreferences.isEmpty { try container.encode(routePreferences, forKey: .routePreferences) }
         try container.encode(trainsInService, forKey: .trainsInService)
         try container.encode(targetHeadways, forKey: .targetHeadways)
         try container.encode(trains, forKey: .trains)

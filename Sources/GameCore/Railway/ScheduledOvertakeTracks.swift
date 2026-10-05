@@ -26,14 +26,14 @@ extension GameWorld {
         if j > 0 {
             let previous = points[j - 1]
             let start = TrainPosition.onEdge(previous.berth.traversal, offset: previous.berth.offset)
-            guard let path = trafficPath(from: start, toStation: point.station, length: length,
+            guard let path = preferredTrafficPath(service, to: point, from: start, berth: berth) ?? trafficPath(from: start, toStation: point.station, length: length,
                                          berthPenalty: [:], edgePenalty: [:], only: berth) else { return nil }
             stretches += trafficStretches(from: start, along: path)
             distance += path.distance; normal += point.distance
         }
         if j + 1 < points.count {
             let next = points[j + 1]
-            guard let path = trafficPath(from: position, toStation: next.station, length: length,
+            guard let path = preferredTrafficPath(service, to: next, from: position, berth: next.berth) ?? trafficPath(from: position, toStation: next.station, length: length,
                                          berthPenalty: [:], edgePenalty: [:], only: next.berth) else { return nil }
             stretches += trafficStretches(from: position, along: path)
             distance += path.distance; normal += next.distance
@@ -83,8 +83,9 @@ extension GameWorld {
         let own = trafficNominalDirections(service)
         let opposite = Set(plan.services.filter { $0.train.id != service.train.id }
             .flatMap { trafficNominalDirections($0).map(\.reversed) }).subtracting(own)
+        let assignedSiding = trafficAssignedSiding(plan, service: s, at: j)
         let tracks = berths(of: point.station, length: service.train.length).compactMap { berth -> TrafficTrack? in
-            guard berth.traversal.edge != point.berth.traversal.edge,
+            guard berth.traversal.edge != point.berth.traversal.edge || assignedSiding,
                   let track = trafficTrack(service, at: j, berth: berth),
                   // Resource sets carry no direction, so check both local
                   // paths too before admitting a newly borrowed main line.
@@ -95,17 +96,36 @@ extension GameWorld {
         return tracks
     }
 
+    /// An explicit stopping track may already be the passing place. The
+    /// other train's same directed station corridor supplies the main;
+    /// availability still checks every peer movement and the whole body.
+    func trafficAssignedSiding(_ plan: TrafficPlan, service s: Int, at j: Int) -> Bool {
+        let service = plan.services[s], p = service.points[j]
+        guard p.stop > 0, j > 0, j + 1 < service.points.count,
+              let route = routePreference(for: service.train, from: p.stop - 1, to: p.stop),
+              (route.platform.station == p.station && route.platform.edge == p.berth.traversal.edge) || route.tracks.contains(p.berth.traversal) else { return false }
+        let before = service.points[j - 1].station, after = service.points[j + 1].station
+        for other in plan.services where other.train.id != service.train.id {
+            for k in other.points.indices where k > 0 && k + 1 < other.points.count {
+                let point = other.points[k]
+                if point.station == p.station && point.berth.traversal.edge != p.berth.traversal.edge,
+                   other.points[k - 1].station == before, other.points[k + 1].station == after { return true }
+            }
+        }
+        return false
+    }
+
     func trafficTrackDirections(_ service: TrafficService, at j: Int, berth: Berth) -> Set<TrackTraversal> {
         var directions: Set<TrackTraversal> = []
         let points = service.points, position = TrainPosition.onEdge(berth.traversal, offset: berth.offset)
         if j > 0 {
             let p = points[j - 1], start = TrainPosition.onEdge(p.berth.traversal, offset: p.berth.offset)
-            if let path = trafficPath(from: start, toStation: points[j].station, length: service.train.length,
+            if let path = preferredTrafficPath(service, to: points[j], from: start, berth: berth) ?? trafficPath(from: start, toStation: points[j].station, length: service.train.length,
                                       berthPenalty: [:], edgePenalty: [:], only: berth) {
                 directions.formUnion(trafficStretches(from: start, along: path).filter { $0.to > $0.from }.map(\.traversal))
             }
         }
-        if j + 1 < points.count, let path = trafficPath(from: position, toStation: points[j + 1].station, length: service.train.length,
+        if j + 1 < points.count, let path = preferredTrafficPath(service, to: points[j + 1], from: position, berth: points[j + 1].berth) ?? trafficPath(from: position, toStation: points[j + 1].station, length: service.train.length,
                                                        berthPenalty: [:], edgePenalty: [:], only: points[j + 1].berth) {
             directions.formUnion(trafficStretches(from: position, along: path).filter { $0.to > $0.from }.map(\.traversal))
         }
@@ -185,14 +205,12 @@ extension GameWorld {
         var memo = DirectionMemo(), candidate = train
         follow(normal, &candidate)
         let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
-        var chosen: TrainPath?
-        for track in tracks where !network.fouls(track.body, avoid) {
-            guard let path = trafficPath(from: start, toStation: target, length: train.length,
-                                         berthPenalty: berthPenalty, edgePenalty: edgePenalty,
-                                         only: track.berth, forbidden: forbidden) else { continue }
-            if path.distance < chosen?.distance ?? .max { chosen = path }
-        }
-        return chosen
+        let eligible = Set(tracks.filter { !network.fouls($0.body, avoid) }.map(\.berth))
+        // One search across all safe berths retains V3's generalized costs
+        // and route-level tie order; geometric distance alone is insufficient.
+        return trafficPath(from: start, toStation: target, length: train.length,
+                           berthPenalty: berthPenalty, edgePenalty: edgePenalty,
+                           eligible: eligible, forbidden: forbidden)
     }
 
 }

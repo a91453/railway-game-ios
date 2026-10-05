@@ -878,6 +878,9 @@ public struct GameWorld: Equatable, Sendable {
         guard lines[index].patterns.allSatisfy({ LinePattern.isCallList($0.calls, stopCount: stops.count) }) else {
             throw .invalidLinePattern
         }
+        var changed = lines[index]
+        changed.stops = stops
+        guard changed.validRoutePreferences else { throw .invalidLineRoutePreference }
         lines[index].stops = stops
         abandonUnservedPassengers()
     }
@@ -914,7 +917,22 @@ public struct GameWorld: Equatable, Sendable {
         } else {
             lines[index].outerLastDispatch = nil
         }
+        if lines[index].isRing != isRing { lines[index].routePreferences = [] }
         lines[index].isRing = isRing
+    }
+
+    /// Replaces one service's preferences atomically. Missing physical
+    /// track/platform is permitted: rebuilding the map falls back to the
+    /// automatic route until that preference becomes usable again.
+    public mutating func setLineRoutePreferences(_ id: LineID, to routes: [LineRoutePreference], pattern: Int? = nil) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        if let pattern, !lines[index].patterns.indices.contains(pattern) { throw .unknownLinePattern(pattern) }
+        var changed = lines[index]
+        if let pattern { changed.patterns[pattern].routePreferences = routes }
+        else { changed.routePreferences = routes }
+        guard changed.validRoutePreferences else { throw .invalidLineRoutePreference }
+        lines[index] = changed
+        passengerPlan = PassengerPlanCache()
     }
 
     /// Sets the performance a line's journey times are worked out with
@@ -1724,6 +1742,10 @@ public struct GameWorld: Equatable, Sendable {
                 return true
             }
         }
+        if let preferred = preferredGoingOn(trains[index]), case .granted(let granted) = reserving(preferred) {
+            setOff(index, as: granted)
+            return true
+        }
         switch reservingDeparture(going, memo: &memo.directions) {
         case .granted(var granted):
             let fastest = run(of: granted, length: routeLength(of: granted))
@@ -1942,6 +1964,9 @@ public struct GameWorld: Equatable, Sendable {
            case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan),
            case .granted(let granted) = reserving(scheduled) {
             train = granted
+        } else if case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle),
+                  case .granted(let granted) = reserving(preferred) {
+            train = granted
         } else {
             switch reservingDeparture(moved, memo: &memo.directions) {
             case .granted(let granted):
@@ -2000,6 +2025,15 @@ public struct GameWorld: Equatable, Sendable {
         leaving(train, stop: stop, cycle: cycle) { start, call in
             path(from: start, toStation: call, length: train.length).map { ($0, nil) }
         } ?? .noRoute
+    }
+
+    /// Decision 61: a physical preference is taken only as a whole.
+    func preferredLeaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving? {
+        guard let next = train.call(after: stop, cycle: cycle),
+              let preference = routePreference(for: train, from: stop, to: next.stop) else { return nil }
+        return leaving(train, stop: stop, cycle: cycle) { start, _ in
+            preferredPath(from: start, preference: preference, length: train.length).map { ($0, nil) }
+        }
     }
 
     /// Stage V3 (decision 59): `train` leaving stop `stop` along its

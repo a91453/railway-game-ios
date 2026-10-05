@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Automatic physical path" : {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動選擇股道與月台"
+          }
+        }
+      }
+    },
     "Waiting at %@ to meet %@" : {
       "localizations" : {
         "zh-Hant" : {

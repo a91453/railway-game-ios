@@ -309,6 +309,7 @@ struct LinesPanel: View {
 
     private func serviceSection(_ summary: LineServiceSummary, of line: ServiceLine) -> some View {
         Section {
+            routeMenus(line, pattern: summary.pattern)
             Text(summary.callsText)
                 .font(.footnote)
             ForEach(summary.levels, id: \.level) { level in
@@ -330,6 +331,51 @@ struct LinesPanel: View {
         } header: {
             Text(summary.title)
         }
+    }
+
+    /// Each ordered leg can keep its platform flexible, or bind the whole
+    /// displayed directed walk. IDs are the map's physical track numbers.
+    private func routeMenus(_ line: ServiceLine, pattern: Int?) -> some View {
+        let calls = pattern.map { line.patterns[$0].calls } ?? Array(line.stops.indices)
+        let outward = line.isRing ? calls + [0] : calls
+        let order = line.isRing ? outward + outward.dropLast().reversed() : calls + calls.dropLast().reversed()
+        let pairs = Array(zip(order, order.dropFirst()))
+        let preferences = pattern.map { line.patterns[$0].routePreferences } ?? line.routePreferences
+        return ForEach(pairs.indices, id: \.self) { index in
+            let pair = pairs[index]
+            let selected = preferences.first { $0.from == pair.0 && $0.to == pair.1 }
+            let choices = session.world.lineRouteChoices(line.id, from: pair.0, to: pair.1, pattern: pattern)
+            Menu {
+                Button("Automatic physical path") {
+                    session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
+                }
+                ForEach(choices.indices, id: \.self) { choice in
+                    Button(routeChoiceText(choices[choice])) {
+                        session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+                    }
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))")
+                    if let selected { Text(routeChoiceText(selected)).font(.caption) }
+                    else { Text("Automatic physical path").font(.caption) }
+                }
+            }
+            .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
+        }
+    }
+
+    private func trackNumber(_ edge: TrackEdgeID) -> Int {
+        switch edge { case .edge(let number): number }
+    }
+
+    private func routeChoiceText(_ route: LineRoutePreference) -> String {
+        let platform = trackNumber(route.platform.edge)
+        if route.tracks.isEmpty {
+            return session.language.text("Platform track #\(platform) · automatic route", "月台股道 #\(platform)・自動選路")
+        }
+        let walk = route.tracks.map { "\(trackNumber($0.edge))\($0.direction == .forward ? "→" : "←")" }.joined(separator: " · ")
+        return session.language.text("Tracks \(walk) · platform #\(platform)", "股道 \(walk)・月台股道 #\(platform)")
     }
 
     /// The trains a service is set to run at one level, with a stepper to
