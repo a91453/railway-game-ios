@@ -86,8 +86,10 @@ enum ReplayState {
             line("line \(entry.id.rawValue) \(entry.name) stops \(entry.stops.map(\.rawValue)) ring \(entry.isRing) window \(json(entry.window))")
             line("  performance \(json(entry.performance)) trains \(json(entry.trainsInService)) targets \(json(entry.targetHeadways))")
             line("  roster \(entry.trains.map(\.rawValue)) last \(time(entry.lastDispatch)) outer \(time(entry.outerLastDispatch))")
+            if !entry.routePreferences.isEmpty { line(" routes \(json(entry.routePreferences))") }
             for pattern in entry.patterns {
                 line("  pattern \(pattern.calls) trains \(json(pattern.trainsInService)) targets \(json(pattern.targetHeadways)) roster \(pattern.trains.map(\.rawValue)) last \(time(pattern.lastDispatch))")
+                if !pattern.routePreferences.isEmpty { line("  routes \(json(pattern.routePreferences))") }
             }
         }
         line("day \(json(world.serviceDay))")

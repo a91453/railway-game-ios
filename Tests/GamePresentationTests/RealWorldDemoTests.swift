@@ -168,4 +168,50 @@ final class RealWorldDemoTests: XCTestCase {
         XCTAssertTrue(seen, "the planned wait uses Houtong's other physical track")
     }
 
+    /// V4b: select Houtong's original physical platform instead of the
+    /// shorter constructed loop, then witness the actual train stop there.
+    func testASharedPreferenceUsesHoutongsSelectedPhysicalPlatform() throws {
+        var (_, world) = try Self.built.get()
+        let line = world.lines[0], train = line.trains[0]
+        for other in world.lines where other.id != line.id { try world.removeLine(other.id) }
+        for other in world.trains where other.id != train { try world.unplaceTrain(other.id) }
+        try world.setLineTrainsInService(line.id, to: .init(peak: 1, offPeak: 1, low: 1))
+        let houtong = try XCTUnwrap(world.stations.first { $0.name == "猴硐" })
+        let platform = try XCTUnwrap(world.trackPlatforms(of: houtong.id).first)
+        let preference = LineRoutePreference(from: 0, to: 1, platform: platform)
+        try world.setLineRoutePreferences(line.id, to: [preference])
+        let journey = try XCTUnwrap(world.lineJourney(line.id))
+        XCTAssertEqual(journey.legs[0].path.traversals.last?.edge, platform.edge)
+        world.setSpeed(.x1)
+        var seen = false
+        for _ in 0..<180 {
+            try world.advance(ticks: 100)
+            guard let actual = world.train(id: train) else { return XCTFail("missing train") }
+            if case .waitingAtStop(1, _)? = actual.execution {
+                guard case .onEdge(let track, _)? = actual.position else { return XCTFail("missing position") }
+                XCTAssertEqual(track.edge, platform.edge)
+                seen = true
+                break
+            }
+        }
+        XCTAssertTrue(seen, "the selected physical platform must be reached")
+        XCTAssertEqual(world.occupancyConflicts(), [])
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+    }
+
+    @MainActor
+    func testTheLinePanelSessionSetsAndClearsOnlyTheSelectedLeg() throws {
+        let (_, world) = try Self.built.get()
+        let session = GameSession(world: world, language: .traditionalChinese)
+        let line = world.lines[0]
+        session.selectLine(line.id)
+        let choices = session.world.lineRouteChoices(line.id, from: 0, to: 1)
+        let choice = try XCTUnwrap(choices.first)
+        session.setSelectedLineRoute(from: 0, to: 1, preference: choice)
+        XCTAssertEqual(session.world.line(id: line.id)?.routePreferences, [choice])
+        XCTAssertTrue(session.message?.text.contains("股道") == true)
+        session.setSelectedLineRoute(from: 0, to: 1, preference: nil)
+        XCTAssertEqual(session.world.line(id: line.id)?.routePreferences, [])
+    }
+
 }

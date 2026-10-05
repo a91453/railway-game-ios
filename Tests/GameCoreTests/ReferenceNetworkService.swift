@@ -105,9 +105,9 @@ extension ReferenceWorld {
     /// and, among equals, the choices that come first step by step (a berth
     /// ahead on the same run, nearest first, before any turn; turns by
     /// ascending edge number).
-    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:], only: (Run, Int64)? = nil) -> TrainPath? {
+    func networkPathToStation(from position: TrainPosition, station id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<Run> = [], berthCosts: [Run: Int64] = [:], edgeCosts: [Int: Int64] = [:], only: (Run, Int64)? = nil, eligible: [Run: [Int64]]? = nil) -> TrainPath? {
         guard case .onEdge(let traversal, let offset) = position, let start = Run(traversal), isOnNetwork(traversal, offset) else { return nil }
-        let berths = only.map { [$0.0: [$0.1]] } ?? berthsForStation(id, length: length)
+        let berths = only.map { [$0.0: [$0.1]] } ?? eligible ?? berthsForStation(id, length: length)
         guard !berths.isEmpty else { return nil }
         let best = distancesToBerths(berths, blocked: blocked, forbidden: forbidden, berthCosts: berthCosts, edgeCosts: edgeCosts)
         var (run, at) = (start, offset)
@@ -211,7 +211,11 @@ extension ReferenceWorld {
            case .success = admitted(routed(start, way.path)) {
             scheduled = way
         }
-        guard let path = scheduled?.path ?? chosenRoute(from: start, to: target) else { return false }
+        var preferred: TrainPath?
+        if scheduled == nil, let preference = routePreference(trains[i], from: service.stop, to: next.stop),
+           let way = preferenceRoute(from: start.position!, preference, length: Self.length(start)),
+           case .success = admitted(routed(start, way)) { preferred = way }
+        guard let path = scheduled?.path ?? preferred ?? chosenRoute(from: start, to: target) else { return false }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
@@ -318,13 +322,14 @@ extension ReferenceWorld {
     /// The line driven once on the network from `start` for a train of
     /// `length` with body `trailEdges`: out along `calls`, turned at the
     /// last, back; `nil` if a leg has no way.
-    func networkJourney(of line: Line, calling calls: [Int], from start: TrainPosition, trailEdges: [Int], length: Int64) -> LineJourney? {
+    func networkJourney(of line: Line, calling calls: [Int], from start: TrainPosition, trailEdges: [Int], length: Int64, routes: [LineRoutePreference]) -> LineJourney? {
         var train = Self.driver(at: start, trailEdges: trailEdges, length: length)
         var legs: [LineLeg] = []
         let (pairs, turn) = Self.legPairs(line, calls)
         for (from, to) in pairs {
             if from == turn { train = turnedOnNetwork(train) }
-            guard let path = networkPathToStation(from: train.position!, station: line.stops[to], length: length) else { return nil }
+            let selected = routes.first { $0.from == from && $0.to == to }.flatMap { preferenceRoute(from: train.position!, $0, length: length) }
+            guard let path = selected ?? networkPathToStation(from: train.position!, station: line.stops[to], length: length) else { return nil }
             let units = path.distance
             // Stage W2c: the least second the line's curve is built for.
             guard let seconds = units == 0 ? 0 : Self.leastSeconds(units, line.performance) else { return nil }

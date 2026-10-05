@@ -95,6 +95,7 @@ struct ReplayCommand: Codable {
     var pattern: Int?
     var day: [Band]?
     var targets: Targets?
+    var routes: [LineRoutePreference]?
     var calls: [Int]?
     var ring: Bool?
     var cars: Int?
@@ -135,6 +136,7 @@ struct ReplayCommand: Codable {
         case .createLine(let name, let stops): self.init(kind: "createLine"); self.name = name; stations = stops.map(\.rawValue)
         case .removeLine(let id): self.init(kind: "removeLine"); line = id.rawValue
         case .setLineStops(let id, let stops): self.init(kind: "setLineStops"); line = id.rawValue; stations = stops.map(\.rawValue)
+        case .setLineRoutes(let id, let routes, let pattern): self.init(kind: "setLineRoutes"); line = id.rawValue; self.routes = routes; self.pattern = pattern
         case .setLinePerformance(let id, let performance): self.init(kind: "setLinePerformance"); line = id.rawValue; self.performance = Self.record(performance)
         case .setLineWindow(let id, let window):
             self.init(kind: "setLineWindow"); line = id.rawValue
@@ -241,6 +243,7 @@ struct ReplayCommand: Codable {
         case "createLine": guard let name, let stations else { return nil }; return .createLine(name, stations.map(StationID.init(rawValue:)))
         case "removeLine": return line.map { .removeLine($0) }
         case "setLineStops": guard let line, let stations else { return nil }; return .setLineStops(line, stations.map(StationID.init(rawValue:)))
+        case "setLineRoutes": guard let line, let routes else { return nil }; return .setLineRoutes(line, routes, pattern)
         case "setLinePerformance": guard let line, let performance else { return nil }; return .setLinePerformance(line, performance)
         case "setLineWindow":
             guard let line, let window else { return nil }

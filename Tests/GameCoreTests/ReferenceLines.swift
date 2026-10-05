@@ -49,6 +49,11 @@ extension ReferenceWorld {
         if let problem = stopsProblem(stops, ring: lines[index].ring) { return problem }
         // Decision 24: the patterns keep their calls, which must still fit.
         if lines[index].patterns.contains(where: { $0.calls.contains { $0 >= stops.count } }) { return .invalidLinePattern }
+        var candidate = self
+        candidate.lines[index].stops = stops
+        for k in 0...lines[index].patterns.count {
+            if candidate.setLineRoutes(id, lines[index].service(k).routes, pattern: k == 0 ? nil : k - 1) != nil { return .invalidLineRoutePreference }
+        }
         lines[index].stops = stops
         abandonStrandedPassengers()
         return nil
@@ -67,6 +72,7 @@ extension ReferenceWorld {
         } else {
             lines[index].outerLastDispatch = nil
         }
+        if lines[index].ring != ring { lines[index].routes = [] }
         lines[index].ring = ring
         return nil
     }
@@ -183,10 +189,13 @@ extension ReferenceWorld {
     func serviceJourney(_ line: Line, _ k: Int) -> LineJourney? {
         let calls = line.ring ? Self.lap(line, outer: false) : line.service(k).calls
         var best: LineJourney?
+        var mostMatched = -1
         for start in journeyStarts(onNetworkOf: line.stops[calls[0]]) {
-            guard let journey = networkJourney(of: line, calling: calls, from: start, trailEdges: [], length: 0) else { continue }
-            if best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true {
+            guard let journey = networkJourney(of: line, calling: calls, from: start, trailEdges: [], length: 0, routes: line.service(k).routes) else { continue }
+            let matched = matchedRoutes(journey, routes: line.service(k).routes, start: Self.driver(at: start, trailEdges: [], length: 0))
+            if matched > mostMatched || matched == mostMatched && (best.map({ journey.roundTripSeconds < $0.roundTripSeconds }) ?? true) {
                 best = journey
+                mostMatched = matched
             }
         }
         return best
@@ -572,11 +581,12 @@ extension ReferenceWorld {
         let key = ServiceKey(line: line.id, service: k, outer: outer == true)
         if memo.trips[place]?[key] == nil {
             // Decision 31: from its place and body.
-            let straight = networkJourney(of: line, calling: calls, from: position, trailEdges: train.trailEdges, length: length)
+            let straight = networkJourney(of: line, calling: calls, from: position, trailEdges: train.trailEdges, length: length, routes: line.service(k).routes)
             let back = turnedOnNetwork(train)
-            let turned = networkJourney(of: line, calling: calls, from: back.position!, trailEdges: back.trailEdges, length: length)
+            let turned = networkJourney(of: line, calling: calls, from: back.position!, trailEdges: back.trailEdges, length: length, routes: line.service(k).routes)
             let pick: (Bool, LineJourney)? = switch (straight, turned) {
-            case (let s?, let t?): t.roundTripSeconds < s.roundTripSeconds ? (true, t) : (false, s)
+            case (let s?, let t?):
+                (matchedRoutes(t, routes: service.routes, start: back) > matchedRoutes(s, routes: service.routes, start: train) || matchedRoutes(t, routes: service.routes, start: back) == matchedRoutes(s, routes: service.routes, start: train) && t.roundTripSeconds < s.roundTripSeconds) ? (true, t) : (false, s)
             case (let s?, nil): (false, s)
             case (nil, let t?): (true, t)
             case (nil, nil): nil

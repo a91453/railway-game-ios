@@ -172,6 +172,7 @@ struct ReferenceWorld: Equatable {
             var turns: Set<Int>
             var length: Int64
             var repeats: Bool
+            var routes: [LineRoutePreference?] = []
         }
         var directions: [Order: Set<Run>] = [:]
         /// A running service's walk on from where it stands.
@@ -207,6 +208,7 @@ struct ReferenceWorld: Equatable {
         var targets: [ServiceLevel: Int64] = [:]
         var roster: [Int] = []
         var lastDispatch: Int64?
+        var routes: [LineRoutePreference] = []
         var patterns: [Pattern] = []
         var ring = false
         var outerLastDispatch: Int64?
@@ -215,7 +217,7 @@ struct ReferenceWorld: Equatable {
             lhs.id == rhs.id && lhs.name == rhs.name && lhs.stops == rhs.stops && lhs.performance == rhs.performance
                 && lhs.hours?.open == rhs.hours?.open && lhs.hours?.close == rhs.hours?.close && lhs.trains == rhs.trains
                 && lhs.targets == rhs.targets && lhs.roster == rhs.roster && lhs.lastDispatch == rhs.lastDispatch
-                && lhs.patterns == rhs.patterns && lhs.ring == rhs.ring && lhs.outerLastDispatch == rhs.outerLastDispatch
+                && lhs.routes == rhs.routes && lhs.patterns == rhs.patterns && lhs.ring == rhs.ring && lhs.outerLastDispatch == rhs.outerLastDispatch
         }
 
         var targetHeadways: TargetHeadways {
@@ -233,13 +235,14 @@ struct ReferenceWorld: Equatable {
         /// Service `k`: the line's own (every stop) for 0, pattern `k - 1`
         /// after it, as one shape.
         func service(_ k: Int) -> Pattern {
-            k == 0 ? Pattern(calls: Array(0..<stops.count), trains: trains, targets: targets, roster: roster, lastDispatch: lastDispatch) : patterns[k - 1]
+            k == 0 ? Pattern(calls: Array(0..<stops.count), routes: routes, trains: trains, targets: targets, roster: roster, lastDispatch: lastDispatch) : patterns[k - 1]
         }
     }
 
     /// Decision 24: a further service of a line.
     struct Pattern: Equatable {
         var calls: [Int]
+        var routes: [LineRoutePreference] = []
         var trains: [ServiceLevel: Int] = [.peak: 0, .offPeak: 0, .low: 0]
         var targets: [ServiceLevel: Int64] = [:]
         var roster: [Int] = []

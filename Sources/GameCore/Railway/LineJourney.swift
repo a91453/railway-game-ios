@@ -197,14 +197,17 @@ extension GameWorld {
         let first = line.stops[calls[0]]
         let starts = berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
         var best: LineJourney?
+        var mostMatched = -1
         for start in starts {
             let placement = TrainPlacement(position: start, trailEdges: [], length: 0)
-            let driven = line.isRing ? driveLap(line, calling: line.ringCalls(.inner), from: placement) : drive(line, calling: calls, from: placement)
+            let driven = line.isRing ? driveLap(line, calling: line.ringCalls(.inner), from: placement, routes: line.routes(ofService: service)) : drive(line, calling: calls, from: placement, routes: line.routes(ofService: service))
             guard let journey = driven else {
                 continue
             }
-            if best == nil || journey.roundTripSeconds < best!.roundTripSeconds {
+            let matched = matchedRoutes(journey, routes: line.routes(ofService: service), start: placement)
+            if matched > mostMatched || matched == mostMatched && (best == nil || journey.roundTripSeconds < best!.roundTripSeconds) {
                 best = journey
+                mostMatched = matched
             }
         }
         return best
@@ -292,13 +295,17 @@ extension GameWorld {
         let ahead: LineJourney?, turned: LineJourney?
         if line.isRing {
             let lap = line.ringCalls(line.ringDirection(of: train.id) ?? .inner)
-            ahead = driveLap(line, calling: lap, from: placement)
-            turned = driveLap(line, calling: lap, from: turnedRound(placement))
+            ahead = driveLap(line, calling: lap, from: placement, routes: line.routes(ofService: service))
+            turned = driveLap(line, calling: lap, from: turnedRound(placement), routes: line.routes(ofService: service))
         } else {
-            ahead = drive(line, calling: calls, from: placement)
-            turned = drive(line, calling: calls, from: turnedRound(placement))
+            ahead = drive(line, calling: calls, from: placement, routes: line.routes(ofService: service))
+            turned = drive(line, calling: calls, from: turnedRound(placement), routes: line.routes(ofService: service))
         }
-        if let turned, ahead.map({ turned.roundTripSeconds < $0.roundTripSeconds }) ?? true {
+        if let turned, ahead.map({ other in
+            let a = matchedRoutes(other, routes: line.routes(ofService: service), start: placement)
+            let b = matchedRoutes(turned, routes: line.routes(ofService: service), start: turnedRound(placement))
+            return b > a || b == a && turned.roundTripSeconds < other.roundTripSeconds
+        }) ?? true {
             return LineTrip(turnsFirst: true, journey: turned)
         }
         return ahead.map { LineTrip(turnsFirst: false, journey: $0) }
@@ -316,8 +323,7 @@ extension GameWorld {
     /// of a platform it fits (Stage S5). Each leg's seconds are the least in
     /// which the line's performance builds a running curve for its exact
     /// distance (Stage W2c).
-    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> LineJourney? {
-        let stops = line.stops
+    func drive(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement, routes: [LineRoutePreference]) -> LineJourney? {
         let farEnd = calls[calls.count - 1]
         let order = calls + calls.dropLast().reversed()
         var placement = start
@@ -328,7 +334,7 @@ extension GameWorld {
                 // The far end: turn round before coming back.
                 placement = turnedRound(placement)
             }
-            guard let path = path(from: placement.position, toStation: stops[to], length: placement.length) else { return nil }
+            guard let path = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes) else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
                 guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
@@ -351,13 +357,12 @@ extension GameWorld {
     /// it calls at once round (the reference's
     /// `metroHeadwayRoundTripMinutes` for a ring: one dwell a stop, no
     /// terminal).
-    func driveLap(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement) -> LineJourney? {
-        let stops = line.stops
+    func driveLap(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement, routes: [LineRoutePreference]) -> LineJourney? {
         var placement = start
         var legs: [LineLeg] = []
         var seconds = ServiceLine.dwellMinutes * Int64(calls.count - 1) * GameTime.secondsPerMinute
         for (from, to) in zip(calls, calls.dropFirst()) {
-            guard let path = path(from: placement.position, toStation: stops[to], length: placement.length) else { return nil }
+            guard let path = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes) else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
                 guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }

@@ -175,7 +175,8 @@ extension ReferenceWorld {
             if next == 0 && !order.repeats { continue }
             var driver = Self.driver(at: state.place.position, trailEdges: state.place.trailEdges, length: order.length)
             if order.turns.contains(state.stop) { driver = turnedOnNetwork(driver) }
-            guard let found = memoPath(from: driver, to: order.stations[next], length: order.length) else { continue }
+            let specified = order.routes.indices.contains(state.stop) ? order.routes[state.stop].flatMap { preferenceRoute(from: driver.position!, $0, length: order.length) } : nil
+            guard let found = specified ?? memoPath(from: driver, to: order.stations[next], length: order.length) else { continue }
             result.formUnion(legRuns(driver, along: found))
             driver = followed(driver, along: found)
             queue.append(DirectionState(place: Place(position: driver.position!, trailEdges: driver.trailEdges), stop: next))
@@ -225,7 +226,7 @@ extension ReferenceWorld {
     /// not at the call (a passing place), and its timetable on from there.
     private mutating func serviceRuns(of train: Train) -> Set<Run> {
         guard let service = train.service, let window = routeWindow(train) else { return [] }
-        let order = RouteMemo.Order(stations: train.timetable.map(\.station), turns: Set(train.timetable.indices.filter { train.timetable[$0].reverses }), length: Self.length(train), repeats: train.period != nil)
+        let order = RouteMemo.Order(stations: train.timetable.map(\.station), turns: Set(train.timetable.indices.filter { train.timetable[$0].reverses }), length: Self.length(train), repeats: train.period != nil, routes: hasRoutes(train) ? train.timetable.indices.map { routePreference(train, from: $0, to: ($0 + 1) % train.timetable.count) } : [])
         var found: Set<Run> = []
         var at = train
         if !service.waiting {
@@ -268,7 +269,7 @@ extension ReferenceWorld {
                 for sequence in sequences {
                     let turns: Set<Int> = line.ring ? [] : [sequence.count / 2, sequence.count - 1]
                     for length in lengths {
-                        planned.formUnion(directionRuns(.init(stations: sequence.map { line.stops[$0] }, turns: turns, length: length, repeats: true)))
+                        planned.formUnion(directionRuns(.init(stations: sequence.map { line.stops[$0] }, turns: turns, length: length, repeats: true, routes: pattern.routes.isEmpty ? [] : zip(sequence, sequence.dropFirst()).map { pair in pattern.routes.first { $0.from == pair.0 && $0.to == pair.1 } } + [nil])))
                     }
                 }
             }

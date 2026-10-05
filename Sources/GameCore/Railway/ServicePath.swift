@@ -136,11 +136,11 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
-        for berth in berths(of: id, length: length) where only == nil || berth == only {
+        for berth in berths(of: id, length: length) where (only == nil || berth == only) && eligible?.contains(berth) != false {
             berthsAlong[berth.traversal, default: []].append(berth.offset)
         }
         guard !berthsAlong.isEmpty else { return nil }
@@ -199,12 +199,12 @@ extension GameWorld {
     /// V3 generalized path cost (migration map §7). The geometric length
     /// in TrainPath remains exact; penalties affect selection only.
     func trafficPath(from start: TrainPosition, toStation id: StationID, length: Int64,
-                     berthPenalty: [Berth: Int64], edgePenalty: [TrackEdgeID: Int64], only: Berth? = nil,
+                     berthPenalty: [Berth: Int64], edgePenalty: [TrackEdgeID: Int64], only: Berth? = nil, eligible: Set<Berth>? = nil,
                      forbidden: Set<TrackTraversal> = []) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
             networkPath(from: traversal, offset: offset, toStation: id, length: length,
-                        forbidden: forbidden, berthPenalty: berthPenalty, edgePenalty: edgePenalty, only: only)
+                        forbidden: forbidden, berthPenalty: berthPenalty, edgePenalty: edgePenalty, only: only, eligible: eligible)
         }
     }
 

@@ -91,6 +91,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// thrown when new stops for a line would leave a pattern calling past
     /// its last stop.
     case invalidLinePattern
+    /// A physical preference must name a directed leg of its service.
+    case invalidLineRoutePreference
     /// The line has no pattern at this index.
     case unknownLinePattern(Int)
     /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.

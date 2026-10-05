@@ -191,14 +191,36 @@ GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.s
 | --- | --- | --- |
 | `Railway/site_archive_clean/index.html`／`overtakeTrackFree`、`planSameDirectionOvertakes(..., tracks)` | `ScheduledOvertakeTracks.swift`／`overtakeTrackFree`、`trafficMoves`、`trafficOvertakeTracks`；`ScheduledTraffic.swift`／`planTrafficOvertakes` | **faithful**：秒 ×1、窗口前後 30 秒、包含端點、0／>30 股拒絕、所有路線組合 OR masks、到站／車次優先、選候選與接受前雙重檢查；**adapted**：StationID、TrainID、cycle 替代站名／字串車次／日期 |
 | `Railway/site_archive_clean/data/tra_overtake_tracks.json`／version 1、241 站、halfM 137.4、`stations.moves`／`dirs` | `ScheduledOvertakeTracks.swift`／`TrafficTrack`、`trafficTrack`、`trafficMoves`、`trafficOvertakeTracks` | **adapted**：由玩家 RailwayNetwork、TrackPlatform、V1 berths 及名義服務路線推導；m ×64，車長 1024／車；不把台鐵站名／OSM id／137.4 m 當規則輸入。沒有新增真實資料 dependency |
-| `Railway/site_archive_clean/index.html`／`attachOvertakePeers`；`rail-3d/physical/motion.js`／`sidingsFor`、`routeAt`、`servedFirst` | `ScheduledOvertakeTracks.swift`／`scheduledBerthPath`；`ScheduledTraffic.swift`／`scheduledPath` | **adapted**：同窗口的各車自己路線、首站實際位置、servedFirst 忽略較晚待避、全身不得壓進出；跨站 pathIds 重綁由 V4b 接續；位置由中心／半列改車頭／全車長。既有偏好失敗退 V1／V2，整條預約仍優先 |
-| `Railway/site_archive_clean/rail-3d/physical/overtake-sidings.js`／`reroute`、`wrongWay`、`stopPosition`、`body` | `ScheduledOvertakeTracks.swift`／`trafficTrack`、`trafficTrackDirections`、`trafficNominalDirections`、`scheduledBerthPath`；`ServicePath.swift`／`trafficPath(...only:forbidden:)`；既有 `RouteReservation`／`resources`、`foulingNodes` | **adapted**：只用已建實體股道、前後可續行、不倒車、V1 berth 停車、span／限界與 `network.fouls`；m ×64。≥20 次／≤2% 歷史單向判定改名義 traversal／V1 方向保護；pairMax／四站路徑重綁改既有 400 m detour／逐站路線，必要理由見決策 60 |
+| `Railway/site_archive_clean/index.html`／`attachOvertakePeers`；`rail-3d/physical/motion.js`／`sidingsFor`、`routeAt`、`servedFirst` | `ScheduledOvertakeTracks.swift`／`scheduledBerthPath`；`ScheduledTraffic.swift`／`scheduledPath` | **adapted**：同窗口的各車自己路線、首站實際位置、servedFirst 忽略較晚待避、全身不得壓進出；候選集合保留 V3 廣義成本／路徑平手；跨站 pathIds 重綁由 V4b 接續；位置由中心／半列改車頭／全車長。既有偏好失敗退 V1／V2，整條預約仍優先 |
+| `Railway/site_archive_clean/rail-3d/physical/overtake-sidings.js`／`reroute`、`wrongWay`、`stopPosition`、`body` | `ScheduledOvertakeTracks.swift`／`trafficTrack`、`trafficTrackDirections`、`trafficNominalDirections`、`scheduledBerthPath`；`ServicePath.swift`／`trafficPath(...only:eligible:forbidden:)`；既有 `RouteReservation`／`resources`、`foulingNodes` | **adapted**：只用已建實體股道、前後可續行、不倒車、V1 berth 停車、span／限界與 `network.fouls`；m ×64。≥20 次／≤2% 歷史單向判定改名義 traversal／V1 方向保護；pairMax／四站路徑重綁改既有 400 m detour／逐站路線，必要理由見決策 60 |
 | （獨立交叉驗證） | `ReferenceOvertakeTracks.swift`／`stationMove`、`stationMovements`、`overtakePlaces`、`freeOvertakeTrack`、`scheduledBerthRoute`；`ReferenceNetworkService`／指定 berth 的鬆弛搜尋 | **gap**：本專案獨立 oracle，絕對距離窗口／候選索引集合組合，無 production planner 或 GameWorld 呼叫；同倍率 |
 | `Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html`／快慢車與越行說明；`lib/app__q_c234188b7c397f91.js`／`MIN_TRAIN_GAP` | 無可翻譯的 V4a 實作 | **gap**：只有文字與一次常數定義，未找到股道窗口／派車路線表演算法，不冒稱來源 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7／path cost、platformMismatchCost；`binary_reference/relevant_symbols_and_settings.txt` | V3 既有成本沿用；V4a 無新增成本常數 | **gap**：只有結構與編譯符號，沒有 overtakeTrackFree 實作；V3 自訂 400／800 m 成本不稱為參考預設值 |
 | `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT | 無（V4a） | **gap**：雙線往返、停留、同線車距與煞車限制，未找到單線待避／股道窗口 |
 
 V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 GoldenScenarios、SaveFixtures、ReplayFixtures 不改；原 `traffic.scheduledMeets` case 0–17 保留，新增三車 case 18–23 在 campaigns-15–18，每步全狀態／批次＝逐秒／存讀／關閉交通控制驗證。實景示範用猴硐既有雙股驗證實際全列停到快車名義走廊以外的另一股（正線／待避股推導的限制見決策 60），驗證狀態見 PR。
+
+#### V4b：服務共用逐段股道與月台偏好（決策 61）
+
+四份來源固定私有 main `25229af`；V4b 從作者已合併 #116 的 main `77b0443` 開分支，接手整合 `d2de3d5`（#117 inventory、#118 實景資料、#119 觸控）。#117 的 `2db0c5a` 盤點保留作平行移植紀錄，不取代本階段固定來源。資料只作語義來源，不把台鐵／OSM id 當玩家路網規則。
+
+| 參考檔案／函式 | 目標檔案／函式 | 倍率與分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/dispatch.json`／`plans.pathIds`、`assignmentBasis: inferred`；`network.json`／`paths.walk`、`ways` | `LineRoutePreference.swift`／`LineRoutePreference`、`preferredPath`；`ServiceLine.swift`／本線與交路 `routePreferences`；`GameWorld.setLineRoutePreferences` | **adapted**：逐段有向實體 walk→TrackTraversal、平台；m×64，秒×1，車長 1024／車；依作者要求改服務共用，不以真實車次／OSM id 為規則輸入 |
+| `dispatch.json`／`conflictPolicy: scheduled-hold`、arrival／departure `holds`、`departureHolds` | `GameWorld.departService`／`preferredLeaving`／`goOn`；`ScheduledTraffic.trafficPoints`；既有 `TrafficPlan`、`trafficVisits` | **adapted**：等待秒數仍按實際事件重新推導；V3 排定等待先、偏好整條授權才用、失敗回 V1／U2／V2（決策 59 第 11 點）；秒×1，無靜態 holds 存檔 |
+| `rail-3d/physical/plan-binding.js`／`createPlanBinding`、`sameStations`、`canJoin` | `routePreference(for:from:to:)`／整份班次站序匹配；`preferredPath`／逐對 transitions；`LineJourney`／服務共用 | **adapted**：共享物理路徑與站序／接續檢查；真實班表 exact／retimed／byTrain／跨班 DP 借用沒有本專案資料，該借用鏈列 **gap**，不冒稱移植整個 createPlanBinding；m×64 |
+| `rail-platform.js`／`resolvePlatform` | `LineRoutePreference.platform`、validated decoder／設定指令、已拆月台 fallback | **adapted**：月台歸屬目的站／服務有向路段，非 Station 永久屬性；live feed eventAt／最新資料矛盾／180000 ms freshness 沒有本地資料，列 **gap**；chainage m×64，無 Date.now 進 GameCore |
+| `index.html`／`stationTrackRef`、`sharedTrackGroups`、`boardSharedTrack` | 實體路徑依 `RailwayNetwork`；既有 span／fouling 共享與預約 | **adapted**：共用股道以實體資源判定；nearest-screen label anchor 與共同站對統計不是派車選路，該畫面行為列 **gap**；不將 px 或站名比對當權威拓撲 |
+| `rail-3d/physical/motion.js`／`sidingsFor`、`routeAt`、`attachOvertakePeers` | `preferredTrafficPath`、`ScheduledOvertakeTracks.trafficTrack`／`trafficTrackDirections`；`ServiceDirections`／memo 的偏好段 | **adapted**：moves／dirs 沿指定 walk 的前綴／續段，替代待避股回 V1，動態計畫／全列 body 與限界原子保護；m×64、秒×1；源 UI 的中心／halfM 改遊戲車頭／全列 |
+| `index.html`／`planSameDirectionOvertakes`、`overtakeTrackFree` | `ScheduledTraffic.planTrafficOvertakes`、`LineRoutePreference.preferredTrafficCommon`／`preferredTrafficSharesCorridor`、`ScheduledOvertakeTracks.trafficAssignedSiding` | **adapted**：來源單向班表改遊戲往返分向；指定月台可不同，以同向 head span 正長度重疊判斷走廊；已指定待避股可原股停等，完整 body／moves 仍檢查；原門檻與提案順序不變、無偏好分支不變；m×64、秒×1 |
+| `dispatch.json`／`handoffs`、`groups` | 既有同列車往返／折返／下一趟派車 | **adapted**：班次接續不用現實日期／source group；新中途換向／倒進側線為 V4d，groups 歷史資料分組列 **gap**；秒×1 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7／`rail_shorter_platform_penalty`、`rail_longer_platform_penalty`、platformMismatchCost；binary symbols | `ServicePath` eligible berth、`ScheduledTraffic` 既有廣義成本；`preferredPath` 全列 fit | **adapted**：保留距離＋選路成本的概念；clean pack 沒有可讀預設值或實作，新增短／長月台成本常數列 **gap**；既有 400／800 m 為本專案決策 59，m×64 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`routeLegs`、`consolidateRingRouteLegs` | 既有 ServiceLine／LinePattern 語義沿用 | **gap**（V4b）：routeLegs 是班型／班距段，未找到 physical pathIds 或 platformMismatchCost；不將班距設定誤稱實體股道綁定 |
+| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT、platform spots | 無可翻譯的 V4b 派車實作 | **gap**：雙線捷運場景／步行碰撞與搭車 spots，沒有逐段 path binding／玩家股道指定 |
+| （玩家操作／獨立驗證） | `GameWorld.lineRouteChoices`、`GameSession.setSelectedLineRoute`、`LinesPanel.routeMenus`；`ReferenceLineRoutes`、`ReferenceNetworkService`／名義與實際路徑、`ReferenceTrafficControl`／方向保護 | **gap**：本專案補足選路 UI、validated Codable、獨立 signed-run／絕對距離 oracle；UI point×1、m×64／秒×1；無 production planner／GameWorld 呼叫 |
+| （V4a 合併後追蹤） | `scheduledBerthPath` 單次 eligible 搜尋、`ScheduledOvertakeTrackTests` 第七項手算 | **gap**：恢復跨安全 berth 的 V3 成本／平手；觸控已獨立由作者合併 #119，不在 V4b diff；m×64 |
+
+本階段使用 adapted／gap；無 JavaScript 執行期 direct reuse 或未有來源的 faithful 宣稱。新增版本 10 save／schema 32 短 golden／實體路徑 replay，既有三種 fixture 檔案未修改。新 campaign 在 campaigns-19，既有 campaign 不縮減；實景猴硐指定原有月台實際停靠與 GameSession 設定／清除驗收保留原全部測試。完整必要調整、偏好優先與 failure atomicity 見決策 61；各檢查 VERIFIED／UNVERIFIED 見 PR。
 
 #### V1／V2 歷史盤點：當時 Deferred 的排定等待（交會／待避已由 V3 接續）
 

@@ -92,6 +92,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .removeLine(let id): error = model.removeLine(id)
         case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
         case .setLineRing(let id, let ring): error = model.setLineRing(id, ring)
+        case .setLineRoutePreferences(let id, let routes, let pattern): error = model.setLineRoutes(id, routes, pattern: pattern)
         case .setLinePerformance(let id, let performance): error = model.setLinePerformance(id, performance)
         case .setTrainPerformance(let id, let performance): error = model.setPerformance(id, performance)
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)
@@ -229,6 +230,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
                 )
             }
         )
+        summary.routePreferences = line.routes
+        for i in line.patterns.indices { summary.patterns[i].routePreferences = line.patterns[i].routes }
         summary.isRing = line.ring
         summary.outerLastDispatch = line.outerLastDispatch
         return summary

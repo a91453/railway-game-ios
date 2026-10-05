@@ -60,9 +60,11 @@
 /// 9. Scheduled traffic (decision 59): actual station visits release meets
 ///    and overtakes, including after a delayed train enters its next run.
 ///    Version 8 would drop these events and release a wait too soon.
+/// 10. Shared line/service physical route preferences (decision 61).
+///     Older builds would silently drop an assigned path or platform.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 9
+    public static let currentVersion = 10
 
     public let world: GameWorld
 
@@ -111,6 +113,8 @@ extension SavedGame: Codable {
         // before. Version 8 to 9: missing actual traffic visits decode as an
         // empty history; no plan is migrated or saved. Older running services
         // conservatively use their last actual arrival where history is absent.
+        // Version 9 to 10: absent line/pattern routePreferences migrate
+        // to empty automatic selections in their validated decoders.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

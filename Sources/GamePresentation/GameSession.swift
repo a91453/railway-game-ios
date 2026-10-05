@@ -594,6 +594,20 @@ public final class GameSession {
         selectedLineID = world.lines.first?.id
     }
 
+    /// One directed leg of the selected service: replace or clear its
+    /// preference through the world's atomic command.
+    public func setSelectedLineRoute(from: Int, to: Int, preference: LineRoutePreference?, pattern: Int? = nil) {
+        guard let line = requireSelectedLine() else { return }
+        var routes = pattern.flatMap { line.patterns.indices.contains($0) ? line.patterns[$0].routePreferences : nil } ?? line.routePreferences
+        routes.removeAll { $0.from == from && $0.to == to }
+        if let preference { routes.append(preference) }
+        let chosen = routes
+        perform { world throws(GameError) in
+            try world.setLineRoutePreferences(line.id, to: chosen, pattern: pattern)
+            return language.text("Updated the service's physical path.", "已更新交路的股道與月台。")
+        }
+    }
+
     /// Runs the selected line all day, or from 06:00 to midnight.
     public func setSelectedLineAllDay(_ allDay: Bool) {
         guard let line = requireSelectedLine() else { return }

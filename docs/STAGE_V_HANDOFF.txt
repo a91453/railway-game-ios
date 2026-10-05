@@ -1,0 +1,77 @@
+Stage V 接手更新（2026-10-05；本節取代下方歷史狀態）
+
+本次作者要求先更新 main 並繼續接手 V4b。新環境原本沒有 repo／scratch 備份，已從遠端還原；main 現在是 d2de3d5f814af3a3ecc6d6cf33e7b334226acfaf。作者已合併 #117、#118、#119；agent 未合併、未開 auto-merge。保留 backup/stage-v4b-published 指向遠端已發布 WIP ada70c3a56ddc1a96f7528cb3fe2e5d7b4a7496f，工作分支仍是 codex/stage-v4b-route-preferences，整合新 main 而未重寫 WIP 歷史。安全 berth 全域成本／平手修正保留；StartSaveFlow diff 已去重。#118 實景資料及 #117 inventory 保留。
+
+#119 VERIFIED（GitHub head dd45b084）：CI run 37312125653 success（UI-only gate）；localization 37312125692 success；iOS run 37312125830 success，Simulator build、English／zh-Hant UI smoke tests 均 success。iPad／missing-button proof skipped；實機 UNVERIFIED。
+
+四份私有來源均重新查核、固定 25229af。私有 clone 放 /workspace/railway-reference-private（detached），遠端最新為 2db0c5a；#117 inventory 對後者的盤點不取代 V4b 來源或擴大範圍。clean pack 已讀 READ_ME 與 migration §7；GTA 已讀 READ_ME 與 source。沒有移植金鑰／私人資料。
+
+已知 fastPassed failure 已修正並驗證：快車 180→600 秒按 33280 單位／420 秒行駛，450 秒尚未到 edge 3；獨立公式得到首次整秒通過為 478。測試要求精確 478、終點到達 600、慢車續行，保留完整模型、批次＝逐秒、occupancy 與存讀。首次補強曾在 clock=180 的出發處理前觀察 run 得到 nil；改於 190 秒檢查 start=180、length=33280、duration=420 後通過。沒有更動 production 規則來迎合斷言，也没有修改任何既有 fixtures。
+
+VERIFIED Linux Swift 6.4：warnings-as-errors build，/workspace/scratch/v4b-build-final.log；相關回歸初跑156項只有上述新出發觀察點的3個 assertion 失敗（同一 test），/workspace/scratch/v4b-focused.log；修正後 LineRoutePreferenceTests 全10項＋golden match／portableJSON 2項通過，/workspace/scratch/v4b-corrected-and-golden.log。最後完整相關 filter 158 項、1 項既有錄製 skip、0 failure（106.712 秒），/workspace/scratch/v4b-focused-final.log。Golden mutation mechanism 未本機全跑。
+VERIFIED campaigns-19：最後無偏好 memo 調整之後重跑，680步、digest 6ECB397836FA3785，21.571秒，coverage pass，/workspace/scratch/v4b-campaign19.log。shard自測通過，/workspace/scratch/v4b-shards-selftest.log。
+V4b draft PR #120：https://github.com/a91453/railway-game-ios/pull/120 。第一個 head e6629ed 的 Apple build／localization／unsigned archive 因 LinesPanel 呼叫 internal DisplayLanguage.text 失敗；已改 App 內依 public language enum 選文字，內容不變，後續新 head 結果以 PR 為準。全套 Swift CI／Apple build／UI gate 等結果另見 draft PR；新 UI test 只 full lane，實機 UNVERIFIED。V4b 不稱已驗收；V4c／V4d／V4e 必須等作者合併前段才開工。
+
+可直接貼給下一位的 prompt
+先讀本文件最新節、CLAUDE.md、AGENTS.md，保留工作樹並 fetch 最新 main。延續 2026-10-05 Stage V 授權（取代 AGENTS Division of work）：GameCore／獨立模型／新增 fixtures／存檔及 golden 版本／決策61起／ROADMAP／mapping 均可改；其他規範照舊。V4b 已保留 WIP、整合 main d2de3d5、按手算修正 fastPassed；先查 #120 的最新 head 與所有 CI，紅燈修好並 push，不合併、不開 auto-merge。只用 Swift6.4；warnings-errors／相關filter／新慢campaign shard 本機跑；全套交CI。既有 GoldenScenarios／SaveFixtures／ReplayFixtures（含 README）不可改；不碰 testflight.yml 或提交任何金鑰／私人資料。四源每階段重讀固定私有25229af（不用ddff2be），來源語義／常數／平手忠實保留，必要Swift調整與gap明列；由玩家路網推導，不以站名或OSM id作規則。若作者尚未合併V4b，不開V4c。
+作者合併V4b後從新main開V4c：parallelTracks／交會站推導單線最大列車數與班距，查tra_track_sections.json、traSectionKey／inferMeetPassTimes／inferMeetRun及1.5min來源，公式決策、獨立模型、平溪demo驗收。其後作者合併才開V4d（中途換向／V2倒入側線，turnbacks.js／turnbackProgress／reverse penalty，明確停留預約），再合併才開V4e（App／GamePresentation地圖movement authority／死結車與互等位置，保留文字；缺查詢才補Core與測試，新UI只full lane）。每段一draft PR，手算＋獨立模型＋每步全狀態／批次＝逐秒campaign＋存讀＋無控制舊行為＋RealWorldDemo；shard約560秒內、job20min，不縮舊campaign或拉timeout。
+
+下方為原交付歷史；其中本機路徑、失敗及 pending CI 狀態以最新節為準。
+
+Stage V 接手文件與可直接貼給下一個 agent 的 prompt
+更新：2026-10-05；觸控 PR 與 V4b WIP 均已發布
+
+最新作者指示
+作者將本次交付縮為「開 PR 修正觸控就好了」，並要求立刻 push、留下接手 prompt。作者接著要求「已經完成的部分也需要 push」；現已將全部現有 V4b 程式、獨立模型、fixtures 與文件推到 WIP 分支。不再擴充 V4b，不把尚有失敗的工作宣稱驗收完成。
+
+已發布交付
+Draft PR #119：https://github.com/a91453/railway-game-ios/pull/119
+分支 codex/fix-native-menu-touch；head dd45b084c06cf3a2c4caf1c34679d95ed074df70。
+從最新 main dceb03bf335a17b75941aa7a2d11623833e1c2ac 開分支。
+只改 RailwayGameApp/UITests/StartSaveFlowSmokeTests.swift（17 additions / 2 deletions）。
+Save／Back to Start 點擊可見 frame 中心；保留 requiredButton 的 existence／enabled／hittable，新增 frame 尺寸及中心位於 App 範圍的檢查，保留真實存讀、回主畫面斷言。產品 UI、gate list、workflow 沒改。
+VERIFIED：Linux git diff --check；GitHub blob/tree 與本機 tree 一致；發布後 fetch 確認 tree c69197d68960d92471a1b75172a9b6115d35703f。
+CI run 37312125653 success（UI-only diff 的 Swift gate，不能稱為 Swift 全套跑過）。iOS run 37312125830、localization run 37312125692 尚 in_progress。UI runtime／實機 UNVERIFIED。不要合併或啟用 auto-merge。
+觸控 worktree：/workspace/railway-game-ios-touch，乾淨，HEAD 已對齊發布的 dd45b084。
+
+原 Stage V 工作與保留位置
+工作目錄 /workspace/railway-game-ios；分支 codex/stage-v4b-route-preferences。
+V4a #116 已由作者合併，main 77b0443；原 head ee1b319。agent 未合併。
+V4a 合併後安全 berth 全域廣義成本／平手修正，以及觸控修正，原先在本機 commit 837a339；觸控現已獨立為 #119。
+V4b 已完整 commit／發布：38d17799d76f59d988ffa7505d365c72fa8be750，分支 codex/stage-v4b-route-preferences，GitHub https://github.com/a91453/railway-game-ios/tree/codex/stage-v4b-route-preferences 。含相對 77b0443 的全部 42 個改動／新檔（及上述兩項），remote tree 35be1c95e55a3a2cfd121073927941233f55f3e4 與本機一致。另加本接手文件 docs/STAGE_V_HANDOFF.txt；沒有 V4b PR，WIP 保存不表示測試全綠。
+可移植備份：/workspace/stage-v4b-wip.patch（git diff --binary 77b0443 加全部新檔）；/workspace/stage-v4b-wip.tar.gz（所有改動檔的最終內容）。不要把 tar 當作完整 repo。
+最新 origin/main dceb03b 已合併 #117（5598930 私有參考待移植項目盤點），V4b 尚未重整到該 main。需要讀最新文件、處理與本地 mapping／roadmap 的差異。#119 合併後，V4b 不再帶重複觸控 diff；仍保留安全 berth 成本修正。
+
+V4b 實作摘要（WIP，尚未完整驗收）
+決策 61；LineRoutePreference.swift 新型別：from/to 為線路索引，tracks 包括起點與終點有向邊，platform 為目的 TrackPlatform，空 tracks 只指定月台。資料放 ServiceLine／LinePattern，不放 ScheduledStop／Station，同服務全部班次共用。
+設定與 Codable 驗證有向相鄰 call、平台站、ID、重複 key、walk 終點；缺少字段遷移空陣列、explicit null 拒絕。已拆平台／斷路偏好保留，但執行 fallback。
+preferredPath：固定 walk 後段可重接、逐對 transitions、全列 fit、checked Int64；平台偏好用一次 eligible berth 成本搜尋。初始 berth/facing 先比實現偏好數，再沿原成本／平手。
+實際 departure／passing-place goOn／deadlock 查詢／方向保護／名義 traffic moves 接入，只有整條授權可原子取得才採用；失敗退 V1/U2/V2。V3 scheduled wait/path 仍先。
+有偏好且完整往返的 traffic overtakes，按既有 reverses 分向共站序；不同月台用同向正長度 head span 重疊辨識走廊；已指定 loop 的名義 berth 可候選，仍查全部 body/moves/dirs。無偏好保留 V4a 分支。
+獨立 ReferenceLineRoutes.swift、ReferenceOvertakeTracks 等用 signed Run、另一份校驗／絕對窗口，無 GameWorld 呼叫。
+SavedGame.currentVersion 10（9→10），golden schema 32（繼續 30/31），新增 SaveFixtures/v10-line-route-preferences.json、GoldenScenarios/line-route-preference.json、ReplayFixtures/line-route-preferences.json；既有 fixture 全未修改。
+LinesPanel 每向 leg 的 Menu，可選自動／平台／固定 walk，GameSession 指令唯一權威；只加自己的 Automatic physical path xcstrings zh-Hant；新 UI test 只在 full lane。
+實景新增猴硐指定原有月台實停、GameSession 設定清除兩項；原實景全部驗收仍存在。
+campaigns-19：4 個單車 case×4 seed×20 步，加 2 個雙車 case×4 seed×45 步＝680 步，每步完整狀態、計畫、不變量，advance 批次＝逐秒，存讀。原 campaign 沒縮減。
+
+驗證與已知待辦（勿隱藏失敗）
+VERIFIED Linux Swift 6.4：warnings-as-errors build，/workspace/scratch/v4b-build.log（最後 build 約 7 秒）。
+VERIFIED campaigns-19：/workspace/scratch/v4b-campaign19-final.log，680 步，digest 6ECB397836FA3785，18.234 秒，coverage pass。此 run 在最後「無偏好 directions memo 保留空 routes」效能調整之前；該調整 build 已 pass，但 shard 還要重跑。
+VERIFIED shards 自測 .github/scripts/swift-shards-selftest.sh，campaigns-1～19＋rest coverage／失敗保護；既有 fixtures 及翻譯條目 unchanged。
+最後 focused run /workspace/scratch/v4b-verify-final.log：158 個測試、1 項既有錄製 test skip、1 個 failure。原 ScheduledTraffic／Overtake／ServiceLine／Pattern／Dispatch／Ring／TrafficControl／Deadlock／SavedGame、golden match、ReferenceWorld golden、Replay、實景驗收通過。
+唯一 failure：Tests/GameCoreTests/LineRoutePreferenceTests.swift:153，testAnAssignedLoopRemainsAnOvertakePlaceAndClearsTheExpress 的 fastPassed 斷言。新加入「450 秒內 fast head 到 edge 3 或 7」仍未成立。之前僅檢查 scheduled overtaking wait、slow 在 loop edge5、45×10秒的批次＝逐秒／完整模型／occupancy 都通過；不能因此聲稱快車已成功通過。下一位必須查實際 fast path／held／服務時間與 return direction protection，修真正確行為或手算事件窗口，不能弱化 assertion 來掩蓋阻塞。
+不要重跑 GoldenScenarioTests.testChangedExpectationsAreReported 整個 mutation mechanism 作為快速檢查：本次曾選太廣而停止該 task-owned runner；後來只跑 matchCommittedExpectations／portableJSON 等相關方法。全套留 CI。
+V4b 已發布 WIP 分支，但尚無 PR／該分支的全套 CI，Apple build／full lane／實機都 UNVERIFIED。
+V4a 全域 eligible 成本修正已本機跑原改動 campaigns-12/14/15/16/17/18，digest 保持原本；記錄在 /workspace/scratch/v4a-cost-*.log。不可把 #116 iOS gate 原 head 的 failure 說成綠燈。
+
+發布工具
+gh 的 GH_TOKEN 已過期，git public fetch 正常、push 401；不要印 token。可用已連接 GitHub connector 的 create_blob→create_tree→create_commit→create_branch/update_ref→create_pull_request；先比 blob/tree 與 local Git SHA 完全一致。GitHub commit metadata 與 local commit SHA 可不同，tree 必須相同；發布後 fetch，再僅對自身 branch reset --soft 對齊。工具透過 functions.exec 的 ALL_TOOLS 搜尋 github_* schema。PR 新 head CI 用 fetch_commit_workflow_runs／fetch_workflow_run_jobs；不要 force-push main。
+
+繼續 Stage V 的 prompt（作者可直接貼給下一位）
+請先完整讀 repo 的 docs/STAGE_V_HANDOFF.txt（同 /workspace/stage-v-handoff.txt）、CLAUDE.md 和 AGENTS.md，保留工作樹，再從最新 origin/main 檢查作者已合併哪些 PR。延續原 2026-10-05 Stage V 授權：可改 GameCore、獨立 ReferenceWorld、golden schema、存檔版本與新增 fixtures、ARCHITECTURE 決策 60 起、ROADMAP、RAILWAY_REFERENCE_MAPPING；這取代 AGENTS Division of work，其餘照舊。先跟進 #119 的 macOS CI；只有作者合併，agent 不合併、不開 auto-merge。
+私有 repo /workspace/railway-reference-private 固定 main25229af，不能用 ddff2be。每階段查四源 Ci/reference_snapshot、Railway/site_archive_clean、Railway/railway_game_reference_clean（先 READ_ME、migration §7）、Railway/taipei_gta_reference（先 READ_ME、source）。來源行為、常數、平手直接移植；Swift deterministic／整數定點／無 Foundation／value semantics／Sendable／validated Codable／failure atomicity。玩家路網從 RailwayNetwork/TrackPlatform/berths 推導，不用真實台鐵站名或 OSM id 作規則。
+先完成並修好保留的 V4b，尤其已知 fastPassed failure，不要重新從零寫，不要宣稱目前 WIP 已完成。新的 main 先讀 #117 inventory，將接手的安全 berth 全域成本修正保留、觸控 #119 去重。V4b 仍一分支、一 draft PR，附四源→目標／倍率／direct reuse|faithful|adapted|gap 表、必要調整、決策61、各 check VERIFIED/UNVERIFIED。PR 開好且 CI 紅燈修好再推；下一階段僅在作者合併前階段後從新 main 開 branch。
+V4c：從 parallelTracks／交會站推導單線最大列車數與班距，來源 tra_track_sections.json、traSectionKey/inferMeetPassTimes/inferMeetRun、參考最短班距1.5min；新增公式決策、獨立模型、golden 值變動逐值解釋、平溪 demo 單線容量驗收。
+V4d：中途站換向、V2 倒入側線讓路；來源 turnbacks.js 的同來源節點同股反向與林鐵 zigzag、timing.turnbackProgress、RailwayCore reverse penalty；明確停留及預約語義。
+V4e：只改 App/GamePresentation（缺查詢才補 Core＋測試），地圖畫每車 movement authority／死結車及互等位置、保留文字，參考 blockHoldSec/updateBlockHolds 和股道顯示；新 UI test 只 full lane。
+每階段手算＋獨立模型＋每步全狀態/批次＝逐秒 campaign＋存讀＋無交通控制舊行為＋RealWorldDemo 新行為；不改任何既有 GoldenScenarios/SaveFixtures/ReplayFixtures（README 也不改）。格式變升版遷移加新fixture。Swift6.4 only；本機 build warnings-errors、相關 filter、新/慢 campaign shard。每 shard runner 約560秒內，job20min，不拉 timeout、不縮舊 campaign；全套交CI、紅燈修好。不要碰 testflight.yml 或提交任何金鑰／私人資料。依 V4b→V4c→V4d→V4e 完成，但各前段必須作者合併後才開下一分支。

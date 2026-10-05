@@ -59,6 +59,17 @@ extension ReferenceWorld {
             _ = admit(off, at: i)
             return
         }
+        if service.stop > 0, let preference = routePreference(trains[i], from: service.stop - 1, to: service.stop),
+           let path = preferenceRoute(from: start.position!, preference, length: Self.length(start)),
+           case .success = admitted(routed(start, path)) {
+            var preferred = routed(start, path)
+            preferred.service = service
+            let fastest = run(preferred, length: path.distance, scheduled: nil)
+            preferred.service?.run = fastest
+            preferred.trafficVisits = scheduledDepartureHistory(trains[i])
+            _ = admit(preferred, at: i)
+            return
+        }
         guard let path = chosenRoute(from: start, to: target) else { return }
         var off = routed(start, path)
         off.service = service
@@ -76,6 +87,10 @@ extension ReferenceWorld {
     mutating func canSetOff(_ candidate: Train) -> Bool {
         guard trafficControl, let service = candidate.service, !service.waiting else { return true }
         let start = standing(candidate)
+        if case .success = admitted(candidate) { return true }
+        if service.stop > 0, let r = routePreference(candidate, from: service.stop - 1, to: service.stop),
+           let path = preferenceRoute(from: start.position!, r, length: Self.length(candidate)),
+           case .success = admitted(routed(start, path)) { return true }
         guard let path = chosenRoute(from: start, to: candidate.timetable[service.stop].station) else { return false }
         if case .success = admitted(routed(start, path), following: true) { return true }
         return false

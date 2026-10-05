@@ -11,7 +11,7 @@ import XCTest
 /// `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private static func currentVersion(of data: Data) -> Data {
-        Data(String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 9"#).utf8)
+        Data(String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 10"#).replacingOccurrences(of: #""saveVersion" : 9"#, with: #""saveVersion" : 10"#).utf8)
     }
 
     private func makeWorld() throws -> GameWorld {
@@ -37,7 +37,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 9)
+        XCTAssertEqual(SavedGame.currentVersion, 10)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -57,7 +57,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 10, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 11, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -476,7 +476,7 @@ final class SavedGameTests: XCTestCase {
         for name in ["v9-scheduled-meet.json", "v9-scheduled-clearance.json"] {
             let data = try Data(contentsOf: Self.fixtures.appendingPathComponent(name))
             let game = try JSONDecoder().decode(SavedGame.self, from: data)
-            XCTAssertEqual(try encoder.encode(game), data)
+            XCTAssertEqual(try encoder.encode(game), Self.currentVersion(of: data))
             XCTAssertNotNil(game.world.scheduledTrafficWait(of: TrainID(rawValue: 1)))
             var world = game.world
             if name.contains("clearance") {
@@ -497,7 +497,7 @@ final class SavedGameTests: XCTestCase {
         let game = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertTrue(game.world.trains.allSatisfy { $0.trafficVisits.isEmpty })
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(game)) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 9)
+        XCTAssertEqual(object["saveVersion"] as? Int, 10)
     }
 
     func testCorruptActualTrafficVisitsAreRefused() throws {
@@ -527,4 +527,16 @@ final class SavedGameTests: XCTestCase {
         .deletingLastPathComponent()
         .deletingLastPathComponent()
         .appendingPathComponent("SaveFixtures", isDirectory: true)
+    func testVersionTenPreservesItsSharedPhysicalPreferences() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v10-line-route-preferences.json"))
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        let route = try XCTUnwrap(world.lines[0].routePreferences.first)
+        XCTAssertEqual(route.tracks.map(\.edge), [1, 4, 5].map(TrackEdgeID.edge))
+        XCTAssertEqual(route.platform.edge, .edge(5))
+        XCTAssertFalse(world.isTrafficControlEnabled)
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+        try world.advance(ticks: 610)
+        XCTAssertEqual(world.trains[0].movement.remainingEdges.first, .edge(4))
+    }
+
 }
