@@ -113,10 +113,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # The slowest shard takes about 9 minutes of tests on a fast runner and
-    # up to about 16 on a slow one (see the table in swift-shards.sh); the
-    # limit leaves room for campaigns to grow before a shard is split further.
-    timeout-minutes: 20
+    # Since Stage V3's fix (#111) the slowest shard, campaigns-12
+    # (ScheduledTrafficPropertyTests, one test that cannot be split by
+    # class), takes about 33 minutes of tests on a fast runner and up to
+    # about 60 on a slow one (see the table in swift-shards.sh); the other
+    # shards take about 9 to 16. The limit fits the slowest with room; it
+    # comes back down when that campaign is made cheaper.
+    timeout-minutes: 75
     container: swift:6.4-noble
     strategy:
       # The shards are independent: let every one finish so a failing run

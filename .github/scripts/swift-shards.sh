@@ -69,6 +69,15 @@ set -euo pipefail
 # Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
 # TrackResourcePropertyTests here, and the grid's position, movement, route
 # and topology campaigns from rest) with the grid's tests.
+# Stage V3's fix (#111) works the scheduled plan out again every second and
+# checks every long advance against seconds, so two shards outgrew the
+# 20-minute limit (cancelled on main from 67bd315 on):
+#   campaigns-12 ScheduledTrafficPropertyTests 2452 s locally (2026-10-05;
+#                the shard took about 3 1/2 minutes on the runner before
+#                #111), so ~1990 on a fast runner and up to ~3600 on a slow
+#                one: ci.yml's limit is 75 minutes
+#   campaigns-9  TrafficControlPropertyTests: more than 18 minutes of tests
+#                on the runner after #111 (about 18 before)
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
