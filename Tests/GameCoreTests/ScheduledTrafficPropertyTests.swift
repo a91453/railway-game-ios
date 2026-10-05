@@ -9,7 +9,10 @@ import XCTest
 /// that ends with a service still in its first cycle must show it in a
 /// deadlock, never wait in silence.
 ///
-/// The campaign has 18 cases a seed. This class runs cases 0 to 8 of every
+/// The campaign has 24 cases a seed. V4a adds three-train cases 18 to 23
+/// across ScheduledOvertakeTrackPropertyTests, its Middle, Last and Final classes
+/// on campaigns-15 to 18; the original
+/// cases and their generators are unchanged. This class runs cases 0 to 8 of every
 /// seed and ``ScheduledTrafficSecondHalfPropertyTests`` cases 9 to 17, on a
 /// shard of their own (the whole campaign no longer fitted one job). A case
 /// is the same case whichever class runs it: its generator comes from its
@@ -34,14 +37,21 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
     /// digest and returns the tally, with `ran` the cases run.
     static func campaign(cases: Range<Int>) throws -> [String: Int] {
         var digest = Digest(), tally: [String: Int] = [:]
-        try runCampaign("traffic.scheduledMeets", cases: 18) { testCase in
+        try runCampaign("traffic.scheduledMeets", cases: 24) { testCase in
             guard cases.contains(testCase.index) else { return }
             tally["ran", default: 0] += 1
-            let kind = testCase.index % 3
-            var world = kind == 1
+            let trackCase = testCase.index >= 18
+            let kind = trackCase ? 1 : testCase.index % 3
+            var world = trackCase ? try ScheduledOvertakeTrackTests.threeTrains(departure: 300 + Int64(testCase.random.below(180))) : kind == 1
                 ? try ScheduledTrafficTests.overtake(fastDeparture: 180 + Int64(testCase.random.below(40)), fastArrival: 600 + Int64(testCase.random.below(90)))
                 : kind == 2 ? try ScheduledTrafficTests.repeatingMeet() : try ScheduledTrafficTests.meet()
             if kind == 2 { tally["repeatingCases", default: 0] += 1 }
+            if trackCase {
+                tally["trackCases", default: 0] += 1
+                if !world.scheduledTrafficWaits().contains(where: { $0.kind == .overtake && $0.train.rawValue == 1 }) {
+                    tally["deniedOvertakes", default: 0] += 1
+                }
+            }
             var model = ScheduledTrafficTests.model(for: world)
             func compare() -> [String] {
                 var problems = KernelDifferentialTests.differences(world, model, lineAnswers: false)
@@ -118,5 +128,40 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
 final class ScheduledTrafficSecondHalfPropertyTests: XCTestCase {
     func testScheduledTrafficMatchesTheIndependentModel() throws {
         try ScheduledTrafficPropertyTests.checkHalf(ScheduledTrafficPropertyTests.campaign(cases: 9..<18))
+    }
+}
+
+/// Additional cases of the same campaign; no original case was reduced.
+final class ScheduledOvertakeTrackPropertyTests: XCTestCase {
+    static func check(_ cases: Range<Int>, saves: Int, runs: Int = 8) throws {
+        let tally = try ScheduledTrafficPropertyTests.campaign(cases: cases)
+        XCTAssertEqual(tally["ran"], runs)
+        XCTAssertEqual(tally["trackCases"], runs)
+        XCTAssertEqual(tally["deniedOvertakes"], runs)
+        XCTAssertEqual(tally["operations"], runs * 36)
+        XCTAssertEqual(tally["saves"], saves)
+        XCTAssertEqual(tally["longAdvances"], runs * 5)
+    }
+
+    func testScheduledTrafficWithAThirdStationMovement() throws {
+        try Self.check(18..<20, saves: 36)
+    }
+}
+
+final class ScheduledOvertakeTrackMiddlePropertyTests: XCTestCase {
+    func testScheduledTrafficWithAThirdStationMovement() throws {
+        try ScheduledOvertakeTrackPropertyTests.check(20..<22, saves: 36)
+    }
+}
+
+final class ScheduledOvertakeTrackLastPropertyTests: XCTestCase {
+    func testScheduledTrafficWithAThirdStationMovement() throws {
+        try ScheduledOvertakeTrackPropertyTests.check(22..<23, saves: 16, runs: 4)
+    }
+}
+
+final class ScheduledOvertakeTrackFinalPropertyTests: XCTestCase {
+    func testScheduledTrafficWithAThirdStationMovement() throws {
+        try ScheduledOvertakeTrackPropertyTests.check(23..<24, saves: 16, runs: 4)
     }
 }

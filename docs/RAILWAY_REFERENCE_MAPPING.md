@@ -183,6 +183,23 @@ GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.s
 
 2026-10-05 修正（決策 59 第 11–13 點）是本專案權威執行模型自己的 gap，參考沒有對應：網站在取樣的時刻表上平移時刻，沒有進路預約，所以沒有「排定路線拿不到時怎麼辦」「被等的車到不了時怎麼辦」，也不必管推進切法。修正後排定路線只是偏好、不等不會來的車、計畫每一步從列車狀態推導；參考的常數、排序與演算法本身沒有改變。
 
+#### V4a：25229af 的股道窗口與實體換股（決策 60）
+
+2026-10-05，四份來源皆檢查私有 repo main `25229af`；逐函式比對 `ddff2be → 25229af`。下表是 V4a 採用範圍，V3 的歷史表保留。
+
+| 參考檔案／函式 | 目標檔案／函式 | 倍率與分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html`／`overtakeTrackFree`、`planSameDirectionOvertakes(..., tracks)` | `ScheduledOvertakeTracks.swift`／`overtakeTrackFree`、`trafficMoves`、`trafficOvertakeTracks`；`ScheduledTraffic.swift`／`planTrafficOvertakes` | **faithful**：秒 ×1、窗口前後 30 秒、包含端點、0／>30 股拒絕、所有路線組合 OR masks、到站／車次優先、選候選與接受前雙重檢查；**adapted**：StationID、TrainID、cycle 替代站名／字串車次／日期 |
+| `Railway/site_archive_clean/data/tra_overtake_tracks.json`／version 1、241 站、halfM 137.4、`stations.moves`／`dirs` | `ScheduledOvertakeTracks.swift`／`TrafficTrack`、`trafficTrack`、`trafficMoves`、`trafficOvertakeTracks` | **adapted**：由玩家 RailwayNetwork、TrackPlatform、V1 berths 及名義服務路線推導；m ×64，車長 1024／車；不把台鐵站名／OSM id／137.4 m 當規則輸入。沒有新增真實資料 dependency |
+| `Railway/site_archive_clean/index.html`／`attachOvertakePeers`；`rail-3d/physical/motion.js`／`sidingsFor`、`routeAt`、`servedFirst` | `ScheduledOvertakeTracks.swift`／`scheduledBerthPath`；`ScheduledTraffic.swift`／`scheduledPath` | **adapted**：同窗口的各車自己路線、首站實際位置、servedFirst 忽略較晚待避、全身不得壓進出；跨站 pathIds 重綁由 V4b 接續；位置由中心／半列改車頭／全車長。既有偏好失敗退 V1／V2，整條預約仍優先 |
+| `Railway/site_archive_clean/rail-3d/physical/overtake-sidings.js`／`reroute`、`wrongWay`、`stopPosition`、`body` | `ScheduledOvertakeTracks.swift`／`trafficTrack`、`trafficTrackDirections`、`trafficNominalDirections`、`scheduledBerthPath`；`ServicePath.swift`／`trafficPath(...only:forbidden:)`；既有 `RouteReservation`／`resources`、`foulingNodes` | **adapted**：只用已建實體股道、前後可續行、不倒車、V1 berth 停車、span／限界與 `network.fouls`；m ×64。≥20 次／≤2% 歷史單向判定改名義 traversal／V1 方向保護；pairMax／四站路徑重綁改既有 400 m detour／逐站路線，必要理由見決策 60 |
+| （獨立交叉驗證） | `ReferenceOvertakeTracks.swift`／`stationMove`、`stationMovements`、`overtakePlaces`、`freeOvertakeTrack`、`scheduledBerthRoute`；`ReferenceNetworkService`／指定 berth 的鬆弛搜尋 | **gap**：本專案獨立 oracle，絕對距離窗口／候選索引集合組合，無 production planner 或 GameWorld 呼叫；同倍率 |
+| `Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html`／快慢車與越行說明；`lib/app__q_c234188b7c397f91.js`／`MIN_TRAIN_GAP` | 無可翻譯的 V4a 實作 | **gap**：只有文字與一次常數定義，未找到股道窗口／派車路線表演算法，不冒稱來源 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7／path cost、platformMismatchCost；`binary_reference/relevant_symbols_and_settings.txt` | V3 既有成本沿用；V4a 無新增成本常數 | **gap**：只有結構與編譯符號，沒有 overtakeTrackFree 實作；V3 自訂 400／800 m 成本不稱為參考預設值 |
+| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT | 無（V4a） | **gap**：雙線往返、停留、同線車距與煞車限制，未找到單線待避／股道窗口 |
+
+V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 GoldenScenarios、SaveFixtures、ReplayFixtures 不改；原 `traffic.scheduledMeets` case 0–17 保留，新增三車 case 18–23 在 campaigns-15–18，每步全狀態／批次＝逐秒／存讀／關閉交通控制驗證。實景示範用猴硐既有雙股驗證實際全列停到快車名義走廊以外的另一股（正線／待避股推導的限制見決策 60），驗證狀態見 PR。
+
 #### V1／V2 歷史盤點：當時 Deferred 的排定等待（交會／待避已由 V3 接續）
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |

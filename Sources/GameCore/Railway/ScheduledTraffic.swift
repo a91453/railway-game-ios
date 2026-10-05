@@ -53,6 +53,8 @@ extension GameWorld {
         /// other on a service, kept as the plan is worked out (the network
         /// cannot change meanwhile).
         var tracks: [TrafficSection: Int] = [:]
+        var moves: [TrafficMoveKey: [TrafficTrack]] = [:]
+        var sidings: [TrafficMoveKey: [TrafficTrack]] = [:]
     }
     struct TrafficSection: Hashable {
         var from: StationID
@@ -428,6 +430,7 @@ extension GameWorld {
                               dep > st.departure, trafficHasSiding(at: st, train: l.train),
                               !plan.waits.contains(where: { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep })
                         else { continue }
+                        guard overtakeTrackFree(&plan, service: slow, at: lc, departure: dep) else { continue }
                         let proposal = Proposal(slow: slow, fast: fast, point: lc, fastPoint: fc, departure: dep, need: need)
                         if let old = proposals.firstIndex(where: { $0.slow == slow && $0.point == lc }) {
                             if proposals[old].departure < dep { proposals[old] = proposal }
@@ -445,6 +448,7 @@ extension GameWorld {
             let st = l.points[p.point], fst = f.points[p.fastPoint]
             guard !rebuilt.contains(p.fast), !relied.contains(p.slow),
                   (!rebuilt.contains(p.slow) || (p.departure - st.arrival <= 600 && fst.arrival - st.arrival >= p.need)),
+                  overtakeTrackFree(&plan, service: p.slow, at: p.point, departure: p.departure),
                   trafficStopBuildable(l, at: p.point, departure: p.departure)
             else { continue }
             plan.waits.removeAll { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle }
@@ -584,7 +588,7 @@ extension GameWorld {
             p.calls && p.stop == execution.stop && p.departure != train.scheduledDeparture(of: p.stop, cycle: p.cycle).seconds
         }
         guard timingChanged || !berthPenalty.isEmpty || !edgePenalty.isEmpty || target != call,
-              let chosen = trafficPath(from: start, toStation: target, length: train.length, berthPenalty: berthPenalty, edgePenalty: edgePenalty)
+              let chosen = scheduledBerthPath(train, from: start, target: target, stop: stop, normal: normal, plan: plan, berthPenalty: berthPenalty, edgePenalty: edgePenalty)
         else { return nil }
         let there = placement(TrainPlacement(position: start, trailEdges: train.trailEdges, length: train.length), after: chosen)
         let onward = target == call ? 0 : path(from: there.position, toStation: call, length: train.length)?.distance

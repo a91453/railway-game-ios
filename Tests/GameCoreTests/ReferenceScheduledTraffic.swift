@@ -17,7 +17,12 @@ extension ReferenceWorld {
         var distance: Int64
     }
     struct PlannedService { var train: Train; var visits: [PlannedVisit] }
-    struct ScheduledPlan { var services: [PlannedService] = []; var waits: [ScheduledTrafficWait] = [] }
+    struct ScheduledPlan {
+        var services: [PlannedService] = []
+        var waits: [ScheduledTrafficWait] = []
+        var movements: [StationMoveKey: [StationMove]] = [:]
+        var places: [StationMoveKey: [StationMove]] = [:]
+    }
 
     func plannedVisits(_ train: Train, cycle: Int64) -> [PlannedVisit]? {
         guard let first = train.timetable.first else { return nil }
@@ -240,6 +245,7 @@ extension ReferenceWorld {
                         let st = l.visits[j], ft = f.visits[fj], dep = Self.capped(f.visits[fj].dep, 30)
                         guard ft.arr - st.arr >= need, dep - st.arr <= 600, dep > st.dep, hasScheduledLoop(st, l.train),
                               !plan.waits.contains(where: { $0.train.rawValue == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep }) else { continue }
+                        guard freeOvertakeTrack(&plan, slow, j, dep) else { continue }
                         if let old = proposed.firstIndex(where: { $0.slow == slow && $0.j == j }) {
                             if proposed[old].dep < dep { proposed[old] = (slow, fast, j, fj, dep, need) }
                         } else { proposed.append((slow, fast, j, fj, dep, need)) }
@@ -253,7 +259,7 @@ extension ReferenceWorld {
         for p in proposed {
             let l = plan.services[p.slow], f = plan.services[p.fast], st = l.visits[p.j], ft = f.visits[p.fj]
             guard !rebuilt.contains(p.fast), !relied.contains(p.slow),
-                  (!rebuilt.contains(p.slow) || (p.dep - st.arr <= 600 && ft.arr - st.arr >= p.need)), buildsScheduledStop(l, p.j, p.dep) else { continue }
+                  (!rebuilt.contains(p.slow) || (p.dep - st.arr <= 600 && ft.arr - st.arr >= p.need)), freeOvertakeTrack(&plan, p.slow, p.j, p.dep), buildsScheduledStop(l, p.j, p.dep) else { continue }
             plan.waits.removeAll { $0.train.rawValue == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle }
             plan.waits.append(ScheduledTrafficWait(train: TrainID(rawValue: l.train.id), station: st.station, stop: st.stop, cycle: st.cycle,
                                                    other: TrainID(rawValue: f.train.id), otherStop: ft.stop, otherCycle: ft.cycle,
@@ -391,7 +397,7 @@ extension ReferenceWorld {
         }
         let timingChanged = sequence.visits.contains { $0.call && $0.stop == service.stop && $0.dep != train.timetable[$0.stop].departure.seconds + $0.cycle * (train.period ?? 0) }
         guard timingChanged || target != call || !berthCosts.isEmpty || !edgeCosts.isEmpty,
-              let way = networkPathToStation(from: position, station: target, length: Self.length(train), berthCosts: berthCosts, edgeCosts: edgeCosts) else { return nil }
+              let way = scheduledBerthRoute(train, target, stop, normal, plan, berthCosts, edgeCosts) else { return nil }
         let there = followed(train, along: way)
         let onward = target == call ? 0 : networkPathToStation(from: there.position!, station: call, length: Self.length(train))?.distance
         guard let onward, way.distance + onward <= normal.distance + 25_600 else { return nil }
