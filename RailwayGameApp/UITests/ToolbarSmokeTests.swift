@@ -94,7 +94,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
     private func tapMenuAction(_ button: XCUIElement, in app: XCUIApplication) {
         guard button.waitForExistence(timeout: 10) else {
             recordRouteUI("missing menu action", in: app)
-            XCTFail("Missing route menu action: \(button.identifier)")
+            XCTFail("Missing route menu action; see the attached accessibility hierarchy")
             return
         }
         XCTAssertTrue(button.isEnabled)
