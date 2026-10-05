@@ -189,10 +189,10 @@ extension GameWorld {
     /// whose spans or fouling nodes conflict with the other trains' track.
     /// A berth short of a blocked span on the same edge remains reachable.
     /// The caller must still reserve the whole envelope, including the body.
-    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>, forbidden: Set<TrackTraversal> = []) -> TrainPath? {
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>, forbidden: Set<TrackTraversal> = [], only: Berth? = nil) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
-            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked, forbidden: forbidden)
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked, forbidden: forbidden, only: only)
         }
     }
 

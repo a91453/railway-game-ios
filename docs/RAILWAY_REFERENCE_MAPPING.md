@@ -713,3 +713,18 @@ V 實際放行 → T、U（保證不互穿）
 **順序（2026-10-01 作者決定）**：W2 先於 U-min。兩者互不依賴（U → T，W2 → W1），但後做的那個要處理「列車依曲線在授權終點前停下」；W2 先做，U-min 就直接建立在最終的移動方式上，不必先為固定的 rate 設計停車。
 
 依 ARCHITECTURE 的依賴方向規則，G1 的乘客與經營只讀車站、線路與停站的查詢，所以之後的 U、V、W2 改變鐵路的物理層時，不必重寫它們。
+
+
+## Stage V4d：中途換向與倒入側線
+
+固定私有 commit `25229af377c5e60a19254cba208a836ec39a8a10`；先讀 clean `00_READ_ME_FIRST.md`／migration §7 與 GTA `00_READ_ME_FIRST.md`／source。量綱：來源 m→64 世界單位、sec→1 遊戲秒。決策63列完整平手、dwell、原子預約及手算。
+
+| 來源／函式 | 目標 | 分類 | 必要調整／gap |
+| --- | --- | --- | --- |
+| Railway/site_archive_clean/rail-3d/physical/turnbacks.js `isScheduledTurnback`／AFR_TURNBACKS | LineJourney.drive、trip timetable；ReferenceNetworkService／ReferenceLines | adapted | 保留同股反向含義；由玩家有向邊、全車平台与正向不可達推導，移除來源 system／站名白名單。既有正向優先，非環線、控制 ON。 |
+| 同目錄 timing.js `turnbackProgress` | 既有 RunningCurve／ServiceDwell；TurnbackTests 手算 | adapted／gap | 源碼明說未公布停留，不虛構。保留現有加減速與dwell，不把20秒ease參數加成反轉停留；沒有移植畫面ease到權威移動。 |
+| Railway/railway_game_reference_clean/01_MIGRATION_MAP.md §7／binary_reference/relevant_symbols_and_settings.txt `rail_depot_reverse_penalty` | Deadlock.passingPlace／passingContinuation、GameWorld.resolveDeadlock／ServiceDirections；ReferenceDeadlock／ReferenceTrafficControl | adapted／gap | 只有符號與成本構想、無可讀planner或數值。正向優先，再反向所有可容全車berths；沿用400m detour與完整預約，不捏造新penalty。 |
+| Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js，turnback/reverse／headway查核 | 無直接反向側線實作可移植；新增玩家規則與獨立oracle | gap | 1.5min為班距，不是反轉dwell；未發現可讀的單線反向側線planner。 |
+| Railway/taipei_gta_reference/source/assets/actors-Cx0CrTrM.js，MRT雙軌端點layover | 非直接移植；延續GameCore head/tail反轉與既有停留 | gap | 來源是兩軌捷運端點timer14，沒有玩家单線死結倒側線模型；不套14秒。 |
+
+新增 golden schema34：可省略的中途反轉出發leg indices；舊30–33繼續讀。save10不變，既有fixtures（含README）不改。新campaign 768步的每步獨立模型、batch=second、存讀；實景驗收用既有平溪幾何建玩家折返服務。多次調車、無平台倒車、全域最優解仍是gap，本階段只做一次反向待避與安全續行。驗證以PR128實際head/run為準。

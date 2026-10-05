@@ -1,3 +1,146 @@
+Stage V4d 接手完成段 — 2026-10-05（Claude Code 接手；本節取代下方所有 pending 狀態）
+
+接手分支 claude/takeover-and-complete-mp89w9（本 session 指定的唯一可推分支），由 PR128 head c353761 快轉而來，PR128 的全部 commit 原樣保留；另開 draft PR（取代 PR128 的驗收，作者可擇一合併或關閉 PR128）。agent 沒有 merge／auto-merge／commit main；V4e 仍等作者合併 V4d。私有參考固定 25229af（mapping 所列 turnbacks.js isScheduledTurnback、timing.js turnbackProgress、clean READ_ME／migration §7／symbols、Ci app 檔、GTA actors 均在該 commit 重新核對存在且語義相符）。
+
+本輪修改（不改產品行為）：
+1. TurnbackTests 新增 testPreferencesOnTurnbackLegsAreMatchedFromTheTurnedPlacement：在兩條中途折返腿（B→C、B→A）設平台偏好，驗 matchedRoutes 由翻向後 placement 計得 2（production 與獨立模型相同）、未派出線路兩向保護、510 秒逐秒全模型＋invariants、batch=second、完整結束。突變檢查：把 matchedRoutes 改回只在遠端翻向，該測試以 0≠2 失敗，還原後通過。
+2. 決策63補「限制」：V4c 名義容量仍按站序相鄰區段計費，中途折返線實體重疊不拆分；只限制請求列車數，安全仍由完整預約與死結處理保證。ROADMAP／決策63的驗證狀態改指向本接手 PR。
+
+審查結論（本機讀碼，無需改碼）：goingOn／passingContinuation 正向優先、與 V3 scheduledPath（以正向 normal path 為前提）及 preferredGoingOn（正向偏好）一致，dead-end 時兩者皆 nil，不會把正向 path 套在翻向後的車上；反向 fallback 起始 traversal 也經 networkPath 的 forbidden 檢查；resolveDeadlock 只在 reserving 授權後才提交翻向；ServiceDirections 對執行中車用時刻表 reverses、未派出線路用 intermediateTurnbacks memo key，與 ReferenceTrafficControl 對應。berth 平手順序 production 依 platform 排序（edge,start,end）每平台 forward→backward，獨立模型依 edge→forward→offset；僅同站同邊兩平台且總距離完全相等時才可能不同，未見於任何測試，列為已知差異。
+
+VERIFIED（Linux，Swift 6.4.0 /opt/swift，本 session）：
+- source 與 ede8849 相同的 c353761：swift build --build-tests -Xswiftc -warnings-as-errors 58.1s exit0。
+- 相關 filter 193 項、1 既有 record skip、0 failure（105.3s）：Turnback、Deadlock、LineRoutePreference、TrafficControl、ScheduledTraffic、ScheduledOvertakeTrack、SingleTrackCapacity、RingLine、LineDispatch、ServiceLine、NetworkService、LinePattern、SavedGame、ReplayFixture、ReferenceWorldGolden、GoldenScenario 的 match／portable／unknown version／line commands、全部 RealWorldDemo（9 項含十分→菁桐→平溪折返）。
+- campaigns-22：2 項 51.2s、runner 52s、coverage 通過；capacity 576 步 digest E974A083D5858C78、turnbacks 768 步 digest E46C5001271E3303（56 reversed／255 waiting／16 completed），與前一位紀錄一致。
+- campaigns-11：DeadlockPropertyTests 1 項 120.1s、runner 121s、coverage 通過（digest 42AE3745A3FF09E8，1352 operations、37 passing places、111 completed）。
+- 加入新測試後：warnings-as-errors build exit0；TurnbackTests 8 項 0 failure（17.3s）。
+- swift-shards-selftest、bash -n、git diff --check 通過；既有 GoldenScenarios／SaveFixtures／ReplayFixtures／README 與 workflows 對 main 無任何修改（只新增 intermediate-turnbacks.json）。
+
+UNVERIFIED／交 CI：全套 22 campaigns＋rest、iOS PR gate、Wasm、localization 以接手 PR 實際 head／run 為準（結果寫在 PR 本文，不另以文件 commit 觸發重跑）；full UI lane 以 workflow_dispatch 在接手分支跑，結果亦寫 PR 本文；實機仍 UNVERIFIED。PR128 本身的 c353761 runs 在接手時仍 queued／pending。
+
+下一位：若接手 PR 有紅燈，在 claude/takeover-and-complete-mp89w9 修復並 push；作者合併 V4d 後才從新 main 開 V4e（App／GamePresentation 地圖 movement authority、死結車與互等位置，保留文字；缺查詢才補 Core＋測試，新 UI 只 full lane）。
+
+===== 以下為前一位（PR128）最後保存點與歷史，pending 狀態以上節為準 =====
+
+最後查核補充：本機campaigns-11已於2026-10-05 19:59:18 UTC完成，VERIFIED 1test105.002s、runner106s、coverage exit0，/workspace/scratch/v4d-verified-campaign11.log；下文「仍執行中」是先前觀察，已被本行取代。原始碼仍ede8849、後續僅文件。最新GitHub CI仍待下一位查實際head/run。
+
+Stage V4d 最終保存點 — 2026-10-05（作者因額度要求立刻寫接手並保存）
+
+本節取代下方「執行中」舊狀態。已停止功能擴充；PR128仍draft、尚未完成完整最新CI驗收，不可直接當merge-ready。沒有merge PR／auto-merge／commit main；V4e仍等作者合併V4d。
+
+精確原始碼head：ede884903d9a53e1b4ffa1cfc0425f004b64aaa7，tree 以git核對；分支codex/stage-v4d-turnbacks，https://github.com/a91453/railway-game-ios/pull/128。全數source/test/golden/mapping/決策/roadmap已發布；本文件另以純文件commit保存，最終head見PR。
+工作目錄 /workspace/railway-game-ios-v4d；main worktree /workspace/railway-game-ios，origin/main=3fd1e9d25c855948d663a5e2bcfa294617b33e13，已透過第二parent整合到ede8849；原作者新增population/place資料與UI研究保留。私有/workspace/railway-reference-private固定25229af377c5e60a19254cba208a836ec39a8a10。Swift6.4.0=/workspace/swift/usr/bin；export PATH=/workspace/swift/usr/bin:$PATH。
+
+本輪完成並保存：
+1. Deadlock反向fallback逐一枚舉全列berths，保留正向原行為；ServicePath blocked adapter新增only。原最近main berth漏掉可用loop的重現已修，兩車實際完成。
+2. 中途換向／時刻表WIP保留；補未派出線路方向保護（memo Plan/Order中intermediateTurnbacks）、dead-end待避續行的反向出口保護。普通零距離抵站續行仍保留，不誤用passingContinuation的正距離限制。
+3. TurnbackTests共7項：手算中途折返、關閉控制／過長車、側線完整通過、blocked/短側線/短起站平台/第三車在junction fouling、原子等待與控制切換、rate0暫停恢復、未派出完整雙向保護。ReferenceWorld獨立signed Run實作。
+4. schema34可省略intermediateTurnbacks摘要，保留30–33；新增GoldenScenarios/intermediate-turnbacks.json。save10不變。既有GoldenScenarios/SaveFixtures/ReplayFixtures含README均未改。
+5. TurnbackPropertyTests新traffic.turnbacks，6case×4seed×32步=768；每步全狀態、計畫、held/預約/holder/deadlock、invariants、實際存讀接續、batch=second。加在campaigns-22，既有容量campaign未縮。
+6. RealWorldDemoTests新增玩家十分→菁桐→平溪折返並回十分；兩次中途站訪問、存讀、取得預約和完整結束都驗證，非真實班表宣稱。原demo測試保留。
+7. ARCHITECTURE決策63、RAILWAY_REFERENCE_MAPPING四來源分類/量綱/gap、ROADMAP已發布。多次調車／無平台倒車／全域最優解仍gap。
+
+VERIFIED 最新原始碼ede8849（後續僅交接文件，不修改source）：
+- Linux Swift6.4 warnings-as-errors build3.65s，/workspace/scratch/v4d-verified-build.log。
+- 相關filter：Core54項、1既有record skip、0failure（40.702s）；Presentation/RealWorldDemo9項0failure（28.133s），合計63項。/workspace/scratch/v4d-verified-focused.log。含7TurnbackTests、Deadlock、LineRoutePreference、golden match/portable/unknown version、ReferenceWorld所有golden、SavedGame、ReplayFixtures、全部RealWorldDemo。
+- campaigns-22兩項47.267s，runner48s、coverage exit0；/workspace/scratch/v4d-verified-campaign22.log。容量576步digest E974A083D5858C78不變；turnbacks768步digest E46C5001271E3303（56reversed、255waiting、16completed），新test27.932s。
+- shard selftest、diff --check，/workspace/scratch/v4d-shards-selftest.log。
+- 所有發布blob SHA／整tree與local一致；包括保留executable mode的shard script。git push無憑證，connector API已成功保存。
+
+UNVERIFIED／下一位必查：
+- 本機campaigns-11（既有DeadlockPropertyTests）仍執行中，/workspace/scratch/v4d-verified-campaign11.log；task runner exec session36450，若環境尚存可讀log或poll，未觀察完成前不稱通過。其前面的build/filter/campaign22皆已成功。若新環境不存在這些logs需重跑，不可假稱本機仍在。
+- ede8849 GitHub最新：CI37366745477 pending、iOS PR gate37366745347 pending、Wasm37366745339 queued。完整結果待查；本handoff純文件head需查其實際run，不套用舊head。PR127 full37345609975（head2002eca）iPhone/iPad VERIFIED成功且已作者合併；它不等於最新V4d full lane。最新full UI／實機仍UNVERIFIED。
+- 先追最新PR128所有CI，修紅燈push；繼續審查direction/route preference/scheduled-wait與反向續行交互安全，最新新增的方向保護目前本機專項／完整模型已過，不以單項代替全套。
+- 依CI實際shard時間保持約560s/shard目標，不改20min timeout、不縮campaign；本機不要重跑全套。既有fixtures含README不能改；不碰testflight.yml／secrets。
+
+失敗紀錄（均保留，不隱藏）：原反向測試nil候選失敗後才改枚舉；新golden初版final count1但createLine預設none，新增明確setLineTrainsInService指令修測試設置（未改舊fixture）；實景首跑unplace後rate0未發車，補setRate1024；新fouling初版以edge.length作end拋invalidContinuation，修端點合法end=nil。最終上述63項全過。舊來源e6長4732，非4414；新名義點車golden551s，實際3cars542s，兩者不能混用。
+
+下一位直接prompt：
+讀本文件最新節、AGENTS.md/CLAUDE.md/ARCHITECTURE，延續Stage V授權可改Core/獨立模型/新fixtures/schema/設計文件，保留工作樹並fetch。從PR128最新head接手，不重做已發布內容。先查本機campaign11（若logs尚存）與GitHub最新head CI/iOS/Wasm，紅燈修復push，不merge、不auto-merge。已完成63項focused与campaign22驗證的source為ede8849；純交接commit不改source，但CI報告仍附實際head/run。補足剩餘review與最新CI證據，必要full lane不能用gate代替。四來源固定25229af，Swift6.4only、warnings-errors、舊fixtures/README/timeout/gate/testflight限制照舊。每小段保存push；作者合併V4d後才開V4e。
+
+===== 以下為本輪較早記錄與原交接，最新以以上為準 =====
+
+Stage V4d 接續 — 2026-10-05（本節優先，精確發布 head 看 PR128）
+
+已還原 /workspace/railway-game-ios、/workspace/railway-game-ios-v4d、私有參考固定25229af；Swift6.4.0在/workspace/swift。原PR128 head153eb514已本機VERIFIED build26.22s、2tests4.196s；遠端CI37347953348的22campaigns+rest、iOS PR gate37347953499、Wasm37347953491皆success。PR127已由作者合併，head2002eca full37345609975 iPhone及iPad VERIFIED success。main更新3fd1e9d（作者合併#127/#129/#130），已整合V4d分支，agent未merge PR／未auto-merge。
+
+已發布第一段5c704e6：反向fallback枚舉全部全列berths，原正向最近berth行為保留。反向側線重現首跑nil失敗，修正後VERIFIED 3tests6.316s，兩列車都完成、逐秒模型／batch=second／存讀一致。手算11900進側線、15996續行、27896全程。
+
+本輪後續：安全測試（blocked／短側線／起站短平台／junction fouling、等待不翻向、rate0恢復、控制切換與存读）、未派出線路與dead-end續行的方向保護、schema34可省略intermediateTurnbacks摘要與新增golden、768步traffic.turnbacks campaign置campaigns-22、實景玩家十分→菁桐→平溪折返並回十分、決策63與四來源mapping。save10不變。原fixtures／README、workflow／gate／timeout均未改，未縮任何campaign。
+
+驗證紀錄不可套用最新HEAD：初版安全6項9.427s成功；campaign22初版VERIFIED兩項47.168s、coverage成功，容量digest E974A083D5858C78、turnbacks E46C5001271E3303（768步、56reversed、255waiting、16completed）。之後新增方向保護須重跑。新golden首跑createLine預設none與手填count1不符，補明確setLineTrainsInService指令；沒有修改舊期望值。實景首跑因測試unplace後rate0而未發車，補setRate1024後單項VERIFIED通過。新fouling設置首跑invalidContinuation（端點end必須nil），已改合法設定，須重驗。所有失敗log保留。
+
+最終候選本機檢查執行中，完成前UNVERIFIED：/workspace/scratch/v4d-verified-build.log、v4d-verified-focused.log、v4d-verified-campaign22.log、v4d-verified-campaign11.log。完整最新HEAD CI待PR；iOS PR gate不代表full lane；實機UNVERIFIED。V4e等作者合併V4d才做。
+
+發布：git push無credentials；GitHub connector create_blob/tree/commit/update_ref可用，逐blob/tree核對後fetch，只soft reset自身branch對齊。整合main的發布須帶main為第二parent，保留作者新增資料來源／UI研究文件。來源私人檔不複製入public，只列路徑與語義。
+
+===== 以下為原WIP交接與歷史，pending狀態以本節/最新PR為準 =====
+
+Stage V 接手文件 — 2026-10-05 本次停止點
+
+作者最新指示：沒額度，先寫接手文件並上傳所有目前修改。已停止功能擴充；本次 V4d 是 WIP 保存點，不能當成完成或直接合併。本文取代舊文件的 pending 狀態，歷史設計仍參考 repo docs/STAGE_V_HANDOFF.txt 下方。
+
+工作與遠端
+主 repo a91453/railway-game-ios；V4c PR125 已由作者合併 main 04a5e4a0a3b6f7d7e795fa2ebfbbf484748b4c88。診斷 PR126 又由作者合併 main 62c2c7028471748ec4370184dc95fcf9f76a7853。agent 從未 merge／auto-merge。
+/workspace/railway-game-ios：codex/fix-route-menu-interaction，已發布 PR127，head 2002eca2eebf529fd99668b0837ea053f5c20943，工作樹乾淨。
+/workspace/railway-game-ios-v4d：codex/stage-v4d-turnbacks，base 62c2c7028471748ec4370184dc95fcf9f76a7853；本次將九個 source/test 修改及本文件保存成 draft PR。精確發布 commit 看 branch/PR 最新 head。
+/workspace/railway-reference-private：detached 25229af，固定來源；不用遠端新版。
+Swift6.4：export PATH=/workspace/swift/usr/bin:$PATH。官方安裝脚本、簽章已驗；/opt/swift 權限失敗後改裝 /workspace/swift。
+本環境最初 /workspace 空白，舊接手提到的更早 worktree／scratch 不在這台；已由 GitHub 還原 repo，不可聲稱那些舊本機資料仍存在。
+
+規範
+先讀 AGENTS.md、CLAUDE.md、ARCHITECTURE。延續作者 Stage V 授權可改 Core、獨立 ReferenceWorld、新 fixture/schema/save version、decision63 起、ROADMAP/mapping；授權取代 AGENTS 舊分工。Swift6.4 only、warnings-as-errors；不縮 campaign，不增加 timeout，不改 gate/workflow，不碰 testflight.yml、secrets。既有 GoldenScenarios／SaveFixtures／ReplayFixtures 及其 README 不改。每個 stage draft PR；不 commit main、不 merge、不 auto-merge。任何通過要寫 VERIFIED 和實際 head/run；PR gate 不能替代 full lane。作者合併 V4d 後才做 V4e。
+
+UI 已保存 PR127 https://github.com/a91453/railway-game-ios/pull/127
+診斷 PR126 head467e99c642f8cef45b123ccf3cdb5d6b6b939c9e，full run37342452056 VERIFIED failure：16 tests／1 failure；其餘15通過、iPad成功。route.tap 前後 AX hierarchy 完全相同，未開 menu。外層 line.route.-1.0.1 frame (16,704,370,66.7)，中心(201,737.35)；內層原生 Button frame(32,719,147.7,36.7)，右界179.7，中心點不在 label hit area。
+PR127 LinesPanel Menu label 新增 .frame(maxWidth:.infinity,alignment:.leading).contentShape(Rectangle())；維持原 route.tap 與選路／還原斷言。ToolbarSmokeTests missing-action 訊息改靜態字串，避免讀不存在元素 identifier 觸發 snapshot 例外。只有兩檔3增1減。
+VERIFIED Linux6.4 syntax parse、diff check、GitHub blob/tree identity；baseline build33.01s；RealWorldDemoTests.testTheLinePanelSessionSetsAndClearsOnlyTheSelectedLeg 1 test7.522s pass（只證明 Core/session，非SwiftUI）。
+head2002eca：Swift gate37345609418 success（UI-only）；localization37345609427 success；iOS PR gate37345609522 success（iPad skipped）。manual FULL37345609975 最新觀察 iPhone UI in_progress、iPad success；全文 UI 結果 UNVERIFIED，下一位先查。PR127 最新觀察 OPEN draft、未合併，實機 UNVERIFIED。
+先前 main04a5e4a Swift37340680604/Wasm37340680610 success，但 full iOS37340680583 failure（同16/1）；main91d5d95 full37323656529 同 failure。main62c2c70 full37342605068 尚未追結果。
+本機 logs：/workspace/scratch/diagnostic-ios/2_Xcode build (iOS Simulator).txt；main-v4c-ios/1_Xcode build (iOS Simulator).txt；old-ios-run/1_Xcode build (iOS Simulator).txt。三者 zip 同在 scratch。UI PR body /workspace/scratch/route-menu-fix-pr.md。
+
+V4d 已修改（全部本次保存）
+Sources/GameCore/Railway/LineJourney.swift：新 derived intermediateTurnbacks:[Int] departure leg indices，預設[]；drive 先舊正向路徑，失敗且控制ON、中途站才嘗試全車 turnedRound；首發 turnsFirst／終端折返另外處理。timetable 在 index+1 額外翻向。
+Sources/GameCore/Railway/LineRoutePreference.swift：matchedRoutes 隨中途翻向追 placement。
+Sources/GameCore/Railway/Deadlock.swift：passingContinuation 嘗試正向再反向離開 dead-end berth；goingOn 用對應起點／trail；passingPlace 回傳 reverses，先舊正向讓路，再控制ON＋全車在站才反向候選。
+Sources/GameCore/World/GameWorld.swift：resolveDeadlock 依 reverses 在候選 placement 翻向、follow/reserve；只有授權成功才改世界。
+Tests/GameCoreTests/ReferenceNetworkService.swift、ReferenceLines.swift、ReferenceLineRoutes.swift：獨立中途反向尋路、時刻與匹配。
+Tests/GameCoreTests/ReferenceDeadlock.swift：獨立 passingExit／反向候選，不呼叫 production helpers。
+Tests/GameCoreTests/TurnbackTests.swift：新兩個測試，含逐秒模型、等待、方向／預約、存讀與控制OFF／過長車拒絕。
+沒有改 fixtures、schema 或 save version，仍 schema33/save10。新 derived 欄位尚未加入 golden JourneySummary；若要可觀察摘要需評估34並保留33相容。
+
+VERIFIED 的範圍（不可套用至最新 WIP）
+中途折返第一版：/workspace/scratch/v4d-line-build.log warnings-as-errors build28.29s；v4d-line-first.log 2 TurnbackTests5.31s pass（17:12:21 UTC）。第一個 v4d-first-build.log 曾因 model.advance 缺 ticks: 失敗，修後上述通過。
+手算：單邊長32768，站順序物理 A,C,B；平台 A[2048,4096] B[24576,26624] C[12288,14336]，3cars長2048；四腿22528,12288,12288,22528；加速1.5kmh/s、減速2.5，ceil(sqrt(distance*0.12))=52,39,39,52；名義往返542（含360 dwell）。turnbacks[1,3]；arrival[0,94,193,352,464] departure[42,154,313,412,464] reverse[false,true,true,true,true]。
+510個1秒逐步比完整獨立模型／等待／死結／invariants；94/154未翻向，155向後且取得預約；94,154,155,194,413存讀；510前完成。OFF無journey／dispatch、4cars過長無trip。
+最新倒側線改動尚未驗證：v4d-shunt-build.log build FAILED（passingExit 非mutating 卻呼叫 mutating defaultRoute）；最後已補 private mutating func，但尚未重建／重跑。舊2項pass不證明目前HEAD。所有最新shunt runtime、campaign、full CI為UNVERIFIED。diff --check 已通過。作者要求先保存，所以沒有繼續實作／測試。
+
+已知未解問題與下一步
+目前 passingPlace 對一個站只查最近 berth：最近 main berth 無法讓對車通過時，直接拒絕該站，漏掉稍遠 loop berth。反向側線功能未完成，不可宣稱可用。
+重現計畫：以 SingleTrackMeet.world/model 去掉 edge4 西側入口，保留 e5+e6 成 dead-end siding；M保留 e2 main、e5 loop。e3 加站A平台[2048,4096]。A東向 e3offset3072，2cars body1024，A→E；B西向 e3offset3072（不是1024，後者車身不在E平台），2cars，E→W；42發車，60 deadlock。A應向西倒入M loop，B往W通過後A翻向往E。
+e6曲線長4732（不是研究草稿先前猜4414），points(21504,6144),(23552,6144),(23552,4096),(25600,4096)，128samples rounded hypot sum。A翻向車頭實體e3offset2048；shunt=2048+4732+5120=11900。M loop倒向停後翻向頭e5offset4096；onward4096+4732+7168=15996；總27896，default4096，繞行23800 <=400m×64=25600。
+目前會先找到 M main e2back距11264，不能讓B通過，就漏掉11900的loop。
+建議下一步：只在反向 fallback 枚舉所有容全車 berths，保留原正向優先／tie行為，逐一檢查完整予約、fouling、確實釋放另一列車，再依distance/station/berth deterministic排序。ServicePath.swift blocked path adapter可加only:Berth? 傳至 networkPath.only；獨立模型已有 networkPathToStation(...only:(Run,Int64)?)／berthsForStation 可自行枚舉，不能借 production。
+後續補安全等待／短月台／blocked/fouling／完整預約失敗不翻車／rate0／control toggle／存讀／逐秒=batch、獨立模型、新campaign、RealWorldDemo及舊回歸。ReferenceDeadlock loop indentation也待整理。decision63、ROADMAP、mapping、新golden/campaign尚未寫。不要隱藏先前build failure。
+
+四來源固定25229af，研究已做，正式mapping未做
+Railway/site_archive_clean/rail-3d/physical/turnbacks.js：AFR_TURNBACKS、isScheduledTurnback 用 a.to===b.from && a.nodeIds.at(-2)===b.nodeIds[1]（另有系統／站名白名單）；Swift要按拓撲適配，不拿站名或OSM ID當規則。
+同目錄timing.js turnbackProgress：w=min(.15,20/max(1,next.arrSec-st.depSec))；departure w*(2u²-u³)、arrival1-w+w*(u+u²-u³)。源註明不虛構未公開dwell，既有window內減速；不可杜撰反轉20秒。
+Railway/railway_game_reference_clean/00_READ_ME_FIRST.md、migration§7及symbols：有 rail_depot_reverse_penalty 名稱，無數值／可讀planner；reverse priority明列adapted/gap，不稱忠實常數。
+Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js：查turnback/reverse，沒有可讀反向側線planner；1.5min headway不等於反轉dwell。
+Railway/taipei_gta_reference/READ_ME與source actors-Cx0CrTrM.js：MRT兩軌端點layover timer14，無同玩家單線deadlock反向側線；不套用14秒。
+正式PR需四源→目標→classification→gap table；固定點m×64、sec×1；沿用既有加減速與dwell，原子預約。
+
+遠端保存操作注意
+一般git push缺credentials／401；gh API曾可用、最後401。GitHub connector仍可讀寫，使用create_blob→create_tree(base tree)→create_commit(parent)→create_branch，核對每blob SHA與整tree，fetch後對齊自己的branch。勿印tokens或簽名URL。大型xcresult下載在此環境受限，不要浪費時間；完整run logs zip可用，UI failure已有實際AX證據。
+本機 scratch 補充 /workspace/scratch/v4d-research-notes.txt 含舊算式，e6以本文4732為準。重要進度已寫本文入repo，不依賴scratch永久存在。
+
+下一位直接接手 prompt
+讀本文件與規範，fetch最新remote，先看PR127 head2002eca full37345609975結果，有紅燈修復推PR，不merge。接著從 codex/stage-v4d-turnbacks 最新WIP接續，先Swift6.4 warnings-as-errors build確認最後mutating修正，再處理最近berth漏候選問題及完整測試／四源mapping。保留九檔WIP與歷史fixtures；不要用舊測試結果宣稱最新head通過。每完成可檢查小段就commit並push PR，避免額度用完只在本機。V4d完成並由作者合併後才做V4e車輛authority／死結位置UI。
+
+
+===== 以下為歷史交付，最新狀態以以上為準 =====
+
 Stage V 最新接手狀態：2026-10-05；V4c 單線容量
 
 作者已合併 #120、#123，agent 未合併／未開 auto-merge。#123 head 5b08c84 的 CI 37321507070 全部 780 項／21 shards（含 rest）零 failure；iOS 37321506468 與 localization 37321506543 success。新選路 UI 修正只 full lane，runtime／實機仍 UNVERIFIED，gate success 不能代替它。#123 SaveMutation 全 14 項通過但 shard 732 秒，V4c 保留原全部方法內容／seeds／mutations／量下限分成兩個 7 項 class 在 campaigns-3／21，timeout 不改。

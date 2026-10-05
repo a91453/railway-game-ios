@@ -665,7 +665,7 @@ extension ReferenceWorld {
             let arrival = clock + leg.seconds
             clock = arrival + stay
             timetable.append(ScheduledStop(
-                station: line.stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: clock), reverses: final || far
+                station: line.stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: clock), reverses: final || far || trip.intermediateTurnbacks.contains(n + 1)
             ))
         }
         return .ready(timetable)

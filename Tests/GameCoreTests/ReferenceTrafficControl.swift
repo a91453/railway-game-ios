@@ -175,8 +175,15 @@ extension ReferenceWorld {
             if next == 0 && !order.repeats { continue }
             var driver = Self.driver(at: state.place.position, trailEdges: state.place.trailEdges, length: order.length)
             if order.turns.contains(state.stop) { driver = turnedOnNetwork(driver) }
-            let specified = order.routes.indices.contains(state.stop) ? order.routes[state.stop].flatMap { preferenceRoute(from: driver.position!, $0, length: order.length) } : nil
-            guard let found = specified ?? memoPath(from: driver, to: order.stations[next], length: order.length) else { continue }
+            let preference = order.routes.indices.contains(state.stop) ? order.routes[state.stop] : nil
+            var found = preference.flatMap { preferenceRoute(from: driver.position!, $0, length: order.length) }
+                ?? memoPath(from: driver, to: order.stations[next], length: order.length)
+            if found == nil, order.intermediateTurnbacks, (1..<(order.stations.count - 1)).contains(state.stop), !order.turns.contains(state.stop) {
+                driver = turnedOnNetwork(driver)
+                found = preference.flatMap { preferenceRoute(from: driver.position!, $0, length: order.length) }
+                    ?? memoPath(from: driver, to: order.stations[next], length: order.length)
+            }
+            guard let found else { continue }
             result.formUnion(legRuns(driver, along: found))
             driver = followed(driver, along: found)
             queue.append(DirectionState(place: Place(position: driver.position!, trailEdges: driver.trailEdges), stop: next))
@@ -237,9 +244,9 @@ extension ReferenceWorld {
             at = standing(at)
             let call = train.timetable[service.stop].station
             if !isAtBerth(at, of: call) {
-                guard let way = memoPath(from: at, to: call, length: Self.length(train)) else { return found }
-                found.formUnion(legRuns(at, along: way))
-                at = followed(at, along: way)
+                guard let (exit, way) = passingExit(at, call: call) else { return found }
+                found.formUnion(legRuns(exit, along: way))
+                at = followed(exit, along: way)
             }
         }
         let seed = DirectionState(place: Place(position: at.position!, trailEdges: at.trailEdges), stop: service.stop)
@@ -269,7 +276,7 @@ extension ReferenceWorld {
                 for sequence in sequences {
                     let turns: Set<Int> = line.ring ? [] : [sequence.count / 2, sequence.count - 1]
                     for length in lengths {
-                        planned.formUnion(directionRuns(.init(stations: sequence.map { line.stops[$0] }, turns: turns, length: length, repeats: true, routes: pattern.routes.isEmpty ? [] : zip(sequence, sequence.dropFirst()).map { pair in pattern.routes.first { $0.from == pair.0 && $0.to == pair.1 } } + [nil])))
+                        planned.formUnion(directionRuns(.init(stations: sequence.map { line.stops[$0] }, turns: turns, length: length, repeats: true, routes: pattern.routes.isEmpty ? [] : zip(sequence, sequence.dropFirst()).map { pair in pattern.routes.first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: trafficControl && !line.ring)))
                     }
                 }
             }

@@ -173,6 +173,7 @@ struct ReferenceWorld: Equatable {
             var length: Int64
             var repeats: Bool
             var routes: [LineRoutePreference?] = []
+            var intermediateTurnbacks = false
         }
         var directions: [Order: Set<Run>] = [:]
         /// A running service's walk on from where it stands.

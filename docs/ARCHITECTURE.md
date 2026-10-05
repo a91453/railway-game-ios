@@ -2796,6 +2796,24 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：這是每線共用 block 的名義穩態上界，不是跨線全域最佳時刻表或即時可取得授權的保證；共享同股的不同線路、誤點與實際占用仍由原預約／排定等待保護。快車整段多 block 計費與固定 30 秒上界刻意保守；不把保守估計包裝成現實台鐵最大容量。clean pack（先 READ_ME／migration §7）及 Taipei GTA（先 READ_ME／source）沒有可讀的單線容量公式，列 gap。下一段中途換向／倒入側線 V4d 仍須作者先合併 V4c。
 
+### 63. 中途站折返與反向側線待避（Stage V4d）
+
+2026-10-05。接續作者已合併的 V4c；保留 PR128 WIP，整合 main `3fd1e9d`。四來源固定私有 `25229af`，詳見 RAILWAY_REFERENCE_MAPPING 的 V4d 表。這是玩家自建拓撲的換向及單次反向待避，不是任意調車搜尋器。
+
+1. **中途折返**：非環線完整往返逐腿先用既有正向 `linePath`（含實體路徑偏好）；只有無路、交通控制 ON、且非首站／遠端終站時，才在該站的全列 berth 翻轉 head／tail 後再找路。保留有正向繞圈時的原選擇。首發 `turnsFirst`、終端既有反向與環線語義不變。`LineJourney.intermediateTurnbacks` 是出發 leg 的索引，推導而非保存。時刻表在對應離站點設既有 `reverses`，只在停站時間結束、取得授權後提交翻向。
+2. **時間與量綱**：m×64、sec×1；保留原端點 120 秒、中途 60 秒名義 dwell、實際車門／乘客停留與 W1 加減速。來源 `turnbackProgress` 是既有站間時窗內的動畫 ease，`min(.15,20/window)` 的 20 不是反轉停留秒數；不另加 20 秒。GTA 兩軌端點 layover 14 秒亦不套用。clean pack 只有 reverse penalty 名称，沒有可讀数值，不能杜撰忠實反轉成本。
+3. **反向待避**：先保留 V2 正向最近 berth 候選、全程距離／station 平手；找不到時，僅控制 ON 且原列車全車已停於站內才考慮翻向。反向 fallback 枚舉每個非呼叫站所有容全車的 berth，逐一找避開 blocked／forbidden 的進路，確認全程 detour ≤400 m、完整原子預約及限界安全，而且把列車放到該 berth 後確實能放行死結中另一車。選全程距離最短，平手依 station ID、平台既有順序與 forward／backward berth 順序。最近正線停點不能放行，不會遮住稍遠的側線。仍每整分鐘最多調度一車。
+4. **待避續行**：先正向，無正向路才 whole-body 反轉以離開 dead-end berth。查詢及候選計算不改世界；取得授權後才提交 head／trail／path，拿不到不先翻車、不保存半條預約。沒有新增待避 dwell：非呼叫站不開門、不上下客，路一安全就按既有最快曲線續行。已倒入側線後關閉控制仍能反向離開；控制 OFF 不啟動新反向解死結。rate 0 暫停物理移動並保留授權，恢復後完成。
+5. **計畫與偏好**：逐段偏好匹配按實際中途翻向的 placement 走。執行服務用時刻表 `reverses`；尚未派出的線路方向保護也在中途正向無路時嘗試翻向，memo key 包含此規則，避免只保護第一次折返前的軌道。dead-end 待避續行的方向保護包括反向出口。V3 排定等待仍優先，完整預約、body／span／fouling 與替代路方向檢查沒有放寬。
+6. **契約**：save **10 不變**，沒有新增權威／Codable 欄位；時刻表既有 reverses、head/trail、passing-place execution 都已有合法表示。測試在停站、倒車途中、側線等待及續行存讀，再接續比對。golden **34** 增加可省略 `intermediateTurnbacks` 摘要，空陣列省略；繼續接受 30–33。只新增 `intermediate-turnbacks.json`，既有三種 fixture 及 README 不修改。
+7. **手算**：A–C–B 物理排列、服務 A–B–C，單邊32768，A[2048,4096]、B[24576,26624]、C[12288,14336]。3cars body2048 的四腿22528/12288/12288/22528，三角曲線 `ceil(sqrt(distance*0.12))` 為52/39/39/52，名義542秒；實際 arrival[0,94,193,352,464]、departure[42,154,313,412,464]。golden 的名義點車四腿22528/14336/14336/24576，52/42/42/55秒，加360 dwell=551秒，10分鐘，turnbacks[1,3]。沒有把点車與實際編組當同一長度。
+8. **倒側線手算**：SingleTrackMeet 移除 e4、保留 e5/e6 形成東端入口的袋狀側線。e6 的128段取樣整數長4732。A 全車在 e3 的新站平台，與 E→W 車互等；正線 berth 11264雖較近但不能放行，改選側線。倒車2048+4732+5120=11900；在e5翻回後4096+4732+7168=15996；全程27896，相對原4096繞行23800≤25600。測試要求兩車實際完成，不能只以離開死結清單代替。
+9. **獨立驗證**：ReferenceWorld 的 signed Run、relaxation 路徑、逐秒推進與另一份全車翻向／候選枚舉，不呼叫 production planner。新增 `traffic.turnbacks` 6cases×4seeds×32步=768，含中途折返、可用／過短側線、出發平台過短、控制開關、rate0／恢復；每步完整狀態／預約／held／等待／死結／invariants、存讀及 batch=second。與原容量 campaign 同在 campaigns-22，原量不變。RealWorldDemo 新增玩家「十分→菁桐→平溪」服務，驗兩次中途折返並回十分，並非聲稱真實台鐵班表。
+
+**限制**：V4c 的名義單線容量（決策62）仍按線路站序的相鄰區段計費，中途折返線在實體上重疊的區段不另行拆分；它只限制請求列車數，實際安全仍由完整預約與死結處理保證。多次調車、無平台倒車與全域最佳解仍是 gap。
+
+**驗證狀態**：見 PR128、接手分支 `claude/takeover-and-complete-mp89w9` 的 draft PR 與 docs/STAGE_V_HANDOFF.txt 的實際 head/run。新重現首跑無候選失敗；修正後雙車完整完成。新 golden 首跑的 final requested count 與 createLine 預設 none 不符，改新增明確設定 count=1 指令，沒有改既有期望值或產品預設。實景新測試首跑 unplace 後 rate=0 未發車，補測試的 setRate 指令後重驗。保留所有失敗記錄，不以早期成功代替最新 head。V4e 仍等作者合併。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^20 單位，16,384 公尺，E1 起是新遊戲的大小）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

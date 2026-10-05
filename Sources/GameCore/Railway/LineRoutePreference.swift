@@ -225,7 +225,7 @@ extension GameWorld {
         guard !routes.isEmpty else { return 0 }
         var place = start, count = 0
         for (index, leg) in journey.legs.enumerated() {
-            if !journey.isRing && index == journey.legs.count / 2 { place = turnedRound(place) }
+            if !journey.isRing && (index == journey.legs.count / 2 || journey.intermediateTurnbacks.contains(index)) { place = turnedRound(place) }
             if let preference = routes.first(where: { $0.from == leg.from && $0.to == leg.to }),
                preferredPath(from: place.position, preference: preference, length: place.length) == leg.path { count += 1 }
             place = placement(place, after: leg.path)

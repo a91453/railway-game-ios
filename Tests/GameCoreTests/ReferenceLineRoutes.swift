@@ -134,7 +134,7 @@ extension ReferenceWorld {
         var driver = start, count = 0
         for index in journey.legs.indices {
             let leg = journey.legs[index]
-            if !journey.isRing && index * 2 == journey.legs.count { driver = turnedOnNetwork(driver) }
+            if !journey.isRing && (index * 2 == journey.legs.count || journey.intermediateTurnbacks.contains(index)) { driver = turnedOnNetwork(driver) }
             if let r = routes.first(where: { $0.from == leg.from && $0.to == leg.to }), preferenceRoute(from: driver.position!, r, length: Self.length(driver)) == leg.path { count += 1 }
             driver = followed(driver, along: leg.path)
         }

@@ -1,0 +1,406 @@
+{
+  "description": "Decision 63: A-C-B physical order, A-B-C service. Point-train hand distances 22528,14336,14336,24576; triangular runs ceil(sqrt(distance*0.12)) = 52,42,42,55, plus 360 dwell = 551 seconds. Intermediate departure legs 1 and 3 turn only with control enabled.",
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 1000000,
+    "gameMinutes": 0,
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Switchback",
+        "patterns": [],
+        "stops": [
+          1,
+          2,
+          3
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "peak": 1,
+          "offPeak": 1,
+          "low": 1
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 32768,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 1024,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 33792,
+          "y": 4096,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "station": 1,
+          "edge": 1,
+          "start": 2048,
+          "end": 4096
+        },
+        {
+          "station": 3,
+          "edge": 1,
+          "start": 12288,
+          "end": 14336
+        },
+        {
+          "station": 2,
+          "edge": 1,
+          "start": 24576,
+          "end": 26624
+        }
+      ]
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "A",
+        "point": {
+          "x": 4096,
+          "y": 8192
+        }
+      },
+      {
+        "id": 2,
+        "name": "B",
+        "point": {
+          "x": 26624,
+          "y": 8192
+        }
+      },
+      {
+        "id": 3,
+        "name": "C",
+        "point": {
+          "x": 14336,
+          "y": 8192
+        }
+      }
+    ],
+    "trafficControl": true,
+    "trains": []
+  },
+  "initialState": {
+    "balance": 1000000,
+    "costs": {
+      "car": 0,
+      "station": 0,
+      "track": 0,
+      "train": 0
+    },
+    "gameMinutes": 0,
+    "speed": "normal",
+    "worldHeight": 12288,
+    "worldWidth": 40960
+  },
+  "schemaVersion": 34,
+  "steps": [
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 33792,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 1,
+        "to": 2,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "A",
+        "point": {
+          "x": 4096,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 1,
+        "edge": 1,
+        "start": 2048,
+        "end": 4096
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "B",
+        "point": {
+          "x": 26624,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 2,
+        "edge": 1,
+        "start": 24576,
+        "end": 26624
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "C",
+        "point": {
+          "x": 14336,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 3,
+        "edge": 1,
+        "start": 12288,
+        "end": 14336
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Switchback",
+        "stops": [
+          1,
+          2,
+          3
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineTrainsInService",
+        "line": 1,
+        "trains": {
+          "peak": 1,
+          "offPeak": 1,
+          "low": 1
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrafficControl",
+        "enabled": false
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "lineJourney",
+        "line": 1
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "command": {
+        "type": "setTrafficControl",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "lineJourney",
+        "line": 1
+      },
+      "expect": {
+        "found": true,
+        "journey": {
+          "start": {
+            "type": "edge",
+            "edge": 1,
+            "direction": "forward",
+            "offset": 4096
+          },
+          "legs": [
+            {
+              "from": 0,
+              "to": 1,
+              "path": {
+                "traversals": [],
+                "end": 26624,
+                "distance": 22528
+              },
+              "seconds": 52
+            },
+            {
+              "from": 1,
+              "to": 2,
+              "path": {
+                "traversals": [],
+                "end": 20480,
+                "distance": 14336
+              },
+              "seconds": 42
+            },
+            {
+              "from": 2,
+              "to": 1,
+              "path": {
+                "traversals": [],
+                "end": 26624,
+                "distance": 14336
+              },
+              "seconds": 42
+            },
+            {
+              "from": 1,
+              "to": 0,
+              "path": {
+                "traversals": [],
+                "end": 30720,
+                "distance": 24576
+              },
+              "seconds": 55
+            }
+          ],
+          "roundTripSeconds": 551,
+          "roundTripMinutes": 10,
+          "intermediateTurnbacks": [
+            1,
+            3
+          ]
+        }
+      }
+    }
+  ]
+}

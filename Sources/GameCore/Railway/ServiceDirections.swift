@@ -14,6 +14,7 @@ extension GameWorld {
             let length: Int64
             let repeats: Bool
             var routes: [LineRoutePreference?] = []
+            var intermediateTurnbacks = false
         }
         /// A running service's way on through its plan: the call it is at
         /// (or bound for) and where it stands for it.
@@ -59,9 +60,16 @@ extension GameWorld {
         while visited.insert(DirectionState(placement: place, stop: stop)).inserted {
             let next = stop + 1 == plan.calls.count ? 0 : stop + 1
             if next == 0 && !plan.repeats { break }
-            let from = plan.calls[stop].reverses ? turnedRound(place) : place
-            let specified = plan.routes.indices.contains(stop) ? plan.routes[stop].flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) } : nil
-            guard let path = specified ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length) else { break }
+            var from = plan.calls[stop].reverses ? turnedRound(place) : place
+            let preference = plan.routes.indices.contains(stop) ? plan.routes[stop] : nil
+            var chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
+                ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+            if chosen == nil, plan.intermediateTurnbacks, stop > 0, stop < plan.calls.count - 1, !plan.calls[stop].reverses {
+                from = turnedRound(from)
+                chosen = preference.flatMap { preferredPath(from: from.position, preference: $0, length: plan.length) }
+                    ?? path(from: from.position, toStation: plan.calls[next].station, length: plan.length)
+            }
+            guard let path = chosen else { break }
             directions.formUnion(self.directions(of: path, from: from))
             place = placement(from, after: path)
             stop = next
@@ -104,9 +112,12 @@ extension GameWorld {
             let ahead = pathAhead(of: train)
             let end = ahead.count == train.movement.remainingEdges.count ? train.movement.end : nil
             start = placement(start, after: TrainPath(traversals: ahead, end: end, distance: 0))
-            guard let path = path(from: start.position, toStation: plan.calls[next].station, length: plan.length) else { return directions }
-            directions.formUnion(self.directions(of: path, from: start))
-            start = placement(start, after: path)
+            let ordinary = path(from: start.position, toStation: plan.calls[next].station, length: plan.length)
+            let continuation = ordinary.map { (start: start, path: $0) }
+                ?? passingContinuation(from: start, to: plan.calls[next].station)
+            guard let continuation else { return directions }
+            directions.formUnion(self.directions(of: continuation.path, from: continuation.start))
+            start = placement(continuation.start, after: continuation.path)
             stop = next
         }
         let walk = DirectionMemo.Walk(plan: plan, start: start, stop: stop)
@@ -141,7 +152,7 @@ extension GameWorld {
                         DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
                     }
                     for length in lengths {
-                        directions.formUnion(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil]), memo: &memo))
+                        directions.formUnion(plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo))
                     }
                 }
             }

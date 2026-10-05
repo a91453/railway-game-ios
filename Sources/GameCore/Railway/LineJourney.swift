@@ -62,11 +62,17 @@ public struct LineJourney: Hashable, Sendable {
     /// round, and comes back to its first call going the same way.
     public let isRing: Bool
 
-    public init(start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64, isRing: Bool = false) {
+    /// Leg indices whose intermediate departure must turn the train round
+    /// on its platform. The usual far-terminal turn and the trip's initial
+    /// facing are separate. Derived from topology, never saved on the line.
+    public let intermediateTurnbacks: [Int]
+
+    public init(start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64, isRing: Bool = false, intermediateTurnbacks: [Int] = []) {
         self.start = start
         self.legs = legs
         self.roundTripSeconds = roundTripSeconds
         self.isRing = isRing
+        self.intermediateTurnbacks = intermediateTurnbacks
     }
 
     /// The round trip in whole minutes, rounded up: what a line plans its
@@ -143,7 +149,7 @@ struct LineTrip: Hashable, Sendable {
             guard !late, !later else { return nil }
             timetable.append(ScheduledStop(
                 station: stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: leaving),
-                reverses: isLast || isFarEnd
+                reverses: isLast || isFarEnd || journey.intermediateTurnbacks.contains(index + 1)
             ))
             time = leaving
         }
@@ -336,13 +342,26 @@ extension GameWorld {
         let order = calls + calls.dropLast().reversed()
         var placement = start
         var legs: [LineLeg] = []
+        var turnbacks: [Int] = []
         var seconds = (ServiceLine.terminalDwellMinutes * 2 + ServiceLine.dwellMinutes * Int64(2 * (calls.count - 2))) * GameTime.secondsPerMinute
         for (from, to) in zip(order, order.dropFirst()) {
             if from == farEnd {
                 // The far end: turn round before coming back.
                 placement = turnedRound(placement)
             }
-            guard let path = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes) else { return nil }
+            var chosen = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes)
+            // A switchback is a stopped, whole-train reversal on the same
+            // platform, not an edge transition through a junction. Keep
+            // the old forward route whenever one exists, including loops.
+            if chosen == nil, isTrafficControlEnabled, from != calls[0], from != farEnd {
+                let reverse = turnedRound(placement)
+                if let path = linePath(line, from: from, to: to, start: reverse.position, length: reverse.length, routes: routes) {
+                    placement = reverse
+                    chosen = path
+                    turnbacks.append(legs.count)
+                }
+            }
+            guard let path = chosen else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
                 guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
@@ -354,7 +373,7 @@ extension GameWorld {
             legs.append(LineLeg(from: from, to: to, path: path, seconds: legSeconds))
             placement = self.placement(placement, after: path)
         }
-        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds)
+        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds, intermediateTurnbacks: turnbacks)
     }
 
     /// A ring's lap calling at `calls` (indices into its stops, from the
