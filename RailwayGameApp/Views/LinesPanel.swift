@@ -353,6 +353,7 @@ struct LinesPanel: View {
                     Button(routeChoiceText(choices[choice])) {
                         session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
                     }
+                    .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
