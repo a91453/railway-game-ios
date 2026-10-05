@@ -30,6 +30,7 @@ struct RailwayGameApp: App {
     private static func makeLauncher() -> GameLauncher {
         let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
         launcher.population = bundledPopulation()
+        launcher.places = bundledPlaces()
         #if DEBUG
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
@@ -48,6 +49,16 @@ struct RailwayGameApp: App {
               let data = try? Data(contentsOf: url)
         else { return nil }
         return try? PopulationGrid(data: data)
+    }
+
+    /// The app's grid of OpenStreetMap's places in Taiwan
+    /// (`Resources/RealWorld/`), or `nil` if it cannot be read: new
+    /// stations then all serve homes.
+    private static func bundledPlaces() -> PlaceGrid? {
+        guard let url = Bundle.main.url(forResource: "taiwan_places", withExtension: "json"),
+              let data = try? Data(contentsOf: url)
+        else { return nil }
+        return try? PlaceGrid(data: data)
     }
 
     private static func makeSaveLibrary() -> SaveLibrary {
