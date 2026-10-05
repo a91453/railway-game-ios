@@ -204,7 +204,14 @@ extension ReferenceWorld {
             departedDistance = 0
             return admit(there, at: i) == nil
         }
-        guard let path = chosenRoute(from: start, to: target) else { return false }
+        // Decision 59: the scheduled way when it can be had whole now;
+        // otherwise the way chosen as without a plan.
+        var scheduled: (path: TrainPath, seconds: Int64?)?
+        if trafficControl, let plan = routeMemo.scheduled, let way = scheduledRoute(start, target: target, plan: plan),
+           case .success = admitted(routed(start, way.path)) {
+            scheduled = way
+        }
+        guard let path = scheduled?.path ?? chosenRoute(from: start, to: target) else { return false }
         departedDistance = path.distance
         var off = standing(start)
         off.edges = path.traversals.map { Run($0)!.edge }
@@ -214,8 +221,8 @@ extension ReferenceWorld {
             stop: next.stop, waiting: false, cycle: next.cycle, arrival: service.arrival, departure: clockSeconds,
             run: setOff(trains[i], length: path.distance, from: (service.stop, service.cycle), to: next)
         )
-        if let plan = routeMemo.scheduled, let chosen = scheduledRoute(trains[i], target: target, plan: plan) {
-            let selectedRun = run(off, length: path.distance, scheduled: chosen.seconds)
+        if let seconds = scheduled?.seconds {
+            let selectedRun = run(off, length: path.distance, scheduled: seconds)
             off.service?.run = selectedRun
         }
         off.trafficVisits = scheduledDepartureHistory(trains[i])
@@ -234,7 +241,6 @@ extension ReferenceWorld {
     /// The default way from `start` (standing) to where it stops for
     /// station `target`, as every departure looks it up; `nil` with none.
     mutating func defaultRoute(from start: Train, to target: StationID) -> TrainPath? {
-        if let plan = routeMemo.scheduled, let chosen = scheduledRoute(start, target: target, plan: plan) { return chosen.path }
         let key = RouteMemo.Key(start: start.position!, station: target, length: Self.length(start))
         let found = routeMemo.network[key] ?? networkPathToStation(from: start.position!, station: target, length: Self.length(start))
         routeMemo.network[key] = .some(found)

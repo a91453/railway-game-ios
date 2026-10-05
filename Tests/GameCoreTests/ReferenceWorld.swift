@@ -581,7 +581,9 @@ struct ReferenceWorld: Equatable {
                     dispatch(l, memo: &memo)
                 }
             }
-            if routeMemo.scheduled == nil { routeMemo.scheduled = scheduledPlan() }
+            // Decision 59: the plan as this second finds the world.
+            routeMemo.scheduled = nil
+            routeMemo.scheduled = scheduledPlan()
             recordScheduledVisits(routeMemo.scheduled!, before: nil)
             for i in trains.indices {
                 dwell(i, second: second)

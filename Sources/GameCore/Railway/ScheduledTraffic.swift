@@ -59,29 +59,49 @@ extension GameWorld {
 
     /// The scheduled wait currently keeping this train at its station.
     public func scheduledTrafficWait(of id: TrainID) -> ScheduledTrafficWait? {
-        let plan = trafficPlan()
         guard let train = train(id: id) else { return nil }
-        return currentTrafficWait(train, plan: plan)
+        var memo = DirectionMemo()
+        return currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo)
+    }
+
+    /// What the plan is derived from: which trains run or have run, and
+    /// where in their timetables. Everything else it reads (timetables,
+    /// the network, the trains' lengths) cannot change within an advance.
+    struct TrafficPlanKey: Equatable {
+        struct Entry: Equatable {
+            var id: TrainID
+            var execution: TimetableExecution?
+            var visitedCycle: Int64?
+        }
+        var enabled: Bool
+        var entries: [Entry]
+    }
+
+    func trafficPlanKey() -> TrafficPlanKey {
+        TrafficPlanKey(enabled: isTrafficControlEnabled, entries: trains.compactMap { train in
+            train.position == nil ? nil : .init(id: train.id, execution: train.execution, visitedCycle: train.trafficVisits.last?.cycle)
+        })
+    }
+
+    /// The plan for the world as it is now, worked out again only when
+    /// what it is derived from has changed since `memo` last kept one;
+    /// within an advance's step, the plan the step started with.
+    func trafficPlan(memo: inout DirectionMemo) -> TrafficPlan {
+        if let step = memo.stepTraffic { return step }
+        let key = trafficPlanKey()
+        if let kept = memo.traffic, kept.key == key { return kept.plan }
+        let plan = trafficPlan()
+        memo.traffic = (key, plan)
+        return plan
     }
 
     func trafficPlan() -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
-        var dispatch = DispatchMemo()
-        for original in trains where original.position != nil {
-            var source = original
-            // Idle roster trains contribute their next concrete trip; no
-            // unplaced trains or empty lines contribute hypothetical traffic.
-            if source.execution == nil, source.trafficVisits.isEmpty {
-                guard let lineID = assignedLine(of: source.id), let line = lines.first(where: { $0.id == lineID }),
-                      let stream = line.dispatchStream(of: source.id),
-                      isDispatchDue(line, stream, at: clock.now, memo: &dispatch),
-                      let trip = readyTrip(of: source, on: line, stream.service, memo: &dispatch),
-                      let table = trip.timetable(calling: line.stops, sentOutAt: clock.now)
-                else { continue }
-                source.timetable = table
-                source.execution = .waitingAtStop(0)
-            }
+        // Running services, and finished ones whose visits a waiting train
+        // may still need. No hypothetical trips: the plan depends on the
+        // trains' state alone, never on the clock (decision 59, point 6).
+        for source in trains where source.position != nil && (source.execution != nil || !source.trafficVisits.isEmpty) {
             guard source.timetable.count >= 2 else { continue }
             let cycle = source.execution?.cycle ?? source.trafficVisits.last?.cycle ?? 0
             if let points = trafficPoints(of: source, cycle: cycle), points.count >= 2 {
@@ -440,18 +460,23 @@ extension GameWorld {
         guard let peer = train(id: wait.other) else { return clock.now }
         if let visit = peer.trafficVisits.first(where: { $0.station == wait.station && $0.stop == wait.otherStop && $0.cycle == wait.otherCycle }) {
             let event = wait.kind == .meet ? visit.arrival : visit.departure
-            return event.map { Self.saturating($0, plus: wait.clearance) }
+            if let event { return Self.saturating(event, plus: wait.clearance) }
+            // Its service ended there: it never leaves.
+            return peer.execution == nil ? clock.now : nil
         }
         // Services already beyond a call in an older save have no visit
         // history: wait conservatively from their last actual arrival.
         if let execution = peer.execution,
            execution.cycle > wait.otherCycle || (execution.cycle == wait.otherCycle && execution.stop > wait.otherStop),
            let times = peer.times { return Self.saturating(times.arrival, plus: wait.clearance) }
-        if peer.execution == nil && peer.trafficVisits.isEmpty { return clock.now }
-        return nil
+        // A service that has ended (or stopped) will not come.
+        return peer.execution == nil ? clock.now : nil
     }
 
-    func currentTrafficWait(_ train: Train, plan: TrafficPlan) -> ScheduledTrafficWait? {
+    /// The scheduled wait keeping `train` at its station, as the plan and
+    /// the actual visits have it, before asking whether the train waited
+    /// for can come at all (see ``currentTrafficWait(_:plan:memo:)``).
+    func pendingTrafficWait(_ train: Train, plan: TrafficPlan) -> ScheduledTrafficWait? {
         guard isTrafficControlEnabled, let execution = train.execution, standingPoint(of: train) != nil else { return nil }
         return plan.waits.first { wait in
             guard wait.train == train.id, wait.stop == execution.stop, wait.cycle == execution.cycle,
@@ -459,6 +484,29 @@ extension GameWorld {
             let released = trafficReleased(wait)
             return released == nil || clock.now < max(wait.departure, released!)
         }
+    }
+
+    /// The scheduled wait keeping `train` at its station (decision 59). A
+    /// wait is only worth keeping for a train that is on its way: follow
+    /// who waits for whom from `train`, and drop the wait when that comes
+    /// back to a train already met (they would wait for each other for
+    /// ever), or ends at a train that itself waits for a route (see
+    /// ``waitingRoute(of:memo:)``). Traffic control then works as it does
+    /// without a plan (decisions 57 and 58), and a deadlock among them is
+    /// found and reported as any other.
+    func currentTrafficWait(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> ScheduledTrafficWait? {
+        guard let wait = pendingTrafficWait(train, plan: plan) else { return nil }
+        var met: Set<TrainID> = [train.id]
+        var other = wait.other
+        while let next = self.train(id: other) {
+            guard met.insert(other).inserted else { return nil }
+            if let further = pendingTrafficWait(next, plan: plan) {
+                other = further.other
+                continue
+            }
+            return waitingRoute(of: next, memo: &memo) == nil ? wait : nil
+        }
+        return wait
     }
 }
 

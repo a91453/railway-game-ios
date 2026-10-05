@@ -263,14 +263,9 @@ extension ReferenceWorld {
     func scheduledPlan() -> ScheduledPlan {
         guard trafficControl else { return ScheduledPlan() }
         var plan = ScheduledPlan()
-        var dispatch = DispatchMemo()
-        for original in trains where original.position != nil {
-            var source = original
-            if source.service == nil, source.trafficVisits.isEmpty {
-                guard let (l, k) = lineService(of: source.id), isDue(l, service: k, memo: &dispatch), let table = readyTrip(of: source, line: l, service: k) else { continue }
-                source.timetable = table
-                source.service = Service(stop: 0, waiting: true, arrival: clockSeconds)
-            }
+        // Running services and finished ones that left visits; nothing a
+        // line has yet to send out, so nothing that moves with the clock.
+        for source in trains where source.position != nil && (source.service != nil || !source.trafficVisits.isEmpty) {
             let cycle = source.service?.cycle ?? source.trafficVisits.last?.cycle ?? 0
             if let visits = plannedVisits(source, cycle: cycle), visits.count >= 2 { plan.services.append(PlannedService(train: source, visits: visits)) }
         }
@@ -289,21 +284,40 @@ extension ReferenceWorld {
     func scheduledRelease(_ wait: ScheduledTrafficWait) -> Int64? {
         guard let train = trains.first(where: { $0.id == wait.other.rawValue }) else { return clockSeconds }
         if let visit = train.trafficVisits.first(where: { $0.station == wait.station && $0.stop == wait.otherStop && $0.cycle == wait.otherCycle }) {
-            return (wait.kind == .meet ? Optional(visit.arrival.seconds) : visit.departure?.seconds).map { Self.capped($0, wait.clearance) }
+            if let seen = wait.kind == .meet ? Optional(visit.arrival.seconds) : visit.departure?.seconds { return Self.capped(seen, wait.clearance) }
+            return train.service == nil ? clockSeconds : nil
         }
         if let service = train.service, service.cycle > wait.otherCycle || (service.cycle == wait.otherCycle && service.stop > wait.otherStop) {
             return Self.capped(service.arrival, wait.clearance)
         }
-        return train.service == nil && train.trafficVisits.isEmpty ? clockSeconds : nil
+        return train.service == nil ? clockSeconds : nil
     }
 
-    func waitingScheduled(_ train: Train, plan: ScheduledPlan) -> ScheduledTrafficWait? {
+    /// The wait the plan and the visits give `train`, whether or not the
+    /// train it waits for can come.
+    func pendingScheduled(_ train: Train, plan: ScheduledPlan) -> ScheduledTrafficWait? {
         guard trafficControl, let service = train.service, isStanding(train) else { return nil }
         return plan.waits.first {
             guard $0.train.rawValue == train.id && $0.stop == service.stop && $0.cycle == service.cycle && networkStops(of: train).contains($0.station) else { return false }
             let wait = $0
             return scheduledRelease(wait).map { clockSeconds < max($0, wait.departure.seconds) } ?? true
         }
+    }
+
+    /// The wait keeping `train` where it is: none when the chain of trains
+    /// waited for runs into itself, or ends at a train waiting for a route
+    /// (decision 58's `waitingFor`), asked of a copy of the world.
+    func waitingScheduled(_ train: Train, plan: ScheduledPlan) -> ScheduledTrafficWait? {
+        guard let wait = pendingScheduled(train, plan: plan) else { return nil }
+        var chain = [train.id], next = wait.other.rawValue
+        while let other = trains.first(where: { $0.id == next }) {
+            if chain.contains(next) { return nil }
+            chain.append(next)
+            if let further = pendingScheduled(other, plan: plan) { next = further.other.rawValue; continue }
+            var copy = self
+            return copy.waitingFor(other) == nil ? wait : nil
+        }
+        return wait
     }
 }
 

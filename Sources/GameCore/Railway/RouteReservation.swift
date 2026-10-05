@@ -70,13 +70,14 @@ extension GameWorld {
     /// saved.
     public func trainHoldingRoute(of id: TrainID) -> TrainID? {
         guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
-        if let wait = scheduledTrafficWait(of: id) { return wait.other }
+        var memo = DirectionMemo()
+        if let wait = currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) { return wait.other }
         if isFollowing(train) {
             // Stage U2: a train following others waits for the rest of its
             // route.
             return holder(of: routeEnvelope(of: train).resources, except: id)
         }
-        guard let departing = departureRequest(of: train) else { return nil }
+        guard let departing = departureRequest(of: train, memo: &memo) else { return nil }
         if case .granted(let granted) = reservingDeparture(departing), !isFollowing(granted) { return nil }
         return holder(of: routeEnvelope(of: departing).resources, except: id)
     }

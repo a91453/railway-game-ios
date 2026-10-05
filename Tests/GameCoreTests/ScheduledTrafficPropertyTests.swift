@@ -3,16 +3,20 @@ import Foundation
 import XCTest
 
 /// traffic.scheduledMeets: source thresholds, two-way meets, overtakes,
-/// delayed peer movement, traffic toggles, saves and exact batched time.
-/// Every step compares the whole world and the independent V3 plan.
+/// repeating out-and-back services, delayed peer movement, traffic
+/// toggles, saves and exact batched time, short and long. Every step
+/// compares the whole world and the independent V3 plan; a repeating case
+/// that ends with a service still in its first cycle must show it in a
+/// deadlock, never wait in silence.
 final class ScheduledTrafficPropertyTests: XCTestCase {
     func testScheduledTrafficMatchesTheIndependentModel() throws {
         var digest = Digest(), tally: [String: Int] = [:]
-        let ran = try runCampaign("traffic.scheduledMeets", cases: 12) { testCase in
-            let overtake = testCase.index % 2 == 1
-            var world = overtake
+        let ran = try runCampaign("traffic.scheduledMeets", cases: 18) { testCase in
+            let kind = testCase.index % 3
+            var world = kind == 1
                 ? try ScheduledTrafficTests.overtake(fastDeparture: 180 + Int64(testCase.random.below(40)), fastArrival: 600 + Int64(testCase.random.below(90)))
-                : try ScheduledTrafficTests.meet()
+                : kind == 2 ? try ScheduledTrafficTests.repeatingMeet() : try ScheduledTrafficTests.meet()
+            if kind == 2 { tally["repeatingCases", default: 0] += 1 }
             var model = ScheduledTrafficTests.model(for: world)
             func compare() -> [String] {
                 var problems = KernelDifferentialTests.differences(world, model, lineAnswers: false)
@@ -44,6 +48,11 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
                 } else if step % 9 == 0 {
                     operation = .saveAndLoad
                     tally["saves", default: 0] += 1
+                } else if step % 7 == 3 {
+                    // One long call: the plan must follow the trains
+                    // within it as it does second by second.
+                    operation = .advance(15 + testCase.random.below(15))
+                    tally["longAdvances", default: 0] += 1
                 } else {
                     operation = .advance(1 + testCase.random.below(3))
                 }
@@ -63,14 +72,23 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
                 tally["waits", default: 0] += world.trains.filter { world.scheduledTrafficWait(of: $0.id) != nil }.count
                 tally["visits", default: 0] += world.trains.reduce(0) { $0 + $1.trafficVisits.count }
             }
+            if kind == 2 {
+                let stuck = world.deadlockedTrains()
+                for train in world.trains where (train.execution?.cycle ?? 1) < 1 && !stuck.contains(train.id) {
+                    testCase.fail("train \(train.id.rawValue) is still in its first cycle at \(world.clock.now.seconds) with no deadlock shown")
+                    return
+                }
+            }
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
         }
         print("[digest] traffic.scheduledMeets \(digest.hex) (\(tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")))")
-        XCTAssertEqual(ran, 48)
+        XCTAssertEqual(ran, 72)
+        XCTAssertEqual(tally["repeatingCases"], 24)
         XCTAssertGreaterThan(tally["waits", default: 0], 40)
         XCTAssertGreaterThan(tally["visits", default: 0], 40)
-        XCTAssertEqual(tally["operations"], 1_728)
-        XCTAssertEqual(tally["saves"], 208)
+        XCTAssertEqual(tally["operations"], 2_592)
+        XCTAssertEqual(tally["saves"], 312)
+        XCTAssertEqual(tally["longAdvances"], 360)
     }
 }
