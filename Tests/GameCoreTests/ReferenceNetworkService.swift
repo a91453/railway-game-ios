@@ -251,7 +251,12 @@ extension ReferenceWorld {
     mutating func chosenRoute(from start: Train, to target: StationID) -> TrainPath? {
         guard let path = defaultRoute(from: start, to: target) else { return nil }
         guard trafficControl, case .failure = admitted(routed(start, path), following: true) else { return path }
-        if let other = alternative(from: start, to: target, default: path, avoiding: blocked(for: start.id)),
+        let end = followed(start, along: path)
+        let waypoint = routeMemo.scheduled?.waits.first { wait in
+            wait.train.rawValue == start.id && wait.stop == start.service?.stop && wait.cycle == start.service?.cycle
+                && isAtBerth(end, of: wait.station)
+        }?.station ?? target
+        if let other = alternative(from: start, to: waypoint, default: path, avoiding: blocked(for: start.id)),
            case .success = admitted(routed(start, other)) {
             return other
         }

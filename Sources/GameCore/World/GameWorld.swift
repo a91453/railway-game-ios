@@ -1541,9 +1541,10 @@ public struct GameWorld: Equatable, Sendable {
             guard let index = trains.firstIndex(where: { $0.id == id }),
                   let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
             else { continue }
-            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reservingDeparture(leaving, memo: &memo.directions) {
-                continue
+            if isTrafficControlEnabled {
+                if memo.traffic == nil { memo.traffic = trafficPlan() }
+                if let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops, traffic: memo.traffic),
+                   case .held = reservingDeparture(leaving, memo: &memo.directions, traffic: memo.traffic) { continue }
             }
             return (index, trip)
         }
@@ -1571,14 +1572,14 @@ public struct GameWorld: Equatable, Sendable {
     /// it would be once it has left the first call: turned round first if
     /// the trip says so, on its way along the first leg. `nil` if the
     /// trip's times would not fit.
-    func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID]) -> Train? {
+    func firstDeparture(of train: Train, on trip: LineTrip, calling stops: [StationID], traffic: TrafficPlan? = nil) -> Train? {
         guard let timetable = trip.timetable(calling: stops, sentOutAt: clock.now) else { return nil }
         var sent = train
         sent.timetable = timetable
         sent.timetablePeriod = nil
         sent.execution = .waitingAtStop(0)
         sent.times = ServiceTimes(arrival: clock.now)
-        return leaving(sent, stop: 0, cycle: 0).train
+        return leaving(sent, stop: 0, cycle: 0, traffic: traffic).train
     }
 
     /// The whole minutes from now, the start of a minute, until the first
@@ -1700,7 +1701,7 @@ public struct GameWorld: Equatable, Sendable {
             let plannedRun = run(of: going, length: chosen.path.distance, scheduled: chosen.seconds)
             going.times?.run = plannedRun
         }
-        switch reservingDeparture(going, memo: &memo.directions) {
+        switch reservingDeparture(going, memo: &memo.directions, traffic: plan) {
         case .granted(var granted):
             recordTrafficDeparture(index)
             granted.trafficVisits = trains[index].trafficVisits
@@ -1902,7 +1903,7 @@ public struct GameWorld: Equatable, Sendable {
             return false
         }
         let train: Train
-        switch reservingDeparture(moved, memo: &memo.directions) {
+        switch reservingDeparture(moved, memo: &memo.directions, traffic: plan) {
         case .granted(let granted):
             train = granted
         case .held:

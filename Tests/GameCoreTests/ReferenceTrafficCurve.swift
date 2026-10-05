@@ -1,7 +1,7 @@
 import GameCore
 
 /// V3's independent fixed-point buildProfile. Native UInt128 replaces the
-/// production WideInteger implementation. Inversion scans seconds, and
+/// production WideInteger implementation. Inversion brackets exponentially, and
 /// never calls RunningCurve or any GameCore simulation function.
 struct ReferenceTrafficCurve {
     var length: Int64
@@ -96,7 +96,14 @@ struct ReferenceTrafficCurve {
     }
 
     func firstSecond(at distance: Int64) -> Int64 {
-        for second in 0...seconds where self.distance(second) >= distance { return second }
-        return seconds
+        guard distance > 0 else { return 0 }
+        var upper: Int64 = 1
+        while upper < seconds && self.distance(upper) < distance { upper = min(seconds, upper * 2) }
+        var lower = upper / 2
+        while lower + 1 < upper {
+            let second = lower + (upper - lower) / 2
+            if self.distance(second) >= distance { upper = second } else { lower = second }
+        }
+        return upper
     }
 }

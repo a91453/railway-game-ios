@@ -122,11 +122,11 @@ extension GameWorld {
         return reservingDeparture(candidate, memo: &memo)
     }
 
-    func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
+    func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo, traffic: TrafficPlan? = nil) -> Reserving {
         let planned = reserving(candidate, following: true)
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution,
-              let alternative = alternativeRoute(of: candidate, to: reservationDestination(candidate, call: candidate.timetable[stop].station),
+              let alternative = alternativeRoute(of: candidate, to: reservationDestination(candidate, call: candidate.timetable[stop].station, traffic: traffic),
                                                  avoiding: blockedTrack(except: candidate.id), memo: &memo)
         else { return planned }
         var rerouted = candidate
@@ -141,11 +141,13 @@ extension GameWorld {
         return planned
     }
 
-    func reservationDestination(_ candidate: Train, call: StationID) -> StationID {
-        guard let placement = candidate.placement else { return call }
-        let end = self.placement(placement, after: TrainPath(traversals: routeStretches(of: candidate).stretches.dropFirst().map(\.traversal), end: candidate.movement.end, distance: routeLength(of: candidate)))
-        guard case .onEdge(let traversal, let offset) = end.position else { return call }
-        return stations.first { berths(of: $0.id, length: candidate.length).contains(Berth(traversal: traversal, offset: offset)) }?.id ?? call
+    func reservationDestination(_ candidate: Train, call: StationID, traffic: TrafficPlan?) -> StationID {
+        guard let traffic, let execution = candidate.execution,
+              let end = routeStretches(of: candidate).stretches.last else { return call }
+        return traffic.waits.first { wait in
+            wait.train == candidate.id && wait.stop == execution.stop && wait.cycle == execution.cycle
+                && berths(of: wait.station, length: candidate.length).contains(Berth(traversal: end.traversal, offset: end.to))
+        }?.station ?? call
     }
 
     /// How much longer than a service's default route an alternative

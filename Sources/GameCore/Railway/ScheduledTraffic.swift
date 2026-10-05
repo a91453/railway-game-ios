@@ -424,6 +424,12 @@ extension GameWorld {
         let next = point.calls ? point.stop + 1 : point.stop
         guard train.timetable.indices.contains(next) else { return false }
         let main = point.berth
+        // A service already placed at its first call on the main cannot
+        // change berth before waiting without an extra shunting movement.
+        // Leave this case to V1/V2 instead of blocking a passing express.
+        if point.calls, point.stop == 0, train.execution?.stop == 0,
+           isStopped(train, at: point.station),
+           case .onEdge(let actual, _)? = train.position, actual.edge == main.traversal.edge { return false }
         let direction = network.edge(main.traversal.edge)!
         let outgoing = main.traversal.direction == .forward ? direction.to : direction.from
         return berths(of: point.station, length: train.length).contains { berth in

@@ -507,6 +507,7 @@ extension ReferenceWorld {
     func firstLeaving(_ train: Train, withTrafficControl: Bool = false) -> Train? {
         var trial = self
         trial.trafficControl = withTrafficControl && trafficControl
+        trial.routeMemo.scheduled = trial.trafficControl ? (routeMemo.scheduled ?? scheduledPlan()) : nil
         guard let i = trial.trains.firstIndex(where: { $0.id == train.id }) else { return nil }
         trial.trains[i] = train
         let before = trial.trains[i]
