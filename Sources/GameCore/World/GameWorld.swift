@@ -2374,7 +2374,7 @@ public struct GameWorld: Equatable, Sendable {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions) { true } else { false } }) {
+            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions, traffic: memo.traffic) { true } else { false } }) {
                 return true
             }
             return moved.canExtendAnyAuthority()

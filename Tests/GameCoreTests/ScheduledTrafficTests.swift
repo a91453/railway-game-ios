@@ -66,6 +66,19 @@ final class ScheduledTrafficTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    func testRouteHolderQueryKeepsTheScheduledWaypoint() throws {
+        var world = try Self.meet()
+        var model = Self.model(for: world)
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        // The route only goes to M's loop, so the peer standing at E does
+        // not block this departure. Queries must use that same waypoint.
+        let own = TrainID(rawValue: 1)
+        XCTAssertNil(world.trainHoldingRoute(of: own))
+        XCTAssertNil(model.trainHoldingRoute(of: own))
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model, lineAnswers: false), [])
+    }
+
     func testSlowTrainWaitsOnTheLoopAndFastTrainUsesTheMain() throws {
         var world = try Self.overtake()
         let wait = try XCTUnwrap(world.scheduledTrafficWaits().first { $0.kind == .overtake })

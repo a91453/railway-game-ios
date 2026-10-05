@@ -119,7 +119,7 @@ extension GameWorld {
     /// candidate has been admitted.
     func reservingDeparture(_ candidate: Train) -> Reserving {
         var memo = DirectionMemo()
-        return reservingDeparture(candidate, memo: &memo)
+        return reservingDeparture(candidate, memo: &memo, traffic: trafficPlan())
     }
 
     func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo, traffic: TrafficPlan? = nil) -> Reserving {

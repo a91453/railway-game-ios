@@ -73,7 +73,7 @@ extension GameWorld {
             else { return nil }
             return (train, false)
         }
-        guard let candidate = departureRequest(of: train), case .held = reservingDeparture(candidate, memo: &memo) else { return nil }
+        guard let candidate = departureRequest(of: train), case .held = reservingDeparture(candidate, memo: &memo, traffic: trafficPlan()) else { return nil }
         return (candidate, true)
     }
 
@@ -84,13 +84,20 @@ extension GameWorld {
     /// passing place (Stage V2, see ``goingOn(_:)``). `nil` for any other
     /// train.
     func departureRequest(of train: Train) -> Train? {
-        if currentTrafficWait(train, plan: trafficPlan()) != nil { return nil }
+        let plan = trafficPlan()
+        if currentTrafficWait(train, plan: plan) != nil { return nil }
         switch train.execution {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }
-            return leaving(train, stop: stop, cycle: cycle).train
+            return leaving(train, stop: stop, cycle: cycle, traffic: plan).train
         case .travellingToStop?:
-            return goingOn(train)
+            guard var going = goingOn(train) else { return nil }
+            if let chosen = scheduledPath(for: train, from: train.position!, to: train.timetable[train.execution!.stop].station, plan: plan) {
+                follow(chosen.path, &going)
+                let plannedRun = run(of: going, length: chosen.path.distance, scheduled: chosen.seconds)
+                going.times?.run = plannedRun
+            }
+            return going
         case nil:
             guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }),
                   let stream = line.dispatchStream(of: train.id)
@@ -99,7 +106,7 @@ extension GameWorld {
             guard isDispatchDue(line, stream, at: clock.now, memo: &memo),
                   let trip = readyTrip(of: train, on: line, stream.service, memo: &memo)
             else { return nil }
-            return firstDeparture(of: train, on: trip, calling: line.stops)
+            return firstDeparture(of: train, on: trip, calling: line.stops, traffic: plan)
         }
     }
 
@@ -126,7 +133,7 @@ extension GameWorld {
         let blocked = blockedTrack(except: candidate.id, among: ids)
         if !network.fouls(routeEnvelope(of: candidate).resources, blocked) { return true }
         guard request.departs, case .travellingToStop(let stop, _)? = candidate.execution,
-              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: blocked, memo: &memo)
+              let alternative = alternativeRoute(of: candidate, to: reservationDestination(candidate, call: candidate.timetable[stop].station, traffic: trafficPlan()), avoiding: blocked, memo: &memo)
         else { return false }
         var rerouted = candidate
         follow(alternative, &rerouted)
@@ -225,7 +232,7 @@ extension GameWorld {
             var freed = false
             for (id, request) in stuck where id != candidate.id {
                 if request.departs {
-                    if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { freed = true }
+                    if case .granted = aside.reservingDeparture(request.candidate, memo: &memo, traffic: aside.trafficPlan()) { freed = true }
                 } else if aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil {
                     freed = true
                 }
