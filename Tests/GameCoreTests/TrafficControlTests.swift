@@ -1363,16 +1363,22 @@ extension TrafficControlTests {
 
 
 extension TrafficControlTests {
-    func testRemovingAnUnassignedLineReleasesItsDerivedDirectionProtection() throws {
+    /// Decision 57 as fused for Stage V2: a line protects its whole plan
+    /// only while a placed train is assigned to it, whatever its window;
+    /// with none it is plan data that cannot run, and protects nothing.
+    /// Assigning and unassigning between calls changes the protection.
+    func testALineProtectsItsPlanOnlyWhileAPlacedTrainIsAssigned() throws {
         var world = try DoubleTrackCrossover.world(extended: true)
         var model = DoubleTrackCrossover.model(extended: true)
-        for (number, place) in [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072)].enumerated() {
+        let places = [(SingleTrackMeet.forward(2), Int64(13_312)), (SingleTrackMeet.forward(1), 3_072), (SingleTrackMeet.backward(7), 6_144)]
+        for (number, place) in places.enumerated() {
             let id = try DoubleTrackCrossover.stand(&world, place.0, at: place.1)
             XCTAssertNil(model.purchaseTrain(named: "T"))
             XCTAssertNil(model.setCars(id, 2))
             XCTAssertNil(model.placeTrain(id, at: .onEdge(place.0, offset: place.1)))
             XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: place.1))
             XCTAssertNil(model.setRate(id, 1_024))
+            guard number < 2 else { continue }
             let stops: [(StationID, Int64)]
             if number == 0 { stops = [(DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)] }
             else { stops = [(DoubleTrackCrossover.west, 0), (DoubleTrackCrossover.middle, 180), (DoubleTrackCrossover.east, 420)] }
@@ -1382,22 +1388,34 @@ extension TrafficControlTests {
             XCTAssertNil(model.setTimetable(id, calls))
             XCTAssertNil(model.startService(id))
         }
+        let (follower, opposer) = (TrainID(rawValue: 2), TrainID(rawValue: 3))
         let stops = [DoubleTrackCrossover.outer, DoubleTrackCrossover.east, DoubleTrackCrossover.middle, DoubleTrackCrossover.west]
         let line = try world.createLine(named: "B", stops: stops).id
         XCTAssertNil(model.createLine(named: "B", stops: stops))
-        // No roster, no operating trains, and the window is closed: this is
-        // plan data. Removing it between calls must invalidate the memo.
+        // Westbound on track B is the line's way: an eastbound alternative
+        // may not borrow e4 forwards while the line can run.
+        let againstLine = TrackTraversal(edge: .edge(4), direction: .forward)
+        func protected() -> Bool {
+            var memo = GameWorld.DirectionMemo()
+            return world.opposingServiceTraversals(for: world.train(id: follower)!, memo: &memo).contains(againstLine)
+        }
+        XCTAssertFalse(protected(), "a line with no train cannot run")
+        try world.assignTrain(opposer, to: line)
+        XCTAssertNil(model.assign(opposer, to: line))
+        XCTAssertTrue(protected(), "its window is closed, but it has a train to send")
         try world.setTrafficControl(true)
         XCTAssertNil(model.setTrafficControl(true))
         try world.advance(ticks: 1)
         XCTAssertNil(model.advance(ticks: 1))
-        XCTAssertFalse(world.train(id: .init(rawValue: 2))!.movement.edges.contains(.edge(5)))
+        XCTAssertNil(world.line(id: line)?.lastDispatch)
+        XCTAssertFalse(world.train(id: follower)!.movement.edges.contains(.edge(5)))
         XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
-        try world.removeLine(line)
-        XCTAssertNil(model.removeLine(line))
+        try world.unassignTrain(opposer)
+        XCTAssertNil(model.unassign(opposer))
+        XCTAssertFalse(protected())
         try world.advance(ticks: 1)
         XCTAssertNil(model.advance(ticks: 1))
-        XCTAssertTrue(world.train(id: .init(rawValue: 2))!.movement.edges.contains(.edge(5)))
+        XCTAssertTrue(world.train(id: follower)!.movement.edges.contains(.edge(5)))
         XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
         XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
@@ -1486,5 +1504,61 @@ extension TrafficControlTests {
         try near.setTrafficControl(true)
         try near.advance(ticks: 1)
         XCTAssertEqual(near.train(id: other)?.movement.edges, [.edge(4), .edge(5)])
+    }
+}
+
+/// Decision 57 as fused for Stage V2: a running service protects only the
+/// way it still goes, from where its train is, not every way its timetable
+/// could start from.
+extension TrafficControlTests {
+    /// A stands on M's main platform, due to leave for E; B stands at E,
+    /// due to leave for W. A waits for B's platform at E, B for A's at M.
+    /// A goes east from the main platform, so the loop is not its way: B
+    /// takes it (V1, 636 units longer) and both complete. Planning A's
+    /// timetable from every berth of M as well, the loop's eastbound berth
+    /// among them, would forbid the loop to B: neither could go, and no
+    /// passing place would help.
+    func testARunningServiceLeavesTheLoopItDoesNotUseToAnOpposingService() throws {
+        var world = try SingleTrackMeet.world()
+        var model = SingleTrackMeet.model()
+        let (w, m, e) = (SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east)
+        let plans: [(TrackTraversal, Int64, [ScheduledStop])] = [
+            (SingleTrackMeet.forward(2), 9_216, DoubleTrackCrossover.calls([(m, 0), (e, 240)])),
+            (SingleTrackMeet.backward(3), 3_072, DoubleTrackCrossover.calls([(e, 0), (w, 480)])),
+        ]
+        for (traversal, offset, calls) in plans {
+            let id = try SingleTrackMeet.stand(&world, edge: traversal, offset: offset)
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(traversal, offset: offset)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: offset))
+            XCTAssertNil(model.setRate(id, 1_024))
+            try world.setTrainTimetable(id, to: calls)
+            try world.startTrainService(id)
+            XCTAssertNil(model.setTimetable(id, calls))
+            XCTAssertNil(model.startService(id))
+        }
+        let (a, b) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        try world.setTrafficControl(true)
+        XCTAssertNil(model.setTrafficControl(true))
+        try world.advance(ticks: 1)
+        XCTAssertNil(model.advance(ticks: 1))
+        XCTAssertEqual(world.train(id: a)?.execution, .waitingAtStop(0))
+        XCTAssertEqual(world.trainHoldingRoute(of: a), b)
+        XCTAssertEqual(world.train(id: b)?.movement.edges, [.edge(6), .edge(5), .edge(4), .edge(1)])
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        for _ in 0..<12 where world.train(id: a)?.execution != nil || world.train(id: b)?.execution != nil {
+            try world.advance(ticks: 1)
+            XCTAssertNil(model.advance(ticks: 1))
+            XCTAssertEqual(world.deadlockedTrains(), [])
+            XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        }
+        XCTAssertNil(world.train(id: a)?.execution)
+        XCTAssertNil(world.train(id: b)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: a), [e])
+        XCTAssertEqual(world.stationsStoppedAt(by: b), [w])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        XCTAssertNil(WorldInvariants.roundTripProblem(of: world))
     }
 }

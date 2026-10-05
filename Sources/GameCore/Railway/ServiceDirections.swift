@@ -1,6 +1,7 @@
 // Decision 57: direction protection for newly borrowed alternative track.
-// Derived from complete plans, independent of departure times and progress.
-// The memo belongs to one advance/query; it is never world or save state.
+// Derived from what can still run: each running service from where it is,
+// and each line with a train placed to run it, over its whole plan. The
+// memo belongs to one advance/query; it is never world or save state.
 
 extension GameWorld {
     struct DirectionMemo {
@@ -13,7 +14,15 @@ extension GameWorld {
             let length: Int64
             let repeats: Bool
         }
+        /// A running service's way on through its plan: the call it is at
+        /// (or bound for) and where it stands for it.
+        struct Walk: Hashable {
+            let plan: Plan
+            let start: TrainPlacement
+            let stop: Int
+        }
         var plans: [Plan: Set<TrackTraversal>] = [:]
+        var walks: [Walk: Set<TrackTraversal>] = [:]
     }
 
     private struct DirectionState: Hashable {
@@ -21,56 +30,102 @@ extension GameWorld {
         let stop: Int
     }
 
-    /// All positive-distance default traversals, from every fitting berth
-    /// of the first call. Walk the complete order, including reversals and
-    /// repeat seams, until the placement/order state repeats or is unroutable.
-    /// No time, occupancy, execution or fixed lookahead enters this search.
+    /// The traversals the head of a train at `start` enters along `path`,
+    /// with the one it is on if it moves on along it; nothing for no
+    /// distance.
+    private func directions(of path: TrainPath, from start: TrainPlacement) -> Set<TrackTraversal> {
+        guard path.distance > 0, case .onEdge(let run, let offset) = start.position else { return [] }
+        var directions = Set(path.traversals)
+        let end = path.traversals.isEmpty ? path.end ?? network.edge(run.edge)!.length : network.edge(run.edge)!.length
+        if end > offset { directions.insert(run) }
+        return directions
+    }
+
+    /// All positive-distance default traversals of `plan` from a train at
+    /// `start` standing for call `stop`: walk the order on, including
+    /// reversals and repeat seams, until the placement/order state repeats
+    /// or is unroutable. No time, occupancy or fixed lookahead enters it.
+    private func walkedDirections(_ plan: DirectionMemo.Plan, from start: TrainPlacement, stop: Int) -> Set<TrackTraversal> {
+        var directions: Set<TrackTraversal> = []
+        var place = start
+        var stop = stop
+        var visited: Set<DirectionState> = []
+        while visited.insert(DirectionState(placement: place, stop: stop)).inserted {
+            let next = stop + 1 == plan.calls.count ? 0 : stop + 1
+            if next == 0 && !plan.repeats { break }
+            let from = plan.calls[stop].reverses ? turnedRound(place) : place
+            guard let path = path(from: from.position, toStation: plan.calls[next].station, length: plan.length) else { break }
+            directions.formUnion(self.directions(of: path, from: from))
+            place = placement(from, after: path)
+            stop = next
+        }
+        return directions
+    }
+
+    /// A line's plan from every fitting berth of its first call: a line
+    /// sends its trains out from wherever they stand there.
     private func plannedDirections(_ plan: DirectionMemo.Plan, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         if let known = memo.plans[plan] { return known }
         var directions: Set<TrackTraversal> = []
         if let first = plan.calls.first {
             for berth in berths(of: first.station, length: plan.length) {
-                var place = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: plan.length)
-                var stop = 0
-                var visited: Set<DirectionState> = []
-                while visited.insert(DirectionState(placement: place, stop: stop)).inserted {
-                    let next = stop + 1 == plan.calls.count ? 0 : stop + 1
-                    if next == 0 && !plan.repeats { break }
-                    let start = plan.calls[stop].reverses ? turnedRound(place) : place
-                    guard let path = path(from: start.position, toStation: plan.calls[next].station, length: plan.length) else { break }
-                    if path.distance > 0, case .onEdge(let run, let offset) = start.position {
-                        let end = path.traversals.isEmpty ? path.end ?? network.edge(run.edge)!.length : network.edge(run.edge)!.length
-                        if end > offset { directions.insert(run) }
-                        directions.formUnion(path.traversals)
-                    }
-                    place = placement(start, after: path)
-                    stop = next
-                }
+                let place = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: plan.length)
+                directions.formUnion(walkedDirections(plan, from: place, stop: 0))
             }
         }
         memo.plans[plan] = directions
         return directions
     }
 
-    /// Protect every timetable and every line/pattern/lap, even idle,
-    /// unassigned or outside its operating window. A line is planned for
-    /// one car and each assigned train length. Times are omitted from keys:
-    /// dispatching another instance cannot invalidate its direction plan.
+    /// A running service's traversals from where the train is: the rest of
+    /// its route, the way on to its call from where that ends (a passing
+    /// place's, Stage V2), and its timetable on from that call. The legs
+    /// it has run already, and the berths it does not stand at, are not in
+    /// it.
+    private func serviceDirections(of train: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
+        guard let execution = train.execution, var start = train.placement else { return [] }
+        let plan = DirectionMemo.Plan(calls: train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) },
+                                      length: train.length, repeats: train.timetablePeriod != nil)
+        var directions: Set<TrackTraversal> = []
+        let stop: Int
+        switch execution {
+        case .waitingAtStop(let waiting, _):
+            stop = waiting
+        case .travellingToStop(let next, _):
+            directions.formUnion(routeStretches(of: train).stretches.filter { $0.to > $0.from }.map(\.traversal))
+            let ahead = pathAhead(of: train)
+            let end = ahead.count == train.movement.remainingEdges.count ? train.movement.end : nil
+            start = placement(start, after: TrainPath(traversals: ahead, end: end, distance: 0))
+            guard let path = path(from: start.position, toStation: plan.calls[next].station, length: plan.length) else { return directions }
+            directions.formUnion(self.directions(of: path, from: start))
+            start = placement(start, after: path)
+            stop = next
+        }
+        let walk = DirectionMemo.Walk(plan: plan, start: start, stop: stop)
+        if let known = memo.walks[walk] { return directions.union(known) }
+        let walked = walkedDirections(plan, from: start, stop: stop)
+        memo.walks[walk] = walked
+        return directions.union(walked)
+    }
+
+    /// Protect what can still run: every placed train's running service
+    /// from where it is, and every line service with a placed train, over
+    /// its whole plan (round trip, or each lap of a ring), whatever its
+    /// operating window or dispatch time. A line is planned for each
+    /// placed train's length. Times are omitted from keys: dispatching
+    /// another instance cannot invalidate its direction plan. A timetable
+    /// that is not running (finished, stopped or never started), a line
+    /// with no placed train and an unplaced train protect nothing: when
+    /// they start, their departure takes its route whole like any other.
     func opposingServiceTraversals(for candidate: Train, memo: inout DirectionMemo) -> Set<TrackTraversal> {
         var directions: Set<TrackTraversal> = []
-        for train in trains where train.id != candidate.id {
-            let calls = train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) }
-            if !calls.isEmpty {
-                directions.formUnion(plannedDirections(.init(calls: calls, length: train.length, repeats: train.timetablePeriod != nil), memo: &memo))
-            }
-            // Also respect a route already chosen by another service.
-            if case .travellingToStop? = train.execution {
-                directions.formUnion(routeStretches(of: train).stretches.filter { $0.to > $0.from }.map(\.traversal))
-            }
+        for train in trains where train.id != candidate.id && train.position != nil {
+            directions.formUnion(serviceDirections(of: train, memo: &memo))
         }
         for line in lines {
             for service in 0..<line.serviceCount {
-                let lengths = Set([Int64(0)] + line.trains(ofService: service).compactMap { train(id: $0)?.length })
+                let lengths = Set(line.trains(ofService: service).compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
+                guard !lengths.isEmpty else { continue }
                 let orders = line.isRing ? RingDirection.allCases.map { line.ringCalls($0) }
                     : [line.calls(ofService: service) + line.calls(ofService: service).dropLast().reversed()]
                 for order in orders {

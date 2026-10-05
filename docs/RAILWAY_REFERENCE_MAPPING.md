@@ -148,7 +148,7 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 | 參考檔案 / 函式 | Swift 檔案 / 函式 | 倍率與採用範圍 |
 | --- | --- | --- |
 | `Railway/site_archive_clean/rail-3d/physical/topology.js` / `shortestPath({blocked})` | `ServicePath.swift` / `networkPath`、`path(...avoiding:forbidden:)` | m × 64 → 世界單位（km × 64000）；沿用既有整數邊長，每一步排除衝突的 span 與限界節點，仍用既有搜尋平手順序 |
-| 同檔 / `directed(edge, from)`、`tags.oneway`、`edgeAllowed` | `ServiceDirections.swift` / `opposingServiceTraversals(for:memo:)`、`plannedDirections`；`ServicePath.swift` / `networkPath` 的 forbidden traversal；獨立 `ReferenceTrafficControl.contraryRuns` | 無倍率，方向翻轉；gap：無永久 one-way tag，從完整時刻表、所有線路／服務模式／雙向環線及剩餘實際路推導，不讀時間／派車就緒；只限制替代路新借用的 traversal，候選車預設走廊保留 ；替代路與待避路（決策 58）都守它 |
+| 同檔 / `directed(edge, from)`、`tags.oneway`、`edgeAllowed` | `ServiceDirections.swift` / `opposingServiceTraversals(for:memo:)`、`serviceDirections`、`plannedDirections`；`ServicePath.swift` / `networkPath` 的 forbidden traversal；獨立 `ReferenceTrafficControl.contraryRuns`、`serviceRuns`、`directionRuns` | 無倍率，方向翻轉；gap：無永久 one-way tag，從執行中服務所在位置往後的路，以及有已放置列車的線路／服務模式／雙向環線的完整計畫推導，不讀時間／派車就緒；只限制替代路新借用的 traversal，候選車預設走廊保留 ；替代路與待避路（決策 58）都守它 |
 | 同檔 / `stopCandidates` | `ServicePath.swift` / `berths(of:length:)` | 停車點對應同站月台的方向性 berth；不是靠經緯度、站名近似或半徑推估；列車長度以 1024 單位 / 車間距（16 m）篩選 |
 | 同檔 / `maxLength`（預設 Infinity）、crossover `length × 4` | `RouteReservation.swift` / `detourAllowance`、`alternativeRoute(of:to:avoiding:)` | 參考的 `maxLength` 是呼叫者給的上限；本專案定為預設路加 25,600 單位（400 m，與 `BLOCK_GAP_KM` 0.4 km × 64000 同一尺度）。沒有 crossover 軌道種類，不加 4 倍懲罰：方向限制已排除逆向借線 |
 | `Ci/PROJECT_ABSORPTION_GUIDE.md` / D 的 request → reserve → approved continuation；U 的 platform assignment | `RouteReservation.swift` / `reservingDeparture`；`GameWorld.swift` / `departService`、`readyTrain`、`goOn` | 無數值倍率；完整取得預設路，或在預設路上 U2 跟車，再取得替代路，最後等待；只有 `GameWorld` 提交 |
@@ -163,7 +163,7 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 **Deferred（暫時沒有改的地方）**：事前的排定等待與時刻表交會、待避推估；需要換向的折返與調車解法；決策 22 的單線容量；畫面上的授權範圍與地圖上的死結標示。規劃查詢與手動路、放置、反向仍照既有規則。
 
 
-第二輪修正 gap：完整計畫從第一站所有放得下車身的 berth 逐段推導預設路，包含折返、重複接縫與完整循環（位置／停靠狀態重複才停止），不採固定 N 段前瞻；空 roster、關閉營運時段、無上線數的線路也保護其計畫。名義第一站位置無法由已執行的列車唯一重建，所以枚舉 berth 是保守策略。替代路只禁「新增借用」的對向 traversal，候選車預設路的同向 traversal 保留，讓單線交會仍能使用共用入口；每一步 blocked span／限界與完整 envelope 的安全檢查仍在。這些是本專案 gap，參考 directed 是永久 oneway tag，並沒有此名義計畫政策。
+第二輪修正 gap：完整計畫從第一站所有放得下車身的 berth 逐段推導預設路，包含折返、重複接縫與完整循環（位置／停靠狀態重複才停止），不採固定 N 段前瞻；關閉營運時段、無上線數的線路也保護其計畫。融合（決策 57）後，執行中的服務改從它實際所在的位置往後推導，不再枚舉第一站的每個 berth（那會把它沒有停的待避線也算成它的路）；線路仍枚舉第一站 berth，但只限 roster 有已放置列車的；沒有執行的時刻表與沒有列車的線路不保護。替代路只禁「新增借用」的對向 traversal，候選車預設路的同向 traversal 保留，讓單線交會仍能使用共用入口；每一步 blocked span／限界與完整 envelope 的安全檢查仍在。這些是本專案 gap，參考 directed 是永久 oneway tag，並沒有此名義計畫政策。
 
 計畫快取：GameCore 在單次 advance 的 DispatchMemo.directions 依停靠／折返順序、車長、重複旗標記住名義 traversal；ReferenceWorld 以獨立鬆弛搜尋及狀態工作清單求 run，RouteMemo.directions 返回前清空，blocked route key 仍包含全部禁止方向與資源。來源與當下實際路每次重合併，未快取 ownership；下一個指令或 advance 不沿用。存檔格式與版本 7 不變。
 
