@@ -188,11 +188,10 @@ extension GameWorld {
     /// ``ServiceLine/serviceCount``), as ``lineJourney(_:pattern:)``
     /// finds it.
     ///
-    /// A ring's journey (decision 49) is its lap the
-    /// ``RingDirection/inner`` way, from the same starts: once round, in
-    /// the order of its stops, back to the first (see
+    /// A ring's journey (decision 49) is its lap in `direction` (inner by
+    /// default), from the same starts, back to the first (see
     /// ``driveLap(_:calling:from:)``).
-    func journey(of line: ServiceLine, service: Int) -> LineJourney? {
+    func journey(of line: ServiceLine, service: Int, direction: RingDirection = .inner) -> LineJourney? {
         let calls = line.calls(ofService: service)
         let first = line.stops[calls[0]]
         let starts = berths(of: first, length: 0).map { TrainPosition.onEdge($0.traversal, offset: $0.offset) }
@@ -200,7 +199,7 @@ extension GameWorld {
         var mostMatched = -1
         for start in starts {
             let placement = TrainPlacement(position: start, trailEdges: [], length: 0)
-            let driven = line.isRing ? driveLap(line, calling: line.ringCalls(.inner), from: placement, routes: line.routes(ofService: service)) : drive(line, calling: calls, from: placement, routes: line.routes(ofService: service))
+            let driven = line.isRing ? driveLap(line, calling: line.ringCalls(direction), from: placement, routes: line.routes(ofService: service)) : drive(line, calling: calls, from: placement, routes: line.routes(ofService: service))
             guard let journey = driven else {
                 continue
             }
@@ -216,13 +215,21 @@ extension GameWorld {
     /// The most trains line `id`'s own service, or its pattern at index
     /// `pattern`, can run on its own: as many as keep at least
     /// ``ServiceLine/minimumHeadwayMinutes`` between them over its round
-    /// trip, and at least one. `nil` if the line or pattern does not exist
+    /// trip, and at least one. Traffic control also applies decision 62's
+    /// meet-to-meet single-track bound. `nil` if the line or pattern does not exist
     /// or its journey cannot be driven.
     ///
     /// A ring (decision 49) runs that many each way, twice as many in all
-    /// (the reference's `(isRing ? 2 : 1) * floor(…)`).
+    /// (the reference's `(isRing ? 2 : 1) * floor(…)`). A controlled single
+    /// ring needs room for both directions and can have a zero paired maximum.
     public func lineMaximumTrains(_ id: LineID, pattern: Int? = nil) -> Int? {
-        guard let journey = lineJourney(id, pattern: pattern) else { return nil }
+        guard let line = line(id: id), let service = line.service(pattern), let journey = journey(of: line, service: service) else { return nil }
+        let layout = capacityLayout(of: line)
+        if !layout.blocks.isEmpty {
+            let outer = line.isRing ? self.journey(of: line, service: service, direction: .outer) : nil
+            return capacityProfile(of: line, service: service, journey: journey, layout: layout, outer: outer)
+                .maximum(roundTrip: journey.roundTripMinutes, ring: journey.isRing)
+        }
         let eachWay = Int(clamping: max(1, journey.roundTripMinutes / ServiceLine.minimumHeadwayMinutes))
         return journey.isRing ? eachWay * 2 : eachWay
     }
@@ -236,8 +243,8 @@ extension GameWorld {
     /// ``lineSegmentLoads(_:at:)``). `nil` if the line or pattern does not
     /// exist or its journey cannot be driven.
     public func lineTrainsInService(_ id: LineID, at level: ServiceLevel, pattern: Int? = nil) -> Int? {
-        guard let (line, service, roundTrips) = serviceRoundTrips(id, pattern: pattern), roundTrips[service] != nil else { return nil }
-        return line.services(at: level, roundTrips: roundTrips).plans[service]?.trains ?? 0
+        guard let (line, service, roundTrips, capacities) = serviceRoundTrips(id, pattern: pattern), roundTrips[service] != nil else { return nil }
+        return line.services(at: level, roundTrips: roundTrips, capacities: capacities).plans[service]?.trains ?? 0
     }
 
     /// The minutes between two trains of line `id`'s own service, or of its
@@ -248,8 +255,8 @@ extension GameWorld {
     /// longer. `nil` if the line or pattern does not exist, its journey
     /// cannot be driven, or it runs no trains at that level.
     public func lineHeadway(_ id: LineID, at level: ServiceLevel, pattern: Int? = nil) -> Int64? {
-        guard let (line, service, roundTrips) = serviceRoundTrips(id, pattern: pattern) else { return nil }
-        return line.services(at: level, roundTrips: roundTrips).plans[service]?.headway
+        guard let (line, service, roundTrips, capacities) = serviceRoundTrips(id, pattern: pattern) else { return nil }
+        return line.services(at: level, roundTrips: roundTrips, capacities: capacities).plans[service]?.headway
     }
 
     /// The load on each segment of line `id` at `level`, in trains a day
@@ -264,17 +271,18 @@ extension GameWorld {
     /// ``lineJourney(_:pattern:)``).
     public func lineSegmentLoads(_ id: LineID, at level: ServiceLevel) -> [Int]? {
         guard let line = line(id: id) else { return nil }
-        let roundTrips = (0..<line.serviceCount).map { journey(of: line, service: $0)?.roundTripMinutes }
-        return line.services(at: level, roundTrips: roundTrips).loads
+        let journeys = (0..<line.serviceCount).map { journey(of: line, service: $0) }
+        return line.services(at: level, roundTrips: journeys.map { $0?.roundTripMinutes }, capacities: capacityProfiles(of: line, journeys: journeys)).loads
     }
 
     /// Line `id`, the service that `pattern` names (see
     /// ``ServiceLine/serviceCount``), and the round trips of that service
     /// and every one before it, which are all that decide what it runs.
     /// `nil` if the line or pattern does not exist.
-    private func serviceRoundTrips(_ id: LineID, pattern: Int?) -> (ServiceLine, Int, [Int64?])? {
+    private func serviceRoundTrips(_ id: LineID, pattern: Int?) -> (ServiceLine, Int, [Int64?], [ServiceCapacityProfile?])? {
         guard let line = line(id: id), let service = line.service(pattern) else { return nil }
-        return (line, service, (0...service).map { journey(of: line, service: $0)?.roundTripMinutes })
+        let journeys = (0...service).map { journey(of: line, service: $0) }
+        return (line, service, journeys.map { $0?.roundTripMinutes }, capacityProfiles(of: line, journeys: journeys))
     }
 
     /// The round trip `train` would make for `line`'s service `service`

@@ -1475,6 +1475,9 @@ public struct GameWorld: Equatable, Sendable {
         /// Each service's journey (see ``lineJourney(_:pattern:)``), by line
         /// and service (see ``ServiceLine/serviceCount``), once looked up.
         var journeys: [LineID: [Int: LineJourney?]] = [:]
+        var capacityLayouts: [LineID: LineCapacityLayout] = [:]
+        var capacities: [LineID: [Int: ServiceCapacityProfile?]] = [:]
+        var outerCapacityJourneys: [LineID: LineJourney?] = [:]
         /// V1 complete direction plans, local to this advance.
         var directions = DirectionMemo()
         /// Each train's round trip from where it stood idle (its position
@@ -1546,6 +1549,13 @@ public struct GameWorld: Equatable, Sendable {
     private func plannedService(of line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> (trains: Int, headway: Int64)? {
         guard line.window.contains(minuteOfDay: now.minuteOfDay) else { return nil }
         var roundTrips: [Int64?] = []
+        var capacities: [ServiceCapacityProfile?] = []
+        let layout: LineCapacityLayout
+        if let known = memo.capacityLayouts[line.id] { layout = known }
+        else {
+            layout = capacityLayout(of: line)
+            memo.capacityLayouts[line.id] = layout
+        }
         for earlier in 0...service {
             let journey: LineJourney?
             if let known = memo.journeys[line.id]?[earlier] {
@@ -1555,9 +1565,25 @@ public struct GameWorld: Equatable, Sendable {
                 memo.journeys[line.id, default: [:]][earlier] = journey
             }
             roundTrips.append(journey?.roundTripMinutes)
+            if let known = memo.capacities[line.id]?[earlier] { capacities.append(known) }
+            else {
+                var outer: LineJourney?
+                if line.isRing, !layout.blocks.isEmpty {
+                    if let known = memo.outerCapacityJourneys[line.id] { outer = known }
+                    else {
+                        outer = self.journey(of: line, service: earlier, direction: .outer)
+                        memo.outerCapacityJourneys[line.id] = .some(outer)
+                    }
+                }
+                let profile = layout.blocks.isEmpty ? nil : journey.map {
+                    capacityProfile(of: line, service: earlier, journey: $0, layout: layout, outer: outer)
+                }
+                memo.capacities[line.id, default: [:]][earlier] = .some(profile)
+                capacities.append(profile)
+            }
         }
         guard roundTrips[service] != nil else { return nil }
-        return line.services(at: serviceDay.level(atMinuteOfDay: now.minuteOfDay), roundTrips: roundTrips).plans[service]
+        return line.services(at: serviceDay.level(atMinuteOfDay: now.minuteOfDay), roundTrips: roundTrips, capacities: capacities).plans[service]
     }
 
     /// The first of the trains of `line`'s service `service`, in ID order,

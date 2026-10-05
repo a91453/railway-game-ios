@@ -1,0 +1,547 @@
+{
+  "description": "Decision 62: the unchanged 20+21+240=281 second physical journey; disabled planning maximum 2/headway 3/load480, controlled whole single block maximum1/headway5/load288; the requested four trains are preserved.",
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 1000000,
+    "gameMinutes": 0,
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Selected",
+        "patterns": [],
+        "routePreferences": [
+          {
+            "from": 0,
+            "platform": {
+              "edge": 2,
+              "end": 2048,
+              "start": 1536,
+              "station": 2
+            },
+            "to": 1,
+            "tracks": [
+              {
+                "edge": 1,
+                "forward": true
+              },
+              {
+                "edge": 2,
+                "forward": true
+              }
+            ]
+          }
+        ],
+        "stops": [
+          1,
+          2
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 4,
+          "offPeak": 4,
+          "peak": 4
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 1024,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 3072,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 5120,
+          "y": 4096,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 1024,
+          "start": 512,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 1024,
+          "start": 512,
+          "station": 2
+        },
+        {
+          "edge": 2,
+          "end": 2048,
+          "start": 1536,
+          "station": 2
+        }
+      ]
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "W",
+        "point": {
+          "x": 2048,
+          "y": 6144
+        }
+      },
+      {
+        "id": 2,
+        "name": "E",
+        "point": {
+          "x": 4096,
+          "y": 6144
+        }
+      }
+    ],
+    "trafficControl": true,
+    "trains": []
+  },
+  "initialState": {
+    "balance": 1000000,
+    "costs": {
+      "car": 0,
+      "station": 0,
+      "track": 0,
+      "train": 0
+    },
+    "gameMinutes": 0,
+    "speed": "normal",
+    "worldHeight": 8192,
+    "worldWidth": 8192
+  },
+  "schemaVersion": 33,
+  "steps": [
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 3072,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5120,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 1,
+        "to": 2,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 2,
+        "to": 3,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "W",
+        "point": {
+          "x": 2048,
+          "y": 6144
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "E",
+        "point": {
+          "x": 4096,
+          "y": 6144
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 1,
+        "end": 1024,
+        "start": 512,
+        "station": 1,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 2,
+        "end": 1024,
+        "start": 512,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 2,
+        "end": 2048,
+        "start": 1536,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Selected",
+        "stops": [
+          1,
+          2
+        ],
+        "type": "createLine"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "routePreferences": [
+          {
+            "from": 0,
+            "platform": {
+              "edge": 2,
+              "end": 2048,
+              "start": 1536,
+              "station": 2
+            },
+            "to": 1,
+            "tracks": [
+              {
+                "edge": 1,
+                "forward": true
+              },
+              {
+                "edge": 2,
+                "forward": true
+              }
+            ]
+          }
+        ],
+        "type": "setLineRoutePreferences"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "journey": {
+          "legs": [
+            {
+              "from": 0,
+              "path": {
+                "distance": 3072,
+                "end": null,
+                "traversals": [
+                  {
+                    "direction": "forward",
+                    "edge": 2
+                  }
+                ]
+              },
+              "seconds": 20,
+              "to": 1
+            },
+            {
+              "from": 1,
+              "path": {
+                "distance": 3584,
+                "end": 1536,
+                "traversals": [
+                  {
+                    "direction": "backward",
+                    "edge": 1
+                  }
+                ]
+              },
+              "seconds": 21,
+              "to": 0
+            }
+          ],
+          "roundTripMinutes": 5,
+          "roundTripSeconds": 281,
+          "start": {
+            "direction": "forward",
+            "edge": 1,
+            "offset": 1024,
+            "type": "edge"
+          }
+        }
+      },
+      "observe": {
+        "line": 1,
+        "type": "lineJourney"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "trains": {
+          "low": 4,
+          "offPeak": 4,
+          "peak": 4
+        },
+        "type": "setLineTrainsInService"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "enabled": false,
+        "type": "setTrafficControl"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "trains": 2
+      },
+      "observe": {
+        "line": 1,
+        "type": "lineMaximumTrains"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "trains": 2
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineTrainsInService"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "minutes": 3
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineHeadway"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "loads": [
+          480
+        ]
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineSegmentLoads"
+      }
+    },
+    {
+      "command": {
+        "enabled": true,
+        "type": "setTrafficControl"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "trains": 1
+      },
+      "observe": {
+        "line": 1,
+        "type": "lineMaximumTrains"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "trains": 1
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineTrainsInService"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "minutes": 5
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineHeadway"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "loads": [
+          288
+        ]
+      },
+      "observe": {
+        "level": "peak",
+        "line": 1,
+        "type": "lineSegmentLoads"
+      }
+    }
+  ]
+}

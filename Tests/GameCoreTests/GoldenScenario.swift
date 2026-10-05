@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 32
+    static let schemaVersion = 33
 
     var description: String
     var initialState: InitialState
@@ -148,7 +148,7 @@ struct GoldenScenario: Decodable {
             var schemaVersion: Int
         }
         let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
-        guard version == 30 || version == 31 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
+        guard version == 30 || version == 31 || version == 32 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
         let scenario = try JSONDecoder().decode(GoldenScenario.self, from: data)
         try checkClock(minutes: scenario.initialState.gameMinutes, seconds: scenario.initialState.gameSeconds, in: "initialState")
         let final = scenario.expectedFinalState

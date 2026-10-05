@@ -222,6 +222,21 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 
 本階段使用 adapted／gap；無 JavaScript 執行期 direct reuse 或未有來源的 faithful 宣稱。新增版本 10 save／schema 32 短 golden／實體路徑 replay，既有三種 fixture 檔案未修改。新 campaign 在 campaigns-19，既有 campaign 不縮減；實景猴硐指定原有月台實際停靠與 GameSession 設定／清除驗收保留原全部測試。完整必要調整、偏好優先與 failure atomicity 見決策 61；各檢查 VERIFIED／UNVERIFIED 見 PR。
 
+#### V4c：單線交會資源與服務容量（決策 62）
+
+來源固定 `25229af`；V4b 的 #120／#123 均由作者合併後，從 main `18ff248` 開工。四源逐階段重查，clean 先 READ_ME／migration §7、GTA 先 READ_ME／source。來源沒有可直接照搬的單線最大列車數公式。
+
+| 來源／函式 | 目標 | 倍率／分類與必要調整 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/data/tra_track_sections.json`、`index.html`／`traSectionKey` 的 tracks=1 | `LineCapacity.capacityLayout`／`parallelTracks`、usable berths、block components、ringSharedCapacitySegments | **adapted**：來源≥0.5平行長度比例的真實站對字串表改玩家已建路網與可放全列的不同平台邊；不複製現實站名／id 或 tracks 常數；環線另比兩向lap的正長度實體span，防止把繞圈兩弧誤當雙線；m×64 |
+| `index.html`／`inferMeetPassTimes`、`inferMeetRun`／`single`、`conflictOn`、交會 m 餘裕 | `LineCapacity.capacityProfile` 的 meet-to-meet 占用秒數 | **adapted**：來源實際單向班表窗口改服務共用往返名義工作量；秒×1；來源 m≤30 改保守端點 30 秒上界，略過交會站的整跑段計入所有跨越 block，不冒稱逐事件等價 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`MIN_HEADWAY_MINUTES=1.5`、`enforceMinHeadway` | `ServiceLine.minimumHeadwayMinutes`／capacity maximum、實際 dispatcher | **adapted**：既有 ceil(90/60)=2min 與整數分鐘 dispatcher 保留；單線 G 取整至分鐘，N 受 G 與原 requested／target 限制；本線→交路索引優先不變 |
+| （四源沒有可讀單線最大公式） | `ServiceCapacityProfile`、`ServiceLine.services`；`ReferenceLineCapacity`／`ReferenceLines` | **gap**：本專案推導 G=max(2,ceil(max B/60))、N=floor(R/G)、每天 ceil(B×1440/H)≤86400 的保守資源式；獨立 DFS／餘數算術／倒數 allocation，不呼叫 production planner；無新 saved 欄位 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7、binary symbols | 無新增可直譯容量函式 | **gap**：成本／reverse／platform 設定不是單線 headway 公式，未找到可讀的單線 capacity／meeting implementation；不猜常數 |
+| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT | 無新增可直譯容量函式 | **gap**：既有雙線捷運來回／站台 spots 與車距，沒有玩家單線拓撲、交會 block 或最大 roster 公式 |
+
+無 direct reuse 或 faithful 全公式宣稱。必要整數化、環線兩向、部分交路共用、不過午夜重算、未知外向零 paired 容量與名義上界限制見決策 62。SavedGame 10 不變（derived，無格式變更），schema 33 新增短 golden；既有三種 fixtures 全不改。新 576 步 campaign 在 campaigns-22，原 SaveMutation 14 項不縮減而分 campaigns-3／21。平溪 demo 由本身路網推導；各 check 狀態見 PR／handoff。
+
 #### V1／V2 歷史盤點：當時 Deferred 的排定等待（交會／待避已由 V3 接續）
 
 | 參考 | 行為 | 現有 GameCore | 預計 Swift | 倍率 | 分類 |

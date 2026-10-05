@@ -186,8 +186,8 @@ extension ReferenceWorld {
     /// Service `k` of `line` driven from every berth of its first call on
     /// the network (decision 31), a train of one car; the shortest, the
     /// first found among equals. A ring's journey is its lap the inner way.
-    func serviceJourney(_ line: Line, _ k: Int) -> LineJourney? {
-        let calls = line.ring ? Self.lap(line, outer: false) : line.service(k).calls
+    func serviceJourney(_ line: Line, _ k: Int, outer: Bool = false) -> LineJourney? {
+        let calls = line.ring ? Self.lap(line, outer: outer) : line.service(k).calls
         var best: LineJourney?
         var mostMatched = -1
         for start in journeyStarts(onNetworkOf: line.stops[calls[0]]) {
@@ -217,9 +217,10 @@ extension ReferenceWorld {
         let k = pattern.map { $0 + 1 } ?? 0
         let journeys = (0...k).map { serviceJourney(line, $0) }
         guard let journey = journeys[k] else { return none }
-        var answers = LineAnswers(journey: journey, maximum: Self.maximum(line, journey), trains: [:], headways: [:])
+        let limits = capacities(line, journeys)
+        var answers = LineAnswers(journey: journey, maximum: limits[k]?.maximum(journey.roundTripMinutes, ring: line.ring) ?? Self.maximum(line, journey), trains: [:], headways: [:])
         for level in ServiceLevel.allCases {
-            let plan = Self.plans(line, at: level, journeys: journeys)[k]!
+            let plan = Self.plans(line, at: level, journeys: journeys, capacities: limits)[k]!
             answers.trains[level] = plan.trains
             answers.headways[level] = plan.headway
         }
@@ -233,12 +234,13 @@ extension ReferenceWorld {
     func allLineAnswers(_ id: LineID) -> (services: [LineAnswers], loads: [ServiceLevel: [Int]])? {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
         let journeys = (0...line.patterns.count).map { serviceJourney(line, $0) }
-        var services = journeys.map { journey in
-            LineAnswers(journey: journey, maximum: journey.map { Self.maximum(line, $0) }, trains: [:], headways: [:])
+        let limits = capacities(line, journeys)
+        var services = journeys.enumerated().map { index, journey in
+            LineAnswers(journey: journey, maximum: journey.map { limits[index]?.maximum($0.roundTripMinutes, ring: line.ring) ?? Self.maximum(line, $0) }, trains: [:], headways: [:])
         }
         var loads: [ServiceLevel: [Int]] = [:]
         for level in ServiceLevel.allCases {
-            let plans = Self.plans(line, at: level, journeys: journeys)
+            let plans = Self.plans(line, at: level, journeys: journeys, capacities: limits)
             for (k, plan) in plans.enumerated() {
                 guard let plan else { continue }
                 services[k].trains[level] = plan.trains
@@ -296,33 +298,43 @@ extension ReferenceWorld {
     /// a day's trains at its headway, added on every segment from its first
     /// call to its last to what the services before it put there, stays
     /// within 720.
-    static func plans(_ line: Line, at level: ServiceLevel, journeys: [LineJourney?]) -> [(trains: Int, headway: Int64?)?] {
+    static func plans(_ line: Line, at level: ServiceLevel, journeys: [LineJourney?], capacities: [Capacity?]? = nil) -> [(trains: Int, headway: Int64?)?] {
         if line.ring {
             // Decision 49: one service, each way planned as a line on the
             // lap, with half the count; twice the trains in all.
             guard let lap = journeys[0]?.roundTripMinutes else { return [nil] }
             let eachWay = plan(Pattern(calls: [], trains: line.trains.mapValues { $0 / 2 }, targets: line.targets), at: level,
-                               roundTrip: lap, maximum: maximumTrains(roundTrip: lap))
+                               roundTrip: lap, maximum: capacities?.first.flatMap { $0 }.map { $0.maximum(lap, ring: true) / 2 } ?? maximumTrains(roundTrip: lap))
             return [(2 * eachWay.trains, eachWay.headway)]
         }
         var plans: [(trains: Int, headway: Int64?)?] = []
+        var used = Array(repeating: Int64(0), count: Self.segments(line))
         for (k, journey) in journeys.enumerated() {
             guard let journey else {
                 plans.append(nil)
                 continue
             }
             let service = line.service(k)
-            let alone = plan(service, at: level, roundTrip: journey.roundTripMinutes, maximum: maximumTrains(roundTrip: journey.roundTripMinutes))
+            let capacity = capacities?[k]
+            let alone = plan(service, at: level, roundTrip: journey.roundTripMinutes, maximum: capacity?.maximum(journey.roundTripMinutes, ring: false) ?? maximumTrains(roundTrip: journey.roundTripMinutes))
             var count = alone.trains
             while count > 0 {
-                let mine = load(headway(count, roundTrip: journey.roundTripMinutes, target: service.targets[level]))
+                let gap = headway(count, roundTrip: journey.roundTripMinutes, target: service.targets[level])
+                let mine = load(gap)
                 let fits = (service.calls.first!..<service.calls.last!).allSatisfy { segment in
                     loadBefore(line, plans, segment) + mine <= 720
                 }
-                if fits { break }
+                let singleFits = capacity.map { c in
+                    c.seconds.indices.allSatisfy { Capacity.occupied(c.seconds[$0], gap: gap) <= 86400 - used[$0] }
+                } ?? true
+                if fits && singleFits { break }
                 count -= 1
             }
-            plans.append(count == 0 ? (0, nil) : (count, headway(count, roundTrip: journey.roundTripMinutes, target: service.targets[level])))
+            let gap = count == 0 ? nil : headway(count, roundTrip: journey.roundTripMinutes, target: service.targets[level])
+            plans.append((count, gap))
+            if let gap, let capacity {
+                for segment in used.indices { used[segment] += Capacity.occupied(capacity.seconds[segment], gap: gap) }
+            }
         }
         return plans
     }
@@ -374,7 +386,7 @@ extension ReferenceWorld {
     func lineSegmentLoads(_ id: LineID, at level: ServiceLevel) -> [Int]? {
         guard let line = lines.first(where: { $0.id == id.rawValue }) else { return nil }
         let journeys = (0...line.patterns.count).map { serviceJourney(line, $0) }
-        let plans = Self.plans(line, at: level, journeys: journeys)
+        let plans = Self.plans(line, at: level, journeys: journeys, capacities: capacities(line, journeys))
         return (0..<Self.segments(line)).map { Self.loadBefore(line, plans, $0) }
     }
 }
@@ -460,6 +472,9 @@ extension ReferenceWorld {
     /// What stays the same within one call of `advance`.
     struct DispatchMemo {
         var journeys: [ServiceKey: LineJourney?] = [:]
+        var capacityTopologies: [Int: CapacityTopology] = [:]
+        var capacities: [ServiceKey: Capacity?] = [:]
+        var outerCapacityJourneys: [Int: LineJourney?] = [:]
         /// Trips found from a train's place and body: `(turned, journey)`,
         /// or none.
         var trips: [Place: [ServiceKey: (Bool, LineJourney)?]] = [:]
@@ -542,14 +557,34 @@ extension ReferenceWorld {
               let level = serviceLevel(of: LineID(rawValue: line.id), at: GameTime(minutes: minutes))
         else { return false }
         var journeys: [LineJourney?] = []
+        var limits: [Capacity?] = []
+        let topology: CapacityTopology
+        if let known = memo.capacityTopologies[line.id] { topology = known }
+        else {
+            topology = capacityTopology(line)
+            memo.capacityTopologies[line.id] = topology
+        }
         for earlier in 0...k {
             let key = ServiceKey(line: line.id, service: earlier)
             if memo.journeys[key] == nil {
                 memo.journeys[key] = .some(serviceJourney(line, earlier))
             }
             journeys.append(memo.journeys[key]!)
+            if memo.capacities[key] == nil {
+                var outer: LineJourney?
+                if line.ring, !topology.groups.isEmpty {
+                    if let known = memo.outerCapacityJourneys[line.id] { outer = known }
+                    else {
+                        outer = serviceJourney(line, earlier, outer: true)
+                        memo.outerCapacityJourneys[line.id] = .some(outer)
+                    }
+                }
+                let limit = topology.groups.isEmpty ? nil : memo.journeys[key]!.map { capacity(line, earlier, $0, topology: topology, outer: outer) }
+                memo.capacities[key] = .some(limit)
+            }
+            limits.append(memo.capacities[key]!)
         }
-        guard journeys[k] != nil, let plan = Self.plans(line, at: level, journeys: journeys)[k], plan.trains > 0,
+        guard journeys[k] != nil, let plan = Self.plans(line, at: level, journeys: journeys, capacities: limits)[k], plan.trains > 0,
               let headway = plan.headway
         else { return false }
         if let last = outer == true ? line.outerLastDispatch : service.lastDispatch, minutes - last < headway { return false }
