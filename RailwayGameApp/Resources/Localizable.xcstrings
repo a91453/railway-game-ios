@@ -2238,6 +2238,106 @@
           }
         }
       }
+    },
+    "800m Catchment Area" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "800m 服務範圍"
+          }
+        }
+      }
+    },
+    "Map Layers" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地圖圖層"
+          }
+        }
+      }
+    },
+    "Population Density Heatmap" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人口密度熱力圖"
+          }
+        }
+      }
+    },
+    "Population density grid overlay will be available in Phase 2." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人口密度網格圖層將於後續版本推出。"
+          }
+        }
+      }
+    },
+    "Station 800m Catchment" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "800m 車站服務圈"
+          }
+        }
+      }
+    },
+    "Station Names" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "站名"
+          }
+        }
+      }
+    },
+    "Station Overlays" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車站圖層"
+          }
+        }
+      }
+    },
+    "Station catchment area shows the 800-metre walking service radius (~10 minutes walk) used for demand calculation." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示以車站為中心、步行約 10 分鐘的 800 公尺服務半徑，此範圍用於計算周邊客流需求。"
+          }
+        }
+      }
+    },
+    "Urban Demographics" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "城市人口"
+          }
+        }
+      }
+    },
+    "Waiting Passenger Counts" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "候車人數"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
