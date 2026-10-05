@@ -1,4 +1,4 @@
-# 台鐵與捷運營運資料移植研究
+﻿# 台鐵與捷運營運資料移植研究
 
 - 查閱日期：2026-10-05
 - railway-game-ios (main)：`d2de3d5f814af3a3ecc6d6cf33e7b334226acfaf`
@@ -13,9 +13,9 @@
   - `基隆` (Value): `str`
 - **資料範例**：
   ```json
-{
-  "基隆": "一等"
-}
+  {
+    "基隆": "一等"
+  }
   ```
 
 ## `tra_station_info.json`
@@ -32,16 +32,16 @@
   - `feature`: `str`
 - **資料範例**：
   ```json
-{
-  "基隆": {
-    "name": "基隆",
-    "id": "0900",
-    "address": "203001基隆市中山區中山一路 16 之 1 號",
-    "lat": 25.13191,
-    "lon": 121.73837,
-    "feature": ""
-  }
+  {
+    "基隆": {
+  "name": "基隆",
+  "id": "0900",
+  "address": "203001基隆市中山區中山一路 16 之 1 號",
+  "lat": 25.13191,
+  "lon": 121.73837,
+  "feature": ""
 }
+  }
   ```
 
 ## `tra_platforms.json`
@@ -50,12 +50,12 @@
 - **來源與授權**：
   - source: OpenStreetMap contributors — way[railway=platform／public_transport=platform／railway=platform_edge] 與 node[stop_position／railway=stop]，經 Overpass API 取得
   - license: ODbL 1.0（https://www.openstreetmap.org/copyright）
-- **筆數**：5
-- **每筆資料的欄位與型別**：
-  - Item: `int`
-- **資料範例**：
+- **說明**：`stations`（197 站）與 `derived`（42 站）都是「站名 → [[lat, lon], [lat, lon]]」月台兩端座標；`estLenByTier` 是 5 個數字的陣列。
+- **資料範例 (stations 內一筆)**：
   ```json
-378
+  {
+    "基隆": [[25.13194, 121.73841], [25.13366, 121.73975]]
+  }
   ```
 
 ## `tra_track_sections.json`
@@ -63,7 +63,14 @@
 - **最上層欄位**：`version, source_notes, pairs`
 - **來源與授權**：
   - source_notes: 本站自算，無外部上游：由 rail-3d/physical/network.json（OSM 股道幾何）與 rail-3d/physical/dispatch.json（各站對實際派過的路徑）算出相鄰兩站之間有平行正線股道的長度佔比，≥0.5 判雙線（tracks=2）否則單線（tracks=1）。南迴線／臺東線同名隧道 way 是否為第二股，2026-09-14 已用交通部 TDX GIS 圖資 v3「軌道路網實體路線」（逐股道官方幾何，政府資料開放授權條款-1.0）逐對核實：核實過的算平行股道，未核實／經核實只有一股的仍不算。核實證據 scripts/fixtures/tra-parallel-verified-tdx-0914.json（產生器 scripts/build_tdx_parallel_evidence.mjs）；TDX 與台鐵官方《路線修築沿革》衝突時以沿革為準（南迴線無添築雙線紀錄 ⇒ 不算；山里─臺東 2013 添築雙線 ⇒ 算）。maxPathM＝該站對派過的實體股道路徑中最長者（公尺，進位到公釐再加 1 公釐），index.html 建跑段剖面時站間長度取它與示意線形長的較大者，畫在任一條實體股道或示意線形上的點速才不會超過剖面速度（＝不超過車種極速）。鍵＝兩站名正規化成班表用字「臺」後排序、以 | 相接（讀表端 index.html 用班表站名查）。via＝班表（data/tra_schedule_dense.json）排在站對中間、派車表沒有的站，其座標投影到該站對每條派過路徑上離鍵的第一站、第二站各最遠多少公尺（進位規則同 maxPathM），index.html 當停在那一站的前後兩截剖面長下限。產生器 scripts/build_tra_track_sections.mjs。
-- **筆數**：0
+- **筆數**：`pairs` 是 243 個站對（tracks=2 有 181 個、tracks=1 有 62 個）
+- **每筆資料的欄位**：`tracks`, `parallelFrac`, `lengthM`, `maxPathM`, `refs`, `via`, `override`
+- **資料範例**：
+  ```json
+  {
+    "七堵|八堵": {"tracks": 2, "parallelFrac": 0.995, "lengthM": 2398, "maxPathM": 2411.357, "refs": ["宜蘭線", "縱貫線"]}
+  }
+  ```
 
 ## `trtc_codes.json`
 - **檔案大小**：6960 bytes
@@ -75,17 +82,9 @@
   - `on`: `list`
 - **資料範例**：
   ```json
-{
-  "BL01": {
-    "name": "頂埔",
-    "on": [
-      {
-        "ln": "...",
-        "i": "..."
-      }
-    ]
+  {
+    "BL01": {"name": "頂埔", "on": [{"ln": "BL", "i": 0}]}
   }
-}
   ```
 
 ## `tra.json`
@@ -132,7 +131,7 @@
       "lon": 121.7290072,
       "d": 3.823717919230238
     },
-    "... (34 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "shapeLen": 125.5676
@@ -184,7 +183,7 @@
       "d": 1.184,
       "dwell": 25
     },
-    "... (21 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -197,13 +196,13 @@
     {
       "run": 99
     },
-    "... (20 more items)"
+    "..."
   ],
   "dwellSec": [
     0,
     25,
     25,
-    "... (21 more items)"
+    "..."
   ]
 }
   ```
@@ -253,7 +252,7 @@
       "d": 3.379,
       "dwell": 25
     },
-    "... (22 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -266,7 +265,7 @@
     {
       "run": 180
     },
-    "... (21 more items)"
+    "..."
   ]
 }
   ```
@@ -313,7 +312,7 @@
       "lon": 121.45918,
       "d": 7.6192
     },
-    "... (19 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -326,7 +325,7 @@
     {
       "run": 60
     },
-    "... (18 more items)"
+    "..."
   ]
 }
   ```
@@ -369,7 +368,7 @@
       "lon": 120.5315,
       "d": 10.9063
     },
-    "... (14 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "shapeLen": 69.4759
@@ -420,7 +419,7 @@
       "d": 1.6594,
       "dwell": 30
     },
-    "... (15 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -433,7 +432,7 @@
     {
       "run": 160
     },
-    "... (14 more items)"
+    "..."
   ]
 }
   ```
@@ -481,7 +480,7 @@
       "lon": 121.460813,
       "d": 1.7529
     },
-    "... (8 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -494,7 +493,7 @@
     {
       "run": null
     },
-    "... (7 more items)"
+    "..."
   ],
   "headway_estimated": true
 }
@@ -543,7 +542,7 @@
       "lon": 121.49937,
       "d": 1.3057
     },
-    "... (6 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -556,7 +555,7 @@
     {
       "run": null
     },
-    "... (5 more items)"
+    "..."
   ],
   "headway_estimated": true
 }
@@ -608,7 +607,7 @@
       "d": 2.465,
       "dwell": 25
     },
-    "... (9 more items)"
+    "..."
   ],
   "shape": "[... shape coordinates omitted ...]",
   "segs": [
@@ -621,176 +620,110 @@
     {
       "run": 112
     },
-    "... (8 more items)"
+    "..."
   ],
   "headway_estimated": true
 }
   ```
 
 ## 站名比對
-- **對得上的數量**：241
-- **App 有但資料沒有的站名**：左營(舊城)
-- **資料有但 App 沒有的站名**：南方小站, 台北-環島, 左營, 新城, 樹林調車場, 潮州基地
+### `tra_station_class.json` 比對結果
+- **對得上的數量**：209
+- **App 有但資料沒有的站名 (33站)**：上員, 九讚頭, 內灣, 八斗子, 六家, 十分, 千甲, 合興, 埔心, 大華, 富貴, 嶺腳, 左營(舊城), 平溪, 平鎮, 成功, 新莊, 望古, 林榮新光, 榮華, 橫山, 水里, 沙崙, 海科館, 源泉, 濁水, 竹中, 竹東, 菁桐, 車埕, 長榮大學, 集集, 龍泉
+- **資料有但 App 沒有的站名 (1站)**：左營
+
+### `tra_station_info.json` 比對結果
+- **對得上的數量**：240
+- **App 有但資料沒有的站名 (2站)**：左營(舊城), 新城 (太魯閣)
+- **資料有但 App 沒有的站名 (6站)**：南方小站, 台北-環島, 左營, 新城, 樹林調車場, 潮州基地
 
 ## 各系統營運資料
 ### TRA
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| 縱貫線北段 | 縱貫線北段（基隆–竹南） | 37 | 600 | 1200 | 無 | 無法 |
-| 山線 | 山線（竹南–彰化） | 23 | 720 | 1200 | 無 | 無法 |
-| 海線 | 海線（竹南–彰化） | 18 | 900 | 1500 | 無 | 無法 |
-| 縱貫線南段 | 縱貫線南段（彰化–高雄） | 46 | 600 | 1200 | 無 | 無法 |
-| 屏東線 | 屏東線（高雄–枋寮） | 21 | 720 | 1200 | 無 | 無法 |
-| 南迴線 | 南迴線（枋寮–臺東） | 12 | 1800 | 3600 | 無 | 無法 |
-| 臺東線 | 臺東線（臺東–花蓮） | 27 | 900 | 1500 | 無 | 無法 |
-| 北迴線 | 北迴線（花蓮–蘇澳新） | 13 | 900 | 1500 | 無 | 無法 |
-| 宜蘭線 | 宜蘭線（蘇澳–八堵） | 27 | 720 | 1200 | 無 | 無法 |
-| NEIWAN | 內灣線（新竹–內灣） | 13 | 1800 | 3600 | 無 | 無法 |
-| LIUJIA | 六家線（竹中–六家） | 2 | 1800 | 3600 | 無 | 無法 |
-| PINGXI | 平溪線（三貂嶺–菁桐） | 7 | 1800 | 3600 | 無 | 無法 |
-| SHENAO | 深澳線（瑞芳–八斗子） | 3 | 1800 | 3600 | 無 | 無法 |
-| JIJI | 集集線（二水–車埕） | 7 | 1800 | 3600 | 無 | 無法 |
-| SHALUN | 沙崙線（中洲–沙崙） | 3 | 1800 | 3600 | 無 | 無法 |
-| chengzhui | 成追線（追分–成功） | 2 | - | - | 無 | 無法 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| 縱貫線北段 | 縱貫線北段（基隆–竹南） | 37 | 600 | 1200 | 無 | 無 | 無 | 可以 |
+| 山線 | 山線（竹南–彰化） | 23 | 720 | 1200 | 無 | 無 | 無 | 可以 |
+| 海線 | 海線（竹南–彰化） | 18 | 900 | 1500 | 無 | 無 | 無 | 可以 |
+| 縱貫線南段 | 縱貫線南段（彰化–高雄） | 46 | 600 | 1200 | 無 | 無 | 無 | 可以 |
+| 屏東線 | 屏東線（高雄–枋寮） | 21 | 720 | 1200 | 無 | 無 | 無 | 可以 |
+| 南迴線 | 南迴線（枋寮–臺東） | 12 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| 臺東線 | 臺東線（臺東–花蓮） | 27 | 900 | 1500 | 無 | 無 | 無 | 可以 |
+| 北迴線 | 北迴線（花蓮–蘇澳新） | 13 | 900 | 1500 | 無 | 無 | 無 | 可以 |
+| 宜蘭線 | 宜蘭線（蘇澳–八堵） | 27 | 720 | 1200 | 無 | 無 | 無 | 可以 |
+| NEIWAN | 內灣線（新竹–內灣） | 13 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| LIUJIA | 六家線（竹中–六家） | 2 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| PINGXI | 平溪線（三貂嶺–菁桐） | 7 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| SHENAO | 深澳線（瑞芳–八斗子） | 3 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| JIJI | 集集線（二水–車埕） | 7 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| SHALUN | 沙崙線（中洲–沙崙） | 3 | 1800 | 3600 | 無 | 無 | 無 | 可以 |
+| chengzhui | 成追線（追分–成功） | 2 | - | - | 無 | 無 | 無 | 可以 |
 
 ### TRTC
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| BR | 文湖線 | 24 | 120 | 420 | 有 | 無法 |
-| R | 淡水信義線 | 28 | 360 | 540 | 有 | 無法 |
-| R_XBT | 新北投支線 | 2 | 420 | 600 | 無 | 無法 |
-| G | 松山新店線 | 19 | 240 | 420 | 有 | 無法 |
-| G_XBT | 小碧潭支線 | 2 | 720 | 960 | 無 | 無法 |
-| O_XINZHUANG | 中和新蘆線（迴龍） | 21 | 360 | 600 | 有 | 無法 |
-| O_LUZHOU | 中和新蘆線（蘆洲） | 17 | 360 | 600 | 有 | 無法 |
-| BL | 板南線 | 23 | 360 | 540 | 有 | 無法 |
-| Y | 環狀線 | 14 | 290 | 450 | 有 | 無法 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| BR | 文湖線 | 24 | 120 | 420 | 有 | 有 | 有 | 可以 |
+| R | 淡水信義線 | 28 | 360 | 540 | 有 | 有 | 有 | 可以 |
+| R_XBT | 新北投支線 | 2 | 420 | 600 | 無 | 有 | 有 | 可以 |
+| G | 松山新店線 | 19 | 240 | 420 | 有 | 有 | 有 | 可以 |
+| G_XBT | 小碧潭支線 | 2 | 720 | 960 | 無 | 有 | 有 | 可以 |
+| O_XINZHUANG | 中和新蘆線（迴龍） | 21 | 360 | 600 | 有 | 有 | 有 | 可以 |
+| O_LUZHOU | 中和新蘆線（蘆洲） | 17 | 360 | 600 | 有 | 有 | 有 | 可以 |
+| BL | 板南線 | 23 | 360 | 540 | 有 | 有 | 有 | 可以 |
+| Y | 環狀線 | 14 | 290 | 450 | 有 | 有 | 有 | 可以 |
 
 ### KRTC
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| KR | 紅線 | 25 | 240 | 420 | 無 | 可以 |
-| KO | 橘線 | 14 | 240 | 420 | 無 | 可以 |
-| C | 環狀輕軌 | 38 | 600 | 900 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| KR | 紅線 | 25 | 240 | 420 | 無 | 有 | 有 | 可以 |
+| KO | 橘線 | 14 | 240 | 420 | 無 | 有 | 有 | 可以 |
+| C | 環狀輕軌 | 38 | 600 | 900 | 無 | 有 | 有 | 可以 |
 
 ### TYMC
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| A | 機場捷運 | 22 | 900 | 900 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| A | 機場捷運 | 22 | 900 | 900 | 無 | 無 | 有 | 可以 |
 
 ### AFR
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| AFR_MAIN | 本線（嘉義－阿里山） | 17 | - | - | 無 | 無法 |
-| AFR_ZHUSHAN | 祝山線 | 3 | - | - | 無 | 無法 |
-| AFR_SHENMU | 神木線 | 2 | - | - | 無 | 無法 |
-| AFR_ZHAOPING | 沼平線 | 2 | - | - | 無 | 無法 |
-| AFR_YARD_阿里山 | 阿里山站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_神木 | 神木站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_神木_2 | 神木站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_祝山 | 祝山站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_第一分道 | 第一分道站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_第一分道_2 | 第一分道站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_第二分道 | 第二分道站股道 | 0 | - | - | 無 | 無法 |
-| AFR_YARD_第二分道_2 | 第二分道站股道 | 0 | - | - | 無 | 無法 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| AFR_MAIN | 本線（嘉義－阿里山） | 17 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_ZHUSHAN | 祝山線 | 3 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_SHENMU | 神木線 | 2 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_ZHAOPING | 沼平線 | 2 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_阿里山 | 阿里山站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_神木 | 神木站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_神木_2 | 神木站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_祝山 | 祝山站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_第一分道 | 第一分道站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_第一分道_2 | 第一分道站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_第二分道 | 第二分道站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
+| AFR_YARD_第二分道_2 | 第二分道站股道 | 0 | - | - | 無 | 無 | 無 | 可以 |
 
 ### TMRT
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| TG | 綠線 | 18 | 360 | 540 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| TG | 綠線 | 18 | 360 | 540 | 無 | 有 | 有 | 可以 |
 
 ### NTDLRT
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| V | 綠山線 | 11 | 600 | 900 | 無 | 可以 |
-| VB | 藍海線 | 12 | 600 | 900 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| V | 綠山線 | 11 | 600 | 900 | 無 | 無 | 無 | 可以 |
+| VB | 藍海線 | 12 | 600 | 900 | 無 | 無 | 無 | 可以 |
 
 ### NTALRT
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| K | 安坑輕軌 | 9 | 720 | 900 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| K | 安坑輕軌 | 9 | 720 | 900 | 無 | 無 | 無 | 可以 |
 
 ### SANYING
-| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec | 對應 track_lines.geojson |
-|---|---|---|---|---|---|---|
-| LB | 三鶯線 | 12 | 360 | 480 | 無 | 可以 |
+| id | name | 站數 | peakHeadwaySec | offpeakHeadwaySec | dwellSec 陣列 | 站上有 dwell | segs 有 run | 對應 track_lines.geojson |
+|---|---|---|---|---|---|---|---|---|
+| LB | 三鶯線 | 12 | 360 | 480 | 無 | 有 | 有 | 可以 |
 
 ## 之後移植要注意的事
-- 有部分台鐵站名存在於 App 中，但私有參考資料裡沒有（如：左營(舊城) 等）。
-- 有部分台鐵站名存在於私有參考資料中，但 App 裡沒有（如：樹林調車場, 左營, 台北-環島 等）。
-- TRA 的 `縱貫線北段` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `縱貫線北段` 線無法對應到 App 內的 `lineKey` (`tra|縱貫線北段`)。
-- TRA 的 `山線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `山線` 線無法對應到 App 內的 `lineKey` (`tra|山線`)。
-- TRA 的 `海線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `海線` 線無法對應到 App 內的 `lineKey` (`tra|海線`)。
-- TRA 的 `縱貫線南段` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `縱貫線南段` 線無法對應到 App 內的 `lineKey` (`tra|縱貫線南段`)。
-- TRA 的 `屏東線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `屏東線` 線無法對應到 App 內的 `lineKey` (`tra|屏東線`)。
-- TRA 的 `南迴線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `南迴線` 線無法對應到 App 內的 `lineKey` (`tra|南迴線`)。
-- TRA 的 `臺東線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `臺東線` 線無法對應到 App 內的 `lineKey` (`tra|臺東線`)。
-- TRA 的 `北迴線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `北迴線` 線無法對應到 App 內的 `lineKey` (`tra|北迴線`)。
-- TRA 的 `宜蘭線` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `宜蘭線` 線無法對應到 App 內的 `lineKey` (`tra|宜蘭線`)。
-- TRA 的 `NEIWAN` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `NEIWAN` 線無法對應到 App 內的 `lineKey` (`tra|NEIWAN`)。
-- TRA 的 `LIUJIA` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `LIUJIA` 線無法對應到 App 內的 `lineKey` (`tra|LIUJIA`)。
-- TRA 的 `PINGXI` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `PINGXI` 線無法對應到 App 內的 `lineKey` (`tra|PINGXI`)。
-- TRA 的 `SHENAO` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `SHENAO` 線無法對應到 App 內的 `lineKey` (`tra|SHENAO`)。
-- TRA 的 `JIJI` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `JIJI` 線無法對應到 App 內的 `lineKey` (`tra|JIJI`)。
-- TRA 的 `SHALUN` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `SHALUN` 線無法對應到 App 內的 `lineKey` (`tra|SHALUN`)。
-- TRA 的 `chengzhui` 線缺乏 `dwellSec` 欄位。
-- TRA 的 `chengzhui` 線無法對應到 App 內的 `lineKey` (`tra|chengzhui`)。
-- TRTC 的 `BR` 線無法對應到 App 內的 `lineKey` (`trtc|BR`)。
-- TRTC 的 `R` 線無法對應到 App 內的 `lineKey` (`trtc|R`)。
-- TRTC 的 `R_XBT` 線缺乏 `dwellSec` 欄位。
-- TRTC 的 `R_XBT` 線無法對應到 App 內的 `lineKey` (`trtc|R_XBT`)。
-- TRTC 的 `G` 線無法對應到 App 內的 `lineKey` (`trtc|G`)。
-- TRTC 的 `G_XBT` 線缺乏 `dwellSec` 欄位。
-- TRTC 的 `G_XBT` 線無法對應到 App 內的 `lineKey` (`trtc|G_XBT`)。
-- TRTC 的 `O_XINZHUANG` 線無法對應到 App 內的 `lineKey` (`trtc|O_XINZHUANG`)。
-- TRTC 的 `O_LUZHOU` 線無法對應到 App 內的 `lineKey` (`trtc|O_LUZHOU`)。
-- TRTC 的 `BL` 線無法對應到 App 內的 `lineKey` (`trtc|BL`)。
-- TRTC 的 `Y` 線無法對應到 App 內的 `lineKey` (`trtc|Y`)。
-- KRTC 的 `KR` 線缺乏 `dwellSec` 欄位。
-- KRTC 的 `KO` 線缺乏 `dwellSec` 欄位。
-- KRTC 的 `C` 線缺乏 `dwellSec` 欄位。
-- TYMC 的 `A` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_MAIN` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_MAIN` 線無法對應到 App 內的 `lineKey` (`afr|AFR_MAIN`)。
-- AFR 的 `AFR_ZHUSHAN` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_ZHUSHAN` 線無法對應到 App 內的 `lineKey` (`afr|AFR_ZHUSHAN`)。
-- AFR 的 `AFR_SHENMU` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_SHENMU` 線無法對應到 App 內的 `lineKey` (`afr|AFR_SHENMU`)。
-- AFR 的 `AFR_ZHAOPING` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_ZHAOPING` 線無法對應到 App 內的 `lineKey` (`afr|AFR_ZHAOPING`)。
-- AFR 的 `AFR_YARD_阿里山` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_阿里山` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_阿里山`)。
-- AFR 的 `AFR_YARD_神木` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_神木` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_神木`)。
-- AFR 的 `AFR_YARD_神木_2` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_神木_2` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_神木_2`)。
-- AFR 的 `AFR_YARD_祝山` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_祝山` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_祝山`)。
-- AFR 的 `AFR_YARD_第一分道` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_第一分道` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_第一分道`)。
-- AFR 的 `AFR_YARD_第一分道_2` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_第一分道_2` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_第一分道_2`)。
-- AFR 的 `AFR_YARD_第二分道` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_第二分道` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_第二分道`)。
-- AFR 的 `AFR_YARD_第二分道_2` 線缺乏 `dwellSec` 欄位。
-- AFR 的 `AFR_YARD_第二分道_2` 線無法對應到 App 內的 `lineKey` (`afr|AFR_YARD_第二分道_2`)。
-- TMRT 的 `TG` 線缺乏 `dwellSec` 欄位。
-- NTDLRT 的 `V` 線缺乏 `dwellSec` 欄位。
-- NTDLRT 的 `VB` 線缺乏 `dwellSec` 欄位。
-- NTALRT 的 `K` 線缺乏 `dwellSec` 欄位。
-- SANYING 的 `LB` 線缺乏 `dwellSec` 欄位。
+- 有 33 個 App 內的台鐵站名，在 `tra_station_class.json` 找不到等級資料（上員, 九讚頭, 內灣, 八斗子, 六家, 十分, 千甲, 合興, 埔心, 大華, 富貴, 嶺腳, 左營(舊城), 平溪, 平鎮, 成功, 新莊, 望古, 林榮新光, 榮華, 橫山, 水里, 沙崙, 海科館, 源泉, 濁水, 竹中, 竹東, 菁桐, 車埕, 長榮大學, 集集, 龍泉）。
+- 有部分台鐵站名與資料庫對不上：App 端的 `左營(舊城)` 在資料庫對應為 `左營`；App 端的 `新城(太魯閣)` 在資料庫對應為 `新城`。
+- 以下路線完全沒有停站時間資料（既無 dwellSec 陣列也無各站 dwell）：TRA 的 `縱貫線北段`, TRA 的 `山線`, TRA 的 `海線`, TRA 的 `縱貫線南段`, TRA 的 `屏東線`, TRA 的 `南迴線`, TRA 的 `臺東線`, TRA 的 `北迴線`, TRA 的 `宜蘭線`, TRA 的 `NEIWAN`, TRA 的 `LIUJIA`, TRA 的 `PINGXI`, TRA 的 `SHENAO`, TRA 的 `JIJI`, TRA 的 `SHALUN`, TRA 的 `chengzhui`, TYMC 的 `A`, AFR 的 `AFR_MAIN`, AFR 的 `AFR_ZHUSHAN`, AFR 的 `AFR_SHENMU`, AFR 的 `AFR_ZHAOPING`, AFR 的 `AFR_YARD_阿里山`, AFR 的 `AFR_YARD_神木`, AFR 的 `AFR_YARD_神木_2`, AFR 的 `AFR_YARD_祝山`, AFR 的 `AFR_YARD_第一分道`, AFR 的 `AFR_YARD_第一分道_2`, AFR 的 `AFR_YARD_第二分道`, AFR 的 `AFR_YARD_第二分道_2`, NTDLRT 的 `V`, NTDLRT 的 `VB`, NTALRT 的 `K`。
+- 以下路線沒有站間行駛秒數資料（segs 無 run 欄位）：TRA 的 `縱貫線北段`, TRA 的 `山線`, TRA 的 `海線`, TRA 的 `縱貫線南段`, TRA 的 `屏東線`, TRA 的 `南迴線`, TRA 的 `臺東線`, TRA 的 `北迴線`, TRA 的 `宜蘭線`, TRA 的 `NEIWAN`, TRA 的 `LIUJIA`, TRA 的 `PINGXI`, TRA 的 `SHENAO`, TRA 的 `JIJI`, TRA 的 `SHALUN`, TRA 的 `chengzhui`, AFR 的 `AFR_MAIN`, AFR 的 `AFR_ZHUSHAN`, AFR 的 `AFR_SHENMU`, AFR 的 `AFR_ZHAOPING`, AFR 的 `AFR_YARD_阿里山`, AFR 的 `AFR_YARD_神木`, AFR 的 `AFR_YARD_神木_2`, AFR 的 `AFR_YARD_祝山`, AFR 的 `AFR_YARD_第一分道`, AFR 的 `AFR_YARD_第一分道_2`, AFR 的 `AFR_YARD_第二分道`, AFR 的 `AFR_YARD_第二分道_2`, NTDLRT 的 `V`, NTDLRT 的 `VB`, NTALRT 的 `K`。
+- 以下路線班距為估算值（headway_estimated）：TRA 的 `縱貫線北段`, TRA 的 `山線`, TRA 的 `海線`, TRA 的 `縱貫線南段`, TRA 的 `屏東線`, TRA 的 `南迴線`, TRA 的 `臺東線`, TRA 的 `北迴線`, TRA 的 `宜蘭線`, TRA 的 `NEIWAN`, TRA 的 `LIUJIA`, TRA 的 `PINGXI`, TRA 的 `SHENAO`, TRA 的 `JIJI`, TRA 的 `SHALUN`, TRTC 的 `Y`, KRTC 的 `C`, NTDLRT 的 `V`, NTDLRT 的 `VB`, NTALRT 的 `K`, SANYING 的 `LB`。
+- 成追線與林鐵等路線沒有班距資料：TRA 的 `chengzhui`, AFR 的 `AFR_MAIN`, AFR 的 `AFR_ZHUSHAN`, AFR 的 `AFR_SHENMU`, AFR 的 `AFR_ZHAOPING`, AFR 的 `AFR_YARD_阿里山`, AFR 的 `AFR_YARD_神木`, AFR 的 `AFR_YARD_神木_2`, AFR 的 `AFR_YARD_祝山`, AFR 的 `AFR_YARD_第一分道`, AFR 的 `AFR_YARD_第一分道_2`, AFR 的 `AFR_YARD_第二分道`, AFR 的 `AFR_YARD_第二分道_2`。
