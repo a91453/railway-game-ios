@@ -47,12 +47,23 @@ extension ReferenceWorld {
         let plan = routeMemo.scheduled ?? scheduledPlan()
         guard waitingScheduled(trains[i], plan: plan) == nil, let going = goingOn(trains[i]), let service = going.service else { return }
         let start = standing(going)
-        guard let path = chosenRoute(from: start, to: going.timetable[service.stop].station) else { return }
+        let target = going.timetable[service.stop].station
+        // Decision 59: on the scheduled way and run when it can be had
+        // whole now; otherwise as decision 58 has it, as fast as it can.
+        if trafficControl, let way = scheduledRoute(trains[i], target: target, plan: plan), case .success = admitted(routed(start, way.path)) {
+            var off = routed(start, way.path)
+            off.service = service
+            let plannedRun = run(off, length: way.path.distance, scheduled: way.seconds)
+            off.service?.run = plannedRun
+            off.trafficVisits = scheduledDepartureHistory(trains[i])
+            _ = admit(off, at: i)
+            return
+        }
+        guard let path = chosenRoute(from: start, to: target) else { return }
         var off = routed(start, path)
         off.service = service
-        let chosen = scheduledRoute(trains[i], target: going.timetable[service.stop].station, plan: plan)
-        let plannedRun = run(off, length: path.distance, scheduled: chosen?.seconds)
-        off.service?.run = plannedRun
+        let fastest = run(off, length: path.distance, scheduled: nil)
+        off.service?.run = fastest
         off.trafficVisits = scheduledDepartureHistory(trains[i])
         _ = admit(off, at: i, following: true)
     }

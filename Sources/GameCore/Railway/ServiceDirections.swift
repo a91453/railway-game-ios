@@ -23,6 +23,11 @@ extension GameWorld {
         }
         var plans: [Plan: Set<TrackTraversal>] = [:]
         var walks: [Walk: Set<TrackTraversal>] = [:]
+        /// V3 (decision 59): the last scheduled-traffic plan worked out,
+        /// with what it was derived from, and the plan an advance's step
+        /// keeps for all its decisions.
+        var traffic: (key: TrafficPlanKey, plan: TrafficPlan)?
+        var stepTraffic: TrafficPlan?
     }
 
     private struct DirectionState: Hashable {

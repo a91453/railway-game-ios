@@ -73,7 +73,7 @@ extension GameWorld {
             else { return nil }
             return (train, false)
         }
-        guard let candidate = departureRequest(of: train), case .held = reservingDeparture(candidate, memo: &memo) else { return nil }
+        guard let candidate = departureRequest(of: train, memo: &memo), case .held = reservingDeparture(candidate, memo: &memo) else { return nil }
         return (candidate, true)
     }
 
@@ -83,8 +83,8 @@ extension GameWorld {
     /// (along the first leg of its trip), or a service going on from a
     /// passing place (Stage V2, see ``goingOn(_:)``). `nil` for any other
     /// train.
-    func departureRequest(of train: Train) -> Train? {
-        if currentTrafficWait(train, plan: trafficPlan()) != nil { return nil }
+    func departureRequest(of train: Train, memo: inout DirectionMemo) -> Train? {
+        if currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) != nil { return nil }
         switch train.execution {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }

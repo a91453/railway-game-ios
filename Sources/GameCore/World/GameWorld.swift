@@ -1341,8 +1341,13 @@ public struct GameWorld: Equatable, Sendable {
             }
             // Stage W2b: every service's dwell, and the departures due now.
             held = []
-            if memo.traffic == nil { memo.traffic = trafficPlan() }
-            recordTrafficVisits(memo.traffic!, before: nil)
+            // V3 (decision 59): the plan from the world as the step finds
+            // it, kept for every decision the step makes.
+            memo.directions.stepTraffic = nil
+            let traffic = trafficPlan(memo: &memo.directions)
+            let trafficKey = memo.directions.traffic?.key
+            memo.directions.stepTraffic = traffic
+            recordTrafficVisits(traffic, before: nil)
             if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
                 changed = true
             }
@@ -1374,8 +1379,18 @@ public struct GameWorld: Equatable, Sendable {
                let freed = secondsUntilARouteFrees(held, from: start, within: span, memo: &memo) {
                 span = freed
             }
-            if !memo.traffic!.waits.isEmpty { span = 1 }
-            let beforeTraffic = memo.traffic!.waits.isEmpty ? nil : trains
+            if !traffic.waits.isEmpty {
+                span = 1
+            } else if span > 1, trafficPlanKey() != trafficKey {
+                // A departure or a visit in this step changed what the plan
+                // is derived from: when the plan it gives schedules a wait,
+                // the next second works it out again, as a step every second
+                // would (decision 59, point 13).
+                memo.directions.stepTraffic = nil
+                if !trafficPlan(memo: &memo.directions).waits.isEmpty { span = 1 }
+                memo.directions.stepTraffic = traffic
+            }
+            let beforeTraffic = traffic.waits.isEmpty ? nil : trains
             if moveTrains(from: start, for: span) {
                 changed = true
             }
@@ -1384,11 +1399,12 @@ public struct GameWorld: Equatable, Sendable {
             }
             clock.advance(basicSteps: span)
             remaining -= span
-            recordTrafficVisits(memo.traffic!, before: beforeTraffic)
+            recordTrafficVisits(traffic, before: beforeTraffic)
+            memo.directions.stepTraffic = nil
             if recordArrivals() {
                 changed = true
             }
-            if !changed, span == minute, memo.traffic!.waits.isEmpty {
+            if !changed, span == minute, traffic.waits.isEmpty {
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
                     minutesUntilLineWaitsChange(memo: &memo),
@@ -1443,7 +1459,6 @@ public struct GameWorld: Equatable, Sendable {
         var journeys: [LineID: [Int: LineJourney?]] = [:]
         /// V1 complete direction plans, local to this advance.
         var directions = DirectionMemo()
-        var traffic: TrafficPlan?
         /// Each train's round trip from where it stood idle (its position
         /// and body) when it was looked up, or
         /// `nil` if it had none.
@@ -1476,7 +1491,6 @@ public struct GameWorld: Equatable, Sendable {
                       let timetable = trip.timetable(calling: line.stops, sentOutAt: now)
                 else { continue }
                 trains[ready].trafficVisits = []
-                memo.traffic = nil
                 trains[ready].timetable = timetable
                 trains[ready].timetablePeriod = nil
                 trains[ready].execution = .waitingAtStop(0)
@@ -1691,25 +1705,44 @@ public struct GameWorld: Equatable, Sendable {
     /// off its timetable, so it runs as fast as it can. Otherwise it waits
     /// there, and the route it waits for joins `held`. Without traffic
     /// control it always can. Returns whether the service changed.
+    ///
+    /// Stage V3 (decision 59): a train held by a scheduled wait stays; one
+    /// whose scheduled way on (see ``scheduledPath(for:from:to:plan:)``)
+    /// it can take whole now takes it, on the scheduled run. Otherwise it
+    /// goes on exactly as above.
     private mutating func goOn(_ index: Int, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
-        let plan = memo.traffic ?? trafficPlan()
-        guard currentTrafficWait(trains[index], plan: plan) == nil,
-              var going = goingOn(trains[index]) else { return false }
+        let plan = trafficPlan(memo: &memo.directions)
+        guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil,
+              let going = goingOn(trains[index]) else { return false }
         if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan) {
-            follow(chosen.path, &going)
-            let plannedRun = run(of: going, length: chosen.path.distance, scheduled: chosen.seconds)
-            going.times?.run = plannedRun
+            var scheduled = going
+            follow(chosen.path, &scheduled)
+            let plannedRun = run(of: scheduled, length: chosen.path.distance, scheduled: chosen.seconds)
+            scheduled.times?.run = plannedRun
+            if case .granted(let granted) = reserving(scheduled) {
+                setOff(index, as: granted)
+                return true
+            }
         }
         switch reservingDeparture(going, memo: &memo.directions) {
         case .granted(var granted):
-            recordTrafficDeparture(index)
-            granted.trafficVisits = trains[index].trafficVisits
-            trains[index] = granted
+            let fastest = run(of: granted, length: routeLength(of: granted))
+            granted.times?.run = fastest
+            setOff(index, as: granted)
             return true
         case .held:
             held.append(HeldRoute(candidate: going))
             return false
         }
+    }
+
+    /// Train `index` set off as `train`, its traffic visits (decision 59)
+    /// kept, with its departure from where it stands.
+    private mutating func setOff(_ index: Int, as train: Train) {
+        recordTrafficDeparture(index)
+        var departed = train
+        departed.trafficVisits = trains[index].trafficVisits
+        trains[index] = departed
     }
 
     /// Stage V2 (ARCHITECTURE decision 58): the dispatcher's phase, at a
@@ -1893,26 +1926,32 @@ public struct GameWorld: Equatable, Sendable {
               !unroutable.contains(trains[index].id),
               trains[index].placement != nil
         else { return false }
-        let plan = memo.traffic ?? trafficPlan()
-        guard currentTrafficWait(trains[index], plan: plan) == nil else { return false }
-        let departure = leaving(trains[index], stop: stop, cycle: cycle, traffic: plan)
+        // Stage V3 (decision 59): a scheduled wait keeps it here.
+        let plan = trafficPlan(memo: &memo.directions)
+        guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil else { return false }
+        let departure = leaving(trains[index], stop: stop, cycle: cycle)
         guard let moved = departure.train else {
             // Nothing changes: the train is not turned round either.
             unroutable.insert(trains[index].id)
             return false
         }
         let train: Train
-        switch reservingDeparture(moved, memo: &memo.directions) {
-        case .granted(let granted):
+        // Stage V3: the scheduled path, on the scheduled run, when the train
+        // can take it whole now; otherwise the departure as without a plan.
+        if case .setsOff = departure,
+           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan),
+           case .granted(let granted) = reserving(scheduled) {
             train = granted
-        case .held:
-            held.append(HeldRoute(candidate: moved))
-            return false
+        } else {
+            switch reservingDeparture(moved, memo: &memo.directions) {
+            case .granted(let granted):
+                train = granted
+            case .held:
+                held.append(HeldRoute(candidate: moved))
+                return false
+            }
         }
-        recordTrafficDeparture(index)
-        var departed = train
-        departed.trafficVisits = trains[index].trafficVisits
-        trains[index] = departed
+        setOff(index, as: train)
         serve(departureOf: train.id, from: stop, distance: departure.distance.map { $0 == 0 ? 0 : routeLength(of: train) })
         return true
     }
@@ -1957,7 +1996,26 @@ public struct GameWorld: Equatable, Sendable {
     /// ``turnedRound(_:)``). A train turned round stands there: its path
     /// ends where its head is.
     /// Without a path, the train is not turned round either.
-    func leaving(_ train: Train, stop: Int, cycle: Int64, traffic: TrafficPlan? = nil) -> Leaving {
+    func leaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving {
+        leaving(train, stop: stop, cycle: cycle) { start, call in
+            path(from: start, toStation: call, length: train.length).map { ($0, nil) }
+        } ?? .noRoute
+    }
+
+    /// Stage V3 (decision 59): `train` leaving stop `stop` along its
+    /// scheduled path, on the scheduled run (see
+    /// ``scheduledPath(for:from:to:plan:)``); `nil` when the plan gives it
+    /// none.
+    func scheduledLeaving(_ train: Train, stop: Int, cycle: Int64, plan: TrafficPlan) -> Leaving? {
+        leaving(train, stop: stop, cycle: cycle) { start, call in
+            scheduledPath(for: train, from: start, to: call, plan: plan)
+        }
+    }
+
+    /// See ``leaving(_:stop:cycle:)``, along the path (and in the seconds,
+    /// if any) `route` gives from where the train would stand to the next
+    /// call's station; `nil` when it gives none.
+    private func leaving(_ train: Train, stop: Int, cycle: Int64, route: (TrainPosition, StationID) -> (path: TrainPath, seconds: Int64?)?) -> Leaving? {
         guard let placement = train.placement else { return .noRoute }
         let start = train.timetable[stop].reverses ? turnedRound(placement) : placement
         var moved = train
@@ -1968,10 +2026,8 @@ public struct GameWorld: Equatable, Sendable {
             moved.times = nil
             return .completes(moved)
         }
-        let chosen = traffic.flatMap { scheduledPath(for: train, from: start.position, to: train.timetable[next.stop].station, plan: $0) }
-        guard let path = chosen?.path ?? path(from: start.position, toStation: train.timetable[next.stop].station, length: train.length) else {
-            return .noRoute
-        }
+        guard let chosen = route(start.position, train.timetable[next.stop].station) else { return nil }
+        let path = chosen.path
         stand(&moved, at: start)
         let now = clock.now
         if path.distance == 0 {
@@ -1989,7 +2045,7 @@ public struct GameWorld: Equatable, Sendable {
             - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
             arrival: train.times?.arrival ?? now, departure: now,
-            run: run(of: moved, length: path.distance, scheduled: chosen?.seconds ?? scheduled)
+            run: run(of: moved, length: path.distance, scheduled: chosen.seconds ?? scheduled)
         )
         return .setsOff(moved, distance: path.distance)
     }
