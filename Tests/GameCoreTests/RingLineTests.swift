@@ -109,6 +109,23 @@ final class RingLineTests: XCTestCase {
         TrainsInService(peak: count, offPeak: count, low: count)
     }
 
+    func testPassengerRouteEndsAtTheRingLapBoundary() throws {
+        let world = try makeRingWorld(trains: 2, running: pairs(2))
+        let routes = world.passengerRoutes(from: beta, to: delta)
+
+        XCTAssertEqual(routes.first?.legs.map(\.direction), [.outbound])
+        XCTAssertEqual(routes.first?.legs.map(\.from), [beta])
+        XCTAssertEqual(routes.first?.legs.map(\.to), [delta])
+        XCTAssertFalse(routes.contains { route in
+            route.legs.contains { $0.direction == .inbound && $0.from == beta && $0.to == delta }
+        }, "\(routes)")
+        XCTAssertTrue(routes.contains { route in
+            route.legs.map(\.direction) == [.inbound, .inbound] &&
+            route.legs.map(\.from) == [beta, alpha] &&
+            route.legs.map(\.to) == [alpha, delta] && route.waitMinutes == 18
+        }, "crossing the lap must start a new ride and wait again: \(routes)")
+    }
+
     // MARK: - Making a ring
 
     /// A ring needs three stops or more, not the same station first and

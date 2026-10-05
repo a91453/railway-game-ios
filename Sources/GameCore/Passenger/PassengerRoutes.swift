@@ -27,9 +27,26 @@ public struct PassengerRoute: Hashable, Sendable {
     public let transferMinutes: Int64
 
     public var totalMinutes: Int64 { rideMinutes + waitMinutes + transferMinutes }
+    fileprivate var totalSeconds: Int64 {
+        legs.reduce(0) { $0 + $1.rideSeconds } + (waitMinutes + transferMinutes) * GameTime.secondsPerMinute
+    }
     public var transfers: Int {
         zip(legs, legs.dropFirst()).reduce(0) { $0 + ($1.0.line == $1.1.line ? 0 : 1) }
     }
+}
+
+private func passengerRoutePrecedes(_ lhs: PassengerRoute, _ rhs: PassengerRoute) -> Bool {
+    if lhs.totalMinutes != rhs.totalMinutes { return lhs.totalMinutes < rhs.totalMinutes }
+    if lhs.transfers != rhs.transfers { return lhs.transfers < rhs.transfers }
+    if lhs.totalSeconds != rhs.totalSeconds { return lhs.totalSeconds < rhs.totalSeconds }
+    let left = lhs.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
+    let right = rhs.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
+    for (l, r) in zip(left, right) where l != r {
+        if l.0 != r.0 { return l.0 < r.0 }
+        if l.1 != r.1 { return l.1 < r.1 }
+        return l.2 < r.2
+    }
+    return left.count < right.count
 }
 
 private func passengerMinutesRoundingUp(_ value: Int64, by divisor: Int64) -> Int64 {
@@ -37,14 +54,14 @@ private func passengerMinutesRoundingUp(_ value: Int64, by divisor: Int64) -> In
     return 1 + (value - 1) / divisor
 }
 
-private struct PassengerRideEdge: Hashable {
+struct PassengerRideEdge: Hashable {
     let line: Int
     let from: Int
     let to: Int
     let direction: Int
 }
 
-private struct PassengerRouteNode: Hashable, Comparable {
+struct PassengerRouteNode: Hashable, Comparable {
     let line: Int
     let stop: Int
     let direction: Int
@@ -56,23 +73,28 @@ private struct PassengerRouteNode: Hashable, Comparable {
     }
 }
 
+private struct PassengerRouteState: Hashable {
+    let node: PassengerRouteNode
+    let onboard: Bool
+}
+
 private struct PassengerRouteLabel {
     enum Arrival {
         case board
         case ride(PassengerRideEdge, Int64)
     }
 
-    let node: PassengerRouteNode
+    let state: PassengerRouteState
     let total: Int64
     let ride: Int64
     let wait: Int64
     let transfer: Int64
     let changes: Int
-    let previous: PassengerRouteNode?
+    let previous: Int?
     let arrival: Arrival
 }
 
-private struct PassengerRouteGraph {
+struct PassengerRouteGraph {
     // The Ci snapshot receives transfer minutes from its flow service's
     // path plan; that service is absent from the reference snapshot. Four
     // minutes is this first native graph's same-station interchange cost.
@@ -90,6 +112,16 @@ private struct PassengerRouteGraph {
 
     let paths: [ServicePath]
     let stopsAt: [StationID: [PassengerRouteNode]]
+
+    init(paths: [ServicePath]) {
+        var included: [ServicePath] = []
+        var calls: [StationID: [PassengerRouteNode]] = [:]
+        for path in paths {
+            Self.add(path, to: &included, calls: &calls)
+        }
+        self.paths = included
+        stopsAt = calls
+    }
 
     init(world: GameWorld) {
         var included: [ServicePath] = []
@@ -145,93 +177,130 @@ private struct PassengerRouteGraph {
 
     private func nextRide(_ node: PassengerRouteNode) -> (PassengerRouteNode, PassengerRideEdge, Int64)? {
         let path = paths[node.line]
-        let next = node.stop + 1 == path.stations.count ? (path.isRing ? 1 : -1) : node.stop + 1
-        guard next >= 0 else { return nil }
-        let segment = next == 1 && node.stop == path.stations.count - 1 ? 0 : node.stop
+        let next = node.stop + 1
+        guard next < path.stations.count else { return nil }
         let edge = PassengerRideEdge(line: node.line, from: node.stop, to: next, direction: node.direction)
         return (PassengerRouteNode(line: node.line, stop: next, direction: node.direction), edge,
-                path.runSeconds[segment])
+                path.runSeconds[node.stop])
     }
 
-    /// Dijkstra over (service, call, direction). A line change at the same
-    /// station adds a transfer penalty and another expected wait. A reversal
-    /// on the same line is possible only at a terminal, and also waits.
+    /// Dijkstra over service calls and boarding state. Each state keeps the
+    /// nondominated (elapsed seconds, line changes) labels, since rounding
+    /// to whole minutes can favor a later arrival with fewer changes.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
         guard let starts = stopsAt[origin], stopsAt[destination] != nil else { return nil }
-        var best: [PassengerRouteNode: PassengerRouteLabel] = [:]
-        var open: [PassengerRouteNode] = []
+        var labels: [PassengerRouteLabel] = []
+        var frontier: [PassengerRouteState: [Int]] = [:]
+        var active: [Bool] = []
+        var open: [Int] = []
 
         func offer(_ label: PassengerRouteLabel) {
-            if let earlier = best[label.node] {
-                if label.total > earlier.total || label.total == earlier.total && label.changes >= earlier.changes { return }
-            } else {
-                open.append(label.node)
+            let state = label.state
+            let existing = frontier[state] ?? []
+            if existing.contains(where: { labels[$0].total <= label.total && labels[$0].changes <= label.changes }) {
+                return
             }
-            best[label.node] = label
+            var survivors: [Int] = []
+            for index in existing {
+                if label.total <= labels[index].total && label.changes <= labels[index].changes {
+                    active[index] = false
+                } else {
+                    survivors.append(index)
+                }
+            }
+            let index = labels.count
+            labels.append(label)
+            active.append(true)
+            open.append(index)
+            survivors.append(index)
+            frontier[state] = survivors
         }
 
         for node in starts {
             let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
-            offer(PassengerRouteLabel(node: node, total: wait, ride: 0, wait: wait,
-                                      transfer: 0, changes: 0, previous: nil, arrival: .board))
+            offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
+                                      total: wait, ride: 0, wait: wait, transfer: 0,
+                                      changes: 0, previous: nil, arrival: .board))
         }
         while !open.isEmpty {
             open.sort { a, b in
-                let left = best[a]!
-                let right = best[b]!
-                if left.total != right.total { return left.total < right.total }
+                let left = labels[a]
+                let right = labels[b]
+                let leftMinutes = passengerMinutesRoundingUp(left.total, by: GameTime.secondsPerMinute)
+                let rightMinutes = passengerMinutesRoundingUp(right.total, by: GameTime.secondsPerMinute)
+                if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
                 if left.changes != right.changes { return left.changes < right.changes }
+                if left.total != right.total { return left.total < right.total }
+                if left.state.node != right.state.node { return left.state.node < right.state.node }
+                if left.state.onboard != right.state.onboard { return !left.state.onboard }
                 return a < b
             }
-            let node = open.removeFirst()
-            let label = best[node]!
+            let index = open.removeFirst()
+            guard active[index] else { continue }
+            let label = labels[index]
+            let node = label.state.node
             if station(node) == destination {
-                return reconstruct(label, from: best)
+                return reconstruct(index, from: labels)
             }
             if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
                 // A passenger already aboard stays through this stop's
                 // dwell. One boarding here has waited for departure already.
-                let dwell: Int64 = switch label.arrival {
-                case .board: 0
-                case .ride: ServiceLine.dwellMinutes * GameTime.secondsPerMinute
-                }
+                let dwell = label.state.onboard ? ServiceLine.dwellMinutes * GameTime.secondsPerMinute : 0
                 let seconds = run + dwell
-                offer(PassengerRouteLabel(node: next, total: label.total + seconds,
-                                          ride: label.ride + seconds, wait: label.wait,
-                                          transfer: label.transfer, changes: label.changes,
-                                          previous: node, arrival: .ride(edge, seconds)))
+                offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
+                                          total: label.total + seconds, ride: label.ride + seconds,
+                                          wait: label.wait, transfer: label.transfer,
+                                          changes: label.changes, previous: index,
+                                          arrival: .ride(edge, seconds)))
+            }
+            let path = paths[node.line]
+            if path.isRing && node.stop == path.stations.count - 1 {
+                // The final call is the starting station, but it ends this
+                // train's lap. Crossing to the next lap requires a new wait.
+                let wait = max(1, passengerMinutesRoundingUp(path.headway, by: 2)) * GameTime.secondsPerMinute
+                let first = PassengerRouteNode(line: node.line, stop: 0, direction: node.direction)
+                offer(PassengerRouteLabel(state: PassengerRouteState(node: first, onboard: false),
+                                          total: label.total + wait, ride: label.ride,
+                                          wait: label.wait + wait, transfer: label.transfer,
+                                          changes: label.changes, previous: index, arrival: .board))
             }
             for other in stopsAt[station(node)] ?? [] where other != node {
                 guard other.line != node.line else { continue }
                 let sameLine = paths[other.line].line == paths[node.line].line
                 let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
                 let transfer: Int64 = sameLine ? 0 : Self.sameStationTransferMinutes * GameTime.secondsPerMinute
-                offer(PassengerRouteLabel(node: other, total: label.total + wait + transfer,
+                offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
+                                          total: label.total + wait + transfer,
                                           ride: label.ride, wait: label.wait + wait,
                                           transfer: label.transfer + transfer,
                                           changes: label.changes + (sameLine ? 0 : 1),
-                                          previous: node, arrival: .board))
+                                          previous: index, arrival: .board))
             }
         }
         return nil
     }
 
-    private func reconstruct(_ end: PassengerRouteLabel, from labels: [PassengerRouteNode: PassengerRouteLabel]) -> (PassengerRoute, [PassengerRideEdge]) {
+    private func reconstruct(_ endIndex: Int, from labels: [PassengerRouteLabel]) -> (PassengerRoute, [PassengerRideEdge]) {
         var chain: [PassengerRouteLabel] = []
-        var current: PassengerRouteLabel? = end
-        while let label = current {
+        var current: Int? = endIndex
+        while let index = current {
+            let label = labels[index]
             chain.append(label)
-            current = label.previous.flatMap { labels[$0] }
+            current = label.previous
         }
         var legs: [PassengerRouteLeg] = []
         var edges: [PassengerRideEdge] = []
+        var newBoarding = true
         for label in chain.reversed() {
-            guard case .ride(let edge, let seconds) = label.arrival else { continue }
+            guard case .ride(let edge, let seconds) = label.arrival else {
+                newBoarding = true
+                continue
+            }
             edges.append(edge)
             let path = paths[edge.line]
             let from = path.stations[edge.from]
             let to = path.stations[edge.to]
-            if let last = legs.last, last.line == path.line && last.pattern == path.pattern &&
+            if !newBoarding, let last = legs.last, last.line == path.line && last.pattern == path.pattern &&
                 last.direction == path.direction && last.to == from {
                 legs[legs.count - 1] = PassengerRouteLeg(line: path.line, pattern: path.pattern,
                                                           direction: path.direction, from: last.from,
@@ -241,11 +310,12 @@ private struct PassengerRouteGraph {
                                               direction: path.direction, from: from,
                                               to: to, rideSeconds: seconds))
             }
+            newBoarding = false
         }
         return (PassengerRoute(legs: legs,
-                               rideMinutes: passengerMinutesRoundingUp(end.ride, by: GameTime.secondsPerMinute),
-                               waitMinutes: end.wait / GameTime.secondsPerMinute,
-                               transferMinutes: end.transfer / GameTime.secondsPerMinute), edges)
+                               rideMinutes: passengerMinutesRoundingUp(labels[endIndex].ride, by: GameTime.secondsPerMinute),
+                               waitMinutes: labels[endIndex].wait / GameTime.secondsPerMinute,
+                               transferMinutes: labels[endIndex].transfer / GameTime.secondsPerMinute), edges)
     }
 }
 
@@ -276,18 +346,7 @@ extension GameWorld {
                 candidates.append((found.0, found.1, bans))
             }
             guard !candidates.isEmpty else { break }
-            candidates.sort { a, b in
-                if a.route.totalMinutes != b.route.totalMinutes { return a.route.totalMinutes < b.route.totalMinutes }
-                if a.route.transfers != b.route.transfers { return a.route.transfers < b.route.transfers }
-                let left = a.route.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
-                let right = b.route.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
-                for (l, r) in zip(left, right) where l != r {
-                    if l.0 != r.0 { return l.0 < r.0 }
-                    if l.1 != r.1 { return l.1 < r.1 }
-                    return l.2 < r.2
-                }
-                return left.count < right.count
-            }
+            candidates.sort { passengerRoutePrecedes($0.route, $1.route) }
             chosen = candidates.removeFirst()
             selected.append(chosen.route)
         }

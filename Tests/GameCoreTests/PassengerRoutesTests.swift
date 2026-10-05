@@ -164,4 +164,36 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(routes[0].legs[0].from, a)
         XCTAssertEqual(routes[0].legs[0].to, c)
     }
+
+    func testBoardingStateCanBeatAnEarlierOnboardArrival() throws {
+        // At C, staying on the local reaches the stop at 160 seconds but
+        // pays another 60-second dwell. Express then local reaches its
+        // boarding state at 190 seconds and leaves without that dwell.
+        let local = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 1), pattern: nil,
+            direction: .outbound, stations: [a, b, c, d], runSeconds: [20, 20, 20], headway: 2, isRing: false)
+        let express = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 1), pattern: 0,
+            direction: .outbound, stations: [a, c], runSeconds: [70], headway: 2, isRing: false)
+        let graph = PassengerRouteGraph(paths: [local, express])
+
+        let route = try XCTUnwrap(graph.shortest(from: a, to: d, banning: [])?.0)
+        XCTAssertEqual(route.legs.map(\.pattern), [0, nil])
+        XCTAssertEqual(route.legs.map(\.rideSeconds), [70, 20])
+        XCTAssertEqual(route.waitMinutes, 2)
+        XCTAssertEqual(route.totalMinutes, 4)
+    }
+
+    func testWholeMinuteTiePrefersFewerTransfersBeforeRawSeconds() throws {
+        let first = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 1), pattern: nil,
+            direction: .outbound, stations: [a, b], runSeconds: [1], headway: 2, isRing: false)
+        let second = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 2), pattern: nil,
+            direction: .outbound, stations: [b, c], runSeconds: [1], headway: 2, isRing: false)
+        let direct = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 3), pattern: nil,
+            direction: .outbound, stations: [a, c], runSeconds: [350], headway: 2, isRing: false)
+        let graph = PassengerRouteGraph(paths: [first, second, direct])
+
+        let route = try XCTUnwrap(graph.shortest(from: a, to: c, banning: [])?.0)
+        XCTAssertEqual(route.legs.map(\.line), [LineID(rawValue: 3)])
+        XCTAssertEqual(route.totalMinutes, 7)
+        XCTAssertEqual(route.transfers, 0)
+    }
 }
