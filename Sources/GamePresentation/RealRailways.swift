@@ -14,9 +14,9 @@ import GameCore
 // Sources (`Railway/site_archive_clean/`):
 // - `data/track_lines.geojson` and `data/track_stations.geojson`: every
 //   line's shape and stations. The colours the site draws them in are not
-//   used: each line has a colour picked at random from its key (2026-10-05,
-//   the author's request), mixed for each look as the site mixes its own
-//   (`index.html` `railMix`);
+//   read: each line has its official colour (``System``), checked against
+//   the operators and TDX (2026-10-05, the author's requests), mixed for
+//   each look as the site mixes its own (`index.html` `railMix`);
 // - `data/track_style_layers.json`: the casing, line and station widths and
 //   the casing colour of each map theme;
 // - `i18n/stations.json`: the stations' English names;
@@ -69,6 +69,11 @@ public struct RealRailways: Sendable {
             }
             self.init(red: values[0] << 4 | values[1], green: values[2] << 4 | values[3], blue: values[4] << 4 | values[5])
         }
+
+        /// The colour `0xRRGGBB`.
+        init(_ value: UInt32) {
+            self.init(red: UInt8(truncatingIfNeeded: value >> 16), green: UInt8(truncatingIfNeeded: value >> 8), blue: UInt8(truncatingIfNeeded: value))
+        }
     }
 
     /// A railway operator's network, in the site's order (`index.html`'s
@@ -78,6 +83,20 @@ public struct RealRailways: Sendable {
         public let id: String
         let english: String
         let chinese: String
+        /// The colour all its lines are drawn in, where they have no line
+        /// colours of their own: its operator's. `nil` where each line has
+        /// its own (``lineColors``).
+        public let operatorColor: RGB?
+        /// Each line's official colour, by the site's line key (`lineKey`).
+        let lineColors: [String: RGB]
+
+        init(id: String, english: String, chinese: String, operatorColor: RGB? = nil, lineColors: [String: RGB] = [:]) {
+            self.id = id
+            self.english = english
+            self.chinese = chinese
+            self.operatorColor = operatorColor
+            self.lineColors = lineColors
+        }
 
         /// The site's label, and its English translation
         /// (`i18n/translations.js`).
@@ -85,17 +104,49 @@ public struct RealRailways: Sendable {
             language.text(english, chinese)
         }
 
+        /// The official colour of its line with the key `lineKey`, or `nil`
+        /// where there is none.
+        public func color(ofLine lineKey: String) -> RGB? {
+            operatorColor ?? lineColors[lineKey]
+        }
+
+        // Every colour is an official one, checked on 2026-10-05; none is
+        // made up (the author's request). Where an operator's own sources
+        // differ by a unit or two, the value the site already had is kept.
         public static let all: [System] = [
-            System(id: "tra_sched", english: "TRA", chinese: "台鐵"),
-            System(id: "thsr_sched", english: "High Speed Rail", chinese: "高鐵"),
-            System(id: "afr_sched", english: "Alishan Forest Railway", chinese: "阿里山林鐵"),
-            System(id: "mrt", english: "Taipei Metro", chinese: "台北捷運"),
-            System(id: "tymc", english: "Taoyuan Airport MRT", chinese: "桃園機捷"),
-            System(id: "ntdlrt", english: "Danhai Light Rail", chinese: "淡海輕軌"),
-            System(id: "ntalrt", english: "Ankeng Light Rail", chinese: "安坑輕軌"),
-            System(id: "sanying", english: "Sanying Line", chinese: "三鶯線"),
-            System(id: "krtc", english: "Kaohsiung Metro", chinese: "高雄捷運"),
-            System(id: "tmrt", english: "Taichung Metro", chinese: "台中捷運"),
+            // The operators' colours, for the systems with no line colours:
+            // Taiwan Railway's blue as the author gave it (the logo at
+            // www.railway.gov.tw is about #00529D), Taiwan High Speed Rail's
+            // orange (www.thsrc.com.tw's logo.svg) and the Alishan Forest
+            // Railway's red (afrch.forest.gov.tw's logo_ch.svg and favicon,
+            // near PANTONE 200 C).
+            System(id: "tra_sched", english: "TRA", chinese: "台鐵", operatorColor: RGB(0x005792)),
+            System(id: "thsr_sched", english: "High Speed Rail", chinese: "高鐵", operatorColor: RGB(0xDB5009)),
+            System(id: "afr_sched", english: "Alishan Forest Railway", chinese: "阿里山林鐵", operatorColor: RGB(0xC41229)),
+            // Taipei Metro's own stylesheets: the lines' classes in
+            // web.metro.taipei's route widget, and for the two branches the
+            // route planner's (`webrouteplan.css` `.BX`, `.QX`) with their
+            // station labels.
+            System(id: "mrt", english: "Taipei Metro", chinese: "台北捷運", lineColors: [
+                "mrt|BR": RGB(0xC48C31), "mrt|R": RGB(0xE3002C), "mrt|R_XBT": RGB(0xF3A5A8),
+                "mrt|G": RGB(0x008659), "mrt|G_XBT": RGB(0xDAE11B),
+                "mrt|O_XINZHUANG": RGB(0xF8B61C), "mrt|O_LUZHOU": RGB(0xF8B61C),
+                "mrt|BL": RGB(0x0070BD), "mrt|Y": RGB(0xFFDB00),
+            ]),
+            // TDX's `Rail/Metro/Line` `LineColor`, where the operator's own
+            // site declares no line colour. The Danhai Light Rail's two
+            // services share the one line's.
+            System(id: "tymc", english: "Taoyuan Airport MRT", chinese: "桃園機捷", lineColors: ["tymc|A": RGB(0x8246AF)]),
+            System(id: "ntdlrt", english: "Danhai Light Rail", chinese: "淡海輕軌", lineColors: ["ntdlrt|V": RGB(0xFF2A00), "ntdlrt|VB": RGB(0xFF2A00)]),
+            System(id: "ntalrt", english: "Ankeng Light Rail", chinese: "安坑輕軌", lineColors: ["ntalrt|K": RGB(0x9E925E)]),
+            System(id: "sanying", english: "Sanying Line", chinese: "三鶯線", lineColors: ["sanying|LB": RGB(0x47C1E1)]),
+            // Kaohsiung Metro's own stylesheets (www.krtc.com.tw `.lineRed`,
+            // `.lineOrange`, `.lineLRT`); TDX has no colours for it.
+            System(id: "krtc", english: "Kaohsiung Metro", chinese: "高雄捷運", lineColors: [
+                "krtc|KR": RGB(0xE30964), "krtc|KO": RGB(0xFF9500), "krtc|C": RGB(0x8FC31F),
+            ]),
+            // TDX.
+            System(id: "tmrt", english: "Taichung Metro", chinese: "台中捷運", lineColors: ["tmrt|TG": RGB(0x84BD00)]),
         ]
     }
 
@@ -141,9 +192,8 @@ public struct RealRailways: Sendable {
     /// The colours one line and its stations are drawn in, one for each
     /// track display and map theme.
     ///
-    /// Not the site's: the author asked (2026-10-05) for colours of the
-    /// game's own, so a line's colour is picked at random from its key
-    /// (``init(key:)``), the same every time. The dark, faint and hidden
+    /// The line's official colour (``System/color(ofLine:)``), not the
+    /// site's (2026-10-05, the author's requests). The dark, faint and hidden
     /// looks are mixed from it toward the map theme's casing as the site
     /// mixes its own (`index.html` `railMix`, with `RAIL_DIM`,
     /// `FAINT_LIGHT`, `FAINT_GLOW`, `GHOST_LIGHT` and `GHOST_GLOW`).
@@ -154,18 +204,6 @@ public struct RealRailways: Sendable {
 
         public init(color: RGB) {
             self.color = color
-        }
-
-        /// A colour picked at random from `key` and always the same for it:
-        /// the hue from the key's 64-bit FNV-1a hash, at 65% saturation and
-        /// 47% lightness, so every line reads on the map whatever its hue.
-        public init(key: String) {
-            var hash: UInt64 = 0xCBF2_9CE4_8422_2325
-            for byte in key.utf8 {
-                hash ^= UInt64(byte)
-                hash = hash &* 0x0000_0100_0000_01B3
-            }
-            self.init(color: Self.rgb(hue: Double(hash % 360), saturation: 0.65, lightness: 0.47))
         }
 
         /// The colour for `style` on `theme` (the site's `trackLineColor`
@@ -190,26 +228,6 @@ public struct RealRailways: Sendable {
                 UInt8((Double(c) * keep + Double(b) * (1 - keep)).rounded())
             }
             return RGB(red: channel(color.red, base.red), green: channel(color.green, base.green), blue: channel(color.blue, base.blue))
-        }
-
-        /// The colour of `hue` (degrees), `saturation` and `lightness`.
-        static func rgb(hue: Double, saturation: Double, lightness: Double) -> RGB {
-            let chroma = (1 - abs(2 * lightness - 1)) * saturation
-            let sector = hue / 60
-            let second = chroma * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
-            let (r, g, b): (Double, Double, Double) = switch Int(sector) {
-            case 0: (chroma, second, 0)
-            case 1: (second, chroma, 0)
-            case 2: (0, chroma, second)
-            case 3: (0, second, chroma)
-            case 4: (second, 0, chroma)
-            default: (chroma, 0, second)
-            }
-            let lift = lightness - chroma / 2
-            func channel(_ value: Double) -> UInt8 {
-                UInt8(((value + lift) * 255).rounded())
-            }
-            return RGB(red: channel(r), green: channel(g), blue: channel(b))
         }
     }
 
@@ -292,6 +310,8 @@ public struct RealRailways: Sendable {
     public enum LoadError: Error, Hashable {
         case invalidCoordinate
         case unknownSystem(String)
+        /// A line with no official colour: none is made up for it.
+        case noOfficialColor(lineKey: String)
     }
 
     public let lines: [Line]
@@ -311,21 +331,23 @@ public struct RealRailways: Sendable {
         lines = try lineFeatures.enumerated().map { index, feature in
             let points = try feature.geometry.coordinates.map(Self.coordinate)
             guard points.count >= 2 else { throw LoadError.invalidCoordinate }
+            let system = try Self.system(feature.properties.sys)
             return Line(
                 id: index,
-                system: try Self.system(feature.properties.sys),
+                system: system,
                 name: feature.properties.name,
                 sortKey: feature.properties.sortKey,
-                palette: Palette(key: feature.properties.lineKey),
+                palette: try Self.palette(feature.properties.lineKey, in: system),
                 points: points,
                 box: Box(points)
             )
         }
         stationMarks = try stationFeatures.map { feature in
-            StationMark(
-                system: try Self.system(feature.properties.sys),
+            let system = try Self.system(feature.properties.sys)
+            return StationMark(
+                system: system,
                 coordinate: try Self.coordinate(feature.geometry.coordinates),
-                palette: Palette(key: feature.properties.lineKey)
+                palette: try Self.palette(feature.properties.lineKey, in: system)
             )
         }
         var seen: Set<String> = []
@@ -383,6 +405,11 @@ public struct RealRailways: Sendable {
     private static func system(_ id: String) throws -> System {
         guard let system = System.all.first(where: { $0.id == id }) else { throw LoadError.unknownSystem(id) }
         return system
+    }
+
+    private static func palette(_ lineKey: String, in system: System) throws -> Palette {
+        guard let color = system.color(ofLine: lineKey) else { throw LoadError.noOfficialColor(lineKey: lineKey) }
+        return Palette(color: color)
     }
 
     /// GeoJSON's `[longitude, latitude]`.

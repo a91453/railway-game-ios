@@ -59,8 +59,8 @@ public enum DataSourceCredits {
                             "交通部 TDX 運輸資料流通服務"
                         ),
                         detail: language.text(
-                            "The shapes, station order and station names of the High Speed Rail, the metro and light rail lines and the Alishan Forest Railway; the positions of some TRA stations.",
-                            "高鐵、捷運、輕軌與阿里山林鐵的路線幾何、站序與站名，以及部分台鐵車站的座標。"
+                            "The shapes, station order and station names of the High Speed Rail, the metro and light rail lines and the Alishan Forest Railway; the positions of some TRA stations; the official colours of the Airport MRT, the Danhai and Ankeng light rail, the Sanying Line and the Taichung Metro.",
+                            "高鐵、捷運、輕軌與阿里山林鐵的路線幾何、站序與站名，部分台鐵車站的座標，以及機場捷運、淡海與安坑輕軌、三鶯線與台中捷運的官方路線色。"
                         ),
                         notice: language.text(
                             "Used under the Open Government Data License, version 1.0.",
@@ -95,8 +95,8 @@ public enum DataSourceCredits {
                         id: "operators",
                         title: language.text("Railway operators", "鐵道營運機構"),
                         detail: language.text(
-                            "The station order of the TRA lines (TRA open data) and of the Sanying Line (New Taipei Metro).",
-                            "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）。"
+                            "The station order of the TRA lines (TRA open data) and of the Sanying Line (New Taipei Metro); the official colours of the Taipei and Kaohsiung Metro lines, from their operators’ websites; the colours of the TRA, High Speed Rail and Alishan Forest Railway lines, after their operators’ own colours.",
+                            "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）；台北捷運與高雄捷運各線的官方路線色，取自營運機構的網站；台鐵、高鐵與阿里山林鐵路線的顏色，依各營運機構的公司色。"
                         ),
                         notice: language.text(
                             "The lines and the English station names are compiled by Railway Game; the game is not affiliated with any operator.",
