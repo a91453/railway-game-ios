@@ -2810,7 +2810,9 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 8. **倒側線手算**：SingleTrackMeet 移除 e4、保留 e5/e6 形成東端入口的袋狀側線。e6 的128段取樣整數長4732。A 全車在 e3 的新站平台，與 E→W 車互等；正線 berth 11264雖較近但不能放行，改選側線。倒車2048+4732+5120=11900；在e5翻回後4096+4732+7168=15996；全程27896，相對原4096繞行23800≤25600。測試要求兩車實際完成，不能只以離開死結清單代替。
 9. **獨立驗證**：ReferenceWorld 的 signed Run、relaxation 路徑、逐秒推進與另一份全車翻向／候選枚舉，不呼叫 production planner。新增 `traffic.turnbacks` 6cases×4seeds×32步=768，含中途折返、可用／過短側線、出發平台過短、控制開關、rate0／恢復；每步完整狀態／預約／held／等待／死結／invariants、存讀及 batch=second。與原容量 campaign 同在 campaigns-22，原量不變。RealWorldDemo 新增玩家「十分→菁桐→平溪」服務，驗兩次中途折返並回十分，並非聲稱真實台鐵班表。
 
-**驗證狀態**：見 PR128 與 docs/STAGE_V_HANDOFF.txt 的實際 head/run。新重現首跑無候選失敗；修正後雙車完整完成。新 golden 首跑的 final requested count 與 createLine 預設 none 不符，改新增明確設定 count=1 指令，沒有改既有期望值或產品預設。實景新測試首跑 unplace 後 rate=0 未發車，補測試的 setRate 指令後重驗。保留所有失敗記錄，不以早期成功代替最新 head。V4e 仍等作者合併。
+**限制**：V4c 的名義單線容量（決策62）仍按線路站序的相鄰區段計費，中途折返線在實體上重疊的區段不另行拆分；它只限制請求列車數，實際安全仍由完整預約與死結處理保證。多次調車、無平台倒車與全域最佳解仍是 gap。
+
+**驗證狀態**：見 PR128、接手分支 `claude/takeover-and-complete-mp89w9` 的 draft PR 與 docs/STAGE_V_HANDOFF.txt 的實際 head/run。新重現首跑無候選失敗；修正後雙車完整完成。新 golden 首跑的 final requested count 與 createLine 預設 none 不符，改新增明確設定 count=1 指令，沒有改既有期望值或產品預設。實景新測試首跑 unplace 後 rate=0 未發車，補測試的 setRate 指令後重驗。保留所有失敗記錄，不以早期成功代替最新 head。V4e 仍等作者合併。
 
 ## 目前規則摘要
 

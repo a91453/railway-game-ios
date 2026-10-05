@@ -197,6 +197,41 @@ final class TurnbackTests: XCTestCase {
         XCTAssertEqual(Set(reference.map(\.traversal)), protected)
     }
 
+    /// Platform preferences on the two turnback legs (B to C, B to A) are
+    /// matched from the turned placement, chosen whole at departure, and
+    /// protected in both directions before the line sends a train out.
+    func testPreferencesOnTurnbackLegsAreMatchedFromTheTurnedPlacement() throws {
+        var (world, model, id, train) = try Self.switchback()
+        let stops = try XCTUnwrap(world.line(id: id)).stops
+        let routes = [LineRoutePreference(from: 1, to: 2, platform: world.trackPlatforms(of: stops[2])[0]),
+                      LineRoutePreference(from: 1, to: 0, platform: world.trackPlatforms(of: stops[0])[0])]
+        try world.setLineRoutePreferences(id, to: routes); XCTAssertNil(model.setLineRoutes(id, routes))
+        let line = try XCTUnwrap(world.line(id: id)), placed = try XCTUnwrap(world.train(id: train))
+        let trip = try XCTUnwrap(world.trip(of: line, service: 0, for: placed))
+        XCTAssertFalse(trip.turnsFirst)
+        XCTAssertEqual(trip.journey.intermediateTurnbacks, [1, 3])
+        XCTAssertEqual(trip.journey.legs.map(\.path.distance), [22_528, 12_288, 12_288, 22_528])
+        XCTAssertEqual(world.matchedRoutes(trip.journey, routes: routes, start: try XCTUnwrap(placed.placement)), 2)
+        let driver = try XCTUnwrap(model.trains.first { $0.id == train.rawValue })
+        XCTAssertEqual(model.matchedRoutes(trip.journey, routes: routes, start: driver), 2)
+        let probe = try world.purchaseTrain(named: "Probe").id
+        XCTAssertNil(model.purchaseTrain(named: "Probe"))
+        var memo = GameWorld.DirectionMemo()
+        let protected = world.opposingServiceTraversals(for: try XCTUnwrap(world.train(id: probe)), memo: &memo)
+        XCTAssertEqual(protected, [SingleTrackMeet.forward(1), SingleTrackMeet.backward(1)])
+        XCTAssertEqual(Set(model.contraryRuns(for: try XCTUnwrap(model.trains.first { $0.id == probe.rawValue })).map(\.traversal)), protected)
+        var batched = world
+        for second in 1...510 {
+            try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+            XCTAssertEqual(KernelDifferentialTests.differences(world, model), [], "second \(second)")
+            XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        }
+        try batched.advance(ticks: 5_100)
+        XCTAssertEqual(world, batched)
+        XCTAssertNil(world.train(id: train)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: train), [stops[0]])
+    }
+
     func testWholeTrainSwitchbackHasHandTimedLegsAndTurnsOnlyAtDeparture() throws {
         var (world, model, id, train) = try Self.switchback()
         let line = try XCTUnwrap(world.line(id: id)), placed = try XCTUnwrap(world.train(id: train))

@@ -1,3 +1,27 @@
+Stage V4d 接手完成段 — 2026-10-05（Claude Code 接手；本節取代下方所有 pending 狀態）
+
+接手分支 claude/takeover-and-complete-mp89w9（本 session 指定的唯一可推分支），由 PR128 head c353761 快轉而來，PR128 的全部 commit 原樣保留；另開 draft PR（取代 PR128 的驗收，作者可擇一合併或關閉 PR128）。agent 沒有 merge／auto-merge／commit main；V4e 仍等作者合併 V4d。私有參考固定 25229af（mapping 所列 turnbacks.js isScheduledTurnback、timing.js turnbackProgress、clean READ_ME／migration §7／symbols、Ci app 檔、GTA actors 均在該 commit 重新核對存在且語義相符）。
+
+本輪修改（不改產品行為）：
+1. TurnbackTests 新增 testPreferencesOnTurnbackLegsAreMatchedFromTheTurnedPlacement：在兩條中途折返腿（B→C、B→A）設平台偏好，驗 matchedRoutes 由翻向後 placement 計得 2（production 與獨立模型相同）、未派出線路兩向保護、510 秒逐秒全模型＋invariants、batch=second、完整結束。突變檢查：把 matchedRoutes 改回只在遠端翻向，該測試以 0≠2 失敗，還原後通過。
+2. 決策63補「限制」：V4c 名義容量仍按站序相鄰區段計費，中途折返線實體重疊不拆分；只限制請求列車數，安全仍由完整預約與死結處理保證。ROADMAP／決策63的驗證狀態改指向本接手 PR。
+
+審查結論（本機讀碼，無需改碼）：goingOn／passingContinuation 正向優先、與 V3 scheduledPath（以正向 normal path 為前提）及 preferredGoingOn（正向偏好）一致，dead-end 時兩者皆 nil，不會把正向 path 套在翻向後的車上；反向 fallback 起始 traversal 也經 networkPath 的 forbidden 檢查；resolveDeadlock 只在 reserving 授權後才提交翻向；ServiceDirections 對執行中車用時刻表 reverses、未派出線路用 intermediateTurnbacks memo key，與 ReferenceTrafficControl 對應。berth 平手順序 production 依 platform 排序（edge,start,end）每平台 forward→backward，獨立模型依 edge→forward→offset；僅同站同邊兩平台且總距離完全相等時才可能不同，未見於任何測試，列為已知差異。
+
+VERIFIED（Linux，Swift 6.4.0 /opt/swift，本 session）：
+- source 與 ede8849 相同的 c353761：swift build --build-tests -Xswiftc -warnings-as-errors 58.1s exit0。
+- 相關 filter 193 項、1 既有 record skip、0 failure（105.3s）：Turnback、Deadlock、LineRoutePreference、TrafficControl、ScheduledTraffic、ScheduledOvertakeTrack、SingleTrackCapacity、RingLine、LineDispatch、ServiceLine、NetworkService、LinePattern、SavedGame、ReplayFixture、ReferenceWorldGolden、GoldenScenario 的 match／portable／unknown version／line commands、全部 RealWorldDemo（9 項含十分→菁桐→平溪折返）。
+- campaigns-22：2 項 51.2s、runner 52s、coverage 通過；capacity 576 步 digest E974A083D5858C78、turnbacks 768 步 digest E46C5001271E3303（56 reversed／255 waiting／16 completed），與前一位紀錄一致。
+- campaigns-11：DeadlockPropertyTests 1 項 120.1s、runner 121s、coverage 通過（digest 42AE3745A3FF09E8，1352 operations、37 passing places、111 completed）。
+- 加入新測試後：warnings-as-errors build exit0；TurnbackTests 8 項 0 failure（17.3s）。
+- swift-shards-selftest、bash -n、git diff --check 通過；既有 GoldenScenarios／SaveFixtures／ReplayFixtures／README 與 workflows 對 main 無任何修改（只新增 intermediate-turnbacks.json）。
+
+UNVERIFIED／交 CI：全套 22 campaigns＋rest、iOS PR gate、Wasm、localization 以接手 PR 實際 head／run 為準（結果寫在 PR 本文，不另以文件 commit 觸發重跑）；full UI lane 以 workflow_dispatch 在接手分支跑，結果亦寫 PR 本文；實機仍 UNVERIFIED。PR128 本身的 c353761 runs 在接手時仍 queued／pending。
+
+下一位：若接手 PR 有紅燈，在 claude/takeover-and-complete-mp89w9 修復並 push；作者合併 V4d 後才從新 main 開 V4e（App／GamePresentation 地圖 movement authority、死結車與互等位置，保留文字；缺查詢才補 Core＋測試，新 UI 只 full lane）。
+
+===== 以下為前一位（PR128）最後保存點與歷史，pending 狀態以上節為準 =====
+
 最後查核補充：本機campaigns-11已於2026-10-05 19:59:18 UTC完成，VERIFIED 1test105.002s、runner106s、coverage exit0，/workspace/scratch/v4d-verified-campaign11.log；下文「仍執行中」是先前觀察，已被本行取代。原始碼仍ede8849、後續僅文件。最新GitHub CI仍待下一位查實際head/run。
 
 Stage V4d 最終保存點 — 2026-10-05（作者因額度要求立刻寫接手並保存）

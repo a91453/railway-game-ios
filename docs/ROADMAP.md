@@ -825,4 +825,4 @@ E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立�
 
 - 已實作，最新 head 驗證中（決策63）：中途全列折返、V2反向倒入側線；正向優先、反向枚舉全部可用berths、完整原子預約與限界／方向保護，dead-end續行取得授權後才翻向。
 - 新golden schema34（保留30–33）、save10不變；新768步campaign與實景玩家折返服務。既有fixtures／campaign量／workflow／timeout保留。
-- 精確VERIFIED／UNVERIFIED狀態見PR128及STAGE_V_HANDOFF。作者合併V4d後才開V4e：地圖上的movement authority、死結車與互等位置，保留文字。
+- 精確VERIFIED／UNVERIFIED狀態見PR128、接手分支`claude/takeover-and-complete-mp89w9`的draft PR及STAGE_V_HANDOFF。作者合併V4d後才開V4e：地圖上的movement authority、死結車與互等位置，保留文字。
