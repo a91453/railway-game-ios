@@ -112,6 +112,12 @@ public final class GameSession {
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?
 
+    /// Who lives where on real-world maps in Taiwan, which sets the
+    /// ridership of a managed company's new stations there (see
+    /// PopulationGrid.swift); `nil` gives them the city's. The app's
+    /// bundled grid, set by the launcher; never saved.
+    @ObservationIgnored public var population: PopulationGrid?
+
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?

@@ -199,14 +199,29 @@ extension GameSession {
         return (point.edge, start, start + length)
     }
 
+    /// The ridership a managed company gives a new station at `point`: on
+    /// a real-world map the population grid covers, from the people living
+    /// around it (``StationDemand/realWorld(residents:)``); anywhere else
+    /// the city's (``StationDemand/cityDefault``).
+    public func newStationDemand(at point: PlanPoint) -> StationDemand {
+        guard let population, let frame = RealWorldFrame(world: world) else { return .cityDefault }
+        let place = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
+        guard let residents = population.people(
+            within: StationDemand.catchmentRadius,
+            ofLatitude: place.latitude,
+            longitude: place.longitude
+        ) else { return .cityDefault }
+        return .realWorld(residents: residents)
+    }
+
     /// Adds a platform along ``networkPlatformStretch`` through
     /// `GameWorld.addTrackPlatform(_:on:from:to:)` for the station
     /// ``platformStationID``, or for a new station built first through
     /// `GameWorld.buildStation(named:at:)` at the middle of the platform
-    /// (Stage F1); a managed company's city gives the new
-    /// station its ridership (``StationDemand/cityDefault``). All or
-    /// nothing. A new station then serves the next platform, so a second
-    /// track beside it joins the same station.
+    /// (Stage F1); a managed company gives the new station its ridership
+    /// (``newStationDemand(at:)``). All or nothing. A new station then
+    /// serves the next platform, so a second track beside it joins the
+    /// same station.
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
@@ -215,6 +230,7 @@ extension GameSession {
         let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
         let chosen = platformStationID.flatMap { world.station(id: $0) }
         let name = stationName
+        let demand = newStationDemand(at: middle)
         var built: StationID?
         perform { world throws(GameError) in
             var draft = world
@@ -224,7 +240,7 @@ extension GameSession {
             } else {
                 station = try draft.buildStation(named: name, at: middle)
                 if draft.accounts.mode == .management {
-                    try draft.setStationDemand(station.id, to: .cityDefault)
+                    try draft.setStationDemand(station.id, to: demand)
                 }
             }
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)

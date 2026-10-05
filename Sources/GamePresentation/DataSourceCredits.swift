@@ -7,6 +7,8 @@
 // `afr.json`, `trtc.json` and the other systems'): the Ministry of
 // Transportation and Communications' TDX under the Open Government Data
 // License, version 1.0, and OpenStreetMap under the Open Database License.
+// The population that sets a real-world station's ridership is WorldPop's,
+// under CC BY 4.0 (PopulationGrid.swift).
 
 /// One source of the game's data.
 public struct DataSourceCredit: Identifiable, Hashable, Sendable {
@@ -38,6 +40,9 @@ public enum DataSourceCredits {
     static let openStreetMapCopyrightURL = "https://www.openstreetmap.org/copyright"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
     static let repositoryURL = "https://github.com/a91453/railway-game-ios"
+    static let worldPopURL = "https://www.worldpop.org"
+    static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
+    static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -122,6 +127,29 @@ public enum DataSourceCredits {
                             "車站座標 © OpenStreetMap 貢獻者（ODbL 1.0）與交通部 TDX。"
                         ),
                         links: []
+                    ),
+                ]
+            ),
+            DataSourceSection(
+                id: "population",
+                title: language.text("Station Ridership on Real-World Maps", "實景地圖的車站客流"),
+                credits: [
+                    DataSourceCredit(
+                        id: "worldPop",
+                        title: "WorldPop",
+                        detail: language.text(
+                            "How many people live around a station a company builds on a real-world map in Taiwan, which sets its ridership: WorldPop’s 2025 estimates per square kilometre (R2025A).",
+                            "公司在台灣實景地圖上建站時，用來估計車站周邊住了多少人、決定它的客流：WorldPop 2025 年每平方公里的人口估計（R2025A）。"
+                        ),
+                        notice: language.text(
+                            "WorldPop (www.worldpop.org), University of Southampton, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0); DOI 10.5258/SOTON/WP00840. The game rounds each square to whole people.",
+                            "WorldPop（www.worldpop.org），南安普敦大學，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用；DOI 10.5258/SOTON/WP00840。遊戲把每一格的人數四捨五入到整數。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
+                            DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
                     ),
                 ]
             ),
