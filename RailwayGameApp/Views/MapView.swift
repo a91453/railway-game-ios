@@ -95,11 +95,21 @@ struct MapView: View {
                 .accessibilityValue(selectionDescription)
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
                 .clipped()
-                .overlay(alignment: .topLeading) {
-                    // The construction HUD takes the top of the map while a
-                    // stretch is previewed; the traffic key gives way to it.
-                    if !showsConstructionHUD {
-                        TrafficLegend(traffic: traffic, language: session.language)
+                .overlay(alignment: .top) {
+                    // One column down the top of the map, so none covers
+                    // another: the status banner, then the construction HUD
+                    // while a stretch is previewed, or else the traffic key
+                    // at the leading edge.
+                    VStack(spacing: 0) {
+                        StatusBanner(session: session)
+                        if showsConstructionHUD, let preview = session.networkPreview {
+                            MapConstructionHUD(preview: preview, language: session.language)
+                                .padding(.top, 12)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        } else {
+                            TrafficLegend(traffic: traffic, language: session.language)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
@@ -113,13 +123,6 @@ struct MapView: View {
                         }
                     }
                     .padding(12)
-                }
-                .overlay(alignment: .top) {
-                    if showsConstructionHUD, let preview = session.networkPreview {
-                        MapConstructionHUD(preview: preview, language: session.language)
-                            .padding(.top, 12)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .frame(height: viewport.height)
