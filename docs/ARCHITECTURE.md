@@ -2460,6 +2460,13 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 錨點只記點，不記地名；參考依城市設定的票價基準（`metroFareDemandBaselineForCity`）、城市的人口與起訖需求（Phase 5、6）沒有接上。
 - 已經開始的遊戲不能換錨點（GameCore 允許，畫面沒有）。
 
+**台灣的真實鐵道**（2026-10-05 追加，作者要求從私有 repo 直接移植；對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#實景地圖的台灣鐵道與車站)）：
+- `Railway/` 網站的 `track_lines.geojson`、`track_stations.geojson` 與 `i18n/stations.json` 原檔放在 App 的 `Resources/RealRailways/`（約 940 KB）。GamePresentation 的 `RealRailways` 讀它們（Foundation 的 `JSONDecoder`，Linux 上用 repo 裡的同一份檔案測試）；App 第一次用到時讀一次（`RealRailways.bundled`）。
+- 實景的遊戲地圖：`FollowingMapView` 把錨點 16 公里內的路線畫成 MapKit 的 overlay，照網站的寬度、顏色與疊放順序，放在 `.aboveRoads`（道路之上、地圖的標籤之下，和網站在 MapLibre 的位置相同）；車站是 `StationDotsRenderer` 畫的固定大小的圓，網站的第 11 級以上才畫。地圖樣式選單多一個「真實鐵道」（自動、淡化、隱藏，App 的設定，預設淡化），以及「資料來源」。
+- 選點的畫面：地圖畫出全部路線；清單在台灣之後依系統列出 543 個車站，輸入時照網站的比對方式即時列出符合的車站。
+- 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
+- 都只是畫面：GameCore 不知道真實鐵道，存檔不存它，玩家的鐵路照舊自己蓋；golden、存檔版本與 property digest 都沒有改。
+
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
 
 2026-10-03。E2 合併、實機確認之後，作者決定**現在**做 F3，排在 F2、U-min、V 之前，並交給 Claude Code 選「對未來幫助最大、又不影響新功能」的做法。這一條記下範圍與步驟；每一步的細節在各自的 PR 補上。

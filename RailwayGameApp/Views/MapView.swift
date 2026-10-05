@@ -13,6 +13,11 @@ struct MapView: View {
     /// How Apple's map under a real-world game looks (Stage E2): a view
     /// preference, the same for every game.
     @AppStorage("realWorldMapStyle") private var mapStyle: AppleMapStyle = .standard
+    /// How strongly Taiwan's real railways show on it (the `Railway/` site's
+    /// track display). Faint by default, not the site's own colours: here
+    /// the player's railway is drawn over them.
+    @AppStorage("realRailwayTrackStyle") private var trackStyle: RealRailways.TrackStyle = .faint
+    @State private var showsDataSources = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -60,8 +65,8 @@ struct MapView: View {
                     zoomControls(camera: projection)
                 }
                 .overlay(alignment: .bottomLeading) {
-                    if realWorld != nil {
-                        mapStyleMenu
+                    if let realWorld {
+                        mapStyleMenu(realWorld)
                     }
                 }
                 .frame(height: viewport.height)
@@ -74,8 +79,18 @@ struct MapView: View {
             }
             .background {
                 if let realWorld {
-                    AppleMapBackground(realWorld: realWorld, camera: projection, style: mapStyle)
+                    AppleMapBackground(
+                        realWorld: realWorld,
+                        camera: projection,
+                        style: mapStyle,
+                        railways: RealRailways.bundled,
+                        trackStyle: trackStyle,
+                        language: session.language
+                    )
                 }
+            }
+            .sheet(isPresented: $showsDataSources) {
+                DataSourcesView(language: session.language)
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
@@ -116,8 +131,9 @@ struct MapView: View {
         session.selectionText() ?? String(localized: "Nothing selected")
     }
 
-    /// Chooses how Apple's map under a real-world game looks.
-    private var mapStyleMenu: some View {
+    /// Chooses how Apple's map under a real-world game looks, and how
+    /// strongly Taiwan's real railways show on it where there are any.
+    private func mapStyleMenu(_ realWorld: RealWorldFrame) -> some View {
         Menu {
             Picker("Map Style", selection: $mapStyle) {
                 ForEach(AppleMapStyle.allCases) { style in
@@ -125,6 +141,24 @@ struct MapView: View {
                         .tag(style)
                 }
             }
+            if RealRailways.bundled?.lines(near: realWorld.anchor, within: 16_000).isEmpty == false {
+                Picker(selection: $trackStyle) {
+                    ForEach(RealRailways.TrackStyle.allCases) { style in
+                        Text(verbatim: style.name(in: session.language))
+                            .tag(style)
+                    }
+                } label: {
+                    Label("Real Railways", systemImage: "tram")
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("map.realRailways")
+            }
+            Button {
+                showsDataSources = true
+            } label: {
+                Label("Data Sources", systemImage: "info.circle")
+            }
+            .accessibilityIdentifier("map.dataSources")
         } label: {
             Image(systemName: "map")
                 .font(.title3)

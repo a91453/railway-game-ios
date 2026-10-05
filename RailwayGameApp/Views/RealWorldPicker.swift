@@ -13,6 +13,10 @@ import SwiftUI
 /// Only that middle is kept, as the world's anchor. A search's results are
 /// Apple's map data, shown with the map and dropped (Attachment 6 §2.4 and
 /// §2.5 of the Apple Developer Program License Agreement).
+///
+/// Taiwan's real railways (the `Railway/` site's) are drawn on the map, and
+/// every one of their stations is a place to start at: by railway, and as
+/// the player types a name, matched as the site matches names.
 struct RealWorldPicker: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +25,7 @@ struct RealWorldPicker: View {
     @State private var middle: CLLocationCoordinate2D
     @State private var query = ""
     @State private var search = PlaceSearch()
+    @Environment(\.colorScheme) private var colorScheme
 
     init(launcher: GameLauncher) {
         self.launcher = launcher
@@ -79,6 +84,11 @@ struct RealWorldPicker: View {
     /// Apple's map with the game's map drawn as a square round its middle.
     private var preview: some View {
         Map(position: $position) {
+            ForEach(Self.railwayLines) { line in
+                MapPolyline(coordinates: line.coordinates)
+                    .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
+            }
+            .mapOverlayLevel(level: .aboveRoads)
             MapPolygon(coordinates: Self.square(around: middle))
                 .foregroundStyle(Palette.station.opacity(0.08))
                 .stroke(Palette.station, lineWidth: 2)
@@ -99,6 +109,14 @@ struct RealWorldPicker: View {
 
     private var places: some View {
         List {
+            let stations = RealRailways.bundled?.stations(matching: query) ?? []
+            if !stations.isEmpty {
+                Section("Railway Stations") {
+                    ForEach(stations.prefix(50)) { station in
+                        stationButton(station, showsSystem: true)
+                    }
+                }
+            }
             if search.isSearching || search.results != nil {
                 Section("Search Results") {
                     if search.isSearching {
@@ -148,9 +166,51 @@ struct RealWorldPicker: View {
                 } header: {
                     Text(verbatim: region.name(in: launcher.language))
                 }
+                if region == .taiwan, let railways = RealRailways.bundled {
+                    Section {
+                        ForEach(RealRailways.System.all) { system in
+                            let stations = railways.stations.filter { $0.system == system }
+                            DisclosureGroup {
+                                ForEach(stations) { station in
+                                    stationButton(station, showsSystem: false)
+                                }
+                            } label: {
+                                Text(verbatim: "\(system.name(in: launcher.language)) · \(stations.count)")
+                            }
+                            .accessibilityIdentifier("railway.\(system.id)")
+                        }
+                    } header: {
+                        Text("Railway Stations")
+                    } footer: {
+                        Text(verbatim: DataSourceCredits.railwaysOnMap(in: launcher.language))
+                    }
+                }
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    /// Moves the map to a station of Taiwan's real railways.
+    private func stationButton(_ station: RealRailways.Station, showsSystem: Bool) -> some View {
+        Button {
+            position = Self.camera(on: CLLocationCoordinate2D(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude))
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "tram.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(station.palette.color(.auto, on: colorScheme == .dark ? .dark : .light)))
+                Text(verbatim: station.name(in: launcher.language))
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                if showsSystem {
+                    Spacer()
+                    Text(verbatim: station.system.name(in: launcher.language))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .accessibilityIdentifier("station.\(station.id)")
     }
 
     /// The anchor at the middle of the view.
@@ -191,6 +251,34 @@ struct RealWorldPicker: View {
 
     /// How far a new game's map reaches from its middle, in metres.
     private static let newMapHalfExtent = RealWorldFrame.halfExtent(of: GameWorld.newGameBounds)
+
+    /// Taiwan's real railways as the map draws them, made once.
+    private static let railwayLines: [RailwayLineDrawing] = (RealRailways.bundled?.lines ?? []).map(RailwayLineDrawing.init)
+}
+
+/// A line of Taiwan's real railways on the picker's map: the line's own
+/// colours (the site's auto track display).
+struct RailwayLineDrawing: Identifiable {
+    let id: Int
+    let coordinates: [CLLocationCoordinate2D]
+    let palette: RealRailways.Palette
+
+    init(_ line: RealRailways.Line) {
+        id = line.id
+        coordinates = line.points.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        palette = line.palette
+    }
+
+    func color(_ theme: RealRailways.MapTheme) -> RealRailways.RGB {
+        palette.color(.auto, on: theme)
+    }
+}
+
+extension Color {
+    /// The `Railway/` site's colour `#RRGGBB`.
+    init(_ rgb: RealRailways.RGB) {
+        self.init(.sRGB, red: Double(rgb.red) / 255, green: Double(rgb.green) / 255, blue: Double(rgb.blue) / 255)
+    }
 }
 
 /// A place found by a search: shown, then dropped.

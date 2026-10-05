@@ -16,6 +16,7 @@ struct StartView: View {
     @State private var showsSaves = false
     @State private var importsSave = false
     @State private var choosesPlace = false
+    @State private var showsDataSources = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -107,22 +108,26 @@ struct StartView: View {
                     .background((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.12), in: Capsule())
                     .overlay(Capsule().strokeBorder((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.35), lineWidth: 1))
                 }
-                // iOS keeps each app's language in Settings (the reference's
-                // home screen has a language menu instead).
-                Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        openURL(url)
+                HStack(spacing: 10) {
+                    // iOS keeps each app's language in Settings (the
+                    // reference's home screen has a language menu instead).
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    } label: {
+                        chip(Label("Language", systemImage: "globe"))
                     }
-                } label: {
-                    Label("Language", systemImage: "globe")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(Palette.chipBackground, in: Capsule())
-                        .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
+                    .accessibilityHint("Opens Settings, where the game's language is chosen.")
+                    // Where the real-world data comes from (the `Railway/`
+                    // site's data sources page).
+                    Button {
+                        showsDataSources = true
+                    } label: {
+                        chip(Label("Data Sources", systemImage: "info.circle"))
+                    }
+                    .accessibilityIdentifier("start.dataSources")
                 }
-                .accessibilityHint("Opens Settings, where the game's language is chosen.")
             }
             .frame(maxWidth: 420)
             .padding(.horizontal)
@@ -135,6 +140,9 @@ struct StartView: View {
         }
         .sheet(isPresented: $choosesPlace) {
             RealWorldPicker(launcher: launcher)
+        }
+        .sheet(isPresented: $showsDataSources) {
+            DataSourcesView(language: launcher.language)
         }
         .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
             launcher.importSave {
@@ -179,6 +187,17 @@ struct StartView: View {
                 .padding(.horizontal, 16)
         }
         .padding(.bottom, 8)
+    }
+
+    /// A small capsule under the start buttons.
+    private func chip(_ label: some View) -> some View {
+        label
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(Palette.chipBackground, in: Capsule())
+            .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
     }
 
     /// The save's game time, cash and size, and when it was saved.
