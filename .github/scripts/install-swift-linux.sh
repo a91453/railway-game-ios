@@ -50,7 +50,11 @@ trap 'rm -rf "$work"' EXIT
 echo "Downloading $url"
 curl -fsSL --retry 4 --retry-delay 2 -o "$work/swift.tar.gz" "$url"
 curl -fsSL --retry 4 --retry-delay 2 -o "$work/swift.tar.gz.sig" "$url.sig"
-curl -fsSL --retry 4 --retry-delay 2 -o "$work/keys.asc" https://www.swift.org/keys/all-keys.asc
+# swift.org sends the keys gzip-encoded (Content-Encoding: gzip) even when the
+# request does not ask for it; without --compressed curl saves the gzip bytes
+# and gpg finds no keys. Only the keys: the archive is gzip itself and must
+# stay as it is.
+curl -fsSL --compressed --retry 4 --retry-delay 2 -o "$work/keys.asc" https://www.swift.org/keys/all-keys.asc
 mkdir -m 700 "$work/gnupg"
 GNUPGHOME="$work/gnupg" gpg --batch --quiet --import "$work/keys.asc"
 GNUPGHOME="$work/gnupg" gpg --batch --quiet --verify "$work/swift.tar.gz.sig" "$work/swift.tar.gz"
