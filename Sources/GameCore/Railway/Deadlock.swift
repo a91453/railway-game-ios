@@ -42,14 +42,28 @@ extension GameWorld {
     /// such route.
     func goingOn(_ train: Train) -> Train? {
         guard isAtPassingPlace(train), case .travellingToStop(let stop, _)? = train.execution, let placement = train.placement,
-              let path = path(from: placement.position, toStation: train.timetable[stop].station, length: train.length),
-              path.distance > 0
+              let onward = passingContinuation(from: placement, to: train.timetable[stop].station)
         else { return nil }
         var going = train
+        going.position = onward.start.position
+        going.trailEdges = onward.start.trailEdges
+        let path = onward.path
         follow(path, &going)
         let fastest = run(of: going, length: path.distance)
         going.times?.run = fastest
         return going
+    }
+
+    /// A dead-end passing berth needs the same whole-body reversal as a
+    /// timetable turnback. The ordinary facing always wins when reachable.
+    /// The candidate is committed only after its departure is reserved.
+    private func passingContinuation(from place: TrainPlacement, to call: StationID) -> (start: TrainPlacement, path: TrainPath)? {
+        for start in [place, turnedRound(place)] {
+            if let path = path(from: start.position, toStation: call, length: start.length), path.distance > 0 {
+                return (start, path)
+            }
+        }
+        return nil
     }
 
     // MARK: - Who waits for whom
@@ -192,22 +206,40 @@ extension GameWorld {
     /// ``detourAllowance`` of the default route, and where its standing
     /// lets another train of the deadlock go; the shortest whole way, the
     /// first station on a tie. `nil` if there is none.
-    func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64)? {
+    func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64, reverses: Bool)? {
+        // Preserve V2's ordinary passing-place selection before considering
+        // a backing move. A reversal is possible only from a full berth.
+        let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
+        let length = routeLength(of: candidate)
+        if let way = passingPlace(for: candidate, in: stuck, forbidden: forbidden, defaultLength: length, memo: &memo) {
+            return (way.path, way.distance, false)
+        }
+        guard isTrafficControlEnabled, !stationsBesideWholeTrain(candidate.id).isEmpty,
+              let place = candidate.placement else { return nil }
+        let reverse = turnedRound(place)
+        var backing = candidate
+        backing.position = reverse.position
+        backing.trailEdges = reverse.trailEdges
+        guard let way = passingPlace(for: backing, in: stuck, forbidden: forbidden, defaultLength: length, memo: &memo) else { return nil }
+        return (way.path, way.distance, true)
+    }
+
+    private func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], forbidden: Set<TrackTraversal>, defaultLength: Int64, memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64)? {
         guard case .travellingToStop(let stop, _)? = candidate.execution, let start = candidate.placement else { return nil }
         let call = candidate.timetable[stop].station
-        let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
         let blocked = blockedTrack(except: candidate.id)
-        let (limit, overflow) = routeLength(of: candidate).addingReportingOverflow(Self.detourAllowance)
+        let (limit, overflow) = defaultLength.addingReportingOverflow(Self.detourAllowance)
         var best: (path: TrainPath, distance: Int64)?
         for station in stations where station.id != call {
             guard let way = path(from: start.position, toStation: station.id, length: candidate.length, avoiding: blocked, forbidden: forbidden),
                   way.distance > 0
             else { continue }
             let there = placement(start, after: way)
-            guard let onward = path(from: there.position, toStation: call, length: candidate.length), onward.distance > 0,
-                  onward.traversals.allSatisfy({ !forbidden.contains($0) })
+            guard let next = passingContinuation(from: there, to: call),
+                  next.path.traversals.allSatisfy({ !forbidden.contains($0) })
             else { continue }
-            if case .onEdge(let traversal, let offset) = there.position, offset < network.edge(traversal.edge)!.length,
+            let onward = next.path
+            if case .onEdge(let traversal, let offset) = next.start.position, offset < network.edge(traversal.edge)!.length,
                forbidden.contains(traversal) {
                 continue
             }

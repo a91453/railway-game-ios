@@ -1815,6 +1815,11 @@ public struct GameWorld: Equatable, Sendable {
                   let passing = passingPlace(for: request.candidate, in: stuck, memo: &memo.directions)
             else { continue }
             var aside = request.candidate
+            if passing.reverses, let place = aside.placement {
+                let reverse = turnedRound(place)
+                aside.position = reverse.position
+                aside.trailEdges = reverse.trailEdges
+            }
             follow(passing.path, &aside)
             let fastest = run(of: aside, length: passing.path.distance)
             aside.times?.run = fastest

@@ -31,13 +31,19 @@ extension ReferenceWorld {
     /// way.
     mutating func goingOn(_ train: Train) -> Train? {
         guard atPassingPlace(train), let service = train.service else { return nil }
-        let start = standing(train)
-        guard let path = defaultRoute(from: start, to: train.timetable[service.stop].station), path.distance > 0 else { return nil }
+        guard let (start, path) = passingExit(train, call: train.timetable[service.stop].station) else { return nil }
         var going = routed(start, path)
         going.service = service
         let fastest = run(going, length: path.distance, scheduled: nil)
         going.service?.run = fastest
         return going
+    }
+
+    private mutating func passingExit(_ train: Train, call: StationID) -> (Train, TrainPath)? {
+        let forward = standing(train)
+        if let path = defaultRoute(from: forward, to: call), path.distance > 0 { return (forward, path) }
+        let reverse = turnedOnNetwork(forward)
+        return defaultRoute(from: reverse, to: call).flatMap { $0.distance > 0 ? (reverse, $0) : nil }
     }
 
     /// Decision 58: train `i`'s service, standing at a passing place, goes
@@ -174,22 +180,24 @@ extension ReferenceWorld {
     /// Decision 58: the passing place for `candidate` (setting off, in
     /// deadlock `stuck`): the way there and the whole way's length through
     /// it to the call.
-    mutating func passingWay(for candidate: Train, stuck: [Int: (candidate: Train, departs: Bool)]) -> (path: TrainPath, distance: Int64)? {
+    mutating func passingWay(for candidate: Train, stuck: [Int: (candidate: Train, departs: Bool)]) -> (path: TrainPath, distance: Int64, reverses: Bool)? {
         guard let service = candidate.service, !service.waiting else { return nil }
-        let start = standing(candidate)
+        let initial = standing(candidate)
         let call = candidate.timetable[service.stop].station
-        guard let planned = defaultRoute(from: start, to: call) else { return nil }
-        let forbidden = contraryRuns(for: routed(start, planned))
+        guard let planned = defaultRoute(from: initial, to: call) else { return nil }
+        let forbidden = contraryRuns(for: routed(initial, planned))
         let blocked = blocked(for: candidate.id)
-        var best: (path: TrainPath, distance: Int64)?
+        let canReverse = trafficControl && !stationsBesideWholeTrain(TrainID(rawValue: candidate.id)).isEmpty
+        for (orientation, start) in (canReverse ? [initial, turnedOnNetwork(initial)] : [initial]).enumerated() {
+        var best: (path: TrainPath, distance: Int64, reverses: Bool)?
         for station in stations.sorted(by: { $0.id < $1.id }) where station.id != call.rawValue {
             guard let way = networkPathToStation(from: start.position!, station: StationID(rawValue: station.id), length: Self.length(start),
                                                  blocked: blocked, forbidden: forbidden),
                   way.distance > 0
             else { continue }
             let there = standing(followed(start, along: way))
-            guard !isAtBerth(there, of: call), let onward = defaultRoute(from: there, to: call),
-                  case .onEdge(let traversal, let offset)? = there.position
+            guard !isAtBerth(there, of: call), let (exit, onward) = passingExit(there, call: call),
+                  case .onEdge(let traversal, let offset)? = exit.position
             else { continue }
             var runs = onward.traversals.map { Run($0)! }
             if offset < networkEdges[Run(traversal)!.edge]!.length { runs.insert(Run(traversal)!, at: 0) }
@@ -211,9 +219,11 @@ extension ReferenceWorld {
                 }
             }
             guard frees else { continue }
-            best = (way, total)
+            best = (way, total, orientation == 1)
         }
-        return best
+        if let best { return best }
+        }
+        return nil
     }
 
     /// Decision 58: at a whole minute after the services, the first train
@@ -227,7 +237,8 @@ extension ReferenceWorld {
             guard let request = stuck[id], request.departs, let i = trains.firstIndex(where: { $0.id == id }),
                   let before = trains[i].service, let way = passingWay(for: request.candidate, stuck: stuck)
             else { continue }
-            var aside = routed(standing(request.candidate), way.path)
+            let start = standing(request.candidate)
+            var aside = routed(way.reverses ? turnedOnNetwork(start) : start, way.path)
             aside.service = request.candidate.service
             let fastest = run(aside, length: way.path.distance, scheduled: nil)
             aside.service?.run = fastest

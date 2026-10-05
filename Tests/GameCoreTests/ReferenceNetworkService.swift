@@ -325,11 +325,23 @@ extension ReferenceWorld {
     func networkJourney(of line: Line, calling calls: [Int], from start: TrainPosition, trailEdges: [Int], length: Int64, routes: [LineRoutePreference]) -> LineJourney? {
         var train = Self.driver(at: start, trailEdges: trailEdges, length: length)
         var legs: [LineLeg] = []
+        var turnbacks: [Int] = []
         let (pairs, turn) = Self.legPairs(line, calls)
         for (from, to) in pairs {
             if from == turn { train = turnedOnNetwork(train) }
-            let selected = routes.first { $0.from == from && $0.to == to }.flatMap { preferenceRoute(from: train.position!, $0, length: length) }
-            guard let path = selected ?? networkPathToStation(from: train.position!, station: line.stops[to], length: length) else { return nil }
+            let mayTurn = trafficControl && !line.ring && from != turn && from != calls.first
+            let candidates = mayTurn ? [train, turnedOnNetwork(train)] : [train]
+            var found: (Train, TrainPath)?
+            for (index, driver) in candidates.enumerated() {
+                let selected = routes.first { $0.from == from && $0.to == to }.flatMap { preferenceRoute(from: driver.position!, $0, length: length) }
+                if let path = selected ?? networkPathToStation(from: driver.position!, station: line.stops[to], length: length) {
+                    found = (driver, path)
+                    if index == 1 { turnbacks.append(legs.count) }
+                    break
+                }
+            }
+            guard let (driver, path) = found else { return nil }
+            train = driver
             let units = path.distance
             // Stage W2c: the least second the line's curve is built for.
             guard let seconds = units == 0 ? 0 : Self.leastSeconds(units, line.performance) else { return nil }
@@ -337,6 +349,6 @@ extension ReferenceWorld {
             train = followed(train, along: path)
         }
         let total = legs.reduce(Int64(0)) { $0 + $1.seconds } + Self.dwellSeconds(line, calls)
-        return LineJourney(start: start, legs: legs, roundTripSeconds: total, isRing: line.ring)
+        return LineJourney(start: start, legs: legs, roundTripSeconds: total, isRing: line.ring, intermediateTurnbacks: turnbacks)
     }
 }
