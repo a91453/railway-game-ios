@@ -453,11 +453,12 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
 
 - **V4a — 已實作，驗證結果見 PR**（ARCHITECTURE 決策 60）：對齊私有參考 `25229af`，同向待避在選站與重建前檢查股道窗口（到站前／出發後各 30 秒），所有同站服務的已知進出路線組合都必須留有可停股道；較早待避優先，同時到站取 TrainID。從玩家路網 berth、span 與限界資源推導，不以台鐵站名／OSM id 為規則輸入；實際換到全列不妨礙其他車進出的停車位置，偏好拿不到仍回 V1／V2。
   - 存檔 9／schema 31 不變，既有三種 fixture 不改；新增手算、三車差分 case（原 18 case 不縮減，新增 case 18–23，在 campaigns-15–18）及實景猴硐另一股待避驗收（名義走廊的限制見決策 60）。
-  - #116 已由作者合併；合併後安全 berth 全域成本／平手修正與 StartSaveFlow Menu 觸控修正由 V4b 承接。
+  - #116 已由作者合併；合併後安全 berth 全域成本／平手修正由 V4b 承接。StartSaveFlow Menu 觸控修正已由作者獨立合併 #119，V4b 不再帶該 diff。
 
-- **V4b — 已實作，驗證結果見 PR**（ARCHITECTURE 決策 61）：線路本線／交路共用逐段有向 walk 與月台偏好，不加進 ScheduledStop／Station。指定不可用退 V1／V2，整條授權才採用；接入名義進出、方向保護、派車與待避後續行。線路面板可逐向設定自動／月台／固定股道。
+- **V4b — draft PR 驗證中，尚未驗收**（ARCHITECTURE 決策 61）：線路本線／交路共用逐段有向 walk 與月台偏好，不加進 ScheduledStop／Station。指定不可用退 V1／V2，整條授權才採用；接入名義進出、方向保護、派車與待避後續行。線路面板可逐向設定自動／月台／固定股道。
   - 存檔 10（9→10 缺省空偏好遷移）／schema 32，新增短 golden、v10 save、實體路徑 replay，既有三種 fixture 檔案未修改。
   - traffic.lineRoutes 4 個單列車 case×4 seeds×20 步＋2 個雙列車 case×4 seeds×45 步（680 步），比完整狀態與批次＝逐秒，campaigns-19；新增實景猴硐指定月台實際停靠與 GameSession 設定／清除驗收；新 UI 測試留 full lane。
+  - 已整合 main `d2de3d5`（#117／#118／#119）。WIP 的 fastPassed 失敗已按手算事件窗口修正：精確驗證 478 秒進入 edge 3、600 秒抵達終點及慢車續行；CI 與 Apple 檢查結果見 PR，未執行的不稱為通過。
   - V4c → V4d → V4e 各一分支／draft PR，前階段由作者合併後從新 main 開工：單線容量；中途換向與倒進側線；地圖授權範圍與死結標示。
 
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。

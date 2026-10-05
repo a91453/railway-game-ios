@@ -6,7 +6,9 @@ import GameCore
 // under its map, ported with its data as it is. The app bundles the site's
 // own files and draws them on Apple's map, under the map's labels as the
 // site draws them under MapLibre's; the real-world picker lists the
-// stations as places to start at.
+// stations as places to start at. The site is no longer maintained, so
+// where its line shapes are off the real track the game redraws them from
+// OpenStreetMap (`tools/real-railways/`, three stretches since 2026-10-05).
 //
 // None of it is the game's: the rules never see a real railway, a save
 // keeps nothing of it, and the player builds their own railway over it.

@@ -56,6 +56,42 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertTrue(railways.lines.allSatisfy { $0.points.count >= 2 && $0.sortKey >= 0 })
     }
 
+    /// Where the site's shapes are off the real track, the game redraws them
+    /// from OpenStreetMap (`tools/real-railways/osm_patches.json`): the
+    /// bundled lines carry every stretch the patches list, so copying the
+    /// site's original file over them again cannot quietly undo them.
+    func testTheStretchesRedrawnFromOpenStreetMapAreBundled() throws {
+        struct Patches: Decodable {
+            struct Patch: Decodable {
+                let id: String
+                let lineKey: String
+                let points: [[Double]]
+            }
+
+            let patches: [Patch]
+        }
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let patches = try JSONDecoder().decode(
+            Patches.self,
+            from: Data(contentsOf: root.appendingPathComponent("tools/real-railways/osm_patches.json"))
+        ).patches
+        XCTAssertEqual(patches.map(\.id), ["krtc-red-airport", "krtc-orange-yanchengpu", "afr-zhushan"])
+
+        let railways = try Self.bundled()
+        for patch in patches {
+            let system = String(patch.lineKey.prefix { $0 != "|" })
+            let stretch = patch.points.map { RealRailways.Coordinate(latitude: $0[1], longitude: $0[0]) }
+            let carried = railways.lines.contains { line in
+                line.system.id == system && line.points.count >= stretch.count
+                    && (0 ... line.points.count - stretch.count).contains { Array(line.points[$0 ..< $0 + stretch.count]) == stretch }
+            }
+            XCTAssertTrue(carried, patch.id)
+        }
+    }
+
     func testTheFirstLineAsTheSiteHasIt() throws {
         let line = try XCTUnwrap(Self.bundled().lines.first)
         XCTAssertEqual(line.system.id, "tra_sched")

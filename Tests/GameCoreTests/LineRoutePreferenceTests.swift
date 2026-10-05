@@ -135,22 +135,43 @@ final class LineRoutePreferenceTests: XCTestCase {
         var (world, model, _, _) = try Self.assignedOvertake()
         XCTAssertTrue(world.scheduledTrafficWaits().contains { $0.train.rawValue == 1 && $0.kind == .overtake })
         XCTAssertEqual(world.scheduledTrafficWaits(), model.scheduledPlan().waits)
-        var seen = false, fastPassed = false
-        for _ in 0..<45 {
+        // W→F: (8192−1024)+16384+8192+1536 = 33280 units,
+        // departing at 180 and arriving at 600. For a=1500, b=2500,
+        // L=v*T−v²*(1/a+1/b)/2 gives v≈79.69172 units/s. Edge 3
+        // begins at distance 23552, reached at second 477.033…: the
+        // first whole-second observation is 478, beyond the old 450 window.
+        var seen = false, slowContinued = false
+        var fastEnteredEastAt: Int64?
+        for _ in 0..<61 {
             var single = world
             try world.advance(ticks: 100); XCTAssertNil(model.advance(ticks: 100))
-            for _ in 0..<10 { try single.advance(ticks: 10) }
+            for _ in 0..<10 {
+                try single.advance(ticks: 10)
+                if fastEnteredEastAt == nil, case .onEdge(let track, _)? = single.trains[1].position, track.edge == .edge(3) {
+                    fastEnteredEastAt = single.clock.now.seconds
+                }
+            }
             XCTAssertEqual(world, single)
             XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
             XCTAssertEqual(world.scheduledTrafficWaits(), model.scheduledPlan().waits)
             XCTAssertEqual(world.occupancyConflicts(), [])
-            if case .onEdge(let track, _)? = world.trains[1].position, [.edge(3), .edge(7)].contains(track.edge) { fastPassed = true }
             let slow = world.trains[0]
             if world.stationsStoppedAt(by: slow.id).contains(SingleTrackMeet.middle), case .onEdge(let track, _)? = slow.position {
                 XCTAssertEqual(track.edge, .edge(5)); seen = true
             }
+            if case .travellingToStop(2, _)? = slow.execution { slowContinued = true }
+            if world.clock.now.seconds == 190 {
+                XCTAssertEqual(world.trains[1].times?.run?.start.seconds, 180)
+                XCTAssertEqual(world.trains[1].times?.run?.length, 33_280)
+                XCTAssertEqual(world.trains[1].times?.run?.seconds, 420)
+            }
         }
-        XCTAssertTrue(seen); XCTAssertTrue(fastPassed)
+        XCTAssertTrue(seen)
+        XCTAssertEqual(fastEnteredEastAt, 478)
+        XCTAssertTrue(slowContinued)
+        XCTAssertEqual(world.trains[1].execution, .waitingAtStop(1, cycle: 0))
+        XCTAssertEqual(world.trains[1].times?.arrival.seconds, 600)
+        XCTAssertTrue(world.stationsStoppedAt(by: world.trains[1].id).contains(world.stations[3].id))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
     }
 

@@ -202,7 +202,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 
 #### V4b：服務共用逐段股道與月台偏好（決策 61）
 
-四份來源固定私有 main `25229af`；V4b 從作者已合併 #116 的新 main `77b0443` 開分支。資料只作語義來源，不把台鐵／OSM id 當玩家路網規則。
+四份來源固定私有 main `25229af`；V4b 從作者已合併 #116 的 main `77b0443` 開分支，接手整合 `d2de3d5`（#117 inventory、#118 實景資料、#119 觸控）。#117 的 `2db0c5a` 盤點保留作平行移植紀錄，不取代本階段固定來源。資料只作語義來源，不把台鐵／OSM id 當玩家路網規則。
 
 | 參考檔案／函式 | 目標檔案／函式 | 倍率與分類 |
 | --- | --- | --- |
@@ -218,7 +218,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`routeLegs`、`consolidateRingRouteLegs` | 既有 ServiceLine／LinePattern 語義沿用 | **gap**（V4b）：routeLegs 是班型／班距段，未找到 physical pathIds 或 platformMismatchCost；不將班距設定誤稱實體股道綁定 |
 | `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT、platform spots | 無可翻譯的 V4b 派車實作 | **gap**：雙線捷運場景／步行碰撞與搭車 spots，沒有逐段 path binding／玩家股道指定 |
 | （玩家操作／獨立驗證） | `GameWorld.lineRouteChoices`、`GameSession.setSelectedLineRoute`、`LinesPanel.routeMenus`；`ReferenceLineRoutes`、`ReferenceNetworkService`／名義與實際路徑、`ReferenceTrafficControl`／方向保護 | **gap**：本專案補足選路 UI、validated Codable、獨立 signed-run／絕對距離 oracle；UI point×1、m×64／秒×1；無 production planner／GameWorld 呼叫 |
-| （V4a 合併後追蹤） | `scheduledBerthPath` 單次 eligible 搜尋、`ScheduledOvertakeTrackTests` 第七項手算；`StartSaveFlowSmokeTests.tapMenuAction` | **gap**：恢復跨安全 berth 的 V3 成本／平手；保留可見 hittable／enabled 的原生 Menu 真實觸控與存讀斷言；無新 gate 測試，UI point×1 |
+| （V4a 合併後追蹤） | `scheduledBerthPath` 單次 eligible 搜尋、`ScheduledOvertakeTrackTests` 第七項手算 | **gap**：恢復跨安全 berth 的 V3 成本／平手；觸控已獨立由作者合併 #119，不在 V4b diff；m×64 |
 
 本階段使用 adapted／gap；無 JavaScript 執行期 direct reuse 或未有來源的 faithful 宣稱。新增版本 10 save／schema 32 短 golden／實體路徑 replay，既有三種 fixture 檔案未修改。新 campaign 在 campaigns-19，既有 campaign 不縮減；實景猴硐指定原有月台實際停靠與 GameSession 設定／清除驗收保留原全部測試。完整必要調整、偏好優先與 failure atomicity 見決策 61；各檢查 VERIFIED／UNVERIFIED 見 PR。
 
@@ -495,7 +495,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 
 | 參考 | 行為 | Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
-| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列） | 度（WGS-84） | 直接重用（原檔） |
+| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列）。2026-10-05 起網站不再維護，與當天的 OSM 比對後，高捷紅線（機場段）、橘線（鹽埕埔段）與林鐵祝山線一段改用 OSM 重畫（`tools/real-railways/`） | 度（WGS-84） | 直接重用（原檔）；**改變**：三段改用 OSM |
 | `Railway` `data/track_stations.geojson`（608 個站點，同一站在每條線各一點） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫，用那條線的顏色）與 `stations`（每個系統每個站名的第一個，544 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
 | `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，五站沒有英文時用中文（含新的平鎮） | — | 直接重用（原檔） |
 | `Railway` `index.html` 的系統表（`id`、`label`）與 `i18n/translations.js` 的英文 | 系統的名稱與順序 | `RealRailways.System.all` | — | faithful |

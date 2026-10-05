@@ -78,8 +78,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The shapes of the TRA lines and some metro lines, and the positions of stations, from OpenStreetMap’s contributors.",
-                            "台鐵與部分捷運的軌道幾何，以及車站的座標，來自 OpenStreetMap 貢獻者。"
+                            "The shapes of the TRA lines, some metro lines and part of the Alishan Forest Railway, and the positions of stations, from OpenStreetMap’s contributors.",
+                            "台鐵、部分捷運與阿里山林鐵部分路段的軌道幾何，以及車站的座標，來自 OpenStreetMap 貢獻者。"
                         ),
                         notice: language.text(
                             "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The game’s railway files (track_lines.geojson and track_stations.geojson) are available under the same licence in its source repository.",
