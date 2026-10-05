@@ -156,8 +156,17 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   The drift check in `ios-build.yml` (the official macOS binary) is
   authoritative. When upgrading XcodeGen, update the action and these lines
   together.
-- Whenever GameCore changes, run `swift build` and `swift test`, and keep
-  warnings-as-errors clean (`swift build --build-tests -Xswiftc -warnings-as-errors`).
+- Whenever the package changes, run only the fast checks locally before
+  pushing, not the whole suite:
+  `swift build --build-tests -Xswiftc -warnings-as-errors` (keep it clean),
+  then the tests the change touches with
+  `swift test --skip-build --filter <Class>`, and the shard of any campaign
+  whose code or behaviour it changes with
+  `.github/scripts/swift-shards.sh run <shard>`. The full suite is CI's job:
+  when CI turns red, fix the failure and push rather than rerunning
+  everything locally. Run more locally only when the task needs it (to
+  reproduce a CI failure, or to measure shard times). Report the local checks
+  as VERIFIED and the rest as left to CI.
   CI splits the suite across shards and runs each after
   `swift build --build-tests -Xswiftc -warnings-as-errors` with
   `swift test --skip-build` (plain `swift test` would rebuild everything);

@@ -13,7 +13,8 @@ not only Claude Code. Read it first and follow it. In particular:
   or Metal, and stays deterministic. `GameWorld` is the only authority for
   game state.
 - Build and test with Swift 6.4 only (no Swift 6.0 checks), and keep
-  warnings-as-errors clean.
+  warnings-as-errors clean. Locally run the build and the tests your change
+  touches; the full suite is CI's job (see `CLAUDE.md`).
 - Never run `testflight.yml`, add a trigger to it, or let pull requests reach
   its secrets. Never commit secrets, keys, certificates, `.env` files or
   personal data: this repository is public.
