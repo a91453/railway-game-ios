@@ -100,6 +100,14 @@ struct MapView: View {
                     }
                     .padding(12)
                 }
+                .overlay(alignment: .top) {
+                    if session.tool == .network, let preview = session.networkPreview {
+                        MapConstructionHUD(preview: preview, language: session.language)
+                            .padding(.top, 12)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .frame(height: viewport.height)
                 if strip > 0 {
                     // Nothing of the game over the strip: Apple's map shows
