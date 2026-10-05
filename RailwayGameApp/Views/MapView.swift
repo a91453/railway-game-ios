@@ -21,6 +21,9 @@ struct MapView: View {
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @State private var showsDataSources = false
+    /// What the map shows of traffic control (Stage V4e), worked out when
+    /// the world changes, not on every pan or zoom.
+    @State private var traffic = TrafficOverlay()
     @State private var showsMapLayers = false
 
     private var mapLayers: MapLayerPreferences {
@@ -31,7 +34,9 @@ struct MapView: View {
                 showsCatchmentRings: showsCatchmentRings
             )
         }
-        set {
+        // The binding below sets this from a non-mutating context; the
+        // @AppStorage values it writes need no mutable self.
+        nonmutating set {
             showsStationNames = newValue.showsStationNames
             showsWaitingCounts = newValue.showsWaitingCounts
             showsCatchmentRings = newValue.showsCatchmentRings
@@ -61,6 +66,7 @@ struct MapView: View {
                     selectedTrainID: session.selectedTrainID,
                     selectedStationID: session.selectedStation?.id,
                     network: session.networkOverlay,
+                    traffic: traffic,
                     camera: projection,
                     edges: edges,
                     drawsLand: realWorld == nil,
@@ -89,6 +95,9 @@ struct MapView: View {
                 .accessibilityValue(selectionDescription)
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
                 .clipped()
+                .overlay(alignment: .topLeading) {
+                    TrafficLegend(traffic: traffic, language: session.language)
+                }
                 .overlay(alignment: .bottomTrailing) {
                     zoomControls(camera: projection)
                 }
@@ -144,6 +153,9 @@ struct MapView: View {
                     }
                 }
             }
+        }
+        .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
+            traffic = session.world.trafficOverlay()
         }
         .onChange(of: session.world.network, initial: true) { _, network in
             // Edges are immutable and IDs are never reused. Keep their
@@ -248,13 +260,74 @@ struct MapView: View {
     }
 }
 
+/// What the traffic overlay is worked out from (Stage V4e): the time
+/// (a due departure starts a wait), the trains with their routes and
+/// reservations, the lines that send them out, the track and whether
+/// traffic control is on.
+private struct TrafficKey: Equatable {
+    let now: GameTime
+    let isEnabled: Bool
+    let trains: [Train]
+    let lines: [ServiceLine]
+    let network: RailwayNetwork
+
+    init(world: GameWorld) {
+        now = world.clock.now
+        isEnabled = world.isTrafficControlEnabled
+        trains = world.trains
+        lines = world.lines
+        network = world.network
+    }
+}
+
+/// The traffic overlay's key (Stage V4e): how many trains have movement
+/// authority, wait and are deadlocked, in the map's colours; read out as
+/// the overlay's summary. Shown only while there is something to show, and
+/// never in the way of a tap on the map.
+private struct TrafficLegend: View {
+    let traffic: TrafficOverlay
+    let language: DisplayLanguage
+
+    var body: some View {
+        if let summary = traffic.summary(in: language) {
+            let deadlocked = traffic.waits.filter(\.isDeadlocked).count
+            HStack(spacing: 8) {
+                count(traffic.authorities.count, Palette.metroGreen)
+                count(traffic.waits.count - deadlocked, Palette.metroAmber)
+                count(deadlocked, Palette.metroRed)
+            }
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.regularMaterial, in: Capsule())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: summary))
+            .accessibilityIdentifier("map.traffic")
+            .allowsHitTesting(false)
+            .padding(12)
+        }
+    }
+
+    @ViewBuilder
+    private func count(_ value: Int, _ color: Color) -> some View {
+        if value > 0 {
+            HStack(spacing: 3) {
+                Circle().fill(color).frame(width: 8, height: 8)
+                Text(verbatim: "\(value)")
+            }
+        }
+    }
+}
+
 /// Clock-only ticks do not redraw the map; camera changes and moving
-/// trains do. Canvas never allocates a view the size of the whole world.
+/// trains do, and so does a change of what traffic control shows.
+/// Canvas never allocates a view the size of the whole world.
 private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
     let selectedStationID: StationID?
     let network: NetworkOverlay?
+    let traffic: TrafficOverlay
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
     /// Whether the land is filled in: not over Apple's map (Stage E2).
@@ -270,6 +343,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
+            && lhs.traffic == rhs.traffic
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
             && lhs.drawsLand == rhs.drawsLand
@@ -279,7 +353,7 @@ private struct MapCanvas: View, Equatable {
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selectedStationID = selectedStationID, network = network, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts
+        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -287,6 +361,7 @@ private struct MapCanvas: View, Equatable {
                 selectedTrainID: selectedTrainID,
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
+                traffic: traffic,
                 projection: camera,
                 edges: edges,
                 drawsLand: drawsLand,

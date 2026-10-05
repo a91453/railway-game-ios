@@ -28,6 +28,26 @@ struct TrackStretch: Hashable, Sendable {
     let to: Int64
 }
 
+/// A train waiting for its route under traffic control (Stage V4e,
+/// decision 64; see ``GameWorld/routeWaits()``).
+public struct RouteWait: Hashable, Sendable {
+    public let train: TrainID
+    /// The train holding its route (see ``GameWorld/trainHoldingRoute(of:)``).
+    public let holder: TrainID
+    /// The track where the two meet (see
+    /// ``GameWorld/contestedResources(of:)``).
+    public let contested: [TrackResource]
+    /// Whether it is in a deadlock (see ``GameWorld/deadlockedTrains()``).
+    public let isDeadlocked: Bool
+
+    public init(train: TrainID, holder: TrainID, contested: [TrackResource], isDeadlocked: Bool) {
+        self.train = train
+        self.holder = holder
+        self.contested = contested
+        self.isDeadlocked = isDeadlocked
+    }
+}
+
 extension GameWorld {
     // MARK: - Queries
 
@@ -69,17 +89,68 @@ extension GameWorld {
     /// route free), and for an unknown ID. Derived on every call, never
     /// saved.
     public func trainHoldingRoute(of id: TrainID) -> TrainID? {
-        guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
+        awaitedRoute(of: id)?.holder
+    }
+
+    /// Stage V4e (decision 64): where train `id` and the train holding its
+    /// route (see ``trainHoldingRoute(of:)``) meet, in resource order: the
+    /// track of the route it waits to take that the holder holds or fouls
+    /// (see ``RailwayNetwork/fouls(_:_:)``), or, following trains ahead
+    /// (Stage U2), still waits for. For a map to show what keeps it. Empty
+    /// when it waits for no route, and for a scheduled wait (decision 59),
+    /// which keeps it at a station for a train by plan, not for track. Derived
+    /// on every call, never saved.
+    public func contestedResources(of id: TrainID) -> [TrackResource] {
+        awaitedRoute(of: id).map { contested($0, for: id) } ?? []
+    }
+
+    /// Every train waiting for its route under traffic control, in
+    /// ascending ID order (Stage V4e, decision 64): what
+    /// ``trainHoldingRoute(of:)``, ``contestedResources(of:)`` and
+    /// ``deadlockedTrains()`` tell of each, worked out together for a map
+    /// to draw at once. Empty with traffic control off. Derived on every
+    /// call, never saved.
+    public func routeWaits() -> [RouteWait] {
+        guard isTrafficControlEnabled else { return [] }
         var memo = DirectionMemo()
-        if let wait = currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) { return wait.other }
+        let deadlocked = Set(deadlock(memo: &memo).keys)
+        return trains.sorted { $0.id < $1.id }.compactMap { train in
+            guard let wait = awaitedRoute(of: train.id, memo: &memo) else { return nil }
+            return RouteWait(train: train.id, holder: wait.holder, contested: contested(wait, for: train.id), isDeadlocked: deadlocked.contains(train.id))
+        }
+    }
+
+    /// See ``contestedResources(of:)``.
+    private func contested(_ wait: (holder: TrainID, needs: Set<TrackResource>?), for id: TrainID) -> [TrackResource] {
+        guard let needs = wait.needs, let holder = train(id: wait.holder) else { return [] }
+        var blocking = held(holder)
+        if let claim = claim(of: holder), (train(id: id).map(held) ?? []).isDisjoint(with: claim.route) {
+            blocking.formUnion(claim.waiting)
+        }
+        return needs.filter { network.fouls([$0], blocking) }.sorted()
+    }
+
+    /// The train holding the route train `id` waits for (see
+    /// ``trainHoldingRoute(of:)``), with the track that route needs; `nil`
+    /// track for a scheduled wait.
+    private func awaitedRoute(of id: TrainID) -> (holder: TrainID, needs: Set<TrackResource>?)? {
+        var memo = DirectionMemo()
+        return awaitedRoute(of: id, memo: &memo)
+    }
+
+    private func awaitedRoute(of id: TrainID, memo: inout DirectionMemo) -> (holder: TrainID, needs: Set<TrackResource>?)? {
+        guard isTrafficControlEnabled, let train = train(id: id), train.position != nil else { return nil }
+        if let wait = currentTrafficWait(train, plan: trafficPlan(memo: &memo), memo: &memo) { return (wait.other, nil) }
         if isFollowing(train) {
             // Stage U2: a train following others waits for the rest of its
             // route.
-            return holder(of: routeEnvelope(of: train).resources, except: id)
+            let needs = routeEnvelope(of: train).resources
+            return holder(of: needs, except: id).map { ($0, needs) }
         }
         guard let departing = departureRequest(of: train, memo: &memo) else { return nil }
         if case .granted(let granted) = reservingDeparture(departing), !isFollowing(granted) { return nil }
-        return holder(of: routeEnvelope(of: departing).resources, except: id)
+        let needs = routeEnvelope(of: departing).resources
+        return holder(of: needs, except: id).map { ($0, needs) }
     }
 
     // MARK: - What a train needs

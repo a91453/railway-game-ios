@@ -48,6 +48,30 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons["map.style"].waitForExistence(timeout: 15), "Continuing keeps the real-world map")
     }
 
+    /// Stage V4e: the real-world demo runs under traffic control, and the
+    /// map's traffic key appears and reads out the movement authority its
+    /// trains take. Full lane only (not in the pull request gate).
+    func testTheRealWorldDemoShowsMovementAuthorityOnTheMap() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        // The demo's button is the start screen's last: scroll to it.
+        let demo = app.buttons["start.realWorldDemo"]
+        XCTAssertTrue(demo.waitForExistence(timeout: 10), "Missing button: start.realWorldDemo")
+        for _ in 0..<4 where !demo.isHittable { app.swipeUp() }
+        tappable(app.buttons.matching(identifier: "start.realWorldDemo"), name: "start.realWorldDemo").tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        let authority = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "Movement authority")).firstMatch
+        XCTAssertTrue(authority.waitForExistence(timeout: 60), "The demo's trains take their routes under traffic control")
+        capture(app, name: "real-world-04-traffic")
+    }
+
     /// A blank new game has no Apple map and no style menu.
     func testABlankGameHasNoMapStyle() {
         continueAfterFailure = false

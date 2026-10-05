@@ -25,10 +25,12 @@ final class DeadlockPropertyTests: XCTestCase {
                     if world.reservedResources(of: train.id) != model.reservedResources(of: train.id) { problems.append("reservation \(train.id)") }
                     if world.heldResources(of: train.id) != model.heldResources(of: train.id) { problems.append("held \(train.id)") }
                     if world.trainHoldingRoute(of: train.id) != model.trainHoldingRoute(of: train.id) { problems.append("holder \(train.id)") }
+                    if world.contestedResources(of: train.id) != model.contestedResources(of: train.id) { problems.append("contested \(train.id)") }
                 }
                 if world.deadlockedTrains() != model.deadlockedTrains() {
                     problems.append("deadlocked \(world.deadlockedTrains()) vs \(model.deadlockedTrains())")
                 }
+                if world.routeWaits() != WorldInvariants.routeWaitsOneByOne(in: world) { problems.append("route waits") }
                 problems += WorldInvariants.violations(in: world)
                 if let problem = WorldInvariants.roundTripProblem(of: world) { problems.append(problem) }
                 return problems

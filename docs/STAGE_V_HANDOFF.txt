@@ -1,3 +1,20 @@
+Stage V4e — 2026-10-05（Claude Code；本節為最新，V4d 段以下為歷史）
+
+V4d 已由作者合併（#131，main 812247b；#128 內容全部包含其中）。作者指示「都過了就做最後的 V4e」：本 agent 在 claude/takeover-and-complete-mp89w9（從 main 812247b 重開）實作 V4e，開新 draft PR；不 merge、不 auto-merge。main 812247b 的 CI 在交接時：Wasm 通過；Swift 分片 1、5、9、10、17、18、20 通過，其餘分片因 GitHub 15 分鐘內派不到 runner 而被取消（沒有任何測試執行），重跑一次後的結果寫在 V4e PR 本文；完整 iOS UI lane 仍排隊。
+
+V4e 內容（決策64）：
+1. GameCore 只補唯讀查詢：`contestedResources(of:)`（等候路線被擋住者持有／foul／跟隨仍等的部分；排定等待為空）、`routeWaits()`（同一 memo 一次給出每輛等候車 holder／contested／死結）。`trainHoldingRoute` 改由同一個 awaitedRoute 推導，行為不變。
+2. 獨立模型：ReferenceTrafficControl 另做 contested（對 blocking 集合逐資源 foul）。DeadlockTests 逐秒、traffic.deadlock（campaigns-11）與 traffic.turnbacks（campaigns-22）每步比 production，並比 routeWaits 與逐一查詢相等。
+3. GamePresentation `TrafficOverlay`／`GameWorld.trafficOverlay()`：世界座標的授權折線（相鄰 span 合併）與 junction 節點、等候車 contested、車頭與等的位置；英中摘要。TrafficOverlayTests 手算座標（W–M–E：0:42 互等 x=29696–32768／2048–5120，1:00 待避等 x=23552）；RealWorldDemo 首小時每分鐘一致、每車都有授權。
+4. App：MapArt 依網站跟隨路線樣式（followCase 外框、8.5:4.4、FOLLOW_DIM 0.62）畫授權，contested 黃／死結紅、虛線與外圈；MapView 只在時間／列車／線路／路網／控制改變時重算；左上圖例 `map.traffic`。文字 routeWaitText 保留。新 UI 測試 `RealWorldMapUITests.testTheRealWorldDemoShowsMovementAuthorityOnTheMap` 只在 full lane（未加入 gate）。沒有新 App 檔案，Xcode 專案不需重產（XcodeGen 2.46.0 已在 Linux 驗證可重現 committed 專案）。
+5. 四來源（25229af）都沒有畫授權或死結；mapping 見 RAILWAY_REFERENCE_MAPPING 的 V4e 表。save10、golden34、既有 fixtures／README、workflow、gate、timeout 不變。
+
+本機 VERIFIED／UNVERIFIED 與 CI run 見 V4e PR 本文（不以文件 commit 觸發重跑）。App 的 SwiftUI／Canvas 只由 macOS CI 編譯與 UI 測試；實機 UNVERIFIED。
+
+下一位：V 系列完成。若 V4e PR 紅燈，在同分支修復；作者合併後的後續（號誌、預測授權、死結閃爍、同軌標籤錯位）見決策64限制，另開階段。
+
+===== 以下為 V4d 接手完成段與更早歷史 =====
+
 Stage V4d 接手完成段 — 2026-10-05（Claude Code 接手；本節取代下方所有 pending 狀態）
 
 接手分支 claude/takeover-and-complete-mp89w9（本 session 指定的唯一可推分支），由 PR128 head c353761 快轉而來，PR128 的全部 commit 原樣保留；另開 draft PR（取代 PR128 的驗收，作者可擇一合併或關閉 PR128）。agent 沒有 merge／auto-merge／commit main；V4e 仍等作者合併 V4d。私有參考固定 25229af（mapping 所列 turnbacks.js isScheduledTurnback、timing.js turnbackProgress、clean READ_ME／migration §7／symbols、Ci app 檔、GTA actors 均在該 commit 重新核對存在且語義相符）。
