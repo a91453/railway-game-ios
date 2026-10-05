@@ -456,9 +456,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     ///
     /// - Precondition: `roundTrip >= 1`.
     static func service(
-        _ counts: TrainsInService, _ targets: TargetHeadways, at level: ServiceLevel, roundTrip: Int64
+        _ counts: TrainsInService, _ targets: TargetHeadways, at level: ServiceLevel, roundTrip: Int64,
+        capacity: ServiceCapacityProfile? = nil
     ) -> (trains: Int, headway: Int64)? {
-        let maximum = Int(clamping: max(1, roundTrip / minimumHeadwayMinutes))
+        let maximum = capacity?.maximum(roundTrip: roundTrip, ring: false)
+            ?? Int(clamping: max(1, roundTrip / minimumHeadwayMinutes))
         let count: Int
         if let target = targets[level] {
             count = min(Int(clamping: dividedRoundingUp(roundTrip, by: target)), maximum)
@@ -486,9 +488,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     ///
     /// - Precondition: `lap >= 1`.
     static func ringService(
-        _ counts: TrainsInService, _ targets: TargetHeadways, at level: ServiceLevel, lap: Int64
+        _ counts: TrainsInService, _ targets: TargetHeadways, at level: ServiceLevel, lap: Int64,
+        capacity: ServiceCapacityProfile? = nil
     ) -> (trains: Int, headway: Int64)? {
-        let maximum = Int(clamping: max(1, lap / minimumHeadwayMinutes))
+        let maximum = capacity.map { $0.maximum(roundTrip: lap, ring: true) / 2 }
+            ?? Int(clamping: max(1, lap / minimumHeadwayMinutes))
         let eachWay: Int
         if let target = targets[level] {
             eachWay = min(Int(clamping: dividedRoundingUp(lap, by: target)), maximum)
@@ -578,14 +582,16 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// from ``ringService(_:_:at:lap:)``, the round trip being its lap; its
     /// load is on every segment, the last one from its last stop back to
     /// the first included, each way at its headway.
-    func services(at level: ServiceLevel, roundTrips: [Int64?]) -> (plans: [(trains: Int, headway: Int64)?], loads: [Int]) {
+    func services(at level: ServiceLevel, roundTrips: [Int64?], capacities: [ServiceCapacityProfile?]? = nil) -> (plans: [(trains: Int, headway: Int64)?], loads: [Int]) {
         if isRing {
-            guard let lap = roundTrips.first ?? nil, let plan = Self.ringService(trainsInService, targetHeadways, at: level, lap: lap) else {
+            guard let lap = roundTrips.first ?? nil, let plan = Self.ringService(trainsInService, targetHeadways, at: level, lap: lap, capacity: capacities?.first ?? nil) else {
                 return ([nil], Array(repeating: 0, count: stops.count))
             }
             return ([plan], Array(repeating: Self.load(ofHeadway: plan.headway), count: stops.count))
         }
         var loads = Array(repeating: 0, count: stops.count - 1)
+        var occupied = Array(repeating: Int64(0), count: stops.count - 1)
+        let day = GameTime.minutesPerDay * GameTime.secondsPerMinute
         var plans: [(trains: Int, headway: Int64)?] = []
         for (service, roundTrip) in roundTrips.enumerated() {
             let (counts, targets) = service == 0
@@ -593,7 +599,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
                 : (patterns[service - 1].trainsInService, patterns[service - 1].targetHeadways)
             let calls = calls(ofService: service)
             let span = calls[0]..<calls[calls.count - 1]
-            guard let roundTrip, let wanted = Self.service(counts, targets, at: level, roundTrip: roundTrip) else {
+            let capacity = capacities?[service]
+            guard let roundTrip, let wanted = Self.service(counts, targets, at: level, roundTrip: roundTrip, capacity: capacity) else {
                 plans.append(nil)
                 continue
             }
@@ -602,7 +609,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
             var (fits, tooMany) = (0, wanted.trains + 1)
             while tooMany - fits > 1 {
                 let middle = fits + (tooMany - fits) / 2
-                if Self.load(ofHeadway: Self.headway(of: middle, roundTrip: roundTrip, target: targets[level])) <= room {
+                let gap = Self.headway(of: middle, roundTrip: roundTrip, target: targets[level])
+                let singleFits = capacity.map { profile in
+                    profile.work.indices.allSatisfy { segment in
+                        ServiceCapacityProfile.usage(profile.work[segment], headway: gap) <= day - occupied[segment]
+                    }
+                } ?? true
+                if Self.load(ofHeadway: gap) <= room && singleFits {
                     fits = middle
                 } else {
                     tooMany = middle
@@ -615,6 +628,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
             let headway = Self.headway(of: fits, roundTrip: roundTrip, target: targets[level])
             for segment in span {
                 loads[segment] += Self.load(ofHeadway: headway)
+            }
+            if let capacity {
+                for segment in capacity.work.indices {
+                    occupied[segment] += ServiceCapacityProfile.usage(capacity.work[segment], headway: headway)
+                }
             }
             plans.append((fits, headway))
         }

@@ -105,6 +105,31 @@ final class RealWorldDemoTests: XCTestCase {
 
     // MARK: - Running
 
+    func testPingxiCapacityComesFromItsBuiltSingleTrackAndPassingLoops() throws {
+        var (_, world) = try Self.built.get()
+        let line = world.lines[0]
+        let journey = try XCTUnwrap(world.lineJourney(line.id))
+        let layout = world.capacityLayout(of: line)
+        let profile = world.capacityProfile(of: line, service: 0, journey: journey, layout: layout)
+        XCTAssertEqual(journey.legs.map(\.seconds), [208, 140, 178, 152, 115, 126, 87, 115, 117, 87, 126, 115, 152, 178, 140, 208])
+        XCTAssertEqual(journey.roundTripSeconds, 3324)
+        XCTAssertEqual(layout.blocks, [[0], [1], [2, 3], [4, 5, 6, 7]])
+        XCTAssertEqual(layout.passing, [0, 1, 2, 4])
+        // Four nominal resources: 2*208+60; 2*140+60;
+        // 2*(178+152)+120+60; 888+4*120+30 seconds.
+        XCTAssertEqual(profile.work, [476, 340, 840, 840, 1398, 1398, 1398, 1398])
+        XCTAssertEqual(profile.minimumHeadway, 24) // ceil(1398/60)
+        let controlled = try XCTUnwrap(world.lineMaximumTrains(line.id))
+        XCTAssertEqual(controlled, 2) // floor(ceil(3324/60)/24)
+        XCTAssertEqual(world.lineTrainsInService(line.id, at: .peak), 2)
+        XCTAssertEqual(world.lineHeadway(line.id, at: .peak), 28) // ceil(56/2)
+        XCTAssertEqual(world.line(id: line.id)?.trainsInService.peak, 2)
+        try world.setTrafficControl(false)
+        let legacy = try XCTUnwrap(world.lineMaximumTrains(line.id))
+        XCTAssertEqual(legacy, 28)
+        XCTAssertLessThan(controlled, legacy)
+    }
+
     func testTheDemoRunsAtOnce() throws {
         var (_, world) = try Self.built.get()
         // A tick is a game minute at a new game's speed: an hour.

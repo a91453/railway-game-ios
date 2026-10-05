@@ -455,12 +455,18 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 存檔 9／schema 31 不變，既有三種 fixture 不改；新增手算、三車差分 case（原 18 case 不縮減，新增 case 18–23，在 campaigns-15–18）及實景猴硐另一股待避驗收（名義走廊的限制見決策 60）。
   - #116 已由作者合併；合併後安全 berth 全域成本／平手修正由 V4b 承接。StartSaveFlow Menu 觸控修正已由作者獨立合併 #119，V4b 不再帶該 diff。
 
-- **V4b — 作者已合併 #120；UI／分片修正驗證中，尚未完整驗收**（ARCHITECTURE 決策 61）：線路本線／交路共用逐段有向 walk 與月台偏好，不加進 ScheduledStop／Station。指定不可用退 V1／V2，整條授權才採用；接入名義進出、方向保護、派車與待避後續行。線路面板可逐向設定自動／月台／固定股道。
+- **V4b — 作者已合併 #120／#123；全套 Swift／Apple gate 通過，full-lane UI 仍待驗**（ARCHITECTURE 決策 61）：線路本線／交路共用逐段有向 walk 與月台偏好，不加進 ScheduledStop／Station。指定不可用退 V1／V2，整條授權才採用；接入名義進出、方向保護、派車與待避後續行。線路面板可逐向設定自動／月台／固定股道。
   - 存檔 10（9→10 缺省空偏好遷移）／schema 32，新增短 golden、v10 save、實體路徑 replay，既有三種 fixture 檔案未修改。
   - traffic.lineRoutes 4 個單列車 case×4 seeds×20 步＋2 個雙列車 case×4 seeds×45 步（680 步），比完整狀態與批次＝逐秒，campaigns-19；新增實景猴硐指定月台實際停靠與 GameSession 設定／清除驗收；新 UI 測試留 full lane。
   - 已整合 main `d2de3d5`（#117／#118／#119）。WIP 的 fastPassed 失敗已按手算事件窗口修正：精確驗證 478 秒進入 edge 3、600 秒抵達終點及慢車續行；CI 與 Apple 檢查結果見 PR，未執行的不稱為通過。
   - #120 首輪 Apple 跨模組存取失敗已修正；作者合併的是 50da302，後續新 UI test 的選項查找失敗，改明確 ID／觸控／等待並移獨立 full-lane class，修正後 full runtime 尚未驗證。Swift 全套 779 項曾通過，但 CI 時間需要重分配，完整保留 Economy 12 case 並分 campaigns-1／20，未拉 timeout 或縮減原操作；後續修正由同分支的另一 draft PR 驗證，最新狀態見 STAGE_V_HANDOFF.txt。
   - V4c → V4d → V4e 各一分支／draft PR，前階段由作者合併後從新 main 開工：單線容量；中途換向與倒進側線；地圖授權範圍與死結標示。
+
+- **V4c — 已實作，驗證中**（ARCHITECTURE 決策 62）：從作者合併 #123 後 main `18ff248` 開工；控制啟用時，以玩家 parallelTracks／可放最長列車的兩股交會站推導單線 block，完整名義往返占用推導最大 count／headway。本線與交路共用每天 block 86400 秒預算，保持原服務順序與雙線／關閉控制行為。來源未有直接最大公式，保守改寫與 gap 明列。
+  - SavedGame 10 不變，derived 無新 saved 欄位；schema 33，只新增 single-track-capacity golden，既有三種 fixture 不改。手算 281 秒／5 分鐘往返：無控制 2 列／3 分鐘，單線控制 1 列／5 分鐘；requested 4 保留。
+  - 新 `line.singleTrackCapacity` 6×4×24＝576 步，比每步完整模型／計畫／不變量／存讀與批次＝逐秒；新增平溪 demo 容量驗收，原實景驗收保留。
+  - #123 CI 全 780 項、iOS build／gate 與 localization 已通過；SaveMutation 732 秒，原 14 項完整保留分 campaigns-3／21，新容量 campaign 放22，不改 timeout。最新 checks／未驗 UI 限制見 handoff／PR。
+  - 作者合併此段後才從新 main 開 V4d（中途換向／倒進側線），再合併才做 V4e（地圖 movement authority／死結互等）。
 
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。
 - **T 留下的死結**：T 只保證不會「拿一半、等另一半」；單線上兩端的列車各自等對方、時刻表造成的循環等待、兩台站著的列車各自擋住對方，都由 V 解決（決策 32 第 15 點）。

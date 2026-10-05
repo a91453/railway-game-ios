@@ -10,7 +10,7 @@ import XCTest
 /// loads must keep every documented invariant, survive another save, and
 /// stay consistent under further commands (a refused command changes
 /// nothing, and nothing traps).
-final class SaveMutationTests: XCTestCase {
+class SaveMutationChecks: XCTestCase {
     private enum Step: CustomStringConvertible {
         case key(String)
         case index(Int)
@@ -113,7 +113,7 @@ final class SaveMutationTests: XCTestCase {
         return (random.chance(1, in: 2) ? nil : NSNumber(value: 1), "removed or replaced \(value)")
     }
 
-    func testMutatedSavesAreRefusedOrLoadIntoWorldsThatKeepEveryInvariant() throws {
+    func checkMutatedSavesAreRefusedOrLoadIntoWorldsThatKeepEveryInvariant() throws {
         var accepted = 0
         var refused = 0
         var commandsOnLoaded = 0
@@ -180,7 +180,7 @@ final class SaveMutationTests: XCTestCase {
     /// added. Whatever loads keeps every stop at a station the world has,
     /// with times that never go back, and further commands (timetable
     /// replacements included) stay atomic.
-    func testMutatedTimetablesAreRefusedOrLoadWithEveryStopAtAKnownStation() throws {
+    func checkMutatedTimetablesAreRefusedOrLoadWithEveryStopAtAKnownStation() throws {
         var accepted = 0
         var refused = 0
         var timetableMutations = 0
@@ -265,7 +265,7 @@ final class SaveMutationTests: XCTestCase {
     /// Whatever loads keeps every service consistent with its timetable,
     /// train and stations, survives another save, and stays so under further
     /// commands and advances, which never trap.
-    func testMutatedServicesAreRefusedOrLoadWithAConsistentService() throws {
+    func checkMutatedServicesAreRefusedOrLoadWithAConsistentService() throws {
         var accepted = 0
         var refused = 0
         var serviceMutations = 0
@@ -366,7 +366,7 @@ final class SaveMutationTests: XCTestCase {
     /// every period and cycle consistent with its timetable, survives
     /// another save, and stays so under further commands and advances,
     /// which never trap.
-    func testMutatedRepeatsAreRefusedOrLoadWithAConsistentService() throws {
+    func checkMutatedRepeatsAreRefusedOrLoadWithAConsistentService() throws {
         var accepted = 0
         var refused = 0
         var repeatMutations = 0
@@ -473,7 +473,7 @@ final class SaveMutationTests: XCTestCase {
     /// keeps every line consistent with the world's stations and the rules
     /// for stops, rates, windows, counts and days, survives another save,
     /// and stays so under further commands, which never trap.
-    func testMutatedLinesAreRefusedOrLoadWithConsistentLines() throws {
+    func checkMutatedLinesAreRefusedOrLoadWithConsistentLines() throws {
         var accepted = 0
         var refused = 0
         var lineMutations = 0
@@ -553,7 +553,7 @@ final class SaveMutationTests: XCTestCase {
     /// trains, targets and last dispatch and in their trains' timetables and
     /// services, are refused or load into worlds that keep every invariant
     /// and keep dispatching without breaking one.
-    func testMutatedDispatchIsRefusedOrLoadsConsistently() throws {
+    func checkMutatedDispatchIsRefusedOrLoadsConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -632,7 +632,7 @@ final class SaveMutationTests: XCTestCase {
     /// patterns (their calls, counts, targets, trains and last dispatch),
     /// are refused or load into worlds that keep every invariant and keep
     /// dispatching without breaking one.
-    func testMutatedPatternsAreRefusedOrLoadConsistently() throws {
+    func checkMutatedPatternsAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -709,7 +709,7 @@ final class SaveMutationTests: XCTestCase {
 
     /// Stage S3 (decision 29): mutations aimed at the track network, the
     /// positions of trains on it and their bodies and paths.
-    func testMutatedNetworksAreRefusedOrLoadConsistently() throws {
+    func checkMutatedNetworksAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -784,7 +784,7 @@ final class SaveMutationTests: XCTestCase {
     /// railway lives: refused, or loaded as a world that keeps every
     /// invariant (grades, structures, clearance, platforms), survives saving
     /// and keeps them under further commands.
-    func testMutatedThreeDimensionalNetworksAreRefusedOrLoadConsistently() throws {
+    func checkMutatedThreeDimensionalNetworksAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -861,7 +861,7 @@ final class SaveMutationTests: XCTestCase {
     /// invariant (a travelling service's path ends where it stops for its
     /// next call, a waiting one stands at its station), survives saving
     /// and keeps them under further commands.
-    func testMutatedNetworkServicesAreRefusedOrLoadConsistently() throws {
+    func checkMutatedNetworkServicesAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -941,7 +941,7 @@ final class SaveMutationTests: XCTestCase {
     /// and edges); the flag is also flipped. Whatever loads must keep every
     /// invariant, traffic control's among them (no two trains hold the same
     /// track, a train on its way has a reservation, one standing has none).
-    func testMutatedTrafficControlIsRefusedOrLoadsConsistently() throws {
+    func checkMutatedTrafficControlIsRefusedOrLoadsConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -1019,7 +1019,7 @@ final class SaveMutationTests: XCTestCase {
     /// G1a (decision 34): a save's passengers either fail to load or load
     /// into a world where every passenger is accounted for, every group
     /// waits for a trip a line still takes, and play goes on keeping it so.
-    func testMutatedPassengersAreRefusedOrLoadConsistently() throws {
+    func checkMutatedPassengersAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -1088,7 +1088,7 @@ final class SaveMutationTests: XCTestCase {
     /// a world where every passenger is accounted for, no train carries
     /// more than it takes and every rider is bound for a stop ahead, and
     /// play goes on keeping it so.
-    func testMutatedRidersAreRefusedOrLoadConsistently() throws {
+    func checkMutatedRidersAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -1164,7 +1164,7 @@ final class SaveMutationTests: XCTestCase {
     /// loaded as a world that keeps every invariant (open accounts, whole
     /// dollars, rows shaped as written, days ascending) and keeps settling
     /// under further commands without breaking one.
-    func testMutatedAccountsAreRefusedOrLoadConsistently() throws {
+    func checkMutatedAccountsAreRefusedOrLoadConsistently() throws {
         var accepted = 0
         var refused = 0
         var aimed = 0
@@ -1233,4 +1233,26 @@ final class SaveMutationTests: XCTestCase {
         assertVolume(aimed > 150, "only \(aimed) mutations aimed at the accounts")
         assertVolume(ledgersLoaded > 30, "only \(ledgersLoaded) worlds with a ledger loaded")
     }
+}
+
+// All original cases, seeds, mutations and invariant checks are preserved.
+final class SaveMutationTests: SaveMutationChecks {
+    func testMutatedSavesAreRefusedOrLoadIntoWorldsThatKeepEveryInvariant() throws { try checkMutatedSavesAreRefusedOrLoadIntoWorldsThatKeepEveryInvariant() }
+    func testMutatedTimetablesAreRefusedOrLoadWithEveryStopAtAKnownStation() throws { try checkMutatedTimetablesAreRefusedOrLoadWithEveryStopAtAKnownStation() }
+    func testMutatedServicesAreRefusedOrLoadWithAConsistentService() throws { try checkMutatedServicesAreRefusedOrLoadWithAConsistentService() }
+    func testMutatedNetworksAreRefusedOrLoadConsistently() throws { try checkMutatedNetworksAreRefusedOrLoadConsistently() }
+    func testMutatedThreeDimensionalNetworksAreRefusedOrLoadConsistently() throws { try checkMutatedThreeDimensionalNetworksAreRefusedOrLoadConsistently() }
+    func testMutatedTrafficControlIsRefusedOrLoadsConsistently() throws { try checkMutatedTrafficControlIsRefusedOrLoadsConsistently() }
+    func testMutatedRidersAreRefusedOrLoadConsistently() throws { try checkMutatedRidersAreRefusedOrLoadConsistently() }
+}
+
+// All original cases, seeds, mutations and invariant checks are preserved.
+final class SaveMutationSecondHalfTests: SaveMutationChecks {
+    func testMutatedRepeatsAreRefusedOrLoadWithAConsistentService() throws { try checkMutatedRepeatsAreRefusedOrLoadWithAConsistentService() }
+    func testMutatedLinesAreRefusedOrLoadWithConsistentLines() throws { try checkMutatedLinesAreRefusedOrLoadWithConsistentLines() }
+    func testMutatedDispatchIsRefusedOrLoadsConsistently() throws { try checkMutatedDispatchIsRefusedOrLoadsConsistently() }
+    func testMutatedPatternsAreRefusedOrLoadConsistently() throws { try checkMutatedPatternsAreRefusedOrLoadConsistently() }
+    func testMutatedNetworkServicesAreRefusedOrLoadConsistently() throws { try checkMutatedNetworkServicesAreRefusedOrLoadConsistently() }
+    func testMutatedPassengersAreRefusedOrLoadConsistently() throws { try checkMutatedPassengersAreRefusedOrLoadConsistently() }
+    func testMutatedAccountsAreRefusedOrLoadConsistently() throws { try checkMutatedAccountsAreRefusedOrLoadConsistently() }
 }

@@ -1,3 +1,27 @@
+Stage V 最新接手狀態：2026-10-05；V4c 單線容量
+
+作者已合併 #120、#123，agent 未合併／未開 auto-merge。#123 head 5b08c84 的 CI 37321507070 全部 780 項／21 shards（含 rest）零 failure；iOS 37321506468 與 localization 37321506543 success。新選路 UI 修正只 full lane，runtime／實機仍 UNVERIFIED，gate success 不能代替它。#123 SaveMutation 全 14 項通過但 shard 732 秒，V4c 保留原全部方法內容／seeds／mutations／量下限分成兩個 7 項 class 在 campaigns-3／21，timeout 不改。
+
+V4c 從 main 18ff248 開分支 codex/stage-v4c-single-track-capacity，工作目錄 /workspace/railway-game-ios-v4c。作者又合併 #124 人口資料，main 已更新 91d5d95；已整合並重建驗證。原 V4b 分支工作樹保留 /workspace/railway-game-ios。四源重新查核固定私有 25229af，不用遠端新版或 ddff2be；clean READ_ME／migration §7 及 GTA READ_ME／source 已讀，沒有私人資料／金鑰提交。
+
+V4c 決策62：控制啟用才按 parallelTracks=1／可放最長列車的兩條不同平台邊推導 meet-to-meet block。各服務名義完整往返占用 B，G=max(2,ceil(max B/60))，最大一般 count=max(1,floor(R/G))；服務按本線→交路共用 ceil(B×1440/H)≤86400 秒／日，部分交路占整個共用 block，保留原720／日上限。來源只有實際交會窗口／tracks／1.5min headway，沒有可直接移植的單線最大公式；保守30秒上界、快車整跑段跨多block計費、每線名義穩態限制與 adapted／gap 全列在決策與 mapping。環線合計兩向 B，容不下一對可為0；外向不可達0。沒有saved新欄位，版本10不變；schema33新 golden（281秒／5分鐘；控制關閉2列/3分/480，啟用1列/5分/288，request4不變），舊三種fixture與README均不改。
+
+獨立 ReferenceLineCapacity 用 DFS、signed Run、1440次餘數算術及倒數allocation，不呼叫 GameWorld／production capacity helpers。新 line.singleTrackCapacity 6case×4seed×24步=576，原所有campaign保留。起始第二列放同股時遇合法trackReserved／trainsShareTrack，已修成兩端月台先放車再取得authority；不是放寬產品安全。最後 campaign22 VERIFIED 576步、digest E974A083D5858C78、24.419秒，coverage pass，/workspace/scratch/v4c-campaign22-final.log；之後若核心再調整需重跑。第一批相關filter VERIFIED 84項、1既有record skip、0fail，/workspace/scratch/v4c-focused-first.log；新5unit+golden+oracle8項 pass，/workspace/scratch/v4c-new-golden-demo.log。平溪新驗收另以完整方法名跑過，/workspace/scratch/v4c-demo-capacity.log（7.537秒）；該demo資料整合#124後與最後新增ring test要再驗。原短filter沒有選到demo，不把它算入8項。warnings-errors build 與 shard selftest 已通過；最新check／CI狀態見 PR，不把舊head成功算到新head。
+
+最後新增環線手算發現 parallelTracks 把同一圈的兩弧回傳2（不是實體雙線），已補 production 兩向lap正長度head span 的共用判定；ReferenceWorld 另用signed Run絕對區間判定，無production helper。唯讀ring-line geometry兩向各968秒／17分、共用1936秒→33分，paired最大0；測試比完整模型。修正前新增測試5assertion失敗，不能隱藏；修正後需看最新focused／campaign22／CI。SaveMutation第二半7項417.403秒本身通過，但在該runner執行中修改腳本註解使bash後段游標偏移、最後syntax error；未把那次runner稱綠燈，固定腳本通過bash-n／selftest後重跑 /workspace/scratch/v4c-campaign21-final.log。
+
+V4c 最後本機 VERIFIED：整合main 91d5d95後Swift6.4 warnings-as-errors build /workspace/scratch/v4c-build-ring-final.log（10.74秒）；完整相關filter /workspace/scratch/v4c-focused-final.log，114 unique tests（GamePresentation28＋GameCore86）、1既有record skip、0fail，含新ring／平溪、原demo全部驗收、原golden match／portable、ReferenceWorld所有golden、存檔／replay與原fastPassed。最後campaign22 /workspace/scratch/v4c-campaign22-verified.log，576步、24.080秒、digest E974A083D5858C78，coverage exit0。SaveMutation兩half runner最後325／418秒，各7項，第二半417.389秒；腳本固定後exit0、coverage pass，原14方法內容僅改class／method名稱、byte-for-byte比較通過。bash-n／shardselftest／git diff --check及舊fixtures／README unchanged皆VERIFIED。受容量影響的既有campaigns-19再跑，/workspace/scratch/v4c-campaign19.log，未結束前UNVERIFIED。V4c全套CI／macOS待draft PR觸發並追最新head，full-lane UI／實機仍UNVERIFIED；不要把舊head或本機結果當全CI通過。
+
+PR125最新CI追蹤：第一個head f77f872的CI37332013997，rest於GoldenScenarioTests.testUnsupportedSchemaVersionIsRejected失敗；schema33已支援，該舊測試仍將33列未知。已將最後未知版本改GoldenScenario.schemaVersion+1（34），保留所有1–29與typed錯誤斷言，不改fixture或產品decoder。Swift6.4 warnings-errors build VERIFIED /workspace/scratch/v4c-build-ci-fix.log（4.11秒），未知版本／golden match／portable／ReferenceWorld所有golden四項 VERIFIED /workspace/scratch/v4c-ci-fix-focused.log（9.608秒）。新head全部CI仍需追，不把前head成功套用。campaign19最後5項452.213秒／runner453、coverage exit0 VERIFIED。
+另查作者main91d5d95 push full-lane iOS37323656529：build/drift/iPad通過，但新LineRoutePreferenceUITests在ToolbarSmokeTests.swift:93等不到line.route.choice.-1.0.1.0，job111808783535 logs為VERIFIED failure；它不在PR gate，V4c未改這個test。作者合併後先追最新main full lane並處理該已知選項定位／觸控failure；不能再當純未驗或用gate綠燈證明已過。實機仍UNVERIFIED。
+作者最新指示：此agent完成V4c並追CI到無紅燈，作者合併後寫完整接手prompt給下一個Codex做V4d/V4e；此agent不開V4d。最新完整接手文件另在/workspace/stage-v-handoff.txt，最終版與prompt會發布到PR125body，包含作者合併後main SHA／最新CI；repo下方pending段以最新PRbody／最終接手文件為準。
+
+後續 prompt（可直接貼）
+請先讀本文件最新節、CLAUDE.md、AGENTS.md，保留所有工作樹，fetch最新main／V4c分支。延續作者2026-10-05 Stage V授權（取代AGENTS分工）可改GameCore、獨立模型、新fixtures／版本／schema、決策62起、ROADMAP／mapping；其餘規範照舊。先追V4c最新head draft PR全部CI，紅燈修好並push，不merge、不auto-merge。Swift6.4 only；build warnings-errors／相關filter／新增與慢shards本機，全套交CI；約560秒/shard、20min/job，不縮舊campaign或拉timeout。既有GoldenScenarios／SaveFixtures／ReplayFixtures含README不改；不碰testflight.yml或金鑰／私人資料。四源每階段固定25229af，先clean READ_ME／migration§7與GTA READ_ME／source，列四源→目標／倍率／分類／必要調整／gap。V4c是名義保守公式，不稱最優或真實台鐵容量；UI新選路full runtime仍UNVERIFIED。
+只有作者合併V4c後才從新main開V4d：中途站換向／V2倒入側線讓路，查turnbacks.js同來源節點同股反向、林鐵zigzag、timing.turnbackProgress、RailwayCore reverse penalty，明確dwell及原子預約語義；手算＋獨立模型＋完整每步/batch=second campaign＋存讀＋無控制舊行為＋RealWorldDemo。作者合併V4d後才開V4e：App／GamePresentation地圖每車movement authority與死結互等位置，保留文字，缺query才補Core＋測試，新UI只full lane。agent不可替作者合併。
+
+下方 V4b 與原始交付為歷史記錄；舊 pending／失敗狀態以本最新節及最新 PR head 為準。
+
 Stage V 接手更新（2026-10-05；本節取代下方歷史狀態）
 
 工作途中作者已合併 #120（head 50da302）、#121 inventory 更新與 #122 實景車站資料研究；最新 main／本機 main 均更新至 ed3dad20f0ae0c67713a0f7a9efab7445aec3cbc。agent 未合併。UI runtime／分片時間修正 487188c 是合併 #120 後才發布，尚不在 main；同工作分支再整合 ed3dad2，只剩六個後續修正檔，另開 draft PR 驗證。下方提到 #120 draft 是其合併前歷史。#121／#122 文件已閱讀並保留；它們使用 2db0c5a 的研究不取代本階段作者指定的私有 25229af。

@@ -2779,6 +2779,23 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **指定待避股的手算事件窗口**：保留的 WIP `fastPassed` failure 是 450 秒觀察窗口早於事件，並非快車阻塞。W→F 距離 `(8192−1024)+16384+8192+1536=33280` 單位，出發 180 秒、抵達 600 秒，跑段 420 秒。無惰行，a=1500、b=2500（換成單位／秒²為 80/3、400/9），由 `L=vT−v²(1/a+1/b)/2` 得巡航速度約 79.69172 單位／秒。edge 3 起點距離 23552，時刻 `180+23552/v+v/(2a)=477.033…`，首次整秒位置為 478；M 名義通過 374，實際通過 388（與原 V3 手算一致），不能只拿名義等待解除證明實際越行。測試改驗精確的 478 秒、600 秒終點到達和慢車續行，保留完整獨立模型、批次＝逐秒、股道佔用與存讀比對。沒有變更 production 規則或既有 fixture 值。
 
+### 62. 由單線與交會站推導服務容量（Stage V4c）
+
+2026-10-05；從作者合併 V4b／修正 #120、#123 後的 main `18ff248` 開分支。四源固定私有 `25229af`。網站 `tra_track_sections.json`／`traSectionKey` 提供站間 tracks；`inferMeetPassTimes`／`inferMeetRun` 檢查對向單線窗口與交會餘裕。Ci 的 `MIN_HEADWAY_MINUTES=1.5`／`enforceMinHeadway` 提供最短班距及按班距限制列車的概念。**四源沒有可直接移植的單線最大列車數公式**；以下是本專案的保守名義容量公式，列 adapted／gap，不宣稱來源原公式或最優排點。
+
+1. **啟用範圍**：只在交通控制啟用時套用。`parallelTracks == 1` 的相鄰站間是單線；0 股是不可達，不當成可用單線，≥2 股維持原容量；環線另比兩向名義 lap 的正長度實體 head span，兩條繞圈弧線不能充當上下行兩股，若兩向同一區間重疊則列單線。方向未知也不能證明 paired 容量。關閉控制、純雙線保留決策 22／24／49 的結果與排序。由 RailwayNetwork、TrackPlatform、V1 berths 推導，不以台鐵站名、OSM id 或來源 tracks 表當玩家路網規則。
+2. **交會與資源**：同站有至少兩條不同實體平台邊，均容得下該線全部 roster 最長列車，並可無換向接到前後站，才是可用交會點。兩個同邊停點不算兩股。相鄰單線在不能交會的站合成一個 meet-to-meet block；雙線或可交會站切開。環線首尾在 stop 0 不能交會時相接。取拓撲、可達與全列 fit；當下占用由既有實際預約處理，不能把暫時空股當永久容量。
+3. **每趟占用 B（秒）**：對各服務的完整名義往返，累加跨該 block 的 `LineJourney` 跑段秒數；不能交會的已停靠站加 dwell（端點一次 120 秒、中間去回各 60 秒）。到達服務跨度內的可交會 block 端點，各加 30 秒上界餘裕。來源 m 是端點 30 秒或 min(30,floor(dwell/3))；這裡採保守 30 秒上界，非逐事件 faithful 翻譯。未到達的遠方交會點不收費。快車略過交會站時，一段完整跑段時間計入它跨的每個 block，不創造新停站或猜線性中途時間；因此可能低估可排容量。部分交路占用同一未切 block 的所有段，不能把沒有交會點的相鄰區間分給互相獨立的交路。
+4. **單一服務**：`G=max(2,ceil(max(B)/60))` 分鐘；2 是原 Ci 1.5 min 在遊戲整分鐘 dispatcher 的向上取整，沒有改為小於來源 90 秒。來回 `R=ceil(roundTripSeconds/60)`，一般線最大 `max(1,floor(R/G))`；有效 count 保持原本 requested／target 決策，再受最大限制，`H=max(target?,ceil(R/N))`。requested 設定不被覆寫。單車名義往返不可能超出 R；沒有 passing endpoint 的整條單線 B=完整往返秒數，仍可跑一列。
+5. **服務共用預算**：每個 block 每天 86400 秒，服務按既有本線→交路索引順序使用 `ceil(B*1440/H)`。本線優先和平手不變；用二分找不超過 wanted 且可共用的 count，沒有餘額可為 0。保留原每方向 720 列／日的 segment load 限制，對所有 block 段檢查占用，即使該服務只覆蓋部分站序。不能用 `ceil(1440/H)*B` 把跨午夜的一趟全部重複算入每天。UInt64 full-width 乘除、checked／飽和加法避免 Int64 溢位；預算成立後才累加。
+6. **環線**：內外向名義 lap 分別推導，block 的 B 合計兩向跑段與各不能交會站兩次 dwell。每向最大 `floor(innerLapMinutes/G)`，總數乘 2；無法容納一對時可為 0，不能硬塞兩列到無交會的整圈單線。外向不可達也是零 paired 容量。新手算環線沿用唯讀舊 ring geometry：四段各182秒＋四站60秒，內外lap皆968秒／17分；兩向同圈合計1936秒、G=33分，floor(17/33)=0每向，不能強迫至少一對。獨立模型以自己正反Run絕對區間交叉比對，與完整世界一致。純雙線仍沿原 decision 49，公共 lineJourney 仍回內向 lap。
+7. **權威與存檔**：查詢、load 及實際 dispatch 使用同公式；一次 advance 的 DispatchMemo 暫存不可變拓撲／名義 profile，結束即丟，無跨指令／存讀權威 cache。執行中班次仍按既有時刻表與 T/U/V 原子授權跑完，不撤銷半條路。沒有新增儲存欄位，SavedGame **10 不變**，不需要格式遷移或新 save fixture；每步存讀驗證 derived 答案一致。golden 行為契約升 **33**，繼續讀 30／31／32，只新增 `single-track-capacity.json`；所有既有 GoldenScenarios／SaveFixtures／ReplayFixtures（含 README）不改。
+8. **手算與新 golden**：3072／3584 單位的跑段為 20／21 秒，加兩端各 120 秒，Rsec=B=281、R=5、G=5。request=4 不變；控制關閉最大／有效列車=2、H=ceil(5/2)=3、load=ceil(1440/3)=480；啟用後最大／有效列車=1、H=5、load=288，占用 ceil(281×1440/5)=80928 秒／日。新 fixture 的每個變值均由這些式子手填，不改舊期望值。
+9. **獨立驗證**：ReferenceLineCapacity 自己以 signed Run／berth 可達、DFS components 推導 block，用 1440 次整數餘數累加算 utilization，服務 allocation 倒數搜尋，無 GameWorld 或 production capacity helper 呼叫。新增 `line.singleTrackCapacity` 6 case×4 seeds×24 步＝576 步，含有／無交會月台、本線／快車、控制開關、requested count／逐段偏好變更、雙端列車。每步完整狀態、名義計畫、授權／held／deadlock、不變量、存讀；advance 比批次＝逐秒。平溪實景手算：跑段序列 208/140/178/152/115/126/87/115/117/87/126/115/152/178/140/208 秒，往返 3324 秒取整56分。四個 block 分別 2×208+60=476、2×140+60=340、2×(178+152)+120+60=840、888+4×120+30=1398秒；G=24、N=floor(56/24)=2，原 request2 的 H=28分，控制關閉最大28列。新增容量驗收並保留原實景運行驗收；四源映射與 VERIFIED／UNVERIFIED 狀態見 mapping／PR／handoff。
+10. **CI 時間**：#123 的全部 780 項已通過，但 SaveMutation 732 秒超過約 560 秒目標。原 14 項方法的全部 seeds／cases／mutations／量下限／assertions 不變，分成兩個 7 項 class 在 campaigns-3／21；新容量 campaign 放 campaigns-22。20 分鐘 timeout 不改，分區／coverage／失敗保護仍由 shard runner 驗證。全套留 CI。
+
+**限制**：這是每線共用 block 的名義穩態上界，不是跨線全域最佳時刻表或即時可取得授權的保證；共享同股的不同線路、誤點與實際占用仍由原預約／排定等待保護。快車整段多 block 計費與固定 30 秒上界刻意保守；不把保守估計包裝成現實台鐵最大容量。clean pack（先 READ_ME／migration §7）及 Taipei GTA（先 READ_ME／source）沒有可讀的單線容量公式，列 gap。下一段中途換向／倒入側線 V4d 仍須作者先合併 V4c。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^20 單位，16,384 公尺，E1 起是新遊戲的大小）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

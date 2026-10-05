@@ -75,7 +75,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         XCTAssertGreaterThan(steps, 300, "the fixtures should exercise the model")
     }
 
-    private static func apply(_ command: ScenarioCommand, to model: inout ReferenceWorld) -> StepOutcome {
+    static func apply(_ command: ScenarioCommand, to model: inout ReferenceWorld) -> StepOutcome {
         var error: GameError?
         switch command {
         case .buildStationAt(let name, let point): error = model.buildStation(named: name, at: point)
