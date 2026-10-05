@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-19   the long property, differential and mutation
+#   campaigns-1 .. campaigns-20   the long property, differential and mutation
 #                                campaigns, named below
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -100,18 +100,27 @@ set -euo pipefail
 # Stage V4b adds campaigns-19: LineRoutePreferencePropertyTests, 18.2 s
 # locally on Swift 6.4 (680 full-state/batch-second steps). Existing campaigns
 # are unchanged. All jobs keep their 20-minute timeout.
+# V4b CI run 37316105112: campaigns-5 took 624 s (LineDispatch 488,
+# Timetable 135), campaigns-8 586 s (ServiceLine 305, NetworkService 280).
+# Put NetworkService/Timetable beside the 20 s new campaign (~435 s),
+# and the smaller campaigns from campaigns-1 beside occupied routing.
+# campaigns-1 took 976 s, including Economy 657 s, ContinuousTrack 145 s,
+# Kernel 115 s, Passenger 58 s. Economy keeps all 12 cases/seed, split at
+# case 6 into campaigns-1/20; the halves' event-volume minima sum to the
+# original bound. campaigns-10 carries the smaller classes.
+# This preserves all original cases, operations and checks without timeout changes.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
+    campaigns-1) echo "EconomyPropertyTests" ;;
     campaigns-2) echo "BoardingPropertyTests" ;;
     campaigns-3) echo "SaveMutationTests" ;;
     campaigns-4) echo "LinePatternPropertyTests" ;;
-    campaigns-5) echo "LineDispatchPropertyTests TimetablePropertyTests" ;;
+    campaigns-5) echo "LineDispatchPropertyTests" ;;
     campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
     campaigns-7) echo "ServiceRepeatingPropertyTests" ;;
-    campaigns-8) echo "NetworkServicePropertyTests ServiceLinePropertyTests" ;;
+    campaigns-8) echo "ServiceLinePropertyTests" ;;
     campaigns-9) echo "TrafficControlPropertyTests" ;;
-    campaigns-10) echo "OccupiedRoutingPropertyTests" ;;
+    campaigns-10) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
     campaigns-11) echo "DeadlockPropertyTests" ;;
     campaigns-12) echo "ScheduledTrafficPropertyTests" ;;
     campaigns-13) echo "TrafficFollowingPropertyTests" ;;
@@ -120,11 +129,12 @@ classes_of() {
     campaigns-16) echo "ScheduledOvertakeTrackMiddlePropertyTests" ;;
     campaigns-17) echo "ScheduledOvertakeTrackLastPropertyTests" ;;
     campaigns-18) echo "ScheduledOvertakeTrackFinalPropertyTests" ;;
-    campaigns-19) echo "LineRoutePreferencePropertyTests" ;;
+    campaigns-19) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests" ;;
+    campaigns-20) echo "EconomySecondHalfPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""

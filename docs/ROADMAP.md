@@ -459,6 +459,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 存檔 10（9→10 缺省空偏好遷移）／schema 32，新增短 golden、v10 save、實體路徑 replay，既有三種 fixture 檔案未修改。
   - traffic.lineRoutes 4 個單列車 case×4 seeds×20 步＋2 個雙列車 case×4 seeds×45 步（680 步），比完整狀態與批次＝逐秒，campaigns-19；新增實景猴硐指定月台實際停靠與 GameSession 設定／清除驗收；新 UI 測試留 full lane。
   - 已整合 main `d2de3d5`（#117／#118／#119）。WIP 的 fastPassed 失敗已按手算事件窗口修正：精確驗證 478 秒進入 edge 3、600 秒抵達終點及慢車續行；CI 與 Apple 檢查結果見 PR，未執行的不稱為通過。
+  - #120 首輪 Apple 跨模組存取失敗已修正；後續新 UI test 的選項查找失敗，改明確 ID／觸控／等待並移獨立 full-lane class，修正後 full runtime 尚未驗證。Swift 全套 779 項曾通過，但 CI 時間需要重分配，完整保留 Economy 12 case 並分 campaigns-1／20，未拉 timeout 或縮減原操作。最新驗證見 #120。
   - V4c → V4d → V4e 各一分支／draft PR，前階段由作者合併後從新 main 開工：單線容量；中途換向與倒進側線；地圖授權範圍與死結標示。
 
 - **衝突用排定的等待解決**：在某一站多停，讓對向或後面的車先過，而不是讓列車互穿。

@@ -79,11 +79,20 @@ final class EconomyPropertyTests: XCTestCase {
     }
 
     func testTheEconomyMatchesTheReferenceAndBatchesMatchSingleSteps() throws {
+        try Self.check(cases: 0..<6)
+    }
+
+    // The full original 0..<12 range runs once across the two classes.
+    // Seed/case IDs and every operation/assertion remain the original ones.
+    static func check(cases: Range<Int>) throws {
+        var selected = 0
         var counts: [String: Int] = [:]
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign("economy.differential", cases: 12) { c in
+            guard cases.contains(c.index) else { return }
+            selected += 1
             let (setup, operations) = try Self.generate(&c, operations: 60)
             c.note("setup: \(setup.summary), second \(setup.seconds), \(setup.speed)")
 
@@ -127,13 +136,17 @@ final class EconomyPropertyTests: XCTestCase {
             digest.add(String(decoding: data, as: UTF8.self))
         }
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
-        print("[digest] economy.differential \(digest.hex) (\(summary))")
-        assertVolume(ran == 12 * PropertySeeds.active.count, "every case should run")
+        print("[digest] economy.differential cases \(cases.lowerBound)-\(cases.upperBound - 1) \(digest.hex) (\(summary))")
+        assertVolume(ran == 12 * PropertySeeds.active.count, "the harness visits every original case ID")
+        assertVolume(selected == cases.count * PropertySeeds.active.count, "every case in this half should run")
         for (event, least) in [
             ("hours settled", 200), ("hours with fares", 60), ("days settled", 20), ("fare rules set", 60), ("fare rules refused", 5),
             ("fare baseline set", 20), ("fare baseline refused", 2), ("cars paid for", 10), ("cars beyond the balance", 2), ("below zero", 10),
         ] {
-            assertVolume((counts[event] ?? 0) >= least, "too few \(event): \(summary)")
+            // The two halves' minima sum to the original full-campaign
+            // bound; retain every original case and per-operation check.
+            let minimum = cases.lowerBound == 0 ? least / 2 : (least + 1) / 2
+            assertVolume((counts[event] ?? 0) >= minimum, "too few \(event): \(summary)")
         }
     }
 
@@ -144,5 +157,11 @@ final class EconomyPropertyTests: XCTestCase {
         counts["hours with fares", default: 0] += new.count { $0.kind == .hourlyNet && $0.breakdown[0].amount > .zero }
         counts["days settled", default: 0] += new.count { $0.kind == .dailyStaff }
         if after.economy.balance < .zero, before.economy.balance >= .zero { counts["below zero", default: 0] += 1 }
+    }
+}
+
+final class EconomySecondHalfPropertyTests: XCTestCase {
+    func testTheEconomyMatchesTheReferenceAndBatchesMatchSingleSteps() throws {
+        try EconomyPropertyTests.check(cases: 6..<12)
     }
 }
