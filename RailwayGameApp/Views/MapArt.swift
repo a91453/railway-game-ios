@@ -31,6 +31,8 @@ enum MapArt {
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
         drawsLand: Bool = true,
+        layers: MapLayerPreferences = .default,
+        waitingCounts: [StationID: Int64] = [:],
         in context: GraphicsContext
     ) {
         let referenceSize = projection.referenceSize
@@ -49,10 +51,21 @@ enum MapArt {
         }
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
+        if layers.showsCatchmentRings {
+            drawCatchmentRings(world, projection: projection, in: context)
+        }
+
         drawNetwork(world, projection: projection, cached: edges, in: context)
         drawAuthorities(traffic, selectedTrainID: selectedTrainID, projection: projection, in: context)
         for station in world.stations {
-            drawPointStation(station, isSelected: station.id == selectedStationID, projection: projection, in: context)
+            drawPointStation(
+                station,
+                isSelected: station.id == selectedStationID,
+                layers: layers,
+                waitingCount: waitingCounts[station.id] ?? 0,
+                projection: projection,
+                in: context
+            )
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
         drawWaits(traffic, projection: projection, in: context)
@@ -285,7 +298,43 @@ enum MapArt {
         context.stroke(dot, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)), lineWidth: isSelected ? 3 : 1.5)
     }
 
-    private static func drawPointStation(_ station: Station, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
+    private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
+        let radiusWorldUnits = MapLayers.catchmentRadiusWorldUnits
+        let screenRadius = MapLayers.catchmentScreenRadius(pointsPerUnit: projection.pointsPerUnit)
+        guard screenRadius > 1 else { return }
+
+        let region = drawingRegion(projection)
+        for station in world.stations {
+            let stationRegion = WorldRegion(
+                minX: Double(station.location.x) - radiusWorldUnits,
+                minY: Double(station.location.y) - radiusWorldUnits,
+                maxX: Double(station.location.x) + radiusWorldUnits,
+                maxY: Double(station.location.y) + radiusWorldUnits
+            )
+            guard region.intersects(stationRegion) else { continue }
+
+            let center = projection.screenPoint(of: station.location)
+            let circle = disc(at: center, radius: screenRadius)
+
+            // Overlapping rings compound naturally with translucent fill
+            context.fill(circle, with: .color(Palette.station.opacity(0.08)))
+            let strokeWidth = max(1.0, min(2.0, projection.pointsPerUnit * 1.5))
+            context.stroke(
+                circle,
+                with: .color(Palette.station.opacity(0.35)),
+                style: StrokeStyle(lineWidth: strokeWidth, dash: [6, 4])
+            )
+        }
+    }
+
+    private static func drawPointStation(
+        _ station: Station,
+        isSelected: Bool,
+        layers: MapLayerPreferences,
+        waitingCount: Int64,
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
         let center = projection.screenPoint(of: station.location)
         let radius = max(5, projection.referenceSize * 0.32)
         let badgeRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
@@ -295,9 +344,9 @@ enum MapArt {
         // line under 48 high at the largest text size, so this bound needs no
         // measuring.
         let reach = max(radius + 6, Double(station.name.count) * 12)
-        let largest = CGRect(x: center.x - reach, y: center.y - radius - 6, width: reach * 2, height: radius * 2 + 10 + 48)
+        let largest = CGRect(x: center.x - reach, y: center.y - radius - 20, width: reach * 2, height: radius * 2 + 20 + 48)
         guard largest.intersects(context.clipBoundingRect) else { return }
-        let name = projection.detail == .full
+        let name = (projection.detail == .full && layers.showsStationNames)
             ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.rail)) : nil
         let nameSize = name?.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity)) ?? .zero
         let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
@@ -313,9 +362,29 @@ enum MapArt {
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
             context.stroke(ring, with: .color(.accentColor), lineWidth: 3)
         }
+        drawStationSymbol(at: center, size: radius * 1.05, context: context)
         if let name {
-            drawStationSymbol(at: center, size: radius * 1.05, context: context)
             context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
+        }
+
+        // Waiting passengers count badge
+        if layers.showsWaitingCounts && projection.detail == .full {
+            if waitingCount > 0 {
+                let countText = context.resolve(
+                    Text(verbatim: "\(waitingCount)")
+                        .font(.system(size: max(8, min(11, radius * 0.7)), weight: .bold))
+                        .foregroundStyle(Color.white)
+                )
+                let countSize = countText.measure(in: CGSize(width: 120, height: 24))
+                let pillWidth = max(countSize.width + 6, radius * 1.5)
+                let pillHeight = max(countSize.height + 2, 11)
+                let pillY = center.y - radius - pillHeight / 2 - 2
+                let pillRect = CGRect(x: center.x - pillWidth / 2, y: pillY - pillHeight / 2, width: pillWidth, height: pillHeight)
+                let pillPath = Path(roundedRect: pillRect, cornerRadius: pillHeight / 2)
+                context.fill(pillPath, with: .color(Palette.metroBlue))
+                context.stroke(pillPath, with: .color(Color(uiColor: .systemBackground)), lineWidth: 1)
+                context.draw(countText, at: CGPoint(x: center.x, y: pillY), anchor: .center)
+            }
         }
     }
 

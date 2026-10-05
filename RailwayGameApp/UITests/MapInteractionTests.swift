@@ -142,4 +142,39 @@ final class MapInteractionTests: XCTestCase {
         app.buttons["Zoom out"].tap()
         XCTAssertTrue(zoomIn.isEnabled)
     }
+
+    func testMapLayersSheetTogglesAndDismisses() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let demoMap = app.buttons["start.demoMap"]
+        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
+        demoMap.tap()
+
+        let layersButton = app.buttons["map.layers"]
+        XCTAssertTrue(layersButton.waitForExistence(timeout: 10), "Map layers button must be visible on the map")
+        layersButton.tap()
+
+        let stationNamesToggle = app.switches["layer.stationNames"]
+        XCTAssertTrue(stationNamesToggle.waitForExistence(timeout: 5), "Station names toggle must exist in MapLayerSheet")
+
+        let waitingCountsToggle = app.switches["layer.waitingCounts"]
+        XCTAssertTrue(waitingCountsToggle.waitForExistence(timeout: 5), "Waiting counts toggle must exist in MapLayerSheet")
+
+        let catchmentRingsToggle = app.switches["layer.catchmentRings"]
+        XCTAssertTrue(catchmentRingsToggle.waitForExistence(timeout: 5), "Catchment rings toggle must exist in MapLayerSheet")
+
+        let heatmapToggle = app.switches["layer.populationHeatmap"]
+        XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap toggle must exist")
+        XCTAssertFalse(heatmapToggle.isEnabled, "Population heatmap toggle must be disabled (Phase 2)")
+
+        let doneButton = app.buttons["layer.done"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        doneButton.tap()
+
+        XCTAssertTrue(layersButton.waitForExistence(timeout: 5), "Map must be restored after dismissing sheet")
+    }
 }
+

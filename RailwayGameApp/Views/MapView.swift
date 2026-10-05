@@ -17,10 +17,38 @@ struct MapView: View {
     /// track display). Faint by default, not the site's own colours: here
     /// the player's railway is drawn over them.
     @AppStorage("realRailwayTrackStyle") private var trackStyle: RealRailways.TrackStyle = .faint
+    @AppStorage("mapShowsStationNames") private var showsStationNames = true
+    @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
+    @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
     @State private var showsDataSources = false
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
+    @State private var showsMapLayers = false
+
+    private var mapLayers: MapLayerPreferences {
+        get {
+            MapLayerPreferences(
+                showsStationNames: showsStationNames,
+                showsWaitingCounts: showsWaitingCounts,
+                showsCatchmentRings: showsCatchmentRings
+            )
+        }
+        // The binding below sets this from a non-mutating context; the
+        // @AppStorage values it writes need no mutable self.
+        nonmutating set {
+            showsStationNames = newValue.showsStationNames
+            showsWaitingCounts = newValue.showsWaitingCounts
+            showsCatchmentRings = newValue.showsCatchmentRings
+        }
+    }
+
+    private var mapLayersBinding: Binding<MapLayerPreferences> {
+        Binding(
+            get: { mapLayers },
+            set: { mapLayers = $0 }
+        )
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -41,7 +69,9 @@ struct MapView: View {
                     traffic: traffic,
                     camera: projection,
                     edges: edges,
-                    drawsLand: realWorld == nil
+                    drawsLand: realWorld == nil,
+                    layers: mapLayers,
+                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world)
                 )
                 .equatable()
                 .overlay {
@@ -72,9 +102,13 @@ struct MapView: View {
                     zoomControls(camera: projection)
                 }
                 .overlay(alignment: .bottomLeading) {
-                    if let realWorld {
-                        mapStyleMenu(realWorld)
+                    HStack(spacing: 8) {
+                        mapLayersButton
+                        if let realWorld {
+                            mapStyleMenu(realWorld)
+                        }
                     }
+                    .padding(12)
                 }
                 .frame(height: viewport.height)
                 if strip > 0 {
@@ -98,6 +132,9 @@ struct MapView: View {
             }
             .sheet(isPresented: $showsDataSources) {
                 DataSourcesView(language: session.language)
+            }
+            .sheet(isPresented: $showsMapLayers) {
+                MapLayerSheet(layers: mapLayersBinding)
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
@@ -177,7 +214,19 @@ struct MapView: View {
         }
         .accessibilityLabel("Map Style")
         .accessibilityIdentifier("map.style")
-        .padding(12)
+    }
+
+    private var mapLayersButton: some View {
+        Button {
+            showsMapLayers = true
+        } label: {
+            Image(systemName: "square.3.layers.3d")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(.regularMaterial, in: Circle())
+        }
+        .accessibilityLabel("Map Layers")
+        .accessibilityIdentifier("map.layers")
     }
 
     private func zoomControls(camera: PlanCamera) -> some View {
@@ -283,6 +332,8 @@ private struct MapCanvas: View, Equatable {
     let edges: [TrackEdgeID: MapEdgeDrawing]
     /// Whether the land is filled in: not over Apple's map (Stage E2).
     let drawsLand: Bool
+    let layers: MapLayerPreferences
+    let waitingCounts: [StationID: Int64]
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -296,11 +347,13 @@ private struct MapCanvas: View, Equatable {
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
             && lhs.drawsLand == rhs.drawsLand
+            && lhs.layers == rhs.layers
+            && lhs.waitingCounts == rhs.waitingCounts
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand
+        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -312,6 +365,8 @@ private struct MapCanvas: View, Equatable {
                 projection: camera,
                 edges: edges,
                 drawsLand: drawsLand,
+                layers: layers,
+                waitingCounts: waitingCounts,
                 in: context
             )
         }
