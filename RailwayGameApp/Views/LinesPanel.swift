@@ -361,6 +361,8 @@ struct LinesPanel: View {
                     if let selected { Text(routeChoiceText(selected)).font(.caption) }
                     else { Text("Automatic physical path").font(.caption) }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
         }
