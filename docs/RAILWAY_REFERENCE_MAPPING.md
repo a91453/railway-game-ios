@@ -179,7 +179,7 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 | `Ci/PROJECT_ABSORPTION_GUIDE.md` Stage U；`Ci/reference_snapshot/` 更新記錄 | 無可翻譯實作；概念對應上述計畫與月台選路 | 優先順序、在哪裡等、快車越行、單線交會、月台分配清單；snapshot 只有快慢車與哪些車站需要越行的文字，列為概念，沒有數值倍率 |
 | `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-*.js` 的 MRT | **無**（V3） | 雙線往返、終點 14 秒折返、同線跟車距離／煞車限速；確認沒有單線交會或同向待避。未移植／未冒充 V3 來源 |
 
-GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.swift`／`ReferenceTrafficCurve.swift` 不呼叫 production 規劃／曲線。派車與保存語義、正線的名義最短走廊推導、實際 witness 的版本 9 與所有調整，均列決策 59。兩份新 schema 31 golden 先取得 GameCore 值再由獨立模型確認；`traffic.scheduledMeets` 在 `campaigns-12`，既有 campaign 不縮小。
+GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.swift`／`ReferenceTrafficCurve.swift` 不呼叫 production 規劃／曲線。派車與保存語義、正線的名義最短走廊推導、實際 witness 的版本 9 與所有調整，均列決策 59。兩份新 schema 31 golden 先取得 GameCore 值再由獨立模型確認；`traffic.scheduledMeets` 在 `campaigns-12`（每個 seed 的第 9–17 個 case 在 `campaigns-14`），既有 campaign 不縮小。
 
 2026-10-05 修正（決策 59 第 11–13 點）是本專案權威執行模型自己的 gap，參考沒有對應：網站在取樣的時刻表上平移時刻，沒有進路預約，所以沒有「排定路線拿不到時怎麼辦」「被等的車到不了時怎麼辦」，也不必管推進切法。修正後排定路線只是偏好、不等不會來的車、計畫每一步從列車狀態推導；參考的常數、排序與演算法本身沒有改變。
 

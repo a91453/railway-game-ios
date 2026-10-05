@@ -255,7 +255,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 
 | GitHub workflow | 現在 | Xcode Cloud 可以取代的部分 |
 | --- | --- | --- |
-| `ci.yml`（Linux，Swift 6.0 / 6.4） | 保留 | 不取代：GameCore 可移植性與 Swift 版本矩陣 |
+| `ci.yml`（Linux，Swift 6.4） | 保留 | 不取代：GameCore 在 Linux 上的可移植性與完整測試 |
 | `ios-build.yml` 的漂移檢查、archivable product 檢查 | 保留 | 不取代：Xcode Cloud 不檢查專案是否與 `project.yml` 一致 |
 | `ios-build.yml` 的 Simulator build | 保留 | 可取代，條件見下 |
 | `release-archive.yml`（未簽章） | 保留 | Workflow 2 成功後可只留手動觸發 |

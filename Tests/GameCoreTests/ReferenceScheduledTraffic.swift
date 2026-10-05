@@ -120,18 +120,20 @@ extension ReferenceWorld {
     func scheduledMeets(_ plan: inout ScheduledPlan, only: Int? = nil) {
         for i in plan.services.indices where only == nil || plan.services[i].train.id == only {
             guard plan.services[i].train.service != nil else { continue }
+            var loops = [Bool?](repeating: nil, count: plan.services[i].visits.count)
             for _ in 0..<8 {
                 let x = plan.services[i]
                 var choices: [(Int64, Int, Int, Int, Int64, Int64)] = []
                 for j in 0..<(x.visits.count - 1) {
                     let p = x.visits[j], n = x.visits[j + 1]
-                    guard hasScheduledLoop(p, x.train) else { continue }
                     for y in plan.services.indices where y != i {
                         for k in 1..<plan.services[y].visits.count {
                             let q = plan.services[y].visits[k], previous = plan.services[y].visits[k - 1]
                             let dwell = q.dep - q.arr, terminal = k == plan.services[y].visits.count - 1
                             guard q.call, q.station == p.station, previous.station == n.station, terminal || dwell >= 30,
                                   min(Self.scheduledGap(p.arr, q.arr), Self.scheduledGap(p.arr, q.dep)) <= 1800 else { continue }
+                            if loops[j] == nil { loops[j] = hasScheduledLoop(p, x.train) }
+                            guard loops[j] == true else { continue }
                             let m: Int64 = terminal ? 30 : min(30, dwell / 3)
                             guard let call = (0..<k).reversed().first(where: { plan.services[y].visits[$0].call }) else { continue }
                             let end = ((j + 1)..<x.visits.count).first { x.visits[$0].station == plan.services[y].visits[call].station }
@@ -284,6 +286,44 @@ extension ReferenceWorld {
         return plan
     }
 
+    /// What a plan is worked out from that can change within one advance
+    /// (the network cannot): each placed train's service, timetable and
+    /// last visited cycle, and, while at its first stop, where it stands.
+    struct ScheduledKey: Equatable {
+        struct Entry: Equatable {
+            var id: Int
+            var service: Service?
+            var timetable: [ScheduledStop]
+            var period: Int64?
+            var visitedCycle: Int64?
+            var standing: [StationID]
+            var edge: Int?
+        }
+        var trafficControl: Bool
+        var entries: [Entry]
+    }
+
+    func scheduledKey() -> ScheduledKey {
+        ScheduledKey(trafficControl: trafficControl, entries: trains.compactMap { train in
+            guard let position = train.position else { return nil }
+            let first = train.service?.stop == 0
+            var edge: Int?
+            if first, case .onEdge(let traversal, _) = position { edge = traversal.edge.number }
+            return .init(id: train.id, service: train.service, timetable: train.timetable, period: train.period,
+                         visitedCycle: train.trafficVisits.last?.cycle, standing: first ? networkStops(of: train) : [], edge: edge)
+        })
+    }
+
+    /// `scheduledPlan()`, worked out again only when its key differs from
+    /// the one the plan kept this advance was worked out from.
+    mutating func keptScheduledPlan() -> ScheduledPlan {
+        let key = scheduledKey()
+        if let kept = routeMemo.scheduledFrom, kept.key == key { return kept.plan }
+        let plan = scheduledPlan()
+        routeMemo.scheduledFrom = (key, plan)
+        return plan
+    }
+
     func scheduledRelease(_ wait: ScheduledTrafficWait) -> Int64? {
         guard let train = trains.first(where: { $0.id == wait.other.rawValue }) else { return clockSeconds }
         if let visit = train.trafficVisits.first(where: { $0.station == wait.station && $0.stop == wait.otherStop && $0.cycle == wait.otherCycle }) {
@@ -328,7 +368,7 @@ extension ReferenceWorld {
     /// Costed berth selection using the independent reverse relaxation.
     /// Costs enter only at the berth or when leaving a platform edge.
     func scheduledRoute(_ train: Train, target call: StationID, plan: ScheduledPlan) -> (path: TrainPath, seconds: Int64?)? {
-        guard let service = train.service, let sequence = plan.services.first(where: { $0.train.id == train.id }),
+        guard !plan.waits.isEmpty, let service = train.service, let sequence = plan.services.first(where: { $0.train.id == train.id }),
               let position = train.position,
               let normal = networkPathToStation(from: position, station: call, length: Self.length(train)) else { return nil }
         let stop = service.waiting ? (service.stop + 1 < train.timetable.count ? service.stop + 1 : 0) : service.stop

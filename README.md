@@ -70,7 +70,7 @@ GameCore 目前能做到：
 
 - Swift 6（language mode 6）
   - 最低 Swift tools version：6.0（`swift-tools-version: 6.0`）
-  - CI 驗證最低版本 6.0 與目前穩定版 6.4；介於兩者之間的版本（例如 iPad Swift Playgrounds 的 6.2.x）不另外驗證
+  - CI 與本機檢查只用 Swift 6.4（2026-10-05 起不再驗證 6.0）；其他版本（例如 iPad Swift Playgrounds 的 6.2.x）不另外驗證
 - Swift Package Manager
 - XcodeGen（由 `RailwayGameApp/project.yml` 產生 Xcode 專案，產生結果提交進版控）
 - SwiftUI（Presentation；Phase 2B prototype UI，iOS 17+，iPhone / iPad）
@@ -122,7 +122,7 @@ Claude Code Cloud (Linux) → GitHub → GitHub Actions（Linux 測試、macOS �
 | 層 | 在哪裡跑 | 驗證什麼 |
 | --- | --- | --- |
 | 1. Claude Code Cloud | Linux 容器 | 原始碼開發；GameCore `swift build` / `swift test`。**沒有** Xcode、Simulator、SwiftUI / UIKit |
-| 2. Linux CI（`ci.yml`） | 每次 push 到 `main` 與手動執行；PR 只在改到會影響 Swift package 的檔案時（`Package.swift`、`Sources/`、`Tests/`、`GoldenScenarios/`、`ci.yml`、`swift-shards.sh`）才跑 Swift job，`Swift CI (gate)` 一定回報 | Swift 6.0（最低相容版本）：warnings as errors 的 build 與除了長 campaign 以外的全部測試。Swift 6.4（目前的完整正確性驗證）：同樣的 build 與**全部**測試，包含 property / differential / mutation campaign（不減量，分成 5 個平行 shard） |
+| 2. Linux CI（`ci.yml`） | 每次 push 到 `main` 與手動執行；PR 只在改到會影響 Swift package 的檔案時（`Package.swift`、`Sources/`、`Tests/`、`GoldenScenarios/`、`ci.yml`、`swift-shards.sh`）才跑 Swift job，`Swift CI (gate)` 一定回報 | 只用 Swift 6.4：warnings as errors 的 build 與**全部**測試，包含 property / differential / mutation campaign（不減量，分成多個平行 shard） |
 | 3. iOS App Build（`ios-build.yml`） | macOS runner，PR 與 `main` 自動執行（純文件變更略過） | 已提交的 Xcode 專案與 `project.yml` 一致、shared scheme 可被 Xcode Cloud 找到；以真正的 Xcode / Apple SDK 為 iOS Simulator 編譯 SwiftUI App 與 GameCore；iPhone UI 測試與 iPad 教學 UI 測試（兩個平行 job，各用自己的 Simulator）；不需簽章。PR 只跑精簡的擋關清單（開始畫面、三個工具的中英文、開始／存檔／繼續、教學的前幾步），iPad 只在改到教學畫面時跑；合併到 `main`、每晚與手動則跑全部 UI 測試、iPad 教學測試與「拿掉按鈕要失敗」的證明，這條線紅燈不擋 PR |
 | 4. Release Archive（`release-archive.yml`） | macOS runner，手動觸發；修改專案設定或 App 資源的 PR 自動執行 | 以 Release、真實 iOS 裝置 SDK 封存並檢查 App（**未簽章**：不代表簽章、上傳或 TestFlight 會成功） |
 | 5. TestFlight Checks（`testflight-checks.yml`） | Linux + macOS runner；修改 TestFlight workflow 或腳本的 PR 自動執行 | 發佈腳本的 lint 與測試、macOS dry run、合成 IPA 檢查；只用假值，不需 Apple 帳號，不簽章、不上傳 |
@@ -171,10 +171,9 @@ xcodegen generate --spec RailwayGameApp/project.yml
 swift test
 ```
 
-`swift test` 會執行 GameCore 與 GamePresentation 的測試。兩者都只使用 Swift 標準函式庫（GamePresentation 另用標準函式庫的 `Observation`），因此可在 macOS、iOS 與 Linux 上建置。CI 在 Linux 上以 Swift 6.0（最低版本）與 6.4（目前穩定版）建置（warnings as errors）並測試：
+`swift test` 會執行 GameCore 與 GamePresentation 的測試。兩者都只使用 Swift 標準函式庫（GamePresentation 另用標準函式庫的 `Observation`），因此可在 macOS、iOS 與 Linux 上建置。CI 在 Linux 上只用 Swift 6.4 建置（warnings as errors）並測試（2026-10-05 起拿掉 Swift 6.0 job）：
 
-- **Swift 6.0**：最低相容版本。編譯所有測試，並執行除了長 campaign（`*PropertyTests`、`KernelDifferentialTests`、`SaveMutationTests`）以外的全部測試，包括 golden scenario。這些 campaign 檢查的是邏輯，不因編譯器版本而不同。
-- **Swift 6.4**：目前的完整正確性驗證，執行**全部**測試，包含所有 campaign。campaign 的 seed、case 數與指令數都沒有減少；它們只是被分到 5 個平行 job（shard），等待時間是最慢的 shard，而不是全部相加。分法與「每個測試恰好在某一個 shard 跑過一次」的證明在 `.github/scripts/swift-shards.sh`：每個 shard 先確認各 shard 的選擇剛好切分 `swift test list` 的結果，跑完再確認實際執行的測試與選擇的完全相同。新增的測試類別不必改 CI，會落在 `rest` shard。
+- **Swift 6.4**：完整正確性驗證，執行**全部**測試，包含所有 campaign。campaign 的 seed、case 數與指令數都沒有減少；它們只是被分到多個平行 job（shard），等待時間是最慢的 shard，而不是全部相加。分法與「每個測試恰好在某一個 shard 跑過一次」的證明在 `.github/scripts/swift-shards.sh`：每個 shard 先確認各 shard 的選擇剛好切分 `swift test list` 的結果，跑完再確認實際執行的測試與選擇的完全相同。新增的測試類別不必改 CI，會落在 `rest` shard。
 - 只改文件、App 或 TestFlight 檔案的 PR 不會啟動這些 Swift job（`Swift CI (gate)` 仍會回報）；推到 `main` 與手動執行一律全部跑。
 
 GameCore 測試也會執行 `GoldenScenarios/` 裡的每個情境，並與檔案中手寫的預期結果比對。測試只讀取 fixture、從不寫回；預期值改變代表遊戲行為改變，必須在 PR 中說明。

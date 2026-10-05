@@ -12,7 +12,9 @@ not only Claude Code. Read it first and follow it. In particular:
 - `Sources/GameCore/` imports no Foundation, SwiftUI, UIKit, AppKit, SpriteKit
   or Metal, and stays deterministic. `GameWorld` is the only authority for
   game state.
-- Keep Swift 6.0 compatibility and warnings-as-errors clean.
+- Build and test with Swift 6.4 only (no Swift 6.0 checks), and keep
+  warnings-as-errors clean. Locally run the build and the tests your change
+  touches; the full suite is CI's job (see `CLAUDE.md`).
 - Never run `testflight.yml`, add a trigger to it, or let pull requests reach
   its secrets. Never commit secrets, keys, certificates, `.env` files or
   personal data: this repository is public.

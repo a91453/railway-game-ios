@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # Installs an official Swift toolchain for Linux from swift.org into DEST,
 # verified against swift.org's signing keys. Used by the Claude Code cloud
-# session hook (.claude/hooks/session-start.sh) and by hand for the Swift 6.0
-# minimum-compatibility check:
+# session hook (.claude/hooks/session-start.sh):
 #
 #   .github/scripts/install-swift-linux.sh 6.4.0 /opt/swift
-#   .github/scripts/install-swift-linux.sh 6.0.3 /opt/swift60
 #
 # VERSION is the full release name with three numbers. swift.org names every
 # release that way (swift-6.4.0-RELEASE), even a .0 one, so a URL built from

@@ -35,7 +35,7 @@ Worker 內只保有一份 GameWorld。主執行緒的選取、鏡頭、模型與
 
 | 項目 | 用途與準備條件 |
 | --- | --- |
-| 原生 Swift toolchain | 執行目前的參考實作與 golden scenarios；保留 Swift 6.0 相容性與既有 6.0 / 6.4 CI |
+| 原生 Swift toolchain | 執行目前的參考實作與 golden scenarios；CI 只用 Swift 6.4 |
 | 相容的 Swift WebAssembly SDK / runtime | 先確認可用版本、目標、授權、下載來源與 checksum，再固定 compiler / SDK 組合；Linux 能編譯不代表 Wasm 能編譯 |
 | Node.js LTS、TypeScript、Vite | Wasm 可行性成立後，建立 Web shell、開發與靜態打包；版本與 lockfile 一起固定 |
 | Babylon.js | 首個真正 3D renderer 的候選；WebGPU 為可選，提供 WebGL2 路徑並實測 Safari |

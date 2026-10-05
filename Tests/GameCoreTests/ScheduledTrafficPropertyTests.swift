@@ -8,10 +8,35 @@ import XCTest
 /// compares the whole world and the independent V3 plan; a repeating case
 /// that ends with a service still in its first cycle must show it in a
 /// deadlock, never wait in silence.
+///
+/// The campaign has 18 cases a seed. This class runs cases 0 to 8 of every
+/// seed and ``ScheduledTrafficSecondHalfPropertyTests`` cases 9 to 17, on a
+/// shard of their own (the whole campaign no longer fitted one job). A case
+/// is the same case whichever class runs it: its generator comes from its
+/// seed and index alone.
 final class ScheduledTrafficPropertyTests: XCTestCase {
     func testScheduledTrafficMatchesTheIndependentModel() throws {
+        try Self.checkHalf(Self.campaign(cases: 0..<9))
+    }
+
+    /// What either half (12 cases of each kind) must have done.
+    static func checkHalf(_ tally: [String: Int], file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(tally["ran"], 36, file: file, line: line)
+        XCTAssertEqual(tally["repeatingCases"], 12, file: file, line: line)
+        XCTAssertGreaterThan(tally["waits", default: 0], 40, file: file, line: line)
+        XCTAssertGreaterThan(tally["visits", default: 0], 40, file: file, line: line)
+        XCTAssertEqual(tally["operations"], 1_296, file: file, line: line)
+        XCTAssertEqual(tally["saves"], 156, file: file, line: line)
+        XCTAssertEqual(tally["longAdvances"], 180, file: file, line: line)
+    }
+
+    /// Cases `cases` of every seed of traffic.scheduledMeets; prints their
+    /// digest and returns the tally, with `ran` the cases run.
+    static func campaign(cases: Range<Int>) throws -> [String: Int] {
         var digest = Digest(), tally: [String: Int] = [:]
-        let ran = try runCampaign("traffic.scheduledMeets", cases: 18) { testCase in
+        try runCampaign("traffic.scheduledMeets", cases: 18) { testCase in
+            guard cases.contains(testCase.index) else { return }
+            tally["ran", default: 0] += 1
             let kind = testCase.index % 3
             var world = kind == 1
                 ? try ScheduledTrafficTests.overtake(fastDeparture: 180 + Int64(testCase.random.below(40)), fastArrival: 600 + Int64(testCase.random.below(90)))
@@ -20,9 +45,10 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
             var model = ScheduledTrafficTests.model(for: world)
             func compare() -> [String] {
                 var problems = KernelDifferentialTests.differences(world, model, lineAnswers: false)
-                if world.scheduledTrafficWaits() != model.scheduledPlan().waits { problems.append("scheduled plan") }
+                let plan = model.scheduledPlan()
+                if world.scheduledTrafficWaits() != plan.waits { problems.append("scheduled plan") }
                 for train in world.trains {
-                    let expected = model.waitingScheduled(model.trains.first { $0.id == train.id.rawValue }!, plan: model.scheduledPlan())
+                    let expected = model.waitingScheduled(model.trains.first { $0.id == train.id.rawValue }!, plan: plan)
                     if world.scheduledTrafficWait(of: train.id) != expected { problems.append("scheduled wait \(train.id)") }
                     if world.reservedResources(of: train.id) != model.reservedResources(of: train.id) { problems.append("reservation \(train.id)") }
                     if world.heldResources(of: train.id) != model.heldResources(of: train.id) { problems.append("held \(train.id)") }
@@ -82,13 +108,15 @@ final class ScheduledTrafficPropertyTests: XCTestCase {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
         }
-        print("[digest] traffic.scheduledMeets \(digest.hex) (\(tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")))")
-        XCTAssertEqual(ran, 72)
-        XCTAssertEqual(tally["repeatingCases"], 24)
-        XCTAssertGreaterThan(tally["waits", default: 0], 40)
-        XCTAssertGreaterThan(tally["visits", default: 0], 40)
-        XCTAssertEqual(tally["operations"], 2_592)
-        XCTAssertEqual(tally["saves"], 312)
-        XCTAssertEqual(tally["longAdvances"], 360)
+        print("[digest] traffic.scheduledMeets cases \(cases.lowerBound)-\(cases.upperBound - 1) \(digest.hex) (\(tally.keys.sorted().map { "\($0) \(tally[$0]!)" }.joined(separator: ", ")))")
+        return tally
+    }
+}
+
+/// Cases 9 to 17 of traffic.scheduledMeets (see
+/// ``ScheduledTrafficPropertyTests``).
+final class ScheduledTrafficSecondHalfPropertyTests: XCTestCase {
+    func testScheduledTrafficMatchesTheIndependentModel() throws {
+        try ScheduledTrafficPropertyTests.checkHalf(ScheduledTrafficPropertyTests.campaign(cases: 9..<18))
     }
 }

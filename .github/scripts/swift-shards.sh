@@ -4,15 +4,15 @@
 #
 #   swift-shards.sh run <shard>      run one shard after `swift build --build-tests`
 #   swift-shards.sh select <shard>   print the test IDs a shard selects (offline)
-#   swift-shards.sh shards           print the Swift 6.4 shard names, one per line
+#   swift-shards.sh shards           print the shard names, one per line
 #   swift-shards.sh classes          print every class the campaign shards name
 #   swift-shards.sh matrix           print them as the JSON matrix ci.yml uses
 #   swift-shards.sh relevant         read changed file names on stdin; print
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-12   the long property, differential and mutation
-#                                campaigns, named below; Swift 6.4 only
+#   campaigns-1 .. campaigns-14   the long property, differential and mutation
+#                                campaigns, named below
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
 #                                GamePresentation tests, and whatever is added
@@ -20,9 +20,10 @@
 #                                Its campaigns are named too since Stage F3b
 #                                (it was the slowest shard once they ran on
 #                                the track network)
-#   light                        Swift 6.0: everything except the campaigns
-#                                ($LIGHT_SKIP); the minimum-toolchain job
 #   all                          everything, for a local full run
+#
+# Every shard runs on Swift 6.4 only; the Swift 6.0 job, and its `light`
+# selection (everything but the campaigns), were removed on 2026-10-05.
 #
 # The campaign shards run every test of the classes they name and nothing else;
 # `rest` skips exactly those classes. Together they are the whole package
@@ -69,6 +70,21 @@ set -euo pipefail
 # Stage F3c-3b deleted the grid's campaigns (StationFacilityPropertyTests and
 # TrackResourcePropertyTests here, and the grid's position, movement, route
 # and topology campaigns from rest) with the grid's tests.
+#
+# Stages V1 to V3 added campaigns-10 to campaigns-12 and made
+# TrafficControlPropertyTests slower (1052 s of tests in run 37260822506);
+# after the V3 fixes campaigns-9 and campaigns-12 were cancelled at the
+# limit (run 37269381885). So traffic.following has a class of its own,
+# TrafficFollowingPropertyTests, and traffic.scheduledMeets runs cases 0 to
+# 8 of each seed in ScheduledTrafficPropertyTests and 9 to 17 in
+# ScheduledTrafficSecondHalfPropertyTests. Seconds locally (Swift 6.4, two
+# shards at a time):
+#   campaigns-9   TrafficControlPropertyTests 578
+#   campaigns-10  OccupiedRoutingPropertyTests 100
+#   campaigns-11  DeadlockPropertyTests 153
+#   campaigns-12  ScheduledTrafficPropertyTests 563
+#   campaigns-13  TrafficFollowingPropertyTests 558
+#   campaigns-14  ScheduledTrafficSecondHalfPropertyTests 563
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
@@ -83,14 +99,13 @@ classes_of() {
     campaigns-10) echo "OccupiedRoutingPropertyTests" ;;
     campaigns-11) echo "DeadlockPropertyTests" ;;
     campaigns-12) echo "ScheduledTrafficPropertyTests" ;;
+    campaigns-13) echo "TrafficFollowingPropertyTests" ;;
+    campaigns-14) echo "ScheduledTrafficSecondHalfPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
-# The long-standing Swift 6.0 exclusion: the campaigns check logic, which does
-# not depend on the compiler, so only the current release runs them.
-LIGHT_SKIP='PropertyTests|KernelDifferentialTests|SaveMutationTests'
 
 WORK=""
 trap '[[ -z "$WORK" ]] || rm -rf "$WORK"' EXIT
@@ -119,7 +134,7 @@ all_campaign_classes() {
 
 is_shard() {
   local shard
-  for shard in "${SHARDS[@]}" light all; do
+  for shard in "${SHARDS[@]}" all; do
     [[ "$shard" == "$1" ]] && return 0
   done
   return 1
@@ -129,7 +144,6 @@ is_shard() {
 select_ids() {
   case "$1" in
     all) cat "$2" ;;
-    light) grep -v -E "$LIGHT_SKIP" "$2" || true ;;
     rest) grep -v -E "$(pattern_for "$(all_campaign_classes | tr '\n' ' ')")" "$2" || true ;;
     *) grep -E "$(pattern_for "$(classes_of "$1")")" "$2" || true ;;
   esac
@@ -140,7 +154,6 @@ selection_args() {
   SELECT_ARGS=()
   case "$1" in
     all) ;;
-    light) SELECT_ARGS=(--skip "$LIGHT_SKIP") ;;
     rest) SELECT_ARGS=(--skip "$(pattern_for "$(all_campaign_classes | tr '\n' ' ')")") ;;
     *) SELECT_ARGS=(--filter "$(pattern_for "$(classes_of "$1")")") ;;
   esac
@@ -178,7 +191,7 @@ check_partition() {
 
 run_shard() {
   local shard="$1"
-  is_shard "$shard" || die "Unknown shard '$shard'. Shards: ${SHARDS[*]} light all."
+  is_shard "$shard" || die "Unknown shard '$shard'. Shards: ${SHARDS[*]} all."
   WORK="$(mktemp -d)"
   local list="$WORK/list.txt" log="$WORK/test.log"
 
@@ -234,7 +247,7 @@ run_shard() {
     {
       echo "### Shard \`$shard\`"
       echo "- selected **$expected_count** of $total tests; executed **$executed_count**; failed **$failed_count**; ${seconds}s"
-      if [[ "$shard" != rest && "$shard" != light && "$shard" != all ]]; then
+      if [[ "$shard" != rest && "$shard" != all ]]; then
         echo "- classes: $(classes_of "$shard")"
       fi
     } >>"$GITHUB_STEP_SUMMARY"

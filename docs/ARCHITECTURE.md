@@ -2714,6 +2714,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 參考模型（`ReferenceWorld`）同樣改成每秒重新推導、排定路線先試整條、不等不會來的車；`traffic.scheduledMeets` 加入重複來回的 case、一次 15–29 分鐘的長推進（每次都和逐秒推進比較），以及「重複來回的 case 結束時還在第一輪的列車必須顯示在死結裡」的檢查。
 
+**2026-10-05 CI 時間（PR #111 合併後）。** 規則不變，結果不變。#111 合併後 main 的 `campaigns-9`、`campaigns-12` 超過 20 分鐘的 job 上限被取消。推導改成不做結果用不到的工作：沒有排定等待時不再找排定路線（沒有等待就沒有成本，也沒有改時刻）；交會推導的「有沒有待避線」只在另一個服務在該點停站時才問，每點一次；`parallelTracks` 在一次推導裡每對相鄰車站只算一次（`TrafficPlan.tracks`）；參考模型的計畫在推導依據（每台已放置列車的服務、時刻表、最後見證的 cycle、在第一站時站的位置，以及交通控制）沒變時沿用（一次 advance 內）。`traffic.following` 移到自己的 class 與 shard（`campaigns-13`），`traffic.scheduledMeets` 每個 seed 的第 9–17 個 case 移到 `campaigns-14`；case 本身不變（每個 case 只由 seed 與 index 產生），只是 digest 分成兩半。
+
 **Deferred（V4 與以後）：**每段路徑／股道／月台指定、單線容量重算（決策 22）留 V4；需要換向的折返／調車解法、地圖授權範圍與死結標示、E3。W1 尚未有的 speed-zone／觀測 profile 不在本輪重新實作；直接用既有 fixed-point 曲線適配上述 anchors。
 
 ## 目前規則摘要

@@ -1,20 +1,15 @@
 name: CI
 
-# The Swift package (GameCore, GamePresentation and their tests) on Linux.
-#
-# - Swift 6.0 is the minimum Package.swift declares (swift-tools-version: 6.0):
-#   every target and test builds with warnings as errors, and every test runs
-#   except the long campaigns, whose logic does not depend on the compiler.
-# - Swift 6.4 is the current release and the full correctness suite: the same
-#   build, and every test, campaigns included. The campaigns are not reduced;
-#   they are split across parallel jobs (shards) so the wait is the slowest
-#   shard, not their sum.
+# The Swift package (GameCore, GamePresentation and their tests) on Linux,
+# with Swift 6.4 only: every target and test builds with warnings as errors,
+# and every test runs, campaigns included. The campaigns are not reduced; they
+# are split across parallel jobs (shards) so the wait is the slowest shard, not
+# their sum. No other Swift release is built: the Swift 6.0 job (the minimum
+# Package.swift declares) was removed on 2026-10-05.
 #
 # The shards, the proof that together they run every test exactly once, and the
 # path filter live in .github/scripts/swift-shards.sh. The matrix below comes
-# from that script, so a shard defined there always has a job. Releases
-# between 6.0 and 6.4 (such as the iPad Swift Playgrounds' 6.2) are not built
-# separately.
+# from that script, so a shard defined there always has a job.
 #
 # The workflow always starts, so the "Swift CI (gate)" check always reports:
 # on a pull request that changes nothing the package builds or tests (only
@@ -87,27 +82,6 @@ jobs:
         if: steps.detect.outputs.swift == 'true'
         run: .github/scripts/swift-shards-selftest.sh
 
-  swift-min:
-    name: Swift 6.0 (Linux)
-    needs: changes
-    if: needs.changes.outputs.swift == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    container: swift:6.0-noble
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Swift version
-        run: swift --version
-
-      - name: Build (warnings as errors)
-        run: swift build --build-tests -Xswiftc -warnings-as-errors
-
-      # Not `swift test`: that would rebuild everything, because the build
-      # above passed a flag it does not. --skip-build runs what was just built.
-      - name: Test (everything except the campaigns)
-        run: .github/scripts/swift-shards.sh run light
-
   swift-current:
     name: Swift 6.4 (Linux) / ${{ matrix.shard }}
     needs: changes
@@ -140,7 +114,7 @@ jobs:
 
   gate:
     name: Swift CI (gate)
-    needs: [changes, swift-min, swift-current]
+    needs: [changes, swift-current]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -149,23 +123,22 @@ jobs:
         env:
           CHANGES: ${{ needs.changes.result }}
           SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
-          MINIMUM: ${{ needs.swift-min.result }}
           CURRENT: ${{ needs.swift-current.result }}
         run: |
-          echo "changes: $CHANGES; Swift needed: $SWIFT_NEEDED; Swift 6.0: $MINIMUM; Swift 6.4: $CURRENT"
+          echo "changes: $CHANGES; Swift needed: $SWIFT_NEEDED; Swift 6.4: $CURRENT"
           if [[ "$CHANGES" != success ]]; then
             echo "::error::The change detection did not succeed."
             exit 1
           fi
           if [[ "$SWIFT_NEEDED" == true ]]; then
-            if [[ "$MINIMUM" != success || "$CURRENT" != success ]]; then
-              echo "::error::A Swift job did not succeed (Swift 6.0: $MINIMUM, Swift 6.4: $CURRENT)."
+            if [[ "$CURRENT" != success ]]; then
+              echo "::error::A Swift job did not succeed (Swift 6.4: $CURRENT)."
               exit 1
             fi
-            echo "Swift 6.0 and every Swift 6.4 shard passed."
+            echo "Every Swift 6.4 shard passed."
           else
-            if [[ "$MINIMUM" != skipped || "$CURRENT" != skipped ]]; then
-              echo "::error::The Swift jobs were not needed but did not skip (Swift 6.0: $MINIMUM, Swift 6.4: $CURRENT)."
+            if [[ "$CURRENT" != skipped ]]; then
+              echo "::error::The Swift jobs were not needed but did not skip (Swift 6.4: $CURRENT)."
               exit 1
             fi
             echo "No file that can change the Swift package changed; the Swift jobs were skipped."
