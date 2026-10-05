@@ -519,6 +519,16 @@
         }
       }
     },
+    "Data Sources" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資料來源"
+          }
+        }
+      }
+    },
     "Demo Map" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1305,6 +1315,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Railway Game 存檔"
+          }
+        }
+      }
+    },
+    "Railway Stations" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鐵道車站"
+          }
+        }
+      }
+    },
+    "Real Railways" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "真實鐵道"
           }
         }
       }

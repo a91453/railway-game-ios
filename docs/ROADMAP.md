@@ -621,6 +621,12 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 還沒有：地圖旋轉與傾斜、3D 建築與地形；中國大陸的 GCJ-02 換算（E3 時處理）；沒有網路時的提示；依城市的票價基準與真實人口（Phase 5、6）。
   - 畫面層的「地圖背景」（`AppleMapBackground`）只在 App；E3 可以換成 MapLibre，不動 GameCore。
   - 實機：2026-10-03 作者在 TestFlight 上確認可以使用。
+- **台灣的真實鐵道 ✅**（2026-10-05，作者要求從私有 repo 直接移植；ARCHITECTURE 決策 50；[參考對照](RAILWAY_REFERENCE_MAPPING.md#實景地圖的台灣鐵道與車站)）：
+  - 實景地圖照 `Railway/` 網站畫出台灣的鐵道路線與車站（台鐵、高鐵、阿里山林鐵、各地捷運與輕軌，網站的原檔），在道路之上、地名之下；地圖樣式選單的「真實鐵道」選自動、淡化（預設）或隱藏。
+  - 選點的畫面多了全部 543 個車站，依系統分組，打字時即時比對站名。
+  - 資料來源與授權的畫面（開始畫面、地圖樣式選單）：交通部 TDX（政府資料開放授權條款第 1 版）與 OpenStreetMap（ODbL 1.0）；地圖底部顯示短標示。
+  - 只動 App 與 GamePresentation：GameCore、golden 與存檔都沒有改。
+  - 還沒有：真實鐵道只在台灣；不能沿著真實路線自動建造（`Railway/` 的 `tra.json` 等路線資料可以當範本）；依最近的真實車站替新車站命名。
 - **E3 — MapLibre**（視需要，不佔固定的位置）：E2 實測之後，MapKit 不夠用時（例如每座城市都要 3D 建築、自訂樣式、離線圖磚）才加入。
   - `Ci/` 用的就是 MapLibre 加 OpenFreeMap 的圖磚（中國用高德），3D 建築用 fill-extrusion。
   - MapLibre Native 是 BSD 2-Clause 授權，免費，要在 App 裡附上授權聲明；iOS 有 SwiftUI 的包裝。

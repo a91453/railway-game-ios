@@ -434,6 +434,24 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 | `Ci` `metroFareDemandBaselineForCity`（依城市的票價基準） | 城市決定票價基準 | 沒有：實景與空白的新遊戲都是標準票價（G1d） | — | **gap**：錨點不記城市 |
 | `Railway` `TW_BOX`（整個台灣的平移範圍） | 地圖的範圍 | 新遊戲的 16 公里地圖（E1） | — | 不採用（E1 已決定） |
 
+### 實景地圖的台灣鐵道與車站
+
+2026-10-05 唯讀檢查私有 repo `ddff2be`。補在 E2 之後（ARCHITECTURE 決策 50「台灣的真實鐵道」）。只動 App 與 GamePresentation：GameCore、golden、存檔都沒有改。其他三份參考沒有可用的對應：`Ci/` 用的是中國與國外城市，沒有台灣的軌道資料；RailwayCore 參考包沒有地圖；台北的 3D 參考是縮小的虛構台北，沒有經緯度。
+
+| 參考 | 行為 | Swift | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它 | 度（WGS-84） | 直接重用（原檔） |
+| `Railway` `data/track_stations.geojson`（607 個站點，同一站在每條線各一點、各用那條線的顏色） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫）與 `stations`（每個系統每個站名的第一個，543 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
+| `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，四站沒有英文時用中文 | — | 直接重用（原檔） |
+| `Railway` `index.html` 的系統表（`id`、`label`）與 `i18n/translations.js` 的英文 | 系統的名稱與順序 | `RealRailways.System.all` | — | faithful |
+| `Railway` `data/track_style_layers.json`：`track-casing` 寬 5.6、`track-line` 寬 3、`track-stations` 半徑 2.4、外圈 1.5、外圈不透明度 0.9、`minzoom` 11；`themes` 的 casing 色（light `#f2ede2`、dark `#10141c`、sat `#24382c`）與 `states` 的取色 | 鐵道的畫法 | `RealRailways.Widths`、`MapTheme.casing`、`Palette.color(_:on:)`；App 的 `FollowingMapView`（`MKMultiPolylineRenderer`）與 `StationDotsRenderer` | 點；MapLibre 的 z 等於 MapKit 的 zoom scale 2^(z−19) | faithful |
+| `Railway` `glTracksInstall`：每個 `sortKey` 由小到大先畫全部 casing、再畫線；軌道層插在第一個標籤層之前 | 疊放順序 | 依 `sortKey` 先 casing 後依顏色的線，車站最後；MapKit 的 `.aboveRoads`（道路之上、標籤之下） | — | faithful |
+| `Railway` `trackStyle`（`自動`／`淡化`／`隱藏`，`localStorage` 的 `trainmap-track`；隱藏是極淡，不是不畫） | 軌道顯示 | `RealRailways.TrackStyle`，地圖樣式選單的「真實鐵道」；App 的設定（`@AppStorage`），不是遊戲的 | — | faithful；**改變**：預設是淡化（網站是自動），因為玩家的鐵路畫在它上面 |
+| `Railway` `state.basemap`（地圖、衛星）與深色模式 | 依底圖選色 | 地圖樣式的「地圖」依系統的深淺色用 light／dark，衛星兩種用 sat | — | faithful |
+| `Railway` `rail-discovery.js` `norm`（臺→台、去空白、小寫） | 站名比對 | `RealRailways.normalized`、`stations(matching:)`：中文或英文，開頭符合的在前 | — | faithful；排序是這裡的 |
+| `Railway` `data-sources/index.html`、各資料檔的 `source_notes` | 資料來源與授權 | `DataSourceCredits`、`DataSourcesView`（開始畫面與地圖樣式選單）；地圖底部帶子中間的「鐵道：交通部 TDX、© OpenStreetMap 貢獻者」 | — | faithful（標示）；ODbL 的衍生資料庫在公開的 repo 依同一授權提供 |
+| `Railway` 的跟隨路線（`followLayers`）、夜間霓虹色（`colorNeon`）、`collect` 狀態、車站標籤 | 網站其他的軌道畫法 | 沒有 | — | 不採用：遊戲沒有跟隨真實列車與收集；站名由 Apple 地圖自己的標籤顯示 |
+
 ### Stage F3：移除方格
 
 2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 51；盤點見 [F3_GRID_INVENTORY](research/F3_GRID_INVENTORY.md)。F3 歷史差異（非移植閘門）新的行為，只拿掉方格的相容層；這張表記下三份參考對「方格還是 graph」的做法，以及 F3 之後對應的 GameCore。
