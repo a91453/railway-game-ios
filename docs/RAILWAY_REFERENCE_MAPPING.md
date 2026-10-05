@@ -452,13 +452,13 @@ GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.s
 
 ### 實景地圖的台灣鐵道與車站
 
-2026-10-05 唯讀檢查私有 repo `ddff2be`。補在 E2 之後（ARCHITECTURE 決策 50「台灣的真實鐵道」）。只動 App 與 GamePresentation：GameCore、golden、存檔都沒有改。其他三份參考沒有可用的對應：`Ci/` 用的是中國與國外城市，沒有台灣的軌道資料；RailwayCore 參考包沒有地圖；台北的 3D 參考是縮小的虛構台北，沒有經緯度。
+2026-10-05 唯讀檢查私有 repo `ddff2be`；同日的參考更新（`25229af`，`Refresh RailwayGame reference snapshot`）之後，`track_stations.geojson` 與 `i18n/stations.json` 換成新版原檔（多了縱貫線的平鎮站；`stations.json` 只改了日文名），`track_lines.geojson` 不變。補在 E2 之後（ARCHITECTURE 決策 50「台灣的真實鐵道」）。只動 App 與 GamePresentation：GameCore、golden、存檔都沒有改。其他三份參考沒有可用的對應：`Ci/` 用的是中國與國外城市，沒有台灣的軌道資料；RailwayCore 參考包沒有地圖；台北的 3D 參考是縮小的虛構台北，沒有經緯度。
 
 | 參考 | 行為 | Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
 | `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列） | 度（WGS-84） | 直接重用（原檔） |
-| `Railway` `data/track_stations.geojson`（607 個站點，同一站在每條線各一點） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫，用那條線的顏色）與 `stations`（每個系統每個站名的第一個，543 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
-| `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，四站沒有英文時用中文 | — | 直接重用（原檔） |
+| `Railway` `data/track_stations.geojson`（608 個站點，同一站在每條線各一點） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫，用那條線的顏色）與 `stations`（每個系統每個站名的第一個，544 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
+| `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，五站沒有英文時用中文（含新的平鎮） | — | 直接重用（原檔） |
 | `Railway` `index.html` 的系統表（`id`、`label`）與 `i18n/translations.js` 的英文 | 系統的名稱與順序 | `RealRailways.System.all` | — | faithful |
 | `Railway` `data/track_style_layers.json`：`track-casing` 寬 5.6、`track-line` 寬 3、`track-stations` 半徑 2.4、外圈 1.5、外圈不透明度 0.9、`minzoom` 11；`themes` 的 casing 色（light `#f2ede2`、dark `#10141c`、sat `#24382c`）與 `states` 的取色 | 鐵道的畫法 | `RealRailways.Widths`、`MapTheme.casing`、`Palette.color(_:on:)`；App 的 `FollowingMapView`（`MKMultiPolylineRenderer`）與 `StationDotsRenderer` | 點；MapLibre 的 z 等於 MapKit 的 zoom scale 2^(z−19) | faithful |
 | `Railway` `glTracksInstall`：每個 `sortKey` 由小到大先畫全部 casing、再畫線；軌道層插在第一個標籤層之前 | 疊放順序 | 依 `sortKey` 先 casing 後依顏色的線，車站最後；MapKit 的 `.aboveRoads`（道路之上、標籤之下） | — | faithful |
