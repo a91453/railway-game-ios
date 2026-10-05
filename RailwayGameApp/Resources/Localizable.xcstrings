@@ -1359,6 +1359,16 @@
         }
       }
     },
+    "Real-World Demo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "實景示範地圖"
+          }
+        }
+      }
+    },
     "Real-World Map" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1945,6 +1955,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切換到自由模式"
+          }
+        }
+      }
+    },
+    "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台灣的平溪線、宜蘭線與深澳線，照真實路線蓋好、已經在跑"
           }
         }
       }

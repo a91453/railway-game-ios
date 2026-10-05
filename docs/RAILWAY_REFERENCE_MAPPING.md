@@ -454,17 +454,30 @@ GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.s
 
 | 參考 | 行為 | Swift | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
-| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它 | 度（WGS-84） | 直接重用（原檔） |
-| `Railway` `data/track_stations.geojson`（607 個站點，同一站在每條線各一點、各用那條線的顏色） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫）與 `stations`（每個系統每個站名的第一個，543 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
+| `Railway` `data/track_lines.geojson`（79 段、10 個系統；`sys`、`name`、`sortKey`、`lineKey`，以及 `railMix` 預先混好的八種顏色） | 真實的鐵道路線 | 原檔放進 `RailwayGameApp/Resources/RealRailways/`；`RealRailways.lines` 讀它；檔裡的顏色不用（下面「顏色」一列） | 度（WGS-84） | 直接重用（原檔） |
+| `Railway` `data/track_stations.geojson`（607 個站點，同一站在每條線各一點） | 地圖上的車站 | 原檔；`RealRailways.stationMarks`（全部畫，用那條線的顏色）與 `stations`（每個系統每個站名的第一個，543 站） | 度 | 直接重用（原檔）；去重複是這裡的，選點用 |
 | `Railway` `i18n/stations.json`（`systems[sys][站名].en`） | 車站的英文名稱 | 原檔改名 `station_names.json`；`Station.name(in:)`，四站沒有英文時用中文 | — | 直接重用（原檔） |
 | `Railway` `index.html` 的系統表（`id`、`label`）與 `i18n/translations.js` 的英文 | 系統的名稱與順序 | `RealRailways.System.all` | — | faithful |
 | `Railway` `data/track_style_layers.json`：`track-casing` 寬 5.6、`track-line` 寬 3、`track-stations` 半徑 2.4、外圈 1.5、外圈不透明度 0.9、`minzoom` 11；`themes` 的 casing 色（light `#f2ede2`、dark `#10141c`、sat `#24382c`）與 `states` 的取色 | 鐵道的畫法 | `RealRailways.Widths`、`MapTheme.casing`、`Palette.color(_:on:)`；App 的 `FollowingMapView`（`MKMultiPolylineRenderer`）與 `StationDotsRenderer` | 點；MapLibre 的 z 等於 MapKit 的 zoom scale 2^(z−19) | faithful |
 | `Railway` `glTracksInstall`：每個 `sortKey` 由小到大先畫全部 casing、再畫線；軌道層插在第一個標籤層之前 | 疊放順序 | 依 `sortKey` 先 casing 後依顏色的線，車站最後；MapKit 的 `.aboveRoads`（道路之上、標籤之下） | — | faithful |
 | `Railway` `trackStyle`（`自動`／`淡化`／`隱藏`，`localStorage` 的 `trainmap-track`；隱藏是極淡，不是不畫） | 軌道顯示 | `RealRailways.TrackStyle`，地圖樣式選單的「真實鐵道」；App 的設定（`@AppStorage`），不是遊戲的 | — | faithful；**改變**：預設是淡化（網站是自動），因為玩家的鐵路畫在它上面 |
 | `Railway` `state.basemap`（地圖、衛星）與深色模式 | 依底圖選色 | 地圖樣式的「地圖」依系統的深淺色用 light／dark，衛星兩種用 sat | — | faithful |
+| `Railway` 每條線的 `color`，與 `index.html` `railMix`（`RAIL_DIM` 0.40、`FAINT_LIGHT` 0.35、`FAINT_GLOW` 0.22、`GHOST_LIGHT` 0.18、`GHOST_GLOW` 0.12，向 casing 色混合） | 顏色 | `RealRailways.Palette(key:)`：每條線（`lineKey`）一個由 64 位元 FNV-1a 雜湊決定色相的隨機色（飽和度 65%、亮度 47%），每次都一樣；`Palette.mix` 照 `railMix` 混出深色、淡化與隱藏 | — | **改變**（2026-10-05 作者要求不用網站的代表色）；`railMix` faithful：拿網站的原色混，79 條線 × 7 種預先混好的顏色逐一相同（`RealRailwaysTests`） |
 | `Railway` `rail-discovery.js` `norm`（臺→台、去空白、小寫） | 站名比對 | `RealRailways.normalized`、`stations(matching:)`：中文或英文，開頭符合的在前 | — | faithful；排序是這裡的 |
 | `Railway` `data-sources/index.html`、各資料檔的 `source_notes` | 資料來源與授權 | `DataSourceCredits`、`DataSourcesView`（開始畫面與地圖樣式選單）；地圖底部帶子中間的「鐵道：交通部 TDX、© OpenStreetMap 貢獻者」 | — | faithful（標示）；ODbL 的衍生資料庫在公開的 repo 依同一授權提供 |
 | `Railway` 的跟隨路線（`followLayers`）、夜間霓虹色（`colorNeon`）、`collect` 狀態、車站標籤 | 網站其他的軌道畫法 | 沒有 | — | 不採用：遊戲沒有跟隨真實列車與收集；站名由 Apple 地圖自己的標籤顯示 |
+
+### 實景示範地圖
+
+2026-10-05 作者要求「把真實路線蓋成遊戲路網，當作實景的預設地圖，方便之後測功能」。只動 GamePresentation 與 App：用一般的 `GameWorld` 指令蓋，GameCore、golden、存檔都沒有改。
+
+| 參考 | 行為 | Swift | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway` `data/track_lines.geojson` 的宜蘭線（蘇澳–八堵，1307 點）、平溪線（397 點）、深澳線（162 點） | 真實路線的中心線 | `RealWorldDemo.Layout`：宜蘭線取四腳亭以西 250 m 到三貂嶺、反過來接平溪線到菁桐，成一條主線；深澳線從瑞芳待避線西端分岔 | 經緯度 → 世界單位：`RealWorldFrame.worldPosition(latitude:longitude:)`（Web Mercator，同 MapKit 的 map point，錨點緯度上 1 公尺 = 64 單位） | 直接使用資料 |
+| 同上（OpenStreetMap 與 TDX 的測量線，有細小的折角） | 軌道的幾何 | 每 5 m 重新取樣、前後 15 m 平均；擬合成 cubic 的邊，節點兩側切線一致（所以互通）；偏離 3 m 內（深澳線與宜蘭線並行、相距 6–12 m 的一段 1 m 內，才守得住 4 m 線間距）、每段 30–960 m、轉角 60° 內 | 世界單位 | **gap**：網站只有中心線、沒有股道與道岔 |
+| `Railway` `data/track_stations.geojson` 的站點 | 車站與月台 | 每站一個 64 m 的月台（3 節車加一節），在中心線上離真實站點最近的地方；端點站往內收；瑞芳、猴硐、三貂嶺、十分多一條長 400 m、偏 5 m 的待避線與第二個月台 | m × 64 | **gap**：真實的宜蘭線是雙線、各站股道數不同；這裡簡化成單線加待避線，十分是平溪線真實的交會站 |
+| — | 營運 | 平溪線（瑞芳–菁桐）兩台、宜蘭線（四腳亭–三貂嶺）一台、深澳線（八斗子–瑞芳）一台，都是 3 節；全日營運；每站設遊戲的客流（不是真實的運量） | — | 這裡的：給測試 V3 的交會、待避與共線用 |
+| — | 開局資金 | 先算好全部的建造費（`TrackGeometry` 的長度與 `ConstructionCosts`），新遊戲的資金加上它，蓋完剛好剩 $3,000,000 | 美分 | 這裡的 |
 
 ### Stage F3：移除方格
 

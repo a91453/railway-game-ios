@@ -10,11 +10,13 @@ extension GameWorld {
     ///
     /// A blank map, or with `anchor` a real-world map with its middle there
     /// (Stage E2): the same game either way, laid over the Earth or not.
-    public static func newGame(anchor: GeoAnchor? = nil) -> GameWorld {
+    /// It starts with `balance`: ``startingBalance`` but for a game that
+    /// comes with its railway built (``RealWorldDemo``).
+    public static func newGame(anchor: GeoAnchor? = nil, balance: Money = startingBalance) -> GameWorld {
         do {
             var world = GameWorld(
                 bounds: newGameBounds,
-                economy: GameEconomy(balance: startingBalance, costs: .newGame),
+                economy: GameEconomy(balance: balance, costs: .newGame),
                 clock: GameClock(speed: .normal)
             )
             try world.setTrafficControl(true)
