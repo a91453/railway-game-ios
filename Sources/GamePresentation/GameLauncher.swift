@@ -70,6 +70,12 @@ public final class GameLauncher {
         begin(DemoWorld.make(in: language), keepingAutosave: true)
     }
 
+    /// Opens ``RealWorldDemo``: Taiwan's Pingxi, Yilan and Shenao Lines
+    /// built on `railways` and running over Apple's map.
+    public func openRealWorldDemo(railways: RealRailways) {
+        begin(RealWorldDemo.make(in: language, railways: railways), keepingAutosave: true)
+    }
+
     /// Starts a new game with the tutorial on its first step (the start
     /// screen's tutorial entry, Stage C5).
     public func startTutorial() {

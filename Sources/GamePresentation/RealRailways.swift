@@ -13,8 +13,10 @@ import GameCore
 //
 // Sources (`Railway/site_archive_clean/`):
 // - `data/track_lines.geojson` and `data/track_stations.geojson`: every
-//   line's shape and stations, with the colours the site draws them in
-//   (`railMix` mixed in advance for each look);
+//   line's shape and stations. The colours the site draws them in are not
+//   used: each line has a colour picked at random from its key (2026-10-05,
+//   the author's request), mixed for each look as the site mixes its own
+//   (`index.html` `railMix`);
 // - `data/track_style_layers.json`: the casing, line and station widths and
 //   the casing colour of each map theme;
 // - `i18n/stations.json`: the stations' English names;
@@ -136,31 +138,78 @@ public struct RealRailways: Sendable {
         }
     }
 
-    /// The colours the site draws one line or station in, one for each
+    /// The colours one line and its stations are drawn in, one for each
     /// track display and map theme.
+    ///
+    /// Not the site's: the author asked (2026-10-05) for colours of the
+    /// game's own, so a line's colour is picked at random from its key
+    /// (``init(key:)``), the same every time. The dark, faint and hidden
+    /// looks are mixed from it toward the map theme's casing as the site
+    /// mixes its own (`index.html` `railMix`, with `RAIL_DIM`,
+    /// `FAINT_LIGHT`, `FAINT_GLOW`, `GHOST_LIGHT` and `GHOST_GLOW`).
     public struct Palette: Hashable, Sendable {
-        let color: RGB
-        let colorDark: RGB
-        let colorFaintLight: RGB
-        let colorFaintDark: RGB
-        let colorFaintSat: RGB
-        let colorHiddenLight: RGB
-        let colorHiddenDark: RGB
-        let colorHiddenSat: RGB
+        /// The line's own colour: how it looks in the auto display on a
+        /// light map and on imagery.
+        public let color: RGB
 
-        /// The colour for `style` on `theme` (`track_style_layers.json`'s
-        /// states).
-        public func color(_ style: TrackStyle, on theme: MapTheme) -> RGB {
-            switch (style, theme) {
-            case (.auto, .light), (.auto, .satellite): color
-            case (.auto, .dark): colorDark
-            case (.faint, .light): colorFaintLight
-            case (.faint, .dark): colorFaintDark
-            case (.faint, .satellite): colorFaintSat
-            case (.hidden, .light): colorHiddenLight
-            case (.hidden, .dark): colorHiddenDark
-            case (.hidden, .satellite): colorHiddenSat
+        public init(color: RGB) {
+            self.color = color
+        }
+
+        /// A colour picked at random from `key` and always the same for it:
+        /// the hue from the key's 64-bit FNV-1a hash, at 65% saturation and
+        /// 47% lightness, so every line reads on the map whatever its hue.
+        public init(key: String) {
+            var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+            for byte in key.utf8 {
+                hash ^= UInt64(byte)
+                hash = hash &* 0x0000_0100_0000_01B3
             }
+            self.init(color: Self.rgb(hue: Double(hash % 360), saturation: 0.65, lightness: 0.47))
+        }
+
+        /// The colour for `style` on `theme` (the site's `trackLineColor`
+        /// and `railDimColor`, as its files have them mixed in advance).
+        public func color(_ style: TrackStyle, on theme: MapTheme) -> RGB {
+            let keep: Double? = switch (style, theme) {
+            case (.auto, .light), (.auto, .satellite): nil
+            case (.auto, .dark): 0.40
+            case (.faint, .light): 0.35
+            case (.faint, .dark), (.faint, .satellite): 0.22
+            case (.hidden, .light): 0.18
+            case (.hidden, .dark), (.hidden, .satellite): 0.12
+            }
+            guard let keep else { return color }
+            return Self.mix(color, into: theme.casing, keeping: keep)
+        }
+
+        /// The site's `railMix`: each channel `round(c · keep + base · (1 −
+        /// keep))`.
+        public static func mix(_ color: RGB, into base: RGB, keeping keep: Double) -> RGB {
+            func channel(_ c: UInt8, _ b: UInt8) -> UInt8 {
+                UInt8((Double(c) * keep + Double(b) * (1 - keep)).rounded())
+            }
+            return RGB(red: channel(color.red, base.red), green: channel(color.green, base.green), blue: channel(color.blue, base.blue))
+        }
+
+        /// The colour of `hue` (degrees), `saturation` and `lightness`.
+        static func rgb(hue: Double, saturation: Double, lightness: Double) -> RGB {
+            let chroma = (1 - abs(2 * lightness - 1)) * saturation
+            let sector = hue / 60
+            let second = chroma * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
+            let (r, g, b): (Double, Double, Double) = switch Int(sector) {
+            case 0: (chroma, second, 0)
+            case 1: (second, chroma, 0)
+            case 2: (0, chroma, second)
+            case 3: (0, second, chroma)
+            case 4: (second, 0, chroma)
+            default: (chroma, 0, second)
+            }
+            let lift = lightness - chroma / 2
+            func channel(_ value: Double) -> UInt8 {
+                UInt8(((value + lift) * 255).rounded())
+            }
+            return RGB(red: channel(r), green: channel(g), blue: channel(b))
         }
     }
 
@@ -241,7 +290,6 @@ public struct RealRailways: Sendable {
 
     /// Why the files cannot be read.
     public enum LoadError: Error, Hashable {
-        case invalidColor(String)
         case invalidCoordinate
         case unknownSystem(String)
     }
@@ -268,7 +316,7 @@ public struct RealRailways: Sendable {
                 system: try Self.system(feature.properties.sys),
                 name: feature.properties.name,
                 sortKey: feature.properties.sortKey,
-                palette: try feature.properties.palette.read(),
+                palette: Palette(key: feature.properties.lineKey),
                 points: points,
                 box: Box(points)
             )
@@ -277,7 +325,7 @@ public struct RealRailways: Sendable {
             StationMark(
                 system: try Self.system(feature.properties.sys),
                 coordinate: try Self.coordinate(feature.geometry.coordinates),
-                palette: try feature.properties.palette.read()
+                palette: Palette(key: feature.properties.lineKey)
             )
         }
         var seen: Set<String> = []
@@ -401,69 +449,20 @@ extension RealRailways {
         let coordinates: [Double]
     }
 
-    /// The colours every feature carries.
-    private struct PaletteProperties: Decodable {
-        let color: String
-        let colorDark: String
-        let colorFaintLight: String
-        let colorFaintDark: String
-        let colorFaintSat: String
-        let colorHiddenLight: String
-        let colorHiddenDark: String
-        let colorHiddenSat: String
-
-        func read() throws -> Palette {
-            func rgb(_ hex: String) throws -> RGB {
-                guard let rgb = RGB(hex: hex) else { throw LoadError.invalidColor(hex) }
-                return rgb
-            }
-            return Palette(
-                color: try rgb(color),
-                colorDark: try rgb(colorDark),
-                colorFaintLight: try rgb(colorFaintLight),
-                colorFaintDark: try rgb(colorFaintDark),
-                colorFaintSat: try rgb(colorFaintSat),
-                colorHiddenLight: try rgb(colorHiddenLight),
-                colorHiddenDark: try rgb(colorHiddenDark),
-                colorHiddenSat: try rgb(colorHiddenSat)
-            )
-        }
-    }
-
+    /// A line's piece: its system, name, drawing order and key (the system
+    /// and the line, shared by its pieces and its stations).
     private struct LineProperties: Decodable {
         let sys: String
         let name: String
         let sortKey: Int
-        let palette: PaletteProperties
-
-        enum CodingKeys: String, CodingKey {
-            case sys, name, sortKey
-        }
-
-        init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            sys = try container.decode(String.self, forKey: .sys)
-            name = try container.decode(String.self, forKey: .name)
-            sortKey = try container.decode(Int.self, forKey: .sortKey)
-            palette = try PaletteProperties(from: decoder)
-        }
+        let lineKey: String
     }
 
+    /// A station on a line.
     private struct StationProperties: Decodable {
         let sys: String
         let name: String
-        let palette: PaletteProperties
-
-        enum CodingKeys: String, CodingKey {
-            case sys, name
-        }
-
-        init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            sys = try container.decode(String.self, forKey: .sys)
-            name = try container.decode(String.self, forKey: .name)
-            palette = try PaletteProperties(from: decoder)
-        }
+        let lineKey: String
     }
 
     /// `i18n/stations.json`: each system's stations by their Chinese name.

@@ -50,7 +50,7 @@ public enum DataSourceCredits {
         [
             DataSourceSection(
                 id: "railways",
-                title: language.text("Taiwan’s Railways on Real-World Maps", "實景地圖上的台灣鐵道"),
+                title: language.text("Taiwan’s Railways on Real-World Maps and the Real-World Demo", "實景地圖與實景示範地圖上的台灣鐵道"),
                 credits: [
                     DataSourceCredit(
                         id: "tdx",

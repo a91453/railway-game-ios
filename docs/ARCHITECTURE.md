@@ -2462,10 +2462,18 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **台灣的真實鐵道**（2026-10-05 追加，作者要求從私有 repo 直接移植；對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#實景地圖的台灣鐵道與車站)）：
 - `Railway/` 網站的 `track_lines.geojson`、`track_stations.geojson` 與 `i18n/stations.json` 原檔放在 App 的 `Resources/RealRailways/`（約 940 KB）。GamePresentation 的 `RealRailways` 讀它們（Foundation 的 `JSONDecoder`，Linux 上用 repo 裡的同一份檔案測試）；App 第一次用到時讀一次（`RealRailways.bundled`）。
-- 實景的遊戲地圖：`FollowingMapView` 把錨點 16 公里內的路線畫成 MapKit 的 overlay，照網站的寬度、顏色與疊放順序，放在 `.aboveRoads`（道路之上、地圖的標籤之下，和網站在 MapLibre 的位置相同）；車站是 `StationDotsRenderer` 畫的固定大小的圓，網站的第 11 級以上才畫。地圖樣式選單多一個「真實鐵道」（自動、淡化、隱藏，App 的設定，預設淡化），以及「資料來源」。
+- 實景的遊戲地圖：`FollowingMapView` 把錨點 16 公里內的路線畫成 MapKit 的 overlay，照網站的寬度與疊放順序（顏色是每條線一個固定的隨機色，深色、淡化與隱藏照網站的 `railMix` 混出；2026-10-05 作者要求不用網站的代表色），放在 `.aboveRoads`（道路之上、地圖的標籤之下，和網站在 MapLibre 的位置相同）；車站是 `StationDotsRenderer` 畫的固定大小的圓，網站的第 11 級以上才畫。地圖樣式選單多一個「真實鐵道」（自動、淡化、隱藏，App 的設定，預設淡化），以及「資料來源」。
 - 選點的畫面：地圖畫出全部路線；清單在台灣之後依系統列出 543 個車站，輸入時照網站的比對方式即時列出符合的車站。
 - 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
 - 都只是畫面：GameCore 不知道真實鐵道，存檔不存它，玩家的鐵路照舊自己蓋；golden、存檔版本與 property digest 都沒有改。
+
+**實景示範地圖**（2026-10-05 追加，作者要求；對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#實景示範地圖)）：
+- 開始畫面的「實景示範地圖」：錨點在瑞芳、三貂嶺與菁桐之間，平溪線（三貂嶺–菁桐）、宜蘭線（四腳亭–三貂嶺）與深澳線（瑞芳–八斗子）照真實路線蓋成遊戲的軌道，平溪線兩台、宜蘭線與深澳線各一台列車開局就在跑，用來在真實路線上測 V3 的交會、待避與共線。
+- 和示範地圖一樣是 GamePresentation 用一般的 `GameWorld` 指令蓋（`RealWorldDemo`），照常付費；開局資金是新遊戲的加上先算好的建造費，蓋完剩下和新遊戲一樣。GameCore、golden、存檔都沒有改。
+- 真實線形先平滑（每 5 m 取樣、前後 15 m 平均），再擬合成 cubic 的邊：節點兩側用同一個切線，所以每個節點都互通；擬合誤差 3 m，深澳線與宜蘭線並行的 1.3 km 內 1 m，守住 4 m 的線間距。
+- 經緯度到世界的換算是 `RealWorldFrame.worldPosition(latitude:longitude:)`，和 `AppleMapBackground` 用的 MapKit map point 是同一個 Web Mercator，所以蓋出來的軌道疊在底下畫的真實鐵道上。
+- 簡化：只有中心線一股，瑞芳、猴硐、三貂嶺、十分加 400 m 的待避線；真實的宜蘭線是雙線。客流是遊戲的數字，不是真實的運量。
+- 建造的時間：Linux 的 release 約 0.4 秒、debug 約 8 秒，幾乎都在 GameCore 每段軌道的間距與交叉檢查（約 200 段）；實機沒有量。
 
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
 

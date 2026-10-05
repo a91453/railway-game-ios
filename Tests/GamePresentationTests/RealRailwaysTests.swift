@@ -61,24 +61,74 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(line.points.count, 485)
     }
 
-    func testEachTrackStyleAndThemeHasTheSitesColour() throws {
-        let palette = try XCTUnwrap(Self.bundled().lines.first).palette
-        func hex(_ style: RealRailways.TrackStyle, _ theme: RealRailways.MapTheme) -> RealRailways.RGB {
-            palette.color(style, on: theme)
-        }
-        XCTAssertEqual(hex(.auto, .light), RealRailways.RGB(hex: "#2E6FB0"))
-        XCTAssertEqual(hex(.auto, .satellite), RealRailways.RGB(hex: "#2E6FB0"), "the line's own colour on imagery")
-        XCTAssertEqual(hex(.auto, .dark), RealRailways.RGB(hex: "#1c3857"))
-        XCTAssertEqual(hex(.faint, .light), RealRailways.RGB(hex: "#adc1d1"))
-        XCTAssertEqual(hex(.faint, .dark), RealRailways.RGB(hex: "#17283d"))
-        XCTAssertEqual(hex(.faint, .satellite), RealRailways.RGB(hex: "#264449"))
-        XCTAssertEqual(hex(.hidden, .light), RealRailways.RGB(hex: "#cfd6d9"))
-        XCTAssertEqual(hex(.hidden, .dark), RealRailways.RGB(hex: "#141f2e"))
-        XCTAssertEqual(hex(.hidden, .satellite), RealRailways.RGB(hex: "#253f3c"))
+    /// The site's `railMix`, ported: mixing each line's own colour as the
+    /// site does gives every colour its files have mixed in advance, for
+    /// every line, look and map theme.
+    func testColoursMixAsTheSiteMixesThem() throws {
+        struct File: Decodable {
+            struct Feature: Decodable {
+                let properties: [String: AnyValue]
+            }
 
+            let features: [Feature]
+        }
+        enum AnyValue: Decodable {
+            case text(String), number(Double)
+            init(from decoder: any Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let text = try? container.decode(String.self) { self = .text(text) } else { self = .number(try container.decode(Double.self)) }
+            }
+
+            var text: String? {
+                if case .text(let text) = self { text } else { nil }
+            }
+        }
+        let features = try JSONDecoder().decode(File.self, from: Self.bundledFile("track_lines.geojson")).features
+        XCTAssertEqual(features.count, 79)
+        let looks: [(String, RealRailways.TrackStyle, RealRailways.MapTheme)] = [
+            ("colorDark", .auto, .dark),
+            ("colorFaintLight", .faint, .light), ("colorFaintDark", .faint, .dark), ("colorFaintSat", .faint, .satellite),
+            ("colorHiddenLight", .hidden, .light), ("colorHiddenDark", .hidden, .dark), ("colorHiddenSat", .hidden, .satellite),
+        ]
+        for feature in features {
+            let own = try XCTUnwrap(RealRailways.RGB(hex: try XCTUnwrap(feature.properties["color"]?.text)))
+            let palette = RealRailways.Palette(color: own)
+            XCTAssertEqual(palette.color(.auto, on: .light), own)
+            XCTAssertEqual(palette.color(.auto, on: .satellite), own, "the line's own colour on imagery")
+            for (key, style, theme) in looks {
+                let mixed = try XCTUnwrap(feature.properties[key]?.text)
+                XCTAssertEqual(palette.color(style, on: theme), RealRailways.RGB(hex: mixed), "\(key) of \(own)")
+            }
+        }
         XCTAssertEqual(RealRailways.MapTheme.light.casing, RealRailways.RGB(hex: "#f2ede2"))
         XCTAssertEqual(RealRailways.MapTheme.dark.casing, RealRailways.RGB(hex: "#10141c"))
         XCTAssertEqual(RealRailways.MapTheme.satellite.casing, RealRailways.RGB(hex: "#24382c"))
+    }
+
+    /// Not the site's colours (2026-10-05, the author's request): each line
+    /// has one picked at random from its key, the same every time, shared
+    /// by its pieces and its stations.
+    func testEachLineHasARandomColourOfItsOwn() throws {
+        let railways = try Self.bundled()
+        let first = try XCTUnwrap(railways.lines.first)
+        XCTAssertEqual(first.palette, RealRailways.Palette(key: "tra_sched|縱貫線北段"))
+        XCTAssertNotEqual(first.palette.color, RealRailways.RGB(hex: "#2E6FB0"), "not the site's blue")
+        XCTAssertEqual(try Self.bundled().lines.map(\.palette), railways.lines.map(\.palette), "the same every time")
+
+        // The 13 pieces of the trunk line's northern part share one colour,
+        // and so do its stations.
+        let trunk = railways.lines.filter { $0.name == first.name }
+        XCTAssertEqual(trunk.count, 13)
+        XCTAssertEqual(Set(trunk.map(\.palette)), [first.palette])
+        let keelung = try XCTUnwrap(railways.stations.first)
+        XCTAssertEqual(keelung.palette, first.palette)
+
+        // The lines differ: at least 20 colours among them.
+        XCTAssertGreaterThanOrEqual(Set(railways.lines.map(\.palette.color)).count, 20)
+
+        // A colour from a hue: 65% saturation, 47% lightness.
+        XCTAssertEqual(RealRailways.Palette(color: RealRailways.Palette(key: "x").color).color, RealRailways.Palette(key: "x").color)
+        XCTAssertEqual(RealRailways.Palette.mix(.init(red: 200, green: 0, blue: 100), into: .init(red: 0, green: 100, blue: 0), keeping: 0.5), .init(red: 100, green: 50, blue: 50))
     }
 
     func testColoursAreSixHexDigits() {
@@ -95,8 +145,7 @@ final class RealRailwaysTests: XCTestCase {
         func lines(_ properties: String, _ coordinates: String) -> Data {
             Data(#"{"type":"FeatureCollection","features":[{"type":"Feature","properties":{\#(properties)},"geometry":{"type":"LineString","coordinates":\#(coordinates)}}]}"#.utf8)
         }
-        let colours = ##""color":"#2E6FB0","colorDark":"#1c3857","colorFaintLight":"#adc1d1","colorFaintDark":"#17283d","colorFaintSat":"#264449","colorHiddenLight":"#cfd6d9","colorHiddenDark":"#141f2e","colorHiddenSat":"#253f3c""##
-        let good = #""sys":"mrt","name":"A","sortKey":0,"# + colours
+        let good = #""sys":"mrt","name":"A","sortKey":0,"lineKey":"mrt|A""#
         XCTAssertEqual(try RealRailways(lines: lines(good, "[[121.5,25.0],[121.6,25.1]]"), stations: stations, names: names).lines.count, 1)
 
         XCTAssertThrowsError(try RealRailways(lines: lines(good, "[[121.5,25.0]]"), stations: stations, names: names)) {
@@ -105,13 +154,9 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertThrowsError(try RealRailways(lines: lines(good, "[[121.5,95.0],[121.6,25.1]]"), stations: stations, names: names)) {
             XCTAssertEqual($0 as? RealRailways.LoadError, .invalidCoordinate)
         }
-        let unknown = #""sys":"bus","name":"A","sortKey":0,"# + colours
+        let unknown = #""sys":"bus","name":"A","sortKey":0,"lineKey":"bus|A""#
         XCTAssertThrowsError(try RealRailways(lines: lines(unknown, "[[121.5,25.0],[121.6,25.1]]"), stations: stations, names: names)) {
             XCTAssertEqual($0 as? RealRailways.LoadError, .unknownSystem("bus"))
-        }
-        let badColour = good.replacingOccurrences(of: ##""color":"#2E6FB0""##, with: #""color":"blue""#)
-        XCTAssertThrowsError(try RealRailways(lines: lines(badColour, "[[121.5,25.0],[121.6,25.1]]"), stations: stations, names: names)) {
-            XCTAssertEqual($0 as? RealRailways.LoadError, .invalidColor("blue"))
         }
     }
 

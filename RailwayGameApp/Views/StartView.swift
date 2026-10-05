@@ -7,7 +7,8 @@ import UniformTypeIdentifiers
 /// its saved-game card (`screen-save-load-ui`: go on with the saved game,
 /// or start fresh): continue the autosave, start a new game on a blank or a
 /// real-world map (Stage E2), open the demo map, load one of the saves or
-/// import a save file.
+/// import a save file, or open the real-world demo (Taiwan's real lines
+/// built and running).
 ///
 /// Every action calls a ``GameLauncher`` method; the screen keeps nothing
 /// of the games but what it shows.
@@ -93,6 +94,19 @@ struct StartView: View {
                     ) {
                         importsSave = true
                     }
+                    // Last, so the buttons the UI tests reach stay where
+                    // they were.
+                    StartButton(
+                        title: String(localized: "Real-World Demo"),
+                        detail: String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
+                        systemImage: "map.fill",
+                        accentColor: Palette.metroCyan
+                    ) {
+                        if let railways = RealRailways.bundled {
+                            launcher.openRealWorldDemo(railways: railways)
+                        }
+                    }
+                    .accessibilityIdentifier("start.realWorldDemo")
                 }
                 if let message = launcher.message {
                     HStack(spacing: 8) {
