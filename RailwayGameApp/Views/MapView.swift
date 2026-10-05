@@ -24,24 +24,21 @@ struct MapView: View {
     @State private var showsMapLayers = false
 
     private var mapLayers: MapLayerPreferences {
-        get {
-            MapLayerPreferences(
-                showsStationNames: showsStationNames,
-                showsWaitingCounts: showsWaitingCounts,
-                showsCatchmentRings: showsCatchmentRings
-            )
-        }
-        set {
-            showsStationNames = newValue.showsStationNames
-            showsWaitingCounts = newValue.showsWaitingCounts
-            showsCatchmentRings = newValue.showsCatchmentRings
-        }
+        MapLayerPreferences(
+            showsStationNames: showsStationNames,
+            showsWaitingCounts: showsWaitingCounts,
+            showsCatchmentRings: showsCatchmentRings
+        )
     }
 
     private var mapLayersBinding: Binding<MapLayerPreferences> {
         Binding(
             get: { mapLayers },
-            set: { mapLayers = $0 }
+            set: { newPreferences in
+                showsStationNames = newPreferences.showsStationNames
+                showsWaitingCounts = newPreferences.showsWaitingCounts
+                showsCatchmentRings = newPreferences.showsCatchmentRings
+            }
         )
     }
 
@@ -101,6 +98,14 @@ struct MapView: View {
                     }
                     .padding(12)
                 }
+                .overlay(alignment: .top) {
+                    if session.tool == .network, let preview = session.networkPreview {
+                        MapConstructionHUD(preview: preview, language: session.language)
+                            .padding(.top, 12)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .frame(height: viewport.height)
                 if strip > 0 {
                     // Nothing of the game over the strip: Apple's map shows
