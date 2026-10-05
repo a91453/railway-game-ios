@@ -25,10 +25,12 @@ final class TurnbackPropertyTests: XCTestCase {
                 var problems = KernelDifferentialTests.differences(world, model)
                 if world.scheduledTrafficWaits() != model.scheduledPlan().waits { problems.append("scheduled waits") }
                 if world.deadlockedTrains() != model.deadlockedTrains() { problems.append("deadlock") }
+                if world.routeWaits() != WorldInvariants.routeWaitsOneByOne(in: world) { problems.append("route waits") }
                 for unit in world.trains {
                     if world.reservedResources(of: unit.id) != model.reservedResources(of: unit.id) { problems.append("reservation") }
                     if world.heldResources(of: unit.id) != model.heldResources(of: unit.id) { problems.append("held") }
                     if world.trainHoldingRoute(of: unit.id) != model.trainHoldingRoute(of: unit.id) { problems.append("holder") }
+                    if world.contestedResources(of: unit.id) != model.contestedResources(of: unit.id) { problems.append("contested") }
                 }
                 problems += WorldInvariants.violations(in: world)
                 if let problem = WorldInvariants.roundTripProblem(of: world) { problems.append(problem) }

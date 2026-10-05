@@ -20,6 +20,11 @@ enum Palette {
     static let metroCyan = dynamic(light: (0.05, 0.60, 0.72), dark: (0.20, 0.75, 0.88))
     static let metroRed = dynamic(light: (0.85, 0.24, 0.24), dark: (0.95, 0.38, 0.38))
 
+    /// The casing under a train's movement authority (Stage V4e): the
+    /// `Railway/` site's `followCase` (#fffdf6 light, #10141c dark), which
+    /// it draws under a followed train's route.
+    static let followCase = dynamic(light: (1.00, 0.992, 0.965), dark: (0.063, 0.078, 0.110))
+
     // Surfaces and Borders
     static let cardBackground = dynamic(light: (1.00, 1.00, 1.00), dark: (0.14, 0.15, 0.18))
     static let cardBorder = dynamicAlpha(light: (0.0, 0.0, 0.0, 0.08), dark: (1.0, 1.0, 1.0, 0.12))

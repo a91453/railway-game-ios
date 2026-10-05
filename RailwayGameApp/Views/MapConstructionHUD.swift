@@ -23,7 +23,7 @@ struct MapConstructionHUD: View {
                         .monospacedDigit()
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(language.text("Length: \(NetworkBuilding.lengthText(preview.length, in: language))", "長度：\(NetworkBuilding.lengthText(preview.length, in: language))"))
+                .accessibilityLabel(text("Length: \(NetworkBuilding.lengthText(preview.length, in: language))", "長度：\(NetworkBuilding.lengthText(preview.length, in: language))"))
 
                 Divider()
                     .frame(height: 14)
@@ -38,7 +38,7 @@ struct MapConstructionHUD: View {
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     } else {
-                        Text("\(NetworkBuilding.lengthText(preview.startHeight, in: language)) → \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
+                        Text(verbatim: "\(NetworkBuilding.lengthText(preview.startHeight, in: language)) → \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     }
@@ -60,7 +60,7 @@ struct MapConstructionHUD: View {
                             .monospacedDigit()
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel(language.text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
+                    .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
                 }
             }
 
@@ -79,7 +79,7 @@ struct MapConstructionHUD: View {
                 .padding(.vertical, 4)
                 .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(language.text("Problem: \(problem)", "問題：\(problem)"))
+                .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
             } else if preview.joinsStart || preview.joinsEnd {
                 HStack(spacing: 4) {
                     Image(systemName: "link")
@@ -100,23 +100,31 @@ struct MapConstructionHUD: View {
         }
         .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
         .allowsHitTesting(false)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.constructionHUD")
+    }
+
+    /// `english` or `chinese` for the session's language. GamePresentation's
+    /// own `DisplayLanguage.text` is internal to that module, so the app
+    /// picks by the public enum, as the line panel does.
+    private func text(_ english: String, _ chinese: String) -> String {
+        language == .traditionalChinese ? chinese : english
     }
 
     private var continuityText: String {
         switch (preview.joinsStart, preview.joinsEnd) {
-        case (true, true): return language.text("joins track at both ends", "兩端均與軌道相接")
-        case (true, false): return language.text("continues existing track", "延續既有軌道")
-        case (false, true): return language.text("joins track at end", "終點與軌道相接")
+        case (true, true): return text("joins track at both ends", "兩端均與軌道相接")
+        case (true, false): return text("continues existing track", "延續既有軌道")
+        case (false, true): return text("joins track at end", "終點與軌道相接")
         case (false, false): return ""
         }
     }
 
     private var heightAccessibilityLabel: String {
         if preview.startHeight == preview.endHeight {
-            return language.text("Height: \(NetworkBuilding.lengthText(preview.startHeight, in: language))", "高度：\(NetworkBuilding.lengthText(preview.startHeight, in: language))")
+            return text("Height: \(NetworkBuilding.lengthText(preview.startHeight, in: language))", "高度：\(NetworkBuilding.lengthText(preview.startHeight, in: language))")
         } else {
-            return language.text("Height: \(NetworkBuilding.lengthText(preview.startHeight, in: language)) to \(NetworkBuilding.lengthText(preview.endHeight, in: language))", "高度：\(NetworkBuilding.lengthText(preview.startHeight, in: language)) 至 \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
+            return text("Height: \(NetworkBuilding.lengthText(preview.startHeight, in: language)) to \(NetworkBuilding.lengthText(preview.endHeight, in: language))", "高度：\(NetworkBuilding.lengthText(preview.startHeight, in: language)) 至 \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
         }
     }
 }

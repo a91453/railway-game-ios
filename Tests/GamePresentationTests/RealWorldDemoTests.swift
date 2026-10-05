@@ -188,6 +188,34 @@ final class RealWorldDemoTests: XCTestCase {
         let carried = world.stations.map { world.passengerLedger(of: $0.id).arrived }.reduce(0, +)
         XCTAssertGreaterThan(carried, 0, "passengers rode")
     }
+    /// V4e: over the demo's first hour the map shows every running train's
+    /// movement authority along its own track, and every wait names a
+    /// train of the world; a deadlocked train waits for another one.
+    func testTheMapShowsTheDemosMovementAuthorities() throws {
+        var (_, world) = try Self.built.get()
+        XCTAssertTrue(world.isTrafficControlEnabled)
+        var trainsWithAuthority: Set<TrainID> = []
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            let overlay = world.trafficOverlay()
+            for authority in overlay.authorities {
+                trainsWithAuthority.insert(authority.train)
+                XCTAssertFalse(world.reservedResources(of: authority.train).isEmpty)
+                XCTAssertFalse(authority.track.lines.isEmpty)
+                XCTAssertTrue(authority.track.lines.allSatisfy { $0.count >= 2 })
+            }
+            let deadlocked = Set(world.deadlockedTrains())
+            for wait in overlay.waits {
+                XCTAssertNotNil(world.train(id: wait.holder))
+                XCTAssertNotEqual(wait.train, wait.holder)
+                XCTAssertEqual(wait.isDeadlocked, deadlocked.contains(wait.train))
+                if wait.isDeadlocked { XCTAssertTrue(deadlocked.contains(wait.holder)) }
+            }
+            XCTAssertEqual(overlay.summary(in: .english) == nil, overlay.isEmpty)
+        }
+        XCTAssertEqual(trainsWithAuthority, Set(world.trains.map(\.id)), "every demo train took a route")
+    }
+
     /// V4a on the demo's own geometry: a slow train starts at Sijiaoting and calls at Houtong,
     /// an express catches it before Sandiaoling. The waiting body must
     /// clear the express's nominal corridor, on the other physical track.

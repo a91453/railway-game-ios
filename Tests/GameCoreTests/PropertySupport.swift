@@ -221,6 +221,17 @@ enum PerformanceSamples {
 // MARK: - World invariants
 
 enum WorldInvariants {
+    /// Decision 64: what ``GameWorld/routeWaits()`` must equal, asked one
+    /// train at a time through the single queries.
+    static func routeWaitsOneByOne(in world: GameWorld) -> [RouteWait] {
+        let deadlocked = Set(world.deadlockedTrains())
+        return world.trains.sorted { $0.id < $1.id }.compactMap { train in
+            world.trainHoldingRoute(of: train.id).map {
+                RouteWait(train: train.id, holder: $0, contested: world.contestedResources(of: train.id), isDeadlocked: deadlocked.contains(train.id))
+            }
+        }
+    }
+
     /// Every documented invariant a world reachable through commands must
     /// keep; each broken one is described. Checked from the public state only.
     static func violations(in world: GameWorld) -> [String] {

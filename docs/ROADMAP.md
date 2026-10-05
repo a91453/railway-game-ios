@@ -826,3 +826,9 @@ E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立�
 - 已實作，最新 head 驗證中（決策63）：中途全列折返、V2反向倒入側線；正向優先、反向枚舉全部可用berths、完整原子預約與限界／方向保護，dead-end續行取得授權後才翻向。
 - 新golden schema34（保留30–33）、save10不變；新768步campaign與實景玩家折返服務。既有fixtures／campaign量／workflow／timeout保留。
 - 精確VERIFIED／UNVERIFIED狀態見PR128、接手分支`claude/takeover-and-complete-mp89w9`的draft PR及STAGE_V_HANDOFF。作者合併V4d後才開V4e：地圖上的movement authority、死結車與互等位置，保留文字。
+
+### Stage V4e（2026-10-05，作者合併 V4d #131 後開工）
+
+- 已實作，驗證中（決策64）：地圖畫每車 movement authority（預約軌道，選取車不調暗）、等候車與擋住它的列車之間「等的位置」（contested 軌道，黃；死結紅）、車頭到該處的虛線與等候／死結外圈；列車面板等候文字保留，地圖左上小圖例與 VoiceOver 摘要 `map.traffic`。
+- GameCore 只補唯讀查詢 `contestedResources(of:)` 與一次算完的 `routeWaits()`，獨立模型與 deadlock／turnbacks campaign 每步比對；save 10、golden 34、既有 fixtures／workflow／gate／timeout 不變。新 UI 測試只在 full lane。
+- V 系列至此完成；之後的號誌、預測授權、死結閃爍與同軌標籤錯位列為 gap（決策64限制）。精確 VERIFIED／UNVERIFIED 見 V4e PR 與 STAGE_V_HANDOFF。

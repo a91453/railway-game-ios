@@ -122,6 +122,9 @@ final class ScheduledTrafficTests: XCTestCase {
         try world.setTrainMovementRate(TrainID(rawValue: 2), to: 0)
         try world.advance(ticks: 10)
         XCTAssertEqual(world.scheduledTrafficWait(of: TrainID(rawValue: 1))?.other.rawValue, 2)
+        // Decision 64: a scheduled wait is by plan, not for held track.
+        XCTAssertEqual(world.trainHoldingRoute(of: TrainID(rawValue: 1))?.rawValue, 2)
+        XCTAssertEqual(world.contestedResources(of: TrainID(rawValue: 1)), [])
         XCTAssertTrue(world.train(id: TrainID(rawValue: 2))!.trafficVisits.isEmpty)
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
