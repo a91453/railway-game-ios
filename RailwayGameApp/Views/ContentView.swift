@@ -122,8 +122,7 @@ struct ContentView: View {
             // belongs to the world it was drawn from.
             .id(ObjectIdentifier(session))
             .tutorialTarget(.map)
-            .overlay(alignment: .top) {
-                StatusBanner(session: session)
-            }
+            // The status banner is at the top of the map view, above its
+            // construction HUD and traffic key.
     }
 }

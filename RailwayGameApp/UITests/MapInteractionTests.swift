@@ -176,5 +176,39 @@ final class MapInteractionTests: XCTestCase {
 
         XCTAssertTrue(layersButton.waitForExistence(timeout: 5), "Map must be restored after dismissing sheet")
     }
+
+    func testConstructionHUDAppearsDuringTrackPreview() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        newGame.tap()
+
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        network.tap()
+
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+
+        let hud = app.otherElements["map.constructionHUD"]
+        XCTAssertFalse(hud.exists, "HUD must not exist before track is previewed")
+
+        // Tap start anchor and end anchor to trigger track preview
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35)).tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.35)).tap()
+
+        XCTAssertTrue(hud.waitForExistence(timeout: 5), "MapConstructionHUD must appear when preview is active")
+
+        // Clearing construction removes preview and HUD
+        let clear = app.buttons["Clear"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 5))
+        clear.tap()
+
+        XCTAssertFalse(hud.exists, "MapConstructionHUD must disappear when preview is cleared")
+    }
 }
 
