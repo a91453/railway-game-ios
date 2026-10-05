@@ -189,39 +189,47 @@ extension ReferenceWorld {
         let blocked = blocked(for: candidate.id)
         let canReverse = trafficControl && !stationsBesideWholeTrain(TrainID(rawValue: candidate.id)).isEmpty
         for (orientation, start) in (canReverse ? [initial, turnedOnNetwork(initial)] : [initial]).enumerated() {
-        var best: (path: TrainPath, distance: Int64, reverses: Bool)?
-        for station in stations.sorted(by: { $0.id < $1.id }) where station.id != call.rawValue {
-            guard let way = networkPathToStation(from: start.position!, station: StationID(rawValue: station.id), length: Self.length(start),
-                                                 blocked: blocked, forbidden: forbidden),
-                  way.distance > 0
-            else { continue }
-            let there = standing(followed(start, along: way))
-            guard !isAtBerth(there, of: call), let (exit, onward) = passingExit(there, call: call),
-                  case .onEdge(let traversal, let offset)? = exit.position
-            else { continue }
-            var runs = onward.traversals.map { Run($0)! }
-            if offset < networkEdges[Run(traversal)!.edge]!.length { runs.insert(Run(traversal)!, at: 0) }
-            guard runs.allSatisfy({ !forbidden.contains($0) }) else { continue }
-            let total = way.distance + onward.distance
-            guard total - planned.distance <= 25_600, total < best?.distance ?? .max else { continue }
-            guard case .success = admitted(routed(start, way)) else { continue }
-            // Standing there, another train of the deadlock could go.
-            var trial = self
-            var aside = there
-            aside.service = service
-            aside.reservation = []
-            trial.trains[trial.trains.firstIndex { $0.id == candidate.id }!] = aside
-            var frees = false
-            for (id, request) in stuck.sorted(by: { $0.key < $1.key }) where id != candidate.id {
-                if request.departs ? trial.canSetOff(request.candidate) : trial.holder(of: trial.needs(request.candidate).resources, except: id) == nil {
-                    frees = true
-                    break
+            var best: (path: TrainPath, distance: Int64, reverses: Bool)?
+            for station in stations.sorted(by: { $0.id < $1.id }) where station.id != call.rawValue {
+                let stationID = StationID(rawValue: station.id)
+                let berths = berthsForStation(stationID, length: Self.length(start))
+                let ordered = berths.keys.sorted { a, b in a.edge != b.edge ? a.edge < b.edge : a.forward && !b.forward }
+                let targets: [(Run, Int64)?] = orientation == 0 ? [nil] : ordered.flatMap { run in
+                    (berths[run] ?? []).sorted().map { Optional((run, $0)) }
+                }
+                for target in targets {
+                    guard let way = networkPathToStation(from: start.position!, station: StationID(rawValue: station.id), length: Self.length(start),
+                                                         blocked: blocked, forbidden: forbidden, only: target),
+                          way.distance > 0
+                    else { continue }
+                    let there = standing(followed(start, along: way))
+                    guard !isAtBerth(there, of: call), let (exit, onward) = passingExit(there, call: call),
+                          case .onEdge(let traversal, let offset)? = exit.position
+                    else { continue }
+                    var runs = onward.traversals.map { Run($0)! }
+                    if offset < networkEdges[Run(traversal)!.edge]!.length { runs.insert(Run(traversal)!, at: 0) }
+                    guard runs.allSatisfy({ !forbidden.contains($0) }) else { continue }
+                    let total = way.distance + onward.distance
+                    guard total - planned.distance <= 25_600, total < best?.distance ?? .max else { continue }
+                    guard case .success = admitted(routed(start, way)) else { continue }
+                    // Standing there, another train of the deadlock could go.
+                    var trial = self
+                    var aside = there
+                    aside.service = service
+                    aside.reservation = []
+                    trial.trains[trial.trains.firstIndex { $0.id == candidate.id }!] = aside
+                    var frees = false
+                    for (id, request) in stuck.sorted(by: { $0.key < $1.key }) where id != candidate.id {
+                        if request.departs ? trial.canSetOff(request.candidate) : trial.holder(of: trial.needs(request.candidate).resources, except: id) == nil {
+                            frees = true
+                            break
+                        }
+                    }
+                    guard frees else { continue }
+                    best = (way, total, orientation == 1)
                 }
             }
-            guard frees else { continue }
-            best = (way, total, orientation == 1)
-        }
-        if let best { return best }
+            if let best { return best }
         }
         return nil
     }

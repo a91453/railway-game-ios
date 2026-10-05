@@ -38,6 +38,65 @@ final class TurnbackTests: XCTestCase {
         return (world, model, line, train)
     }
 
+    static func reverseSiding() throws -> (GameWorld, ReferenceWorld, TrainID, TrainID) {
+        var world = try SingleTrackMeet.world()
+        var model = SingleTrackMeet.model()
+        try world.removeTrackEdge(.edge(4)); XCTAssertNil(model.removeNetworkEdge(.edge(4)))
+        let point = PlanPoint(x: 28_672, y: 8_192)
+        let a = try world.buildStation(named: "A", at: point).id
+        XCTAssertNil(model.buildStation(named: "A", at: point))
+        try world.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096)
+        XCTAssertNil(model.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096))
+        var ids: [TrainID] = []
+        for (track, calls) in [(SingleTrackMeet.forward(3), [a, SingleTrackMeet.east]),
+                               (SingleTrackMeet.backward(3), [SingleTrackMeet.east, SingleTrackMeet.west])] {
+            let id = try SingleTrackMeet.stand(&world, edge: track, offset: 3_072)
+            XCTAssertNil(model.purchaseTrain(named: "T")); XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(track, offset: 3_072)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: 3_072)); XCTAssertNil(model.setRate(id, 1_024))
+            let table = calls.enumerated().map {
+                ScheduledStop(station: $0.element, arrival: .init(seconds: Int64($0.offset) * 240), departure: .init(seconds: Int64($0.offset) * 240))
+            }
+            try world.setTrainTimetable(id, to: table); XCTAssertNil(model.setTimetable(id, table))
+            try world.startTrainService(id); XCTAssertNil(model.startService(id))
+            ids.append(id)
+        }
+        try world.setTrafficControl(true); XCTAssertNil(model.setTrafficControl(true))
+        world.setSpeed(.x1); model.setSpeed(.x1)
+        return (world, model, ids[0], ids[1])
+    }
+
+    func testReverseSidingSkipsNearMainBerthAndBothTrainsFinish() throws {
+        var (world, model, east, west) = try Self.reverseSiding()
+        try world.advance(ticks: 590); XCTAssertNil(model.advance(ticks: 590))
+        XCTAssertEqual(world.deadlockedTrains(), [east, west])
+        var memo = GameWorld.DirectionMemo()
+        let stuck = world.deadlock(memo: &memo)
+        let way = try XCTUnwrap(world.passingPlace(for: try XCTUnwrap(stuck[east]).candidate, in: stuck, memo: &memo))
+        XCTAssertTrue(way.reverses)
+        XCTAssertEqual(way.path.distance, 11_900)
+        XCTAssertEqual(way.path.traversals, [SingleTrackMeet.backward(6), SingleTrackMeet.backward(5)])
+        XCTAssertEqual(way.path.end, 5_120)
+        XCTAssertEqual(way.distance, 27_896)
+        var batched = world
+        var sawSiding = false
+        for second in 60...600 {
+            try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+            XCTAssertEqual(KernelDifferentialTests.differences(world, model), [], "second \(second)")
+            XCTAssertEqual(world.deadlockedTrains(), model.deadlockedTrains())
+            XCTAssertEqual(WorldInvariants.violations(in: world), [])
+            if world.passingPlace(of: east) == SingleTrackMeet.middle { sawSiding = true }
+            if [60, 100, 120, 180, 300].contains(second) { XCTAssertNil(WorldInvariants.roundTripProblem(of: world)) }
+        }
+        try batched.advance(ticks: 5_410)
+        XCTAssertEqual(world, batched)
+        XCTAssertTrue(sawSiding)
+        XCTAssertNil(world.train(id: east)?.execution)
+        XCTAssertNil(world.train(id: west)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: east), [SingleTrackMeet.east])
+        XCTAssertEqual(world.stationsStoppedAt(by: west), [SingleTrackMeet.west])
+    }
+
     func testWholeTrainSwitchbackHasHandTimedLegsAndTurnsOnlyAtDeparture() throws {
         var (world, model, id, train) = try Self.switchback()
         let line = try XCTUnwrap(world.line(id: id)), placed = try XCTUnwrap(world.train(id: train))

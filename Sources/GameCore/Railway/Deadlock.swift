@@ -220,54 +220,60 @@ extension GameWorld {
         var backing = candidate
         backing.position = reverse.position
         backing.trailEdges = reverse.trailEdges
-        guard let way = passingPlace(for: backing, in: stuck, forbidden: forbidden, defaultLength: length, memo: &memo) else { return nil }
+        guard let way = passingPlace(for: backing, in: stuck, forbidden: forbidden, defaultLength: length, allBerths: true, memo: &memo) else { return nil }
         return (way.path, way.distance, true)
     }
 
-    private func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], forbidden: Set<TrackTraversal>, defaultLength: Int64, memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64)? {
+    private func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], forbidden: Set<TrackTraversal>, defaultLength: Int64, allBerths: Bool = false, memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64)? {
         guard case .travellingToStop(let stop, _)? = candidate.execution, let start = candidate.placement else { return nil }
         let call = candidate.timetable[stop].station
         let blocked = blockedTrack(except: candidate.id)
         let (limit, overflow) = defaultLength.addingReportingOverflow(Self.detourAllowance)
         var best: (path: TrainPath, distance: Int64)?
         for station in stations where station.id != call {
-            guard let way = path(from: start.position, toStation: station.id, length: candidate.length, avoiding: blocked, forbidden: forbidden),
-                  way.distance > 0
-            else { continue }
-            let there = placement(start, after: way)
-            guard let next = passingContinuation(from: there, to: call),
-                  next.path.traversals.allSatisfy({ !forbidden.contains($0) })
-            else { continue }
-            let onward = next.path
-            if case .onEdge(let traversal, let offset) = next.start.position, offset < network.edge(traversal.edge)!.length,
-               forbidden.contains(traversal) {
-                continue
-            }
-            let (distance, long) = way.distance.addingReportingOverflow(onward.distance)
-            guard !long, overflow || distance <= limit, distance < best?.distance ?? .max else { continue }
-            var routed = candidate
-            follow(way, &routed)
-            guard case .granted = reserving(routed) else { continue }
-            // Standing there, it must let another train of the deadlock go.
-            var standing = candidate
-            standing.position = there.position
-            standing.trailEdges = there.trailEdges
-            standing.movement.edges = []
-            standing.movement.cursor = 0
-            standing.movement.end = way.end
-            standing.reservation = []
-            let aside = replacing(standing)
-            var freed = false
-            for (id, request) in stuck where id != candidate.id {
-                if request.departs {
-                    if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { freed = true }
-                } else if aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil {
-                    freed = true
+            // Keep the original forward choice. Only the reverse fallback
+            // enumerates berths: the nearest main berth may block the peer
+            // while a slightly farther siding releases it.
+            let targets: [Berth?] = allBerths ? berths(of: station.id, length: candidate.length).map { $0 } : [nil]
+            for target in targets {
+                guard let way = path(from: start.position, toStation: station.id, length: candidate.length, avoiding: blocked, forbidden: forbidden, only: target),
+                      way.distance > 0
+                else { continue }
+                let there = placement(start, after: way)
+                guard let next = passingContinuation(from: there, to: call),
+                      next.path.traversals.allSatisfy({ !forbidden.contains($0) })
+                else { continue }
+                let onward = next.path
+                if case .onEdge(let traversal, let offset) = next.start.position, offset < network.edge(traversal.edge)!.length,
+                   forbidden.contains(traversal) {
+                    continue
                 }
-                if freed { break }
+                let (distance, long) = way.distance.addingReportingOverflow(onward.distance)
+                guard !long, overflow || distance <= limit, distance < best?.distance ?? .max else { continue }
+                var routed = candidate
+                follow(way, &routed)
+                guard case .granted = reserving(routed) else { continue }
+                // Standing there, it must let another train of the deadlock go.
+                var standing = candidate
+                standing.position = there.position
+                standing.trailEdges = there.trailEdges
+                standing.movement.edges = []
+                standing.movement.cursor = 0
+                standing.movement.end = way.end
+                standing.reservation = []
+                let aside = replacing(standing)
+                var freed = false
+                for (id, request) in stuck where id != candidate.id {
+                    if request.departs {
+                        if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { freed = true }
+                    } else if aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil {
+                        freed = true
+                    }
+                    if freed { break }
+                }
+                guard freed else { continue }
+                best = (way, distance)
             }
-            guard freed else { continue }
-            best = (way, distance)
         }
         return best
     }
