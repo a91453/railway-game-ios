@@ -146,7 +146,8 @@ extension GameWorld {
     /// ``passengerTrip(from:to:)``) that have demand, in proportion to their
     /// own daily trips, by largest remainder (ties to the lower station
     /// ID). 0 when the origin has no demand or does not reach the
-    /// destination.
+    /// destination. With network routing a pair's trips also fall with its
+    /// fastest route's generalized minutes (see ``PassengerCrowding``).
     public func dailyDemand(from origin: StationID, to destination: StationID) -> Int64 {
         dailyDemand(from: origin).first { $0.destination == destination }?.trips ?? 0
     }
@@ -273,13 +274,16 @@ extension GameWorld {
         guard let demand = stationDemand(of: origin), demand.dailyTrips > 0, allowsEntry(at: origin) else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
         let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
+        var fastest: [StationID: Int64] = [:]
         for record in passengers {
             guard let demand = record.demand, demand.dailyTrips > 0, allowsService(at: record.station) else { continue }
             let weight = attraction(of: demand, at: record.station)
             let trip: PassengerTrip?
             if passengerRoutingMode == .network {
-                if let leg = passengerRouteChoices(from: origin, to: record.station, graph: graph).first?.route.legs.first {
+                let choices = passengerRouteChoices(from: origin, to: record.station, graph: graph)
+                if let leg = choices.first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
+                    fastest[record.station] = choices.map(\.route.totalMinutes).min()
                 } else {
                     trip = nil
                 }
@@ -291,7 +295,10 @@ extension GameWorld {
         }
         let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
         return zip(reached, shares).compactMap { reached, trips in
-            let trips = faredTrips(trips, from: origin, to: reached.destination)
+            var trips = faredTrips(trips, from: origin, to: reached.destination)
+            if let minutes = fastest[reached.destination] {
+                trips = PassengerCrowding.decayed(trips, minutes: minutes)
+            }
             return trips > 0 ? (reached.destination, trips, reached.trip) : nil
         }
     }
@@ -404,6 +411,10 @@ extension GameWorld {
         let trafficControl: Bool
         let trains: [TrainID]
         let trainLengths: [Int64]
+        /// Each train's capacity and the service day set a path's daily
+        /// capacity (see ``PassengerCrowding``).
+        let trainCapacities: [Int64]
+        let serviceDay: ServiceDay
         let levels: [ServiceLevel?]
         let records: [StationID]
         let demands: [StationDemand?]
@@ -422,6 +433,7 @@ extension GameWorld {
         PassengerPlanKey(
             lines: lines, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
             trains: trains.map(\.id), trainLengths: trains.map(\.length),
+            trainCapacities: trains.map(\.capacity), serviceDay: serviceDay,
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
@@ -477,35 +489,69 @@ extension GameWorld {
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
     }
 
+    /// The network plan. A pair's daily trips fall with its fastest
+    /// route's generalized minutes, and its choices' weights follow their
+    /// crowded costs under the plan's own daily loads (see
+    /// ``PassengerCrowding``).
     private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
-        var flows: [PassengerPlan.Flow] = []
-        var hourly: [Int64] = []
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
-        for record in passengers {
+        struct Draft {
+            let origin: StationID
+            let record: Int
+            let destination: StationPassengers
+            let kind: StationDemandKind
+            let options: [PassengerRouteChoice]
+            let journeys: [PassengerJourney]
+            let trips: Int64
+        }
+        var drafts: [Draft] = []
+        for (index, record) in passengers.enumerated() {
             guard let origin = record.demand, origin.dailyTrips > 0, allowsEntry(at: record.station) else { continue }
-            let reached = drawing.compactMap { other -> (StationPassengers, [PassengerPlan.Choice])? in
+            let reached = drawing.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
                 let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
-                let options = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
-                memo.choices[pair] = options
-                let choices = options.compactMap { choice -> PassengerPlan.Choice? in
-                    guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { return nil }
-                    return PassengerPlan.Choice(journey: journey, weight: choice.weight)
+                let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
+                memo.choices[pair] = found
+                var options: [PassengerRouteChoice] = []
+                var journeys: [PassengerJourney] = []
+                for choice in found {
+                    guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { continue }
+                    options.append(choice)
+                    journeys.append(journey)
                 }
-                return choices.isEmpty ? nil : (other, choices)
+                return options.isEmpty ? nil : (other, options, journeys)
             }
             let shares = Self.apportion(trips(of: origin, at: record.station),
                                         by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
-            for ((destination, choices), shared) in zip(reached, shares) {
-                let trips = faredTrips(shared, from: record.station, to: destination.station)
+            for ((destination, options, journeys), shared) in zip(reached, shares) {
+                let fared = faredTrips(shared, from: record.station, to: destination.station)
+                let trips = PassengerCrowding.decayed(fared, minutes: options.map(\.route.totalMinutes).min()!)
                 guard trips > 0 else { continue }
-                let first = choices[0].journey.leg
-                flows.append(PassengerPlan.Flow(origin: record.station,
-                    record: passengers.firstIndex(where: { $0.station == record.station })!, destination: destination.station,
-                    trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
+                drafts.append(Draft(origin: record.station, record: index, destination: destination,
+                                    kind: origin.kind, options: options, journeys: journeys, trips: trips))
             }
+        }
+        // The plan's own daily loads, on the uncrowded weights.
+        var used: [PassengerRouteGraph.Segment: Int64] = [:]
+        for draft in drafts {
+            let shares = Self.apportion(draft.trips, by: draft.options.map(\.weight))
+            for (option, share) in zip(draft.options, shares) where share > 0 {
+                for segment in graph.segments(of: option.route) ?? [] {
+                    used[segment, default: 0] += share
+                }
+            }
+        }
+        var flows: [PassengerPlan.Flow] = []
+        var hourly: [Int64] = []
+        for draft in drafts {
+            let weights = PassengerCrowding.crowdedWeights(draft.options, used: used, on: graph)
+            let choices = zip(draft.journeys, weights).map { PassengerPlan.Choice(journey: $0.0, weight: $0.1) }
+            let first = choices[0].journey.leg
+            flows.append(PassengerPlan.Flow(origin: draft.origin, record: draft.record,
+                destination: draft.destination.station,
+                trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
+            hourly += Self.hourly(draft.trips, from: draft.kind, to: draft.destination.demand!.kind, weekend: isDemandWeekend)
         }
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
     }

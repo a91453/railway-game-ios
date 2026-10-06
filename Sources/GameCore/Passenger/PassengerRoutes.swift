@@ -136,6 +136,9 @@ struct PassengerRouteGraph: Equatable {
         let runSeconds: [Int64]
         let headway: Int64
         let isRing: Bool
+        /// Passengers its trains carry a day each way (see
+        /// ``PassengerCrowding``); 0 for a hand-built graph.
+        var dailyCapacity: Int64 = 0
     }
 
     typealias Walk = PassengerWalk
@@ -181,6 +184,15 @@ struct PassengerRouteGraph: Equatable {
                 let plans = line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
                                           capacities: Array(capacities.prefix(service + 1))).plans
                 guard let headway = plans[service]?.headway, let journey = journeys[service] else { continue }
+                let assigned = line.trains(ofService: service).compactMap { world.train(id: $0)?.capacity }.max()
+                let anyTrain = (line.trains + line.patterns.flatMap(\.trains)).compactMap { world.train(id: $0)?.capacity }.max()
+                let capacity = PassengerCrowding.dailyCapacity(
+                    window: line.window, day: world.serviceDay,
+                    capacity: assigned ?? anyTrain ?? PassengerCrowding.defaultTrainCapacity
+                ) { level in
+                    line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
+                                  capacities: Array(capacities.prefix(service + 1))).plans[service]?.headway
+                }
                 if line.isRing {
                     for direction in [RingDirection.inner, .outer] {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
@@ -188,7 +200,7 @@ struct PassengerRouteGraph: Equatable {
                         let path = ServicePath(line: line.id, pattern: nil,
                                                direction: direction == .inner ? .outbound : .inbound,
                                                stations: stationIDs, runSeconds: lap.legs.map(\.seconds),
-                                               headway: headway, isRing: true)
+                                               headway: headway, isRing: true, dailyCapacity: capacity)
                         Self.add(path, to: &included, calls: &calls)
                     }
                 } else {
@@ -197,11 +209,11 @@ struct PassengerRouteGraph: Equatable {
                     let forward = ServicePath(line: line.id, pattern: pattern, direction: .outbound,
                                               stations: callIndices.map { line.stops[$0] },
                                               runSeconds: Array(journey.legs.prefix(half).map(\.seconds)),
-                                              headway: headway, isRing: false)
+                                              headway: headway, isRing: false, dailyCapacity: capacity)
                     let backward = ServicePath(line: line.id, pattern: pattern, direction: .inbound,
                                                stations: callIndices.reversed().map { line.stops[$0] },
                                                runSeconds: Array(journey.legs.suffix(half).map(\.seconds)),
-                                               headway: headway, isRing: false)
+                                               headway: headway, isRing: false, dailyCapacity: capacity)
                     Self.add(forward, to: &included, calls: &calls)
                     Self.add(backward, to: &included, calls: &calls)
                 }
