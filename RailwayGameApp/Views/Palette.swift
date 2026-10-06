@@ -51,6 +51,48 @@ enum Palette {
     }
 }
 
+/// Color ramp for WorldPop ~1km population grid cells, faithfully translated from
+/// `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` (syncPopTravelPopulationLegendUi & landscan/chinaGrid).
+enum PopulationColorRamp {
+    static let gradientColors: [Color] = [
+        Color(red: 0.969, green: 0.984, blue: 1.000), // #F7FBFF (0)
+        Color(red: 0.871, green: 0.922, blue: 0.969), // #DEEBF7 (10)
+        Color(red: 0.776, green: 0.859, blue: 0.937), // #C6DBEF (25)
+        Color(red: 0.620, green: 0.792, blue: 0.882), // #9ECAE1 (100)
+        Color(red: 0.420, green: 0.682, blue: 0.839), // #6BAED6 (200)
+        Color(red: 0.259, green: 0.573, blue: 0.776), // #4292C6 (400)
+        Color(red: 0.129, green: 0.443, blue: 0.710), // #2171B5 (800)
+        Color(red: 0.031, green: 0.318, blue: 0.612), // #08519C (1200)
+        Color(red: 0.031, green: 0.188, blue: 0.420), // #08306B (1600)
+        Color(red: 0.016, green: 0.122, blue: 0.290)  // #041F4A (10000+)
+    ]
+
+    static func color(for count: Int) -> Color {
+        switch count {
+        case ..<10:
+            return gradientColors[0]
+        case ..<25:
+            return gradientColors[1]
+        case ..<50:
+            return gradientColors[2]
+        case ..<100:
+            return gradientColors[3]
+        case ..<200:
+            return gradientColors[4]
+        case ..<400:
+            return gradientColors[5]
+        case ..<800:
+            return gradientColors[6]
+        case ..<1200:
+            return gradientColors[7]
+        case ..<1600:
+            return gradientColors[8]
+        default:
+            return gradientColors[9]
+        }
+    }
+}
+
 /// A clean, tactile card modifier for grouping management options.
 struct MetroCardModifier: ViewModifier {
     var padding: CGFloat = 12

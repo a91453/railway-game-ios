@@ -62,6 +62,9 @@ public final class GameSession {
     /// command selects a station or a point instead.
     public private(set) var tappedTrainID: TrainID?
 
+    /// Whether the camera dynamically follows the selected train.
+    public var isFollowingTrain: Bool = false
+
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
@@ -208,7 +211,48 @@ public final class GameSession {
         selectedPoint = nil
         selectedStationID = nil
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
+    }
+
+    /// Selects train `id`, and optionally begins camera following.
+    public func selectTrain(_ id: TrainID, following: Bool = false) {
+        selectedTrainID = id
+        tappedTrainID = id
+        if following {
+            isFollowingTrain = true
+        }
+        message = nil
+    }
+
+    /// Toggles dynamic camera following for the selected train.
+    public func toggleFollowTrain() {
+        if isFollowingTrain {
+            isFollowingTrain = false
+        } else {
+            if selectedTrainID == nil {
+                selectedTrainID = world.trains.first?.id
+            }
+            isFollowingTrain = selectedTrainID != nil
+        }
+    }
+
+    /// Sets whether the camera dynamically follows the selected train.
+    public func setFollowingTrain(_ following: Bool) {
+        if following && selectedTrainID == nil {
+            selectedTrainID = world.trains.first?.id
+        }
+        isFollowingTrain = following && selectedTrainID != nil
+    }
+
+    /// Estimates the 800-metre walking catchment population of station `id`
+    /// when the session runs on a real-world map with population data.
+    public func stationCatchmentPopulation(of id: StationID) -> Int? {
+        guard let station = world.station(id: id),
+              let realWorld = RealWorldFrame(world: world),
+              let population else { return nil }
+        let coord = realWorld.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+        return population.people(within: StationDemand.catchmentRadius, ofLatitude: coord.latitude, longitude: coord.longitude)
     }
 
     // MARK: - Tools
@@ -506,6 +550,7 @@ public final class GameSession {
     /// `GameWorld.unplaceTrain(_:)`, which also clears its rate and path.
     public func unplaceSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
+        isFollowingTrain = false
         perform { world throws(GameError) in
             try world.unplaceTrain(train.id)
             return language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")

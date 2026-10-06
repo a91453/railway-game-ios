@@ -139,6 +139,81 @@ struct GridCounts: Sendable {
         let east = (d - b) * metresPerDegreeOfLongitude(at: a)
         return (south * south + east * east).squareRoot()
     }
+
+    /// Queries non-empty population cells within the given geographic bounding box.
+    func cells(inNorth northLimit: Double, south southLimit: Double, west westLimit: Double, east eastLimit: Double) -> [PopulationCell] {
+        guard cellDegrees > 0 else { return [] }
+        let highLat = max(northLimit, southLimit)
+        let lowLat = min(northLimit, southLimit)
+        let lowLon = min(westLimit, eastLimit)
+        let highLon = max(westLimit, eastLimit)
+
+        let minRow = max(0, Int(((north - highLat) / cellDegrees).rounded(.down)))
+        let maxRow = max(minRow, Int(((north - lowLat) / cellDegrees).rounded(.up)))
+        let minCol = max(0, Int(((lowLon - west) / cellDegrees).rounded(.down)))
+        let maxCol = max(minCol, Int(((highLon - west) / cellDegrees).rounded(.up)))
+
+        var result: [PopulationCell] = []
+        for r in minRow...maxRow {
+            for c in minCol...maxCol {
+                let cell = Cell(row: r, column: c)
+                guard let count = counts[cell], count > 0 else { continue }
+                let cellNorth = north - Double(r) * cellDegrees
+                let cellSouth = cellNorth - cellDegrees
+                let cellWest = west + Double(c) * cellDegrees
+                let cellEast = cellWest + cellDegrees
+                let midLat = cellNorth - 0.5 * cellDegrees
+                let midLon = cellWest + 0.5 * cellDegrees
+                result.append(PopulationCell(
+                    row: r,
+                    column: c,
+                    count: count,
+                    centerLatitude: midLat,
+                    centerLongitude: midLon,
+                    northLatitude: cellNorth,
+                    southLatitude: cellSouth,
+                    westLongitude: cellWest,
+                    eastLongitude: cellEast
+                ))
+            }
+        }
+        return result
+    }
+}
+
+/// A single cell of the population grid for overlay visualization.
+public struct PopulationCell: Equatable, Hashable, Sendable {
+    public let row: Int
+    public let column: Int
+    public let count: Int
+    public let centerLatitude: Double
+    public let centerLongitude: Double
+    public let northLatitude: Double
+    public let southLatitude: Double
+    public let westLongitude: Double
+    public let eastLongitude: Double
+
+    public init(
+        row: Int,
+        column: Int,
+        count: Int,
+        centerLatitude: Double,
+        centerLongitude: Double,
+        northLatitude: Double,
+        southLatitude: Double,
+        westLongitude: Double,
+        eastLongitude: Double
+    ) {
+        self.row = row
+        self.column = column
+        self.count = count
+        self.centerLatitude = centerLatitude
+        self.centerLongitude = centerLongitude
+        self.northLatitude = northLatitude
+        self.southLatitude = southLatitude
+        self.westLongitude = westLongitude
+        self.eastLongitude = eastLongitude
+    }
 }
 
 /// People per cell of WorldPop's grid of Taiwan.
@@ -178,6 +253,11 @@ public struct PopulationGrid: Sendable {
     public func people(within radius: Double, ofLatitude latitude: Double, longitude: Double) -> Int? {
         guard radius > 0, people.hasAny(within: Self.coverage, ofLatitude: latitude, longitude: longitude) else { return nil }
         return Int(people.count(within: radius, ofLatitude: latitude, longitude: longitude).rounded())
+    }
+
+    /// Non-empty cells of the grid within the given geographic bounding box.
+    public func cells(north: Double, south: Double, west: Double, east: Double) -> [PopulationCell] {
+        people.cells(inNorth: north, south: south, west: west, east: east)
     }
 }
 

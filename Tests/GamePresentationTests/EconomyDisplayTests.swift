@@ -154,4 +154,32 @@ final class EconomyDisplayTests: XCTestCase {
         try world.assignTrain(train.id, to: main)
         return world
     }
+
+    func testTrainLoadInfoAndThresholds() throws {
+        var world = try makeLine()
+        let train = world.trains[0]
+        let load = try XCTUnwrap(world.trainLoadInfo(of: train.id))
+        XCTAssertEqual(load.passengerCount, 0)
+        XCTAssertEqual(load.capacity, 320)
+        XCTAssertEqual(load.loadFactor, 0.0)
+        XCTAssertEqual(load.percentage, 0)
+        XCTAssertEqual(load.level, .normal)
+        XCTAssertFalse(load.isOverload)
+
+        let normal = TrainLoadInfo(passengerCount: 160, capacity: 320, loadFactor: 0.5, percentage: 50)
+        XCTAssertEqual(normal.level, .normal)
+        XCTAssertFalse(normal.isOverload)
+
+        let busy = TrainLoadInfo(passengerCount: 240, capacity: 320, loadFactor: 0.75, percentage: 75)
+        XCTAssertEqual(busy.level, .busy)
+        XCTAssertFalse(busy.isOverload)
+
+        let crowded = TrainLoadInfo(passengerCount: 300, capacity: 320, loadFactor: 0.94, percentage: 94)
+        XCTAssertEqual(crowded.level, .crowded)
+        XCTAssertFalse(crowded.isOverload)
+
+        let overloaded = TrainLoadInfo(passengerCount: 350, capacity: 320, loadFactor: 1.09, percentage: 109)
+        XCTAssertEqual(overloaded.level, .crowded)
+        XCTAssertTrue(overloaded.isOverload)
+    }
 }

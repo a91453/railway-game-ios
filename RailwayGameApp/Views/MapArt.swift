@@ -33,6 +33,8 @@ enum MapArt {
         drawsLand: Bool = true,
         layers: MapLayerPreferences = .default,
         waitingCounts: [StationID: Int64] = [:],
+        population: PopulationGrid? = nil,
+        realWorld: RealWorldFrame? = nil,
         in context: GraphicsContext
     ) {
         let referenceSize = projection.referenceSize
@@ -50,6 +52,10 @@ enum MapArt {
             context.fill(land, with: .color(Palette.land))
         }
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
+
+        if layers.showsPopulationHeatmap {
+            drawPopulationHeatmap(world, population: population, realWorld: realWorld, projection: projection, in: context)
+        }
 
         if layers.showsCatchmentRings {
             drawCatchmentRings(world, projection: projection, in: context)
@@ -324,6 +330,43 @@ enum MapArt {
                 with: .color(Palette.station.opacity(0.35)),
                 style: StrokeStyle(lineWidth: strokeWidth, dash: [6, 4])
             )
+        }
+    }
+
+    private static func drawPopulationHeatmap(
+        _ world: GameWorld,
+        population: PopulationGrid?,
+        realWorld: RealWorldFrame?,
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
+        guard let population, let realWorld else { return }
+        let region = drawingRegion(projection)
+        let nw = realWorld.coordinate(worldX: region.minX, worldY: region.minY)
+        let se = realWorld.coordinate(worldX: region.maxX, worldY: region.maxY)
+        let north = max(nw.latitude, se.latitude) + 0.02
+        let south = min(nw.latitude, se.latitude) - 0.02
+        let west = min(nw.longitude, se.longitude) - 0.02
+        let east = max(nw.longitude, se.longitude) + 0.02
+
+        let cells = population.cells(north: north, south: south, west: west, east: east)
+        guard !cells.isEmpty else { return }
+
+        for cell in cells {
+            let p1 = realWorld.worldPosition(latitude: cell.northLatitude, longitude: cell.westLongitude)
+            let p2 = realWorld.worldPosition(latitude: cell.northLatitude, longitude: cell.eastLongitude)
+            let p3 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.eastLongitude)
+            let p4 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.westLongitude)
+
+            let s1 = projection.screenPoint(of: p1)
+            let s2 = projection.screenPoint(of: p2)
+            let s3 = projection.screenPoint(of: p3)
+            let s4 = projection.screenPoint(of: p4)
+
+            let cellPoly = polygon([s1, s2, s3, s4])
+            let color = PopulationColorRamp.color(for: cell.count)
+            context.fill(cellPoly, with: .color(color.opacity(0.42)))
+            context.stroke(cellPoly, with: .color(color.opacity(0.20)), lineWidth: 0.5)
         }
     }
 

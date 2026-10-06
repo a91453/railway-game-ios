@@ -72,6 +72,33 @@ final class TrainControlTests: XCTestCase {
         }
     }
 
+    func testTrainFollowStateAndToggle() async throws {
+        var world = try makeLineWorld()
+        try world.purchaseTrain(named: "Train 1")
+        try world.purchaseTrain(named: "Train 2")
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            XCTAssertFalse(session.isFollowingTrain)
+
+            session.toggleFollowTrain()
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.first)
+
+            session.selectTrain(Self.second, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.second)
+
+            session.mapDidMove()
+            XCTAssertFalse(session.isFollowingTrain, "Panning or moving the map must cancel train follow")
+
+            session.setFollowingTrain(true)
+            XCTAssertTrue(session.isFollowingTrain)
+
+            session.clearSelection()
+            XCTAssertFalse(session.isFollowingTrain, "Clearing selection must cancel train follow")
+        }
+    }
+
     func testBuyingATrainGoesThroughGameCoreAndSelectsIt() async throws {
         let world = try makeLineWorld(balance: 100_000)
         var expected = world

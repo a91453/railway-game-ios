@@ -59,6 +59,20 @@ final class PopulationGridTests: XCTestCase {
         XCTAssertEqual(Double(people), Double.pi * 800 * 800, accuracy: 2, "a person a square metre")
     }
 
+    func testCellsQueryReturnsNonEmptyCellsInBoundingBox() throws {
+        let grid = try Self.bundled()
+        // Query around Taipei Main Station (~25.047°N, ~121.517°E) with +/- 0.05° bounding box
+        let cells = grid.cells(north: 25.10, south: 25.00, west: 121.45, east: 121.55)
+        XCTAssertFalse(cells.isEmpty, "Taipei bounding box must contain population cells")
+        for cell in cells {
+            XCTAssertGreaterThan(cell.count, 0, "All returned cells must have positive population count")
+            XCTAssertLessThanOrEqual(cell.northLatitude, 25.15)
+            XCTAssertGreaterThanOrEqual(cell.southLatitude, 24.95)
+            XCTAssertGreaterThanOrEqual(cell.westLongitude, 121.40)
+            XCTAssertLessThanOrEqual(cell.eastLongitude, 121.60)
+        }
+    }
+
     // MARK: - Ridership
 
     func testRidershipIsFortyTripsForEveryHundredResidents() {
