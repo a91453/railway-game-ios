@@ -18,8 +18,9 @@ public struct PassengerRouteLeg: Hashable, Sendable {
     public let rideSeconds: Int64
 }
 
-/// A route between stations, with whole-minute costs. Consecutive legs on
-/// different lines meet at the same station in this first transfer stage.
+/// A route between stations, with whole-minute costs. Consecutive legs meet
+/// at the same station, or the next leg starts at a station a short walk
+/// away (see ``GameWorld/walkingTransferMinutes(from:to:)``).
 public struct PassengerRoute: Hashable, Sendable {
     public let legs: [PassengerRouteLeg]
     public let rideMinutes: Int64
@@ -31,7 +32,7 @@ public struct PassengerRoute: Hashable, Sendable {
         legs.reduce(0) { $0 + $1.rideSeconds } + (waitMinutes + transferMinutes) * GameTime.secondsPerMinute
     }
     public var transfers: Int {
-        zip(legs, legs.dropFirst()).reduce(0) { $0 + ($1.0.line == $1.1.line ? 0 : 1) }
+        zip(legs, legs.dropFirst()).reduce(0) { $0 + ($1.0.line == $1.1.line && $1.0.to == $1.1.from ? 0 : 1) }
     }
 }
 
@@ -42,7 +43,7 @@ public struct PassengerRouteAllocation: Hashable, Sendable {
     public let count: Int64
 }
 
-struct PassengerRouteChoice {
+struct PassengerRouteChoice: Equatable {
     let route: PassengerRoute
     let weight: Int64
 }
@@ -117,13 +118,13 @@ private struct PassengerRouteLabel {
     let arrival: Arrival
 }
 
-struct PassengerRouteGraph {
+struct PassengerRouteGraph: Equatable {
     // The Ci snapshot receives transfer minutes from its flow service's
     // path plan; that service is absent from the reference snapshot. Four
     // minutes is this first native graph's same-station interchange cost.
     static let sameStationTransferMinutes: Int64 = 4
 
-    struct ServicePath {
+    struct ServicePath: Equatable {
         let line: LineID
         let pattern: Int?
         let direction: LineDirection
@@ -133,10 +134,24 @@ struct PassengerRouteGraph {
         let isRing: Bool
     }
 
+    /// A walk from one served station to another near it.
+    struct Walk: Equatable {
+        let to: StationID
+        let minutes: Int64
+    }
+
     let paths: [ServicePath]
     let stopsAt: [StationID: [PassengerRouteNode]]
+    /// From each served station, the other served stations a walk away, by
+    /// ascending station.
+    let walks: [StationID: [Walk]]
 
-    init(paths: [ServicePath]) {
+    /// The calls are derived from the paths.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.paths == rhs.paths && lhs.walks == rhs.walks
+    }
+
+    init(paths: [ServicePath], walks: [StationID: [Walk]] = [:]) {
         var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
         for path in paths {
@@ -144,6 +159,7 @@ struct PassengerRouteGraph {
         }
         self.paths = included
         stopsAt = calls
+        self.walks = walks
     }
 
     init(world: GameWorld) {
@@ -151,10 +167,16 @@ struct PassengerRouteGraph {
         var calls: [StationID: [PassengerRouteNode]] = [:]
         for line in world.lines {
             guard let level = world.serviceLevel(of: line.id, at: world.clock.now) else { continue }
+            // What `lineHeadway` and `lineJourney` give for each service,
+            // driving each service once: a service's plan depends on its
+            // own and the earlier services' round trips and capacities.
+            let journeys = (0..<line.serviceCount).map { world.journey(of: line, service: $0) }
+            let capacities = world.capacityProfiles(of: line, journeys: journeys)
             for service in 0..<line.serviceCount {
                 let pattern = service == 0 ? nil : service - 1
-                guard let headway = world.lineHeadway(line.id, at: level, pattern: pattern),
-                      let journey = world.lineJourney(line.id, pattern: pattern) else { continue }
+                let plans = line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
+                                          capacities: Array(capacities.prefix(service + 1))).plans
+                guard let headway = plans[service]?.headway, let journey = journeys[service] else { continue }
                 if line.isRing {
                     for direction in [RingDirection.inner, .outer] {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
@@ -183,6 +205,16 @@ struct PassengerRouteGraph {
         }
         paths = included
         stopsAt = calls
+        var walks: [StationID: [Walk]] = [:]
+        let served = world.stations.filter { calls[$0.id] != nil }.sorted { $0.id < $1.id }
+        for from in served {
+            for to in served where to.id != from.id {
+                if let minutes = GameWorld.walkingTransferMinutes(from: from.point, to: to.point) {
+                    walks[from.id, default: []].append(Walk(to: to.id, minutes: minutes))
+                }
+            }
+        }
+        self.walks = walks
     }
 
     private static func add(_ path: ServicePath, to paths: inout [ServicePath], calls: inout [StationID: [PassengerRouteNode]]) {
@@ -216,7 +248,54 @@ struct PassengerRouteGraph {
         var labels: [PassengerRouteLabel] = []
         var frontier: [PassengerRouteState: [Int]] = [:]
         var active: [Bool] = []
+        // A binary heap of open labels under one strict total order, so it
+        // pops exactly the label a full sort would put first.
         var open: [Int] = []
+
+        func precedes(_ a: Int, _ b: Int) -> Bool {
+            let left = labels[a]
+            let right = labels[b]
+            let leftMinutes = passengerMinutesRoundingUp(left.total, by: GameTime.secondsPerMinute)
+            let rightMinutes = passengerMinutesRoundingUp(right.total, by: GameTime.secondsPerMinute)
+            if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
+            if left.changes != right.changes { return left.changes < right.changes }
+            if left.total != right.total { return left.total < right.total }
+            if passengerRouteOrderPrecedes(left.order, right.order) { return true }
+            if passengerRouteOrderPrecedes(right.order, left.order) { return false }
+            if left.state.node != right.state.node { return left.state.node < right.state.node }
+            if left.state.onboard != right.state.onboard { return !left.state.onboard }
+            return a < b
+        }
+
+        func push(_ index: Int) {
+            open.append(index)
+            var child = open.count - 1
+            while child > 0 {
+                let parent = (child - 1) / 2
+                guard precedes(open[child], open[parent]) else { break }
+                open.swapAt(child, parent)
+                child = parent
+            }
+        }
+
+        func popFirst() -> Int? {
+            guard let first = open.first else { return nil }
+            let last = open.removeLast()
+            if !open.isEmpty {
+                open[0] = last
+                var parent = 0
+                while true {
+                    let left = 2 * parent + 1
+                    guard left < open.count else { break }
+                    var best = left
+                    if left + 1 < open.count, precedes(open[left + 1], open[left]) { best = left + 1 }
+                    guard precedes(open[best], open[parent]) else { break }
+                    open.swapAt(best, parent)
+                    parent = best
+                }
+            }
+            return first
+        }
 
         func dominates(_ lhs: PassengerRouteLabel, _ rhs: PassengerRouteLabel) -> Bool {
             guard lhs.total <= rhs.total, lhs.changes <= rhs.changes else { return false }
@@ -239,7 +318,7 @@ struct PassengerRouteGraph {
             let index = labels.count
             labels.append(label)
             active.append(true)
-            open.append(index)
+            push(index)
             survivors.append(index)
             frontier[state] = survivors
         }
@@ -250,26 +329,12 @@ struct PassengerRouteGraph {
                                       total: wait, ride: 0, wait: wait, transfer: 0,
                                       changes: 0, order: [], previous: nil, arrival: .board))
         }
-        while !open.isEmpty {
-            open.sort { a, b in
-                let left = labels[a]
-                let right = labels[b]
-                let leftMinutes = passengerMinutesRoundingUp(left.total, by: GameTime.secondsPerMinute)
-                let rightMinutes = passengerMinutesRoundingUp(right.total, by: GameTime.secondsPerMinute)
-                if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
-                if left.changes != right.changes { return left.changes < right.changes }
-                if left.total != right.total { return left.total < right.total }
-                if passengerRouteOrderPrecedes(left.order, right.order) { return true }
-                if passengerRouteOrderPrecedes(right.order, left.order) { return false }
-                if left.state.node != right.state.node { return left.state.node < right.state.node }
-                if left.state.onboard != right.state.onboard { return !left.state.onboard }
-                return a < b
-            }
-            let index = open.removeFirst()
+        while let index = popFirst() {
             guard active[index] else { continue }
             let label = labels[index]
             let node = label.state.node
-            if station(node) == destination {
+            // Only a ride arrives: a walk ends where another ride starts.
+            if label.state.onboard && station(node) == destination {
                 return reconstruct(index, from: labels)
             }
             if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
@@ -316,6 +381,22 @@ struct PassengerRouteGraph {
                                           changes: label.changes + (sameLine ? 0 : 1),
                                           order: label.order, previous: index, arrival: .board))
             }
+            // A passenger who has just got off may walk to a station near
+            // by and wait there for another ride: never at the start of a
+            // journey, nor twice in a row.
+            guard label.state.onboard else { continue }
+            for walk in walks[station(node)] ?? [] {
+                for other in stopsAt[walk.to] ?? [] {
+                    let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
+                    let transfer = walk.minutes * GameTime.secondsPerMinute
+                    offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
+                                              total: label.total + wait + transfer,
+                                              ride: label.ride, wait: label.wait + wait,
+                                              transfer: label.transfer + transfer,
+                                              changes: label.changes + 1,
+                                              order: label.order, previous: index, arrival: .board))
+                }
+            }
         }
         return nil
     }
@@ -360,6 +441,48 @@ struct PassengerRouteGraph {
 }
 
 extension GameWorld {
+    /// How far apart two stations may stand, at most, for passengers to walk
+    /// between them to change trains: under 450 m, the `Railway/` site's
+    /// transfer rule (`station_transfers.json`, `criteria.maxDistanceM`,
+    /// `haversine_meters < maxDistanceM`), here on the world's plane.
+    public static let walkingTransferMetres: Int64 = 450
+
+    /// How fast passengers walk between stations: 80 m a minute. The
+    /// reference has no walking speed; this is the native policy.
+    public static let walkingMetresPerMinute: Int64 = 80
+
+    /// The minutes passengers take to change from a train at `origin` to one
+    /// at `destination`, another station less than
+    /// ``walkingTransferMetres`` away: the same-station change of 4 minutes
+    /// plus the walk between their points at ``walkingMetresPerMinute``,
+    /// rounded up to a whole minute. `nil` for the same station, a station
+    /// that does not exist, or one too far away.
+    public func walkingTransferMinutes(from origin: StationID, to destination: StationID) -> Int64? {
+        guard origin != destination, let from = station(id: origin), let to = station(id: destination) else { return nil }
+        return Self.walkingTransferMinutes(from: from.point, to: to.point)
+    }
+
+    /// The same between two points, exactly on the squared distance.
+    static func walkingTransferMinutes(from origin: PlanPoint, to destination: PlanPoint) -> Int64? {
+        let dx = origin.x - destination.x
+        let dy = origin.y - destination.y
+        let squared = dx * dx + dy * dy
+        let limit = walkingTransferMetres * WorldCoordinate.unitsPerMetre
+        guard squared < limit * limit else { return nil }
+        let perMinute = walkingMetresPerMinute * WorldCoordinate.unitsPerMetre
+        var minutes: Int64 = 0
+        while (minutes * perMinute) * (minutes * perMinute) < squared {
+            minutes += 1
+        }
+        return PassengerRouteGraph.sameStationTransferMinutes + minutes
+    }
+
+    /// Whether a journey may go on from `previous` to `next`: from the same
+    /// station, or by a walk to a station near by.
+    func connects(_ previous: PassengerJourneyLeg, to next: PassengerJourneyLeg) -> Bool {
+        previous.to == next.from || walkingTransferMinutes(from: previous.to, to: next.from) != nil
+    }
+
     /// Up to three distinct service paths between two stations, in ascending
     /// whole-minute cost. Ties prefer fewer transfers, then lower unrounded
     /// seconds, then the line and stop order. The graph uses lines with service
@@ -368,9 +491,16 @@ extension GameWorld {
     /// stores its chosen route as a journey; legacy direct demand continues
     /// to use `passengerTrip`.
     public func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3) -> [PassengerRoute] {
+        passengerRoutes(from: origin, to: destination, limit: limit, graph: nil)
+    }
+
+    /// The same, on `graph` when given: a graph derived from this world at
+    /// this minute, shared by every pair of one passenger plan.
+    func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3,
+                         graph shared: PassengerRouteGraph?) -> [PassengerRoute] {
         guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
               limit > 0 else { return [] }
-        let graph = PassengerRouteGraph(world: self)
+        let graph = shared ?? PassengerRouteGraph(world: self)
         guard let first = graph.shortest(from: origin, to: destination, banning: []) else { return [] }
         var selected = [first.0]
         var candidates: [(route: PassengerRoute, edges: [PassengerRideEdge], bans: Set<PassengerRideEdge>)] = []
@@ -413,11 +543,37 @@ extension GameWorld {
         return zip(choices, shares).map { PassengerRouteAllocation(route: $0.0.route, count: $0.1) }
     }
 
-    func passengerRouteChoices(from origin: StationID, to destination: StationID) -> [PassengerRouteChoice] {
-        let routes = passengerRoutes(from: origin, to: destination)
+    func passengerRouteChoices(from origin: StationID, to destination: StationID,
+                               graph: PassengerRouteGraph? = nil) -> [PassengerRouteChoice] {
+        let routes = passengerRoutes(from: origin, to: destination, graph: graph)
         guard let fastest = routes.first?.totalMinutes else { return [] }
         let allowance = max(5, fastest / 2)
         return routes.filter { $0.totalMinutes - fastest <= allowance && $0.legs.count <= 32 }
             .map { PassengerRouteChoice(route: $0, weight: max(1, 10_000 / max(1, $0.totalMinutes))) }
+    }
+}
+
+/// The route choices already worked out on one derived graph. Not game
+/// state: never saved, and two worlds compare equal whatever it holds. The
+/// choices are a pure function of the graph, so keeping them while the
+/// graph is unchanged gives exactly what working them out again would.
+struct PassengerRouteMemo: Equatable, Sendable {
+    struct Pair: Hashable, Sendable {
+        let origin: StationID
+        let destination: StationID
+    }
+
+    var graph: PassengerRouteGraph?
+    var choices: [Pair: [PassengerRouteChoice]] = [:]
+
+    static func == (_: Self, _: Self) -> Bool {
+        true
+    }
+
+    /// Keeps the choices only if `graph` is the one they were worked out on.
+    mutating func use(_ graph: PassengerRouteGraph) {
+        guard self.graph != graph else { return }
+        self.graph = graph
+        choices = [:]
     }
 }

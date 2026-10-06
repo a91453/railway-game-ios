@@ -35,6 +35,36 @@ final class RealWorldDemoTests: XCTestCase {
         }
     }
 
+    /// The passenger route graph drives each service once; what it finds
+    /// must be what `lineHeadway` and `lineJourney` find service by service.
+    func testPassengerRouteGraphMatchesTheServiceQueries() throws {
+        var (_, world) = try Self.built.get()
+        let line = try XCTUnwrap(world.lines.first { $0.stops.count >= 3 })
+        let express = try world.addLinePattern(line.id, calling: [0, line.stops.count - 1])
+        try world.setLineTrainsInService(line.id, to: .init(peak: 1, offPeak: 1, low: 1), pattern: express)
+        let graph = PassengerRouteGraph(world: world)
+        var expected = 0
+        for line in world.lines {
+            guard let level = world.serviceLevel(of: line.id, at: world.clock.now) else { continue }
+            for service in 0..<line.serviceCount {
+                let pattern = service == 0 ? nil : service - 1
+                guard let headway = world.lineHeadway(line.id, at: level, pattern: pattern),
+                      let journey = world.lineJourney(line.id, pattern: pattern) else { continue }
+                let paths = graph.paths.filter { $0.line == line.id && (line.isRing || $0.pattern == pattern) }
+                XCTAssertFalse(paths.isEmpty, "\(line.name) service \(service)")
+                for path in paths {
+                    XCTAssertEqual(path.headway, headway, "\(line.name) service \(service)")
+                    XCTAssertEqual(path.runSeconds.reduce(0, +) > 0, true)
+                    if !line.isRing, path.direction == .outbound {
+                        XCTAssertEqual(path.runSeconds, Array(journey.legs.prefix(path.stations.count - 1).map(\.seconds)))
+                    }
+                }
+                expected += line.isRing ? 2 : 2
+            }
+        }
+        XCTAssertEqual(graph.paths.count, expected)
+    }
+
     func testNewRuifangShifenExpressDepartsWithoutSettingALegacyRate() async throws {
         var (_, world) = try Self.built.get()
         for line in world.lines { try world.removeLine(line.id) }

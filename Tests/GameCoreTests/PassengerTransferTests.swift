@@ -375,3 +375,150 @@ final class PassengerTransferTests: XCTestCase {
         }
     }
 }
+
+/// Changing trains between two stations a short walk apart (Phase 5F): the
+/// `Railway/` site's under-450 m transfer rule.
+final class WalkingTransferTests: XCTestCase {
+    private let a = StationID(rawValue: 1)
+    private let b = StationID(rawValue: 2)
+    private let near = StationID(rawValue: 3)
+    private let c = StationID(rawValue: 4)
+
+    /// A at column 1 and B at 3 on the first line; the second line runs from
+    /// B's neighbour 32 m east of it to C, 496 m further on.
+    private func world() throws -> GameWorld {
+        var world = try makeWorld(width: 65_536, height: 4_096, balance: 1_000_000)
+        let track = TestLine(tiles: 38)
+        try track.build(in: &world)
+        for (name, x) in [("A", 1), ("B", 3), ("Near", 5), ("C", 36)] {
+            try track.buildStation(named: name, beside: x, at: 1, in: &world)
+        }
+        let first = try world.createLine(named: "First", stops: [a, b]).id
+        let second = try world.createLine(named: "Second", stops: [near, c]).id
+        for line in [first, second] {
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        }
+        let one = try world.purchaseTrain(named: "One").id
+        let two = try world.purchaseTrain(named: "Two").id
+        try world.placeTrain(one, at: track.at(1, facingEast: true))
+        try world.placeTrain(two, at: track.at(5, facingEast: true))
+        try world.setTrainMovementRate(one, to: 1024)
+        try world.setTrainMovementRate(two, to: 1024)
+        try world.assignTrain(one, to: first)
+        try world.assignTrain(two, to: second)
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        world.setSpeed(.normal)
+        return world
+    }
+
+    func testWalkingMinutesFollowTheDistance() throws {
+        let world = try world()
+        // 32 m: the 4-minute change and a minute's walk.
+        XCTAssertEqual(world.walkingTransferMinutes(from: b, to: near), 5)
+        XCTAssertEqual(world.walkingTransferMinutes(from: near, to: b), 5)
+        // 64 m: 4 + 1 (80 m a minute).
+        XCTAssertEqual(world.walkingTransferMinutes(from: a, to: near), 5)
+        XCTAssertNil(world.walkingTransferMinutes(from: b, to: b))
+        // 496 m is past the 450 m limit.
+        XCTAssertNil(world.walkingTransferMinutes(from: near, to: c))
+        XCTAssertNil(world.walkingTransferMinutes(from: b, to: StationID(rawValue: 99)))
+        // Exactly on the limit is too far; just inside it walks.
+        let limit = GameWorld.walkingTransferMetres * WorldCoordinate.unitsPerMetre
+        XCTAssertNil(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: limit, y: 0)))
+        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: limit - 1, y: 0)), 10)
+        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: 0, y: 80 * 64)), 5)
+        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: 0, y: 80 * 64 + 1)), 6)
+    }
+
+    func testRouteWalksBetweenNearbyStations() throws {
+        let world = try world()
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        XCTAssertEqual(route.legs.map(\.from), [a, near])
+        XCTAssertEqual(route.legs.map(\.to), [b, c])
+        XCTAssertEqual(route.transfers, 1)
+        XCTAssertEqual(route.transferMinutes, 5)
+        // A walk never ends a journey: every route to Near rides into it.
+        let toNear = world.passengerRoutes(from: a, to: near)
+        XCTAssertFalse(toNear.isEmpty)
+        XCTAssertTrue(toNear.allSatisfy { $0.legs.last?.to == near })
+        XCTAssertNotNil(PassengerJourney(origin: a, route: route))
+    }
+
+    func testPassengersWalkToTheNextTrainAndStayConserved() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: TrainID(rawValue: 1)).map(\.count), [5])
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: TrainID(rawValue: 1)), [])
+        XCTAssertEqual(world.waitingPassengers(at: b), [])
+        let walking = try XCTUnwrap(world.waitingPassengers(at: near).first)
+        XCTAssertEqual(walking.journey?.origin, a)
+        XCTAssertEqual(walking.journey?.current, 1)
+        XCTAssertEqual(walking.count, 5)
+        XCTAssertEqual(walking.readyAt, GameTime(seconds: walking.since.seconds + 5 * GameTime.secondsPerMinute))
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+        XCTAssertEqual(world.passengerLedger(of: near).released, 0)
+        XCTAssertEqual(world.passengerLedger(of: near).waiting, 0)
+
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        XCTAssertEqual(loaded, world)
+        var batched = world
+        try batched.advance(ticks: 60)
+        for _ in 0..<60 { try loaded.advance(ticks: 1) }
+        XCTAssertEqual(batched, loaded)
+        let ledger = batched.passengerLedger(of: a)
+        XCTAssertEqual(ledger.released, 5)
+        XCTAssertEqual(ledger.arrived, 5)
+        XCTAssertEqual(ledger.waiting + ledger.riding + ledger.overflowed + ledger.abandoned, 0)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(batched)), batched)
+    }
+
+    func testRemovingTheWalkedToLineAbandonsAtTheOrigin() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.removeLine(LineID(rawValue: 2))
+        let ledger = world.passengerLedger(of: a)
+        XCTAssertEqual(ledger.abandoned, 5)
+        XCTAssertEqual(ledger.waiting, 0)
+    }
+
+    func testNetworkDemandWalksAndBatchMatchesMinuteSteps() throws {
+        var batched = try world()
+        try batched.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 2_000))
+        try batched.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 2_000))
+        var stepped = batched
+        try batched.advance(ticks: 90)
+        for _ in 0..<90 { try stepped.advance(ticks: 1) }
+        XCTAssertEqual(batched, stepped)
+        let ledger = batched.passengerLedger(of: a)
+        XCTAssertGreaterThan(ledger.released, 0)
+        XCTAssertGreaterThan(ledger.arrived, 0)
+        XCTAssertEqual(ledger.released,
+            ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(batched)), batched)
+    }
+
+    func testASaveWithAJourneyOutOfWalkingReachIsRefused() throws {
+        var world = try world()
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        world.passengers[0].release(5, along: try XCTUnwrap(PassengerJourney(origin: a, route: route)), at: GameTime(minutes: -1))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = try encoder.encode(world)
+        XCTAssertNoThrow(try JSONDecoder().decode(GameWorld.self, from: data))
+        // Move the walked-to station 500 m away in the save's text.
+        var json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        let point = TestLine.centre(5, 1)
+        let moved = #"{"x":\#(point.x + 500 * 64),"y":\#(point.y)}"#
+        let original = #"{"x":\#(point.x),"y":\#(point.y)}"#
+        XCTAssertEqual(json.components(separatedBy: original).count, 2, "The station's point appears once")
+        json = json.replacingOccurrences(of: original, with: moved)
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(json.utf8)))
+    }
+}

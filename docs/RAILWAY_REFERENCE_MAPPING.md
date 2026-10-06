@@ -745,16 +745,17 @@ V 實際放行 → T、U（保證不互穿）
 
 量綱：遊戲座標 m×64，只用世界座標折線，不引入新常數。新增查詢不保存，save10、golden 34 不變。
 
-## Phase 5F：旅程執行與接手穩定化（WIP）
+## Phase 5F：旅程執行、跨站步行與新遊戲啟用
 
-2026-10-06 重新檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。本節記錄 PR #142 的部分實作，未宣告 5F 完成；目前存檔為 v11，既有 golden、replay 與 save fixtures 均未改寫。
+2026-10-06 重新檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。PR #142 完成同站轉乘；之後的 PR 加上跨站步行轉乘、新遊戲啟用 `.network` 與路徑計畫效能（ARCHITECTURE 決策 65）。存檔仍為 v11，既有 golden、replay 與 save fixtures 均未改寫。
 
 | 來源／契約 | 目標 | 移植狀態／差異 |
 | --- | --- | --- |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroExpandODDispatchPath` | `PassengerJourney`、`PassengerDemand.makeNetworkPassengerPlan`、`Boarding.exchangePassengers` | adapted：完整服務 leg、current 與固定原起站；StationID／LineID／pattern 取代 net index。需求使用原生實體服務路徑查詢，最多 32 leg。 |
 | 同檔／`_metroNormalizeDispatchOptionWeights`、`_metroSpawnODSplitCountByOptions` | `PassengerRouteChoice`、`PassengerRouteBalance.allocate` | adapted：來源用 choiceProb 與亂數分配剩餘人數；原生使用 inverse-cost 整數權重、持久化 smooth weighted round robin 與路徑順序平手。百萬人次 5:3:2 配額及切批、存檔、選項改變已有測試。不是來源亂數行為的逐值等價移植。 |
 | 同檔／`metroDeductBoardingPlanFromTransferQueues`、`metroStationAllowsTransfer`、`metroStationAllowsPassengerDestination` | `Boarding`、`StationPassengers`、原起站 `PassengerLedger` | adapted／gap：同站轉乘暫用原生 4 分鐘，第一段付原起訖票價；轉乘站拒收記原起站 abandoned。來源的封站／流量管制 operationMode 尚無原生模型，不把 service window 當成封站。 |
-| `Railway/site_archive_clean/data/station_transfers.json`／`criteria`、`transferStations[].members`、`pairs` | 尚未接入 GameCore | gap：同名正規化、system-scoped ID 與距離嚴格小於 450 m；563 站、58 組、63 matched pairs。群組可由多個 pair 連通，不能把全 members 當成每對都可直接步行。原生需來源 ID → StationID 轉換、明確步行 leg／時間與存檔；資料本身沒有同月台／通道成本數值。 |
+| `Railway/site_archive_clean/data/station_transfers.json`／`criteria.maxDistanceM`（450）、`distanceRule`（`haversine_meters < maxDistanceM`） | `GameWorld.walkingTransferMinutes(from:to:)`、`PassengerRouteGraph.walks`、`Boarding.enqueueTransfer`（決策 65） | adapted：玩家車站之間平面距離嚴格小於 450 m 即可步行轉乘，世界單位 64／m，平方距離精確比較；時間 = 同站 4 分鐘 + ⌈距離 ÷ 80 m⌉ 分鐘（來源無步行速度，原生政策）。由站點推導、不存檔。 |
+| 同檔／`transferStations[].members`、`pairs` | 未匯入 | gap：同名正規化、system-scoped ID 與距離嚴格小於 450 m；563 站、58 組、63 matched pairs。群組可由多個 pair 連通，不能把全 members 當成每對都可直接步行。原生需來源 ID → StationID 轉換、明確步行 leg／時間與存檔；資料本身沒有同月台／通道成本數值。 |
 | `Railway/site_archive_clean/index.html`／`transferStationName`、`transferAnchorForStop`、`transferAnchorNear` | 跨站匹配的待接位置 | gap：NFKC、臺→台、移除前綴／後綴，搭配實際距離。正規化與地理資料轉換應在 GameCore 外完成；不可只用近距離或站名自動把所有站接起來。 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
 

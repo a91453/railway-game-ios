@@ -106,6 +106,28 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertNotNil(world.lineHeadway(line, at: .peak, pattern: express))
         XCTAssertTrue(routes.contains { $0.legs.map(\.pattern) == [express] })
         XCTAssertTrue(routes.contains { $0.legs.map(\.pattern) == [nil] })
+        assertGraphMatchesServiceQueries(world)
+    }
+
+    /// The route graph drives each service once; its headways and running
+    /// times must be what `lineHeadway` and `lineJourney` give.
+    private func assertGraphMatchesServiceQueries(_ world: GameWorld, file: StaticString = #filePath, line: UInt = #line) {
+        let graph = PassengerRouteGraph(world: world)
+        var count = 0
+        for serviceLine in world.lines {
+            guard let level = world.serviceLevel(of: serviceLine.id, at: world.clock.now) else { continue }
+            for service in 0..<serviceLine.serviceCount {
+                let pattern = service == 0 ? nil : service - 1
+                guard let headway = world.lineHeadway(serviceLine.id, at: level, pattern: pattern),
+                      let journey = world.lineJourney(serviceLine.id, pattern: pattern) else { continue }
+                let paths = graph.paths.filter { $0.line == serviceLine.id && $0.pattern == pattern }
+                XCTAssertEqual(paths.count, 2, file: file, line: line)
+                XCTAssertEqual(paths.map(\.headway), [headway, headway], file: file, line: line)
+                XCTAssertEqual(paths.flatMap(\.runSeconds), journey.legs.map(\.seconds), file: file, line: line)
+                count += 2
+            }
+        }
+        XCTAssertEqual(graph.paths.count, count, file: file, line: line)
     }
 
     func testCapacityLimitedHeadwayChangesWaitingTime() throws {

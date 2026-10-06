@@ -264,10 +264,22 @@ extension GameWorld {
         return boarded
     }
 
+    /// Passengers who got off at `station` from `line` wait for their
+    /// journey's next leg: there, ready after the change of trains (none
+    /// for another train of the same line), or at the station a walk away
+    /// where it starts, ready once they have walked there (see
+    /// ``walkingTransferMinutes(from:to:)``). Those whose next leg is gone
+    /// or out of reach, or who find no room to wait, leave.
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                          at station: StationID, after line: LineID) {
+                                          at alighting: StationID, after line: LineID) {
         let origin = journey.origin
-        guard journey.leg.from == station else {
+        let station = journey.leg.from
+        let minutes: Int64
+        if station == alighting {
+            minutes = line == journey.leg.line ? 0 : PassengerRouteGraph.sameStationTransferMinutes
+        } else if let walk = walkingTransferMinutes(from: alighting, to: station) {
+            minutes = walk
+        } else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
@@ -277,7 +289,6 @@ extension GameWorld {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
-        let minutes: Int64 = line == journey.leg.line ? 0 : PassengerRouteGraph.sameStationTransferMinutes
         guard let ready = Self.time(clock.now, plusMinutes: minutes) else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
@@ -368,6 +379,12 @@ extension GameWorld {
                 }
                 guard ahead.contains(where: { train.timetable[$0].station == group.destination }) else {
                     return "Passengers ride train \(id) to a station it does not call at before it turns round."
+                }
+                if let journey = group.journey {
+                    let pending = journey.legs.dropFirst(journey.current)
+                    guard zip(pending, pending.dropFirst()).allSatisfy(connects) else {
+                        return "Passengers ride train \(id) on a journey whose next ride starts out of walking reach."
+                    }
                 }
                 riding[group.origin, default: 0] += group.count
             }
