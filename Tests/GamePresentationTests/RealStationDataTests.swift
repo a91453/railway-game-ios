@@ -38,9 +38,9 @@ final class RealStationDataTests: XCTestCase {
         XCTAssertEqual(data.stationClass(forStation: "基隆"), .first)
         XCTAssertEqual(data.stationClass(forStation: "板橋"), .first)
         XCTAssertEqual(data.stationClass(forStation: "新竹"), .first)
+        XCTAssertEqual(data.stationClass(forStation: "瑞芳"), .first, "The bundled reference lists 瑞芳 as 一等")
 
         XCTAssertEqual(data.stationClass(forStation: "八堵"), .second)
-        XCTAssertEqual(data.stationClass(forStation: "瑞芳"), .second)
 
         XCTAssertEqual(data.stationClass(forStation: "四腳亭"), .third)
         XCTAssertEqual(data.stationClass(forStation: "三貂嶺"), .third)
