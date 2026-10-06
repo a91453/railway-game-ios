@@ -42,6 +42,12 @@ public struct GameWorld: Equatable, Sendable {
     /// decision 35), by ascending ``TrainID``. Set by the passenger rules
     /// (`Boarding.swift`) only.
     public internal(set) var riders: [TrainRiders]
+    /// Legacy saves keep direct-trip demand; network games select a complete
+    /// journey at release. A change affects future releases only.
+    public internal(set) var passengerRoutingMode: PassengerRoutingMode
+    /// Fractions left after deterministic OD route choice, by origin and
+    /// destination. They are saved so advancing in batches changes nothing.
+    var passengerRouteBalances: [PassengerRouteBalance]
     /// The company's accounts (G1c, ARCHITECTURE decision 36): its economy
     /// mode and fare rules, the hour being accrued and the ledger. Free and
     /// empty in a new world. Set by the economy rules (`Economy/`) only.
@@ -78,6 +84,8 @@ public struct GameWorld: Equatable, Sendable {
         self.isTrafficControlEnabled = false
         self.passengers = []
         self.riders = []
+        self.passengerRoutingMode = .direct
+        self.passengerRouteBalances = []
         self.accounts = CompanyAccounts()
         self.geoAnchor = nil
         self.nextStationID = 1
@@ -1338,6 +1346,9 @@ public struct GameWorld: Equatable, Sendable {
         var held: [HeldRoute] = []
         // Worked out only when the call steps at all: a paused game's calls
         // cost nothing.
+        if remaining > 0 && passengerRoutingMode == .network {
+            passengerPlan = PassengerPlanCache()
+        }
         var release = remaining > 0 ? passengerRelease() : nil
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
@@ -2597,7 +2608,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, accounts, geoAnchor
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -2668,6 +2679,10 @@ extension GameWorld: Codable {
         isTrafficControlEnabled = container.contains(.trafficControl) ? try container.decode(Bool.self, forKey: .trafficControl) : false
         passengers = container.contains(.passengers) ? try container.decode([StationPassengers].self, forKey: .passengers) : []
         riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
+        passengerRoutingMode = container.contains(.passengerRoutingMode)
+            ? try container.decode(PassengerRoutingMode.self, forKey: .passengerRoutingMode) : .direct
+        passengerRouteBalances = container.contains(.passengerRouteBalances)
+            ? try container.decode([PassengerRouteBalance].self, forKey: .passengerRouteBalances) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         if madeBeforeSpacing {
@@ -2728,6 +2743,12 @@ extension GameWorld: Codable {
         }
         if !riders.isEmpty {
             try container.encode(riders, forKey: .riders)
+        }
+        if passengerRoutingMode != .direct {
+            try container.encode(passengerRoutingMode, forKey: .passengerRoutingMode)
+        }
+        if !passengerRouteBalances.isEmpty {
+            try container.encode(passengerRouteBalances, forKey: .passengerRouteBalances)
         }
         if !accounts.isPristine {
             try container.encode(accounts, forKey: .accounts)

@@ -56,7 +56,7 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         let current = try box.decode(Int.self, forKey: .current)
         guard (1...32).contains(legs.count), legs.indices.contains(current),
               legs.first?.from == origin, legs.last?.to == destination,
-              legs.allSatisfy({ $0.from != $0.to && ($0.pattern ?? 0) >= 0 }),
+              legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) }),
               zip(legs, legs.dropFirst()).allSatisfy({ $0.to == $1.from })
         else {
             throw DecodingError.dataCorruptedError(forKey: .legs, in: box,
@@ -72,4 +72,21 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         try box.encode(legs, forKey: .legs)
         try box.encode(current, forKey: .current)
     }
+}
+
+/// Direct is the behavior of saves written before network passenger routing.
+/// Network games assign a complete journey when passengers are released.
+public enum PassengerRoutingMode: String, Codable, Sendable {
+    case direct
+    case network
+}
+
+/// Fractional route shares carried between minute releases of one OD pair.
+/// Keeping this in the save makes a batch split equivalent to minute steps.
+struct PassengerRouteBalance: Hashable, Codable, Sendable {
+    let origin: StationID
+    let destination: StationID
+    let journeys: [PassengerJourney]
+    let weights: [Int64]
+    var balances: [Int64]
 }

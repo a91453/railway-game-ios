@@ -151,7 +151,12 @@ extension GameWorld {
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
                 if group.destination == entry.station {
-                    passengers[passengerIndex(of: group.origin)].arrived += group.count
+                    if let next = group.journey?.next {
+                        enqueueTransfer(group.count, along: next, at: entry.station,
+                                        after: group.journey!.leg.line)
+                    } else {
+                        passengers[passengerIndex(of: group.origin)].arrived += group.count
+                    }
                     alighted += group.count
                 } else if entry.reverses || isLast {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
@@ -186,6 +191,8 @@ extension GameWorld {
         else { return nil }
         let onRing = self.line(id: line)?.isRing ?? false
         let direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
+        let ringDirection: LineDirection = self.line(id: line)?.ringDirection(of: train.id) == .outer ? .inbound : .outbound
+        let pattern = assignedPattern(of: train.id)
         // How far along each destination is: the first call at it.
         var reach: [StationID: Int] = [:]
         for call in Self.callsAhead(of: train, leaving: stop) where reach[train.timetable[call].station] == nil {
@@ -193,7 +200,17 @@ extension GameWorld {
         }
         let waiting = passengers[record].waiting
         let eligible = waiting.indices
-            .filter { waiting[$0].line == line && (onRing || waiting[$0].direction == direction) && reach[waiting[$0].destination] != nil }
+            .filter { index in
+                let group = waiting[index]
+                guard group.line == line, reach[group.destination] != nil,
+                      group.readyAt.map({ $0 <= clock.now }) ?? true else { return false }
+                if let journey = group.journey {
+                    return journey.leg.from == train.timetable[stop].station &&
+                        journey.leg.pattern == pattern &&
+                        group.direction == (onRing ? ringDirection : direction)
+                }
+                return onRing || group.direction == direction
+            }
             .enumerated()
             .sorted { lhs, rhs in
                 let (left, right) = (reach[waiting[lhs.element].destination]!, reach[waiting[rhs.element].destination]!)
@@ -226,8 +243,11 @@ extension GameWorld {
             taken[index] = count
             room -= count
             boarded += count
-            boarding.add(count, from: passengers[record].station, to: group.destination)
-            paying[group.destination, default: 0] += count
+            boarding.add(count, from: group.journey?.origin ?? passengers[record].station,
+                         to: group.destination, journey: group.journey)
+            if group.journey?.current == nil || group.journey?.current == 0 {
+                paying[group.journey?.destination ?? group.destination, default: 0] += count
+            }
         }
         // Each destination's boarders pay together, rounded to whole
         // dollars (G1c; the reference's fare trips of a boarding plan).
@@ -240,7 +260,37 @@ extension GameWorld {
         } else {
             riders.insert(boarding, at: riders.firstIndex { $0.train > train.id } ?? riders.count)
         }
+        if passengers[record].isEmpty { passengers.remove(at: record) }
         return boarded
+    }
+
+    private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
+                                          at station: StationID, after line: LineID) {
+        let origin = journey.origin
+        guard journey.leg.from == station else {
+            passengers[passengerIndex(of: origin)].abandoned += count
+            return
+        }
+        let planned = WaitingGroup(line: journey.leg.line, direction: journey.leg.direction,
+            destination: journey.leg.to, since: clock.now, count: count, journey: journey)
+        guard isServed(planned, at: station) else {
+            passengers[passengerIndex(of: origin)].abandoned += count
+            return
+        }
+        let minutes: Int64 = line == journey.leg.line ? 0 : PassengerRouteGraph.sameStationTransferMinutes
+        guard let ready = Self.time(clock.now, plusMinutes: minutes) else {
+            passengers[passengerIndex(of: origin)].abandoned += count
+            return
+        }
+        let slot: Int
+        if let found = passengers.firstIndex(where: { $0.station == station }) {
+            slot = found
+        } else {
+            slot = passengers.firstIndex { $0.station > station } ?? passengers.count
+            passengers.insert(StationPassengers(station: station), at: slot)
+        }
+        let admitted = passengers[slot].enqueueTransfer(count, along: journey, at: clock.now, readyAt: ready)
+        passengers[passengerIndex(of: origin)].abandoned += count - admitted
     }
 
     /// `train`, leaving stop `stop` full, counts those still waiting there
@@ -322,8 +372,17 @@ extension GameWorld {
                 riding[group.origin, default: 0] += group.count
             }
         }
-        for record in passengers where record.boardedAndRiding != riding[record.station] ?? 0 {
-            return "Station \(record.station.rawValue)'s passengers do not add up to those it released."
+        var waiting: [StationID: Int64] = [:]
+        for record in passengers {
+            for group in record.waiting {
+                waiting[group.journey?.origin ?? record.station, default: 0] += group.count
+            }
+        }
+        for record in passengers {
+            let unaccounted = record.released - record.arrived - record.overflowed - record.abandoned
+            if unaccounted != (waiting[record.station] ?? 0) + (riding[record.station] ?? 0) {
+                return "Station \(record.station.rawValue)'s passengers do not add up to those it released."
+            }
         }
         return nil
     }

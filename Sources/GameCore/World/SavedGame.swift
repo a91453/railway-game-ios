@@ -62,9 +62,11 @@
 ///    Version 8 would drop these events and release a wait too soon.
 /// 10. Shared line/service physical route preferences (decision 61).
 ///     Older builds would silently drop an assigned path or platform.
+/// 11. Network passenger journeys and transfer queues (Phase 5C/5F).
+///     Older builds would drop their remaining legs or route balances.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 10
+    public static let currentVersion = 11
 
     public let world: GameWorld
 
@@ -115,6 +117,8 @@ extension SavedGame: Codable {
         // conservatively use their last actual arrival where history is absent.
         // Version 9 to 10: absent line/pattern routePreferences migrate
         // to empty automatic selections in their validated decoders.
+        // Version 10 to 11: absent passenger routing mode means direct;
+        // old waiting and riding groups have no journey or route balance.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

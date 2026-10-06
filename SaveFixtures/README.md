@@ -35,6 +35,12 @@ another station where it stands aside out of a deadlock. Earlier saves never
 hold one and read as before; a build before version 8 refuses a version 8
 save rather than a service it would call damaged.
 
+Since version 11 (Phase 5C/5F), a waiting or riding passenger group can hold
+its remaining network journey and an OD pair can hold deterministic route
+choice balances. Earlier saves have direct-trip groups and load in direct
+routing mode. An older build must reject version 11 so it cannot silently
+drop the transfer plan when saving again.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -52,3 +58,4 @@ hand could hold, is refused with that reason
 | `v6-demo-siding-90-minutes.json` | 6 | The version 5 save read by the Stage F3d build (ARCHITECTURE decision 54) and saved again: `"saveVersion": 6`, the world's `"bounds": {"width": 1048576, "height": 1048576}` in world units instead of the version 5 `"map"` of 1024 × 1024 tiles, and no `"continuation": []` in the four trains' movements; byte for byte otherwise. The version 4 siding save saved again by this build gives it byte for byte too. |
 | `v7-demo-siding-90-minutes.json` | 7 | The version 6 save read by the Stage U2 build (ARCHITECTURE decision 56) and saved again: `"saveVersion": 7`, byte for byte otherwise (no train follows another in it). The version 4 siding save and the version 6 save saved again by this build give it byte for byte too. |
 | `v8-demo-siding-90-minutes.json` | 8 | The version 7 save read by the Stage V2 build (ARCHITECTURE decision 58) and saved again: `"saveVersion": 8`, byte for byte otherwise (no service in it stands aside at a passing place). The version 4 siding save, and the version 6 and 7 saves, saved again by this build give it byte for byte too. |
+| `v11-network-transfer.json` | 11 | A two-line service with five passengers from A waiting at B for the second leg to C. Their original station keeps the conservation ledger; the waiting group holds its remaining journey and transfer ready time. Written by the version 11 build. |

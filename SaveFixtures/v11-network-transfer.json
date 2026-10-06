@@ -1,0 +1,404 @@
+{
+  "saveVersion" : 11,
+  "world" : {
+    "bounds" : {
+      "height" : 4096,
+      "width" : 8192
+    },
+    "clock" : {
+      "now" : 120,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 986400,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "lastDispatch" : 0,
+        "name" : "First",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      },
+      {
+        "id" : 2,
+        "lastDispatch" : 0,
+        "name" : "Second",
+        "stops" : [
+          2,
+          3
+        ],
+        "trains" : [
+          2
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        }
+      ],
+      "nextEdgeID" : 7,
+      "nextNodeID" : 8,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        }
+      ]
+    },
+    "nextLineID" : 3,
+    "nextStationID" : 4,
+    "nextTrainID" : 3,
+    "passengerRoutingMode" : "network",
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 1000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 5,
+        "remainders" : [
+          {
+            "destination" : 3,
+            "value" : 480
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 5,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 1,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                },
+                {
+                  "direction" : "outbound",
+                  "from" : 2,
+                  "line" : 2,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 2,
+            "readyAt" : 306,
+            "since" : 66
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 1000,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 480
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 1536,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 3584,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "C",
+        "point" : {
+          "x" : 5632,
+          "y" : 1536
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "execution" : {
+          "phase" : "waiting",
+          "stop" : 1
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "rate" : 1024
+        },
+        "name" : "One",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 3,
+            "offset" : 1024
+          }
+        },
+        "times" : {
+          "arrival" : 58,
+          "departure" : 42,
+          "exchangeEnd" : 67
+        },
+        "timetable" : [
+          {
+            "arrival" : 0,
+            "departure" : 42,
+            "station" : 1
+          },
+          {
+            "arrival" : 58,
+            "departure" : 178,
+            "reverse" : true,
+            "station" : 2
+          },
+          {
+            "arrival" : 194,
+            "departure" : 194,
+            "reverse" : true,
+            "station" : 1
+          }
+        ]
+      },
+      {
+        "execution" : {
+          "phase" : "waiting",
+          "stop" : 1
+        },
+        "id" : 2,
+        "movement" : {
+          "cursor" : 0,
+          "rate" : 1024
+        },
+        "name" : "Two",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 5,
+            "offset" : 1024
+          }
+        },
+        "times" : {
+          "arrival" : 58,
+          "departure" : 42,
+          "exchangeEnd" : 66
+        },
+        "timetable" : [
+          {
+            "arrival" : 0,
+            "departure" : 42,
+            "station" : 2
+          },
+          {
+            "arrival" : 58,
+            "departure" : 178,
+            "reverse" : true,
+            "station" : 3
+          },
+          {
+            "arrival" : 194,
+            "departure" : 194,
+            "reverse" : true,
+            "station" : 2
+          }
+        ]
+      }
+    ]
+  }
+}
