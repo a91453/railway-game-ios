@@ -323,6 +323,9 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// or `nil` if it never has (or the line is not a ring);
     /// ``lastDispatch`` is the ``RingDirection/inner`` way's.
     public internal(set) var outerLastDispatch: GameTime?
+    /// The colour the player chose for the line, or `nil` for the app's
+    /// own pick (see ``LineColor``).
+    public internal(set) var color: LineColor?
 
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1
@@ -348,6 +351,7 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         self.patterns = []
         self.isRing = false
         self.outerLastDispatch = nil
+        self.color = nil
     }
 
     /// Whether `stops` can be a line's stops, judged without a world: at
@@ -784,7 +788,7 @@ extension ServiceDay.Band: Codable {}
 
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -822,6 +826,7 @@ extension ServiceLine: Codable {
         patterns = container.contains(.patterns) ? try container.decode([LinePattern].self, forKey: .patterns) : []
         isRing = container.contains(.ring) ? try container.decode(Bool.self, forKey: .ring) : false
         outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
+        color = container.contains(.color) ? try container.decode(LineColor.self, forKey: .color) : nil
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -891,6 +896,7 @@ extension ServiceLine: Codable {
             try container.encode(true, forKey: .ring)
         }
         try container.encodeIfPresent(outerLastDispatch, forKey: .outerLastDispatch)
+        try container.encodeIfPresent(color, forKey: .color)
     }
 }
 
@@ -949,5 +955,40 @@ extension LinePattern: Codable {
             try container.encode(trains, forKey: .trains)
         }
         try container.encodeIfPresent(lastDispatch, forKey: .lastDispatch)
+    }
+}
+
+/// A line's colour: red, green and blue, 0 to 255 each, packed as
+/// `0xRRGGBB`, as the reference stores a line's `color` (`"#ef5350"`).
+public struct LineColor: Hashable, Sendable {
+    public let rgb: Int
+
+    /// `nil` unless `rgb` is within `0...0xFFFFFF`.
+    public init?(rgb: Int) {
+        guard (0...0xFF_FFFF).contains(rgb) else { return nil }
+        self.rgb = rgb
+    }
+
+    /// The reference's line colours to choose from (`PRESET_COLORS`).
+    public static let presets: [LineColor] = [
+        0xF5F5F5, 0xEF5350, 0xFF7043, 0xFFD54F, 0xAED581, 0x66BB6A, 0x26A69A, 0x4DD0E1, 0x42A5F5, 0x5C6BC0,
+        0xAB47BC, 0xEC407A, 0xFF80AB, 0xA1887F, 0x78909C, 0xFFCC02, 0xFF6E40, 0x00E5FF, 0x69F0AE, 0xEEFF41,
+    ].map { LineColor(rgb: $0)! }
+}
+
+extension LineColor: Codable {
+    /// Decodes the packed number, rejecting one outside `0...0xFFFFFF`.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rgb = try container.decode(Int.self)
+        guard let color = LineColor(rgb: rgb) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "A line colour is 0 to 0xFFFFFF.")
+        }
+        self = color
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rgb)
     }
 }

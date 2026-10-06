@@ -20,7 +20,7 @@ struct FollowBar: View {
         let info = session.world.followBarInfo(of: train.id, in: language)
         HStack(spacing: 9) {
             Circle()
-                .fill(info?.line.map(Palette.lineColor) ?? Palette.train)
+                .fill(info?.line.map { Palette.lineColor($0, custom: session.world.line(id: $0)?.color) } ?? Palette.train)
                 .frame(width: 9, height: 9)
 
             Text(verbatim: train.name)

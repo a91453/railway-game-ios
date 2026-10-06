@@ -35,11 +35,24 @@ enum Palette {
     static let paxBarOverload = dynamic(light: (0.847, 0.349, 0.275), dark: (0.937, 0.267, 0.267))
 
     /// The colour a line is drawn with in the lines panel and the follow
-    /// bar's dot. Lines have no stored colour (GameCore keeps none), so it
-    /// is picked from the line's ID, as the lines panel always has.
-    static func lineColor(_ id: LineID) -> Color {
+    /// bar's dot: the one the player chose (`custom`, the line's
+    /// ``LineColor``), or else one picked from the line's ID, as the lines
+    /// panel always has.
+    static func lineColor(_ id: LineID, custom: LineColor? = nil) -> Color {
+        if let custom {
+            return color(custom)
+        }
         let colors: [Color] = [metroBlue, metroGreen, metroAmber, metroPurple, metroCyan, metroRed]
         return colors[abs(Int(id.rawValue)) % colors.count]
+    }
+
+    /// A ``LineColor`` as a SwiftUI colour.
+    static func color(_ line: LineColor) -> Color {
+        Color(
+            red: Double((line.rgb >> 16) & 0xFF) / 255,
+            green: Double((line.rgb >> 8) & 0xFF) / 255,
+            blue: Double(line.rgb & 0xFF) / 255
+        )
     }
 
     // Surfaces and Borders

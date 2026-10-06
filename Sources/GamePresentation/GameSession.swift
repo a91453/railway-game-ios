@@ -568,6 +568,34 @@ public final class GameSession {
         }
     }
 
+    /// Renames the selected station through `GameWorld.renameStation(_:to:)`.
+    public func renameSelectedStation(to name: String) {
+        guard let station = selectedStation else { return }
+        perform { world throws(GameError) in
+            try world.renameStation(station.id, to: name)
+            return language.text("Renamed \(station.name) to \(name).", "已將 \(station.name) 更名為 \(name)。")
+        }
+    }
+
+    /// Renames the selected line through `GameWorld.renameLine(_:to:)`.
+    public func renameSelectedLine(to name: String) {
+        guard let line = requireSelectedLine() else { return }
+        perform { world throws(GameError) in
+            try world.renameLine(line.id, to: name)
+            return language.text("Renamed \(line.name) to \(name).", "已將 \(line.name) 更名為 \(name)。")
+        }
+    }
+
+    /// Sets the selected line's colour through
+    /// `GameWorld.setLineColor(_:to:)`; `nil` gives back the app's pick.
+    public func setSelectedLineColor(_ color: LineColor?) {
+        guard let line = requireSelectedLine() else { return }
+        perform { world throws(GameError) in
+            try world.setLineColor(line.id, to: color)
+            return language.text("\(line.name) has a new colour.", "\(line.name) 換了顏色。")
+        }
+    }
+
     /// Borrows one ``CompanyAccounts/loanStep`` through
     /// `GameWorld.borrow(_:)` (decision 67).
     public func borrowLoanStep() {

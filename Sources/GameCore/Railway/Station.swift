@@ -26,7 +26,8 @@ public struct StationID: RawRepresentable, Hashable, Comparable, Codable, Sendab
 /// (decision 54).
 public struct Station: Identifiable, Hashable, Sendable {
     public let id: StationID
-    public let name: String
+    /// Its name; ``GameWorld/renameStation(_:to:)`` changes it.
+    public internal(set) var name: String
     /// Where the station stands.
     public let point: PlanPoint
     /// Whether passengers may enter, change and leave here (Phase 5F, see

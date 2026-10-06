@@ -14,6 +14,7 @@ final class DemoWorldTests: XCTestCase {
     func testNewGamesRoutePassengersOverTheNetworkAndTheyChangeTrains() throws {
         XCTAssertEqual(GameWorld.newGame().passengerRoutingMode, .network)
         XCTAssertTrue(GameWorld.newGame().weeklyDemand, "Item 4: weekdays and weekends differ")
+        XCTAssertNotNil(GameWorld.newGame().townGrowth, "Item 5: towns grow round served stations")
         var world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.passengerRoutingMode, .network)
         let west = try XCTUnwrap(world.stations.first { $0.name == "West" }).id

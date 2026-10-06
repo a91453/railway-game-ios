@@ -55,6 +55,11 @@ public struct GameWorld: Equatable, Sendable {
     /// new world and in saves from before them; the app's new games turn
     /// them on. Set by ``setDemandEvents(seed:)`` and every midnight only.
     public internal(set) var demandEvents: DemandEventSchedule?
+    /// How the towns round the stations grow, or `nil` for a world whose
+    /// ridership stays as set (item 5; see ``TownGrowth``). Off in a new
+    /// world and in saves from before it; the app's new games turn it on.
+    /// Set by ``setTownGrowth(_:)`` and every midnight only.
+    public internal(set) var townGrowth: TownGrowth?
     /// Fractions left after deterministic OD route choice, by origin and
     /// destination. They are saved so advancing in batches changes nothing.
     var passengerRouteBalances: [PassengerRouteBalance]
@@ -548,6 +553,36 @@ public struct GameWorld: Equatable, Sendable {
             if price > 0 { try economy.spend(Money(price)) }
         }
         trains[index].cars = cars
+    }
+
+    /// Renames station `id` (the reference's station rename). Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
+    ///   ``GameError/invalidName``.
+    public mutating func renameStation(_ id: StationID, to name: String) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        guard Self.isValidName(name) else { throw .invalidName }
+        stations[index].name = name
+    }
+
+    /// Renames line `id`. Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidName``.
+    public mutating func renameLine(_ id: LineID, to name: String) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        guard Self.isValidName(name) else { throw .invalidName }
+        lines[index].name = name
+    }
+
+    /// Sets line `id`'s colour, or `nil` for the app's own pick (the
+    /// reference's line colour, from its `PRESET_COLORS` or any other).
+    /// Free; no rule reads it.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineColor(_ id: LineID, to color: LineColor?) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].color = color
     }
 
     /// Sets the type of train `id`'s cars (the reference's `TRAIN_TYPES`),
@@ -1452,14 +1487,16 @@ public struct GameWorld: Equatable, Sendable {
                         passengerLevels = levels
                     }
                 }
-                // Item 4: events start and end at midnight.
-                let midnight = demandEvents != nil && start.seconds % GameTime.secondsPerDay == 0
+                // Items 4 and 5: towns grow from the day that ended, and
+                // events start and end, at midnight.
+                let midnight = (demandEvents != nil || townGrowth != nil) && start.seconds % GameTime.secondsPerDay == 0
                 if midnight {
+                    growTowns(reached: release.map(Self.reachedStations) ?? [:])
                     startDemandEventDay(dayIndex(of: start))
                 }
                 // Weekly demand and events: each day releases its own day's
                 // trips.
-                if demandDay != nil, midnight || passengerPlan.day != demandDay {
+                if midnight || demandDay != nil && passengerPlan.day != demandDay {
                     if let release { keepRemainders(of: release) }
                     passengerPlan = PassengerPlanCache()
                     release = passengerRelease()
@@ -1549,14 +1586,15 @@ public struct GameWorld: Equatable, Sendable {
                 } else {
                     passengerWake = nil
                 }
-                // Weekly demand: the next day releases its own trips. The
-                // second of the day, without multiplying back (a save's
-                // clock may be near the end of time).
+                // Weekly demand, events and town growth: the next day
+                // releases its own trips. The second of the day, without
+                // multiplying back (a save's clock may be near the end of
+                // time).
                 let day = GameTime.secondsPerDay
-                let dayWake: Int64? = demandDay.map { _ in
+                let dayWake: Int64? = demandDay != nil || townGrowth != nil ? {
                     let intoDay = (clock.now.seconds % day + day) % day
                     return (day - intoDay + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
-                }
+                }() : nil
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
                     minutesUntilLineWaitsChange(memo: &memo), passengerWake, dayWake,
@@ -2731,7 +2769,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -2806,6 +2844,7 @@ extension GameWorld: Codable {
             ? try container.decode(PassengerRoutingMode.self, forKey: .passengerRoutingMode) : .direct
         weeklyDemand = container.contains(.weeklyDemand) ? try container.decode(Bool.self, forKey: .weeklyDemand) : false
         demandEvents = container.contains(.demandEvents) ? try container.decode(DemandEventSchedule.self, forKey: .demandEvents) : nil
+        townGrowth = container.contains(.townGrowth) ? try container.decode(TownGrowth.self, forKey: .townGrowth) : nil
         passengerRouteBalances = container.contains(.passengerRouteBalances)
             ? try container.decode([PassengerRouteBalance].self, forKey: .passengerRouteBalances) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
@@ -2873,6 +2912,7 @@ extension GameWorld: Codable {
             try container.encode(weeklyDemand, forKey: .weeklyDemand)
         }
         try container.encodeIfPresent(demandEvents, forKey: .demandEvents)
+        try container.encodeIfPresent(townGrowth, forKey: .townGrowth)
         if passengerRoutingMode != .direct {
             try container.encode(passengerRoutingMode, forKey: .passengerRoutingMode)
         }
@@ -3080,7 +3120,7 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service times are after the clock."
             }
         }
-        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? demandEventProblem()
+        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? demandEventProblem() ?? townGrowthProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE
