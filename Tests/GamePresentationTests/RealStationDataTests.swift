@@ -81,6 +81,46 @@ final class RealStationDataTests: XCTestCase {
 
     // MARK: - TRTC Station Codes
 
+    func testXinchengAliasesResolveTheSameOfficialStationData() throws {
+        let data = try Self.makeStationData()
+        let platform = try XCTUnwrap(data.platforms["新城"])
+        let northSection = try XCTUnwrap(data.trackSections["崇德|新城"])
+        let southSection = try XCTUnwrap(data.trackSections["新城|景美"])
+        for name in ["新城", "新城 (太魯閣)", "新城(太魯閣)", "新城　（太魯閣）"] {
+            XCTAssertEqual(data.stationInfo(forStation: name)?.id, "7030", name)
+            XCTAssertEqual(data.stationClass(forStation: name), .second, name)
+            XCTAssertEqual(data.platform(forStation: name), platform, name)
+            XCTAssertEqual(data.trackSection(between: name, and: "崇德"), northSection, name)
+            XCTAssertEqual(data.trackSection(between: "景美", and: name), southSection, name)
+        }
+        XCTAssertNil(data.stationInfo(forStation: "新城北"), "Aliases must not match by prefix")
+    }
+
+    func testZuoyingOldCityAliasResolvesOfficialMetadata() throws {
+        let data = try Self.makeStationData()
+        XCTAssertEqual(data.stationInfo(forStation: "左營(舊城)")?.id, "4350")
+        XCTAssertEqual(data.platform(forStation: "左營 (舊城)"), data.platforms["左營"])
+        XCTAssertEqual(data.stationClass(forStation: "左營(舊城)"), .simple)
+        XCTAssertEqual(data.stationInfo(forStation: "新左營")?.id, "4340")
+    }
+
+    func testDiscoveryNameConnectsToMetadataWithoutChangingItsIdentity() throws {
+        let data = try Self.makeStationData()
+        let railways = try RealRailways(
+            lines: Self.bundledFile("track_lines.geojson"),
+            stations: Self.bundledFile("track_stations.geojson"),
+            names: Self.bundledFile("station_names.json")
+        )
+        let station = try XCTUnwrap(railways.stations.first { $0.id == "tra_sched|新城 (太魯閣)" })
+        let name = station.name(in: .traditionalChinese)
+        XCTAssertEqual(name, "新城 (太魯閣)")
+        XCTAssertEqual(railways.stations(matching: "新城(太魯閣)").map(\.id), [station.id])
+        XCTAssertEqual(data.stationInfo(forStation: name)?.id, "7030")
+        XCTAssertEqual(data.stationClass(forStation: name), .second)
+        XCTAssertNotNil(data.platform(forStation: name))
+        XCTAssertEqual(data.tracksBetween(stationA: name, stationB: "崇德"), 2)
+    }
+
     func testTRTCStationCodesLoadAndQuery() throws {
         let data = try Self.makeStationData()
         XCTAssertEqual(data.trtcCodes.count, 122, "122 TRTC station code records")

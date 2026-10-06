@@ -245,18 +245,37 @@ public struct RealStationData: Sendable {
         self.trackSections = parsedSections
     }
 
-    /// Looks up the TRA station classification for `name` (with "台"/"臺" normalized).
+    /// A lookup key only: source names and station identities remain intact.
+    /// The reference uses the discovery names 新城 (太魯閣) and 左營(舊城)
+    /// alongside the official metadata names 新城 and 左營.
+    private static func stationKey(_ name: String) -> String {
+        let key = RealRailways.normalized(name)
+            .replacingOccurrences(of: "（", with: "(")
+            .replacingOccurrences(of: "）", with: ")")
+        switch key {
+        case "新城(太魯閣)": return "新城"
+        case "左營(舊城)": return "左營"
+        default: return key
+        }
+    }
+
+    private static func lookup<Value>(_ name: String, in values: [String: Value]) -> Value? {
+        if let direct = values[name] { return direct }
+        let normalized = stationKey(name)
+        // Exact spellings take precedence; a sorted fallback is stable even
+        // if a source contains more than one spelling of the same station.
+        guard let key = values.keys.sorted().first(where: { stationKey($0) == normalized }) else { return nil }
+        return values[key]
+    }
+
+    /// Looks up the TRA station classification, accepting reference aliases.
     public func stationClass(forStation name: String) -> TRAStationClass? {
-        if let direct = stationClasses[name] { return direct }
-        let alt = name.contains("臺") ? name.replacingOccurrences(of: "臺", with: "台") : name.replacingOccurrences(of: "台", with: "臺")
-        return stationClasses[alt]
+        Self.lookup(name, in: stationClasses)
     }
 
     /// Looks up TRA station information for `name`.
     public func stationInfo(forStation name: String) -> TRAStationInfo? {
-        if let direct = stationInfos[name] { return direct }
-        let alt = name.contains("臺") ? name.replacingOccurrences(of: "臺", with: "台") : name.replacingOccurrences(of: "台", with: "臺")
-        return stationInfos[alt]
+        Self.lookup(name, in: stationInfos)
     }
 
     /// Looks up TRA station information by station code (e.g. `"0900"`).
@@ -266,9 +285,7 @@ public struct RealStationData: Sendable {
 
     /// Returns TRTC station codes for station `name` (e.g. "台北車站" -> `["BL12", "R10"]`).
     public func trtcCodes(forStation name: String) -> [String] {
-        if let direct = trtcCodesByStation[name] { return direct }
-        let alt = name.contains("臺") ? name.replacingOccurrences(of: "臺", with: "台") : name.replacingOccurrences(of: "台", with: "臺")
-        return trtcCodesByStation[alt] ?? []
+        Self.lookup(name, in: trtcCodesByStation) ?? []
     }
 
     /// Returns TRTC station info for `code` (e.g. `"BL01"`).
@@ -278,9 +295,7 @@ public struct RealStationData: Sendable {
 
     /// Platform geometry for `name`.
     public func platform(forStation name: String) -> TRAPlatform? {
-        if let direct = platforms[name] { return direct }
-        let alt = name.contains("臺") ? name.replacingOccurrences(of: "臺", with: "台") : name.replacingOccurrences(of: "台", with: "臺")
-        return platforms[alt]
+        Self.lookup(name, in: platforms)
     }
 
     /// Estimated platform length for a class tier (0 to 4).
@@ -300,17 +315,11 @@ public struct RealStationData: Sendable {
         let key2 = "\(stationB)|\(stationA)"
         if let found = trackSections[key1] ?? trackSections[key2] { return found }
 
-        let normA = stationA.replacingOccurrences(of: "台", with: "臺")
-        let normB = stationB.replacingOccurrences(of: "台", with: "臺")
-        let key3 = "\(normA)|\(normB)"
-        let key4 = "\(normB)|\(normA)"
-        if let found = trackSections[key3] ?? trackSections[key4] { return found }
-
-        let altA = stationA.replacingOccurrences(of: "臺", with: "台")
-        let altB = stationB.replacingOccurrences(of: "臺", with: "台")
-        let key5 = "\(altA)|\(altB)"
-        let key6 = "\(altB)|\(altA)"
-        return trackSections[key5] ?? trackSections[key6]
+        let endpoints = [Self.stationKey(stationA), Self.stationKey(stationB)].sorted()
+        guard let key = trackSections.keys.sorted().first(where: {
+            $0.split(separator: "|").map { Self.stationKey(String($0)) }.sorted() == endpoints
+        }) else { return nil }
+        return trackSections[key]
     }
 
     /// Number of tracks between two stations (1 for single track, 2 for double track).
