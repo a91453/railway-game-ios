@@ -175,6 +175,29 @@ final class RealWorldDemoTests: XCTestCase {
         XCTAssertGreaterThan(split, 20)
     }
 
+    /// A platform track beside a platform on the demo's curved single
+    /// track (大華, one platform): it builds on one side or the other, the
+    /// station gets its second platform, and the world still saves.
+    @MainActor
+    func testAPlatformTrackFitsBesideADemoPlatform() throws {
+        let (_, world) = try Self.built.get()
+        var quiet = world
+        for train in quiet.trains { try quiet.unplaceTrain(train.id) }
+        let session = GameSession(world: quiet, language: .english)
+        let dahua = try XCTUnwrap(quiet.stations.first { $0.name == "大華" }).id
+        let platform = try XCTUnwrap(quiet.trackPlatforms(of: dahua).first)
+        var built: PlatformTrackSide?
+        for side in PlatformTrackSide.allCases where built == nil {
+            if session.platformTrackPreview(beside: platform, layout: .side, side: side).problem == nil {
+                session.addPlatformTrack(beside: platform, layout: .side, side: side)
+                built = side
+            }
+        }
+        XCTAssertNotNil(built, session.platformTrackPreview(beside: platform, layout: .side, side: .left).problem ?? "")
+        XCTAssertEqual(session.world.trackPlatforms(of: dahua).count, 2, session.message?.text ?? "")
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(session.world)), session.world)
+    }
+
     /// A line that already runs keeps the trains it is set to run.
     @MainActor
     func testAssigningToALineThatRunsKeepsItsCounts() throws {

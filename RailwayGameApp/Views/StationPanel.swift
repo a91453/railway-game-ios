@@ -36,6 +36,7 @@ struct StationPanel: View {
                         .accessibilityIdentifier("station.rename")
                     }
                     operationSection(station)
+                    platformsSection(station)
                     realStationSection(station)
                     catchmentPopulationSection(station)
                     demandSection(station)
@@ -98,6 +99,48 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.operation")
         } footer: {
             Text(verbatim: mode.detail(in: session.language))
+        }
+    }
+
+    /// The station's platforms, each with a menu that adds a platform track
+    /// beside it in one step (`GameSession.addPlatformTrack(beside:layout:side:)`):
+    /// island or side, on either side of its track.
+    private func platformsSection(_ station: Station) -> some View {
+        let language = session.language
+        let platforms = session.world.trackPlatforms(of: station.id)
+        return Section {
+            if platforms.isEmpty {
+                Text(verbatim: language.text("No platform yet. Add one with the network tool.", "還沒有月台。請用路網工具加上月台。"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(Array(platforms.enumerated()), id: \.offset) { index, platform in
+                Menu {
+                    ForEach(PlatformTrackLayout.allCases, id: \.self) { layout in
+                        ForEach(PlatformTrackSide.allCases, id: \.self) { side in
+                            Button {
+                                session.addPlatformTrack(beside: platform, layout: layout, side: side)
+                            } label: {
+                                Text(verbatim: "\(layout.title(in: language)) · \(session.platformTrackSideText(side, of: platform))")
+                            }
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Platform \(index + 1): add a platform track", "第 \(index + 1) 月台：加月台軌道"))
+                    } icon: {
+                        Image(systemName: "plus.rectangle.on.rectangle")
+                    }
+                }
+                .accessibilityIdentifier("station.platformTrack.\(index)")
+            }
+        } header: {
+            Text(verbatim: language.text("Platforms", "月台"))
+        } footer: {
+            Text(verbatim: language.text(
+                "A platform track runs beside the platform with a turnout at each end. Island: one platform between the tracks, 11 m apart. Side: a platform outside each track, 5 m apart.",
+                "月台軌道會建在月台旁，兩端各有一組道岔。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
+            ))
         }
     }
 
