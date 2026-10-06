@@ -216,4 +216,48 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(route.totalMinutes, 7)
         XCTAssertEqual(route.transfers, 1)
     }
+
+    func testRouteAllocationUsesLargestRemaindersAndRouteOrderForTies() throws {
+        var world = try network()
+        let first = try world.createLine(named: "First", stops: [a, c]).id
+        let second = try world.createLine(named: "Second", stops: [a, c]).id
+        try run(&world, first)
+        try run(&world, second)
+
+        let allocations = world.passengerRouteAllocations(from: a, to: c, count: 5)
+        XCTAssertEqual(allocations.prefix(2).map { $0.route.legs[0].line }, [first, second])
+        XCTAssertEqual(allocations.prefix(2).map(\.count), [3, 2])
+        XCTAssertEqual(allocations.map(\.count).reduce(0, +), 5)
+        XCTAssertEqual(world.passengerRouteAllocations(from: a, to: c, count: 0), [])
+        XCTAssertEqual(world.passengerRouteAllocations(from: a, to: a, count: 5), [])
+
+        try world.setLineTargetHeadways(second, to: TargetHeadways(peak: 8, offPeak: 8, low: 8))
+        let weighted = world.passengerRouteAllocations(from: a, to: c, count: 101)
+        XCTAssertEqual(weighted.map(\.count).reduce(0, +), 101)
+        XCTAssertGreaterThan(weighted[1].route.totalMinutes, weighted[0].route.totalMinutes)
+        XCTAssertGreaterThan(weighted[0].count, weighted[1].count)
+        XCTAssertEqual(weighted, world.passengerRouteAllocations(from: a, to: c, count: 101))
+    }
+
+    func testRouteAllocationExcludesExcessivelySlowService() throws {
+        var world = try network()
+        let first = try world.createLine(named: "First", stops: [a, b]).id
+        let second = try world.createLine(named: "Second", stops: [b, c]).id
+        let slow = try world.createLine(named: "Slow", stops: [a, c]).id
+        try run(&world, first)
+        try run(&world, second)
+        try run(&world, slow, headway: 60)
+
+        let routes = world.passengerRoutes(from: a, to: c)
+        XCTAssertTrue(routes.contains { $0.legs.map(\.line) == [slow] })
+        let allocations = world.passengerRouteAllocations(from: a, to: c, count: 101)
+        XCTAssertFalse(allocations.contains { $0.route.legs.map(\.line) == [slow] })
+        XCTAssertEqual(allocations.map(\.count).reduce(0, +), 101)
+        XCTAssertTrue(allocations.allSatisfy { $0.count >= 0 })
+
+        try world.setLineTrainsInService(second, to: .none)
+        let changed = world.passengerRouteAllocations(from: a, to: c, count: 101)
+        XCTAssertEqual(changed.map(\.count).reduce(0, +), 101)
+        XCTAssertEqual(changed.first?.route.legs.map(\.line), [slow])
+    }
 }

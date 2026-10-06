@@ -35,6 +35,13 @@ public struct PassengerRoute: Hashable, Sendable {
     }
 }
 
+/// One OD group's passengers assigned to a route. A zero count keeps the
+/// route visible when the group is smaller than the number of choices.
+public struct PassengerRouteAllocation: Hashable, Sendable {
+    public let route: PassengerRoute
+    public let count: Int64
+}
+
 private struct PassengerRouteOrderLeg: Equatable {
     let line: LineID
     let from: StationID
@@ -380,5 +387,28 @@ extension GameWorld {
             selected.append(chosen.route)
         }
         return selected
+    }
+
+    /// Splits one day's OD demand among the usable route options. Choices
+    /// more than five minutes or half the fastest route's cost slower than
+    /// the fastest one are omitted. Remaining choices receive inverse-cost
+    /// integer weights; largest remainders get the leftover passengers, in
+    /// route order. This native policy replaces the reference backend's
+    /// unavailable `choiceProb` planner. The result is derived from current
+    /// service and is not saved.
+    ///
+    /// `count` is one day's OD demand, at most the largest daily station demand.
+    /// An invalid count or an unreachable pair returns no allocations.
+    public func passengerRouteAllocations(
+        from origin: StationID, to destination: StationID, count: Int64
+    ) -> [PassengerRouteAllocation] {
+        guard (1...StationDemand.maximumDailyTrips).contains(count) else { return [] }
+        let routes = passengerRoutes(from: origin, to: destination)
+        guard let fastest = routes.first?.totalMinutes else { return [] }
+        let allowance = max(5, fastest / 2)
+        let choices = routes.filter { $0.totalMinutes - fastest <= allowance }
+        let weights = choices.map { max(1, 10_000 / max(1, $0.totalMinutes)) }
+        let shares = Self.apportion(count, by: weights)
+        return zip(choices, shares).map { PassengerRouteAllocation(route: $0.0, count: $0.1) }
     }
 }
