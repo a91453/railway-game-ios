@@ -26,13 +26,14 @@ final class NearestStationNamingTests: XCTestCase {
         // Point near Taipei Main Station (25.0478, 121.5170)
         let tpeCoord = RealRailways.Coordinate(latitude: 25.0478, longitude: 121.5170)
         let nearestTpe = try XCTUnwrap(railways.nearestStation(to: tpeCoord))
-        XCTAssertTrue(nearestTpe.station.chinese.contains("台北") || nearestTpe.station.chinese.contains("臺北"))
+        let tpeName = nearestTpe.station.name(in: .traditionalChinese)
+        XCTAssertTrue(tpeName.contains("台北") || tpeName.contains("臺北"))
         XCTAssertLessThan(nearestTpe.distanceMetres, 1_000)
 
         // Point near Houtong (25.087, 121.828)
         let houtongCoord = RealRailways.Coordinate(latitude: 25.087, longitude: 121.828)
         let nearestHoutong = try XCTUnwrap(railways.nearestStation(to: houtongCoord))
-        XCTAssertEqual(nearestHoutong.station.chinese, "猴硐")
+        XCTAssertEqual(nearestHoutong.station.name(in: .traditionalChinese), "猴硐")
         XCTAssertLessThan(nearestHoutong.distanceMetres, 500)
 
         // Point far out in the Pacific Ocean (30.0, 130.0) with a 5 km limit returns nil

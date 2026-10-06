@@ -289,8 +289,8 @@ public struct RealRailways: Sendable {
     /// each system, in the site's order.
     public struct Station: Identifiable, Hashable, Sendable {
         public let system: System
-        let chinese: String
-        let english: String?
+        public let chinese: String
+        public let english: String?
         public let coordinate: Coordinate
         public let palette: Palette
 
