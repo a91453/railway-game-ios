@@ -135,8 +135,9 @@ extension GameWorld {
 
     /// The exchange of train `index` at stop `stop` of its timetable, as its
     /// doors finish opening (Stage W2b): those riding to that stop's
-    /// station get off, and so does anyone still on board at a stop where
-    /// the train turns round or its service ends (the reference's
+    /// station get off, and so does anyone still on board where the
+    /// train's direction or its service ends (``directionEnd(of:from:)``;
+    /// the reference's
     /// `releaseAll`; nobody boards for a station past such a stop, so there
     /// is never anyone). Then, unless it is the last stop, the train takes
     /// on passengers (see ``boardPassengers(_:at:)``). Returns the larger of
@@ -158,7 +159,7 @@ extension GameWorld {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                     }
                     alighted += group.count
-                } else if entry.reverses || isLast {
+                } else if isLast || stop == directionEnd(of: train, from: stop) {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
                     alighted += group.count
                 } else {
@@ -195,7 +196,7 @@ extension GameWorld {
         let pattern = assignedPattern(of: train.id)
         // How far along each destination is: the first call at it.
         var reach: [StationID: Int] = [:]
-        for call in Self.callsAhead(of: train, leaving: stop) where reach[train.timetable[call].station] == nil {
+        for call in callsAhead(of: train, leaving: stop) where reach[train.timetable[call].station] == nil {
             reach[train.timetable[call].station] = call
         }
         let waiting = passengers[record].waiting
@@ -306,16 +307,26 @@ extension GameWorld {
     }
 
     /// The timetable entries `train` calls at after leaving `stop`, up to
-    /// and including the next one where it turns round or its service ends.
-    static func callsAhead(of train: Train, leaving stop: Int) -> ClosedRange<Int> {
+    /// and including the end of its direction (see ``directionEnd(of:from:)``).
+    func callsAhead(of train: Train, leaving stop: Int) -> ClosedRange<Int> {
         let first = stop + 1
-        return first...segmentEnd(of: train, from: first)
+        return first...directionEnd(of: train, from: first)
     }
 
-    /// The first entry at or after `stop` where `train` turns round, or the
-    /// last entry.
-    static func segmentEnd(of train: Train, from stop: Int) -> Int {
+    /// The entry at or after `stop` where the passengers' direction of
+    /// `train` ends: on a line that is not a ring, its round trip's far end
+    /// (the middle entry) and then its last entry, the direction boarding
+    /// uses (``boardingPlan(of:at:)``). A mid-route turnback (V4d), where
+    /// the train reverses to continue the same way along the line, ends no
+    /// direction: riders stay aboard through it, as the line's stop order
+    /// and the route planners assume. Any other train's direction ends at
+    /// the first entry where it turns round, or its last entry.
+    func directionEnd(of train: Train, from stop: Int) -> Int {
         let last = train.timetable.count - 1
+        if let line = assignedLine(of: train.id), self.line(id: line)?.isRing == false {
+            let farEnd = last / 2
+            return stop <= farEnd ? farEnd : last
+        }
         return (stop...last).first { train.timetable[$0].reverses } ?? last
     }
 
@@ -359,8 +370,8 @@ extension GameWorld {
             // A train waiting at a stop may already carry those it took on
             // there, for the calls after it (Stage W2b).
             let ahead: ClosedRange<Int> = switch execution {
-            case .waitingAtStop(let stop, _): stop...Self.segmentEnd(of: train, from: min(stop + 1, train.timetable.count - 1))
-            case .travellingToStop(let stop, _): stop...Self.segmentEnd(of: train, from: stop)
+            case .waitingAtStop(let stop, _): stop...directionEnd(of: train, from: min(stop + 1, train.timetable.count - 1))
+            case .travellingToStop(let stop, _): stop...directionEnd(of: train, from: stop)
             }
             for group in entry.groups {
                 guard passengers.contains(where: { $0.station == group.origin }) else {

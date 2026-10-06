@@ -107,6 +107,54 @@ final class RealWorldDemoTests: XCTestCase {
         XCTAssertEqual(world.stationsStoppedAt(by: train), [shifen])
     }
 
+    /// Passengers ride through a mid-route turnback (V4d): reversing at
+    /// Jingtong to go on to Pingxi ends no direction, so those from Shifen
+    /// for Pingxi board, stay aboard through the reversal (saved and loaded
+    /// there) and arrive, as the line's stop order and the planners assume.
+    func testPassengersRideThroughAMidRouteTurnback() throws {
+        var (_, world) = try Self.built.get()
+        for line in world.lines { try world.removeLine(line.id) }
+        for train in world.trains { try world.unplaceTrain(train.id) }
+        let ids = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.name, $0.id) })
+        let shifen = try XCTUnwrap(ids["十分"]), jingtong = try XCTUnwrap(ids["菁桐"]), pingxi = try XCTUnwrap(ids["平溪"])
+        let lineID = try world.createLine(named: "Player switchback", stops: [shifen, jingtong, pingxi]).id
+        try world.setLineServiceWindow(lineID, to: .allDay)
+        try world.setLineTrainsInService(lineID, to: .init(peak: 1, offPeak: 1, low: 1))
+        let journey = try XCTUnwrap(world.lineJourney(lineID))
+        XCTAssertEqual(journey.intermediateTurnbacks, [1, 3])
+        let train = try XCTUnwrap(world.trains.first).id
+        try world.setTrainCars(train, to: 3)
+        try world.placeTrain(train, at: journey.start)
+        guard case .onEdge(_, let offset) = journey.start else { return XCTFail("missing start") }
+        try world.setTrainContinuation(train, along: [], stoppingAt: offset)
+        try world.setTrainMovementRate(train, to: 1_024)
+        try world.assignTrain(train, to: lineID)
+        world.setSpeed(.x1)
+        var throughTurnback: Int64 = 0
+        var savedThrough = false
+        for _ in 0..<1_080 {
+            try world.advance(ticks: 100)
+            XCTAssertNil(world.riderProblem())
+            let unit = try XCTUnwrap(world.train(id: train))
+            let forPingxi = world.riders.first { $0.train == train }?.groups
+                .filter { $0.origin == shifen && $0.destination == pingxi }
+                .reduce(Int64(0)) { $0 + $1.count } ?? 0
+            if case .waitingAtStop(1, _)? = unit.execution, forPingxi > 0 {
+                throughTurnback = max(throughTurnback, forPingxi)
+                if !savedThrough {
+                    let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+                    XCTAssertEqual(world, loaded)
+                    savedThrough = true
+                }
+            }
+        }
+        XCTAssertGreaterThan(throughTurnback, 0, "riders from Shifen for Pingxi stay aboard while the train reverses at Jingtong")
+        let waitingForPingxi = world.passengers.first { $0.station == shifen }?.waiting
+            .filter { $0.destination == pingxi }.reduce(Int64(0)) { $0 + $1.count } ?? 0
+        XCTAssertLessThan(waitingForPingxi, 49, "Shifen's queue for Pingxi is carried (49 waited when nobody could ride through)")
+        _ = jingtong
+    }
+
     // MARK: - Where the world lies
 
     /// A point's place in the world is the same as on the app's map: the
