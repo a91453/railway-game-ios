@@ -60,7 +60,7 @@ final class StationFacilitySessionTests: XCTestCase {
             session.selectStation(StationID(rawValue: 2))
             session.applyTool()
             XCTAssertEqual(session.selectedTrain?.movement.edges, [.edge(4), .edge(5)])
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Central, 3072 units along the track. Set a rate to start."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Central, 3072 units along the track."))
         }
     }
 

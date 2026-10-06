@@ -159,6 +159,7 @@ final class TrainSessionPropertyTests: XCTestCase {
                 if offset < edge.length {
                     try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
                 }
+                try draft.useTrainPerformanceForMovement(id)
                 shadow = draft
             } catch {}
         }
@@ -166,7 +167,12 @@ final class TrainSessionPropertyTests: XCTestCase {
             guard let id, let station, let train = shadow.train(id: id), let position = train.position,
                   let path = shadow.path(from: position, toStation: station.id, length: train.length)
             else { return }
-            try? shadow.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
+            var draft = shadow
+            do {
+                try draft.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
+                try draft.useTrainPerformanceForMovement(id)
+                shadow = draft
+            } catch {}
         }
         switch action {
         case .tap, .selectStation, .clearSelection, .selectTool, .selectTrain, .heading:

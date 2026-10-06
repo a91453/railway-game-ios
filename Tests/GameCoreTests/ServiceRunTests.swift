@@ -208,6 +208,50 @@ final class ServiceRunTests: XCTestCase {
 
     // MARK: - Following a run
 
+    func testPhysicalMovementTravelsOneKilometreInOneMinute() throws {
+        var world = GameWorld(bounds: .maximum, economy: GameEconomy(balance: 10_000_000, costs: testCosts), clock: GameClock(speed: .x1))
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 103_424, y: 1_024))
+        let edge = try world.buildTrackEdge(from: a, to: b)
+        let id = try world.purchaseTrain(named: "60 km/h").id
+        let start = TrainPosition.onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 1_024)
+        try world.placeTrain(id, at: start)
+        try world.setTrainPerformance(id, to: TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 60))
+        try world.useTrainPerformanceForMovement(id)
+        try world.advance(ticks: 600)
+        XCTAssertEqual(world.train(id: id)?.position, .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 65_024))
+        XCTAssertEqual(world.clock.now.seconds, 60)
+    }
+
+    func testPerformanceMovementCoversOneKilometrePerMinuteAtSixtyKmh() throws {
+        var world = try makeWorld(speed: .x1)
+        try world.setTrainPerformance(one, to: TrainPerformance(acceleration: 1_500, braking: 2_500, topSpeed: 60))
+        try world.useTrainPerformanceForMovement(one)
+        XCTAssertEqual(try train(world).movement.rate, 64_000)
+        try world.setTrainMovementRate(one, to: 0)
+        try world.useTrainPerformanceForMovement(one)
+        XCTAssertEqual(try train(world).movement.rate, 64_000, "Resuming restores its km/h performance, not a second speed")
+
+        let before = world
+        XCTAssertThrowsError(try world.useTrainPerformanceForMovement(TrainID(rawValue: 999)))
+        XCTAssertEqual(world, before)
+        try world.unplaceTrain(one)
+        let unplaced = world
+        XCTAssertThrowsError(try world.useTrainPerformanceForMovement(one))
+        XCTAssertEqual(world, unplaced)
+    }
+
+    func testPerformanceMovementDoesNotReplaceAServiceRunningCurve() throws {
+        var world = try makeServiceWorld(leaving: 60, arriving: 180)
+        try advance(&world, to: 120)
+        let before = try train(world)
+        try world.useTrainPerformanceForMovement(one)
+        XCTAssertEqual(try train(world).times, before.times)
+        XCTAssertEqual(try train(world).position, before.position)
+        try advance(&world, to: 179)
+        XCTAssertEqual(try train(world).position, line.between(2, 3, offset: runDistance(2_048, in: 120, after: 119) - 1_024))
+    }
+
     /// Leaving Alpha at 60 for Beta at 180, the train runs the two links in
     /// the 120 s its timetable gives it: it arrives at 180, on time, and in
     /// between it is where the curve has taken it.

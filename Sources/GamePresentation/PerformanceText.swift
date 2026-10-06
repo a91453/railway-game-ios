@@ -131,6 +131,44 @@ public func durationText(seconds: Int64, in language: DisplayLanguage) -> String
 }
 
 extension GameWorld {
+    /// Speed derived from the authoritative running curve, sampled over
+    /// the surrounding second. A waiting, held or unplaced train is at rest.
+    /// Manual movements convert the kernel's integer distance rate to km/h.
+    public func trainSpeedKMH(of id: TrainID) -> Double {
+        guard let train = train(id: id), train.movement.rate > 0,
+              case .onEdge(let traversal, let offset)? = train.position,
+              let edge = network.edge(traversal.edge) else { return 0 }
+        if train.movement.remainingEdges.isEmpty, offset >= (train.movement.end ?? edge.length) { return 0 }
+        if let execution = train.execution {
+            guard case .travellingToStop = execution,
+                  let run = train.times?.run, clock.now > run.start, clock.now < run.end,
+                  let curve = run.curve(for: train.performance) else { return 0 }
+            let elapsed = (clock.now.seconds - run.start.seconds) * 1000
+            let first = max(0, elapsed - 500), last = min(curve.duration, elapsed + 500)
+            return Double(curve.distance(at: last) - curve.distance(at: first)) * 3600
+                / Double(WorldCoordinate.unitsPerMetre * (last - first))
+        }
+        return Double(train.movement.rate) * 60 / Double(WorldCoordinate.unitsPerMetre * 1000)
+    }
+
+    public func trainSpeedText(of id: TrainID) -> String {
+        let tenths = Int64((trainSpeedKMH(of: id) * 10).rounded())
+        return "\(tenths / 10).\(tenths % 10) km/h"
+    }
+
+    /// A service creates its next path when it departs, so an empty
+    /// continuation while it waits is not a routing failure.
+    public func trainPathStatusText(of id: TrainID, in language: DisplayLanguage) -> String {
+        guard let train = train(id: id) else { return language.text("No train", "沒有列車") }
+        if case .waitingAtStop? = train.execution {
+            return language.text("Waiting for departure", "等候發車")
+        }
+        if train.execution == nil, assignedLine(of: id) != nil {
+            return language.text("Waiting for service dispatch", "等候交路派車")
+        }
+        return train.pathText(in: language)
+    }
+
     /// How long line `id`'s own service takes, worked out with the line's
     /// performance (Stage W2c, `lineJourney(_:pattern:)`): "Round trip 7
     /// min 4 s · legs 16 s, 16 s, 16 s, 16 s", the first eight legs then
@@ -172,7 +210,10 @@ extension GameSession {
     public func setSelectedTrainPerformance(_ performance: TrainPerformance) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
-            try world.setTrainPerformance(train.id, to: performance)
+            var draft = world
+            try draft.setTrainPerformance(train.id, to: performance)
+            if train.position != nil, train.movement.rate > 0 { try draft.useTrainPerformanceForMovement(train.id) }
+            world = draft
             let text = performance.displayText(in: language)
             return language.text("\(train.name) now runs as \(text).", "\(train.name) 的性能改為 \(text)。")
         }

@@ -285,6 +285,7 @@ final class LineSessionTests: XCTestCase {
 
             session.assignSelectedTrainToSelectedLine(pattern: 1)
             try expected.assignTrain(Self.first, to: Self.main, pattern: 1)
+            try expected.useTrainPerformanceForMovement(Self.first)
             XCTAssertEqual(session.message?.text, "Blue now runs for Main · Express Alpha–Delta. It leaves once it waits at the first stop.")
             session.assignSelectedTrainToSelectedLine()
             XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage(in: .english))

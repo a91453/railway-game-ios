@@ -587,6 +587,19 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].movement.rate = rate
     }
 
+    /// Enables movement using the train's configured km/h performance.
+    /// Services still follow their acceleration/braking curve; manual
+    /// movement uses the same top speed, converted to integer world units
+    /// per minute. The old rate command remains for save/replay compatibility
+    /// and explicit holds, rather than a second player speed setting.
+    public mutating func useTrainPerformanceForMovement(_ id: TrainID) throws(GameError) {
+        let (index, _) = try placedTrain(id)
+        let speed = trains[index].performance.topSpeed
+        let minutesPerHour = GameTime.secondsPerHour / GameTime.secondsPerMinute
+        // Valid performances cap speed at 2^20, so this product fits Int64.
+        trains[index].movement.rate = speed * WorldCoordinate.unitsPerMetre * 1000 / minutesPerHour
+    }
+
     /// Sets how train `id` accelerates, brakes and coasts, and how fast it may
     /// run (Stage W2c; see ``Train/performance``): the running curves its
     /// services follow between calls. Placed or not, at no cost.

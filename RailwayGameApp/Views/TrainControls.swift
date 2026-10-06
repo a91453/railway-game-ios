@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The train tool's options: which train, where GameCore has it, the path
 /// it has left and the station it is stopped at, the run it follows and
-/// its performance (Stage C3), its own timetable (Stage C2), its rate, and
+/// its performance (Stage C3), its own timetable (Stage C2), its km/h speed, and
 /// the train commands that need no station.
 ///
 /// Everything shown is read from `session.world` each time the view is
@@ -13,12 +13,6 @@ import SwiftUI
 /// move only when the game loop advances the world (the HUD's speed
 /// controls).
 struct TrainControls: View {
-    /// What one press of the rate control changes, in world units per game
-    /// minute (64 units are a metre; at 600× a game minute is 100 ms). An
-    /// `Int`, because that is `Int64`'s stride.
-    static let rateStep = 32
-    static let maximumRate: Int64 = 1_024
-
     @Bindable var session: GameSession
     @State private var showsTimetable = false
     @State private var showsFleetOverview = false
@@ -55,12 +49,24 @@ struct TrainControls: View {
                     }
                     headingPicker
                 } else {
-                    Stepper(value: $session.selectedTrainRate, in: 0...Self.maximumRate, step: Self.rateStep) {
-                        Text(train.movement.rateText(in: session.language))
-                            .font(.subheadline.weight(.semibold))
+                    HStack {
+                        Label(session.world.trainSpeedText(of: train.id), systemImage: "speedometer")
                             .monospacedDigit()
+                            .accessibilityIdentifier("train.speed")
+                        Spacer()
+                        Button {
+                            if train.movement.rate > 0 { session.holdSelectedTrain() }
+                            else { session.resumeSelectedTrain() }
+                        } label: {
+                            Label(
+                                train.movement.rate > 0
+                                    ? session.language.text("Hold train", "暫停列車")
+                                    : session.language.text("Resume train", "恢復列車"),
+                                systemImage: train.movement.rate > 0 ? "pause.fill" : "play.fill"
+                            )
+                        }
+                        .accessibilityIdentifier("train.motion")
                     }
-                    .accessibilityValue("\(train.movement.rate) units per game minute")
                     commands
                 }
             } else {
@@ -182,7 +188,7 @@ struct TrainControls: View {
             }
 
             if train.position != nil {
-                Text(train.pathText(in: language))
+                Text(session.world.trainPathStatusText(of: train.id, in: language))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
