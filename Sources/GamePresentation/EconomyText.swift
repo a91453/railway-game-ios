@@ -239,13 +239,13 @@ public struct TrainLoadInfo: Equatable, Hashable, Sendable {
     }
 
     public var level: Level {
-        if percentage >= 90 { return .crowded }
-        if percentage >= 70 { return .busy }
+        if loadFactor >= 0.90 { return .crowded }
+        if loadFactor >= 0.70 { return .busy }
         return .normal
     }
 
     public var isOverload: Bool {
-        percentage > 100
+        passengerCount > capacity
     }
 }
 

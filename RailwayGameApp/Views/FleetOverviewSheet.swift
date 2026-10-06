@@ -60,6 +60,7 @@ struct FleetOverviewSheet: View {
             sum + train.ratedCapacity
         }
         let fleetLoadPercent = totalCapacity > 0 ? Int((200 * totalRiders + totalCapacity) / (2 * totalCapacity)) : 0
+        let fleetLoadFactor = totalCapacity > 0 ? Double(totalRiders) / Double(totalCapacity) : 0.0
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -92,7 +93,7 @@ struct FleetOverviewSheet: View {
                         .foregroundStyle(.secondary)
                     Text(verbatim: "\(fleetLoadPercent)%")
                         .font(.headline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(fleetLoadPercent >= 90 ? Color.red : (fleetLoadPercent >= 70 ? Palette.metroAmber : Color.green))
+                        .foregroundStyle(fleetLoadFactor >= 0.90 ? Color.red : (fleetLoadFactor >= 0.70 ? Palette.metroAmber : Color.green))
                 }
             }
         }

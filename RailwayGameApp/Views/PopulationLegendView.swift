@@ -36,11 +36,7 @@ struct PopulationLegendView: View {
                 }
             }
 
-            HStack(spacing: 6) {
-                Text(verbatim: "0")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-
+            VStack(spacing: 3) {
                 LinearGradient(
                     colors: PopulationColorRamp.gradientColors,
                     startPoint: .leading,
@@ -53,9 +49,17 @@ struct PopulationLegendView: View {
                         .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
                 )
 
-                Text(verbatim: "10000+")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Text(verbatim: "\(PopulationColorRamp.tiers.first?.min ?? 0)")
+                    Spacer()
+                    Text(verbatim: "1k")
+                    Spacer()
+                    Text(verbatim: "4k")
+                    Spacer()
+                    Text(verbatim: "\(PopulationColorRamp.tiers.last?.min ?? 10000)+")
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 10)

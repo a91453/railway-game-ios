@@ -182,4 +182,36 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(overloaded.level, .crowded)
         XCTAssertTrue(overloaded.isOverload)
     }
+
+    func testLoadThresholdBoundariesWithoutRoundingDistortion() {
+        // 70% boundary: 223 / 320 rounds to 70%, but factor is ~69.69% -> .normal
+        let sub70 = TrainLoadInfo(passengerCount: 223, capacity: 320, loadFactor: 223.0 / 320.0, percentage: 70)
+        XCTAssertEqual(sub70.level, .normal, "223/320 is below 70% threshold despite rounding to 70%")
+        XCTAssertFalse(sub70.isOverload)
+
+        // Exactly 70%: 224 / 320 = 0.70 -> .busy
+        let at70 = TrainLoadInfo(passengerCount: 224, capacity: 320, loadFactor: 224.0 / 320.0, percentage: 70)
+        XCTAssertEqual(at70.level, .busy)
+        XCTAssertFalse(at70.isOverload)
+
+        // 90% boundary: 287 / 320 rounds to 90%, but factor is ~89.69% -> .busy
+        let sub90 = TrainLoadInfo(passengerCount: 287, capacity: 320, loadFactor: 287.0 / 320.0, percentage: 90)
+        XCTAssertEqual(sub90.level, .busy, "287/320 is below 90% threshold despite rounding to 90%")
+        XCTAssertFalse(sub90.isOverload)
+
+        // Exactly 90%: 288 / 320 = 0.90 -> .crowded
+        let at90 = TrainLoadInfo(passengerCount: 288, capacity: 320, loadFactor: 288.0 / 320.0, percentage: 90)
+        XCTAssertEqual(at90.level, .crowded)
+        XCTAssertFalse(at90.isOverload)
+
+        // 100% boundary: 320 / 320 = 1.00 -> not overloaded
+        let at100 = TrainLoadInfo(passengerCount: 320, capacity: 320, loadFactor: 1.0, percentage: 100)
+        XCTAssertEqual(at100.level, .crowded)
+        XCTAssertFalse(at100.isOverload)
+
+        // Overload boundary: 321 / 320 rounds to 100%, but passengerCount > capacity -> isOverload = true
+        let over100 = TrainLoadInfo(passengerCount: 321, capacity: 320, loadFactor: 321.0 / 320.0, percentage: 100)
+        XCTAssertEqual(over100.level, .crowded)
+        XCTAssertTrue(over100.isOverload, "321/320 is overloaded even though integer percentage is 100%")
+    }
 }

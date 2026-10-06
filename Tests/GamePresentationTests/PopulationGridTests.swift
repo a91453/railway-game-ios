@@ -144,4 +144,78 @@ final class PopulationGridTests: XCTestCase {
             }
         }
     }
+
+    func testStationCatchmentPopulationWithAndWithoutData() async throws {
+        let grid = try Self.bundled()
+        let taipei = try XCTUnwrap(GeoAnchor(latitudeDegrees: Self.taipei.latitude, longitudeDegrees: Self.taipei.longitude))
+        let tokyo = try XCTUnwrap(GeoAnchor(latitudeDegrees: 35.681_2, longitudeDegrees: 139.767_1))
+
+        func makeWorldWithStation(anchor: GeoAnchor?) throws -> GameWorld {
+            var world = GameWorld.newGame(anchor: anchor)
+            let west = try world.buildTrackNode(at: WorldCoordinate(x: 520_192, y: 524_288))
+            let east = try world.buildTrackNode(at: WorldCoordinate(x: 528_384, y: 524_288))
+            try world.buildTrackEdge(from: west, to: east)
+            return world
+        }
+
+        // 1. With data: Real-world map in Taipei with bundled grid
+        let taipeiWorld = try makeWorldWithStation(anchor: taipei)
+        try await MainActor.run {
+            let session = GameSession(world: taipeiWorld)
+            session.population = grid
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 524_288, y: 524_288), reach: 512)
+            session.addNetworkPlatform()
+            let station = try XCTUnwrap(session.world.stations.first)
+
+            let catchment = session.stationCatchmentPopulation(of: station.id)
+            let people = try XCTUnwrap(catchment)
+            XCTAssertTrue((40_000 ... 50_000).contains(people), "Catchment population around Taipei station should be 40k-50k")
+
+            // Unknown station ID returns nil
+            XCTAssertNil(session.stationCatchmentPopulation(of: StationID(rawValue: 9999)))
+        }
+
+        // 2. Without data: Population grid is nil
+        try await MainActor.run {
+            let session = GameSession(world: taipeiWorld)
+            session.population = nil
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 524_288, y: 524_288), reach: 512)
+            session.addNetworkPlatform()
+            let station = try XCTUnwrap(session.world.stations.first)
+
+            XCTAssertNil(session.stationCatchmentPopulation(of: station.id), "Should be nil when session.population is nil")
+        }
+
+        // 3. Without data: Not a real-world map (no anchor)
+        let nonRealWorld = try makeWorldWithStation(anchor: nil)
+        try await MainActor.run {
+            let session = GameSession(world: nonRealWorld)
+            session.population = grid
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 524_288, y: 524_288), reach: 512)
+            session.addNetworkPlatform()
+            let station = try XCTUnwrap(session.world.stations.first)
+
+            XCTAssertNil(session.stationCatchmentPopulation(of: station.id), "Should be nil when world has no real-world frame")
+        }
+
+        // 4. Without data: Real-world map outside population grid coverage (Tokyo)
+        let tokyoWorld = try makeWorldWithStation(anchor: tokyo)
+        try await MainActor.run {
+            let session = GameSession(world: tokyoWorld)
+            session.population = grid
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 524_288, y: 524_288), reach: 512)
+            session.addNetworkPlatform()
+            let station = try XCTUnwrap(session.world.stations.first)
+
+            XCTAssertNil(session.stationCatchmentPopulation(of: station.id), "Should be nil when outside grid coverage")
+        }
+    }
 }

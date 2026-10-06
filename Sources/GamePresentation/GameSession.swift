@@ -179,6 +179,7 @@ public final class GameSession {
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
     }
 
@@ -204,6 +205,7 @@ public final class GameSession {
         selectedPoint = station.point
         selectedStationID = id
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
     }
 
@@ -215,12 +217,17 @@ public final class GameSession {
         message = nil
     }
 
-    /// Selects train `id`, and optionally begins camera following.
+    /// Selects train `id`, and optionally begins camera following if the train
+    /// is placed on the track. Never changes the world; an ID the world does
+    /// not have is ignored.
     public func selectTrain(_ id: TrainID, following: Bool = false) {
+        guard let train = world.train(id: id) else { return }
         selectedTrainID = id
         tappedTrainID = id
-        if following {
+        if following && train.position != nil {
             isFollowingTrain = true
+        } else {
+            isFollowingTrain = false
         }
         message = nil
     }
@@ -231,18 +238,30 @@ public final class GameSession {
             isFollowingTrain = false
         } else {
             if selectedTrainID == nil {
-                selectedTrainID = world.trains.first?.id
+                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
             }
-            isFollowingTrain = selectedTrainID != nil
+            guard let train = selectedTrain, train.position != nil else {
+                isFollowingTrain = false
+                return
+            }
+            isFollowingTrain = true
         }
     }
 
     /// Sets whether the camera dynamically follows the selected train.
     public func setFollowingTrain(_ following: Bool) {
-        if following && selectedTrainID == nil {
-            selectedTrainID = world.trains.first?.id
+        if following {
+            if selectedTrainID == nil {
+                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
+            }
+            guard let train = selectedTrain, train.position != nil else {
+                isFollowingTrain = false
+                return
+            }
+            isFollowingTrain = true
+        } else {
+            isFollowingTrain = false
         }
-        isFollowingTrain = following && selectedTrainID != nil
     }
 
     /// Estimates the 800-metre walking catchment population of station `id`
@@ -419,14 +438,6 @@ public final class GameSession {
         set { setSelectedTrainRate(newValue) }
     }
 
-    /// Chooses the train the train tool acts on. Never changes the world;
-    /// an ID the world does not have is ignored.
-    public func selectTrain(_ id: TrainID) {
-        guard id != selectedTrainID, world.train(id: id) != nil else { return }
-        selectedTrainID = id
-        message = nil
-    }
-
     /// Chooses the heading for the next placement. Never changes the world.
     public func setPlacementHeading(_ heading: CompassHeading) {
         placementHeading = heading
@@ -444,6 +455,8 @@ public final class GameSession {
         }
         if let purchased {
             selectedTrainID = purchased
+            tappedTrainID = purchased
+            isFollowingTrain = false
         }
     }
 

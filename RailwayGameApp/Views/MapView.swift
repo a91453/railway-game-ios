@@ -192,20 +192,10 @@ struct MapView: View {
                 }
             }
             .onChange(of: session.world.clock) { _, _ in
-                if session.isFollowingTrain,
-                   let train = session.selectedTrain,
-                   let position = train.position,
-                   let coordinate = session.world.location(of: position)?.position {
-                    camera = projection.centered(on: coordinate)
-                }
+                centerOnFollowedTrain(projection: projection)
             }
-            .onChange(of: session.isFollowingTrain) { _, following in
-                if following,
-                   let train = session.selectedTrain,
-                   let position = train.position,
-                   let coordinate = session.world.location(of: position)?.position {
-                    camera = projection.centered(on: coordinate)
-                }
+            .onChange(of: session.isFollowingTrain ? session.selectedTrainID : nil) { _, _ in
+                centerOnFollowedTrain(projection: projection)
             }
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
@@ -317,6 +307,14 @@ struct MapView: View {
         .background(.regularMaterial, in: Capsule())
         .tutorialTarget(.zoomControls)
         .padding(12)
+    }
+
+    private func centerOnFollowedTrain(projection: some MapProjection) {
+        guard session.isFollowingTrain,
+              let train = session.selectedTrain,
+              let position = train.position,
+              let coordinate = session.world.location(of: position)?.position else { return }
+        camera = projection.centered(on: coordinate)
     }
 }
 
