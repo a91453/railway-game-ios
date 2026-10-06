@@ -42,6 +42,8 @@ extension GameWorld {
             // Item 4: exhibitions and crowd surges raise a station's demand
             // for some days, announced days ahead.
             world.setDemandEvents(seed: eventSeed)
+            // Item 5: the towns round well-served stations grow.
+            world.setTownGrowth(true)
             world.setGeoAnchor(anchor)
             return world
         } catch {

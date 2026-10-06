@@ -140,6 +140,14 @@ struct StationPanel: View {
                 Text(verbatim: session.world.stationDemand(of: station.id)?.displayText(in: session.language) ?? "—")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                // Item 5: how the town round it has grown.
+                if let growth = session.world.townGrowthText(of: station.id, in: session.language) {
+                    Text(verbatim: growth)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("station.growth")
+                }
             } header: {
                 Text("Ridership")
             } footer: {
