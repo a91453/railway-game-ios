@@ -107,6 +107,40 @@ public struct StationDemand: Hashable, Sendable {
         100, 100, 100, 100, 100, 100, 720, 1500, 1800, 1500, 800, 820,
         840, 860, 880, 900, 1500, 1500, 1800, 1500, 1000, 1020, 1040, 100,
     ]
+
+    /// How busy each hour of a weekend day is, in thousandths, for a world
+    /// with weekly demand: ``dayShape`` times the reference's weekend hourly
+    /// factor over its weekday one (`H_FACTOR_WE[h] / H_FACTOR_WD[h]`),
+    /// rounded half up. Weekends start later and have no rush hours.
+    public static let weekendShape: [Int64] = [
+        67, 75, 83, 80, 75, 38, 216, 417, 741, 1350, 1257, 1523,
+        1365, 1474, 1509, 1238, 1375, 1059, 1440, 1500, 1000, 1020, 1300, 150,
+    ]
+
+    /// Each weekday's share of a week's trips, in thousandths of a day's,
+    /// Sunday first: the reference's `METRO_WEEKDAY_FACTORS`
+    /// (0.84, 1.04, 1.02, 1.02, 1.04, 1.12, 0.92), which add up to a week of
+    /// seven days.
+    public static let weekdayFactors: [Int64] = [840, 1_040, 1_020, 1_020, 1_040, 1_120, 920]
+
+    /// The weekday of game day `day`, 0 for Sunday to 6 for Saturday: a
+    /// game starts on a Monday.
+    public static func weekday(ofDay day: Int64) -> Int {
+        Int(((day + 1) % 7 + 7) % 7)
+    }
+
+    /// Whether game day `day` is a Saturday or a Sunday (the reference's
+    /// `isWeekend`, `[0, 6].includes(simDay % 7)`).
+    public static func isWeekend(day: Int64) -> Bool {
+        let weekday = weekday(ofDay: day)
+        return weekday == 0 || weekday == 6
+    }
+
+    /// A station's trips on game day `day`: its daily trips times the
+    /// day's ``weekdayFactors``, rounded half up.
+    public func trips(onDay day: Int64) -> Int64 {
+        (dailyTrips * Self.weekdayFactors[Self.weekday(ofDay: day)] + 500) / 1_000
+    }
 }
 
 extension StationDemand: Codable {

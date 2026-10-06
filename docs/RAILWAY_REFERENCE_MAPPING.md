@@ -785,3 +785,16 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`estimateActionCost`、`metroPurchaseQuote`、`window.MetroEconomy` | `ConstructionCosts.newGame`（決策 46） | gap：引擎不在快照；購車價格是原生 |
 | 同檔／`summarizeFinanceForTransport` | `FinanceSummary`（+ `interestCost`、`netProfit`） | adapted：加上原生的利息與淨利 |
 | 貸款、利息、折舊：`Ci/` 與 `Railway/` 都沒有；`railway_game_reference_clean` 只有 OpenTTD 編譯核心的字串（`EXPENSES_LOAN_INT`、`max_loan`、`initial_interest`），沒有數值與可讀原始碼 | `GameWorld.borrow`、`repayLoan`、`dailyLoanInterest`、`CompanyAccounts.loan` | gap → 原生：$100,000 一步，上限 $5,000,000，年利率 5%（360 天），每日支付。折舊與資產負債表仍是 gap。 |
+
+## 每週需求（決策 68）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`METRO_WEEKDAY_FACTORS`、`getWeekdayFactor` | `StationDemand.weekdayFactors`（千分比）、`StationDemand.trips(onDay:)` | direct：數值照搬，四捨五入到整人次 |
+| 同檔／`isWeekend`（`[0,6].includes(simDay % 7)`） | `StationDemand.isWeekend(day:)`、`weekday(ofDay:)` | adapted：遊戲第 0 天是星期一 |
+| 同檔／`H_FACTOR_WD`、`H_FACTOR_WE`、`currentHFactor` | `StationDemand.weekendShape` | adapted：既有 `dayShape`（`PARAMS.PEAK_FACTOR`）乘上週末÷平日的比例，整數千分比 |
+| 同檔／`metroWeeklyDemandMinuteIntegral`、`METRO_WEEKDAY_PREFIX` | 每天一份計畫、午夜重建 | adapted：來源以連續積分算需求分鐘；原生以整數逐日計畫，每天精確釋出當天旅次 |
+| 同檔／`peakFlowMult`（`PEAK_MULT_WE = 0.7`、離峰 0.4） | — | gap：作用於來源的流量／班次，本遊戲由服務日等級決定 |
+| 同檔／`metroUpdateDemandEvents`、`metroEventDemandMultiplier`；`MetroEconomy.advanceMetroEvents`（不在快照）；`aviation_disruptions` | — | 下一步：事件與中斷 |

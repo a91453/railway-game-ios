@@ -33,6 +33,9 @@ extension GameWorld {
             // (the reference's global OD paths). Saves of earlier games
             // keep their direct trips.
             world.setPassengerRoutingMode(.network)
+            // Item 4: weekdays and weekends differ, as the reference's
+            // weekday factors and weekend hours.
+            world.setWeeklyDemand(true)
             world.setGeoAnchor(anchor)
             return world
         } catch {

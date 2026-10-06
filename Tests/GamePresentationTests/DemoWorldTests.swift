@@ -13,6 +13,7 @@ final class DemoWorldTests: XCTestCase {
     /// the demo they change between Line 1, Line 2 and the ring.
     func testNewGamesRoutePassengersOverTheNetworkAndTheyChangeTrains() throws {
         XCTAssertEqual(GameWorld.newGame().passengerRoutingMode, .network)
+        XCTAssertTrue(GameWorld.newGame().weeklyDemand, "Item 4: weekdays and weekends differ")
         var world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.passengerRoutingMode, .network)
         let west = try XCTUnwrap(world.stations.first { $0.name == "West" }).id

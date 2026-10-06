@@ -27,7 +27,35 @@ extension GameWorld {
     /// spread over the 60 minutes of the hour.
     static let releaseUnit: Int64 = 3_600
 
+    /// The game day demand is worked out for, with weekly demand: today's.
+    /// `nil` without weekly demand, when every day is the same.
+    var demandDay: Int64? {
+        weeklyDemand ? dayIndex(of: clock.now) : nil
+    }
+
+    /// Whether today's demand follows the weekend's hours.
+    var isDemandWeekend: Bool {
+        demandDay.map { StationDemand.isWeekend(day: $0) } ?? false
+    }
+
+    /// The trips a station with `demand` starts today: its daily trips, or
+    /// with weekly demand today's share of its week (see
+    /// ``StationDemand/trips(onDay:)``).
+    func trips(of demand: StationDemand) -> Int64 {
+        demandDay.map { demand.trips(onDay: $0) } ?? demand.dailyTrips
+    }
+
     // MARK: - Commands
+
+    /// Turns weekly demand on or off (item 4 of the author's order): with
+    /// it, each day's trips follow the reference's weekday factors and
+    /// weekends its weekend hours. Passengers already waiting stay; the
+    /// next release uses the new demand.
+    public mutating func setWeeklyDemand(_ enabled: Bool) {
+        guard enabled != weeklyDemand else { return }
+        weeklyDemand = enabled
+        passengerPlan = PassengerPlanCache()
+    }
 
     /// Selects how future passenger releases choose a service. Groups
     /// already waiting or riding keep their chosen trip or journey.
@@ -125,7 +153,7 @@ extension GameWorld {
         guard trips > 0, let from = stationDemand(of: origin), let to = stationDemand(of: destination) else {
             return Array(repeating: 0, count: 24)
         }
-        return Self.hourly(trips, from: from.kind, to: to.kind)
+        return Self.hourly(trips, from: from.kind, to: to.kind, weekend: isDemandWeekend)
     }
 
     // MARK: - Derivation
@@ -213,7 +241,7 @@ extension GameWorld {
             guard let trip else { continue }
             reached.append((record.station, weight, trip))
         }
-        let shares = Self.apportion(demand.dailyTrips, by: reached.map(\.weight))
+        let shares = Self.apportion(trips(of: demand), by: reached.map(\.weight))
         return zip(reached, shares).compactMap { reached, trips in
             let trips = faredTrips(trips, from: origin, to: reached.destination)
             return trips > 0 ? (reached.destination, trips, reached.trip) : nil
@@ -232,10 +260,12 @@ extension GameWorld {
     }
 
     /// `trips` shared among the 24 hours (see ``hourlyDemand(from:to:)``).
-    static func hourly(_ trips: Int64, from origin: StationDemandKind, to destination: StationDemandKind) -> [Int64] {
+    static func hourly(_ trips: Int64, from origin: StationDemandKind, to destination: StationDemandKind,
+                       weekend: Bool = false) -> [Int64] {
         let departures = origin.departureShape
         let arrivals = destination.arrivalShape
-        let weights = (0..<24).map { StationDemand.dayShape[$0] * departures[$0] * arrivals[$0] }
+        let day = weekend ? StationDemand.weekendShape : StationDemand.dayShape
+        let weights = (0..<24).map { day[$0] * departures[$0] * arrivals[$0] }
         return apportion(trips, by: weights)
     }
 
@@ -298,6 +328,9 @@ extension GameWorld {
         /// `nil` until worked out; then the plan, `nil` inside when no pair
         /// has trips.
         var plan: PassengerPlan??
+        /// The game day the plan is for, with weekly demand; `nil` without,
+        /// when every day is the same.
+        var day: Int64?
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -338,14 +371,14 @@ extension GameWorld {
         for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
-            let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
+            let shares = Self.apportion(trips(of: origin), by: reached.map { $0.0.demand!.dailyTrips })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = faredTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
                     destination: destination.station, trip: trip, choices: []))
-                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
+                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
             }
         }
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
@@ -369,7 +402,7 @@ extension GameWorld {
                 }
                 return choices.isEmpty ? nil : (other, choices)
             }
-            let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
+            let shares = Self.apportion(trips(of: origin), by: reached.map { $0.0.demand!.dailyTrips })
             for ((destination, choices), shared) in zip(reached, shares) {
                 let trips = faredTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
@@ -377,7 +410,7 @@ extension GameWorld {
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!, destination: destination.station,
                     trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
+                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
             }
         }
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
@@ -393,7 +426,12 @@ extension GameWorld {
     /// The release for a call of ``advance(ticks:)``, or `nil` when no pair
     /// has trips; works the plan out first if no current one is kept.
     mutating func passengerRelease() -> PassengerRelease? {
+        // With weekly demand a plan is for one day.
+        if passengerPlan.plan != nil, passengerPlan.day != demandDay {
+            passengerPlan = PassengerPlanCache()
+        }
         if passengerPlan.plan == nil {
+            passengerPlan.day = demandDay
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
