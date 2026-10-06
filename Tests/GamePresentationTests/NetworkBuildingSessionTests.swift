@@ -58,6 +58,63 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     // MARK: - Building
 
+    /// The owner's play-test (2026-10-06): a turnout from the middle of a
+    /// line. A tap on the track away from its nodes picks a place there;
+    /// building from it splits the edge (`GameWorld.splitTrackEdge`) and
+    /// the new track leaves along the line, so it joins it as a turnout.
+    /// A tap within 22 m of an end picks that end's node instead.
+    @MainActor
+    func testATapOnTheTrackBuildsATurnoutThere() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 1_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 4_096))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 18_432, y: 4_096))
+        let line = try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+
+        session.tapNetwork(at: PlanPoint(x: 2_560, y: 4_200), reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .node(west), "8 m from the end: its node")
+        session.clearNetworkDraft()
+
+        session.tapNetwork(at: PlanPoint(x: 8_192, y: 4_200), reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .track(NetworkEdgePoint(edge: line, distance: 6_144)))
+        XCTAssertEqual(session.networkDraftText(), "From a turnout on edge #1. Tap where it ends.")
+        session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: Self.reach)
+        XCTAssertEqual(session.networkPreview?.joinsStart, true, "it leaves along the line")
+        XCTAssertNil(session.networkPreview?.problem)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+
+        let network = session.world.network
+        XCTAssertNil(network.edge(line), "split")
+        let turnout = try XCTUnwrap(network.nodes.first { $0.position == WorldCoordinate(x: 8_192, y: 4_096) })
+        XCTAssertEqual(turnout.ends.count, 3)
+        let fromWest = try XCTUnwrap(network.edges.first { $0.from == west && $0.to == turnout.id })
+        let branch = try XCTUnwrap(network.edges.first { $0.from == turnout.id && $0.to != east })
+        XCTAssertEqual(turnout.end(of: fromWest.id)?.exits.contains(branch.id), true, "a train from the west may take the branch")
+    }
+
+    /// Both ends on the same edge: the second is found again on the part it
+    /// lies on after the first splits it, and both splits are made.
+    @MainActor
+    func testATrackBetweenTwoPlacesOnOneEdgeSplitsItTwice() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 1_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 4_096))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 30_720, y: 4_096))
+        try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.networkFollowsTrack = false
+        session.tapNetwork(at: PlanPoint(x: 8_192, y: 4_096), reach: Self.reach)
+        session.tapNetwork(at: PlanPoint(x: 24_576, y: 4_096), reach: Self.reach)
+        let before = session.world.network.nodes.count
+        session.buildNetworkTrack()
+        // The new track lies on the old: GameCore refuses it, and nothing
+        // is split.
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.world.network.nodes.count, before)
+    }
+
     func testTwoTapsAndBuildLayAStraightEdgeAndContinueFromItsEnd() async throws {
         let world = try makeNetworkWorld()
         var expected = world
@@ -68,7 +125,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: a node, or anywhere for a new one.")
+            XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkStart, .point(Self.a))
             XCTAssertEqual(session.networkDraftText(), "From a new node. Tap where it ends.")
@@ -420,7 +477,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點，或任何地方建立新節點。")
+            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點、軌道上（在那裡設道岔），或任何地方建立新節點。")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "從新節點開始。請點終點。")
             session.tapNetwork(at: Self.b, reach: Self.reach)
