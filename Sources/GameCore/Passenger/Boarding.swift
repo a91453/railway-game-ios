@@ -33,11 +33,15 @@ public struct RidingGroup: Hashable, Sendable {
     public let destination: StationID
     /// How many, at least 1.
     public let count: Int64
+    /// The selected route, including subsequent rides after this train.
+    /// `nil` for a direct-trip passenger from an older save.
+    public let journey: PassengerJourney?
 
-    public init(origin: StationID, destination: StationID, count: Int64) {
+    public init(origin: StationID, destination: StationID, count: Int64, journey: PassengerJourney? = nil) {
         self.origin = origin
         self.destination = destination
         self.count = count
+        self.journey = journey
     }
 }
 
@@ -61,11 +65,13 @@ public struct TrainRiders: Hashable, Sendable {
 
     /// Adds `count` riders from `origin` to `destination`, keeping the
     /// groups in order.
-    mutating func add(_ count: Int64, from origin: StationID, to destination: StationID) {
-        if let index = groups.firstIndex(where: { $0.origin == origin && $0.destination == destination }) {
-            groups[index] = RidingGroup(origin: origin, destination: destination, count: groups[index].count + count)
+    mutating func add(_ count: Int64, from origin: StationID, to destination: StationID,
+                      journey: PassengerJourney? = nil) {
+        if let index = groups.firstIndex(where: { $0.origin == origin && $0.destination == destination && $0.journey == journey }) {
+            groups[index] = RidingGroup(origin: origin, destination: destination,
+                                        count: groups[index].count + count, journey: journey)
         } else {
-            let group = RidingGroup(origin: origin, destination: destination, count: count)
+            let group = RidingGroup(origin: origin, destination: destination, count: count, journey: journey)
             groups.insert(group, at: groups.firstIndex { ($0.origin, $0.destination) > (origin, destination) } ?? groups.count)
         }
     }
@@ -325,7 +331,7 @@ extension GameWorld {
 
 extension RidingGroup: Codable {
     private enum CodingKeys: String, CodingKey {
-        case origin, destination, count
+        case origin, destination, count, journey
     }
 
     /// Decodes a group, rejecting a count outside
@@ -336,11 +342,16 @@ extension RidingGroup: Codable {
         origin = try container.decode(StationID.self, forKey: .origin)
         destination = try container.decode(StationID.self, forKey: .destination)
         count = try container.decode(Int64.self, forKey: .count)
+        journey = try container.decodeIfPresent(PassengerJourney.self, forKey: .journey)
         guard (1...Int64(Train.maximumCars) * Train.capacityPerCar).contains(count) else {
             throw DecodingError.dataCorruptedError(forKey: .count, in: container, debugDescription: "A riding group has 1 to a full train's passengers.")
         }
         guard origin != destination else {
             throw DecodingError.dataCorruptedError(forKey: .destination, in: container, debugDescription: "A riding group rides to another station.")
+        }
+        if let journey, journey.origin != origin || journey.leg.to != destination {
+            throw DecodingError.dataCorruptedError(forKey: .journey, in: container,
+                debugDescription: "A riding group's current journey leg must match its train destination.")
         }
     }
 
@@ -349,6 +360,7 @@ extension RidingGroup: Codable {
         try container.encode(origin, forKey: .origin)
         try container.encode(destination, forKey: .destination)
         try container.encode(count, forKey: .count)
+        if let journey { try container.encode(journey, forKey: .journey) }
     }
 }
 
@@ -367,8 +379,13 @@ extension TrainRiders: Codable {
         guard !groups.isEmpty else {
             throw DecodingError.dataCorruptedError(forKey: .groups, in: container, debugDescription: "A train without riders is not saved.")
         }
-        guard zip(groups, groups.dropFirst()).allSatisfy({ ($0.origin, $0.destination) < ($1.origin, $1.destination) }) else {
-            throw DecodingError.dataCorruptedError(forKey: .groups, in: container, debugDescription: "Riding groups must be listed once each, by origin and then destination.")
+        guard zip(groups, groups.dropFirst()).allSatisfy({ lhs, rhs in
+            let left = (lhs.origin, lhs.destination)
+            let right = (rhs.origin, rhs.destination)
+            return left < right || left == right && lhs.journey != rhs.journey
+        }) else {
+            throw DecodingError.dataCorruptedError(forKey: .groups, in: container,
+                debugDescription: "Riding groups must be ordered by origin and destination, without duplicate journeys.")
         }
     }
 

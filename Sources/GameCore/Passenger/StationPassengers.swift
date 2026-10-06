@@ -33,13 +33,18 @@ public struct WaitingGroup: Hashable, Sendable {
     public let since: GameTime
     /// How many, at least 1.
     public let count: Int64
+    /// The selected route, including its original station and subsequent
+    /// rides. `nil` for a passenger from an older direct-trip save.
+    public let journey: PassengerJourney?
 
-    public init(line: LineID, direction: LineDirection, destination: StationID, since: GameTime, count: Int64) {
+    public init(line: LineID, direction: LineDirection, destination: StationID, since: GameTime, count: Int64,
+                journey: PassengerJourney? = nil) {
         self.line = line
         self.direction = direction
         self.destination = destination
         self.since = since
         self.count = count
+        self.journey = journey
     }
 
     var trip: PassengerTrip {
@@ -206,7 +211,7 @@ public struct StationPassengers: Hashable, Sendable {
             if taken < group.count {
                 kept.append(WaitingGroup(
                     line: group.line, direction: group.direction, destination: group.destination,
-                    since: group.since, count: group.count - taken
+                    since: group.since, count: group.count - taken, journey: group.journey
                 ))
             }
         }
@@ -246,7 +251,7 @@ public struct StationPassengers: Hashable, Sendable {
 
 extension WaitingGroup: Codable {
     private enum CodingKeys: String, CodingKey {
-        case line, direction, destination, since, count
+        case line, direction, destination, since, count, journey
     }
 
     /// Decodes a group, rejecting a count below 1. That its trip is one
@@ -258,8 +263,13 @@ extension WaitingGroup: Codable {
         destination = try container.decode(StationID.self, forKey: .destination)
         since = try container.decode(GameTime.self, forKey: .since)
         count = try container.decode(Int64.self, forKey: .count)
+        journey = try container.decodeIfPresent(PassengerJourney.self, forKey: .journey)
         guard count >= 1 else {
             throw DecodingError.dataCorruptedError(forKey: .count, in: container, debugDescription: "A waiting group has at least one passenger.")
+        }
+        if let journey, journey.leg.line != line || journey.leg.direction != direction || journey.leg.to != destination {
+            throw DecodingError.dataCorruptedError(forKey: .journey, in: container,
+                debugDescription: "A waiting group's current journey leg must match its queue.")
         }
     }
 
@@ -270,6 +280,7 @@ extension WaitingGroup: Codable {
         try container.encode(destination, forKey: .destination)
         try container.encode(since, forKey: .since)
         try container.encode(count, forKey: .count)
+        if let journey { try container.encode(journey, forKey: .journey) }
     }
 }
 
