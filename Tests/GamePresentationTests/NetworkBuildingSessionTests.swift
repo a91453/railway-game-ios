@@ -349,7 +349,6 @@ final class NetworkBuildingSessionTests: XCTestCase {
             var expected = world
             try expected.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: .edge(1), direction: direction), offset: offset))
             try expected.setTrainContinuation(train.id, along: [], stoppingAt: offset)
-            // #144: placing a train starts it at its configured performance.
             try expected.useTrainPerformanceForMovement(train.id)
             await MainActor.run { [world, expected] in
                 let session = GameSession(world: world)
