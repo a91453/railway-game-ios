@@ -276,6 +276,191 @@ public struct GameWorld: Equatable, Sendable {
         abandonUnservedPassengers()
     }
 
+    /// The shortest piece either part of a split edge may be: a junction
+    /// zone (``RailwayNetwork/junctionZone``, 16 m), so the new node's
+    /// junction never reaches past the far end.
+    public static let minimumSplitPiece: Int64 = RailwayNetwork.junctionZone
+
+    /// Splits edge `id` of the track network into two edges joined at a new
+    /// node `distance` along it from its `from` node, so that new track can
+    /// branch from there (a turnout in the middle of a line). Free: the
+    /// track is paid for. Returns the new node.
+    ///
+    /// A straight edge splits into two straight edges at its point
+    /// `distance` along. A cubic edge splits at its sampled point nearest
+    /// `distance` along (see ``TrackGeometry``), the curve cut there by de
+    /// Casteljau's rule with each control point rounded to the nearest unit,
+    /// halves up; the parts' geometry and lengths are worked out again from
+    /// them. Each part keeps the edge's structure. The parts join each other
+    /// at the new node and the edges the old one joined at its ends, and a
+    /// platform on the edge moves to the part it lies on, at the same
+    /// distances from the edge's `from` node (the second part's less the
+    /// first part's length).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
+    ///   ``GameError/invalidTrackGeometry`` for an edge that is not level
+    ///   (a split of a slope is not yet supported), a cut less than
+    ///   ``minimumSplitPiece`` from either end, an edge in a spacing
+    ///   exemption, or parts that would not be edges or not join as it did;
+    ///   ``GameError/trackReserved(_:)`` for the lowest numbered train that
+    ///   stands on the edge, has its body on it, will enter it along its
+    ///   path or has reserved some of it; ``GameError/trackEdgeHasPlatform(_:)``
+    ///   when a platform spans the cut; ``GameError/trackEdgeInLineRoute(_:)``
+    ///   for the lowest numbered line whose chosen path runs along it or
+    ///   stops at a platform on it; ``GameError/trackConflict(_:)`` or
+    ///   ``GameError/trackTooClose(_:)`` when a part would meet other track;
+    ///   or ``GameError/idsExhausted``.
+    @discardableResult
+    public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
+        guard let edge = network.edge(id), let geometry = network.geometry(of: id),
+              let start = network.node(edge.from), let end = network.node(edge.to) else { throw .unknownTrackEdge(id) }
+        guard start.position.z == end.position.z, edge.profile == .uniform,
+              distance >= Self.minimumSplitPiece, distance <= geometry.length - Self.minimumSplitPiece,
+              !network.spacingExemptions.contains(where: { $0.contains(id) }),
+              let cut = Self.split(edge.curve, from: start.position.plan, to: end.position.plan, near: distance)
+        else { throw .invalidTrackGeometry }
+        if let train = trains.first(where: { train in
+            if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
+            return train.trailEdges.contains(id) || train.movement.remainingEdges.contains(id)
+                || train.reservation.contains { $0.isSpan(of: id) }
+        }) {
+            throw .trackReserved(train.id)
+        }
+        guard !network.platforms(on: id).contains(where: { $0.start < cut.chainage && cut.chainage < $0.end }) else {
+            throw .trackEdgeHasPlatform(id)
+        }
+        if let line = lines.first(where: { line in
+            (0..<line.serviceCount).contains { service in
+                line.routes(ofService: service).contains { route in
+                    route.platform.edge == id || route.tracks.contains { $0.edge == id }
+                }
+            }
+        }) {
+            throw .trackEdgeInLineRoute(line.id)
+        }
+        let middle = WorldCoordinate(x: cut.point.x, y: cut.point.y, z: start.position.z)
+        guard isInWorld(middle), !network.hasNode(at: middle),
+              cut.first.controlPoints.allSatisfy(bounds.contains), cut.second.controlPoints.allSatisfy(bounds.contains),
+              let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first),
+              let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second)
+        else { throw .invalidTrackGeometry }
+
+        var after = network
+        let platforms = after.platforms(on: id)
+        for platform in platforms {
+            guard let index = after.platforms.firstIndex(of: platform) else { continue }
+            after.removePlatform(at: index)
+        }
+        after.removeEdge(id)
+        let (_, nodeNext) = try Self.allocateID(from: after.nextNodeNumber)
+        let node = after.addNode(at: middle, next: nodeNext)
+        if let other = after.firstConflict(from: edge.from, to: node, curve: cut.first, geometry: firstGeometry) {
+            throw .trackConflict(other)
+        }
+        let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
+        let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: .uniform, structure: edge.structure,
+                                  geometry: firstGeometry, next: firstNext)
+        if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
+            throw .trackConflict(other)
+        }
+        let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
+        let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: .uniform, structure: edge.structure,
+                                   geometry: secondGeometry, next: secondNext)
+        // Spacing along the ways of the network with both parts: alone,
+        // neither reaches the junction where the edge parted from track
+        // beside it.
+        for part in [first, second] {
+            if let other = after.firstTooClose(existing: part, besides: [first, second]) {
+                throw .trackTooClose(other)
+            }
+        }
+        // The parts join each other, and at the old ends what the edge did.
+        func exits(_ edge: TrackEdgeID, at node: TrackNodeID, in network: RailwayNetwork) -> Set<TrackEdgeID> {
+            Set(network.node(node)?.end(of: edge)?.exits ?? [])
+        }
+        guard exits(first, at: node, in: after) == [second], exits(second, at: node, in: after) == [first],
+              exits(first, at: edge.from, in: after) == exits(id, at: edge.from, in: network),
+              exits(second, at: edge.to, in: after) == exits(id, at: edge.to, in: network)
+        else { throw .invalidTrackGeometry }
+        for platform in platforms {
+            let moved: TrackPlatform
+            if platform.end <= cut.chainage {
+                moved = TrackPlatform(station: platform.station, edge: first,
+                                      start: min(platform.start, firstGeometry.length - 1), end: min(platform.end, firstGeometry.length))
+            } else {
+                let start = platform.start - cut.chainage, end = platform.end - cut.chainage
+                moved = TrackPlatform(station: platform.station, edge: second,
+                                      start: min(start, secondGeometry.length - 1), end: min(end, secondGeometry.length))
+            }
+            guard moved.start >= 0, moved.start < moved.end else { throw .invalidTrackGeometry }
+            after.addPlatform(moved)
+        }
+        after.dropSpacedExemptions()
+        network = after
+        return node
+    }
+
+    /// Edge `curve` from `p0` to `p3` cut at its sampled point nearest
+    /// `distance` along it (see ``splitTrackEdge(_:at:)``): the two parts'
+    /// curves, the point, and its chainage along the uncut edge. `nil` when
+    /// the cut would fall on an end.
+    static func split(_ curve: TrackCurve, from p0: PlanPoint, to p3: PlanPoint, near distance: Int64)
+        -> (first: TrackCurve, second: TrackCurve, point: PlanPoint, chainage: Int64)?
+    {
+        switch curve {
+        case .straight:
+            guard let geometry = TrackGeometry(from: WorldCoordinate(x: p0.x, y: p0.y, z: 0), to: WorldCoordinate(x: p3.x, y: p3.y, z: 0),
+                                               curve: .straight) else { return nil }
+            let position = geometry.location(at: distance).position
+            let point = PlanPoint(x: position.x, y: position.y)
+            guard point != p0, point != p3 else { return nil }
+            return (.straight, .straight, point, distance)
+        case .cubic(let c1, let c2):
+            // The samples of TrackGeometry, kept with their indices.
+            let polygon = c1.vector(from: p0).length + c2.vector(from: c1).length + p3.vector(from: c2).length
+            var count = TrackGeometry.minimumSamples
+            var shift = 9
+            while count < TrackGeometry.maximumSamples, count * TrackGeometry.sampleSpacing < polygon {
+                count *= 2
+                shift += 3
+            }
+            let unit = shift / 3
+            func point(_ step: Int64) -> PlanPoint {
+                let rest = count - step
+                let w0 = rest * rest * rest, w1 = 3 * rest * rest * step, w2 = 3 * rest * step * step, w3 = step * step * step
+                return PlanPoint(x: FixedPoint.roundedShift(w0 * p0.x + w1 * c1.x + w2 * c2.x + w3 * p3.x, by: shift),
+                                 y: FixedPoint.roundedShift(w0 * p0.y + w1 * c1.y + w2 * c2.y + w3 * p3.y, by: shift))
+            }
+            var best: (step: Int64, chainage: Int64)?
+            var previous = p0
+            var travelled: Int64 = 0
+            for step in 1..<count {
+                let here = point(step)
+                travelled += here.vector(from: previous).length
+                previous = here
+                if best == nil || abs(travelled - distance) < abs(best!.chainage - distance) {
+                    best = (step, travelled)
+                }
+            }
+            guard let best else { return nil }
+            let i = best.step, rest = count - i
+            func linear(_ a: PlanPoint, _ b: PlanPoint) -> PlanPoint {
+                PlanPoint(x: FixedPoint.roundedShift(rest * a.x + i * b.x, by: unit),
+                          y: FixedPoint.roundedShift(rest * a.y + i * b.y, by: unit))
+            }
+            func quadratic(_ a: PlanPoint, _ b: PlanPoint, _ c: PlanPoint) -> PlanPoint {
+                let w0 = rest * rest, w1 = 2 * rest * i, w2 = i * i
+                return PlanPoint(x: FixedPoint.roundedShift(w0 * a.x + w1 * b.x + w2 * c.x, by: 2 * unit),
+                                 y: FixedPoint.roundedShift(w0 * a.y + w1 * b.y + w2 * c.y, by: 2 * unit))
+            }
+            let middle = point(i)
+            let first = TrackCurve.cubic(linear(p0, c1), quadratic(p0, c1, c2))
+            let second = TrackCurve.cubic(quadratic(c1, c2, p3), linear(c2, p3))
+            guard middle != p0, middle != p3 else { return nil }
+            return (first, second, middle, best.chainage)
+        }
+    }
+
     /// Removes node `id` of the track network (Stage S3). Free. No edge may
     /// end at it, so no train can be there.
     ///
@@ -2757,7 +2942,7 @@ extension GameWorld {
     /// reads the counter, so a command can check before changing anything.
     ///
     /// - Throws: ``GameError/idsExhausted`` once the counter is at `Int.max`.
-    private static func allocateID(from next: Int) throws(GameError) -> (id: Int, next: Int) {
+    static func allocateID(from next: Int) throws(GameError) -> (id: Int, next: Int) {
         let (following, overflow) = next.addingReportingOverflow(1)
         guard !overflow else { throw .idsExhausted }
         return (next, following)

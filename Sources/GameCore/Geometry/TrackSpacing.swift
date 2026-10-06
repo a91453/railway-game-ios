@@ -267,6 +267,25 @@ extension RailwayNetwork {
         return nil
     }
 
+    /// The lowest numbered edge other than `id` and those in `besides`
+    /// that edge `id` of this network comes closer to than the track
+    /// spacing beyond the reach, along this network's ways (with `id` in
+    /// it), or `nil`: for the parts of a split edge, which only together
+    /// part from the track the edge parted from.
+    func firstTooClose(existing id: TrackEdgeID, besides: Set<TrackEdgeID>) -> TrackEdgeID? {
+        guard let shape = clearanceShape(of: id), let edge = edge(id), let box = planBox(of: edge) else { return nil }
+        var reach: [TrackNodeID: [TrackNodeID: Int64]] = [:]
+        for edge in edges where edge.id != id && !besides.contains(edge.id) {
+            guard let near = planBox(of: edge), near.mayComeClose(to: box), let other = clearanceShape(of: edge.id) else { continue }
+            let spaced = TrackSpacing.isSpaced(shape, other) { a, b in
+                if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.partingReach) }
+                return reach[a]?[b]
+            }
+            if !spaced { return edge.id }
+        }
+        return nil
+    }
+
     /// Every pair of edges closer than the track spacing beyond the reach,
     /// in order: what the ``GameWorld`` decoder compares with
     /// ``spacingExemptions``. `geometries` are the edges' geometries in ID

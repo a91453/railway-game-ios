@@ -153,6 +153,28 @@ final class RealWorldDemoTests: XCTestCase {
         XCTAssertEqual(session.world.train(id: train)?.timetable.map(\.station), [ids[0], ids[1], ids[0]])
     }
 
+    /// The demo's smooth curves split anywhere a turnout could go
+    /// (`GameWorld.splitTrackEdge`): every eighth edge, at its middle, with
+    /// the trains off the track, except where a platform spans the cut.
+    func testTheDemosCurvesSplitAndStillJoin() throws {
+        var (_, world) = try Self.built.get()
+        for train in world.trains { try world.unplaceTrain(train.id) }
+        let edges = world.network.edges.filter { $0.length >= 2 * GameWorld.minimumSplitPiece }
+        var split = 0
+        for edge in stride(from: 0, to: edges.count, by: 8).map({ edges[$0] }) {
+            var copy = world
+            do throws(GameError) {
+                try copy.splitTrackEdge(edge.id, at: edge.length / 2)
+                split += 1
+            } catch .trackEdgeHasPlatform {
+                continue
+            } catch {
+                XCTFail("\(edge.id): \(error)")
+            }
+        }
+        XCTAssertGreaterThan(split, 20)
+    }
+
     /// A line that already runs keeps the trains it is set to run.
     @MainActor
     func testAssigningToALineThatRunsKeepsItsCounts() throws {
