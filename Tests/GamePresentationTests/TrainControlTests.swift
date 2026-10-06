@@ -52,6 +52,7 @@ final class TrainControlTests: XCTestCase {
         let train = try XCTUnwrap(world.train(id: id))
         let path = try XCTUnwrap(world.path(from: try XCTUnwrap(train.position), toStation: station, length: train.length))
         try world.setTrainContinuation(id, along: path.traversals, stoppingAt: path.end)
+        try world.useTrainPerformanceForMovement(id)
         return world
     }
 
@@ -241,6 +242,7 @@ final class TrainControlTests: XCTestCase {
         let position = TrainPosition.onEdge(TrackTraversal(edge: .edge(3), direction: .backward), offset: 512)
         try expected.placeTrain(Self.first, at: position)
         try expected.setTrainContinuation(Self.first, along: [], stoppingAt: 512)
+        try expected.useTrainPerformanceForMovement(Self.first)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.purchaseTrain()
@@ -347,6 +349,29 @@ final class TrainControlTests: XCTestCase {
 
     // MARK: - Sending
 
+    func testHoldingAndResumingUsesTheConfiguredKmhSpeed() async throws {
+        let world = try makePlacedWorld()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.setSelectedTrainPerformance(.standard.withTopSpeed(60))
+            session.selectStation(Self.east)
+            session.sendSelectedTrain()
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.first), "60.0 km/h")
+            session.holdSelectedTrain()
+            let stopped = session.selectedTrain?.position
+            session.advance(realElapsed: .milliseconds(100))
+            XCTAssertEqual(session.selectedTrain?.position, stopped)
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.first), "0.0 km/h")
+            session.setSelectedTrainPerformance(.standard.withTopSpeed(30))
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.first), "0.0 km/h", "Changing performance preserves an explicit hold")
+            session.resumeSelectedTrain()
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.first), "30.0 km/h")
+            session.advance(realElapsed: .milliseconds(100))
+            XCTAssertEqual(session.selectedTrain?.position, Self.line.at(5, facingEast: true))
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.first), "0.0 km/h")
+        }
+    }
+
     /// From West, facing east, to East's platform on the last half of edge
     /// 5: edges 2 to 5, stopping at the end of edge 5.
     func testSendingCommitsGameCoresPathUnchanged() async throws {
@@ -365,7 +390,7 @@ final class TrainControlTests: XCTestCase {
             XCTAssertEqual(session.selectedTrain?.movement.remainingEdges, [.edge(2), .edge(3), .edge(4), .edge(5)])
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to East, 4096 units along the track. Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to East, 4096 units along the track.")
             )
         }
     }
@@ -380,7 +405,7 @@ final class TrainControlTests: XCTestCase {
             session.sendSelectedTrain()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Train 1 stops at West. Set a rate to start."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Train 1 stops at West."))
         }
     }
 
@@ -388,13 +413,13 @@ final class TrainControlTests: XCTestCase {
         let world = try makePlacedWorld(at: 1, facingEast: true)
         try await MainActor.run {
             let session = GameSession(world: world)
-            session.setSelectedTrainRate(512)
+            session.setSelectedTrainPerformance(.standard.withTopSpeed(1))
             session.selectStation(Self.east)
             session.sendSelectedTrain()
-            // Three ticks at 1×: 1536 units, half way along edge 3.
-            session.advance(realElapsed: .milliseconds(300))
+            // One game minute at 1 km/h: 1066 units, 42 along edge 3.
+            session.advance(realElapsed: .milliseconds(100))
             let moved = session.world
-            XCTAssertEqual(moved.train(id: Self.first)?.position, Self.line.between(2, 3, offset: 512))
+            XCTAssertEqual(moved.train(id: Self.first)?.position, Self.line.between(2, 3, offset: 42))
 
             session.selectStation(Self.mid)
             session.sendSelectedTrain()
@@ -406,7 +431,7 @@ final class TrainControlTests: XCTestCase {
             XCTAssertEqual(expected.train(id: Self.first)?.movement.remainingEdges, [])
             XCTAssertNil(expected.train(id: Self.first)?.movement.end)
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Mid, 512 units along the track."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Train 1 to Mid, 982 units along the track."))
         }
     }
 
@@ -539,6 +564,7 @@ final class TrainControlTests: XCTestCase {
         // West's first platform is the last half of edge 1: facing east,
         // the head at its end, the end of the edge.
         try placed.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
+        try placed.useTrainPerformanceForMovement(Self.first)
         let expected = try Self.sent(placed, Self.first, to: Self.east)
         await MainActor.run { [placed, expected] in
             let session = GameSession(world: world)
@@ -558,7 +584,7 @@ final class TrainControlTests: XCTestCase {
         }
     }
 
-    /// Place, choose a destination, set a rate, find the path, commit,
+    /// Place, choose a destination and km/h performance, find the path, commit,
     /// advance, read: the whole Stage M flow, checked against GameCore run
     /// directly.
     func testTheGameLoopMovesASentTrainExactlyAsGameCoreDoes() async throws {
@@ -566,17 +592,17 @@ final class TrainControlTests: XCTestCase {
         var expected = world
         try expected.purchaseTrain(named: "Train 1")
         try expected.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
-        try expected.setTrainMovementRate(Self.first, to: 384)
+        try expected.setTrainPerformance(Self.first, to: .standard.withTopSpeed(1))
         expected = try Self.sent(expected, Self.first, to: Self.east)
         let committed = expected
-        try expected.advance(ticks: 7)
+        try expected.advance(ticks: 2)
         await MainActor.run { [committed, expected] in
             let session = GameSession(world: world)
             session.selectTool(.train)
             session.purchaseTrain()
             session.selectStation(Self.west)
             session.applyTool()
-            session.selectedTrainRate = 384
+            session.setSelectedTrainPerformance(.standard.withTopSpeed(1))
             session.selectStation(Self.east)
             session.applyTool()
             XCTAssertEqual(session.world, committed)
@@ -584,16 +610,16 @@ final class TrainControlTests: XCTestCase {
             // Nothing moves until the game loop advances the world.
             XCTAssertEqual(session.selectedTrain?.position, Self.line.at(1, facingEast: true))
 
-            for _ in 0..<7 {
+            for _ in 0..<2 {
                 session.advance(realElapsed: .milliseconds(100))
             }
             XCTAssertEqual(session.world, expected)
-            // 7 × 384 = 2688 units: edges 2 and 3, and 640 along edge 4.
-            XCTAssertEqual(session.selectedTrain?.position, Self.line.between(3, 4, offset: 640))
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #4 forward, 640 units along")
+            // Two minutes at 1 km/h: 2132 units, 84 along edge 4.
+            XCTAssertEqual(session.selectedTrain?.position, Self.line.between(3, 4, offset: 84))
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #4 forward, 84 units along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Edge #5")
 
-            // The rest of the way: 4096 − 2688 = 1408 more units.
+            // It reaches the berth and stays there, even while time continues.
             for _ in 0..<4 {
                 session.advance(realElapsed: .milliseconds(100))
             }

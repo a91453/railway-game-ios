@@ -64,6 +64,30 @@ final class PerformanceSessionTests: XCTestCase {
 
     // MARK: - Lines
 
+    func testDisplayedSpeedFollowsTheServiceCurveRatherThanTheManualRate() throws {
+        var world = try makeLineWorld()
+        let track = TestLine(tiles: 9, row: 1)
+        let id = try world.purchaseTrain(named: "Physical speed").id
+        try world.placeTrain(id, at: track.at(1, facingEast: true))
+        try world.useTrainPerformanceForMovement(id)
+        let start = world.clock.now.seconds
+        try world.setTrainTimetable(id, to: [
+            .init(station: StationID(rawValue: 1), arrival: GameTime(seconds: start), departure: GameTime(seconds: start + 60)),
+            .init(station: StationID(rawValue: 2), arrival: GameTime(seconds: start + 80), departure: GameTime(seconds: start + 80)),
+        ])
+        try world.startTrainService(id)
+        world.setSpeed(.x1)
+        XCTAssertEqual(world.trainSpeedText(of: id), "0.0 km/h")
+        XCTAssertEqual(world.trainPathStatusText(of: id, in: .traditionalChinese), "等候發車")
+        try world.advance(ticks: 610)
+        XCTAssertEqual(world.trainSpeedText(of: id), "1.5 km/h")
+        try world.advance(ticks: 10)
+        XCTAssertEqual(world.trainSpeedText(of: id), "3.0 km/h")
+        XCTAssertLessThan(world.trainSpeedKMH(of: id), 110, "The top speed is not its instantaneous speed")
+        try world.advance(ticks: 180)
+        XCTAssertEqual(world.trainSpeedText(of: id), "0.0 km/h")
+    }
+
     /// Two edges between stops: 16 s at the standard performance
     /// (√(2 × 2048 × 0.06) = 15.7), 120 s at a 1 km/h crawl; the rest of a
     /// round trip, 480 s, is the stops. On the track network (Stage F3c)

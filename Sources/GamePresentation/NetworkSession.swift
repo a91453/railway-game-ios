@@ -339,6 +339,7 @@ extension GameSession {
             if offset < edge.length {
                 try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
             }
+            try draft.useTrainPerformanceForMovement(train.id)
             world = draft
             return language.text(
                 "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",

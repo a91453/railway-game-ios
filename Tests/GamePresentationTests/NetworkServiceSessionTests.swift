@@ -57,6 +57,7 @@ final class NetworkServiceSessionTests: XCTestCase {
         XCTAssertEqual(path, TrainPath(traversals: [TrackTraversal(edge: Self.e2, direction: .forward)], end: 5_120, distance: 8_192))
         var expected = world
         try expected.setTrainContinuation(Self.tram, along: path.traversals, stoppingAt: path.end)
+        try expected.useTrainPerformanceForMovement(Self.tram)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.train)
@@ -70,7 +71,7 @@ final class NetworkServiceSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track. Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track.")
             )
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Edge #2, stopping 5120 units along it")
             XCTAssertNil(session.world.stationStopText(of: Self.tram, in: .english), "a train with a path left is not stopped")
@@ -78,33 +79,37 @@ final class NetworkServiceSessionTests: XCTestCase {
     }
 
     func testANetworkTrainRunsToThePlatformAndStopsThere() async throws {
-        let world = try makeNetworkWorld(rate: 1_024)
+        var world = try makeNetworkWorld(rate: 1_024)
+        world.setSpeed(.x1)
         await MainActor.run {
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
             session.selectStation(Self.east)
             session.sendSelectedTrain()
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track."))
-            // Five minutes (a tick is 100 ms): 5120 of the 8192 run, 2048
-            // into e2.
-            session.advance(realElapsed: .milliseconds(500))
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 2048 units along")
-            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: stops 3072 units ahead")
-            session.advance(realElapsed: .milliseconds(500))
+            // At 110 km/h it travels 5866 units in three game seconds.
+            for _ in 0..<6 { session.advance(realElapsed: .milliseconds(500)) }
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 2794 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: stops 2326 units ahead")
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.tram), "110.0 km/h")
+            for _ in 0..<4 { session.advance(realElapsed: .milliseconds(500)) }
             XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 5120 units along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
             XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
+            XCTAssertEqual(session.world.trainSpeedText(of: Self.tram), "0.0 km/h")
         }
     }
 
-    func testSendingANetworkTrainToAStationItStandsAtChangesNothing() async throws {
+    func testSendingANetworkTrainToItsCurrentStationArmsSpeedWithoutMoving() async throws {
         let world = try makeNetworkWorld(rate: 100)
-        await MainActor.run {
+        var expected = world
+        try expected.useTrainPerformanceForMovement(Self.tram)
+        await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTrain(Self.tram)
             session.selectStation(Self.west)
             session.sendSelectedTrain()
-            XCTAssertEqual(session.world, world, "already at the berth: the same path, ending where it stands")
+            XCTAssertEqual(session.world, expected, "already at the berth: the same path, with its configured km/h speed ready")
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Tram stops at West."))
         }
     }

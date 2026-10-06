@@ -22,6 +22,45 @@ final class RealWorldDemoTests: XCTestCase {
         return (railways, RealWorldDemo.make(in: .traditionalChinese, railways: railways))
     }
 
+    func testExpressPatternsCanRouteBetweenEveryPairOfRealDemoStops() throws {
+        let (_, original) = try Self.built.get()
+        for line in original.lines {
+            for first in 0..<(line.stops.count - 1) {
+                for last in (first + 1)..<line.stops.count where last > first + 1 {
+                    var world = original
+                    let pattern = try world.addLinePattern(line.id, calling: [first, last])
+                    XCTAssertNotNil(world.lineJourney(line.id, pattern: pattern), "\(line.name): \(first) to \(last)")
+                }
+            }
+        }
+    }
+
+    func testNewRuifangShifenExpressDepartsWithoutSettingALegacyRate() async throws {
+        var (_, world) = try Self.built.get()
+        for line in world.lines { try world.removeLine(line.id) }
+        for train in world.trains { try world.unplaceTrain(train.id) }
+        let names = ["瑞芳", "猴硐", "三貂嶺", "大華", "十分"]
+        let stops = try names.map { name in try XCTUnwrap(world.stations.first { $0.name == name }?.id) }
+        let line = try world.createLine(named: "瑞芳十分快車", stops: stops).id
+        let pattern = try world.addLinePattern(line, calling: [0, 4])
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: .init(peak: 1, offPeak: 1, low: 1), pattern: pattern)
+        XCTAssertNotNil(world.lineJourney(line, pattern: pattern), "The physical route exists")
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.selectLine(line)
+            session.selectStation(stops[0])
+            session.purchaseTrain()
+            session.setSelectedTrainCars(3)
+            session.placeSelectedTrain()
+            session.assignSelectedTrainToSelectedLine(pattern: pattern)
+            session.advance(realElapsed: .milliseconds(200))
+            XCTAssertNotNil(session.selectedTrain?.execution, "A newly placed express must not be held by an invisible legacy rate of zero")
+            XCTAssertEqual(session.selectedTrain?.timetable.map(\.station), [stops[0], stops[4], stops[0]])
+            XCTAssertNotEqual(session.selectedTrain?.pathText(in: .traditionalChinese), "前方沒有路徑")
+        }
+    }
+
     /// V4d on the bundled physical Pingxi track: Shifen -> Jingtong ->
     /// Pingxi reverses at the intermediate terminal, then again on return.
     /// The requested call order is a player scenario, not a real timetable.

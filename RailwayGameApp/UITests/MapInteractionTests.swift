@@ -27,6 +27,11 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(follow.isHittable)
             follow.tap()
             XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
+            let speed = app.descendants(matching: .any)["train.speed"].firstMatch
+            XCTAssertTrue(speed.waitForExistence(timeout: 5))
+            XCTAssertTrue(speed.label.contains("km/h"), "Train controls must show physical speed")
+            XCTAssertFalse(app.steppers.containing(NSPredicate(format: "label BEGINSWITH 'Rate '")).firstMatch.exists,
+                           "The obsolete per-minute rate must not remain a second speed control")
             app.buttons["tool.select"].tap()
             map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             XCTAssertTrue((map.value as? String)?.hasPrefix("Train · \(name) ·") == true,

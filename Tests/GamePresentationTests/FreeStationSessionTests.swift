@@ -164,7 +164,7 @@ final class FreeStationSessionTests: XCTestCase {
 
             session.selectStation(east)
             session.applyTool()
-            XCTAssertEqual(session.message?.text, "Sent Train 1 to East, 5120 units along the track. Set a rate to start.")
+            XCTAssertEqual(session.message?.text, "Sent Train 1 to East, 5120 units along the track.")
             XCTAssertNil(session.world.train(id: train)?.movement.end, "the far end of East's platform is the end of the edge")
 
             session.selectStation(west)

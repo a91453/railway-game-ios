@@ -510,6 +510,19 @@ public final class GameSession {
         }
     }
 
+    /// An explicit operational hold, separate from the configured km/h speed.
+    public func holdSelectedTrain() {
+        setSelectedTrainRate(0)
+    }
+
+    public func resumeSelectedTrain() {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.useTrainPerformanceForMovement(train.id)
+            return language.text("Resumed \(train.name).", "已恢復 \(train.name) 運行。")
+        }
+    }
+
     /// Sends the selected train to the selected station: to where it stops
     /// at one of the station's platforms on the track network that it
     /// fits, along `GameWorld.path(from:toStation:length:)`, committed
@@ -542,14 +555,17 @@ public final class GameSession {
             return
         }
         perform { world throws(GameError) in
-            try world.setTrainContinuation(train.id, along: path.traversals, stoppingAt: path.end)
+            var draft = world
+            try draft.setTrainContinuation(train.id, along: path.traversals, stoppingAt: path.end)
+            try draft.useTrainPerformanceForMovement(train.id)
+            world = draft
             let sent = path.distance == 0
                 ? language.text("\(train.name) stops at \(station.name).", "\(train.name) 停在 \(station.name)。")
                 : language.text(
                     "Sent \(train.name) to \(station.name), \(path.distance) units along the track.",
                     "已派 \(train.name) 前往 \(station.name)，沿軌道 \(path.distance) 單位。"
                 )
-            return train.movement.rate == 0 ? sent + language.text(" Set a rate to start.", "設定速率後出發。") : sent
+            return sent
         }
     }
 
@@ -791,7 +807,10 @@ public final class GameSession {
     public func assignSelectedTrainToSelectedLine(pattern: Int? = nil) {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
-            try world.assignTrain(train.id, to: line.id, pattern: pattern)
+            var draft = world
+            try draft.assignTrain(train.id, to: line.id, pattern: pattern)
+            if train.position != nil { try draft.useTrainPerformanceForMovement(train.id) }
+            world = draft
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name
             return language.text(
                 "\(train.name) now runs for \(service). It leaves once it waits at the first stop.",
@@ -814,7 +833,10 @@ public final class GameSession {
     public func startSelectedTrainService() {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
-            try world.startTrainService(train.id)
+            var draft = world
+            try draft.startTrainService(train.id)
+            try draft.useTrainPerformanceForMovement(train.id)
+            world = draft
             return language.text("\(train.name) is running its timetable.", "\(train.name) 開始依時刻表運行。")
         }
     }

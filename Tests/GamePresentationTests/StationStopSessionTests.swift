@@ -46,6 +46,7 @@ final class StationStopSessionTests: XCTestCase {
         let train = try XCTUnwrap(world.train(id: first))
         let path = try XCTUnwrap(world.path(from: try XCTUnwrap(train.position), toStation: station, length: train.length))
         try world.setTrainContinuation(first, along: path.traversals, stoppingAt: path.end)
+        try world.useTrainPerformanceForMovement(first)
         return world
     }
 
@@ -65,7 +66,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Market, 3072 units along the track. Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Market, 3072 units along the track.")
             )
         }
     }
@@ -89,7 +90,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(heading.world, onEdgeExpected, "the rest of edge 2 to Central's platform end")
             XCTAssertEqual(
                 heading.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 512 units along the track. Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 512 units along the track.")
             )
         }
     }
@@ -130,7 +131,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 1024 units along the track. Set a rate to start.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 1024 units along the track.")
             )
         }
     }
@@ -138,10 +139,11 @@ final class StationStopSessionTests: XCTestCase {
     /// Send to a station, advance with the game loop, read the stop: the
     /// whole Stage N flow, checked against GameCore run directly.
     func testTheGameLoopBringsASentTrainToAStop() async throws {
-        let world = try makeStationWorld(trainAt: Self.line.at(1, facingEast: true), rate: 384)
+        var world = try makeStationWorld(trainAt: Self.line.at(1, facingEast: true))
+        try world.setTrainPerformance(Self.first, to: .standard.withTopSpeed(1))
         let expected = try Self.sent(world, to: Self.market)
         var arrived = expected
-        try arrived.advance(ticks: 8)
+        try arrived.advance(ticks: 3)
         XCTAssertEqual(arrived.stationsStoppedAt(by: Self.first), [Self.market])
         await MainActor.run { [expected, arrived] in
             let session = GameSession(world: world)
@@ -150,8 +152,8 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "departing")
 
-            // 3072 units at 384 a minute: 8 minutes.
-            for _ in 0..<7 {
+            // 48 metres at 1 km/h takes 2.88 minutes: it stops in minute 3.
+            for _ in 0..<2 {
                 session.advance(realElapsed: .milliseconds(100))
             }
             XCTAssertNil(session.world.stationStopText(of: Self.first, in: .english), "not there yet")
