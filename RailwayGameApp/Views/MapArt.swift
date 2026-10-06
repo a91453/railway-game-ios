@@ -358,10 +358,10 @@ enum MapArt {
             let p3 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.eastLongitude)
             let p4 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.westLongitude)
 
-            let s1 = projection.screenPoint(of: p1)
-            let s2 = projection.screenPoint(of: p2)
-            let s3 = projection.screenPoint(of: p3)
-            let s4 = projection.screenPoint(of: p4)
+            let s1 = screenPoint(p1.x, p1.y, projection)
+            let s2 = screenPoint(p2.x, p2.y, projection)
+            let s3 = screenPoint(p3.x, p3.y, projection)
+            let s4 = screenPoint(p4.x, p4.y, projection)
 
             let cellPoly = polygon([s1, s2, s3, s4])
             let color = PopulationColorRamp.color(for: cell.count)

@@ -156,7 +156,7 @@ final class EconomyDisplayTests: XCTestCase {
     }
 
     func testTrainLoadInfoAndThresholds() throws {
-        var world = try makeLine()
+        let world = try makeLine()
         let train = world.trains[0]
         let load = try XCTUnwrap(world.trainLoadInfo(of: train.id))
         XCTAssertEqual(load.passengerCount, 0)

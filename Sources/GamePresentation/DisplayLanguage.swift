@@ -19,7 +19,7 @@ public enum DisplayLanguage: CaseIterable, Hashable, Sendable {
     }
 
     /// `english` in English, `chinese` in Traditional Chinese.
-    func text(_ english: @autoclosure () -> String, _ chinese: @autoclosure () -> String) -> String {
+    public func text(_ english: @autoclosure () -> String, _ chinese: @autoclosure () -> String) -> String {
         switch self {
         case .english: english()
         case .traditionalChinese: chinese()
