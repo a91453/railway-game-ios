@@ -3,9 +3,9 @@ import GamePresentation
 import SwiftUI
 
 /// Fleet overview and roster sheet displaying all trains in the network.
-///
-/// Faithfully reproduces the `Ci/` reference's `#panel-train` roster list
-/// and `Railway/` reference's fleet status table.
+/// Each train's load uses the reference's train-panel load bar
+/// (``TrainLoadBar``); the roster itself is the app's own (the `Ci/`
+/// reference has no fleet list).
 struct FleetOverviewSheet: View {
     @Bindable var session: GameSession
     @Environment(\.dismiss) private var dismiss
@@ -53,14 +53,8 @@ struct FleetOverviewSheet: View {
     private var summaryCard: some View {
         let trains = session.world.trains
         let placedCount = trains.filter { $0.position != nil }.count
-        let totalRiders = trains.reduce(Int64(0)) { sum, train in
-            sum + session.world.riders(of: train.id).reduce(0) { $0 + $1.count }
-        }
-        let totalCapacity = trains.reduce(Int64(0)) { sum, train in
-            sum + train.ratedCapacity
-        }
-        let fleetLoadPercent = totalCapacity > 0 ? Int((200 * totalRiders + totalCapacity) / (2 * totalCapacity)) : 0
-        let fleetLoadFactor = totalCapacity > 0 ? Double(totalRiders) / Double(totalCapacity) : 0.0
+        // Trains on the track only: one in the depot is not in service.
+        let fleetLoad = session.world.fleetLoadInfo()
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -91,9 +85,9 @@ struct FleetOverviewSheet: View {
                     Text(verbatim: session.language.text("Avg Load", "平均滿載率"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text(verbatim: "\(fleetLoadPercent)%")
+                    Text(verbatim: fleetLoad.map { "\($0.percentage)%" } ?? "--")
                         .font(.headline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(fleetLoadFactor >= 0.90 ? Color.red : (fleetLoadFactor >= 0.70 ? Palette.metroAmber : Color.green))
+                        .foregroundStyle(fleetLoad?.isOverload == true ? Palette.paxBarOverload : Color.primary)
                 }
             }
         }
@@ -110,7 +104,7 @@ struct FleetOverviewSheet: View {
 
     private func trainRow(_ train: Train) -> some View {
         let isSelected = session.selectedTrainID == train.id
-        let isFollowing = isSelected && session.isFollowingTrain
+        let isFollowing = session.isFollowing(train.id)
         let language = session.language
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -132,9 +126,10 @@ struct FleetOverviewSheet: View {
                 if train.position != nil {
                     Button {
                         if isFollowing {
-                            session.setFollowingTrain(false)
+                            session.stopFollowingTrain()
                         } else {
-                            session.selectTrain(train.id, following: true)
+                            session.selectTrain(train.id)
+                            session.followTrain(train.id)
                             dismiss()
                         }
                     } label: {

@@ -155,63 +155,78 @@ final class EconomyDisplayTests: XCTestCase {
         return world
     }
 
-    func testTrainLoadInfoAndThresholds() throws {
+    /// The load bar is the `Ci/` reference's `#pt-load` / `.pax-bar-fill`:
+    /// `u = cap ? round(pax / cap × 100) : 0`, the bar `min(100, max(0, u))`
+    /// wide, and `is-overload` only when `u > 100`.
+    func testTrainLoadInfoReadsRidersOverRatedCapacity() throws {
         let world = try makeLine()
         let train = world.trains[0]
         let load = try XCTUnwrap(world.trainLoadInfo(of: train.id))
-        XCTAssertEqual(load.passengerCount, 0)
-        XCTAssertEqual(load.capacity, 320)
-        XCTAssertEqual(load.loadFactor, 0.0)
+        XCTAssertEqual(load, TrainLoadInfo(passengerCount: 0, capacity: 320))
         XCTAssertEqual(load.percentage, 0)
-        XCTAssertEqual(load.level, .normal)
+        XCTAssertEqual(load.barFraction, 0)
         XCTAssertFalse(load.isOverload)
-
-        let normal = TrainLoadInfo(passengerCount: 160, capacity: 320, loadFactor: 0.5, percentage: 50)
-        XCTAssertEqual(normal.level, .normal)
-        XCTAssertFalse(normal.isOverload)
-
-        let busy = TrainLoadInfo(passengerCount: 240, capacity: 320, loadFactor: 0.75, percentage: 75)
-        XCTAssertEqual(busy.level, .busy)
-        XCTAssertFalse(busy.isOverload)
-
-        let crowded = TrainLoadInfo(passengerCount: 300, capacity: 320, loadFactor: 0.94, percentage: 94)
-        XCTAssertEqual(crowded.level, .crowded)
-        XCTAssertFalse(crowded.isOverload)
-
-        let overloaded = TrainLoadInfo(passengerCount: 350, capacity: 320, loadFactor: 1.09, percentage: 109)
-        XCTAssertEqual(overloaded.level, .crowded)
-        XCTAssertTrue(overloaded.isOverload)
+        XCTAssertNil(world.trainLoadInfo(of: TrainID(rawValue: 99)))
     }
 
-    func testLoadThresholdBoundariesWithoutRoundingDistortion() {
-        // 70% boundary: 223 / 320 rounds to 70%, but factor is ~69.69% -> .normal
-        let sub70 = TrainLoadInfo(passengerCount: 223, capacity: 320, loadFactor: 223.0 / 320.0, percentage: 70)
-        XCTAssertEqual(sub70.level, .normal, "223/320 is below 70% threshold despite rounding to 70%")
-        XCTAssertFalse(sub70.isOverload)
+    func testLoadPercentageRoundsHalfUpAndOverloadNeedsMoreThanAHundredRounded() {
+        XCTAssertEqual(TrainLoadInfo(passengerCount: 160, capacity: 320).percentage, 50)
+        // 1 / 200 = 0.5 % rounds up, as `Math.round` does.
+        XCTAssertEqual(TrainLoadInfo(passengerCount: 1, capacity: 200).percentage, 1)
+        XCTAssertEqual(TrainLoadInfo(passengerCount: 223, capacity: 320).percentage, 70)
 
-        // Exactly 70%: 224 / 320 = 0.70 -> .busy
-        let at70 = TrainLoadInfo(passengerCount: 224, capacity: 320, loadFactor: 224.0 / 320.0, percentage: 70)
-        XCTAssertEqual(at70.level, .busy)
-        XCTAssertFalse(at70.isOverload)
+        let full = TrainLoadInfo(passengerCount: 320, capacity: 320)
+        XCTAssertEqual(full.percentage, 100)
+        XCTAssertEqual(full.barFraction, 1)
+        XCTAssertFalse(full.isOverload)
 
-        // 90% boundary: 287 / 320 rounds to 90%, but factor is ~89.69% -> .busy
-        let sub90 = TrainLoadInfo(passengerCount: 287, capacity: 320, loadFactor: 287.0 / 320.0, percentage: 90)
-        XCTAssertEqual(sub90.level, .busy, "287/320 is below 90% threshold despite rounding to 90%")
-        XCTAssertFalse(sub90.isOverload)
+        // 321 / 320 is 100.3 %: rounded it is 100, which the reference does
+        // not mark as overloaded.
+        let justOver = TrainLoadInfo(passengerCount: 321, capacity: 320)
+        XCTAssertEqual(justOver.percentage, 100)
+        XCTAssertFalse(justOver.isOverload)
 
-        // Exactly 90%: 288 / 320 = 0.90 -> .crowded
-        let at90 = TrainLoadInfo(passengerCount: 288, capacity: 320, loadFactor: 288.0 / 320.0, percentage: 90)
-        XCTAssertEqual(at90.level, .crowded)
-        XCTAssertFalse(at90.isOverload)
+        // 322 / 320 is 100.6 %, rounded 101: overloaded, the bar still full.
+        let over = TrainLoadInfo(passengerCount: 322, capacity: 320)
+        XCTAssertEqual(over.percentage, 101)
+        XCTAssertTrue(over.isOverload)
+        XCTAssertEqual(over.barFraction, 1, "the bar is clamped to 100 %")
 
-        // 100% boundary: 320 / 320 = 1.00 -> not overloaded
-        let at100 = TrainLoadInfo(passengerCount: 320, capacity: 320, loadFactor: 1.0, percentage: 100)
-        XCTAssertEqual(at100.level, .crowded)
-        XCTAssertFalse(at100.isOverload)
+        let crushed = TrainLoadInfo(passengerCount: 352, capacity: 320)
+        XCTAssertEqual(crushed.percentage, 110)
+        XCTAssertTrue(crushed.isOverload)
+        XCTAssertEqual(crushed.barFraction, 1)
+    }
 
-        // Overload boundary: 321 / 320 rounds to 100%, but passengerCount > capacity -> isOverload = true
-        let over100 = TrainLoadInfo(passengerCount: 321, capacity: 320, loadFactor: 321.0 / 320.0, percentage: 100)
-        XCTAssertEqual(over100.level, .crowded)
-        XCTAssertTrue(over100.isOverload, "321/320 is overloaded even though integer percentage is 100%")
+    /// A capacity of 0 shows 0 % (the reference's `e.cap ? … : 0`), keeps
+    /// the capacity it has rather than a made-up 1, and never divides by it.
+    func testZeroCapacityShowsZeroPercent() {
+        let empty = TrainLoadInfo(passengerCount: 5, capacity: 0)
+        XCTAssertEqual(empty.capacity, 0)
+        XCTAssertEqual(empty.percentage, 0)
+        XCTAssertEqual(empty.barFraction, 0)
+        XCTAssertFalse(empty.isOverload)
+        XCTAssertEqual(TrainLoadInfo.percentage(passengers: 10, capacity: 0), 0)
+        XCTAssertEqual(TrainLoadInfo.percentage(passengers: 10, capacity: -4), 0)
+    }
+
+    /// The fleet's average load counts only trains on the track: a train in
+    /// the depot adds neither riders nor capacity.
+    func testFleetLoadCountsOnlyPlacedTrains() throws {
+        var world = try makeLine()
+        XCTAssertEqual(world.fleetLoadInfo(), TrainLoadInfo(passengerCount: 0, capacity: 320))
+        try world.purchaseTrain(named: "Spare")
+        XCTAssertEqual(world.fleetLoadInfo(), TrainLoadInfo(passengerCount: 0, capacity: 320), "the unplaced train is not counted")
+        try world.setStationDemand(StationID(rawValue: 1), to: StationDemand(kind: .residential, dailyTrips: 200_000))
+        try world.setStationDemand(StationID(rawValue: 3), to: StationDemand(kind: .office, dailyTrips: 1_000))
+        try world.advance(ticks: 26)
+        let riding = world.riders(of: TrainID(rawValue: 1)).reduce(Int64(0)) { $0 + $1.count }
+        XCTAssertGreaterThan(riding, 0)
+        XCTAssertEqual(world.fleetLoadInfo(), TrainLoadInfo(passengerCount: riding, capacity: 320))
+        XCTAssertEqual(world.fleetLoadInfo()?.percentage, world.trainLoadInfo(of: TrainID(rawValue: 1))?.percentage)
+
+        var depot = try makeWorld(balance: 100_000)
+        try depot.purchaseTrain(named: "Depot")
+        XCTAssertNil(depot.fleetLoadInfo(), "no train on the track, no average")
     }
 }

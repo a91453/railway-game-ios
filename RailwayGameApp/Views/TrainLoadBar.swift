@@ -1,11 +1,13 @@
 import GamePresentation
 import SwiftUI
 
-/// A tactile progress bar for a train's load factor, faithfully matching
-/// `Ci/`'s `pax-bar-fill` styling and color thresholds:
-/// - `< 70%`: green (`Palette.metroGreen`)
-/// - `70% ..< 90%`: amber (`Palette.metroAmber`)
-/// - `>= 90%`: red (`Palette.metroRed`), with overload animation / alert
+/// A train's load, ported from the `Ci/` reference's train panel
+/// (`game-dom` `#panel-train`): a `sec-lbl` row with "Load factor"
+/// (`metro.train.load_factor`) and the percentage (`#pt-load`), over a
+/// 5-point `.pax-bar-bg` track whose `.pax-bar-fill` is one neutral colour
+/// and turns red (`.is-overload`) only when the rounded percentage is over
+/// 100 (``TrainLoadInfo/isOverload``). The reference's rated capacity and
+/// current passengers rows (`#pt-cap`, `#pt-pax`) follow as one caption.
 struct TrainLoadBar: View {
     let load: TrainLoadInfo
     let language: DisplayLanguage
@@ -13,61 +15,35 @@ struct TrainLoadBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Label {
-                    Text(verbatim: language.text("Load Factor", "載客率"))
-                        .font(.caption.weight(.semibold))
-                } icon: {
-                    Image(systemName: "person.2.fill")
-                        .font(.caption2)
-                        .foregroundStyle(barColor)
-                }
-
+                Text(verbatim: language.text("Load Factor", "載客率"))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
                 Spacer()
-
-                Text(verbatim: "\(load.passengerCount) / \(load.capacity) · \(load.percentage)%")
+                Text(verbatim: "\(load.percentage)%")
                     .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(barColor)
             }
 
             GeometryReader { proxy in
-                let width = proxy.size.width
-                let fillRatio = min(1.0, max(0.0, load.loadFactor))
-                let fillWidth = width * CGFloat(fillRatio)
-
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color(uiColor: .systemGray5))
-                        .frame(height: 8)
-
+                        .fill(Palette.paxBarTrack)
                     Capsule()
-                        .fill(barColor)
-                        .frame(width: fillWidth, height: 8)
+                        .fill(load.isOverload ? Palette.paxBarOverload : Palette.paxBarFill)
+                        .frame(width: proxy.size.width * load.barFraction)
                 }
             }
-            .frame(height: 8)
+            .frame(height: 5)
+            .animation(.linear(duration: 0.2), value: load.barFraction)
 
-            if load.isOverload {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                    Text(verbatim: language.text("Over capacity", "超載運行中"))
-                        .font(.caption2.weight(.bold))
-                }
-                .foregroundStyle(Color.red)
-            }
+            Text(verbatim: language.text(
+                "Current passengers \(load.passengerCount) · Rated capacity \(load.capacity)",
+                "當前載客 \(load.passengerCount) · 額定載客 \(load.capacity)"
+            ))
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(language.text("Load Factor", "載客率")): \(load.percentage)% (\(load.passengerCount) / \(load.capacity))"))
-    }
-
-    private var barColor: Color {
-        switch load.level {
-        case .normal:
-            return Palette.metroGreen
-        case .busy:
-            return Palette.metroAmber
-        case .crowded:
-            return Palette.metroRed
-        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: language.text("Load Factor", "載客率")))
+        .accessibilityValue(Text(verbatim: "\(load.percentage)% (\(load.passengerCount) / \(load.capacity))"))
     }
 }

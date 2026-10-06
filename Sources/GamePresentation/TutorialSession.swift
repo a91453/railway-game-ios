@@ -50,7 +50,10 @@ extension GameSession {
     /// session only the first time on such a step, so calling it on every
     /// frame of a gesture costs nothing.
     public func mapDidMove() {
-        isFollowingTrain = false
+        // A drag, pinch or zoom ends following a train, as the reference's
+        // `dragstart`, `zoomstart` and `rotatestart` do
+        // (`metroCancelCameraFollowForUserGesture`).
+        if followedTrainID != nil { stopFollowingTrain() }
         guard var shown = tutorial, shown.awaitsMapMove else { return }
         shown.noteMapMoved()
         tutorial = shown

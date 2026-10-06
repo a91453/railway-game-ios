@@ -162,8 +162,7 @@ struct LinesPanel: View {
 
     private func lineRow(_ line: ServiceLine) -> some View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
-        let colors: [Color] = [Palette.metroBlue, Palette.metroGreen, Palette.metroAmber, Palette.metroPurple, Palette.metroCyan, Palette.metroRed]
-        let color = colors[abs(Int(line.id.rawValue)) % colors.count]
+        let color = Palette.lineColor(line.id)
         return HStack(spacing: 10) {
             ZStack {
                 Circle()
