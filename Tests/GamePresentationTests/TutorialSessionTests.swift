@@ -110,8 +110,8 @@ final class TutorialSessionTests: XCTestCase {
             Self.expect(session, step: 7, goal: .startService, targets: [.linesButton])
             session.assignSelectedTrainToSelectedLine()
             XCTAssertNotNil(session.world.assignedLine(of: session.selectedTrainID!))
-            XCTAssertFalse(session.isTutorialStepDone, "the line is set to run no trains")
-            session.setSelectedLineTrains(1, at: .peak)
+            // A line that ran no trains now runs the one assigned.
+            XCTAssertEqual(session.selectedLine?.trainsInService, TrainsInService(peak: 1, offPeak: 1, low: 1))
         case 8:
             Self.expect(session, step: 8, goal: .read, targets: [.map])
         case 9:

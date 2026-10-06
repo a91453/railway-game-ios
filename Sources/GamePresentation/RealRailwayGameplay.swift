@@ -247,6 +247,7 @@ extension GameSession {
             let point: PlanPoint? = switch anchor {
             case .node(let id): world.trackNode(id)?.position.plan
             case .point(let point): point
+            case .track: world.position(of: anchor, height: 0)?.plan
             }
             return point.flatMap { world.station(near: $0, within: Self.realSectionReach) }
         }

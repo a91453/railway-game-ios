@@ -163,7 +163,14 @@ extension GameWorld {
         if case .waitingAtStop? = train.execution {
             return language.text("Waiting for departure", "等候發車")
         }
-        if train.execution == nil, assignedLine(of: id) != nil {
+        if train.execution == nil, let lineID = assignedLine(of: id) {
+            // A line outside its service window sends nobody out: say
+            // when it opens, not only that the train waits.
+            if serviceLevel(of: lineID, at: clock.now) == nil, let line = line(id: lineID),
+               case .hours(let open, _) = line.window {
+                let time = clockText(minuteOfDay: open % 1_440)
+                return language.text("Waiting: \(line.name) opens at \(time)", "等候發車：\(line.name) \(time) 開始營運")
+            }
             return language.text("Waiting for service dispatch", "等候交路派車")
         }
         return train.pathText(in: language)

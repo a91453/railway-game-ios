@@ -139,6 +139,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// A station has a platform on the edge, so it cannot be removed;
     /// remove the platform first (Stage S4).
     case trackEdgeHasPlatform(TrackEdgeID)
+    /// A line's chosen physical path (decision 61) runs along the edge, so
+    /// it cannot be split; clear that line's path first.
+    case trackEdgeInLineRoute(LineID)
     /// A platform on the track network must lie within its edge, be level,
     /// and not overlap another platform on the edge; one to remove must
     /// exist (Stage S4).

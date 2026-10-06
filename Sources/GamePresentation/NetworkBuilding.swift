@@ -15,6 +15,10 @@ import GameCore
 public enum NetworkAnchor: Hashable, Sendable {
     case node(TrackNodeID)
     case point(PlanPoint)
+    /// A place in the middle of an edge: building there first splits the
+    /// edge (`GameWorld.splitTrackEdge(_:at:)`), so the new track leaves
+    /// it as a turnout.
+    case track(NetworkEdgePoint)
 }
 
 /// What a tap does with the network tool.
@@ -214,6 +218,23 @@ extension GameWorld {
         switch anchor {
         case .node(let id): network.node(id)?.position
         case .point(let point): WorldCoordinate(x: point.x, y: point.y, z: height)
+        case .track(let point):
+            trackGeometry(of: point.edge).flatMap { geometry in
+                (0...geometry.length).contains(point.distance) ? geometry.location(at: point.distance).position : nil
+            }
         }
+    }
+
+    /// Of the two ways along the edge at `point`, the one pointing most
+    /// nearly at `target` if it turns at most 90° from it: the way a turnout
+    /// there leaves the track.
+    func joiningDirection(at point: NetworkEdgePoint, toward target: PlanPoint) -> PlanVector? {
+        guard let geometry = trackGeometry(of: point.edge), (0...geometry.length).contains(point.distance) else { return nil }
+        let location = geometry.location(at: point.distance)
+        let chord = PlanVector(dx: target.x - location.position.x, dy: target.y - location.position.y)
+        let along = location.direction
+        let forward = along.dx * chord.dx + along.dy * chord.dy >= 0
+        let direction = forward ? along : along.reversed
+        return NetworkBuilding.turnsAtMostRightAngle(direction, toward: chord) ? direction : nil
     }
 }

@@ -67,6 +67,15 @@ struct NetworkControls: View {
             .toggleStyle(.button)
             .buttonStyle(.bordered)
             .font(.footnote)
+            // Two places on two tracks make a crossover: one diagonal, or
+            // an X with the mirrored one crossing it.
+            if session.networkPicksCrossover {
+                Toggle("X crossover", isOn: $session.networkBuildsScissors)
+                    .toggleStyle(.button)
+                    .buttonStyle(.bordered)
+                    .font(.footnote)
+                    .accessibilityIdentifier("network.scissors")
+            }
             if let preview = session.networkPreview {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {

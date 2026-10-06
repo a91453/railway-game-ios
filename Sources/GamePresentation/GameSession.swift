@@ -123,6 +123,10 @@ public final class GameSession {
     /// Whether the next stretch continues the track at its ends smoothly
     /// (the default), or runs straight.
     public var networkFollowsTrack = true
+    /// Whether a stretch between two tracks is built as an X (scissors)
+    /// crossover, with the mirrored diagonal crossing it at a diamond in
+    /// the middle (see ``networkPicksCrossover``), rather than one.
+    public var networkBuildsScissors = false
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends.
     public var networkEasesGrade = false
@@ -967,17 +971,47 @@ public final class GameSession {
     /// Assigns the selected train to a service of the selected line (its
     /// own for `pattern` `nil`), which sends it out from the service's first
     /// stop once it waits there.
+    ///
+    /// A new line runs no trains at any level and has no target headways,
+    /// so a train assigned to it would never leave: when the service runs
+    /// none, it is set to run its assigned trains at every level (a ring's
+    /// count made even, up, as each way needs one).
     public func assignSelectedTrainToSelectedLine(pattern: Int? = nil) {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             var draft = world
             try draft.assignTrain(train.id, to: line.id, pattern: pattern)
             if train.position != nil { try draft.useTrainPerformanceForMovement(train.id) }
+            var started = 0
+            if let assigned = draft.line(id: line.id) {
+                let service = pattern.map { $0 + 1 } ?? 0
+                let counts = service == 0 ? assigned.trainsInService : assigned.patterns[service - 1].trainsInService
+                let targets = service == 0 ? assigned.targetHeadways : assigned.patterns[service - 1].targetHeadways
+                if counts == .none, targets == TargetHeadways() {
+                    let trains = (service == 0 ? assigned.trains : assigned.patterns[service - 1].trains).count
+                    started = assigned.isRing ? max(2, trains + trains % 2) : max(1, trains)
+                    try draft.setLineTrainsInService(line.id, to: TrainsInService(peak: started, offPeak: started, low: started), pattern: pattern)
+                }
+            }
             world = draft
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name
-            return language.text(
+            let text = language.text(
                 "\(train.name) now runs for \(service). It leaves once it waits at the first stop.",
                 "\(train.name) 現在為 \(service) 服務。它在第一站等候後就會出發。"
+            )
+            // A line outside its window sends nobody out until it opens.
+            let opens: String
+            if let assigned = world.line(id: line.id), world.serviceLevel(of: line.id, at: world.clock.now) == nil,
+               case .hours(let open, _) = assigned.window {
+                let time = clockText(minuteOfDay: open % 1_440)
+                opens = language.text(" \(line.name) opens at \(time).", "\(line.name) \(time) 開始營運。")
+            } else {
+                opens = ""
+            }
+            guard started > 0 else { return text + opens }
+            return text + opens + language.text(
+                " \(service) ran no trains, so it now runs \(started) at every level.",
+                "\(service) 原本沒有上線列車，現在各時段上線 \(started) 列。"
             )
         }
     }

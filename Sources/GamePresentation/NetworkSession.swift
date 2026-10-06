@@ -33,8 +33,10 @@ extension GameSession {
     /// ``NetworkBuilding/touchRadius``). Never changes the world.
     ///
     /// Building, the first tap picks where the track starts and later taps
-    /// where it ends: the nearest node within reach, or a new point there.
-    /// Tapping the start again forgets both. Placing a platform or
+    /// where it ends: the nearest node within reach; else the nearest place
+    /// on the track within reach, for a turnout there (a place closer than
+    /// ``NetworkBuilding/minimumSpacing`` to an end of its edge is that end's
+    /// node); else a new point there. Tapping the start again forgets both. Placing a platform or
     /// removing, a tap picks the nearest place on an edge within reach.
     /// Taps outside the world's bounds are ignored.
     public func tapNetwork(at point: PlanPoint, reach: Int64) {
@@ -42,7 +44,9 @@ extension GameSession {
         message = nil
         switch networkMode {
         case .build:
-            let anchor = world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) } ?? .point(point)
+            let anchor = world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
+                ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
+                ?? .point(point)
             if networkStart == nil {
                 networkStart = anchor
             } else if anchor == networkStart {
@@ -68,11 +72,21 @@ extension GameSession {
 
     // MARK: - Building
 
+    /// A turnout at `point`, or the node at the end of its edge when it is
+    /// closer than ``NetworkBuilding/minimumSpacing`` to it.
+    private func trackAnchor(_ point: NetworkEdgePoint) -> NetworkAnchor {
+        guard let edge = world.network.edge(point.edge) else { return .track(point) }
+        if point.distance < NetworkBuilding.minimumSpacing { return .node(edge.from) }
+        if edge.length - point.distance < NetworkBuilding.minimumSpacing { return .node(edge.to) }
+        return .track(point)
+    }
+
     /// The stretch of track the picked ends would make, and whether
     /// GameCore would build it and for how much; `nil` until both ends are
     /// picked (or in another mode).
     public var networkPreview: NetworkPreview? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
+        if let scissors = scissorsPreview() { return scissors.preview }
         return preview(from: start, to: end)
     }
 
@@ -82,6 +96,10 @@ extension GameSession {
     /// nothing. The end then becomes the start of the next stretch, so taps
     /// lay a line piece by piece, each continuing the last.
     public func buildNetworkTrack() {
+        if scissorsPlan() != nil {
+            buildNetworkScissors()
+            return
+        }
         guard let start = networkStart, let end = networkEnd else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Tap where the track starts, then where it ends.",
@@ -159,7 +177,7 @@ extension GameSession {
         guard let from = world.position(of: start, height: networkHeight), let to = world.position(of: end, height: networkHeight) else {
             return .failure(.missingNode)
         }
-        let isNewPoint: (NetworkAnchor) -> Bool = { if case .point = $0 { true } else { false } }
+        let isNewPoint: (NetworkAnchor) -> Bool = { if case .node = $0 { false } else { true } }
         if isNewPoint(start) || isNewPoint(end) {
             let dx = to.x - from.x, dy = to.y - from.y
             guard dx * dx + dy * dy >= NetworkBuilding.minimumSpacing * NetworkBuilding.minimumSpacing else { return .failure(.tooClose) }
@@ -171,8 +189,16 @@ extension GameSession {
                 guard let direction = world.joiningDirection(at: id, toward: to.plan) else { return .failure(.tooSharp) }
                 startTangent = direction
             }
+            if case .track(let point) = start {
+                guard let direction = world.joiningDirection(at: point, toward: to.plan) else { return .failure(.tooSharp) }
+                startTangent = direction
+            }
             if case .node(let id) = end, !world.joiningDirections(at: id).isEmpty {
                 guard let direction = world.joiningDirection(at: id, toward: from.plan) else { return .failure(.tooSharp) }
+                endTangent = direction
+            }
+            if case .track(let point) = end {
+                guard let direction = world.joiningDirection(at: point, toward: from.plan) else { return .failure(.tooSharp) }
                 endTangent = direction
             }
         }
@@ -314,7 +340,9 @@ extension GameSession {
     // MARK: - Trains
 
     /// Puts `train` on a platform of `station` on the track network: the
-    /// first, along the track, as long as the train, or else the longest.
+    /// first, along the track, as long as the train, or else the longest;
+    /// if GameCore refuses it there (another train holds that track), the
+    /// next one in that order.
     /// It faces the way along the platform nearer ``placementHeading`` and
     /// stands with its head at the platform's far end, through
     /// `GameWorld.placeTrain(_:at:)` and, to stand there rather than run on
@@ -323,34 +351,46 @@ extension GameSession {
     /// track behind the platform takes the rest of the train.
     func place(_ train: Train, atPlatformOf station: Station) {
         let platforms = world.trackPlatforms(of: station.id)
-        guard let platform = platforms.first(where: { $0.length >= train.length }) ?? platforms.max(by: { $0.length < $1.length }),
-              let edge = world.network.edge(platform.edge),
-              let geometry = world.trackGeometry(of: platform.edge)
-        else { return }
+        // Those as long as the train in track order, then the rest, longest
+        // first.
+        let ordered = platforms.filter { $0.length >= train.length }
+            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
+        guard !ordered.isEmpty else { return }
         let heading = placementHeading
-        let way = geometry.location(at: (platform.start + platform.end) / 2).direction
-        let forward: Bool
-        switch heading {
-        case .north: forward = way.dy <= 0
-        case .east: forward = way.dx >= 0
-        case .south: forward = way.dy >= 0
-        case .west: forward = way.dx <= 0
-        }
-        let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
-        // The offset is measured the way the train faces.
-        let offset = forward ? platform.end : edge.length - platform.start
         perform { world throws(GameError) in
-            var draft = world
-            try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
-            if offset < edge.length {
-                try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
+            var refusal: GameError?
+            for platform in ordered {
+                guard let edge = world.network.edge(platform.edge),
+                      let geometry = world.trackGeometry(of: platform.edge) else { continue }
+                let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+                let forward: Bool
+                switch heading {
+                case .north: forward = way.dy <= 0
+                case .east: forward = way.dx >= 0
+                case .south: forward = way.dy >= 0
+                case .west: forward = way.dx <= 0
+                }
+                let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
+                // The offset is measured the way the train faces.
+                let offset = forward ? platform.end : edge.length - platform.start
+                var draft = world
+                do throws(GameError) {
+                    try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
+                    if offset < edge.length {
+                        try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
+                    }
+                    try draft.useTrainPerformanceForMovement(train.id)
+                } catch {
+                    refusal = refusal ?? error
+                    continue
+                }
+                world = draft
+                return language.text(
+                    "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
+                    "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
+                )
             }
-            try draft.useTrainPerformanceForMovement(train.id)
-            world = draft
-            return language.text(
-                "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
-                "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
-            )
+            throw refusal ?? .unknownStation(station.id)
         }
     }
 
@@ -434,8 +474,14 @@ struct EdgePlan {
 
     private func node(for anchor: NetworkAnchor, at position: WorldCoordinate, in world: inout GameWorld) throws(GameError) -> TrackNodeID {
         switch anchor {
-        case .node(let id): id
-        case .point: try world.buildTrackNode(at: position)
+        case .node(let id): return id
+        case .point: return try world.buildTrackNode(at: position)
+        case .track(let point):
+            // The other end may have split the same edge: find the place
+            // again where it lies now.
+            let now = world.network.edge(point.edge) != nil ? point : world.trackEdgePoint(near: position.plan, within: 16)
+            guard let now else { throw .unknownTrackEdge(point.edge) }
+            return try world.splitTrackEdge(now.edge, at: now.distance)
         }
     }
 }
@@ -471,8 +517,8 @@ extension GameSession {
         case .build:
             guard let start = networkStart else {
                 return language.text(
-                    "Tap where the track starts: a node, or anywhere for a new one.",
-                    "請點軌道的起點：既有的節點，或任何地方建立新節點。"
+                    "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.",
+                    "請點軌道的起點：既有的節點、軌道上（在那裡設道岔），或任何地方建立新節點。"
                 )
             }
             guard let end = networkEnd else {
@@ -505,6 +551,7 @@ extension NetworkAnchor {
         switch self {
         case .node(let id): id.displayText(in: language)
         case .point: language.text("a new node", "新節點")
+        case .track(let point): language.text("a turnout on \(point.edge.displayText(in: language).lowercased())", "\(point.edge.displayText(in: language)) 上的新道岔")
         }
     }
 }
@@ -573,6 +620,9 @@ public struct NetworkOverlay: Hashable, Sendable {
     public var anchors: [WorldCoordinate] = []
     /// The centre line of the next stretch.
     public var preview: [WorldCoordinate] = []
+    /// The mirrored diagonal of an X crossover (see
+    /// ``GameSession/networkBuildsScissors``), drawn like ``preview``.
+    public var crossing: [WorldCoordinate] = []
     /// Whether GameCore would build it.
     public var previewIsBuildable = false
     /// The centre line of what the platform or remove mode picked.
@@ -590,7 +640,11 @@ extension GameSession {
         switch networkMode {
         case .build:
             overlay.anchors = [networkStart, networkEnd].compactMap { $0.flatMap { world.position(of: $0, height: networkHeight) } }
-            if let preview = networkPreview {
+            if let scissors = scissorsPreview() {
+                overlay.preview = scissors.preview.points
+                overlay.crossing = scissors.crossing
+                overlay.previewIsBuildable = scissors.preview.problem == nil
+            } else if let preview = networkPreview {
                 overlay.preview = preview.points
                 overlay.previewIsBuildable = preview.problem == nil
             }

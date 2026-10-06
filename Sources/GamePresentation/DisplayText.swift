@@ -336,6 +336,11 @@ extension GameError {
                 "Without that track, \(first.displayText(in: language).lowercased()) and \(second.displayText(in: language).lowercased()) would run less than 4 m apart with no junction near. Remove one of them first.",
                 "拆掉這段軌道之後，\(first.displayText(in: language))與\(second.displayText(in: language))之間不到 4 公尺，附近又沒有相接的交會點。請先拆掉其中一條。"
             )
+        case .trackEdgeInLineRoute(let line):
+            language.text(
+                "Line #\(line.rawValue)'s chosen path runs along that track. Clear the line's path first.",
+                "路線 #\(line.rawValue) 指定的股道經過這段軌道。請先清除該路線的指定股道。"
+            )
         case .trackEdgeHasPlatform(let edge):
             language.text(
                 "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first.",

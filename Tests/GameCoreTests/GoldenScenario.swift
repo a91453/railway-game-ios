@@ -842,6 +842,8 @@ extension StepOutcome: Codable {
             self = .rejected(.tracksWouldBeTooClose(.edge(ids[0]), .edge(ids[1])))
         case "trackEdgeHasPlatform":
             self = try .rejected(.trackEdgeHasPlatform(.edge(container.decode(Int.self, forKey: .edge))))
+        case "trackEdgeInLineRoute":
+            self = try .rejected(.trackEdgeInLineRoute(container.decodeLine(forKey: .line)))
         case "invalidPlatform":
             self = .rejected(.invalidPlatform)
         case "trackReserved":
@@ -985,6 +987,9 @@ extension StepOutcome: Codable {
         case .rejected(.trackEdgeHasPlatform(let edge)):
             try container.encode("trackEdgeHasPlatform", forKey: .result)
             try encodeEdge(edge)
+        case .rejected(.trackEdgeInLineRoute(let id)):
+            try container.encode("trackEdgeInLineRoute", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
         case .rejected(.invalidPlatform):
             try container.encode("invalidPlatform", forKey: .result)
         case .rejected(.trackReserved(let id)):
