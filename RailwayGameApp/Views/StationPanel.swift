@@ -79,7 +79,7 @@ struct StationPanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Label {
-                            Text(session.language.text("800m Catchment Population", "800m 車站腹地人口"))
+                            Text(verbatim: session.language.text("800m Catchment Population", "800m 車站腹地人口"))
                                 .font(.subheadline.weight(.semibold))
                         } icon: {
                             Image(systemName: "person.3.sequence.fill")
@@ -93,7 +93,7 @@ struct StationPanel: View {
                             .foregroundStyle(Palette.metroBlue)
                     }
 
-                    Text(session.language.text(
+                    Text(verbatim: session.language.text(
                         "~10 min walking radius · Generates ~\(estimatedTrips.formatted()) trips/day (40 trips / 100 residents)",
                         "約 10 分鐘步行服務範圍 · 衍生約 \(estimatedTrips.formatted()) 旅次/日（每百人約 40 旅次）"
                     ))
@@ -102,7 +102,7 @@ struct StationPanel: View {
                 }
                 .padding(.vertical, 2)
             } header: {
-                Text(session.language.text("Catchment & Demographics", "站區腹地與人口"))
+                Text(verbatim: session.language.text("Catchment & Demographics", "站區腹地與人口"))
             }
         }
     }

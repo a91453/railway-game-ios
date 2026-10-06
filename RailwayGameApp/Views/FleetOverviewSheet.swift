@@ -21,7 +21,7 @@ struct FleetOverviewSheet: View {
 
                 Section {
                     if session.world.trains.isEmpty {
-                        Text("No trains in fleet yet. Purchase a train to begin operations.")
+                        Text(verbatim: session.language.text("No trains in fleet yet. Purchase a train to begin operations.", "車隊中尚無列車。購買列車後即可開始營運。"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
@@ -30,15 +30,17 @@ struct FleetOverviewSheet: View {
                         }
                     }
                 } header: {
-                    Text(session.language.text("Trains (\(session.world.trains.count))", "列車清單（\(session.world.trains.count)）"))
+                    Text(verbatim: session.language.text("Trains (\(session.world.trains.count))", "列車清單（\(session.world.trains.count)）"))
                 }
             }
-            .navigationTitle(session.language.text("Fleet Overview", "車隊總覽"))
+            .navigationTitle(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(session.language.text("Done", "完成")) {
+                    Button {
                         dismiss()
+                    } label: {
+                        Text(verbatim: session.language.text("Done", "完成"))
                     }
                     .accessibilityIdentifier("fleet.done")
                 }
@@ -62,10 +64,10 @@ struct FleetOverviewSheet: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(session.language.text("Fleet Size", "車隊規模"))
+                    Text(verbatim: session.language.text("Fleet Size", "車隊規模"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text("\(trains.count) \(session.language.text("trains", "列"))")
+                    Text(verbatim: "\(trains.count) \(session.language.text("trains", "列"))")
                         .font(.headline.weight(.bold).monospacedDigit())
                 }
 
@@ -73,10 +75,10 @@ struct FleetOverviewSheet: View {
                     .frame(height: 28)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(session.language.text("In Service", "運轉中"))
+                    Text(verbatim: session.language.text("In Service", "運轉中"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text("\(placedCount) \(session.language.text("trains", "列"))")
+                    Text(verbatim: "\(placedCount) \(session.language.text("trains", "列"))")
                         .font(.headline.weight(.bold).monospacedDigit())
                         .foregroundStyle(Palette.metroBlue)
                 }
@@ -85,10 +87,10 @@ struct FleetOverviewSheet: View {
                     .frame(height: 28)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(session.language.text("Avg Load", "平均滿載率"))
+                    Text(verbatim: session.language.text("Avg Load", "平均滿載率"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text("\(fleetLoadPercent)%")
+                    Text(verbatim: "\(fleetLoadPercent)%")
                         .font(.headline.weight(.bold).monospacedDigit())
                         .foregroundStyle(fleetLoadPercent >= 90 ? Color.red : (fleetLoadPercent >= 70 ? Palette.metroAmber : Color.green))
                 }
@@ -116,11 +118,11 @@ struct FleetOverviewSheet: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(isSelected ? Palette.metroBlue : .secondary)
 
-                Text(train.name)
+                Text(verbatim: train.name)
                     .font(.subheadline.weight(.bold))
                     .monospacedDigit()
 
-                Text(train.carsText(in: language))
+                Text(verbatim: train.carsText(in: language))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
@@ -138,7 +140,7 @@ struct FleetOverviewSheet: View {
                         HStack(spacing: 4) {
                             Image(systemName: isFollowing ? "location.fill" : "location")
                                 .font(.caption2.weight(.bold))
-                            Text(isFollowing ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
+                            Text(verbatim: isFollowing ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
                                 .font(.caption2.weight(.bold))
                         }
                         .padding(.horizontal, 8)
@@ -156,25 +158,25 @@ struct FleetOverviewSheet: View {
                 HStack(spacing: 6) {
                     if let service = session.world.trainServiceStatus(of: train.id, in: language) {
                         if let name = service.serviceName {
-                            Text(name)
+                            Text(verbatim: name)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.metroBlue)
                         }
-                        Text(service.stopText)
+                        Text(verbatim: service.stopText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
                         if let punctuality = service.punctuality {
-                            Text(punctuality.text(in: language))
+                            Text(verbatim: punctuality.text(in: language))
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(punctuality == .onTime ? Color.green : Color.orange)
                         }
                     } else if let stop = session.world.stationStopText(of: train.id, in: language) {
-                        Text(stop)
+                        Text(verbatim: stop)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text(train.pathText(in: language))
+                        Text(verbatim: train.pathText(in: language))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -184,7 +186,7 @@ struct FleetOverviewSheet: View {
                     TrainLoadBar(load: load, language: language)
                 }
             } else {
-                Text(language.text("In depot / off track", "未上軌（車庫待命中）"))
+                Text(verbatim: language.text("In depot / off track", "未上軌（車庫待命中）"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

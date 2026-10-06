@@ -124,7 +124,7 @@ struct TrainControls: View {
                             .strokeBorder(Palette.cardBorder, lineWidth: 1)
                     )
             }
-            .accessibilityLabel(session.language.text("Fleet Overview", "車隊總覽"))
+            .accessibilityLabel(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .accessibilityIdentifier("train.fleetOverview")
 
             Spacer(minLength: 4)
@@ -167,7 +167,7 @@ struct TrainControls: View {
                         HStack(spacing: 4) {
                             Image(systemName: session.isFollowingTrain ? "location.fill" : "location")
                                 .font(.caption2.weight(.bold))
-                            Text(session.isFollowingTrain ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
+                            Text(verbatim: session.isFollowingTrain ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
                                 .font(.caption2.weight(.bold))
                         }
                         .padding(.horizontal, 8)

@@ -13,7 +13,7 @@ struct PopulationLegendView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Label {
-                    Text(titleText)
+                    Text(verbatim: titleText)
                         .font(.caption2.weight(.bold))
                 } icon: {
                     Image(systemName: "person.3.fill")
@@ -32,12 +32,12 @@ struct PopulationLegendView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Close population legend")
+                    .accessibilityLabel(Text(verbatim: language.text("Close population legend", "關閉人口圖例")))
                 }
             }
 
             HStack(spacing: 6) {
-                Text("0")
+                Text(verbatim: "0")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
 
@@ -53,7 +53,7 @@ struct PopulationLegendView: View {
                         .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
                 )
 
-                Text("10000+")
+                Text(verbatim: "10000+")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -67,7 +67,7 @@ struct PopulationLegendView: View {
         )
         .frame(maxWidth: 240)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(titleText)
+        .accessibilityLabel(Text(verbatim: titleText))
     }
 
     private var titleText: String {

@@ -17,24 +17,24 @@ struct FollowBar: View {
                 .fill(Palette.metroBlue)
                 .frame(width: 8, height: 8)
 
-            Text(train.name)
+            Text(verbatim: train.name)
                 .font(.subheadline.weight(.bold))
                 .monospacedDigit()
 
             if let service = session.world.trainServiceStatus(of: train.id, in: session.language) {
-                Text(service.serviceName ?? service.stopText)
+                Text(verbatim: service.serviceName ?? service.stopText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else if let stop = session.world.stationStopText(of: train.id, in: session.language) {
-                Text(stop)
+                Text(verbatim: stop)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
             if let load = session.world.trainLoadInfo(of: train.id) {
-                Text("\(load.percentage)%")
+                Text(verbatim: "\(load.percentage)%")
                     .font(.caption2.weight(.bold).monospacedDigit())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -51,7 +51,7 @@ struct FollowBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "xmark")
                         .font(.caption2.weight(.bold))
-                    Text(unfollowText)
+                    Text(verbatim: unfollowText)
                         .font(.caption.weight(.bold))
                 }
                 .padding(.horizontal, 8)
@@ -61,7 +61,7 @@ struct FollowBar: View {
                 .clipShape(Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(unfollowText)
+            .accessibilityLabel(Text(verbatim: unfollowText))
             .accessibilityIdentifier("train.unfollow")
         }
         .padding(.horizontal, 12)

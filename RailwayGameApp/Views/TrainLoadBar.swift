@@ -14,7 +14,7 @@ struct TrainLoadBar: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Label {
-                    Text(language.text("Load Factor", "載客率"))
+                    Text(verbatim: language.text("Load Factor", "載客率"))
                         .font(.caption.weight(.semibold))
                 } icon: {
                     Image(systemName: "person.2.fill")
@@ -24,7 +24,7 @@ struct TrainLoadBar: View {
 
                 Spacer()
 
-                Text("\(load.passengerCount) / \(load.capacity) · \(load.percentage)%")
+                Text(verbatim: "\(load.passengerCount) / \(load.capacity) · \(load.percentage)%")
                     .font(.caption.weight(.bold).monospacedDigit())
                     .foregroundStyle(barColor)
             }
@@ -50,14 +50,14 @@ struct TrainLoadBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                    Text(language.text("Over capacity", "超載運行中"))
+                    Text(verbatim: language.text("Over capacity", "超載運行中"))
                         .font(.caption2.weight(.bold))
                 }
                 .foregroundStyle(Color.red)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(language.text("Load Factor", "載客率")): \(load.percentage)% (\(load.passengerCount) / \(load.capacity))")
+        .accessibilityLabel(Text(verbatim: "\(language.text("Load Factor", "載客率")): \(load.percentage)% (\(load.passengerCount) / \(load.capacity))"))
     }
 
     private var barColor: Color {
