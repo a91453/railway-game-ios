@@ -1,6 +1,6 @@
 import Foundation
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 final class NearestStationNamingTests: XCTestCase {

@@ -884,7 +884,7 @@ public final class GameSession {
     /// number upward that no existing station uses. On a real-world map,
     /// suggests the nearest real railway station's name if within range
     /// and not yet taken.
-    static func suggestedStationName(
+    public static func suggestedStationName(
         for world: GameWorld,
         at location: PlanPoint? = nil,
         in language: DisplayLanguage,
