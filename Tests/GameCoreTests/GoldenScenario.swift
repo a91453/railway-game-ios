@@ -825,6 +825,10 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidStationDemand)
         case "invalidFareRules":
             self = .rejected(.invalidFareRules)
+        case "invalidLoanAmount":
+            self = .rejected(.invalidLoanAmount)
+        case "loanNeedsManagement":
+            self = .rejected(.loanNeedsManagement)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -962,6 +966,10 @@ extension StepOutcome: Codable {
             try container.encode("invalidStationDemand", forKey: .result)
         case .rejected(.invalidFareRules):
             try container.encode("invalidFareRules", forKey: .result)
+        case .rejected(.invalidLoanAmount):
+            try container.encode("invalidLoanAmount", forKey: .result)
+        case .rejected(.loanNeedsManagement):
+            try container.encode("loanNeedsManagement", forKey: .result)
         }
         // Fixtures name network nodes and edges by number.
         func encodeNode(_ node: TrackNodeID) throws {

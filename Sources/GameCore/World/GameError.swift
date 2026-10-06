@@ -158,4 +158,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// distance once from 0 with only the last open-ended (G1c; see
     /// ``FareRules/isValid``).
     case invalidFareRules
+    /// A loan or repayment that is not a whole number of
+    /// ``CompanyAccounts/loanStep``s above 0, that would take the loan past
+    /// ``CompanyAccounts/maximumLoan``, or repay more than is owed
+    /// (decision 67).
+    case invalidLoanAmount
+    /// Loans are a managed company's (decision 67): free play has none.
+    case loanNeedsManagement
 }

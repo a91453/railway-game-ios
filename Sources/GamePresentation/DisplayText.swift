@@ -367,6 +367,13 @@ extension GameError {
                 "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end.",
                 "票價須為非負金額；階梯票價的區間須從 0 公里開始連續銜接，最後一個區間的結束距離須留空。"
             )
+        case .invalidLoanAmount:
+            language.text(
+                "Loans are borrowed and repaid \(CompanyAccounts.loanStep.moneyText) at a time, up to \(CompanyAccounts.maximumLoan.moneyText) in all, and no more than is owed.",
+                "貸款以每次 \(CompanyAccounts.loanStep.moneyText) 借入與償還，總額最多 \(CompanyAccounts.maximumLoan.moneyText)，償還不能超過欠款。"
+            )
+        case .loanNeedsManagement:
+            language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
         }
     }
 }

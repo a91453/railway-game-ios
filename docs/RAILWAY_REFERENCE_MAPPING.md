@@ -773,3 +773,15 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`getMetroTrainOperationalCap`、`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1` | `Train.capacity` | direct：`(額定 × 11 + 5) / 10`，與 `Math.round` 對正數相同。HSR 不超載的分支本遊戲沒有高鐵模式，gap。 |
 | 同檔／`getMetroLineTrainPpc`、各城市 `*_STOCK_MODELS` | 未移植 | gap：真實車型表依城市；本遊戲沒有城市車型選擇。 |
 | 來源無車門模型（`PARAMS.BOARDING_RATE: 2` 未被使用） | `TrainType.doorsPerCar`、`Train.passengersPerSecond`、`Train.exchangeSeconds` | gap → 原生：每門每秒 2 人（決策 39），門數依車種（5／4／3／2）。 |
+
+## 營運成本與公司帳、貸款（決策 67）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`metroEconomySettleHourlyIfNeeded`（營運 `75·班次 + 42·列車公里 + 18·車站`、維修 `12·路線公里 + 9·列車公里 + 8·列車`） | `GameWorld.settleHour`（決策 36） | 已移植（G1c） |
+| 同檔／`metroEconomySettleDailyForEndedDay`（能源 `220·路線公里 + 360·列車`、人事 `620·車站 + 480·列車`） | `GameWorld.settleDay`（決策 36） | 已移植（G1c） |
+| 同檔／`estimateActionCost`、`metroPurchaseQuote`、`window.MetroEconomy` | `ConstructionCosts.newGame`（決策 46） | gap：引擎不在快照；購車價格是原生 |
+| 同檔／`summarizeFinanceForTransport` | `FinanceSummary`（+ `interestCost`、`netProfit`） | adapted：加上原生的利息與淨利 |
+| 貸款、利息、折舊：`Ci/` 與 `Railway/` 都沒有；`railway_game_reference_clean` 只有 OpenTTD 編譯核心的字串（`EXPENSES_LOAN_INT`、`max_loan`、`initial_interest`），沒有數值與可讀原始碼 | `GameWorld.borrow`、`repayLoan`、`dailyLoanInterest`、`CompanyAccounts.loan` | gap → 原生：$100,000 一步，上限 $5,000,000，年利率 5%（360 天），每日支付。折舊與資產負債表仍是 gap。 |

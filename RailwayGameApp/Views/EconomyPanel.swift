@@ -21,6 +21,7 @@ struct EconomyPanel: View {
         NavigationStack {
             Form {
                 balanceSection
+                loanSection
                 faresSection
                 lastHourSection
                 reportSection
@@ -92,6 +93,39 @@ struct EconomyPanel: View {
         }
     }
 
+    /// Decision 67: borrowing and repaying in steps, with the daily
+    /// interest. The words come from GamePresentation in the game's
+    /// language.
+    private var loanSection: some View {
+        Section {
+            Text(verbatim: accounts.loanText(in: session.language))
+                .monospacedDigit()
+                .accessibilityIdentifier("economy.loan")
+            HStack {
+                Button {
+                    session.borrowLoanStep()
+                } label: {
+                    Text(verbatim: session.language.text("Borrow \(CompanyAccounts.loanStep.moneyText)", "借入 \(CompanyAccounts.loanStep.moneyText)"))
+                }
+                .disabled(accounts.mode != .management || accounts.loan >= CompanyAccounts.maximumLoan)
+                .accessibilityIdentifier("economy.borrow")
+                Spacer()
+                Button {
+                    session.repayLoanStep()
+                } label: {
+                    Text(verbatim: session.language.text("Repay \(CompanyAccounts.loanStep.moneyText)", "償還 \(CompanyAccounts.loanStep.moneyText)"))
+                }
+                .disabled(accounts.loan == .zero)
+                .accessibilityIdentifier("economy.repay")
+            }
+            .buttonStyle(.borderless)
+        } header: {
+            Text(verbatim: session.language.text("Loan", "貸款"))
+        } footer: {
+            Text(verbatim: CompanyAccounts.loanTermsText(in: session.language))
+        }
+    }
+
     private var faresSection: some View {
         Section("Fares") {
             LabeledContent("Rules", value: accounts.effectiveFareRules.displayText(in: session.language))
@@ -143,6 +177,10 @@ struct EconomyPanel: View {
                 reportRow("Energy", report.current.energyCost, report.previous.energyCost)
                 reportRow("Staff", report.current.staffCost, report.previous.staffCost)
                 reportRow("Profit", report.current.operatingProfit, report.previous.operatingProfit)
+                if report.current.interestCost > .zero || report.previous.interestCost > .zero {
+                    verbatimRow(session.language.text("Interest", "利息"), report.current.interestCost, report.previous.interestCost)
+                    verbatimRow(session.language.text("Net profit", "淨利"), report.current.netProfit, report.previous.netProfit)
+                }
             }
             .font(.footnote)
             .monospacedDigit()
@@ -152,6 +190,14 @@ struct EconomyPanel: View {
     private func reportRow(_ title: LocalizedStringKey, _ current: Money, _ previous: Money) -> some View {
         GridRow {
             Text(title).gridColumnAlignment(.leading)
+            Text(current.moneyText)
+            Text(previous.moneyText)
+        }
+    }
+
+    private func verbatimRow(_ title: String, _ current: Money, _ previous: Money) -> some View {
+        GridRow {
+            Text(verbatim: title).gridColumnAlignment(.leading)
             Text(current.moneyText)
             Text(previous.moneyText)
         }

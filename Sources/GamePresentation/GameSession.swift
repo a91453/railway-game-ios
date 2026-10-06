@@ -545,6 +545,24 @@ public final class GameSession {
         }
     }
 
+    /// Borrows one ``CompanyAccounts/loanStep`` through
+    /// `GameWorld.borrow(_:)` (decision 67).
+    public func borrowLoanStep() {
+        perform { world throws(GameError) in
+            try world.borrow(CompanyAccounts.loanStep)
+            return language.text("Borrowed \(CompanyAccounts.loanStep.moneyText).", "借入 \(CompanyAccounts.loanStep.moneyText)。")
+        }
+    }
+
+    /// Repays one ``CompanyAccounts/loanStep`` through
+    /// `GameWorld.repayLoan(_:)` (decision 67).
+    public func repayLoanStep() {
+        perform { world throws(GameError) in
+            try world.repayLoan(CompanyAccounts.loanStep)
+            return language.text("Repaid \(CompanyAccounts.loanStep.moneyText).", "償還 \(CompanyAccounts.loanStep.moneyText)。")
+        }
+    }
+
     /// Sets the type of the selected train's cars through
     /// `GameWorld.setTrainType(_:to:)` (`nil`: the standard car): only while
     /// it is off the track.

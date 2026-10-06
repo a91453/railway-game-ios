@@ -23,6 +23,26 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from $ 0.55")
     }
 
+    /// Decision 67: the loan's words and the session's loan commands.
+    @MainActor
+    func testTheLoanIsShownAndTakenInSteps() throws {
+        XCTAssertEqual(CompanyAccounts().loanText(in: .english), "No loan")
+        XCTAssertEqual(CompanyAccounts.loanTermsText(in: .english), "$ 100,000 at a time, up to $ 5,000,000, at 5% a year, paid daily")
+        let session = GameSession(world: GameWorld.newGame())
+        let balance = session.world.economy.balance
+        session.borrowLoanStep()
+        XCTAssertEqual(session.world.accounts.loan, CompanyAccounts.loanStep)
+        XCTAssertEqual(session.world.economy.balance, balance + CompanyAccounts.loanStep)
+        XCTAssertEqual(session.message?.text, "Borrowed $ 100,000.")
+        XCTAssertEqual(session.world.accounts.loanText(in: .english), "Loan $ 100,000 · $ 14 a day in interest")
+        XCTAssertEqual(session.world.accounts.loanText(in: .traditionalChinese), "貸款 $ 100,000 · 每日利息 $ 14")
+        session.repayLoanStep()
+        XCTAssertEqual(session.world.accounts.loan, .zero)
+        session.repayLoanStep()
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(LedgerEntry.Kind.dailyInterest.displayName(in: .traditionalChinese), "貸款利息（日結）")
+    }
+
     func testLedgerRowsAndTheLastHourAreReadFromTheAccounts() throws {
         var world = try makeLine()
         world.setEconomyMode(.management)
