@@ -20,7 +20,28 @@ struct MapView: View {
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
-    @AppStorage("mapShowsPopulationHeatmap") private var showsPopulationHeatmap = false
+    /// Which population and travel layer is shown (``PopTravelMode``'s raw
+    /// value, empty for none); a view preference, as the other layers.
+    @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// The layer's opacity once the player has moved its slider (the
+    /// reference's `_popTravelOpacityUserSet`); until then each layer's own
+    /// (``PopTravel/baseOpacity(for:compactWidth:)``).
+    @State private var popTravelOpacity: Double?
+    /// The timeline's hour, and whether it plays (view state, as the
+    /// reference's `G.popTravelHour` and `G.popTravelPlaying`).
+    @State private var popTravelHour = PopTravel.defaultHour
+    @State private var popTravelPlay: Task<Void, Never>?
+    /// The population grid laid out on this map, made once for a grid and
+    /// a map (``PopulationHeatmap``), and a number that changes with it.
+    @State private var heatmap: PopulationHeatmap?
+    @State private var heatmapVersion = 0
+    /// The travel demand of the world's stations, worked out when their
+    /// demand or the lines change, only while a travel layer is shown.
+    @State private var travelDemand = TravelDemandMap(trips: [:])
+    /// The population tooltip of the last tapped cell, and where it was
+    /// tapped (`pop-grid-tooltip`).
+    @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var showsDataSources = false
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
@@ -36,7 +57,7 @@ struct MapView: View {
                 showsStationNames: showsStationNames,
                 showsWaitingCounts: showsWaitingCounts,
                 showsCatchmentRings: showsCatchmentRings,
-                showsPopulationHeatmap: showsPopulationHeatmap
+                popTravelMode: PopTravelMode(rawValue: popTravelModeName)
             )
         }
         // The binding below sets this from a non-mutating context; the
@@ -45,7 +66,7 @@ struct MapView: View {
             showsStationNames = newValue.showsStationNames
             showsWaitingCounts = newValue.showsWaitingCounts
             showsCatchmentRings = newValue.showsCatchmentRings
-            showsPopulationHeatmap = newValue.showsPopulationHeatmap
+            popTravelModeName = newValue.popTravelMode?.rawValue ?? ""
         }
     }
 
@@ -67,28 +88,39 @@ struct MapView: View {
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
             VStack(spacing: 0) {
-                MapCanvas(
-                    world: session.world,
-                    selectedTrainID: session.selectedTrainID,
-                    selectedStationID: session.selectedStation?.id,
-                    network: session.networkOverlay,
-                    traffic: traffic,
-                    camera: projection,
-                    edges: edges,
-                    drawsLand: realWorld == nil,
-                    layers: mapLayers,
-                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
-                    population: session.population,
-                    realWorld: realWorld
-                )
-                .equatable()
+                ZStack {
+                    // The land and the population and travel layer: redrawn
+                    // only when the camera or the layer changes, never for
+                    // a moving train.
+                    MapBaseCanvas(
+                        bounds: bounds,
+                        drawsLand: realWorld == nil,
+                        layer: popTravelLayer(realWorld: realWorld),
+                        camera: projection
+                    )
+                    .equatable()
+                    MapCanvas(
+                        world: session.world,
+                        selectedTrainID: session.selectedTrainID,
+                        selectedStationID: session.selectedStation?.id,
+                        network: session.networkOverlay,
+                        traffic: traffic,
+                        camera: projection,
+                        edges: edges,
+                        layers: mapLayers,
+                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world)
+                    )
+                    .equatable()
+                }
                 .overlay {
                     MapGestures(camera: projection, onCameraChange: { moved in
                         camera = moved
+                        cellTooltip = nil
                         session.mapDidMove()
                     }) { location in
                         let point = projection.planPoint(at: location)
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                        showCellTooltip(at: location, projection: projection)
                         if session.tool == .network {
                             session.tapNetwork(at: point, reach: reach)
                         } else {
@@ -96,6 +128,13 @@ struct MapView: View {
                         }
                     }
                     .accessibilityHidden(true)
+                }
+                .overlay(alignment: .topLeading) {
+                    if let cellTooltip {
+                        PopulationCellTooltip(info: cellTooltip.info, language: session.language)
+                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - 220)), y: max(8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .allowsHitTesting(false)
+                    }
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(bounds.mapLabel(in: session.language))
@@ -129,9 +168,18 @@ struct MapView: View {
                 }
                 .overlay(alignment: .bottomTrailing) {
                     VStack(alignment: .trailing, spacing: 8) {
-                        if mapLayers.showsPopulationHeatmap {
-                            PopulationLegendView(language: session.language) {
-                                showsPopulationHeatmap = false
+                        if let mode = mapLayers.popTravelMode {
+                            PopulationLegendView(
+                                mode: mode,
+                                language: session.language,
+                                opacity: opacityBinding(for: mode),
+                                hour: $popTravelHour,
+                                isPlaying: popTravelPlay != nil,
+                                onTogglePlay: togglePopTravelPlay
+                            ) {
+                                stopPopTravelPlay()
+                                cellTooltip = nil
+                                popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
                         }
@@ -150,7 +198,7 @@ struct MapView: View {
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
-                .animation(.easeInOut(duration: 0.2), value: mapLayers.showsPopulationHeatmap)
+                .animation(.easeInOut(duration: 0.2), value: mapLayers.popTravelMode)
                 .frame(height: viewport.height)
                 if strip > 0 {
                     // Nothing of the game over the strip: Apple's map shows
@@ -208,6 +256,27 @@ struct MapView: View {
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             traffic = session.world.trafficOverlay()
         }
+        .onChange(of: HeatmapKey(total: session.population?.total, realWorld: RealWorldFrame(world: session.world)), initial: true) { _, key in
+            // The grid is laid out once for a map, not on every draw.
+            if let population = session.population, let frame = key.realWorld {
+                heatmap = PopulationHeatmap(grid: population, frame: frame)
+            } else {
+                heatmap = nil
+            }
+            heatmapVersion &+= 1
+        }
+        .onChange(of: TravelDemandKey(world: session.world, isShown: mapLayers.popTravelMode?.usesHour == true), initial: true) { _, key in
+            if key.isShown {
+                travelDemand = session.world.travelDemandMap()
+            }
+        }
+        .onChange(of: mapLayers.popTravelMode) { _, mode in
+            cellTooltip = nil
+            if mode?.usesHour != true { stopPopTravelPlay() }
+        }
+        .onDisappear {
+            stopPopTravelPlay()
+        }
         .onChange(of: session.world.network, initial: true) { _, network in
             // Edges are immutable and IDs are never reused. Keep their
             // sampled geometry across ticks, pans and zooms; discard removals.
@@ -217,6 +286,74 @@ struct MapView: View {
             }
             edges = next
         }
+    }
+
+    /// What the base canvas draws of the population and travel layer, or
+    /// `nil` for nothing.
+    private func popTravelLayer(realWorld: RealWorldFrame?) -> PopTravelLayer? {
+        guard let mode = mapLayers.popTravelMode else { return nil }
+        let alpha = opacity(for: mode)
+        switch mode {
+        case .population:
+            guard let heatmap, realWorld != nil else { return nil }
+            return PopTravelLayer(content: .population(heatmap), key: .population(version: heatmapVersion), opacity: alpha)
+        case .travel, .movement:
+            return PopTravelLayer(
+                content: .travel(travelDemand.tiles(for: mode, at: popTravelHour)),
+                key: .travel(mode: mode, hour: popTravelHour, demand: travelDemand),
+                opacity: alpha
+            )
+        }
+    }
+
+    /// The layer's opacity: the player's, or the layer's own until set
+    /// (narrow screens, the reference's `innerWidth <= 768`, are compact).
+    private func opacity(for mode: PopTravelMode) -> Double {
+        popTravelOpacity ?? PopTravel.baseOpacity(for: mode, compactWidth: sizeClass == .compact)
+    }
+
+    private func opacityBinding(for mode: PopTravelMode) -> Binding<Double> {
+        Binding(
+            get: { opacity(for: mode) },
+            set: { popTravelOpacity = PopTravel.clampedOpacity($0) }
+        )
+    }
+
+    /// Play: the next hour every 1.2 s, back to 0 after 23
+    /// (`startPopTravelPlay`); played on population, it shows travel
+    /// demand, as the reference switches to its travel tab.
+    private func togglePopTravelPlay() {
+        if popTravelPlay != nil {
+            stopPopTravelPlay()
+            return
+        }
+        if mapLayers.popTravelMode == .population || mapLayers.popTravelMode == nil {
+            popTravelModeName = PopTravelMode.travel.rawValue
+        }
+        popTravelPlay = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: PopTravel.playInterval)
+                guard !Task.isCancelled else { return }
+                popTravelHour = PopTravel.nextHour(after: popTravelHour)
+            }
+        }
+    }
+
+    private func stopPopTravelPlay() {
+        popTravelPlay?.cancel()
+        popTravelPlay = nil
+    }
+
+    /// Shows the tapped cell's people and density while the population
+    /// layer is on (the reference's `pop-grid-tooltip`); a tap where no one
+    /// lives hides it. The tap still selects as it always does.
+    private func showCellTooltip(at location: ScreenPoint, projection: PlanCamera) {
+        guard mapLayers.popTravelMode == .population, let heatmap else {
+            cellTooltip = nil
+            return
+        }
+        let place = projection.worldPosition(at: location)
+        cellTooltip = heatmap.cellInfo(atX: place.x, y: place.y).map { ($0, location) }
     }
 
     /// The camera a game opens on (Stage E1): what it has built, or the
@@ -398,12 +535,8 @@ private struct MapCanvas: View, Equatable {
     let traffic: TrafficOverlay
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
-    /// Whether the land is filled in: not over Apple's map (Stage E2).
-    let drawsLand: Bool
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
-    let population: PopulationGrid?
-    let realWorld: RealWorldFrame?
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -416,16 +549,13 @@ private struct MapCanvas: View, Equatable {
             && lhs.traffic == rhs.traffic
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
-            && lhs.drawsLand == rhs.drawsLand
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
-            && lhs.population?.total == rhs.population?.total
-            && lhs.realWorld == rhs.realWorld
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts, population = population, realWorld = realWorld
+        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -436,13 +566,110 @@ private struct MapCanvas: View, Equatable {
                 traffic: traffic,
                 projection: camera,
                 edges: edges,
-                drawsLand: drawsLand,
                 layers: layers,
                 waitingCounts: waitingCounts,
-                population: population,
-                realWorld: realWorld,
                 in: context
             )
+        }
+    }
+}
+
+/// What the base canvas draws of the population and travel layer, with a
+/// key that says when it changed: the heatmap's layout is compared by a
+/// version, not cell by cell.
+struct PopTravelLayer: Equatable {
+    enum Content {
+        case population(PopulationHeatmap)
+        case travel([TravelDemandMap.Tile])
+    }
+
+    enum Key: Equatable {
+        case population(version: Int)
+        case travel(mode: PopTravelMode, hour: Int, demand: TravelDemandMap)
+    }
+
+    let content: Content
+    let key: Key
+    let opacity: Double
+
+    static func == (lhs: PopTravelLayer, rhs: PopTravelLayer) -> Bool {
+        lhs.key == rhs.key && lhs.opacity == rhs.opacity
+    }
+}
+
+/// The land and the population and travel layer, in a canvas of their own
+/// under the map: redrawn only when the camera, the map or the layer
+/// changes, not on every tick that moves a train.
+private struct MapBaseCanvas: View, Equatable {
+    let bounds: WorldBounds
+    let drawsLand: Bool
+    let layer: PopTravelLayer?
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: MapBaseCanvas, rhs: MapBaseCanvas) -> Bool {
+        lhs.bounds == rhs.bounds && lhs.drawsLand == rhs.drawsLand && lhs.layer == rhs.layer && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let bounds = bounds, drawsLand = drawsLand, layer = layer, camera = camera
+        return Canvas { context, size in
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
+            MapArt.drawBase(bounds: bounds, drawsLand: drawsLand, layer: layer, projection: camera, in: context)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// The tapped population cell (the reference's `pop-grid-tooltip`):
+/// "Population grid", its estimated people and its density per km².
+private struct PopulationCellTooltip: View {
+    let info: PopulationHeatmap.CellInfo
+    let language: DisplayLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: language.text("Population grid", "人口網格"))
+                .font(.caption.weight(.bold))
+            ForEach(info.lines(in: language), id: \.self) { line in
+                Text(verbatim: line)
+                    .font(.caption2.monospacedDigit())
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("map.populationTooltip")
+    }
+}
+
+/// What the population heatmap is laid out from: the grid (by its total)
+/// and the map.
+private struct HeatmapKey: Equatable {
+    let total: Int?
+    let realWorld: RealWorldFrame?
+}
+
+/// What the travel demand map is worked out from (``GameWorld/stationFlow(of:)``:
+/// the stations, their demand and the lines), and whether a travel layer is
+/// shown at all.
+private struct TravelDemandKey: Equatable {
+    let stations: [Station]
+    let demands: [StationDemand?]
+    let lines: [ServiceLine]
+    let isShown: Bool
+
+    init(world: GameWorld, isShown: Bool) {
+        self.isShown = isShown
+        if isShown {
+            stations = world.stations
+            demands = world.stations.map { world.stationDemand(of: $0.id) }
+            lines = world.lines
+        } else {
+            stations = []
+            demands = []
+            lines = []
         }
     }
 }

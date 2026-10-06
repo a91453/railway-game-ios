@@ -68,60 +68,6 @@ enum Palette {
     }
 }
 
-/// Color ramp for WorldPop ~1km population grid cells, faithfully translated from
-/// `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` (syncPopTravelPopulationLegendUi & chinaGrid).
-enum PopulationColorRamp {
-    struct Tier: Equatable, Hashable, Sendable {
-        let min: Int
-        let max: Int?
-        let color: Color
-
-        var label: String {
-            if let max {
-                return "\(Self.compact(min))–\(Self.compact(max))"
-            } else {
-                return "\(Self.compact(min))+"
-            }
-        }
-
-        private static func compact(_ value: Int) -> String {
-            value >= 1000 && value.isMultiple(of: 1000) ? "\(value / 1000)k" : "\(value)"
-        }
-    }
-
-    static let tiers: [Tier] = [
-        Tier(min: 0, max: 100, color: Color(red: 0.969, green: 0.984, blue: 1.000)),       // #F7FBFF
-        Tier(min: 100, max: 250, color: Color(red: 0.871, green: 0.922, blue: 0.969)),     // #DEEBF7
-        Tier(min: 250, max: 500, color: Color(red: 0.776, green: 0.859, blue: 0.937)),     // #C6DBEF
-        Tier(min: 500, max: 1000, color: Color(red: 0.620, green: 0.792, blue: 0.882)),    // #9ECAE1
-        Tier(min: 1000, max: 2000, color: Color(red: 0.420, green: 0.682, blue: 0.839)),   // #6BAED6
-        Tier(min: 2000, max: 4000, color: Color(red: 0.259, green: 0.573, blue: 0.776)),   // #4292C6
-        Tier(min: 4000, max: 6000, color: Color(red: 0.129, green: 0.443, blue: 0.710)),   // #2171B5
-        Tier(min: 6000, max: 8000, color: Color(red: 0.031, green: 0.318, blue: 0.612)),   // #08519C
-        Tier(min: 8000, max: 10000, color: Color(red: 0.031, green: 0.188, blue: 0.420)),  // #08306B
-        Tier(min: 10000, max: nil, color: Color(red: 0.016, green: 0.122, blue: 0.290))    // #041F4A
-    ]
-
-    static var gradientColors: [Color] {
-        tiers.map(\.color)
-    }
-
-    static func tier(for count: Int) -> Tier {
-        for tier in tiers {
-            if let max = tier.max {
-                if count < max { return tier }
-            } else {
-                return tier
-            }
-        }
-        return tiers.last!
-    }
-
-    static func color(for count: Int) -> Color {
-        tier(for: count).color
-    }
-}
-
 /// A clean, tactile card modifier for grouping management options.
 struct MetroCardModifier: ViewModifier {
     var padding: CGFloat = 12
