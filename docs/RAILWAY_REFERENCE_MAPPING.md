@@ -767,3 +767,16 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroNavigationEstimate` 內的二元堆積（`d()` push、`f()` pop） | `PassengerRoutes.swift` 的 `PassengerRouteHeap` | adapted：同樣以二元堆積取代每次 pop 前整列排序；比較器沿用原生的嚴格全序（分鐘、轉乘次數、秒數、路線順序、節點、索引），所以 pop 順序與舊實作逐一相同。 |
 | 同檔／`G.odPathDispatchCache`（每個 OD 保存路徑選項，flowFull 重算時才更新） | `PassengerRouteCache.swift` 的 `PassengerRouteCache`、`PassengerPlanKey` | adapted：來源由後端在網路改變時重算並快取；原生以「圖實際讀取的輸入」（線路、車站、路網、號誌、列車長度、各線目前的服務等級）為 key，最多保留 8 個時段的圖與 OD 選項。不存檔、不影響相等比較；key 相同時結果與重新計算逐一相同。 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §6（Link Graph：先算最短廣義成本並決定性分配） | 同上 | 依此保留決定性的 Dijkstra／K 條路徑；同起點的各迄點共用每組禁用邊的一次完整搜尋（pop 順序與迄點無關，第一個到達某站的 label 即提前結束版本的答案）。 |
+
+### Phase 5F 續：步行轉乘、轉乘分級與車站營運模式（T2，存檔 v12）
+
+| 來源／契約 | 目標 | 移植狀態／差異 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`_classifyMoveTransferDistance`、`MOVE_TRANSFER_OVERLAP_MAX_M`=20、`MOVE_TRANSFER_SAME_PLATFORM_MAX_M`=50、`MOVE_TRANSFER_PASSAGE_MAX_M`=250，及 `metroDebugCompareCentralToAirportTimings` 內的分類函式（`m()`：overlap／same-platform／passage／virtual） | `PassengerRoutes.swift` 的 `PassengerTransferTier.of(squaredDistance:)` | ported：距離分級逐值相同；距離以世界座標（64 單位／公尺）精確平方比較，取代 haversine。共用車站跨線換乘照來源預設型別 same-platform。 |
+| 同函式／`l={overlap:.8,"same-platform":.8,passage:1.2,virtual:1.7}`、換乘基準 `r=15`（註明「與 flow_service 默認一致」） | `PassengerTransferTier.penaltySeconds`（720／720／1080／1530 秒）、`PassengerRouteGraph` 的換乘與步行邊 | ported：懲罰 = 15 分 × 係數，以整數秒保存；取代原生的同站 4 分鐘。每次轉乘收一次（來源 `S()` 對 xfer link 收一次、之後的乘車段為 0）；同線不同 pattern 仍為 0。 |
+| 同檔／`metroNavigationTransfers`（`haversine/(5e3/3600)`）、上述函式 `n=5`（同組步行 5 km/h） | `PassengerTransferTier.walkSeconds`（每世界單位 9/800 秒，向上取整） | ported：5 km/h。 |
+| 同檔／`METRO_NAVIGATION_MIN_TRANSFER_SEC`=120（`metroNavigationEstimate` 的最小轉乘時間） | `PassengerTransferTier.minimumChangeSeconds`、`Boarding.enqueueTransfer` 的 `readyAt` | ported：下車到可搭下一班 = max(120 秒, 步行秒)；同線換 pattern 為 0。取代原生 4 分鐘。 |
+| `Railway/site_archive_clean/data/station_transfers.json`／`criteria.maxDistanceM`=450、`haversine_meters < maxDistanceM` | `PassengerTransferTier.maximumWalkMetres`、`PassengerRouteGraph.walk` | adapted：來源超過 passage 的連結只能由玩家設定的轉乘群組建立；遊戲車站沒有群組，所以以真實資料的嚴格 < 450 m 作為步行上限（virtual 級）。同名正規化不適用於玩家命名的車站，未移植。 |
+| 同檔／`applyStationOperationToStation`（`normalFlow`／`flowControl`／`closed`）、`metroStationAllowsEntryForLine`、`metroStationAllowsTrainServiceAtStation`、`metroStationAllowsTransfer`、`metroStationAllowsPassengerDestination`、`clearStationWaitingPassengers` | `Station.operationMode`、`StationOperationMode`、`GameWorld.setStationOperationMode(_:to:)`、`PassengerDemand`／`Boarding`／路徑圖 | ported：三種模式與各條件逐一相同；關站時清空該站候車（記原起站 abandoned），並移除仍需在關站上下車、轉乘的候車旅程。差異（gap）：來源的列車跳過關閉車站（`metroSkipClosedNextStationIdx`），原生列車的物理時刻表不變，只是不上下客；在折返站仍在車上的乘客記 abandoned。自動依末班車改模式（`metroComputeStationAutoOperationMode`）未移植。 |
+
+同一 StationID 內「同月台／站內通道」的再細分需要知道各服務停靠哪一座月台，參考沒有對應的資料，仍為 gap；目前同站換乘一律為 same-platform。

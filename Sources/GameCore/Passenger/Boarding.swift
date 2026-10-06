@@ -146,11 +146,15 @@ extension GameWorld {
         let train = trains[index]
         let entry = train.timetable[stop]
         let isLast = stop == train.timetable.count - 1
+        // Nobody gets on or off at a closed station (the reference's
+        // `updateTrainAtStation` serves no one there), but nobody rides on
+        // past where the train turns round either.
+        let isOpen = allowsService(at: entry.station)
         var alighted: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
-                if group.destination == entry.station {
+                if group.destination == entry.station && isOpen {
                     if let next = group.journey?.next {
                         enqueueTransfer(group.count, along: next, at: entry.station,
                                         after: group.journey!.leg.line)
@@ -171,7 +175,7 @@ extension GameWorld {
                 riders[slot].groups = kept
             }
         }
-        let boarded = isLast ? 0 : boardPassengers(train, at: stop)
+        let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)
     }
 
@@ -264,12 +268,25 @@ extension GameWorld {
         return boarded
     }
 
+    /// Those of a journey who got off at `alighting` wait for its next leg:
+    /// there, or at the station nearby they walk to (Phase 5F). They may
+    /// board once the walk and the reference's least change time
+    /// (``PassengerTransferTier/minimumChangeSeconds``) have passed; staying
+    /// on the same line's other service needs no time. If the next leg can
+    /// no longer be taken, they leave, counted at their original station.
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                          at station: StationID, after line: LineID) {
+                                          at alighting: StationID, after line: LineID) {
         let origin = journey.origin
-        guard journey.leg.from == station else {
-            passengers[passengerIndex(of: origin)].abandoned += count
-            return
+        let station = journey.leg.from
+        var seconds: Int64 = 0
+        if station != alighting {
+            guard let walk = PassengerRouteGraph.walk(from: alighting, to: station, in: self) else {
+                passengers[passengerIndex(of: origin)].abandoned += count
+                return
+            }
+            seconds = max(PassengerTransferTier.minimumChangeSeconds, walk.seconds)
+        } else if line != journey.leg.line {
+            seconds = PassengerTransferTier.minimumChangeSeconds
         }
         let planned = WaitingGroup(line: journey.leg.line, direction: journey.leg.direction,
             destination: journey.leg.to, since: clock.now, count: count, journey: journey)
@@ -277,11 +294,12 @@ extension GameWorld {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
-        let minutes: Int64 = line == journey.leg.line ? 0 : PassengerRouteGraph.sameStationTransferMinutes
-        guard let ready = Self.time(clock.now, plusMinutes: minutes) else {
+        let (readySeconds, overflow) = clock.now.seconds.addingReportingOverflow(seconds)
+        guard !overflow else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
+        let ready = GameTime(seconds: readySeconds)
         let slot: Int
         if let found = passengers.firstIndex(where: { $0.station == station }) {
             slot = found
@@ -368,6 +386,9 @@ extension GameWorld {
                 }
                 guard ahead.contains(where: { train.timetable[$0].station == group.destination }) else {
                     return "Passengers ride train \(id) to a station it does not call at before it turns round."
+                }
+                if let journey = group.journey, !hasWalkableChanges(journey, after: journey.current) {
+                    return "Passengers ride train \(id) on a journey with a walk they cannot make."
                 }
                 riding[group.origin, default: 0] += group.count
             }

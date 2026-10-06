@@ -38,7 +38,8 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(routes[0].legs.map(\.from), [a, b])
         XCTAssertEqual(routes[0].legs.map(\.to), [b, c])
         XCTAssertEqual(routes[0].transfers, 1)
-        XCTAssertEqual(routes[0].transferMinutes, 4)
+        // The reference's change at a shared station: 15 min × 0.8.
+        XCTAssertEqual(routes[0].transferMinutes, 12)
         XCTAssertEqual(routes[0].legs[0].rideSeconds, try XCTUnwrap(world.lineJourney(first)).legs[0].seconds)
         XCTAssertEqual(routes[0].totalMinutes,
                        routes[0].rideMinutes + routes[0].waitMinutes + routes[0].transferMinutes)
@@ -213,7 +214,7 @@ final class PassengerRoutesTests: XCTestCase {
 
         let route = try XCTUnwrap(graph.shortest(from: a, to: d, banning: [])?.0)
         XCTAssertEqual(route.legs.map(\.line), [LineID(rawValue: 1), LineID(rawValue: 4)])
-        XCTAssertEqual(route.totalMinutes, 7)
+        XCTAssertEqual(route.totalMinutes, 15, "two 1-minute waits, a 1-minute ride and a 12-minute change")
         XCTAssertEqual(route.transfers, 1)
     }
 

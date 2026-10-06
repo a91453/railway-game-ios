@@ -33,7 +33,9 @@ public struct PassengerJourneyLeg: Hashable, Codable, Sendable {
 
 /// A chosen route and the leg a waiting or riding group is completing.
 /// Its origin stays fixed so transfer passengers remain in that station's
-/// conservation ledger.
+/// conservation ledger. A leg starts where the one before ends, or at a
+/// station nearby that its passengers walk to (Phase 5F, save version 12);
+/// the world checks that each walk can be made.
 public struct PassengerJourney: Hashable, Codable, Sendable {
     public let origin: StationID
     public let destination: StationID
@@ -49,8 +51,8 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
     public init?(origin: StationID, route: PassengerRoute) {
         guard (1...32).contains(route.legs.count), let last = route.legs.last, origin != last.to,
               route.legs.first?.from == origin,
-              route.legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) }),
-              zip(route.legs, route.legs.dropFirst()).allSatisfy({ $0.to == $1.from }) else { return nil }
+              route.legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) })
+        else { return nil }
         self.init(origin: origin, destination: last.to, legs: route.legs.map(PassengerJourneyLeg.init), current: 0)
     }
 
@@ -84,11 +86,10 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         guard (1...32).contains(legs.count), legs.indices.contains(current),
               origin != destination,
               legs.first?.from == origin, legs.last?.to == destination,
-              legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) }),
-              zip(legs, legs.dropFirst()).allSatisfy({ $0.to == $1.from })
+              legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) })
         else {
             throw DecodingError.dataCorruptedError(forKey: .legs, in: box,
-                debugDescription: "A passenger journey has one to 32 connected service legs and a valid current leg.")
+                debugDescription: "A passenger journey has one to 32 service legs and a valid current leg.")
         }
         self.init(origin: origin, destination: destination, legs: legs, current: current)
     }
