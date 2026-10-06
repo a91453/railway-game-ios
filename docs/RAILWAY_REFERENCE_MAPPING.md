@@ -803,3 +803,22 @@ V 實際放行 → T、U（保證不互穿）
 | `aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a）、cadence `firstMin/firstMax/gapMin/gapMax`、`/ max(1, n / 10)` | `DemandEventSchedule.hash`、`roll`、`startDemandEventDay` | direct／adapted：雜湊照搬；秒數換成整天 |
 | `MetroEconomy.advanceMetroEvents`（不在快照） | 展覽 3–7 天 +20–50%、大客流 1–2 天 +50–100%，提前 2–5 天 | gap → 原生數值 |
 | `aviation_disruptions` 的天氣封閉、燃油、國定假日 | — | gap：沒有封站營運模式，之後處理 |
+
+## 城鎮成長（決策 70）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。
+
+| 來源 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`src/town_cmd.cpp`、`src/industry_cmd.cpp`、`src/subsidy.cpp`，只有路徑） | `TownGrowth`、`GameWorld.growTowns(reached:)` | gap → 原生：照它的要求只讀運輸可達性量測，不控制列車；原始碼與數值不在參考包 |
+| 同上 `binary_reference/relevant_symbols_and_settings.txt` | — | 沒有城鎮成長的數值 |
+| `Ci/` 的人口格與 poptravel（`panel-poptravel`） | GamePresentation 的 `PopulationGrid`、`PopTravel`（既有） | 只決定新站的初始客流，不成長 |
+| 第 1 項的全網路徑（決策 65） | 可達車站數 = 昨天的計畫裡該站的迄點數 | 原生 |
+| 產業 | — | gap：沒有貨物模型 |
+
+## 更名與線路顏色（決策 71）
+
+| 來源／函式 | 目標 | 狀態 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`PRESET_COLORS`（20 色）、線路 `color`（`"#ef5350"`） | `LineColor.presets`、`ServiceLine.color`、`setLineColor(_:to:)`、`LineColor.hexText` | direct：色值照搬，存為 `0xRRGGBB` 整數 |
+| 同檔／車站、線路名稱編輯 | `renameStation(_:to:)`、`renameLine(_:to:)` | adapted：沿用既有名稱規則 |
