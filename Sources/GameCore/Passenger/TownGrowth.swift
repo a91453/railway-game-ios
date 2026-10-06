@@ -64,7 +64,9 @@ public struct TownGrowth: Hashable, Codable, Sendable {
     /// reach `reached` stations: negative when nothing was served.
     public static func growth(served: Int64, trips: Int64, reached: Int) -> Int64 {
         guard served > 0 else { return -decline }
-        let share = min(1_000, served * 1_000 / max(1, trips))
+        // Whole once served reaches the day's trips, which keeps a large
+        // `served` from a save from overflowing.
+        let share = served >= trips ? 1_000 : served * 1_000 / max(1, trips)
         return share * serviceGrowth / 1_000 + min(Int64(reached), reachedStations) * reachGrowth
     }
 }

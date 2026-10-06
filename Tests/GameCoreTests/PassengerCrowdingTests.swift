@@ -27,6 +27,22 @@ final class PassengerCrowdingTests: XCTestCase {
         XCTAssertEqual(PassengerCrowding.crowdingSeconds(600, load: 9_000), 1_440, "the ratio is capped at 2")
     }
 
+    /// A line calling at A twice (A B C A D): the ride from A to D boards
+    /// at the second call, so its load is on the last segment only.
+    func testALegFromAStationCalledTwiceLoadsOnlyWhatItRides() throws {
+        let stations = (1...4).map { StationID(rawValue: $0) }
+        let path = PassengerRouteGraph.ServicePath(
+            line: LineID(rawValue: 1), pattern: nil, direction: .outbound,
+            stations: [stations[0], stations[1], stations[2], stations[0], stations[3]],
+            runSeconds: [60, 60, 60, 60], headway: 600, isRing: false
+        )
+        let graph = PassengerRouteGraph(paths: [path])
+        let route = try XCTUnwrap(graph.shortest(from: stations[0], to: stations[3], banning: [])?.0)
+        XCTAssertEqual(graph.segments(of: route), [PassengerRouteGraph.Segment(path: 0, stop: 3)])
+        let first = try XCTUnwrap(graph.shortest(from: stations[0], to: stations[1], banning: [])?.0)
+        XCTAssertEqual(graph.segments(of: first), [PassengerRouteGraph.Segment(path: 0, stop: 0)])
+    }
+
     /// Two lines A–C with the same headway: the one with one-car trains
     /// fills, so the plan gives it the smaller share.
     private func world(smallCars: Int, bigCars: Int) throws -> GameWorld {

@@ -531,7 +531,10 @@ extension GameWorld {
             chosen = candidates.removeFirst()
             selected.append(chosen.route)
         }
-        return selected
+        // The search ranks by the whole minutes of the total seconds; a
+        // route's cost rounds each part up (a walk, or a penalty that is
+        // not whole minutes), which can put a later route first.
+        return selected.sorted(by: passengerRoutePrecedes)
     }
 
     /// Splits one day's OD demand among the usable route options. Choices

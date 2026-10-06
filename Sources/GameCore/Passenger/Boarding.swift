@@ -143,7 +143,8 @@ extension GameWorld {
         let isLast = stop == train.timetable.count - 1
         // Nobody gets on or off at a closed station (the reference's
         // `metroStationAllowsTrainServiceAtStation`), but nobody rides on
-        // past where the train's direction ends either.
+        // past where the train's direction ends, or past the closed
+        // station they ride to, either: their trip is abandoned there.
         let isOpen = station(id: entry.station)?.operationMode.allowsService ?? false
         var alighted: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
@@ -157,7 +158,7 @@ extension GameWorld {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                     }
                     alighted += group.count
-                } else if isLast || stop == directionEnd(of: train, from: stop) {
+                } else if group.destination == entry.station || isLast || stop == directionEnd(of: train, from: stop) {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
                     alighted += group.count
                 } else {

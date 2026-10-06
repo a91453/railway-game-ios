@@ -190,11 +190,13 @@ extension GameWorld {
     // MARK: - Validation
 
     /// Why the events break a rule, or `nil`: each is well formed, at a
-    /// station that exists, announced by today and not yet over.
+    /// station that exists, announced by today and not yet over, and the
+    /// draws counted are no more than one a day could make (2^40 days are
+    /// beyond any game), so counting the next never overflows.
     func demandEventProblem() -> String? {
         guard let schedule = demandEvents else { return nil }
         let day = dayIndex(of: clock.now)
-        guard schedule.draws >= 0, schedule.events.count <= 64 else { return "The demand events are out of range." }
+        guard (0...(1 << 40)).contains(schedule.draws), schedule.events.count <= 64 else { return "The demand events are out of range." }
         for event in schedule.events {
             guard event.isValid, station(id: event.station) != nil, event.announced <= day, day <= event.end else {
                 return "A demand event is not one the game could have drawn."

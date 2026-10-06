@@ -88,6 +88,10 @@ extension GameWorld {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard demand?.isValid ?? true else { throw .invalidStationDemand }
         passengerPlan = PassengerPlanCache()
+        // Town growth (item 5) starts again from the demand set here: the
+        // old start would pull it back, and its growth would be out of
+        // range.
+        townGrowth?.places.removeAll { $0.station == id }
 
         if let index = passengers.firstIndex(where: { $0.station == id }) {
             passengers[index].demand = demand

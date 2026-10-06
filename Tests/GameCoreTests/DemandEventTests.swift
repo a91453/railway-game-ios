@@ -124,6 +124,11 @@ final class DemandEventTests: XCTestCase {
             broken.demandEvents!.events = [bad]
             XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(broken)), "\(bad)")
         }
+        // A count of draws no game reaches, which the next draw would
+        // overflow.
+        var counted = world
+        counted.demandEvents!.draws = .max
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(counted)))
         world.setDemandEvents(seed: nil)
         XCTAssertNil(world.demandEvents)
     }
