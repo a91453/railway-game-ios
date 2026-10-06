@@ -40,6 +40,8 @@ struct GridCounts: Sendable {
     let cellDegrees: Double
     let counts: [Cell: Int]
     let total: Int
+    private let lastRow: Int?
+    private let lastColumn: Int?
 
     /// Throws for a grid without a corner or a positive cell size, or a
     /// negative row, column or count.
@@ -63,6 +65,8 @@ struct GridCounts: Sendable {
         self.cellDegrees = cellDegrees
         self.counts = counts
         self.total = total
+        lastRow = counts.keys.lazy.map(\.row).max()
+        lastColumn = counts.keys.lazy.map(\.column).max()
     }
 
     /// How many there are within `radius` metres of `latitude`° north,
@@ -140,18 +144,27 @@ struct GridCounts: Sendable {
         return (south * south + east * east).squareRoot()
     }
 
-    /// Queries non-empty population cells within the given geographic bounding box.
+    /// Non-empty cells whose area overlaps the geographic rectangle. Reversed
+    /// limits are accepted; empty, non-finite and uncovered rectangles return none.
     func cells(inNorth northLimit: Double, south southLimit: Double, west westLimit: Double, east eastLimit: Double) -> [PopulationCell] {
-        guard cellDegrees > 0 else { return [] }
+        guard northLimit.isFinite, southLimit.isFinite,
+              westLimit.isFinite, eastLimit.isFinite,
+              let lastRow, let lastColumn else { return [] }
         let highLat = max(northLimit, southLimit)
         let lowLat = min(northLimit, southLimit)
         let lowLon = min(westLimit, eastLimit)
         let highLon = max(westLimit, eastLimit)
 
-        let minRow = max(0, Int(((north - highLat) / cellDegrees).rounded(.down)))
-        let maxRow = max(minRow, Int(((north - lowLat) / cellDegrees).rounded(.up)))
-        let minCol = max(0, Int(((lowLon - west) / cellDegrees).rounded(.down)))
-        let maxCol = max(minCol, Int(((highLon - west) / cellDegrees).rounded(.up)))
+        guard highLat > lowLat, highLon > lowLon else { return [] }
+        // Clamp before converting to Int: a large rectangle must neither trap
+        // nor walk rows and columns outside the stored grid.
+        let firstRow = max(0, ((north - highLat) / cellDegrees).rounded(.down))
+        let finalRow = min(Double(lastRow), ((north - lowLat) / cellDegrees).rounded(.up) - 1)
+        let firstColumn = max(0, ((lowLon - west) / cellDegrees).rounded(.down))
+        let finalColumn = min(Double(lastColumn), ((highLon - west) / cellDegrees).rounded(.up) - 1)
+        guard firstRow <= finalRow, firstColumn <= finalColumn else { return [] }
+        let minRow = Int(firstRow), maxRow = Int(finalRow)
+        let minCol = Int(firstColumn), maxCol = Int(finalColumn)
 
         var result: [PopulationCell] = []
         for r in minRow...maxRow {
@@ -162,6 +175,8 @@ struct GridCounts: Sendable {
                 let cellSouth = cellNorth - cellDegrees
                 let cellWest = west + Double(c) * cellDegrees
                 let cellEast = cellWest + cellDegrees
+                guard cellNorth > lowLat, cellSouth < highLat,
+                      cellEast > lowLon, cellWest < highLon else { continue }
                 let midLat = cellNorth - 0.5 * cellDegrees
                 let midLon = cellWest + 0.5 * cellDegrees
                 result.append(PopulationCell(
@@ -255,7 +270,8 @@ public struct PopulationGrid: Sendable {
         return Int(people.count(within: radius, ofLatitude: latitude, longitude: longitude).rounded())
     }
 
-    /// Non-empty cells of the grid within the given geographic bounding box.
+    /// Non-empty cells whose area overlaps the geographic rectangle. Reversed
+    /// limits are accepted; empty, non-finite and uncovered rectangles return none.
     public func cells(north: Double, south: Double, west: Double, east: Double) -> [PopulationCell] {
         people.cells(inNorth: north, south: south, west: west, east: east)
     }

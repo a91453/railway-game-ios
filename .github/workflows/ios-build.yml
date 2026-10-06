@@ -239,6 +239,8 @@ jobs:
             only=(
               -only-testing:RailwayGameUITests/ToolbarSmokeTests
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests
+              -only-testing:RailwayGameUITests/MapInteractionTests/testSwitchingFollowTargetWhilePausedCentersTheCamera
+              -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
               -only-testing:RailwayGameUITests/TutorialUITests/testBuildingTrackEnablesNextAndSkipEnds
             )
