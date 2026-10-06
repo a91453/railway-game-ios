@@ -100,11 +100,29 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(route.waitForExistence(timeout: 10))
         let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform track #"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
+        // Choosing a path posts a status message, pinned to the bottom of
+        // the sheet over the row at the bottom of the screen: the next tap
+        // landed on it and the menu never opened (main, 56dae15). Dismiss
+        // it, then bring the row clear before opening the menu again.
+        dismissMessage(in: app)
+        for _ in 0..<6 where !route.isHittable { app.swipeUp() }
+        XCTAssertTrue(route.isHittable)
         route.tap()
         let automatic = app.buttons["Automatic physical path"]
         tapMenuAction(automatic, in: app)
         let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Automatic physical path"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    }
+
+    /// Dismisses the status message the sheet shows at its bottom, if
+    /// any: the lowest "Dismiss message" button, the sheet's own (the map's
+    /// lies under the sheet), and waits for it to go.
+    private func dismissMessage(in app: XCUIApplication) {
+        let buttons = app.buttons.matching(NSPredicate(format: "label == %@", "Dismiss message")).allElementsBoundByIndex
+        guard let lowest = buttons.filter({ $0.exists }).max(by: { $0.frame.minY < $1.frame.minY }) else { return }
+        lowest.tap()
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: lowest)
+        _ = XCTWaiter.wait(for: [gone], timeout: 5)
     }
 
     private func tapMenuAction(_ button: XCUIElement, in app: XCUIApplication) {
