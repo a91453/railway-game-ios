@@ -39,8 +39,10 @@ struct MapView: View {
     /// demand or the lines change, only while a travel layer is shown.
     @State private var travelDemand = TravelDemandMap(trips: [:])
     /// The travel layer's squares for the shown mode and hour, made only
-    /// when one of them or the demand changes, not on every body update.
+    /// when one of them or the demand changes, not on every body update,
+    /// and a number that changes with them.
     @State private var travelTiles: [TravelDemandMap.Tile] = []
+    @State private var travelTilesVersion = 0
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
@@ -276,6 +278,7 @@ struct MapView: View {
         }
         .onChange(of: TravelTilesKey(mode: mapLayers.popTravelMode, hour: popTravelHour, demand: travelDemand), initial: true) { _, key in
             travelTiles = key.mode.map { key.demand.tiles(for: $0, at: key.hour) } ?? []
+            travelTilesVersion &+= 1
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -307,7 +310,7 @@ struct MapView: View {
         case .travel, .movement:
             return PopTravelLayer(
                 content: .travel(travelTiles),
-                key: .travel(mode: mode, hour: popTravelHour, demand: travelDemand),
+                key: .travel(version: travelTilesVersion),
                 opacity: alpha
             )
         }
@@ -468,7 +471,11 @@ struct MapView: View {
               let position = train.position,
               let coordinate = session.world.location(of: position)?.position else { return }
         let center = followCamera.step(towardX: Double(coordinate.x), y: Double(coordinate.y), elapsed: FollowCamera.tickSeconds)
-        camera = projection.centered(atX: center.x, y: center.y)
+        let moved = projection.centered(atX: center.x, y: center.y)
+        // The tooltip is pinned to a screen point: once the map moves under
+        // it, it would describe another cell, as after a pan.
+        if moved != projection { cellTooltip = nil }
+        camera = moved
     }
 }
 
@@ -587,8 +594,10 @@ private struct MapCanvas: View, Equatable {
 }
 
 /// What the base canvas draws of the population and travel layer, with a
-/// key that says when it changed: the heatmap's layout is compared by a
-/// version, not cell by cell.
+/// key that says when it changed: the heatmap's layout and the travel
+/// squares are compared by a version, not cell by cell. The travel version
+/// changes when the squares are stored, not when the hour or demand they
+/// are made from does, so the canvas never keeps the previous squares.
 struct PopTravelLayer: Equatable {
     enum Content {
         case population(PopulationHeatmap)
@@ -597,7 +606,7 @@ struct PopTravelLayer: Equatable {
 
     enum Key: Equatable {
         case population(version: Int)
-        case travel(mode: PopTravelMode, hour: Int, demand: TravelDemandMap)
+        case travel(version: Int)
     }
 
     let content: Content

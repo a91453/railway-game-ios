@@ -1589,11 +1589,13 @@ public struct GameWorld: Equatable, Sendable {
                 // Weekly demand, events and town growth: the next day
                 // releases its own trips. The second of the day, without
                 // multiplying back (a save's clock may be near the end of
-                // time).
+                // time). At midnight itself that is 0: the next step handles
+                // it, and skipping it would lose the day's growth and events.
                 let day = GameTime.secondsPerDay
                 let dayWake: Int64? = demandDay != nil || townGrowth != nil ? {
                     let intoDay = (clock.now.seconds % day + day) % day
-                    return (day - intoDay + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
+                    let left = (day - intoDay) % day
+                    return (left + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
                 }() : nil
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),

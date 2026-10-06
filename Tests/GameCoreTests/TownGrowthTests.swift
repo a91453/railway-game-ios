@@ -10,6 +10,7 @@ final class TownGrowthTests: XCTestCase {
     private let b = StationID(rawValue: 2)
 
     func testTheRate() {
+        XCTAssertEqual(TownGrowth.growth(served: .max / 2, trips: 1_000, reached: 0), 10, "More than the trips is whole")
         XCTAssertEqual(TownGrowth.growth(served: 0, trips: 1_000, reached: 3), -2)
         XCTAssertEqual(TownGrowth.growth(served: 1_000, trips: 1_000, reached: 0), 10)
         XCTAssertEqual(TownGrowth.growth(served: 500, trips: 1_000, reached: 1), 6)
@@ -108,6 +109,37 @@ final class TownGrowthTests: XCTestCase {
             let ledger = batched.passengerLedger(of: station.id)
             XCTAssertEqual(ledger.released, ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned)
         }
+    }
+
+    /// A line closed at 23:00 leaves 23:59 quiet: a call that handles 23:59
+    /// and goes on skips the idle minutes from midnight, which must still
+    /// stop at midnight for the town to grow.
+    func testAQuietMidnightIsNotSkipped() throws {
+        var batched = try world()
+        try batched.setLineServiceWindow(batched.lines[0].id, to: .hours(open: 360, close: 1_380))
+        try batched.advance(ticks: 1_440 * 2 - 1)
+        var stepped = batched
+        try batched.advance(ticks: 1_440 + 2)
+        for _ in 0..<(1_440 + 2) { try stepped.advance(ticks: 1) }
+        XCTAssertEqual(batched.townGrowth, stepped.townGrowth)
+        XCTAssertEqual(batched, stepped)
+    }
+
+    /// Demand set by the player is the new start: growth neither pulls it
+    /// back up to the old start nor records growth out of range.
+    func testSetDemandStartsGrowthAgain() throws {
+        var world = try world()
+        try world.advance(ticks: 1_441)
+        XCTAssertEqual(world.townGrowth(of: a)?.base, 1_000)
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100))
+        XCTAssertNil(world.townGrowth(of: a))
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.townGrowth(of: a)?.base, 100)
+        XCTAssertEqual(world.stationDemand(of: a)?.dailyTrips, 100)
+        try world.advance(ticks: 1_440)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(world.stationDemand(of: a)?.dailyTrips), 102)
+        XCTAssertNil(world.townGrowthProblem())
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
     func testBadGrowthIsRefused() throws {

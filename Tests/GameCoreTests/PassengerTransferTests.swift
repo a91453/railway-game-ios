@@ -359,6 +359,33 @@ final class PassengerTransferTests: XCTestCase {
         XCTAssertFalse(world.passengerRoutes(from: a, to: c).isEmpty, "flow control still lets them change")
     }
 
+    /// Riders bound for a station that closes on the way cannot get off
+    /// there and cannot ride on past it: they leave the train there,
+    /// counted as abandoned at their origin, and every step stays saveable.
+    func testRidersBoundForAClosedStationOnTheWayLeaveThere() throws {
+        var world = try world()
+        world.setPassengerRoutingMode(.direct)
+        let through = try world.createLine(named: "Through", stops: [a, b, c]).id
+        try world.setLineServiceWindow(through, to: .allDay)
+        try world.setLineTrainsInService(through, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let one = TrainID(rawValue: 1)
+        try world.unassignTrain(one)
+        try world.assignTrain(one, to: through)
+        let origin = try XCTUnwrap(world.passengers.firstIndex { $0.station == a })
+        world.passengers[origin].release(5, to: b, along: PassengerTrip(line: through, direction: .outbound),
+                                         at: world.clock.now)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riderCount(of: one), 5)
+        try world.setStationOperationMode(b, to: .closed)
+        for _ in 0..<6 {
+            try world.advance(ticks: 1)
+            try assertConservedAndSaveable(world)
+        }
+        XCTAssertEqual(world.riderCount(of: one), 0)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(world.passengerLedger(of: a).arrived, 0)
+    }
+
     func testInvalidRouteCreditStateIsRejected() throws {
         var world = try world()
         try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
@@ -386,6 +413,15 @@ final class PassengerTransferTests: XCTestCase {
             entry["journeys"] = [journeys[0], journeys[0]]
             entry["weights"] = [1, 1]
             entry["balances"] = [0, 0]
+        }
+        // A next ride that starts out of walking reach of the last.
+        try rejects { entry in
+            var journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
+            var legs = try XCTUnwrap(journeys[0]["legs"] as? [[String: Any]])
+            guard legs.count == 2 else { return XCTFail("A to C changes at B") }
+            legs[1]["from"] = 99
+            journeys[0]["legs"] = legs
+            entry["journeys"] = journeys
         }
     }
 }

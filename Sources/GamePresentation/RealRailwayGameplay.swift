@@ -164,8 +164,10 @@ extension GameSession {
     public func realLine(calling stops: [StationID]) -> (system: String, line: RealOperationLine)? {
         guard let railways, let operations = railways.operations else { return nil }
         let realMap = RealWorldFrame(world: world) != nil
-        // Each stop's real stations, as (site system, name key).
-        let identities: [Set<String>] = stops.map { id in
+        // Each station's real stations, as (site system, name key): a
+        // station the line calls at twice (A B A) counts once.
+        var seen: Set<StationID> = []
+        let identities: [Set<String>] = stops.filter { seen.insert($0).inserted }.map { id in
             guard let station = world.station(id: id) else { return [] }
             return Set(realStations(named: station.name, at: realMap ? station.location : nil).map {
                 "\($0.system.id)|\(RealRailways.stationKey($0.chinese))"

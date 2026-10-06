@@ -114,6 +114,7 @@ final class RealRailwayGameplayTests: XCTestCase {
         // The red line: 360 s at the peak, 540 s off it.
         XCTAssertEqual(session.realTargetHeadways(of: match.line, inSystem: match.system), TargetHeadways(peak: 6, offPeak: 9))
         XCTAssertNil(session.realLine(calling: [tamsui, elsewhere]), "Two real stops at least")
+        XCTAssertNil(session.realLine(calling: [tamsui, elsewhere, tamsui]), "Two real stations, not one called at twice")
 
         session.selectStation(tamsui)
         session.addSelectedStationToLineDraft()

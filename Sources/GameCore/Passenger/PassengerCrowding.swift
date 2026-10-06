@@ -105,14 +105,17 @@ extension PassengerRouteGraph {
     }
 
     /// The ride segments `route` uses; `nil` if a leg is not on this graph.
+    /// A line may call at a station twice (A B C A D): a leg boards at its
+    /// last call there before it gets off, as the shortest ride does.
     func segments(of route: PassengerRoute) -> [Segment]? {
         var result: [Segment] = []
         for leg in route.legs {
             guard let path = paths.indices.first(where: {
                 paths[$0].line == leg.line && paths[$0].pattern == leg.pattern && paths[$0].direction == leg.direction
                     && paths[$0].stations.contains(leg.from)
-            }), let from = paths[path].stations.firstIndex(of: leg.from),
-                  let to = paths[path].stations[(from + 1)...].firstIndex(of: leg.to) else { return nil }
+            }), let first = paths[path].stations.firstIndex(of: leg.from),
+                  let to = paths[path].stations[(first + 1)...].firstIndex(of: leg.to),
+                  let from = paths[path].stations[first..<to].lastIndex(of: leg.from) else { return nil }
             for stop in from..<to {
                 result.append(Segment(path: path, stop: stop))
             }
