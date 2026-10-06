@@ -50,6 +50,7 @@ extension GameSession {
     /// session only the first time on such a step, so calling it on every
     /// frame of a gesture costs nothing.
     public func mapDidMove() {
+        isFollowingTrain = false
         guard var shown = tutorial, shown.awaitsMapMove else { return }
         shown.noteMapMoved()
         tutorial = shown

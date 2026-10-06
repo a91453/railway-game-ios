@@ -21,6 +21,7 @@ struct StationPanel: View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    catchmentPopulationSection(station)
                     demandSection(station)
                     if let flow = session.world.stationFlow(of: station.id) {
                         flowSection(flow)
@@ -66,6 +67,44 @@ struct StationPanel: View {
         }
         .accessibilityLabel("Choose a station")
         .disabled(session.world.stations.isEmpty)
+    }
+
+    // MARK: - Catchment & Demographics
+
+    @ViewBuilder
+    private func catchmentPopulationSection(_ station: Station) -> some View {
+        if let residents = session.stationCatchmentPopulation(of: station.id) {
+            let estimatedTrips = StationDemand.realWorld(residents: residents).dailyTrips
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Label {
+                            Text(verbatim: session.language.text("800m Catchment Population", "800m 車站腹地人口"))
+                                .font(.subheadline.weight(.semibold))
+                        } icon: {
+                            Image(systemName: "person.3.sequence.fill")
+                                .foregroundStyle(Palette.metroBlue)
+                        }
+
+                        Spacer()
+
+                        Text(verbatim: "\(residents.formatted()) \(session.language.text("people", "人"))")
+                            .font(.headline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(Palette.metroBlue)
+                    }
+
+                    Text(verbatim: session.language.text(
+                        "~10 min walking radius · Generates ~\(estimatedTrips.formatted()) trips/day (40 trips / 100 residents)",
+                        "約 10 分鐘步行服務範圍 · 衍生約 \(estimatedTrips.formatted()) 旅次/日（每百人約 40 旅次）"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            } header: {
+                Text(verbatim: session.language.text("Catchment & Demographics", "站區腹地與人口"))
+            }
+        }
     }
 
     // MARK: - Demand

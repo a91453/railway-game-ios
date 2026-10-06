@@ -8,6 +8,7 @@ final class MapLayersTests: XCTestCase {
         XCTAssertTrue(prefs.showsStationNames)
         XCTAssertTrue(prefs.showsWaitingCounts)
         XCTAssertTrue(prefs.showsCatchmentRings)
+        XCTAssertFalse(prefs.showsPopulationHeatmap, "Population heatmap should default to disabled")
     }
 
     func testPreferencesEqualityAndMutation() {
@@ -19,6 +20,12 @@ final class MapLayersTests: XCTestCase {
         XCTAssertNotEqual(a, b)
 
         b.showsCatchmentRings = false
+        XCTAssertEqual(a, b)
+
+        a.showsPopulationHeatmap = true
+        XCTAssertNotEqual(a, b)
+
+        b.showsPopulationHeatmap = true
         XCTAssertEqual(a, b)
 
         a.showsStationNames = false

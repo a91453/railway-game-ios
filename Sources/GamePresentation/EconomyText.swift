@@ -196,4 +196,56 @@ extension GameWorld {
         let percent = (200 * count + train.ratedCapacity) / (2 * train.ratedCapacity)
         return language.text("\(count) riding · \(percent)%", "載客 \(count) 人 · \(percent)%")
     }
+
+    /// Detailed passenger load and capacity info for train `id`.
+    public func trainLoadInfo(of id: TrainID) -> TrainLoadInfo? {
+        guard let train = train(id: id) else { return nil }
+        let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
+        let capacity = max(Int64(1), train.ratedCapacity)
+        let percent = Int((200 * count + capacity) / (2 * capacity))
+        let factor = Double(count) / Double(capacity)
+        return TrainLoadInfo(
+            passengerCount: count,
+            capacity: capacity,
+            loadFactor: factor,
+            percentage: percent
+        )
+    }
 }
+
+/// Information about a train's passenger load, capacity, and load factor.
+///
+/// Corresponds to the `Ci/` reference's `metro.train.load_factor` and `pax-bar-fill` color thresholds:
+/// - `< 70%`: normal / green
+/// - `70% ..< 90%`: busy / amber
+/// - `>= 90%`: crowded / red (with `is-overload` warning when > 100%)
+public struct TrainLoadInfo: Equatable, Hashable, Sendable {
+    public enum Level: Equatable, Hashable, Sendable {
+        case normal
+        case busy
+        case crowded
+    }
+
+    public let passengerCount: Int64
+    public let capacity: Int64
+    public let loadFactor: Double
+    public let percentage: Int
+
+    public init(passengerCount: Int64, capacity: Int64, loadFactor: Double, percentage: Int) {
+        self.passengerCount = passengerCount
+        self.capacity = capacity
+        self.loadFactor = loadFactor
+        self.percentage = percentage
+    }
+
+    public var level: Level {
+        if loadFactor >= 0.90 { return .crowded }
+        if loadFactor >= 0.70 { return .busy }
+        return .normal
+    }
+
+    public var isOverload: Bool {
+        passengerCount > capacity
+    }
+}
+

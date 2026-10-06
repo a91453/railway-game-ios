@@ -1,6 +1,177 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+
+    "Unfollow" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消跟隨"
+          }
+        }
+      }
+    },
+    "Follow" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨"
+          }
+        }
+      }
+    },
+    "Following" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨中"
+          }
+        }
+      }
+    },
+    "Follow Train" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨列車"
+          }
+        }
+      }
+    },
+    "Following Train" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨列車中"
+          }
+        }
+      }
+    },
+    "Fleet Overview" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車隊總覽"
+          }
+        }
+      }
+    },
+    "Fleet Size" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車隊規模"
+          }
+        }
+      }
+    },
+    "In Service" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "運轉中"
+          }
+        }
+      }
+    },
+    "Avg Load" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平均滿載率"
+          }
+        }
+      }
+    },
+    "Load Factor" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "載客率"
+          }
+        }
+      }
+    },
+    "Over capacity" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超載運行中"
+          }
+        }
+      }
+    },
+    "In depot / off track" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未上軌（車庫待命中）"
+          }
+        }
+      }
+    },
+    "Population density grid overlay based on WorldPop 1km estimates (0 to 10,000+ people/km²)." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基於 WorldPop 1km 推估之人口密度網格（0 至 10,000+ 人/km²）。"
+          }
+        }
+      }
+    },
+    "800m Catchment Population" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "800m 車站腹地人口"
+          }
+        }
+      }
+    },
+    "Catchment & Demographics" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "站區腹地與人口"
+          }
+        }
+      }
+    },
+    "Population (/1km²)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人口（人/約 1km 方格）"
+          }
+        }
+      }
+    },
+    "Close population legend" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉人口圖例"
+          }
+        }
+      }
+    },
     "Automatic physical path" : {
       "localizations": {
         "zh-Hant": {

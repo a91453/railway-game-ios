@@ -21,6 +21,7 @@ struct TrainControls: View {
 
     @Bindable var session: GameSession
     @State private var showsTimetable = false
+    @State private var showsFleetOverview = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -72,6 +73,9 @@ struct TrainControls: View {
             TimetableEditor(session: session)
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showsFleetOverview) {
+            FleetOverviewSheet(session: session)
+        }
     }
 
     /// The selected train, a menu to choose another, and the buy button.
@@ -106,7 +110,25 @@ struct TrainControls: View {
                 .accessibilityLabel("Train: \(train.name)")
                 .accessibilityHint("Chooses the train to control.")
             }
-            Spacer(minLength: 8)
+
+            Button {
+                showsFleetOverview = true
+            } label: {
+                Image(systemName: "list.bullet.rectangle.portrait")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(8)
+                    .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                    )
+            }
+            .accessibilityLabel(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
+            .accessibilityIdentifier("train.fleetOverview")
+
+            Spacer(minLength: 4)
+
             Button {
                 session.purchaseTrain()
             } label: {
@@ -130,10 +152,35 @@ struct TrainControls: View {
     /// stopped at, exactly as GameCore records or derives them.
     private func status(of train: Train) -> some View {
         let language = session.language
-        return VStack(alignment: .leading, spacing: 3) {
-            Text(verbatim: "\(train.positionText(in: language)) · \(train.carsText(in: language))")
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(verbatim: "\(train.positionText(in: language)) · \(train.carsText(in: language))")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+
+                Spacer()
+
+                if train.position != nil {
+                    Button {
+                        session.toggleFollowTrain()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: session.isFollowingTrain ? "location.fill" : "location")
+                                .font(.caption2.weight(.bold))
+                            Text(verbatim: session.isFollowingTrain ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
+                                .font(.caption2.weight(.bold))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(session.isFollowingTrain ? Palette.metroBlue.opacity(0.18) : Palette.chipBackground)
+                        .foregroundStyle(session.isFollowingTrain ? Palette.metroBlue : .primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("train.follow")
+                }
+            }
+
             if train.position != nil {
                 Text(train.pathText(in: language))
                     .font(.footnote)
@@ -143,7 +190,10 @@ struct TrainControls: View {
                     Text(stop)
                         .font(.footnote.weight(.semibold))
                 }
-                if let load = session.world.loadText(of: train.id, in: language) {
+                if let loadInfo = session.world.trainLoadInfo(of: train.id) {
+                    TrainLoadBar(load: loadInfo, language: language)
+                        .padding(.top, 2)
+                } else if let load = session.world.loadText(of: train.id, in: language) {
                     Label(load, systemImage: "person.2.fill")
                         .font(.footnote)
                         .monospacedDigit()

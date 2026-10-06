@@ -11,15 +11,19 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
     public var showsWaitingCounts: Bool
     /// Whether 800m station catchment service circles are drawn.
     public var showsCatchmentRings: Bool
+    /// Whether the population density heatmap is drawn.
+    public var showsPopulationHeatmap: Bool
 
     public init(
         showsStationNames: Bool = true,
         showsWaitingCounts: Bool = true,
-        showsCatchmentRings: Bool = true
+        showsCatchmentRings: Bool = true,
+        showsPopulationHeatmap: Bool = false
     ) {
         self.showsStationNames = showsStationNames
         self.showsWaitingCounts = showsWaitingCounts
         self.showsCatchmentRings = showsCatchmentRings
+        self.showsPopulationHeatmap = showsPopulationHeatmap
     }
 
     /// The default layer preferences for a standard view.

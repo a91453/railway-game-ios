@@ -62,6 +62,9 @@ public final class GameSession {
     /// command selects a station or a point instead.
     public private(set) var tappedTrainID: TrainID?
 
+    /// Whether the camera dynamically follows the selected train.
+    public var isFollowingTrain: Bool = false
+
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
@@ -176,6 +179,7 @@ public final class GameSession {
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
     }
 
@@ -201,6 +205,7 @@ public final class GameSession {
         selectedPoint = station.point
         selectedStationID = id
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
     }
 
@@ -208,7 +213,65 @@ public final class GameSession {
         selectedPoint = nil
         selectedStationID = nil
         tappedTrainID = nil
+        isFollowingTrain = false
         message = nil
+    }
+
+    /// Selects train `id`, and optionally begins camera following if the train
+    /// is placed on the track. Never changes the world; an ID the world does
+    /// not have is ignored.
+    public func selectTrain(_ id: TrainID, following: Bool = false) {
+        guard let train = world.train(id: id) else { return }
+        selectedTrainID = id
+        tappedTrainID = id
+        if following && train.position != nil {
+            isFollowingTrain = true
+        } else {
+            isFollowingTrain = false
+        }
+        message = nil
+    }
+
+    /// Toggles dynamic camera following for the selected train.
+    public func toggleFollowTrain() {
+        if isFollowingTrain {
+            isFollowingTrain = false
+        } else {
+            if selectedTrainID == nil {
+                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
+            }
+            guard let train = selectedTrain, train.position != nil else {
+                isFollowingTrain = false
+                return
+            }
+            isFollowingTrain = true
+        }
+    }
+
+    /// Sets whether the camera dynamically follows the selected train.
+    public func setFollowingTrain(_ following: Bool) {
+        if following {
+            if selectedTrainID == nil {
+                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
+            }
+            guard let train = selectedTrain, train.position != nil else {
+                isFollowingTrain = false
+                return
+            }
+            isFollowingTrain = true
+        } else {
+            isFollowingTrain = false
+        }
+    }
+
+    /// Estimates the 800-metre walking catchment population of station `id`
+    /// when the session runs on a real-world map with population data.
+    public func stationCatchmentPopulation(of id: StationID) -> Int? {
+        guard let station = world.station(id: id),
+              let realWorld = RealWorldFrame(world: world),
+              let population else { return nil }
+        let coord = realWorld.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+        return population.people(within: StationDemand.catchmentRadius, ofLatitude: coord.latitude, longitude: coord.longitude)
     }
 
     // MARK: - Tools
@@ -375,14 +438,6 @@ public final class GameSession {
         set { setSelectedTrainRate(newValue) }
     }
 
-    /// Chooses the train the train tool acts on. Never changes the world;
-    /// an ID the world does not have is ignored.
-    public func selectTrain(_ id: TrainID) {
-        guard id != selectedTrainID, world.train(id: id) != nil else { return }
-        selectedTrainID = id
-        message = nil
-    }
-
     /// Chooses the heading for the next placement. Never changes the world.
     public func setPlacementHeading(_ heading: CompassHeading) {
         placementHeading = heading
@@ -400,6 +455,8 @@ public final class GameSession {
         }
         if let purchased {
             selectedTrainID = purchased
+            tappedTrainID = purchased
+            isFollowingTrain = false
         }
     }
 
@@ -506,6 +563,7 @@ public final class GameSession {
     /// `GameWorld.unplaceTrain(_:)`, which also clears its rate and path.
     public func unplaceSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
+        isFollowingTrain = false
         perform { world throws(GameError) in
             try world.unplaceTrain(train.id)
             return language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")

@@ -72,6 +72,104 @@ final class TrainControlTests: XCTestCase {
         }
     }
 
+    func testTrainFollowStateAndToggle() async throws {
+        var world = try makeLineWorld()
+        try world.purchaseTrain(named: "Train 1")
+        try world.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
+        try world.purchaseTrain(named: "Train 2")
+        try world.placeTrain(Self.second, at: Self.line.at(3, facingEast: true))
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            XCTAssertFalse(session.isFollowingTrain)
+
+            session.toggleFollowTrain()
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.first)
+
+            session.selectTrain(Self.second, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.second)
+
+            session.mapDidMove()
+            XCTAssertFalse(session.isFollowingTrain, "Panning or moving the map must cancel train follow")
+
+            session.setFollowingTrain(true)
+            XCTAssertTrue(session.isFollowingTrain)
+
+            session.clearSelection()
+            XCTAssertFalse(session.isFollowingTrain, "Clearing selection must cancel train follow")
+        }
+    }
+
+    func testSwitchingFollowTargetWhilePaused() async throws {
+        var world = try makeLineWorld(speed: .paused)
+        try world.purchaseTrain(named: "Train 1")
+        try world.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
+        try world.purchaseTrain(named: "Train 2")
+        try world.placeTrain(Self.second, at: Self.line.at(3, facingEast: true))
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            XCTAssertEqual(session.world.clock.speed, .paused)
+
+            session.selectTrain(Self.first, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.first)
+
+            // Switch to second train while paused
+            session.selectTrain(Self.second, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+            XCTAssertEqual(session.selectedTrainID, Self.second)
+            XCTAssertEqual(session.selectedTrain?.id, Self.second)
+            XCTAssertNotNil(session.selectedTrain?.position)
+        }
+    }
+
+    func testCannotFollowUnplacedTrain() async throws {
+        var world = try makeLineWorld()
+        try world.purchaseTrain(named: "Unplaced Train")
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            XCTAssertNil(session.selectedTrain?.position)
+
+            // Attempting to select with following: true
+            session.selectTrain(Self.first, following: true)
+            XCTAssertFalse(session.isFollowingTrain, "Cannot follow a train that has not been placed on track")
+
+            // Attempting to toggle follow
+            session.toggleFollowTrain()
+            XCTAssertFalse(session.isFollowingTrain, "Cannot toggle follow on an unplaced train")
+
+            // Attempting to set following directly
+            session.setFollowingTrain(true)
+            XCTAssertFalse(session.isFollowingTrain, "Cannot set following on an unplaced train")
+        }
+    }
+
+    func testSelectingStationOrBuyingTrainCancelsFollow() async throws {
+        var world = try makeLineWorld()
+        try world.purchaseTrain(named: "Train 1")
+        try world.placeTrain(Self.first, at: Self.line.at(1, facingEast: true))
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.selectTrain(Self.first, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+
+            // Selecting a station cancels follow
+            session.selectStation(Self.west)
+            XCTAssertFalse(session.isFollowingTrain, "Selecting a station must cancel train follow")
+            XCTAssertEqual(session.selectedStationID, Self.west)
+
+            // Re-enable follow
+            session.selectTrain(Self.first, following: true)
+            XCTAssertTrue(session.isFollowingTrain)
+
+            // Buying a new train cancels follow
+            session.purchaseTrain()
+            XCTAssertFalse(session.isFollowingTrain, "Purchasing a train must cancel train follow")
+            XCTAssertEqual(session.selectedTrainID, Self.second)
+        }
+    }
+
     func testBuyingATrainGoesThroughGameCoreAndSelectsIt() async throws {
         let world = try makeLineWorld(balance: 100_000)
         var expected = world

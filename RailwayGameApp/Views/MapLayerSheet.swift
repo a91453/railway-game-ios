@@ -31,15 +31,14 @@ struct MapLayerSheet: View {
                 }
 
                 Section {
-                    Toggle(isOn: .constant(false)) {
+                    Toggle(isOn: $layers.showsPopulationHeatmap) {
                         Label("Population Density Heatmap", systemImage: "person.3.sequence")
                     }
-                    .disabled(true)
                     .accessibilityIdentifier("layer.populationHeatmap")
                 } header: {
                     Text("Urban Demographics")
                 } footer: {
-                    Text("Population density grid overlay will be available in Phase 2.")
+                    Text("Population density grid overlay based on WorldPop 1km estimates (0 to 10,000+ people/km²).")
                 }
             }
             .navigationTitle("Map Layers")

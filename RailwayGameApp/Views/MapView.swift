@@ -20,6 +20,7 @@ struct MapView: View {
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
+    @AppStorage("mapShowsPopulationHeatmap") private var showsPopulationHeatmap = false
     @State private var showsDataSources = false
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
@@ -31,7 +32,8 @@ struct MapView: View {
             MapLayerPreferences(
                 showsStationNames: showsStationNames,
                 showsWaitingCounts: showsWaitingCounts,
-                showsCatchmentRings: showsCatchmentRings
+                showsCatchmentRings: showsCatchmentRings,
+                showsPopulationHeatmap: showsPopulationHeatmap
             )
         }
         // The binding below sets this from a non-mutating context; the
@@ -40,6 +42,7 @@ struct MapView: View {
             showsStationNames = newValue.showsStationNames
             showsWaitingCounts = newValue.showsWaitingCounts
             showsCatchmentRings = newValue.showsCatchmentRings
+            showsPopulationHeatmap = newValue.showsPopulationHeatmap
         }
     }
 
@@ -71,7 +74,9 @@ struct MapView: View {
                     edges: edges,
                     drawsLand: realWorld == nil,
                     layers: mapLayers,
-                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world)
+                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                    population: session.population,
+                    realWorld: realWorld
                 )
                 .equatable()
                 .overlay {
@@ -97,11 +102,18 @@ struct MapView: View {
                 .clipped()
                 .overlay(alignment: .top) {
                     // One column down the top of the map, so none covers
-                    // another: the status banner, then the construction HUD
-                    // while a stretch is previewed, or else the traffic key
-                    // at the leading edge.
+                    // another: the status banner, the train follow bar when
+                    // active, then the construction HUD while a stretch is previewed,
+                    // or else the traffic key at the leading edge.
                     VStack(spacing: 0) {
                         StatusBanner(session: session)
+                        if session.isFollowingTrain, let train = session.selectedTrain {
+                            FollowBar(train: train, session: session) {
+                                session.setFollowingTrain(false)
+                            }
+                            .padding(.top, 8)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                         if showsConstructionHUD, let preview = session.networkPreview {
                             MapConstructionHUD(preview: preview, language: session.language)
                                 .padding(.top, 12)
@@ -113,7 +125,16 @@ struct MapView: View {
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    zoomControls(camera: projection)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        if mapLayers.showsPopulationHeatmap {
+                            PopulationLegendView(language: session.language) {
+                                showsPopulationHeatmap = false
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                        zoomControls(camera: projection)
+                    }
+                    .padding(12)
                 }
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 8) {
@@ -125,6 +146,8 @@ struct MapView: View {
                     .padding(12)
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
+                .animation(.easeInOut(duration: 0.2), value: session.isFollowingTrain)
+                .animation(.easeInOut(duration: 0.2), value: mapLayers.showsPopulationHeatmap)
                 .frame(height: viewport.height)
                 if strip > 0 {
                     // Nothing of the game over the strip: Apple's map shows
@@ -167,6 +190,12 @@ struct MapView: View {
                         camera = projection.centered(on: point)
                     }
                 }
+            }
+            .onChange(of: session.world.clock) { _, _ in
+                centerOnFollowedTrain(projection: projection)
+            }
+            .onChange(of: session.isFollowingTrain ? session.selectedTrainID : nil) { _, _ in
+                centerOnFollowedTrain(projection: projection)
             }
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
@@ -279,6 +308,14 @@ struct MapView: View {
         .tutorialTarget(.zoomControls)
         .padding(12)
     }
+
+    private func centerOnFollowedTrain(projection: PlanCamera) {
+        guard session.isFollowingTrain,
+              let train = session.selectedTrain,
+              let position = train.position,
+              let coordinate = session.world.location(of: position)?.position else { return }
+        camera = projection.centered(on: coordinate)
+    }
 }
 
 /// What the traffic overlay is worked out from (Stage V4e): the time
@@ -355,6 +392,8 @@ private struct MapCanvas: View, Equatable {
     let drawsLand: Bool
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
+    let population: PopulationGrid?
+    let realWorld: RealWorldFrame?
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -370,11 +409,13 @@ private struct MapCanvas: View, Equatable {
             && lhs.drawsLand == rhs.drawsLand
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
+            && lhs.population?.total == rhs.population?.total
+            && lhs.realWorld == rhs.realWorld
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID
-        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts
+        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, drawsLand = drawsLand, layers = layers, waitingCounts = waitingCounts, population = population, realWorld = realWorld
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -388,6 +429,8 @@ private struct MapCanvas: View, Equatable {
                 drawsLand: drawsLand,
                 layers: layers,
                 waitingCounts: waitingCounts,
+                population: population,
+                realWorld: realWorld,
                 in: context
             )
         }
