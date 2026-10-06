@@ -884,7 +884,7 @@ public final class GameSession {
     /// number upward that no existing station uses. On a real-world map,
     /// suggests the nearest real railway station's name if within range
     /// and not yet taken.
-    public static func suggestedStationName(
+    nonisolated public static func suggestedStationName(
         for world: GameWorld,
         at location: PlanPoint? = nil,
         in language: DisplayLanguage,
@@ -923,7 +923,7 @@ public final class GameSession {
 
     /// "`prefix` N" with the lowest N from `first` upward that is not in
     /// `taken`.
-    private static func suggestedName(_ prefix: String, from first: Int, taken: Set<String>) -> String {
+    nonisolated private static func suggestedName(_ prefix: String, from first: Int, taken: Set<String>) -> String {
         var number = first
         while taken.contains("\(prefix) \(number)") {
             number += 1
