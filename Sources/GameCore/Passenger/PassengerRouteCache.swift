@@ -6,8 +6,9 @@
 // service graph again. Here the graph and each pair's choices are kept,
 // keyed by everything the graph reads: the lines, stations, track network,
 // traffic control, train lengths (a controlled single-track line's
-// capacity reads its longest train) and each line's service level at the
-// current minute (its window and the service day). The service level is
+// capacity reads its longest train) and capacities, the service day and
+// each line's service level at the current minute (its window and the
+// service day). The service level is
 // the only time-of-day input, so a key per level keeps a day's few service
 // periods without working them out again.
 //
@@ -24,7 +25,11 @@ struct PassengerRouteGraphKey: Equatable, Sendable {
     let trafficControl: Bool
     let trains: [TrainID]
     let trainLengths: [Int64]
+    let trainCapacities: [Int64]
     let levels: [ServiceLevel?]
+    /// Every level's headway sets a path's daily capacity (see
+    /// ``PassengerCrowding``).
+    let serviceDay: ServiceDay
 }
 
 /// What a network release plan reads besides its graph: the stations'
@@ -99,8 +104,8 @@ extension GameWorld {
     func passengerRouteGraphKey() -> PassengerRouteGraphKey {
         PassengerRouteGraphKey(
             lines: lines, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
-            trains: trains.map(\.id), trainLengths: trains.map(\.length),
-            levels: lines.map { serviceLevel(of: $0.id, at: clock.now) }
+            trains: trains.map(\.id), trainLengths: trains.map(\.length), trainCapacities: trains.map(\.capacity),
+            levels: lines.map { serviceLevel(of: $0.id, at: clock.now) }, serviceDay: serviceDay
         )
     }
 

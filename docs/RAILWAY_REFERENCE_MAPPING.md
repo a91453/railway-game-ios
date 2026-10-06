@@ -780,3 +780,11 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`applyStationOperationToStation`（`normalFlow`／`flowControl`／`closed`）、`metroStationAllowsEntryForLine`、`metroStationAllowsTrainServiceAtStation`、`metroStationAllowsTransfer`、`metroStationAllowsPassengerDestination`、`clearStationWaitingPassengers` | `Station.operationMode`、`StationOperationMode`、`GameWorld.setStationOperationMode(_:to:)`、`PassengerDemand`／`Boarding`／路徑圖 | ported：三種模式與各條件逐一相同；關站時清空該站候車（記原起站 abandoned），並移除仍需在關站上下車、轉乘的候車旅程。差異（gap）：來源的列車跳過關閉車站（`metroSkipClosedNextStationIdx`），原生列車的物理時刻表不變，只是不上下客；在折返站仍在車上的乘客記 abandoned。自動依末班車改模式（`metroComputeStationAutoOperationMode`）未移植。 |
 
 同一 StationID 內「同月台／站內通道」的再細分需要知道各服務停靠哪一座月台，參考沒有對應的資料，仍為 gap；目前同站換乘一律為 same-platform。
+
+### Phase 5F 續：擁擠成本與廣義成本對需求的影響（T3）
+
+| 來源／契約 | 目標 | 移植狀態／差異 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §6（link graph 邊：travelTime、frequency、offeredCapacity、usedCapacity、transferPenalty；先做最短廣義成本與決定性分配） | `PassengerCrowding.swift`、`PassengerRouteGraph.ServicePath.dailyCapacity`、`PassengerDemand.makeNetworkPassengerPlan` | gap → native：參考只列欄位、沒有公式或程式。offered = 各服務等級在營運時窗內的分鐘 ÷ 該等級班距 × 列車營運容量；used = 本計畫的每日 OD 人次按未擁擠權重分到各路段；擁擠時間 = 乘車秒 × 0.15 ×（used/offered）^4（BPR，比值上限 2）；權重改用擁擠後成本（一次 incremental assignment）。全部整數、由世界狀態決定，不存檔。 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`getMetroTrainOperationalCap`（額定 × 1.1）、預設 `{cars: 6, cap: 1920}`；`metroEconomyCollectCrowdingMetrics`（只回報 load factor） | `Train.capacity`、`PassengerCrowding.defaultTrainCapacity` | ported 常數：未指派列車的線路以參考的六節車（6 × 352）計。參考的路徑分配 `choiceProb` 來自不在快照中的後端，沒有擁擠成本可移植。 |
+| `Ci/OBSERVED_STRENGTHS.md` §9、`Ci/PROJECT_ABSORPTION_GUIDE.md` J（accessibility/congestion feedback、demand elasticity 只列為概念） | `PassengerCrowding.decayed(_:minutes:)` | gap → native：最快路線的廣義分鐘 ≤ 30 時保留全部人次，之後與分鐘成反比（60 分鐘剩一半），四捨五入；只在 `.network` 模式，`.direct` 與既有 golden 不變。城市成長：GameCore 目前沒有城市模型（Phase 6），沒有可接上可達性的消費者，仍為 gap。 |
