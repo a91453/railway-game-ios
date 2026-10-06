@@ -545,6 +545,36 @@ public final class GameSession {
         }
     }
 
+    /// Borrows one ``CompanyAccounts/loanStep`` through
+    /// `GameWorld.borrow(_:)` (decision 67).
+    public func borrowLoanStep() {
+        perform { world throws(GameError) in
+            try world.borrow(CompanyAccounts.loanStep)
+            return language.text("Borrowed \(CompanyAccounts.loanStep.moneyText).", "借入 \(CompanyAccounts.loanStep.moneyText)。")
+        }
+    }
+
+    /// Repays one ``CompanyAccounts/loanStep`` through
+    /// `GameWorld.repayLoan(_:)` (decision 67).
+    public func repayLoanStep() {
+        perform { world throws(GameError) in
+            try world.repayLoan(CompanyAccounts.loanStep)
+            return language.text("Repaid \(CompanyAccounts.loanStep.moneyText).", "償還 \(CompanyAccounts.loanStep.moneyText)。")
+        }
+    }
+
+    /// Sets the type of the selected train's cars through
+    /// `GameWorld.setTrainType(_:to:)` (`nil`: the standard car): only while
+    /// it is off the track.
+    public func setSelectedTrainType(_ type: TrainType?) {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.setTrainType(train.id, to: type)
+            let text = Train.typeText(type, in: language)
+            return language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+        }
+    }
+
     /// Sets the selected train's rate through
     /// `GameWorld.setTrainMovementRate(_:to:)`. Like a speed change, a new
     /// rate is shown by the control itself rather than announced; a rejected

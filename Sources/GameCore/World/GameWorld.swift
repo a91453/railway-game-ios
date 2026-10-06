@@ -45,6 +45,16 @@ public struct GameWorld: Equatable, Sendable {
     /// Legacy saves keep direct-trip demand; network games select a complete
     /// journey at release. A change affects future releases only.
     public internal(set) var passengerRoutingMode: PassengerRoutingMode
+    /// Whether each day's demand follows the reference's weekday factors
+    /// and weekends its weekend hours (item 4 of the author's order). Off in
+    /// a new world and in saves from before it; the app's new games turn it
+    /// on. Set by ``setWeeklyDemand(_:)`` only.
+    public internal(set) var weeklyDemand: Bool = false
+    /// The demand events and the seed they are drawn from, or `nil` for a
+    /// world without them (item 4; see ``DemandEventSchedule``). Off in a
+    /// new world and in saves from before them; the app's new games turn
+    /// them on. Set by ``setDemandEvents(seed:)`` and every midnight only.
+    public internal(set) var demandEvents: DemandEventSchedule?
     /// Fractions left after deterministic OD route choice, by origin and
     /// destination. They are saved so advancing in batches changes nothing.
     var passengerRouteBalances: [PassengerRouteBalance]
@@ -532,6 +542,19 @@ public struct GameWorld: Equatable, Sendable {
             if price > 0 { try economy.spend(Money(price)) }
         }
         trains[index].cars = cars
+    }
+
+    /// Sets the type of train `id`'s cars (the reference's `TRAIN_TYPES`),
+    /// or `nil` for the standard car: what each car carries and how many
+    /// doors it has (see ``TrainType``). Free, and only while the train is
+    /// off the track, as its cars are (see ``setTrainCars(_:to:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainAlreadyPlaced(_:)``.
+    public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
+        trains[index].type = type
     }
 
     /// Takes a placed train off the track. The train keeps its ID, name and
@@ -1220,7 +1243,7 @@ public struct GameWorld: Equatable, Sendable {
     ///      farthest first, up to its ``Train/capacity`` (G1b; see
     ///      ``riders(of:)`` and ``PassengerLedger``). Both use the doors at
     ///      once, so the exchange lasts the larger number's
-    ///      ``ServiceDwell/exchangeSeconds(_:cars:)``.
+    ///      ``Train/exchangeSeconds(_:)``.
     ///    - **Doors held open.** At each whole minute while they are open,
     ///      newly released passengers board too, and the exchange runs on.
     ///    - **Doors closing.** They start closing at the first second when
@@ -1423,6 +1446,18 @@ public struct GameWorld: Equatable, Sendable {
                         passengerLevels = levels
                     }
                 }
+                // Item 4: events start and end at midnight.
+                let midnight = demandEvents != nil && start.seconds % GameTime.secondsPerDay == 0
+                if midnight {
+                    startDemandEventDay(dayIndex(of: start))
+                }
+                // Weekly demand and events: each day releases its own day's
+                // trips.
+                if demandDay != nil, midnight || passengerPlan.day != demandDay {
+                    if let release { keepRemainders(of: release) }
+                    passengerPlan = PassengerPlanCache()
+                    release = passengerRelease()
+                }
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {
                     releasePassengers(at: start, &release!)
@@ -1508,9 +1543,17 @@ public struct GameWorld: Equatable, Sendable {
                 } else {
                     passengerWake = nil
                 }
+                // Weekly demand: the next day releases its own trips. The
+                // second of the day, without multiplying back (a save's
+                // clock may be near the end of time).
+                let day = GameTime.secondsPerDay
+                let dayWake: Int64? = demandDay.map { _ in
+                    let intoDay = (clock.now.seconds % day + day) % day
+                    return (day - intoDay + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
+                }
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
-                    minutesUntilLineWaitsChange(memo: &memo), passengerWake,
+                    minutesUntilLineWaitsChange(memo: &memo), passengerWake, dayWake,
                 ].compactMap { $0 }.min()
                 let idle = min(remaining / minute, wake ?? remaining / minute)
                 if release != nil || accounts.mode == .management {
@@ -1935,7 +1978,7 @@ public struct GameWorld: Equatable, Sendable {
     /// - once its doors have opened, the passengers for that stop get off
     ///   and those waiting for the train get on (see
     ///   ``exchangePassengers(_:at:)``), taking as long as the larger
-    ///   number does (see ``ServiceDwell/exchangeSeconds(_:cars:)``);
+    ///   number does (see ``Train/exchangeSeconds(_:)``);
     /// - while its doors stay open, at each whole minute, when new
     ///   passengers have come, they get on too, after those still getting
     ///   on;
@@ -1950,14 +1993,14 @@ public struct GameWorld: Equatable, Sendable {
             if times.closing == nil, now.isWholeMinute {
                 let boarded = boardPassengers(trains[index], at: stop)
                 if boarded > 0 {
-                    times.exchangeEnd = Self.saturating(max(end, now), plus: ServiceDwell.exchangeSeconds(boarded, cars: trains[index].cars))
+                    times.exchangeEnd = Self.saturating(max(end, now), plus: trains[index].exchangeSeconds(boarded))
                     changed = true
                 }
             }
         } else {
             guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
             let busy = exchangePassengers(index, at: stop)
-            times.exchangeEnd = Self.saturating(now, plus: ServiceDwell.exchangeSeconds(busy, cars: trains[index].cars))
+            times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy))
             changed = true
         }
         if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
@@ -2682,7 +2725,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, accounts, geoAnchor
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -2755,6 +2798,8 @@ extension GameWorld: Codable {
         riders = container.contains(.riders) ? try container.decode([TrainRiders].self, forKey: .riders) : []
         passengerRoutingMode = container.contains(.passengerRoutingMode)
             ? try container.decode(PassengerRoutingMode.self, forKey: .passengerRoutingMode) : .direct
+        weeklyDemand = container.contains(.weeklyDemand) ? try container.decode(Bool.self, forKey: .weeklyDemand) : false
+        demandEvents = container.contains(.demandEvents) ? try container.decode(DemandEventSchedule.self, forKey: .demandEvents) : nil
         passengerRouteBalances = container.contains(.passengerRouteBalances)
             ? try container.decode([PassengerRouteBalance].self, forKey: .passengerRouteBalances) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
@@ -2818,6 +2863,10 @@ extension GameWorld: Codable {
         if !riders.isEmpty {
             try container.encode(riders, forKey: .riders)
         }
+        if weeklyDemand {
+            try container.encode(weeklyDemand, forKey: .weeklyDemand)
+        }
+        try container.encodeIfPresent(demandEvents, forKey: .demandEvents)
         if passengerRoutingMode != .direct {
             try container.encode(passengerRoutingMode, forKey: .passengerRoutingMode)
         }
@@ -3025,7 +3074,7 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service times are after the clock."
             }
         }
-        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem()
+        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? demandEventProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

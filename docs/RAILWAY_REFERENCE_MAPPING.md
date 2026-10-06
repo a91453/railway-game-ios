@@ -765,3 +765,46 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
 
 服務異動處理：候車群組檢查尚未完成的每段服務、物理路徑與每天能實際出現的服務 level；夜間暫停可等待再開班，永久失效則離站。刪除 pattern 會移轉後續索引；已在被移除服務上的乘客可按舊時刻表完成目前這段，移除未來 pattern 則結束其旅程並記回原起站。批量推進在 window／level 邊界保存 OD 餘數、重建需求，idle shortcut 亦會在該邊界醒來。
+
+## 車種與每節定員（決策 66）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。`Railway/` 三個來源與 `railway_game_reference_clean` 都沒有車種資料；`Ci/` 只有每節人數。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`TRAIN_TYPES`、`LINE_TRAIN_TYPE_MAIN`、`LINE_TRAIN_TYPE_EXTRA` | `TrainType`、`TrainType.ratedCapacityPerCar`、`TrainType.main` | direct：九種與 `ppc` 逐值照搬。來源依城市限制可選車種（中國大陸全部、其他城市 A、B、C、L、D），本遊戲沒有城市清單，全部可選。 |
+| 同檔／`normalizeLineTrainTypeForCityKey`、`_lineFormState.type` | `TrainType.referenceDefault` | direct：預設 B。App 新購列車仍是標準車（不改決策 46 平衡），記錄來源預設。 |
+| 同檔／`getTrainCap`（`round(ppc × cars)`） | `Train.ratedCapacity` | direct：整數相乘。 |
+| 同檔／`getMetroTrainOperationalCap`、`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1` | `Train.capacity` | direct：`(額定 × 11 + 5) / 10`，與 `Math.round` 對正數相同。HSR 不超載的分支本遊戲沒有高鐵模式，gap。 |
+| 同檔／`getMetroLineTrainPpc`、各城市 `*_STOCK_MODELS` | 未移植 | gap：真實車型表依城市；本遊戲沒有城市車型選擇。 |
+| 來源無車門模型（`PARAMS.BOARDING_RATE: 2` 未被使用） | `TrainType.doorsPerCar`、`Train.passengersPerSecond`、`Train.exchangeSeconds` | gap → 原生：每門每秒 2 人（決策 39），門數依車種（5／4／3／2）。 |
+
+## 營運成本與公司帳、貸款（決策 67）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`metroEconomySettleHourlyIfNeeded`（營運 `75·班次 + 42·列車公里 + 18·車站`、維修 `12·路線公里 + 9·列車公里 + 8·列車`） | `GameWorld.settleHour`（決策 36） | 已移植（G1c） |
+| 同檔／`metroEconomySettleDailyForEndedDay`（能源 `220·路線公里 + 360·列車`、人事 `620·車站 + 480·列車`） | `GameWorld.settleDay`（決策 36） | 已移植（G1c） |
+| 同檔／`estimateActionCost`、`metroPurchaseQuote`、`window.MetroEconomy` | `ConstructionCosts.newGame`（決策 46） | gap：引擎不在快照；購車價格是原生 |
+| 同檔／`summarizeFinanceForTransport` | `FinanceSummary`（+ `interestCost`、`netProfit`） | adapted：加上原生的利息與淨利 |
+| 貸款、利息、折舊：`Ci/` 與 `Railway/` 都沒有；`railway_game_reference_clean` 只有 OpenTTD 編譯核心的字串（`EXPENSES_LOAN_INT`、`max_loan`、`initial_interest`），沒有數值與可讀原始碼 | `GameWorld.borrow`、`repayLoan`、`dailyLoanInterest`、`CompanyAccounts.loan` | gap → 原生：$100,000 一步，上限 $5,000,000，年利率 5%（360 天），每日支付。折舊與資產負債表仍是 gap。 |
+
+## 每週需求（決策 68）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`METRO_WEEKDAY_FACTORS`、`getWeekdayFactor` | `StationDemand.weekdayFactors`（千分比）、`StationDemand.trips(onDay:)` | direct：數值照搬，四捨五入到整人次 |
+| 同檔／`isWeekend`（`[0,6].includes(simDay % 7)`） | `StationDemand.isWeekend(day:)`、`weekday(ofDay:)` | adapted：遊戲第 0 天是星期一 |
+| 同檔／`H_FACTOR_WD`、`H_FACTOR_WE`、`currentHFactor` | `StationDemand.weekendShape` | adapted：既有 `dayShape`（`PARAMS.PEAK_FACTOR`）乘上週末÷平日的比例，整數千分比 |
+| 同檔／`metroWeeklyDemandMinuteIntegral`、`METRO_WEEKDAY_PREFIX` | 每天一份計畫、午夜重建 | adapted：來源以連續積分算需求分鐘；原生以整數逐日計畫，每天精確釋出當天旅次 |
+| 同檔／`peakFlowMult`（`PEAK_MULT_WE = 0.7`、離峰 0.4） | — | gap：作用於來源的流量／班次，本遊戲由服務日等級決定 |
+| 同檔／`metroUpdateDemandEvents`、`metroEventDemandMultiplier`（`1 + max(boost)`） | `GameWorld.demandMultiplier(at:)`、`trips(of:at:)`、`attraction(of:at:)`（決策 69） | adapted：整數千分比，事件以整天計 |
+| 同檔／`metroEventStationTrafficWeights`（流量 ÷ 最大，前 20% × 10） | `GameWorld.drawDemandEvent` | adapted：以每日旅次為流量，整數權重 |
+| 同檔／事件文字 `metro.event.exhibition`、`metro.event.crowdSurge`、「{wait} 天後開始，持續 {days} 天」 | `DemandEventKind`、`GameWorld.demandEventTexts(at:in:)` | direct（繁中化） |
+| `aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a）、cadence `firstMin/firstMax/gapMin/gapMax`、`/ max(1, n / 10)` | `DemandEventSchedule.hash`、`roll`、`startDemandEventDay` | direct／adapted：雜湊照搬；秒數換成整天 |
+| `MetroEconomy.advanceMetroEvents`（不在快照） | 展覽 3–7 天 +20–50%、大客流 1–2 天 +50–100%，提前 2–5 天 | gap → 原生數值 |
+| `aviation_disruptions` 的天氣封閉、燃油、國定假日 | — | gap：沒有封站營運模式，之後處理 |

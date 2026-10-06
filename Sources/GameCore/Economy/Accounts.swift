@@ -44,6 +44,9 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// `metro_station_staff` and `metro_train_staff`: the day's staff, out.
     case stationStaff
     case trainStaff
+    /// The day's interest on the company's loan, out (decision 67; the
+    /// reference has no loans).
+    case loanInterest
 }
 
 /// One line of a ledger row's breakdown.
@@ -92,6 +95,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailyEnergy
         /// A day's staff.
         case dailyStaff
+        /// A day's interest on the loan (decision 67).
+        case dailyInterest
     }
 
     public let kind: Kind
@@ -123,6 +128,9 @@ public struct DayAccount: Hashable, Sendable {
     public internal(set) var maintenanceCost: Money = .zero
     public internal(set) var energyCost: Money = .zero
     public internal(set) var staffCost: Money = .zero
+    /// Interest paid on the loan (decision 67): not a running cost, so not
+    /// in ``totalCost``.
+    public internal(set) var interestCost: Money = .zero
 
     public init(day: Int64) {
         self.day = day
@@ -142,6 +150,7 @@ public struct DayAccount: Hashable, Sendable {
             case .maintenanceCost: maintenanceCost = maintenanceCost + cost
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
+            case .loanInterest: interestCost = interestCost + cost
             }
         }
     }
@@ -171,15 +180,21 @@ public struct FinanceSummary: Hashable, Sendable {
     public let maintenanceCost: Money
     public let energyCost: Money
     public let staffCost: Money
+    /// Interest paid on the loan (decision 67).
+    public let interestCost: Money
 
     public var totalCost: Money {
         operatingCost + maintenanceCost + energyCost + staffCost
     }
 
-    /// Revenue less every cost; with no investing flows in G1 it is also
-    /// the net cash flow.
+    /// Revenue less every running cost.
     public var operatingProfit: Money {
         fareRevenue - totalCost
+    }
+
+    /// The operating profit less the loan's interest (decision 67).
+    public var netProfit: Money {
+        operatingProfit - interestCost
     }
 }
 
@@ -210,6 +225,18 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// The latest days with any ledger row, by ascending day: at most
     /// ``keptDays``.
     public internal(set) var days: [DayAccount] = []
+    /// What the company owes the bank (decision 67): borrowed and repaid in
+    /// ``loanStep``s up to ``maximumLoan``; interest is paid every midnight
+    /// while the company is managed.
+    public internal(set) var loan: Money = .zero
+
+    /// Loans are taken and repaid $100,000 at a time.
+    public static let loanStep: Money = 10_000_000
+    /// The most the company may owe: $5,000,000.
+    public static let maximumLoan: Money = 500_000_000
+    /// The yearly interest, in hundredths of a percent: 5 %, over the
+    /// finance report's 360-day year, charged daily.
+    public static let interestBasisPoints: Int64 = 500
 
     /// The economy panel shows the last 12 rows and the last hour's totals;
     /// two days of rows cover both.
@@ -225,7 +252,7 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// Whether there is nothing in the accounts: a world before G1c.
     var isPristine: Bool {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && pending == .empty && openedAt == nil
-            && entries.isEmpty && days.isEmpty
+            && entries.isEmpty && days.isEmpty && loan == .zero
     }
 
     /// The rules trips pay by.
@@ -261,7 +288,8 @@ public struct CompanyAccounts: Hashable, Sendable {
             }
             return FinanceSummary(
                 index: index, fareRevenue: total(\.fareRevenue), operatingCost: total(\.operatingCost),
-                maintenanceCost: total(\.maintenanceCost), energyCost: total(\.energyCost), staffCost: total(\.staffCost)
+                maintenanceCost: total(\.maintenanceCost), energyCost: total(\.energyCost), staffCost: total(\.staffCost),
+                interestCost: total(\.interestCost)
             )
         }
         return (summary(current), summary(current - 1))
@@ -278,7 +306,37 @@ public struct CompanyAccounts: Hashable, Sendable {
 extension HourlyAccrual: Codable {}
 extension LedgerLine: Codable {}
 extension CrowdingMetrics: Codable {}
-extension DayAccount: Codable {}
+extension DayAccount: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
+    }
+
+    /// Decodes a day; a day without interest, as every day before loans,
+    /// has no `"interestCost"`.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        day = try container.decode(Int64.self, forKey: .day)
+        fareRevenue = try container.decode(Money.self, forKey: .fareRevenue)
+        operatingCost = try container.decode(Money.self, forKey: .operatingCost)
+        maintenanceCost = try container.decode(Money.self, forKey: .maintenanceCost)
+        energyCost = try container.decode(Money.self, forKey: .energyCost)
+        staffCost = try container.decode(Money.self, forKey: .staffCost)
+        interestCost = container.contains(.interestCost) ? try container.decode(Money.self, forKey: .interestCost) : .zero
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(day, forKey: .day)
+        try container.encode(fareRevenue, forKey: .fareRevenue)
+        try container.encode(operatingCost, forKey: .operatingCost)
+        try container.encode(maintenanceCost, forKey: .maintenanceCost)
+        try container.encode(energyCost, forKey: .energyCost)
+        try container.encode(staffCost, forKey: .staffCost)
+        if interestCost != .zero {
+            try container.encode(interestCost, forKey: .interestCost)
+        }
+    }
+}
 
 extension LedgerEntry: Codable {
     private enum CodingKeys: String, CodingKey {
@@ -308,7 +366,7 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, fareBaseline, pending, openedAt, entries, days
+        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -324,6 +382,7 @@ extension CompanyAccounts: Codable {
         openedAt = container.contains(.openedAt) ? try container.decode(GameTime.self, forKey: .openedAt) : nil
         entries = try container.decode([LedgerEntry].self, forKey: .entries)
         days = try container.decode([DayAccount].self, forKey: .days)
+        loan = container.contains(.loan) ? try container.decode(Money.self, forKey: .loan) : .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -341,5 +400,8 @@ extension CompanyAccounts: Codable {
         }
         try container.encode(entries, forKey: .entries)
         try container.encode(days, forKey: .days)
+        if loan != .zero {
+            try container.encode(loan, forKey: .loan)
+        }
     }
 }

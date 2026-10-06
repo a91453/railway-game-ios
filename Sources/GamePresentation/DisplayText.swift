@@ -367,6 +367,13 @@ extension GameError {
                 "Fares must be 0 or more, and distance steps must start at 0 km, follow on without gaps, and end with one that has no end.",
                 "票價須為非負金額；階梯票價的區間須從 0 公里開始連續銜接，最後一個區間的結束距離須留空。"
             )
+        case .invalidLoanAmount:
+            language.text(
+                "Loans are borrowed and repaid \(CompanyAccounts.loanStep.moneyText) at a time, up to \(CompanyAccounts.maximumLoan.moneyText) in all, and no more than is owed.",
+                "貸款以每次 \(CompanyAccounts.loanStep.moneyText) 借入與償還，總額最多 \(CompanyAccounts.maximumLoan.moneyText)，償還不能超過欠款。"
+            )
+        case .loanNeedsManagement:
+            language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
         }
     }
 }
@@ -475,5 +482,35 @@ extension GameSession {
             return summary
         }
         return nil
+    }
+}
+
+extension TrainType {
+    /// The type's name, as the reference labels it (`TRAIN_TYPES[type].label`,
+    /// `metroTrainTypeLabel`): "Type B" / "B型", "Maglev" / "磁浮".
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .a, .b, .c, .l, .d: language.text("Type \(rawValue)", "\(rawValue)型")
+        case .apm: "APM"
+        case .maglev: language.text("Maglev", "磁浮")
+        case .skyRail: language.text("Sky rail", "雲軌")
+        case .monorail: language.text("Monorail", "單軌")
+        }
+    }
+}
+
+extension Train {
+    /// The type of its cars, what each carries and its doors:
+    /// "Type B · 260 a car · 4 doors", or "Standard car · 320 a car · 4 doors".
+    public func typeText(in language: DisplayLanguage) -> String {
+        Self.typeText(type, in: language)
+    }
+
+    /// The same for a train of cars of `type` (`nil`: the standard car).
+    public static func typeText(_ type: TrainType?, in language: DisplayLanguage) -> String {
+        let name = type?.title(in: language) ?? language.text("Standard car", "標準車")
+        let perCar = type?.ratedCapacityPerCar ?? ratedCapacityPerCar
+        let doors = type?.doorsPerCar ?? ServiceDwell.doorsPerCar
+        return language.text("\(name) · \(perCar) a car · \(doors) doors", "\(name) · 每節 \(perCar) 人 · \(doors) 門")
     }
 }

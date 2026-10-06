@@ -58,6 +58,7 @@ extension LedgerEntry.Kind {
         case .hourlyNet: language.text("Hourly net", "小時淨額")
         case .dailyEnergy: language.text("Energy (daily)", "能源費用（日結）")
         case .dailyStaff: language.text("Staff (daily)", "員工費用（日結）")
+        case .dailyInterest: language.text("Loan interest (daily)", "貸款利息（日結）")
         }
     }
 }
@@ -74,6 +75,7 @@ extension LedgerItem {
         case .trainEnergy: language.text("Train power", "列車日用電")
         case .stationStaff: language.text("Station staff", "車站員工")
         case .trainStaff: language.text("Drivers and dispatchers", "司機與調度員工")
+        case .loanInterest: language.text("Loan interest", "貸款利息")
         }
     }
 }
@@ -260,3 +262,22 @@ public struct TrainLoadInfo: Equatable, Hashable, Sendable {
     }
 }
 
+
+extension CompanyAccounts {
+    /// What the company owes and what it costs (decision 67): "Loan
+    /// $1,000,000 · $139 a day in interest", or "No loan".
+    public func loanText(in language: DisplayLanguage) -> String {
+        guard loan > .zero else { return language.text("No loan", "沒有貸款") }
+        let interest = GameWorld.dailyLoanInterest(on: loan).moneyText
+        return language.text("Loan \(loan.moneyText) · \(interest) a day in interest", "貸款 \(loan.moneyText) · 每日利息 \(interest)")
+    }
+
+    /// The terms: "$100,000 at a time, up to $5,000,000, at 5% a year".
+    public static func loanTermsText(in language: DisplayLanguage) -> String {
+        let rate = "\(interestBasisPoints / 100)%"
+        return language.text(
+            "\(loanStep.moneyText) at a time, up to \(maximumLoan.moneyText), at \(rate) a year, paid daily",
+            "每次 \(loanStep.moneyText)，最多 \(maximumLoan.moneyText)，年利率 \(rate)，每日支付"
+        )
+    }
+}

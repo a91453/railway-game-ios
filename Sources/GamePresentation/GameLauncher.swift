@@ -75,7 +75,7 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, or with `anchor` on a real-world
     /// map with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        begin(.newGame(anchor: anchor), keepingAutosave: true)
+        begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
     }
 
     /// Opens ``DemoWorld``: two lines already running.
@@ -92,7 +92,7 @@ public final class GameLauncher {
     /// Starts a new game with the tutorial on its first step (the start
     /// screen's tutorial entry, Stage C5).
     public func startTutorial() {
-        guard begin(.newGame(), keepingAutosave: true) else { return }
+        guard begin(.newGame(eventSeed: .random(in: .min ... .max)), keepingAutosave: true) else { return }
         session?.startTutorial()
     }
 

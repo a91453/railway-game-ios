@@ -400,3 +400,41 @@ extension GameSession {
         return station
     }
 }
+
+extension DemandEventKind {
+    /// The reference's event names (`metro.event.exhibition` 大型展览,
+    /// `metro.event.crowdSurge` 大客流事件).
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .exhibition: language.text("Exhibition", "大型展覽")
+        case .crowdSurge: language.text("Crowd surge", "大客流事件")
+        }
+    }
+}
+
+extension GameWorld {
+    /// The demand events announced or running at station `id`, in the
+    /// reference's words ("{wait} days until start, lasts {days} days"):
+    /// "Exhibition: +35% demand, starts in 2 days, lasts 5 days", or
+    /// "Crowd surge: +80% demand, 1 more day".
+    public func demandEventTexts(at id: StationID, in language: DisplayLanguage) -> [String] {
+        let today = clock.now.seconds / GameTime.secondsPerDay
+        return (demandEvents?.events ?? []).filter { $0.station == id && today < $0.end }.map { event in
+            let percent = (event.boost + 5) / 10
+            let title = event.kind.title(in: language)
+            if event.start > today {
+                let wait = event.start - today
+                let days = event.end - event.start
+                return language.text(
+                    "\(title): +\(percent)% demand, starts in \(wait) day\(wait == 1 ? "" : "s"), lasts \(days) day\(days == 1 ? "" : "s")",
+                    "\(title)：需求 +\(percent)%，\(wait) 天後開始，持續 \(days) 天"
+                )
+            }
+            let left = event.end - today
+            return language.text(
+                "\(title): +\(percent)% demand, \(left) more day\(left == 1 ? "" : "s")",
+                "\(title)：需求 +\(percent)%，還有 \(left) 天"
+            )
+        }
+    }
+}
