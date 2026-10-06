@@ -208,4 +208,34 @@ final class DeadlockTests: XCTestCase {
         XCTAssertFalse(world.isAtPassingPlace(world.train(id: east)!))
         XCTAssertEqual(world.train(id: east)?.movement.edges, [.edge(3)])
     }
+
+    /// A platform a service at a passing place needs cannot be removed,
+    /// even without traffic control (which holds nothing then): the one it
+    /// stands at, and its call's, which it goes on to. Nor can a platform of
+    /// its call be added under its head, which would leave it stopped at its
+    /// call without arriving. So the world still saves and loads.
+    func testAPassingPlaceKeepsThePlatformsItNeeds() throws {
+        var world = try SingleTrackMeet.world()
+        let (east, _) = try expresses(&world)
+        world.setSpeed(.x1)
+        try world.advance(ticks: 1_200)
+        XCTAssertTrue(world.isAtPassingPlace(world.train(id: east)!))
+        XCTAssertEqual(world.train(id: east)?.position, .onEdge(SingleTrackMeet.forward(2), offset: 9_216))
+        try world.setTrafficControl(false)
+        let before = world
+        XCTAssertThrowsError(try world.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(2), from: 7_168)) {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(east))
+        }
+        XCTAssertThrowsError(try world.removeTrackPlatform(SingleTrackMeet.east, on: .edge(3), from: 5_120)) {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(east))
+        }
+        XCTAssertThrowsError(try world.addTrackPlatform(SingleTrackMeet.east, on: .edge(2), from: 9_216, to: 11_264)) {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(east))
+        }
+        XCTAssertEqual(world, before)
+        // M's loop platform is no passing place of its: that one goes.
+        try world.removeTrackPlatform(SingleTrackMeet.middle, on: .edge(5), from: 3_072)
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+    }
 }
