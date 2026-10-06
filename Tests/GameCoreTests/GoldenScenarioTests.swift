@@ -556,7 +556,8 @@ final class GoldenScenarioTests: XCTestCase {
                 var bigger = first
                 bigger.count += 1
                 var later = first
-                later.since += 1
+                later.since = later.since.map { $0 + 1 }
+                later.sinceSeconds = later.sinceSeconds.map { $0 + 1 }
                 wrong += [.groups(Array(groups.dropFirst())), .groups([bigger] + groups.dropFirst()), .groups([later] + groups.dropFirst())]
             }
             if groups.count > 1, groups.reversed() != groups { wrong.append(.groups(groups.reversed())) }

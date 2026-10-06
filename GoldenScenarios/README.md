@@ -171,6 +171,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setStationDemand`（schema 20） | `station`、`demand`（需求，或 `null` 清除；key 必填） | `setStationDemand(_:to:)` |
 | `setEconomyMode`（schema 22） | `mode`（經營模式） | `setEconomyMode(_:)` |
 | `setFareRules`（schema 22） | `rules`（票價規則） | `setFareRules(_:)` |
+| `setPassengerRoutingMode`（schema 35） | `mode`（`"direct"` 或 `"network"`） | `setPassengerRoutingMode(_:)` |
+| `setStationOperationMode`（schema 35） | `station`、`mode`（`"normalFlow"`、`"flowControl"` 或 `"closed"`） | `setStationOperationMode(_:to:)` |
 
 ### 結果（`expect.result`）
 
@@ -590,3 +592,9 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - schema 27 還寫的最終狀態 `tracks`、列車的 `trail` 與 `movement.continuation`：照舊讀寫，但只能是 `[]`。線路行程的一段只有 `path`（方格的 `route` 拿掉）。
 
 這三個 key 在 schema 28（F3c-4）拿掉，見上面的「Schema 版本紀錄」。
+
+## Phase 5F：跨線路網的乘客（schema 35）
+
+- 新指令 `setPassengerRoutingMode`、`setStationOperationMode`；最終狀態可以有 `passengerRoutingMode`（只在 `"network"` 時寫出）與車站的 `operationMode`（只在不是 `normalFlow` 時寫出）；等車群組在兩個整分鐘之間下車轉乘時寫成 `sinceSeconds`（取代 `since`），並帶可上車的 `readyAtSeconds`。三者都是選填，舊的 fixture 不必改，schema 30 到 34 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
+- `network-passengers.json`：兩條相距 100 m 的軌道、四站、兩線，A 與 C 之間只能步行轉乘（passage 級，Ci 參考的 15 分 × 1.2 轉乘懲罰、5 km/h 步行、最小轉乘 120 秒），接著關閉、重開 B' 並讓 A 進站管制。預期值由 GameCore 記錄後逐項依規則人工核對（守恆、旅程、轉乘時刻），沒有獨立的計算器；`ReferenceWorld` 只實作直達路徑，所以 `ReferenceWorldGoldenTests` 跳過用到這兩個指令的 fixture。
+

@@ -102,7 +102,8 @@ final class ReplayFixtureTests: XCTestCase {
                 index += 1
             } while generated.0.seconds > 1_000_000_000 || generated.0.speed == .paused
             let (setup, operations) = generated
-            let start = try setup.build().0
+            var start = try setup.build().0
+            if recipe.networkRouting { start.setPassengerRoutingMode(.network) }
             let commands = operations.map(ReplayCommand.init)
             let checksums = ReplayFixture.checksums(from: start, applying: operations, every: ReplayFixture.interval) { index, problem in
                 XCTFail("\(recipe.name): command \(index): \(problem)")
@@ -198,6 +199,9 @@ struct ReplayFixture: Codable {
         let suite: String
         let seed: UInt64
         let index: Int
+        /// Whether the starting world routes passengers across the network
+        /// (Phase 5F) instead of directly.
+        var networkRouting = false
         let generate: (inout PropertyCase) throws -> (KernelDifferentialTests.Setup, [KernelDifferentialTests.Operation])
     }
 
@@ -221,6 +225,11 @@ struct ReplayFixture: Codable {
         Recipe(
             name: "economy", description: "Passengers boarding lines' trains, fares, and the accounts over hours and days.",
             suite: "economy.differential", seed: 0x5EED_A001, index: 1
+        ) { try EconomyPropertyTests.generate(&$0, operations: 160) },
+        Recipe(
+            name: "network-economy",
+            description: "The economy campaign's case with network passenger routing (Phase 5F): journeys across lines, transfers, crowding and demand by generalized time.",
+            suite: "economy.differential", seed: 0x5EED_A001, index: 1, networkRouting: true
         ) { try EconomyPropertyTests.generate(&$0, operations: 160) },
     ] }
 }
