@@ -58,6 +58,40 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Borrows `amount` from the bank (decision 67): the balance goes up by
+    /// it and the loan with it, and interest is paid on the loan every
+    /// midnight. Only a managed company borrows, in whole
+    /// ``CompanyAccounts/loanStep``s, up to ``CompanyAccounts/maximumLoan``
+    /// in all.
+    ///
+    /// - Throws, checked in this order: ``GameError/loanNeedsManagement``,
+    ///   or ``GameError/invalidLoanAmount``.
+    public mutating func borrow(_ amount: Money) throws(GameError) {
+        guard accounts.mode == .management else { throw .loanNeedsManagement }
+        guard Self.isLoanStep(amount), amount <= CompanyAccounts.maximumLoan - accounts.loan,
+              economy.balance.amount <= Self.maximumBalance - amount.amount else { throw .invalidLoanAmount }
+        accounts.loan = accounts.loan + amount
+        economy.earn(amount)
+    }
+
+    /// Repays `amount` of the loan from the balance (decision 67), in whole
+    /// ``CompanyAccounts/loanStep``s and no more than is owed. Allowed in
+    /// free play too, so a company that stopped being managed can still
+    /// clear its debt.
+    ///
+    /// - Throws, checked in this order: ``GameError/invalidLoanAmount``, or
+    ///   ``GameError/insufficientFunds(required:available:)`` when the
+    ///   balance is less than `amount`.
+    public mutating func repayLoan(_ amount: Money) throws(GameError) {
+        guard Self.isLoanStep(amount), amount <= accounts.loan else { throw .invalidLoanAmount }
+        try economy.spend(amount)
+        accounts.loan = accounts.loan - amount
+    }
+
+    private static func isLoanStep(_ amount: Money) -> Bool {
+        amount > .zero && amount.amount % CompanyAccounts.loanStep.amount == 0
+    }
+
     // MARK: - Queries
 
     /// The fare a passenger from `origin` to `destination` pays: the rule's
@@ -222,6 +256,15 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .routeEnergy, amount: .zero - routeEnergy), LedgerLine(item: .trainEnergy, amount: .zero - trainEnergy)]
             ), day: day)
         }
+        // Decision 67: the day's interest on what is owed at midnight, 5 % a
+        // 360-day year, rounded to whole dollars.
+        let interest = Self.dailyLoanInterest(on: accounts.loan)
+        if interest > .zero {
+            write(LedgerEntry(
+                kind: .dailyInterest, time: time, amount: .zero - interest,
+                breakdown: [LedgerLine(item: .loanInterest, amount: .zero - interest)]
+            ), day: day)
+        }
         let staff = Money((620 * assets.stations + 480 * assets.trains) * 100)
         if staff > .zero {
             write(LedgerEntry(
@@ -232,6 +275,12 @@ extension GameWorld {
                 ]
             ), day: day)
         }
+    }
+
+    /// A day's interest on `loan`: `loan × 5 % ÷ 360`, rounded half up to
+    /// whole dollars (decision 67).
+    public static func dailyLoanInterest(on loan: Money) -> Money {
+        roundedDollars(loan.amount * CompanyAccounts.interestBasisPoints, over: 100 * 10_000 * FinancePeriod.year.days)
     }
 
     /// Writes `entry` and moves the balance by its amount, which may take
@@ -276,6 +325,10 @@ extension GameWorld {
         guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
         guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
         guard (Money(1)...FareRules.maximumFare).contains(accounts.fareBaseline) else { return "The fare baseline is out of range." }
+        guard (.zero...CompanyAccounts.maximumLoan).contains(accounts.loan),
+              accounts.loan.amount % CompanyAccounts.loanStep.amount == 0 else {
+            return "The loan must be whole steps of $100,000, up to the most the bank lends."
+        }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {
             guard opened <= clock.now else { return "The accounts cannot open after now." }
@@ -289,9 +342,9 @@ extension GameWorld {
             return "Day accounts must be listed once each, by ascending day."
         }
         let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
-            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost] }
+            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost] }
         guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
-        guard accounts.days.allSatisfy({ [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost].allSatisfy { $0 >= .zero } }) else {
+        guard accounts.days.allSatisfy({ [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost].allSatisfy { $0 >= .zero } }) else {
             return "Day accounts cannot be negative."
         }
         guard accounts.entries.allSatisfy(Self.isWellFormed) else {
@@ -308,6 +361,7 @@ extension GameWorld {
         case .hourlyNet: [.fareRevenue, .operatingCost, .maintenanceCost]
         case .dailyEnergy: [.routeEnergy, .trainEnergy]
         case .dailyStaff: [.stationStaff, .trainStaff]
+        case .dailyInterest: [.loanInterest]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue ? $0.amount >= .zero : $0.amount <= .zero }),

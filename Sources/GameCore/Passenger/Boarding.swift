@@ -78,23 +78,17 @@ public struct TrainRiders: Hashable, Sendable {
 }
 
 extension Train {
-    /// How many passengers a car is rated for: the reference's 6-car train
-    /// of 1,920 (`{cars: 6, cap: 1920}`), per car.
+    /// How many passengers a standard car (a train without a type) is rated
+    /// for: the reference's 6-car train of 1,920 (`{cars: 6, cap: 1920}`),
+    /// per car. It is the most any car carries, so it bounds every train.
     public static let ratedCapacityPerCar: Int64 = 320
 
     /// How many passengers a car takes at most: its rated capacity × 1.1
     /// (the reference's `METRO_TRAIN_OPERATIONAL_LOAD_FACTOR`), exactly.
     public static let capacityPerCar: Int64 = 352
 
-    /// How many passengers the train is rated for: its cars × 320.
-    public var ratedCapacity: Int64 {
-        Int64(cars) * Self.ratedCapacityPerCar
-    }
-
-    /// How many passengers the train takes at most (G1b): its cars × 352.
-    public var capacity: Int64 {
-        Int64(cars) * Self.capacityPerCar
-    }
+    // A train's capacity follows its type (see `TrainType.swift`); one
+    // without a type has these standard cars.
 }
 
 extension GameWorld {

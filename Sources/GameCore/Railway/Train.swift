@@ -71,6 +71,10 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// 1, as every newly bought train has, up to ``maximumCars``. Set by
     /// ``GameWorld/setTrainCars(_:to:)`` while the train is unplaced.
     public internal(set) var cars: Int
+    /// The type of its cars (the reference's `TRAIN_TYPES`), or `nil` for
+    /// the standard car every newly bought train has. Set by
+    /// ``GameWorld/setTrainType(_:to:)`` while the train is unplaced.
+    public internal(set) var type: TrainType?
     /// The edges the train's body lies over behind the edge its head is on
     /// (Stage S3), nearest first: every edge the body reaches into, up to
     /// and including the one its tail is on (see ``length``). Empty for a
@@ -109,6 +113,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.execution = nil
         self.times = nil
         self.cars = 1
+        self.type = nil
         self.trailEdges = []
         self.reservation = []
         self.performance = .standard
@@ -178,7 +183,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, trail, trailEdges, reservation, performance, trafficVisits
+        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits
     }
 
     /// Decodes a train.
@@ -203,7 +208,8 @@ extension Train: Codable {
     /// period is changed, and no execution is moved to another stop or
     /// cycle or dropped. A train of one car has no `"cars"` key, which is
     /// also how trains saved before trains had length read; cars outside
-    /// `minimumCars...maximumCars` are rejected.
+    /// `minimumCars...maximumCars` are rejected. A train of standard cars has
+    /// no `"type"` key, which is also how trains saved before types read.
     ///
     /// A train whose body reaches beyond its head's edge has `"trailEdges"`
     /// (edge numbers, Stage S3); without the key, which is also how trains
@@ -258,6 +264,7 @@ extension Train: Codable {
         trafficVisits = container.contains(.trafficVisits) ? try container.decode([TrafficVisit].self, forKey: .trafficVisits) : []
         times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
+        type = container.contains(.type) ? try container.decode(TrainType.self, forKey: .type) : nil
         let gridTrail = container.contains(.trail) ? try container.decode([LegacyGrid.Cell].self, forKey: .trail) : []
         guard gridTrail.isEmpty else {
             throw DecodingError.dataCorruptedError(
@@ -359,6 +366,7 @@ extension Train: Codable {
         if cars != Self.minimumCars {
             try container.encode(cars, forKey: .cars)
         }
+        try container.encodeIfPresent(type, forKey: .type)
         if !trailEdges.isEmpty {
             try container.encode(trailEdges.map { $0.networkNumber }, forKey: .trailEdges)
         }
