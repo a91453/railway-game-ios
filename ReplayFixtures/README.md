@@ -47,6 +47,7 @@ Rules, as for the golden scenarios and the save fixtures:
 | `line-dispatch.json` | `line.dispatch` | Lines that send their trains out, with targets, windows, service days and rings. |
 | `line-patterns.json` | `line.patterns` | Lines with patterns (short workings and expresses) and the load on each stretch. |
 | `economy.json` | `economy.differential` | Passengers boarding lines' trains, fares, and the accounts over hours and days. |
+| `network-economy.json` | `economy.differential` | The same case with network passenger routing (Phase 5F): journeys across lines, transfers, crowding and demand by generalized time. Recorded with the recipe's `networkRouting`; recording the other recipes again gave the same checksums. |
 
 Stage F3c removes the grid from GameCore without changing any game
 behaviour. These files hold no grid command and no grid content, so they

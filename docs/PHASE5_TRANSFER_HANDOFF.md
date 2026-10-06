@@ -36,7 +36,7 @@
 2. 移植不同 StationID 的步行轉乘，以及同月台／站內通道／跨站的時間成本。現有路徑圖與登車流程只支援**相同 StationID** 轉乘；`Railway/` 的 `station_transfers.json` 尚未接入。先一致設計 walking leg、所在站／抵達時間、原起站帳、容量與存檔語義。原生目前也沒有來源的封站 operationMode；不可把 service window 測試當成已完成封站。
 3. 匯入時保留 transfer dataset 的明確 pairs、來源 system-scoped ID 與嚴格小於 450 m 的條件；同名正規化在 GameCore 外做。58 groups 的 members 有傳遞連通，不能自動展開成每對都能直接走的完整圖。資料沒有分級時間成本，仍需核對／決定原生政策。
 4. 多路徑已驗證百萬人次 5:3:2 配額、切批一致、存檔續玩與服務選項變更。仍須在跨站／成本政策加入後重跑此契約；目前的 deterministic smooth weighted round robin 是對來源亂數分配的原生調整，不宣稱逐值相同。
-5. 完成上述行為後，決定新遊戲何時啟用 `.network`；目前 `GameWorld`／`GamePresentation` 新遊戲預設 `.direct`，測試顯式開啟。確認玩家存檔遷移語義及 UI 指標。
+5. 完成上述行為後，決定新遊戲何時啟用 `.network`。（T4 分支：App 的新遊戲 `GameWorld.newGame` 以指令開啟 `.network`，路線面板有切換開關；`GameWorld.init` 仍是 `.direct`，既有 golden 不變。舊存檔維持各自存的模式。）
 6. 本次已補 `docs/ROADMAP.md`、`docs/RAILWAY_REFERENCE_MAPPING.md` 與 PR 來源對照；未新增 `docs/ARCHITECTURE.md` 決策。跨站／時間成本與新遊戲啟用需要明確架構決策及 review，完成後才考慮合併。
 
 ## 來源及重要位置
@@ -50,3 +50,15 @@
 | `SavedGame.swift`、`SaveFixtures/v11-network-transfer.json` | v11 解碼與向後相容測試 |
 
 來源檢查 commit：`2db0c5a6963798e6b86723bb001189343a59940c`；詳細來源函式、資料與差異見 `docs/RAILWAY_REFERENCE_MAPPING.md` 的 Phase 5F 節。本次接手處理同站轉乘穩定化與既有 CI 紅燈；跨站轉乘仍是下一個里程碑，車種、週需求及城市成長等後續項目尚未開始。
+
+## T1–T4 分支（2026-10-06）
+
+依序堆疊，各自一個提交，見 `docs/RAILWAY_REFERENCE_MAPPING.md` 的 Phase 5F 續各節：
+
+- `claude/t1-transfer-plan-perf`：路徑圖、OD 選項與網路計畫依實際輸入（線路、車站、路網、號誌、列車、各線目前服務等級）快取，不再每次 `advance` 重算；Dijkstra 改二元堆積（pop 順序不變）；同起點各迄點共用搜尋。行為不變。
+- `claude/t2-walking-transfers`：不同 StationID 間 < 450 m 的步行轉乘、Ci 參考的轉乘分級與懲罰、5 km/h、最小轉乘 120 秒；`StationOperationMode` 與 `setStationOperationMode(_:to:)`；存檔 v12 與 `SaveFixtures/v12-walking-transfer.json`。同站跨線懲罰由原生 4 分改為參考的 12 分。
+- `claude/t3-capacity-demand-feedback`：路段容量與本計畫負載的擁擠成本（BPR）、廣義時間超過 30 分後的 OD 需求遞減；皆為原生規則（參考無實作），只在 `.network`。
+- `claude/t4-enable-network-mode`：App 新遊戲預設 `.network` 與切換開關、golden schema 35 與 `network-passengers.json`、`ReplayFixtures/network-economy.json`。
+
+仍未完成：列車跳過關閉車站、同站月台細分、末班車自動營運模式、城市成長（GameCore 尚無城市模型）；`dailyDemand` 在 `.network` 仍依目前服務時段計算（與計畫一致，計畫本身也是依時段重建）。
+
