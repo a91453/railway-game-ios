@@ -82,6 +82,11 @@ extension GameWorld {
         let offset = (train.timetablePeriod ?? 0) &* (execution?.cycle ?? 0)
         let status: FollowBarInfo.Status
         switch execution {
+        case nil where line != nil:
+            // A line train gets its timetable only when dispatched, and
+            // keeps the finished trip's until the next dispatch: with one
+            // and no execution, it has arrived.
+            status = .arrived
         case nil:
             status = .notDeparted
         case .waitingAtStop(let stop, _)? where stop == 0:

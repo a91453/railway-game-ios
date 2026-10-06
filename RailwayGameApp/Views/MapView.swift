@@ -38,6 +38,9 @@ struct MapView: View {
     /// The travel demand of the world's stations, worked out when their
     /// demand or the lines change, only while a travel layer is shown.
     @State private var travelDemand = TravelDemandMap(trips: [:])
+    /// The travel layer's squares for the shown mode and hour, made only
+    /// when one of them or the demand changes, not on every body update.
+    @State private var travelTiles: [TravelDemandMap.Tile] = []
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
@@ -102,6 +105,7 @@ struct MapView: View {
                     MapCanvas(
                         world: session.world,
                         selectedTrainID: session.selectedTrainID,
+                        highlightedTrainID: session.followedTrain?.id,
                         selectedStationID: session.selectedStation?.id,
                         network: session.networkOverlay,
                         traffic: traffic,
@@ -270,6 +274,9 @@ struct MapView: View {
                 travelDemand = session.world.travelDemandMap()
             }
         }
+        .onChange(of: TravelTilesKey(mode: mapLayers.popTravelMode, hour: popTravelHour, demand: travelDemand), initial: true) { _, key in
+            travelTiles = key.mode.map { key.demand.tiles(for: $0, at: key.hour) } ?? []
+        }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
             if mode?.usesHour != true { stopPopTravelPlay() }
@@ -299,7 +306,7 @@ struct MapView: View {
             return PopTravelLayer(content: .population(heatmap), key: .population(version: heatmapVersion), opacity: alpha)
         case .travel, .movement:
             return PopTravelLayer(
-                content: .travel(travelDemand.tiles(for: mode, at: popTravelHour)),
+                content: .travel(travelTiles),
                 key: .travel(mode: mode, hour: popTravelHour, demand: travelDemand),
                 opacity: alpha
             )
@@ -530,6 +537,9 @@ private struct TrafficLegend: View {
 private struct MapCanvas: View, Equatable {
     let world: GameWorld
     let selectedTrainID: TrainID?
+    /// The followed train, whose route is drawn undimmed (as the site
+    /// draws a followed train's); the selected train's when none is.
+    let highlightedTrainID: TrainID?
     let selectedStationID: StationID?
     let network: NetworkOverlay?
     let traffic: TrafficOverlay
@@ -544,6 +554,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
             && lhs.selectedTrainID == rhs.selectedTrainID
+            && lhs.highlightedTrainID == rhs.highlightedTrainID
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
             && lhs.traffic == rhs.traffic
@@ -554,13 +565,14 @@ private struct MapCanvas: View, Equatable {
     }
 
     var body: some View {
-        let world = world, selectedTrainID = selectedTrainID
+        let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
                 world,
                 selectedTrainID: selectedTrainID,
+                highlightedTrainID: highlightedTrainID,
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
                 traffic: traffic,
@@ -654,6 +666,13 @@ private struct HeatmapKey: Equatable {
 /// What the travel demand map is worked out from (``GameWorld/stationFlow(of:)``:
 /// the stations, their demand and the lines), and whether a travel layer is
 /// shown at all.
+/// What the travel layer's squares depend on.
+private struct TravelTilesKey: Equatable {
+    let mode: PopTravelMode?
+    let hour: Int
+    let demand: TravelDemandMap
+}
+
 private struct TravelDemandKey: Equatable {
     let stations: [Station]
     let demands: [StationDemand?]

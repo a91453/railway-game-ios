@@ -241,6 +241,16 @@ final class PopTravelTests: XCTestCase {
         let detail = running.detail(in: .english)
         XCTAssertTrue(detail.hasPrefix("Main　\(running.origin ?? "")→\(running.terminus ?? "")　"), detail)
         XCTAssertNil(world.followBarInfo(of: TrainID(rawValue: 99), in: .english))
+
+        // Between trips a line train keeps the finished trip's timetable
+        // with no execution: standing at its terminus, it has arrived.
+        for _ in 0..<7_200 where world.train(id: train.id)?.execution != nil {
+            try world.advance(ticks: 1)
+        }
+        let done = try XCTUnwrap(world.train(id: train.id))
+        XCTAssertNil(done.execution, "the trip completes")
+        XCTAssertEqual(done.timetable, timetable, "the finished trip's timetable stays until the next dispatch")
+        XCTAssertEqual(world.followBarInfo(of: train.id, in: .english)?.status, .arrived)
     }
 
     func testFollowStatusTexts() {
