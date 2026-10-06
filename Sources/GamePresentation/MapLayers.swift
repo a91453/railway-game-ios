@@ -11,19 +11,45 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
     public var showsWaitingCounts: Bool
     /// Whether 800m station catchment service circles are drawn.
     public var showsCatchmentRings: Bool
-    /// Whether the population density heatmap is drawn.
-    public var showsPopulationHeatmap: Bool
+    /// Which of the population and travel layers is drawn (the reference's
+    /// `G.popTravelMode` while `G.popTravelMapLayerEnabled`), or `nil` for
+    /// none. Only one at a time, as in the reference's map layer panel.
+    public var popTravelMode: PopTravelMode?
 
     public init(
         showsStationNames: Bool = true,
         showsWaitingCounts: Bool = true,
         showsCatchmentRings: Bool = true,
-        showsPopulationHeatmap: Bool = false
+        popTravelMode: PopTravelMode? = nil
     ) {
         self.showsStationNames = showsStationNames
         self.showsWaitingCounts = showsWaitingCounts
         self.showsCatchmentRings = showsCatchmentRings
-        self.showsPopulationHeatmap = showsPopulationHeatmap
+        self.popTravelMode = popTravelMode
+    }
+
+    /// Whether the population grid is drawn (the reference's
+    /// `layer-toggle-population-grid`). Turning it on shows population in
+    /// place of another layer; turning it off hides it only when it is the
+    /// one shown (`togglePopTravelLayerFromMapPanel`).
+    public var showsPopulationHeatmap: Bool {
+        get { popTravelMode == .population }
+        set { setShows(.population, newValue) }
+    }
+
+    /// Whether layer `mode` is the one drawn.
+    public func shows(_ mode: PopTravelMode) -> Bool {
+        popTravelMode == mode
+    }
+
+    /// Turns layer `mode` on, in place of any other, or off when it is the
+    /// one shown (`togglePopTravelLayerFromMapPanel(mode, checked)`).
+    public mutating func setShows(_ mode: PopTravelMode, _ shows: Bool) {
+        if shows {
+            popTravelMode = mode
+        } else if popTravelMode == mode {
+            popTravelMode = nil
+        }
     }
 
     /// The default layer preferences for a standard view.
@@ -32,7 +58,9 @@ public struct MapLayerPreferences: Equatable, Hashable, Sendable {
 
 /// Namespace for map layer calculations and presentation data derivations.
 public enum MapLayers {
-    /// Station catchment radius in metres (800 metres, ~10 minutes walk).
+    /// Station catchment radius in metres: 800 m, ~10 minutes' walk (the
+    /// reference's `metroFlowCatchmentRadiusForType`, which uses 400 m only
+    /// for APM and sky rail lines; the game has no such line types).
     public static var catchmentRadiusMetres: Double {
         StationDemand.catchmentRadius
     }

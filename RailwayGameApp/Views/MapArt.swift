@@ -30,11 +30,8 @@ enum MapArt {
         traffic: TrafficOverlay = TrafficOverlay(),
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
-        drawsLand: Bool = true,
         layers: MapLayerPreferences = .default,
         waitingCounts: [StationID: Int64] = [:],
-        population: PopulationGrid? = nil,
-        realWorld: RealWorldFrame? = nil,
         in context: GraphicsContext
     ) {
         let referenceSize = projection.referenceSize
@@ -47,15 +44,10 @@ enum MapArt {
             screenPoint(bounds.maxX, bounds.maxY, projection),
             screenPoint(bounds.minX, bounds.maxY, projection)
         ])
-        // Over Apple's map (Stage E2) only the map's edge is drawn.
-        if drawsLand {
-            context.fill(land, with: .color(Palette.land))
-        }
+        // The land (and the population and travel layer over it) is drawn
+        // by ``drawBase``, in a canvas of its own under this one; over
+        // Apple's map (Stage E2) the base draws no land, only this edge.
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
-
-        if layers.showsPopulationHeatmap {
-            drawPopulationHeatmap(world, population: population, realWorld: realWorld, projection: projection, in: context)
-        }
 
         if layers.showsCatchmentRings {
             drawCatchmentRings(world, projection: projection, in: context)
@@ -333,40 +325,87 @@ enum MapArt {
         }
     }
 
-    private static func drawPopulationHeatmap(
-        _ world: GameWorld,
-        population: PopulationGrid?,
-        realWorld: RealWorldFrame?,
+    /// The map's land and the population and travel layer over it: what
+    /// changes only with the camera or the layer's data, so the map view
+    /// draws it in a canvas of its own that a moving train never redraws.
+    static func drawBase(
+        bounds worldBounds: WorldBounds,
+        drawsLand: Bool,
+        layer: PopTravelLayer?,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
-        guard let population, let realWorld else { return }
+        if drawsLand {
+            let bounds = WorldRegion(bounds: worldBounds)
+            let land = polygon([
+                screenPoint(bounds.minX, bounds.minY, projection),
+                screenPoint(bounds.maxX, bounds.minY, projection),
+                screenPoint(bounds.maxX, bounds.maxY, projection),
+                screenPoint(bounds.minX, bounds.maxY, projection)
+            ])
+            context.fill(land, with: .color(Palette.land))
+        }
+        guard let layer else { return }
+        switch layer.content {
+        case .population(let heatmap):
+            drawPopulation(heatmap, opacity: layer.opacity, projection: projection, in: context)
+        case .travel(let tiles):
+            drawTravel(tiles, opacity: layer.opacity, projection: projection, in: context)
+        }
+    }
+
+    /// The screen rectangle of the world rectangle from (`minX`, `minY`)
+    /// to (`maxX`, `maxY`).
+    private static func screenRect(minX: Double, minY: Double, maxX: Double, maxY: Double, _ projection: some MapProjection) -> CGRect {
+        let a = screenPoint(minX, minY, projection)
+        let b = screenPoint(maxX, maxY, projection)
+        return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
+    }
+
+    /// The population grid (`chinaGrid`'s 1 km gradient) at the layer's
+    /// opacity (`fill-opacity`): only the cells in view, merged into blocks
+    /// when zoomed out (``PopulationHeatmap/blockSize(pointsPerUnit:)``),
+    /// and one fill for each step of the gradient rather than one for each
+    /// cell. The outline (the LandScan grid's `rgba(8,48,107,0.45)` at
+    /// width 0.4, `0.88 × opacity / 0.72`) only once cells are 12 points
+    /// or more, where it can be told apart.
+    private static func drawPopulation(_ heatmap: PopulationHeatmap, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let blockSize = heatmap.blockSize(pointsPerUnit: projection.pointsPerUnit)
+        let tiles = heatmap.tiles(in: drawingRegion(projection), blockSize: blockSize)
+        guard !tiles.isEmpty else { return }
+        var bands = Array(repeating: Path(), count: PopTravel.populationBands)
+        var outline = Path()
+        var outlined = blockSize == 1
+        for tile in tiles {
+            let rect = screenRect(minX: tile.minX, minY: tile.minY, maxX: tile.maxX, maxY: tile.maxY, projection)
+            bands[tile.band].addRect(rect)
+            if outlined {
+                if rect.width < 12 { outlined = false } else { outline.addRect(rect) }
+            }
+        }
+        for (band, path) in bands.enumerated() where !path.isEmpty {
+            context.fill(path, with: .color(Color(PopTravel.populationBandColor(band)).opacity(opacity)))
+        }
+        if outlined {
+            let alpha = 0.45 * min(1, 0.88 * opacity / 0.72)
+            context.stroke(outline, with: .color(Color(PopTravel.populationOutline).opacity(alpha)), lineWidth: 0.4)
+        }
+    }
+
+    /// The travel demand or demand change squares, one fill a colour.
+    private static func drawTravel(_ tiles: [TravelDemandMap.Tile], opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let region = drawingRegion(projection)
-        let nw = realWorld.coordinate(worldX: region.minX, worldY: region.minY)
-        let se = realWorld.coordinate(worldX: region.maxX, worldY: region.maxY)
-        let north = max(nw.latitude, se.latitude) + 0.02
-        let south = min(nw.latitude, se.latitude) - 0.02
-        let west = min(nw.longitude, se.longitude) - 0.02
-        let east = max(nw.longitude, se.longitude) + 0.02
-
-        let cells = population.cells(north: north, south: south, west: west, east: east)
-        guard !cells.isEmpty else { return }
-
-        for cell in cells {
-            let p1 = realWorld.worldPosition(latitude: cell.northLatitude, longitude: cell.westLongitude)
-            let p2 = realWorld.worldPosition(latitude: cell.northLatitude, longitude: cell.eastLongitude)
-            let p3 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.eastLongitude)
-            let p4 = realWorld.worldPosition(latitude: cell.southLatitude, longitude: cell.westLongitude)
-
-            let s1 = screenPoint(p1.x, p1.y, projection)
-            let s2 = screenPoint(p2.x, p2.y, projection)
-            let s3 = screenPoint(p3.x, p3.y, projection)
-            let s4 = screenPoint(p4.x, p4.y, projection)
-
-            let cellPoly = polygon([s1, s2, s3, s4])
-            let color = PopulationColorRamp.color(for: cell.count)
-            context.fill(cellPoly, with: .color(color.opacity(0.42)))
-            context.stroke(cellPoly, with: .color(color.opacity(0.20)), lineWidth: 0.5)
+        var paths: [PopTravel.RGB: Path] = [:]
+        var order: [PopTravel.RGB] = []
+        for tile in tiles {
+            guard tile.maxX > region.minX, tile.minX < region.maxX, tile.maxY > region.minY, tile.minY < region.maxY else { continue }
+            if paths[tile.color] == nil { order.append(tile.color) }
+            paths[tile.color, default: Path()].addRect(screenRect(minX: tile.minX, minY: tile.minY, maxX: tile.maxX, maxY: tile.maxY, projection))
+        }
+        for color in order {
+            if let path = paths[color] {
+                context.fill(path, with: .color(Color(color).opacity(opacity)))
+            }
         }
     }
 

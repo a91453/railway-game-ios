@@ -231,9 +231,9 @@ final class MapInteractionTests: XCTestCase {
         let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
         XCTAssertTrue(legend.waitForExistence(timeout: 5))
         let value = legend.value as? String ?? ""
-        for range in ["0–100", "100–250", "250–500", "500–1k", "1k–2k",
-                      "2k–4k", "4k–6k", "6k–8k", "8k–10k", "10k+"] {
-            XCTAssertTrue(value.contains(range), "Legend must expose every tier's range: \(range); value: \(value)")
+        // The reference's 1 km grid legend: a gradient from 0 to 10000+.
+        for end in ["0", "10000+"] {
+            XCTAssertTrue(value.contains(end), "Legend must expose the gradient's end \(end); value: \(value)")
         }
         app.buttons["Close population legend"].tap()
         XCTAssertFalse(legend.exists)
