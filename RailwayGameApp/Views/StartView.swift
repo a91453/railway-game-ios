@@ -192,9 +192,10 @@ struct StartView: View {
                     .foregroundStyle(.white)
             }
             .accessibilityHidden(true)
-            Text(verbatim: "Railway Game")
+            Text("Along the Line")
                 .font(.system(.largeTitle, design: .rounded).weight(.heavy))
-            Text("Build a railway, run its trains and carry the city's passengers.")
+                .accessibilityIdentifier("start.brand")
+            Text("Along the Line is a railway and city-building simulation where the railway shapes the growth of the city.")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -104,8 +104,8 @@ public enum DataSourceCredits {
                             "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）；台北捷運與高雄捷運各線的官方路線色，取自營運機構的網站；台鐵、高鐵與阿里山林鐵路線的顏色，依各營運機構的公司色。"
                         ),
                         notice: language.text(
-                            "The lines and the English station names are compiled by Railway Game; the game is not affiliated with any operator.",
-                            "路線與車站的英文名稱由 Railway Game 整理；遊戲與各營運機構無關。"
+                            "The lines and the English station names are compiled by Along the Line; the game is not affiliated with any operator.",
+                            "路線與車站的英文名稱由《沿線》整理；遊戲與各營運機構無關。"
                         ),
                         links: []
                     ),

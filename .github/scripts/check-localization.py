@@ -14,9 +14,9 @@ import xml.etree.ElementTree as ET
 
 LANGUAGE = "zh-Hant"
 ACCEPTED_STATES = {"translated", "final", "signed-off"}
-# Architecture decision 38 deliberately keeps the app name in English.
-# Limit that exception to these exact InfoPlist IDs AND their source values.
-APP_NAMES = {"CFBundleDisplayName": "Railway Game", "CFBundleName": "RailwayGame"}
+# Only the internal bundle name stays untranslated. The player-facing
+# CFBundleDisplayName must have a translated target, like other UI strings.
+APP_NAMES = {"CFBundleName": "RailwayGame"}
 
 
 def string_units(node):

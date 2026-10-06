@@ -1,6 +1,10 @@
-# Railway Game iOS
+# Along the Line
 
-一款以 iPhone / iPad 為主要平台的鐵道與城市經營模擬遊戲。長期目標是玩法深度接近《A列車》系列的原生 Apple 平台遊戲。
+Along the Line（沿線）是一款鐵路與城市發展模擬遊戲，以 iPhone / iPad 為主要平台。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。核心概念：「鐵路是原因，城市是結果。」長期目標是玩法深度接近《A列車》系列的原生 Apple 平台遊戲。
+
+正式名稱：English **Along the Line**、繁體中文 **沿線**、日本語 **沿線**。App 顯示名稱由 `project.yml` 的英文預設值與 `Resources/{en,zh-Hant,ja}.lproj/InfoPlist.strings` 設定；開始畫面的品牌名稱與介紹使用 String Catalog（日文品牌已設定，其餘尚未翻譯的介面維持英文 fallback）。內部 `RailwayGame` target、scheme、module、Bundle ID 與存檔識別碼保留。
+
+AppIcon 使用定稿 package 的兩張原始 1024×1024 PNG：Any／Default 為 `along-the-line-app-icon-light.png`（米白背景），Dark 為 `along-the-line-app-icon-dark.png`（深色原稿）。iOS／iPadOS 18 以上依主畫面 icon appearance 選擇；較早版本使用預設淺色版。沒有自訂 Tinted variant，由系統生成；SVG 與 preview 不放入 App bundle。
 
 ## 目前狀態
 

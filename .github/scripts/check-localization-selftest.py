@@ -106,11 +106,17 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("expected target-language=zh-Hant", "\n".join(self.check()))
 
     def test_app_name_exception_is_exact(self):
-        unit = self.root.findall(".//x:trans-unit", NS)[2]
+        unit = self.root.findall(".//x:trans-unit", NS)[3]
         unit.find("x:source", NS).text = "A different name"
         self.assertIn("A different name", "\n".join(self.check()))
-        unit.find("x:source", NS).text = "Railway Game"
+        unit.find("x:source", NS).text = "RailwayGame"
         self.root.findall("x:file", NS)[1].set("original", "Localizable.xcstrings")
+        self.assertIn("missing zh-Hant target", "\n".join(self.check()))
+
+    def test_display_name_requires_translation(self):
+        unit = self.root.findall(".//x:trans-unit", NS)[2]
+        unit.remove(unit.find("x:target", NS))
+        self.assertIn("CFBundleDisplayName", "\n".join(self.check()))
         self.assertIn("missing zh-Hant target", "\n".join(self.check()))
 
     def test_absent_empty_and_unsupported_exports(self):

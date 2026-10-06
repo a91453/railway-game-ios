@@ -14,7 +14,7 @@
   </file>
   <file original="Resources/en.lproj/RailwayGame-InfoPlist.strings" source-language="en" target-language="zh-Hant" datatype="plaintext">
     <body>
-      <trans-unit id="CFBundleDisplayName"><source>Railway Game</source></trans-unit>
+      <trans-unit id="CFBundleDisplayName"><source>Along the Line</source><target state="translated">沿線</target></trans-unit>
       <trans-unit id="CFBundleName"><source>RailwayGame</source></trans-unit>
     </body>
   </file>
