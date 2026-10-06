@@ -24,6 +24,7 @@ struct StationPanel: View {
                     realStationSection(station)
                     catchmentPopulationSection(station)
                     demandSection(station)
+                    eventsSection(station)
                     if let flow = session.world.stationFlow(of: station.id) {
                         flowSection(flow)
                     }
@@ -144,6 +145,27 @@ struct StationPanel: View {
             } footer: {
                 Text("A managed company's city sets each station's ridership. Free play can change it.")
             }
+        }
+    }
+
+    /// Item 4: the demand events announced or running at the station.
+    @ViewBuilder
+    private func eventsSection(_ station: Station) -> some View {
+        let lines = session.world.demandEventTexts(at: station.id, in: session.language)
+        if !lines.isEmpty {
+            Section {
+                ForEach(lines, id: \.self) { line in
+                    Label {
+                        Text(verbatim: line)
+                    } icon: {
+                        Image(systemName: "person.3.fill")
+                    }
+                    .font(.footnote)
+                }
+            } header: {
+                Text(verbatim: session.language.text("Events", "活動"))
+            }
+            .accessibilityIdentifier("station.events")
         }
     }
 

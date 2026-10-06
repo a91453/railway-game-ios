@@ -797,4 +797,9 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`H_FACTOR_WD`、`H_FACTOR_WE`、`currentHFactor` | `StationDemand.weekendShape` | adapted：既有 `dayShape`（`PARAMS.PEAK_FACTOR`）乘上週末÷平日的比例，整數千分比 |
 | 同檔／`metroWeeklyDemandMinuteIntegral`、`METRO_WEEKDAY_PREFIX` | 每天一份計畫、午夜重建 | adapted：來源以連續積分算需求分鐘；原生以整數逐日計畫，每天精確釋出當天旅次 |
 | 同檔／`peakFlowMult`（`PEAK_MULT_WE = 0.7`、離峰 0.4） | — | gap：作用於來源的流量／班次，本遊戲由服務日等級決定 |
-| 同檔／`metroUpdateDemandEvents`、`metroEventDemandMultiplier`；`MetroEconomy.advanceMetroEvents`（不在快照）；`aviation_disruptions` | — | 下一步：事件與中斷 |
+| 同檔／`metroUpdateDemandEvents`、`metroEventDemandMultiplier`（`1 + max(boost)`） | `GameWorld.demandMultiplier(at:)`、`trips(of:at:)`、`attraction(of:at:)`（決策 69） | adapted：整數千分比，事件以整天計 |
+| 同檔／`metroEventStationTrafficWeights`（流量 ÷ 最大，前 20% × 10） | `GameWorld.drawDemandEvent` | adapted：以每日旅次為流量，整數權重 |
+| 同檔／事件文字 `metro.event.exhibition`、`metro.event.crowdSurge`、「{wait} 天後開始，持續 {days} 天」 | `DemandEventKind`、`GameWorld.demandEventTexts(at:in:)` | direct（繁中化） |
+| `aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a）、cadence `firstMin/firstMax/gapMin/gapMax`、`/ max(1, n / 10)` | `DemandEventSchedule.hash`、`roll`、`startDemandEventDay` | direct／adapted：雜湊照搬；秒數換成整天 |
+| `MetroEconomy.advanceMetroEvents`（不在快照） | 展覽 3–7 天 +20–50%、大客流 1–2 天 +50–100%，提前 2–5 天 | gap → 原生數值 |
+| `aviation_disruptions` 的天氣封閉、燃油、國定假日 | — | gap：沒有封站營運模式，之後處理 |

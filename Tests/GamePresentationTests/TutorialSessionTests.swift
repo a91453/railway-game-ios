@@ -293,7 +293,7 @@ final class TutorialSessionTests: XCTestCase {
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startTutorial()
             let session = try XCTUnwrap(launcher.session)
-            XCTAssertEqual(session.world, .newGame())
+            XCTAssertEqual(session.world, .newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed)))
             XCTAssertEqual(session.tutorial?.index, 0)
             XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)
         }

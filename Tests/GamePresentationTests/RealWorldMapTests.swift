@@ -108,7 +108,8 @@ final class RealWorldMapTests: XCTestCase {
         try await MainActor.run {
             let launcher = GameLauncher(library: library, language: .english)
             launcher.startNewGame(at: paris)
-            XCTAssertEqual(launcher.session?.world, .newGame(anchor: paris))
+            let seed = try XCTUnwrap(launcher.session?.world.demandEvents?.seed)
+            XCTAssertEqual(launcher.session?.world, .newGame(anchor: paris, eventSeed: seed))
             launcher.returnToStart()
             let autosave = try XCTUnwrap(launcher.autosave)
             XCTAssertEqual(autosave.summary?.realWorld, true)

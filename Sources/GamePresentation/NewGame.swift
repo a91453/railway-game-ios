@@ -13,7 +13,10 @@ extension GameWorld {
     /// (Stage E2): the same game either way, laid over the Earth or not.
     /// It starts with `balance`: ``startingBalance`` but for a game that
     /// comes with its railway built (``RealWorldDemo``).
-    public static func newGame(anchor: GeoAnchor? = nil, balance: Money = startingBalance) -> GameWorld {
+    ///
+    /// Its demand events (item 4) are drawn from `eventSeed`: the app's
+    /// new games pass a random one, so each game has its own events.
+    public static func newGame(anchor: GeoAnchor? = nil, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
         do {
             var world = GameWorld(
                 bounds: newGameBounds,
@@ -36,6 +39,9 @@ extension GameWorld {
             // Item 4: weekdays and weekends differ, as the reference's
             // weekday factors and weekend hours.
             world.setWeeklyDemand(true)
+            // Item 4: exhibitions and crowd surges raise a station's demand
+            // for some days, announced days ahead.
+            world.setDemandEvents(seed: eventSeed)
             world.setGeoAnchor(anchor)
             return world
         } catch {

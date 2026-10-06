@@ -27,22 +27,32 @@ extension GameWorld {
     /// spread over the 60 minutes of the hour.
     static let releaseUnit: Int64 = 3_600
 
-    /// The game day demand is worked out for, with weekly demand: today's.
-    /// `nil` without weekly demand, when every day is the same.
+    /// The game day demand is worked out for, with weekly demand or
+    /// events: today's. `nil` without either, when every day is the same.
     var demandDay: Int64? {
-        weeklyDemand ? dayIndex(of: clock.now) : nil
+        weeklyDemand || demandEvents != nil ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours.
     var isDemandWeekend: Bool {
-        demandDay.map { StationDemand.isWeekend(day: $0) } ?? false
+        weeklyDemand && StationDemand.isWeekend(day: dayIndex(of: clock.now))
     }
 
-    /// The trips a station with `demand` starts today: its daily trips, or
-    /// with weekly demand today's share of its week (see
-    /// ``StationDemand/trips(onDay:)``).
-    func trips(of demand: StationDemand) -> Int64 {
-        demandDay.map { demand.trips(onDay: $0) } ?? demand.dailyTrips
+    /// The trips station `station`, with `demand`, starts today: its daily
+    /// trips, or with weekly demand today's share of its week (see
+    /// ``StationDemand/trips(onDay:)``), raised by any event there (see
+    /// ``demandMultiplier(at:)``), rounded half up.
+    func trips(of demand: StationDemand, at station: StationID) -> Int64 {
+        let trips = weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips
+        guard demandEvents != nil else { return trips }
+        return (trips * demandMultiplier(at: station) + 500) / 1_000
+    }
+
+    /// How strongly station `station`, with `demand`, draws travellers
+    /// today: its daily trips, raised by any event there.
+    func attraction(of demand: StationDemand, at station: StationID) -> Int64 {
+        guard demandEvents != nil else { return demand.dailyTrips }
+        return demand.dailyTrips * demandMultiplier(at: station)
     }
 
     // MARK: - Commands
@@ -227,7 +237,8 @@ extension GameWorld {
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
         let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
         for record in passengers {
-            guard let weight = record.demand?.dailyTrips, weight > 0 else { continue }
+            guard let demand = record.demand, demand.dailyTrips > 0 else { continue }
+            let weight = attraction(of: demand, at: record.station)
             let trip: PassengerTrip?
             if passengerRoutingMode == .network {
                 if let leg = passengerRouteChoices(from: origin, to: record.station, graph: graph).first?.route.legs.first {
@@ -241,7 +252,7 @@ extension GameWorld {
             guard let trip else { continue }
             reached.append((record.station, weight, trip))
         }
-        let shares = Self.apportion(trips(of: demand), by: reached.map(\.weight))
+        let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
         return zip(reached, shares).compactMap { reached, trips in
             let trips = faredTrips(trips, from: origin, to: reached.destination)
             return trips > 0 ? (reached.destination, trips, reached.trip) : nil
@@ -371,7 +382,8 @@ extension GameWorld {
         for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
-            let shares = Self.apportion(trips(of: origin), by: reached.map { $0.0.demand!.dailyTrips })
+            let shares = Self.apportion(trips(of: origin, at: record.station),
+                                        by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = faredTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
@@ -402,7 +414,8 @@ extension GameWorld {
                 }
                 return choices.isEmpty ? nil : (other, choices)
             }
-            let shares = Self.apportion(trips(of: origin), by: reached.map { $0.0.demand!.dailyTrips })
+            let shares = Self.apportion(trips(of: origin, at: record.station),
+                                        by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
             for ((destination, choices), shared) in zip(reached, shares) {
                 let trips = faredTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
