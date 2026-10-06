@@ -54,6 +54,10 @@ extension GameSession {
         case .platform:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
             platformStationID = networkEdgePoint.flatMap { nearestStation(to: $0) }
+            if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
+                let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
+                stationName = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
+            }
         case .remove:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
         }
@@ -265,7 +269,7 @@ extension GameSession {
                 )
         }
         if let built {
-            stationName = Self.suggestedStationName(for: world, in: language)
+            stationName = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
             platformStationID = built
         }
     }

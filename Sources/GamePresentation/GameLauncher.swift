@@ -42,6 +42,10 @@ public final class GameLauncher {
     /// every game it starts (``GameSession/places``).
     @ObservationIgnored public var places: PlaceGrid?
 
+    /// Taiwan's real railways (stations and lines) for real-world maps, handed
+    /// to every game it starts (``GameSession/railways``).
+    @ObservationIgnored public var railways: RealRailways?
+
     @ObservationIgnored let library: SaveLibrary
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
@@ -149,6 +153,7 @@ public final class GameLauncher {
         let started = GameSession(world: world, language: language)
         started.population = population
         started.places = places
+        started.railways = railways
         session = started
         message = nil
         if isActive {

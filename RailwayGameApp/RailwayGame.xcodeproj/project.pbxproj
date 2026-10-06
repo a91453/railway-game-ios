@@ -7,6 +7,27 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		68A741A29723ADA1D5981F49 /* tra_station_class.json in Resources */ = {isa = PBXBuildFile; fileRef = 041AFAEE59E6B1C342E12465 /* tra_station_class.json */; };
+		FFBEE0B3123C5898CFB81052 /* tra_station_info.json in Resources */ = {isa = PBXBuildFile; fileRef = 76841281630E62ACD59235CE /* tra_station_info.json */; };
+		C20EFB47EB8C86FC18C65161 /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 0B60DD9643EAD8B751F25236 /* trtc_codes.json */; };
+		EB65DF83600AACFD9A7D12C8 /* tra_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 155E27851F4C4F778BB1F89C /* tra_platforms.json */; };
+		451BE6D1B63CE063E5FBEC07 /* tra_track_sections.json in Resources */ = {isa = PBXBuildFile; fileRef = 8AE248BC69501794E4BC3707 /* tra_track_sections.json */; };
+		014CDF6244DC1F86A6AD5BB1 /* tra.json in Resources */ = {isa = PBXBuildFile; fileRef = CD0A6DE0C69E351948A5FCE6 /* tra.json */; };
+		F71400D77D7460593F45063B /* trtc.json in Resources */ = {isa = PBXBuildFile; fileRef = 316E40D6E80F4ACD5F1EB087 /* trtc.json */; };
+		9E05D68B2047C6665784C079 /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = 1D385CF7AB5FDC16DBA83296 /* krtc.json */; };
+		5F2953E12BC4EB892F6D2D5F /* tymc.json in Resources */ = {isa = PBXBuildFile; fileRef = C16E23353C28E723D0C294E4 /* tymc.json */; };
+		0E5EDC0804D2A5603053D57B /* afr.json in Resources */ = {isa = PBXBuildFile; fileRef = 7CC621752B017C3643FD538E /* afr.json */; };
+		4183CBF19DFB8A64314C1A9E /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = C91003705833B14AEF84B031 /* tmrt.json */; };
+		C9A4CBDAE9AD2AF95A2013B5 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 71EE1A460BB7F9156E434788 /* ntdlrt.json */; };
+		3D147BEDA70525B914858F46 /* ntalrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 85BBDB2E6AA012F3CFC30040 /* ntalrt.json */; };
+		6561B50D7C7602E3DFCC17E3 /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = DC2CD1466655900FA994371A /* sanying.json */; };
+		35AB79649B5BF7EDC046FE20 /* trtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 0178692502F47CA784296ECE /* trtc_times.json */; };
+		3F7386D81A9E136A738DF76B /* krtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B9573930233454025F543DC8 /* krtc_times.json */; };
+		2CA6CAC8839F0D6BEB4A2964 /* tymc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 8670B0C11569AC82FA217C36 /* tymc_times.json */; };
+		B7E1B2B9971422641DF03E11 /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3296B37AEF2CF0CDAEA2355F /* ntdlrt_times.json */; };
+		485292ADF797C0D670818992 /* ntalrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 82B6EAE4F781DBAA006650B2 /* ntalrt_times.json */; };
+		3D3EFB1683E2A8724B11567A /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 4CEC6F81214249EE86664D73 /* sanying_times.json */; };
+		210BA1CED83AEB2947F5E7D6 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3D5FAE24E3233330EA17F71B /* tmrt_times.json */; };
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
 		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
@@ -63,6 +84,27 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		041AFAEE59E6B1C342E12465 /* tra_station_class.json */ = {isa = PBXFileReference; path = tra_station_class.json; sourceTree = "<group>"; };
+		76841281630E62ACD59235CE /* tra_station_info.json */ = {isa = PBXFileReference; path = tra_station_info.json; sourceTree = "<group>"; };
+		0B60DD9643EAD8B751F25236 /* trtc_codes.json */ = {isa = PBXFileReference; path = trtc_codes.json; sourceTree = "<group>"; };
+		155E27851F4C4F778BB1F89C /* tra_platforms.json */ = {isa = PBXFileReference; path = tra_platforms.json; sourceTree = "<group>"; };
+		8AE248BC69501794E4BC3707 /* tra_track_sections.json */ = {isa = PBXFileReference; path = tra_track_sections.json; sourceTree = "<group>"; };
+		CD0A6DE0C69E351948A5FCE6 /* tra.json */ = {isa = PBXFileReference; path = tra.json; sourceTree = "<group>"; };
+		316E40D6E80F4ACD5F1EB087 /* trtc.json */ = {isa = PBXFileReference; path = trtc.json; sourceTree = "<group>"; };
+		1D385CF7AB5FDC16DBA83296 /* krtc.json */ = {isa = PBXFileReference; path = krtc.json; sourceTree = "<group>"; };
+		C16E23353C28E723D0C294E4 /* tymc.json */ = {isa = PBXFileReference; path = tymc.json; sourceTree = "<group>"; };
+		7CC621752B017C3643FD538E /* afr.json */ = {isa = PBXFileReference; path = afr.json; sourceTree = "<group>"; };
+		C91003705833B14AEF84B031 /* tmrt.json */ = {isa = PBXFileReference; path = tmrt.json; sourceTree = "<group>"; };
+		71EE1A460BB7F9156E434788 /* ntdlrt.json */ = {isa = PBXFileReference; path = ntdlrt.json; sourceTree = "<group>"; };
+		85BBDB2E6AA012F3CFC30040 /* ntalrt.json */ = {isa = PBXFileReference; path = ntalrt.json; sourceTree = "<group>"; };
+		DC2CD1466655900FA994371A /* sanying.json */ = {isa = PBXFileReference; path = sanying.json; sourceTree = "<group>"; };
+		0178692502F47CA784296ECE /* trtc_times.json */ = {isa = PBXFileReference; path = trtc_times.json; sourceTree = "<group>"; };
+		B9573930233454025F543DC8 /* krtc_times.json */ = {isa = PBXFileReference; path = krtc_times.json; sourceTree = "<group>"; };
+		8670B0C11569AC82FA217C36 /* tymc_times.json */ = {isa = PBXFileReference; path = tymc_times.json; sourceTree = "<group>"; };
+		3296B37AEF2CF0CDAEA2355F /* ntdlrt_times.json */ = {isa = PBXFileReference; path = ntdlrt_times.json; sourceTree = "<group>"; };
+		82B6EAE4F781DBAA006650B2 /* ntalrt_times.json */ = {isa = PBXFileReference; path = ntalrt_times.json; sourceTree = "<group>"; };
+		4CEC6F81214249EE86664D73 /* sanying_times.json */ = {isa = PBXFileReference; path = sanying_times.json; sourceTree = "<group>"; };
+		3D5FAE24E3233330EA17F71B /* tmrt_times.json */ = {isa = PBXFileReference; path = tmrt_times.json; sourceTree = "<group>"; };
 		080B5EA4C72E50F138757E75 /* NetworkControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkControls.swift; sourceTree = "<group>"; };
 		0A8A6A623CDA7792FB18C0A2 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapConstructionHUD.swift; sourceTree = "<group>"; };
@@ -156,6 +198,27 @@
 				31AA7BB032ACE4E009B42AF1 /* station_names.json */,
 				D8A3D706AFEA85A7941D8933 /* track_lines.geojson */,
 				BDC928DD3917E8959E2930DD /* track_stations.geojson */,
+				041AFAEE59E6B1C342E12465 /* tra_station_class.json */,
+				76841281630E62ACD59235CE /* tra_station_info.json */,
+				0B60DD9643EAD8B751F25236 /* trtc_codes.json */,
+				155E27851F4C4F778BB1F89C /* tra_platforms.json */,
+				8AE248BC69501794E4BC3707 /* tra_track_sections.json */,
+				CD0A6DE0C69E351948A5FCE6 /* tra.json */,
+				316E40D6E80F4ACD5F1EB087 /* trtc.json */,
+				1D385CF7AB5FDC16DBA83296 /* krtc.json */,
+				C16E23353C28E723D0C294E4 /* tymc.json */,
+				7CC621752B017C3643FD538E /* afr.json */,
+				C91003705833B14AEF84B031 /* tmrt.json */,
+				71EE1A460BB7F9156E434788 /* ntdlrt.json */,
+				85BBDB2E6AA012F3CFC30040 /* ntalrt.json */,
+				DC2CD1466655900FA994371A /* sanying.json */,
+				0178692502F47CA784296ECE /* trtc_times.json */,
+				B9573930233454025F543DC8 /* krtc_times.json */,
+				8670B0C11569AC82FA217C36 /* tymc_times.json */,
+				3296B37AEF2CF0CDAEA2355F /* ntdlrt_times.json */,
+				82B6EAE4F781DBAA006650B2 /* ntalrt_times.json */,
+				4CEC6F81214249EE86664D73 /* sanying_times.json */,
+				3D5FAE24E3233330EA17F71B /* tmrt_times.json */,
 			);
 			path = RealRailways;
 			sourceTree = "<group>";
@@ -335,6 +398,27 @@
 				19E3457A000AB98921141272 /* taiwan_population.json in Resources */,
 				66CD628AEFF6AEC5001B87F0 /* track_lines.geojson in Resources */,
 				F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */,
+				68A741A29723ADA1D5981F49 /* tra_station_class.json in Resources */,
+				FFBEE0B3123C5898CFB81052 /* tra_station_info.json in Resources */,
+				C20EFB47EB8C86FC18C65161 /* trtc_codes.json in Resources */,
+				EB65DF83600AACFD9A7D12C8 /* tra_platforms.json in Resources */,
+				451BE6D1B63CE063E5FBEC07 /* tra_track_sections.json in Resources */,
+				014CDF6244DC1F86A6AD5BB1 /* tra.json in Resources */,
+				F71400D77D7460593F45063B /* trtc.json in Resources */,
+				9E05D68B2047C6665784C079 /* krtc.json in Resources */,
+				5F2953E12BC4EB892F6D2D5F /* tymc.json in Resources */,
+				0E5EDC0804D2A5603053D57B /* afr.json in Resources */,
+				4183CBF19DFB8A64314C1A9E /* tmrt.json in Resources */,
+				C9A4CBDAE9AD2AF95A2013B5 /* ntdlrt.json in Resources */,
+				3D147BEDA70525B914858F46 /* ntalrt.json in Resources */,
+				6561B50D7C7602E3DFCC17E3 /* sanying.json in Resources */,
+				35AB79649B5BF7EDC046FE20 /* trtc_times.json in Resources */,
+				3F7386D81A9E136A738DF76B /* krtc_times.json in Resources */,
+				2CA6CAC8839F0D6BEB4A2964 /* tymc_times.json in Resources */,
+				B7E1B2B9971422641DF03E11 /* ntdlrt_times.json in Resources */,
+				485292ADF797C0D670818992 /* ntalrt_times.json in Resources */,
+				3D3EFB1683E2A8724B11567A /* sanying_times.json in Resources */,
+				210BA1CED83AEB2947F5E7D6 /* tmrt_times.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
