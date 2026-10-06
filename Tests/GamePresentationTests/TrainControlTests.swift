@@ -109,7 +109,7 @@ final class TrainControlTests: XCTestCase {
         try world.placeTrain(Self.second, at: Self.line.at(3, facingEast: true))
         await MainActor.run { [world] in
             let session = GameSession(world: world)
-            XCTAssertEqual(session.world.speed, .paused)
+            XCTAssertEqual(session.world.clock.speed, .paused)
 
             session.selectTrain(Self.first, following: true)
             XCTAssertTrue(session.isFollowingTrain)

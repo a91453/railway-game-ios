@@ -309,7 +309,7 @@ struct MapView: View {
         .padding(12)
     }
 
-    private func centerOnFollowedTrain(projection: some MapProjection) {
+    private func centerOnFollowedTrain(projection: PlanCamera) {
         guard session.isFollowingTrain,
               let train = session.selectedTrain,
               let position = train.position,
