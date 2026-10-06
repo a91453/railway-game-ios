@@ -217,11 +217,17 @@ final class MapInteractionTests: XCTestCase {
         let heatmapToggle = heatmapRow.switches.firstMatch
         XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap control must exist")
         XCTAssertTrue(heatmapToggle.isEnabled, "The implemented population overlay must be available")
-        if heatmapToggle.value as? String == "0" {
+        // The sheet may still be presenting when the switch first exists,
+        // and a tap then can be lost (the value stays "0"): wait until it
+        // can be hit, and tap again while it is still off.
+        for _ in 0..<3 where heatmapToggle.value as? String != "1" {
+            let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: heatmapToggle)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 5)
             heatmapToggle.tap()
+            let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: heatmapToggle)
+            _ = XCTWaiter.wait(for: [switched], timeout: 3)
         }
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: heatmapToggle)
-        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Population heatmap must be on before dismissing")
+        XCTAssertEqual(heatmapToggle.value as? String, "1", "Population heatmap must be on before dismissing")
 
         let doneButton = app.buttons["layer.done"]
         XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
