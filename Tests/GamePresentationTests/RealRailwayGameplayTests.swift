@@ -100,6 +100,27 @@ final class RealRailwayGameplayTests: XCTestCase {
         XCTAssertNil(session.realPlatformCars(forStationNamed: "Station 1", at: nil))
     }
 
+    /// A real station's length is suggested only for that station: the
+    /// next one with no real default is back at the usual 4 cars, unless
+    /// the player chose a length.
+    func testARealPlatformLengthIsNotKeptForTheNextStation() throws {
+        var world = GameWorld.newGame()
+        let real = try world.buildStation(named: "三坑", at: PlanPoint(x: 8_192, y: 8_192)).id
+        let other = try world.buildStation(named: "Elsewhere", at: PlanPoint(x: 16_384, y: 8_192)).id
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        session.platformStationID = real
+        session.suggestPlatformCars()
+        XCTAssertEqual(session.platformCars, 11)
+        session.platformStationID = other
+        session.suggestPlatformCars()
+        XCTAssertEqual(session.platformCars, 4)
+        session.platformCars = 6
+        session.platformStationID = real
+        session.suggestPlatformCars()
+        XCTAssertEqual(session.platformCars, 6, "the player's length stays")
+    }
+
     func testANewLineOnARealLineStartsWithItsHeadways() throws {
         var world = GameWorld.newGame()
         let tamsui = try world.buildStation(named: "淡水", at: PlanPoint(x: 64_000, y: 64_000)).id

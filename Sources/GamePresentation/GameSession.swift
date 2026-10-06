@@ -61,7 +61,10 @@ public final class GameSession {
     /// The car count the session last suggested for ``platformCars``
     /// (from a real TRA station's grade); replaced, like the name, only
     /// while the player has not changed it.
-    @ObservationIgnored var automaticPlatformCars: Int = 4
+    @ObservationIgnored var automaticPlatformCars: Int = GameSession.defaultPlatformCars
+
+    /// The car count a platform is built for where no real default applies.
+    static let defaultPlatformCars = 4
 
     /// The train the train tool acts on: an ID only, never a copy of the
     /// train. Read the train itself through ``selectedTrain``.
@@ -133,7 +136,7 @@ public final class GameSession {
     /// The place on an edge the platform and remove modes picked.
     public internal(set) var networkEdgePoint: NetworkEdgePoint?
     /// How many cars the next platform is long enough for.
-    public var platformCars = 4
+    public var platformCars = GameSession.defaultPlatformCars
     /// The station the next platform serves; `nil` builds a new station
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?

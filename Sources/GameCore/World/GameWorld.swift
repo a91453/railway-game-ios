@@ -195,7 +195,9 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func buildTrackEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface
     ) throws(GameError) -> TrackEdgeID {
-        try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, checksSpacing: true)
+        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, checksSpacing: true)
+        abandonUnservedPassengers()
+        return id
     }
 
     /// Builds the edges `plans` describe, in order, as one command (the
@@ -227,6 +229,7 @@ public struct GameWorld: Equatable, Sendable {
             }
         }
         self = after
+        abandonUnservedPassengers()
         return built
     }
 
@@ -525,10 +528,13 @@ public struct GameWorld: Equatable, Sendable {
     /// platform on the edge, of this station or another.
     ///
     /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
-    ///   ``GameError/unknownTrackEdge(_:)``; ``GameError/invalidPlatform``; or, under traffic
-    ///   control (Stage T), ``GameError/trackReserved(_:)`` while a train
-    ///   holds a span of the edge, whose spans the platform's ends would
-    ///   cut.
+    ///   ``GameError/unknownTrackEdge(_:)``; ``GameError/invalidPlatform``;
+    ///   ``GameError/trainServiceActive(_:)`` naming the lowest numbered
+    ///   train whose service stands at a passing place (Stage V2) with its
+    ///   head where the platform would be, of the station of its call; or,
+    ///   under traffic control (Stage T), ``GameError/trackReserved(_:)``
+    ///   while a train holds a span of the edge, whose spans the platform's
+    ///   ends would cut.
     public mutating func addTrackPlatform(_ id: StationID, on edge: TrackEdgeID, from start: Int64, to end: Int64) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard network.edge(edge) != nil else { throw .unknownTrackEdge(edge) }
@@ -536,9 +542,20 @@ public struct GameWorld: Equatable, Sendable {
         guard isValidPlatform(platform), !network.platforms.contains(where: { $0.overlaps(platform) }) else {
             throw .invalidPlatform
         }
+        // Stage V2: a service at a passing place stands there with its path
+        // spent; a platform of its call under its head would stop it at its
+        // call without arriving.
+        if let train = trains.first(where: { train in
+            guard isAtPassingPlace(train), case .travellingToStop(let stop, _)? = train.execution,
+                  train.timetable[stop].station == id, let (standing, chainage) = standingPoint(of: train) else { return false }
+            return standing == edge && start <= chainage && chainage <= end
+        }) {
+            throw .trainServiceActive(train.id)
+        }
         try requireSpansUnheld(on: edge)
 
         network.addPlatform(platform)
+        abandonUnservedPassengers()
     }
 
     /// Removes station `id`'s platform on edge `edge` that starts at `start`
@@ -547,9 +564,11 @@ public struct GameWorld: Equatable, Sendable {
     /// A platform a timetable service needs cannot be removed (Stage S5):
     /// one where a service waits at this station with the train's head on
     /// the platform, or one on the edge where a service travelling to this
-    /// station ends its path. Stop the service first (for a line's train,
-    /// take it off the line). So a waiting service is always stopped at its
-    /// station, and a travelling one always has a platform to arrive at.
+    /// station ends its path, or one of a passing place it travels to or
+    /// stands at, or of the call it goes on to from there (Stage V2). Stop
+    /// the service first (for a line's train, take it off the line). So a
+    /// waiting service is always stopped at its station, and a travelling
+    /// one always has a platform to arrive at.
     ///
     /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
     ///   ``GameError/invalidPlatform`` when the station has no such
@@ -575,17 +594,26 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Whether `train`'s service needs `platform` (Stage S5): it waits at
     /// the platform's station with its head on the platform, or travels to
-    /// that station along a path whose last edge is the platform's.
+    /// that station along a path whose last edge is the platform's. Since
+    /// Stage V2 also a passing place's (see ``isAtPassingPlace(_:)``): the
+    /// platform of another station a service travels to, or stands at with
+    /// its head on it, and while it stands there, every platform of its
+    /// call, which it goes on to from there.
     private func serviceNeeds(_ train: Train, _ platform: TrackPlatform) -> Bool {
-        guard let execution = train.execution, train.timetable[execution.stop].station == platform.station,
+        guard let execution = train.execution,
               case .onEdge(let traversal, let offset)? = train.position, let edge = network.edge(traversal.edge)
         else { return false }
+        let call = train.timetable[execution.stop].station
+        let chainage = traversal.direction == .forward ? offset : edge.length - offset
+        let headOn = traversal.edge == platform.edge && platform.start <= chainage && chainage <= platform.end
         switch execution {
         case .waitingAtStop:
-            let chainage = traversal.direction == .forward ? offset : edge.length - offset
-            return traversal.edge == platform.edge && platform.start <= chainage && chainage <= platform.end
+            return platform.station == call && headOn
         case .travellingToStop:
-            return (train.movement.remainingEdges.last ?? traversal.edge) == platform.edge
+            if isAtPassingPlace(train) { return headOn || platform.station == call }
+            guard (train.movement.remainingEdges.last ?? traversal.edge) == platform.edge else { return false }
+            return platform.station == call
+                || (!pathEndsAtBerth(of: train, for: call) && pathEndsAtBerth(of: train, for: platform.station))
         }
     }
 
@@ -1271,7 +1299,7 @@ public struct GameWorld: Equatable, Sendable {
         else { changed.routePreferences = routes }
         guard changed.validRoutePreferences else { throw .invalidLineRoutePreference }
         lines[index] = changed
-        passengerPlan = PassengerPlanCache()
+        abandonUnservedPassengers()
     }
 
     /// Sets the performance a line's journey times are worked out with
@@ -1286,6 +1314,7 @@ public struct GameWorld: Equatable, Sendable {
         let index = try lineIndex(of: id)
         guard performance.isValid else { throw .invalidTrainPerformance }
         lines[index].performance = performance
+        abandonUnservedPassengers()
     }
 
     /// Sets when a line runs during the day (see ``ServiceWindow``).
@@ -1426,6 +1455,7 @@ public struct GameWorld: Equatable, Sendable {
             let roster = lines[target].patterns[service - 1].trains
             lines[target].patterns[service - 1].trains.insert(id, at: roster.firstIndex { $0 > id } ?? roster.count)
         }
+        abandonUnservedPassengers()
     }
 
     /// Takes a train off its line, whichever of the line's services it is
@@ -1443,6 +1473,7 @@ public struct GameWorld: Equatable, Sendable {
         for pattern in lines[index].patterns.indices {
             lines[index].patterns[pattern].trains.removeAll { $0 == id }
         }
+        abandonUnservedPassengers()
     }
 
     // MARK: - Time

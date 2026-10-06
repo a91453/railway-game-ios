@@ -149,7 +149,9 @@ extension GameSession {
         }
         guard let target else { return }
         let point = RealWorldFrame(world: world) == nil ? nil : target.point
-        guard let cars = realPlatformCars(forStationNamed: target.name, at: point) else { return }
+        // Without a real one, back to the default, so one real station's
+        // length is not kept for the stations that follow.
+        let cars = realPlatformCars(forStationNamed: target.name, at: point) ?? Self.defaultPlatformCars
         if platformCars == automaticPlatformCars {
             platformCars = cars
         }

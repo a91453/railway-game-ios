@@ -683,9 +683,11 @@ extension GameWorld {
         }
     }
 
-    /// After a line's stops change or it is removed: every group waiting
-    /// for a trip no line takes that way any more leaves its station (see
-    /// ``PassengerLedger/abandoned``).
+    /// After a line's stops change or it is removed, or anything else its
+    /// journey or the service it can run depends on (its track, platforms,
+    /// performance, route preferences and trains): every group waiting for
+    /// a trip no line takes that way any more leaves its station (see
+    /// ``PassengerLedger/abandoned``), so the world still loads.
     mutating func abandonUnservedPassengers() {
         passengerPlan = PassengerPlanCache()
         let world = self

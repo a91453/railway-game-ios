@@ -345,6 +345,40 @@ final class PassengerTransferTests: XCTestCase {
         try assertConservedAndSaveable(world)
     }
 
+    /// A slower line can leave a pattern sharing its single track no room
+    /// at any level (decision 62): the pattern's queue leaves at once, as
+    /// when its trains in service are set to none, and the world still
+    /// loads.
+    func testASlowerLineThatCrowdsOutAPatternAbandonsItsQueue() throws {
+        let (west, middle, east) = (SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east)
+        var world = try SingleTrackMeet.world()
+        try world.removeTrackPlatform(middle, on: .edge(5), from: 3_072)
+        let id = try world.createLine(named: "Single", stops: [west, middle, east]).id
+        try world.setLineServiceWindow(id, to: .allDay)
+        try world.setLineTrainsInService(id, to: .none)
+        let short = try world.addLinePattern(id, calling: [0, 1])
+        let onward = try world.addLinePattern(id, calling: [1, 2])
+        for pattern in [short, onward] {
+            try world.setLineTrainsInService(id, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: pattern)
+        }
+        try world.setLineTargetHeadways(id, to: TargetHeadways(peak: 60, offPeak: 60, low: 60), pattern: short)
+        try world.assignTrain(SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072), to: id, pattern: short)
+        try world.setTrafficControl(true)
+        try world.setStationDemand(middle, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        XCTAssertNotNil(world.lineHeadway(id, at: .peak, pattern: onward))
+        let route = try XCTUnwrap(world.passengerRoutes(from: middle, to: east).first)
+        XCTAssertEqual(route.legs.map(\.pattern), [onward])
+        let origin = try XCTUnwrap(world.passengers.firstIndex { $0.station == middle })
+        world.passengers[origin].release(5, along: try XCTUnwrap(PassengerJourney(origin: middle, route: route)), at: GameTime(minutes: -1))
+
+        try world.setLinePerformance(id, to: TrainPerformance(acceleration: 300, braking: 300, topSpeed: 10))
+        XCTAssertNil(world.lineHeadway(id, at: .peak, pattern: onward))
+        XCTAssertEqual(world.passengerLedger(of: middle).abandoned, 5)
+        XCTAssertEqual(world.passengerLedger(of: middle).waiting, 0)
+        try assertConservedAndSaveable(world)
+    }
+
     /// Nobody changes trains at a closed station (the reference's
     /// `metroStationAllowsTransfer`): B is where the lines meet.
     func testNoOneChangesTrainsAtAClosedStation() throws {
