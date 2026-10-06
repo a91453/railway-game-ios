@@ -351,10 +351,11 @@ extension Tutorial {
             goal: .startService,
             title: ("Start service", "開始營運"),
             body: (
-                "Open Lines and pick your line. Raise the trains wanted for a time of day (peak, off-peak or low) to 1, "
-                    + "then tap Assign … Here to give the line your train. It leaves once it has waited at the first stop.",
-                "打開「路線」並選你的路線。把某個時段（尖峰、離峰或低峰）的「上線」列數加到 1，"
-                    + "再按「把…指派到這裡」把列車交給路線。它在第一站等候後就會出發。"
+                "Open Lines, pick your line and tap Assign … Here to give it your train. A line that runs no trains yet "
+                    + "then runs it at every time of day; change how many it runs for peak, off-peak or low there. "
+                    + "It leaves once it has waited at the first stop.",
+                "打開「路線」，選你的路線，按「把…指派到這裡」把列車交給它。還沒有上線列車的路線，"
+                    + "會在各時段都讓這列車上線；尖峰、離峰、低峰的上線列數可以在那裡調整。它在第一站等候後就會出發。"
             )
         ),
         // No reference step: its stations carry their ridership in the line

@@ -91,6 +91,84 @@ final class RealWorldDemoTests: XCTestCase {
         }
     }
 
+    /// The owner's play-test (2026-10-06): a new line from Ruifang to
+    /// Shifen on the demo, made and run through the session at night.
+    /// Placing finds Ruifang's free loop platform when the demo's train
+    /// holds the other, assigning puts the line's first train in service,
+    /// the train says the line opens at 06:00 rather than "No path ahead",
+    /// and it leaves once the line runs.
+    @MainActor
+    func testANewRuifangShifenLineRunsItsTrainFromTheSession() throws {
+        let (railways, world) = try Self.built.get()
+        let session = GameSession(world: world, language: .english)
+        session.railways = railways
+        let ids = try ["瑞芳", "十分"].map { name in try XCTUnwrap(world.stations.first { $0.name == name }?.id) }
+        for id in ids {
+            session.selectStation(id)
+            session.addSelectedStationToLineDraft()
+        }
+        session.createLineFromDraft()
+        let line = try XCTUnwrap(session.selectedLine)
+        XCTAssertEqual(line.trainsInService, .none, "a new line runs no trains")
+        XCTAssertEqual(line.window, .standard)
+
+        session.selectStation(ids[0])
+        session.purchaseTrain()
+        let train = try XCTUnwrap(session.selectedTrain).id
+        // The demo's trains hold Ruifang's platforms as they come and go:
+        // run on to a moment one is held and the other free.
+        func held() -> [TrackPlatform] {
+            session.world.trackPlatforms(of: ids[0]).filter { platform in
+                var draft = session.world
+                return (try? draft.placeTrain(train, at: .onEdge(TrackTraversal(edge: platform.edge, direction: .forward), offset: platform.end))) == nil
+            }
+        }
+        for _ in 0..<120 where held().count != 1 {
+            session.advance(realElapsed: .milliseconds(250))
+        }
+        let busy = try XCTUnwrap(held().first)
+        XCTAssertEqual(held().count, 1)
+        session.placeSelectedTrain()
+        guard case .onEdge(let traversal, _)? = session.world.train(id: train)?.position else {
+            return XCTFail(session.message?.text ?? "not placed")
+        }
+        XCTAssertNotEqual(traversal.edge, busy.edge, "placed on the free platform")
+
+        session.selectLine(line.id)
+        session.assignSelectedTrainToSelectedLine()
+        let message = try XCTUnwrap(session.message?.text)
+        XCTAssertTrue(message.contains("opens at 06:00"), message)
+        XCTAssertTrue(message.hasSuffix("ran no trains, so it now runs 1 at every level."), message)
+        XCTAssertEqual(session.world.line(id: line.id)?.trainsInService, TrainsInService(peak: 1, offPeak: 1, low: 1))
+        XCTAssertLessThan(session.world.clock.now.seconds % GameTime.secondsPerDay, 6 * 3_600, "the demo starts at night")
+        XCTAssertEqual(session.world.trainPathStatusText(of: train, in: .english), "Waiting: \(line.name) opens at 06:00")
+        XCTAssertEqual(session.world.trainPathStatusText(of: train, in: .traditionalChinese), "等候發車：\(line.name) 06:00 開始營運")
+
+        session.setSelectedLineAllDay(true)
+        // It waits for its route under traffic control, then leaves.
+        for _ in 0..<60 where session.world.train(id: train)?.execution == nil {
+            session.advance(realElapsed: .milliseconds(500))
+        }
+        XCTAssertNotNil(session.world.train(id: train)?.execution, "it leaves once the line runs")
+        XCTAssertEqual(session.world.train(id: train)?.timetable.map(\.station), [ids[0], ids[1], ids[0]])
+    }
+
+    /// A line that already runs keeps the trains it is set to run.
+    @MainActor
+    func testAssigningToALineThatRunsKeepsItsCounts() throws {
+        let (_, world) = try Self.built.get()
+        let session = GameSession(world: world, language: .english)
+        let line = try XCTUnwrap(session.world.lines.first)
+        let counts = line.trainsInService
+        XCTAssertNotEqual(counts, .none)
+        session.selectStation(line.stops[0])
+        session.purchaseTrain()
+        session.selectLine(line.id)
+        session.assignSelectedTrainToSelectedLine()
+        XCTAssertEqual(session.world.line(id: line.id)?.trainsInService, counts)
+        XCTAssertFalse(session.message?.text.contains("ran no trains") ?? true)
+    }
+
     /// V4d on the bundled physical Pingxi track: Shifen -> Jingtong ->
     /// Pingxi reverses at the intermediate terminal, then again on return.
     /// The requested call order is a player scenario, not a real timetable.

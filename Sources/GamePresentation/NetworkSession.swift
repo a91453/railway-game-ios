@@ -314,7 +314,9 @@ extension GameSession {
     // MARK: - Trains
 
     /// Puts `train` on a platform of `station` on the track network: the
-    /// first, along the track, as long as the train, or else the longest.
+    /// first, along the track, as long as the train, or else the longest;
+    /// if GameCore refuses it there (another train holds that track), the
+    /// next one in that order.
     /// It faces the way along the platform nearer ``placementHeading`` and
     /// stands with its head at the platform's far end, through
     /// `GameWorld.placeTrain(_:at:)` and, to stand there rather than run on
@@ -323,34 +325,46 @@ extension GameSession {
     /// track behind the platform takes the rest of the train.
     func place(_ train: Train, atPlatformOf station: Station) {
         let platforms = world.trackPlatforms(of: station.id)
-        guard let platform = platforms.first(where: { $0.length >= train.length }) ?? platforms.max(by: { $0.length < $1.length }),
-              let edge = world.network.edge(platform.edge),
-              let geometry = world.trackGeometry(of: platform.edge)
-        else { return }
+        // Those as long as the train in track order, then the rest, longest
+        // first.
+        let ordered = platforms.filter { $0.length >= train.length }
+            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
+        guard !ordered.isEmpty else { return }
         let heading = placementHeading
-        let way = geometry.location(at: (platform.start + platform.end) / 2).direction
-        let forward: Bool
-        switch heading {
-        case .north: forward = way.dy <= 0
-        case .east: forward = way.dx >= 0
-        case .south: forward = way.dy >= 0
-        case .west: forward = way.dx <= 0
-        }
-        let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
-        // The offset is measured the way the train faces.
-        let offset = forward ? platform.end : edge.length - platform.start
         perform { world throws(GameError) in
-            var draft = world
-            try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
-            if offset < edge.length {
-                try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
+            var refusal: GameError?
+            for platform in ordered {
+                guard let edge = world.network.edge(platform.edge),
+                      let geometry = world.trackGeometry(of: platform.edge) else { continue }
+                let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+                let forward: Bool
+                switch heading {
+                case .north: forward = way.dy <= 0
+                case .east: forward = way.dx >= 0
+                case .south: forward = way.dy >= 0
+                case .west: forward = way.dx <= 0
+                }
+                let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
+                // The offset is measured the way the train faces.
+                let offset = forward ? platform.end : edge.length - platform.start
+                var draft = world
+                do throws(GameError) {
+                    try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
+                    if offset < edge.length {
+                        try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
+                    }
+                    try draft.useTrainPerformanceForMovement(train.id)
+                } catch {
+                    refusal = refusal ?? error
+                    continue
+                }
+                world = draft
+                return language.text(
+                    "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
+                    "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
+                )
             }
-            try draft.useTrainPerformanceForMovement(train.id)
-            world = draft
-            return language.text(
-                "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
-                "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
-            )
+            throw refusal ?? .unknownStation(station.id)
         }
     }
 
