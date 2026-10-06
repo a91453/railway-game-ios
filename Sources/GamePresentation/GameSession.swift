@@ -53,6 +53,16 @@ public final class GameSession {
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
 
+    /// The name the session last suggested for ``stationName``. A new
+    /// suggestion replaces ``stationName`` only while it is still this one:
+    /// a name the player typed is never overwritten.
+    @ObservationIgnored var automaticStationName: String
+
+    /// The car count the session last suggested for ``platformCars``
+    /// (from a real TRA station's grade); replaced, like the name, only
+    /// while the player has not changed it.
+    @ObservationIgnored var automaticPlatformCars: Int = 4
+
     /// The train the train tool acts on: an ID only, never a copy of the
     /// train. Read the train itself through ``selectedTrain``.
     public private(set) var selectedTrainID: TrainID?
@@ -128,8 +138,15 @@ public final class GameSession {
     @ObservationIgnored public var places: PlaceGrid?
 
     /// Taiwan's real railways (stations and lines) for real-world maps.
-    /// Handed to each session by the launcher; never saved.
-    @ObservationIgnored public var railways: RealRailways?
+    /// Handed to each session by the launcher; never saved. Once they are
+    /// there, a station name still as first suggested is suggested again
+    /// from them, at the middle of a real-world map.
+    @ObservationIgnored public var railways: RealRailways? {
+        didSet {
+            let middle = RealWorldFrame(world: world).map { PlanPoint(x: Int64($0.middleX), y: Int64($0.middleY)) }
+            suggestStationName(at: middle)
+        }
+    }
 
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
@@ -154,7 +171,9 @@ public final class GameSession {
     public init(world: GameWorld, language: DisplayLanguage = .english) {
         self.world = Self.withCityRidership(world)
         self.language = language
-        self.stationName = Self.suggestedStationName(for: world, in: language)
+        let suggested = Self.suggestedStationName(for: world, in: language)
+        self.stationName = suggested
+        self.automaticStationName = suggested
         self.selectedTrainID = world.trains.first?.id
         self.selectedLineID = world.lines.first?.id
     }
@@ -656,16 +675,34 @@ public final class GameSession {
     /// Creates a line calling at the picked stops, in order, through
     /// `GameWorld.createLine(named:stops:)`, and selects it. The draft is
     /// kept when GameCore refuses the stops.
+    ///
+    /// Where the stops are on a real line (``realLine(calling:)``), the new
+    /// line starts with that line's peak and off-peak headways as its
+    /// targets (``realTargetHeadways(of:inSystem:)``), through
+    /// `GameWorld.setLineTargetHeadways(_:to:pattern:)` in the same step.
     public func createLineFromDraft() {
         var created: LineID?
         let stops = lineDraft
+        let real = realLine(calling: stops).flatMap { match in
+            realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
+        }
         perform { world throws(GameError) in
-            let line = try world.createLine(named: Self.suggestedLineName(for: world, in: language), stops: stops)
+            var draft = world
+            let line = try draft.createLine(named: Self.suggestedLineName(for: draft, in: language), stops: stops)
+            var detail = ""
+            if let real {
+                try draft.setLineTargetHeadways(line.id, to: real.targets, pattern: nil)
+                let levels = [(ServiceLevel.peak, real.targets.peak), (.offPeak, real.targets.offPeak)].compactMap { level, minutes in
+                    minutes.map { "\(level.title(in: language)) \(headwayText(minutes: $0, in: language).lowercased())" }
+                }.joined(separator: language.text(", ", "、"))
+                detail = language.text(" Target headways from \(real.name): \(levels).", "目標班距依 \(real.name)：\(levels)。")
+            }
+            world = draft
             created = line.id
             return language.text(
                 "Created \(line.name) with \(stops.count) stops. Set how many trains it runs.",
                 "已建立 \(line.name)，共 \(stops.count) 站。請設定上線列車數。"
-            )
+            ) + detail
         }
         if let created {
             selectedLineID = created
@@ -906,6 +943,12 @@ public final class GameSession {
     /// number upward that no existing station uses. On a real-world map,
     /// suggests the nearest real railway station's name if within range
     /// and not yet taken.
+    ///
+    /// A real station is taken when a station of the world already is it,
+    /// whatever language or system's spelling it was named in: 台北, 臺北,
+    /// 台北車站, "Taipei" and "Taipei Main Station" near Taipei Main
+    /// Station are one place (``RealRailways/stationKey(_:)``), so none of
+    /// them is offered again once one is used.
     nonisolated public static func suggestedStationName(
         for world: GameWorld,
         at location: PlanPoint? = nil,
@@ -914,21 +957,42 @@ public final class GameSession {
         maximumDistanceMetres: Double = 5_000
     ) -> String {
         let taken = Set(world.stations.map(\.name))
-        let activeRailways = railways
         if let location,
-           let activeRailways,
+           let railways,
            let frame = RealWorldFrame(world: world) {
-            let coord = frame.coordinate(worldX: Double(location.x), worldY: Double(location.y))
-            let point = RealRailways.Coordinate(latitude: coord.latitude, longitude: coord.longitude)
-            let candidates = activeRailways.nearbyStations(to: point, maximumDistanceMetres: maximumDistanceMetres)
+            func coordinate(_ point: PlanPoint) -> RealRailways.Coordinate {
+                let coord = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
+                return RealRailways.Coordinate(latitude: coord.latitude, longitude: coord.longitude)
+            }
+            // Every name key of the real stations the world's stations are.
+            var takenKeys = Set(taken.map(RealRailways.stationKey))
+            for station in world.stations {
+                for real in railways.stations(named: station.name, near: coordinate(station.location)) {
+                    takenKeys.insert(RealRailways.stationKey(real.chinese))
+                    if let english = real.english { takenKeys.insert(RealRailways.stationKey(english)) }
+                }
+            }
+            let candidates = railways.nearbyStations(to: coordinate(location), maximumDistanceMetres: maximumDistanceMetres)
             for candidate in candidates {
                 let name = candidate.station.name(in: language)
-                if !taken.contains(name) {
+                let keys = [candidate.station.chinese, candidate.station.english, name].compactMap { $0 }.map(RealRailways.stationKey)
+                if !taken.contains(name), keys.allSatisfy({ !takenKeys.contains($0) }) {
                     return name
                 }
             }
         }
         return suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: taken)
+    }
+
+    /// Suggests a new ``stationName`` for a station at `location` (see
+    /// ``suggestedStationName(for:at:in:railways:maximumDistanceMetres:)``),
+    /// replacing the current one only while it is still the last suggestion.
+    func suggestStationName(at location: PlanPoint?) {
+        let suggestion = Self.suggestedStationName(for: world, at: location, in: language, railways: railways)
+        if stationName == automaticStationName {
+            stationName = suggestion
+        }
+        automaticStationName = suggestion
     }
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number

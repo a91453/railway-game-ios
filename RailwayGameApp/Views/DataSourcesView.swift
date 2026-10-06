@@ -41,6 +41,19 @@ struct DataSourcesView: View {
                         Text(verbatim: section.title)
                     }
                 }
+                // The bundled data files that could not be read: shown so a
+                // broken file is seen rather than silently missing.
+                let issues = RealRailways.bundledLoad.issues + (RealRailways.bundled?.operations?.timetableIssues ?? [])
+                if !issues.isEmpty {
+                    Section {
+                        ForEach(issues, id: \.self) { issue in
+                            Text(verbatim: issue.description)
+                                .font(.footnote.monospaced())
+                        }
+                    } header: {
+                        Text(verbatim: language.text("Files that could not be read", "無法讀取的檔案"))
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Data Sources")

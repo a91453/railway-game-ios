@@ -145,13 +145,25 @@ public struct RealStationData: Sendable {
     public let platforms: [String: TRAPlatform]
     public let estimatedPlatformLengthsByTier: [Double]
     public let trackSections: [String: TRATrackSection]
+    /// The tracks trains can wait on to be overtaken at each TRA station
+    /// (`tra_overtake_tracks.json`); `nil` without the file.
+    public let overtakeTracks: TRAOvertakeTracks?
+
+    // The source spellings each lookup key falls back to, worked out once
+    // (the first, sorted, of each key) rather than on every lookup.
+    private let classAliases: [String: String]
+    private let infoAliases: [String: String]
+    private let trtcAliases: [String: String]
+    private let platformAliases: [String: String]
+    private let sectionAliases: [String: String]
 
     public init(
         classes classesData: Data,
         infos infosData: Data,
         codes codesData: Data,
         platforms platformsData: Data,
-        sections sectionsData: Data
+        sections sectionsData: Data,
+        overtakeTracks overtakeData: Data? = nil
     ) throws {
         let decoder = JSONDecoder()
 
@@ -243,6 +255,32 @@ public struct RealStationData: Sendable {
             )
         }
         self.trackSections = parsedSections
+
+        // 6. Overtaking tracks
+        self.overtakeTracks = try overtakeData.map(TRAOvertakeTracks.init(data:))
+
+        classAliases = Self.aliases(parsedClasses.keys)
+        infoAliases = Self.aliases(parsedInfos.keys)
+        trtcAliases = Self.aliases(codesByName.keys)
+        platformAliases = Self.aliases(parsedPlatforms.keys)
+        var sections: [String: String] = [:]
+        for key in parsedSections.keys.sorted() {
+            let endpoints = key.split(separator: "|").map { Self.stationKey(String($0)) }.sorted().joined(separator: "|")
+            if sections[endpoints] == nil { sections[endpoints] = key }
+        }
+        sectionAliases = sections
+    }
+
+    /// Each lookup key of `names`, to the first of its spellings in sorted
+    /// order: stable even if a source has more than one spelling of the
+    /// same station.
+    fileprivate static func aliases(_ names: some Collection<String>) -> [String: String] {
+        var result: [String: String] = [:]
+        for name in names.sorted() {
+            let key = stationKey(name)
+            if result[key] == nil { result[key] = name }
+        }
+        return result
     }
 
     /// A lookup key only: source names and station identities remain intact.
@@ -259,23 +297,24 @@ public struct RealStationData: Sendable {
         }
     }
 
-    private static func lookup<Value>(_ name: String, in values: [String: Value]) -> Value? {
+    private static func lookup<Value>(_ name: String, in values: [String: Value], aliases: [String: String]) -> Value? {
         if let direct = values[name] { return direct }
-        let normalized = stationKey(name)
-        // Exact spellings take precedence; a sorted fallback is stable even
-        // if a source contains more than one spelling of the same station.
-        guard let key = values.keys.sorted().first(where: { stationKey($0) == normalized }) else { return nil }
+        // The site's own fallback (`index.html`: `clsMap[name] ||
+        // clsMap[name.replace(/台/g, '臺')]`).
+        if let official = values[name.replacingOccurrences(of: "台", with: "臺")] { return official }
+        // Exact spellings take precedence; then the reference aliases.
+        guard let key = aliases[stationKey(name)] else { return nil }
         return values[key]
     }
 
     /// Looks up the TRA station classification, accepting reference aliases.
     public func stationClass(forStation name: String) -> TRAStationClass? {
-        Self.lookup(name, in: stationClasses)
+        Self.lookup(name, in: stationClasses, aliases: classAliases)
     }
 
     /// Looks up TRA station information for `name`.
     public func stationInfo(forStation name: String) -> TRAStationInfo? {
-        Self.lookup(name, in: stationInfos)
+        Self.lookup(name, in: stationInfos, aliases: infoAliases)
     }
 
     /// Looks up TRA station information by station code (e.g. `"0900"`).
@@ -285,7 +324,7 @@ public struct RealStationData: Sendable {
 
     /// Returns TRTC station codes for station `name` (e.g. "台北車站" -> `["BL12", "R10"]`).
     public func trtcCodes(forStation name: String) -> [String] {
-        Self.lookup(name, in: trtcCodesByStation) ?? []
+        Self.lookup(name, in: trtcCodesByStation, aliases: trtcAliases) ?? []
     }
 
     /// Returns TRTC station info for `code` (e.g. `"BL01"`).
@@ -295,7 +334,7 @@ public struct RealStationData: Sendable {
 
     /// Platform geometry for `name`.
     public func platform(forStation name: String) -> TRAPlatform? {
-        Self.lookup(name, in: platforms)
+        Self.lookup(name, in: platforms, aliases: platformAliases)
     }
 
     /// Estimated platform length for a class tier (0 to 4).
@@ -309,17 +348,20 @@ public struct RealStationData: Sendable {
         estimatedPlatformLength(forTier: stationClass.tier)
     }
 
+    /// The site's `traSectionKey(a, b)`: both names with 台 written 臺,
+    /// in sorted order, joined by `|`, the key of `tra_track_sections.json`.
+    public static func sectionKey(_ stationA: String, _ stationB: String) -> String {
+        [stationA, stationB].map { $0.replacingOccurrences(of: "台", with: "臺") }.sorted().joined(separator: "|")
+    }
+
     /// Track section between two stations. Order of station names does not matter.
     public func trackSection(between stationA: String, and stationB: String) -> TRATrackSection? {
+        if let found = trackSections[Self.sectionKey(stationA, stationB)] { return found }
         let key1 = "\(stationA)|\(stationB)"
         let key2 = "\(stationB)|\(stationA)"
         if let found = trackSections[key1] ?? trackSections[key2] { return found }
-
-        let endpoints = [Self.stationKey(stationA), Self.stationKey(stationB)].sorted()
-        guard let key = trackSections.keys.sorted().first(where: {
-            $0.split(separator: "|").map { Self.stationKey(String($0)) }.sorted() == endpoints
-        }) else { return nil }
-        return trackSections[key]
+        let endpoints = [Self.stationKey(stationA), Self.stationKey(stationB)].sorted().joined(separator: "|")
+        return sectionAliases[endpoints].flatMap { trackSections[$0] }
     }
 
     /// Number of tracks between two stations (1 for single track, 2 for double track).
@@ -327,9 +369,56 @@ public struct RealStationData: Sendable {
         trackSection(between: stationA, and: stationB)?.tracks
     }
 
-    /// Whether the section between two stations is double track.
-    public func isDoubleTrack(between stationA: String, and stationB: String) -> Bool {
-        guard let section = trackSection(between: stationA, and: stationB) else { return false }
-        return section.isDoubleTrack
+    /// Whether the section between two stations is double track; `nil`
+    /// where the data has no such section (unknown, not single track).
+    public func isDoubleTrack(between stationA: String, and stationB: String) -> Bool? {
+        trackSection(between: stationA, and: stationB)?.isDoubleTrack
+    }
+
+    /// The overtaking tracks of TRA station `name`, accepting the same
+    /// spellings as the other lookups.
+    public func overtakeStation(forStation name: String) -> TRAOvertakeTracks.Station? {
+        guard let stations = overtakeTracks?.stations else { return nil }
+        return Self.lookup(name, in: stations, aliases: overtakeTracks?.aliases ?? [:])
+    }
+}
+
+/// `tra_overtake_tracks.json`: the site's own reading of each TRA
+/// station's routes (`index.html` `planSameDirectionOvertakes`).
+/// `stations[name].moves["from>to|s"]` (or `|p`) are the routes a
+/// movement uses at the station (`s` stopping or starting, `p` passing);
+/// `dirs["from>to"]` the tracks a train passing that way can wait on, each
+/// with the routes that block it.
+public struct TRAOvertakeTracks: Hashable, Sendable {
+    public struct Station: Hashable, Sendable, Decodable {
+        public let moves: [String: [Int]]
+        public let dirs: [String: [[Int]]]
+
+        /// How many tracks a train passing each way can wait on, by the
+        /// way (`"八堵>百福"`), in sorted order.
+        public var waitingTracks: [(direction: String, tracks: Int)] {
+            dirs.keys.sorted().map { ($0, dirs[$0]!.count) }
+        }
+    }
+
+    public let version: Int
+    /// Half a platform's length the site allows round a stopping point, in
+    /// metres (`halfM`).
+    public let halfMetres: Double
+    public let stations: [String: Station]
+    /// Each lookup key to its spelling here, worked out once.
+    let aliases: [String: String]
+
+    public init(data: Data) throws {
+        struct Raw: Decodable {
+            let version: Int
+            let halfM: Double
+            let stations: [String: Station]
+        }
+        let raw = try JSONDecoder().decode(Raw.self, from: data)
+        version = raw.version
+        halfMetres = raw.halfM
+        stations = raw.stations
+        aliases = RealStationData.aliases(raw.stations.keys)
     }
 }

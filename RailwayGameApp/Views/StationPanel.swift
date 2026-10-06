@@ -21,6 +21,7 @@ struct StationPanel: View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    realStationSection(station)
                     catchmentPopulationSection(station)
                     demandSection(station)
                     if let flow = session.world.stationFlow(of: station.id) {
@@ -67,6 +68,25 @@ struct StationPanel: View {
         }
         .accessibilityLabel("Choose a station")
         .disabled(session.world.stations.isEmpty)
+    }
+
+    // MARK: - Real station
+
+    /// What the real data knows of the station, where it is a real one:
+    /// codes, grade, address, transfers (`GameSession.realStationDetails(of:)`).
+    @ViewBuilder
+    private func realStationSection(_ station: Station) -> some View {
+        let details = session.realStationDetails(of: station.id)
+        if !details.isEmpty {
+            Section {
+                ForEach(details, id: \.self) { line in
+                    Text(verbatim: line)
+                        .font(.footnote)
+                }
+            } header: {
+                Text("Real Station")
+            }
+        }
     }
 
     // MARK: - Catchment & Demographics

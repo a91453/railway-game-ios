@@ -25,7 +25,7 @@ final class RealRailwayOperationsTests: XCTestCase {
             timetables[t] = try bundledFile("\(t).json")
         }
 
-        return try RealRailwayOperations(systems: systems, timetables: timetables)
+        return RealRailwayOperations(systems: systems, timetables: timetables)
     }
 
     func testOperationsLoadAllSystems() throws {
@@ -89,7 +89,7 @@ final class RealRailwayOperationsTests: XCTestCase {
         XCTAssertEqual(afr.lines.count, 12)
 
         // Timetable data dictionary
-        XCTAssertEqual(ops.timetableData.count, 7, "All 7 timetable datasets loaded")
+        XCTAssertEqual(ops.timetableSystemIDs.count, 7, "All 7 timetable datasets available")
     }
 
     func testHeadwayQueries() throws {
@@ -98,5 +98,56 @@ final class RealRailwayOperationsTests: XCTestCase {
         XCTAssertEqual(ops.headway(forLine: "BR", inSystem: "trtc", peak: false), 420)
         XCTAssertEqual(ops.headway(forLine: "KR", inSystem: "krtc", peak: true), 240)
         XCTAssertNil(ops.headway(forLine: "nonexistent", inSystem: "trtc", peak: true))
+    }
+
+    func testSegmentRunTimesStayAlignedWithTheirSegments() throws {
+        let file = Data(#"""
+        {"system":"X","lines":[{"id":"L","name":"L","stations":[
+          {"name":"A","lat":25,"lon":121},{"name":"B","lat":25,"lon":121.01},
+          {"name":"C","lat":25,"lon":121.02},{"name":"D","lat":25,"lon":121.03}],
+          "segs":[{"run":60},{},{"run":90}]}]}
+        """#.utf8)
+        let ops = RealRailwayOperations(systems: ["x": file])
+        let line = try XCTUnwrap(ops.line(id: "L", inSystem: "x"))
+        XCTAssertEqual(line.segmentRunSec, [60, nil, 90], "A segment without a run time stays in its place")
+        XCTAssertEqual(line.runSeconds(from: 2, to: 3), 90)
+        XCTAssertEqual(line.runSeconds(from: 1, to: 0), 60)
+        XCTAssertNil(line.runSeconds(from: 0, to: 3), "The site's runBetween: nil across an unknown segment")
+
+        // The Kaohsiung light rail is a ring: the shorter way round.
+        let circular = try XCTUnwrap(Self.makeOperations().line(id: "C", inSystem: "krtc"))
+        XCTAssertTrue(circular.isLoop)
+        XCTAssertEqual(circular.segmentRunSec?.count, circular.stations.count)
+        let last = circular.stations.count - 1
+        XCTAssertEqual(circular.runSeconds(from: 0, to: last), circular.segmentRunSec?[last] ?? nil)
+    }
+
+    func testAFileThatCannotBeReadIsListedNotDropped() throws {
+        let ops = RealRailwayOperations(systems: ["broken": Data("not json".utf8), "trtc": try Self.bundledFile("trtc.json")])
+        XCTAssertNotNil(ops.system(id: "trtc"))
+        XCTAssertNil(ops.system(id: "broken"))
+        XCTAssertEqual(ops.loadIssues.map(\.file), ["broken.json"])
+    }
+
+    func testTimetablesAreReadOnlyWhenAskedFor() throws {
+        struct Unreadable: Error {}
+        let trtc = try Self.bundledFile("trtc_times.json")
+        let ops = RealRailwayOperations(
+            systems: [:],
+            timetables: ["trtc": { trtc }, "krtc": { throw Unreadable() }]
+        )
+        // Nothing read yet, so nothing has failed.
+        XCTAssertEqual(ops.timetableIssues, [])
+        XCTAssertEqual(ops.timetableSystemIDs, ["krtc", "trtc"])
+        XCTAssertEqual(ops.timetable(forSystem: "trtc")?.lines.count, 9)
+        XCTAssertNil(ops.timetable(forSystem: "krtc"))
+        XCTAssertEqual(ops.timetableIssues.map(\.file), ["krtc_times.json"])
+        XCTAssertNil(ops.timetable(forSystem: "none"))
+    }
+
+    func testTheOrderOfSystemsIsTheSites() throws {
+        let ops = try Self.makeOperations()
+        XCTAssertEqual(ops.orderedSystems.map(\.id), ["tra", "afr", "trtc", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"])
+        XCTAssertEqual(ops.allLines.first?.id, "縱貫線北段")
     }
 }

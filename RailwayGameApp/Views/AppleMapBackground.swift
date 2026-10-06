@@ -366,51 +366,28 @@ private extension CLLocationCoordinate2D {
 
 extension RealRailways {
     /// The app's copy of the `Railway/` site's files
-    /// (`Resources/RealRailways/`), read the first time it is needed; `nil`
-    /// if it cannot be read.
-    public static let bundled: RealRailways? = {
-        func file(_ name: String, _ type: String) -> Data? {
-            Bundle.main.url(forResource: name, withExtension: type).flatMap { try? Data(contentsOf: $0) }
+    /// (`Resources/RealRailways/`), read the first time it is needed (the
+    /// timetables only when one is asked for), with every file that could
+    /// not be read (`RealRailways.load(file:)`). Each such file is printed
+    /// once in debug builds and listed on the data sources screen.
+    static let bundledLoad: RealRailways.Loaded = {
+        let loaded = RealRailways.load { name, ext in
+            guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
+                throw RealRailways.ResourceError.missing("\(name).\(ext)")
+            }
+            return try Data(contentsOf: url)
         }
-        guard let lines = file("track_lines", "geojson"),
-              let stations = file("track_stations", "geojson"),
-              let names = file("station_names", "json")
-        else { return nil }
-
-        let stationData: RealStationData? = {
-            guard let classes = file("tra_station_class", "json"),
-                  let infos = file("tra_station_info", "json"),
-                  let codes = file("trtc_codes", "json"),
-                  let platforms = file("tra_platforms", "json"),
-                  let sections = file("tra_track_sections", "json")
-            else { return nil }
-            return try? RealStationData(classes: classes, infos: infos, codes: codes, platforms: platforms, sections: sections)
-        }()
-
-        let operations: RealRailwayOperations? = {
-            let systemNames = ["tra", "trtc", "krtc", "tymc", "afr", "tmrt", "ntdlrt", "ntalrt", "sanying"]
-            var systems: [String: Data] = [:]
-            for s in systemNames {
-                if let d = file(s, "json") {
-                    systems[s] = d
-                }
-            }
-            let timetableNames = ["trtc_times", "krtc_times", "tymc_times", "ntdlrt_times", "ntalrt_times", "sanying_times", "tmrt_times"]
-            var timetables: [String: Data] = [:]
-            for t in timetableNames {
-                if let d = file(t, "json") {
-                    timetables[t] = d
-                }
-            }
-            return try? RealRailwayOperations(systems: systems, timetables: timetables)
-        }()
-
-        return try? RealRailways(
-            lines: lines,
-            stations: stations,
-            names: names,
-            stationData: stationData,
-            operations: operations
-        )
+        #if DEBUG
+        for issue in loaded.issues {
+            print("RealRailways: could not read \(issue)")
+        }
+        #endif
+        return loaded
     }()
+
+    /// The bundled railways; `nil` if the map files cannot be read
+    /// (`bundledLoad` says why).
+    static var bundled: RealRailways? {
+        bundledLoad.railways
+    }
 }

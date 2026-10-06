@@ -56,8 +56,11 @@ extension GameSession {
             platformStationID = networkEdgePoint.flatMap { nearestStation(to: $0) }
             if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
                 let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
-                stationName = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
+                // A name the player typed stays (only a suggestion is
+                // replaced).
+                suggestStationName(at: middle)
             }
+            suggestPlatformCars()
         case .remove:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
         }
@@ -269,7 +272,10 @@ extension GameSession {
                 )
         }
         if let built {
-            stationName = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
+            // The typed name went to the new station: suggest the next.
+            let suggestion = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
+            stationName = suggestion
+            automaticStationName = suggestion
             platformStationID = built
         }
     }
@@ -472,7 +478,9 @@ extension GameSession {
             guard let end = networkEnd else {
                 return language.text("From \(start.text(in: language)). Tap where it ends.", "從\(start.text(in: language))開始。請點終點。")
             }
-            return "\(start.text(in: language)) → \(end.text(in: language))"
+            let ends = "\(start.text(in: language)) → \(end.text(in: language))"
+            guard let real = realTrackSectionText(from: start, to: end) else { return ends }
+            return "\(ends) · \(real)"
         case .platform:
             guard let stretch = networkPlatformStretch else {
                 return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
