@@ -35,7 +35,7 @@ public struct SaveLibrary: Sendable {
         public let problem: SaveError?
     }
 
-    /// The `"app"` every save names.
+    /// The `"app"` every save names. Keep this identifier for save compatibility.
     public static let appName = "RailwayGame"
     static let autosaveFile = "autosave.json"
 
@@ -142,7 +142,7 @@ public struct SaveLibrary: Sendable {
     public static func exportFile(for world: GameWorld, at date: Date) throws(SaveError) -> URL {
         let data = try encode(world, at: date)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Exports", isDirectory: true)
-        let url = folder.appendingPathComponent("\(appName) \(stamp(date)).json")
+        let url = folder.appendingPathComponent("Along the Line \(stamp(date)).json")
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try data.write(to: url, options: .atomic)
@@ -277,7 +277,7 @@ public enum SaveError: Error, Hashable, Sendable {
     public func playerMessage(in language: DisplayLanguage) -> String {
         switch self {
         case .notASave:
-            language.text("That file is not a Railway Game save.", "這個檔案不是本遊戲的存檔。")
+            language.text("That file is not an Along the Line save.", "這個檔案不是《沿線》的存檔。")
         case .newerVersion(let version):
             language.text(
                 "That save comes from a newer version of the game (save format \(version)). Update the app to load it.",

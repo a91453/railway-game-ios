@@ -34,7 +34,7 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 | --- | --- | --- |
 | Team ID（10 個字元） | developer.apple.com → Account → Membership details | 寫入 `project.yml` 的 `DEVELOPMENT_TEAM`（它會出現在每個簽章過的 App 內，不是秘密） |
 | Bundle ID 是否可用 | Certificates, Identifiers & Profiles → Identifiers | 預設 `io.github.a91453.RailwayGame`，**尚未確認已註冊** |
-| App Store Connect 的 App 名稱 | 建立 app record 時決定 | 必須在 App Store 上唯一；「Railway Game」可能已被使用，可改用別的名稱，不影響 Bundle ID 與主畫面顯示名稱 |
+| App Store Connect 的 App 名稱 | 建立 app record 時決定 | 正式品牌為 Along the Line／沿線；商店名稱須符合 App Store 的唯一性要求，不影響 Bundle ID |
 
 **絕對不要**把 Apple 帳號密碼、雙重認證碼、`.p12` / `.p8`、憑證、provisioning profile 或 token 貼到 issue、PR、聊天或 repository。Xcode Cloud 使用雲端管理的自動簽章，本專案不需要任何這類檔案。
 
@@ -63,7 +63,7 @@ Apple 官方文件查閱日期：**2026-09-28**（來源列在文末）。Apple 
 
 1. developer.apple.com/account → Membership details → 記下 **Team ID**。
 2. Certificates, Identifiers & Profiles → Identifiers → 「+」→ App IDs → App：
-   - Description：`Railway Game`
+   - Description：`Along the Line`
    - Bundle ID：**Explicit**，`io.github.a91453.RailwayGame`
    - Capabilities：全部不勾（App 目前沒有使用任何需要 entitlement 的功能）
 3. 如果 Bundle ID 已被占用，改用其他值，並在步驟 4 一併修改 `project.yml` 的 `PRODUCT_BUNDLE_IDENTIFIER`（之後 CI 裡寫死的 `io.github.a91453.RailwayGame` 檢查也要同步改）。
@@ -77,7 +77,7 @@ App Store Connect → Apps → 「+」→ New App：
 | 欄位 | 值 |
 | --- | --- |
 | Platforms | iOS |
-| Name | App Store 上唯一的名稱（例：`Railway Game`，被占用就換一個） |
+| Name | 正式名稱 `Along the Line`；繁體中文與日文為 `沿線`（須符合 App Store 的唯一性要求） |
 | Primary Language | 你的主要語言 |
 | Bundle ID | 選步驟 2 註冊的 `io.github.a91453.RailwayGame` |
 | SKU | 任意唯一字串，例：`railwaygame-ios` |
@@ -149,9 +149,9 @@ XcodeGen 重新產生專案時會保留這個檔案（已在 Linux 上以 XcodeG
 
 1. App Store Connect → TestFlight → 這個 build。若顯示 **Missing Compliance**，按 Manage 回答加密問題（見〈出口合規〉）。回答前 build 不能測試。
 2. TestFlight → Internal Testing → `Internal` → Builds 旁的「+」/ Add Builds → 選這個 build（Xcode Cloud 的 build 要手動加入；若 post-action 已經加入就略過）。
-3. 在 iPhone / iPad 從 App Store 安裝免費的 **TestFlight** App，用同一個 Apple Account 登入，接受邀請，安裝 Railway Game。
+3. 在 iPhone / iPad 從 App Store 安裝免費的 **TestFlight** App，用同一個 Apple Account 登入，接受邀請，安裝 Along the Line（沿線）。
 4. 最小 smoke check：
-   - 主畫面圖示是鐵軌圖示，名稱為「Railway Game」。
+   - 主畫面名稱為「Along the Line」（英文）或「沿線」（繁體中文／日文）。Default／Light appearance 使用米白背景的淺色版；Dark appearance 使用深色原稿（iOS／iPadOS 18 以上）。
    - 開啟後顯示地圖、現金、`Day 1 · 08:30`，時間會前進；暫停 / 1× / 2× 有反應。
    - 選取一格、鋪一段鐵軌、建一個車站，金額減少；在空格以外鋪軌會顯示錯誤訊息。
    - iPad 直向、橫向都能顯示；切到背景再回來不會閃退。
@@ -275,8 +275,8 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
   - 未選方案 B（不提交、在 `ci_post_clone.sh` 產生）：Apple 明文表示動態產生或編輯專案的工具可能讓首次設定與之後的建置失敗；首次 onboarding 時借來的 Mac 也得先裝 XcodeGen 產生專案才能開啟，而 Xcode Cloud 端要依賴 clone 後才存在的專案。沒有官方證據證明這條路可靠，所以不採用。
 - **可重現**：同一個 checkout 重新產生、不同路徑或使用者重新產生，輸出完全相同；Xcode Cloud 寫入的 `manifest.json` 與 `Package.resolved` 在重新產生時保留。限制：checkout 資料夾名稱會寫進專案（本地套件的顯示名稱），所以要在名為 `railway-game-ios` 的資料夾（`git clone` 預設）中產生。
 - **漂移檢查**：`ios-build.yml` 以固定版本、checksum 驗證的 XcodeGen 重新產生，任何差異都失敗並附上預期專案的 artifact；另外確認 shared scheme 已提交、`xcodebuild -describeAllArchivableProducts`（Xcode Cloud 用來找產品的指令）列得出 App。
-- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Railway Game；`MARKETING_VERSION` 0.3.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
-- **App Icon**：作者提供的圖（高架上的列車與城市，0.3.0 起取代原創的臨時圖示），單一 1024×1024 不透明 PNG（原圖有圓角，裁掉四角的白邊，iOS 自己套圓角），`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
+- **發佈設定**：App target、shared scheme、Archive action = Release；iPhone + iPad（`TARGETED_DEVICE_FAMILY` 1,2）、iOS 17.0；Bundle ID `io.github.a91453.RailwayGame`；顯示名稱 Along the Line（繁體中文／日文：沿線）；`MARKETING_VERSION` 0.3.0；`CODE_SIGN_STYLE` Automatic，`DEVELOPMENT_TEAM` 待填；Release 不定義 `DEBUG`，因此 `-demo-layout` 啟動參數不會編進 Release（示範地圖本身從 Stage C4 起由開始畫面開啟，Release 也有）。
+- **App Icon**：作者提供的正式 Light／Dark 定稿，兩張原始 1024×1024 PNG。`AppIcon.appiconset` 的 Any／Default 指向 `along-the-line-app-icon-light.png`，Dark 指向 `along-the-line-app-icon-dark.png`；不裁切、不改色、不加圓角，由 iOS 套用 mask，Tinted 由系統生成。`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`（XcodeGen 的 iOS App 預設值）。
 - **未簽章 Release Archive**：`release-archive.yml` 以 Release、`generic/platform=iOS`、`-disableAutomaticPackageResolution`、`CODE_SIGNING_ALLOWED=NO` 封存並檢查 Info.plist、圖示、架構與 Release 不含示範配置。它**不能**證明簽章、上傳或 TestFlight；`CODE_SIGNING_ALLOWED=NO` 只用在這個 CI 檢查，不用於任何真正的發佈。
 
 ## 官方來源（查閱日期 2026-09-28）

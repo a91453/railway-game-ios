@@ -16,12 +16,28 @@ final class ToolbarSmokeTests: XCTestCase {
         ])
     }
 
+    func testJapaneseBrand() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(ja)", "-AppleLocale", "ja_JP"]
+        app.launch()
+        defer { app.terminate() }
+        let brand = app.staticTexts["start.brand"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        XCTAssertEqual(brand.label, "沿線")
+        XCTAssertTrue(app.buttons["start.newGame"].exists)
+    }
+
     private func captureToolbar(language: String, locale: String, queries: [String]) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         app.launch()
         defer { app.terminate() }
+
+        let brand = app.staticTexts["start.brand"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        XCTAssertEqual(brand.label, language == "en" ? "Along the Line" : "沿線")
 
         // The app opens on the start screen; start a new game from it.
         let newGame = app.buttons["start.newGame"]

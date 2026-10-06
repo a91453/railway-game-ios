@@ -88,7 +88,7 @@ struct HUDView: View {
                 Label("Save Game", systemImage: "square.and.arrow.down")
             }
             .accessibilityIdentifier("menu.saveGame")
-            ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Railway Game save"))) {
+            ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
                 Label("Export Save", systemImage: "square.and.arrow.up")
             }
             Divider()

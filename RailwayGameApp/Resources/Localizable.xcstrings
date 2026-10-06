@@ -2,6 +2,24 @@
   "sourceLanguage" : "en",
   "strings" : {
 
+    "Along the Line" : {
+      "comment" : "Official player-facing brand name.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿線"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿線"
+          }
+        }
+      }
+    },
+
     "Unfollow" : {
       "localizations" : {
         "zh-Hant" : {
@@ -510,12 +528,18 @@
         }
       }
     },
-    "Build a railway, run its trains and carry the city's passengers." : {
+    "Along the Line is a railway and city-building simulation where the railway shapes the growth of the city." : {
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "『沿線』は、鉄道が都市の成長を形づくる鉄道・都市開発シミュレーションゲームです。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鋪設鐵路、營運列車，載運城市的乘客。"
+            "value" : "《沿線》是一款鐵路與城市發展模擬遊戲。玩家規劃鐵路、車站與運輸網路，而城市會沿著交通建設逐步成長。"
           }
         }
       }
@@ -1510,12 +1534,18 @@
         }
       }
     },
-    "Railway Game save" : {
+    "Along the Line save" : {
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿線のセーブデータ"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Railway Game 存檔"
+            "value" : "沿線存檔"
           }
         }
       }
