@@ -2,10 +2,11 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Floating bar shown when camera is dynamically following a train.
-///
-/// Faithfully reproduces the `Railway/` reference's `.followbar` and
-/// `Ci/` reference's `metro.train.follow` control.
+/// The bar over the map while the camera follows a train
+/// (``GameSession/followedTrain``): the `Railway/` site's `.followbar`
+/// (`renderFollowBar`): a dot in the train's colour (here its line's, see
+/// ``Palette/lineColor(_:)``), the train's name, and the unfollow button
+/// (`取消跟隨`).
 struct FollowBar: View {
     let train: Train
     let session: GameSession
@@ -14,8 +15,8 @@ struct FollowBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(Palette.metroBlue)
-                .frame(width: 8, height: 8)
+                .fill(dotColor)
+                .frame(width: 9, height: 9)
 
             Text(verbatim: train.name)
                 .font(.subheadline.weight(.bold))
@@ -38,8 +39,8 @@ struct FollowBar: View {
                     .font(.caption2.weight(.bold).monospacedDigit())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(loadBadgeColor(load.level).opacity(0.15))
-                    .foregroundStyle(loadBadgeColor(load.level))
+                    .background(loadColor(load).opacity(0.15))
+                    .foregroundStyle(loadColor(load))
                     .clipShape(Capsule())
             }
 
@@ -80,11 +81,14 @@ struct FollowBar: View {
         session.language.text("Unfollow", "取消跟隨")
     }
 
-    private func loadBadgeColor(_ level: TrainLoadInfo.Level) -> Color {
-        switch level {
-        case .normal: return Color.green
-        case .busy: return Palette.metroAmber
-        case .crowded: return Color.red
-        }
+    /// The train's line colour (the site's `tr.color`); a train on no
+    /// line has the map's train colour.
+    private var dotColor: Color {
+        session.world.assignedLine(of: train.id).map(Palette.lineColor) ?? Palette.train
+    }
+
+    /// Neutral, or red when overloaded, as the reference's load bar.
+    private func loadColor(_ load: TrainLoadInfo) -> Color {
+        load.isOverload ? Palette.paxBarOverload : Color.primary
     }
 }

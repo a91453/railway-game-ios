@@ -1,3 +1,4 @@
+import GameCore
 import SwiftUI
 import UIKit
 
@@ -24,6 +25,22 @@ enum Palette {
     /// `Railway/` site's `followCase` (#fffdf6 light, #10141c dark), which
     /// it draws under a followed train's route.
     static let followCase = dynamic(light: (1.00, 0.992, 0.965), dark: (0.063, 0.078, 0.110))
+
+    // The `Ci/` reference's train-panel load bar (app-panels CSS): the
+    // track is `--metro-user-panel-field` (#d1d4d7 light, #484d54 dark),
+    // the fill one neutral ink (#000 on the light card, #f9fafb on the
+    // dark panel) and `.is-overload` red (#d85946 light, #ef4444 dark).
+    static let paxBarTrack = dynamic(light: (0.820, 0.831, 0.843), dark: (0.282, 0.302, 0.329))
+    static let paxBarFill = dynamic(light: (0.0, 0.0, 0.0), dark: (0.976, 0.980, 0.984))
+    static let paxBarOverload = dynamic(light: (0.847, 0.349, 0.275), dark: (0.937, 0.267, 0.267))
+
+    /// The colour a line is drawn with in the lines panel and the follow
+    /// bar's dot. Lines have no stored colour (GameCore keeps none), so it
+    /// is picked from the line's ID, as the lines panel always has.
+    static func lineColor(_ id: LineID) -> Color {
+        let colors: [Color] = [metroBlue, metroGreen, metroAmber, metroPurple, metroCyan, metroRed]
+        return colors[abs(Int(id.rawValue)) % colors.count]
+    }
 
     // Surfaces and Borders
     static let cardBackground = dynamic(light: (1.00, 1.00, 1.00), dark: (0.14, 0.15, 0.18))

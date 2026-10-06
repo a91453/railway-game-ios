@@ -317,9 +317,17 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
 
     /// `point` in the middle of the view, as near as the map's edges allow.
     public func centered(on point: WorldCoordinate) -> PlanCamera {
+        centered(atX: Double(point.x), y: Double(point.y))
+    }
+
+    /// The world point (`x`, `y`) in the middle of the view, as near as the
+    /// map's edges allow: for a centre between whole units, such as the
+    /// eased centre of a followed train (``FollowCamera``).
+    public func centered(atX x: Double, y: Double) -> PlanCamera {
+        guard x.isFinite, y.isFinite else { return self }
         var camera = self
-        camera.centerX = Double(point.x)
-        camera.centerY = Double(point.y)
+        camera.centerX = x
+        camera.centerY = y
         camera.clampCenter()
         return camera
     }

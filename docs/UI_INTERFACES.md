@@ -204,3 +204,44 @@ CX-5 的覆蓋層這樣讀（示意）：
 - **地圖邊緣**：參考是沒有邊界的世界地圖；這裡拖曳停在地圖邊緣，整張地圖放得下的方向置中（和原本可捲動的地圖一樣）。
 - **沒有大小的 view**（第一次排版之前）視為 1 × 1 點，縮放保持正數。
 - 參考的 `metrobuilder_tutorial_done`（看過就不再自動開啟）、`openUI`（步驟打開面板）、`cardPosition` 還沒有，C5 視需要加。
+
+## 7. 跟隨列車與載客率（GamePresentation）
+
+2026-10-06 定（UI P1 的修正）。檔案：`Sources/GamePresentation/GameSession.swift`（跟隨）、`Sources/GamePresentation/FollowCamera.swift`（相機的緩動）、`Sources/GamePresentation/EconomyText.swift`（`TrainLoadInfo`）；測試：`TrainControlTests`、`EconomyDisplayTests`。
+
+### 跟隨
+
+照 `Ci/` 的 `trackedTrainId`：跟隨的列車和選取的列車（`selectedTrainId`）分開記。
+
+| 要做的 | 讀法／方法 |
+| --- | --- |
+| 跟隨的是哪一台 | `session.followedTrain`：列車還在而且在軌道上才有；`followedTrainID` 只是 ID |
+| 有沒有在跟隨、是不是這一台 | `session.isFollowingTrain`、`session.isFollowing(id)` |
+| 列車面板的跟隨鈕（`toggleTrainFollow`） | `session.toggleFollowTrain()`：選取的列車正被跟隨就停止，否則跟隨它（要在軌道上） |
+| 車隊清單的「跟隨」 | `session.selectTrain(id)` 再 `session.followTrain(id)` |
+| 跟隨列的「取消跟隨」 | `session.stopFollowingTrain()` |
+
+選別台列車（選單、車隊清單、點地圖上的列車）、選車站、買車都**不**改跟隨。跟隨結束的時機（參考的出口）：
+
+| 參考 | 這裡 |
+| --- | --- |
+| `dragstart`、`zoomstart`、`rotatestart`（`metroCancelCameraFollowForUserGesture`） | `session.mapDidMove()`：拖曳、捏合、縮放按鈕 |
+| `closePanelTrain` | `session.clearSelection()` |
+| 列車被刪除（`deleteSelectedTrain`，或列車不見了） | 指令或 tick 之後列車不在、或離開軌道（`unplaceSelectedTrain` 成功後）；指令失敗時跟隨不變 |
+| 刪除路線（參考連列車一起刪） | `removeSelectedLine()` 成功、而跟隨的列車屬於那條路線 |
+| 切換運輸模式（`setTransportMode`） | 這裡沒有運輸模式；換工具不算 |
+
+地圖 view 在跟隨時不因為選到遠方的車站而移動相機。
+
+**相機的緩動**（`FollowCamera`，參考 `_setPosAndAngle`）：每顯示一個新的世界走一步，`s = 1 − 0.75^(min(dt, 0.1) × 60)`，`dt` 是遊戲迴圈的 tick 間隔（`FollowCamera.tickSeconds`，0.1 秒，所以每步約 82%）；沒有中心（剛開始跟隨）或任一軸超過 0.05° 就直接跳過去。0.05° 換成世界座標是 0.05 × 111,320 公尺 × 64 = 356,224 單位（`snapDistance`）。相機的中心不必是整數（`PlanCamera.centered(atX:y:)`）。
+
+### 載客率
+
+照 `Ci/` 的列車面板（`#pt-load`、`.pax-bar-fill`）：`u = cap ? round(pax / cap × 100) : 0`，長條 `min(100, max(0, u))`，只有 `u > 100` 才是超載（`.is-overload`）。
+
+| 要顯示的 | 讀法 |
+| --- | --- |
+| 一台列車 | `world.trainLoadInfo(of:)`：`passengerCount`、`capacity`（額定載客，車廂 × 320，不改）、`percentage`、`barFraction`、`isOverload` |
+| 車隊平均 | `world.fleetLoadInfo()`：只算軌道上的列車；沒有就 `nil` |
+
+長條的顏色（App 的 `Palette.paxBar*`）：底 `#d1d4d7`／`#484d54`（`--metro-user-panel-field`），填滿是中性的墨色（`#000`／`#f9fafb`），超載 `#d85946`／`#ef4444`。參考沒有綠、黃、紅的分級。

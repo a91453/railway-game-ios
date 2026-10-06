@@ -26,6 +26,9 @@ struct MapView: View {
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
     @State private var showsMapLayers = false
+    /// Where the camera looks while it follows a train (the reference's
+    /// eased `_trackCenter`); view state only.
+    @State private var followCamera = FollowCamera()
 
     private var mapLayers: MapLayerPreferences {
         get {
@@ -107,9 +110,9 @@ struct MapView: View {
                     // or else the traffic key at the leading edge.
                     VStack(spacing: 0) {
                         StatusBanner(session: session)
-                        if session.isFollowingTrain, let train = session.selectedTrain {
+                        if let train = session.followedTrain {
                             FollowBar(train: train, session: session) {
-                                session.setFollowingTrain(false)
+                                session.stopFollowingTrain()
                             }
                             .padding(.top, 8)
                             .transition(.move(edge: .top).combined(with: .opacity))
@@ -146,7 +149,7 @@ struct MapView: View {
                     .padding(12)
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
-                .animation(.easeInOut(duration: 0.2), value: session.isFollowingTrain)
+                .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
                 .animation(.easeInOut(duration: 0.2), value: mapLayers.showsPopulationHeatmap)
                 .frame(height: viewport.height)
                 if strip > 0 {
@@ -184,7 +187,8 @@ struct MapView: View {
                 // A station chosen in the overview may be kilometres away.
                 // One already in view stays where it is, under the finger
                 // that tapped it.
-                if let station = session.selectedStation {
+                // While a train is followed the camera stays on it.
+                if !session.isFollowingTrain, let station = session.selectedStation {
                     let point = WorldCoordinate(x: station.location.x, y: station.location.y)
                     if !projection.visibleRegion.contains(point) {
                         camera = projection.centered(on: point)
@@ -194,7 +198,10 @@ struct MapView: View {
             .onChange(of: session.world.clock) { _, _ in
                 centerOnFollowedTrain(projection: projection)
             }
-            .onChange(of: session.isFollowingTrain ? session.selectedTrainID : nil) { _, _ in
+            .onChange(of: session.followedTrain?.id) { _, _ in
+                // A new follow snaps to its train, as the reference's
+                // cleared `_trackCenter` does.
+                followCamera.reset()
                 centerOnFollowedTrain(projection: projection)
             }
         }
@@ -309,12 +316,15 @@ struct MapView: View {
         .padding(12)
     }
 
+    /// One step of the camera towards the followed train (``FollowCamera``,
+    /// the reference's eased follow), once for each world the loop shows:
+    /// the time between two is the game loop's tick interval.
     private func centerOnFollowedTrain(projection: PlanCamera) {
-        guard session.isFollowingTrain,
-              let train = session.selectedTrain,
+        guard let train = session.followedTrain,
               let position = train.position,
               let coordinate = session.world.location(of: position)?.position else { return }
-        camera = projection.centered(on: coordinate)
+        let center = followCamera.step(towardX: Double(coordinate.x), y: Double(coordinate.y), elapsed: FollowCamera.tickSeconds)
+        camera = projection.centered(atX: center.x, y: center.y)
     }
 }
 

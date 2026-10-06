@@ -171,15 +171,15 @@ struct TrainControls: View {
                         session.toggleFollowTrain()
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: session.isFollowingTrain ? "location.fill" : "location")
+                            Image(systemName: session.isFollowing(train.id) ? "location.fill" : "location")
                                 .font(.caption2.weight(.bold))
-                            Text(verbatim: session.isFollowingTrain ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
+                            Text(verbatim: session.isFollowing(train.id) ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
                                 .font(.caption2.weight(.bold))
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(session.isFollowingTrain ? Palette.metroBlue.opacity(0.18) : Palette.chipBackground)
-                        .foregroundStyle(session.isFollowingTrain ? Palette.metroBlue : .primary)
+                        .background(session.isFollowing(train.id) ? Palette.metroBlue.opacity(0.18) : Palette.chipBackground)
+                        .foregroundStyle(session.isFollowing(train.id) ? Palette.metroBlue : .primary)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -199,10 +199,6 @@ struct TrainControls: View {
                 if let loadInfo = session.world.trainLoadInfo(of: train.id) {
                     TrainLoadBar(load: loadInfo, language: language)
                         .padding(.top, 2)
-                } else if let load = session.world.loadText(of: train.id, in: language) {
-                    Label(load, systemImage: "person.2.fill")
-                        .font(.footnote)
-                        .monospacedDigit()
                 }
             }
             if let service = session.world.trainServiceStatus(of: train.id, in: language) {

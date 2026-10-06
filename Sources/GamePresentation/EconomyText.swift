@@ -188,64 +188,75 @@ extension GameWorld {
 
     /// How full train `id` is, such as "640 riding · 33%": riders over its
     /// rated capacity (cars × 320), rounded half up, as the reference's
-    /// load. `nil` if nobody rides it (or there is no such train).
+    /// load (``TrainLoadInfo/percentage(passengers:capacity:)``). `nil` if
+    /// nobody rides it (or there is no such train).
     public func loadText(of id: TrainID, in language: DisplayLanguage) -> String? {
-        guard let train = train(id: id) else { return nil }
-        let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
-        guard count > 0 else { return nil }
-        let percent = (200 * count + train.ratedCapacity) / (2 * train.ratedCapacity)
-        return language.text("\(count) riding · \(percent)%", "載客 \(count) 人 · \(percent)%")
+        guard let load = trainLoadInfo(of: id), load.passengerCount > 0 else { return nil }
+        return language.text("\(load.passengerCount) riding · \(load.percentage)%", "載客 \(load.passengerCount) 人 · \(load.percentage)%")
     }
 
-    /// Detailed passenger load and capacity info for train `id`.
+    /// How full train `id` is, for the load bar: its riders and its rated
+    /// capacity (cars × 320, the reference's `cap`). `nil` for an unknown ID.
     public func trainLoadInfo(of id: TrainID) -> TrainLoadInfo? {
         guard let train = train(id: id) else { return nil }
         let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
-        let capacity = max(Int64(1), train.ratedCapacity)
-        let percent = Int((200 * count + capacity) / (2 * capacity))
-        let factor = Double(count) / Double(capacity)
-        return TrainLoadInfo(
-            passengerCount: count,
-            capacity: capacity,
-            loadFactor: factor,
-            percentage: percent
-        )
+        return TrainLoadInfo(passengerCount: count, capacity: train.ratedCapacity)
+    }
+
+    /// How full the trains on the track are together, for the fleet
+    /// overview's average load: the riders of every placed train over their
+    /// rated capacities. A train off the track carries nobody and is not in
+    /// service, so it counts in neither. `nil` when no train is placed.
+    public func fleetLoadInfo() -> TrainLoadInfo? {
+        let placed = trains.filter { $0.position != nil }
+        guard !placed.isEmpty else { return nil }
+        let count = placed.reduce(Int64(0)) { sum, train in sum + riders(of: train.id).reduce(0) { $0 + $1.count } }
+        let capacity = placed.reduce(Int64(0)) { $0 + $1.ratedCapacity }
+        return TrainLoadInfo(passengerCount: count, capacity: capacity)
     }
 }
 
-/// Information about a train's passenger load, capacity, and load factor.
+/// How full a train is, as the `Ci/` reference's train panel shows it
+/// (`metro.train.load_factor`, `#pt-load` and the `.pax-bar-fill` bar):
 ///
-/// Corresponds to the `Ci/` reference's `metro.train.load_factor` and `pax-bar-fill` color thresholds:
-/// - `< 70%`: normal / green
-/// - `70% ..< 90%`: busy / amber
-/// - `>= 90%`: crowded / red (with `is-overload` warning when > 100%)
+///     u = e.cap ? Math.round((e.pax || 0) / e.cap * 100) : 0
+///     bar width = Math.min(100, Math.max(0, u)) + "%"
+///     u > 100 ? add("is-overload") : remove("is-overload")
+///
+/// The bar has one neutral colour and turns red only when the rounded
+/// percentage is over 100 (`.pax-bar-fill.is-overload`); the reference has
+/// no other load levels.
 public struct TrainLoadInfo: Equatable, Hashable, Sendable {
-    public enum Level: Equatable, Hashable, Sendable {
-        case normal
-        case busy
-        case crowded
-    }
-
     public let passengerCount: Int64
+    /// The rated capacity, as the train has it (never adjusted for display).
     public let capacity: Int64
-    public let loadFactor: Double
+    /// The load in whole percent, rounded half up; 0 when the capacity is 0.
     public let percentage: Int
 
-    public init(passengerCount: Int64, capacity: Int64, loadFactor: Double, percentage: Int) {
+    public init(passengerCount: Int64, capacity: Int64) {
         self.passengerCount = passengerCount
         self.capacity = capacity
-        self.loadFactor = loadFactor
-        self.percentage = percentage
+        self.percentage = Self.percentage(passengers: passengerCount, capacity: capacity)
     }
 
-    public var level: Level {
-        if loadFactor >= 0.90 { return .crowded }
-        if loadFactor >= 0.70 { return .busy }
-        return .normal
+    /// The reference's `Math.round(pax / cap * 100)`, in integers (half up,
+    /// as `Math.round` for these non-negative values), and 0 for a capacity
+    /// of 0 or less (`e.cap ? … : 0`).
+    public static func percentage(passengers: Int64, capacity: Int64) -> Int {
+        guard capacity > 0 else { return 0 }
+        return Int((200 * max(passengers, 0) + capacity) / (2 * capacity))
     }
 
+    /// How much of the bar is filled, 0…1: the percentage clamped to
+    /// 0…100 (`Math.min(100, Math.max(0, u))`).
+    public var barFraction: Double {
+        Double(min(100, max(0, percentage))) / 100
+    }
+
+    /// Whether the bar shows as overloaded (`is-overload`): only when the
+    /// rounded percentage is over 100, as the reference decides it.
     public var isOverload: Bool {
-        passengerCount > capacity
+        percentage > 100
     }
 }
 

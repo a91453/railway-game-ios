@@ -72,8 +72,17 @@ public final class GameSession {
     /// command selects a station or a point instead.
     public private(set) var tappedTrainID: TrainID?
 
-    /// Whether the camera dynamically follows the selected train.
-    public var isFollowingTrain: Bool = false
+    /// The train the camera follows: the `Ci/` reference's
+    /// `trackedTrainId`, kept apart from the selection
+    /// (``selectedTrainID``, the reference's `selectedTrainId`), so picking
+    /// another train or a station never moves or ends it. An ID only; read
+    /// the train through ``followedTrain``, which is `nil` once the train is
+    /// gone or off the track. Started with ``followTrain(_:)`` or
+    /// ``toggleFollowTrain()``; ended by the player (``stopFollowingTrain()``,
+    /// a drag, pinch or zoom of the map through ``mapDidMove()``, closing the
+    /// train with ``clearSelection()``), or when the train leaves the track,
+    /// stops existing or its line is removed.
+    public private(set) var followedTrainID: TrainID?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -202,7 +211,6 @@ public final class GameSession {
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
-        isFollowingTrain = false
         message = nil
     }
 
@@ -228,62 +236,83 @@ public final class GameSession {
         selectedPoint = station.point
         selectedStationID = id
         tappedTrainID = nil
-        isFollowingTrain = false
         message = nil
     }
 
+    /// Lets go of the selected station, point and tapped train: the
+    /// inspector closes. Like the reference's `closePanelTrain`, closing
+    /// the train also ends following it.
     public func clearSelection() {
         selectedPoint = nil
         selectedStationID = nil
         tappedTrainID = nil
-        isFollowingTrain = false
+        followedTrainID = nil
         message = nil
     }
 
-    /// Selects train `id`, and optionally begins camera following if the train
-    /// is placed on the track. Never changes the world; an ID the world does
-    /// not have is ignored.
-    public func selectTrain(_ id: TrainID, following: Bool = false) {
-        guard let train = world.train(id: id) else { return }
+    /// Selects train `id` (the train tool's picker, the fleet list). Never
+    /// changes the world or what the camera follows, even when another
+    /// train is picked (the reference keeps `trackedTrainId` apart from
+    /// `selectedTrainId`); an ID the world does not have is ignored.
+    public func selectTrain(_ id: TrainID) {
+        guard world.train(id: id) != nil else { return }
         selectedTrainID = id
         tappedTrainID = id
-        if following && train.position != nil {
-            isFollowingTrain = true
-        } else {
-            isFollowingTrain = false
-        }
         message = nil
     }
 
-    /// Toggles dynamic camera following for the selected train.
+    // MARK: - Following a train
+
+    /// The followed train (``followedTrainID``) while it exists and stands
+    /// on the track; `nil` otherwise, so the follow bar and the camera never
+    /// show a train that cannot be followed.
+    public var followedTrain: Train? {
+        guard let id = followedTrainID, let train = world.train(id: id), train.position != nil else { return nil }
+        return train
+    }
+
+    /// Whether the camera follows a train now (``followedTrain``).
+    public var isFollowingTrain: Bool {
+        followedTrain != nil
+    }
+
+    /// Whether the camera follows train `id` now.
+    public func isFollowing(_ id: TrainID) -> Bool {
+        followedTrain?.id == id
+    }
+
+    /// Starts following train `id` (the reference's `toggleTrainFollow`
+    /// turning on). Only a train on the track can be followed; for any
+    /// other, or an unknown ID, nothing changes. Never changes the world or
+    /// the selection.
+    public func followTrain(_ id: TrainID) {
+        guard let train = world.train(id: id), train.position != nil else { return }
+        followedTrainID = id
+    }
+
+    /// Stops following (the follow bar's unfollow button).
+    public func stopFollowingTrain() {
+        followedTrainID = nil
+    }
+
+    /// The train panel's follow button (the reference's `toggleTrainFollow`):
+    /// stops following when the selected train is the one followed,
+    /// otherwise follows the selected train if it is on the track. Without
+    /// a selected train nothing changes.
     public func toggleFollowTrain() {
-        if isFollowingTrain {
-            isFollowingTrain = false
+        guard let id = selectedTrainID else { return }
+        if isFollowing(id) {
+            followedTrainID = nil
         } else {
-            if selectedTrainID == nil {
-                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
-            }
-            guard let train = selectedTrain, train.position != nil else {
-                isFollowingTrain = false
-                return
-            }
-            isFollowingTrain = true
+            followTrain(id)
         }
     }
 
-    /// Sets whether the camera dynamically follows the selected train.
-    public func setFollowingTrain(_ following: Bool) {
-        if following {
-            if selectedTrainID == nil {
-                selectedTrainID = world.trains.first(where: { $0.position != nil })?.id ?? world.trains.first?.id
-            }
-            guard let train = selectedTrain, train.position != nil else {
-                isFollowingTrain = false
-                return
-            }
-            isFollowingTrain = true
-        } else {
-            isFollowingTrain = false
+    /// Lets go of a followed train that no longer exists or has left the
+    /// track (the reference ends `trackedTrainId` when its train is gone).
+    func endFollowIfGone() {
+        if followedTrainID != nil, followedTrain == nil {
+            followedTrainID = nil
         }
     }
 
@@ -404,6 +433,7 @@ public final class GameSession {
         if ticks > 0 {
             do throws(GameError) {
                 try world.advance(ticks: ticks)
+                endFollowIfGone()
             } catch {
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             }
@@ -479,7 +509,6 @@ public final class GameSession {
         if let purchased {
             selectedTrainID = purchased
             tappedTrainID = purchased
-            isFollowingTrain = false
         }
     }
 
@@ -602,7 +631,8 @@ public final class GameSession {
     /// `GameWorld.unplaceTrain(_:)`, which also clears its rate and path.
     public func unplaceSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        isFollowingTrain = false
+        // Follow ends only once the train is off the track (``perform``
+        // checks): a refused command leaves it where it was, still followed.
         perform { world throws(GameError) in
             try world.unplaceTrain(train.id)
             return language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")
@@ -714,9 +744,15 @@ public final class GameSession {
     /// trains finish the trip they are on.
     public func removeSelectedLine() {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
+        let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
+        let removed = perform { world throws(GameError) in
             try world.removeLine(line.id)
             return language.text("Removed \(line.name). Its trains finish the trip they are on.", "已刪除 \(line.name)。它的列車會跑完目前這一趟。")
+        }
+        // The reference removes a line's trains with it, which ends
+        // following one of them (`trackedTrainId` of a gone train).
+        if removed && followsLineTrain {
+            followedTrainID = nil
         }
         selectedLineID = world.lines.first?.id
     }
@@ -932,6 +968,7 @@ public final class GameSession {
     func perform(_ command: (inout GameWorld) throws(GameError) -> String) -> Bool {
         do throws(GameError) {
             message = StatusMessage(kind: .success, text: try command(&world))
+            endFollowIfGone()
             return true
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
