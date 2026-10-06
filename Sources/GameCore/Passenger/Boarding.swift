@@ -28,7 +28,7 @@
 /// Passengers riding a train together: from the same station to the same
 /// destination.
 public struct RidingGroup: Hashable, Sendable {
-    /// The station they boarded at, whose ledger counts them.
+    /// The original station whose ledger counts the full journey.
     public let origin: StationID
     public let destination: StationID
     /// How many, at least 1.
@@ -50,7 +50,7 @@ public struct RidingGroup: Hashable, Sendable {
 public struct TrainRiders: Hashable, Sendable {
     public let train: TrainID
     /// By ascending origin and then destination, at most one group for each
-    /// pair, never empty.
+    /// pair and journey, never empty.
     public internal(set) var groups: [RidingGroup]
 
     public init(train: TrainID, groups: [RidingGroup]) {
@@ -405,7 +405,7 @@ extension RidingGroup: Codable {
         guard (1...Int64(Train.maximumCars) * Train.capacityPerCar).contains(count) else {
             throw DecodingError.dataCorruptedError(forKey: .count, in: container, debugDescription: "A riding group has 1 to a full train's passengers.")
         }
-        guard origin != destination else {
+        guard origin != destination || journey != nil else {
             throw DecodingError.dataCorruptedError(forKey: .destination, in: container, debugDescription: "A riding group rides to another station.")
         }
         if let journey, journey.origin != origin || journey.leg.to != destination {
@@ -445,6 +445,10 @@ extension TrainRiders: Codable {
         }) else {
             throw DecodingError.dataCorruptedError(forKey: .groups, in: container,
                 debugDescription: "Riding groups must be ordered by origin and destination, without duplicate journeys.")
+        }
+        guard Set(groups.map { RidingGroup(origin: $0.origin, destination: $0.destination, count: 1, journey: $0.journey) }).count == groups.count else {
+            throw DecodingError.dataCorruptedError(forKey: .groups, in: container,
+                debugDescription: "A train must not repeat a riding journey.")
         }
     }
 

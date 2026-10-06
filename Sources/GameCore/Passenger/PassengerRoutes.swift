@@ -364,9 +364,9 @@ extension GameWorld {
     /// whole-minute cost. Ties prefer fewer transfers, then lower unrounded
     /// seconds, then the line and stop order. The graph uses lines with service
     /// planned at the current
-    /// minute; it is derived anew when queried. A route is a plan only:
-    /// passenger release and boarding still use `passengerTrip` until the
-    /// following transfer stage moves the route into their queue records.
+    /// minute; it is derived anew when queried. Network passenger demand
+    /// stores its chosen route as a journey; legacy direct demand continues
+    /// to use `passengerTrip`.
     public func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3) -> [PassengerRoute] {
         guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
               limit > 0 else { return [] }

@@ -16,6 +16,19 @@ public struct PassengerJourneyLeg: Hashable, Codable, Sendable {
         from = leg.from
         to = leg.to
     }
+
+    private init(_ leg: PassengerJourneyLeg, pattern: Int) {
+        line = leg.line
+        self.pattern = pattern
+        direction = leg.direction
+        from = leg.from
+        to = leg.to
+    }
+
+    func reindexed(afterRemoving pattern: Int) -> PassengerJourneyLeg {
+        guard let previous = self.pattern, previous > pattern else { return self }
+        return PassengerJourneyLeg(self, pattern: previous - 1)
+    }
 }
 
 /// A chosen route and the leg a waiting or riding group is completing.
@@ -34,8 +47,10 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
     }
 
     public init?(origin: StationID, route: PassengerRoute) {
-        guard (1...32).contains(route.legs.count), let last = route.legs.last,
-              route.legs.first?.from == origin else { return nil }
+        guard (1...32).contains(route.legs.count), let last = route.legs.last, origin != last.to,
+              route.legs.first?.from == origin,
+              route.legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) }),
+              zip(route.legs, route.legs.dropFirst()).allSatisfy({ $0.to == $1.from }) else { return nil }
         self.init(origin: origin, destination: last.to, legs: route.legs.map(PassengerJourneyLeg.init), current: 0)
     }
 
@@ -44,6 +59,18 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         self.destination = destination
         self.legs = legs
         self.current = current
+    }
+
+    /// Completed legs are history. A rider may finish the removed service's
+    /// current leg using its unchanged timetable; a removed future ride or
+    /// a waiting group's removed ride invalidates the remaining journey.
+    func reindexed(on line: LineID, removing pattern: Int, riding: Bool) -> PassengerJourney? {
+        let pending = riding ? current + 1 : current
+        guard !legs.dropFirst(pending).contains(where: { $0.line == line && $0.pattern == pattern }) else { return nil }
+        let updated = legs.enumerated().map { index, leg in
+            index >= current && leg.line == line ? leg.reindexed(afterRemoving: pattern) : leg
+        }
+        return PassengerJourney(origin: origin, destination: destination, legs: updated, current: current)
     }
 
     private enum CodingKeys: String, CodingKey { case origin, destination, legs, current }
@@ -55,6 +82,7 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         let legs = try box.decode([PassengerJourneyLeg].self, forKey: .legs)
         let current = try box.decode(Int.self, forKey: .current)
         guard (1...32).contains(legs.count), legs.indices.contains(current),
+              origin != destination,
               legs.first?.from == origin, legs.last?.to == destination,
               legs.allSatisfy({ $0.from != $0.to && ($0.pattern == nil || (0..<Int.max).contains($0.pattern!)) }),
               zip(legs, legs.dropFirst()).allSatisfy({ $0.to == $1.from })
@@ -89,4 +117,20 @@ struct PassengerRouteBalance: Hashable, Codable, Sendable {
     let journeys: [PassengerJourney]
     let weights: [Int64]
     var balances: [Int64]
+
+    /// Smooth weighted round robin. Ties go to the earlier route, and the
+    /// credit survives saving so release boundaries cannot change the split.
+    mutating func allocate(_ count: Int64) -> [Int64] {
+        let denominator = weights.reduce(0, +)
+        var shares = Array(repeating: Int64(0), count: weights.count)
+        for _ in 0..<count {
+            for choice in weights.indices { balances[choice] += weights[choice] }
+            let selected = weights.indices.max { lhs, rhs in
+                balances[lhs] != balances[rhs] ? balances[lhs] < balances[rhs] : lhs > rhs
+            }!
+            shares[selected] += 1
+            balances[selected] -= denominator
+        }
+        return shares
+    }
 }

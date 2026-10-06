@@ -202,7 +202,14 @@ final class MapInteractionTests: XCTestCase {
         let heatmapToggle = app.switches["layer.populationHeatmap"]
         XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap toggle must exist")
         XCTAssertTrue(heatmapToggle.isEnabled, "The implemented population overlay must be available")
-        if heatmapToggle.value as? String == "0" { heatmapToggle.tap() }
+        if heatmapToggle.value as? String == "0" {
+            // SwiftUI exposes the labelled Form row as the switch. Its
+            // centre is the label; tap the actual control at the trailing
+            // edge, as a player does, and verify the setting before Done.
+            heatmapToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        }
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: heatmapToggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Population heatmap must be on before dismissing")
 
         let doneButton = app.buttons["layer.done"]
         XCTAssertTrue(doneButton.waitForExistence(timeout: 5))

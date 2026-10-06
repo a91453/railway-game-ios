@@ -261,7 +261,7 @@ final class LineRoutePreferenceTests: XCTestCase {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let save = try encoder.encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: save).world, world)
-        XCTAssertEqual(SavedGame.currentVersion, 10)
+        XCTAssertGreaterThanOrEqual(SavedGame.currentVersion, 10, "physical preferences require v10 or later")
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode(SavedGame(world: automatic))) as? [String: Any]); old["saveVersion"] = 9
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: old)).world, automatic)
         try automatic.advance(ticks: 610)

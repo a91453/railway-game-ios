@@ -76,7 +76,7 @@ public struct DemandRemainder: Hashable, Sendable {
 public struct PassengerLedger: Hashable, Sendable {
     /// Every passenger ever released at the station.
     public let released: Int64
-    /// Those waiting there now.
+    /// Those from this origin waiting now, including at transfer stations.
     public let waiting: Int64
     /// Those on a train now (G1b).
     public let riding: Int64
@@ -167,12 +167,6 @@ public struct StationPassengers: Hashable, Sendable {
         )
     }
 
-    /// Passengers released here who are neither waiting, arrived,
-    /// overflowed nor abandoned: those riding trains.
-    var boardedAndRiding: Int64 {
-        released - waitingCount - arrived - overflowed - abandoned
-    }
-
     /// Whether the record says nothing: no demand, no passenger ever
     /// released and no remainder. Such a record is not kept.
     var isEmpty: Bool {
@@ -197,9 +191,8 @@ public struct StationPassengers: Hashable, Sendable {
         let admitted = min(count, max(0, Self.capacity - waitingCount))
         if admitted > 0 {
             let leg = journey.leg
-            waiting.append(WaitingGroup(line: leg.line, direction: leg.direction,
+            enqueue(WaitingGroup(line: leg.line, direction: leg.direction,
                 destination: leg.to, since: now, count: admitted, journey: journey))
-            waitingCount += admitted
         }
         released += count
         overflowed += count - admitted
@@ -214,10 +207,26 @@ public struct StationPassengers: Hashable, Sendable {
         let leg = journey.leg
         let group = WaitingGroup(line: leg.line, direction: leg.direction, destination: leg.to,
             since: now, count: admitted, journey: journey, readyAt: readyAt)
-        let insert = waiting.firstIndex { $0.since > now || $0.since == now && $0.destination > leg.to } ?? waiting.count
-        waiting.insert(group, at: insert)
-        waitingCount += admitted
+        enqueue(group)
         return admitted
+    }
+
+    private mutating func enqueue(_ group: WaitingGroup) {
+        if let index = waiting.firstIndex(where: {
+            $0.since == group.since && $0.line == group.line && $0.direction == group.direction &&
+                $0.destination == group.destination && $0.journey == group.journey && $0.readyAt == group.readyAt
+        }) {
+            let previous = waiting[index]
+            waiting[index] = WaitingGroup(line: previous.line, direction: previous.direction,
+                destination: previous.destination, since: previous.since, count: previous.count + group.count,
+                journey: previous.journey, readyAt: previous.readyAt)
+        } else {
+            let insert = waiting.firstIndex {
+                $0.since > group.since || $0.since == group.since && $0.destination > group.destination
+            } ?? waiting.count
+            waiting.insert(group, at: insert)
+        }
+        waitingCount += group.count
     }
 
     /// Removes groups whose chosen service is no longer valid. The world
@@ -225,6 +234,21 @@ public struct StationPassengers: Hashable, Sendable {
     mutating func abandonGroups(unless isServed: (WaitingGroup) -> Bool) -> [WaitingGroup] {
         let left = waiting.filter { !isServed($0) }
         waiting.removeAll { !isServed($0) }
+        waitingCount -= left.reduce(0) { $0 + $1.count }
+        return left
+    }
+
+    mutating func reindexJourneys(on line: LineID, removing pattern: Int) -> [WaitingGroup] {
+        var left: [WaitingGroup] = []
+        waiting = waiting.compactMap { group in
+            guard let journey = group.journey else { return group }
+            guard let updated = journey.reindexed(on: line, removing: pattern, riding: false) else {
+                left.append(group)
+                return nil
+            }
+            return WaitingGroup(line: group.line, direction: group.direction, destination: group.destination,
+                since: group.since, count: group.count, journey: updated, readyAt: group.readyAt)
+        }
         waitingCount -= left.reduce(0) { $0 + $1.count }
         return left
     }
@@ -381,10 +405,19 @@ extension StationPassengers: Codable {
         }
         let total = waiting.reduce(Int64(0)) { $0 + $1.count }
         guard total <= Self.capacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
-        // Released minute by minute, one group per destination a minute, by
-        // ascending destination.
-        guard zip(waiting, waiting.dropFirst()).allSatisfy({ $0.since < $1.since || ($0.since == $1.since && $0.destination < $1.destination) }) else {
+        // Released minute by minute, by ascending leg destination. Several
+        // planned journeys can share one minute and destination.
+        guard zip(waiting, waiting.dropFirst()).allSatisfy({
+            $0.since < $1.since || $0.since == $1.since &&
+                ($0.destination < $1.destination || $0.destination == $1.destination && ($0.journey != nil || $1.journey != nil))
+        }) else {
             throw corrupt(.waiting, "waiting groups must be in the order they came.")
+        }
+        guard Set(waiting.map {
+            WaitingGroup(line: $0.line, direction: $0.direction, destination: $0.destination,
+                since: $0.since, count: 1, journey: $0.journey, readyAt: $0.readyAt)
+        }).count == waiting.count else {
+            throw corrupt(.waiting, "a waiting journey must not be repeated.")
         }
         guard released >= 0, overflowed >= 0, abandoned >= 0, arrived >= 0, refused >= 0 else {
             throw corrupt(.released, "counts cannot be negative.")

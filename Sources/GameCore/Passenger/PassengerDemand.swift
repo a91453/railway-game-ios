@@ -18,8 +18,9 @@
 // minute's interpolation becomes a numerator over 3600.
 //
 // Dependency direction (ARCHITECTURE, "GameCore 內部的依賴方向"): this file
-// reads stations, the lines' stops and the clock, nothing of the railway's
-// physical layer, and changes nothing but the passengers.
+// direct demand reads stations, the lines' stops and the clock. Network
+// demand also uses the derived physical service queries of PassengerRoutes;
+// neither mode changes anything but the passengers and its route credits.
 
 extension GameWorld {
     /// A passenger's release is counted in 1/3600ths: a trip rate per hour,
@@ -145,29 +146,49 @@ extension GameWorld {
 
     /// Whether `group`, waiting at `station`, still has its trip: its line
     /// exists and still takes it that way.
-    func isServed(_ group: WaitingGroup, at station: StationID) -> Bool {
+    func isServed(_ group: WaitingGroup, at station: StationID,
+                  checkingLeg check: ((PassengerJourneyLeg) -> Bool)? = nil) -> Bool {
         guard let line = line(id: group.line) else { return false }
         if let journey = group.journey {
             guard journey.leg.from == station,
                   journey.leg.line == group.line,
                   journey.leg.direction == group.direction,
                   journey.leg.to == group.destination else { return false }
-            if line.isRing {
-                let direction: RingDirection = group.direction == .outbound ? .inner : .outer
-                let calls = line.ringCalls(direction).map { line.stops[$0] }
-                return calls.indices.contains { index in
-                    calls[index] == station && calls.dropFirst(index + 1).contains(group.destination)
-                }
-            }
-            let service = (journey.leg.pattern ?? -1) + 1
-            guard (0..<line.serviceCount).contains(service) else { return false }
-            let calls = line.calls(ofService: service).map { line.stops[$0] }
-            let ordered = group.direction == .outbound ? calls : Array(calls.reversed())
-            return ordered.indices.contains { index in
-                ordered[index] == station && ordered.dropFirst(index + 1).contains(group.destination)
-            }
+            return journey.legs.dropFirst(journey.current).allSatisfy(check ?? isServed)
         }
         return Self.trip(on: line, from: station, to: group.destination) == group.trip
+    }
+
+    /// A planned ride can wait across the nightly closure, but must still
+    /// have a physical journey and a service planned at some level.
+    private func isServed(_ leg: PassengerJourneyLeg) -> Bool {
+        guard let line = line(id: leg.line),
+              lineJourney(leg.line, pattern: leg.pattern) != nil,
+              scheduledLevels(of: line).contains(where: { lineHeadway(leg.line, at: $0, pattern: leg.pattern) != nil })
+        else { return false }
+        if line.isRing {
+            let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
+            guard journey(of: line, service: 0, direction: direction) != nil else { return false }
+            let calls = line.ringCalls(direction).map { line.stops[$0] }
+            return calls.indices.contains { index in
+                calls[index] == leg.from && calls.dropFirst(index + 1).contains(leg.to)
+            }
+        }
+        let service = (leg.pattern ?? -1) + 1
+        guard (0..<line.serviceCount).contains(service) else { return false }
+        let calls = line.calls(ofService: service).map { line.stops[$0] }
+        let ordered = leg.direction == .outbound ? calls : Array(calls.reversed())
+        return ordered.indices.contains { index in
+            ordered[index] == leg.from && ordered.dropFirst(index + 1).contains(leg.to)
+        }
+    }
+
+    private func scheduledLevels(of line: ServiceLine) -> [ServiceLevel] {
+        var levels = serviceDay.bands.filter { line.window.contains(minuteOfDay: $0.start) }.map(\.level)
+        if case .hours(let open, _) = line.window {
+            levels.append(serviceDay.level(atMinuteOfDay: open))
+        }
+        return levels
     }
 
     /// The origin's daily trips to each station it reaches that has demand,
@@ -241,11 +262,10 @@ extension GameWorld {
     // MARK: - Release
 
     /// Every trip that releases passengers: the flows, by ascending origin
-    /// and then destination (the order passengers released in the same
-    /// minute join their queues), and their hourly trips. Derived from the
-    /// demands and the lines' stops only, so it is kept between calls of
-    /// ``advance(ticks:)`` (see ``PassengerPlanCache``) and worked out again
-    /// after a command changes either.
+    /// and then destination, and their hourly trips. Direct plans depend on
+    /// demand and calls only; network plans also depend on physical service,
+    /// its window and level. A network batch rebuilds when the service level
+    /// changes and keeps the previous release's fractional OD remainders.
     struct PassengerPlan: Sendable {
         struct Choice: Sendable {
             let journey: PassengerJourney
@@ -439,17 +459,7 @@ extension GameWorld {
                 journeys: journeys, weights: weights, balances: Array(repeating: 0, count: choices.count))
         }
         var state = balance!
-        let denominator = weights.reduce(0, +)
-        var shares = Array(repeating: Int64(0), count: choices.count)
-        for _ in 0..<count {
-            for choice in choices.indices { state.balances[choice] += weights[choice] }
-            let selected = choices.indices.max { lhs, rhs in
-                state.balances[lhs] != state.balances[rhs]
-                    ? state.balances[lhs] < state.balances[rhs] : lhs > rhs
-            }!
-            shares[selected] += 1
-            state.balances[selected] -= denominator
-        }
+        let shares = state.allocate(count)
         if let index { passengerRouteBalances[index] = state }
         else {
             let insert = passengerRouteBalances.firstIndex {
@@ -483,10 +493,11 @@ extension GameWorld {
     mutating func abandonUnservedPassengers() {
         passengerPlan = PassengerPlanCache()
         let world = self
+        let valid = servedWaitingLegs()
         var abandoned: [StationID: Int64] = [:]
         for index in passengers.indices {
             let station = passengers[index].station
-            for group in passengers[index].abandonGroups(unless: { world.isServed($0, at: station) }) {
+            for group in passengers[index].abandonGroups(unless: { world.isServed($0, at: station, checkingLeg: { valid.contains($0) }) }) {
                 abandoned[group.journey?.origin ?? station, default: 0] += group.count
             }
         }
@@ -496,6 +507,45 @@ extension GameWorld {
             }
         }
         passengers.removeAll { $0.isEmpty }
+    }
+
+    /// Validate each distinct planned leg once, even with a full station's
+    /// thousands of minute groups. Legacy direct queues need no graph work.
+    private func servedWaitingLegs() -> Set<PassengerJourneyLeg> {
+        let pending = Set(passengers.flatMap(\.waiting).flatMap { group in
+            group.journey.map { Array($0.legs.dropFirst($0.current)) } ?? []
+        })
+        return Set(pending.filter(isServed))
+    }
+
+    mutating func reindexPassengerJourneys(on line: LineID, removing pattern: Int) {
+        var abandoned: [StationID: Int64] = [:]
+        for index in passengers.indices {
+            for group in passengers[index].reindexJourneys(on: line, removing: pattern) {
+                abandoned[group.journey!.origin, default: 0] += group.count
+            }
+        }
+        for index in riders.indices {
+            riders[index].groups = riders[index].groups.compactMap { group in
+                guard let journey = group.journey else { return group }
+                guard let updated = journey.reindexed(on: line, removing: pattern, riding: true) else {
+                    abandoned[group.origin, default: 0] += group.count
+                    return nil
+                }
+                return RidingGroup(origin: group.origin, destination: group.destination,
+                    count: group.count, journey: updated)
+            }
+        }
+        riders.removeAll { $0.groups.isEmpty }
+        for origin in abandoned.keys.sorted() {
+            let index = passengers.firstIndex { $0.station == origin }!
+            passengers[index].abandoned += abandoned[origin]!
+        }
+        passengerRouteBalances.removeAll { balance in
+            balance.journeys.contains { journey in
+                journey.legs.contains { $0.line == line && ($0.pattern ?? -1) >= pattern }
+            }
+        }
     }
 
     // MARK: - Validation
@@ -511,11 +561,12 @@ extension GameWorld {
         guard zip(passengers, passengers.dropFirst()).allSatisfy({ $0.station < $1.station }) else {
             return "Passenger records must be listed once each, by ascending station."
         }
+        let valid = servedWaitingLegs()
         for record in passengers {
             let id = record.station.rawValue
             guard station(id: record.station) != nil else { return "Passengers wait at station \(id), which does not exist." }
             for group in record.waiting {
-                guard isServed(group, at: record.station) else {
+                guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."
                 }
                 if let journey = group.journey,
@@ -536,11 +587,14 @@ extension GameWorld {
         }) else { return "Route balances must be listed once per OD pair, in order." }
         for balance in passengerRouteBalances {
             guard passengerRoutingMode == .network,
+                  balance.origin != balance.destination,
+                  station(id: balance.origin) != nil, station(id: balance.destination) != nil,
                   (1...3).contains(balance.journeys.count),
+                  Set(balance.journeys).count == balance.journeys.count,
                   balance.weights.count == balance.journeys.count,
                   balance.balances.count == balance.journeys.count,
                   balance.weights.allSatisfy({ (1...10_000).contains($0) }),
-                  balance.journeys.allSatisfy({ $0.origin == balance.origin && $0.destination == balance.destination })
+                  balance.journeys.allSatisfy({ $0.current == 0 && $0.origin == balance.origin && $0.destination == balance.destination })
             else { return "An OD route balance is invalid." }
             let sum = balance.weights.reduce(Int64(0), +)
             guard balance.balances.allSatisfy({ (-sum...sum).contains($0) }),

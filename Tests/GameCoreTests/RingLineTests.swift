@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import XCTest
 
 /// Ring lines (ARCHITECTURE decision 49, after the `Ci/` metro game's
@@ -124,6 +124,28 @@ final class RingLineTests: XCTestCase {
             route.legs.map(\.from) == [beta, alpha] &&
             route.legs.map(\.to) == [alpha, delta] && route.waitMinutes == 18
         }, "crossing the lap must start a new ride and wait again: \(routes)")
+    }
+
+    func testPlannedPassengerChangesLapsAndArrivesWithoutLosingOrigin() throws {
+        var world = try makeRingWorld(trains: 2, running: pairs(2))
+        world.setPassengerRoutingMode(.network)
+        try world.setStationDemand(beta, to: StationDemand(kind: .residential, dailyTrips: 0))
+        let route = try XCTUnwrap(world.passengerRoutes(from: beta, to: delta).first {
+            $0.legs.map(\.direction) == [.inbound, .inbound]
+        })
+        let journey = try XCTUnwrap(PassengerJourney(origin: beta, route: route))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 17)
+        XCTAssertEqual(world.passengerLedger(of: beta).waiting, 5)
+        XCTAssertEqual(world.waitingPassengers(at: alpha).first?.journey?.current, 1)
+        XCTAssertEqual(world.passengerLedger(of: beta).abandoned, 0)
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        try world.advance(ticks: 20)
+        for _ in 0..<20 { try loaded.advance(ticks: 1) }
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(world.passengerLedger(of: beta).arrived, 5)
+        XCTAssertEqual(world.passengerLedger(of: beta).waiting + world.passengerLedger(of: beta).riding, 0)
+        XCTAssertEqual(world.passengerLedger(of: beta).abandoned, 0)
     }
 
     // MARK: - Making a ring

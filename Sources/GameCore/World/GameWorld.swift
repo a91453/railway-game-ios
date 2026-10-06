@@ -254,6 +254,7 @@ public struct GameWorld: Equatable, Sendable {
         }
 
         network.removeEdge(id)
+        abandonUnservedPassengers()
     }
 
     /// Removes node `id` of the track network (Stage S3). Free. No edge may
@@ -327,6 +328,7 @@ public struct GameWorld: Equatable, Sendable {
         try requireSpansUnheld(on: edge)
 
         network.removePlatform(at: index)
+        abandonUnservedPassengers()
     }
 
     /// Whether `train`'s service needs `platform` (Stage S5): it waits at
@@ -695,6 +697,7 @@ public struct GameWorld: Equatable, Sendable {
             for index in trains.indices {
                 trains[index].reservation = []
             }
+            abandonUnservedPassengers()
             return
         }
         guard !isTrafficControlEnabled else { return }
@@ -710,6 +713,7 @@ public struct GameWorld: Equatable, Sendable {
         for need in needs where need.moves {
             trains[need.index].reservation = need.resources.sorted()
         }
+        abandonUnservedPassengers()
     }
 
     // MARK: - Timetables
@@ -927,6 +931,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         if lines[index].isRing != isRing { lines[index].routePreferences = [] }
         lines[index].isRing = isRing
+        abandonUnservedPassengers()
     }
 
     /// Replaces one service's preferences atomically. Missing physical
@@ -965,6 +970,7 @@ public struct GameWorld: Equatable, Sendable {
         let index = try lineIndex(of: id)
         guard window.isValid else { throw .invalidServiceWindow }
         lines[index].window = window
+        abandonUnservedPassengers()
     }
 
     /// Sets how many trains a line's own service, or its pattern at index
@@ -990,6 +996,7 @@ public struct GameWorld: Equatable, Sendable {
         } else {
             lines[index].patterns[service - 1].trainsInService = trains
         }
+        abandonUnservedPassengers()
     }
 
     /// Sets which service level each minute of the day has, for every line.
@@ -999,6 +1006,7 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func setServiceDay(_ day: ServiceDay) throws(GameError) {
         guard day.isValid else { throw .invalidServiceDay }
         serviceDay = day
+        abandonUnservedPassengers()
     }
 
     /// Sets the minutes a line's own service, or its pattern at index
@@ -1017,6 +1025,7 @@ public struct GameWorld: Equatable, Sendable {
         } else {
             lines[index].patterns[service - 1].targetHeadways = headways
         }
+        abandonUnservedPassengers()
     }
 
     /// Adds a pattern to a line, calling at `calls` (indices into the
@@ -1048,6 +1057,8 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func removeLinePattern(_ id: LineID, at pattern: Int) throws(GameError) {
         let (index, service) = try lineService(id, pattern: pattern)
         lines[index].patterns.remove(at: service - 1)
+        reindexPassengerJourneys(on: id, removing: pattern)
+        abandonUnservedPassengers()
     }
 
     /// The line train `id` is assigned to, or `nil` if it is on none (or
@@ -1350,6 +1361,7 @@ public struct GameWorld: Equatable, Sendable {
             passengerPlan = PassengerPlanCache()
         }
         var release = remaining > 0 ? passengerRelease() : nil
+        var passengerLevels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
             let start = clock.now
@@ -1360,6 +1372,15 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             if start.isWholeMinute {
+                if passengerRoutingMode == .network {
+                    let levels = lines.map { serviceLevel(of: $0.id, at: start) }
+                    if levels != passengerLevels {
+                        if let release { keepRemainders(of: release) }
+                        passengerPlan = PassengerPlanCache()
+                        release = passengerRelease()
+                        passengerLevels = levels
+                    }
+                }
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {
                     releasePassengers(at: start, &release!)
@@ -1434,9 +1455,20 @@ public struct GameWorld: Equatable, Sendable {
                 changed = true
             }
             if !changed, span == minute, traffic.waits.isEmpty {
+                // A closed network may have no release plan and no ready
+                // train. It must still wake when passenger service opens.
+                let passengerWake: Int64?
+                if passengerRoutingMode == .network {
+                    let levels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
+                    passengerWake = levels != passengerLevels ? 0 : lines.compactMap {
+                        $0.nextChange(after: clock.now, in: serviceDay)
+                    }.min().map { Self.minutes(from: clock.now, until: $0) }
+                } else {
+                    passengerWake = nil
+                }
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
-                    minutesUntilLineWaitsChange(memo: &memo),
+                    minutesUntilLineWaitsChange(memo: &memo), passengerWake,
                 ].compactMap { $0 }.min()
                 let idle = min(remaining / minute, wake ?? remaining / minute)
                 if release != nil || accounts.mode == .management {
