@@ -370,6 +370,29 @@ public final class GameSession {
         }
     }
 
+    // MARK: - Passenger routing
+
+    /// Chooses how passengers released from now on find their way, through
+    /// `GameWorld.setPassengerRoutingMode(_:)`: across the whole network,
+    /// changing trains and walking between stations nearby (`network`), or
+    /// only on a line that calls at both ends (`direct`). Those already
+    /// waiting or riding keep their way.
+    public func setPassengerRoutingMode(_ mode: PassengerRoutingMode) {
+        guard mode != world.passengerRoutingMode else { return }
+        perform { world throws(GameError) in
+            world.setPassengerRoutingMode(mode)
+            return mode == .network
+                ? language.text(
+                    "Passengers now plan journeys across the network and change trains.",
+                    "乘客現在會規劃跨線路網的旅程並轉乘。"
+                )
+                : language.text(
+                    "Passengers now take only a line that serves both their stations.",
+                    "乘客現在只搭兩站都停靠的線路。"
+                )
+        }
+    }
+
     // MARK: - Economy
 
     /// Switches a managed company to free play through

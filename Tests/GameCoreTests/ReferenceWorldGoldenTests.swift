@@ -12,6 +12,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         for url in try GoldenScenarioFixtures.urls() {
             let scenario = try GoldenScenario.decode(Data(contentsOf: url))
             let name = url.lastPathComponent
+            // The reference model routes passengers directly only: network
+            // routing, walks and station modes (Phase 5F) are GameCore's.
+            guard !scenario.usesPassengerNetwork else { continue }
             let initial = scenario.initialState
             var model = ReferenceWorld(
                 width: initial.worldWidth, height: initial.worldHeight, balance: initial.balance,
@@ -119,6 +122,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setStationDemand(let id, let demand): error = model.setStationDemand(id, demand)
         case .setEconomyMode(let mode): model.setEconomyMode(mode)
         case .setFareRules(let rules): error = model.setFareRules(rules)
+        case .setPassengerRoutingMode, .setStationOperationMode:
+            preconditionFailure("the reference model does not run network routing")
         }
         return error.map { .rejected($0) } ?? .ok
     }

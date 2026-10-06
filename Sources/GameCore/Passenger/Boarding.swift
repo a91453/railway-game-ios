@@ -141,11 +141,15 @@ extension GameWorld {
         let train = trains[index]
         let entry = train.timetable[stop]
         let isLast = stop == train.timetable.count - 1
+        // Nobody gets on or off at a closed station (the reference's
+        // `metroStationAllowsTrainServiceAtStation`), but nobody rides on
+        // past where the train's direction ends either.
+        let isOpen = station(id: entry.station)?.operationMode.allowsService ?? false
         var alighted: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
-                if group.destination == entry.station {
+                if group.destination == entry.station && isOpen {
                     if let next = group.journey?.next {
                         enqueueTransfer(group.count, along: next, at: entry.station,
                                         after: group.journey!.leg.line)
@@ -166,7 +170,7 @@ extension GameWorld {
                 riders[slot].groups = kept
             }
         }
-        let boarded = isLast ? 0 : boardPassengers(train, at: stop)
+        let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)
     }
 
@@ -259,21 +263,23 @@ extension GameWorld {
         return boarded
     }
 
-    /// Passengers who got off at `station` from `line` wait for their
-    /// journey's next leg: there, ready after the change of trains (none
-    /// for another train of the same line), or at the station a walk away
-    /// where it starts, ready once they have walked there (see
-    /// ``walkingTransferMinutes(from:to:)``). Those whose next leg is gone
-    /// or out of reach, or who find no room to wait, leave.
+    /// Passengers who got off at `alighting` from `line` wait for their
+    /// journey's next leg: there, or at the station a walk away where it
+    /// starts (see ``walkingTransfer(from:to:)``). They may board once the
+    /// reference's least change time
+    /// (``PassengerTransferRules.minimumChangeSeconds``, 120 s) or their
+    /// walk, if longer, has passed; another train of the same line at the
+    /// same station needs no time. Those whose next leg is gone or out of
+    /// reach, or who find no room to wait, leave.
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
                                           at alighting: StationID, after line: LineID) {
         let origin = journey.origin
         let station = journey.leg.from
-        let minutes: Int64
+        let seconds: Int64
         if station == alighting {
-            minutes = line == journey.leg.line ? 0 : PassengerRouteGraph.sameStationTransferMinutes
-        } else if let walk = walkingTransferMinutes(from: alighting, to: station) {
-            minutes = walk
+            seconds = line == journey.leg.line ? 0 : PassengerTransferRules.minimumChangeSeconds
+        } else if let walk = walkingTransfer(from: alighting, to: station) {
+            seconds = max(PassengerTransferRules.minimumChangeSeconds, walk.seconds)
         } else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
@@ -284,10 +290,12 @@ extension GameWorld {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
-        guard let ready = Self.time(clock.now, plusMinutes: minutes) else {
+        let (readySeconds, overflow) = clock.now.seconds.addingReportingOverflow(seconds)
+        guard !overflow else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
+        let ready = GameTime(seconds: readySeconds)
         let slot: Int
         if let found = passengers.firstIndex(where: { $0.station == station }) {
             slot = found

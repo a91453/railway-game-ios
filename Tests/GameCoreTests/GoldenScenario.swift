@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 34
+    static let schemaVersion = 35
 
     var description: String
     var initialState: InitialState
@@ -148,7 +148,7 @@ struct GoldenScenario: Decodable {
             var schemaVersion: Int
         }
         let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
-        guard version == 30 || version == 31 || version == 32 || version == 33 || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
+        guard (30..<schemaVersion).contains(version) || version == schemaVersion else { throw FixtureError.unsupportedSchemaVersion(version) }
         let scenario = try JSONDecoder().decode(GoldenScenario.self, from: data)
         try checkClock(minutes: scenario.initialState.gameMinutes, seconds: scenario.initialState.gameSeconds, in: "initialState")
         let final = scenario.expectedFinalState
@@ -157,6 +157,17 @@ struct GoldenScenario: Decodable {
             throw FixtureError.invalidClock("expectedFinalState: pendingTenths is 1 to 9, or left out")
         }
         return scenario
+    }
+
+    /// Whether a step sets network routing or a station's operation mode
+    /// (schema 35), which only GameCore runs.
+    var usesPassengerNetwork: Bool {
+        steps.contains { step in
+            switch step {
+            case .command(.setPassengerRoutingMode, _), .command(.setStationOperationMode, _): true
+            default: false
+            }
+        }
     }
 
     /// Runs the scenario on a new world and describes every way the result
@@ -435,6 +446,9 @@ enum ScenarioCommand: Equatable {
     case setStationDemand(StationID, StationDemand?)
     case setEconomyMode(EconomyMode)
     case setFareRules(FareRules)
+    /// Schema 35 (Phase 5F): network passenger routing and station modes.
+    case setPassengerRoutingMode(PassengerRoutingMode)
+    case setStationOperationMode(StationID, StationOperationMode)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -520,6 +534,10 @@ enum ScenarioCommand: Equatable {
                 world.setEconomyMode(mode)
             case .setFareRules(let rules):
                 try world.setFareRules(rules)
+            case .setPassengerRoutingMode(let mode):
+                world.setPassengerRoutingMode(mode)
+            case .setStationOperationMode(let id, let mode):
+                try world.setStationOperationMode(id, to: mode)
             }
             return .ok
         } catch {
@@ -683,6 +701,19 @@ extension ScenarioCommand: Decodable {
             self = .setEconomyMode(value)
         case "setFareRules":
             self = try .setFareRules(container.decode(FareRulesSummary.self, forKey: .rules).rules)
+        // Schema 35: network passenger routing and station modes (Phase 5F).
+        case "setPassengerRoutingMode":
+            let mode = try container.decode(String.self, forKey: .mode)
+            guard let value = PassengerRoutingMode(rawValue: mode) else {
+                throw DecodingError.dataCorruptedError(forKey: .mode, in: container, debugDescription: "Unknown routing mode \"\(mode)\".")
+            }
+            self = .setPassengerRoutingMode(value)
+        case "setStationOperationMode":
+            let mode = try container.decode(String.self, forKey: .mode)
+            guard let value = StationOperationMode(rawValue: mode) else {
+                throw DecodingError.dataCorruptedError(forKey: .mode, in: container, debugDescription: "Unknown operation mode \"\(mode)\".")
+            }
+            self = try .setStationOperationMode(container.decodeStation(forKey: .station), value)
         case "advance":
             let ticks = try container.decode(Int.self, forKey: .ticks)
             // GameCore treats a negative tick count as a programming error.
@@ -1471,6 +1502,9 @@ struct WorldSummary: Codable, Equatable {
     var riders: [RiderSummary]
     /// The company's accounts (schema 22).
     var accounts: AccountsSummary
+    /// `"network"` while passengers are routed across the network (schema
+    /// 35); left out for direct routing, as in every earlier fixture.
+    var passengerRoutingMode: String?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -1479,15 +1513,18 @@ struct WorldSummary: Codable, Equatable {
         var id: Int
         var name: String
         var point: PlanPoint
+        /// Schema 35: `"flowControl"` or `"closed"`; left out while open.
+        var operationMode: String?
 
-        init(id: Int, name: String, point: PlanPoint) {
+        init(id: Int, name: String, point: PlanPoint, operationMode: String? = nil) {
             self.id = id
             self.name = name
             self.point = point
+            self.operationMode = operationMode
         }
 
         private enum CodingKeys: String, CodingKey {
-            case id, name, x, y, annexes, point
+            case id, name, x, y, annexes, point, operationMode
         }
 
         init(from decoder: any Decoder) throws {
@@ -1498,6 +1535,7 @@ struct WorldSummary: Codable, Equatable {
                 throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "A station on tiles is a station of the grid, which Stage F3c removed.")
             }
             point = try container.decode(PlanPoint.self, forKey: .point)
+            operationMode = try container.decodeIfPresent(String.self, forKey: .operationMode)
         }
 
         func encode(to encoder: any Encoder) throws {
@@ -1505,6 +1543,7 @@ struct WorldSummary: Codable, Equatable {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(point, forKey: .point)
+            try container.encodeIfPresent(operationMode, forKey: .operationMode)
         }
     }
 
@@ -1646,7 +1685,8 @@ struct WorldSummary: Codable, Equatable {
         speed = SpeedName(world.clock.speed)
         balance = world.economy.balance.amount
         stations = world.stations
-            .map { StationSummary(id: $0.id.rawValue, name: $0.name, point: $0.point) }
+            .map { StationSummary(id: $0.id.rawValue, name: $0.name, point: $0.point,
+                                  operationMode: $0.operationMode == .normalFlow ? nil : $0.operationMode.rawValue) }
             .sorted { $0.id < $1.id }
         trains = world.trains
             .map {
@@ -1671,6 +1711,7 @@ struct WorldSummary: Codable, Equatable {
             .map { RiderSummary(train: $0.train.rawValue, groups: $0.groups.map(RidingGroupSummary.init)) }
             .sorted { $0.train < $1.train }
         accounts = AccountsSummary(world.accounts)
+        passengerRoutingMode = world.passengerRoutingMode == .direct ? nil : world.passengerRoutingMode.rawValue
     }
 }
 
@@ -1747,19 +1788,25 @@ struct TripSummary: Codable, Equatable {
 }
 
 /// A waiting group: `{"line", "direction", "destination", "since",
-/// "count"}`.
+/// "count"}`. Schema 35 (Phase 5F): a group that changed trains got off
+/// between two minutes, so it has `"sinceSeconds"` instead of `"since"`,
+/// and `"readyAtSeconds"`, when it may board the next train.
 struct WaitingGroupSummary: Codable, Equatable {
     var line: Int
     var direction: DirectionAlongLine
     var destination: Int
-    var since: Int64
+    var since: Int64?
+    var sinceSeconds: Int64?
+    var readyAtSeconds: Int64?
     var count: Int64
 
     init(_ group: WaitingGroup) {
         line = group.line.rawValue
         direction = DirectionAlongLine(group.direction)
         destination = group.destination.rawValue
-        since = group.since.minutes
+        since = group.since.isWholeMinute ? group.since.minute : nil
+        sinceSeconds = group.since.isWholeMinute ? nil : group.since.seconds
+        readyAtSeconds = group.readyAt?.seconds
         count = group.count
     }
 }

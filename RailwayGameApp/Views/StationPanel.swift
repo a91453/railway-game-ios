@@ -35,6 +35,7 @@ struct StationPanel: View {
                         }
                         .accessibilityIdentifier("station.rename")
                     }
+                    operationSection(station)
                     realStationSection(station)
                     catchmentPopulationSection(station)
                     demandSection(station)
@@ -74,6 +75,29 @@ struct StationPanel: View {
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session)
             }
+        }
+    }
+
+    /// How the station is run (Phase 5F, the reference's `operationMode`):
+    /// normal, flow control or closed, through
+    /// `GameSession.setSelectedStationOperationMode(_:)`.
+    private func operationSection(_ station: Station) -> some View {
+        let mode = session.world.station(id: station.id)?.operationMode ?? .normalFlow
+        return Section {
+            Picker(selection: Binding(
+                get: { mode },
+                set: { session.setSelectedStationOperationMode($0) }
+            )) {
+                ForEach(StationOperationMode.allCases, id: \.self) { mode in
+                    Text(verbatim: mode.title(in: session.language)).tag(mode)
+                }
+            } label: {
+                Text(verbatim: session.language.text("Operation", "營運狀態"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("station.operation")
+        } footer: {
+            Text(verbatim: mode.detail(in: session.language))
         }
     }
 

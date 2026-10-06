@@ -2842,6 +2842,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：沒有站內通道／同月台的分級成本（來源沒有數值），也沒有來源的封站／流量管制 operationMode；步行不檢查站外通道容量。
 
+**修訂（2026-10-06，R1：來源轉乘常數、封站狀態、計畫鍵）**：作者決定保留本決策的架構（共用圖、堆積、memo、`Walk`、新遊戲 `.network`），只把原生常數換成 `Ci/` 來源值，並補上：
+
+1. **常數集中**：所有轉乘常數在 `PassengerTransferRules`（`PassengerRoutes.swift`）一處，各附來源：基準 15 分鐘（`metroDebugCompareCentralToAirportTimings` 的 `r = 15`）、分級係數 overlap 0.8／same-platform 0.8／passage 1.2／virtual 1.7（同函式的 `l`）、分級距離 ≤20／≤50／≤250 m（`MOVE_TRANSFER_*_MAX_M`、`_classifyMoveTransferDistance`），其餘 <450 m 是 virtual（`station_transfers.json`）、步行 5 km/h（`metroNavigationTransfers`）、最短換車 120 s（`METRO_NAVIGATION_MIN_TRANSFER_SEC`）。調整平衡只改一行。
+2. **兩種時間分開**：分級懲罰（同站換線＝same-platform 12 分鐘，取代原生 4 分鐘；跨站依距離分級）只是**路徑選擇的感知成本**，加上步行秒數；**實際上車延遲**是 max(120 s, 步行秒數)（同線另一服務 0）。`PassengerRoute.transferMinutes` 是懲罰、`walkMinutes` 是步行；`walkingTransferMinutes(from:to:)` 改為 `walkingTransfer(from:to:)`（`PassengerWalk`：秒數與分級）。
+3. **車站營運狀態**：`StationOperationMode` normalFlow／flowControl／closed 與 `setStationOperationMode(_:to:)`（`applyStationOperationToStation`）。flowControl 不再釋出新乘客（`metroStationAllowsEntryForLine`），仍可轉乘、抵達；closed 不上下車、不轉乘、不作迄點（`metroStationAllowsTrainServiceAtStation`／`AllowsTransfer`／`AllowsPassengerDestination`），關站時清空候車（`clearStationWaitingPassengers`）記回原起站，需要它的候車旅程也放棄。列車仍停靠封閉站但不上下車（來源 `metroStationAllowsTrainServiceAtStation`）；收班後的自動狀態 `metroComputeStationAutoOperationMode` 未移植（gap），模式只由玩家設定。設定模式會丟棄釋出計畫，並讓其他車站仍須在此上下車或轉乘的候車旅程離站。讀檔拒絕明寫 `"normalFlow"` 的車站，存檔只有一種寫法。旅程的步行連通只看距離、不看狀態，所以車上乘客的下車站被關閉時存檔仍有效；他們在方向終點離車記 abandoned。直達與網路需求都遵守。存檔版本不變（11）：`Station.operationMode` 只在不是 normalFlow 時寫出、讀檔選填，所以舊存檔照讀（CLAUDE.md：只有舊存檔讀不了的格式才升版）；`SavedGameTests` 驗證帶封站的 v11 存檔往返。App 的車站面板有三段選擇（`GameSession.setSelectedStationOperationMode`，雙語文字）。
+4. **計畫鍵**：網路計畫不再於每次 `advance` 丟棄；`PassengerPlanKey`（路徑圖所讀的線路、車站含狀態、路網、交控、列車長度、各線當下等級，以及紀錄、需求、票價）相同時沿用，結果與重算相同（`PassengerPlanKeyTests`）。不存檔，世界相等不看它。
+5. **擁擠與需求衰減（R2，原生規則）**：來源沒有公式（`Ci/` 的 `choiceProb` 來自快照外的 flow service，`metroEconomyCollectCrowdingMetrics` 只回報負載；`01_MIGRATION_MAP.md` §6 只列 offered／used capacity 欄位），所以是**原生**、只在 `.network`：每條服務路徑每向一天的供給 = 各等級開放分鐘 ÷ 班距 × 列車容量（無車時 6 × 352）；使用量 = 本計畫各 OD 的日旅次按未擁擠權重以最大餘數分到各選項、累加到每段；擁擠秒數 = 乘車秒數 × 0.15 ×（使用 ÷ 供給）^4（BPR，比例上限 2）；選項權重 = 10000 ÷（整分鐘成本 + 擁擠秒數 ÷ 60），以秒計算，無擁擠時恰等於原權重。需求：一對 OD 最快路徑的廣義分鐘 ≤ 30 時全數，超過按 30 ÷ 分鐘比例遞減（四捨五入）；`dailyDemand` 與計畫一致。計畫仍只是世界的函數（不存檔），計畫鍵加入列車容量與服務日。常數集中於 `PassengerCrowding`。
+6. **App 與契約（R3）**：`GameSession.setPassengerRoutingMode(_:)` 經 `GameWorld` 指令切換，線路面板有開關（zh-Hant 字串）；golden schema 35 加 `setPassengerRoutingMode`、`setStationOperationMode`、選填的最終狀態 `passengerRoutingMode`／車站 `operationMode` 與轉乘群組的 `sinceSeconds`／`readyAtSeconds`，既有 fixture 一個值都沒變；`ReferenceWorld` 只有直達路徑，跳過用到這兩個指令的 fixture。
+
 ### 66. 車種、每節定員與門數
 
 2026-10-06。作者的移植順序第 2 項。來源：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `TRAIN_TYPES`、`getTrainCap`、`getMetroTrainOperationalCap`（固定私有 `2db0c5a`）。
@@ -2887,7 +2896,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 6. **開關**：`setDemandEvents(seed:)`，`nil` 關閉。`GameWorld` 的新世界與舊存檔關閉（golden、replay、save fixtures 不變）；`GameWorld.newGame(eventSeed:)` 開啟，App 的新遊戲用隨機種子。讀檔檢查事件的形狀、車站存在、已公布且未結束。
 7. **畫面**：車站面板「活動」區列出公布或進行中的事件（「大型展覽：需求 +35%，2 天後開始，持續 5 天」）。
 
-**限制**：中斷（停駛、封站、颱風）與國定假日尚未移植：本遊戲沒有封站的營運模式（Phase 5F 的 gap），之後與它一起做。
+**限制**：中斷（停駛、封站、颱風）與國定假日尚未移植。封站的營運模式已由決策 65 的 R1 修訂加入（`setStationOperationMode`），事件自動封站尚未接上。
 
 ### 70. 城鎮成長（Phase 6 的第一步）
 
@@ -2942,7 +2951,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 需求事件（決策 69）：App 的新遊戲每 8–12 天由存檔的種子抽出一個展覽或大客流事件，提前 2–5 天公布，進行時該站的需求乘 1 + 加成。
 - 城鎮成長（決策 70）：經營模式下，App 的新遊戲每個午夜依昨天的服務比例與可達車站數讓每站的每日旅次成長（最多每天 1.5%、起點的 4 倍），沒有服務時每天 −0.2%，不低於起點。
 - 上下車與容量（決策 35、39）：列車到達一站 8 秒後車門開好，坐到那一站的人下車（`arrived`），同時線路上的列車讓那一站等它的線路、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1）；花的時間是較多的一邊 ÷ 每節每秒 8 人，進位到整秒；開著門時每個整分鐘釋出的人也上車。客滿的列車離開時，還在等、本來可以搭的人記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
-- 全網路徑與轉乘（Phase 5F，決策 65）：App 的新遊戲以 `.network` 釋出乘客，每對 OD 最多三條路徑（整數分鐘的候車、乘車、轉乘成本），依持久化的配額分配；乘客按旅程在同站換車（4 分鐘，同一線路 0）或步行到 450 m 內的另一站（4 分鐘＋每 80 m 一分鐘），只在第一段付原起訖票價，守恆帳歸原起站。`GameWorld` 的新世界與舊存檔是 `.direct`。
+- 全網路徑與轉乘（Phase 5F，決策 65）：App 的新遊戲以 `.network` 釋出乘客，每對 OD 最多三條路徑（整數分鐘的候車、乘車、轉乘成本），依持久化的配額分配；乘客按旅程在同站換車或步行到 450 m 內的另一站（路徑選擇的感知成本：`Ci/` 的 15 分鐘 × 分級係數，同站換線 12 分鐘，加 5 km/h 步行；實際換車 max(120 s, 步行)，同一線路 0；常數集中於 `PassengerTransferRules`）；車站可設 flowControl／closed（車站面板），只在第一段付原起訖票價，守恆帳歸原起站。`GameWorld` 的新世界與舊存檔是 `.direct`。
 - 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站的點之間精確的直線距離分段（決策 54），0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·列車公里 + 18·車站`、維修 `12·路線公里 + 9·列車公里 + 8·列車`，車站是每條線路各自的停靠站），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（720 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求，以公司所在城市的基準票價比較（預設 0.75 美元，決策 46）。金額是美分。
 - 行駛曲線（決策 40）：列車與線路各有性能（加速、煞車、最高速度，可以有備用值與惰行；預設是標準性能），服務執行中不能換列車的性能。服務離開一站時得到一段行駛（出發時刻、長度、秒數），存檔；被擋住時丟掉，能動時從停止狀態以最少的秒數重新出發。
 - 貸款（決策 67）：經營模式的公司以 $100,000 為一步借入，最多 $5,000,000，隨時以一步償還；每個午夜付欠款 × 5% ÷ 360 的利息（整美元），寫進帳本，不算營運成本。

@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-22   the long property, differential and mutation
+#   campaigns-1 .. campaigns-23   the long property, differential and mutation
 #                                campaigns, named below
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
@@ -113,6 +113,9 @@ set -euo pipefail
 # Keep every method's original cases/seeds/mutations/assertions; seven methods
 # stay in SaveMutationTests (campaigns-3), seven run in its second-half class
 # (campaigns-21). New line.singleTrackCapacity's 576 steps use campaigns-22.
+# Phase 5F R1: PassengerPlanKeyTests (a 40-station network plan worked out
+# afresh twice, and a day of minute calls) took 312 s locally on Swift 6.4;
+# it runs alone in campaigns-23 rather than lengthen rest.
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests" ;;
@@ -137,10 +140,11 @@ classes_of() {
     campaigns-20) echo "EconomySecondHalfPropertyTests" ;;
     campaigns-21) echo "SaveMutationSecondHalfTests" ;;
     campaigns-22) echo "SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
+    campaigns-23) echo "PassengerPlanKeyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20 campaigns-21 campaigns-22)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20 campaigns-21 campaigns-22 campaigns-23)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""

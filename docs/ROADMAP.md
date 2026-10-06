@@ -742,6 +742,8 @@ G1 先做了 5A、5B、5D、5E、5G 的最小版；這個 Phase 在它上面深�
 
 **2026-10-06 跨站步行與新遊戲啟用（決策 65）**：兩站相距不到 450 m（`station_transfers.json` 的條件）可以步行轉乘，時間是 4 分鐘加每 80 m 一分鐘；App 的新遊戲改用 `.network`，示範地圖的乘客在 Central 與環線之間換車。路徑計畫共用路徑圖、改用堆積、以衍生路徑圖為鍵記住每對 OD 的選擇。仍缺：站內通道／同月台分級成本、封站 operationMode、資料明確 pairs 匯入（列為 gap）。
 
+**2026-10-06 R1（來源轉乘常數與封站）**：轉乘常數改用 `Ci/` 來源值並集中在 `PassengerTransferRules`：同站換線 12 分鐘、跨站依 ≤20／≤50／≤250 m 分級（15 分鐘 × 0.8／0.8／1.2／1.7）、步行 5 km/h、實際換車 max(120 s, 步行)；車站營運狀態 normalFlow／flowControl／closed（只在非 normalFlow 時存檔，存檔版本仍為 11）；網路計畫只在輸入改變時重算。R2（原生，來源無公式）：`.network` 的選路權重加入擁擠（BPR 0.15×負載^4，上限 2；供給 = 班次 × 列車容量，預設 6×352），OD 需求超過 30 廣義分鐘按比例遞減。城市成長沒有消費者（Phase 6），列為 gap。R3：線路面板的「跨線乘客路徑」開關（`GameSession.setPassengerRoutingMode`），golden schema 35 的 `setPassengerRoutingMode`／`setStationOperationMode` 與 `network-passengers.json`，replay `network-economy.json`；新遊戲照 #151 預設 `.network`。
+
 **2026-10-06 的 5F WIP（PR #142，已合併）**：已接上同 StationID 的完整旅程、換車、原起站守恆帳與 v11 存檔；需求可顯式選 `.network`。接手補上服務開／收班、尖峰與跨午夜的批量一致性、多路徑同分鐘存檔、pattern 移除時的索引移轉、軌道／月台失效、轉乘溢出、反向與環線跨圈測試。跨 StationID 步行、封站狀態與同月台／站內通道分級尚未接上，新遊戲仍是 `.direct`。尚未完成 5F，也未合併；驗證與下一步見 [PHASE5_TRANSFER_HANDOFF](PHASE5_TRANSFER_HANDOFF.md)。
 
 - **5A — 需求來源**：在城市模擬之前，每個車站依類型（住宅、辦公、商業、景點）套用每小時的需求曲線，權重以千分比整數表示。車站等級（真實時刻表研究）決定需求與車站規模的預設值：情境轉換工具依等級決定車站的格數（Stage S2 的多格車站）。

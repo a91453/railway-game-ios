@@ -542,6 +542,30 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(world.trains[0].movement.remainingEdges.first, .edge(4))
     }
 
+    /// Station operation modes (Phase 5F) need no new save version: a
+    /// station is written with `"operationMode"` only when it is not open,
+    /// and one written without it is open, so every earlier save reads as
+    /// before and a version 11 save keeps a closed station.
+    func testAVersionElevenSaveKeepsAClosedStation() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertTrue(world.stations.allSatisfy { $0.operationMode == .normalFlow })
+        try world.setStationOperationMode(StationID(rawValue: 3), to: .closed)
+        try world.setStationOperationMode(StationID(rawValue: 1), to: .flowControl)
+        let saved = try JSONEncoder().encode(SavedGame(world: world))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 11)
+        let stations = try XCTUnwrap((object["world"] as? [String: Any])?["stations"] as? [[String: Any]])
+        XCTAssertEqual(stations.map { $0["operationMode"] as? String }, ["flowControl", nil, "closed"])
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: saved).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.station(id: StationID(rawValue: 3))?.operationMode, .closed)
+        // Open again, the save is written as before.
+        try world.setStationOperationMode(StationID(rawValue: 3), to: .normalFlow)
+        try world.setStationOperationMode(StationID(rawValue: 1), to: .normalFlow)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(SavedGame(world: world)), as: UTF8.self).contains("operationMode"))
+    }
+
     func testVersionElevenPreservesAWaitingTransferAndOlderSavesStayDirect() throws {
         let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
         var world = try JSONDecoder().decode(SavedGame.self, from: data).world

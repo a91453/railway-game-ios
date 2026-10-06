@@ -20,16 +20,24 @@ public struct PassengerRouteLeg: Hashable, Sendable {
 
 /// A route between stations, with whole-minute costs. Consecutive legs meet
 /// at the same station, or the next leg starts at a station a short walk
-/// away (see ``GameWorld/walkingTransferMinutes(from:to:)``).
+/// away (see ``GameWorld/walkingTransfer(from:to:)`` and
+/// ``PassengerTransferTier``).
 public struct PassengerRoute: Hashable, Sendable {
     public let legs: [PassengerRouteLeg]
     public let rideMinutes: Int64
     public let waitMinutes: Int64
-    public let transferMinutes: Int64
+    /// The changes' transfer penalties (see
+    /// ``PassengerTransferTier/penaltySeconds``), rounded up to whole
+    /// minutes.
+    public var transferMinutes: Int64 { passengerMinutesRoundingUp(transferSeconds, by: GameTime.secondsPerMinute) }
+    /// The walks between stations, rounded up to whole minutes.
+    public var walkMinutes: Int64 { passengerMinutesRoundingUp(walkSeconds, by: GameTime.secondsPerMinute) }
+    let transferSeconds: Int64
+    let walkSeconds: Int64
 
-    public var totalMinutes: Int64 { rideMinutes + waitMinutes + transferMinutes }
+    public var totalMinutes: Int64 { rideMinutes + waitMinutes + transferMinutes + walkMinutes }
     fileprivate var totalSeconds: Int64 {
-        legs.reduce(0) { $0 + $1.rideSeconds } + (waitMinutes + transferMinutes) * GameTime.secondsPerMinute
+        legs.reduce(0) { $0 + $1.rideSeconds } + waitMinutes * GameTime.secondsPerMinute + transferSeconds + walkSeconds
     }
     public var transfers: Int {
         zip(legs, legs.dropFirst()).reduce(0) { $0 + ($1.0.line == $1.1.line && $1.0.to == $1.1.from ? 0 : 1) }
@@ -72,7 +80,7 @@ private func passengerRoutePrecedes(_ lhs: PassengerRoute, _ rhs: PassengerRoute
     return passengerRouteOrderPrecedes(left, right)
 }
 
-private func passengerMinutesRoundingUp(_ value: Int64, by divisor: Int64) -> Int64 {
+func passengerMinutesRoundingUp(_ value: Int64, by divisor: Int64) -> Int64 {
     guard value > 0 else { return 0 }
     return 1 + (value - 1) / divisor
 }
@@ -112,6 +120,7 @@ private struct PassengerRouteLabel {
     let ride: Int64
     let wait: Int64
     let transfer: Int64
+    let walk: Int64
     let changes: Int
     let order: [PassengerRouteOrderLeg]
     let previous: Int?
@@ -119,11 +128,6 @@ private struct PassengerRouteLabel {
 }
 
 struct PassengerRouteGraph: Equatable {
-    // The Ci snapshot receives transfer minutes from its flow service's
-    // path plan; that service is absent from the reference snapshot. Four
-    // minutes is this first native graph's same-station interchange cost.
-    static let sameStationTransferMinutes: Int64 = 4
-
     struct ServicePath: Equatable {
         let line: LineID
         let pattern: Int?
@@ -132,26 +136,28 @@ struct PassengerRouteGraph: Equatable {
         let runSeconds: [Int64]
         let headway: Int64
         let isRing: Bool
+        /// Passengers its trains carry a day each way (see
+        /// ``PassengerCrowding``); 0 for a hand-built graph.
+        var dailyCapacity: Int64 = 0
     }
 
-    /// A walk from one served station to another near it.
-    struct Walk: Equatable {
-        let to: StationID
-        let minutes: Int64
-    }
+    typealias Walk = PassengerWalk
 
     let paths: [ServicePath]
     let stopsAt: [StationID: [PassengerRouteNode]]
-    /// From each served station, the other served stations a walk away, by
-    /// ascending station.
+    /// From each open served station, the other open served stations a walk
+    /// away, by ascending station.
     let walks: [StationID: [Walk]]
+    /// Served stations where nobody boards, alights or changes (see
+    /// ``StationOperationMode/closed``): trains run through them.
+    let closed: Set<StationID>
 
     /// The calls are derived from the paths.
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.paths == rhs.paths && lhs.walks == rhs.walks
+        lhs.paths == rhs.paths && lhs.walks == rhs.walks && lhs.closed == rhs.closed
     }
 
-    init(paths: [ServicePath], walks: [StationID: [Walk]] = [:]) {
+    init(paths: [ServicePath], walks: [StationID: [Walk]] = [:], closed: Set<StationID> = []) {
         var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
         for path in paths {
@@ -160,6 +166,7 @@ struct PassengerRouteGraph: Equatable {
         self.paths = included
         stopsAt = calls
         self.walks = walks
+        self.closed = closed
     }
 
     init(world: GameWorld) {
@@ -177,6 +184,15 @@ struct PassengerRouteGraph: Equatable {
                 let plans = line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
                                           capacities: Array(capacities.prefix(service + 1))).plans
                 guard let headway = plans[service]?.headway, let journey = journeys[service] else { continue }
+                let assigned = line.trains(ofService: service).compactMap { world.train(id: $0)?.capacity }.max()
+                let anyTrain = (line.trains + line.patterns.flatMap(\.trains)).compactMap { world.train(id: $0)?.capacity }.max()
+                let capacity = PassengerCrowding.dailyCapacity(
+                    window: line.window, day: world.serviceDay,
+                    capacity: assigned ?? anyTrain ?? PassengerCrowding.defaultTrainCapacity
+                ) { level in
+                    line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
+                                  capacities: Array(capacities.prefix(service + 1))).plans[service]?.headway
+                }
                 if line.isRing {
                     for direction in [RingDirection.inner, .outer] {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
@@ -184,7 +200,7 @@ struct PassengerRouteGraph: Equatable {
                         let path = ServicePath(line: line.id, pattern: nil,
                                                direction: direction == .inner ? .outbound : .inbound,
                                                stations: stationIDs, runSeconds: lap.legs.map(\.seconds),
-                                               headway: headway, isRing: true)
+                                               headway: headway, isRing: true, dailyCapacity: capacity)
                         Self.add(path, to: &included, calls: &calls)
                     }
                 } else {
@@ -193,11 +209,11 @@ struct PassengerRouteGraph: Equatable {
                     let forward = ServicePath(line: line.id, pattern: pattern, direction: .outbound,
                                               stations: callIndices.map { line.stops[$0] },
                                               runSeconds: Array(journey.legs.prefix(half).map(\.seconds)),
-                                              headway: headway, isRing: false)
+                                              headway: headway, isRing: false, dailyCapacity: capacity)
                     let backward = ServicePath(line: line.id, pattern: pattern, direction: .inbound,
                                                stations: callIndices.reversed().map { line.stops[$0] },
                                                runSeconds: Array(journey.legs.suffix(half).map(\.seconds)),
-                                               headway: headway, isRing: false)
+                                               headway: headway, isRing: false, dailyCapacity: capacity)
                     Self.add(forward, to: &included, calls: &calls)
                     Self.add(backward, to: &included, calls: &calls)
                 }
@@ -207,10 +223,12 @@ struct PassengerRouteGraph: Equatable {
         stopsAt = calls
         var walks: [StationID: [Walk]] = [:]
         let served = world.stations.filter { calls[$0.id] != nil }.sorted { $0.id < $1.id }
-        for from in served {
-            for to in served where to.id != from.id {
-                if let minutes = GameWorld.walkingTransferMinutes(from: from.point, to: to.point) {
-                    walks[from.id, default: []].append(Walk(to: to.id, minutes: minutes))
+        closed = Set(served.filter { !$0.operationMode.allowsService }.map(\.id))
+        let open = served.filter(\.operationMode.allowsService)
+        for from in open {
+            for to in open where to.id != from.id {
+                if let walk = PassengerWalk(from: from.point, to: to.point, station: to.id) {
+                    walks[from.id, default: []].append(walk)
                 }
             }
         }
@@ -244,7 +262,8 @@ struct PassengerRouteGraph: Equatable {
     /// to whole minutes can favor a later arrival with fewer changes. Exact
     /// metric ties keep the lower full-route line/stop order.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
-        guard let starts = stopsAt[origin], stopsAt[destination] != nil else { return nil }
+        guard let starts = stopsAt[origin], stopsAt[destination] != nil,
+              !closed.contains(origin), !closed.contains(destination) else { return nil }
         var labels: [PassengerRouteLabel] = []
         var frontier: [PassengerRouteState: [Int]] = [:]
         var active: [Bool] = []
@@ -326,7 +345,7 @@ struct PassengerRouteGraph: Equatable {
         for node in starts {
             let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
             offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
-                                      total: wait, ride: 0, wait: wait, transfer: 0,
+                                      total: wait, ride: 0, wait: wait, transfer: 0, walk: 0,
                                       changes: 0, order: [], previous: nil, arrival: .board))
         }
         while let index = popFirst() {
@@ -353,10 +372,15 @@ struct PassengerRouteGraph: Equatable {
                 }
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
                                           total: label.total + seconds, ride: label.ride + seconds,
-                                          wait: label.wait, transfer: label.transfer,
+                                          wait: label.wait, transfer: label.transfer, walk: label.walk,
                                           changes: label.changes, order: order, previous: index,
                                           arrival: .ride(edge, seconds)))
             }
+            // Nobody gets off, changes or walks at a closed station: trains
+            // run through it (the reference's
+            // `metroStationAllowsTrainServiceAtStation`,
+            // `metroStationAllowsTransfer`).
+            guard !closed.contains(station(node)) else { continue }
             let path = paths[node.line]
             if path.isRing && node.stop == path.stations.count - 1 {
                 // The final call is the starting station, but it ends this
@@ -365,7 +389,7 @@ struct PassengerRouteGraph: Equatable {
                 let first = PassengerRouteNode(line: node.line, stop: 0, direction: node.direction)
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: first, onboard: false),
                                           total: label.total + wait, ride: label.ride,
-                                          wait: label.wait + wait, transfer: label.transfer,
+                                          wait: label.wait + wait, transfer: label.transfer, walk: label.walk,
                                           changes: label.changes, order: label.order,
                                           previous: index, arrival: .board))
             }
@@ -373,26 +397,30 @@ struct PassengerRouteGraph: Equatable {
                 guard other.line != node.line else { continue }
                 let sameLine = paths[other.line].line == paths[node.line].line
                 let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
-                let transfer: Int64 = sameLine ? 0 : Self.sameStationTransferMinutes * GameTime.secondsPerMinute
+                // A change of line within a station: the reference's
+                // default transfer type for one station, same-platform.
+                let transfer: Int64 = sameLine ? 0 : PassengerTransferTier.samePlatform.penaltySeconds
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
                                           total: label.total + wait + transfer,
                                           ride: label.ride, wait: label.wait + wait,
-                                          transfer: label.transfer + transfer,
+                                          transfer: label.transfer + transfer, walk: label.walk,
                                           changes: label.changes + (sameLine ? 0 : 1),
                                           order: label.order, previous: index, arrival: .board))
             }
             // A passenger who has just got off may walk to a station near
             // by and wait there for another ride: never at the start of a
-            // journey, nor twice in a row.
+            // journey, nor twice in a row. The walk costs its time and its
+            // tier's transfer penalty (the reference's transfer link,
+            // `isXfer`).
             guard label.state.onboard else { continue }
             for walk in walks[station(node)] ?? [] {
                 for other in stopsAt[walk.to] ?? [] {
                     let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
-                    let transfer = walk.minutes * GameTime.secondsPerMinute
+                    let transfer = walk.tier.penaltySeconds
                     offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
-                                              total: label.total + wait + transfer,
+                                              total: label.total + wait + transfer + walk.seconds,
                                               ride: label.ride, wait: label.wait + wait,
-                                              transfer: label.transfer + transfer,
+                                              transfer: label.transfer + transfer, walk: label.walk + walk.seconds,
                                               changes: label.changes + 1,
                                               order: label.order, previous: index, arrival: .board))
                 }
@@ -436,51 +464,33 @@ struct PassengerRouteGraph: Equatable {
         return (PassengerRoute(legs: legs,
                                rideMinutes: passengerMinutesRoundingUp(labels[endIndex].ride, by: GameTime.secondsPerMinute),
                                waitMinutes: labels[endIndex].wait / GameTime.secondsPerMinute,
-                               transferMinutes: labels[endIndex].transfer / GameTime.secondsPerMinute), edges)
+                               transferSeconds: labels[endIndex].transfer,
+                               walkSeconds: labels[endIndex].walk), edges)
     }
 }
 
 extension GameWorld {
     /// How far apart two stations may stand, at most, for passengers to walk
-    /// between them to change trains: under 450 m, the `Railway/` site's
-    /// transfer rule (`station_transfers.json`, `criteria.maxDistanceM`,
-    /// `haversine_meters < maxDistanceM`), here on the world's plane.
-    public static let walkingTransferMetres: Int64 = 450
+    /// between them to change trains (strictly less):
+    /// ``PassengerTransferRules/maximumWalkMetres``.
+    public static var walkingTransferMetres: Int64 { PassengerTransferRules.maximumWalkMetres }
 
-    /// How fast passengers walk between stations: 80 m a minute. The
-    /// reference has no walking speed; this is the native policy.
-    public static let walkingMetresPerMinute: Int64 = 80
-
-    /// The minutes passengers take to change from a train at `origin` to one
-    /// at `destination`, another station less than
-    /// ``walkingTransferMetres`` away: the same-station change of 4 minutes
-    /// plus the walk between their points at ``walkingMetresPerMinute``,
-    /// rounded up to a whole minute. `nil` for the same station, a station
-    /// that does not exist, or one too far away.
-    public func walkingTransferMinutes(from origin: StationID, to destination: StationID) -> Int64? {
+    /// The walk from station `origin` to `destination`, another station
+    /// less than ``walkingTransferMetres`` away: its time at the
+    /// reference's 5 km/h and its transfer tier (see ``PassengerWalk``).
+    /// `nil` for the same station, a station that does not exist, or one
+    /// too far away. The stations' operation modes are not read: the route
+    /// graph walks only between open stations, and a journey's walk to or
+    /// from a closed one is ended where it is served.
+    public func walkingTransfer(from origin: StationID, to destination: StationID) -> PassengerWalk? {
         guard origin != destination, let from = station(id: origin), let to = station(id: destination) else { return nil }
-        return Self.walkingTransferMinutes(from: from.point, to: to.point)
-    }
-
-    /// The same between two points, exactly on the squared distance.
-    static func walkingTransferMinutes(from origin: PlanPoint, to destination: PlanPoint) -> Int64? {
-        let dx = origin.x - destination.x
-        let dy = origin.y - destination.y
-        let squared = dx * dx + dy * dy
-        let limit = walkingTransferMetres * WorldCoordinate.unitsPerMetre
-        guard squared < limit * limit else { return nil }
-        let perMinute = walkingMetresPerMinute * WorldCoordinate.unitsPerMetre
-        var minutes: Int64 = 0
-        while (minutes * perMinute) * (minutes * perMinute) < squared {
-            minutes += 1
-        }
-        return PassengerRouteGraph.sameStationTransferMinutes + minutes
+        return PassengerWalk(from: from.point, to: to.point, station: destination)
     }
 
     /// Whether a journey may go on from `previous` to `next`: from the same
     /// station, or by a walk to a station near by.
     func connects(_ previous: PassengerJourneyLeg, to next: PassengerJourneyLeg) -> Bool {
-        previous.to == next.from || walkingTransferMinutes(from: previous.to, to: next.from) != nil
+        previous.to == next.from || walkingTransfer(from: previous.to, to: next.from) != nil
     }
 
     /// Up to three distinct service paths between two stations, in ascending
@@ -575,5 +585,141 @@ struct PassengerRouteMemo: Equatable, Sendable {
         guard self.graph != graph else { return }
         self.graph = graph
         choices = [:]
+    }
+}
+
+/// Every constant of changing trains (Phase 5F), in one place so that a
+/// balance change is a one-line edit. Each is ported from the owner's `Ci/`
+/// reference (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`) or
+/// the `Railway/` site, cited where it is defined.
+///
+/// Two different things are made from them:
+///
+/// - The **perceived cost** of a change in route choice: the transfer
+///   penalty of its tier (``PassengerTransferTier/penaltySeconds``, 12
+///   minutes for a change of line at one station) plus, for a change
+///   between stations, the walk. Passengers weigh routes by it; it never
+///   delays anyone.
+/// - The **actual delay** before a passenger who changed may board:
+///   ``minimumChangeSeconds`` or the walk, whichever is longer (none for
+///   another train of the same line at the same station).
+public enum PassengerTransferRules {
+    /// The transfer base the tier factors multiply: 15 minutes (`换乘基准`,
+    /// `r = 15` in `metroDebugCompareCentralToAirportTimings`, "the same as
+    /// the flow service's default").
+    public static let baseSeconds: Int64 = 900
+
+    /// The tier factors, in tenths of ``baseSeconds``: the reference's
+    /// `{overlap: .8, "same-platform": .8, passage: 1.2, virtual: 1.7}`
+    /// (`metroDebugCompareCentralToAirportTimings`).
+    public static let overlapFactorTenths: Int64 = 8
+    public static let samePlatformFactorTenths: Int64 = 8
+    public static let passageFactorTenths: Int64 = 12
+    public static let virtualFactorTenths: Int64 = 17
+
+    /// The tiers' distance limits, inclusive: `MOVE_TRANSFER_OVERLAP_MAX_M`
+    /// = 20, `MOVE_TRANSFER_SAME_PLATFORM_MAX_M` = 50 and
+    /// `MOVE_TRANSFER_PASSAGE_MAX_M` = 250 (`_classifyMoveTransferDistance`);
+    /// farther is `virtual`.
+    public static let overlapMaximumMetres: Int64 = 20
+    public static let samePlatformMaximumMetres: Int64 = 50
+    public static let passageMaximumMetres: Int64 = 250
+
+    /// Stations strictly closer than this walk to each other: 450 m, the
+    /// `Railway/` site's transfer rule
+    /// (`Railway/site_archive_clean/data/station_transfers.json`,
+    /// `criteria.maxDistanceM`, `haversine_meters < maxDistanceM`), here on
+    /// the world's plane. (The `Ci/` reference links stations beyond a
+    /// passage only through a transfer group the player sets up; game
+    /// stations have none.)
+    public static let maximumWalkMetres: Int64 = 450
+
+    /// Walking speed between stations: 5 km/h (`metroNavigationTransfers`,
+    /// `haversine / (5e3 / 3600)`; `n = 5` in
+    /// `metroDebugCompareCentralToAirportTimings`, "the same as the flow
+    /// service's default").
+    public static let walkingMetresPerHour: Int64 = 5_000
+
+    /// The least time between getting off one train and boarding another
+    /// line's, walk included: `METRO_NAVIGATION_MIN_TRANSFER_SEC` = 120.
+    /// The actual delay; never part of the perceived cost.
+    public static let minimumChangeSeconds: Int64 = 120
+}
+
+/// A change of trains' transfer type by distance (Phase 5F, see
+/// ``PassengerTransferRules``): `_classifyMoveTransferDistance` and the
+/// classifier of `metroDebugCompareCentralToAirportTimings`. A change
+/// between lines at one station is the reference's default type for one
+/// station, ``samePlatform``.
+public enum PassengerTransferTier: String, CaseIterable, Sendable {
+    case overlap
+    case samePlatform
+    case passage
+    case virtual
+
+    /// The tier's transfer penalty, a perceived route-choice cost only:
+    /// ``PassengerTransferRules/baseSeconds`` times the tier's factor,
+    /// exactly in seconds (720, 720, 1080 and 1530 with the reference's
+    /// values).
+    public var penaltySeconds: Int64 {
+        let tenths = switch self {
+        case .overlap: PassengerTransferRules.overlapFactorTenths
+        case .samePlatform: PassengerTransferRules.samePlatformFactorTenths
+        case .passage: PassengerTransferRules.passageFactorTenths
+        case .virtual: PassengerTransferRules.virtualFactorTenths
+        }
+        return PassengerTransferRules.baseSeconds * tenths / 10
+    }
+
+    /// The tier of stations `squaredDistance` world units² apart, or `nil`
+    /// when they are too far apart to walk
+    /// (``PassengerTransferRules/maximumWalkMetres`` or more).
+    static func of(squaredDistance: Int64) -> PassengerTransferTier? {
+        func within(_ metres: Int64) -> Bool {
+            let units = metres * WorldCoordinate.unitsPerMetre
+            return squaredDistance <= units * units
+        }
+        let farthest = PassengerTransferRules.maximumWalkMetres * WorldCoordinate.unitsPerMetre
+        guard squaredDistance < farthest * farthest else { return nil }
+        if within(PassengerTransferRules.overlapMaximumMetres) { return .overlap }
+        if within(PassengerTransferRules.samePlatformMaximumMetres) { return .samePlatform }
+        if within(PassengerTransferRules.passageMaximumMetres) { return .passage }
+        return .virtual
+    }
+
+    /// The walk across `squaredDistance` world units² at
+    /// ``PassengerTransferRules/walkingMetresPerHour``, in whole seconds
+    /// rounded up (5 km/h: 0.72 s a metre, 9/800 s a world unit).
+    static func walkSeconds(squaredDistance: Int64) -> Int64 {
+        var units = FixedPoint.squareRoot(squaredDistance)
+        if units * units < squaredDistance { units += 1 }
+        let perHour = PassengerTransferRules.walkingMetresPerHour * WorldCoordinate.unitsPerMetre
+        let numerator = units * GameTime.secondsPerHour
+        return (numerator + perHour - 1) / perHour
+    }
+}
+
+/// A walk from a station to another one nearby, to change trains there
+/// (Phase 5F): how long it takes and its transfer tier. Derived from the
+/// stations' points; never saved.
+public struct PassengerWalk: Hashable, Sendable {
+    /// The station walked to.
+    public let to: StationID
+    /// The walk at ``PassengerTransferRules/walkingMetresPerHour``, in
+    /// whole seconds rounded up.
+    public let seconds: Int64
+    public let tier: PassengerTransferTier
+
+    /// The walk from `origin` to `destination`, the point of station
+    /// `station`, or `nil` if they stand ``GameWorld/walkingTransferMetres``
+    /// or more apart. Exact on the squared distance.
+    init?(from origin: PlanPoint, to destination: PlanPoint, station: StationID) {
+        let dx = origin.x - destination.x
+        let dy = origin.y - destination.y
+        let squared = dx * dx + dy * dy
+        guard let tier = PassengerTransferTier.of(squaredDistance: squared) else { return nil }
+        to = station
+        seconds = PassengerTransferTier.walkSeconds(squaredDistance: squared)
+        self.tier = tier
     }
 }

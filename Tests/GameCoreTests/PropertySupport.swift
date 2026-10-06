@@ -363,10 +363,19 @@ enum WorldInvariants {
         if stations != stations.sorted() || Set(stations).count != stations.count {
             problems.append("passenger records not by ascending station")
         }
+        // Network routing (Phase 5F): a group changing trains waits at
+        // another station, and its original station counts it.
+        var waitingFrom: [StationID: Int64] = [:]
+        for record in world.passengers {
+            for group in record.waiting {
+                waitingFrom[group.journey?.origin ?? record.station, default: 0] += group.count
+            }
+        }
         for record in world.passengers {
             let id = record.station.rawValue
             if world.station(id: record.station) == nil { problems.append("passengers at station \(id), which does not exist") }
-            let waiting = record.waiting.reduce(Int64(0)) { $0 + $1.count }
+            let held = record.waiting.reduce(Int64(0)) { $0 + $1.count }
+            let waiting = waitingFrom[record.station] ?? 0
             let ledger = world.passengerLedger(of: record.station)
             if ledger.waiting != waiting { problems.append("station \(id) counts \(ledger.waiting) waiting in \(waiting)") }
             // Decision 35: and those riding or arrived.
@@ -376,14 +385,22 @@ enum WorldInvariants {
                 || ledger.overflowed < 0 || ledger.abandoned < 0 || ledger.arrived < 0 || ledger.refused < 0 {
                 problems.append("station \(id) does not account for its passengers: \(ledger)")
             }
-            if waiting > StationPassengers.capacity { problems.append("station \(id) holds \(waiting) waiting") }
-            if record.demand == nil, record.released == 0, record.remainders.isEmpty { problems.append("station \(id) keeps an empty record") }
+            if held > StationPassengers.capacity { problems.append("station \(id) holds \(held) waiting") }
+            if record.demand == nil, record.released == 0, record.remainders.isEmpty, record.waiting.isEmpty {
+                problems.append("station \(id) keeps an empty record")
+            }
+            // Journeys may share a minute and a destination on different
+            // routes; direct trips never do.
             for (earlier, later) in zip(record.waiting, record.waiting.dropFirst())
-            where later.since < earlier.since || (later.since == earlier.since && later.destination <= earlier.destination) {
+            where later.since < earlier.since || (later.since == earlier.since && (later.destination < earlier.destination
+                || later.destination == earlier.destination && later.journey == nil && earlier.journey == nil)) {
                 problems.append("station \(id) queue out of order")
             }
             for group in record.waiting {
                 if group.count < 1 || group.since >= world.clock.now { problems.append("station \(id) has a group \(group)") }
+                // A journey's leg is checked by GameCore's own validation
+                // (patterns and rings included).
+                if group.journey != nil { continue }
                 let line = world.lines.first { $0.id == group.line }
                 let from = line?.stops.firstIndex(of: record.station)
                 let to = line?.stops.firstIndex(of: group.destination)
@@ -417,7 +434,10 @@ enum WorldInvariants {
                 continue
             }
             let pairs = entry.groups.map { [$0.origin.rawValue, $0.destination.rawValue] }
-            if entry.groups.isEmpty || pairs != pairs.sorted(by: { $0.lexicographicallyPrecedes($1) }) || Set(pairs).count != pairs.count {
+            // Network routing (Phase 5F): one pair may ride on different
+            // journeys, each once.
+            let identities = Set(entry.groups.map { RidingGroup(origin: $0.origin, destination: $0.destination, count: 1, journey: $0.journey) })
+            if entry.groups.isEmpty || pairs != pairs.sorted(by: { $0.lexicographicallyPrecedes($1) }) || identities.count != pairs.count {
                 problems.append("train \(id) riders not listed once each by origin and destination")
             }
             let total = entry.groups.reduce(Int64(0)) { $0 + $1.count }

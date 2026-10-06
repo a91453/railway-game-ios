@@ -83,8 +83,13 @@ struct LinesPanel: View {
                 get: { session.world.isTrafficControlEnabled },
                 set: { session.setTrafficControl($0) }
             ))
+            Toggle("Network passenger routes", isOn: Binding(
+                get: { session.world.passengerRoutingMode == .network },
+                set: { session.setPassengerRoutingMode($0 ? .network : .direct) }
+            ))
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
+            Text("With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations.")
         }
     }
 

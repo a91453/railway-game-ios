@@ -20,6 +20,16 @@
       }
     },
 
+    "Network passenger routes" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跨線乘客路徑"
+          }
+        }
+      }
+    },
     "Unfollow" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2426,6 +2436,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟時，列車出發前會預約整條進路，其他列車要等它讓出進路。"
+          }
+        }
+      }
+    },
+    "With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟後，乘客會轉乘其他線路，也會步行到附近的車站；關閉時只搭兩站都停靠的線路。"
           }
         }
       }

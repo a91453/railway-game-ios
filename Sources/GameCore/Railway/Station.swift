@@ -30,6 +30,10 @@ public struct Station: Identifiable, Hashable, Sendable {
     public internal(set) var name: String
     /// Where the station stands.
     public let point: PlanPoint
+    /// Whether passengers may enter, change and leave here (Phase 5F, see
+    /// ``StationOperationMode``). Set by
+    /// ``GameWorld/setStationOperationMode(_:to:)`` only.
+    public internal(set) var operationMode: StationOperationMode = .normalFlow
 
     /// A station standing at `point`.
     ///
@@ -49,7 +53,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point
+        case id, name, position, annexes, point, operationMode
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -77,6 +81,17 @@ extension Station: Codable {
             )
         }
         self.init(id: id, name: name, point: point)
+        // A station written without an operation mode (every save before
+        // Phase 5F's station modes, and every open station since) is open.
+        operationMode = try container.decodeIfPresent(StationOperationMode.self, forKey: .operationMode) ?? .normalFlow
+        // Only a station not run normally is written with a mode, so a save
+        // has one form (the rule #157's stationOperations list kept too).
+        if container.contains(.operationMode), operationMode == .normalFlow {
+            throw DecodingError.dataCorruptedError(
+                forKey: .operationMode, in: container,
+                debugDescription: "Station \(id.rawValue) is written with \"normalFlow\", which a save leaves out."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -84,5 +99,34 @@ extension Station: Codable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(point, forKey: .point)
+        // Written only when not open, so a save keeps its earlier form.
+        if operationMode != .normalFlow {
+            try container.encode(operationMode, forKey: .operationMode)
+        }
     }
+}
+
+/// A station's operation mode (Phase 5F), ported from the owner's `Ci/`
+/// reference (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`:
+/// `applyStationOperationToStation` accepts exactly these three values, and
+/// a station without one is `"normalFlow"`):
+///
+/// - ``normalFlow``: passengers enter, change and leave as usual.
+/// - ``flowControl``: no new passengers enter here
+///   (`metroStationAllowsEntryForLine` is true only for `normalFlow`), but
+///   trains still serve it and passengers still change here and arrive.
+/// - ``closed``: no passenger boards, alights, changes or arrives here
+///   (`metroStationAllowsTrainServiceAtStation`, `metroStationAllowsTransfer`
+///   and `metroStationAllowsPassengerDestination` are false), and those
+///   waiting here leave when it closes (`clearStationWaitingPassengers`).
+public enum StationOperationMode: String, Codable, CaseIterable, Sendable {
+    case normalFlow
+    case flowControl
+    case closed
+
+    /// Whether new passengers may set out from the station.
+    public var allowsEntry: Bool { self == .normalFlow }
+
+    /// Whether passengers may board, alight, change or arrive here.
+    public var allowsService: Bool { self != .closed }
 }
