@@ -351,4 +351,39 @@ final class RealRailwaysTests: XCTestCase {
             "依政府資料開放授權條款第 1 版使用。"
         )
     }
+
+    func testTheBundledRealRailwaysWithOperationalData() throws {
+        let stationData = try RealStationData(
+            classes: Self.bundledFile("tra_station_class.json"),
+            infos: Self.bundledFile("tra_station_info.json"),
+            codes: Self.bundledFile("trtc_codes.json"),
+            platforms: Self.bundledFile("tra_platforms.json"),
+            sections: Self.bundledFile("tra_track_sections.json")
+        )
+        let operations = try RealRailwayOperations(
+            systems: [
+                "tra": Self.bundledFile("tra.json"),
+                "trtc": Self.bundledFile("trtc.json"),
+                "krtc": Self.bundledFile("krtc.json"),
+                "tymc": Self.bundledFile("tymc.json"),
+                "afr": Self.bundledFile("afr.json"),
+                "tmrt": Self.bundledFile("tmrt.json"),
+                "ntdlrt": Self.bundledFile("ntdlrt.json"),
+                "ntalrt": Self.bundledFile("ntalrt.json"),
+                "sanying": Self.bundledFile("sanying.json"),
+            ]
+        )
+        let railways = try RealRailways(
+            lines: Self.bundledFile("track_lines.geojson"),
+            stations: Self.bundledFile("track_stations.geojson"),
+            names: Self.bundledFile("station_names.json"),
+            stationData: stationData,
+            operations: operations
+        )
+
+        XCTAssertNotNil(railways.stationData)
+        XCTAssertNotNil(railways.operations)
+        XCTAssertEqual(railways.stationData?.stationClass(forStation: "台北"), .special)
+        XCTAssertEqual(railways.operations?.headway(forLine: "BR", inSystem: "trtc", peak: true), 120)
+    }
 }

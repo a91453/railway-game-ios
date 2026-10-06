@@ -31,6 +31,7 @@ struct RailwayGameApp: App {
         let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
         launcher.population = bundledPopulation()
         launcher.places = bundledPlaces()
+        launcher.railways = RealRailways.bundled
         #if DEBUG
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).

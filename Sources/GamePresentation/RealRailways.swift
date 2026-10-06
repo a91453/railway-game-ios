@@ -42,6 +42,18 @@ public struct RealRailways: Sendable {
             self.latitude = latitude
             self.longitude = longitude
         }
+
+        /// Distance to another coordinate in metres (Haversine formula).
+        public func distance(to other: Coordinate) -> Double {
+            let earthRadius = 6_378_137.0
+            let lat1 = latitude * .pi / 180
+            let lat2 = other.latitude * .pi / 180
+            let deltaLat = (other.latitude - latitude) * .pi / 180
+            let deltaLon = (other.longitude - longitude) * .pi / 180
+            let a = sin(deltaLat / 2) * sin(deltaLat / 2) + cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
+            let c = 2 * atan2(sqrt(a), sqrt(max(0, 1 - a)))
+            return earthRadius * c
+        }
     }
 
     /// A colour as the site writes it, `#RRGGBB`.
@@ -277,8 +289,8 @@ public struct RealRailways: Sendable {
     /// each system, in the site's order.
     public struct Station: Identifiable, Hashable, Sendable {
         public let system: System
-        let chinese: String
-        let english: String?
+        public let chinese: String
+        public let english: String?
         public let coordinate: Coordinate
         public let palette: Palette
 
@@ -321,10 +333,20 @@ public struct RealRailways: Sendable {
     public let stationMarks: [StationMark]
     /// Every station once in each system, in the site's order.
     public let stations: [Station]
+    /// Real station operational metadata (classes, IDs, addresses, platforms, TRTC codes, track sections).
+    public let stationData: RealStationData?
+    /// Real system and line operational parameters (headways, dwell times, station sequences, timetables).
+    public let operations: RealRailwayOperations?
 
     /// The railways in the site's `track_lines.geojson`,
     /// `track_stations.geojson` and `i18n/stations.json`.
-    public init(lines linesFile: Data, stations stationsFile: Data, names namesFile: Data) throws {
+    public init(
+        lines linesFile: Data,
+        stations stationsFile: Data,
+        names namesFile: Data,
+        stationData: RealStationData? = nil,
+        operations: RealRailwayOperations? = nil
+    ) throws {
         let decoder = JSONDecoder()
         let lineFeatures = try decoder.decode(FeatureCollection<LineProperties, LineGeometry>.self, from: linesFile).features
         let stationFeatures = try decoder.decode(FeatureCollection<StationProperties, PointGeometry>.self, from: stationsFile).features
@@ -366,6 +388,8 @@ public struct RealRailways: Sendable {
             ))
         }
         self.stations = stations
+        self.stationData = stationData
+        self.operations = operations
     }
 
     /// The lines that come within `metres` of `anchor`.
@@ -501,5 +525,32 @@ extension RealRailways {
         }
 
         let systems: [String: [String: Name]]
+    }
+}
+
+extension RealRailways {
+    /// The station nearest to `coordinate`, if one lies within `maximumDistanceMetres`.
+    public func nearestStation(to coordinate: Coordinate, maximumDistanceMetres: Double? = nil) -> (station: Station, distanceMetres: Double)? {
+        var best: (station: Station, distanceMetres: Double)?
+        for s in stations {
+            let dist = coordinate.distance(to: s.coordinate)
+            if let maxDist = maximumDistanceMetres, dist > maxDist { continue }
+            if best == nil || dist < best!.distanceMetres {
+                best = (s, dist)
+            }
+        }
+        return best
+    }
+
+    /// The stations near `coordinate`, sorted from nearest to furthest.
+    public func nearbyStations(to coordinate: Coordinate, maximumDistanceMetres: Double? = nil) -> [(station: Station, distanceMetres: Double)] {
+        var result: [(station: Station, distanceMetres: Double)] = []
+        for s in stations {
+            let dist = coordinate.distance(to: s.coordinate)
+            if let maxDist = maximumDistanceMetres, dist > maxDist { continue }
+            result.append((s, dist))
+        }
+        result.sort { $0.distanceMetres < $1.distanceMetres }
+        return result
     }
 }

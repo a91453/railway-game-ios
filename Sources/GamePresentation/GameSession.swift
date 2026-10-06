@@ -127,6 +127,10 @@ public final class GameSession {
     /// bundled grid, set by the launcher; never saved.
     @ObservationIgnored public var places: PlaceGrid?
 
+    /// Taiwan's real railways (stations and lines) for real-world maps.
+    /// Handed to each session by the launcher; never saved.
+    @ObservationIgnored public var railways: RealRailways?
+
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?
@@ -877,9 +881,32 @@ public final class GameSession {
     }
 
     /// "Station N" (or "車站 N") with the lowest N from the next station
-    /// number upward that no existing station uses.
-    static func suggestedStationName(for world: GameWorld, in language: DisplayLanguage) -> String {
-        suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: Set(world.stations.map(\.name)))
+    /// number upward that no existing station uses. On a real-world map,
+    /// suggests the nearest real railway station's name if within range
+    /// and not yet taken.
+    nonisolated public static func suggestedStationName(
+        for world: GameWorld,
+        at location: PlanPoint? = nil,
+        in language: DisplayLanguage,
+        railways: RealRailways? = nil,
+        maximumDistanceMetres: Double = 5_000
+    ) -> String {
+        let taken = Set(world.stations.map(\.name))
+        let activeRailways = railways
+        if let location,
+           let activeRailways,
+           let frame = RealWorldFrame(world: world) {
+            let coord = frame.coordinate(worldX: Double(location.x), worldY: Double(location.y))
+            let point = RealRailways.Coordinate(latitude: coord.latitude, longitude: coord.longitude)
+            let candidates = activeRailways.nearbyStations(to: point, maximumDistanceMetres: maximumDistanceMetres)
+            for candidate in candidates {
+                let name = candidate.station.name(in: language)
+                if !taken.contains(name) {
+                    return name
+                }
+            }
+        }
+        return suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: taken)
     }
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number
@@ -896,7 +923,7 @@ public final class GameSession {
 
     /// "`prefix` N" with the lowest N from `first` upward that is not in
     /// `taken`.
-    private static func suggestedName(_ prefix: String, from first: Int, taken: Set<String>) -> String {
+    nonisolated private static func suggestedName(_ prefix: String, from first: Int, taken: Set<String>) -> String {
         var number = first
         while taken.contains("\(prefix) \(number)") {
             number += 1
