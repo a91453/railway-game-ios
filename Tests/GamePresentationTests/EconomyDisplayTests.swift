@@ -154,6 +154,23 @@ final class EconomyDisplayTests: XCTestCase {
         }
     }
 
+    /// Interest is paid only by a managed company: a company with a loan
+    /// must repay it before free play, or the loan would cost nothing.
+    @MainActor
+    func testACompanyWithALoanCannotSwitchToFreePlay() throws {
+        let session = GameSession(world: GameWorld.newGame())
+        session.borrowLoanStep()
+        let borrowed = session.world
+        session.setEconomyMode(.free)
+        XCTAssertEqual(session.world, borrowed, "refused")
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.message?.text,
+                       "The company still owes $ 100,000. Free play pays no interest, so repay the loan before switching.")
+        session.repayLoanStep()
+        session.setEconomyMode(.free)
+        XCTAssertEqual(session.world.accounts.mode, .free)
+    }
+
     /// Alpha(1,0) Beta(3,0) Gamma(5,0) beside a line of the track network
     /// from (0,1) to (6,1) (see `TestLine`), line Main calling at all
     /// three, one train of one car running it all day.

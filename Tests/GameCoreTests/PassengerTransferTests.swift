@@ -414,6 +414,15 @@ final class PassengerTransferTests: XCTestCase {
             entry["weights"] = [1, 1]
             entry["balances"] = [0, 0]
         }
+        // A next ride that starts out of walking reach of the last.
+        try rejects { entry in
+            var journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
+            var legs = try XCTUnwrap(journeys[0]["legs"] as? [[String: Any]])
+            guard legs.count == 2 else { return XCTFail("A to C changes at B") }
+            legs[1]["from"] = 99
+            journeys[0]["legs"] = legs
+            entry["journeys"] = journeys
+        }
     }
 }
 

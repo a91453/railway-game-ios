@@ -404,7 +404,9 @@ public final class GameSession {
     ///
     /// A company in the red cannot switch: building still costs money in
     /// free play, which has no income, so a negative balance could never be
-    /// built out of and the switch cannot be undone.
+    /// built out of and the switch cannot be undone. Nor can a company with
+    /// a loan: interest is paid only by a managed company (decision 67), so
+    /// the loan would become money it never pays for.
     public func setEconomyMode(_ mode: EconomyMode) {
         guard mode != world.accounts.mode else { return }
         guard mode == .free else {
@@ -418,6 +420,13 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: language.text(
                 "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game.",
                 "公司目前虧損。自由模式沒有收入，蓋東西仍要花錢，切過去就什麼都蓋不了。請先讓餘額回到零以上，或開新遊戲。"
+            ))
+            return
+        }
+        guard world.accounts.loan == .zero else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "The company still owes \(world.accounts.loan.moneyText). Free play pays no interest, so repay the loan before switching.",
+                "公司仍有 \(world.accounts.loan.moneyText) 貸款。自由模式不付利息，請先還清貸款再切換。"
             ))
             return
         }

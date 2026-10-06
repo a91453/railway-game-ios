@@ -790,7 +790,10 @@ extension GameWorld {
                   balance.weights.count == balance.journeys.count,
                   balance.balances.count == balance.journeys.count,
                   balance.weights.allSatisfy({ (1...10_000).contains($0) }),
-                  balance.journeys.allSatisfy({ $0.current == 0 && $0.origin == balance.origin && $0.destination == balance.destination })
+                  balance.journeys.allSatisfy({ $0.current == 0 && $0.origin == balance.origin && $0.destination == balance.destination }),
+                  // Each next ride starts where the last ends, or a walk
+                  // away, as for those riding and waiting.
+                  balance.journeys.allSatisfy({ zip($0.legs, $0.legs.dropFirst()).allSatisfy(connects) })
             else { return "An OD route balance is invalid." }
             let sum = balance.weights.reduce(Int64(0), +)
             guard balance.balances.allSatisfy({ (-sum...sum).contains($0) }),
