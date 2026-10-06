@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -8,6 +9,36 @@ import XCTest
 /// fares are charged. Its stations share platforms on several tracks and
 /// levels, round Central and a double ring.
 final class DemoWorldTests: XCTestCase {
+    /// Phase 5F: a new game routes passengers over the whole network, so on
+    /// the demo they change between Line 1, Line 2 and the ring.
+    func testNewGamesRoutePassengersOverTheNetworkAndTheyChangeTrains() throws {
+        XCTAssertEqual(GameWorld.newGame().passengerRoutingMode, .network)
+        var world = DemoWorld.make(in: .english)
+        XCTAssertEqual(world.passengerRoutingMode, .network)
+        let west = try XCTUnwrap(world.stations.first { $0.name == "West" }).id
+        let north = try XCTUnwrap(world.stations.first { $0.name == "North" }).id
+        // West is on Line 1 and the ring, North on Line 2 and the ring: no
+        // single line of the two crossing ones takes West to North, but the
+        // ring or a change at Central does.
+        XCTAssertFalse(world.passengerRoutes(from: west, to: north).isEmpty)
+        var changed = false
+        for _ in 0..<240 {
+            try world.advance(ticks: 1)
+            if world.passengers.contains(where: { record in
+                record.waiting.contains { ($0.journey?.current ?? 0) > 0 }
+            }) {
+                changed = true
+                break
+            }
+        }
+        XCTAssertTrue(changed, "Some passengers wait to change trains")
+        for station in world.stations {
+            let ledger = world.passengerLedger(of: station.id)
+            XCTAssertEqual(ledger.released, ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned)
+        }
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     func testTheDemoMapIsBuiltOnTheNetworkWithStationsAtPoints() throws {
         let world = DemoWorld.make(in: .english)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])

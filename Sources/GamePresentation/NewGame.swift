@@ -3,9 +3,10 @@ import GameCore
 extension GameWorld {
     /// The world a new game starts with: ``newGameBounds``, 16.384 km a
     /// side, running at 600× (`normal`), with traffic control on (Phase 4.6
-    /// Stage T): trains take their whole route before they leave, and a
+    /// Stage T): trains take their whole route before they leave, a
     /// managed company (G1c) in a city whose fare baseline is the standard
-    /// fare. GameCore's own new worlds start with both off and the
+    /// fare, and passengers routed over the whole network (Phase 5F).
+    /// GameCore's own new worlds start with all three off and the
     /// reference's default city.
     ///
     /// A blank map, or with `anchor` a real-world map with its middle there
@@ -27,6 +28,11 @@ extension GameWorld {
             // 46): trips pay it until the player sets fares, and setting
             // the same fare keeps their demand.
             try world.setFareBaseline(FareRules.standardFare)
+            // Phase 5F: passengers choose a route over the whole network,
+            // changing trains at a station or walking to one near by
+            // (the reference's global OD paths). Saves of earlier games
+            // keep their direct trips.
+            world.setPassengerRoutingMode(.network)
             world.setGeoAnchor(anchor)
             return world
         } catch {

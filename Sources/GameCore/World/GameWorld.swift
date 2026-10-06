@@ -60,6 +60,10 @@ public struct GameWorld: Equatable, Sendable {
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
     var passengerPlan = PassengerPlanCache()
+    /// The network route choices the last plan used, kept while the derived
+    /// route graph stays the same; not game state (see
+    /// ``PassengerRouteMemo``).
+    var passengerRouteMemo = PassengerRouteMemo()
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).

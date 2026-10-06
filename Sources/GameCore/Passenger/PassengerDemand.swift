@@ -154,7 +154,8 @@ extension GameWorld {
                   journey.leg.line == group.line,
                   journey.leg.direction == group.direction,
                   journey.leg.to == group.destination else { return false }
-            return journey.legs.dropFirst(journey.current).allSatisfy(check ?? isServed)
+            let pending = journey.legs.dropFirst(journey.current)
+            return pending.allSatisfy(check ?? isServed) && zip(pending, pending.dropFirst()).allSatisfy(connects)
         }
         return Self.trip(on: line, from: station, to: group.destination) == group.trip
     }
@@ -196,11 +197,12 @@ extension GameWorld {
     func dailyDemand(from origin: StationID) -> [(destination: StationID, trips: Int64, trip: PassengerTrip)] {
         guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
+        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
         for record in passengers {
             guard let weight = record.demand?.dailyTrips, weight > 0 else { continue }
             let trip: PassengerTrip?
             if passengerRoutingMode == .network {
-                if let leg = passengerRouteChoices(from: origin, to: record.station).first?.route.legs.first {
+                if let leg = passengerRouteChoices(from: origin, to: record.station, graph: graph).first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
                 } else {
                     trip = nil
@@ -306,7 +308,14 @@ extension GameWorld {
     /// ``hourlyDemand(from:to:)``, which it agrees with), looking each
     /// line's first calls up once.
     func makePassengerPlan() -> PassengerPlan? {
-        if passengerRoutingMode == .network { return makeNetworkPassengerPlan() }
+        var memo = PassengerRouteMemo()
+        return makePassengerPlan(memo: &memo)
+    }
+
+    /// The same, reusing and extending `memo`'s route choices in a network
+    /// game.
+    func makePassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
+        if passengerRoutingMode == .network { return makeNetworkPassengerPlan(memo: &memo) }
         let firstCalls = lines.map { line in
             var calls: [StationID: Int] = [:]
             for (index, stop) in line.stops.enumerated() where calls[stop] == nil {
@@ -342,14 +351,18 @@ extension GameWorld {
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
     }
 
-    private func makeNetworkPassengerPlan() -> PassengerPlan? {
+    private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
+        let graph = PassengerRouteGraph(world: self)
+        memo.use(graph)
         for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other -> (StationPassengers, [PassengerPlan.Choice])? in
-                let options = passengerRouteChoices(from: record.station, to: other.station)
+                let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
+                let options = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
+                memo.choices[pair] = options
                 let choices = options.compactMap { choice -> PassengerPlan.Choice? in
                     guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { return nil }
                     return PassengerPlan.Choice(journey: journey, weight: choice.weight)
@@ -381,7 +394,7 @@ extension GameWorld {
     /// has trips; works the plan out first if no current one is kept.
     mutating func passengerRelease() -> PassengerRelease? {
         if passengerPlan.plan == nil {
-            passengerPlan.plan = .some(makePassengerPlan())
+            passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
         var remainders = Array(repeating: Int64(0), count: plan.flows.count)
