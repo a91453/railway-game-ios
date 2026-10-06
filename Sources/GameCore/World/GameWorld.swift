@@ -436,8 +436,11 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// Closing a station sends everyone waiting there away, counted as
     /// abandoned at their original station (the reference's
-    /// `clearStationWaitingPassengers`), and so does any waiting journey
-    /// still to board, change or arrive at a closed station. Passengers on
+    /// `clearStationWaitingPassengers`), and so does any journey waiting
+    /// elsewhere that still has to board, change or arrive at a closed
+    /// station. The reference's automatic modes after the last train
+    /// (`metroComputeStationAutoOperationMode`) are not ported: only the
+    /// player sets the mode. Passengers on
     /// board stay on their train; nobody gets off at a closed station. The
     /// new mode changes the passengers released from now on.
     ///
@@ -449,6 +452,9 @@ public struct GameWorld: Equatable, Sendable {
         if mode == .closed {
             abandonPassengers(waitingAt: id)
         }
+        // Forgets the release plan (the next release follows the new mode),
+        // and sends away every waiting journey elsewhere that still needs
+        // to board, change or arrive here.
         abandonUnservedPassengers()
     }
 

@@ -345,6 +345,20 @@ final class PassengerTransferTests: XCTestCase {
         try assertConservedAndSaveable(world)
     }
 
+    /// Nobody changes trains at a closed station (the reference's
+    /// `metroStationAllowsTransfer`): B is where the lines meet.
+    func testNoOneChangesTrainsAtAClosedStation() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.setStationOperationMode(b, to: .closed)
+        XCTAssertEqual(world.passengerRoutes(from: a, to: c), [])
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 0, "their change at B is gone")
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        try world.setStationOperationMode(b, to: .flowControl)
+        XCTAssertFalse(world.passengerRoutes(from: a, to: c).isEmpty, "flow control still lets them change")
+    }
+
     func testInvalidRouteCreditStateIsRejected() throws {
         var world = try world()
         try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))

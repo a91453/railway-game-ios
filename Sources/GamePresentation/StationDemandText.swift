@@ -392,6 +392,19 @@ extension GameSession {
     }
 
     /// The selected station, or `nil` after reporting that there is none.
+    /// Sets how the selected station is run (Phase 5F, the reference's
+    /// `operationMode`) through `GameWorld.setStationOperationMode(_:to:)`:
+    /// normal, flow control (no one enters; passengers still change trains
+    /// and arrive) or closed (those waiting there leave).
+    public func setSelectedStationOperationMode(_ mode: StationOperationMode) {
+        guard let station = requireSelectedStation() else { return }
+        perform { world throws(GameError) in
+            try world.setStationOperationMode(station.id, to: mode)
+            return language.text("\(station.name): \(mode.title(in: .english)).",
+                                 "\(station.name)：\(mode.title(in: .traditionalChinese))。")
+        }
+    }
+
     private func requireSelectedStation() -> Station? {
         guard let station = selectedStation else {
             message = StatusMessage(kind: .failure, text: language.text("Select a station on the map first.", "請先在地圖上選擇車站。"))
@@ -435,6 +448,28 @@ extension GameWorld {
                 "\(title): +\(percent)% demand, \(left) more day\(left == 1 ? "" : "s")",
                 "\(title)：需求 +\(percent)%，還有 \(left) 天"
             )
+        }
+    }
+}
+
+extension StationOperationMode {
+    /// The reference's labels (`metro.station.status.*`: 正常运行, 流量控制,
+    /// 车站关闭), in the game's languages.
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .normalFlow: language.text("Normal", "正常運行")
+        case .flowControl: language.text("Flow control", "流量控制")
+        case .closed: language.text("Closed", "車站關閉")
+        }
+    }
+
+    /// What it means for passengers.
+    public func detail(in language: DisplayLanguage) -> String {
+        switch self {
+        case .normalFlow: language.text("Passengers enter, change trains and arrive.", "乘客可進站、轉乘與到達。")
+        case .flowControl: language.text("No one enters; passengers still change trains and arrive.", "暫停進站；仍可轉乘與到達。")
+        case .closed: language.text("Closed to passengers: trains run through, no one boards, changes or travels to it.",
+                                    "不開放乘客：列車照常通過，不上下車、不轉乘，也沒有人以此為目的地。")
         }
     }
 }

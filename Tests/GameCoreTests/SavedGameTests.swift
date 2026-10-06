@@ -11,12 +11,10 @@ import XCTest
 /// `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private static func currentVersion(of data: Data) -> Data {
-        let current = #""saveVersion" : \#(SavedGame.currentVersion)"#
-        return Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 8"#, with: current)
-            .replacingOccurrences(of: #""saveVersion" : 9"#, with: current)
-            .replacingOccurrences(of: #""saveVersion" : 10"#, with: current)
-            .replacingOccurrences(of: #""saveVersion" : 11"#, with: current).utf8)
+        Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 11"#)
+            .replacingOccurrences(of: #""saveVersion" : 9"#, with: #""saveVersion" : 11"#)
+            .replacingOccurrences(of: #""saveVersion" : 10"#, with: #""saveVersion" : 11"#).utf8)
     }
 
     private func makeWorld() throws -> GameWorld {
@@ -42,7 +40,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 12)
+        XCTAssertEqual(SavedGame.currentVersion, 11)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -62,8 +60,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertNoThrow(try decode(#"{"saveVersion": 12, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 13, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 12, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -503,7 +500,7 @@ final class SavedGameTests: XCTestCase {
         let game = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertTrue(game.world.trains.allSatisfy { $0.trafficVisits.isEmpty })
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(game)) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
+        XCTAssertEqual(object["saveVersion"] as? Int, 11)
     }
 
     func testCorruptActualTrafficVisitsAreRefused() throws {
@@ -545,6 +542,30 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(world.trains[0].movement.remainingEdges.first, .edge(4))
     }
 
+    /// Station operation modes (Phase 5F) need no new save version: a
+    /// station is written with `"operationMode"` only when it is not open,
+    /// and one written without it is open, so every earlier save reads as
+    /// before and a version 11 save keeps a closed station.
+    func testAVersionElevenSaveKeepsAClosedStation() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertTrue(world.stations.allSatisfy { $0.operationMode == .normalFlow })
+        try world.setStationOperationMode(StationID(rawValue: 3), to: .closed)
+        try world.setStationOperationMode(StationID(rawValue: 1), to: .flowControl)
+        let saved = try JSONEncoder().encode(SavedGame(world: world))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 11)
+        let stations = try XCTUnwrap((object["world"] as? [String: Any])?["stations"] as? [[String: Any]])
+        XCTAssertEqual(stations.map { $0["operationMode"] as? String }, ["flowControl", nil, "closed"])
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: saved).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.station(id: StationID(rawValue: 3))?.operationMode, .closed)
+        // Open again, the save is written as before.
+        try world.setStationOperationMode(StationID(rawValue: 3), to: .normalFlow)
+        try world.setStationOperationMode(StationID(rawValue: 1), to: .normalFlow)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(SavedGame(world: world)), as: UTF8.self).contains("operationMode"))
+    }
+
     func testVersionElevenPreservesAWaitingTransferAndOlderSavesStayDirect() throws {
         let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
         var world = try JSONDecoder().decode(SavedGame.self, from: data).world
@@ -560,29 +581,6 @@ final class SavedGameTests: XCTestCase {
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v10-line-route-preferences.json"))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: older).world.passengerRoutingMode, .direct)
-    }
-
-    func testVersionTwelvePreservesAWalkingTransferAndStationModes() throws {
-        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v12-walking-transfer.json"))
-        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        let origin = StationID(rawValue: 1)
-        XCTAssertEqual(world.station(id: origin)?.operationMode, .closed)
-        XCTAssertEqual(world.station(id: StationID(rawValue: 4))?.operationMode, .flowControl)
-        // Got off at B (station 2), walked to B' (station 3) for the next leg.
-        let walked = try XCTUnwrap(world.waitingPassengers(at: StationID(rawValue: 3)).first)
-        XCTAssertEqual(walked.journey?.legs.map(\.to), [StationID(rawValue: 2), StationID(rawValue: 4)])
-        XCTAssertEqual(walked.journey?.legs.map(\.from), [origin, StationID(rawValue: 3)])
-        XCTAssertEqual(walked.journey?.current, 1)
-        XCTAssertEqual(walked.readyAt.map { $0.seconds - walked.since.seconds }, 120)
-        XCTAssertEqual(world.passengerLedger(of: origin).waiting, 5)
-        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self,
-            from: JSONEncoder().encode(SavedGame(world: world))).world, world)
-        try world.advance(ticks: 15)
-        XCTAssertEqual(world.passengerLedger(of: origin).arrived, 5, "a flow-controlled station still receives")
-
-        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
-        XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.stations
-            .allSatisfy { $0.operationMode == .normalFlow })
     }
 
 }

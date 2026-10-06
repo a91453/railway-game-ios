@@ -241,6 +241,16 @@ final class PassengerWalkTransferTests: XCTestCase {
         other["stations"] = list
         modes["world"] = other
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: modes)))
+        // So is an open station written with its mode: a save has one form.
+        list[3]["operationMode"] = "normalFlow"
+        other["stations"] = list
+        modes["world"] = other
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: modes)))
+        list[3]["operationMode"] = nil
+        other["stations"] = list
+        modes["world"] = other
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: modes)).world
+            .station(id: c)?.operationMode, .normalFlow)
     }
 
 }

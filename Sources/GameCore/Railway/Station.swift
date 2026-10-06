@@ -80,9 +80,17 @@ extension Station: Codable {
             )
         }
         self.init(id: id, name: name, point: point)
-        // Saves before version 12 have no operation mode: every station
-        // is open.
+        // A station written without an operation mode (every save before
+        // Phase 5F's station modes, and every open station since) is open.
         operationMode = try container.decodeIfPresent(StationOperationMode.self, forKey: .operationMode) ?? .normalFlow
+        // Only a station not run normally is written with a mode, so a save
+        // has one form (the rule #157's stationOperations list kept too).
+        if container.contains(.operationMode), operationMode == .normalFlow {
+            throw DecodingError.dataCorruptedError(
+                forKey: .operationMode, in: container,
+                debugDescription: "Station \(id.rawValue) is written with \"normalFlow\", which a save leaves out."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -90,6 +98,7 @@ extension Station: Codable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(point, forKey: .point)
+        // Written only when not open, so a save keeps its earlier form.
         if operationMode != .normalFlow {
             try container.encode(operationMode, forKey: .operationMode)
         }

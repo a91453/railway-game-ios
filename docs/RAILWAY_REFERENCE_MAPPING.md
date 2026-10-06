@@ -747,7 +747,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## Phase 5F：旅程執行、跨站步行與新遊戲啟用
 
-2026-10-06 重新檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。PR #142 完成同站轉乘；之後的 PR 加上跨站步行轉乘、新遊戲啟用 `.network` 與路徑計畫效能（ARCHITECTURE 決策 65）。#151 時存檔仍為 v11；R1（來源轉乘常數、車站營運狀態、計畫鍵）升為 v12。既有 golden、replay 與 save fixtures 均未改寫。
+2026-10-06 重新檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。PR #142 完成同站轉乘；之後的 PR 加上跨站步行轉乘、新遊戲啟用 `.network` 與路徑計畫效能（ARCHITECTURE 決策 65）。存檔仍為 v11（R1 的車站營運狀態只在非 normalFlow 時寫出、讀檔選填，舊存檔照讀）。既有 golden、replay 與 save fixtures 均未改寫。
 
 | 來源／契約 | 目標 | 移植狀態／差異 |
 | --- | --- | --- |
@@ -759,7 +759,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`metroDebugCompareCentralToAirportTimings`：`r=15`（換乘基準分鐘）、`l={overlap:.8,"same-platform":.8,passage:1.2,virtual:1.7}`、同站預設 `same-platform` | `PassengerTransferRules.baseSeconds`、`*FactorTenths`；`PassengerTransferTier.penaltySeconds`（720／720／1080／1530 s） | ported（R1）：係數以十分之一整數；同站換線 12 分鐘取代原生 4 分鐘。只是路徑選擇的感知成本。 |
 | 同檔／`metroNavigationTransfers`（`haversine/(5e3/3600)`）、同函式 `n=5` | `PassengerTransferRules.walkingMetresPerHour`、`PassengerTransferTier.walkSeconds` | ported（R1）：5 km/h＝每世界單位 9/800 s，向上取整秒；取代原生每分鐘 80 m。 |
 | 同檔／`METRO_NAVIGATION_MIN_TRANSFER_SEC`=120 | `PassengerTransferRules.minimumChangeSeconds`、`Boarding.enqueueTransfer` 的 `readyAt` | ported（R1）：實際上車延遲 max(120 s, 步行秒數)，同線 0；取代原生 4 分鐘＋步行分鐘。 |
-| 同檔／`applyStationOperationToStation`、`metroStationAllowsEntryForLine`、`metroStationAllowsTrainServiceAtStation`、`metroStationAllowsTransfer`、`metroStationAllowsPassengerDestination`、`clearStationWaitingPassengers` | `StationOperationMode`、`GameWorld.setStationOperationMode`、`allowsEntry`／`allowsService`、`abandonPassengers(waitingAt:)`、`PassengerRouteGraph.closed`、`Boarding.exchangePassengers` | ported（R1）：三種狀態與規則；存檔 v12。gap：列車仍停靠封閉站、末班自動狀態（`fromAuto`）未移植。 |
+| 同檔／`applyStationOperationToStation`、`metroStationAllowsEntryForLine`、`metroStationAllowsTrainServiceAtStation`、`metroStationAllowsTransfer`、`metroStationAllowsPassengerDestination`、`clearStationWaitingPassengers` | `StationOperationMode`、`GameWorld.setStationOperationMode`、`allowsEntry`／`allowsService`、`abandonPassengers(waitingAt:)`、`PassengerRouteGraph.closed`、`Boarding.exchangePassengers` | ported（R1）：三種狀態與規則；`Station.operationMode` 選填（存檔版本不變）；車站面板的三段選擇與 `GameSession.setSelectedStationOperationMode`（文字取自 #157 / 來源 `metro.station.status.*`）。gap：列車仍停靠封閉站（但不上下車）；收班後的自動狀態 `metroComputeStationAutoOperationMode`（`fromAuto`）未移植，模式只由玩家設定。畫面標籤來自 `lib/game-dom__q_f4c03f23b8518a04.html` 的 `op-status-*`（正常运行、流量控制、车站关闭，繁中化）。部分取自 #157 的 a8a3165：車站面板、狀態文字、存檔正規形（不寫 normalFlow）與同站轉乘的封站測試。 |
 | 同檔／`transferStations[].members`、`pairs` | 未匯入 | gap：同名正規化、system-scoped ID 與距離嚴格小於 450 m；563 站、58 組、63 matched pairs。群組可由多個 pair 連通，不能把全 members 當成每對都可直接步行。原生需來源 ID → StationID 轉換、明確步行 leg／時間與存檔；資料本身沒有同月台／通道成本數值。 |
 | `Railway/site_archive_clean/index.html`／`transferStationName`、`transferAnchorForStop`、`transferAnchorNear` | 跨站匹配的待接位置 | gap：NFKC、臺→台、移除前綴／後綴，搭配實際距離。正規化與地理資料轉換應在 GameCore 外完成；不可只用近距離或站名自動把所有站接起來。 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |

@@ -41,11 +41,6 @@ choice balances. Earlier saves have direct-trip groups and load in direct
 routing mode. An older build must reject version 11 so it cannot silently
 drop the transfer plan when saving again.
 
-Since version 12 (Phase 5F), a station may hold an `"operationMode"`
-(`"flowControl"` or `"closed"`, the `Ci/` reference's station operation
-modes). Earlier saves have every station open (`normalFlow`); an older build
-must reject version 12 rather than reopen a closed station on its next save.
-
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -64,4 +59,3 @@ hand could hold, is refused with that reason
 | `v7-demo-siding-90-minutes.json` | 7 | The version 6 save read by the Stage U2 build (ARCHITECTURE decision 56) and saved again: `"saveVersion": 7`, byte for byte otherwise (no train follows another in it). The version 4 siding save and the version 6 save saved again by this build give it byte for byte too. |
 | `v8-demo-siding-90-minutes.json` | 8 | The version 7 save read by the Stage V2 build (ARCHITECTURE decision 58) and saved again: `"saveVersion": 8`, byte for byte otherwise (no service in it stands aside at a passing place). The version 4 siding save, and the version 6 and 7 saves, saved again by this build give it byte for byte too. |
 | `v11-network-transfer.json` | 11 | A two-line service with five passengers from A waiting at B for the second leg to C. Their original station keeps the conservation ledger; the waiting group holds its remaining journey and transfer ready time. Written by the version 11 build. |
-| `v12-walking-transfer.json` | 12 | Two tracks 100 m apart: First runs A–B on one, Second B′–C on the other. Five passengers from A got off at B and walked to B′ (`readyAt` 120 s after, the reference's least change time, longer than the 72 s walk) for the leg to C. A is closed and C under flow control. Written by the version 12 build. |
