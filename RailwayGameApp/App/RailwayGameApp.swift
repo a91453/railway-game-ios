@@ -37,6 +37,11 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-demo-layout") {
             launcher.openDemo()
         }
+        // Freeze the demo before its first frame so camera UI tests select
+        // known train positions without racing the simulation's first tick.
+        if DebugLaunch.isSet("-ui-testing-paused") {
+            launcher.session?.setSpeed(.paused)
+        }
         #endif
         return launcher
     }

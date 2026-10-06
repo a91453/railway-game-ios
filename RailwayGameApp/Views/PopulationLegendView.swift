@@ -36,30 +36,23 @@ struct PopulationLegendView: View {
                 }
             }
 
-            VStack(spacing: 3) {
-                LinearGradient(
-                    colors: PopulationColorRamp.gradientColors,
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(height: 10)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-                )
-
-                HStack {
-                    Text(verbatim: "\(PopulationColorRamp.tiers.first?.min ?? 0)")
-                    Spacer()
-                    Text(verbatim: "1k")
-                    Spacer()
-                    Text(verbatim: "4k")
-                    Spacer()
-                    Text(verbatim: "\(PopulationColorRamp.tiers.last?.min ?? 10000)+")
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+                ForEach(PopulationColorRamp.tiers, id: \.min) { tier in
+                    VStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(tier.color)
+                            .frame(height: 10)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                            }
+                        Text(verbatim: tier.label)
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .minimumScaleFactor(0.8)
+                            .lineLimit(1)
+                    }
                 }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 10)
@@ -69,9 +62,11 @@ struct PopulationLegendView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
         )
-        .frame(maxWidth: 240)
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: 300)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: titleText))
+        .accessibilityValue(Text(verbatim: PopulationColorRamp.tiers.map(\.label).joined(separator: ", ")))
+        .accessibilityIdentifier("map.populationLegend")
     }
 
     private var titleText: String {

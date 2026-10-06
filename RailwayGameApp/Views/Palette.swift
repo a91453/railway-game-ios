@@ -61,10 +61,14 @@ enum PopulationColorRamp {
 
         var label: String {
             if let max {
-                return "\(min)–\(max)"
+                return "\(Self.compact(min))–\(Self.compact(max))"
             } else {
-                return "\(min)+"
+                return "\(Self.compact(min))+"
             }
+        }
+
+        private static func compact(_ value: Int) -> String {
+            value >= 1000 && value.isMultiple(of: 1000) ? "\(value / 1000)k" : "\(value)"
         }
     }
 

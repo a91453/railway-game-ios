@@ -2,6 +2,39 @@ import XCTest
 
 @MainActor
 final class MapInteractionTests: XCTestCase {
+    /// Assert what is under the camera, rather than only the session's target
+    /// ID: this fails if MapView stops reacting to target changes while paused.
+    func testSwitchingFollowTargetWhilePausedCentersTheCamera() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Resume"].exists, "The demo must stay paused throughout this test")
+
+        for name in ["Train 1", "Train 2"] {
+            app.buttons["tool.train"].tap()
+            let fleet = app.buttons["train.fleetOverview"]
+            if !fleet.isHittable { app.swipeUp() }
+            XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+            fleet.tap()
+            let follow = app.buttons["fleet.follow.\(name)"]
+            XCTAssertTrue(follow.waitForExistence(timeout: 5))
+            for _ in 0..<3 where !follow.isHittable { app.swipeUp() }
+            XCTAssertTrue(follow.isHittable)
+            follow.tap()
+            XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
+            app.buttons["tool.select"].tap()
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            XCTAssertTrue((map.value as? String)?.hasPrefix("Train · \(name) ·") == true,
+                          "The actual camera center must pick \(name); value: \(String(describing: map.value))")
+            XCTAssertTrue(app.buttons["Resume"].exists)
+        }
+    }
+
     func testDemoMapOpensOnItsNetwork() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -168,13 +201,23 @@ final class MapInteractionTests: XCTestCase {
 
         let heatmapToggle = app.switches["layer.populationHeatmap"]
         XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap toggle must exist")
-        XCTAssertFalse(heatmapToggle.isEnabled, "Population heatmap toggle must be disabled (Phase 2)")
+        XCTAssertTrue(heatmapToggle.isEnabled, "The implemented population overlay must be available")
+        if heatmapToggle.value as? String == "0" { heatmapToggle.tap() }
 
         let doneButton = app.buttons["layer.done"]
         XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
         doneButton.tap()
 
         XCTAssertTrue(layersButton.waitForExistence(timeout: 5), "Map must be restored after dismissing sheet")
+        let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 5))
+        let value = legend.value as? String ?? ""
+        for range in ["0–100", "100–250", "250–500", "500–1k", "1k–2k",
+                      "2k–4k", "4k–6k", "6k–8k", "8k–10k", "10k+"] {
+            XCTAssertTrue(value.contains(range), "Legend must expose every tier's range: \(range); value: \(value)")
+        }
+        app.buttons["Close population legend"].tap()
+        XCTAssertFalse(legend.exists)
     }
 
     func testConstructionHUDAppearsDuringTrackPreview() {
@@ -211,4 +254,3 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(hud.exists, "MapConstructionHUD must disappear when preview is cleared")
     }
 }
-

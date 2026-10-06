@@ -66,11 +66,49 @@ final class PopulationGridTests: XCTestCase {
         XCTAssertFalse(cells.isEmpty, "Taipei bounding box must contain population cells")
         for cell in cells {
             XCTAssertGreaterThan(cell.count, 0, "All returned cells must have positive population count")
-            XCTAssertLessThanOrEqual(cell.northLatitude, 25.15)
-            XCTAssertGreaterThanOrEqual(cell.southLatitude, 24.95)
-            XCTAssertGreaterThanOrEqual(cell.westLongitude, 121.40)
-            XCTAssertLessThanOrEqual(cell.eastLongitude, 121.60)
+            XCTAssertGreaterThan(cell.northLatitude, 25.00)
+            XCTAssertLessThan(cell.southLatitude, 25.10)
+            XCTAssertLessThan(cell.westLongitude, 121.55)
+            XCTAssertGreaterThan(cell.eastLongitude, 121.45)
         }
+    }
+
+    func testCellsQueryClipsToIntersectingCellsAndAcceptsReversedLimits() throws {
+        let grid = try Self.overlayFixture()
+        let cells = grid.cells(north: 0.9, south: 0.6, west: 0.1, east: 0.4)
+        XCTAssertEqual(cells.map(\.count), [100], "A rectangle inside one cell must not include its neighbours")
+        XCTAssertEqual(grid.cells(north: 0.6, south: 0.9, west: 0.4, east: 0.1), cells)
+        XCTAssertEqual(grid.cells(north: 1, south: 0.5, west: 0, east: 0.5).map(\.count), [100],
+                       "Touching the next row or column at an edge is not an area overlap")
+        XCTAssertEqual(grid.cells(north: 0.8, south: 0.2, west: 0.2, east: 0.8).map(\.count), [100, 200, 300, 400])
+    }
+
+    func testCellsQueryOutsideTheGridReturnsNone() throws {
+        let grid = try Self.overlayFixture()
+        for box in [(2.0, 1.1, 0.1, 0.4), (0.9, 0.6, -0.4, -0.1),
+                    (-0.1, -0.4, 0.1, 0.4), (0.9, 0.6, 1.1, 1.4)] {
+            XCTAssertTrue(grid.cells(north: box.0, south: box.1, west: box.2, east: box.3).isEmpty)
+        }
+    }
+
+    func testCellsQueryHandlesEmptyNonFiniteAndVeryLargeRectangles() throws {
+        let grid = try Self.overlayFixture()
+        XCTAssertTrue(grid.cells(north: 0.9, south: 0.9, west: 0.1, east: 0.4).isEmpty)
+        XCTAssertTrue(grid.cells(north: 0.9, south: 0.6, west: 0.1, east: 0.1).isEmpty)
+        for invalid in [Double.nan, .infinity, -.infinity] {
+            XCTAssertTrue(grid.cells(north: invalid, south: 0, west: 0, east: 1).isEmpty)
+            XCTAssertTrue(grid.cells(north: 1, south: invalid, west: 0, east: 1).isEmpty)
+            XCTAssertTrue(grid.cells(north: 1, south: 0, west: invalid, east: 1).isEmpty)
+            XCTAssertTrue(grid.cells(north: 1, south: 0, west: 0, east: invalid).isEmpty)
+        }
+        let extent = Double.greatestFiniteMagnitude
+        XCTAssertEqual(grid.cells(north: extent, south: -extent, west: -extent, east: extent).map(\.count), [100, 200, 300, 400])
+        let empty = try PopulationGrid(data: Data(#"{"north":1,"west":0,"cellDegrees":0.5,"runs":[]}"#.utf8))
+        XCTAssertTrue(empty.cells(north: 1, south: 0, west: 0, east: 1).isEmpty)
+    }
+
+    private static func overlayFixture() throws -> PopulationGrid {
+        try PopulationGrid(data: Data(#"{"north":1,"west":0,"cellDegrees":0.5,"runs":[{"r":0,"c":0,"p":[100,200]},{"r":1,"c":0,"p":[300,400]}]}"#.utf8))
     }
 
     // MARK: - Ridership
