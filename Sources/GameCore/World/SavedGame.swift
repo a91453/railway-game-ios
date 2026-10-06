@@ -64,9 +64,13 @@
 ///     Older builds would silently drop an assigned path or platform.
 /// 11. Network passenger journeys and transfer queues (Phase 5C/5F).
 ///     Older builds would drop their remaining legs or route balances.
+/// 12. Station operation modes (Phase 5F): a station may hold
+///     `"operationMode"` (`"flowControl"` or `"closed"`). A build that reads
+///     only version 11 would drop a station's mode and reopen it on its
+///     next save, so it says the save is newer instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 11
+    public static let currentVersion = 12
 
     public let world: GameWorld
 
@@ -119,6 +123,8 @@ extension SavedGame: Codable {
         // to empty automatic selections in their validated decoders.
         // Version 10 to 11: absent passenger routing mode means direct;
         // old waiting and riding groups have no journey or route balance.
+        // Version 11 to 12: a station without `"operationMode"` is open
+        // (`normalFlow`), which every version 11 station is.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

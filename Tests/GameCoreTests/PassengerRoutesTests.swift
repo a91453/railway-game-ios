@@ -38,7 +38,8 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(routes[0].legs.map(\.from), [a, b])
         XCTAssertEqual(routes[0].legs.map(\.to), [b, c])
         XCTAssertEqual(routes[0].transfers, 1)
-        XCTAssertEqual(routes[0].transferMinutes, 4)
+        // The reference's change at one station: 15 min × 0.8.
+        XCTAssertEqual(routes[0].transferMinutes, 12)
         XCTAssertEqual(routes[0].legs[0].rideSeconds, try XCTUnwrap(world.lineJourney(first)).legs[0].seconds)
         XCTAssertEqual(routes[0].totalMinutes,
                        routes[0].rideMinutes + routes[0].waitMinutes + routes[0].transferMinutes)
@@ -210,12 +211,15 @@ final class PassengerRoutesTests: XCTestCase {
         let second = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 2), pattern: nil,
             direction: .outbound, stations: [b, c], runSeconds: [1], headway: 2, isRing: false)
         let direct = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 3), pattern: nil,
-            direction: .outbound, stations: [a, c], runSeconds: [350], headway: 2, isRing: false)
+            direction: .outbound, stations: [a, c], runSeconds: [790], headway: 2, isRing: false)
         let graph = PassengerRouteGraph(paths: [first, second, direct])
 
+        // Both take 15 whole minutes (the change: two 1-minute waits, two
+        // 1-second rides and the reference's 12-minute change, 842 s; the
+        // direct ride 850 s), so the fewer transfers win.
         let route = try XCTUnwrap(graph.shortest(from: a, to: c, banning: [])?.0)
         XCTAssertEqual(route.legs.map(\.line), [LineID(rawValue: 3)])
-        XCTAssertEqual(route.totalMinutes, 7)
+        XCTAssertEqual(route.totalMinutes, 15)
         XCTAssertEqual(route.transfers, 0)
     }
 
@@ -235,7 +239,7 @@ final class PassengerRoutesTests: XCTestCase {
 
         let route = try XCTUnwrap(graph.shortest(from: a, to: d, banning: [])?.0)
         XCTAssertEqual(route.legs.map(\.line), [LineID(rawValue: 1), LineID(rawValue: 4)])
-        XCTAssertEqual(route.totalMinutes, 7)
+        XCTAssertEqual(route.totalMinutes, 15, "two 1-minute waits, a 1-minute ride and a 12-minute change")
         XCTAssertEqual(route.transfers, 1)
     }
 

@@ -420,6 +420,28 @@ public struct GameWorld: Equatable, Sendable {
         return station
     }
 
+    /// Sets station `id`'s operation mode (Phase 5F, see
+    /// ``StationOperationMode``; the reference's
+    /// `applyStationOperationToStation`). Free.
+    ///
+    /// Closing a station sends everyone waiting there away, counted as
+    /// abandoned at their original station (the reference's
+    /// `clearStationWaitingPassengers`), and so does any waiting journey
+    /// still to board, change or arrive at a closed station. Passengers on
+    /// board stay on their train; nobody gets off at a closed station. The
+    /// new mode changes the passengers released from now on.
+    ///
+    /// - Throws: ``GameError/unknownStation(_:)``.
+    public mutating func setStationOperationMode(_ id: StationID, to mode: StationOperationMode) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        guard stations[index].operationMode != mode else { return }
+        stations[index].operationMode = mode
+        if mode == .closed {
+            abandonPassengers(waitingAt: id)
+        }
+        abandonUnservedPassengers()
+    }
+
     /// Buys a new train and charges ``ConstructionCosts/train``.
     ///
     /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
@@ -1374,7 +1396,10 @@ public struct GameWorld: Equatable, Sendable {
         var held: [HeldRoute] = []
         // Worked out only when the call steps at all: a paused game's calls
         // cost nothing.
-        if remaining > 0 && passengerRoutingMode == .network {
+        // A network plan kept from an earlier call is used only while all
+        // it was worked out from is unchanged, the service level included.
+        if remaining > 0 && passengerRoutingMode == .network, passengerPlan.plan != nil,
+           passengerPlan.key != passengerPlanKey() {
             passengerPlan = PassengerPlanCache()
         }
         var release = remaining > 0 ? passengerRelease() : nil

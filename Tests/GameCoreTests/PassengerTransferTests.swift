@@ -413,23 +413,48 @@ final class WalkingTransferTests: XCTestCase {
         return world
     }
 
-    func testWalkingMinutesFollowTheDistance() throws {
+    func testWalksFollowTheDistanceAtTheReferenceSpeedAndTiers() throws {
         let world = try world()
-        // 32 m: the 4-minute change and a minute's walk.
-        XCTAssertEqual(world.walkingTransferMinutes(from: b, to: near), 5)
-        XCTAssertEqual(world.walkingTransferMinutes(from: near, to: b), 5)
-        // 64 m: 4 + 1 (80 m a minute).
-        XCTAssertEqual(world.walkingTransferMinutes(from: a, to: near), 5)
-        XCTAssertNil(world.walkingTransferMinutes(from: b, to: b))
+        // 32 m: a same-platform change (over 20 m, up to 50 m), 23.04 s at
+        // 5 km/h, rounded up.
+        XCTAssertEqual(world.walkingTransfer(from: b, to: near)?.seconds, 24)
+        XCTAssertEqual(world.walkingTransfer(from: b, to: near)?.tier, .samePlatform)
+        XCTAssertEqual(world.walkingTransfer(from: near, to: b)?.seconds, 24)
+        // 64 m: a passage, 46.08 s.
+        XCTAssertEqual(world.walkingTransfer(from: a, to: near)?.seconds, 47)
+        XCTAssertEqual(world.walkingTransfer(from: a, to: near)?.tier, .passage)
+        XCTAssertNil(world.walkingTransfer(from: b, to: b))
         // 496 m is past the 450 m limit.
-        XCTAssertNil(world.walkingTransferMinutes(from: near, to: c))
-        XCTAssertNil(world.walkingTransferMinutes(from: b, to: StationID(rawValue: 99)))
+        XCTAssertNil(world.walkingTransfer(from: near, to: c))
+        XCTAssertNil(world.walkingTransfer(from: b, to: StationID(rawValue: 99)))
         // Exactly on the limit is too far; just inside it walks.
         let limit = GameWorld.walkingTransferMetres * WorldCoordinate.unitsPerMetre
-        XCTAssertNil(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: limit, y: 0)))
-        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: limit - 1, y: 0)), 10)
-        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: 0, y: 80 * 64)), 5)
-        XCTAssertEqual(GameWorld.walkingTransferMinutes(from: PlanPoint(x: 0, y: 0), to: PlanPoint(x: 0, y: 80 * 64 + 1)), 6)
+        let origin = PlanPoint(x: 0, y: 0)
+        XCTAssertNil(PassengerWalk(from: origin, to: PlanPoint(x: limit, y: 0), station: c))
+        XCTAssertEqual(PassengerWalk(from: origin, to: PlanPoint(x: limit - 1, y: 0), station: c)?.seconds, 324)
+        XCTAssertEqual(PassengerWalk(from: origin, to: PlanPoint(x: limit - 1, y: 0), station: c)?.tier, .virtual)
+    }
+
+    func testTiersPenaltiesAndWalkTimesFollowTheReference() {
+        func tier(_ units: Int64) -> PassengerTransferTier? {
+            PassengerTransferTier.of(squaredDistance: units * units)
+        }
+        let metre = WorldCoordinate.unitsPerMetre
+        XCTAssertEqual(tier(0), .overlap)
+        XCTAssertEqual(tier(20 * metre), .overlap)
+        XCTAssertEqual(tier(20 * metre + 1), .samePlatform)
+        XCTAssertEqual(tier(50 * metre), .samePlatform)
+        XCTAssertEqual(tier(50 * metre + 1), .passage)
+        XCTAssertEqual(tier(250 * metre), .passage)
+        XCTAssertEqual(tier(250 * metre + 1), .virtual)
+        XCTAssertEqual(tier(450 * metre - 1), .virtual)
+        XCTAssertNil(tier(450 * metre), "strictly less than 450 m")
+        XCTAssertEqual(PassengerTransferTier.allCases.map(\.penaltySeconds), [720, 720, 1_080, 1_530])
+        XCTAssertEqual(PassengerTransferRules.minimumChangeSeconds, 120)
+        // 5 km/h: 100 m in 72 s, 1 m in 0.72 s (rounded up to 1 s).
+        XCTAssertEqual(PassengerTransferTier.walkSeconds(squaredDistance: (100 * metre) * (100 * metre)), 72)
+        XCTAssertEqual(PassengerTransferTier.walkSeconds(squaredDistance: metre * metre), 1)
+        XCTAssertEqual(PassengerTransferTier.walkSeconds(squaredDistance: 0), 0)
     }
 
     func testRouteWalksBetweenNearbyStations() throws {
@@ -438,7 +463,9 @@ final class WalkingTransferTests: XCTestCase {
         XCTAssertEqual(route.legs.map(\.from), [a, near])
         XCTAssertEqual(route.legs.map(\.to), [b, c])
         XCTAssertEqual(route.transfers, 1)
-        XCTAssertEqual(route.transferMinutes, 5)
+        // 32 m: a same-platform change, 15 min × 0.8, and a 24 s walk.
+        XCTAssertEqual(route.transferMinutes, 12)
+        XCTAssertEqual(route.walkMinutes, 1)
         // A walk never ends a journey: every route to Near rides into it.
         let toNear = world.passengerRoutes(from: a, to: near)
         XCTAssertFalse(toNear.isEmpty)
@@ -460,7 +487,8 @@ final class WalkingTransferTests: XCTestCase {
         XCTAssertEqual(walking.journey?.origin, a)
         XCTAssertEqual(walking.journey?.current, 1)
         XCTAssertEqual(walking.count, 5)
-        XCTAssertEqual(walking.readyAt, GameTime(seconds: walking.since.seconds + 5 * GameTime.secondsPerMinute))
+        // The reference's least change time, longer than the 24 s walk.
+        XCTAssertEqual(walking.readyAt, GameTime(seconds: walking.since.seconds + 120))
         XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
         XCTAssertEqual(world.passengerLedger(of: near).released, 0)
         XCTAssertEqual(world.passengerLedger(of: near).waiting, 0)

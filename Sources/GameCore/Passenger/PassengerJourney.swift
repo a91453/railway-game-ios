@@ -35,7 +35,7 @@ public struct PassengerJourneyLeg: Hashable, Codable, Sendable {
 /// Its origin stays fixed so transfer passengers remain in that station's
 /// conservation ledger. Each leg starts where the one before ends, or at a
 /// station a walk away; the world checks the walks (see
-/// ``GameWorld/walkingTransferMinutes(from:to:)``).
+/// ``GameWorld/walkingTransfer(from:to:)``).
 public struct PassengerJourney: Hashable, Codable, Sendable {
     public let origin: StationID
     public let destination: StationID
