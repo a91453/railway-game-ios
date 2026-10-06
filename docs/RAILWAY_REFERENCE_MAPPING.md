@@ -815,3 +815,10 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/` 的人口格與 poptravel（`panel-poptravel`） | GamePresentation 的 `PopulationGrid`、`PopTravel`（既有） | 只決定新站的初始客流，不成長 |
 | 第 1 項的全網路徑（決策 65） | 可達車站數 = 昨天的計畫裡該站的迄點數 | 原生 |
 | 產業 | — | gap：沒有貨物模型 |
+
+## 更名與線路顏色（決策 71）
+
+| 來源／函式 | 目標 | 狀態 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`PRESET_COLORS`（20 色）、線路 `color`（`"#ef5350"`） | `LineColor.presets`、`ServiceLine.color`、`setLineColor(_:to:)`、`LineColor.hexText` | direct：色值照搬，存為 `0xRRGGBB` 整數 |
+| 同檔／車站、線路名稱編輯 | `renameStation(_:to:)`、`renameLine(_:to:)` | adapted：沿用既有名稱規則 |

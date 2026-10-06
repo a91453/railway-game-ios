@@ -527,6 +527,36 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].cars = cars
     }
 
+    /// Renames station `id` (the reference's station rename). Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
+    ///   ``GameError/invalidName``.
+    public mutating func renameStation(_ id: StationID, to name: String) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        guard Self.isValidName(name) else { throw .invalidName }
+        stations[index].name = name
+    }
+
+    /// Renames line `id`. Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidName``.
+    public mutating func renameLine(_ id: LineID, to name: String) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        guard Self.isValidName(name) else { throw .invalidName }
+        lines[index].name = name
+    }
+
+    /// Sets line `id`'s colour, or `nil` for the app's own pick (the
+    /// reference's line colour, from its `PRESET_COLORS` or any other).
+    /// Free; no rule reads it.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineColor(_ id: LineID, to color: LineColor?) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].color = color
+    }
+
     /// Sets the type of train `id`'s cars (the reference's `TRAIN_TYPES`),
     /// or `nil` for the standard car: what each car carries and how many
     /// doors it has (see ``TrainType``). Free, and only while the train is
