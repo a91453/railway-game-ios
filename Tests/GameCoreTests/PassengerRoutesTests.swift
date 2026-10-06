@@ -196,4 +196,24 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(route.totalMinutes, 7)
         XCTAssertEqual(route.transfers, 0)
     }
+
+    func testExactTieUsesWholeRouteOrderNotDestinationServiceOrder() throws {
+        // Both paths take the same whole minutes, transfers and raw seconds.
+        // Service insertion order favors 2 -> 3 at the destination, while
+        // the public route ordering must prefer the lower first line: 1 -> 4.
+        let two = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 2), pattern: nil,
+            direction: .outbound, stations: [a, c], runSeconds: [10], headway: 2, isRing: false)
+        let three = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 3), pattern: nil,
+            direction: .outbound, stations: [c, d], runSeconds: [10], headway: 2, isRing: false)
+        let one = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 1), pattern: nil,
+            direction: .outbound, stations: [a, b], runSeconds: [10], headway: 2, isRing: false)
+        let four = PassengerRouteGraph.ServicePath(line: LineID(rawValue: 4), pattern: nil,
+            direction: .outbound, stations: [b, d], runSeconds: [10], headway: 2, isRing: false)
+        let graph = PassengerRouteGraph(paths: [two, three, one, four])
+
+        let route = try XCTUnwrap(graph.shortest(from: a, to: d, banning: [])?.0)
+        XCTAssertEqual(route.legs.map(\.line), [LineID(rawValue: 1), LineID(rawValue: 4)])
+        XCTAssertEqual(route.totalMinutes, 7)
+        XCTAssertEqual(route.transfers, 1)
+    }
 }
