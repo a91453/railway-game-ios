@@ -196,11 +196,14 @@ extension GameWorld {
     func dailyDemand(from origin: StationID) -> [(destination: StationID, trips: Int64, trip: PassengerTrip)] {
         guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
+        // One graph and one set of searches for every destination.
+        let choices = passengerRoutingMode == .network
+            ? PassengerRouteGraph(world: self).choices(from: origin, to: passengers.map(\.station)) : nil
         for record in passengers {
             guard let weight = record.demand?.dailyTrips, weight > 0 else { continue }
             let trip: PassengerTrip?
-            if passengerRoutingMode == .network {
-                if let leg = passengerRouteChoices(from: origin, to: record.station).first?.route.legs.first {
+            if let choices {
+                if let leg = choices[record.station]?.first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
                 } else {
                     trip = nil
@@ -296,6 +299,10 @@ extension GameWorld {
         /// `nil` until worked out; then the plan, `nil` inside when no pair
         /// has trips.
         var plan: PassengerPlan??
+        /// What a network plan was worked out from (see
+        /// ``GameWorld/passengerPlanKey()``); `nil` for a direct plan,
+        /// which every command that changes it forgets.
+        var key: PassengerPlanKey?
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -306,7 +313,17 @@ extension GameWorld {
     /// ``hourlyDemand(from:to:)``, which it agrees with), looking each
     /// line's first calls up once.
     func makePassengerPlan() -> PassengerPlan? {
-        if passengerRoutingMode == .network { return makeNetworkPassengerPlan() }
+        if passengerRoutingMode == .network {
+            let graph = PassengerRouteGraph(world: self)
+            let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }.map(\.station)
+            var memo: (origin: StationID, choices: [StationID: [PassengerRouteChoice]])?
+            return makeNetworkPassengerPlan { origin, destination in
+                if memo?.origin != origin {
+                    memo = (origin, graph.choices(from: origin, to: drawing))
+                }
+                return memo!.choices[destination] ?? []
+            }
+        }
         let firstCalls = lines.map { line in
             var calls: [StationID: Int] = [:]
             for (index, stop) in line.stops.enumerated() where calls[stop] == nil {
@@ -342,14 +359,18 @@ extension GameWorld {
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
     }
 
-    private func makeNetworkPassengerPlan() -> PassengerPlan? {
+    /// The network plan, with `routeChoices` giving each pair's route
+    /// choices on the world's current route graph.
+    private func makeNetworkPassengerPlan(
+        _ routeChoices: (StationID, StationID) -> [PassengerRouteChoice]
+    ) -> PassengerPlan? {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
         for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other -> (StationPassengers, [PassengerPlan.Choice])? in
-                let options = passengerRouteChoices(from: record.station, to: other.station)
+                let options = routeChoices(record.station, other.station)
                 let choices = options.compactMap { choice -> PassengerPlan.Choice? in
                     guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { return nil }
                     return PassengerPlan.Choice(journey: journey, weight: choice.weight)
@@ -381,7 +402,18 @@ extension GameWorld {
     /// has trips; works the plan out first if no current one is kept.
     mutating func passengerRelease() -> PassengerRelease? {
         if passengerPlan.plan == nil {
-            passengerPlan.plan = .some(makePassengerPlan())
+            if passengerRoutingMode == .network {
+                // The same plan as `makePassengerPlan()`, from the kept
+                // graph and route choices when the network is unchanged.
+                let key = passengerPlanKey()
+                var entry = takePassengerRouteGraph()
+                let plan = makeNetworkPassengerPlan { entry.choices(from: $0, to: $1) }
+                passengerRouteCache.keep(entry)
+                passengerPlan.plan = .some(plan)
+                passengerPlan.key = key
+            } else {
+                passengerPlan.plan = .some(makePassengerPlan())
+            }
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
         var remainders = Array(repeating: Int64(0), count: plan.flows.count)

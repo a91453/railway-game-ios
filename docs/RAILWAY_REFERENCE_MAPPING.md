@@ -759,3 +759,11 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
 
 服務異動處理：候車群組檢查尚未完成的每段服務、物理路徑與每天能實際出現的服務 level；夜間暫停可等待再開班，永久失效則離站。刪除 pattern 會移轉後續索引；已在被移除服務上的乘客可按舊時刻表完成目前這段，移除未來 pattern 則結束其旅程並記回原起站。批量推進在 window／level 邊界保存 OD 餘數、重建需求，idle shortcut 亦會在該邊界醒來。
+
+### Phase 5F 續：路徑圖與計畫快取（T1）
+
+| 來源／契約 | 目標 | 移植狀態／差異 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroNavigationEstimate` 內的二元堆積（`d()` push、`f()` pop） | `PassengerRoutes.swift` 的 `PassengerRouteHeap` | adapted：同樣以二元堆積取代每次 pop 前整列排序；比較器沿用原生的嚴格全序（分鐘、轉乘次數、秒數、路線順序、節點、索引），所以 pop 順序與舊實作逐一相同。 |
+| 同檔／`G.odPathDispatchCache`（每個 OD 保存路徑選項，flowFull 重算時才更新） | `PassengerRouteCache.swift` 的 `PassengerRouteCache`、`PassengerPlanKey` | adapted：來源由後端在網路改變時重算並快取；原生以「圖實際讀取的輸入」（線路、車站、路網、號誌、列車長度、各線目前的服務等級）為 key，最多保留 8 個時段的圖與 OD 選項。不存檔、不影響相等比較；key 相同時結果與重新計算逐一相同。 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §6（Link Graph：先算最短廣義成本並決定性分配） | 同上 | 依此保留決定性的 Dijkstra／K 條路徑；同起點的各迄點共用每組禁用邊的一次完整搜尋（pop 順序與迄點無關，第一個到達某站的 label 即提前結束版本的答案）。 |

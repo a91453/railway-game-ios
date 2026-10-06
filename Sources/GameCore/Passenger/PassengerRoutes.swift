@@ -42,7 +42,7 @@ public struct PassengerRouteAllocation: Hashable, Sendable {
     public let count: Int64
 }
 
-struct PassengerRouteChoice {
+struct PassengerRouteChoice: Sendable {
     let route: PassengerRoute
     let weight: Int64
 }
@@ -83,7 +83,7 @@ struct PassengerRideEdge: Hashable {
     let direction: Int
 }
 
-struct PassengerRouteNode: Hashable, Comparable {
+struct PassengerRouteNode: Hashable, Comparable, Sendable {
     let line: Int
     let stop: Int
     let direction: Int
@@ -100,6 +100,43 @@ private struct PassengerRouteState: Hashable {
     let onboard: Bool
 }
 
+/// A binary min-heap of label indices under a caller's strict total order.
+/// It replaces sorting the whole open list before every pop (quadratic in
+/// the labels); with a total order the least element is unique, so the
+/// order in which labels pop is the same.
+private struct PassengerRouteHeap {
+    private var items: [Int] = []
+
+    mutating func push(_ item: Int, by precedes: (Int, Int) -> Bool) {
+        var child = items.count
+        items.append(item)
+        while child > 0 {
+            let parent = (child - 1) / 2
+            guard precedes(items[child], items[parent]) else { break }
+            items.swapAt(child, parent)
+            child = parent
+        }
+    }
+
+    mutating func pop(by precedes: (Int, Int) -> Bool) -> Int? {
+        guard let first = items.first else { return nil }
+        let last = items.removeLast()
+        guard !items.isEmpty else { return first }
+        items[0] = last
+        var parent = 0
+        while true {
+            let left = 2 * parent + 1
+            guard left < items.count else { break }
+            var least = left
+            if left + 1 < items.count, precedes(items[left + 1], items[left]) { least = left + 1 }
+            guard precedes(items[least], items[parent]) else { break }
+            items.swapAt(least, parent)
+            parent = least
+        }
+        return first
+    }
+}
+
 private struct PassengerRouteLabel {
     enum Arrival {
         case board
@@ -108,22 +145,28 @@ private struct PassengerRouteLabel {
 
     let state: PassengerRouteState
     let total: Int64
+    /// `total` rounded up to whole minutes: the first key of the open list.
+    var minutes: Int64 { passengerMinutesRoundingUp(total, by: GameTime.secondsPerMinute) }
     let ride: Int64
     let wait: Int64
     let transfer: Int64
     let changes: Int
-    let order: [PassengerRouteOrderLeg]
+    /// The label's full-route order (the legs ridden so far, as lines and
+    /// stations): the last of its legs in the search's shared order tree,
+    /// or -1 before the first ride. Kept as a tree so a label costs no
+    /// array copy; the arrays are built only to break an exact tie.
+    let order: Int
     let previous: Int?
     let arrival: Arrival
 }
 
-struct PassengerRouteGraph {
+struct PassengerRouteGraph: Sendable {
     // The Ci snapshot receives transfer minutes from its flow service's
     // path plan; that service is absent from the reference snapshot. Four
     // minutes is this first native graph's same-station interchange cost.
     static let sameStationTransferMinutes: Int64 = 4
 
-    struct ServicePath {
+    struct ServicePath: Sendable {
         let line: LineID
         let pattern: Int?
         let direction: LineDirection
@@ -135,6 +178,21 @@ struct PassengerRouteGraph {
 
     let paths: [ServicePath]
     let stopsAt: [StationID: [PassengerRouteNode]]
+    /// The index of each path's first call among all calls, in path order:
+    /// a node's index is its path's offset plus its stop, so indices order
+    /// nodes as ``PassengerRouteNode/<`` does.
+    let offsets: [Int]
+    let nodeCount: Int
+
+    private static func offsets(of paths: [ServicePath]) -> [Int] {
+        var offsets: [Int] = []
+        var next = 0
+        for path in paths {
+            offsets.append(next)
+            next += path.stations.count
+        }
+        return offsets + [next]
+    }
 
     init(paths: [ServicePath]) {
         var included: [ServicePath] = []
@@ -144,6 +202,9 @@ struct PassengerRouteGraph {
         }
         self.paths = included
         stopsAt = calls
+        let offsets = Self.offsets(of: included)
+        self.offsets = Array(offsets.dropLast())
+        nodeCount = offsets.last!
     }
 
     init(world: GameWorld) {
@@ -183,6 +244,9 @@ struct PassengerRouteGraph {
         }
         paths = included
         stopsAt = calls
+        let offsets = Self.offsets(of: included)
+        self.offsets = Array(offsets.dropLast())
+        nodeCount = offsets.last!
     }
 
     private static func add(_ path: ServicePath, to paths: inout [ServicePath], calls: inout [StationID: [PassengerRouteNode]]) {
@@ -212,25 +276,85 @@ struct PassengerRouteGraph {
     /// to whole minutes can favor a later arrival with fewer changes. Exact
     /// metric ties keep the lower full-route line/stop order.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
-        guard let starts = stopsAt[origin], stopsAt[destination] != nil else { return nil }
-        var labels: [PassengerRouteLabel] = []
-        var frontier: [PassengerRouteState: [Int]] = [:]
-        var active: [Bool] = []
-        var open: [Int] = []
+        guard stopsAt[destination] != nil else { return nil }
+        return search(from: origin, to: destination, banning: forbidden)[destination]
+    }
 
-        func dominates(_ lhs: PassengerRouteLabel, _ rhs: PassengerRouteLabel) -> Bool {
-            guard lhs.total <= rhs.total, lhs.changes <= rhs.changes else { return false }
-            if lhs.total < rhs.total || lhs.changes < rhs.changes { return true }
-            return !passengerRouteOrderPrecedes(rhs.order, lhs.order)
+    /// The shortest route from `origin` to `destination`, or with no
+    /// destination to every station it reaches but itself. Which label pops
+    /// next never depends on the destination, so the first label popped at
+    /// a station is the same whether the search stops there or goes on.
+    private func search(from origin: StationID, to destination: StationID?,
+                        banning forbidden: Set<PassengerRideEdge>) -> [StationID: (PassengerRoute, [PassengerRideEdge])] {
+        guard let starts = stopsAt[origin] else { return [:] }
+        var firstAt: [StationID: Int] = [:]
+        // The banned rides, by the index of the node they leave.
+        var banned = Array(repeating: false, count: nodeCount)
+        for edge in forbidden where edge.line < paths.count && edge.to == edge.from + 1
+            && edge.direction == (paths[edge.line].direction == .outbound ? 1 : -1)
+            && (0..<paths[edge.line].stations.count - 1).contains(edge.from) {
+            banned[offsets[edge.line] + edge.from] = true
+        }
+        var orderLegs: [PassengerRouteOrderLeg] = []
+        var orderParents: [Int] = []
+        func orderArray(_ tail: Int) -> [PassengerRouteOrderLeg] {
+            var legs: [PassengerRouteOrderLeg] = []
+            var node = tail
+            while node >= 0 {
+                legs.append(orderLegs[node])
+                node = orderParents[node]
+            }
+            return legs.reversed()
+        }
+        func orderPrecedes(_ lhs: Int, _ rhs: Int) -> Bool {
+            lhs != rhs && passengerRouteOrderPrecedes(orderArray(lhs), orderArray(rhs))
+        }
+        var labels: [PassengerRouteLabel] = []
+        // Each label's keys, kept apart so ordering the open list reads
+        // plain integers. A state's index is its node's index, twice, plus
+        // 1 on board.
+        var totals: [Int64] = []
+        var minutes: [Int64] = []
+        var changes: [Int] = []
+        var states: [Int] = []
+        var frontier = Array(repeating: [Int](), count: nodeCount * 2)
+        var active: [Bool] = []
+        // The open list is a binary heap ordered by `pops`, a strict total
+        // order (its last key is the label index), so popping its least
+        // element takes exactly the label that sorting the whole list and
+        // taking the first did before.
+        var open = PassengerRouteHeap()
+
+        func pops(_ a: Int, before b: Int) -> Bool {
+            if minutes[a] != minutes[b] { return minutes[a] < minutes[b] }
+            if changes[a] != changes[b] { return changes[a] < changes[b] }
+            if totals[a] != totals[b] { return totals[a] < totals[b] }
+            if orderPrecedes(labels[a].order, labels[b].order) { return true }
+            if orderPrecedes(labels[b].order, labels[a].order) { return false }
+            // Node order, then waiting before on board.
+            if states[a] != states[b] { return states[a] < states[b] }
+            return a < b
+        }
+
+        func dominates(_ lhs: Int, _ rhs: PassengerRouteLabel) -> Bool {
+            guard totals[lhs] <= rhs.total, changes[lhs] <= rhs.changes else { return false }
+            if totals[lhs] < rhs.total || changes[lhs] < rhs.changes { return true }
+            return !orderPrecedes(rhs.order, labels[lhs].order)
+        }
+
+        func dominates(_ lhs: PassengerRouteLabel, _ rhs: Int) -> Bool {
+            guard lhs.total <= totals[rhs], lhs.changes <= changes[rhs] else { return false }
+            if lhs.total < totals[rhs] || lhs.changes < changes[rhs] { return true }
+            return !orderPrecedes(labels[rhs].order, lhs.order)
         }
 
         func offer(_ label: PassengerRouteLabel) {
-            let state = label.state
-            let existing = frontier[state] ?? []
-            if existing.contains(where: { dominates(labels[$0], label) }) { return }
+            let state = 2 * (offsets[label.state.node.line] + label.state.node.stop) + (label.state.onboard ? 1 : 0)
+            let existing = frontier[state]
+            if existing.contains(where: { dominates($0, label) }) { return }
             var survivors: [Int] = []
             for index in existing {
-                if dominates(label, labels[index]) {
+                if dominates(label, index) {
                     active[index] = false
                 } else {
                     survivors.append(index)
@@ -238,8 +362,12 @@ struct PassengerRouteGraph {
             }
             let index = labels.count
             labels.append(label)
+            totals.append(label.total)
+            minutes.append(label.minutes)
+            changes.append(label.changes)
+            states.append(state)
             active.append(true)
-            open.append(index)
+            open.push(index, by: pops)
             survivors.append(index)
             frontier[state] = survivors
         }
@@ -248,43 +376,35 @@ struct PassengerRouteGraph {
             let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
             offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
                                       total: wait, ride: 0, wait: wait, transfer: 0,
-                                      changes: 0, order: [], previous: nil, arrival: .board))
+                                      changes: 0, order: -1, previous: nil, arrival: .board))
         }
-        while !open.isEmpty {
-            open.sort { a, b in
-                let left = labels[a]
-                let right = labels[b]
-                let leftMinutes = passengerMinutesRoundingUp(left.total, by: GameTime.secondsPerMinute)
-                let rightMinutes = passengerMinutesRoundingUp(right.total, by: GameTime.secondsPerMinute)
-                if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
-                if left.changes != right.changes { return left.changes < right.changes }
-                if left.total != right.total { return left.total < right.total }
-                if passengerRouteOrderPrecedes(left.order, right.order) { return true }
-                if passengerRouteOrderPrecedes(right.order, left.order) { return false }
-                if left.state.node != right.state.node { return left.state.node < right.state.node }
-                if left.state.onboard != right.state.onboard { return !left.state.onboard }
-                return a < b
-            }
-            let index = open.removeFirst()
+        while let index = open.pop(by: pops) {
             guard active[index] else { continue }
             let label = labels[index]
             let node = label.state.node
-            if station(node) == destination {
-                return reconstruct(index, from: labels)
+            let here = station(node)
+            if here == destination {
+                return [here: reconstruct(index, from: labels)]
             }
-            if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
+            if destination == nil, here != origin, firstAt[here] == nil {
+                firstAt[here] = index
+            }
+            if let (next, edge, run) = nextRide(node), !banned[offsets[node.line] + node.stop] {
                 // A passenger already aboard stays through this stop's
                 // dwell. One boarding here has waited for departure already.
                 let dwell = label.state.onboard ? ServiceLine.dwellMinutes * GameTime.secondsPerMinute : 0
                 let seconds = run + dwell
                 let ridePath = paths[edge.line]
                 let to = ridePath.stations[edge.to]
-                var order = label.order
-                if label.state.onboard, let last = order.last {
-                    order[order.count - 1] = PassengerRouteOrderLeg(line: last.line, from: last.from, to: to)
+                let order = orderLegs.count
+                if label.state.onboard, label.order >= 0 {
+                    let last = orderLegs[label.order]
+                    orderLegs.append(PassengerRouteOrderLeg(line: last.line, from: last.from, to: to))
+                    orderParents.append(orderParents[label.order])
                 } else {
-                    order.append(PassengerRouteOrderLeg(line: ridePath.line,
-                                                        from: ridePath.stations[edge.from], to: to))
+                    orderLegs.append(PassengerRouteOrderLeg(line: ridePath.line,
+                                                            from: ridePath.stations[edge.from], to: to))
+                    orderParents.append(label.order)
                 }
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
                                           total: label.total + seconds, ride: label.ride + seconds,
@@ -317,7 +437,7 @@ struct PassengerRouteGraph {
                                           order: label.order, previous: index, arrival: .board))
             }
         }
-        return nil
+        return firstAt.mapValues { reconstruct($0, from: labels) }
     }
 
     private func reconstruct(_ endIndex: Int, from labels: [PassengerRouteLabel]) -> (PassengerRoute, [PassengerRideEdge]) {
@@ -370,28 +490,7 @@ extension GameWorld {
     public func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3) -> [PassengerRoute] {
         guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
               limit > 0 else { return [] }
-        let graph = PassengerRouteGraph(world: self)
-        guard let first = graph.shortest(from: origin, to: destination, banning: []) else { return [] }
-        var selected = [first.0]
-        var candidates: [(route: PassengerRoute, edges: [PassengerRideEdge], bans: Set<PassengerRideEdge>)] = []
-        var chosen = (route: first.0, edges: first.1, bans: Set<PassengerRideEdge>())
-        var tried: Set<Set<PassengerRideEdge>> = [[]]
-        while selected.count < min(limit, 3) {
-            for edge in chosen.edges {
-                var bans = chosen.bans
-                bans.insert(edge)
-                guard tried.insert(bans).inserted,
-                      let found = graph.shortest(from: origin, to: destination, banning: bans),
-                      !selected.contains(found.0), !candidates.contains(where: { $0.route == found.0 })
-                else { continue }
-                candidates.append((found.0, found.1, bans))
-            }
-            guard !candidates.isEmpty else { break }
-            candidates.sort { passengerRoutePrecedes($0.route, $1.route) }
-            chosen = candidates.removeFirst()
-            selected.append(chosen.route)
-        }
-        return selected
+        return PassengerRouteGraph(world: self).routes(from: origin, to: destination, limit: limit)
     }
 
     /// Splits one day's OD demand among the usable route options. Choices
@@ -414,7 +513,73 @@ extension GameWorld {
     }
 
     func passengerRouteChoices(from origin: StationID, to destination: StationID) -> [PassengerRouteChoice] {
-        let routes = passengerRoutes(from: origin, to: destination)
+        guard origin != destination, station(id: origin) != nil, station(id: destination) != nil else { return [] }
+        return PassengerRouteGraph(world: self).choices(from: origin, to: destination)
+    }
+}
+
+extension PassengerRouteGraph {
+    /// Up to three distinct service paths (see
+    /// ``GameWorld/passengerRoutes(from:to:limit:)``), on this graph. The
+    /// stations exist; none between a station and itself.
+    func routes(from origin: StationID, to destination: StationID, limit: Int) -> [PassengerRoute] {
+        routes(from: origin, to: destination, limit: limit) { shortest(from: origin, to: destination, banning: $0) }
+    }
+
+    /// ``routes(from:to:limit:)`` with `shortest` giving the shortest route
+    /// to the destination under a set of banned rides.
+    private func routes(from origin: StationID, to destination: StationID, limit: Int,
+                        shortest: (Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])?) -> [PassengerRoute] {
+        guard origin != destination, limit > 0,
+              let first = shortest([]) else { return [] }
+        var selected = [first.0]
+        var candidates: [(route: PassengerRoute, edges: [PassengerRideEdge], bans: Set<PassengerRideEdge>)] = []
+        var chosen = (route: first.0, edges: first.1, bans: Set<PassengerRideEdge>())
+        var tried: Set<Set<PassengerRideEdge>> = [[]]
+        while selected.count < min(limit, 3) {
+            for edge in chosen.edges {
+                var bans = chosen.bans
+                bans.insert(edge)
+                guard tried.insert(bans).inserted,
+                      let found = shortest(bans),
+                      !selected.contains(found.0), !candidates.contains(where: { $0.route == found.0 })
+                else { continue }
+                candidates.append((found.0, found.1, bans))
+            }
+            guard !candidates.isEmpty else { break }
+            candidates.sort { passengerRoutePrecedes($0.route, $1.route) }
+            chosen = candidates.removeFirst()
+            selected.append(chosen.route)
+        }
+        return selected
+    }
+
+    /// The route choices of an OD pair (see
+    /// ``GameWorld/passengerRouteAllocations(from:to:count:)``) on this graph.
+    func choices(from origin: StationID, to destination: StationID) -> [PassengerRouteChoice] {
+        Self.choices(among: routes(from: origin, to: destination, limit: 3))
+    }
+
+    /// Every station's route choices from `origin` (see
+    /// ``choices(from:to:)``, which each equals), by station. One search
+    /// to every station serves each set of banned rides that any
+    /// destination asks for.
+    func choices(from origin: StationID, to destinations: [StationID]) -> [StationID: [PassengerRouteChoice]] {
+        var searches: [Set<PassengerRideEdge>: [StationID: (PassengerRoute, [PassengerRideEdge])]] = [:]
+        var result: [StationID: [PassengerRouteChoice]] = [:]
+        for destination in destinations {
+            let routes = routes(from: origin, to: destination, limit: 3) { bans in
+                if let found = searches[bans] { return found[destination] }
+                let found = search(from: origin, to: nil, banning: bans)
+                searches[bans] = found
+                return found[destination]
+            }
+            result[destination] = Self.choices(among: routes)
+        }
+        return result
+    }
+
+    private static func choices(among routes: [PassengerRoute]) -> [PassengerRouteChoice] {
         guard let fastest = routes.first?.totalMinutes else { return [] }
         let allowance = max(5, fastest / 2)
         return routes.filter { $0.totalMinutes - fastest <= allowance && $0.legs.count <= 32 }

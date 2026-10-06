@@ -60,6 +60,9 @@ public struct GameWorld: Equatable, Sendable {
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
     var passengerPlan = PassengerPlanCache()
+    /// Network route graphs and OD route choices, kept between plans; not
+    /// game state (see ``PassengerRouteCache``).
+    var passengerRouteCache = PassengerRouteCache()
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -1370,7 +1373,10 @@ public struct GameWorld: Equatable, Sendable {
         var held: [HeldRoute] = []
         // Worked out only when the call steps at all: a paused game's calls
         // cost nothing.
-        if remaining > 0 && passengerRoutingMode == .network {
+        // A network plan kept from an earlier call is used only while all
+        // it was worked out from is unchanged, the service level included.
+        if remaining > 0 && passengerRoutingMode == .network, passengerPlan.plan != nil,
+           passengerPlan.key != passengerPlanKey() {
             passengerPlan = PassengerPlanCache()
         }
         var release = remaining > 0 ? passengerRelease() : nil
