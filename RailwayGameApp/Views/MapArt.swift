@@ -211,15 +211,16 @@ enum MapArt {
                 context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
-        if overlay.preview.count > 1 {
-            let line = polyline(overlay.preview, projection: projection)
+        // The next stretch, and an X crossover's mirrored diagonal.
+        for points in [overlay.preview, overlay.crossing] where points.count > 1 {
+            let line = polyline(points, projection: projection)
             let width = max(2, referenceSize * 0.12)
             if overlay.previewIsBuildable {
                 context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
                 context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             } else {
                 // Dashed, so drawn whole (see the tunnels in drawNetwork).
-                context.stroke(wholePolyline(overlay.preview, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
+                context.stroke(wholePolyline(points, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }
         }
         let radius = max(5, referenceSize * 0.2)

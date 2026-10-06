@@ -123,6 +123,10 @@ public final class GameSession {
     /// Whether the next stretch continues the track at its ends smoothly
     /// (the default), or runs straight.
     public var networkFollowsTrack = true
+    /// Whether a stretch between two tracks is built as an X (scissors)
+    /// crossover, with the mirrored diagonal crossing it at a diamond in
+    /// the middle (see ``networkPicksCrossover``), rather than one.
+    public var networkBuildsScissors = false
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends.
     public var networkEasesGrade = false

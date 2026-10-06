@@ -54,6 +54,25 @@ public struct TrackNodeEnd: Hashable, Sendable {
     public internal(set) var exits: [TrackEdgeID]
 }
 
+/// One edge to build with ``GameWorld/buildTrackEdges(_:)``: its end nodes,
+/// its shape in plan and height, and what carries it.
+public struct TrackEdgePlan: Hashable, Sendable {
+    public let from: TrackNodeID
+    public let to: TrackNodeID
+    public let curve: TrackCurve
+    public let profile: TrackProfile
+    public let structure: TrackStructure
+
+    public init(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform,
+                structure: TrackStructure = .surface) {
+        self.from = from
+        self.to = to
+        self.curve = curve
+        self.profile = profile
+        self.structure = structure
+    }
+}
+
 /// An edge of the railway graph: a stretch of track between two nodes.
 public struct TrackEdge: Hashable, Sendable {
     public let id: TrackEdgeID

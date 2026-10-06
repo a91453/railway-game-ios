@@ -2450,6 +2450,16 @@
         }
       }
     },
+    "X crossover" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X 型交叉渡線"
+          }
+        }
+      }
+    },
     "Zoom in" : {
       "localizations" : {
         "zh-Hant" : {

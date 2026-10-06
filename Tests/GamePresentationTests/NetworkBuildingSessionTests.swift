@@ -94,6 +94,105 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertEqual(turnout.end(of: fromWest.id)?.exits.contains(branch.id), true, "a train from the west may take the branch")
     }
 
+    /// Two straight tracks 5 m apart (320 units), 480 m long.
+    private func parallelTracks() throws -> GameWorld {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        for y in [Int64(4_096), 4_416] {
+            let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: y))
+            let east = try world.buildTrackNode(at: WorldCoordinate(x: 31_744, y: y))
+            try world.buildTrackEdge(from: west, to: east)
+        }
+        return world
+    }
+
+    /// A tap on one track and one on the other further along make a
+    /// crossover: one diagonal leaving each track along it.
+    @MainActor
+    func testTwoTapsOnTwoTracksMakeASingleCrossover() throws {
+        let session = GameSession(world: try parallelTracks())
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: 10_240, y: 4_096), reach: Self.reach / 4)
+        session.tapNetwork(at: PlanPoint(x: 16_384, y: 4_416), reach: Self.reach / 4)
+        XCTAssertTrue(session.networkPicksCrossover)
+        XCTAssertEqual(session.networkPreview?.joinsStart, true)
+        XCTAssertEqual(session.networkPreview?.joinsEnd, true)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.edges.count, 5, "two tracks split once each, and the diagonal")
+    }
+
+    /// With X on, the same taps build an X (scissors) crossover: both
+    /// diagonals, crossing at a diamond where each runs straight through.
+    @MainActor
+    func testAnXCrossoverCrossesAtADiamond() throws {
+        let session = GameSession(world: try parallelTracks())
+        session.selectTool(.network)
+        session.networkBuildsScissors = true
+        session.tapNetwork(at: PlanPoint(x: 10_240, y: 4_096), reach: Self.reach / 4)
+        session.tapNetwork(at: PlanPoint(x: 16_384, y: 4_416), reach: Self.reach / 4)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertNotNil(preview.cost)
+        XCTAssertGreaterThan(session.networkOverlay?.crossing.count ?? 0, 2, "the mirrored diagonal is drawn")
+        let before = session.world
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let network = session.world.network
+        XCTAssertEqual(network.edges.count, 2 * 3 + 4, "each track split twice into three, and four halves")
+        let middle = try XCTUnwrap(network.nodes.first { $0.position == WorldCoordinate(x: 13_312, y: 4_256) })
+        XCTAssertEqual(middle.ends.count, 4)
+        for end in middle.ends {
+            XCTAssertEqual(end.exits.count, 1, "straight through only: a diamond")
+        }
+        XCTAssertEqual(session.world.economy.balance.amount, before.economy.balance.amount - (preview.cost?.amount ?? 0))
+        XCTAssertNil(session.networkStart)
+
+        // Each track's turnouts lead onto a diagonal.
+        for y in [Int64(4_096), 4_416] {
+            let turnouts = network.nodes.filter { $0.position.y == y && $0.ends.count == 3 }
+            XCTAssertEqual(turnouts.count, 2)
+        }
+
+        // A train runs from the first track's west end over the diagonal
+        // through the diamond onto the second track, and out east.
+        var world = session.world
+        let westA = try XCTUnwrap(network.nodes.first { $0.position == WorldCoordinate(x: 1_024, y: 4_096) })
+        let eastB = try XCTUnwrap(network.nodes.first { $0.position == WorldCoordinate(x: 31_744, y: 4_416) })
+        let start = try XCTUnwrap(network.edges.first { $0.from == westA.id })
+        let turnout = start.to
+        let up = try XCTUnwrap(network.edges.first { $0.from == turnout && $0.to == middle.id })
+        let down = try XCTUnwrap(network.edges.first { $0.from != turnout && $0.to == middle.id && middle.end(of: up.id)?.exits == [$0.id] })
+        let landing = down.from
+        let out = try XCTUnwrap(network.edges.first { $0.from == landing && $0.to != middle.id })
+        let last = try XCTUnwrap(network.edges.first { $0.to == eastB.id })
+        let train = try world.purchaseTrain(named: "T").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: start.id, direction: .forward), offset: 0))
+        try world.setTrainContinuation(train, along: [
+            TrackTraversal(edge: up.id, direction: .forward), TrackTraversal(edge: down.id, direction: .backward),
+        ] + (out.id == last.id ? [] : [TrackTraversal(edge: out.id, direction: .forward)]) + [TrackTraversal(edge: last.id, direction: .forward)])
+        try world.setTrainMovementRate(train, to: 60_000)
+        world.setSpeed(.normal)
+        try world.advance(ticks: 1)
+        guard case .onEdge(let traversal, _)? = world.train(id: train)?.position else { return XCTFail("placed") }
+        XCTAssertEqual(traversal.edge, last.id)
+    }
+
+    /// Too short, or too near a node: refused before GameCore, and nothing
+    /// changes.
+    @MainActor
+    func testAnXCrossoverThatDoesNotFitIsRefused() throws {
+        let session = GameSession(world: try parallelTracks())
+        session.selectTool(.network)
+        session.networkBuildsScissors = true
+        session.tapNetwork(at: PlanPoint(x: 10_240, y: 4_096), reach: Self.reach / 4)
+        session.tapNetwork(at: PlanPoint(x: 11_264, y: 4_416), reach: Self.reach / 4)
+        XCTAssertEqual(session.networkPreview?.problem, "Make the crossover longer: at least 44 m along the tracks.")
+        let before = session.world
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.world, before)
+    }
+
     /// Both ends on the same edge: the second is found again on the part it
     /// lies on after the first splits it, and both splits are made.
     @MainActor

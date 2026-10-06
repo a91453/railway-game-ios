@@ -195,6 +195,44 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func buildTrackEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface
     ) throws(GameError) -> TrackEdgeID {
+        try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, checksSpacing: true)
+    }
+
+    /// Builds the edges `plans` describe, in order, as one command (the
+    /// owner's play-test, 2026-10-06): each as
+    /// ``buildTrackEdge(from:to:curve:profile:structure:)`` would, charged
+    /// the same, except that the spacing rule is checked once all of them
+    /// are built, along the ways they make together. An X crossover's
+    /// diagonal runs within 4 m of the other track near the middle and parts
+    /// from it only by way of its other half; built one at a time, the first
+    /// half would be refused. All or nothing. Returns the new edges in order.
+    ///
+    /// - Throws: what ``buildTrackEdge(from:to:curve:profile:structure:)``
+    ///   throws for the first plan it refuses, checked as that plan is
+    ///   built (``GameError/insufficientFunds(required:available:)`` for
+    ///   the first the money left does not cover); then
+    ///   ``GameError/trackTooClose(_:)`` for the lowest numbered edge the
+    ///   first new edge, in order, runs too close beside.
+    @discardableResult
+    public mutating func buildTrackEdges(_ plans: [TrackEdgePlan]) throws(GameError) -> [TrackEdgeID] {
+        var after = self
+        var built: [TrackEdgeID] = []
+        for plan in plans {
+            built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
+                                                  structure: plan.structure, checksSpacing: false))
+        }
+        for id in built {
+            if let other = after.network.firstTooClose(existing: id, besides: []) {
+                throw .trackTooClose(other)
+            }
+        }
+        self = after
+        return built
+    }
+
+    private mutating func buildTrackEdge(
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, checksSpacing: Bool
+    ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
         guard from != to, curve.controlPoints.allSatisfy(bounds.contains),
@@ -205,7 +243,7 @@ public struct GameWorld: Equatable, Sendable {
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackConflict(other)
         }
-        if let other = network.firstTooClose(from: from, to: to, curve: curve, geometry: geometry) {
+        if checksSpacing, let other = network.firstTooClose(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackTooClose(other)
         }
         let (_, next) = try Self.allocateID(from: network.nextEdgeNumber)

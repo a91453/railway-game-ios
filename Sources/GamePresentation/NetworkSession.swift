@@ -86,6 +86,7 @@ extension GameSession {
     /// picked (or in another mode).
     public var networkPreview: NetworkPreview? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
+        if let scissors = scissorsPreview() { return scissors.preview }
         return preview(from: start, to: end)
     }
 
@@ -95,6 +96,10 @@ extension GameSession {
     /// nothing. The end then becomes the start of the next stretch, so taps
     /// lay a line piece by piece, each continuing the last.
     public func buildNetworkTrack() {
+        if scissorsPlan() != nil {
+            buildNetworkScissors()
+            return
+        }
         guard let start = networkStart, let end = networkEnd else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Tap where the track starts, then where it ends.",
@@ -615,6 +620,9 @@ public struct NetworkOverlay: Hashable, Sendable {
     public var anchors: [WorldCoordinate] = []
     /// The centre line of the next stretch.
     public var preview: [WorldCoordinate] = []
+    /// The mirrored diagonal of an X crossover (see
+    /// ``GameSession/networkBuildsScissors``), drawn like ``preview``.
+    public var crossing: [WorldCoordinate] = []
     /// Whether GameCore would build it.
     public var previewIsBuildable = false
     /// The centre line of what the platform or remove mode picked.
@@ -632,7 +640,11 @@ extension GameSession {
         switch networkMode {
         case .build:
             overlay.anchors = [networkStart, networkEnd].compactMap { $0.flatMap { world.position(of: $0, height: networkHeight) } }
-            if let preview = networkPreview {
+            if let scissors = scissorsPreview() {
+                overlay.preview = scissors.preview.points
+                overlay.crossing = scissors.crossing
+                overlay.previewIsBuildable = scissors.preview.problem == nil
+            } else if let preview = networkPreview {
                 overlay.preview = preview.points
                 overlay.previewIsBuildable = preview.problem == nil
             }
