@@ -35,18 +35,28 @@ public struct PassengerRoute: Hashable, Sendable {
     }
 }
 
+private struct PassengerRouteOrderLeg: Equatable {
+    let line: LineID
+    let from: StationID
+    let to: StationID
+}
+
+private func passengerRouteOrderPrecedes(_ lhs: [PassengerRouteOrderLeg], _ rhs: [PassengerRouteOrderLeg]) -> Bool {
+    for (left, right) in zip(lhs, rhs) where left != right {
+        if left.line.rawValue != right.line.rawValue { return left.line.rawValue < right.line.rawValue }
+        if left.from.rawValue != right.from.rawValue { return left.from.rawValue < right.from.rawValue }
+        return left.to.rawValue < right.to.rawValue
+    }
+    return lhs.count < rhs.count
+}
+
 private func passengerRoutePrecedes(_ lhs: PassengerRoute, _ rhs: PassengerRoute) -> Bool {
     if lhs.totalMinutes != rhs.totalMinutes { return lhs.totalMinutes < rhs.totalMinutes }
     if lhs.transfers != rhs.transfers { return lhs.transfers < rhs.transfers }
     if lhs.totalSeconds != rhs.totalSeconds { return lhs.totalSeconds < rhs.totalSeconds }
-    let left = lhs.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
-    let right = rhs.legs.map { ($0.line.rawValue, $0.from.rawValue, $0.to.rawValue) }
-    for (l, r) in zip(left, right) where l != r {
-        if l.0 != r.0 { return l.0 < r.0 }
-        if l.1 != r.1 { return l.1 < r.1 }
-        return l.2 < r.2
-    }
-    return left.count < right.count
+    let left = lhs.legs.map { PassengerRouteOrderLeg(line: $0.line, from: $0.from, to: $0.to) }
+    let right = rhs.legs.map { PassengerRouteOrderLeg(line: $0.line, from: $0.from, to: $0.to) }
+    return passengerRouteOrderPrecedes(left, right)
 }
 
 private func passengerMinutesRoundingUp(_ value: Int64, by divisor: Int64) -> Int64 {
@@ -90,6 +100,7 @@ private struct PassengerRouteLabel {
     let wait: Int64
     let transfer: Int64
     let changes: Int
+    let order: [PassengerRouteOrderLeg]
     let previous: Int?
     let arrival: Arrival
 }
@@ -186,7 +197,8 @@ struct PassengerRouteGraph {
 
     /// Dijkstra over service calls and boarding state. Each state keeps the
     /// nondominated (elapsed seconds, line changes) labels, since rounding
-    /// to whole minutes can favor a later arrival with fewer changes.
+    /// to whole minutes can favor a later arrival with fewer changes. Exact
+    /// metric ties keep the lower full-route line/stop order.
     func shortest(from origin: StationID, to destination: StationID, banning forbidden: Set<PassengerRideEdge>) -> (PassengerRoute, [PassengerRideEdge])? {
         guard let starts = stopsAt[origin], stopsAt[destination] != nil else { return nil }
         var labels: [PassengerRouteLabel] = []
@@ -194,15 +206,19 @@ struct PassengerRouteGraph {
         var active: [Bool] = []
         var open: [Int] = []
 
+        func dominates(_ lhs: PassengerRouteLabel, _ rhs: PassengerRouteLabel) -> Bool {
+            guard lhs.total <= rhs.total, lhs.changes <= rhs.changes else { return false }
+            if lhs.total < rhs.total || lhs.changes < rhs.changes { return true }
+            return !passengerRouteOrderPrecedes(rhs.order, lhs.order)
+        }
+
         func offer(_ label: PassengerRouteLabel) {
             let state = label.state
             let existing = frontier[state] ?? []
-            if existing.contains(where: { labels[$0].total <= label.total && labels[$0].changes <= label.changes }) {
-                return
-            }
+            if existing.contains(where: { dominates(labels[$0], label) }) { return }
             var survivors: [Int] = []
             for index in existing {
-                if label.total <= labels[index].total && label.changes <= labels[index].changes {
+                if dominates(label, labels[index]) {
                     active[index] = false
                 } else {
                     survivors.append(index)
@@ -220,7 +236,7 @@ struct PassengerRouteGraph {
             let wait = max(1, passengerMinutesRoundingUp(paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
             offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
                                       total: wait, ride: 0, wait: wait, transfer: 0,
-                                      changes: 0, previous: nil, arrival: .board))
+                                      changes: 0, order: [], previous: nil, arrival: .board))
         }
         while !open.isEmpty {
             open.sort { a, b in
@@ -231,6 +247,8 @@ struct PassengerRouteGraph {
                 if leftMinutes != rightMinutes { return leftMinutes < rightMinutes }
                 if left.changes != right.changes { return left.changes < right.changes }
                 if left.total != right.total { return left.total < right.total }
+                if passengerRouteOrderPrecedes(left.order, right.order) { return true }
+                if passengerRouteOrderPrecedes(right.order, left.order) { return false }
                 if left.state.node != right.state.node { return left.state.node < right.state.node }
                 if left.state.onboard != right.state.onboard { return !left.state.onboard }
                 return a < b
@@ -247,10 +265,19 @@ struct PassengerRouteGraph {
                 // dwell. One boarding here has waited for departure already.
                 let dwell = label.state.onboard ? ServiceLine.dwellMinutes * GameTime.secondsPerMinute : 0
                 let seconds = run + dwell
+                let ridePath = paths[edge.line]
+                let to = ridePath.stations[edge.to]
+                var order = label.order
+                if label.state.onboard, let last = order.last {
+                    order[order.count - 1] = PassengerRouteOrderLeg(line: last.line, from: last.from, to: to)
+                } else {
+                    order.append(PassengerRouteOrderLeg(line: ridePath.line,
+                                                        from: ridePath.stations[edge.from], to: to))
+                }
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
                                           total: label.total + seconds, ride: label.ride + seconds,
                                           wait: label.wait, transfer: label.transfer,
-                                          changes: label.changes, previous: index,
+                                          changes: label.changes, order: order, previous: index,
                                           arrival: .ride(edge, seconds)))
             }
             let path = paths[node.line]
@@ -262,7 +289,8 @@ struct PassengerRouteGraph {
                 offer(PassengerRouteLabel(state: PassengerRouteState(node: first, onboard: false),
                                           total: label.total + wait, ride: label.ride,
                                           wait: label.wait + wait, transfer: label.transfer,
-                                          changes: label.changes, previous: index, arrival: .board))
+                                          changes: label.changes, order: label.order,
+                                          previous: index, arrival: .board))
             }
             for other in stopsAt[station(node)] ?? [] where other != node {
                 guard other.line != node.line else { continue }
@@ -274,7 +302,7 @@ struct PassengerRouteGraph {
                                           ride: label.ride, wait: label.wait + wait,
                                           transfer: label.transfer + transfer,
                                           changes: label.changes + (sameLine ? 0 : 1),
-                                          previous: index, arrival: .board))
+                                          order: label.order, previous: index, arrival: .board))
             }
         }
         return nil
@@ -321,8 +349,9 @@ struct PassengerRouteGraph {
 
 extension GameWorld {
     /// Up to three distinct service paths between two stations, in ascending
-    /// whole-minute cost. Ties prefer fewer transfers, then the line and
-    /// stop order. The graph uses lines with service planned at the current
+    /// whole-minute cost. Ties prefer fewer transfers, then lower unrounded
+    /// seconds, then the line and stop order. The graph uses lines with service
+    /// planned at the current
     /// minute; it is derived anew when queried. A route is a plan only:
     /// passenger release and boarding still use `passengerTrip` until the
     /// following transfer stage moves the route into their queue records.
