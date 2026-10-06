@@ -81,4 +81,61 @@ final class NearestStationNamingTests: XCTestCase {
         let nameEN = GameSession.suggestedStationName(for: world, at: plan, in: .english, railways: railways)
         XCTAssertEqual(nameEN, "Station 1")
     }
+
+    func testAStationUsedInOneLanguageOrSpellingIsNotOfferedAgain() throws {
+        let railways = try BundledRealData.railways()
+        let tra = try BundledRealData.station("臺北", in: "tra_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor))
+        let taipei = try BundledRealData.point(tra.coordinate, in: world)
+        let first = GameSession.suggestedStationName(for: world, at: taipei, in: .traditionalChinese, railways: railways)
+        XCTAssertEqual(RealRailways.stationKey(first), "台北", first)
+
+        // Named in English, in another system's spelling, or in Chinese:
+        // the same place, so none of its names is offered again.
+        let forbidden: Set<String> = ["台北", "臺北", "台北車站", "Taipei", "Taipei Main Station"]
+        for used in ["Taipei", "Taipei Main Station", "台北車站", "臺北"] {
+            var built = world
+            _ = try built.buildStation(named: used, at: taipei)
+            for language in [DisplayLanguage.traditionalChinese, .english] {
+                let next = GameSession.suggestedStationName(for: built, at: taipei, in: language, railways: railways)
+                XCTAssertFalse(forbidden.contains(next), "\(used) built, \(language) suggests \(next)")
+            }
+        }
+    }
+
+    @MainActor
+    func testTheFirstSuggestionIsMadeWhereTheMapIs() throws {
+        let anchor = RealWorldDemo.anchor
+        let session = GameSession(world: GameWorld.newGame(anchor: anchor), language: .traditionalChinese)
+        XCTAssertEqual(session.stationName, "車站 1", "No railways yet")
+        let railways = try BundledRealData.railways()
+        session.railways = railways
+        let middle = RealRailways.Coordinate(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees)
+        let nearest = try XCTUnwrap(railways.nearestStation(to: middle))
+        XCTAssertEqual(session.stationName, nearest.station.name(in: .traditionalChinese), "The real station nearest the middle of the map")
+        XCTAssertNotEqual(session.stationName, "車站 1")
+    }
+
+    @MainActor
+    func testATypedNameIsNeverReplacedByASuggestion() throws {
+        let tra = try BundledRealData.station("猴硐", in: "tra_sched")
+        let world = GameWorld.newGame(anchor: RealWorldDemo.anchor)
+        let houtong = try BundledRealData.point(tra.coordinate, in: world)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.railways = try BundledRealData.railways()
+
+        // A suggestion replaces a suggestion.
+        session.suggestStationName(at: PlanPoint(x: 64, y: 64))
+        let elsewhere = session.stationName
+        session.suggestStationName(at: houtong)
+        XCTAssertEqual(session.stationName, "猴硐")
+        XCTAssertNotEqual(elsewhere, "")
+
+        // But never what the player typed.
+        session.stationName = "我的車站"
+        session.suggestStationName(at: PlanPoint(x: 64, y: 64))
+        XCTAssertEqual(session.stationName, "我的車站")
+        session.suggestStationName(at: houtong)
+        XCTAssertEqual(session.stationName, "我的車站")
+    }
 }

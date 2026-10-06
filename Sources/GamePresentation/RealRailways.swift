@@ -337,6 +337,15 @@ public struct RealRailways: Sendable {
     public let stationData: RealStationData?
     /// Real system and line operational parameters (headways, dwell times, station sequences, timetables).
     public let operations: RealRailwayOperations?
+    /// The transfers between the railways (`station_transfers.json`).
+    public let transfers: RealStationTransfers?
+    /// The files of the optional data above that could not be read, and
+    /// why; empty when all could. Listed for debugging (the data sources
+    /// screen), never dropped silently.
+    public let loadIssues: [RealDataLoadIssue]
+    /// ``stations`` by ``stationKey(_:)`` of their Chinese and English
+    /// names: indices in the site's order.
+    private let stationIndicesByKey: [String: [Int]]
 
     /// The railways in the site's `track_lines.geojson`,
     /// `track_stations.geojson` and `i18n/stations.json`.
@@ -345,7 +354,9 @@ public struct RealRailways: Sendable {
         stations stationsFile: Data,
         names namesFile: Data,
         stationData: RealStationData? = nil,
-        operations: RealRailwayOperations? = nil
+        operations: RealRailwayOperations? = nil,
+        transfers: RealStationTransfers? = nil,
+        loadIssues: [RealDataLoadIssue] = []
     ) throws {
         let decoder = JSONDecoder()
         let lineFeatures = try decoder.decode(FeatureCollection<LineProperties, LineGeometry>.self, from: linesFile).features
@@ -390,6 +401,15 @@ public struct RealRailways: Sendable {
         self.stations = stations
         self.stationData = stationData
         self.operations = operations
+        self.transfers = transfers
+        self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
+        var byKey: [String: [Int]] = [:]
+        for (index, station) in stations.enumerated() {
+            for key in Set([station.chinese, station.english].compactMap { $0 }.map(Self.stationKey)).sorted() where !key.isEmpty {
+                byKey[key, default: []].append(index)
+            }
+        }
+        stationIndicesByKey = byKey
     }
 
     /// The lines that come within `metres` of `anchor`.
@@ -420,6 +440,30 @@ public struct RealRailways: Sendable {
             }
         }
         return first + then
+    }
+
+    /// What makes two names one station's, in any language and any
+    /// system's spelling: the site's transfer name
+    /// (``RealStationTransfers/transferStationName(_:)``: 臺北車站, 台北
+    /// and 台北火車站 are all 台北) compared as the site compares names
+    /// (``normalized(_:)``: "Taipei Main Station" as "taipeimainstation").
+    public static func stationKey(_ name: String) -> String {
+        normalized(RealStationTransfers.transferStationName(name))
+    }
+
+    /// The real stations a station named `name` is, in any system: those
+    /// whose Chinese or English name has the same ``stationKey(_:)``, and,
+    /// where `coordinate` is known (a real-world map), that lie closer to
+    /// it than the site's transfer distance
+    /// (``RealStationTransfers/maximumDistanceMetres``, 450 m; the same
+    /// name far away is another place). In the site's order.
+    public func stations(named name: String, near coordinate: Coordinate?) -> [Station] {
+        let key = Self.stationKey(name)
+        guard !key.isEmpty, let indices = stationIndicesByKey[key] else { return [] }
+        let found = indices.map { stations[$0] }
+        guard let coordinate else { return found }
+        let reach = transfers?.maximumDistanceMetres ?? 450
+        return found.filter { RealStationTransfers.distanceMetres(coordinate, $0.coordinate) < reach }
     }
 
     /// A name as the site compares names (`rail-discovery.js` `norm`): 臺
@@ -552,5 +596,101 @@ extension RealRailways {
         }
         result.sort { $0.distanceMetres < $1.distanceMetres }
         return result
+    }
+}
+
+extension RealRailways {
+    /// The result of reading the bundled files: the railways (`nil` when
+    /// the three map files cannot be read) and every file that could not
+    /// be, and why.
+    public struct Loaded: Sendable {
+        public let railways: RealRailways?
+        public let issues: [RealDataLoadIssue]
+    }
+
+    /// A bundled file could not be found.
+    public enum ResourceError: Error, Hashable {
+        case missing(String)
+    }
+
+    /// The systems the app bundles a `<key>.json` of, and a
+    /// `<key>_times.json` of.
+    public static let bundledSystems = ["tra", "thsr", "trtc", "krtc", "tymc", "afr", "tmrt", "ntdlrt", "ntalrt", "sanying"]
+    public static let bundledTimetables = ["trtc", "krtc", "tymc", "ntdlrt", "ntalrt", "sanying", "tmrt"]
+
+    /// Reads the app's copy of the `Railway/` site's files through `file`
+    /// (a name and extension to its contents). The map files are read now;
+    /// the timetables only when first asked for. Each optional file that
+    /// cannot be read is left out and listed in ``Loaded/issues`` (and the
+    /// railways' ``loadIssues``) rather than dropped silently.
+    public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> Loaded {
+        var issues: [RealDataLoadIssue] = []
+        func read(_ name: String, _ ext: String) -> Data? {
+            do {
+                return try file(name, ext)
+            } catch {
+                issues.append(RealDataLoadIssue(file: "\(name).\(ext)", error: error))
+                return nil
+            }
+        }
+        func parse<Value>(_ name: String, _ make: () throws -> Value) -> Value? {
+            do {
+                return try make()
+            } catch {
+                issues.append(RealDataLoadIssue(file: name, error: error))
+                return nil
+            }
+        }
+
+        let lines = read("track_lines", "geojson")
+        let stations = read("track_stations", "geojson")
+        let names = read("station_names", "json")
+
+        var stationData: RealStationData?
+        if let classes = read("tra_station_class", "json"),
+           let infos = read("tra_station_info", "json"),
+           let codes = read("trtc_codes", "json"),
+           let platforms = read("tra_platforms", "json"),
+           let sections = read("tra_track_sections", "json") {
+            let overtake = read("tra_overtake_tracks", "json")
+            stationData = parse("tra_*.json, trtc_codes.json") {
+                try RealStationData(classes: classes, infos: infos, codes: codes, platforms: platforms, sections: sections, overtakeTracks: overtake)
+            }
+        }
+
+        var systems: [String: Data] = [:]
+        for key in bundledSystems {
+            // The High Speed Rail's file is `thsr_track.json`.
+            systems[key] = read(key == "thsr" ? "thsr_track" : key, "json")
+        }
+        var timetables: [String: @Sendable () throws -> Data] = [:]
+        for key in bundledTimetables {
+            timetables[key] = { try file("\(key)_times", "json") }
+        }
+        let operations = RealRailwayOperations(
+            systems: systems,
+            timetables: timetables,
+            schedules: ["thsr": { try file("thsr-schedule", "json") }]
+        )
+        let transfers = read("station_transfers", "json").flatMap { data in
+            parse("station_transfers.json") { try RealStationTransfers(data: data) }
+        }
+
+        guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
+        do {
+            let railways = try RealRailways(
+                lines: lines,
+                stations: stations,
+                names: names,
+                stationData: stationData,
+                operations: operations,
+                transfers: transfers,
+                loadIssues: issues
+            )
+            return Loaded(railways: railways, issues: railways.loadIssues)
+        } catch {
+            issues.append(RealDataLoadIssue(file: "track_lines.geojson, track_stations.geojson, station_names.json", error: error))
+            return Loaded(railways: nil, issues: issues + operations.loadIssues)
+        }
     }
 }

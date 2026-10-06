@@ -168,12 +168,47 @@ final class RealStationDataTests: XCTestCase {
         XCTAssertTrue(qiduBadu.isDoubleTrack)
         XCTAssertEqual(data.tracksBetween(stationA: "七堵", stationB: "八堵"), 2)
         XCTAssertEqual(data.tracksBetween(stationA: "八堵", stationB: "七堵"), 2, "Order independent")
-        XCTAssertTrue(data.isDoubleTrack(between: "七堵", and: "八堵"))
+        XCTAssertEqual(data.isDoubleTrack(between: "七堵", and: "八堵"), true)
 
         // Single track section (Pingxi Line)
         let shifenWanggu = try XCTUnwrap(data.trackSection(between: "十分", and: "望古"))
         XCTAssertEqual(shifenWanggu.tracks, 1)
         XCTAssertFalse(shifenWanggu.isDoubleTrack)
         XCTAssertEqual(data.tracksBetween(stationA: "望古", stationB: "十分"), 1)
+        XCTAssertEqual(data.isDoubleTrack(between: "十分", and: "望古"), false)
+    }
+
+    func testAnUnknownSectionIsUnknownNotSingleTrack() throws {
+        let data = try Self.makeStationData()
+        XCTAssertNil(data.isDoubleTrack(between: "臺北", and: "高雄"))
+        XCTAssertNil(data.trackSection(between: "Nowhere", and: "臺北"))
+    }
+
+    func testTheSitesSectionKey() throws {
+        // index.html traSectionKey: 台 as 臺, sorted, joined by |.
+        XCTAssertEqual(RealStationData.sectionKey("萬華", "台北"), "臺北|萬華")
+        XCTAssertEqual(RealStationData.sectionKey("台北", "萬華"), "臺北|萬華")
+        let data = try Self.makeStationData()
+        XCTAssertEqual(data.trackSection(between: "台北", and: "萬華")?.pair, "臺北|萬華")
+    }
+
+    func testOvertakingTracks() throws {
+        let data = try RealStationData(
+            classes: Self.bundledFile("tra_station_class.json"),
+            infos: Self.bundledFile("tra_station_info.json"),
+            codes: Self.bundledFile("trtc_codes.json"),
+            platforms: Self.bundledFile("tra_platforms.json"),
+            sections: Self.bundledFile("tra_track_sections.json"),
+            overtakeTracks: Self.bundledFile("tra_overtake_tracks.json")
+        )
+        let tracks = try XCTUnwrap(data.overtakeTracks)
+        XCTAssertEqual(tracks.version, 1)
+        XCTAssertEqual(tracks.halfMetres, 137.4)
+        let qidu = try XCTUnwrap(data.overtakeStation(forStation: "七堵"))
+        XCTAssertEqual(qidu.dirs["八堵>百福"]?.count, 3)
+        XCTAssertEqual(qidu.moves["八堵>百福|p"], [0, 5, 22])
+        XCTAssertEqual(qidu.waitingTracks.map(\.direction), ["八堵>百福", "百福>八堵"])
+        XCTAssertEqual(qidu.waitingTracks.map(\.tracks), [3, 2])
+        XCTAssertNil(try Self.makeStationData().overtakeTracks)
     }
 }

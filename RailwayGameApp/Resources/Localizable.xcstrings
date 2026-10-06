@@ -1570,6 +1570,16 @@
         }
       }
     },
+    "Real Station" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "真實車站"
+          }
+        }
+      }
+    },
     "Real-World Demo" : {
       "localizations" : {
         "zh-Hant" : {
