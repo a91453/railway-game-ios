@@ -18,8 +18,9 @@
 // minute's interpolation becomes a numerator over 3600.
 //
 // Dependency direction (ARCHITECTURE, "GameCore 內部的依賴方向"): this file
-// reads stations, the lines' stops and the clock, nothing of the railway's
-// physical layer, and changes nothing but the passengers.
+// direct demand reads stations, the lines' stops and the clock. Network
+// demand also uses the derived physical service queries of PassengerRoutes;
+// neither mode changes anything but the passengers and its route credits.
 
 extension GameWorld {
     /// A passenger's release is counted in 1/3600ths: a trip rate per hour,
@@ -27,6 +28,15 @@ extension GameWorld {
     static let releaseUnit: Int64 = 3_600
 
     // MARK: - Commands
+
+    /// Selects how future passenger releases choose a service. Groups
+    /// already waiting or riding keep their chosen trip or journey.
+    public mutating func setPassengerRoutingMode(_ mode: PassengerRoutingMode) {
+        guard mode != passengerRoutingMode else { return }
+        passengerRoutingMode = mode
+        passengerRouteBalances = []
+        passengerPlan = PassengerPlanCache()
+    }
 
     /// Sets the demand of station `id`, or clears it with `nil` (G1a). Free.
     ///
@@ -70,10 +80,13 @@ extension GameWorld {
     /// there, and where they are now.
     public func passengerLedger(of id: StationID) -> PassengerLedger {
         guard let record = passengerRecord(of: id) else { return .empty }
+        let waiting = passengers.reduce(Int64(0)) { sum, entry in
+            entry.waiting.reduce(sum) { $0 + (($1.journey?.origin ?? entry.station) == id ? $1.count : 0) }
+        }
         let riding = riders.reduce(Int64(0)) { sum, entry in
             entry.groups.reduce(sum) { $1.origin == id ? $0 + $1.count : $0 }
         }
-        return record.ledger(riding: riding)
+        return record.ledger(waiting: waiting, riding: riding)
     }
 
     /// The trip from `origin` to `destination`: the lowest-numbered line
@@ -133,9 +146,49 @@ extension GameWorld {
 
     /// Whether `group`, waiting at `station`, still has its trip: its line
     /// exists and still takes it that way.
-    func isServed(_ group: WaitingGroup, at station: StationID) -> Bool {
+    func isServed(_ group: WaitingGroup, at station: StationID,
+                  checkingLeg check: ((PassengerJourneyLeg) -> Bool)? = nil) -> Bool {
         guard let line = line(id: group.line) else { return false }
+        if let journey = group.journey {
+            guard journey.leg.from == station,
+                  journey.leg.line == group.line,
+                  journey.leg.direction == group.direction,
+                  journey.leg.to == group.destination else { return false }
+            return journey.legs.dropFirst(journey.current).allSatisfy(check ?? isServed)
+        }
         return Self.trip(on: line, from: station, to: group.destination) == group.trip
+    }
+
+    /// A planned ride can wait across the nightly closure, but must still
+    /// have a physical journey and a service planned at some level.
+    private func isServed(_ leg: PassengerJourneyLeg) -> Bool {
+        guard let line = line(id: leg.line),
+              lineJourney(leg.line, pattern: leg.pattern) != nil,
+              scheduledLevels(of: line).contains(where: { lineHeadway(leg.line, at: $0, pattern: leg.pattern) != nil })
+        else { return false }
+        if line.isRing {
+            let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
+            guard journey(of: line, service: 0, direction: direction) != nil else { return false }
+            let calls = line.ringCalls(direction).map { line.stops[$0] }
+            return calls.indices.contains { index in
+                calls[index] == leg.from && calls.dropFirst(index + 1).contains(leg.to)
+            }
+        }
+        let service = (leg.pattern ?? -1) + 1
+        guard (0..<line.serviceCount).contains(service) else { return false }
+        let calls = line.calls(ofService: service).map { line.stops[$0] }
+        let ordered = leg.direction == .outbound ? calls : Array(calls.reversed())
+        return ordered.indices.contains { index in
+            ordered[index] == leg.from && ordered.dropFirst(index + 1).contains(leg.to)
+        }
+    }
+
+    private func scheduledLevels(of line: ServiceLine) -> [ServiceLevel] {
+        var levels = serviceDay.bands.filter { line.window.contains(minuteOfDay: $0.start) }.map(\.level)
+        if case .hours(let open, _) = line.window {
+            levels.append(serviceDay.level(atMinuteOfDay: open))
+        }
+        return levels
     }
 
     /// The origin's daily trips to each station it reaches that has demand,
@@ -144,9 +197,18 @@ extension GameWorld {
         guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
         for record in passengers {
-            guard let weight = record.demand?.dailyTrips, weight > 0,
-                  let trip = passengerTrip(from: origin, to: record.station)
-            else { continue }
+            guard let weight = record.demand?.dailyTrips, weight > 0 else { continue }
+            let trip: PassengerTrip?
+            if passengerRoutingMode == .network {
+                if let leg = passengerRouteChoices(from: origin, to: record.station).first?.route.legs.first {
+                    trip = PassengerTrip(line: leg.line, direction: leg.direction)
+                } else {
+                    trip = nil
+                }
+            } else {
+                trip = passengerTrip(from: origin, to: record.station)
+            }
+            guard let trip else { continue }
             reached.append((record.station, weight, trip))
         }
         let shares = Self.apportion(demand.dailyTrips, by: reached.map(\.weight))
@@ -200,19 +262,25 @@ extension GameWorld {
     // MARK: - Release
 
     /// Every trip that releases passengers: the flows, by ascending origin
-    /// and then destination (the order passengers released in the same
-    /// minute join their queues), and their hourly trips. Derived from the
-    /// demands and the lines' stops only, so it is kept between calls of
-    /// ``advance(ticks:)`` (see ``PassengerPlanCache``) and worked out again
-    /// after a command changes either.
+    /// and then destination, and their hourly trips. Direct plans depend on
+    /// demand and calls only; network plans also depend on physical service,
+    /// its window and level. A network batch rebuilds when the service level
+    /// changes and keeps the previous release's fractional OD remainders.
     struct PassengerPlan: Sendable {
+        struct Choice: Sendable {
+            let journey: PassengerJourney
+            let weight: Int64
+        }
         struct Flow: Sendable {
-            /// The origin's index in ``GameWorld/passengers``: only
-            /// ``setStationDemand(_:to:)`` inserts or removes records, and
-            /// it forgets the plan.
+            /// The origin, looked up when the flow releases: a transfer may
+            /// insert another station record while a batch is advancing.
+            let origin: StationID
+            /// Its index when the plan was built, retained for the G1 plan
+            /// audit; release looks up `origin` again after transfer inserts.
             let record: Int
             let destination: StationID
             let trip: PassengerTrip
+            let choices: [Choice]
         }
 
         let flows: [Flow]
@@ -238,6 +306,7 @@ extension GameWorld {
     /// ``hourlyDemand(from:to:)``, which it agrees with), looking each
     /// line's first calls up once.
     func makePassengerPlan() -> PassengerPlan? {
+        if passengerRoutingMode == .network { return makeNetworkPassengerPlan() }
         let firstCalls = lines.map { line in
             var calls: [StationID: Int] = [:]
             for (index, stop) in line.stops.enumerated() where calls[stop] == nil {
@@ -257,14 +326,44 @@ extension GameWorld {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
-        for (index, record) in passengers.enumerated() {
+        for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
             let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = faredTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
-                flows.append(PassengerPlan.Flow(record: index, destination: destination.station, trip: trip))
+                flows.append(PassengerPlan.Flow(origin: record.station,
+                    record: passengers.firstIndex(where: { $0.station == record.station })!,
+                    destination: destination.station, trip: trip, choices: []))
+                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
+            }
+        }
+        return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
+    }
+
+    private func makeNetworkPassengerPlan() -> PassengerPlan? {
+        let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 }
+        var flows: [PassengerPlan.Flow] = []
+        var hourly: [Int64] = []
+        for record in passengers {
+            guard let origin = record.demand, origin.dailyTrips > 0 else { continue }
+            let reached = drawing.compactMap { other -> (StationPassengers, [PassengerPlan.Choice])? in
+                let options = passengerRouteChoices(from: record.station, to: other.station)
+                let choices = options.compactMap { choice -> PassengerPlan.Choice? in
+                    guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { return nil }
+                    return PassengerPlan.Choice(journey: journey, weight: choice.weight)
+                }
+                return choices.isEmpty ? nil : (other, choices)
+            }
+            let shares = Self.apportion(origin.dailyTrips, by: reached.map { $0.0.demand!.dailyTrips })
+            for ((destination, choices), shared) in zip(reached, shares) {
+                let trips = faredTrips(shared, from: record.station, to: destination.station)
+                guard trips > 0 else { continue }
+                let first = choices[0].journey.leg
+                flows.append(PassengerPlan.Flow(origin: record.station,
+                    record: passengers.firstIndex(where: { $0.station == record.station })!, destination: destination.station,
+                    trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
                 hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind)
             }
         }
@@ -290,10 +389,10 @@ extension GameWorld {
         // remainders: one walk through both.
         var index = 0
         while index < plan.flows.count {
-            let record = plan.flows[index].record
-            let kept = passengers[record].remainders
+            let origin = plan.flows[index].origin
+            let kept = passengers.first { $0.station == origin }!.remainders
             var next = 0
-            while index < plan.flows.count, plan.flows[index].record == record {
+            while index < plan.flows.count, plan.flows[index].origin == origin {
                 let destination = plan.flows[index].destination
                 while next < kept.count, kept[next].destination < destination {
                     next += 1
@@ -332,9 +431,43 @@ extension GameWorld {
             let count = total / Self.releaseUnit
             if count > 0 {
                 let flow = plan.flows[index]
-                passengers[flow.record].release(count, to: flow.destination, along: flow.trip, at: now)
+                guard let record = passengers.firstIndex(where: { $0.station == flow.origin }) else { continue }
+                if flow.choices.isEmpty {
+                    passengers[record].release(count, to: flow.destination, along: flow.trip, at: now)
+                } else {
+                    let shares = allocateRouteRelease(count, from: flow.origin, flow: flow)
+                    for (choice, share) in zip(flow.choices, shares) where share > 0 {
+                        passengers[record].release(share, along: choice.journey, at: now)
+                    }
+                }
             }
         }
+    }
+
+    /// Weighted fair allocation with a saved fractional balance. It assigns
+    /// this minute's whole passengers one at a time, so a succession of
+    /// one-passenger releases can still use every route in proportion.
+    private mutating func allocateRouteRelease(_ count: Int64, from origin: StationID,
+                                                flow: PassengerPlan.Flow) -> [Int64] {
+        let choices = flow.choices
+        let journeys = choices.map(\.journey)
+        let weights = choices.map(\.weight)
+        let index = passengerRouteBalances.firstIndex { $0.origin == origin && $0.destination == flow.destination }
+        var balance = index.map { passengerRouteBalances[$0] }
+        if balance?.journeys != journeys || balance?.weights != weights {
+            balance = PassengerRouteBalance(origin: origin, destination: flow.destination,
+                journeys: journeys, weights: weights, balances: Array(repeating: 0, count: choices.count))
+        }
+        var state = balance!
+        let shares = state.allocate(count)
+        if let index { passengerRouteBalances[index] = state }
+        else {
+            let insert = passengerRouteBalances.firstIndex {
+                ($0.origin, $0.destination) > (origin, flow.destination)
+            } ?? passengerRouteBalances.count
+            passengerRouteBalances.insert(state, at: insert)
+        }
+        return shares
     }
 
     /// Keeps the remainders `release` ended the call with, record by record.
@@ -342,13 +475,15 @@ extension GameWorld {
         var index = 0
         let flows = release.plan.flows
         while index < flows.count {
-            let record = flows[index].record
+            let origin = flows[index].origin
             var updates: [DemandRemainder] = []
-            while index < flows.count, flows[index].record == record {
+            while index < flows.count, flows[index].origin == origin {
                 updates.append(DemandRemainder(destination: flows[index].destination, value: release.remainders[index]))
                 index += 1
             }
-            passengers[record].updateRemainders(updates)
+            if let record = passengers.firstIndex(where: { $0.station == origin }) {
+                passengers[record].updateRemainders(updates)
+            }
         }
     }
 
@@ -358,9 +493,58 @@ extension GameWorld {
     mutating func abandonUnservedPassengers() {
         passengerPlan = PassengerPlanCache()
         let world = self
+        let valid = servedWaitingLegs()
+        var abandoned: [StationID: Int64] = [:]
         for index in passengers.indices {
             let station = passengers[index].station
-            passengers[index].abandonGroups { world.isServed($0, at: station) }
+            for group in passengers[index].abandonGroups(unless: { world.isServed($0, at: station, checkingLeg: { valid.contains($0) }) }) {
+                abandoned[group.journey?.origin ?? station, default: 0] += group.count
+            }
+        }
+        for origin in abandoned.keys.sorted() {
+            if let index = passengers.firstIndex(where: { $0.station == origin }) {
+                passengers[index].abandoned += abandoned[origin]!
+            }
+        }
+        passengers.removeAll { $0.isEmpty }
+    }
+
+    /// Validate each distinct planned leg once, even with a full station's
+    /// thousands of minute groups. Legacy direct queues need no graph work.
+    private func servedWaitingLegs() -> Set<PassengerJourneyLeg> {
+        let pending = Set(passengers.flatMap(\.waiting).flatMap { group in
+            group.journey.map { Array($0.legs.dropFirst($0.current)) } ?? []
+        })
+        return Set(pending.filter(isServed))
+    }
+
+    mutating func reindexPassengerJourneys(on line: LineID, removing pattern: Int) {
+        var abandoned: [StationID: Int64] = [:]
+        for index in passengers.indices {
+            for group in passengers[index].reindexJourneys(on: line, removing: pattern) {
+                abandoned[group.journey!.origin, default: 0] += group.count
+            }
+        }
+        for index in riders.indices {
+            riders[index].groups = riders[index].groups.compactMap { group in
+                guard let journey = group.journey else { return group }
+                guard let updated = journey.reindexed(on: line, removing: pattern, riding: true) else {
+                    abandoned[group.origin, default: 0] += group.count
+                    return nil
+                }
+                return RidingGroup(origin: group.origin, destination: group.destination,
+                    count: group.count, journey: updated)
+            }
+        }
+        riders.removeAll { $0.groups.isEmpty }
+        for origin in abandoned.keys.sorted() {
+            let index = passengers.firstIndex { $0.station == origin }!
+            passengers[index].abandoned += abandoned[origin]!
+        }
+        passengerRouteBalances.removeAll { balance in
+            balance.journeys.contains { journey in
+                journey.legs.contains { $0.line == line && ($0.pattern ?? -1) >= pattern }
+            }
         }
     }
 
@@ -377,12 +561,17 @@ extension GameWorld {
         guard zip(passengers, passengers.dropFirst()).allSatisfy({ $0.station < $1.station }) else {
             return "Passenger records must be listed once each, by ascending station."
         }
+        let valid = servedWaitingLegs()
         for record in passengers {
             let id = record.station.rawValue
             guard station(id: record.station) != nil else { return "Passengers wait at station \(id), which does not exist." }
             for group in record.waiting {
-                guard isServed(group, at: record.station) else {
+                guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."
+                }
+                if let journey = group.journey,
+                   !passengers.contains(where: { $0.station == journey.origin && $0.released > 0 }) {
+                    return "A transfer group at station \(id) has no releasing origin."
                 }
                 // The step from minute T releases at T and ends at T + 1.
                 guard group.since < clock.now else { return "Passengers at station \(id) were released at or after the current minute." }
@@ -392,6 +581,24 @@ extension GameWorld {
                     return "Station \(id) keeps a remainder for a station it cannot send passengers to."
                 }
             }
+        }
+        guard zip(passengerRouteBalances, passengerRouteBalances.dropFirst()).allSatisfy({
+            ($0.origin, $0.destination) < ($1.origin, $1.destination)
+        }) else { return "Route balances must be listed once per OD pair, in order." }
+        for balance in passengerRouteBalances {
+            guard passengerRoutingMode == .network,
+                  balance.origin != balance.destination,
+                  station(id: balance.origin) != nil, station(id: balance.destination) != nil,
+                  (1...3).contains(balance.journeys.count),
+                  Set(balance.journeys).count == balance.journeys.count,
+                  balance.weights.count == balance.journeys.count,
+                  balance.balances.count == balance.journeys.count,
+                  balance.weights.allSatisfy({ (1...10_000).contains($0) }),
+                  balance.journeys.allSatisfy({ $0.current == 0 && $0.origin == balance.origin && $0.destination == balance.destination })
+            else { return "An OD route balance is invalid." }
+            let sum = balance.weights.reduce(Int64(0), +)
+            guard balance.balances.allSatisfy({ (-sum...sum).contains($0) }),
+                  balance.balances.reduce(0, +) == 0 else { return "An OD route balance is invalid." }
         }
         return nil
     }

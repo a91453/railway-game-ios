@@ -11,7 +11,10 @@ import XCTest
 /// `SaveFixtures/` keeps loading (see its README).
 final class SavedGameTests: XCTestCase {
     private static func currentVersion(of data: Data) -> Data {
-        Data(String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 10"#).replacingOccurrences(of: #""saveVersion" : 9"#, with: #""saveVersion" : 10"#).utf8)
+        Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 8"#, with: #""saveVersion" : 11"#)
+            .replacingOccurrences(of: #""saveVersion" : 9"#, with: #""saveVersion" : 11"#)
+            .replacingOccurrences(of: #""saveVersion" : 10"#, with: #""saveVersion" : 11"#).utf8)
     }
 
     private func makeWorld() throws -> GameWorld {
@@ -37,7 +40,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 10)
+        XCTAssertEqual(SavedGame.currentVersion, 11)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -57,7 +60,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 11, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 12, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -497,7 +500,7 @@ final class SavedGameTests: XCTestCase {
         let game = try JSONDecoder().decode(SavedGame.self, from: data)
         XCTAssertTrue(game.world.trains.allSatisfy { $0.trafficVisits.isEmpty })
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(game)) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 10)
+        XCTAssertEqual(object["saveVersion"] as? Int, 11)
     }
 
     func testCorruptActualTrafficVisitsAreRefused() throws {
@@ -537,6 +540,23 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
         try world.advance(ticks: 610)
         XCTAssertEqual(world.trains[0].movement.remainingEdges.first, .edge(4))
+    }
+
+    func testVersionElevenPreservesAWaitingTransferAndOlderSavesStayDirect() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world.passengerRoutingMode, .network)
+        let transfer = try XCTUnwrap(world.waitingPassengers(at: StationID(rawValue: 2)).first)
+        XCTAssertEqual(transfer.journey?.origin, StationID(rawValue: 1))
+        XCTAssertEqual(transfer.journey?.current, 1)
+        XCTAssertEqual(world.passengerLedger(of: StationID(rawValue: 1)).waiting, 5)
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self,
+            from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+        try world.advance(ticks: 15)
+        XCTAssertGreaterThanOrEqual(world.passengerLedger(of: StationID(rawValue: 1)).arrived, 5)
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v10-line-route-preferences.json"))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: older).world.passengerRoutingMode, .direct)
     }
 
 }

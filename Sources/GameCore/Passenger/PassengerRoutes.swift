@@ -42,6 +42,11 @@ public struct PassengerRouteAllocation: Hashable, Sendable {
     public let count: Int64
 }
 
+struct PassengerRouteChoice {
+    let route: PassengerRoute
+    let weight: Int64
+}
+
 private struct PassengerRouteOrderLeg: Equatable {
     let line: LineID
     let from: StationID
@@ -359,9 +364,9 @@ extension GameWorld {
     /// whole-minute cost. Ties prefer fewer transfers, then lower unrounded
     /// seconds, then the line and stop order. The graph uses lines with service
     /// planned at the current
-    /// minute; it is derived anew when queried. A route is a plan only:
-    /// passenger release and boarding still use `passengerTrip` until the
-    /// following transfer stage moves the route into their queue records.
+    /// minute; it is derived anew when queried. Network passenger demand
+    /// stores its chosen route as a journey; legacy direct demand continues
+    /// to use `passengerTrip`.
     public func passengerRoutes(from origin: StationID, to destination: StationID, limit: Int = 3) -> [PassengerRoute] {
         guard origin != destination, station(id: origin) != nil, station(id: destination) != nil,
               limit > 0 else { return [] }
@@ -403,12 +408,16 @@ extension GameWorld {
         from origin: StationID, to destination: StationID, count: Int64
     ) -> [PassengerRouteAllocation] {
         guard (1...StationDemand.maximumDailyTrips).contains(count) else { return [] }
+        let choices = passengerRouteChoices(from: origin, to: destination)
+        let shares = Self.apportion(count, by: choices.map(\.weight))
+        return zip(choices, shares).map { PassengerRouteAllocation(route: $0.0.route, count: $0.1) }
+    }
+
+    func passengerRouteChoices(from origin: StationID, to destination: StationID) -> [PassengerRouteChoice] {
         let routes = passengerRoutes(from: origin, to: destination)
         guard let fastest = routes.first?.totalMinutes else { return [] }
         let allowance = max(5, fastest / 2)
-        let choices = routes.filter { $0.totalMinutes - fastest <= allowance }
-        let weights = choices.map { max(1, 10_000 / max(1, $0.totalMinutes)) }
-        let shares = Self.apportion(count, by: weights)
-        return zip(choices, shares).map { PassengerRouteAllocation(route: $0.0, count: $0.1) }
+        return routes.filter { $0.totalMinutes - fastest <= allowance && $0.legs.count <= 32 }
+            .map { PassengerRouteChoice(route: $0, weight: max(1, 10_000 / max(1, $0.totalMinutes))) }
     }
 }

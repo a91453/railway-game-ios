@@ -1,0 +1,377 @@
+import Foundation
+@testable import GameCore
+import XCTest
+
+final class PassengerTransferTests: XCTestCase {
+    private let a = StationID(rawValue: 1)
+    private let b = StationID(rawValue: 2)
+    private let c = StationID(rawValue: 3)
+
+    private func world() throws -> GameWorld {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        let track = TestLine(tiles: 7)
+        try track.build(in: &world)
+        for (name, x) in [("A", 1), ("B", 3), ("C", 5)] {
+            try track.buildStation(named: name, beside: x, at: 1, in: &world)
+        }
+        let first = try world.createLine(named: "First", stops: [a, b]).id
+        let second = try world.createLine(named: "Second", stops: [b, c]).id
+        for line in [first, second] {
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        }
+        let one = try world.purchaseTrain(named: "One").id
+        let two = try world.purchaseTrain(named: "Two").id
+        try world.placeTrain(one, at: track.at(1, facingEast: true))
+        try world.placeTrain(two, at: track.at(3, facingEast: true))
+        try world.setTrainMovementRate(one, to: 1024)
+        try world.setTrainMovementRate(two, to: 1024)
+        try world.assignTrain(one, to: first)
+        try world.assignTrain(two, to: second)
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        world.setSpeed(.normal)
+        return world
+    }
+
+    func testPassengerChangesTrainsAndOriginLedgerStaysConserved() throws {
+        var world = try world()
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        XCTAssertEqual(route.legs.map(\.from), [a, b])
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: route))
+        let origin = try XCTUnwrap(world.passengers.firstIndex { $0.station == a })
+        world.passengers[origin].release(5, along: journey, at: world.clock.now)
+
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: TrainID(rawValue: 1)).map(\.count), [5])
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riders(of: TrainID(rawValue: 1)), [])
+        let transfer = try XCTUnwrap(world.waitingPassengers(at: b).first)
+        XCTAssertEqual(transfer.journey?.origin, a)
+        XCTAssertEqual(transfer.journey?.current, 1)
+        XCTAssertEqual(transfer.count, 5)
+        XCTAssertGreaterThan(transfer.readyAt!, world.clock.now)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        try world.advance(ticks: 15)
+        for _ in 0..<15 { try loaded.advance(ticks: 1) }
+        XCTAssertEqual(world, loaded)
+        let ledger = world.passengerLedger(of: a)
+        XCTAssertEqual(ledger.released, 5)
+        XCTAssertEqual(ledger.arrived, 5)
+        XCTAssertEqual(ledger.waiting + ledger.riding + ledger.overflowed + ledger.abandoned, 0)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
+    func testNetworkDemandUsesRoutesAndBatchMatchesMinuteSteps() throws {
+        var batched = try world()
+        try batched.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        try batched.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        var stepped = batched
+
+        try batched.advance(ticks: 30)
+        for _ in 0..<30 { try stepped.advance(ticks: 1) }
+        XCTAssertEqual(batched, stepped)
+        let ledger = batched.passengerLedger(of: a)
+        XCTAssertGreaterThan(ledger.released, 0)
+        XCTAssertEqual(ledger.released,
+            ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned)
+        XCTAssertTrue(batched.passengers.flatMap(\.waiting).allSatisfy { $0.journey != nil })
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(batched)), batched)
+    }
+
+    private func assertConservedAndSaveable(_ world: GameWorld, file: StaticString = #filePath, line: UInt = #line) throws {
+        for station in world.stations {
+            let ledger = world.passengerLedger(of: station.id)
+            XCTAssertEqual(ledger.released,
+                ledger.waiting + ledger.riding + ledger.arrived + ledger.overflowed + ledger.abandoned,
+                file: file, line: line)
+        }
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world,
+                       file: file, line: line)
+    }
+
+    func testMultipleRoutesReleasedInTheSameMinuteSurviveSaving() throws {
+        var world = try world()
+        let alternate = try world.createLine(named: "Alternate", stops: [a, b]).id
+        try world.setLineServiceWindow(alternate, to: .allDay)
+        try world.setLineTrainsInService(alternate, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        for train in world.trains { try world.unassignTrain(train.id) }
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+        try world.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 100_000))
+
+        try world.advance(ticks: 1)
+        let waiting = world.waitingPassengers(at: a)
+        XCTAssertEqual(Set(waiting.map(\.line)).count, 2)
+        XCTAssertEqual(Set(waiting.map(\.destination)), [b])
+        try assertConservedAndSaveable(world)
+    }
+
+    func testBatchMatchesMinuteStepsAcrossOpeningAndClosingWindows() throws {
+        for window in [ServiceWindow.hours(open: 2, close: 6), .hours(open: 0, close: 5)] {
+            var batched = try world()
+            for train in batched.trains { try batched.unassignTrain(train.id) }
+            try batched.setLineServiceWindow(LineID(rawValue: 2), to: window)
+            try batched.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+            try batched.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 100_000))
+            var stepped = batched
+            try batched.advance(ticks: 10)
+            for _ in 0..<10 { try stepped.advance(ticks: 1) }
+            XCTAssertEqual(batched, stepped, "\(window)")
+            XCTAssertGreaterThan(batched.passengerLedger(of: a).released, 0)
+            try assertConservedAndSaveable(batched)
+        }
+    }
+
+    func testBatchMatchesMinuteStepsAcrossServiceLevelChanges() throws {
+        var batched = try world()
+        for train in batched.trains { try batched.unassignTrain(train.id) }
+        try batched.setLineTrainsInService(LineID(rawValue: 2), to: TrainsInService(peak: 1, offPeak: 0, low: 0))
+        try batched.setServiceDay(ServiceDay(bands: [.init(start: 0, level: .low),
+            .init(start: 2, level: .peak), .init(start: 6, level: .offPeak)]))
+        try batched.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+        try batched.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 100_000))
+        var stepped = batched
+        try batched.advance(ticks: 10)
+        for _ in 0..<10 { try stepped.advance(ticks: 1) }
+        XCTAssertEqual(batched, stepped)
+        XCTAssertGreaterThan(batched.passengerLedger(of: a).released, 0)
+        try assertConservedAndSaveable(batched)
+    }
+
+    func testTransferOverflowIsChargedToTheOriginalStation() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 1)
+        try world.setStationDemand(b, to: StationDemand(kind: .office, dailyTrips: 0))
+        let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == b })
+        world.passengers[index].release(3_998, to: c,
+            along: PassengerTrip(line: LineID(rawValue: 2), direction: .outbound), at: world.clock.now)
+
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 2)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 3)
+        XCTAssertEqual(world.passengerLedger(of: b).released, 3_998)
+        XCTAssertEqual(world.passengerLedger(of: b).abandoned, 0)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testRemovingTheNextLineAbandonsWaitingJourneysAtTheirOrigin() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.removeLine(LineID(rawValue: 2))
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 0)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testRemovingAPatternAbandonsItsQueueAndPreservesLaterPatternIdentity() throws {
+        var world = try world()
+        let line = try world.createLine(named: "Patterns", stops: [a, b, c]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        let first = try world.addLinePattern(line, calling: [0, 1, 2])
+        let later = try world.addLinePattern(line, calling: [0, 2])
+        for pattern in [first, later] {
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: pattern)
+        }
+        let routes = world.passengerRoutes(from: a, to: c)
+        let oldFirst = try XCTUnwrap(routes.first { $0.legs.count == 1 && $0.legs[0].pattern == first })
+        let oldLater = try XCTUnwrap(routes.first { $0.legs.count == 1 && $0.legs[0].pattern == later })
+        world.passengers[0].release(5, along: try XCTUnwrap(PassengerJourney(origin: a, route: oldFirst)), at: GameTime(minutes: -1))
+        world.passengers[0].release(7, along: try XCTUnwrap(PassengerJourney(origin: a, route: oldLater)), at: GameTime(minutes: -1))
+
+        try world.removeLinePattern(line, at: first)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(world.waitingPassengers(at: a).first?.journey?.leg.pattern, 0)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 7)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testBreakingTheTrackAbandonsThePlannedQueue() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.removeTrackPlatform(a, on: .edge(2), from: 0)
+        try world.removeTrackEdge(.edge(2))
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testStoppingATrainAbandonsItsRidersOnTheOriginalLedger() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 1)
+        let train = TrainID(rawValue: 1)
+        try world.unassignTrain(train)
+        try world.stopTrainService(train)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testReverseTransferArrivesAndFaresAreChargedOnlyOnce() throws {
+        var world = try world()
+        world.setEconomyMode(.management)
+        try world.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 0))
+        let journey = try XCTUnwrap(PassengerJourney(origin: c, route: XCTUnwrap(world.passengerRoutes(from: c, to: a).first)))
+        XCTAssertEqual(journey.legs.map(\.direction), [.inbound, .inbound])
+        let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == c })
+        world.passengers[index].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 30)
+        XCTAssertEqual(world.passengerLedger(of: c).arrived, 5)
+        XCTAssertEqual(world.accounts.pending.fareTrips, 5)
+        let expected = GameWorld.wholeDollars(5 * (try XCTUnwrap(world.tripFare(from: c, to: a))).amount)
+        XCTAssertEqual(world.accounts.pending.fareRevenue, expected)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testTurningOffAllPlannedServiceAbandonsTransfers() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 2)
+        try world.setLineTrainsInService(LineID(rawValue: 2), to: .none)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 0)
+        XCTAssertEqual(world.waitingPassengers(at: b), [])
+        try assertConservedAndSaveable(world)
+    }
+
+    func testRouteCreditsAreFairAtMaximumDemandAndIndependentOfReleaseChunks() throws {
+        let world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        // The credit algorithm depends only on weights; journey identity
+        // is exercised by the world save/continuation test below.
+        var batched = PassengerRouteBalance(origin: a, destination: c,
+            journeys: [journey, journey, journey], weights: [5, 3, 2], balances: [0, 0, 0])
+        var stepped = batched
+        let million = StationDemand.maximumDailyTrips
+        XCTAssertEqual(batched.allocate(million), [500_000, 300_000, 200_000])
+        var shares: [Int64] = [0, 0, 0]
+        var remaining = million
+        for count in [Int64(1), 7, 113, 10_001, million - 10_122] {
+            let allocated = stepped.allocate(count)
+            for index in shares.indices { shares[index] += allocated[index] }
+            remaining -= count
+        }
+        XCTAssertEqual(remaining, 0)
+        XCTAssertEqual(shares, [500_000, 300_000, 200_000])
+        XCTAssertEqual(batched, stepped)
+        XCTAssertEqual(stepped.balances, [0, 0, 0])
+        var oneAtATime = PassengerRouteBalance(origin: a, destination: c,
+            journeys: [journey, journey], weights: [1, 1], balances: [0, 0])
+        XCTAssertEqual(oneAtATime.allocate(1), [1, 0])
+        XCTAssertEqual(oneAtATime.allocate(1), [0, 1])
+    }
+
+    func testMultipleRouteCreditsSurviveSavingAndServiceOptionChanges() throws {
+        var world = try world()
+        for train in world.trains { try world.unassignTrain(train.id) }
+        for headway in [Int64(6), 8, 10] {
+            let line = try world.createLine(named: "Direct \(headway)", stops: [a, c]).id
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTargetHeadways(line, to: TargetHeadways(peak: headway, offPeak: headway, low: headway))
+        }
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: StationDemand.maximumDailyTrips))
+        try world.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: StationDemand.maximumDailyTrips))
+        try world.advance(ticks: 17)
+        XCTAssertEqual(world.passengerRouteBalances.first?.journeys.count, 3)
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        try world.advance(ticks: 103)
+        for _ in 0..<103 { try loaded.advance(ticks: 1) }
+        XCTAssertEqual(world, loaded)
+        XCTAssertGreaterThan(world.passengerLedger(of: a).overflowed, 0)
+        try world.removeLine(LineID(rawValue: 4))
+        try world.advance(ticks: 1)
+        XCTAssertFalse(world.passengerRouteBalances.flatMap(\.journeys).flatMap(\.legs).contains { $0.line == LineID(rawValue: 4) })
+        try assertConservedAndSaveable(world)
+    }
+
+    func testAPlannedPassengerDoesNotBoardTheWrongPattern() throws {
+        var world = try world()
+        let first = LineID(rawValue: 1)
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        let pattern = try world.addLinePattern(first, calling: [0, 1])
+        try world.setLineTrainsInService(first, to: TrainsInService(peak: 1, offPeak: 1, low: 1), pattern: pattern)
+        try world.unassignTrain(TrainID(rawValue: 1))
+        try world.assignTrain(TrainID(rawValue: 1), to: first, pattern: pattern)
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riderCount(of: TrainID(rawValue: 1)), 0)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testAPlannedPassengerDoesNotBoardAnOldTimetableMissingTheirStop() throws {
+        var world = try world()
+        world.setSpeed(.x10)
+        try world.advance(ticks: 8)
+        try world.setLineStops(LineID(rawValue: 1), to: [a, c])
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        XCTAssertEqual(journey.legs.map(\.to), [c])
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.riderCount(of: TrainID(rawValue: 1)), 0)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testDemandAcrossMidnightAndOvernightServiceMatchesMinuteSteps() throws {
+        var batched = try world()
+        for train in batched.trains { try batched.unassignTrain(train.id) }
+        try batched.advance(ticks: 1_438)
+        try batched.setLineServiceWindow(LineID(rawValue: 2), to: .hours(open: 1_439, close: 1_442))
+        try batched.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+        try batched.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 100_000))
+        var stepped = batched
+        try batched.advance(ticks: 8)
+        for _ in 0..<8 { try stepped.advance(ticks: 1) }
+        XCTAssertEqual(batched, stepped)
+        XCTAssertGreaterThan(batched.passengerLedger(of: a).released, 0)
+        try assertConservedAndSaveable(batched)
+    }
+
+    func testAWindowThatNeverRunsItsPlannedLevelAbandonsTheQueue() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        try world.setLineTrainsInService(LineID(rawValue: 2), to: TrainsInService(peak: 1, offPeak: 0, low: 0))
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5, "the next peak still runs")
+        try world.setLineServiceWindow(LineID(rawValue: 2), to: .hours(open: 0, close: 60))
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        try assertConservedAndSaveable(world)
+    }
+
+    func testInvalidRouteCreditStateIsRejected() throws {
+        var world = try world()
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 100_000))
+        try world.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 100_000))
+        try world.advance(ticks: 1)
+        let saved = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        let balances = try XCTUnwrap(saved["passengerRouteBalances"] as? [[String: Any]])
+        XCTAssertFalse(balances.isEmpty)
+        func rejects(_ edit: (inout [String: Any]) throws -> Void) throws {
+            var object = saved
+            var entries = balances
+            try edit(&entries[0])
+            object["passengerRouteBalances"] = entries
+            XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object)))
+        }
+        try rejects { $0["weights"] = [Int64.max] }
+        try rejects { $0["origin"] = 99 }
+        try rejects { entry in
+            var journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
+            journeys[0]["current"] = 1
+            entry["journeys"] = journeys
+        }
+        try rejects { entry in
+            let journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
+            entry["journeys"] = [journeys[0], journeys[0]]
+            entry["weights"] = [1, 1]
+            entry["balances"] = [0, 0]
+        }
+    }
+}

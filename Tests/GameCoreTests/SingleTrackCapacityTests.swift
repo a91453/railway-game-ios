@@ -74,7 +74,7 @@ final class SingleTrackCapacityTests: XCTestCase {
         XCTAssertEqual(world.line(id: id)?.trainsInService.peak, 4, "the player's requested count is preserved")
         let save = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: save).world, world)
-        XCTAssertEqual(SavedGame.currentVersion, 10, "derived capacity adds no saved field")
+        XCTAssertGreaterThanOrEqual(SavedGame.currentVersion, 10, "capacity uses the shared physical preferences of v10")
     }
 
     func testAnActualPassingLoopSplitsTheResourceAndRemovingItJoinsIt() throws {
