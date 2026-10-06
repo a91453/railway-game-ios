@@ -20,6 +20,9 @@ struct LinesPanel: View {
     @State private var patternFirst = 0
     @State private var patternLast = 1
     @State private var patternExpress = false
+    /// The name being typed for the selected line, while its rename alert
+    /// is up.
+    @State private var renamingLine: String?
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -45,6 +48,13 @@ struct LinesPanel: View {
             }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
+            .renameAlert(
+                title: session.language.text("Rename Line", "線路更名"),
+                name: $renamingLine,
+                language: session.language
+            ) { name in
+                session.renameSelectedLine(to: name)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -162,7 +172,7 @@ struct LinesPanel: View {
 
     private func lineRow(_ line: ServiceLine) -> some View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
-        let color = Palette.lineColor(line.id)
+        let color = Palette.lineColor(line.id, custom: line.color)
         return HStack(spacing: 10) {
             ZStack {
                 Circle()
@@ -200,6 +210,49 @@ struct LinesPanel: View {
 
     private func lineSection(_ line: ServiceLine) -> some View {
         Section {
+            // The reference's line name and colour (`PRESET_COLORS`).
+            HStack {
+                Button {
+                    renamingLine = line.name
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Rename", "更名"))
+                    } icon: {
+                        Image(systemName: "pencil")
+                    }
+                }
+                .accessibilityIdentifier("line.rename")
+                Spacer()
+                Menu {
+                    Button {
+                        session.setSelectedLineColor(nil)
+                    } label: {
+                        Text(verbatim: session.language.text("Automatic", "自動"))
+                    }
+                    ForEach(LineColor.presets, id: \.self) { color in
+                        Button {
+                            session.setSelectedLineColor(color)
+                        } label: {
+                            Label {
+                                Text(verbatim: color.hexText)
+                            } icon: {
+                                Image(systemName: line.color == color ? "checkmark.circle.fill" : "circle.fill")
+                            }
+                            .tint(Palette.color(color))
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Colour", "顏色"))
+                    } icon: {
+                        Circle()
+                            .fill(Palette.lineColor(line.id, custom: line.color))
+                            .frame(width: 16, height: 16)
+                    }
+                }
+                .accessibilityIdentifier("line.color")
+            }
+            .buttonStyle(.borderless)
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
                 session.setSelectedLineAllDay(line.window != .allDay)
             }
@@ -472,5 +525,45 @@ struct LinesPanel: View {
         } header: {
             Text("New line")
         }
+    }
+}
+
+/// An alert to type a new name in, shown while `name` is not `nil`: the
+/// rename button calls `rename` with what was typed.
+private struct RenameAlert: ViewModifier {
+    let title: String
+    @Binding var name: String?
+    let language: DisplayLanguage
+    let rename: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(
+            Text(verbatim: title),
+            isPresented: Binding(get: { name != nil }, set: { if !$0 { name = nil } })
+        ) {
+            TextField(text: Binding(get: { name ?? "" }, set: { name = $0 })) {
+                Text(verbatim: language.text("Name", "名稱"))
+            }
+            .accessibilityIdentifier("rename.field")
+            Button {
+                if let typed = name { rename(typed) }
+                name = nil
+            } label: {
+                Text(verbatim: language.text("Rename", "更名"))
+            }
+            Button(role: .cancel) {
+                name = nil
+            } label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        }
+    }
+}
+
+extension View {
+    /// A rename alert (see `RenameAlert`).
+    func renameAlert(title: String, name: Binding<String?>, language: DisplayLanguage,
+                     rename: @escaping (String) -> Void) -> some View {
+        modifier(RenameAlert(title: title, name: name, language: language, rename: rename))
     }
 }

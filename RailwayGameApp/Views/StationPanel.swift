@@ -16,11 +16,25 @@ import SwiftUI
 struct StationPanel: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
+    /// The name being typed for the station, while its rename alert is up.
+    @State private var renaming: String?
 
     var body: some View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    Section {
+                        Button {
+                            renaming = station.name
+                        } label: {
+                            Label {
+                                Text(verbatim: session.language.text("Rename Station", "車站更名"))
+                            } icon: {
+                                Image(systemName: "pencil")
+                            }
+                        }
+                        .accessibilityIdentifier("station.rename")
+                    }
                     operationSection(station)
                     realStationSection(station)
                     catchmentPopulationSection(station)
@@ -41,6 +55,13 @@ struct StationPanel: View {
             }
             .navigationTitle(session.selectedStation.map { Text(verbatim: $0.name) } ?? Text("Station"))
             .navigationBarTitleDisplayMode(.inline)
+            .renameAlert(
+                title: session.language.text("Rename Station", "車站更名"),
+                name: $renaming,
+                language: session.language
+            ) { name in
+                session.renameSelectedStation(to: name)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     stationMenu
@@ -164,6 +185,14 @@ struct StationPanel: View {
                 Text(verbatim: session.world.stationDemand(of: station.id)?.displayText(in: session.language) ?? "—")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                // Item 5: how the town round it has grown.
+                if let growth = session.world.townGrowthText(of: station.id, in: session.language) {
+                    Text(verbatim: growth)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("station.growth")
+                }
             } header: {
                 Text("Ridership")
             } footer: {
