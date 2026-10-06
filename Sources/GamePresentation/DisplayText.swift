@@ -514,3 +514,11 @@ extension Train {
         return language.text("\(name) · \(perCar) a car · \(doors) doors", "\(name) · 每節 \(perCar) 人 · \(doors) 門")
     }
 }
+
+extension LineColor {
+    /// "#EF5350", as the reference writes a line's colour.
+    public var hexText: String {
+        let digits = String(rgb, radix: 16, uppercase: true)
+        return "#" + String(repeating: "0", count: max(0, 6 - digits.count)) + digits
+    }
+}

@@ -473,3 +473,20 @@ extension StationOperationMode {
         }
     }
 }
+
+extension GameWorld {
+    /// How station `id`'s town has grown (item 5): "Grown from 1,000 to
+    /// 1,250 trips a day · +1.2% yesterday", or `nil` without growth there.
+    public func townGrowthText(of id: StationID, in language: DisplayLanguage) -> String? {
+        guard let place = townGrowth(of: id), let demand = stationDemand(of: id) else { return nil }
+        let base = Money(place.base).displayText
+        let now = Money(demand.dailyTrips).displayText
+        let sign = place.lastGrowth < 0 ? "-" : "+"
+        let tenths = abs(place.lastGrowth)
+        let rate = "\(sign)\(tenths / 10).\(tenths % 10)%"
+        return language.text(
+            "Grown from \(base) to \(now) trips a day · \(rate) yesterday",
+            "每日旅次由 \(base) 成長到 \(now) · 昨日 \(rate)"
+        )
+    }
+}
