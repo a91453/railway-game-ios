@@ -186,6 +186,11 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
         demoMap.tap()
 
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 10))
+        pause.tap()
+        XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 5))
+
         let layersButton = app.buttons["map.layers"]
         XCTAssertTrue(layersButton.waitForExistence(timeout: 10), "Map layers button must be visible on the map")
         layersButton.tap()
@@ -199,14 +204,16 @@ final class MapInteractionTests: XCTestCase {
         let catchmentRingsToggle = app.switches["layer.catchmentRings"]
         XCTAssertTrue(catchmentRingsToggle.waitForExistence(timeout: 5), "Catchment rings toggle must exist in MapLayerSheet")
 
-        let heatmapToggle = app.switches["layer.populationHeatmap"]
-        XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap toggle must exist")
+        let heatmapRow = app.switches["layer.populationHeatmap"]
+        XCTAssertTrue(heatmapRow.waitForExistence(timeout: 5), "Population heatmap row must exist")
+        // SwiftUI exposes a labelled wrapper and its actual UISwitch as
+        // separate switches. Use the control's activation point; tapping
+        // the wrapper or coordinates in its frame can leave it unchanged.
+        let heatmapToggle = heatmapRow.switches.firstMatch
+        XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap control must exist")
         XCTAssertTrue(heatmapToggle.isEnabled, "The implemented population overlay must be available")
         if heatmapToggle.value as? String == "0" {
-            // SwiftUI exposes the labelled Form row as the switch. Its
-            // centre is the label; tap the actual control at the trailing
-            // edge, as a player does, and verify the setting before Done.
-            heatmapToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+            heatmapToggle.tap()
         }
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: heatmapToggle)
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Population heatmap must be on before dismissing")
