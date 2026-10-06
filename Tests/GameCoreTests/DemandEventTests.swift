@@ -118,6 +118,7 @@ final class DemandEventTests: XCTestCase {
             DemandEvent(kind: .crowdSurge, station: ids[0], announced: 0, start: 2, end: 2, boost: 600),
             DemandEvent(kind: .crowdSurge, station: ids[0], announced: 0, start: 1, end: 2, boost: 0),
             DemandEvent(kind: .crowdSurge, station: ids[0], announced: 5, start: 6, end: 7, boost: 600),
+            DemandEvent(kind: .crowdSurge, station: ids[0], announced: .min, start: .min, end: .max, boost: 600),
         ] {
             var broken = world
             broken.demandEvents!.events = [bad]

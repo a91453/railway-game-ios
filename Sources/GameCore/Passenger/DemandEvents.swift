@@ -60,7 +60,10 @@ public struct DemandEvent: Hashable, Codable, Sendable {
     }
 
     var isValid: Bool {
-        announced <= start && start < end && end - start <= 30 && (1...2_000).contains(boost)
+        // Checked without overflow: a save's days may be anything.
+        guard announced <= start, start < end, (1...2_000).contains(boost) else { return false }
+        let (days, overflow) = end.subtractingReportingOverflow(start)
+        return !overflow && days <= 30
     }
 }
 

@@ -1518,11 +1518,14 @@ public struct GameWorld: Equatable, Sendable {
                 } else {
                     passengerWake = nil
                 }
-                // Weekly demand: the next day releases its own trips.
-                let intoDay = clock.now.seconds - dayIndex(of: clock.now) * GameTime.secondsPerDay
-                let dayWake: Int64? = demandDay != nil
-                    ? (GameTime.secondsPerDay - intoDay + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
-                    : nil
+                // Weekly demand: the next day releases its own trips. The
+                // second of the day, without multiplying back (a save's
+                // clock may be near the end of time).
+                let day = GameTime.secondsPerDay
+                let dayWake: Int64? = demandDay.map { _ in
+                    let intoDay = (clock.now.seconds % day + day) % day
+                    return (day - intoDay + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
+                }
                 let wake = [
                     wholeMinutesUntilNextServiceEvent(passengersWaiting: release != nil), minutesUntilNextDispatch(memo: &memo),
                     minutesUntilLineWaitsChange(memo: &memo), passengerWake, dayWake,
