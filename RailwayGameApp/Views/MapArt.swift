@@ -25,6 +25,7 @@ enum MapArt {
     static func drawMap(
         _ world: GameWorld,
         selectedTrainID: TrainID?,
+        highlightedTrainID: TrainID? = nil,
         selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
         traffic: TrafficOverlay = TrafficOverlay(),
@@ -54,7 +55,7 @@ enum MapArt {
         }
 
         drawNetwork(world, projection: projection, cached: edges, in: context)
-        drawAuthorities(traffic, selectedTrainID: selectedTrainID, projection: projection, in: context)
+        drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
         for station in world.stations {
             drawPointStation(
                 station,
