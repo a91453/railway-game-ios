@@ -477,3 +477,33 @@ extension GameSession {
         return nil
     }
 }
+
+extension TrainType {
+    /// The type's name, as the reference labels it (`TRAIN_TYPES[type].label`,
+    /// `metroTrainTypeLabel`): "Type B" / "B型", "Maglev" / "磁浮".
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .a, .b, .c, .l, .d: language.text("Type \(rawValue)", "\(rawValue)型")
+        case .apm: "APM"
+        case .maglev: language.text("Maglev", "磁浮")
+        case .skyRail: language.text("Sky rail", "雲軌")
+        case .monorail: language.text("Monorail", "單軌")
+        }
+    }
+}
+
+extension Train {
+    /// The type of its cars, what each carries and its doors:
+    /// "Type B · 260 a car · 4 doors", or "Standard car · 320 a car · 4 doors".
+    public func typeText(in language: DisplayLanguage) -> String {
+        Self.typeText(type, in: language)
+    }
+
+    /// The same for a train of cars of `type` (`nil`: the standard car).
+    public static func typeText(_ type: TrainType?, in language: DisplayLanguage) -> String {
+        let name = type?.title(in: language) ?? language.text("Standard car", "標準車")
+        let perCar = type?.ratedCapacityPerCar ?? ratedCapacityPerCar
+        let doors = type?.doorsPerCar ?? ServiceDwell.doorsPerCar
+        return language.text("\(name) · \(perCar) a car · \(doors) doors", "\(name) · 每節 \(perCar) 人 · \(doors) 門")
+    }
+}

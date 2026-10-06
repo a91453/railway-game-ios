@@ -760,3 +760,16 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
 
 服務異動處理：候車群組檢查尚未完成的每段服務、物理路徑與每天能實際出現的服務 level；夜間暫停可等待再開班，永久失效則離站。刪除 pattern 會移轉後續索引；已在被移除服務上的乘客可按舊時刻表完成目前這段，移除未來 pattern 則結束其旅程並記回原起站。批量推進在 window／level 邊界保存 OD 餘數、重建需求，idle shortcut 亦會在該邊界醒來。
+
+## 車種與每節定員（決策 66）
+
+2026-10-06 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c`。`Railway/` 三個來源與 `railway_game_reference_clean` 都沒有車種資料；`Ci/` 只有每節人數。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`TRAIN_TYPES`、`LINE_TRAIN_TYPE_MAIN`、`LINE_TRAIN_TYPE_EXTRA` | `TrainType`、`TrainType.ratedCapacityPerCar`、`TrainType.main` | direct：九種與 `ppc` 逐值照搬。來源依城市限制可選車種（中國大陸全部、其他城市 A、B、C、L、D），本遊戲沒有城市清單，全部可選。 |
+| 同檔／`normalizeLineTrainTypeForCityKey`、`_lineFormState.type` | `TrainType.referenceDefault` | direct：預設 B。App 新購列車仍是標準車（不改決策 46 平衡），記錄來源預設。 |
+| 同檔／`getTrainCap`（`round(ppc × cars)`） | `Train.ratedCapacity` | direct：整數相乘。 |
+| 同檔／`getMetroTrainOperationalCap`、`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1` | `Train.capacity` | direct：`(額定 × 11 + 5) / 10`，與 `Math.round` 對正數相同。HSR 不超載的分支本遊戲沒有高鐵模式，gap。 |
+| 同檔／`getMetroLineTrainPpc`、各城市 `*_STOCK_MODELS` | 未移植 | gap：真實車型表依城市；本遊戲沒有城市車型選擇。 |
+| 來源無車門模型（`PARAMS.BOARDING_RATE: 2` 未被使用） | `TrainType.doorsPerCar`、`Train.passengersPerSecond`、`Train.exchangeSeconds` | gap → 原生：每門每秒 2 人（決策 39），門數依車種（5／4／3／2）。 |

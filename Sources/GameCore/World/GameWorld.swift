@@ -512,6 +512,19 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].cars = cars
     }
 
+    /// Sets the type of train `id`'s cars (the reference's `TRAIN_TYPES`),
+    /// or `nil` for the standard car: what each car carries and how many
+    /// doors it has (see ``TrainType``). Free, and only while the train is
+    /// off the track, as its cars are (see ``setTrainCars(_:to:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainAlreadyPlaced(_:)``.
+    public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
+        trains[index].type = type
+    }
+
     /// Takes a placed train off the track. The train keeps its ID, name and
     /// timetable (and its period); its movement becomes ``TrainMovement/idle`` (rate 0, no
     /// path), so placing it again never resumes an old journey.
@@ -1198,7 +1211,7 @@ public struct GameWorld: Equatable, Sendable {
     ///      farthest first, up to its ``Train/capacity`` (G1b; see
     ///      ``riders(of:)`` and ``PassengerLedger``). Both use the doors at
     ///      once, so the exchange lasts the larger number's
-    ///      ``ServiceDwell/exchangeSeconds(_:cars:)``.
+    ///      ``Train/exchangeSeconds(_:)``.
     ///    - **Doors held open.** At each whole minute while they are open,
     ///      newly released passengers board too, and the exchange runs on.
     ///    - **Doors closing.** They start closing at the first second when
@@ -1910,7 +1923,7 @@ public struct GameWorld: Equatable, Sendable {
     /// - once its doors have opened, the passengers for that stop get off
     ///   and those waiting for the train get on (see
     ///   ``exchangePassengers(_:at:)``), taking as long as the larger
-    ///   number does (see ``ServiceDwell/exchangeSeconds(_:cars:)``);
+    ///   number does (see ``Train/exchangeSeconds(_:)``);
     /// - while its doors stay open, at each whole minute, when new
     ///   passengers have come, they get on too, after those still getting
     ///   on;
@@ -1925,14 +1938,14 @@ public struct GameWorld: Equatable, Sendable {
             if times.closing == nil, now.isWholeMinute {
                 let boarded = boardPassengers(trains[index], at: stop)
                 if boarded > 0 {
-                    times.exchangeEnd = Self.saturating(max(end, now), plus: ServiceDwell.exchangeSeconds(boarded, cars: trains[index].cars))
+                    times.exchangeEnd = Self.saturating(max(end, now), plus: trains[index].exchangeSeconds(boarded))
                     changed = true
                 }
             }
         } else {
             guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
             let busy = exchangePassengers(index, at: stop)
-            times.exchangeEnd = Self.saturating(now, plus: ServiceDwell.exchangeSeconds(busy, cars: trains[index].cars))
+            times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy))
             changed = true
         }
         if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {

@@ -47,6 +47,11 @@ struct TrainControls: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    // Item 2: the type of its cars, as the reference's
+                    // `TRAIN_TYPES` (what a car carries, and its doors).
+                    TrainTypeMenu(type: train.type, language: session.language) { type in
+                        session.setSelectedTrainType(type)
+                    }
                     headingPicker
                 } else {
                     HStack {
@@ -322,6 +327,62 @@ struct TrainControls: View {
                 }
                 .accessibilityLabel("Run the train's timetable")
             }
+        }
+    }
+}
+
+/// The type of a train's cars (the reference's `TRAIN_TYPES`): the standard
+/// car, the reference's main types and its extras. Keeps no type of its own:
+/// a choice calls `choose`, which applies one `GameWorld` command through
+/// the session.
+private struct TrainTypeMenu: View {
+    let type: TrainType?
+    let language: DisplayLanguage
+    let choose: @MainActor (TrainType?) -> Void
+
+    var body: some View {
+        Menu {
+            Button {
+                choose(nil)
+            } label: {
+                option(Train.typeText(nil, in: language), isChosen: type == nil)
+            }
+            Section {
+                ForEach(TrainType.allCases, id: \.self) { candidate in
+                    Button {
+                        choose(candidate)
+                    } label: {
+                        option(Train.typeText(candidate, in: language), isChosen: candidate == type)
+                    }
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: Train.typeText(type, in: language))
+            } icon: {
+                Image(systemName: "tram")
+            }
+            .font(.footnote)
+            .monospacedDigit()
+        }
+        .accessibilityIdentifier("train.type")
+        .accessibilityLabel(Text(verbatim: Train.typeText(type, in: language)))
+        .accessibilityHint(Text(verbatim: language.text(
+            "Chooses the type of its cars: how many passengers each carries and how many doors it has.",
+            "選擇車種：每節載客數與車門數。"
+        )))
+    }
+
+    @ViewBuilder
+    private func option(_ title: String, isChosen: Bool) -> some View {
+        if isChosen {
+            Label {
+                Text(verbatim: title)
+            } icon: {
+                Image(systemName: "checkmark")
+            }
+        } else {
+            Text(verbatim: title)
         }
     }
 }

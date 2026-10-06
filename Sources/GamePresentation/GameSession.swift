@@ -545,6 +545,18 @@ public final class GameSession {
         }
     }
 
+    /// Sets the type of the selected train's cars through
+    /// `GameWorld.setTrainType(_:to:)` (`nil`: the standard car): only while
+    /// it is off the track.
+    public func setSelectedTrainType(_ type: TrainType?) {
+        guard let train = requireSelectedTrain() else { return }
+        perform { world throws(GameError) in
+            try world.setTrainType(train.id, to: type)
+            let text = Train.typeText(type, in: language)
+            return language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+        }
+    }
+
     /// Sets the selected train's rate through
     /// `GameWorld.setTrainMovementRate(_:to:)`. Like a speed change, a new
     /// rate is shown by the control itself rather than announced; a rejected
