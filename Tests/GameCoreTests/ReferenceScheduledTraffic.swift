@@ -455,6 +455,10 @@ extension ReferenceWorld {
             trains[i].trafficVisits.sort {
                 $0.cycle != $1.cycle ? $0.cycle < $1.cycle : $0.stop != $1.stop ? $0.stop < $1.stop : $0.station < $1.station
             }
+            // Only the current cycle and the one before are ever read.
+            if let latest = trains[i].service?.cycle ?? trains[i].trafficVisits.last?.cycle {
+                trains[i].trafficVisits.removeAll { $0.cycle < latest - 1 }
+            }
         }
     }
 
