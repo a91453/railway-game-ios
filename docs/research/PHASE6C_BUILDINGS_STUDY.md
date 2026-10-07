@@ -1,27 +1,29 @@
 # Phase 6c 建物、容量與地價，以及 Phase 8 素材管線：參考盤點與設計提案
 
-查閱日期：2026-10-07（UTC）。本分支由當時最新 `origin/main` **`ea6ca31479c21d55650bcc904dbf529cdca02aab`** 開出；私有參考庫 `a91453/railway-reference-private` 已實際 clone，提交為 **`2db0c5a6963798e6b86723bb001189343a59940c`**。參考路徑均相對於私有庫根目錄；bytes 是實際檔案大小，MiB = 1,048,576 bytes，並非 IPA 壓縮後大小或 GPU 記憶體。本文只有研究與提案，型別、函式、數值和 PR 拆分尚待作者採納。
+查閱日期：2026-10-07（UTC）。本分支由當時最新 `origin/main` **`ea6ca31479c21d55650bcc904dbf529cdca02aab`** 開出；私有參考庫 `a91453/railway-reference-private` 已實際 clone，提交為 **`2db0c5a6963798e6b86723bb001189343a59940c`**。參考路徑均相對於私有庫根目錄；bytes 是實際檔案大小，MiB = 1,048,576 bytes，並非 IPA 壓縮後大小或 GPU 記憶體。本文只有研究與提案，型別、函式、數值和 PR 拆分尚待作者採納。PR #174 修訂時已同步最新 main **`66b5949`**（已合併 PR #173），設計依指定的 6b 提交 **`d2b383356514650197e7f94c060e88f4ac0e2486`** 重算；§2–§4、§8 的參考盤點保持原文。
 
 **本次只新增此文件，沒有程式變更，沒有執行或宣稱任何測試通過。** GameCore 規則、存檔、golden、獨立模型與正式架構紀錄，仍依 `AGENTS.md` 由 Claude Code 負責。
 
 ## 1. 基準、已定方向與土地接點
 
-開始前依序讀 `AGENTS.md`、`CLAUDE.md`、`docs/ARCHITECTURE.md`（決策 28、50、54、70）、`docs/ROADMAP.md` 的 Phase 6／7／8 與「跨階段議題」、Phase 6a 參考對照、`docs/research/PHASE6_LAND_USE_STUDY.md`，最後讀 `Sources/GameCore/City/Land.swift`。main 已合併 PR #172，因此土地研究讀 main；main 當時還沒有決策 72、Phase 6a 對照與 Land.swift，這三項讀 **`origin/claude/relaxed-curie-v8j2fp`，`5f1d8ccd48677cf8241d7b50308cc78043121806`**，沒有把該分支合入本研究分支。
+開始前依序讀 `AGENTS.md`、`CLAUDE.md`、`docs/ARCHITECTURE.md`（決策 28、50、54、70）、`docs/ROADMAP.md` 的 Phase 6／7／8 與「跨階段議題」、Phase 6a 參考對照、`docs/research/PHASE6_LAND_USE_STUDY.md`，最後讀 `Sources/GameCore/City/Land.swift`。main 已合併 PR #172，因此土地研究讀 main；main 當時還沒有決策 72、Phase 6a 對照與 Land.swift，這三項讀 **`origin/claude/relaxed-curie-v8j2fp`，`5f1d8ccd48677cf8241d7b50308cc78043121806`**。上述為初稿查閱基準；本次修訂另外讀指定 `d2b3833` 的 `City/LandDemand.swift`、`City/Land.swift`、`GamePresentation/LandImport.swift` 與架構決策 72、73，並同步含 6a／6b 的最新 main。
 
-本次指示已取代前一份研究的權威任意輪廓提案，以下三點視為既定條件：
+本次指示已取代前一份研究的權威任意輪廓提案，以下四點視為既定條件：
 
 - GameCore 的建物只以**佔用哪些 64 m 格**表示；任意輪廓、朝向、模型、LOD 與模型高度差異在畫面／素材層。鐵路與車站仍是連續世界座標，決策 28、54 不變。
+- 一般住宅、商業、辦公建物由城市自動產生與升級，屬於城市存量；玩家自建、公司持有的房地產移到 Phase 7，6c 不提供建物購買、擺放、升級或拆除的玩家命令。
 - 地價先即時推導，不存價格歷史；建造與維護費用、交易、租金、折舊與資產負債表由 Phase 7 處理，不放進 6c。
 - GameCore 只用整數，結果固定；如需抽籤，只用存檔種子與 `SeedDraw` 的 FNV-1a。相機、載入順序、裝置設定、系統時間與系統亂數不影響模擬。
 
-| 本專案檔案／名稱（6a 分支） | 實際值／行為 | 6c 接點 |
+| 本專案檔案／名稱（指定 6b 提交） | 實際值／行為 | 6c 接點 |
 | --- | --- | --- |
-| `City/Land.swift`：`Land.cellLength`、`columns(in:)`、`rows(in:)` | 4096 世界單位 = 64 m；最後一行／列可超出 bounds。最大世界 256 × 256 = 65,536 格。 | 不能把 64 世界單位誤當格邊長；一格面積是 4096 m²。新建物建議只佔完整在 bounds 內的格；既有末格人口保留。 |
-| 同檔：`LandCell {row,column,use,residents,jobs}`、`isValid` | 三種 `LandUse`：residential／commercial／office；居民與就業各 `0...100_000`，不能同時為 0。`Land.cells` 按 row、column 排序。 | 居民／就業只存土地一次；建物提供容量，不再存入住人數。空置建物須能存在於獨立建物清單，不能靠人口為 0 的 LandCell 表示。 |
+| `City/Land.swift`：`Land.cellLength`、`columns(in:)`、`rows(in:)` | 4096 世界單位 = 64 m；最後一行／列可超出 bounds。最大世界 256 × 256 = 65,536 格。 | 不能把 64 世界單位誤當格邊長；一格面積是 4096 m²。沿用 6b 的合法列／行範圍，末格按一個邏輯格計容量、畫面裁到 bounds；不另禁止 spread 原本可用的末格。 |
+| 同檔：`LandCell {row,column,use,residents,jobs}`、`isValid` | 三種 `LandUse`：residential／commercial／office；居民與就業各 `0...100_000`，不能同時為 0。`Land.cells` 按 row、column 排序。 | 居民／就業只存土地一次；建物提供容量，不再存入住人數。初始化與 spread 同步建立城市建物；人口仍只存在 LandCell，不另造建物入住帳。 |
 | 同檔：`middle`、`cell(at:)`、`totals(within:of:)`、`landCatchment(of:)` | 格中心 `column×4096+2048`、`row×4096+2048`；腹地半徑 51,200 單位 = 800 m，以 `d² < R²` 判定。 | 地價與 6b 使用相同嚴格小於規約，800 m 邊界不算入。`landCatchment` 是重疊腹地的顯示總量，不能直接拿來重複產生人口。 |
-| 同檔：`setLand(_:)`、`foundTowns(seed:)`、`Land.towns(seed:in:)` | 整份替換；setLand 拒絕重複／越界／無效格。3 聚落；中心半徑 12 格、130 人；外側半徑 7–10 格、峰值 80–120；核心住 1/4、工作 3 倍。 | 6c 啟用後替換土地也必須驗證建物容量／用途，不能留下失配；初始核心的商業／辦公也有居民。 |
-| 同檔：`Run`、encode／decode；決策 72 | `{row,column,use,residents:[...],jobs?:[...]}`；全 0 jobs 省略。土地版存檔 12、golden schema 36 是該分支的狀態。 | 本研究不升版；實作時以已合併的版本為基準。建物缺鍵的土地舊局如何建立既有存量，要明訂遷移。 |
-| `Passenger/TownGrowth.swift`：`growth(served:trips:reached:)`、`growTowns(reached:)`；決策 70 | +10 千分比的服務項、每可達站 +1（最多 5）、無抵達 −2；上限原旅次 4 倍。現在長的是 StationDemand。 | 6b 土地世界改長居民／就業；6c 提供上限，不能同時再長車站旅次。服務只讀 Passenger／車站／線路的穩定量測。 |
+| 同檔：`setLand(_:)`、`foundTowns(seed:)`、`Land.towns(seed:in:)` | 整份替換；setLand 拒絕重複／越界／無效格。3 聚落；中心半徑 12 格、峰值 260 人；外側半徑 7–10 格、峰值 160–240；核心住 1/4、工作 3 倍，中心實際為 65 居民／780 就業。 | 6c 啟用後替換土地也必須驗證建物容量／用途，不能留下失配；初始核心的商業／辦公也有居民。 |
+| 同檔：`Run`、encode／decode；決策 72 | `{row,column,use,residents:[...],jobs?:[...]}`；全 0 jobs 省略。6a／6b 已合併，存檔 12、golden schema 36。 | 本研究不升版；實作時以已合併的版本為基準。建物缺鍵的土地舊局如何建立既有存量，要明訂遷移。 |
+| `City/LandDemand.swift`：`shares`、`Share.demand`、`growLand`、`grow`、`spread`；決策 73 | 重疊腹地依距離權重與最大餘數分配；每百居民＋就業 40 旅次，四捨五入；正成長每站分配增量並擴張一格 4 人住宅；固定成長上限 400 居民／1200 就業。 | 6c 啟用時以建物容量取代這兩個上限；保留站序、最大餘數與擴張，不改成另一套逐格成長。 |
+| `Passenger/TownGrowth.swift`：`growth(served:trips:reached:)`、`Place`；決策 70、73 | 服務項最多 +10‰、每可達站 +1‰（最多 5）、無抵達 −2‰。6b 只處理正率，土地不衰退；Place 存 station／base／counted／lastGrowth，沒有保存昨日 served、服務比例或 reached。 | lastGrowth 是旅次實際變化，不是服務品質；§6 明訂需新增的兩個最新量測欄位。legacy 的 StationDemand 成長與四倍上限仍照決策 70。 |
 | `Passenger/DemandEvents.swift`：6a 抽出的 `SeedDraw.hash/roll` | UTF-8 `seed\|key`，FNV-1a 32 位元，初值 2,166,136,261、乘數 16,777,619，乘法按 UInt32 wrapping。 | 使用獨立鍵如 `building:v1:<cell>:<purpose>`，不消耗事件 draws；型別與容量本身不必抽籤。 |
 
 ## 2. 台北場景：擺放、區域風格與 site
@@ -315,15 +317,17 @@ blender目錄現存共 **8,064,361 bytes**（far **7,756,272**）；historic共 
 
 ## 5. 6c建物與容量提案（全部容量數值都是gap→原生）
 
-### 5.1 權威表示與命令
+### 5.1 權威表示與城市內部更新
 
-建議 `Sources/GameCore/City/Building.swift` 的 `Building` 只存 `id`、`kind`（普通開發／既有存量）、`use`、`density`、`occupiedCells:[CellKey(row,column)]`；規則表用固定 `buildingRulesVersion`。普通建物的容量、樓層與名義高度由kind／use／density的整數表推導，**不存PlanPoint、rotation、lot輪廓、模型ID、mesh或LOD**。佔格可以是L形等格集合，任意細部輪廓在畫面；同一個64 m開發單元可畫多棟來源的小公寓與商店，不要求每棟4.4 m店面各佔64 m格。
+建議 `Sources/GameCore/City/Building.swift` 的 `Building` 只存 `id`、`kind`（城市普通建物／既有存量）、`use`、`density`、`occupiedCells:[CellKey(row,column)]`；規則表用固定 `buildingRulesVersion`。容量、樓層與名義高度由 kind／use／density 的整數表推導，**不存 PlanPoint、rotation、lot 輪廓、模型 ID、mesh 或 LOD**。資料表示可容納多格集合，第一版城市自動建物則一格一個開發單元，方便沿用 6b 逐格容量與升級配額；同格可在畫面畫多棟小公寓、店屋，4.4 m 店面不各佔一格。
 
-`GameWorld.placeBuilding/replaceBuilding/removeBuilding` 名稱僅提案：依固定順序驗證ID、類型／密度、非空且唯一的格、完整bounds、相同用途、保留格、既有佔用、每格容量；全部通過後一次提交。多格建物建議要求上下左右連通（格之間可有洞），每格只能有一個權威建物；裝飾地標不佔容量、不排擠居民。查詢index可推導，但不能另存會獨立變動的容量總量。格排序row→column、建物排序ID，失敗不配發ID、不修改任何格。
+**普通建物由 GameWorld 的城市流程自動產生與升級，不新增 `placeBuilding/replaceBuilding/removeBuilding` 玩家命令。** 名稱僅為內部草案：`initializeCityBuildings()` 在新局／啟用容量／土地遷移時依 §5.3 建立建物；既有 `setLand(_:)`、`foundTowns(seed:)` 在容量開啟的世界須原子同步土地與城市建物；`LandDemand.swift` 的 `spread(towards:)` 同時新增 4 人 LandCell 與住宅 D1；同檔 `upgradeCityBuildings(around:...)` 依 §7.2 升級。容量查詢為 `buildingCapacity(at:)`／`remainingCapacity(at:)`，都唯讀。
 
-可建遮罩／道路保留資料尚是gap：6a只列有人格，**沒列出的格不等於水、道路或公園**。第一個容量PR不假設已經有地形禁建資料；沒有遮罩的空白情境視為情境指定可建，實景模型先作裝飾。若後續啟用保留格，必須把它作為核心可驗證的固定整數輸入；不能直接用 `surfaceAt` 或 MapKit／queryRenderedFeatures 在每次命令判斷。
+土地與建物的用途必須相同，同格只由一個權威建物供應容量；格按 row→column、建物按 ID 排序。初始化不能裁人口或把 LandCell 與建物人數加總；升級只改密度，不換用途、不生人、不配新建物 ID。第一版沒有自動降級、拆除或遷出。將來多格有容量的建物也必須逐格驗證，不能用總容量掩蓋單格超額；公司建物的擺放、所有權、資產、拆除與搬遷契約交 Phase 7。
 
-放在已有LandCell的普通建物必須use相符，容量不得小於居民／就業。放在無LandCell的格可以是空置建物，等6b移入才產生土地紀錄；其用途由建物查詢取得。用途修改命令要一起驗證，不能在兩份use之間失配。新建物不放最後不足64 m的邊格，避免按4096 m²計容量卻實際只有狹窄邊帶；6a已有人口的邊格保留為既有存量。
+合法列／行沿用 `Land.problem(in:)`、`Land.rows(in:)`／`columns(in:)`，包括最後不足完整 64 m 的邏輯格。為保留 6b `spread` 行為，第一版不另加「整格完全在 bounds 內」門檻：容量按邏輯格表計，畫面裁到世界邊界；這是原生邊界政策，不代表邊格真有 4096 m² 可交易面積。Phase 7 估值面積須另訂裁切。
+
+可建遮罩／道路保留資料仍為 gap：6b 沒列出的格不等於水、道路、公園；`spread` 只知道世界列／行、800 m 與相鄰有人格。6c 沿用這項語意。未來要加禁建遮罩，須另提供固定整數核心資料並標示行為變更，不能讓 `surfaceAt`、MapKit 或模型載入決定城市是否生長；裝飾地標不自動供容量或排擠居民。
 
 ### 5.2 用途×四級密度表
 
@@ -348,34 +352,73 @@ blender目錄現存共 **8,064,361 bytes**（far **7,756,272**）；historic共 
 
 表格可重算：`G=1536×floors`，住宅配比 `p=7／2／1`（分母8，依R/C/O）；`residentCap=G×p/8/48`，`jobCap=G×(8-p)/8/32`，每步非負整除向下。此組數值整除無餘數；多格建物每格各算一次，不把總容量都灌到anchor格。最大普通容量1120／1680遠低於Land.maximumPerCell=100000，全圖上限乘積在Int64內，解碼仍先驗證後計算。升級只加容量、不直接生居民／工作；§7的6b日更新才填入。
 
+**6c 啟用世界用本表的逐格容量取代 `LandDemand.grownResidents = 400`／`grownJobs = 1200`，不是再與 400／1200 取較小值。** 例如住宅 D2 在 168／36 停住，D3 可長到 504／108，D4 到 1120／240；商業 D4 到 320／1440，辦公 D4 到 160／1680。不同用途對住房與就業的限制不同；滿格可依 §7.2 自動升一級，D4 已無更高普通級別。未開啟建物容量的 6b 舊局保留 400／1200，不把它的存量或行為偷偷改掉。
+
+400／1200 是成長夾限，並不是 `LandCell` 的合法上限（各 100000）。6b 的 `grow(around:residents:jobs:)` 對已達／超限的該項保留現值、停止該項成長，另一項仍可長。實際盤點：種子 1 起始城鎮最大居民 230、就業 780；§5.3 兩種台北錨點的最大居民為 197／211、就業皆 285；**這三個初始化資料集各有 0 格居民 >400、0 格就業 >1200**，不可宣稱台北匯入已超限。任何 `setLand` 匯入或其他存檔仍可合法超限，須逐格比較／遷移；6b 自己的成長不會從未超限狀態長過 400／1200。本次沒有枚舉所有玩家存檔，也不把這個 0 推論到所有選點。另唯讀檢查已合併的 `SaveFixtures/v12-land-demand.json`、`v12-land-towns.json`（各68個土地 Run），兩者也是0格居民>400、0格就業>1200；只是JSON存量盤點，沒有執行保存例測試。
+
 這些是遊戲平衡用容量，不是真實城市人口密度，也不推算參考地標的員工。例如101高508 m、地標catalog kind並沒有等於o-tower；地標若要具有容量，須作者選普通型別與格清單，且不能與同格既有容量重複。
 
-### 5.3 既有土地容量、拆除與相容性
+### 5.3 既有土地容量初始化、台北實算與相容性
 
-不能把初始人口裁到D1，也不能把每格初始存量與新建物加總兩次。建議啟用6c時逐格選**同用途、同時容納現有居民與就業的最低密度**，建立一格建物；例如中心住宅130人選r-mid，核心辦公390工作／32居民選o-high。這是容量初始化，不搬動任何居民／工作，沒有推論真實建物高度。
+啟用 6c 時，逐格建立城市建物，選**同用途、同時容納現有居民與就業的最低密度**，兩項都要比較。這只是容量初始化，土地存量、用途、需求計算均不因模型高度改變。
 
-若四級皆容納不下、或是世界邊格，建立 `existingStock`：每格明存一次 `residentCapacity=max(existingResidents,選定表容量)`、`jobCapacity=max(existingJobs,選定表容量)`，各不超100000；不足完整格的邊格用現有人數作底線。這是**尚未遷移的抽象存量（gap→政策）**，不另加普通建物容量、不假畫40樓替代真實建物。一般建物沒有任意cap覆寫；existingStock只由明確匯入／遷移建立，不能讓玩家以此逃過普通容量限制。
+| 6b 實際值／容量例 | 同用途最低足夠等級與理由 |
+| --- | --- |
+| 中心峰值 260；以 260 居民／0 就業的住宅例計 | R D2 只能容納 168，R D3 的 504／108 足夠，選 r-high。注意 `Land.towns` 的真正中心在核心，260 是用途轉換前的 peak；不會直接保存為 260 居民住宅。 |
+| 中心核心格：`jobs = 3×260 = 780`、`residents = 260/4 = 65` | 抽到辦公：O D3 的 72／756 就業不足，選 O D4 160／1680。抽到商業：C D3 的 144／648 就業不足，選 C D4 320／1440。初稿的 32／390 與 r-mid／o-high 已不適用。 |
+| 核心外住宅、外側城鎮 | 每格按 `peak×floor((r²−d²)×1000/r²)/1000` 向下整除，核心才另作 1/4、3 倍。不是整座城鎮統一等級；R D2 可容納至 168 居民且 36 就業，其餘需同時比較。中心城鎮實際最高住宅居民 230（`d²=16`、share=888），仍選 R D3。 |
 
-替換existingStock時要刪同格的舊存量，再放足夠容量的新建物；總居民／工作不變。建議第一版**有人或工作機會時拒絕拆除／縮小容量**，空置才可拆；不自動逐出、不搬到旁格、不靜默刪人。未來若作者要搬遷，需單獨原子命令與移出帳。跨格建物不可藉總容量足夠而容許某格超額，避免6b的逐格成長契約被破壞。
+**台北實際重算（VERIFIED，雲端 Linux 的 Python 標準函式庫重現指定 d2b3833 算式；沒有執行 Swift 匯入函式或測試）**：使用專案打包的 `RailwayGameApp/Resources/RealWorld/taiwan_population.json` **159071 bytes**、SHA-256 `2b5a318abd96d3fc45915675c3a001759756569e3f69db002746908c41b0a759`；`taiwan_places.json` **255969 bytes**、SHA-256 `d892674e9bd05dcb07f1aba17b11258fcfbd51603f238fde2ea97b7287100739`。不是參考庫缺失的 LandScan 或 PMTiles。
 
-舊存檔：v11以前沒有土地照legacy；土地版缺buildings的世界只有明確啟用容量時才依以上政策初始化。重新讀存檔不能再生一次存量；既有存量與buildingRulesVersion須保存，新版本由作者依當時main決定，不搶先指定13。現行fixtures不改，後續實作以新增保存例／golden釘住這項遷移。
+兩檔的 `north=26.391666897100002`、`west=116.70833214650004`、`cellDegrees=0.0083333333`。按 `GridCounts.init` 累加 `runs.{r,c,p}`／`layers[kind]`；`LandImport.jobsPerPlace` 是 shops **25**、offices **500**、schools **300**、attractions **50**，全台換算 **8561200** 就業。以下使用 `WorldBounds.maximum`，寬高 **1048576 世界單位**，即 256×256 格、中心 (524288,524288)。
+
+重算方法：逐 row 0…255、column 0…255，將 `(column×4096+2048,row×4096+2048)` 交 `RealWorldFrame.coordinate(worldX:worldY:)` 的同一 Mercator 逆投影（`RealWorldDemo.swift` 的 `worldPoints=268435456`、`earthRadius=6378137`）；再以 `GridCounts.cell` 的 floor 找來源格。按 `LandImport.cells` 收集非空來源格的 row-major members，內部來源格的 slots=members.count；碰首末列／行的則 `max(members.count,round(area/4096))`，area 沿用 `GridCounts.area` 的 **110574**、**111320×cos(latitude)** 公尺／度。居民與總就業各取 `total/slots + (index < total%slots ? 1 : 0)`，最後夾到 100000、略過兩者皆 0；用途比較 officeJobs、shopJobs、people，平手依來源先辦公再商業。畫面層投影用 Double，GameCore 收到與保存的都是整數。
+
+| 錨點（緯度、經度）與來源 | 匯入格數 | 總居民／總就業 | 每格最大居民／最大就業 | >400 居民格／>1200 就業格 |
+| --- | ---: | ---: | ---: | ---: |
+| **25.0479308, 121.5170046**，`RealWorldMap.swift` 的 `RealWorldPlace.standard`／tra-taipei | 64897 | 4682180／2058577 | **197／285** | **0／0** |
+| **25.047882, 121.517219**，`LandImportTests.swift` 的 `Self.taipei` | 64829 | 4687421／2061993 | **211／285** | **0／0** |
+
+不同錨點讓 64 m 格中心略移，members／slots 與邊緣份額也會變，不能省掉錨點就說「台北最大值」。以下是各最大值的第一個 row-major 格，row、column 從 0 起；居民與就業最大值不在同一格：
+
+| 錨點／最大項 | 目標格與現有存量 | 來源 WorldPop 格與可手算資料 | 初始化 |
+| --- | --- | --- | --- |
+| standard／居民 | (197,114)，住宅 197／28；197 居民共 166 格 | (166,576)，people=35838，officeJobs=2300，shopJobs=2725，slots=182。`35838/182=196 餘166`，前166格為197；`5025/182=27 餘111`。 | R D3 504／108。 |
+| test／居民 | (197,127)，住宅 211／30；211 居民共 20 格 | (166,577)，people=38240，officeJobs=3700，shopJobs=1725，slots=182。`38240/182=210 餘20`，前20格為211；`5425/182=29 餘147`。 | R D3 504／108。 |
+| 兩錨點／就業 | (124,114)，辦公 78／285；285 就業各有 170 格 | (161,576)，people=15071，officeJobs=35800，shopJobs=19750，slots=195。POI offices=71、schools=1、shops=762、attractions=14；`55550/195=284 餘170`，前170格為285；`15071/195=77 餘56`。 | 此格 O D3 雖容納 285 就業，居民容量72不足，選 O D4 160／1680；同來源其餘77居民格也需 D4。 |
+
+同時檢查整份匯入：兩錨點各 **0 格超出同用途 D4 的兩項容量**，都能按普通表初始化。不過 standard 有 **3045 個住宅格、1272 個辦公格**因混合人口／就業需要 D4（test 為3240／1396）；例如辦公的 78 居民會選40樓，這是本表原生配比的結果，**不是來源真實樓高**。作者需決定是否調整混合用途配比，不能改用途或裁居民來使模型看起來較矮。
+
+另外重現 `SeedDraw.hash/roll` 的 FNV-1a 與 `Land.towns(seed:1,in:.maximum)`：**887 格、90900 居民、67413 就業，最大居民230、就業780**，與決策72的總量相同；這是整數重算核對，沒有執行該測試。一般規則允許其他合法匯入／玩家存檔超過400／1200，不代表本次三組初始化已超過。
+
+若同用途四級仍容納不下，建立 `existingStock`，選定密度 D4，每格一次保存 `residentCapacity=max(existingResidents,D4居民容量)`、`jobCapacity=max(existingJobs,D4就業容量)`，各不超100000。它替代普通容量，不額外相加，不假裝真有40樓；只由匯入／遷移建立，第一版保持容量、不能由一般自動升級無限提高覆寫值。有人格必有足夠建物容量，不因「目前未建立建物」阻止6b存量初始化。邊格照 §5.1 邏輯格政策，不因面積不足再裁居民。
+
+舊存檔：版本11以前沒有土地，保留 legacy；6b 土地版缺建物的舊局在明確啟用6c容量時一次初始化，未啟用仍用固定400／1200。重新讀檔不可重生一次存量；保存建物、existingStock 覆寫與 buildingRulesVersion，格式／升版與新增保存例由作者定案。本研究不改現有 fixtures。普通城市建物只升不降；公司房地產的拆除／降級與搬遷另屬 Phase 7。
 
 ## 6. 地價：即時整數推導提案（gap→原生）
 
-### 6.1 輸入與規約
+### 6.1 輸入、6b 已存資料與明確新增量測欄位
 
-建議 `City/LandValue.swift` 的 `GameWorld.landValue(at:CellKey)` 回傳帶型別的 `centsPerSquareMetre:Int64` 與可解釋的分項；不寫price到Land、建物、日歷或存檔。沒有交易／租金／維護費用。普通用途取建物use，無建物取LandCell.use；兩者都有時已由不變量要求相同。沒有建物也沒人口的可建格視為vacant估值用途（不是新增LandUse enum）；保留／水域格為0。
+建議 `City/LandValue.swift` 的 `GameWorld.landValue(at:CellKey)` 回傳 `centsPerSquareMetre:Int64` 與分項，即時讀目前用途／建物密度及最近完成一日的服務量測；不保存 price 或價格歷史，不結算交易／租金／維護費。沒有土地或建物的格可用 vacant 基準估值（不新增 LandUse）；未來有固定不可建遮罩的格為0，目前未列出的土地不直接當水域。
 
-| 輸入 | 建議定義與整數界線 |
+先釐清指定6b實作：`TownGrowth.Place.counted` 是**上次午夜的累計 arrived**。`LandDemand.swift` 的 `growLand(reached:)` 先算 `served=record.arrived−place.counted`，再覆寫 counted；因此覆寫後無法只靠 counted 還原昨天 served。`lastGrowth=clamp((nowTrips−beforeTrips)×1000/beforeTrips,−1000,1000)` 是午夜前後日旅次的實際變化，受成長夾限、擴張與整數旅次影響，不能拿來當 q 或 rate。`base` 也不是昨日旅次分母。**6b 沒有保存昨日服務比例，也沒有保存 reached**，初稿「已保存服務量測」不成立。
+
+為使日內唯讀地價、存檔續玩與滿格自動升級都能使用相同量測，**明確提議6c新增 `TownGrowth.Place.lastService:Int64`（0…1000）與 `lastReached:Int64`（0…5）兩個存檔欄位**，定義在既有 `Sources/GameCore/Passenger/TownGrowth.swift`，由既有 `City/LandDemand.swift` 的 `growLand(reached:)` 每晚更新一次。只保存最後一次量測，不存日序列或地價。升級在午夜直接用此次局部量測；價格在其後與日內讀保存值，避免存讀後失去午夜 reached 或另造客流統計。
+
+| 輸入／資料鍵 | 規約與整數界線 |
 | --- | --- |
-| 800 m腹地內可用服務 | 對格中心 `d² < 51_200² = 2_621_440_000` 的各站，距離權重 `w=1000-floor(d²×1000/R²)`，範圍內1…1000。closed／無可用服務的站不貢獻。這個平方距離權重是原生，來源沒有地價距離衰減。 |
-| 站的服務品質q | 讀6b已保存的**最近完成一日**服務量測：`q=min(1000,floor(served×1000/max(1,potentialTrips)))`；potentialTrips=0時定義q=0，served是原起站旅客完成旅程、與6b歸屬一致。沒有6b日量測時q=0。只存城市服務量測，不存地價歷史；查詢以現有量測即時計算。不能拿今日累計arrived除今天基礎旅次。 |
-| 格的服務分S | `S=max(floor(w×q/1000))`，0…1000；取最佳站，不把兩個同等站服務直接加倍。若6b採另一服務歸屬政策，需共用其公開結果，而非6c另造客流帳。 |
-| 可達車站數A | 從800 m內目前可用起站的Passenger可行旅程，取可達迄站ID聯集，排除這些起站自身、封站與無可用服務站，去重後 `A=min(count,5)`。由現行路徑／服務查詢推導，不讀TrackTraversal／TrainMovement。與決策70同樣cap5，**聯集規約是新提案**，不能把6a catchment總量當可達站數。 |
-| 用途基準B | vacant **1000**、residential **2000**、commercial **3000**、office **3500** 美分/m²。都是遊戲相對價初值，非台灣公告地價／市場成交價。 |
-| 密度係數D | D1 **1000**、D2 **1250**、D3 **1600**、D4 **2000**（分母1000）；vacant取1000，existingStock用初始化選定密度但不由人數每次重猜。 |
+| 800 m 腹地與距離權重 w | 格中心對各站用 `d² < 51200² = 2621440000`，`w=1000−floor(d²×1000/R²)`，1…1000，直接沿用 `LandDemand.shares` 的距離規約；用來定價的政策為原生。 |
+| 昨日服務分母 trips／分子 served | 與 `growLand` 完全相同：更新前 `record.demand.dailyTrips`（正數且 ≤1000000）、原起站守恆帳 `record.arrived−oldPlace.counted`。不假設另有 potentialTrips 欄位，不改用星期／事件調整後旅次或今日的累計差值。 |
+| **新增存檔 lastService（q）** | `served<=0` 或 trips<=0 為0；`served>=trips>0` 為1000；否則 `floor(served×1000/trips)`。這是 `TownGrowth.growth` 既有的 share 比例，6c 只把它保存。新 place 只有 counted 基準，第一次看見不成長，q=0；舊存檔缺鍵預設0，完成下一個有基準的午夜才量測。 |
+| **新增存檔 lastReached（k）** | 保存 `min(max(Int64(reached[station] ?? 0),0),TownGrowth.reachedStations)`，上限沿用5。`reached` 直接來自 6b `GameWorld.reachedStations(endingDayAt:release:workedOutAt:)`，其 `reachedStations(_:)` 按昨日 release.plan.flows 計各 origin 的迄站數；不另查可行旅程、不取腹地各站目的地聯集。新 place／缺鍵預設0。 |
+| 格的服務分 S 與可達數 A | 對有 place 且 lastService>0 的腹地站取 `score=floor(w×lastService/1000)`，最高者為 s*，平手較小 StationID；`S=score_s*`（0…1000），`A=lastReached_s*`（0…5）。沒有 q>0 的站則 S=A=0；最佳站選擇是原生定價政策，A 的量測與 cap 完全沿用6b。換另一個好站可改變估值，不把站數／同目的地加總。 |
+| 既存 counted／lastGrowth | 保持6b原義，counted繼續作下次 arrived 差值基準，lastGrowth繼續供車站面板；不借用它們的欄位存 q／k。公司非經營、landDemand關閉或townGrowth不存在時，第一版估值的服務／可達溢價定義為0，基準用途／密度價仍可查。 |
+| 用途基準 B | vacant **1000**、residential **2000**、commercial **3000**、office **3500** 美分/m²，原生相對價，不是台灣公告地價或成交價。用途與 LandCell 相符，不由貼圖決定。 |
+| 密度係數 D | D1 **1000**、D2 **1250**、D3 **1600**、D4 **2000**，分母1000；vacant取1000，existingStock用初始化選定D4，不按人口每次重猜。 |
 
-服務品質不是即時每幀改寫；它是6b最近完成日的量測。可達性／用途／密度一改，查詢立即反映；次日服務量測更新，查詢自然改變。沒有平滑、價格快取權威或往日價格。若作者希望日內服務敏感，建議之後獨立改量測契約，仍不存price歷史。
+q／k 是最近完成日，站的 reached 即使日內改線也要等下一次6b午夜量測才更新，不能宣稱它即時反映新路網。用途／密度與站距的查詢則按目前世界即時推導。未知／剛開啟量測取0；不從今日 `arrived−counted` 猜昨天，也不重建一套過去的服務計畫。若作者不接受新增這兩個欄位，應另定估值指標，本案不把 lastGrowth 冒充服務比例。
+
+解碼驗證新增兩欄界線，既存欄位照舊；缺鍵為0且重新保存為相同結果，啟用／關閉與舊局遷移須由存檔負責者釘住。這項新增量測是 §10 的作者待決項，本文沒有改任何存檔程式。
 
 ### 6.2 公式、範圍與可重算例
 
@@ -389,28 +432,55 @@ value = clamp(base + servicePremium + accessPremium, 500, 50_000)
 
 單位為**美分／m²**；可建格下限500、上限50000（$5…$500/m²）。B/D、係數15、每站1000、上下界皆gap建議值：服務滿分加$150/m²、最多5可達站加$50/m²，使鐵路服務能明顯提高價值，並以密度2倍內控制高樓的基準價差。這些不是建造費，不納入公司帳本。實際這組初值的最大普通價是office D4 **27,000**，50000是未來仍需遵守的防護上限；不假稱目前能到50000。
 
-例：住宅D2，距一站 **400 m=25,600單位**，站q=800，可達3站：`w=750,S=600,base=2500,value=2500+9000+3000=14_500`，即 **$145/m²**。沒有服務、沒有可達站的同格價 **2500**；office D4滿服務、5站 **7000+15000+5000=27000**。同樣命令／世界，換模型或相機不改這個數字。
+例：住宅D2，距一站 **400 m=25,600單位**，站已保存 lastService=800、lastReached=3：`w=750,S=600,base=2500,value=2500+9000+3000=14_500`，即 **$145/m²**。沒有服務、沒有可達站的同格價 **2500**；office D4滿服務、5站 **7000+15000+5000=27000**。同樣世界與日量測，換模型或相機不改這個數字。
 
-`d²×1000` 在世界範圍內小於2^51；B×D≤7,000,000；w×q≤1,000,000；value≤50000。q的served來自累計差值，**不能直接假定乘1000永不溢位**：6b需有界日計數，或用checked／WideInteger／先除後餘數的精確算式，壞輸入拒絕且不改世界。A只需集合去重後排序計數，Dictionary/Set的迭代不決定結果。
+`d²×1000` 在世界範圍內小於2^51；B×D≤7,000,000；w×q≤1,000,000；value≤50000。q 沿用 `TownGrowth.growth` 的先判 `served>=trips` 再乘法規約，僅 `0<served<trips≤1000000` 才乘1000，所以該乘積小於1000000000；不對任意累計 arrived 直接乘1000。A 讀最佳站保存的6b reached（已夾0…5），不建集合或做目的地聯集；平手由 StationID 決定。
 
-若Phase7之後要把單價乘面積，完整64 m格 `4096×value` 最大 **204,800,000美分**，全圖上限 **13,421,772,800,000美分**，仍在Int64；但那時要另訂地界裁切、交易／估值時間與租金政策。這里不先記一筆建造或地產收入。
+若Phase7之後要把單價乘面積，完整64 m格 `4096×value` 最大 **204,800,000美分**，全圖上限 **13,421,772,800,000美分**，仍在Int64；但那時要另訂地界裁切、交易／估值時間與租金政策。這裡不先記一筆建造或地產收入。
 
-## 7. 與6b土地成長的接點
+## 7. 與6b土地成長的接點：保留既有 LandDemand 流程
 
-6b會讓服務好的腹地內居民／就業成長；6c只提供 `buildingCapacity(at:) -> {residents,jobs}` 與 `remainingCapacity(at:)`。普通建物的多格容量逐格限制；existingStock替代過渡容量。沒有建物也沒有既有存量的格，容量 **0**，不能只因在車站腹地就生人。
+### 7.1 指定6b實作的每日計算與容量替換
 
-固定午夜順序建議：
+接點是既有 **`Sources/GameCore/City/LandDemand.swift`**，不是另建 LandService／LandGrowth。`drawsDemandFromLand` 只在 landDemand 開啟且經營模式為真，`growLand(reached:)` 還要求 townGrowth 存在；其餘世界保留決策70／6b原行為。一般建物提供容量，6b決定人口與就業。
 
-1. 6b凍結昨日土地、建物容量、服務與重疊腹地配額的同一份快照；日量測仍由Passenger穩定查詢取得，沒有去控制列車。
-2. 6b算每格居民／工作的候選增量與千分比餘數；6c取同格cap，正增量夾到 `max(0,cap-current)`。例如r-mid **167/168**，候選+3，只能+1；滿168時+0。就業另算，不能把剩餘住房借給工作。
-3. 未放入的候選成長記為「容量不足」，**不存成未來無限排隊的移入量**；小數餘數僅保留分母內的不足一人部分。滿容量後升級，從新一天服務增量重新開始，不能一次釋出累積十年的候選人口。這是需與6b協調的原生政策。
-4. 全部格按固定CellKey序一次提交；6b重建今天的土地需求、星期／事件／OD。legacy世界继續決策70；land世界不再乘一次station townGrowth。地價是其後的唯讀查詢，不回頭增加同日成長。
+1. 每晚由既有 `GameWorld.reachedStations(endingDayAt:release:workedOutAt:)` 提供昨日 reached，維持午夜末秒計畫與批量切分的處理。在 `growLand` 原有 record 迴圈記錄 beforeTrips；已見過的 place 算 `served=arrived−counted`、更新 counted，再用 `TownGrowth.growth(served:trips:reached:)` 得 g。新 place 只建立基準，該晚不成長。6c 在這裡保存 §6 的 q／k，不重訂成長率。
+2. `g<=0` 不加入 growing，所以**6b土地不衰退**，無服務不扣居民或工作。正率為 `floor(q×10/1000)+min(reached,5)`，最多15‰。不能把 legacy 每站需求的 −2‰ 衰退或四倍上限移植成土地規則。
+3. 既有 `LandDemand.shares(of:among:)` 在站成長迴圈前算一次，重疊腹地的居民／就業按距離權重、最大餘數分享，平手站ID。`Share.demand` 為 `min(1000000,((residents+officeJobs+shopJobs)×40+50)/100)`，種類依居民→辦公就業→商店就業的最多者；住宅的工作也歸 shopJobs。這是分享存量與需求，與下步的成長量分配不同。
+4. 按 StationID 遞增處理 growing。每站從上述 share 算 `ΔR=grown(R,g)`、`ΔJ=grown(officeJobs+shopJobs,g)`；`grown(amount,rate)` 對正 amount、rate 為 `max(1,(amount×rate+500)/1000)`，amount=0 則0。**先每站算整數成長量，再分給腹地；沒有逐格千分比餘數或跨日土地餘數。**
+5. 既有 `grow(around:residents:jobs:)` 收集腹地格（row→column），各以當時格的居民／就業數作權重，呼叫 `GameWorld.apportion` 最大餘數法，平手較小格索引。較早車站已變動的格／擴張格可成為較晚車站的權重，這是既有順序，不能改成全部格同時套率。6c 在這個方法把固定400／1200換成該格 `buildingCapacity`，兩項各夾剩餘空間；**不再額外 min(400/1200)**。已達／超過上限者保留原值、不倒扣；正常初始化已保證cap≥現值。放不下的分配直接丟棄，不重新分給其他格、不累積候補人數，也不留下小數餘數。
+6. 同一個正成長站隨後呼叫既有 `spread(towards:)`：在800 m腹地、合法列／行中，沒有 LandCell 且上下左右有 LandCell 的格，以 `(d²,row,column)` 最小者新增住宅 **4居民／0就業**（`newCellResidents=4`）。有候選才新增，每個成長站每天最多一格；即使原腹地容量全滿、所有分配都放不下，g>0仍會嘗試擴張。較早站的新格可成為較晚站的相鄰格。**6c 同時自動生成該新格的住宅 D1 建物（56居民／12就業容量）**，保留4位初始居民，不要求玩家先蓋房，也不以原本沒建物而把容量設0。
+7. 最後沿用 `refreshLandDemand()` 與 `lastGrowth` 更新：每站記 midnight 前後 dailyTrips 的實際千分比變化，仍夾 −1000…1000；沒有再次套城鎮成長率到旅次。人口／就業只在 Land 保存一次，需求與計畫照6b原接點更新；地價其後唯讀，不回頭控制本日升級。
 
-6b的無服務衰退與人口底線仍由6b決定；6c不重訂成長率。玩家升級到高密度或在空格放建物，只開放容納空間，不能把cap當當天人口或工作總量；地價也不自動決定當天升級，避免成長→價→密度→成長的同日循環。
+手算：某站 share 為70居民、g=11‰，`grown(70,11)=(770+500)/1000=1`；腹地兩格56、14居民，最大餘數將1給56那格。若該格滿D1且當晚未獲升級配額，夾限後這1人不加入、不轉給14那格；仍可按 spread 規則新增一格4人。沒有「該格今天剩0.56人、明天補上」的土地帳；乘客釋出用的OD餘數是另一項既有狀態，不能混用。
 
-需共用的接口草案：`City/LandService.swift` 提供站可用性、可達迄站ID與昨日服務品質；`City/LandGrowth.swift` 在夾限前查 `BuildingCapacity`。6b若已用別的檔名，就接已存在的接口，不為本研究另造service/manager。`setLand`／用途變更／建物替換都要使土地需求計畫失效；容量純查詢不改OD餘數。
+§5.3的起始城鎮與台北匯入目前沒有超過400／1200的格；任意合法高存量存檔須初始化成足夠普通級別或 existingStock。6c不能先裁到400／1200再選建物；例如合法的R格500居民選D3後可在504停住、滿格再升D4，不能因保留舊固定400而永遠停在500。這個500例為原生設計手算，不是台北匯入觀察值。
 
-後續驗收（此研究未執行）：滿容量／剩1位／多格／重疊站／無站／封站／升級後次日／存讀／午夜idle、批次與任意切分推進得到相同世界；居民與就業只在Land記錄一次，模型載入失敗與LOD切換不改cap；遷移保留所有土地總量，拒絕有人拆除時完整原子。地價公式要獨立手算上例與800 m邊界，並驗證存讀與換錨點的模擬一致性。
+### 7.2 城市自動升級：可重算的原生規則
+
+以下門檻與配額是 **gap→原生提案**，來源與6b沒有建物升級規則。一般R／C／O由城市更新，不是玩家指令、不買公司資產、不付Phase7費用。
+
+| 規則／建議常數 | 整數定義 |
+| --- | --- |
+| 滿格 | 午夜開始時，普通建物 D1…D3 的某項正容量已滿：`residents==residentCap>0` **或** `jobs==jobCap>0`。任一項阻住就可升，不要求住房與工作同時滿；existingStock與D4不在候選。 |
+| 腹地服務好 | 該站有舊place、g>0，且同一次6b量測 `q>=800`、`k>=1`（80%服務，至少1個可達站）。q、k定義見§6，門檻800與至少1為原生初值；不能用受容量影響的 lastGrowth 判斷，否則滿格可能永遠無法升級。 |
+| 每站每日升級配額 | **2格**（`cityUpgradesPerStationPerDay=2`，原生）；成功升一格扣1，沒有候選不借給別站或累到次日。第一版一格建物，故不需多格建物的配額折算。 |
+| 順序與重疊 | 沿用 growing 的 StationID 遞增；每站候選是800 m內午夜開始已滿的普通格，按 `(row,column)` 遞增。全晚局部 `upgradedCells` 防同格重疊站重複升；較小站先選，已升格略過、不再扣後站配額。集合只做成員查詢，不用迭代次序決定結果。 |
+| 升一級 | D1→D2→D3→D4，保留use、occupiedCells、ID與人口／工作；一天同格最多一級。升級本身不長人，容量已變大後交原 `grow` 分配填入。D4滿了只可依6b繼續嘗試邊緣住宅，不發明D5或無限覆寫容量。 |
+
+建議把升級放在 §7.1 第5步、同站 `grow` 之前：午夜開始快照只記「哪些格已滿與原等級」，不新增存檔餘數／升級候補；各站仍按既有順序執行 **upgrade→grow→spread**。shares與rate照6b先算一次；升級不改計算share的存量。當晚才長滿的格要等次晚，當晚 spread 的新格不在開始快照；跨站重複升級也禁止。這是新增升級的時點政策，不把既有 grow／spread 改成全圖同時提交。
+
+手算：滿的R D1格56居民／0就業，站q=800、k=3，因此g=`800×10/1000+3=11`。若是該站排序前2個候選之一，先升D2（168／36），再由6b成長分配入人；若站只有此格，share=56，`grown(56,11)=(616+500)/1000=1`，該格成57居民；有邊緣候選再新增4人D1。第三個滿格當天不升，D4不升，q=799或k=0不升；g仍為正的站照6b執行其成長與擴張。數值可逐步手算，不使用亂數或地價觸發。
+
+城市初始化、兩個最新量測欄位、buildingRulesVersion須保存；當晚局部快照／upgradedCells從每次午夜世界重算，不另存歷史。所有核心常數為整數；一般建物類型與升級順序不抽籤，畫面變體若抽籤才用存檔 SeedDraw/FNV-1a。
+
+### 7.3 接口草案與後續驗收
+
+在既有 `City/LandDemand.swift` 接三處即可：`growLand(reached:)` 保存q／k並建立滿格快照，在既有 growing 迴圈內呼叫私有 `upgradeCityBuildings(around:measurement:...)`；`grow(around:residents:jobs:)` 查 `BuildingCapacity` 取代400／1200；`spread(towards:)` 原子建立4人土地與R D1建物。`shares(of:among:)`／`Share.demand`／`grown`／`GameWorld.apportion` 的算式與順序不變。`City/Building.swift`／`BuildingTypes.swift` 提供資料與容量；`Passenger/TownGrowth.swift` 只補最新量測欄位；**不另造 LandService.swift、LandGrowth.swift 或另一份都市成長權威**。
+
+`setLand`／`foundTowns` 在容量啟用時先驗證、初始化兩份相符資料，再沿用 `refreshLandDemand`；單純升級未改人口，無須提前改客流，原growLand結尾一起刷新。spread的土地／建物不能只建立其中一份，ID不足或合法性失敗須留下相符世界。
+
+後續驗收（本文件未執行）：用6b的站成長量與最大餘數手算、容量替換後的168／504／1440／1680邊界、剩1位／已超舊限、分配不足不重分、g≤0不衰退但g>0滿格仍擴張、新格4人與D1自動配對；q=799／800、k=0／1、同站第2／第3候選、站ID與row／column平手、重疊格一天一級、當天才滿不升／D4不升、模型失敗不改容量；舊存檔初始化保留所有人口與工作、同用途兩項一起選級、兩個新量測缺鍵為0；午夜、idle、批量／逐秒／任意切分及存讀一致。地價獨立重算14500例與800m嚴格邊界，驗證不改世界且不寫價格歷史。
 
 ## 8. Phase8素材管線：現存角色、貼圖、動畫與iOS轉換
 
@@ -491,7 +561,7 @@ manifest對8件現存角色的 `gpuBytes` 加總 **19,279,808 bytes**，fallback
 
 | 參考檔案／函式／鍵 | 目標檔案／函式草案 | 定點比例與保留／改變 |
 | --- | --- | --- |
-| `T/assets/world-gYgJkZNf.js`：DO／lO／UD／WO、RD／zD／VD／HD | `tools/building-assets/import_taipei_scene.*` 產生佔格／保留格；`Sources/GameCore/City/BuildingPlacement.swift`：validateOccupiedCells；GameWorld.placeBuilding | 米→64世界單位；cell4096；小距離量化見§2.1。來源旋轉矩形／3×3細查不進核心；格化差異需明示。 |
+| `T/assets/world-gYgJkZNf.js`：DO／lO／UD／WO、RD／zD／VD／HD | `tools/building-assets/import_taipei_scene.*` 產生佔格／保留格；`Sources/GameCore/City/Building.swift`：validateOccupiedCells／initializeCityBuildings（城市內部流程） | 米→64世界單位；cell4096；小距離量化見§2.1。來源旋轉矩形／3×3細查不進核心；格化差異需明示。 |
 | `T/assets/engine-DKps_Gq_.js`：hr.buildBlocks／districtAt／surfaceAt、V／Kn／K | 同匯入工具；`Sources/GamePresentation/BuildingStyle.swift`：style(for:)；`RailwayGameApp/Rendering/BuildingLayer.swift` | bounds偏移後×64；style機率若需要整數則×1000；9區外觀保持，容量為原生表。 |
 | `T/assets/world-gYgJkZNf.js`：Eg.pickType／floorsFor／layoutBlock、site lot／claims／placement／anchors | `GamePresentation/BuildingStyle`與工具；`City/BuildingTypes.swift`：capacity(for:) | 類型外觀可adapt；樓層2/6/18/40、面積1536、48/32㎡為gap新值，不能稱直接移植。任意輪廓只在畫面。 |
 | `R/blender-buildings.js`：buildingCatalog／buildBlenderBuilding／inspectBlenderBuilding | `Sources/GamePresentation/BuildingAssets.swift`：loadCatalog；`RailwayGameApp/Rendering/BuildingMeshLoader.swift`：loadMesh／inspectionMaterial；或離線USDZ | 24byte Float32 vertex格式只畫面；metres與axis一次轉換；opacity.24可保留。GameCore不importFoundation/SceneKit/RealityKit/Metal。 |
@@ -500,47 +570,51 @@ manifest對8件現存角色的 `gpuBytes` 加總 **19,279,808 bytes**，fallback
 | `T/assets/anim-CQkLTvTS.bin`、clips-Cb5uFd0j.js：AnimLibrary／Clip | 同工具decodeAnimPack／retarget；App character animation | Int16位置1e-4m、root1e-3m、yaw4π/32767僅畫面；輸出骨架動畫，世界位置讀GameCore。 |
 | `Ci/.../styles/liberty.json`、planet.json；app的mlLayerBeforeBuilding3d／setBuilding3dEnabled呼叫 | App實景建物extrusion／疊圖；已有背景保留 | render_height/min_height公尺；opacity.8；只有畫面，PMTiles／外部建物API缺檔。 |
 | 6a `Sources/GameCore/City/Land.swift`：cellLength／middle／totals；SeedDraw | `City/Building.swift`／BuildingCapacity；`City/LandValue.swift`：landValue(at:) | 4096單位格、51200半徑、rate/weights1/1000；FNV-1a原值不變。建物容量／地價全部原生gap。 |
-| `Passenger/TownGrowth.swift`：growth／reachedStations；6b土地成長 | `City/LandGrowth.swift`／capGrowth；`City/LandService.swift`／serviceQuality | 6b控制人口變化，6c每格cap；不改鐵路物理層，不以render height改成長。 |
+| `City/LandDemand.swift`：shares／Share.demand／growLand／grow／spread；`Passenger/TownGrowth.swift`：growth／Place；`GameWorld.swift`：reachedStations(endingDayAt:release:workedOutAt:) | 沿用 `City/LandDemand.swift`：grow 查 BuildingCapacity、spread 自動建R D1、growLand 內部升級；既有 Place 新增 lastService／lastReached | 服務share與成長率1/1000；40/100旅次；400／1200由表容量取代；新格4人；升級q≥800、k≥1、每站2格為原生值。reached沿用6b，不另做聯集。 |
 | 四處來源的地價／容量／費用搜尋（無規則） | `City/BuildingTypes.swift`／LandValueRules；費用另Phase7提案 | 容量人／職位整數；地價美分/m²；本PR不新增經濟成本或資料程式。 |
 
 T、R前綴在§2／§3明訂。目標檔案是供後續作者設計的草案，不表示已建立這些檔案，也不要求覆蓋已合併的6b實作。
 
 ## 10. 建議PR拆分、驗收與作者要決定的問題
 
+普通建物屬城市，由內部流程自動產生／升級；下列6c PR不含玩家建物指令。GameCore、存檔／schema由Claude Code依作者定案實作，本研究不修改那些檔案。
+
 | PR | 範圍 | 後續驗收條件（本研究沒有跑） |
 | --- | --- | --- |
-| 6c-1 格佔用與普通容量 | BuildingID／佔格資料、三用途×四密度、place/replace/remove、普通cap查詢；由Claude Code實作GameCore | 重複／越界／末格／用途／保留格拒絕；同格不重複佔用；失敗不配ID／不改世界；多格每格cap正確、空置可建、有人縮小／拆除拒絕；獨立手算表值。 |
-| 6c-2 既有存量與6b夾限 | 一次性容量初始化／existingStock、存檔版本與遷移、6b午夜接點、計畫失效 | 所有舊存檔仍可讀；土地總人數／工作完全保留；普通與既有存量不雙算；滿cap零成長、剩1夾1；切分／存讀／午夜與idle一致；新增golden/replay／獨立模型，由作者協調schema。 |
-| 6c-3 即時地價查詢與顯示 | §6規則、服務／可達性唯讀接口、面板分項／地價圖層 | 獨立算14500例、無服務2500、最高27000；800m嚴格邊界；重複站去重；closed／空分母與overflow安全；查詢不改世界、存檔沒有price歷史；沒有費用或租金帳。 |
+| 6c-1 城市建物、容量表與初始化 | BuildingID／佔格資料、三用途×四密度、唯讀容量；新局與既有土地的內部初始化、existingStock、保存／遷移 | 同格只供一次cap、用途相符；中心260住宅例D3、65／780核心C/O皆D4；台北最大197／285與測試錨點211／285可重算、78／285辦公選D4；初始化保留總人口／工作、超表存量不裁、末格合法；舊保存例仍可讀、不重生；不新增玩家place/replace/remove。 |
+| 6c-2 接上6b容量、邊緣建物與自動升級 | **修改既有LandDemand.swift**的growLand／grow／spread接點，容量取代400／1200、新格4人配R D1、q／k最新量測、滿格自動升級與配額；Place存檔欄位 | shares／Share.demand／grown／最大餘數與站序不改；兩項逐格cap、放不下不重分也不留餘數；土地不衰退、g>0滿格仍嘗試擴張；q=799/800、k=0/1、每站第2/3格、重疊一天一級、D4／existingStock不上調；午夜／idle／切分／存讀一致，新增獨立手算／模型與保存例，由作者協調schema，不改既有fixture期望來湊結果。 |
+| 6c-3 即時地價查詢與顯示 | §6公式、保存的lastService／lastReached唯讀查詢、面板分項／地價圖層 | 獨立算14500例、無服務2500、最高27000；800m嚴格邊界、最佳站平手按ID、A直接取6b量測不聯集；缺量測為0、界線與乘法安全；lastGrowth不冒充服務比例；日內路網變動等次晚量測，讀存檔同價；不寫price歷史、沒有公司房產指令或費用／租金帳。 |
 | 8a 素材manifest與far建物試片 | 工具固定版本／來源hash／axis／licenses；47far和3種代表素材（101、山佳、總統府）；不改核心 | 輸出hash與bytes／頂點／材質報告；和來源bounds／orientation對照、缺near後備、double-sided／linear RGB核對；macOS loader與實機外觀驗證，OSM來源可見；不同LOD下core digest不變。 |
 | 8b 角色／動畫轉換試片 | 先1英雄jie＋1群眾student-m；meshopt/KTX2／骨架／ANM1轉換、MIT全文 | 骨架joint數、rest pose／idle/walk回圈／root方向、alpha hair／mask／normal/mips；輸出格式能在選定iOSrenderer讀取，量測輸出大小／GPU記憶體；不聲稱缺LOD／fallback已存在。 |
 | 8c 量測後擴充renderer | 程序普通建物／site外觀、分塊／剔除／LOD／instancing、其他素材按需要加入 | iPhone／iPad最低目標裝置報告frame time、峰值記憶體、冷啟動與切區I/O、draw calls；明確選裝置與同場景，不預設未測數字；性能設定／模型失敗不改模擬。 |
 
-建造／維護費、地產交易與租金單獨列Phase7研究／實作PR，等作者定經濟規則，不藏進6c上述PR。
+**Phase 7另外拆公司房地產PR**：玩家自建／購買／持有建物、公司資產與負債、建造／維護費、交易、租金、拆除／搬遷，按作者的經濟規則設計；不能把城市自動升級當公司買樓或收費。這個階段歸屬已定，不列為問題。
 
 | 作者需要決定 | 建議答案與理由 |
 | --- | --- |
-| 普通容量是否採本表四級、樓板／人／職位係數？ | 先採1536㎡／層、48㎡／居民、32㎡／職位與2/6/18/40樓；全部標原生可調值。先以初始城鎮和6b成長跑平衡案例，再改版本化表，不跟模型自動改。 |
-| 6a已有高人口格如何遷移，是否容許existingStock？ | 採同用途最低足夠密度，超表／末格用一次性existingStock保留總人數與工作；不裁人口、不重複加cap。這讓WorldPop高密格仍可讀。 |
-| 拆除／降級時人口怎麼辦？ | 第一版有人或工作時拒絕，空置才拆。搬遷是另案原子命令，不讓玩家按一次拆除就靜默消失。 |
-| 佔格與小site同格多棟怎麼對應？ | 核心一個佔格開發單元、畫面可以多棟細模型；地標預設裝飾零容量。真有玩法效果時作者選型別與格清單，不用508m推就業。 |
-| 道路／公園／水域是否已備妥禁建格？ | 尚無遮罩的情境先明確可建；實景模型只畫面。另取得固定資料再產保留格，不能用畫面圖磚當核心權威。64m格太粗時不強求來源2m搜尋完全等價。 |
-| 地價係數與服務時間窗是否採§6？ | 先採最近完成日服務分＋目前可達站、最佳站距離分、cap5、B/D與15×S公式；只推導price。不再重問要不要價格歷史或加費用，兩者本次已定。 |
-| 滿容量的未實現成長是否累積？ | 不累積容量不足候選，僅留不足一人的分母餘數；升級從次日再長，避免爆量。與6b共同釘住這項契約。 |
+| 容量表與混合用途配比是否先採本表？ | 原生初值為1536m²／層、48m²／居民、32m²／職位、2/6/18/40樓、R/C/O住宅配比7/8、2/8、1/8。先採可手算版本，但應以6b密度重跑平衡：65／780核心要D4、台北78／285辦公也要D4，僅容納原有人口即可造成40樓。若過高，先調混合配比／代表樓層表，不改來源人口或假稱來自模型。 |
+| 滿格門檻、好服務與每日升級配額是否採§7.2？ | 建議任一正容量達滿、昨日q≥800且k≥1、每站最多2格，StationID→row→column、同格一天一級，滿格判斷用午夜開始快照；升級放同站grow之前，當晚即可用新增容量。數值全原生，可再用案例調平衡；不用地價或lastGrowth觸發。 |
+| 是否新增lastService／lastReached兩個存檔欄位？ | 建議同意，只保存最後一筆0…1000／0…5量測，缺鍵0、下一個有基準午夜更新；counted無法保留昨日差值，lastGrowth不是服務率，reached目前不保存。欄位讓日內估價與存讀一致，且滿格仍能判斷好服務，不新增價格歷史。 |
+| 表外既有存量如何處理？ | 同用途最低足夠級別；超表用一次性existingStock、D4密度與兩項max覆寫，保留全部存量，第一版不自動再提高。兩份台北初始化都無表外格；不能據此忽略其他合法匯入或舊局。 |
+| 小site與多格資料如何使用？ | 城市第一版一格一開發單元，畫面可多棟細模型；地標預設裝飾，不以508m推就業。核心資料保留occupiedCells集合，真正多格有容量建物與配額可在另案定，公司建物屬Phase7。 |
+| 未有禁建遮罩與不足64m邊格怎麼辦？ | 沿用6b的合法列／行與spread；邊格按一個邏輯格capacity、畫面裁切，不以模型決定水／道路。新增固定禁建資料會變更6b擴張，須另案明訂；Phase7交易面積另按bounds裁切。 |
+| 地價係數與代表站是否採§6？ | 建議最近完成日q／k、最佳w×q站（平手小ID）、A讀該站6b reached，沿用B/D與15×S＋1000×A公式。日內改線等下次午夜量測；只即時推導價格，不另做目的地聯集。 |
 | Phase8先選哪種iOSrenderer與素材範圍？ | 先47far＋程序普通建物，拿相同3建物與2角色試片比較SceneKit／RealityKit（必要時Metal），實測後選；本研究不鎖定。現階段不等43site／47near缺檔補齊才開始。 |
 | 缺近景與授權全文的補齊優先序？ | 先保留far後備；角色發佈前補Rocketbox MIT全文，native dependency選版後帶LICENSE/NOTICE；按真正需要取得near／缺site，來源metadata保留，不替整包捏造授權。 |
 
-既定的64m格表示、整數核心／SeedDraw、價格不存歷史、費用分Phase7，不列為待決問題。正式決策由作者寫入架構／路線圖；本PR不動那三份共享文件。
+未放入的成長不跨日累積、沒有逐格餘數、土地不衰退、正成長站每晚至多一格4人住宅，是既有6b規則，沿用而不再列為待決。既定64m格表示、整數核心／SeedDraw、價格不存歷史、一般建物城市自動生成／升級、公司建物與費用Phase7也不再重問。正式決策由作者寫入架構／路線圖；本PR不動那三份共享文件。
 
 ## 11. 查閱方法、gap清單與驗證邊界
 
 **VERIFIED（雲端Linux工作區，靜態查閱／檔案結構核對）**：按順序讀規範與指定分支；clone私有庫並釘住上述commit；rg列檔與搜尋；Prettier **3.6.2**只在repo外展開world／engine／Ci app／island／avatar／clips等bundle；Python標準函式庫解析catalog／placement／全部47 model與far，核對bytes、SHA-256、finite floats、stride／triangle數與drawGroup總數／界線；讀8GLB header／JSON／skin／extensions／KTX2 header與ANM1 header；逐條檢查dynamic imports、near／GLB／fallback／source-path存在性。file工具查WebP／PNG尺寸。不是Swift或iOS執行驗證。
 
+**本次修訂 VERIFIED（同一雲端Linux工作區）**：讀指定6b提交d2b3833的LandDemand／Land／LandImport、TownGrowth.Place與growth、GameWorld的午夜reached處理、決策72／73；Python依實際資源檔、Mercator逆投影、members／slots／最大餘數逐格重算兩種台北錨點與FNV-1a種子1城鎮，結果與來源逐步算式見§5.3。用提交前原稿逐段比對，§2–§4、§8未修改。這是來源閱讀與算式重現，不是Swift執行、成長模擬或測試結果。
+
 集中gap及實際搜尋：
 
 | gap | 用過的關鍵字／查法 | 提案處理 |
 | --- | --- | --- |
-| 原生建物容量、入住／就業、地價／租金／開發公式 | population／residents／employment／jobs／capacity／building／floors／landValue／landPrice／propertyValue／realEstate／rent／rental／townGrowth／development／地價／地价／租金／開發／开发；四處來源按命中讀code／metadata | §5容量與§6價格明確原生，不稱來源值。 |
+| 原生建物容量、自動升級、入住／就業、地價／租金／開發公式 | population／residents／employment／jobs／capacity／building／floors／landValue／landPrice／propertyValue／realEstate／rent／rental／townGrowth／development／地價／地价／租金／開發／开发；四處來源按命中讀code／metadata | §5容量、§7.2升級門檻／配額與§6價格明確原生，不稱來源值。 |
 | 43site、postfx、5個content依賴 | import(／site-／build-／postfx／register-DEjbkm8D、逐路徑exists | §2列完；現存proxy／far後備，不宣稱完整網頁能跑。 |
 | 47near、94 GLB宣告、hero thumbnails／source snapshots／.blend | catalog.files／metadata／thumbnail、lods.file/glb、sourceSnapshot／referenceFile／sourceFile／source-layouts／near.mesh.bin／near.glb／far.glb／.blend | §3列每件大小；只有現存far是可用mesh。 |
 | 9avatar／17fallback／角色LOD | manifest.avatars.file/fallback/lod1、.glb與實際存在性 | §8列缺檔；manifest totals與實際總量分開。 |
@@ -548,6 +622,6 @@ T、R前綴在§2／§3明訂。目標檔案是供後續作者設計的草案，
 | 原生可建遮罩／公尺輪廓到64m量化精度 | Land／surfaceAt／claims／water／park／road／placement／footprint | 明定粗格語意，另補整數遮罩；沒有量測就不宣稱等價。 |
 | Rocketbox與依賴完整LICENSE/NOTICE | LICENSE／CREDITS／NOTICE／copyright／license／Microsoft／Rocketbox／ODbL與源metadata | 已有來源授權照規範，特定明示條款補告示；不替未知bundle推測條款。 |
 
-**UNVERIFIED／沒有檢查到**：未跑Swift建置或測試、CI、網頁場景、Three.js、Blender、SceneKit／RealityKit／Metal、Xcode／Simulator／實機；未進行任何資產轉換，沒有轉後USDZ／ASTC／IPA大小或frame-time／GPU基準；未解meshopt後逐三角形看角色外觀，沒有retarget動畫驗證；未逐件目視47外觀／立面／高度或核查所有原照片；未驗證缺near／GLB／sourceSnapshot的hash；未下載外部PMTiles／site／模型／照片、未對每個vendor與網站做全面授權調查；未量測64m佔格對道路／小基地的量化誤差，也未跑容量／地價平衡或6b成長情境。靜態核對不能代替這些檢查。
+**UNVERIFIED／沒有檢查到**：未執行Swift的LandImport／Land.towns、Swift建置或測試、CI、網頁場景、Three.js、Blender、SceneKit／RealityKit／Metal、Xcode／Simulator／實機；未進行任何資產轉換，沒有轉後USDZ／ASTC／IPA大小或frame-time／GPU基準；未解meshopt後逐三角形看角色外觀，沒有retarget動畫驗證；未逐件目視47外觀／立面／高度或核查所有原照片；未驗證缺near／GLB／sourceSnapshot的hash；未下載外部PMTiles／site／模型／照片、未對每個vendor與網站做全面授權調查；未量測64m佔格對道路／小基地的量化誤差，也未跑容量／地價平衡或6b成長情境。靜態核對不能代替這些檢查。
 
 本文件為可審查的參考事實與設計提案；後續PR依§10逐項驗證並如實報VERIFIED／UNVERIFIED。
