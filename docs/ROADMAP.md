@@ -136,6 +136,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - **尚未驗證**：App Store Connect processing、Missing Compliance 與 TestFlight 安裝到裝置（沒有 repository 層級的證據）。
 - **第二版（0.2.0）**：G1（第一個能玩的經營閉環）與 W2a 之後，先完成 L1（繁體中文），再由作者從 `main` 執行 `testflight.yml`。要在實機上看的：經營與路線面板、速度選單與 1×／10×／60× 的手感、中文排版。
 - **第三版（0.3.0）**（2026-10-03，作者要求）：版本號改為 0.3.0，App 圖示換成作者提供的圖（取代臨時圖示）。由作者從 `main` 執行 `testflight.yml`；`CFBundleVersion` 仍由 workflow 決定。
+- **第四版（0.4.0）**（2026-10-07）：上次實機測試以來最大的玩法改變，所以升一個次版本號。內容有 Phase 6 的土地、客流由土地推導、城鎮成長、建物升級、地價與城市圖層（決策 72–78），示範地圖改用土地決定客流、實景資料背景載入（1a），以及 App 圖示風格的配色與地圖優先的畫面（#187、#190）。數字已由無頭模擬量過（[2026-10-07 平衡報告](#phase-6--city-simulation)），實機要看的是手感與畫面看不看得懂，以及報告「待觀察」表的三項：城市長得夠不夠快、短線是否太好賺、回本後現金是否滾太快。由作者從 `main` 執行 `testflight.yml`。
 - **Xcode Cloud onboarding：deferred**。手冊保留：[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md)；啟用時需要一次 Mac／Xcode 操作。
 - **之後**：外部 TestFlight 與 App Store 上架另行規劃。
 
