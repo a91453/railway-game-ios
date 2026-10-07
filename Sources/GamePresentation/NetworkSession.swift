@@ -36,7 +36,8 @@ extension GameSession {
     /// where it ends: the nearest node within reach; else the nearest place
     /// on the track within reach, for a turnout there (a place closer than
     /// ``NetworkBuilding/minimumSpacing`` to an end of its edge is that end's
-    /// node); else a new point there. Tapping the start again forgets both. Placing a platform or
+    /// node); else a new point there, at ``networkHeight``. With
+    /// ``networkSnapsToTrack`` off every tap is a new point. Tapping the start again forgets both. Placing a platform or
     /// removing, a tap picks the nearest place on an edge within reach.
     /// Taps outside the world's bounds are ignored.
     public func tapNetwork(at point: PlanPoint, reach: Int64) {
@@ -44,9 +45,14 @@ extension GameSession {
         message = nil
         switch networkMode {
         case .build:
-            let anchor = world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
-                ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
-                ?? .point(point)
+            // With snapping off a tap is always a new point at the height
+            // being built, beside or over the track; on, track within reach
+            // is joined whatever its height (a ramp starts there).
+            let anchor = networkSnapsToTrack
+                ? world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
+                    ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
+                    ?? .point(point)
+                : .point(point)
             if networkStart == nil {
                 networkStart = anchor
             } else if anchor == networkStart {

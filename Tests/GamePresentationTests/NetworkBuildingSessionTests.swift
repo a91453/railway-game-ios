@@ -94,6 +94,50 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertEqual(turnout.end(of: fromWest.id)?.exits.contains(branch.id), true, "a train from the west may take the branch")
     }
 
+    /// With snapping off every tap is a new point at the height being
+    /// built: a viaduct's end over the line, and a parallel track 5 m beside
+    /// it, closer than a tap reaches. On, the same taps join the line.
+    @MainActor
+    func testTurningSnappingOffMakesEveryTapANewPoint() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 4_096))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 18_432, y: 4_096))
+        let line = try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        XCTAssertTrue(session.networkSnapsToTrack, "on by default")
+        let onTheLine = PlanPoint(x: 8_192, y: 4_200)
+
+        session.networkHeight = 512
+        session.tapNetwork(at: onTheLine, reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .track(NetworkEdgePoint(edge: line, distance: 6_144)), "on: a turnout, where a ramp may start")
+        session.clearNetworkDraft()
+        session.networkSnapsToTrack = false
+        session.tapNetwork(at: onTheLine, reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .point(onTheLine), "off: a point 8 m up, over the line")
+        session.tapNetwork(at: PlanPoint(x: 2_100, y: 4_096), reach: Self.reach)
+        XCTAssertEqual(session.networkEnd, .point(PlanPoint(x: 2_100, y: 4_096)), "not its node either")
+        session.clearNetworkDraft()
+        session.networkSnapsToTrack = true
+
+        // A parallel track 5 m (320 units) beside the line, from end to end.
+        session.networkHeight = 0
+        let start = PlanPoint(x: 4_096, y: 4_416), end = PlanPoint(x: 16_384, y: 4_416)
+        session.tapNetwork(at: start, reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .track(NetworkEdgePoint(edge: line, distance: 2_048)), "snapping on: a turnout")
+        session.clearNetworkDraft()
+        session.networkSnapsToTrack = false
+        session.tapNetwork(at: start, reach: Self.reach)
+        session.tapNetwork(at: end, reach: Self.reach)
+        XCTAssertEqual(session.networkStart, .point(start))
+        XCTAssertEqual(session.networkEnd, .point(end))
+        XCTAssertNil(session.networkPreview?.problem)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.edges.count, 2, "the line and its parallel")
+        XCTAssertNotNil(session.world.network.edge(line), "the line is not split")
+    }
+
     /// Two straight tracks 5 m apart (320 units), 480 m long.
     private func parallelTracks() throws -> GameWorld {
         var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)

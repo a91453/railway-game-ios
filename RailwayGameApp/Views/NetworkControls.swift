@@ -67,6 +67,13 @@ struct NetworkControls: View {
             .toggleStyle(.button)
             .buttonStyle(.bordered)
             .font(.footnote)
+            // Off: every tap is a new point, for a parallel track a few
+            // metres beside another (closer than a tap reaches).
+            Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
+                .toggleStyle(.button)
+                .buttonStyle(.bordered)
+                .font(.footnote)
+                .accessibilityIdentifier("network.snap")
             // Two places on two tracks make a crossover: one diagonal, or
             // an X with the mirrored one crossing it.
             if session.networkPicksCrossover {

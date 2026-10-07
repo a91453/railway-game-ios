@@ -2641,6 +2641,16 @@
           }
         }
       }
+    },
+    "Snap to track" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "吸附軌道"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

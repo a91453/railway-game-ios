@@ -253,6 +253,15 @@ struct StatusBanner: View {
                 AccessibilityNotification.Announcement(message.text).post()
             }
         }
+        // A success clears itself (``StatusMessage/autoDismissDelay``), so
+        // a panel's banner does not stay over its last row; a newer message
+        // restarts the wait, and a problem stays until dismissed.
+        .task(id: session.message) {
+            guard let message = session.message, let delay = message.autoDismissDelay else { return }
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            session.dismissMessage(message)
+        }
     }
 
     private func banner(for message: StatusMessage) -> some View {
