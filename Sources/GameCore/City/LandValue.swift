@@ -110,9 +110,11 @@ extension GameWorld {
     /// What the cells of `rows` × `columns` are worth, by row and then
     /// column, those outside the world left out.
     public func landValues(rows: ClosedRange<Int>, columns: ClosedRange<Int>) -> [LandValue] {
-        let rows = max(0, rows.lowerBound)...min(Land.rows(in: bounds) - 1, rows.upperBound)
-        let columns = max(0, columns.lowerBound)...min(Land.columns(in: bounds) - 1, columns.upperBound)
-        guard !rows.isEmpty, !columns.isEmpty else { return [] }
+        // Clamped apart, as a range wholly outside the world crosses over.
+        let (firstRow, lastRow) = (max(0, rows.lowerBound), min(Land.rows(in: bounds) - 1, rows.upperBound))
+        let (firstColumn, lastColumn) = (max(0, columns.lowerBound), min(Land.columns(in: bounds) - 1, columns.upperBound))
+        guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
+        let rows = firstRow...lastRow, columns = firstColumn...lastColumn
         let stations = landValueStations()
         var values: [LandValue] = []
         values.reserveCapacity(rows.count * columns.count)

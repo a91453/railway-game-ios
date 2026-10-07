@@ -128,10 +128,14 @@ extension GameWorld {
     /// at once, whenever a station is built or the land changes, and each
     /// midnight, and the land grows instead of each station's ridership
     /// (town growth, decision 70, measures it). Off, every station keeps
-    /// the ridership it has, which the player may then set.
+    /// the ridership it has, which the player may then set. Either way town
+    /// growth starts again, as after ``setStationDemand(_:to:)``: the start
+    /// it kept for a station would pull the other rule's ridership back to
+    /// it, and its growth would be out of range.
     public mutating func setLandDemand(_ enabled: Bool) {
         guard enabled != landDemand else { return }
         landDemand = enabled
+        townGrowth?.places = []
         refreshLandDemand()
     }
 

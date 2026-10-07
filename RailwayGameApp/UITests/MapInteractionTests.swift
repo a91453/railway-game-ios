@@ -298,9 +298,13 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(legend.waitForExistence(timeout: 5), "The land value legend must show")
 
         // The new game opens on its first town, in the middle of the map.
+        // On a phone the legend covers much of the map's trailing half,
+        // and takes a tap there: tap the map halfway to the legend.
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)).tap()
+        let panel = app.descendants(matching: .any)["map.populationLegend"].firstMatch
+        let clear = max(24, ((panel.exists ? panel : legend).frame.minX - map.frame.minX) / 2)
+        map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: clear, dy: map.frame.height * 0.45)).tap()
         let tooltip = app.descendants(matching: .any)["map.cityTooltip"].firstMatch
         XCTAssertTrue(tooltip.waitForExistence(timeout: 5), "A tapped cell must show its tooltip")
         XCTAssertTrue((tooltip.label).contains("Land value"), "The tooltip must say the land value; label: \(tooltip.label)")

@@ -834,6 +834,9 @@ public struct GameWorld: Equatable, Sendable {
             if price > 0 { try economy.spend(Money(price)) }
         }
         trains[index].cars = cars
+        // The longest train of a line sets where its trains can pass, and
+        // so the service it can run.
+        abandonUnservedPassengers()
     }
 
     /// Renames station `id` (the reference's station rename). Free.

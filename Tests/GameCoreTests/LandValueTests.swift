@@ -160,6 +160,11 @@ final class LandValueTests: XCTestCase {
             XCTAssertNil(world.landValue(row: row, column: column))
         }
         XCTAssertNotNil(world.landValue(row: 23, column: 31))
+        // Ranges wholly outside the world give none, past either end.
+        XCTAssertEqual(world.landValues(rows: 30...40, columns: 0...3), [])
+        XCTAssertEqual(world.landValues(rows: 0...3, columns: 40...50), [])
+        XCTAssertEqual(world.landValues(rows: -5...(-1), columns: -5...(-1)), [])
+        XCTAssertEqual(world.landValues(rows: 20...40, columns: 30...40).count, 4 * 2)
     }
 
     // MARK: - Every cell, against the reference

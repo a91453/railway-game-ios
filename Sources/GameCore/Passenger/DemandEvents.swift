@@ -78,6 +78,10 @@ public struct DemandEventSchedule: Hashable, Codable, Sendable {
     /// How many draws there have been: each draw's keys are its number.
     public internal(set) var draws: Int64
 
+    /// The most draws a save counts: more than one a day could make in any
+    /// game, so counting them never overflows.
+    static let maximumDraws: Int64 = 1 << 40
+
     init(seed: UInt32, from day: Int64) {
         self.seed = seed
         events = []
@@ -160,7 +164,9 @@ extension GameWorld {
     mutating func startDemandEventDay(_ day: Int64) {
         guard var schedule = demandEvents else { return }
         schedule.events.removeAll { $0.end <= day }
-        if schedule.nextDraw <= day {
+        // A save counts at most 2^40 draws (``demandEventProblem()``): the
+        // last it may count is the last.
+        if schedule.nextDraw <= day, schedule.draws < DemandEventSchedule.maximumDraws {
             if let event = drawDemandEvent(schedule, on: day) {
                 schedule.events.append(event)
             }
@@ -213,7 +219,7 @@ extension GameWorld {
     func demandEventProblem() -> String? {
         guard let schedule = demandEvents else { return nil }
         let day = dayIndex(of: clock.now)
-        guard (0...(1 << 40)).contains(schedule.draws), schedule.events.count <= 64 else { return "The demand events are out of range." }
+        guard (0...DemandEventSchedule.maximumDraws).contains(schedule.draws), schedule.events.count <= 64 else { return "The demand events are out of range." }
         for event in schedule.events {
             guard event.isValid, station(id: event.station) != nil, event.announced <= day, day <= event.end else {
                 return "A demand event is not one the game could have drawn."

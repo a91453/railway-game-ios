@@ -198,6 +198,27 @@ final class LandDemandTests: XCTestCase {
         XCTAssertNil(off["landDemand"])
     }
 
+    /// Turned off, town growth starts again from the ridership each station
+    /// keeps, as after ``GameWorld/setStationDemand(_:to:)``: the start the
+    /// land set long before would pull a station back to it at the next
+    /// midnight, and its growth, out of range, would leave a save that does
+    /// not load.
+    func testTurningLandDemandOffStartsTownGrowthAgain() throws {
+        var world = world()
+        world.setTownGrowth(true)
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: Self.middle, y: Self.middle)).id
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.townGrowth(of: a)?.base, 33_386, "growth has seen the whole town")
+        try world.setLand([LandCell(row: 128, column: 128, use: .residential, residents: 100, jobs: 0)])
+        let kept = try XCTUnwrap(world.stationDemand(of: a))
+        XCTAssertEqual(kept.dailyTrips, 40)
+        world.setLandDemand(false)
+        XCTAssertNil(world.townGrowth(of: a), "growth starts again")
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.stationDemand(of: a), kept, "not pulled back to the town it had")
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
+    }
+
     // MARK: - Growth
 
     /// A world with town growth whose stations growth has seen, and the
