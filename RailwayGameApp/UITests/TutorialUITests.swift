@@ -44,7 +44,13 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(map.waitForExistence(timeout: 5))
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        let visibleMap = map.frame.intersection(app.frame)
+        // On a phone the map runs up under the HUD, which floats over its
+        // top: only the map below the HUD can be tapped.
+        let gameTime = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
+        let hudBottom = max(app.buttons["hud.menu"].frame.maxY, gameTime.frame.maxY) + 12
+        let wholeMap = map.frame.intersection(app.frame)
+        let visibleMap = wholeMap.divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
         let row = freeRow(in: visibleMap, avoiding: card.frame)
         // The row can be the map's bottom edge, where the Map Layers button
         // sits in the leading corner: start the track to its right.

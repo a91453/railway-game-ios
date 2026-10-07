@@ -4,9 +4,11 @@ import SwiftUI
 
 /// The game screen: HUD, map and controls.
 ///
-/// Tall screens stack the map above the controls (on iPad the controls then
-/// sit side by side); wide screens put the controls in a sidebar next to the
-/// map.
+/// Phones in portrait give the map the screen: it runs up under the status
+/// bar, the HUD floats over its top in glass, and the controls sit in a
+/// drawer under it that folds down to the tool picker (``ControlDrawer``).
+/// iPads in portrait stack the map above the controls, which sit side by
+/// side; wide screens put the controls in a sidebar next to the map.
 struct ContentView: View {
     let session: GameSession
     /// Saves the game and goes back to the start screen (Stage C4).
@@ -19,6 +21,11 @@ struct ContentView: View {
     /// the same reason: turning the device swaps them and rebuilds every
     /// view under them.
     @State private var screen = GameScreenState()
+    /// Where a phone's map starts and its floating HUD ends, in the game
+    /// screen's coordinates (``screenSpace``): how far down the map's own
+    /// banners start.
+    @State private var phoneMapTop: CGFloat = 0
+    @State private var phoneHUDBottom: CGFloat = 0
 
     var body: some View {
         Group {
@@ -91,16 +98,17 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private var tallLayout: some View {
-        VStack(spacing: 0) {
-            HUDView(session: session, launcher: launcher)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-            Divider()
-            if horizontalSizeClass == .regular {
-                // iPad portrait: the whole map across the full width, and
-                // the controls get the rest of the height.
+        if horizontalSizeClass == .regular {
+            // iPad portrait: the whole map across the full width, and the
+            // controls get the rest of the height.
+            VStack(spacing: 0) {
+                HUDView(session: session, launcher: launcher)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                Divider()
                 map
                     .aspectRatio(Self.mapAspectRatio, contentMode: .fit)
                     .layoutPriority(1)
@@ -111,32 +119,59 @@ struct ContentView: View {
                 }
                 .tutorialClip()
                 .background(.ultraThinMaterial)
-            } else {
-                // Phones: the map keeps a fixed share of the height and the
-                // controls scroll below it. When the map took whatever the
-                // controls left, text that changes length as the game runs
-                // (a train's status and riders) resized it every game
-                // minute, and what it showed slid up and down; and controls
-                // taller than the space left were drawn over one another.
-                GeometryReader { proxy in
-                    VStack(spacing: 0) {
-                        map
-                            .frame(height: (proxy.size.height * Self.phoneMapShare).rounded())
-                        Divider()
-                        ScrollView {
-                            ControlPanel(session: session, arrangement: .column)
-                                .padding()
-                        }
-                        .tutorialClip()
-                        .background(.ultraThinMaterial)
-                    }
-                }
             }
+        } else {
+            phoneLayout
         }
     }
 
-    /// The share of the height under the HUD the map keeps on a phone.
-    private static let phoneMapShare: CGFloat = 0.5
+    /// Phones in portrait: the map from the top of the screen down to the
+    /// control drawer, with the HUD floating over it in glass. The map ends
+    /// where the drawer starts rather than running under it too: a
+    /// real-world map's bottom strip holds Apple's logo and legal link,
+    /// which nothing may cover (``AppleMapBackground``).
+    private var phoneLayout: some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                map
+                    .environment(\.mapTopInset, max(0, phoneHUDBottom - phoneMapTop) + 8)
+                    .onGeometryChange(for: CGFloat.self) { geometry in
+                        geometry.frame(in: .named(Self.screenSpace)).minY
+                    } action: { top in
+                        phoneMapTop = top
+                    }
+                    .ignoresSafeArea(.container, edges: .top)
+                ControlDrawer(
+                    session: session,
+                    detailsHeight: (proxy.size.height * Self.phoneDetailsShare).rounded()
+                )
+            }
+        }
+        .overlay(alignment: .top) {
+            HUDView(session: session, launcher: launcher)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.horizontal, 8)
+                .onGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.frame(in: .named(Self.screenSpace)).maxY
+                } action: { bottom in
+                    phoneHUDBottom = bottom
+                }
+        }
+        .coordinateSpace(.named(Self.screenSpace))
+    }
+
+    /// The share of the height an open control drawer's details take on a
+    /// phone. A fixed share, not their own height: text that changes
+    /// length as the game runs (a train's status and riders) would resize
+    /// the map every game minute, and what it showed would slide up and
+    /// down.
+    private static let phoneDetailsShare: CGFloat = 0.42
+
+    /// The game screen's coordinates, in which a phone's HUD and map are
+    /// measured.
+    private static let screenSpace = "gameScreen"
 
     /// The map view's shape on an iPad in portrait: 4:3, the shape of the
     /// 32 × 24 map before Stage E1. The view is a window on the map now, so
@@ -171,6 +206,94 @@ struct ContentView: View {
             .tutorialTarget(.map)
             // The status banner is at the top of the map view, above its
             // construction HUD and traffic key.
+    }
+}
+
+/// A phone's controls, in glass under the map: the tool picker always, and
+/// under it what the tool and the selection need (``ControlPanel``'s
+/// details). The details open by themselves when there is something to
+/// show (a tool other than Select, a selection, the tutorial) and fold
+/// away when there is not, so the map gets the screen; the player can open
+/// or fold them too, until what they would show changes.
+private struct ControlDrawer: View {
+    let session: GameSession
+    let detailsHeight: CGFloat
+    /// The player's choice: open or folded, `nil` to follow ``hasDetails``.
+    @State private var choice: Bool?
+
+    /// What the details would be about; a change drops the player's choice.
+    private struct Subject: Equatable {
+        let tool: ConstructionTool
+        let station: StationID?
+        let train: TrainID?
+        let hasSelection: Bool
+    }
+
+    private var subject: Subject {
+        Subject(
+            tool: session.tool,
+            station: session.selectedStationID,
+            train: session.tappedTrainID,
+            hasSelection: session.selectionText() != nil
+        )
+    }
+
+    private var hasDetails: Bool {
+        session.tool != .select || session.selectionText() != nil
+    }
+
+    /// The tutorial points at controls in the details, so they stay open
+    /// while it runs.
+    private var isOpen: Bool {
+        session.tutorial != nil || (choice ?? hasDetails)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                ControlPanel(session: session, arrangement: .tools)
+                if session.tutorial == nil {
+                    toggle
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            if isOpen {
+                ScrollView {
+                    ControlPanel(session: session, arrangement: .details)
+                        .padding(.horizontal)
+                        .padding(.bottom)
+                }
+                .tutorialClip()
+                .frame(height: detailsHeight)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .background {
+            Color.clear
+                .glassBackground(in: Rectangle())
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
+        .overlay(alignment: .top) {
+            Divider()
+        }
+        .animation(.easeInOut(duration: 0.2), value: isOpen)
+        .onChange(of: subject) { _, _ in
+            choice = nil
+        }
+    }
+
+    private var toggle: some View {
+        Button {
+            choice = !isOpen
+        } label: {
+            Image(systemName: isOpen ? "chevron.down" : "chevron.up")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 40, height: 38)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
+        .accessibilityIdentifier("controls.toggle")
     }
 }
 
