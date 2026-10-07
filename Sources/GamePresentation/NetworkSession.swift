@@ -259,9 +259,9 @@ extension GameSession {
     /// ``platformStationID``, or for a new station built first through
     /// `GameWorld.buildStation(named:at:)` at the middle of the platform
     /// (Stage F1); a managed company gives the new station its ridership
-    /// (``newStationDemand(at:)``). All or nothing. A new station then
-    /// serves the next platform, so a second track beside it joins the
-    /// same station.
+    /// (``newStationDemand(at:)``), unless the land does (Phase 6b). All or
+    /// nothing. A new station then serves the next platform, so a second
+    /// track beside it joins the same station.
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
@@ -279,7 +279,9 @@ extension GameSession {
                 station = chosen
             } else {
                 station = try draft.buildStation(named: name, at: middle)
-                if draft.accounts.mode == .management {
+                // With demand from land (Phase 6b) GameCore gives it the
+                // ridership of the land round it.
+                if draft.accounts.mode == .management, !draft.landDemand {
                     try draft.setStationDemand(station.id, to: demand)
                 }
             }

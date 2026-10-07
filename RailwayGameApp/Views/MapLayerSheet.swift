@@ -50,7 +50,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("Population and Travel Data")
                 } footer: {
-                    Text("Population: WorldPop 1 km estimates on real-world maps (0 to 10,000+ people a cell). Travel demand: the trips starting in each 1 km square in each hour, from the stations' demand. Demand change: how they rise or fall from the hour before.")
+                    Text("Population: WorldPop 1 km estimates on real-world maps (0 to 10,000+ people a cell), the towns' 64 m cells on blank maps (people per square km). Travel demand: the trips starting in each 1 km square in each hour, from the stations' demand. Demand change: how they rise or fall from the hour before.")
                 }
             }
             .navigationTitle("Map Layers")

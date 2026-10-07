@@ -448,6 +448,19 @@ final class GoldenScenarioTests: XCTestCase {
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
         switch answer {
+        case .landTotals(nil), .landCell(nil):
+            return []
+        case .landTotals(let totals?):
+            var residents = totals, jobs = totals
+            residents.residents += 1
+            jobs.jobs += 1
+            return [.landTotals(nil), .landTotals(residents), .landTotals(jobs)]
+        case .landCell(let cell?):
+            var residents = cell, jobs = cell, use = cell
+            residents.residents += 1
+            jobs.jobs += 1
+            use.use = cell.use == .residential ? .office : .residential
+            return [.landCell(nil), .landCell(residents), .landCell(jobs), .landCell(use)]
         case .scheduledWaits(let waits):
             return waits.isEmpty ? [] : [.scheduledWaits([]), .scheduledWaits(waits + waits)]
         case .train(nil):

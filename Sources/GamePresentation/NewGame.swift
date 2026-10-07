@@ -16,7 +16,14 @@ extension GameWorld {
     ///
     /// Its demand events (item 4) are drawn from `eventSeed`: the app's
     /// new games pass a random one, so each game has its own events.
-    public static func newGame(anchor: GeoAnchor? = nil, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
+    ///
+    /// Its land (Phase 6a, ARCHITECTURE decision 72) is `land`, a
+    /// real-world map's people (``LandImport``), or without it the towns
+    /// ``Land/towns(seed:in:)`` draws from `eventSeed`: a blank map, or a
+    /// real-world one where the app has no people.
+    public static func newGame(
+        anchor: GeoAnchor? = nil, balance: Money = startingBalance, eventSeed: UInt32 = 1, land: [LandCell]? = nil
+    ) -> GameWorld {
         do {
             var world = GameWorld(
                 bounds: newGameBounds,
@@ -45,10 +52,20 @@ extension GameWorld {
             // Item 5: the towns round well-served stations grow.
             world.setTownGrowth(true)
             world.setGeoAnchor(anchor)
+            // Phase 6a: the city the railway serves.
+            if let land {
+                try world.setLand(land)
+            } else {
+                world.foundTowns(seed: eventSeed)
+            }
+            // Phase 6b: its stations draw their ridership from it, and it
+            // grows round the well-served ones.
+            world.setLandDemand(true)
             return world
         } catch {
-            // An empty world has no trains to share track, so failing here
-            // is a programming error.
+            // An empty world has no trains to share track, and land comes
+            // from ``LandImport`` in this world's bounds, so failing here is
+            // a programming error.
             preconditionFailure("Could not create the new-game world: \(error)")
         }
     }
@@ -124,6 +141,10 @@ public enum DemoWorld {
     private static let reach: Int64 = 9
 
     private static func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
+        // The demo's stations keep the ridership it gives them (below), so
+        // what it shows does not depend on the towns; its land is there to
+        // see (Phase 6b).
+        world.setLandDemand(false)
         let platform = Int64(cars) * Train.carLength
         let ringPlatform = Int64(ringCars) * Train.carLength
         // Central, the middle of the world: the demo is built around it.

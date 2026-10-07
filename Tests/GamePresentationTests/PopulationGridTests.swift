@@ -152,13 +152,16 @@ final class PopulationGridTests: XCTestCase {
 
     /// A managed company's station on a real-world map in Taiwan gets the
     /// ridership of the people around it; on a blank map, outside the
-    /// grid, or without the grid, the city's.
+    /// grid, or without the grid, the city's. This is a game without demand
+    /// from land (a save from before Phase 6b); with it, GameCore gives the
+    /// station its land's ridership (`LandImportTests`).
     func testANewStationOnARealWorldMapHasItsNeighbourhoodsRidership() async throws {
         let grid = try Self.bundled()
         let taipei = try XCTUnwrap(GeoAnchor(latitudeDegrees: Self.taipei.latitude, longitudeDegrees: Self.taipei.longitude))
         let tokyo = try XCTUnwrap(GeoAnchor(latitudeDegrees: 35.681_2, longitudeDegrees: 139.767_1))
         func world(anchor: GeoAnchor?) throws -> GameWorld {
             var world = GameWorld.newGame(anchor: anchor)
+            world.setLandDemand(false)
             // A stretch of track through the middle of the map.
             let west = try world.buildTrackNode(at: WorldCoordinate(x: 520_192, y: 524_288))
             let east = try world.buildTrackNode(at: WorldCoordinate(x: 528_384, y: 524_288))

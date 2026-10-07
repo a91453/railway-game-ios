@@ -32,6 +32,8 @@ extension GameWorld {
         }
         accounts.mode = mode
         passengerPlan = PassengerPlanCache()
+        // Phase 6b: a managed company's land sets its ridership.
+        refreshLandDemand()
     }
 
     /// Sets the network's fare rules. From then on fares change demand
