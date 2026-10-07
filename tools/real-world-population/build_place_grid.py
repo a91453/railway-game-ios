@@ -11,7 +11,8 @@ It asks an Overpass API server (OVERPASS_URL, by default the maps.mail.ru
 mirror) for every 0.25° tile with people in the population grid, one tile
 at a time with pauses, and keeps each answer in the tiles folder: a run
 that stops part way picks up where it left off, and a folder of earlier
-answers is used as it is. A place is its node, or the centre of its way or
+answers is used as it is. An answer the server cut short (a `remark`
+error, or fewer places than its counts) is asked for again, never kept. A place is its node, or the centre of its way or
 relation; one that several tiles return counts once, and one north or west
 of the population grid not at all. Standard library only.
 """
@@ -41,11 +42,33 @@ def query(box):
     return '[out:json][timeout:180];' + ''.join(parts)
 
 
+def incomplete(answer):
+    """Why an answer is not a whole one, or None. Overpass still answers
+    200 when it runs out of time or memory part way, with a `remark` and
+    only some of the elements: such an answer would undercount the tile.
+    Each set's `out count` must be followed by exactly that many places."""
+    remark = answer.get('remark', '')
+    if 'error' in remark.lower():
+        return remark
+    elements = answer.get('elements', [])
+    starts = [i for i, element in enumerate(elements) if element.get('type') == 'count']
+    if len(starts) != len(SETS):
+        return f'{len(starts)} counts for {len(SETS)} sets'
+    for n, start in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(elements)
+        expected = int(elements[start].get('tags', {}).get('total', -1))
+        if expected != end - start - 1:
+            return f'{SETS[n][0]}: {end - start - 1} places for a count of {expected}'
+    return None
+
+
 def fetch(box, path):
-    """The tile's answer: kept from an earlier run, or asked for now."""
+    """The tile's whole answer: kept from an earlier run, or asked for now."""
     if os.path.exists(path):
         try:
-            return json.load(open(path))
+            kept = json.load(open(path))
+            if incomplete(kept) is None:
+                return kept
         except ValueError:
             pass
     time.sleep(1)  # A pause between questions to a shared server.
@@ -55,6 +78,9 @@ def fetch(box, path):
             request = urllib.request.Request(url, headers={'User-Agent': 'railway-game-ios-places/1.0'})
             body = urllib.request.urlopen(request, timeout=240).read()
             answer = json.loads(body)
+            problem = incomplete(answer)
+            if problem is not None:
+                raise ValueError(f'incomplete answer: {problem}')
             open(path, 'wb').write(body)
             return answer
         except Exception as error:  # A busy server answers 504 or HTML.
