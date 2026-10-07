@@ -129,8 +129,10 @@ extension GameSession {
                 problem = error.playerMessage(in: language)
             }
             let geometries = edges.compactMap { draft.trackGeometry(of: $0) }
-            let first = geometries.count == 4 ? geometries[0].points + geometries[1].points.dropFirst() : [plan.places[0].position, plan.middle, plan.places[1].position]
-            let second = geometries.count == 4 ? geometries[2].points + geometries[3].points.dropFirst() : [plan.places[3].position, plan.middle, plan.places[2].position]
+            // Every half runs from its track to the middle: a diagonal's
+            // second half is drawn back out of it.
+            let first = geometries.count == 4 ? geometries[0].points + geometries[1].points.reversed().dropFirst() : [plan.places[0].position, plan.middle, plan.places[1].position]
+            let second = geometries.count == 4 ? geometries[2].points + geometries[3].points.reversed().dropFirst() : [plan.places[3].position, plan.middle, plan.places[2].position]
             let length = geometries.reduce(0) { $0 + $1.length }
             return (NetworkPreview(curve: .straight, profile: .uniform, points: first, length: length, startHeight: plan.middle.z,
                                    endHeight: plan.middle.z, joinsStart: true, joinsEnd: true, cost: cost, problem: problem), second)

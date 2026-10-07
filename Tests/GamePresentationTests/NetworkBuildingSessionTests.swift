@@ -134,6 +134,17 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertNil(preview.problem)
         XCTAssertNotNil(preview.cost)
         XCTAssertGreaterThan(session.networkOverlay?.crossing.count ?? 0, 2, "the mirrored diagonal is drawn")
+        // Each diagonal is drawn from one track through the middle to the
+        // other, its second half the way it runs out of the middle.
+        let diagonal = try XCTUnwrap(session.networkOverlay?.preview)
+        XCTAssertEqual(diagonal.first.map { PlanPoint(x: $0.x, y: $0.y) }, PlanPoint(x: 10_240, y: 4_096))
+        XCTAssertEqual(diagonal.last.map { PlanPoint(x: $0.x, y: $0.y) }, PlanPoint(x: 16_384, y: 4_416))
+        let crossing = try XCTUnwrap(session.networkOverlay?.crossing)
+        XCTAssertEqual(crossing.first.map(\.y), 4_416, "from the second track")
+        XCTAssertEqual(crossing.last.map(\.y), 4_096, "to the first")
+        for line in [diagonal, crossing] {
+            XCTAssertEqual(line.map(\.x), line.map(\.x).sorted(), "one way along, never back")
+        }
         let before = session.world
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
