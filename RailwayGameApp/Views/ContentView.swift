@@ -4,11 +4,13 @@ import SwiftUI
 
 /// The game screen: HUD, map and controls.
 ///
-/// Phones in portrait give the map the screen: it runs up under the status
-/// bar, the HUD floats over its top in glass, and the controls sit in a
-/// drawer under it that folds down to the tool picker (``ControlDrawer``).
-/// iPads in portrait stack the map above the controls, which sit side by
-/// side; wide screens put the controls in a sidebar next to the map.
+/// The map has the screen. On a phone in portrait it runs up under the
+/// status bar, the HUD floats over its top in glass, and the controls sit
+/// in a drawer under it that folds down to the tool picker
+/// (``ControlDrawer``). On an iPad either way up, and on a phone on its
+/// side, the map fills the screen and the HUD and controls float over its
+/// trailing side in a glass card that folds up the same way
+/// (``ControlCard``).
 struct ContentView: View {
     let session: GameSession
     /// Saves the game and goes back to the start screen (Stage C4).
@@ -29,10 +31,10 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if isWide {
-                wideLayout
+            if isWide || horizontalSizeClass == .regular {
+                cardLayout
             } else {
-                tallLayout
+                phoneLayout
             }
         }
         .background {
@@ -98,33 +100,6 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
-    private var tallLayout: some View {
-        if horizontalSizeClass == .regular {
-            // iPad portrait: the whole map across the full width, and the
-            // controls get the rest of the height.
-            VStack(spacing: 0) {
-                HUDView(session: session, launcher: launcher)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                Divider()
-                map
-                    .aspectRatio(Self.mapAspectRatio, contentMode: .fit)
-                    .layoutPriority(1)
-                Divider()
-                ScrollView {
-                    ControlPanel(session: session, arrangement: .sideBySide)
-                        .padding()
-                }
-                .tutorialClip()
-                .background(.ultraThinMaterial)
-            }
-        } else {
-            phoneLayout
-        }
-    }
-
     /// Phones in portrait: the map from the top of the screen down to the
     /// control drawer, with the HUD floating over it in glass. The map ends
     /// where the drawer starts rather than running under it too: a
@@ -134,7 +109,7 @@ struct ContentView: View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
                 map
-                    .environment(\.mapTopInset, max(0, phoneHUDBottom - phoneMapTop) + 8)
+                    .environment(\.mapInsets, EdgeInsets(top: max(0, phoneHUDBottom - phoneMapTop) + 8, leading: 0, bottom: 0, trailing: 0))
                     .onGeometryChange(for: CGFloat.self) { geometry in
                         geometry.frame(in: .named(Self.screenSpace)).minY
                     } action: { top in
@@ -173,30 +148,31 @@ struct ContentView: View {
     /// measured.
     private nonisolated static let screenSpace = "gameScreen"
 
-    /// The map view's shape on an iPad in portrait: 4:3, the shape of the
-    /// 32 × 24 map before Stage E1. The view is a window on the map now, so
-    /// a new game's square 16 km map does not take the controls' room.
-    private static let mapAspectRatio: CGFloat = 4.0 / 3.0
-
-    private var wideLayout: some View {
-        HStack(spacing: 0) {
+    /// iPads either way up, and phones on their side: the map fills the
+    /// screen, and the HUD and controls float over its trailing side in a
+    /// glass card. The card stops above a real-world map's bottom strip,
+    /// whose Apple logo and legal link nothing may cover
+    /// (``AppleMapBackground``).
+    private var cardLayout: some View {
+        GeometryReader { proxy in
+            let width = min(Self.cardWidth, (proxy.size.width * Self.cardMaxShare).rounded())
+            let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
             map
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    HUDView(session: session, launcher: launcher)
-                    Divider()
-                    ControlPanel(session: session, arrangement: .column)
-                    Divider()
-                    NetworkOverview(session: session)
+                .environment(\.mapInsets, EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: width + Self.cardMargin))
+                .overlay(alignment: .topTrailing) {
+                    ControlCard(session: session, launcher: launcher)
+                        .frame(width: width)
+                        .padding(Self.cardMargin)
+                        .padding(.bottom, strip)
                 }
-                .padding()
-            }
-            .tutorialClip()
-            .frame(width: 360)
-            .background(.ultraThinMaterial)
         }
     }
+
+    /// The control card's width, as the sidebar it replaces, and the most
+    /// of the screen's width it takes on a small phone on its side.
+    private static let cardWidth: CGFloat = 360
+    private static let cardMaxShare: CGFloat = 0.45
+    private static let cardMargin: CGFloat = 10
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
@@ -209,51 +185,77 @@ struct ContentView: View {
     }
 }
 
-/// A phone's controls, in glass under the map: the tool picker always, and
-/// under it what the tool and the selection need (``ControlPanel``'s
-/// details). The details open by themselves when there is something to
-/// show (a tool other than Select, a selection, the tutorial) and fold
-/// away when there is not, so the map gets the screen; the player can open
-/// or fold them too, until what they would show changes.
-private struct ControlDrawer: View {
-    let session: GameSession
-    let detailsHeight: CGFloat
-    /// The player's choice: open or folded, `nil` to follow ``hasDetails``.
-    @State private var choice: Bool?
-
+/// When the controls' details (``ControlPanel``'s details: the selection,
+/// the tool's options and the action button) show under the tool picker,
+/// in a phone's drawer and in the control card: by themselves when there
+/// is something to show (a tool other than Select, a selection) and not
+/// otherwise, so the map gets the screen; or as the player chose, until
+/// what they would show changes; and always during the tutorial, which
+/// points at controls in them.
+private enum ControlDetails {
     /// What the details would be about; a change drops the player's choice.
-    private struct Subject: Equatable {
+    struct Subject: Equatable {
         let tool: ConstructionTool
         let station: StationID?
         let train: TrainID?
         let hasSelection: Bool
+
+        @MainActor
+        init(_ session: GameSession) {
+            tool = session.tool
+            station = session.selectedStationID
+            train = session.tappedTrainID
+            hasSelection = session.selectionText() != nil
+        }
     }
 
-    private var subject: Subject {
-        Subject(
-            tool: session.tool,
-            station: session.selectedStationID,
-            train: session.tappedTrainID,
-            hasSelection: session.selectionText() != nil
-        )
+    /// `choice` is the player's: open or folded, `nil` to follow what
+    /// there is to show.
+    @MainActor
+    static func isOpen(_ session: GameSession, choice: Bool?) -> Bool {
+        session.tutorial != nil || (choice ?? (session.tool != .select || session.selectionText() != nil))
     }
+}
 
-    private var hasDetails: Bool {
-        session.tool != .select || session.selectionText() != nil
-    }
-
-    /// The tutorial points at controls in the details, so they stay open
-    /// while it runs.
-    private var isOpen: Bool {
-        session.tutorial != nil || (choice ?? hasDetails)
-    }
+/// Opens or folds the controls' details. Hidden during the tutorial, when
+/// they stay open.
+private struct ControlDetailsToggle: View {
+    let isOpen: Bool
+    /// Whether the details open below the button (the card) or above it
+    /// (the drawer).
+    let opensDownward: Bool
+    let action: () -> Void
 
     var body: some View {
+        Button(action: action) {
+            Image(systemName: isOpen == opensDownward ? "chevron.up" : "chevron.down")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 40, height: 38)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
+        .accessibilityIdentifier("controls.toggle")
+    }
+}
+
+/// A phone's controls, in glass under the map: the tool picker always, and
+/// under it the details when they show (``ControlDetails``).
+private struct ControlDrawer: View {
+    let session: GameSession
+    let detailsHeight: CGFloat
+    /// The player's choice: open or folded, `nil` to follow what there is
+    /// to show.
+    @State private var choice: Bool?
+
+    var body: some View {
+        let isOpen = ControlDetails.isOpen(session, choice: choice)
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 ControlPanel(session: session, arrangement: .tools)
                 if session.tutorial == nil {
-                    toggle
+                    ControlDetailsToggle(isOpen: isOpen, opensDownward: false) {
+                        choice = !isOpen
+                    }
                 }
             }
             .padding(.horizontal)
@@ -278,22 +280,54 @@ private struct ControlDrawer: View {
             Divider()
         }
         .animation(.easeInOut(duration: 0.2), value: isOpen)
-        .onChange(of: subject) { _, _ in
+        .onChange(of: ControlDetails.Subject(session)) { _, _ in
             choice = nil
         }
     }
+}
 
-    private var toggle: some View {
-        Button {
-            choice = !isOpen
-        } label: {
-            Image(systemName: isOpen ? "chevron.down" : "chevron.up")
-                .font(.subheadline.weight(.bold))
-                .frame(width: 40, height: 38)
+/// The HUD and the controls on an iPad, or a phone on its side, in a glass
+/// card over the map: the HUD and the tool picker always, and under them
+/// the details and the network overview when the details show
+/// (``ControlDetails``). Open, the card runs down the map's side and its
+/// details scroll.
+private struct ControlCard: View {
+    let session: GameSession
+    let launcher: GameLauncher
+    /// The player's choice: open or folded, `nil` to follow what there is
+    /// to show.
+    @State private var choice: Bool?
+
+    var body: some View {
+        let isOpen = ControlDetails.isOpen(session, choice: choice)
+        VStack(alignment: .leading, spacing: 12) {
+            HUDView(session: session, launcher: launcher)
+            HStack(spacing: 8) {
+                ControlPanel(session: session, arrangement: .tools)
+                if session.tutorial == nil {
+                    ControlDetailsToggle(isOpen: isOpen, opensDownward: true) {
+                        choice = !isOpen
+                    }
+                }
+            }
+            if isOpen {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ControlPanel(session: session, arrangement: .details)
+                        Divider()
+                        NetworkOverview(session: session)
+                    }
+                }
+                .tutorialClip()
+                .transition(.opacity)
+            }
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-        .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
-        .accessibilityIdentifier("controls.toggle")
+        .padding(14)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .animation(.easeInOut(duration: 0.2), value: isOpen)
+        .onChange(of: ControlDetails.Subject(session)) { _, _ in
+            choice = nil
+        }
     }
 }
 
