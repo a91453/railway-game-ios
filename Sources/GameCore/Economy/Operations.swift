@@ -324,7 +324,8 @@ extension GameWorld {
 
     /// Why the accounts break a G1c rule, or `nil`: counts, amounts and the
     /// balance are within bounds, rows are not dated after now and are
-    /// shaped as settlements write them, and days are in order, each once.
+    /// shaped as settlements write them, and days are in order, each once,
+    /// none after today.
     func accountsProblem() -> String? {
         let pending = accounts.pending
         let counts = [pending.fareTrips, pending.trainDistance, pending.passengers, pending.seats, pending.fareRevenue.amount]
@@ -349,6 +350,10 @@ extension GameWorld {
         }
         guard zip(accounts.days, accounts.days.dropFirst()).allSatisfy({ $0.day < $1.day }) else {
             return "Day accounts must be listed once each, by ascending day."
+        }
+        // Settlements book each row to the day it ran in, never a later one.
+        guard accounts.days.last.map({ $0.day <= dayIndex(of: clock.now) }) ?? true else {
+            return "Day accounts cannot be for a day after today."
         }
         let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
             + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost] }
