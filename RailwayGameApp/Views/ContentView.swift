@@ -171,7 +171,7 @@ struct ContentView: View {
 
     /// The game screen's coordinates, in which a phone's HUD and map are
     /// measured.
-    private static let screenSpace = "gameScreen"
+    private nonisolated static let screenSpace = "gameScreen"
 
     /// The map view's shape on an iPad in portrait: 4:3, the shape of the
     /// 32 × 24 map before Stage E1. The view is a window on the map now, so
