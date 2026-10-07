@@ -44,7 +44,7 @@ struct TrainControls: View {
                     if let price = session.world.carPriceText(in: session.language) {
                         Text(price)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
@@ -76,7 +76,7 @@ struct TrainControls: View {
             } else {
                 Text("No train yet. Buy one, then select a station to place it.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
     }
@@ -95,19 +95,19 @@ struct TrainControls: View {
                     HStack(spacing: 6) {
                         Image(systemName: "train.side.front.car")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(Palette.metroBlue)
+                            .foregroundStyle(Theme.primary)
                         Text(train.name)
                             .font(.subheadline.weight(.bold))
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                            .strokeBorder(Theme.panelBorder, lineWidth: 1)
                     )
                 }
                 .accessibilityLabel("Train: \(train.name)")
@@ -119,12 +119,12 @@ struct TrainControls: View {
             } label: {
                 Image(systemName: "list.bullet.rectangle.portrait")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                     .padding(8)
-                    .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                            .strokeBorder(Theme.panelBorder, lineWidth: 1)
                     )
             }
             .accessibilityLabel(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
@@ -144,9 +144,7 @@ struct TrainControls: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Palette.metroBlue)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .buttonStyle(ThemeProminentButtonStyle())
             .accessibilityLabel("Buy a train for \(session.world.economy.costs.train.moneyText)")
             // The step that asks for it keeps the card off it.
             .tutorialTarget(.buyTrain)
@@ -177,8 +175,8 @@ struct TrainControls: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(session.isFollowing(train.id) ? Palette.metroBlue.opacity(0.18) : Palette.chipBackground)
-                        .foregroundStyle(session.isFollowing(train.id) ? Palette.metroBlue : .primary)
+                        .background(session.isFollowing(train.id) ? Theme.primary.opacity(0.14) : Theme.chip)
+                        .foregroundStyle(session.isFollowing(train.id) ? Theme.primary : Theme.textPrimary)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -189,7 +187,7 @@ struct TrainControls: View {
             if train.position != nil {
                 Text(session.world.trainPathStatusText(of: train.id, in: language))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
                 if let stop = session.world.stationStopText(of: train.id, in: language) {
                     Text(stop)
@@ -207,17 +205,17 @@ struct TrainControls: View {
             if let run = session.world.trainRunText(of: train.id, in: language) {
                 Label(run, systemImage: "speedometer")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
             // Under traffic control: which train holds the route it waits for.
             if let wait = session.world.routeWaitText(of: train.id, in: language) {
                 Label(wait, systemImage: "hourglass")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Palette.metroAmber)
+                    .foregroundStyle(Theme.warning)
             }
         }
-        .metroCard(padding: 8, cornerRadius: 10)
+        .themeCard(padding: 8, cornerRadius: 10)
         .accessibilityElement(children: .combine)
     }
 
@@ -235,7 +233,7 @@ struct TrainControls: View {
                 if let punctuality = service.punctuality {
                     Text(punctuality.text(in: session.language))
                         .fontWeight(.semibold)
-                        .foregroundStyle(punctuality == .onTime ? Color.green : Color.orange)
+                        .foregroundStyle(punctuality == .onTime ? Theme.success : Theme.warning)
                 }
             }
             .font(.footnote)
@@ -244,7 +242,7 @@ struct TrainControls: View {
             if let dwell = service.dwell {
                 Label(dwell.text(in: session.language), systemImage: "door.sliding.left.hand.open")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
     }
@@ -254,7 +252,7 @@ struct TrainControls: View {
         HStack(spacing: 6) {
             Text("Faces")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
             ForEach(CompassHeading.allCases, id: \.self) { heading in
                 let isActive = session.placementHeading == heading
                 Button {
@@ -264,7 +262,7 @@ struct TrainControls: View {
                         .font(.subheadline.weight(.bold))
                         .frame(width: 36, height: 28)
                 }
-                .buttonStyle(SelectableButtonStyle(isActive: isActive))
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel("Face \(heading.name(in: session.language))")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }

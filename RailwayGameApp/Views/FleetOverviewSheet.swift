@@ -23,7 +23,7 @@ struct FleetOverviewSheet: View {
                     if session.world.trains.isEmpty {
                         Text(verbatim: session.language.text("No trains in fleet yet. Purchase a train to begin operations.", "車隊中尚無列車。購買列車後即可開始營運。"))
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     } else {
                         ForEach(session.world.trains) { train in
                             trainRow(train)
@@ -61,7 +61,7 @@ struct FleetOverviewSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: session.language.text("Fleet Size", "車隊規模"))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(verbatim: "\(trains.count) \(session.language.text("trains", "列"))")
                         .font(.headline.weight(.bold).monospacedDigit())
                 }
@@ -72,10 +72,10 @@ struct FleetOverviewSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: session.language.text("In Service", "運轉中"))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(verbatim: "\(placedCount) \(session.language.text("trains", "列"))")
                         .font(.headline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Palette.metroBlue)
+                        .foregroundStyle(Theme.primary)
                 }
 
                 Divider()
@@ -84,19 +84,19 @@ struct FleetOverviewSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: session.language.text("Avg Load", "平均滿載率"))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(verbatim: fleetLoad.map { "\($0.percentage)%" } ?? "--")
                         .font(.headline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(fleetLoad?.isOverload == true ? Palette.paxBarOverload : Color.primary)
+                        .foregroundStyle(fleetLoad?.isOverload == true ? Theme.error : Theme.textPrimary)
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -111,7 +111,7 @@ struct FleetOverviewSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "train.side.front.car")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(isSelected ? Palette.metroBlue : .secondary)
+                    .foregroundStyle(isSelected ? Theme.primary : Theme.textSecondary)
 
                 Text(verbatim: train.name)
                     .font(.subheadline.weight(.bold))
@@ -119,7 +119,7 @@ struct FleetOverviewSheet: View {
 
                 Text(verbatim: train.carsText(in: language))
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
 
                 Spacer()
 
@@ -141,8 +141,8 @@ struct FleetOverviewSheet: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(isFollowing ? Palette.metroBlue.opacity(0.18) : Palette.chipBackground)
-                        .foregroundStyle(isFollowing ? Palette.metroBlue : .primary)
+                        .background(isFollowing ? Theme.primary.opacity(0.14) : Theme.chip)
+                        .foregroundStyle(isFollowing ? Theme.primary : Theme.textPrimary)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -156,25 +156,25 @@ struct FleetOverviewSheet: View {
                         if let name = service.serviceName {
                             Text(verbatim: name)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Palette.metroBlue)
+                                .foregroundStyle(Theme.primary)
                         }
                         Text(verbatim: service.stopText)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
 
                         if let punctuality = service.punctuality {
                             Text(verbatim: punctuality.text(in: language))
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(punctuality == .onTime ? Color.green : Color.orange)
+                                .foregroundStyle(punctuality == .onTime ? Theme.success : Theme.warning)
                         }
                     } else if let stop = session.world.stationStopText(of: train.id, in: language) {
                         Text(verbatim: stop)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     } else {
                         Text(verbatim: session.world.trainPathStatusText(of: train.id, in: language))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
 
@@ -184,7 +184,7 @@ struct FleetOverviewSheet: View {
             } else {
                 Text(verbatim: language.text("In depot / off track", "未上軌（車庫待命中）"))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(.vertical, 4)
