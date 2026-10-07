@@ -269,7 +269,7 @@ extension ReferenceWorld {
         for line in lines {
             for service in 0...line.patterns.count {
                 let pattern = line.service(service)
-                let lengths = Set(trains.filter { pattern.roster.contains($0.id) && $0.position != nil }.map { Self.length($0) })
+                let lengths = Set(trains.filter { pattern.roster.contains($0.id) && $0.id != candidate.id && $0.position != nil }.map { Self.length($0) })
                 if lengths.isEmpty { continue }
                 let sequences = line.ring ? [Self.lap(line, outer: false), Self.lap(line, outer: true)]
                     : [pattern.calls + pattern.calls.dropLast().reversed()]

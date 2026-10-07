@@ -5,12 +5,6 @@
     "Along the Line" : {
       "comment" : "Official player-facing brand name.",
       "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線"
-          }
-        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -540,12 +534,6 @@
     },
     "Along the Line is a railway and city-building simulation where the railway shapes the growth of the city." : {
       "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "『沿線』は、鉄道が都市の成長を形づくる鉄道・都市開発シミュレーションゲームです。"
-          }
-        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1546,12 +1534,6 @@
     },
     "Along the Line save" : {
       "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沿線のセーブデータ"
-          }
-        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",

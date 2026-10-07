@@ -102,6 +102,81 @@ final class TurnbackTests: XCTestCase {
         XCTAssertNoThrow(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)))
     }
 
+    /// ``reverseSiding(shortSiding:shortStart:)`` with the eastbound train a
+    /// line's only train (A to E, its platform at E preferred), dispatched
+    /// before the westbound service starts. A line protects its plan from
+    /// the other trains that run it (decision 57), never its own candidate
+    /// from itself: the line train backs into M's dead-end siding as the
+    /// timetable train does, and goes on to its preferred platform turned
+    /// round, as the independent model has it at every step.
+    static func lineReverseSiding() throws -> (GameWorld, ReferenceWorld, TrainID, TrainID) {
+        var world = try SingleTrackMeet.world()
+        var model = SingleTrackMeet.model()
+        try world.removeTrackEdge(.edge(4)); XCTAssertNil(model.removeNetworkEdge(.edge(4)))
+        let point = PlanPoint(x: 28_672, y: 8_192)
+        let a = try world.buildStation(named: "A", at: point).id
+        XCTAssertNil(model.buildStation(named: "A", at: point))
+        try world.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096)
+        XCTAssertNil(model.addTrackPlatform(a, on: .edge(3), from: 2_048, to: 4_096))
+        let line = try world.createLine(named: "AE", stops: [a, SingleTrackMeet.east]).id
+        XCTAssertNil(model.createLine(named: "AE", stops: [a, SingleTrackMeet.east]))
+        let preference = LineRoutePreference(from: 0, to: 1, platform: try XCTUnwrap(world.trackPlatforms(of: SingleTrackMeet.east).first))
+        try world.setLineRoutePreferences(line, to: [preference]); XCTAssertNil(model.setLineRoutes(line, [preference]))
+        try world.setLineServiceWindow(line, to: .allDay); XCTAssertNil(model.setLineWindow(line, .allDay))
+        let one = TrainsInService(peak: 1, offPeak: 1, low: 1)
+        try world.setLineTrainsInService(line, to: one); XCTAssertNil(model.setLineTrains(line, one))
+        func stand(_ track: TrackTraversal) throws -> TrainID {
+            let id = try SingleTrackMeet.stand(&world, edge: track, offset: 3_072)
+            XCTAssertNil(model.purchaseTrain(named: "T")); XCTAssertNil(model.setCars(id, 2))
+            XCTAssertNil(model.placeTrain(id, at: .onEdge(track, offset: 3_072)))
+            XCTAssertNil(model.setContinuation(id, along: [], stoppingAt: 3_072)); XCTAssertNil(model.setRate(id, 1_024))
+            return id
+        }
+        let east = try stand(SingleTrackMeet.forward(3))
+        try world.assignTrain(east, to: line); XCTAssertNil(model.assign(east, to: line))
+        try world.setTrafficControl(true); XCTAssertNil(model.setTrafficControl(true))
+        world.setSpeed(.x1); model.setSpeed(.x1)
+        while world.train(id: east)?.execution == nil {
+            try world.advance(ticks: 1); XCTAssertNil(model.advance(ticks: 1))
+        }
+        try world.setTrafficControl(false); XCTAssertNil(model.setTrafficControl(false))
+        let west = try stand(SingleTrackMeet.backward(3))
+        let now = world.clock.now.seconds
+        let table = [SingleTrackMeet.east, SingleTrackMeet.west].enumerated().map {
+            ScheduledStop(station: $0.element, arrival: .init(seconds: now + Int64($0.offset) * 240), departure: .init(seconds: now + Int64($0.offset) * 240))
+        }
+        try world.setTrainTimetable(west, to: table); XCTAssertNil(model.setTimetable(west, table))
+        try world.startTrainService(west); XCTAssertNil(model.startService(west))
+        try world.setTrafficControl(true); XCTAssertNil(model.setTrafficControl(true))
+        return (world, model, east, west)
+    }
+
+    func testALineTrainBacksIntoADeadEndSidingAndGoesOnToItsPreferredPlatform() throws {
+        var (world, model, east, west) = try Self.lineReverseSiding()
+        XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
+        var sawDeadlock = false, sawSiding = false
+        for second in 1...900 {
+            try world.advance(ticks: 10); XCTAssertNil(model.advance(ticks: 10))
+            let differences = KernelDifferentialTests.differences(world, model)
+            guard differences.isEmpty else { return XCTFail("second \(second): \(differences.joined(separator: "\n"))") }
+            XCTAssertEqual(world.deadlockedTrains(), model.deadlockedTrains())
+            if !world.deadlockedTrains().isEmpty { sawDeadlock = true }
+            if !sawSiding, world.passingPlace(of: east) == SingleTrackMeet.middle {
+                sawSiding = true
+                // Facing the siding's dead end, it goes on turned round,
+                // to the platform its line prefers.
+                let going = try XCTUnwrap(world.preferredGoingOn(XCTUnwrap(world.train(id: east))))
+                XCTAssertEqual(going.movement.remainingEdges.last, .edge(3))
+            }
+            XCTAssertEqual(WorldInvariants.violations(in: world), [])
+        }
+        XCTAssertTrue(sawDeadlock)
+        XCTAssertTrue(sawSiding, "the line train stands aside in M's dead-end siding")
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertNil(world.train(id: west)?.execution, "the westbound service finished")
+        XCTAssertEqual(world.stationsStoppedAt(by: west), [SingleTrackMeet.west])
+    }
+
     func testReverseSidingSkipsNearMainBerthAndBothTrainsFinish() throws {
         var (world, model, east, west) = try Self.reverseSiding()
         try world.advance(ticks: 590); XCTAssertNil(model.advance(ticks: 590))

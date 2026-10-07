@@ -2462,7 +2462,11 @@ public struct GameWorld: Equatable, Sendable {
             }
         }
         setOff(index, as: train)
-        serve(departureOf: train.id, from: stop, distance: departure.distance.map { $0 == 0 ? 0 : routeLength(of: train) })
+        // Counted the way the train went: a preferred platform can take it
+        // on from a berth where the default way would arrive at once.
+        var setsOff = false
+        if case .travellingToStop? = train.execution { setsOff = true }
+        serve(departureOf: train.id, from: stop, distance: departure.distance.map { _ in setsOff ? routeLength(of: train) : 0 })
         return true
     }
 

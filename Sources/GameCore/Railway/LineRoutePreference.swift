@@ -208,11 +208,17 @@ extension GameWorld {
             ?? path(from: start, toStation: train.timetable[next].station, length: train.length)
     }
 
+    /// Like ``goingOn(_:)``, facing the way it goes on: turned round in a
+    /// dead-end passing berth (see ``passingContinuation(from:to:)``), as
+    /// the independent model's `goOn` has it.
     func preferredGoingOn(_ train: Train) -> Train? {
-        guard isAtPassingPlace(train), case .travellingToStop(let stop, _)? = train.execution, stop > 0, let start = train.position,
+        guard isAtPassingPlace(train), case .travellingToStop(let stop, _)? = train.execution, stop > 0, let place = train.placement,
               let route = routePreference(for: train, from: stop - 1, to: stop),
-              let path = preferredPath(from: start, preference: route, length: train.length), path.distance > 0 else { return nil }
+              let start = passingContinuation(from: place, to: train.timetable[stop].station)?.start,
+              let path = preferredPath(from: start.position, preference: route, length: train.length), path.distance > 0 else { return nil }
         var candidate = train
+        candidate.position = start.position
+        candidate.trailEdges = start.trailEdges
         follow(path, &candidate)
         let fastest = run(of: candidate, length: path.distance)
         candidate.times?.run = fastest

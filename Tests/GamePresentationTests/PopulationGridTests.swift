@@ -107,6 +107,17 @@ final class PopulationGridTests: XCTestCase {
         XCTAssertTrue(empty.cells(north: 1, south: 0, west: 0, east: 1).isEmpty)
     }
 
+    /// A place off any real grid (a world anchored at a pole puts its
+    /// points at longitudes far beyond ±180°) or not a number has no one,
+    /// rather than trapping when it is turned into a cell.
+    func testAPlaceOffTheEarthHasNoOneAndNeverTraps() throws {
+        let grid = try Self.overlayFixture()
+        for (latitude, longitude) in [(0.5, 1e20), (1e20, 0.5), (-1e300, -1e300), (.nan, 0.5), (0.5, .infinity)] {
+            XCTAssertNil(grid.people(within: 800, ofLatitude: latitude, longitude: longitude), "\(latitude), \(longitude)")
+        }
+        XCTAssertNotNil(grid.people(within: 800, ofLatitude: 0.75, longitude: 0.25))
+    }
+
     private static func overlayFixture() throws -> PopulationGrid {
         try PopulationGrid(data: Data(#"{"north":1,"west":0,"cellDegrees":0.5,"runs":[{"r":0,"c":0,"p":[100,200]},{"r":1,"c":0,"p":[300,400]}]}"#.utf8))
     }

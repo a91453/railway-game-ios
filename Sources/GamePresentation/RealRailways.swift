@@ -652,7 +652,11 @@ extension RealRailways {
            let codes = read("trtc_codes", "json"),
            let platforms = read("tra_platforms", "json"),
            let sections = read("tra_track_sections", "json") {
-            let overtake = read("tra_overtake_tracks", "json")
+            // Optional: one that does not decode is listed and left out,
+            // keeping the station data it would otherwise take with it.
+            let overtake = read("tra_overtake_tracks", "json").flatMap { data in
+                parse("tra_overtake_tracks.json") { _ = try TRAOvertakeTracks(data: data); return data }
+            }
             stationData = parse("tra_*.json, trtc_codes.json") {
                 try RealStationData(classes: classes, infos: infos, codes: codes, platforms: platforms, sections: sections, overtakeTracks: overtake)
             }

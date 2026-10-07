@@ -168,9 +168,11 @@ public struct StationPassengers: Hashable, Sendable {
     }
 
     /// Whether the record says nothing: no demand, no passenger ever
-    /// released and no remainder. Such a record is not kept.
+    /// released, no remainder, no one waiting and no refusal (a station
+    /// where passengers only change trains keeps the count of those left
+    /// behind there). Such a record is not kept.
     var isEmpty: Bool {
-        demand == nil && released == 0 && remainders.isEmpty && waiting.isEmpty
+        demand == nil && released == 0 && remainders.isEmpty && waiting.isEmpty && refused == 0
     }
 
     /// Releases `count` passengers for `destination` along `trip` at
@@ -437,7 +439,7 @@ extension StationPassengers: Codable {
         guard zip(remainders, remainders.dropFirst()).allSatisfy({ $0.destination < $1.destination }) else {
             throw corrupt(.remainders, "remainders must be listed once each, by ascending destination.")
         }
-        guard demand != nil || released > 0 || !remainders.isEmpty || !waiting.isEmpty else {
+        guard demand != nil || released > 0 || !remainders.isEmpty || !waiting.isEmpty || refused > 0 else {
             throw corrupt(.station, "a record with nothing in it is not saved.")
         }
         self.station = station

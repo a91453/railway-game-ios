@@ -137,7 +137,6 @@
 		A1B80E3285C9871A9D98DECB /* krtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc_times.json; sourceTree = "<group>"; };
 		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		A7D933E24E26C2077E5BC12A /* RailwayGame.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RailwayGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A7FF4913762612E1C28FB88E /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A92B62C199B3DE4F7602175F /* MapArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapArt.swift; sourceTree = "<group>"; };
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
@@ -378,7 +377,6 @@
 			knownRegions = (
 				Base,
 				en,
-				ja,
 				"zh-Hant",
 			);
 			mainGroup = A1765EA1CC06988CA8C37FF3;
@@ -503,7 +501,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				C639F6C2DB822D36E3F0AB8A /* en */,
-				A7FF4913762612E1C28FB88E /* ja */,
 				2A779D8969EEF8D75DD97FF5 /* zh-Hant */,
 			);
 			name = InfoPlist.strings;

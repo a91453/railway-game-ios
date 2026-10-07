@@ -47,6 +47,19 @@ final class RealRailwayGameplayTests: XCTestCase {
         XCTAssertEqual(railways.operations?.timetableIssues, [])
     }
 
+    /// The overtaking tracks are optional: a copy that does not decode is
+    /// listed as an issue and left out, and the rest of the TRA and Taipei
+    /// Metro station data still loads.
+    func testABrokenOvertakeFileKeepsTheStationData() throws {
+        let loaded = RealRailways.load { name, ext in
+            name == "tra_overtake_tracks" ? Data("not json".utf8) : try BundledRealData.file(name, ext)
+        }
+        XCTAssertEqual(loaded.issues.map(\.file), ["tra_overtake_tracks.json"])
+        let data = try XCTUnwrap(loaded.railways?.stationData)
+        XCTAssertNil(data.overtakeTracks)
+        XCTAssertNotNil(data.stationClass(forStation: "臺北"))
+    }
+
     /// A real-world game at Taipei Main Station, with the bundled data.
     private func taipeiSession(language: DisplayLanguage = .traditionalChinese) throws -> (GameSession, PlanPoint) {
         let tra = try BundledRealData.station("臺北", in: "tra_sched")
