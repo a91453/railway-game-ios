@@ -3626,6 +3626,13 @@ extension GameWorld {
                 if $0.stop != $1.stop { return $0.stop < $1.stop }
                 return $0.station < $1.station
             }
+            // A plan names only the cycle each service is on (or, ended,
+            // last visited), and one worked out earlier in the step the
+            // cycle before: older visits are never read again, so a
+            // repeating service keeps a bounded history.
+            if let latest = trains[index].execution?.cycle ?? trains[index].trafficVisits.last?.cycle {
+                trains[index].trafficVisits.removeAll { $0.cycle < latest - 1 }
+            }
         }
     }
 

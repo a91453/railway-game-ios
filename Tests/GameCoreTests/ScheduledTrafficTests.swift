@@ -330,6 +330,29 @@ final class ScheduledTrafficTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// Nine cycles on: each service keeps the visits of its current cycle
+    /// and the one before only, so a repeating timetable's history (and
+    /// the save) stays bounded, and the save still loads and runs on the
+    /// same.
+    func testRepeatingServicesKeepOnlyTheVisitsStillRead() throws {
+        var world = try Self.repeatingMeet()
+        try world.advance(ticks: 250) // 15000 s, into the ninth cycle
+        for train in world.trains {
+            let cycle = try XCTUnwrap(train.execution).cycle
+            XCTAssertGreaterThanOrEqual(cycle, 8, "train \(train.id.rawValue)")
+            XCTAssertFalse(train.trafficVisits.isEmpty, "train \(train.id.rawValue)")
+            XCTAssertTrue(train.trafficVisits.allSatisfy { $0.cycle >= cycle - 1 }, "train \(train.id.rawValue): \(train.trafficVisits)")
+        }
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+        var (a, b) = (world, loaded)
+        try a.advance(ticks: 50)
+        try b.advance(ticks: 50)
+        XCTAssertEqual(a, b)
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertEqual(WorldInvariants.violations(in: a), [])
+    }
+
     func testRepeatingOutAndBackAgreesWithTheModelAtEverySecond() throws {
         var world = try Self.repeatingMeet()
         var model = Self.model(for: world)
