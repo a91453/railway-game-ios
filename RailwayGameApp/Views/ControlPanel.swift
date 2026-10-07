@@ -310,7 +310,9 @@ struct SelectableButtonStyle: ButtonStyle {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         configuration.label
             .padding(.vertical, 4)
-            .foregroundStyle(isActive ? Color.white : Color.primary)
+            // On the app's tint (the AccentColor asset), whose dark variant
+            // is too light for white (Theme.onPrimary).
+            .foregroundStyle(isActive ? Theme.onPrimary : Color.primary)
             .background(
                 isActive
                     ? AnyShapeStyle(Color.accentColor)
