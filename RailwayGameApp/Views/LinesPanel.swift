@@ -55,6 +55,14 @@ struct LinesPanel: View {
                 patternLast = 1
                 patternExpress = false
             }
+            // A stop removed from the line can leave either index past its
+            // last stop: the picker would show none, and adding the pattern
+            // would be refused.
+            .onChange(of: session.selectedLine?.stops.count) { _, count in
+                guard let count, patternFirst >= count || patternLast >= count else { return }
+                patternFirst = 0
+                patternLast = min(1, max(0, count - 1))
+            }
             .renameAlert(
                 title: session.language.text("Rename Line", "線路更名"),
                 name: $renamingLine,

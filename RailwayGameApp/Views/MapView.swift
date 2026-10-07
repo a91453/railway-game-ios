@@ -127,6 +127,14 @@ struct MapView: View {
                     }
                     .accessibilityHidden(true)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(bounds.mapLabel(in: session.language))
+                .accessibilityIdentifier(TutorialTarget.map.rawValue)
+                .accessibilityValue(selectionDescription)
+                .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
+                .clipped()
+                // After the map's own accessibility element, which ignores
+                // what lies inside it: the tooltips are read on their own.
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
@@ -139,12 +147,6 @@ struct MapView: View {
                             .allowsHitTesting(false)
                     }
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(bounds.mapLabel(in: session.language))
-                .accessibilityIdentifier(TutorialTarget.map.rawValue)
-                .accessibilityValue(selectionDescription)
-                .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
-                .clipped()
                 .overlay(alignment: .top) {
                     // One column down the top of the map, so none covers
                     // another: the status banner, the train follow bar when
