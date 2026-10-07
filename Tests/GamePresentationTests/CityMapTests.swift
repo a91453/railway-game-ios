@@ -88,6 +88,12 @@ final class CityMapTests: XCTestCase {
         let blocks = map.tiles(for: .coverage, in: Self.everywhere, blockSize: 32)
         XCTAssertEqual(blocks.map(\.color), [CityMap.uncoveredColor])
         XCTAssertTrue(map.tiles(for: .population, in: Self.everywhere).isEmpty)
+        // A closed station reaches no one (decision 77): every peopled cell
+        // is unreached.
+        var closed = world
+        try closed.setStationOperationMode(StationID(rawValue: 1), to: .closed)
+        let unreached = CityMap(world: closed).tiles(for: .coverage, in: Self.everywhere)
+        XCTAssertEqual(unreached.map(\.color), Array(repeating: CityMap.uncoveredColor, count: 5))
     }
 
     func testTheTappedCellsTooltip() throws {

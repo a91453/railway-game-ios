@@ -51,7 +51,8 @@ public struct CityMap: Sendable {
         }
         var covered = [Bool](repeating: false, count: rows * columns)
         let length = Land.cellLength, radius = Land.catchmentRadius
-        for station in world.stations {
+        // A closed station reaches no one (decision 77).
+        for station in world.stations where station.operationMode != .closed {
             let point = station.location
             let firstRow = max(0, Int((point.y - radius) / length) - 1), lastRow = min(rows - 1, Int((point.y + radius) / length) + 1)
             let firstColumn = max(0, Int((point.x - radius) / length) - 1), lastColumn = min(columns - 1, Int((point.x + radius) / length) + 1)

@@ -219,6 +219,40 @@ final class LandDemandTests: XCTestCase {
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
     }
 
+    /// Decision 77: a closed station's catchment goes back to its
+    /// neighbours, which take its share of the land; it has no ridership,
+    /// grows nothing and sets no land value. Opened again, it takes its
+    /// share back. A station under flow control keeps its share.
+    func testAClosedStationsCatchmentGoesBackToItsNeighbours() throws {
+        var world = world()
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: Self.middle, y: Self.middle)).id
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: Self.middle + 25_600, y: Self.middle)).id
+        let shared = try XCTUnwrap(world.stationDemand(of: a)).dailyTrips
+        let alone = LandDemand.shares(of: world.land, among: world.stations.filter { $0.id == a })[a]?.demand
+        try world.setStationOperationMode(b, to: .closed)
+        XCTAssertNil(world.stationDemand(of: b), "closed: no ridership")
+        XCTAssertEqual(world.stationDemand(of: a), alone, "A takes B's catchment back")
+        XCTAssertGreaterThan(world.stationDemand(of: a)!.dailyTrips, shared)
+        try world.setStationOperationMode(b, to: .flowControl)
+        XCTAssertEqual(world.stationDemand(of: a)?.dailyTrips, shared, "under flow control B keeps its share")
+        XCTAssertNotNil(world.stationDemand(of: b))
+        try world.setStationOperationMode(b, to: .closed)
+        try world.setStationOperationMode(b, to: .normalFlow)
+        XCTAssertEqual(world.stationDemand(of: a)?.dailyTrips, shared, "opened again, B takes its share back")
+
+        // Its last measured service sets no land value while it is closed.
+        world.setTownGrowth(true)
+        world.growLand(reached: [:])
+        for index in world.townGrowth!.places.indices {
+            world.townGrowth!.places[index].lastService = world.townGrowth!.places[index].station == b ? 1_000 : 0
+            world.townGrowth!.places[index].lastReached = 2
+        }
+        let row = Int(Self.middle / 4_096), column = Int((Self.middle + 25_600) / 4_096)
+        XCTAssertEqual(world.landValue(row: row, column: column)?.station, b)
+        try world.setStationOperationMode(b, to: .closed)
+        XCTAssertNil(world.landValue(row: row, column: column)?.station)
+    }
+
     // MARK: - Growth
 
     /// A world with town growth whose stations growth has seen, and the

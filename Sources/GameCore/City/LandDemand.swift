@@ -147,12 +147,20 @@ extension GameWorld {
         landDemand && accounts.mode == .management
     }
 
+    /// The stations the land is shared among: all but the closed ones
+    /// (decision 77), whose catchments go back to their neighbours. A
+    /// station whose passengers may only not set out (flow control) keeps
+    /// its share.
+    var landStations: [Station] {
+        stations.filter { $0.operationMode != .closed }
+    }
+
     /// Gives every station the ridership of its share of the land (see
-    /// ``LandDemand/shares(of:among:)``), when the land sets it.
-    /// Passengers already waiting stay.
+    /// ``LandDemand/shares(of:among:)``), when the land sets it; a closed
+    /// station has none (decision 77). Passengers already waiting stay.
     mutating func refreshLandDemand() {
         guard drawsDemandFromLand else { return }
-        let shares = LandDemand.shares(of: land, among: stations)
+        let shares = LandDemand.shares(of: land, among: landStations)
         var changed = false
         for station in stations {
             let demand = shares[station.id]?.demand
@@ -190,9 +198,10 @@ extension GameWorld {
     ///   at least ``LandDemand/upgradeReached`` stations (Phase 6c-2), raises
     ///   up to ``LandDemand/upgradesPerStation`` city buildings of its
     ///   catchment by one density, by row and column: those below D4 that
-    ///   were full when the midnight began (residents or jobs at their
-    ///   capacity), each at most once a night (a cell a lower station
-    ///   raised is passed over);
+    ///   were full when the midnight began (their main count, residents of
+    ///   homes or jobs of shops and offices, at their table's; decision 77),
+    ///   each at most once a night (a cell a lower station raised is passed
+    ///   over);
     /// - adds `(R × g + 500) / 1000` residents (at least 1) to its share's
     ///   `R` residents and likewise jobs, shared among the cells of its
     ///   catchment by their residents (jobs) by the largest remainder, each
@@ -236,7 +245,7 @@ extension GameWorld {
             }
         }
         if !growing.isEmpty {
-            let shares = LandDemand.shares(of: land, among: stations)
+            let shares = LandDemand.shares(of: land, among: landStations)
             // Phase 6c-2: the buildings full as the midnight begins, and
             // those raised tonight (membership only: the order is the
             // stations' and the cells').
@@ -270,16 +279,23 @@ extension GameWorld {
         return max(1, (amount * rate + 500) / 1_000)
     }
 
-    /// The cells of the city buildings below D4 that are full: residents or
-    /// jobs at (or above) a positive capacity.
+    /// The cells of the city buildings below D4 that are full: their main
+    /// count (residents of homes, jobs of shops and offices) at or above the
+    /// table's (decision 77).
     private func fullBuildingCells() -> Set<CellPosition> {
         var full: Set<CellPosition> = []
         for cell in land.cells {
             guard let building = buildings.building(row: cell.row, column: cell.column),
                   building.kind == .city, building.density < .d4
             else { continue }
-            let capacity = building.capacity(on: cell)
-            if (capacity.residents > 0 && cell.residents >= capacity.residents) || (capacity.jobs > 0 && cell.jobs >= capacity.jobs) {
+            // Decision 77: full by its main count only (residents of homes,
+            // jobs of shops and offices), the count its density was chosen
+            // by; the other count's capacity is what the cell already holds
+            // whenever that is above the table's, so it would make nearly
+            // every mixed cell of a real-world map full.
+            let table = Building.tableCapacity(of: building.use, building.density)
+            let main = Building.mainCount(of: building.use, residents: table.residents, jobs: table.jobs)
+            if main > 0, Building.mainCount(of: building.use, residents: cell.residents, jobs: cell.jobs) >= main {
                 full.insert(cell.position)
             }
         }
