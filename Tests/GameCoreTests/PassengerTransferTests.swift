@@ -7,7 +7,7 @@ final class PassengerTransferTests: XCTestCase {
     private let b = StationID(rawValue: 2)
     private let c = StationID(rawValue: 3)
 
-    private func world() throws -> GameWorld {
+    private func world(types: (first: TrainType, second: TrainType)? = nil) throws -> GameWorld {
         var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
         let track = TestLine(tiles: 7)
         try track.build(in: &world)
@@ -22,6 +22,10 @@ final class PassengerTransferTests: XCTestCase {
         }
         let one = try world.purchaseTrain(named: "One").id
         let two = try world.purchaseTrain(named: "Two").id
+        if let types {
+            try world.setTrainType(one, to: types.first)
+            try world.setTrainType(two, to: types.second)
+        }
         try world.placeTrain(one, at: track.at(1, facingEast: true))
         try world.placeTrain(two, at: track.at(3, facingEast: true))
         try world.setTrainMovementRate(one, to: 1024)
@@ -90,6 +94,44 @@ final class PassengerTransferTests: XCTestCase {
         }
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world,
                        file: file, line: line)
+    }
+
+    /// A transfer group becomes ready to board part way through a minute,
+    /// whatever second its first train left at. With no release plan to
+    /// wake every minute, a long advance still boards it exactly as minute
+    /// by minute does, and it arrives.
+    func testReadyTransfersBoardTheSameInABatchAsMinuteByMinute() throws {
+        for offset in stride(from: 0, to: 300, by: 7) {
+            var batched = try world()
+            batched.setSpeed(.x1)
+            if offset > 0 { try batched.advance(ticks: offset) }
+            batched.setSpeed(.normal)
+            let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(batched.passengerRoutes(from: a, to: c).first)))
+            batched.passengers[0].release(5, along: journey, at: batched.clock.now)
+            var stepped = batched
+            try batched.advance(ticks: 40)
+            for _ in 0..<40 { try stepped.advance(ticks: 1) }
+            XCTAssertEqual(batched, stepped, "offset \(offset) s")
+            XCTAssertEqual(batched.passengerLedger(of: a).arrived, 5, "offset \(offset) s")
+        }
+    }
+
+    /// B has no demand of its own: passengers only change trains there.
+    /// Those the smaller connecting train leaves behind are counted at B,
+    /// and the count stays once B's queue is empty and through a save.
+    func testATransferStationKeepsItsLeftBehindCount() throws {
+        var world = try world(types: (first: .a, second: .apm))
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(2_000, along: journey, at: world.clock.now)
+        var refused: Int64 = 0
+        for _ in 0..<120 {
+            try world.advance(ticks: 1)
+            XCTAssertGreaterThanOrEqual(world.passengerLedger(of: b).refused, refused, "the count never falls back")
+            refused = world.passengerLedger(of: b).refused
+        }
+        XCTAssertGreaterThan(refused, 0)
+        XCTAssertEqual(world.waitingPassengers(at: b), [], "B's queue has emptied")
+        try assertConservedAndSaveable(world)
     }
 
     func testMultipleRoutesReleasedInTheSameMinuteSurviveSaving() throws {
