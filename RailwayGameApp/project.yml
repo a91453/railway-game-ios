@@ -57,6 +57,8 @@ targets:
         # generated project. See docs/XCODE_CLOUD_ONBOARDING.md.
         CODE_SIGN_STYLE: Automatic
         SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+        # The app's tint: the AccentColor asset, Theme.primary (Views/Theme.swift).
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: Along the Line
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"

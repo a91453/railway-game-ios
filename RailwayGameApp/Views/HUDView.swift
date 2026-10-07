@@ -60,7 +60,7 @@ struct HUDView: View {
                 .font(.subheadline.weight(.bold))
                 .frame(width: 40, height: 32)
         }
-        .buttonStyle(SelectableButtonStyle(isActive: screen.panel == .lines))
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .lines))
         .accessibilityLabel("Lines")
         .accessibilityHint("Shows the service lines and their timetables.")
         .tutorialTarget(.linesButton)
@@ -96,11 +96,12 @@ struct HUDView: View {
         } label: {
             Image(systemName: "line.3.horizontal")
                 .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.primary)
                 .frame(width: 38, height: 32)
-                .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                        .strokeBorder(Theme.panelBorder, lineWidth: 1)
                 )
         }
         .accessibilityLabel("Game menu")
@@ -119,14 +120,14 @@ struct HUDView: View {
             HStack(spacing: 6) {
                 Image(systemName: "banknote.fill")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(isNegative ? Palette.metroRed : Palette.metroGreen)
+                    .foregroundStyle(isNegative ? Theme.error : Theme.success)
                 Text(text)
-                    .foregroundStyle(isNegative ? Palette.metroRed : Color.primary)
+                    .foregroundStyle(isNegative ? Theme.error : Theme.textPrimary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Palette.chipBackground, in: Capsule())
-            .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
+            .background(Theme.panel, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Cash \(text)")
@@ -138,13 +139,14 @@ struct HUDView: View {
         return HStack(spacing: 6) {
             Image(systemName: "clock.fill")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Palette.metroBlue)
+                .foregroundStyle(Theme.primary)
             Text(text)
+                .foregroundStyle(Theme.textPrimary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Palette.chipBackground, in: Capsule())
-        .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
+        .background(Theme.panel, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
         .accessibilityLabel("Game time \(text)")
     }
 }
@@ -166,7 +168,7 @@ private struct SpeedControl: View {
                     .font(.subheadline.weight(.bold))
                     .frame(width: 38, height: 32)
             }
-            .buttonStyle(SelectableButtonStyle(isActive: clock.isPaused))
+            .buttonStyle(ThemeSelectableButtonStyle(isActive: clock.isPaused))
             .accessibilityLabel(clock.isPaused ? "Resume" : "Pause")
             Menu {
                 ForEach(GameSpeed.allCases.filter { $0 != .paused }, id: \.self) { speed in
@@ -185,18 +187,19 @@ private struct SpeedControl: View {
                 HStack(spacing: 4) {
                     if clock.isPaused {
                         Circle()
-                            .fill(Palette.metroAmber)
+                            .fill(Theme.warning)
                             .frame(width: 6, height: 6)
                     }
                     Text(clock.runningSpeed.label(in: language))
                         .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.primary)
                 }
                 .padding(.horizontal, 8)
                 .frame(minWidth: 48, minHeight: 32)
-                .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                        .strokeBorder(Theme.panelBorder, lineWidth: 1)
                 )
             }
             .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName(in: language))")

@@ -75,6 +75,7 @@
 		EBF4B51615CD5EA956ADD087 /* tra_station_class.json in Resources */ = {isa = PBXBuildFile; fileRef = F34F5FAD9996ED6204B4F23C /* tra_station_class.json */; };
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
+		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +106,7 @@
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		31AA7BB032ACE4E009B42AF1 /* station_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_names.json; sourceTree = "<group>"; };
 		360D54F266227011F79894B4 /* tymc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc_times.json; sourceTree = "<group>"; };
+		3934A6F628AA98414B2B952D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
 		3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialUITests.swift; sourceTree = "<group>"; };
 		3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt_times.json; sourceTree = "<group>"; };
@@ -259,6 +261,7 @@
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
+				3934A6F628AA98414B2B952D /* Theme.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */,
@@ -466,6 +469,7 @@
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
+				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */,
@@ -531,6 +535,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -693,6 +698,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
