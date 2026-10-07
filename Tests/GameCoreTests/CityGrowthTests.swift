@@ -84,8 +84,10 @@ final class CityGrowthTests: XCTestCase {
         let full = Set(land.keys.filter { key in
             let plot = land[key]!
             guard plot.kind == .city, plot.density < 4 else { return false }
-            let cap = capacity(plot.use, plot.kind, plot.density, residents: plot.residents, jobs: plot.jobs)
-            return plot.residents >= cap.residents || plot.jobs >= cap.jobs
+            // Full by the main count only (decision 77): the table's
+            // residents of homes, jobs of shops and offices.
+            let table = capacity(plot.use, plot.kind, plot.density, residents: 0, jobs: 0)
+            return plot.use == .residential ? plot.residents >= table.residents : plot.jobs >= table.jobs
         })
         var raised: Set<CellPosition> = []
         for station in stations.sorted(by: { $0.id < $1.id }) {
@@ -423,6 +425,27 @@ final class CityGrowthTests: XCTestCase {
         XCTAssertEqual(density(world, 7), .d4)
         XCTAssertEqual(density(world, 10), .d2)
         XCTAssertEqual(density(world, 2), .d2)
+    }
+
+    /// Decision 77: only the main count fills a building. D2 homes of 100
+    /// with 500 jobs (their jobs' capacity is the 500 they hold) and D2
+    /// offices of 100 jobs with 60 residents (likewise 60) are not full and
+    /// stay; the D1 homes of 56 beside them are, and rise.
+    func testOnlyTheMainCountFillsABuilding() throws {
+        var world = try world(cells: [
+            LandCell(row: 5, column: 4, use: .residential, residents: 100, jobs: 500),
+            LandCell(row: 5, column: 5, use: .office, residents: 60, jobs: 100),
+            LandCell(row: 5, column: 6, use: .residential, residents: 56, jobs: 0),
+        ], bounds: Self.small)
+        let id = try world.buildStation(named: "S", at: Self.point(row: 5, column: 5)).id
+        world.growLand(reached: [:])
+        try serve(&world, [id: 1_000])
+        let before = Self.plots(of: world)
+        world.growLand(reached: [id: 2])
+        XCTAssertEqual(world.buildings.building(row: 5, column: 4)?.density, .d2, "jobs at their capacity do not fill homes")
+        XCTAssertEqual(world.buildings.building(row: 5, column: 5)?.density, .d2, "residents at theirs do not fill offices")
+        XCTAssertEqual(world.buildings.building(row: 5, column: 6)?.density, .d2, "full homes rise")
+        XCTAssertEqual(Self.plots(of: world), Self.referenceNight(before, world.stations, rates: [id: 12], raises: [id], in: world.bounds))
     }
 
     func testRaisingNeedsEightyPercentServedAndAStationReached() throws {

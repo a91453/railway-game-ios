@@ -126,13 +126,14 @@ extension GameWorld {
         return values
     }
 
-    /// The stations that can set a value: those with a measured service,
+    /// The stations that can set a value: open ones with a measured service,
     /// by ascending station, with their point, service and stations
     /// reached; none while the land does not set ridership.
     private func landValueStations() -> [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)] {
         guard drawsDemandFromLand, let growth = townGrowth else { return [] }
         return growth.places.compactMap { place in
-            guard place.lastService > 0, let station = station(id: place.station) else { return nil }
+            // A closed station serves no one (decision 77).
+            guard place.lastService > 0, let station = station(id: place.station), station.operationMode != .closed else { return nil }
             return (place.station, station.location, place.lastService, place.lastReached)
         }
     }

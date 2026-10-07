@@ -742,6 +742,9 @@ public struct GameWorld: Equatable, Sendable {
         // and sends away every waiting journey elsewhere that still needs
         // to board, change or arrive here.
         abandonUnservedPassengers()
+        // Decision 77: a closed station's catchment goes back to its
+        // neighbours, and comes back to it when it opens.
+        refreshLandDemand()
     }
 
     /// Buys a new train and charges ``ConstructionCosts/train``.
