@@ -120,6 +120,20 @@ struct ThemeProminentButtonStyle: ButtonStyle {
 }
 
 extension View {
+    /// A flat card in ``Theme`` colours: ``Theme/panel`` with a
+    /// ``Theme/panelBorder`` edge, so text on it keeps its stated contrast
+    /// even over glass. It replaces `metroCard` as screens move to the
+    /// theme.
+    func themeCard(padding: CGFloat = 12, cornerRadius: CGFloat = 14) -> some View {
+        self
+            .padding(padding)
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Theme.panelBorder, lineWidth: 1)
+            }
+    }
+
     /// Glass behind this view, in `shape`, for the controls that float over
     /// the map: Liquid Glass on iOS 26 and later (reacting to touches when
     /// `interactive`), a material on earlier versions.

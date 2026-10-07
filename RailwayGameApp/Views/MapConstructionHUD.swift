@@ -17,7 +17,7 @@ struct MapConstructionHUD: View {
                 HStack(spacing: 4) {
                     Image(systemName: "ruler")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(Palette.metroBlue)
+                        .foregroundStyle(Theme.primary)
                     Text(NetworkBuilding.lengthText(preview.length, in: language))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
@@ -32,7 +32,7 @@ struct MapConstructionHUD: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.and.down")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(Palette.metroCyan)
+                        .foregroundStyle(Theme.primary)
                     if preview.startHeight == preview.endHeight {
                         Text(NetworkBuilding.lengthText(preview.startHeight, in: language))
                             .font(.subheadline.weight(.semibold))
@@ -54,7 +54,7 @@ struct MapConstructionHUD: View {
                     HStack(spacing: 4) {
                         Image(systemName: "banknote")
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(Palette.metroGreen)
+                            .foregroundStyle(Theme.success)
                         Text(cost.moneyText)
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
@@ -69,36 +69,36 @@ struct MapConstructionHUD: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Palette.metroAmber)
+                        .foregroundStyle(Theme.warning)
                     Text(problem)
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Palette.metroAmber)
+                        .foregroundStyle(Theme.warning)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(text("Problem: \(problem)", "問題：\(problem)"))
             } else if preview.joinsStart || preview.joinsEnd {
                 HStack(spacing: 4) {
                     Image(systemName: "link")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(continuityText)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .foregroundStyle(Theme.textPrimary)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
         .allowsHitTesting(false)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.constructionHUD")

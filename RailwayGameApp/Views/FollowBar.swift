@@ -25,11 +25,13 @@ struct FollowBar: View {
 
             Text(verbatim: train.name)
                 .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
 
             if let detail = info?.detail(in: language), !detail.isEmpty {
                 Text(verbatim: detail)
                     .font(.footnote.monospacedDigit())
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
             }
@@ -43,8 +45,8 @@ struct FollowBar: View {
                     .font(.caption.weight(.bold))
                     .padding(.horizontal, 9)
                     .padding(.vertical, 3)
-                    .background(Palette.metroRed, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .foregroundStyle(Color(red: 1, green: 0.973, blue: 0.925))
+                    .background(Theme.error, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .foregroundStyle(Theme.onError)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: unfollowText))
@@ -52,10 +54,10 @@ struct FollowBar: View {
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Palette.cardBorder, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
         .padding(.horizontal, 12)
         .accessibilityElement(children: .contain)

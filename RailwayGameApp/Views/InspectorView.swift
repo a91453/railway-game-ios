@@ -12,7 +12,7 @@ struct InspectorView: View {
 
     var body: some View {
         inspector
-            .metroCard(padding: 10, cornerRadius: 12)
+            .themeCard(padding: 10, cornerRadius: 12)
     }
 
     @ViewBuilder
@@ -21,17 +21,17 @@ struct InspectorView: View {
             HStack(alignment: .center, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Palette.metroBlue.opacity(0.14))
+                        .fill(Theme.primary.opacity(0.14))
                         .frame(width: 30, height: 30)
                     Image(systemName: "pencil.and.ruler.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Palette.metroBlue)
+                        .foregroundStyle(Theme.primary)
                 }
                 .accessibilityHidden(true)
 
                 Text(session.networkDraftText())
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
@@ -48,33 +48,34 @@ struct InspectorView: View {
                 if let text = session.selectionText() {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Palette.station.opacity(0.18))
+                            .fill(Theme.accent)
                             .frame(width: 30, height: 30)
                         Image(systemName: "tram.fill")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(Palette.station)
+                            .foregroundStyle(Theme.onAccent)
                     }
                     .accessibilityHidden(true)
 
                     Text(verbatim: text)
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Palette.chipBackground)
+                            .fill(Theme.panelBorder)
                             .frame(width: 30, height: 30)
                         Image(systemName: "scope")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     .accessibilityHidden(true)
 
                     Text("Tap a station to select it.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -92,7 +93,7 @@ struct InspectorView: View {
                     .padding(.horizontal, 8)
                     .frame(height: 30)
                 }
-                .buttonStyle(SelectableButtonStyle(isActive: screen.panel == .station))
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .station))
                 .accessibilityLabel("Ridership")
                 .accessibilityHint("Shows the station's ridership: what kind of place it serves, its trips and its passengers.")
             }
