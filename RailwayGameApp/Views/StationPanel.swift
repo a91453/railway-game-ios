@@ -242,6 +242,13 @@ struct StationPanel: View {
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("station.cityGrowth")
                 }
+                // Phase 6c-3: what the land within 800 m is worth.
+                if let value = session.world.catchmentLandValueText(of: station.id, in: session.language) {
+                    Text(verbatim: value)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("station.landValue")
+                }
             } header: {
                 Text(verbatim: session.language.text("Land", "土地"))
             }

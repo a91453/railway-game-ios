@@ -85,11 +85,11 @@ public struct TravelDemandMap: Hashable, Sendable {
         trips[cell].map { Self.change(in: $0, at: hour) } ?? 0
     }
 
-    /// The squares to fill for `mode` at `hour` (nothing for
-    /// ``PopTravelMode/population``), in a fixed order; a square of grade 0
-    /// is left out, as the reference's `rgba(0,0,0,0)`.
+    /// The squares to fill for `mode` at `hour` (nothing for a layer that
+    /// does not follow the hour), in a fixed order; a square of grade 0 is
+    /// left out, as the reference's `rgba(0,0,0,0)`.
     public func tiles(for mode: PopTravelMode, at hour: Int) -> [Tile] {
-        guard mode != .population else { return [] }
+        guard mode.usesHour else { return [] }
         let size = Double(Self.cellUnits)
         return trips.keys.sorted().compactMap { cell in
             let value: Int64

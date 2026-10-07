@@ -13,7 +13,10 @@ import SwiftUI
 ///   a rise, "颜色越深表示变化越大";
 ///
 /// each with the opacity row and slider (`透明度`, 10 %–100 %), and for
-/// the two hourly layers the hour (`08:00`), a 0–23 slider and play.
+/// the two hourly layers the hour (`08:00`), a 0–23 slider and play. The
+/// city's layers (Phase 6d, ``CityMap``) have keys of their own: the three
+/// uses' shades D1 to D4, the land value steps in $ a m², and the
+/// catchment coverage's colours.
 struct PopulationLegendView: View {
     let mode: PopTravelMode
     let language: DisplayLanguage
@@ -44,16 +47,23 @@ struct PopulationLegendView: View {
 
             scale
 
-            HStack {
-                Text(verbatim: lowText)
-                Spacer()
-                Text(verbatim: highText)
+            if mode != .coverage {
+                HStack {
+                    Text(verbatim: lowText)
+                    Spacer()
+                    Text(verbatim: highText)
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
             }
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(.secondary)
 
             if mode == .movement {
                 Text(verbatim: language.text("Darker means a bigger change", "顏色越深表示變化越大"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if mode == .landValue {
+                Text(verbatim: language.text("Dollars a square metre; tap a cell for its parts", "單位：每平方公尺美元；點一格看分項"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -94,6 +104,7 @@ struct PopulationLegendView: View {
         case .population: language.text("Population grid", "人口網格")
         case .travel: language.text("Travel demand", "出行需求")
         case .movement: language.text("Demand change", "需求變化")
+        case .landUse, .landValue, .coverage: mode.title(in: language)
         }
     }
 
@@ -102,6 +113,9 @@ struct PopulationLegendView: View {
         case .population: "0"
         case .travel: language.text("Few", "少")
         case .movement: language.text("Decrease", "減少")
+        case .landUse: language.text("Low-rise (D1)", "低層（D1）")
+        case .landValue: "$ 0"
+        case .coverage: ""
         }
     }
 
@@ -110,6 +124,9 @@ struct PopulationLegendView: View {
         case .population: "10000+"
         case .travel: language.text("Many", "多")
         case .movement: language.text("Increase", "增加")
+        case .landUse: language.text("Towers (D4)", "超高層（D4）")
+        case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
+        case .coverage: ""
         }
     }
 
@@ -143,6 +160,60 @@ struct PopulationLegendView: View {
             }
             .frame(height: 12)
             .clipShape(Capsule())
+        case .landUse:
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(Array([(1, "Homes", "住宅"), (2, "Shops", "商業"), (3, "Offices", "辦公")].enumerated()), id: \.offset) { _, use in
+                    HStack(spacing: 6) {
+                        Text(verbatim: language.text(use.1, use.2))
+                            .font(.caption2)
+                            .frame(width: 48, alignment: .leading)
+                        HStack(spacing: 0) {
+                            ForEach(1...4, id: \.self) { density in
+                                Color(CityMap.useColor(use: use.0, density: density))
+                            }
+                        }
+                        .frame(height: 10)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+            .accessibilityIdentifier("map.landUseLegend")
+        case .landValue:
+            VStack(spacing: 2) {
+                HStack(spacing: 0) {
+                    ForEach(Array(CityMap.valueColors.enumerated()), id: \.offset) { _, color in
+                        Color(color)
+                    }
+                }
+                .frame(height: 12)
+                .clipShape(Capsule())
+                HStack(spacing: 0) {
+                    ForEach(CityMap.valueSteps, id: \.self) { step in
+                        Text(verbatim: "\(step)")
+                            .font(.system(size: 8).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: language.text("Land value, dollars a square metre", "地價，每平方公尺美元")))
+            .accessibilityIdentifier("map.landValueLegend")
+        case .coverage:
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(Array([
+                    (CityMap.coveredColor, "Within 800 m of a station", "車站 800 公尺內"),
+                    (CityMap.coveredEmptyColor, "Within 800 m, no one there", "800 公尺內、沒有人"),
+                    (CityMap.uncoveredColor, "People no station reaches", "有人但沒有車站涵蓋"),
+                ].enumerated()), id: \.offset) { _, entry in
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2).fill(Color(entry.0)).frame(width: 14, height: 10)
+                        Text(verbatim: language.text(entry.1, entry.2))
+                            .font(.caption2)
+                    }
+                }
+            }
+            .accessibilityIdentifier("map.coverageLegend")
         }
     }
 

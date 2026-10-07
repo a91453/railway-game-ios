@@ -255,6 +255,57 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(legend.exists)
     }
 
+    /// Phase 6d (ARCHITECTURE decision 76): the land value layer shows its
+    /// legend, and a tapped cell its tooltip. Full lane only.
+    func testLandValueLayerShowsItsLegendAndATappedCellsTooltip() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        newGame.tap()
+
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 10))
+        pause.tap()
+
+        let layersButton = app.buttons["map.layers"]
+        XCTAssertTrue(layersButton.waitForExistence(timeout: 10))
+        layersButton.tap()
+
+        let row = app.switches["layer.landValue"]
+        // The city's section is below the others: grow the sheet and
+        // scroll until it shows.
+        for _ in 0..<4 where !(row.exists && row.isHittable) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "The land value row must exist")
+        let toggle = row.switches.firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        for _ in 0..<3 where toggle.value as? String != "1" {
+            let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: toggle)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 5)
+            toggle.tap()
+            let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: toggle)
+            _ = XCTWaiter.wait(for: [switched], timeout: 3)
+        }
+        XCTAssertEqual(toggle.value as? String, "1", "The land value layer must be on before dismissing")
+        app.buttons["layer.done"].tap()
+
+        let legend = app.descendants(matching: .any)["map.landValueLegend"].firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 5), "The land value legend must show")
+
+        // The new game opens on its first town, in the middle of the map.
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)).tap()
+        let tooltip = app.descendants(matching: .any)["map.cityTooltip"].firstMatch
+        XCTAssertTrue(tooltip.waitForExistence(timeout: 5), "A tapped cell must show its tooltip")
+        XCTAssertTrue((tooltip.label).contains("Land value"), "The tooltip must say the land value; label: \(tooltip.label)")
+    }
+
     func testConstructionHUDAppearsDuringTrackPreview() {
         continueAfterFailure = false
         let app = XCUIApplication()

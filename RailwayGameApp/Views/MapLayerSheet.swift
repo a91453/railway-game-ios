@@ -52,6 +52,29 @@ struct MapLayerSheet: View {
                 } footer: {
                     Text("Population: WorldPop 1 km estimates on real-world maps (0 to 10,000+ people a cell), the towns' 64 m cells on blank maps (people per square km). Travel demand: the trips starting in each 1 km square in each hour, from the stations' demand. Demand change: how they rise or fall from the hour before.")
                 }
+
+                // Phase 6d: the city's layers, in the same group as the
+                // three above (one layer at a time).
+                Section {
+                    Toggle(isOn: modeBinding(.landUse)) {
+                        Label("Land Use", systemImage: "building.2")
+                    }
+                    .accessibilityIdentifier("layer.landUse")
+
+                    Toggle(isOn: modeBinding(.landValue)) {
+                        Label("Land Value", systemImage: "dollarsign.square")
+                    }
+                    .accessibilityIdentifier("layer.landValue")
+
+                    Toggle(isOn: modeBinding(.coverage)) {
+                        Label("Catchment Coverage", systemImage: "scope")
+                    }
+                    .accessibilityIdentifier("layer.catchmentCoverage")
+                } header: {
+                    Text("City")
+                } footer: {
+                    Text("Land use: each 64 m cell's homes, shops or offices, darker for taller buildings. Land value: dollars a square metre from the cell's use, density and the best nearby service; tap a cell for its parts. Catchment coverage: the cells within 800 m of a station, and the cells with people no station reaches.")
+                }
             }
             .navigationTitle("Map Layers")
             .navigationBarTitleDisplayMode(.inline)

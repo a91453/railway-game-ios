@@ -2591,6 +2591,56 @@
           }
         }
       }
+    },
+    "Land Use" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "土地用途"
+          }
+        }
+      }
+    },
+    "Land Value" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地價"
+          }
+        }
+      }
+    },
+    "Catchment Coverage" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "腹地涵蓋"
+          }
+        }
+      }
+    },
+    "City" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "城市"
+          }
+        }
+      }
+    },
+    "Land use: each 64 m cell's homes, shops or offices, darker for taller buildings. Land value: dollars a square metre from the cell's use, density and the best nearby service; tap a cell for its parts. Catchment coverage: the cells within 800 m of a station, and the cells with people no station reaches." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "土地用途：每個 64 公尺格的住宅、商業或辦公，建物越高顏色越深。地價：依該格的用途、密度與附近最好的車站服務推算，單位是每平方公尺美元；點一格可看分項。腹地涵蓋：車站 800 公尺內的格，以及有人但不在任何車站腹地裡的格。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
