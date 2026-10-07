@@ -53,19 +53,19 @@ struct EconomyPanel: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill((session.world.economy.balance < .zero ? Palette.metroRed : Palette.metroGreen).opacity(0.14))
+                        .fill((session.world.economy.balance < .zero ? Theme.error : Theme.success).opacity(0.14))
                         .frame(width: 44, height: 44)
                     Image(systemName: "banknote.fill")
                         .font(.body.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Palette.metroRed : Palette.metroGreen)
+                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.success)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Balance")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                     Text(session.world.economy.balance.moneyText)
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Palette.metroRed : Color.primary)
+                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
                 }
             }
@@ -147,7 +147,7 @@ struct EconomyPanel: View {
             let totals = session.world.recentLedgerTotals()
             if totals.isEmpty {
                 Text("Nothing settled in the last hour.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(totals, id: \.item) { total in
                 LabeledContent(total.item.displayName(in: session.language), value: total.amountText)
@@ -208,7 +208,7 @@ struct EconomyPanel: View {
             let entries = session.world.recentLedgerEntries()
             if entries.isEmpty {
                 Text("No rows yet.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
                 VStack(alignment: .leading, spacing: 2) {
@@ -217,11 +217,11 @@ struct EconomyPanel: View {
                             .fontWeight(.semibold)
                         Spacer()
                         Text(entry.amountText)
-                            .foregroundStyle(entry.amount < .zero ? Color.red : Color.green)
+                            .foregroundStyle(entry.amount < .zero ? Theme.error : Theme.success)
                     }
                     Text(entry.time.displayText(in: session.language))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .font(.footnote)
                 .monospacedDigit()

@@ -24,7 +24,7 @@ struct DataSourcesView: View {
                                     .font(.subheadline)
                                 Text(verbatim: credit.notice)
                                     .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Theme.textSecondary)
                                 ForEach(credit.links, id: \.url) { link in
                                     if let url = URL(string: link.url) {
                                         // Borderless, so each link in the row
