@@ -50,6 +50,24 @@ final class NewGameBalanceTests: XCTestCase {
         XCTAssertTrue((7...14).contains(payback), "pays for itself in \(payback) days")
     }
 
+    /// ARCHITECTURE decision 78: the demo map's stations draw their
+    /// ridership from its city, as a new game's do, and its three lines and
+    /// four trains pay for themselves in about eight days, as a new game's
+    /// first line does (decision 73).
+    func testTheDemoMapPaysForItselfInAboutEightDays() throws {
+        var world = DemoWorld.make(in: .english)
+        let cost = GameWorld.startingBalance - world.economy.balance
+        XCTAssertTrue(world.landDemand)
+        XCTAssertTrue(world.stations.allSatisfy { (world.stationDemand(of: $0.id)?.dailyTrips ?? 0) > 0 }, "the city gives every station ridership")
+
+        // The second whole day, its hours and its day settled.
+        try world.advance(ticks: 1 + 2 * 1_440)
+        let day = world.financeReport(.day).previous
+        XCTAssertGreaterThan(day.operatingProfit, .zero)
+        let payback = Double(cost.amount) / Double(day.operatingProfit.amount)
+        XCTAssertTrue((7...10).contains(payback), "pays for itself in \(payback) days")
+    }
+
     /// The demo map is built with a new game's money and prices, and leaves
     /// enough to build the tutorial's first line beside it: two stations
     /// and a train.

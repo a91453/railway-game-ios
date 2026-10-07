@@ -78,6 +78,10 @@ public enum RealWorldDemo {
         let layout = Layout(railways: railways)
         var world = GameWorld.newGame(anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame), land: land)
         // The demo's stations keep the ridership it gives them (Phase 6b).
+        // Unlike the blank demo (ARCHITECTURE decision 78) it does not take
+        // them from the land: most of its riders come for the sights, which
+        // the land does not hold, and without the app's people its stations
+        // would have none.
         world.setLandDemand(false)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
