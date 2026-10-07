@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 36
+    static let schemaVersion = 37
 
     var description: String
     var initialState: InitialState
@@ -170,14 +170,16 @@ struct GoldenScenario: Decodable {
         }
     }
 
-    /// Whether a step sets or observes land (schema 36, Phase 6a), which the
-    /// reference model does not hold: ``LandTests`` checks the towns against
-    /// a reference of their own.
+    /// Whether a step sets or observes land (schema 36, Phase 6a), its
+    /// buildings or town growth (schema 37, Phase 6c-1), which the
+    /// reference model does not hold: ``LandTests`` checks the towns and
+    /// ``BuildingTests`` the buildings against references of their own.
     var usesLand: Bool {
         steps.contains { step in
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
-                 .observe(.landCatchment, _), .observe(.landCell, _): true
+                 .command(.setCityBuildings, _), .command(.setTownGrowth, _),
+                 .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _): true
             default: false
             }
         }
@@ -240,7 +242,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell
+        case landTotals, landCell, building
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -269,6 +271,9 @@ extension GoldenScenario.Step: Decodable {
             case .landCell:
                 try requireOnly([.found, .landCell], answering: "landCell")
                 self = try .observe(observation, expect: .landCell(Self.found(expect, .landCell, LandCellSummary.self)))
+            case .building:
+                try requireOnly([.found, .building], answering: "building")
+                self = try .observe(observation, expect: .building(Self.found(expect, .building, BuildingSummary.self)))
             case .scheduledWaits:
                 try requireOnly([.scheduledWaits], answering: "scheduledWaits")
                 self = try .observe(observation, expect: .scheduledWaits(expect.decode([TrafficWaitSummary].self, forKey: .scheduledWaits)))
@@ -473,6 +478,10 @@ enum ScenarioCommand: Equatable {
     case foundTowns(UInt32)
     case setLand([LandCell])
     case setLandDemand(Bool)
+    /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
+    /// grows the land.
+    case setCityBuildings(Bool)
+    case setTownGrowth(Bool)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -568,6 +577,10 @@ enum ScenarioCommand: Equatable {
                 try world.setLand(cells)
             case .setLandDemand(let enabled):
                 world.setLandDemand(enabled)
+            case .setCityBuildings(let enabled):
+                world.setCityBuildings(enabled)
+            case .setTownGrowth(let enabled):
+                world.setTownGrowth(enabled)
             }
             return .ok
         } catch {
@@ -597,6 +610,11 @@ extension ScenarioCommand: Decodable {
             self = try .setLand(container.decode([LandCellSummary].self, forKey: .cells).map(\.cell))
         case "setLandDemand":
             self = try .setLandDemand(container.decode(Bool.self, forKey: .enabled))
+        // Schema 37: city buildings (Phase 6c-1).
+        case "setCityBuildings":
+            self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
+        case "setTownGrowth":
+            self = try .setTownGrowth(container.decode(Bool.self, forKey: .enabled))
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -1116,6 +1134,8 @@ enum ScenarioObservation: Equatable {
     /// Schema 36 (Phase 6a): a station's catchment and a cell of land.
     case landCatchment(StationID)
     case landCell(row: Int, column: Int)
+    /// Schema 37 (Phase 6c-1): the building on a cell and what it holds.
+    case building(row: Int, column: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1123,6 +1143,10 @@ enum ScenarioObservation: Equatable {
             .landTotals(world.landCatchment(of: id).map(LandTotalsSummary.init))
         case .landCell(let row, let column):
             .landCell(world.land.cell(row: row, column: column).map(LandCellSummary.init))
+        case .building(let row, let column):
+            .building(world.buildings.building(row: row, column: column).flatMap { building in
+                world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
+            })
         case .scheduledWaits:
             .scheduledWaits(world.scheduledTrafficWaits().map(TrafficWaitSummary.init))
         case .train(let id):
@@ -1231,6 +1255,9 @@ extension ScenarioObservation: Decodable {
             self = try .landCatchment(container.decodeStation(forKey: .station))
         case "landCell":
             self = try .landCell(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
+        // Schema 37: city buildings (Phase 6c-1).
+        case "building":
+            self = try .building(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1400,6 +1427,7 @@ enum ObservationAnswer: Equatable {
     case scheduledWaits([TrafficWaitSummary])
     case landTotals(LandTotalsSummary?)
     case landCell(LandCellSummary?)
+    case building(BuildingSummary?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1410,7 +1438,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell
+        case landTotals, landCell, building
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1495,7 +1523,7 @@ extension ObservationAnswer: Encodable {
         case .lateness(let lateness?):
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
-        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil):
+        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1503,6 +1531,9 @@ extension ObservationAnswer: Encodable {
         case .landCell(let cell?):
             try container.encode(true, forKey: .found)
             try container.encode(cell, forKey: .landCell)
+        case .building(let building?):
+            try container.encode(true, forKey: .found)
+            try container.encode(building, forKey: .building)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1584,6 +1615,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a managed company's ridership comes from the land
     /// (schema 36, Phase 6b); left out otherwise.
     var landDemand: Bool?
+    /// How many buildings of each density stand while the city's buildings
+    /// are on (schema 37, Phase 6c-1); left out while they are off.
+    var cityBuildings: CityBuildingsSummary?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -1793,10 +1827,55 @@ struct WorldSummary: Codable, Equatable {
         passengerRoutingMode = world.passengerRoutingMode == .direct ? nil : world.passengerRoutingMode.rawValue
         land = world.land.isEmpty ? nil : LandSummary(world.land)
         landDemand = world.landDemand ? true : nil
+        cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
     }
 }
 
 // MARK: - Land
+
+/// The city's buildings in a fixture's final state (schema 37):
+/// `{"buildings", "d1", "d2", "d3", "d4", "existingStock"}`, how many stand,
+/// the city buildings of each density and the existing stock.
+struct CityBuildingsSummary: Codable, Equatable {
+    var buildings: Int
+    var d1: Int
+    var d2: Int
+    var d3: Int
+    var d4: Int
+    var existingStock: Int
+
+    init(_ buildings: CityBuildings) {
+        let city = buildings.all.filter { $0.kind == .city }
+        self.buildings = buildings.all.count
+        d1 = city.count { $0.density == .d1 }
+        d2 = city.count { $0.density == .d2 }
+        d3 = city.count { $0.density == .d3 }
+        d4 = city.count { $0.density == .d4 }
+        existingStock = buildings.all.count - city.count
+    }
+}
+
+/// A building and what it holds on the cell observed (schema 37): `{"id",
+/// "kind", "use", "density", "residents", "jobs"}`, the kind `"city"` or
+/// `"existingStock"`, the density 1 to 4, and the residents and jobs it
+/// holds there.
+struct BuildingSummary: Codable, Equatable {
+    var id: Int
+    var kind: BuildingKind
+    var use: LandUse
+    var density: Int
+    var residents: Int64
+    var jobs: Int64
+
+    init(_ building: Building, capacity: BuildingCapacity) {
+        id = building.id.rawValue
+        kind = building.kind
+        use = building.use
+        density = building.density.rawValue
+        residents = capacity.residents
+        jobs = capacity.jobs
+    }
+}
 
 /// A world's land in a fixture's final state (schema 36): how many cells
 /// it lists and everyone and every job on them.

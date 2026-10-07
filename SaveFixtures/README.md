@@ -47,6 +47,14 @@ world can hold its land, who lives and works in each 64 m cell, and
 and read as before; a build before version 12 refuses a version 12 save
 rather than dropping the land when it saves again.
 
+Since version 13 (Phase 6c-1, ARCHITECTURE decision 74) a world can hold
+`"cityBuildings"`, whether the city's buildings stand on its land, and
+`"buildings"`, the building on each cell (runs of one-cell buildings
+numbered one after another). Earlier saves have them off: their land keeps
+growing to the fixed 400 residents and 1,200 jobs a cell, and turning them
+on puts them up from the land the save holds. A build before version 13
+refuses a version 13 save rather than dropping the buildings.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -67,3 +75,4 @@ hand could hold, is refused with that reason
 | `v11-network-transfer.json` | 11 | A two-line service with five passengers from A waiting at B for the second leg to C. Their original station keeps the conservation ledger; the waiting group holds its remaining journey and transfer ready time. Written by the version 11 build. |
 | `v12-land-towns.json` | 12 | Land (Phase 6a, ARCHITECTURE decision 72): a world 131072 × 98304 units (32 × 24 cells of 64 m) with the first town of seed 1 round its middle as Phase 6a first drew it (half the density 6b settled on), 437 cells with 24,984 residents and 16,614 jobs, saved as runs of cells (`"land"`); no demand from land; a line from West to Middle with a train, a managed company, after 30 minutes. Written by the version 12 build. |
 | `v12-land-demand.json` | 12 | Demand from land (Phase 6b, ARCHITECTURE decision 73): the same world and town (at the density 6b settled on), managed, with `"landDemand": true` and town growth; a line from West to East through the town with one train, after two days and ten hours. The land has grown from 437 to 441 cells (50,189 → 51,256 residents) and set both stations' ridership. Written by the version 12 build. |
+| `v13-city-buildings.json` | 13 | City buildings (Phase 6c-1, ARCHITECTURE decision 74): `v12-land-demand.json` with an office cell of 5,000 jobs set at row 0, column 0 (existing stock: D4 holds 1,680), the city's buildings turned on (`"cityBuildings": true`, 442 buildings numbered by row and column) and one day more. The land grew two cells that day, and each got its D1 homes, buildings 443 and 444: 444 cells and buildings, 94 D1, 187 D2, 129 D3, 33 D4 and one existing stock. Written by the version 13 build. |

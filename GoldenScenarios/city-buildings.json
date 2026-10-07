@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 37,
+  "description": "City buildings (Phase 6c-1, ARCHITECTURE decision 74) in a world 131072 x 98304 units, 32 x 24 cells of 64 m. The table: a storey of a cell holds 1536 m2 of floor, D1 to D4 have 2, 6, 18 and 40 storeys; homes take 7, shops 2 and offices 1 eighths of the floor as homes of 48 m2 a resident, the rest is jobs of 32 m2: homes D1 3072 x 7 / 8 / 48 = 56 residents and 3072 x 1 / 8 / 32 = 12 jobs, D2 168 / 36, D3 504 / 108, D4 1120 / 240; shops D1 16 / 72, D2 48 / 216, D3 144 / 648, D4 320 / 1440; offices D1 8 / 84, D2 24 / 252, D3 72 / 756, D4 160 / 1680. A cell gets the lowest density whose table holds its main count (residents of homes, jobs of shops and offices); of the other count it holds the table's or what the cell has, whichever is more; when not even D4 holds the main count it gets existing stock (D4), holding the cell's or D4's of each, whichever is more. Before the city's buildings are on, and with no land, no cell has a building. setLand with them on puts one up on each cell, numbered from 1 by row and then column: row 1 homes 56 / 12 (column 2, 1: D1 exactly), 57 / 0 (2: D2, 57 > 56), 230 / 30 (3: the first town's fullest homes, D3), 505 / 0 (4: D4), 100 / 500 (5: D2 by its residents, holding its 500 jobs), 1121 / 300 (6: existing stock 1121 / 300); row 2 shops 16 / 72 (7: D1), 0 / 73 (8: D2), 65 / 780 (9: a town's core, 260 / 4 and 3 x 260: D3 holds 648 jobs, so D4), 10 / 1441 (10: existing stock 320 / 1441); row 3 offices 160 / 84 (11: D1 by its jobs, holding its 160 residents), 78 / 285 (12: Taipei's fullest office cell: D3 756 jobs, holding its 78 residents), 0 / 1681 (13: existing stock 160 / 1681), 65 / 780 (14: D4), and homes 0 / 5 (15: D1, no residents). Refused land changes neither the land nor its buildings. Turned off they are gone; turned on again the same buildings stand, numbered the same. foundTowns with seed 1 replaces the land and its buildings (the first town as in land-towns.json, 437 cells): row 12 column 16 offices 65 / 780 is D4 160 / 1680 (number 219: 218 cells come before it by row and column); column 19 shops 60 / 729 D4 320 / 1440; column 20 homes 230 / 0 D3; column 27 homes 41 / 0 D1; row 1 column 2 is no longer land. The town's 437 buildings: 88 D1, 188 D2, 134 D3, 27 D4, no existing stock. All values worked out by hand and checked with an independent Python implementation (tools/golden-checks/city_buildings.py).",
+  "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 10000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": false}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": false}},
+    {"command": {"type": "setLand", "cells": [{"row": 3, "column": 6, "use": "residential", "residents": 0, "jobs": 5}, {"row": 1, "column": 2, "use": "residential", "residents": 56, "jobs": 12}, {"row": 2, "column": 4, "use": "commercial", "residents": 65, "jobs": 780}, {"row": 1, "column": 3, "use": "residential", "residents": 57, "jobs": 0}, {"row": 1, "column": 4, "use": "residential", "residents": 230, "jobs": 30}, {"row": 1, "column": 5, "use": "residential", "residents": 505, "jobs": 0}, {"row": 1, "column": 6, "use": "residential", "residents": 100, "jobs": 500}, {"row": 1, "column": 7, "use": "residential", "residents": 1121, "jobs": 300}, {"row": 2, "column": 2, "use": "commercial", "residents": 16, "jobs": 72}, {"row": 2, "column": 3, "use": "commercial", "residents": 0, "jobs": 73}, {"row": 2, "column": 5, "use": "commercial", "residents": 10, "jobs": 1441}, {"row": 3, "column": 2, "use": "office", "residents": 160, "jobs": 84}, {"row": 3, "column": 3, "use": "office", "residents": 78, "jobs": 285}, {"row": 3, "column": 4, "use": "office", "residents": 0, "jobs": 1681}, {"row": 3, "column": 5, "use": "office", "residents": 65, "jobs": 780}]}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 1, "column": 3}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
+    {"observe": {"type": "building", "row": 1, "column": 4}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
+    {"observe": {"type": "building", "row": 1, "column": 5}, "expect": {"found": true, "building": {"id": 4, "kind": "city", "use": "residential", "density": 4, "residents": 1120, "jobs": 240}}},
+    {"observe": {"type": "building", "row": 1, "column": 6}, "expect": {"found": true, "building": {"id": 5, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 500}}},
+    {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": true, "building": {"id": 6, "kind": "existingStock", "use": "residential", "density": 4, "residents": 1121, "jobs": 300}}},
+    {"observe": {"type": "building", "row": 2, "column": 2}, "expect": {"found": true, "building": {"id": 7, "kind": "city", "use": "commercial", "density": 1, "residents": 16, "jobs": 72}}},
+    {"observe": {"type": "building", "row": 2, "column": 3}, "expect": {"found": true, "building": {"id": 8, "kind": "city", "use": "commercial", "density": 2, "residents": 48, "jobs": 216}}},
+    {"observe": {"type": "building", "row": 2, "column": 4}, "expect": {"found": true, "building": {"id": 9, "kind": "city", "use": "commercial", "density": 4, "residents": 320, "jobs": 1440}}},
+    {"observe": {"type": "building", "row": 2, "column": 5}, "expect": {"found": true, "building": {"id": 10, "kind": "existingStock", "use": "commercial", "density": 4, "residents": 320, "jobs": 1441}}},
+    {"observe": {"type": "building", "row": 3, "column": 2}, "expect": {"found": true, "building": {"id": 11, "kind": "city", "use": "office", "density": 1, "residents": 160, "jobs": 84}}},
+    {"observe": {"type": "building", "row": 3, "column": 3}, "expect": {"found": true, "building": {"id": 12, "kind": "city", "use": "office", "density": 3, "residents": 78, "jobs": 756}}},
+    {"observe": {"type": "building", "row": 3, "column": 4}, "expect": {"found": true, "building": {"id": 13, "kind": "existingStock", "use": "office", "density": 4, "residents": 160, "jobs": 1681}}},
+    {"observe": {"type": "building", "row": 3, "column": 5}, "expect": {"found": true, "building": {"id": 14, "kind": "city", "use": "office", "density": 4, "residents": 160, "jobs": 1680}}},
+    {"observe": {"type": "building", "row": 3, "column": 6}, "expect": {"found": true, "building": {"id": 15, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": false}},
+    {"command": {"type": "setLand", "cells": [{"row": 0, "column": 0, "use": "office", "residents": 1, "jobs": 1}, {"row": 0, "column": 0, "use": "office", "residents": 1, "jobs": 1}]}, "expect": {"result": "invalidLand"}},
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": false}},
+    {"command": {"type": "setCityBuildings", "enabled": false}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": false}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": true, "building": {"id": 6, "kind": "existingStock", "use": "residential", "density": 4, "residents": 1121, "jobs": 300}}},
+    {"command": {"type": "foundTowns", "seed": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 12, "column": 16}, "expect": {"found": true, "building": {"id": 219, "kind": "city", "use": "office", "density": 4, "residents": 160, "jobs": 1680}}},
+    {"observe": {"type": "building", "row": 12, "column": 19}, "expect": {"found": true, "building": {"id": 222, "kind": "city", "use": "commercial", "density": 4, "residents": 320, "jobs": 1440}}},
+    {"observe": {"type": "building", "row": 12, "column": 20}, "expect": {"found": true, "building": {"id": 223, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
+    {"observe": {"type": "building", "row": 12, "column": 27}, "expect": {"found": true, "building": {"id": 230, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": false}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 10000,
+    "stations": [],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      {
+        "start": 0,
+        "level": "low"
+      },
+      {
+        "start": 420,
+        "level": "peak"
+      },
+      {
+        "start": 600,
+        "level": "offPeak"
+      },
+      {
+        "start": 960,
+        "level": "peak"
+      },
+      {
+        "start": 1200,
+        "level": "offPeak"
+      },
+      {
+        "start": 1260,
+        "level": "low"
+      }
+    ],
+    "network": {
+      "nodes": [],
+      "edges": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "free",
+      "fareRules": null,
+      "openedAt": null,
+      "pending": {
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "departures": 0,
+        "trainDistance": 0,
+        "passengers": 0,
+        "seats": 0
+      },
+      "ledger": [],
+      "days": []
+    },
+    "land": {
+      "cells": 437,
+      "residents": 50189,
+      "jobs": 33276
+    },
+    "cityBuildings": {
+      "buildings": 437,
+      "d1": 88,
+      "d2": 188,
+      "d3": 134,
+      "d4": 27,
+      "existingStock": 0
+    }
+  }
+}

@@ -176,6 +176,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `foundTowns`（schema 36） | `seed`（0…4294967295） | `foundTowns(seed:)` |
 | `setLandDemand`（schema 36） | `enabled`（布林值） | `setLandDemand(_:)` |
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"` | `setLand(_:)` |
+| `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
+| `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
 
 ### 結果（`expect.result`）
 
@@ -277,6 +279,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `lateness`（schema 24） | `train` | `{ "found": true, "lateness": 秒 }`（負數是早到），沒有服務（或沒有這台列車）時 `{ "found": false }` | `lateness(of:)` |
 | `landCatchment`（schema 36） | `station` | `{ "found": true, "landTotals": { "residents", "jobs" } }`，沒有這座車站時 `{ "found": false }` | `landCatchment(of:)` |
 | `landCell`（schema 36） | `row`、`column` | `{ "found": true, "landCell": { "row", "column", "use", "residents", "jobs" } }`，那一格沒有人住或工作時 `{ "found": false }` | `land.cell(row:column:)` |
+| `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
 
@@ -419,6 +422,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `accounts`（schema 22）：帳（形式見上面「經營」）。從未經營、也沒有設定票價時是 `{ "mode": "free", "fareRules": null, "openedAt": null, "pending": 全部是 0, "ledger": [], "days": [] }`。
 - `land`（schema 36，選填）：`{ "cells", "residents", "jobs" }`，土地列出的格數與全部的居民、就業；沒有土地時不寫。
 - `landDemand`（schema 36，選填）：土地需求開啟時是 `true`；關閉時不寫。
+- `cityBuildings`（schema 37，選填）：城市建物開啟時是 `{ "buildings", "d1", "d2", "d3", "d4", "existingStock" }`，建物總數、各密度的一般建物數與既有存量數；關閉時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -613,3 +617,10 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - `land-towns.json`：32 × 24 格（2048 × 1536 m）的世界，先以 `setLand` 驗證順序不拘、世界外與重複的格被拒絕且土地不變，再以種子 1 建立城鎮（只有第一座落在這個世界裡）。每一格的居民、就業與 800 m 腹地的總數都依規則手算，並另以獨立的 Python 實作（含 FNV-1a 抽籤）核對；`LandTests` 另有一份逐格重算的參考實作。`ReferenceWorld` 沒有土地，所以 `ReferenceWorldGoldenTests` 跳過用到土地的 fixture。
 - `land-demand.json`（決策 73）：三格土地與三站，經營模式。開啟土地需求之前車站沒有需求；開啟後 West 單獨分到住宅與辦公兩格，之後蓋的 Annex 依距離權重 1000 與 975 以最大餘數法分走一部分，Market 單獨分到商店格；土地決定客流時設定需求被拒絕（`stationDemandFromLand`），自由模式可以設定，切回經營模式時土地重新決定。每個數值都手算，並另以獨立的 Python 實作核對。
 - `land-towns.json` 的城鎮數值是決策 73 加倍後的密度（中心格 260 人）；這份 fixture 和密度的改變在同一個尚未合併的 PR 裡。
+
+## Phase 6c-1：城市建物（schema 37）
+
+- 新指令 `setCityBuildings`、`setTownGrowth`，新觀察 `building`，最終狀態選填的 `cityBuildings`（ARCHITECTURE 決策 74）。城市建物關閉的世界不寫 `cityBuildings`，舊的 fixture 不必改，schema 30 到 36 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地與建物，`ReferenceWorldGoldenTests` 跳過這兩份；`BuildingTests` 另有逐格重算的參考實作。
+- `city-buildings.json`：32 × 24 格的世界。容量表（每層 1536 m²、居民 48 m²、就業 32 m²、2／6／18／40 層、住宅占樓板 7／2／1 八分之一）、依主要用途選最低足夠的密度（住宅格看居民、商辦格看就業，另一項取表上的值與現有人數較大者）、四級都放不下的既有存量、以列與行編號、拒絕的土地不改建物、關閉再開啟得到同樣的建物，以及種子 1 的第一座城鎮的 437 棟（88 D1、188 D2、134 D3、27 D4）。
+- `city-buildings-growth.json`：2 × 2 格的世界、economy.json 的線路與列車，經營模式、土地需求、城鎮成長與城市建物都開啟。第二個午夜三站各以 12‰ 成長，各加 1 位居民與 1 個就業；Alpha、Beta 各在離它最近的空格蓋 4 人住宅，同時建立住宅 D1 建物（編號 3、4），Gamma 沒有空格可蓋。土地仍長到每格 400／1200，建物在 6c-1 不升級。土地與建物的值手算；鐵路、乘客與帳的值取自 GameCore（同 economy.json），成長率由它們的抵達數推得。
+- 兩份的建物與土地都另以獨立的 Python 實作核對：`python3 -I tools/golden-checks/city_buildings.py --check`。

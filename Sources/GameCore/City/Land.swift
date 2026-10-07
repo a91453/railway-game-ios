@@ -298,7 +298,8 @@ extension GameWorld {
 
     /// Replaces the world's land with `cells`, in any order (a real-world
     /// map's people, GamePresentation's `LandImport`). An empty list clears
-    /// it.
+    /// it. With the city's buildings on (Phase 6c-1) each cell gets its
+    /// building at once (see ``setCityBuildings(_:)``).
     ///
     /// - Throws: ``GameError/invalidLand`` for a cell outside the world,
     ///   listed twice, with a negative count, more than
@@ -308,14 +309,15 @@ extension GameWorld {
         var land = Land()
         land.cells = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         guard land.problem(in: bounds) == nil else { throw .invalidLand }
-        self.land = land
+        replaceLand(with: land)
         refreshLandDemand()
     }
 
     /// Replaces the world's land with the towns a blank map starts with,
-    /// drawn from `seed` (see ``Land/towns(seed:in:)``).
+    /// drawn from `seed` (see ``Land/towns(seed:in:)``), and, with the
+    /// city's buildings on, their buildings.
     public mutating func foundTowns(seed: UInt32) {
-        land = Land.towns(seed: seed, in: bounds)
+        replaceLand(with: Land.towns(seed: seed, in: bounds))
         refreshLandDemand()
     }
 

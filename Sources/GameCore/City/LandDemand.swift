@@ -173,7 +173,8 @@ extension GameWorld {
     /// - builds one new home of ``LandDemand/newCellResidents``: the empty
     ///   cell of its catchment, in the world, beside (north, south, east
     ///   or west of) a cell with people, nearest the station (then by row
-    ///   and column).
+    ///   and column), with its building (D1 homes) when the city's
+    ///   buildings are on (Phase 6c-1).
     ///
     /// The stations' ridership then follows the land, and each station's
     /// last growth is how its daily trips changed, in thousandths.
@@ -266,6 +267,6 @@ extension GameWorld {
             }
         }
         guard let best else { return }
-        land.insert(LandCell(row: best.row, column: best.column, use: .residential, residents: LandDemand.newCellResidents, jobs: 0))
+        addLand(LandCell(row: best.row, column: best.column, use: .residential, residents: LandDemand.newCellResidents, jobs: 0))
     }
 }

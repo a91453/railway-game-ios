@@ -217,7 +217,8 @@ struct StationPanel: View {
         }
     }
 
-    /// Who lives and works within 800 m (Phase 6a): the world's land.
+    /// Who lives and works within 800 m (Phase 6a): the world's land, and
+    /// the buildings standing there (Phase 6c-1).
     @ViewBuilder
     private func landSection(_ station: Station) -> some View {
         if let text = session.world.landCatchmentText(of: station.id, in: session.language) {
@@ -226,6 +227,13 @@ struct StationPanel: View {
                     .font(.footnote)
                     .monospacedDigit()
                     .accessibilityIdentifier("station.land")
+                // Phase 6c-1: the city's buildings there, by height.
+                if let buildings = session.world.catchmentBuildingsText(of: station.id, in: session.language) {
+                    Text(verbatim: buildings)
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("station.buildings")
+                }
             } header: {
                 Text(verbatim: session.language.text("Land", "土地"))
             }

@@ -39,4 +39,33 @@ extension GameWorld {
             "800 公尺內：居民 \(residents) 人 · 就業 \(jobs) 個"
         )
     }
+
+    /// The city's buildings within 800 m of station `id` (Phase 6c-1), by
+    /// height: "Buildings within 800 m: low-rise 120 · mid-rise 30 ·
+    /// high-rise 5 · towers 1 · existing stock 2" (D1 to D4, each left out
+    /// when there are none), or `nil` when none stand there or the station
+    /// does not exist.
+    public func catchmentBuildingsText(of id: StationID, in language: DisplayLanguage) -> String? {
+        guard let buildings = catchmentBuildings(of: id), !buildings.isEmpty else { return nil }
+        let names: [(BuildingDensity, String, String)] = [
+            (.d1, "low-rise", "低層"), (.d2, "mid-rise", "中層"), (.d3, "high-rise", "高層"), (.d4, "towers", "超高層"),
+        ]
+        var parts: [(String, String)] = []
+        for (density, english, chinese) in names {
+            let count = buildings.count { $0.kind == .city && $0.density == density }
+            if count > 0 {
+                let number = Money(Int64(count)).displayText
+                parts.append(("\(english) \(number)", "\(chinese) \(number) 棟"))
+            }
+        }
+        let stock = buildings.count { $0.kind == .existingStock }
+        if stock > 0 {
+            let number = Money(Int64(stock)).displayText
+            parts.append(("existing stock \(number)", "既有存量 \(number) 棟"))
+        }
+        return language.text(
+            "Buildings within 800 m: " + parts.map(\.0).joined(separator: " · "),
+            "800 公尺內建物：" + parts.map(\.1).joined(separator: " · ")
+        )
+    }
 }
