@@ -133,7 +133,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
 
     private static func answer(_ observation: ScenarioObservation, in model: ReferenceWorld) -> ObservationAnswer {
         switch observation {
-        case .landCatchment, .landCell, .building, .townGrowth:
+        case .landCatchment, .landCell, .building, .townGrowth, .landValue:
             preconditionFailure("the reference model does not hold land")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))

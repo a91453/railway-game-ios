@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 38
+    static let schemaVersion = 39
 
     var description: String
     var initialState: InitialState
@@ -179,7 +179,7 @@ struct GoldenScenario: Decodable {
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
-                 .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _): true
+                 .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _): true
             default: false
             }
         }
@@ -242,7 +242,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth
+        case landTotals, landCell, building, townGrowth, landValue
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -274,6 +274,9 @@ extension GoldenScenario.Step: Decodable {
             case .building:
                 try requireOnly([.found, .building], answering: "building")
                 self = try .observe(observation, expect: .building(Self.found(expect, .building, BuildingSummary.self)))
+            case .landValue:
+                try requireOnly([.found, .landValue], answering: "landValue")
+                self = try .observe(observation, expect: .landValue(Self.found(expect, .landValue, LandValueSummary.self)))
             case .townGrowth:
                 try requireOnly([.found, .townGrowth], answering: "townGrowth")
                 self = try .observe(observation, expect: .townGrowth(Self.found(expect, .townGrowth, TownGrowthSummary.self)))
@@ -1141,6 +1144,8 @@ enum ScenarioObservation: Equatable {
     case building(row: Int, column: Int)
     /// Schema 38 (Phase 6c-2): how town growth measures a station.
     case townGrowth(StationID)
+    /// Schema 39 (Phase 6c-3): what a cell of land is worth.
+    case landValue(row: Int, column: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1150,6 +1155,8 @@ enum ScenarioObservation: Equatable {
             .landCell(world.land.cell(row: row, column: column).map(LandCellSummary.init))
         case .townGrowth(let id):
             .townGrowth(world.townGrowth(of: id).map(TownGrowthSummary.init))
+        case .landValue(let row, let column):
+            .landValue(world.landValue(row: row, column: column).map(LandValueSummary.init))
         case .building(let row, let column):
             .building(world.buildings.building(row: row, column: column).flatMap { building in
                 world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
@@ -1268,6 +1275,9 @@ extension ScenarioObservation: Decodable {
         // Schema 38: town growth's measures (Phase 6c-2).
         case "townGrowth":
             self = try .townGrowth(container.decodeStation(forKey: .station))
+        // Schema 39: land value (Phase 6c-3).
+        case "landValue":
+            self = try .landValue(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1439,6 +1449,7 @@ enum ObservationAnswer: Equatable {
     case landCell(LandCellSummary?)
     case building(BuildingSummary?)
     case townGrowth(TownGrowthSummary?)
+    case landValue(LandValueSummary?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1449,7 +1460,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth
+        case landTotals, landCell, building, townGrowth, landValue
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1534,7 +1545,7 @@ extension ObservationAnswer: Encodable {
         case .lateness(let lateness?):
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
-        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil):
+        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1548,6 +1559,9 @@ extension ObservationAnswer: Encodable {
         case .townGrowth(let place?):
             try container.encode(true, forKey: .found)
             try container.encode(place, forKey: .townGrowth)
+        case .landValue(let value?):
+            try container.encode(true, forKey: .found)
+            try container.encode(value, forKey: .landValue)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1866,6 +1880,53 @@ struct CityBuildingsSummary: Codable, Equatable {
         d3 = city.count { $0.density == .d3 }
         d4 = city.count { $0.density == .d4 }
         existingStock = buildings.all.count - city.count
+    }
+}
+
+/// What a cell of land is worth (schema 39): `{"value", "base",
+/// "servicePremium", "accessPremium", "station"}`, cents a m², and the
+/// station the premiums are measured at (`null` for none).
+struct LandValueSummary: Equatable {
+    var value: Int64
+    var base: Int64
+    var servicePremium: Int64
+    var accessPremium: Int64
+    var station: Int?
+
+    init(_ value: LandValue) {
+        self.value = value.value
+        base = value.base
+        servicePremium = value.servicePremium
+        accessPremium = value.accessPremium
+        station = value.station?.rawValue
+    }
+}
+
+extension LandValueSummary: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case value, base, servicePremium, accessPremium, station
+    }
+
+    /// `"station"` is required, `null` for none.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        value = try container.decode(Int64.self, forKey: .value)
+        base = try container.decode(Int64.self, forKey: .base)
+        servicePremium = try container.decode(Int64.self, forKey: .servicePremium)
+        accessPremium = try container.decode(Int64.self, forKey: .accessPremium)
+        guard container.contains(.station) else {
+            throw DecodingError.keyNotFound(CodingKeys.station, DecodingError.Context(codingPath: container.codingPath, debugDescription: "landValue needs \"station\"."))
+        }
+        station = try container.decodeIfPresent(Int.self, forKey: .station)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(value, forKey: .value)
+        try container.encode(base, forKey: .base)
+        try container.encode(servicePremium, forKey: .servicePremium)
+        try container.encode(accessPremium, forKey: .accessPremium)
+        try container.encode(station, forKey: .station)
     }
 }
 

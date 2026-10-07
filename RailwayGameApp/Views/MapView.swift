@@ -46,6 +46,13 @@ struct MapView: View {
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
+    /// The city layers' map (Phase 6d, ``CityMap``): made only while one is
+    /// shown, and again only when the land, its buildings, the stations or
+    /// the last measured service change, and a number that changes with it.
+    @State private var cityMap: CityMap?
+    @State private var cityMapVersion = 0
+    /// The city tooltip of the last tapped cell, and where it was tapped.
+    @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
@@ -103,6 +110,7 @@ struct MapView: View {
                     MapGestures(camera: projection, onCameraChange: { moved in
                         camera = moved
                         cellTooltip = nil
+                        cityTooltip = nil
                         session.mapDidMove()
                     }) { location in
                         let point = projection.planPoint(at: location)
@@ -123,6 +131,11 @@ struct MapView: View {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
                             .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - 220)), y: max(8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .allowsHitTesting(false)
+                    }
+                    if let cityTooltip {
+                        CityCellTooltip(info: cityTooltip.info, language: session.language)
+                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - 280)), y: max(8, min(cityTooltip.at.y + 12, viewport.height - 130)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -169,6 +182,7 @@ struct MapView: View {
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
+                                cityTooltip = nil
                                 popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
@@ -207,6 +221,18 @@ struct MapView: View {
                         trackStyle: trackStyle,
                         language: session.language
                     )
+                    // Phase 6d: under the land use layer Apple's map, with
+                    // its own buildings, is washed out so the cells' uses
+                    // read clearly; its legal strip stays as it is.
+                    .overlay {
+                        if mapLayers.popTravelMode == .landUse {
+                            VStack(spacing: 0) {
+                                Color(uiColor: .systemBackground).opacity(0.6)
+                                Color.clear.frame(height: strip)
+                            }
+                            .allowsHitTesting(false)
+                        }
+                    }
                 }
             }
             .onChange(of: viewport, initial: true) { _, size in
@@ -263,8 +289,14 @@ struct MapView: View {
             travelTiles = key.mode.map { key.demand.tiles(for: $0, at: key.hour) } ?? []
             travelTilesVersion &+= 1
         }
+        .onChange(of: CityMapKey(world: session.world, isShown: mapLayers.popTravelMode?.isCityLayer == true), initial: true) { _, key in
+            // Worked out once for what the layers read, not on every draw.
+            cityMap = key.isShown ? CityMap(world: session.world) : nil
+            cityMapVersion &+= 1
+        }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
+            cityTooltip = nil
             if mode?.usesHour != true { stopPopTravelPlay() }
         }
         .onChange(of: session.world.network, initial: true) { _, network in
@@ -297,6 +329,9 @@ struct MapView: View {
                 key: .travel(version: travelTilesVersion),
                 opacity: alpha
             )
+        case .landUse, .landValue, .coverage:
+            guard let cityMap else { return nil }
+            return PopTravelLayer(content: .city(cityMap, mode), key: .city(version: cityMapVersion, mode: mode), opacity: alpha)
         }
     }
 
@@ -335,6 +370,15 @@ struct MapView: View {
     /// layer is on (the reference's `pop-grid-tooltip`); a tap where no one
     /// lives hides it. The tap still selects as it always does.
     private func showCellTooltip(at location: ScreenPoint, projection: PlanCamera) {
+        // Phase 6d: a city layer's tooltip says the cell's use, people and
+        // land value.
+        if mapLayers.popTravelMode?.isCityLayer == true {
+            cellTooltip = nil
+            let place = projection.worldPosition(at: location)
+            cityTooltip = session.world.cityCellInfo(atX: place.x, y: place.y).map { ($0, location) }
+            return
+        }
+        cityTooltip = nil
         guard mapLayers.popTravelMode == .population, let heatmap else {
             cellTooltip = nil
             return
@@ -451,7 +495,7 @@ struct MapView: View {
         let moved = projection.centered(atX: center.x, y: center.y)
         // The tooltip is pinned to a screen point: once the map moves under
         // it, it would describe another cell, as after a pan.
-        if moved != projection { cellTooltip = nil }
+        if moved != projection { cellTooltip = nil; cityTooltip = nil }
         camera = moved
     }
 }
@@ -579,12 +623,15 @@ struct PopTravelLayer: Equatable {
     enum Content {
         case population(PopulationHeatmap)
         case travel([TravelDemandMap.Tile])
+        /// A city layer (Phase 6d), drawn from the city map in view.
+        case city(CityMap, PopTravelMode)
     }
 
     enum Key: Equatable {
         case population(version: Int)
         case travel(version: Int)
         case land(version: Int)
+        case city(version: Int, mode: PopTravelMode)
     }
 
     let content: Content
@@ -640,6 +687,51 @@ private struct PopulationCellTooltip: View {
         .fixedSize()
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("map.populationTooltip")
+    }
+}
+
+/// A tapped cell on a city layer (Phase 6d): its use and density, people,
+/// land value with its parts, and the station that sets it.
+private struct CityCellTooltip: View {
+    let info: CityCellInfo
+    let language: DisplayLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: language.text("Cell of land", "土地格"))
+                .font(.caption.weight(.bold))
+            ForEach(info.lines(in: language), id: \.self) { line in
+                Text(verbatim: line)
+                    .font(.caption2.monospacedDigit())
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("map.cityTooltip")
+    }
+}
+
+/// What the city layers are worked out from (Phase 6d): the land, its
+/// buildings, the stations, town growth's measures and whether the land
+/// sets ridership; nothing while no city layer is shown.
+private struct CityMapKey: Equatable {
+    let land: Land?
+    let buildings: CityBuildings?
+    let stations: [Station]
+    let growth: TownGrowth?
+    let setsRidership: Bool
+    let isShown: Bool
+
+    init(world: GameWorld, isShown: Bool) {
+        self.isShown = isShown
+        land = isShown ? world.land : nil
+        buildings = isShown ? world.buildings : nil
+        stations = isShown ? world.stations : []
+        growth = isShown ? world.townGrowth : nil
+        setsRidership = isShown && world.landDemand && world.accounts.mode == .management
     }
 }
 

@@ -353,7 +353,17 @@ enum MapArt {
             drawPopulation(heatmap, opacity: layer.opacity, projection: projection, in: context)
         case .travel(let tiles):
             drawTravel(tiles, opacity: layer.opacity, projection: projection, in: context)
+        case .city(let map, let mode):
+            drawCity(map, mode: mode, opacity: layer.opacity, projection: projection, in: context)
         }
+    }
+
+    /// A city layer (Phase 6d, ``CityMap``): only the cells in view, merged
+    /// into blocks when zoomed out (``CityMap/blockSize(pointsPerUnit:)``),
+    /// one fill a colour.
+    private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
+        drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
     }
 
     /// The screen rectangle of the world rectangle from (`minX`, `minY`)

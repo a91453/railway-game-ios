@@ -279,6 +279,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `lateness`（schema 24） | `train` | `{ "found": true, "lateness": 秒 }`（負數是早到），沒有服務（或沒有這台列車）時 `{ "found": false }` | `lateness(of:)` |
 | `landCatchment`（schema 36） | `station` | `{ "found": true, "landTotals": { "residents", "jobs" } }`，沒有這座車站時 `{ "found": false }` | `landCatchment(of:)` |
 | `landCell`（schema 36） | `row`、`column` | `{ "found": true, "landCell": { "row", "column", "use", "residents", "jobs" } }`，那一格沒有人住或工作時 `{ "found": false }` | `land.cell(row:column:)` |
+| `landValue`（schema 39） | `row`、`column` | `{ "found": true, "landValue": { "value", "base", "servicePremium", "accessPremium", "station" } }`：那一格的地價（美分／m²）、三個分項與決定價格的車站（沒有時 `null`）；世界外的格 `{ "found": false }` | `landValue(row:column:)` |
 | `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
@@ -630,3 +631,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新觀察 `townGrowth`（ARCHITECTURE 決策 75）。沒有用到它的 fixture 不必改，schema 30 到 37 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`city-buildings-growth.json`（schema 37）的格在那一晚都沒有滿、也沒有碰到容量，所以在 6c-2 的規則下結果相同。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`CityGrowthTests` 另有逐格重算的參考實作。
 - `city-buildings-raise.json`：8 × 2 格的世界、economy.json 的線路與列車。第二個午夜三站都服務 1000‰、可達 2 站：依車站編號，Alpha 升 1、2 號，Beta 略過它們、升 5、7 號，Gamma 升 8、9 號，10 號是 Gamma 的第三格不升；D4（3 號）、既有存量（4 號）不升；差一人的 503 人住宅當晚長滿 504 但不升；之後的成長每格停在建物容量，放不下的捨棄。三站各在最近的空格蓋 4 人住宅與 D1 建物。土地與建物的值由獨立的 Python 實作（`python3 -I tools/golden-checks/city_growth.py`）從規則與觀察到的服務量測算出；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。
+
+## Phase 6c-3：地價（schema 39）
+
+- 新觀察 `landValue`（ARCHITECTURE 決策 76）。沒有用到它的 fixture 不必改，schema 30 到 38 照樣讀取：**沒有任何既有 fixture 的預期值改變**。地價只是查詢，不在最終狀態裡。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`LandValueTests` 另有逐格的參考實作。
+- `land-value.json`：8 × 2 格的世界、economy.json 的線路與列車。量測之前每格只有基準（住宅 D2 2500、商業 D2 3750、辦公 D4 7000、既有存量 4000、空格 1000），世界外的格沒有；第二個午夜三站都量到 1000‰、可達 2 站之後，每格依最近（w 最高）的站加上服務與可達溢價，兩站同分時取編號小的；自由模式又只剩基準。每個地價都依規則手算，並以獨立的 Python 實作（`python3 -I tools/golden-checks/land_value.py`）從觀察到的建物與量測核對；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。

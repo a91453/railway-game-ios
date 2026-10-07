@@ -887,3 +887,17 @@ V 實際放行 → T、U（保證不互穿）
 | 本 repo 決策 73／74 `LandDemand.grow`、`Building.capacity(on:)` | `grow` 改用建物容量 | 取代 400／1200；放不下的捨棄 |
 
 定點比例：服務比例千分比（0…1000），可達站 0…5，容量整數人／職位。
+
+## Phase 6c-3／6d：地價與城市圖層（決策 76）
+
+同一個參考庫版本（`2db0c5a`）。研究文件 PR #174 §4 已在 `Ci/reference_snapshot/` 的 js／json／html 搜尋 `landValue`、`land_value`、`landPrice`、`propertyValue`、`realEstate`、`rent`、`地價`、`租金`、`房地產`、`開發`，並查 `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`，都沒有地價、租金或開發規則；本次再查 `Railway/site_archive_clean/` 與 `Railway/taipei_gta_reference/source/` 也沒有。所以地價與圖層是原生的（gap → 原生）。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| （無：四處來源沒有地價規則） | `GameWorld.landValue(row:column:)`、`landValues()`、`LandValueRules` | gap → 原生：研究文件 §6.2 的公式，美分／m²，全部整數 |
+| `Ci/.../styles/liberty.json` 的 `landuse` 圖層、`virtual_island_city` 的 landuse 語意圖（圖磚本體沒有收錄） | `CityMap` 的用途圖層 | 只有外觀參考；顏色、密度深淺是原生的 |
+| `Ci/.../app__q_c234188b7c397f91.js` 的人口格（`chinaGrid`）與 `pop-grid-tooltip`（已移植成 `PopulationHeatmap`） | `CityMap.tiles(for:in:blockSize:)`、`CityCellInfo`、地圖的提示框 | 沿用「只畫畫面內、縮小合併區塊、點格出提示框」的做法 |
+| 本 repo 決策 73 的 800 m 腹地與距離權重 | 地價的 w、腹地涵蓋圖層 | 同一個 `d² < R²` 與 `1000 − floor(1000 d² / R²)` |
+| 本 repo 決策 75 的 `lastService`／`lastReached` | 地價的 S、A | 只讀，不改 |
+
+定點比例：地價美分／m²（Int64），w 與服務比例千分比，可達 0…5。

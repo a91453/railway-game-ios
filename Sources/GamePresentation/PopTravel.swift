@@ -18,6 +18,15 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// How those trips grow or fall from the hour before (`movement`,
     /// 需求变化: "相邻小时出行需求量的增减").
     case movement
+    /// The city's layers (Phase 6d, ARCHITECTURE decision 76), drawn from
+    /// the world's land (``CityMap``), one at a time with the three above:
+    /// each cell's use, by its building's density;
+    case landUse
+    /// what each cell is worth (``GameCore/LandValue``);
+    case landValue
+    /// which cells the stations' 800 m catchments reach, and which cells
+    /// with people none does.
+    case coverage
 
     /// The tab's title (`map.layers.population`, `map.layers.travelDemand`,
     /// `map.layers.demandChange`).
@@ -26,6 +35,9 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .population: language.text("Population", "人口數據")
         case .travel: language.text("Travel demand", "出行需求")
         case .movement: language.text("Demand change", "需求變化")
+        case .landUse: language.text("Land use", "土地用途")
+        case .landValue: language.text("Land value", "地價")
+        case .coverage: language.text("Catchment coverage", "腹地涵蓋")
         }
     }
 
@@ -49,12 +61,33 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
                 "How the trips starting in each area rise or fall from the hour before.",
                 "相鄰小時出行需求量的增減。"
             )
+        case .landUse:
+            language.text(
+                "Each 64 m cell's homes, shops or offices; darker for taller buildings.",
+                "每個 64 公尺格的住宅、商業或辦公；建物越高顏色越深。"
+            )
+        case .landValue:
+            language.text(
+                "What each cell is worth, in dollars a square metre, from its use, density and the nearest good service.",
+                "每格的地價（每平方公尺美元），依用途、密度與附近車站的服務推算。"
+            )
+        case .coverage:
+            language.text(
+                "The cells within 800 m of a station, and the cells with people that no station reaches.",
+                "車站 800 公尺內的格，以及有人但不在任何車站腹地裡的格。"
+            )
         }
+    }
+
+    /// Whether the layer is one of the city's (Phase 6d), drawn from the
+    /// world's land.
+    public var isCityLayer: Bool {
+        self == .landUse || self == .landValue || self == .coverage
     }
 
     /// Whether the layer follows the timeline's hour.
     public var usesHour: Bool {
-        self != .population
+        self == .travel || self == .movement
     }
 }
 
@@ -67,8 +100,10 @@ public enum PopTravel {
     /// The opacity a layer starts at (`getPopTravelBaseOpacityForMode`):
     /// 0.72 for population; for travel and demand change 0.85, or 1 on a
     /// narrow screen (`window.innerWidth <= 768`).
+    /// The city's layers (Phase 6d) start at 0.8.
     public static func baseOpacity(for mode: PopTravelMode, compactWidth: Bool) -> Double {
-        mode == .population ? 0.72 : (compactWidth ? 1 : 0.85)
+        if mode.isCityLayer { return 0.8 }
+        return mode == .population ? 0.72 : (compactWidth ? 1 : 0.85)
     }
 
     /// The opacity slider's range (`clampPopTravelOpacity`: 0.1 … 1, the
