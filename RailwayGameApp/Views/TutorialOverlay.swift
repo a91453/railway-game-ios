@@ -25,7 +25,10 @@ extension View {
                     let required = tutorial.step.targets.compactMap { target -> CGRect? in
                         target == .map ? nil : anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
                     }
-                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls, required: required)
+                    // The map's own frame, so the card leaves some of it
+                    // free to tap even where little of it shows.
+                    let map = anchors[.map]?.visibleFrame(in: proxy, viewport: viewport)
+                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls, required: required, map: map)
                 }
             }
         }
@@ -40,6 +43,7 @@ private struct TutorialOverlay: View {
     let frames: [CGRect]
     let controls: [CGRect]
     let required: [CGRect]
+    let map: CGRect?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -57,7 +61,7 @@ private struct TutorialOverlay: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            TutorialCardLayout(target: frames.first, controls: controls, required: required) {
+            TutorialCardLayout(target: frames.first, controls: controls, required: required, map: map) {
                 TutorialCard(session: session, tutorial: tutorial)
                     .id(tutorial.index)
             }
@@ -71,13 +75,25 @@ private struct TutorialOverlay: View {
 /// centre and the edges. The first placement that covers no control wins;
 /// when every one covers something, the one that covers least, sparing the
 /// step's own controls first. Missing targets use the centre.
+///
+/// Covering the map costs nothing, as long as a band of it at least
+/// ``minimumFreeMap`` deep stays free beside the card: on a phone in
+/// portrait the map between the HUD and the open control drawer can be
+/// barely taller than the card, and a card over all of it would leave the
+/// player nowhere to tap. Covering the HUD's controls then costs less.
 private struct TutorialCardLayout: Layout {
     let target: CGRect?
     let controls: [CGRect]
     /// The step's own controls (not the map), among `controls`.
     let required: [CGRect]
+    /// The part of the map that shows (``TutorialTarget/map``).
+    let map: CGRect?
     private let margin: CGFloat = 16
     private let gap: CGFloat = 12
+    private let minimumFreeMap: CGFloat = 96
+    /// Above covering any ordinary control with the whole card, below
+    /// covering a sliver of the step's own controls.
+    private let mapCoveredCost: CGFloat = 400_000
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
@@ -127,8 +143,17 @@ private struct TutorialCardLayout: Layout {
                     return common.isNull ? sum : sum + common.width * common.height
                 }
             }
+            let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
+            /// Whether a band of the map at least `minimumFreeMap` deep
+            /// stays free above, below or beside `frame`.
+            func leavesMapFree(_ frame: CGRect) -> Bool {
+                guard let map, frame.intersects(map) else { return true }
+                let bands = [frame.minY - map.minY, map.maxY - frame.maxY, frame.minX - map.minX, map.maxX - frame.maxX]
+                return (bands.max() ?? 0) >= minimumFreeMap
+            }
             func cost(_ frame: CGRect) -> CGFloat {
                 covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
+                    + (leavesMapFree(frame) ? 0 : mapCoveredCost)
             }
             let placements = candidates
                 .map { CGRect(origin: $0, size: size) }

@@ -40,6 +40,11 @@ struct PopulationLegendView: View {
                         Image(systemName: "xmark.circle.fill")
                             .font(.caption2)
                             .foregroundStyle(Theme.textSecondary)
+                            // A target a finger can hit, without making the
+                            // title row taller.
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                            .padding(-8)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text(verbatim: language.text("Close population legend", "關閉人口圖例")))
