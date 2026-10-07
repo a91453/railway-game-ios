@@ -12,6 +12,15 @@ extension GameWorld {
         var point: Int
     }
 
+    /// Where `service` sets off from point `k` standing at `berth`: turned
+    /// round at a call marked to reverse, as ``trafficPoints(of:cycle:)``
+    /// plans the run that follows it.
+    func trafficDeparture(_ service: TrafficService, at k: Int, berth: Berth) -> TrainPosition {
+        let point = service.points[k]
+        let place = TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: service.train.length)
+        return point.calls && service.train.timetable[point.stop].reverses ? turnedRound(place).position : place.position
+    }
+
     /// Local arrival/departure routes through a specific physical berth.
     /// A platform contains the whole body; no reversal or invented track
     /// is allowed. The existing 400 m allowance also bounds this detour.
@@ -24,18 +33,17 @@ extension GameWorld {
         var stretches = body
         var distance: Int64 = 0, normal: Int64 = 0
         if j > 0 {
-            let previous = points[j - 1]
-            let start = TrainPosition.onEdge(previous.berth.traversal, offset: previous.berth.offset)
+            let start = trafficDeparture(service, at: j - 1, berth: points[j - 1].berth)
             guard let path = preferredTrafficPath(service, to: point, from: start, berth: berth) ?? trafficPath(from: start, toStation: point.station, length: length,
                                          berthPenalty: [:], edgePenalty: [:], only: berth) else { return nil }
             stretches += trafficStretches(from: start, along: path)
             distance += path.distance; normal += point.distance
         }
         if j + 1 < points.count {
-            let next = points[j + 1]
-            guard let path = preferredTrafficPath(service, to: next, from: position, berth: next.berth) ?? trafficPath(from: position, toStation: next.station, length: length,
+            let next = points[j + 1], leaving = trafficDeparture(service, at: j, berth: berth)
+            guard let path = preferredTrafficPath(service, to: next, from: leaving, berth: next.berth) ?? trafficPath(from: leaving, toStation: next.station, length: length,
                                          berthPenalty: [:], edgePenalty: [:], only: next.berth) else { return nil }
-            stretches += trafficStretches(from: position, along: path)
+            stretches += trafficStretches(from: leaving, along: path)
             distance += path.distance; normal += next.distance
         }
         guard distance <= normal + Self.detourAllowance else { return nil }
@@ -117,9 +125,9 @@ extension GameWorld {
 
     func trafficTrackDirections(_ service: TrafficService, at j: Int, berth: Berth) -> Set<TrackTraversal> {
         var directions: Set<TrackTraversal> = []
-        let points = service.points, position = TrainPosition.onEdge(berth.traversal, offset: berth.offset)
+        let points = service.points, position = trafficDeparture(service, at: j, berth: berth)
         if j > 0 {
-            let p = points[j - 1], start = TrainPosition.onEdge(p.berth.traversal, offset: p.berth.offset)
+            let start = trafficDeparture(service, at: j - 1, berth: points[j - 1].berth)
             if let path = preferredTrafficPath(service, to: points[j], from: start, berth: berth) ?? trafficPath(from: start, toStation: points[j].station, length: service.train.length,
                                       berthPenalty: [:], edgePenalty: [:], only: berth) {
                 directions.formUnion(trafficStretches(from: start, along: path).filter { $0.to > $0.from }.map(\.traversal))
@@ -202,7 +210,10 @@ extension GameWorld {
                 avoid.formUnion(move.route)
             }
         }
+        // `normal` sets off from `start`, where a reversing stop has turned
+        // the train round.
         var memo = DirectionMemo(), candidate = train
+        candidate.position = start
         follow(normal, &candidate)
         let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
         let eligible = Set(tracks.filter { !network.fouls($0.body, avoid) }.map(\.berth))

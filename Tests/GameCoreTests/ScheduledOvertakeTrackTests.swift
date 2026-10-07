@@ -14,6 +14,54 @@ final class ScheduledOvertakeTrackTests: XCTestCase {
         return world
     }
 
+    /// ``ScheduledTrafficTests/overtake(fastDeparture:fastArrival:scale:)``
+    /// with the slow train first facing west at W, turning round there (a
+    /// reversing stop) before it leaves for M: the run after a reversal is
+    /// planned like any other, so it still waits on M's loop and the fast
+    /// train passes on the main line, as the independent model has it at
+    /// every second.
+    static func turningOvertake() throws -> GameWorld {
+        var world = try ScheduledTrafficTests.overtake()
+        let slow = TrainID(rawValue: 1)
+        try world.setTrafficControl(false)
+        try world.stopTrainService(slow)
+        try world.unplaceTrain(slow)
+        try world.placeTrain(slow, at: .onEdge(SingleTrackMeet.backward(1), offset: 5_120))
+        try world.setTrainContinuation(slow, along: [], stoppingAt: 5_120)
+        try world.setTrainMovementRate(slow, to: 1_024)
+        try world.setTrainTimetable(slow, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60), reverses: true),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 180), departure: .init(seconds: 180)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 900), departure: .init(seconds: 960)),
+        ])
+        try world.startTrainService(slow)
+        try world.setTrafficControl(true)
+        return world
+    }
+
+    func testTheRunAfterAReversalIsOvertakenOnTheLoop() throws {
+        var world = try Self.turningOvertake()
+        var model = ScheduledTrafficTests.model(for: world)
+        let wait = try XCTUnwrap(world.scheduledTrafficWaits().first { $0.kind == .overtake })
+        XCTAssertEqual(wait.train.rawValue, 1)
+        XCTAssertEqual(wait.other.rawValue, 2)
+        XCTAssertEqual(wait.station, SingleTrackMeet.middle)
+        XCTAssertEqual(world.scheduledTrafficWaits(), model.scheduledPlan().waits)
+        world.setSpeed(.x1); model.setSpeed(.x1)
+        var sawLoop = false
+        for second in 0..<1_400 {
+            try world.advance(ticks: 10)
+            XCTAssertNil(model.advance(ticks: 10))
+            let differences = KernelDifferentialTests.differences(world, model)
+            guard differences.isEmpty else { return XCTFail("second \(second + 1): \(differences.joined(separator: "\n"))") }
+            if case .onEdge(let run, _)? = world.train(id: wait.train)?.position, run.edge == .edge(5) { sawLoop = true }
+        }
+        XCTAssertTrue(sawLoop, "the slow train waits on the loop")
+        XCTAssertTrue(world.trains.allSatisfy { $0.execution == nil })
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     func testThirdTrainOnTheLoopPreventsTheV3Overtake() throws {
         let two = try ScheduledTrafficTests.overtake(), three = try Self.threeTrains()
         XCTAssertTrue(two.scheduledTrafficWaits().contains { $0.kind == .overtake })
