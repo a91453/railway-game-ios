@@ -5,10 +5,15 @@ import SwiftUI
 /// Tool picker, selection inspector, tool options and the action button.
 struct ControlPanel: View {
     enum Arrangement {
-        /// Everything in one column (phones, and the sidebar on wide screens).
+        /// Everything in one column (the sidebar on wide screens).
         case column
         /// Tools and action on the left, options on the right (iPad portrait).
         case sideBySide
+        /// The tool picker alone: the top of a phone's control drawer.
+        case tools
+        /// The column without the tool picker: what a phone's control
+        /// drawer shows under it when open.
+        case details
     }
 
     let session: GameSession
@@ -40,6 +45,15 @@ struct ControlPanel: View {
                     NetworkOverview(session: session)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+        case .tools:
+            ToolPicker(session: session)
+        case .details:
+            VStack(alignment: .leading, spacing: 12) {
+                InspectorView(session: session)
+                ToolOptions(session: session)
+                    .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
+                ActionButton(session: session)
             }
         }
     }

@@ -992,6 +992,26 @@
         }
       }
     },
+    "Hide Controls" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收起控制項"
+          }
+        }
+      }
+    },
+    "Show Controls" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展開控制項"
+          }
+        }
+      }
+    },
     "Game speed" : {
       "localizations" : {
         "zh-Hant" : {

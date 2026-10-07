@@ -74,9 +74,11 @@ enum Theme {
     }
 }
 
-/// A button that is on or off, in ``Theme`` colours: ``Theme/primary`` while
-/// on, a panel while off. Flat, like the icon. It replaces
-/// ``SelectableButtonStyle`` as screens move to the theme.
+/// A button that is on or off, in ``Theme`` colours: filled with
+/// ``Theme/primary`` while on, and only its label while off, for the glass
+/// it sits on (`glassBackground(in:interactive:)`). Flat, like
+/// the icon. It replaces ``SelectableButtonStyle`` as screens move to the
+/// theme.
 struct ThemeSelectableButtonStyle: ButtonStyle {
     let isActive: Bool
 
@@ -85,11 +87,24 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
         configuration.label
             .padding(.vertical, 4)
             .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
-            .background(isActive ? Theme.primary : Theme.panel, in: shape)
-            .overlay(shape.strokeBorder(isActive ? Color.clear : Theme.panelBorder, lineWidth: 1))
+            .background(isActive ? Theme.primary : Color.clear, in: shape)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .contentShape(shape)
+    }
+}
+
+extension View {
+    /// Glass behind this view, in `shape`, for the controls that float over
+    /// the map: Liquid Glass on iOS 26 and later (reacting to touches when
+    /// `interactive`), a material on earlier versions.
+    @ViewBuilder
+    func glassBackground(in shape: some Shape, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            glassEffect(.regular.interactive(interactive), in: shape)
+        } else {
+            background(.regularMaterial, in: shape)
+        }
     }
 }

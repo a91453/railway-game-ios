@@ -3,6 +3,13 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
+extension EnvironmentValues {
+    /// How much of the top of the map something floats over (a phone's
+    /// HUD, ``ContentView``): the map's own banners and keys start below
+    /// it. The map itself is drawn under it.
+    @Entry var mapTopInset: CGFloat = 0
+}
+
 /// A viewport-sized map. The camera and derived geometry are view state;
 /// taps still go through the session's ordinary world commands.
 struct MapView: View {
@@ -54,6 +61,8 @@ struct MapView: View {
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
+    /// What floats over the top of the map (``EnvironmentValues/mapTopInset``).
+    @Environment(\.mapTopInset) private var topInset
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -138,12 +147,12 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - 220)), y: max(8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - 220)), y: max(topInset + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
                             .allowsHitTesting(false)
                     }
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - 280)), y: max(8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - 280)), y: max(topInset + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -170,6 +179,7 @@ struct MapView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
+                    .padding(.top, topInset)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     VStack(alignment: .trailing, spacing: 8) {
@@ -437,7 +447,7 @@ struct MapView: View {
             Image(systemName: "map")
                 .font(.title3)
                 .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: Circle())
+                .glassBackground(in: Circle(), interactive: true)
         }
         .accessibilityLabel("Map Style")
         .accessibilityIdentifier("map.style")
@@ -450,7 +460,7 @@ struct MapView: View {
             Image(systemName: "square.3.layers.3d")
                 .font(.title3)
                 .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: Circle())
+                .glassBackground(in: Circle(), interactive: true)
         }
         .accessibilityLabel("Map Layers")
         .accessibilityIdentifier("map.layers")
@@ -481,7 +491,7 @@ struct MapView: View {
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)
-        .background(.regularMaterial, in: Capsule())
+        .glassBackground(in: Capsule(), interactive: true)
         .tutorialTarget(.zoomControls)
         .padding(12)
     }
@@ -541,7 +551,7 @@ private struct TrafficLegend: View {
             .font(.caption2.monospacedDigit().weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(.regularMaterial, in: Capsule())
+            .glassBackground(in: Capsule())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: summary))
             .accessibilityIdentifier("map.traffic")

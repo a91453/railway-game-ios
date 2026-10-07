@@ -6,7 +6,9 @@ import UniformTypeIdentifiers
 /// Cash (which opens the economy panel), game time, speed controls, the
 /// button that opens the lines panel and the game menu (Stage C4: save,
 /// export, back to the start screen). Everything shown is read from the
-/// world, so it updates as soon as a command or a tick changes it.
+/// world, so it updates as soon as a command or a tick changes it. Its
+/// controls have no backgrounds of their own: the bar it sits in is glass
+/// (`ContentView`).
 struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
@@ -98,11 +100,7 @@ struct HUDView: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Theme.primary)
                 .frame(width: 38, height: 32)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                )
+                .contentShape(Rectangle())
         }
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
@@ -124,10 +122,9 @@ struct HUDView: View {
                 Text(text)
                     .foregroundStyle(isNegative ? Theme.error : Theme.textPrimary)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 4)
             .padding(.vertical, 5)
-            .background(Theme.panel, in: Capsule())
-            .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Cash \(text)")
@@ -143,10 +140,8 @@ struct HUDView: View {
             Text(text)
                 .foregroundStyle(Theme.textPrimary)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 4)
         .padding(.vertical, 5)
-        .background(Theme.panel, in: Capsule())
-        .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
         .accessibilityLabel("Game time \(text)")
     }
 }
@@ -196,11 +191,7 @@ private struct SpeedControl: View {
                 }
                 .padding(.horizontal, 8)
                 .frame(minWidth: 48, minHeight: 32)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                )
+                .contentShape(Rectangle())
             }
             .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName(in: language))")
             .accessibilityHint("Chooses how fast game time runs.")
