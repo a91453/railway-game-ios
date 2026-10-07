@@ -13,6 +13,17 @@ extension ReferenceWorld {
     }
     struct StationMoveKey: Hashable { var service: Int; var visit: Int }
 
+    /// Where `service` sets off from visit `k` standing at `run`/`offset`:
+    /// turned round at a call marked to reverse, as `plannedVisits` drives it.
+    func departing(_ service: PlannedService, _ k: Int, _ run: Run, _ offset: Int64) -> (run: Run, offset: Int64) {
+        let visit = service.visits[k]
+        guard visit.call, service.train.timetable[visit.stop].reverses else { return (run, offset) }
+        let driver = turnedOnNetwork(standing(Train(id: service.train.id, name: service.train.name, position: .onEdge(run.traversal, offset: offset),
+                                                    cars: service.train.cars, performance: service.train.performance)))
+        guard case .onEdge(let traversal, let at)? = driver.position, let turned = Run(traversal) else { return (run, offset) }
+        return (turned, at)
+    }
+
     func stationMove(_ service: PlannedService, _ j: Int, _ run: Run, _ offset: Int64) -> StationMove? {
         let v = service.visits, length = Self.length(service.train)
         let position = TrainPosition.onEdge(run.traversal, offset: offset)
@@ -35,15 +46,16 @@ extension ReferenceWorld {
             distance += path.distance
         }
         if j > 0 {
-            let p = v[j - 1]
+            let p = departing(service, j - 1, v[j - 1].run, v[j - 1].offset)
             guard let incoming = prescribedStationRoute(service, v[j], start: .onEdge(p.run.traversal, offset: p.offset), run: run, offset: offset) ?? networkPathToStation(from: .onEdge(p.run.traversal, offset: p.offset), station: v[j].station,
                                                       length: length, only: (run, offset)) else { return nil }
             add(p.run, p.offset, incoming); normal += v[j].distance
         }
         if j < v.count - 1 {
-            let next = v[j + 1]
-            guard let outgoing = prescribedStationRoute(service, next, start: position, run: next.run, offset: next.offset) ?? networkPathToStation(from: position, station: next.station, length: length, only: (next.run, next.offset)) else { return nil }
-            add(run, offset, outgoing); normal += next.distance
+            let next = v[j + 1], leaving = departing(service, j, run, offset)
+            let start = TrainPosition.onEdge(leaving.run.traversal, offset: leaving.offset)
+            guard let outgoing = prescribedStationRoute(service, next, start: start, run: next.run, offset: next.offset) ?? networkPathToStation(from: start, station: next.station, length: length, only: (next.run, next.offset)) else { return nil }
+            add(leaving.run, leaving.offset, outgoing); normal += next.distance
         }
         return distance - normal <= 25_600 ? StationMove(run: run, offset: offset, body: body, route: route, directions: directions) : nil
     }
