@@ -363,31 +363,3 @@ private extension CLLocationCoordinate2D {
         self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
     }
 }
-
-extension RealRailways {
-    /// The app's copy of the `Railway/` site's files
-    /// (`Resources/RealRailways/`), read the first time it is needed (the
-    /// timetables only when one is asked for), with every file that could
-    /// not be read (`RealRailways.load(file:)`). Each such file is printed
-    /// once in debug builds and listed on the data sources screen.
-    static let bundledLoad: RealRailways.Loaded = {
-        let loaded = RealRailways.load { name, ext in
-            guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
-                throw RealRailways.ResourceError.missing("\(name).\(ext)")
-            }
-            return try Data(contentsOf: url)
-        }
-        #if DEBUG
-        for issue in loaded.issues {
-            print("RealRailways: could not read \(issue)")
-        }
-        #endif
-        return loaded
-    }()
-
-    /// The bundled railways; `nil` if the map files cannot be read
-    /// (`bundledLoad` says why).
-    static var bundled: RealRailways? {
-        bundledLoad.railways
-    }
-}

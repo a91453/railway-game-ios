@@ -219,7 +219,7 @@ struct MapView: View {
                         realWorld: realWorld,
                         camera: projection,
                         style: mapStyle,
-                        railways: RealRailways.bundled,
+                        railways: session.railways,
                         trackStyle: trackStyle,
                         language: session.language
                     )
@@ -415,7 +415,7 @@ struct MapView: View {
                         .tag(style)
                 }
             }
-            if RealRailways.bundled?.lines(near: realWorld.anchor, within: 16_000).isEmpty == false {
+            if session.railways?.lines(near: realWorld.anchor, within: 16_000).isEmpty == false {
                 Picker(selection: $trackStyle) {
                     ForEach(RealRailways.TrackStyle.allCases) { style in
                         Text(verbatim: style.name(in: session.language))

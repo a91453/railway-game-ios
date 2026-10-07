@@ -91,16 +91,26 @@ final class RealWorldMapUITests: XCTestCase {
     /// a menu or screen transition ends, and `ViewThatFits` can also expose
     /// an unplaced copy of a menu action, so `firstMatch` alone may not be
     /// hittable (the start and save flow's rule, `StartSaveFlowSmokeTests`).
+    /// It is waited for until enabled too: the start screen's real-world
+    /// buttons are disabled until the real-world data, read in the
+    /// background at launch, is there.
     private func tappable(_ query: XCUIElementQuery, name: String) -> XCUIElement {
         XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing button: \(name)")
         let deadline = Date().addingTimeInterval(10)
+        var disabled: XCUIElement?
         repeat {
             if let button = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
-                XCTAssertTrue(button.isEnabled, "Button is disabled: \(name)")
-                return button
+                if button.isEnabled {
+                    return button
+                }
+                disabled = button
             }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
+        if let disabled {
+            XCTFail("Button is disabled: \(name)")
+            return disabled
+        }
         XCTFail("Button cannot be tapped: \(name)")
         return query.firstMatch
     }

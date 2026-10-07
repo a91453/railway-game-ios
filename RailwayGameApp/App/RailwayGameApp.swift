@@ -29,9 +29,9 @@ struct RailwayGameApp: App {
 
     private static func makeLauncher() -> GameLauncher {
         let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
-        launcher.population = bundledPopulation()
-        launcher.places = bundledPlaces()
-        launcher.railways = RealRailways.bundled
+        // About 2.4 MB of JSON: decoded off the main thread, so the
+        // start screen shows at once; its real-world maps wait for it.
+        launcher.loadRealWorldData { RailwayGameApp.bundledRealWorldData() }
         #if DEBUG
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
@@ -47,24 +47,26 @@ struct RailwayGameApp: App {
         return launcher
     }
 
-    /// The app's population grid of Taiwan (`Resources/RealWorld/`), or
-    /// `nil` if it cannot be read: new stations then get the city's
-    /// ridership everywhere.
-    private static func bundledPopulation() -> PopulationGrid? {
-        guard let url = Bundle.main.url(forResource: "taiwan_population", withExtension: "json"),
-              let data = try? Data(contentsOf: url)
-        else { return nil }
-        return try? PopulationGrid(data: data)
-    }
-
-    /// The app's grid of OpenStreetMap's places in Taiwan
-    /// (`Resources/RealWorld/`), or `nil` if it cannot be read: new
-    /// stations then all serve homes.
-    private static func bundledPlaces() -> PlaceGrid? {
-        guard let url = Bundle.main.url(forResource: "taiwan_places", withExtension: "json"),
-              let data = try? Data(contentsOf: url)
-        else { return nil }
-        return try? PlaceGrid(data: data)
+    /// The app's real-world data (`Resources/RealWorld/` and
+    /// `Resources/RealRailways/`, the timetables only when one is asked
+    /// for). Each file that cannot be read is left out, printed once in
+    /// debug builds and listed on the data sources screen: without the
+    /// population grid new stations get the city's ridership everywhere,
+    /// without the places grid they all serve homes, and without the map
+    /// files there are no real railways.
+    private nonisolated static func bundledRealWorldData() -> RealWorldData {
+        let data = RealWorldData.load { name, ext in
+            guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
+                throw RealRailways.ResourceError.missing("\(name).\(ext)")
+            }
+            return try Data(contentsOf: url)
+        }
+        #if DEBUG
+        for issue in data.issues {
+            print("RealWorldData: could not read \(issue)")
+        }
+        #endif
+        return data
     }
 
     private static func makeSaveLibrary() -> SaveLibrary {

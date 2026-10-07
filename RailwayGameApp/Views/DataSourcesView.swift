@@ -6,8 +6,10 @@ import SwiftUI
 /// page: from the start screen, and from the map style menu of a real-world
 /// map.
 struct DataSourcesView: View {
-    let language: DisplayLanguage
+    let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
+
+    private var language: DisplayLanguage { launcher.language }
 
     var body: some View {
         NavigationStack {
@@ -43,8 +45,15 @@ struct DataSourcesView: View {
                 }
                 // The bundled data files that could not be read: shown so a
                 // broken file is seen rather than silently missing.
-                let issues = RealRailways.bundledLoad.issues + (RealRailways.bundled?.operations?.timetableIssues ?? [])
-                if !issues.isEmpty {
+                let issues = launcher.realWorldIssues + (launcher.railways?.operations?.timetableIssues ?? [])
+                if launcher.isLoadingRealWorldData {
+                    Section {
+                        ProgressView {
+                            Text(verbatim: language.text("Reading the real-world data…", "正在讀取實景資料…"))
+                                .font(.footnote)
+                        }
+                    }
+                } else if !issues.isEmpty {
                     Section {
                         ForEach(issues, id: \.self) { issue in
                             Text(verbatim: issue.description)

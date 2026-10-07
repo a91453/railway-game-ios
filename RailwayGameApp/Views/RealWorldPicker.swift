@@ -25,6 +25,9 @@ struct RealWorldPicker: View {
     @State private var middle: CLLocationCoordinate2D
     @State private var query = ""
     @State private var search = PlaceSearch()
+    /// Taiwan's real railways as the map draws them, made when the picker
+    /// appears (it opens once the launcher has read them).
+    @State private var railwayLines: [RailwayLineDrawing] = []
     @Environment(\.colorScheme) private var colorScheme
 
     init(launcher: GameLauncher) {
@@ -84,7 +87,7 @@ struct RealWorldPicker: View {
     /// Apple's map with the game's map drawn as a square round its middle.
     private var preview: some View {
         Map(position: $position) {
-            ForEach(Self.railwayLines) { line in
+            ForEach(railwayLines) { line in
                 MapPolyline(coordinates: line.coordinates)
                     .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
             }
@@ -94,6 +97,11 @@ struct RealWorldPicker: View {
                 .stroke(Palette.station, lineWidth: 2)
         }
         .mapStyle(.standard(emphasis: .muted))
+        .onAppear {
+            if railwayLines.isEmpty {
+                railwayLines = (launcher.railways?.lines ?? []).map(RailwayLineDrawing.init)
+            }
+        }
         .onMapCameraChange(frequency: .continuous) { context in
             middle = context.region.center
         }
@@ -109,7 +117,7 @@ struct RealWorldPicker: View {
 
     private var places: some View {
         List {
-            let stations = RealRailways.bundled?.stations(matching: query) ?? []
+            let stations = launcher.railways?.stations(matching: query) ?? []
             if !stations.isEmpty {
                 Section("Railway Stations") {
                     ForEach(stations.prefix(50)) { station in
@@ -166,7 +174,7 @@ struct RealWorldPicker: View {
                 } header: {
                     Text(verbatim: region.name(in: launcher.language))
                 }
-                if region == .taiwan, let railways = RealRailways.bundled {
+                if region == .taiwan, let railways = launcher.railways {
                     Section {
                         ForEach(RealRailways.System.all) { system in
                             let stations = railways.stations.filter { $0.system == system }
@@ -251,9 +259,6 @@ struct RealWorldPicker: View {
 
     /// How far a new game's map reaches from its middle, in metres.
     private static let newMapHalfExtent = RealWorldFrame.halfExtent(of: GameWorld.newGameBounds)
-
-    /// Taiwan's real railways as the map draws them, made once.
-    private static let railwayLines: [RailwayLineDrawing] = (RealRailways.bundled?.lines ?? []).map(RailwayLineDrawing.init)
 }
 
 /// A line of Taiwan's real railways on the picker's map: the line's own

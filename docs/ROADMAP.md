@@ -879,7 +879,7 @@ E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立�
 | ✅ 已修（#171） | #120/#131 | `preferredGoingOn` 在盡頭式待避軌不先翻向；獨立模型的 `goOn` 會先依 `passingExit` 翻向再套用路線偏好。 | 建場景時發現更根本的問題：線路對自己唯一的那台車也保護計畫（決策 57 (b)），單線來回的線路列車在死結時連倒入待避線都被自己的去程方向禁止，永遠解不開。改為只對候選車以外的已放置列車保護（GameCore 與獨立模型同步，決策 57 更新）；`preferredGoingOn` 依 `passingContinuation` 翻向。附逐步比對獨立模型的測試（main 上兩車永久死結）。 | — |
 | ✅ 已修（#171） | #142 | 轉乘專用站的「留下」計數在紀錄刪除時歸零。 | `isEmpty` 納入 `refused`，解碼器接受只有留下計數的紀錄；附測試（main 上 7283 歸零）。 | — |
 | ✅ 防護性修正（#171） | #120 | 自動出發為「到站」（距離 0）但路線偏好讓列車出發時，離站距離記為 0（影響管理模式的列車行駛距離，不是票價）。 | 目前觸發不到（需兩站月台重疊，`addTrackPlatform` 不允許）；改為依列車實際是否出發計距離，所有可達情況結果不變，避免日後共用月台等功能讓它變成真的 bug。 | — |
-| 部分已修（#171） | #143/#147 | 啟動時在主執行緒同步解碼約 2 MB 實景 JSON；`tra_overtake_tracks.json` 解碼失敗會丟掉整個 `stationData`。 | `tra_overtake_tracks.json` 改為單獨解碼，失敗只列為該檔的問題（已修，附測試）。主執行緒載入是效能問題，改動啟動順序需在 macOS／實機驗證，等實景資料再增加、先量測後再做。 | 1–2 小時 |
+| ✅ 已修（#171、1a ②） | #143/#147 | 啟動時在主執行緒同步解碼約 2 MB 實景 JSON；`tra_overtake_tracks.json` 解碼失敗會丟掉整個 `stationData`。 | `tra_overtake_tracks.json` 改為單獨解碼，失敗只列為該檔的問題（#171，附測試）。1a ②：啟動時讀的 22 個檔（約 2.4 MB，含 6a 起的人口、地點格）改在背景解碼（`GameLauncher.loadRealWorldData`／`RealWorldData.load`），一次交回 MainActor；讀好前「實景地圖」「實景示範」按鈕停用並顯示讀取中，空白模式不等；人口、地點格讀不到也列在資料來源畫面。Linux 量測（release）約 160 ms。啟動速度 UNVERIFIED，留給 macOS CI 與實機 TestFlight。 | — |
 | ✅ 已修（#171） | #124/#129 | 緯度 ±90° 的錨點讓 `GridCounts.cell` 溢位當機；`build_place_grid.py` 不拒絕帶 `remark` 錯誤的 Overpass 回應。 | `cell` 對非數字或遠在格外的座標回傳格外的空格，不再當機（附測試，main 上會當機）；工具拒絕帶錯誤 `remark` 或筆數少於 `out count` 的回應，不寫入快取。 | — |
 
 修正分組（哪些要一起修）：

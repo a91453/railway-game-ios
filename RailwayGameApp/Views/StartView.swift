@@ -48,14 +48,18 @@ struct StartView: View {
                     }
                     // Stable across localizations for the UI smoke tests.
                     .accessibilityIdentifier("start.newGame")
+                    // The real-world maps wait for the real-world data,
+                    // read in the background at launch: a game started
+                    // before it is would have no people on its map.
                     StartButton(
                         title: String(localized: "Real-World Map"),
-                        detail: String(localized: "Build on a map of a real place"),
+                        detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Build on a map of a real place"),
                         systemImage: "globe.asia.australia",
                         accentColor: Palette.metroCyan
                     ) {
                         choosesPlace = true
                     }
+                    .disabled(launcher.isLoadingRealWorldData)
                     .accessibilityIdentifier("start.realWorld")
                     StartButton(
                         title: String(localized: "Tutorial"),
@@ -98,14 +102,17 @@ struct StartView: View {
                     // they were.
                     StartButton(
                         title: String(localized: "Real-World Demo"),
-                        detail: String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
+                        detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
                         systemImage: "map.fill",
                         accentColor: Palette.metroCyan
                     ) {
-                        if let railways = RealRailways.bundled {
+                        if let railways = launcher.railways {
                             launcher.openRealWorldDemo(railways: railways)
                         }
                     }
+                    // Without the railways' files (listed on the data
+                    // sources screen) there is no demo to open.
+                    .disabled(launcher.railways == nil)
                     .accessibilityIdentifier("start.realWorldDemo")
                 }
                 if let message = launcher.message {
@@ -156,7 +163,7 @@ struct StartView: View {
             RealWorldPicker(launcher: launcher)
         }
         .sheet(isPresented: $showsDataSources) {
-            DataSourcesView(language: launcher.language)
+            DataSourcesView(launcher: launcher)
         }
         .fileImporter(isPresented: $importsSave, allowedContentTypes: [.json]) { result in
             launcher.importSave {
@@ -202,6 +209,11 @@ struct StartView: View {
                 .padding(.horizontal, 16)
         }
         .padding(.bottom, 8)
+    }
+
+    /// What a real-world button says while the real-world data is read.
+    private var loadingDetail: String {
+        launcher.language.text("Reading the real-world data…", "正在讀取實景資料…")
     }
 
     /// A small capsule under the start buttons.
@@ -285,10 +297,12 @@ private struct StartButton: View {
 }
 
 private struct CardTapButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1.0) : 0.5)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }

@@ -35,20 +35,31 @@ public final class GameLauncher {
 
     /// Who lives where on real-world maps in Taiwan, handed to every game
     /// it starts (``GameSession/population``); `nil` without the app's
-    /// bundled grid.
-    @ObservationIgnored public var population: PopulationGrid?
+    /// bundled grid, or while it is read (``isLoadingRealWorldData``).
+    public var population: PopulationGrid?
 
     /// What there is around places on real-world maps in Taiwan, handed to
     /// every game it starts (``GameSession/places``).
-    @ObservationIgnored public var places: PlaceGrid?
+    public var places: PlaceGrid?
 
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
-    @ObservationIgnored public var railways: RealRailways?
+    public var railways: RealRailways?
+
+    /// Whether the app's real-world data is being read
+    /// (``loadRealWorldData(reading:)``). Until it has been, ``population``,
+    /// ``places`` and ``railways`` are `nil`, and the start screen's
+    /// real-world maps wait for them.
+    public private(set) var isLoadingRealWorldData = false
+
+    /// The real-world files that could not be read, and why
+    /// (``RealWorldData/issues``); empty until they have been read.
+    public private(set) var realWorldIssues: [RealDataLoadIssue] = []
 
     @ObservationIgnored let library: SaveLibrary
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
+    @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
 
     public init(library: SaveLibrary, language: DisplayLanguage) {
         self.library = library
@@ -175,6 +186,39 @@ public final class GameLauncher {
         return true
     }
 
+    // MARK: - Real-world data
+
+    /// Reads the real-world data with `read` off the main actor, so the
+    /// start screen shows at once, then hands it to this launcher and to
+    /// the game being played, if any (one continued or started while it was
+    /// read). ``isLoadingRealWorldData`` is `true` until then, and nothing
+    /// sees part of the data: it arrives all at once. Reads once; a second
+    /// call returns the first one's task.
+    @discardableResult
+    public func loadRealWorldData(reading read: @escaping @Sendable () -> RealWorldData) -> Task<Void, Never> {
+        if let realWorldLoad { return realWorldLoad }
+        isLoadingRealWorldData = true
+        let load = Task {
+            let data = await Task.detached(priority: .userInitiated, operation: read).value
+            self.install(data)
+        }
+        realWorldLoad = load
+        return load
+    }
+
+    private func install(_ data: RealWorldData) {
+        population = data.population
+        places = data.places
+        railways = data.railways
+        realWorldIssues = data.issues
+        if let session {
+            session.population = population
+            session.places = places
+            session.railways = railways
+        }
+        isLoadingRealWorldData = false
+    }
+
     // MARK: - Saving
 
     /// Saves the game being played as a new save of the player's own,
@@ -253,5 +297,44 @@ public final class GameLauncher {
             session?.stopGameLoop()
             autosaveCurrentGame()
         }
+    }
+}
+
+/// The real-world data the app bundles: who lives where in Taiwan, what
+/// there is around places there, and its real railways. Each is `nil` when
+/// its files cannot be read, and listed in ``issues``.
+public struct RealWorldData: Sendable {
+    public let population: PopulationGrid?
+    public let places: PlaceGrid?
+    public let railways: RealRailways?
+    /// The files that could not be read, and why: the grids' and the
+    /// railways' (``RealRailways/Loaded/issues``).
+    public let issues: [RealDataLoadIssue]
+
+    public init(population: PopulationGrid?, places: PlaceGrid?, railways: RealRailways?, issues: [RealDataLoadIssue]) {
+        self.population = population
+        self.places = places
+        self.railways = railways
+        self.issues = issues
+    }
+
+    /// Reads `taiwan_population.json`, `taiwan_places.json` and the
+    /// railways' files (``RealRailways/load(file:)``) through `file` (a name
+    /// and extension to its contents). About 2.4 MB of JSON is
+    /// decoded: call it off the main actor.
+    public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
+        var issues: [RealDataLoadIssue] = []
+        func grid<Grid>(_ name: String, _ make: (Data) throws -> Grid) -> Grid? {
+            do {
+                return try make(file(name, "json"))
+            } catch {
+                issues.append(RealDataLoadIssue(file: "\(name).json", error: error))
+                return nil
+            }
+        }
+        let population = grid("taiwan_population", PopulationGrid.init(data:))
+        let places = grid("taiwan_places", PlaceGrid.init(data:))
+        let railways = RealRailways.load(file: file)
+        return RealWorldData(population: population, places: places, railways: railways.railways, issues: issues + railways.issues)
     }
 }
