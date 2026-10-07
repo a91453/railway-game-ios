@@ -33,8 +33,8 @@ struct ControlPanel: View {
 }
 
 /// One button per tool the app offers (Stage F1: the track network only),
-/// in a row. The active tool is filled, the others outlined, so the state
-/// does not depend on colour alone.
+/// in a row. The active tool is filled and its name bold, so the state does
+/// not depend on colour alone.
 private struct ToolPicker: View {
     let session: GameSession
 
@@ -47,7 +47,7 @@ private struct ToolPicker: View {
                 } label: {
                     label(for: tool, isActive: isActive)
                 }
-                .buttonStyle(SelectableButtonStyle(isActive: isActive))
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
                 // Stable across localizations for screenshot-only UI tests.
                 .accessibilityIdentifier("tool.\(tool)")
@@ -56,10 +56,9 @@ private struct ToolPicker: View {
             }
         }
         .padding(3)
-        .background(Palette.chipBackground, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
     }
 
@@ -88,7 +87,7 @@ private struct ToolOptions: View {
         case .select:
             Label("Choose Network to build track, platforms and stations. Selecting only inspects.", systemImage: "info.circle")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
         case .network:
             NetworkControls(session: session)
         case .train:
@@ -119,17 +118,7 @@ private struct ActionButton: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(isRemoval ? Palette.metroRed : Palette.metroBlue)
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .shadow(
-                color: isReady
-                    ? (isRemoval ? Palette.metroRed.opacity(0.3) : Palette.metroBlue.opacity(0.3))
-                    : Color.clear,
-                radius: 6,
-                x: 0,
-                y: 3
-            )
+            .buttonStyle(ThemeProminentButtonStyle(isDestructive: isRemoval))
             .disabled(!isReady)
             .accessibilityHint(hint)
             .tutorialTarget(.actionButton)
@@ -214,7 +203,7 @@ struct StatusBanner: View {
     private func banner(for message: StatusMessage) -> some View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
-        let tintColor = isSuccess ? Palette.metroGreen : Palette.metroAmber
+        let tintColor = isSuccess ? Theme.success : Theme.warning
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.subheadline.weight(.bold))
@@ -222,6 +211,7 @@ struct StatusBanner: View {
                 .accessibilityLabel(kindName)
             Text(message.text)
                 .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Button {
@@ -230,20 +220,19 @@ struct StatusBanner: View {
                 Image(systemName: "xmark")
                     .font(.caption.weight(.bold))
                     .frame(width: 26, height: 26)
-                    .background(Palette.chipBackground, in: Circle())
+                    .background(Theme.panelBorder, in: Circle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.textSecondary)
             .accessibilityLabel("Dismiss message")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(tintColor.opacity(0.4), lineWidth: 1)
+                .strokeBorder(tintColor.opacity(0.5), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 3)
         .accessibilityElement(children: .contain)
         .padding(10)
     }
