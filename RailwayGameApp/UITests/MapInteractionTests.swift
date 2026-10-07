@@ -259,7 +259,9 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(value.contains(end), "Legend must expose the gradient's end \(end); value: \(value)")
         }
         app.buttons["Close population legend"].tap()
-        XCTAssertFalse(legend.exists)
+        // The legend leaves with a transition (glass on iOS 26), which the
+        // idle wait does not always cover: wait for it to go.
+        XCTAssertTrue(legend.waitForNonExistence(timeout: 5), "Closing the legend must remove it")
     }
 
     /// Phase 6d (ARCHITECTURE decision 76): the land value layer shows its

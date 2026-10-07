@@ -179,9 +179,27 @@ struct ContentView: View {
             // A new game is a new map view: its cached track geometry
             // belongs to the world it was drawn from.
             .id(ObjectIdentifier(session))
-            .tutorialTarget(.map)
+            // The tutorial outlines, and keeps free, the part of the map that
+            // shows: not what the HUD or the control card float over.
+            .overlay {
+                MapTutorialTarget()
+            }
             // The status banner is at the top of the map view, above its
             // construction HUD and traffic key.
+    }
+}
+
+/// The part of the map the screen's own controls do not float over
+/// (``EnvironmentValues/mapInsets``), marked as the tutorial's map.
+private struct MapTutorialTarget: View {
+    @Environment(\.mapInsets) private var insets
+
+    var body: some View {
+        Color.clear
+            .padding(insets)
+            .tutorialTarget(.map)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 
