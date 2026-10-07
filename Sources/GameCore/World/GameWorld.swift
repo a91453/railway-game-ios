@@ -336,7 +336,8 @@ public struct GameWorld: Equatable, Sendable {
     /// at the new node and the edges the old one joined at its ends, and a
     /// platform on the edge moves to the part it lies on, at the same
     /// distances from the edge's `from` node (the second part's less the
-    /// first part's length).
+    /// first part's length); one that would end past its part's rounded
+    /// end moves back to end there, its length kept.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
     ///   ``GameError/invalidTrackGeometry`` for an edge that is not level
