@@ -30,11 +30,6 @@ final class TutorialUITests: XCTestCase {
         start.tap()
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10))
-        // Pause through the real HUD: at 600× the clock re-renders the
-        // control panel continuously, which slowed every accessibility
-        // query and once dropped Build Track's press (run 37554617441: the
-        // button highlighted, its action never ran).
-        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))).tap()
         checkToolIsUncovered(app, identifier: "tool.network")
         app.buttons["tool.network"].tap()
         waitForEnabled(app, true)
@@ -69,8 +64,9 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(card.frame.intersects(build.frame), "The tutorial card covers Build Track")
         let label = build.label
         build.tap()
-        // A press can still be dropped on a loaded runner: tap once more
-        // only while nothing was built (a built track disables the button).
+        // A press can be dropped on a loaded runner (run 37554617441: the
+        // button highlighted, its action never ran): tap once more only
+        // while nothing was built (a built track disables the button).
         let built = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Built ")).firstMatch
         if !built.waitForExistence(timeout: 10) {
             let again = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
