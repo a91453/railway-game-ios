@@ -2,17 +2,15 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// Tool picker, selection inspector, tool options and the action button.
+/// Tool picker, selection inspector, tool options and the action button,
+/// in two parts: the tool picker, always shown, and the details under it,
+/// which the screen can fold away (``ContentView``).
 struct ControlPanel: View {
     enum Arrangement {
-        /// Everything in one column (the sidebar on wide screens).
-        case column
-        /// Tools and action on the left, options on the right (iPad portrait).
-        case sideBySide
-        /// The tool picker alone: the top of a phone's control drawer.
+        /// The tool picker alone.
         case tools
-        /// The column without the tool picker: what a phone's control
-        /// drawer shows under it when open.
+        /// The selection inspector, the tool's options and the action
+        /// button, in one column.
         case details
     }
 
@@ -21,31 +19,6 @@ struct ControlPanel: View {
 
     var body: some View {
         switch arrangement {
-        case .column:
-            VStack(alignment: .leading, spacing: 12) {
-                ToolPicker(session: session)
-                InspectorView(session: session)
-                ToolOptions(session: session)
-                    .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
-                ActionButton(session: session)
-            }
-        case .sideBySide:
-            HStack(alignment: .top, spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
-                    ToolPicker(session: session, showsDetails: true)
-                    InspectorView(session: session)
-                    ActionButton(session: session)
-                }
-                .frame(maxWidth: 360)
-                Divider()
-                VStack(alignment: .leading, spacing: 16) {
-                    ToolOptions(session: session)
-                        .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
-                    Divider()
-                    NetworkOverview(session: session)
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
         case .tools:
             ToolPicker(session: session)
         case .details:
@@ -60,28 +33,19 @@ struct ControlPanel: View {
 }
 
 /// One button per tool the app offers (Stage F1: the track network only),
-/// a row of compact buttons, or a list with what each tool costs where
-/// there is room. The active tool is filled, the others outlined, so the
-/// state does not depend on colour alone.
+/// in a row. The active tool is filled, the others outlined, so the state
+/// does not depend on colour alone.
 private struct ToolPicker: View {
     let session: GameSession
-    var showsDetails = false
 
     var body: some View {
-        let layout = showsDetails
-            ? AnyLayout(VStackLayout(spacing: 6))
-            : AnyLayout(HStackLayout(spacing: 6))
-        layout {
+        HStack(spacing: 6) {
             ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
                 Button {
                     session.selectTool(tool)
                 } label: {
-                    if showsDetails {
-                        detailedLabel(for: tool, isActive: isActive)
-                    } else {
-                        compactLabel(for: tool, isActive: isActive)
-                    }
+                    label(for: tool, isActive: isActive)
                 }
                 .buttonStyle(SelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
@@ -99,7 +63,7 @@ private struct ToolPicker: View {
         )
     }
 
-    private func compactLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
+    private func label(for tool: ConstructionTool, isActive: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: tool.systemImage)
                 .font(.subheadline.weight(.semibold))
@@ -109,37 +73,6 @@ private struct ToolPicker: View {
                 .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, minHeight: 38)
-    }
-
-    private func detailedLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isActive ? Color.white.opacity(0.2) : Palette.chipBackground)
-                    .frame(width: 34, height: 34)
-                Image(systemName: tool.systemImage)
-                    .font(.body.weight(.semibold))
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tool.title(in: session.language))
-                    .font(.subheadline.weight(isActive ? .bold : .semibold))
-                Text(detail(for: tool))
-                    .font(.caption)
-                    .opacity(0.8)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
-    }
-
-    private func detail(for tool: ConstructionTool) -> String {
-        let costs = session.world.economy.costs
-        switch tool {
-        case .select: return String(localized: "Inspect stations and track")
-        case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
-        case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
-        }
     }
 }
 

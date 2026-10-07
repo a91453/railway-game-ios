@@ -4,10 +4,11 @@ import SwiftUI
 import UIKit
 
 extension EnvironmentValues {
-    /// How much of the top of the map something floats over (a phone's
-    /// HUD, ``ContentView``): the map's own banners and keys start below
-    /// it. The map itself is drawn under it.
-    @Entry var mapTopInset: CGFloat = 0
+    /// How much of each edge of the map the screen's own controls float
+    /// over (``ContentView``: a phone's HUD at the top, the control card
+    /// at the trailing side): the map's banners, keys and buttons keep
+    /// clear of them. The map itself is drawn under them.
+    @Entry var mapInsets = EdgeInsets()
 }
 
 /// A viewport-sized map. The camera and derived geometry are view state;
@@ -61,8 +62,8 @@ struct MapView: View {
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
-    /// What floats over the top of the map (``EnvironmentValues/mapTopInset``).
-    @Environment(\.mapTopInset) private var topInset
+    /// What floats over the map (``EnvironmentValues/mapInsets``).
+    @Environment(\.mapInsets) private var insets
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -147,12 +148,12 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - 220)), y: max(topInset + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
                             .allowsHitTesting(false)
                     }
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - 280)), y: max(topInset + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -179,7 +180,8 @@ struct MapView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    .padding(.top, topInset)
+                    .padding(.top, insets.top)
+                    .padding(.trailing, insets.trailing)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     VStack(alignment: .trailing, spacing: 8) {
@@ -202,6 +204,7 @@ struct MapView: View {
                         zoomControls(camera: projection)
                     }
                     .padding(12)
+                    .padding(.trailing, insets.trailing)
                 }
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 8) {

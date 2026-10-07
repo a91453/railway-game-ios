@@ -1062,16 +1062,6 @@
         }
       }
     },
-    "Inspect stations and track" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "檢視車站與軌道"
-          }
-        }
-      }
-    },
     "Language" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1498,16 +1488,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把 %@ 放在這裡"
-          }
-        }
-      }
-    },
-    "Place and send trains · %@ each" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "放置與派送列車 · 每列 %@"
           }
         }
       }
@@ -2328,16 +2308,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "路網工具"
-          }
-        }
-      }
-    },
-    "Track, platforms and stations · %@ per 16 m" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "軌道、月台與車站 · 每 16 公尺 %@"
           }
         }
       }
