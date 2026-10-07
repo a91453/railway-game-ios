@@ -101,6 +101,9 @@ enum ReplayState {
         }
         // Phase 6a: only a world with land writes it, so the recordings
         // made before it keep their checksums.
+        if world.landDemand {
+            line("landDemand")
+        }
         for cell in world.land.cells {
             line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
         }

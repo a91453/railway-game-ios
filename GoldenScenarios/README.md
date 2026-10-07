@@ -174,6 +174,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setPassengerRoutingMode`（schema 35） | `mode`（`"direct"` 或 `"network"`） | `setPassengerRoutingMode(_:)` |
 | `setStationOperationMode`（schema 35） | `station`、`mode`（`"normalFlow"`、`"flowControl"` 或 `"closed"`） | `setStationOperationMode(_:to:)` |
 | `foundTowns`（schema 36） | `seed`（0…4294967295） | `foundTowns(seed:)` |
+| `setLandDemand`（schema 36） | `enabled`（布林值） | `setLandDemand(_:)` |
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"` | `setLand(_:)` |
 
 ### 結果（`expect.result`）
@@ -226,6 +227,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trackReserved` | `train` | 交通控制開啟時，這台列車（編號最小的一台）持有指令需要的軌道：新的路或放置要取得的預約範圍，或要拆除、改變的鐵軌（schema 19） |
 | `trainsShareTrack` | `trains`（`[a, b]`） | 開啟交通控制時，兩台列車需要同一段軌道：`b` 是依 ID 第一台與前面某台相交的列車，`a` 是與它相交的最小編號（schema 19） |
 | `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
+| `stationDemandFromLand` | — | 土地決定經營模式的客流時不能設定車站的需求（schema 36，決策 73） |
 | `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
@@ -416,6 +418,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `riders`（schema 21）：每台載客的列車，依列車 ID 遞增：`{ "train", "groups": [車上的一組, ...] }`。沒有列車載客時是 `[]`。
 - `accounts`（schema 22）：帳（形式見上面「經營」）。從未經營、也沒有設定票價時是 `{ "mode": "free", "fareRules": null, "openedAt": null, "pending": 全部是 0, "ledger": [], "days": [] }`。
 - `land`（schema 36，選填）：`{ "cells", "residents", "jobs" }`，土地列出的格數與全部的居民、就業；沒有土地時不寫。
+- `landDemand`（schema 36，選填）：土地需求開啟時是 `true`；關閉時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -608,3 +611,5 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `foundTowns`、`setLand`，新結果 `invalidLand`，新觀察 `landCatchment`、`landCell`，最終狀態選填的 `land`（ARCHITECTURE 決策 72）。沒有土地的世界不寫 `land`，舊的 fixture 不必改，schema 30 到 35 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
 - `land-towns.json`：32 × 24 格（2048 × 1536 m）的世界，先以 `setLand` 驗證順序不拘、世界外與重複的格被拒絕且土地不變，再以種子 1 建立城鎮（只有第一座落在這個世界裡）。每一格的居民、就業與 800 m 腹地的總數都依規則手算，並另以獨立的 Python 實作（含 FNV-1a 抽籤）核對；`LandTests` 另有一份逐格重算的參考實作。`ReferenceWorld` 沒有土地，所以 `ReferenceWorldGoldenTests` 跳過用到土地的 fixture。
+- `land-demand.json`（決策 73）：三格土地與三站，經營模式。開啟土地需求之前車站沒有需求；開啟後 West 單獨分到住宅與辦公兩格，之後蓋的 Annex 依距離權重 1000 與 975 以最大餘數法分走一部分，Market 單獨分到商店格；土地決定客流時設定需求被拒絕（`stationDemandFromLand`），自由模式可以設定，切回經營模式時土地重新決定。每個數值都手算，並另以獨立的 Python 實作核對。
+- `land-towns.json` 的城鎮數值是決策 73 加倍後的密度（中心格 260 人）；這份 fixture 和密度的改變在同一個尚未合併的 PR 裡。

@@ -81,12 +81,15 @@ extension GameWorld {
     /// Passengers already waiting stay: a new demand changes only the trips
     /// released from now on (see ``advance(ticks:)``).
     ///
-    /// - Throws, checked in this order: ``GameError/unknownStation(_:)`` or
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``,
     ///   ``GameError/invalidStationDemand`` for daily trips outside
-    ///   `0...StationDemand.maximumDailyTrips`.
+    ///   `0...StationDemand.maximumDailyTrips`, or
+    ///   ``GameError/stationDemandFromLand`` while the land sets a managed
+    ///   company's ridership (Phase 6b).
     public mutating func setStationDemand(_ id: StationID, to demand: StationDemand?) throws(GameError) {
         guard station(id: id) != nil else { throw .unknownStation(id) }
         guard demand?.isValid ?? true else { throw .invalidStationDemand }
+        guard !drawsDemandFromLand else { throw .stationDemandFromLand }
         passengerPlan = PassengerPlanCache()
         // Town growth (item 5) starts again from the demand set here: the
         // old start would pull it back, and its growth would be out of

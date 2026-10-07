@@ -89,12 +89,15 @@ public final class GameLauncher {
         begin(RealWorldDemo.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor)), keepingAutosave: true)
     }
 
-    /// The people of a new game's map with its middle at `anchor`
-    /// (Phase 6a, ``LandImport``), or `nil` without the app's population
-    /// or where no one in it lives.
+    /// The people and jobs of a new game's map with its middle at `anchor`
+    /// (Phase 6a–6b, ``LandImport``), or `nil` without the app's population
+    /// or where no one in it lives or works.
     func land(at anchor: GeoAnchor) -> [LandCell]? {
         population.flatMap {
-            LandImport.cells(population: $0, frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds)
+            LandImport.cells(
+                population: $0, places: places,
+                frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds
+            )
         }
     }
 

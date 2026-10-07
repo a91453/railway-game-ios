@@ -585,9 +585,10 @@ final class SavedGameTests: XCTestCase {
     }
 
     /// Version 12 (Phase 6a, ARCHITECTURE decision 72): the world's land.
-    /// The save holds the first town of seed 1 in a world 32 × 24 cells,
-    /// keeps it byte for byte when saved again, and runs on; older saves
-    /// have no land.
+    /// The save holds a town round the middle of a world 32 × 24 cells (the
+    /// first town of seed 1 as Phase 6a first drew it, at half the density
+    /// 6b settled on), keeps it byte for byte when saved again, and runs on;
+    /// older saves have no land.
     func testVersionTwelveKeepsItsLand() throws {
         let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v12-land-towns.json"))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -595,16 +596,37 @@ final class SavedGameTests: XCTestCase {
         var world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world.land.cells.count, 437)
         XCTAssertEqual(world.land.totals, LandTotals(residents: 24_984, jobs: 16_614))
-        XCTAssertEqual(world.land, Land.towns(seed: 1, in: world.bounds))
+        XCTAssertFalse(world.landDemand, "the stations keep their own ridership")
         XCTAssertEqual(world.landCatchment(of: StationID(rawValue: 2)), LandTotals(residents: 24_984, jobs: 16_614))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        let land = world.land
         try world.advance(ticks: 60)
-        XCTAssertEqual(world.land, Land.towns(seed: 1, in: world.bounds), "nothing changes land yet")
+        XCTAssertEqual(world.land, land, "without demand from land, nothing changes it")
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v11-network-transfer.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.land.isEmpty)
+    }
+
+    /// Version 12 with demand from land (Phase 6b, ARCHITECTURE decision
+    /// 73): a served line through a town after two days and ten hours. The
+    /// land has grown (four new cells) and set the stations' ridership; the
+    /// save keeps it byte for byte, and the land goes on growing.
+    func testVersionTwelveKeepsDemandFromLand() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v12-land-demand.json"))
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertTrue(world.landDemand)
+        XCTAssertEqual(world.land.cells.count, 441)
+        XCTAssertEqual(world.land.totals, LandTotals(residents: 51_256, jobs: 33_979))
+        for station in world.stations {
+            XCTAssertEqual(world.stationDemand(of: station.id), LandDemand.shares(of: world.land, among: world.stations)[station.id]?.demand)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        try world.advance(ticks: 1_440)
+        XCTAssertGreaterThan(world.land.totals.residents, 51_256)
     }
 
 }

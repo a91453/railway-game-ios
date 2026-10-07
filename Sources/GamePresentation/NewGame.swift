@@ -58,6 +58,9 @@ extension GameWorld {
             } else {
                 world.foundTowns(seed: eventSeed)
             }
+            // Phase 6b: its stations draw their ridership from it, and it
+            // grows round the well-served ones.
+            world.setLandDemand(true)
             return world
         } catch {
             // An empty world has no trains to share track, and land comes
@@ -138,6 +141,10 @@ public enum DemoWorld {
     private static let reach: Int64 = 9
 
     private static func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
+        // The demo's stations keep the ridership it gives them (below), so
+        // what it shows does not depend on the towns; its land is there to
+        // see (Phase 6b).
+        world.setLandDemand(false)
         let platform = Int64(cars) * Train.carLength
         let ringPlatform = Int64(ringCars) * Train.carLength
         // Central, the middle of the world: the demo is built around it.

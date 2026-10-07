@@ -91,6 +91,36 @@ final class LandImportTests: XCTestCase {
         XCTAssertLessThan(cells.reduce(0) { $0 + $1.residents }, Int64(touched.reduce(0) { $0 + $1.count }))
     }
 
+    private static func bundledPlaces() throws -> PlaceGrid {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return try PlaceGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_places.json")))
+    }
+
+    /// Phase 6b: the places round a real-world map become its jobs, and a
+    /// station there takes the ridership of its share of the land.
+    func testTheirPlacesBecomeJobsAndAStationTakesItsShare() throws {
+        let grid = try Self.bundled()
+        let places = try Self.bundledPlaces()
+        // Taiwan's places make some 8.6 million jobs.
+        let jobs = PlaceGrid.Kind.allCases.reduce(Int64(0)) { $0 + Int64(places.total(of: $1)) * (LandImport.jobsPerPlace[$1] ?? 0) }
+        XCTAssertEqual(jobs, 8_561_200)
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: Self.taipei.latitude, longitudeDegrees: Self.taipei.longitude))
+        let cells = try XCTUnwrap(LandImport.cells(population: grid, places: places, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds))
+        let without = try XCTUnwrap(LandImport.cells(population: grid, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds))
+        var world = GameWorld.newGame(anchor: anchor, land: cells)
+        XCTAssertEqual(world.land.totals.residents, without.reduce(0) { $0 + $1.residents }, "the same people")
+        XCTAssertTrue((1_500_000 ... 3_000_000).contains(world.land.totals.jobs), "\(world.land.totals.jobs) jobs round Taipei")
+        XCTAssertEqual(Set(cells.map(\.use)), Set(LandUse.allCases), "homes, shops and offices")
+        // Taipei Main Station: an office station, its ridership its share.
+        let station = try world.buildStation(named: "Taipei", at: PlanPoint(x: 524_288, y: 524_288)).id
+        let demand = try XCTUnwrap(world.stationDemand(of: station))
+        XCTAssertEqual(demand.kind, .office)
+        XCTAssertEqual(demand, LandDemand.shares(of: world.land, among: world.stations)[station]?.demand)
+    }
+
     func testNoOneThereIsNoLand() throws {
         let grid = try Self.bundled()
         let tokyo = try XCTUnwrap(GeoAnchor(latitudeDegrees: 35.681_2, longitudeDegrees: 139.767_1))
@@ -143,8 +173,8 @@ final class LandImportTests: XCTestCase {
     func testTheStationPanelSaysWhoLivesAndWorksNearBy() throws {
         var world = GameWorld.newGame()
         let station = try world.buildStation(named: "Middle", at: PlanPoint(x: 524_288, y: 524_288)).id
-        XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 24,984 residents · 16,614 jobs")
-        XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 24,984 人 · 就業 16,614 個")
+        XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 50,189 residents · 33,276 jobs")
+        XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 50,189 人 · 就業 33,276 個")
         XCTAssertNil(world.landCatchmentText(of: StationID(rawValue: 99), in: .english))
         try world.setLand([])
         XCTAssertNil(world.landCatchmentText(of: station, in: .english), "no land, no line")

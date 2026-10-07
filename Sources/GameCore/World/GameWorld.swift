@@ -77,6 +77,11 @@ public struct GameWorld: Equatable, Sendable {
     /// map's people. No rule reads it yet. Set by ``setLand(_:)`` and
     /// ``foundTowns(seed:)`` only.
     public internal(set) var land: Land
+    /// Whether a managed company's stations take their ridership from the
+    /// land (Phase 6b, ARCHITECTURE decision 73). Off in a new world and in
+    /// saves from before it; the app's new games turn it on. Set by
+    /// ``setLandDemand(_:)`` only.
+    public internal(set) var landDemand: Bool = false
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -695,6 +700,9 @@ public struct GameWorld: Equatable, Sendable {
         let station = Station(id: StationID(rawValue: id), name: name, point: point)
         nextStationID = nextID
         stations.append(station)
+        // Phase 6b: a managed company's new station draws its ridership
+        // from the land, and takes its share from its neighbours.
+        refreshLandDemand()
         return station
     }
 
@@ -3063,7 +3071,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land
+        case land, landDemand
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3144,6 +3152,7 @@ extension GameWorld: Codable {
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
+        landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3223,6 +3232,9 @@ extension GameWorld: Codable {
         }
         if !land.isEmpty {
             try container.encode(land, forKey: .land)
+        }
+        if landDemand {
+            try container.encode(true, forKey: .landDemand)
         }
     }
 

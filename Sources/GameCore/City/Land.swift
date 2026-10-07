@@ -140,27 +140,41 @@ public struct Land: Hashable, Sendable {
     /// `radius` to `point`, compared squared, exactly.
     public func totals(within radius: Int64, of point: PlanPoint) -> LandTotals {
         var totals = LandTotals()
+        forEachCell(within: radius, of: point) { index, _ in
+            totals.residents += cells[index].residents
+            totals.jobs += cells[index].jobs
+        }
+        return totals
+    }
+
+    /// Calls `body` with the index in ``cells`` of every cell whose middle
+    /// lies closer than `radius` to `point`, and its squared distance, by
+    /// row and then column.
+    func forEachCell(within radius: Int64, of point: PlanPoint, _ body: (Int, Int64) -> Void) {
         guard radius > 0, let first = cells.first, let last = cells.last, point.isWithinLimits, radius <= WorldCoordinate.limit
-        else { return totals }
+        else { return }
         let length = Self.cellLength
         let firstRow = max(first.row, Self.cellIndex(point.y - radius)), lastRow = min(last.row, Self.cellIndex(point.y + radius))
         let firstColumn = max(0, Self.cellIndex(point.x - radius)), lastColumn = Self.cellIndex(point.x + radius)
-        guard firstRow <= lastRow, firstColumn <= lastColumn else { return totals }
+        guard firstRow <= lastRow, firstColumn <= lastColumn else { return }
         let reach = radius * radius
         for row in firstRow...lastRow {
             let dy = Int64(row) * length + length / 2 - point.y
             var index = firstIndex(atOrAfterRow: row, column: firstColumn)
             while index < cells.count, cells[index].row == row, cells[index].column <= lastColumn {
-                let cell = cells[index]
-                let dx = Int64(cell.column) * length + length / 2 - point.x
-                if dx * dx + dy * dy < reach {
-                    totals.residents += cell.residents
-                    totals.jobs += cell.jobs
+                let dx = Int64(cells[index].column) * length + length / 2 - point.x
+                let squared = dx * dx + dy * dy
+                if squared < reach {
+                    body(index, squared)
                 }
                 index += 1
             }
         }
-        return totals
+    }
+
+    /// Adds `cell`, which must not be listed yet, in its place.
+    mutating func insert(_ cell: LandCell) {
+        cells.insert(cell, at: firstIndex(atOrAfterRow: cell.row, column: cell.column))
     }
 
     /// The cell index of world coordinate `value`, rounded down (negative
@@ -171,7 +185,7 @@ public struct Land: Hashable, Sendable {
     }
 
     /// The index of the first cell at or after `row`, `column`.
-    private func firstIndex(atOrAfterRow row: Int, column: Int) -> Int {
+    func firstIndex(atOrAfterRow row: Int, column: Int) -> Int {
         var low = 0, high = cells.count
         while low < high {
             let middle = (low + high) / 2
@@ -210,12 +224,13 @@ extension Land {
     /// `seed` (gap, this project's):
     ///
     /// - the first town stands in the middle of the world, where the map
-    ///   opens; its radius is 12 cells (768 m) and its middle cell holds 130
-    ///   residents;
+    ///   opens; its radius is 12 cells (768 m) and its middle cell holds 260
+    ///   residents (some 63,000 a km², a dense city centre: a first line
+    ///   through it pays for itself in about ten days, decision 46);
     /// - the second stands 2 to 5 km east or west and 2 to 5 km north or
     ///   south of the middle, in a quarter drawn from the seed, and the third
     ///   as far in the opposite quarter; each has a radius of 7 to 10 cells
-    ///   and 80 to 120 residents in its middle cell;
+    ///   and 160 to 240 residents in its middle cell;
     /// - a cell whose middle is `d` cells from its town's middle cell, closer
     ///   than the radius `r`, holds `peak × (r² − d²) / r²` residents,
     ///   rounded down in thousandths of the peak;
@@ -236,14 +251,14 @@ extension Land {
         // The quarter of the second town: 0 north-east, 1 south-east, 2
         // south-west, 3 north-west; the third is opposite.
         let quarter = draw.roll("town.quarter", in: 0...3)
-        var towns: [(x: Int64, y: Int64, radius: Int64, peak: Int64)] = [(middle.x, middle.y, 12, 130)]
+        var towns: [(x: Int64, y: Int64, radius: Int64, peak: Int64)] = [(middle.x, middle.y, 12, 260)]
         for (number, side) in [(1, quarter), (2, (quarter + 2) % 4)] {
             let east: Int64 = side == 0 || side == 1 ? 1 : -1
             let south: Int64 = side == 1 || side == 2 ? 1 : -1
             let dx = draw.roll("town.\(number).east", in: 2_000...5_000) * metre
             let dy = draw.roll("town.\(number).south", in: 2_000...5_000) * metre
             let radius = draw.roll("town.\(number).radius", in: 7...10)
-            let peak = draw.roll("town.\(number).peak", in: 80...120)
+            let peak = draw.roll("town.\(number).peak", in: 160...240)
             towns.append((middle.x + east * dx, middle.y + south * dy, radius, peak))
         }
 
@@ -294,12 +309,14 @@ extension GameWorld {
         land.cells = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         guard land.problem(in: bounds) == nil else { throw .invalidLand }
         self.land = land
+        refreshLandDemand()
     }
 
     /// Replaces the world's land with the towns a blank map starts with,
     /// drawn from `seed` (see ``Land/towns(seed:in:)``).
     public mutating func foundTowns(seed: UInt32) {
         land = Land.towns(seed: seed, in: bounds)
+        refreshLandDemand()
     }
 
     // MARK: - Queries

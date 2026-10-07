@@ -77,6 +77,8 @@ public enum RealWorldDemo {
     public static func make(in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil) -> GameWorld {
         let layout = Layout(railways: railways)
         var world = GameWorld.newGame(anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame), land: land)
+        // The demo's stations keep the ridership it gives them (Phase 6b).
+        world.setLandDemand(false)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
         } catch {

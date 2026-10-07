@@ -41,8 +41,9 @@ choice balances. Earlier saves have direct-trip groups and load in direct
 routing mode. An older build must reject version 11 so it cannot silently
 drop the transfer plan when saving again.
 
-Since version 12 (Phase 6a, ARCHITECTURE decision 72) a world can hold
-its land: who lives and works in each 64 m cell. Earlier saves have none
+Since version 12 (Phases 6a and 6b, ARCHITECTURE decisions 72 and 73) a
+world can hold its land, who lives and works in each 64 m cell, and
+`"landDemand"`, whether that land sets a managed company's ridership. Earlier saves have none
 and read as before; a build before version 12 refuses a version 12 save
 rather than dropping the land when it saves again.
 
@@ -64,4 +65,5 @@ hand could hold, is refused with that reason
 | `v7-demo-siding-90-minutes.json` | 7 | The version 6 save read by the Stage U2 build (ARCHITECTURE decision 56) and saved again: `"saveVersion": 7`, byte for byte otherwise (no train follows another in it). The version 4 siding save and the version 6 save saved again by this build give it byte for byte too. |
 | `v8-demo-siding-90-minutes.json` | 8 | The version 7 save read by the Stage V2 build (ARCHITECTURE decision 58) and saved again: `"saveVersion": 8`, byte for byte otherwise (no service in it stands aside at a passing place). The version 4 siding save, and the version 6 and 7 saves, saved again by this build give it byte for byte too. |
 | `v11-network-transfer.json` | 11 | A two-line service with five passengers from A waiting at B for the second leg to C. Their original station keeps the conservation ledger; the waiting group holds its remaining journey and transfer ready time. Written by the version 11 build. |
-| `v12-land-towns.json` | 12 | Land (Phase 6a, ARCHITECTURE decision 72): a world 131072 × 98304 units (32 × 24 cells of 64 m) with the first town of seed 1 round its middle, 437 cells with 24,984 residents and 16,614 jobs, saved as runs of cells (`"land"`); a line from West to Middle with a train, a managed company, after 30 minutes. Written by the version 12 build. |
+| `v12-land-towns.json` | 12 | Land (Phase 6a, ARCHITECTURE decision 72): a world 131072 × 98304 units (32 × 24 cells of 64 m) with the first town of seed 1 round its middle as Phase 6a first drew it (half the density 6b settled on), 437 cells with 24,984 residents and 16,614 jobs, saved as runs of cells (`"land"`); no demand from land; a line from West to Middle with a train, a managed company, after 30 minutes. Written by the version 12 build. |
+| `v12-land-demand.json` | 12 | Demand from land (Phase 6b, ARCHITECTURE decision 73): the same world and town (at the density 6b settled on), managed, with `"landDemand": true` and town growth; a line from West to East through the town with one train, after two days and ten hours. The land has grown from 437 to 441 cells (50,189 → 51,256 residents) and set both stations' ridership. Written by the version 12 build. |

@@ -34,7 +34,7 @@ final class LandTests: XCTestCase {
         let quarter = roll("town.quarter", 0, 3)
         // (middle row, middle column, radius, peak) of each town.
         var towns: [(row: Int64, column: Int64, radius: Int64, peak: Int64)] = [
-            (cellOf(bounds.height / 2), cellOf(bounds.width / 2), 12, 130)
+            (cellOf(bounds.height / 2), cellOf(bounds.width / 2), 12, 260)
         ]
         let signs: [Int64: (east: Int64, south: Int64)] = [0: (1, -1), 1: (1, 1), 2: (-1, 1), 3: (-1, -1)]
         for number in 1...2 {
@@ -42,7 +42,7 @@ final class LandTests: XCTestCase {
             let sign = signs[side]!
             let x = bounds.width / 2 + sign.east * roll("town.\(number).east", 2_000, 5_000) * 64
             let y = bounds.height / 2 + sign.south * roll("town.\(number).south", 2_000, 5_000) * 64
-            towns.append((cellOf(y), cellOf(x), roll("town.\(number).radius", 7, 10), roll("town.\(number).peak", 80, 120)))
+            towns.append((cellOf(y), cellOf(x), roll("town.\(number).radius", 7, 10), roll("town.\(number).peak", 160, 240)))
         }
         var cells: [LandCell] = []
         let rows = (bounds.height + 4_095) / 4_096, columns = (bounds.width + 4_095) / 4_096
@@ -87,19 +87,19 @@ final class LandTests: XCTestCase {
         XCTAssertEqual(one, Land.towns(seed: 1, in: .maximum))
         XCTAssertNotEqual(one, Land.towns(seed: 2, in: .maximum))
         XCTAssertEqual(one.cells.count, 887)
-        XCTAssertEqual(one.totals, LandTotals(residents: 42_788, jobs: 31_935))
+        XCTAssertEqual(one.totals, LandTotals(residents: 90_900, jobs: 67_413))
         XCTAssertEqual(Set(one.cells.map(\.use)), Set(LandUse.allCases))
         // The first town stands in the middle whatever the seed: its middle
-        // cell is shops or offices with 32 residents (130 / 4) and 390 jobs.
+        // cell is shops or offices with 65 residents (260 / 4) and 780 jobs.
         for seed: UInt32 in [1, 2, 99] {
             let middle = Land.towns(seed: seed, in: .maximum).cell(at: PlanPoint(x: 524_288, y: 524_288))
-            XCTAssertEqual(middle?.residents, 32)
-            XCTAssertEqual(middle?.jobs, 390)
+            XCTAssertEqual(middle?.residents, 65)
+            XCTAssertEqual(middle?.jobs, 780)
             XCTAssertNotEqual(middle?.use, .residential)
         }
-        // A home 11 cells east of the middle: 130 × (144 − 121) / 144.
+        // A home 11 cells east of the middle: 260 × (144 − 121) / 144.
         let home = one.cell(row: 128, column: 139)
-        XCTAssertEqual(home, LandCell(row: 128, column: 139, use: .residential, residents: 20, jobs: 0))
+        XCTAssertEqual(home, LandCell(row: 128, column: 139, use: .residential, residents: 41, jobs: 0))
         XCTAssertNil(one.cell(row: 128, column: 140), "12 cells is the radius, outside")
     }
 
@@ -185,7 +185,7 @@ final class LandTests: XCTestCase {
         XCTAssertEqual(world.landCatchment(of: middle), world.land.totals(within: 51_200, of: PlanPoint(x: 524_288, y: 524_288)))
         // The whole first town, 437 cells: 768 m reaches no farther than
         // the 800 m.
-        XCTAssertEqual(world.landCatchment(of: middle), LandTotals(residents: 24_984, jobs: 16_614))
+        XCTAssertEqual(world.landCatchment(of: middle), LandTotals(residents: 50_189, jobs: 33_276))
         XCTAssertEqual(world.landCatchment(of: far), LandTotals())
         XCTAssertNil(world.landCatchment(of: StationID(rawValue: 99)))
     }

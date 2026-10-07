@@ -15,16 +15,19 @@ final class NewGameBalanceTests: XCTestCase {
         let tile = Int64(1_024)
         let cars = 4
         let platform = Int64(cars) * Train.carLength
-        let west = try world.buildTrackNode(at: WorldCoordinate(x: 2 * tile, y: 12 * tile))
-        let east = try world.buildTrackNode(at: WorldCoordinate(x: 30 * tile, y: 12 * tile))
+        // Phase 6b: a first line through the first town, the middle of the
+        // map, whose land gives its stations their ridership.
+        let x = GameWorld.newGameBounds.width / 2 - 16 * tile, y = GameWorld.newGameBounds.height / 2
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: x + 2 * tile, y: y))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: x + 30 * tile, y: y))
         let edge = try world.buildTrackEdge(from: west, to: east)
         var stops: [StationID] = []
         for middle in [tile + platform / 2, 14 * tile, 27 * tile - platform / 2] {
-            let station = try world.buildStation(named: "S\(stops.count)", at: PlanPoint(x: 2 * tile + middle, y: 12 * tile)).id
+            let station = try world.buildStation(named: "S\(stops.count)", at: PlanPoint(x: x + 2 * tile + middle, y: y)).id
             try world.addTrackPlatform(station, on: edge, from: middle - platform / 2, to: middle + platform / 2)
-            try world.setStationDemand(station, to: .cityDefault)
             stops.append(station)
         }
+        XCTAssertTrue(stops.allSatisfy { (world.stationDemand(of: $0)?.dailyTrips ?? 0) > 0 }, "the town gives every station ridership")
         let line = try world.createLine(named: "Line 1", stops: stops).id
         try world.setLineServiceWindow(line, to: .allDay)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))

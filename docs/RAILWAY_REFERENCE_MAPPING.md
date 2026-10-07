@@ -844,3 +844,16 @@ V 實際放行 → T、U（保證不互穿）
 | 本 repo `StationDemand.catchmentRadius`（800 m，`PopulationGrid.swift`） | `Land.catchmentRadius` = 51,200 單位、`GameWorld.landCatchment(of:)` | 同一個半徑的整數版本（64 單位／公尺） |
 
 定點比例：一格 4096 世界單位 = 64 m（64 單位／公尺）；城鎮的密度比例是千分之一（`(r² − d²) × 1000 / r²`），每一步向下取整。
+
+## Phase 6b：客流由土地推導（決策 73）
+
+同一個參考庫版本（`2db0c5a`）。人口→就業→旅次的公式在 `Ci/` 沒有收錄的後端，所以分配、成長與擴張是原生的（gap）。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/.../app__q_c234188b7c397f91.js`／`hourlyOD`、`/api/flowFull`（只有呼叫端） | `LandDemand.shares(of:among:)`、`LandDemand.Share.demand` | gap → 原生：腹地依距離分、每 100 位居民與就業每天 40 旅次（沿用本 repo 決策 50 的係數） |
+| 同檔／`buildStationFlowPresetCurves`（四種站型曲線） | 既有 `StationDemandKind` 的曲線，類型取腹地佔最多的 | 沿用（已移植），不混合曲線 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`town_cmd.cpp`，只有路徑；「consume transport accessibility metrics」） | `GameWorld.growLand(reached:)` | gap → 原生：沿用決策 70 的服務比例與可達車站量測，改成長在土地上並往車站擴張 |
+| 本 repo `taiwan_places.json`（OSM，ODbL，`PlaceGrid`） | `LandImport.jobsPerPlace`、`LandImport.cells(population:places:frame:bounds:)` | 原生係數：商店 25、辦公 500、學校 300、景點 50 個就業 |
+
+定點比例：分配權重 `1000 − ⌊1000 d² / R²⌋`（R = 51,200 單位），成長率千分比，旅次每 100 人 40。

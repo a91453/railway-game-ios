@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 36,
+  "description": "Demand from land (Phase 6b, ARCHITECTURE decision 73) in a world 32 x 24 cells of 64 m. The land is three cells: homes at row 5, column 5 with 1000 residents; offices at row 5, column 7 with 500 jobs; shops at row 5, column 20 with 10 residents and 300 jobs. West stands at the middle of the homes (22528, 22528), Annex at the middle of the offices (30720, 22528), Market at the middle of the shops (83968, 22528). A managed company's station takes its ridership from its share of the land only once demand from land is on: West has none when built, and when it is turned on West alone reaches the homes (d^2 = 0, weight 1000) and the offices (dx = 8192, d^2 = 67108864, weight 1000 - floor(67108864 x 1000 / 51200^2) = 1000 - 25 = 975), not the shops (61440 away, beyond 51200): 1000 residents and 500 office jobs, (1500 x 40 + 50) / 100 = 600 trips a day, homes (residents the most). Built next, Annex shares both cells with West by weights 1000 and 975 (the nearer more), by the largest remainder: the homes' 1000 residents 506 to West (1000 x 1000 / 1975 = 506.3) and 494 to Annex, the offices' 500 jobs 247 to West (975 / 1975) and 253 to Annex. West then has 753 people, 301 trips; Annex 747, 299; both homes. Market alone reaches the shops: 310, (310 x 40 + 50) / 100 = 124 trips, shops (the jobs the most). While the land sets them a station's ridership cannot be set (stationDemandFromLand). In free play it can (Market 77 trips of sights), and turning management on again gives every station the land's ridership back. All values worked out by hand and checked with an independent Python implementation of the rule.",
+  "initialState": {
+    "worldWidth": 131072,
+    "worldHeight": 98304,
+    "balance": 10000,
+    "costs": { "track": 100, "station": 1000, "train": 5000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    { "command": { "type": "setEconomyMode", "mode": "management" }, "expect": { "result": "ok" } },
+    { "command": { "type": "setLand", "cells": [
+      { "row": 5, "column": 5, "use": "residential", "residents": 1000, "jobs": 0 },
+      { "row": 5, "column": 7, "use": "office", "residents": 0, "jobs": 500 },
+      { "row": 5, "column": 20, "use": "commercial", "residents": 10, "jobs": 300 }
+    ] }, "expect": { "result": "ok" } },
+    { "command": { "type": "buildStationAt", "name": "West", "point": { "x": 22528, "y": 22528 } }, "expect": { "result": "ok" } },
+    { "observe": { "type": "demand", "from": 1, "to": 1 }, "expect": { "daily": 0, "hourly": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] } },
+    { "command": { "type": "setLandDemand", "enabled": true }, "expect": { "result": "ok" } },
+    { "command": { "type": "buildStationAt", "name": "Annex", "point": { "x": 30720, "y": 22528 } }, "expect": { "result": "ok" } },
+    { "command": { "type": "buildStationAt", "name": "Market", "point": { "x": 83968, "y": 22528 } }, "expect": { "result": "ok" } },
+    { "command": { "type": "setStationDemand", "station": 1, "demand": { "kind": "office", "dailyTrips": 5 } }, "expect": { "result": "stationDemandFromLand" } },
+    { "command": { "type": "setEconomyMode", "mode": "free" }, "expect": { "result": "ok" } },
+    { "command": { "type": "setStationDemand", "station": 3, "demand": { "kind": "scenic", "dailyTrips": 77 } }, "expect": { "result": "ok" } },
+    { "command": { "type": "setEconomyMode", "mode": "management" }, "expect": { "result": "ok" } }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 7000,
+    "stations": [
+      { "id": 1, "name": "West", "point": { "x": 22528, "y": 22528 } },
+      { "id": 2, "name": "Annex", "point": { "x": 30720, "y": 22528 } },
+      { "id": 3, "name": "Market", "point": { "x": 83968, "y": 22528 } }
+    ],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": { "nodes": [], "edges": [], "platforms": [] },
+    "trafficControl": false,
+    "passengers": [
+      { "station": 1, "demand": { "kind": "residential", "dailyTrips": 301 }, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 },
+      { "station": 2, "demand": { "kind": "residential", "dailyTrips": 299 }, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 },
+      { "station": 3, "demand": { "kind": "shopping", "dailyTrips": 124 }, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 }
+    ],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [],
+      "days": []
+    },
+    "land": { "cells": 3, "residents": 1010, "jobs": 800 },
+    "landDemand": true
+  }
+}

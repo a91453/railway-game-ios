@@ -176,7 +176,8 @@ struct GoldenScenario: Decodable {
     var usesLand: Bool {
         steps.contains { step in
             switch step {
-            case .command(.foundTowns, _), .command(.setLand, _), .observe(.landCatchment, _), .observe(.landCell, _): true
+            case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
+                 .observe(.landCatchment, _), .observe(.landCell, _): true
             default: false
             }
         }
@@ -471,6 +472,7 @@ enum ScenarioCommand: Equatable {
     /// Schema 36 (Phase 6a): land.
     case foundTowns(UInt32)
     case setLand([LandCell])
+    case setLandDemand(Bool)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -564,6 +566,8 @@ enum ScenarioCommand: Equatable {
                 world.foundTowns(seed: seed)
             case .setLand(let cells):
                 try world.setLand(cells)
+            case .setLandDemand(let enabled):
+                world.setLandDemand(enabled)
             }
             return .ok
         } catch {
@@ -591,6 +595,8 @@ extension ScenarioCommand: Decodable {
             self = try .foundTowns(container.decode(UInt32.self, forKey: .seed))
         case "setLand":
             self = try .setLand(container.decode([LandCellSummary].self, forKey: .cells).map(\.cell))
+        case "setLandDemand":
+            self = try .setLandDemand(container.decode(Bool.self, forKey: .enabled))
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -896,6 +902,8 @@ extension StepOutcome: Codable {
             self = .rejected(.loanNeedsManagement)
         case "invalidLand":
             self = .rejected(.invalidLand)
+        case "stationDemandFromLand":
+            self = .rejected(.stationDemandFromLand)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1042,6 +1050,8 @@ extension StepOutcome: Codable {
             try container.encode("loanNeedsManagement", forKey: .result)
         case .rejected(.invalidLand):
             try container.encode("invalidLand", forKey: .result)
+        case .rejected(.stationDemandFromLand):
+            try container.encode("stationDemandFromLand", forKey: .result)
         }
         // Fixtures name network nodes and edges by number.
         func encodeNode(_ node: TrackNodeID) throws {
@@ -1571,6 +1581,9 @@ struct WorldSummary: Codable, Equatable {
     /// The land's cells, residents and jobs (schema 36, Phase 6a); left out
     /// for a world without land, as in every earlier fixture.
     var land: LandSummary?
+    /// `true` while a managed company's ridership comes from the land
+    /// (schema 36, Phase 6b); left out otherwise.
+    var landDemand: Bool?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -1779,6 +1792,7 @@ struct WorldSummary: Codable, Equatable {
         accounts = AccountsSummary(world.accounts)
         passengerRoutingMode = world.passengerRoutingMode == .direct ? nil : world.passengerRoutingMode.rawValue
         land = world.land.isEmpty ? nil : LandSummary(world.land)
+        landDemand = world.landDemand ? true : nil
     }
 }
 

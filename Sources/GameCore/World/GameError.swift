@@ -172,4 +172,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// count, more than ``Land/maximumPerCell`` residents or jobs, or no one
     /// living or working there (Phase 6a).
     case invalidLand
+    /// A managed company's ridership comes from the land while demand from
+    /// land is on (Phase 6b): a station's cannot be set.
+    case stationDemandFromLand
 }
