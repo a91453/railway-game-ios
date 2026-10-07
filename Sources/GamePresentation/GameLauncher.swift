@@ -75,7 +75,7 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, or with `anchor` on a real-world
     /// map with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+        begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:))), keepingAutosave: true)
     }
 
     /// Opens ``DemoWorld``: two lines already running.
@@ -86,7 +86,16 @@ public final class GameLauncher {
     /// Opens ``RealWorldDemo``: Taiwan's Pingxi, Yilan and Shenao Lines
     /// built on `railways` and running over Apple's map.
     public func openRealWorldDemo(railways: RealRailways) {
-        begin(RealWorldDemo.make(in: language, railways: railways), keepingAutosave: true)
+        begin(RealWorldDemo.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor)), keepingAutosave: true)
+    }
+
+    /// The people of a new game's map with its middle at `anchor`
+    /// (Phase 6a, ``LandImport``), or `nil` without the app's population
+    /// or where no one in it lives.
+    func land(at anchor: GeoAnchor) -> [LandCell]? {
+        population.flatMap {
+            LandImport.cells(population: $0, frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds)
+        }
     }
 
     /// Starts a new game with the tutorial on its first step (the start

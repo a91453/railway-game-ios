@@ -88,6 +88,23 @@ public struct DemandEventSchedule: Hashable, Codable, Sendable {
 
     /// FNV-1a, 32 bits, over the UTF-8 of `seed|key` (`aviation_disruptions`).
     func hash(_ key: String) -> UInt32 {
+        SeedDraw(seed: seed).hash(key)
+    }
+
+    /// A whole number in `range`, from the hash of `key`.
+    func roll(_ key: String, in range: ClosedRange<Int64>) -> Int64 {
+        SeedDraw(seed: seed).roll(key, in: range)
+    }
+}
+
+/// Draws from a world's seed (the cross-stage rule: a seed, a purpose and a
+/// number, hashed): FNV-1a, 32 bits, over the UTF-8 of `seed|key`, the
+/// reference's `aviation_disruptions` `d(state, key)`. The demand events
+/// and the towns of a blank map (``Land/towns(seed:in:)``) draw with it.
+struct SeedDraw {
+    let seed: UInt32
+
+    func hash(_ key: String) -> UInt32 {
         var value: UInt32 = 2_166_136_261
         for byte in "\(seed)|\(key)".utf8 {
             value ^= UInt32(byte)

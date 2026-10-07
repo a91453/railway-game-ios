@@ -168,4 +168,8 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLoanAmount
     /// Loans are a managed company's (decision 67): free play has none.
     case loanNeedsManagement
+    /// Land with a cell outside the world, listed twice, with a negative
+    /// count, more than ``Land/maximumPerCell`` residents or jobs, or no one
+    /// living or working there (Phase 6a).
+    case invalidLand
 }

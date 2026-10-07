@@ -72,10 +72,11 @@ public enum RealWorldDemo {
         return anchor
     }()
 
-    /// The demo's game, built on `railways`.
-    public static func make(in language: DisplayLanguage, railways: RealRailways) -> GameWorld {
+    /// The demo's game, built on `railways`, with `land` the map's people
+    /// (``LandImport``; without it, the towns of a new game).
+    public static func make(in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil) -> GameWorld {
         let layout = Layout(railways: railways)
-        var world = GameWorld.newGame(anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame))
+        var world = GameWorld.newGame(anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame), land: land)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
         } catch {

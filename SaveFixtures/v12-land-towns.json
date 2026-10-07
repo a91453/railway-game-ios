@@ -1,0 +1,1391 @@
+{
+  "saveVersion" : 12,
+  "world" : {
+    "accounts" : {
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 1800,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 99988200,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 12,
+        "residents" : [
+          6,
+          12,
+          17,
+          19,
+          20,
+          19,
+          17,
+          12,
+          6
+        ],
+        "row" : 1,
+        "use" : "residential"
+      },
+      {
+        "column" : 10,
+        "residents" : [
+          7,
+          17,
+          25,
+          31,
+          36,
+          38,
+          39,
+          38,
+          36,
+          31,
+          25,
+          17,
+          7
+        ],
+        "row" : 2,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "residents" : [
+          12,
+          24,
+          34,
+          42,
+          48,
+          53,
+          55,
+          56,
+          55,
+          53,
+          48,
+          42,
+          34,
+          24,
+          12
+        ],
+        "row" : 3,
+        "use" : "residential"
+      },
+      {
+        "column" : 8,
+        "residents" : [
+          14,
+          27,
+          39,
+          49,
+          57,
+          64,
+          68,
+          71,
+          72,
+          71,
+          68,
+          64,
+          57,
+          49,
+          39,
+          27,
+          14
+        ],
+        "row" : 4,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "residents" : [
+          12,
+          27,
+          41,
+          53,
+          63,
+          71,
+          77,
+          82,
+          84,
+          85,
+          84,
+          82,
+          77,
+          71,
+          63,
+          53,
+          41,
+          27,
+          12
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          7,
+          24,
+          39,
+          53,
+          65,
+          74,
+          82,
+          89,
+          93,
+          96,
+          97,
+          96,
+          93,
+          89,
+          82,
+          74,
+          65,
+          53,
+          39,
+          24,
+          7
+        ],
+        "row" : 6,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          17,
+          34,
+          49,
+          63,
+          74,
+          84,
+          92,
+          99,
+          103,
+          106,
+          107,
+          106,
+          103,
+          99,
+          92,
+          84,
+          74,
+          63,
+          49,
+          34,
+          17
+        ],
+        "row" : 7,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          6,
+          25,
+          42,
+          57,
+          71,
+          82,
+          92,
+          101,
+          107,
+          111,
+          114,
+          115,
+          114,
+          111,
+          107,
+          101,
+          92,
+          82,
+          71,
+          57,
+          42,
+          25,
+          6
+        ],
+        "row" : 8,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          12,
+          31,
+          48,
+          64,
+          77,
+          89,
+          99,
+          107,
+          113
+        ],
+        "row" : 9,
+        "use" : "residential"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 9,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          360,
+          363
+        ],
+        "residents" : [
+          30,
+          30
+        ],
+        "row" : 9,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 9,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 9,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "residents" : [
+          113,
+          107,
+          99,
+          89,
+          77,
+          64,
+          48,
+          31,
+          12
+        ],
+        "row" : 9,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          17,
+          36,
+          53,
+          68,
+          82,
+          93,
+          103,
+          111
+        ],
+        "row" : 10,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          366
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          375,
+          378
+        ],
+        "residents" : [
+          31,
+          31
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          366
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          111,
+          103,
+          93,
+          82,
+          68,
+          53,
+          36,
+          17
+        ],
+        "row" : 10,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          19,
+          38,
+          55,
+          71,
+          84,
+          96,
+          106,
+          114
+        ],
+        "row" : 11,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          384,
+          387
+        ],
+        "residents" : [
+          32,
+          32
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          384
+        ],
+        "residents" : [
+          32
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          114,
+          106,
+          96,
+          84,
+          71,
+          55,
+          38,
+          19
+        ],
+        "row" : 11,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          20,
+          39,
+          56,
+          72,
+          85,
+          97,
+          107,
+          115
+        ],
+        "row" : 12,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          363
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          378
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          387,
+          390
+        ],
+        "residents" : [
+          32,
+          32
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          387
+        ],
+        "residents" : [
+          32
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          378
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          363
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          115,
+          107,
+          97,
+          85,
+          72,
+          56,
+          39,
+          20
+        ],
+        "row" : 12,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          19,
+          38,
+          55,
+          71,
+          84,
+          96,
+          106,
+          114
+        ],
+        "row" : 13,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          384,
+          387
+        ],
+        "residents" : [
+          32,
+          32
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          384
+        ],
+        "residents" : [
+          32
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          114,
+          106,
+          96,
+          84,
+          71,
+          55,
+          38,
+          19
+        ],
+        "row" : 13,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          17,
+          36,
+          53,
+          68,
+          82,
+          93,
+          103,
+          111
+        ],
+        "row" : 14,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          366
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          375,
+          378
+        ],
+        "residents" : [
+          31,
+          31
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          375
+        ],
+        "residents" : [
+          31
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          366
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          111,
+          103,
+          93,
+          82,
+          68,
+          53,
+          36,
+          17
+        ],
+        "row" : 14,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          12,
+          31,
+          48,
+          64,
+          77,
+          89,
+          99,
+          107,
+          113
+        ],
+        "row" : 15,
+        "use" : "residential"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 15,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          360,
+          363
+        ],
+        "residents" : [
+          30,
+          30
+        ],
+        "row" : 15,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          360
+        ],
+        "residents" : [
+          30
+        ],
+        "row" : 15,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          354
+        ],
+        "residents" : [
+          29
+        ],
+        "row" : 15,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "residents" : [
+          113,
+          107,
+          99,
+          89,
+          77,
+          64,
+          48,
+          31,
+          12
+        ],
+        "row" : 15,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          6,
+          25,
+          42,
+          57,
+          71,
+          82,
+          92,
+          101,
+          107,
+          111,
+          114,
+          115,
+          114,
+          111,
+          107,
+          101,
+          92,
+          82,
+          71,
+          57,
+          42,
+          25,
+          6
+        ],
+        "row" : 16,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          17,
+          34,
+          49,
+          63,
+          74,
+          84,
+          92,
+          99,
+          103,
+          106,
+          107,
+          106,
+          103,
+          99,
+          92,
+          84,
+          74,
+          63,
+          49,
+          34,
+          17
+        ],
+        "row" : 17,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          7,
+          24,
+          39,
+          53,
+          65,
+          74,
+          82,
+          89,
+          93,
+          96,
+          97,
+          96,
+          93,
+          89,
+          82,
+          74,
+          65,
+          53,
+          39,
+          24,
+          7
+        ],
+        "row" : 18,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "residents" : [
+          12,
+          27,
+          41,
+          53,
+          63,
+          71,
+          77,
+          82,
+          84,
+          85,
+          84,
+          82,
+          77,
+          71,
+          63,
+          53,
+          41,
+          27,
+          12
+        ],
+        "row" : 19,
+        "use" : "residential"
+      },
+      {
+        "column" : 8,
+        "residents" : [
+          14,
+          27,
+          39,
+          49,
+          57,
+          64,
+          68,
+          71,
+          72,
+          71,
+          68,
+          64,
+          57,
+          49,
+          39,
+          27,
+          14
+        ],
+        "row" : 20,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "residents" : [
+          12,
+          24,
+          34,
+          42,
+          48,
+          53,
+          55,
+          56,
+          55,
+          53,
+          48,
+          42,
+          34,
+          24,
+          12
+        ],
+        "row" : 21,
+        "use" : "residential"
+      },
+      {
+        "column" : 10,
+        "residents" : [
+          7,
+          17,
+          25,
+          31,
+          36,
+          38,
+          39,
+          38,
+          36,
+          31,
+          25,
+          17,
+          7
+        ],
+        "row" : 22,
+        "use" : "residential"
+      },
+      {
+        "column" : 12,
+        "residents" : [
+          6,
+          12,
+          17,
+          19,
+          20,
+          19,
+          17,
+          12,
+          6
+        ],
+        "row" : 23,
+        "use" : "residential"
+      }
+    ],
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 40960,
+          "y" : 49152,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 90112,
+          "y" : 49152,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 6144,
+          "start" : 2048,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 26624,
+          "start" : 22528,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 2,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 4000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 7,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 1800
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 180
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 420
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 660
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 900
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1140
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1380
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1620
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 10000,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 18,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1800
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 60
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 180
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 240
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 360
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 480
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 540
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 660
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 720
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 840
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 960
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1020
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1140
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1260
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1320
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1440
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1500
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1620
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1740
+          }
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 45056,
+          "y" : 49152
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Middle",
+        "point" : {
+          "x" : 65536,
+          "y" : 49152
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "end" : 6144,
+          "rate" : 0
+        },
+        "name" : "T",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 6144
+          }
+        }
+      }
+    ]
+  }
+}

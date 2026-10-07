@@ -828,3 +828,19 @@ V 實際放行 → T、U（保證不互穿）
 | --- | --- | --- |
 | `Ci/.../app__q_c234188b7c397f91.js`／`PRESET_COLORS`（20 色）、線路 `color`（`"#ef5350"`） | `LineColor.presets`、`ServiceLine.color`、`setLineColor(_:to:)`、`LineColor.hexText` | direct：色值照搬，存為 `0xRRGGBB` 整數 |
 | 同檔／車站、線路名稱編輯 | `renameStation(_:to:)`、`renameLine(_:to:)` | adapted：沿用既有名稱規則 |
+
+## Phase 6a：土地（決策 72）
+
+2026-10-07 檢查參考庫 `2db0c5a6963798e6b86723bb001189343a59940c` 的四處來源（盤點見 PR #172 的 `docs/research/PHASE6_LAND_USE_STUDY.md`）。沒有可移植的土地、居民、就業或成長模型，所以格、起始城鎮與數值是原生的（gap）。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/virtual_island_city__q_21ffa7f6ae58fc9e.js`／`METRO_VIRTUAL_ISLAND_SEMANTIC_MAP_URL`、`landuse` 圖層的 `kind` | `Land`、`LandUse`（`Sources/GameCore/City/Land.swift`） | gap：URL 指向的 `city.pmtiles` 不在參考庫，只有樣式；用途先只取住宅、商業、辦公三種（原生） |
+| `Ci/.../aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a over `seed|key`） | `SeedDraw.hash`、`roll`（`DemandEvents.swift`，需求事件與 `Land.towns(seed:in:)` 共用） | direct：雜湊照搬（決策 69 已移植），這次只從 `DemandEventSchedule` 抽出共用，值不變 |
+| `Ci/.../app__q_c234188b7c397f91.js`／人口格（`loadPopulationHexLayer`）與新站客流 | GamePresentation 的 `LandImport.cells(population:frame:bounds:)` | adapted：WorldPop 30″ 格（本 repo 的 `taiwan_population.json`）重新分配到 64 m 格，最大餘數法；Ci 的 LandScan 圖磚不在參考庫 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`src/town_cmd.cpp`，只有路徑） | `Land.towns(seed:in:)`、`GameWorld.foundTowns(seed:)` | gap → 原生：三座城鎮的位置、半徑與密度是本專案的規則；照它的要求不控制列車 |
+| `Railway/taipei_gta_reference/source/assets/engine-DKps_Gq_.js`／`V` 的 9 區 `floors`、`districtAt` | — | 只是畫面（建物外觀的分布，沒有居民或就業），6c 的建物再評估 |
+| `Railway/site_archive_clean/rail-3d/blender-buildings.js`、`data/taiwan_land.json` | — | 只是畫面／海岸遮罩；6a 不用（實景地圖沒有人的格本來就是空的） |
+| 本 repo `StationDemand.catchmentRadius`（800 m，`PopulationGrid.swift`） | `Land.catchmentRadius` = 51,200 單位、`GameWorld.landCatchment(of:)` | 同一個半徑的整數版本（64 單位／公尺） |
+
+定點比例：一格 4096 世界單位 = 64 m（64 單位／公尺）；城鎮的密度比例是千分之一（`(r² − d²) × 1000 / r²`），每一步向下取整。

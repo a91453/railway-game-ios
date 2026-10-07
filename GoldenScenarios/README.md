@@ -173,6 +173,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setFareRules`（schema 22） | `rules`（票價規則） | `setFareRules(_:)` |
 | `setPassengerRoutingMode`（schema 35） | `mode`（`"direct"` 或 `"network"`） | `setPassengerRoutingMode(_:)` |
 | `setStationOperationMode`（schema 35） | `station`、`mode`（`"normalFlow"`、`"flowControl"` 或 `"closed"`） | `setStationOperationMode(_:to:)` |
+| `foundTowns`（schema 36） | `seed`（0…4294967295） | `foundTowns(seed:)` |
+| `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"` | `setLand(_:)` |
 
 ### 結果（`expect.result`）
 
@@ -224,6 +226,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trackReserved` | `train` | 交通控制開啟時，這台列車（編號最小的一台）持有指令需要的軌道：新的路或放置要取得的預約範圍，或要拆除、改變的鐵軌（schema 19） |
 | `trainsShareTrack` | `trains`（`[a, b]`） | 開啟交通控制時，兩台列車需要同一段軌道：`b` 是依 ID 第一台與前面某台相交的列車，`a` 是與它相交的最小編號（schema 19） |
 | `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
+| `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -270,6 +273,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `financeReport`（schema 22） | `period`（`"day"`、`"week"`、`"month"`、`"year"`） | `{ "report": 報表 }` | `financeReport(_:)` |
 | `serviceTimes`（schema 24） | `train` | `{ "found": true, "times": 服務時刻 }`，沒有服務（或沒有這台列車）時 `{ "found": false }` | `train(id:)?.times` |
 | `lateness`（schema 24） | `train` | `{ "found": true, "lateness": 秒 }`（負數是早到），沒有服務（或沒有這台列車）時 `{ "found": false }` | `lateness(of:)` |
+| `landCatchment`（schema 36） | `station` | `{ "found": true, "landTotals": { "residents", "jobs" } }`，沒有這座車站時 `{ "found": false }` | `landCatchment(of:)` |
+| `landCell`（schema 36） | `row`、`column` | `{ "found": true, "landCell": { "row", "column", "use", "residents", "jobs" } }`，那一格沒有人住或工作時 `{ "found": false }` | `land.cell(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
 
@@ -410,6 +415,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `passengers`（schema 20）：有需求、或曾經釋出過乘客的車站，依車站 ID 遞增：`{ "station", "demand", "waiting", "released", "arrived", "overflowed", "abandoned", "refused" }`（`arrived`、`refused` 自 schema 21），八個欄位都必填；`demand` 沒有時是 `null`，`waiting` 是等車的各組（依排隊的順序）。還沒有乘客時是 `[]`。尚未釋出的不到一人的餘數是內部狀態，不列入。
 - `riders`（schema 21）：每台載客的列車，依列車 ID 遞增：`{ "train", "groups": [車上的一組, ...] }`。沒有列車載客時是 `[]`。
 - `accounts`（schema 22）：帳（形式見上面「經營」）。從未經營、也沒有設定票價時是 `{ "mode": "free", "fareRules": null, "openedAt": null, "pending": 全部是 0, "ledger": [], "days": [] }`。
+- `land`（schema 36，選填）：`{ "cells", "residents", "jobs" }`，土地列出的格數與全部的居民、就業；沒有土地時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -598,3 +604,7 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 新指令 `setPassengerRoutingMode`、`setStationOperationMode`；最終狀態可以有 `passengerRoutingMode`（只在 `"network"` 時寫出）與車站的 `operationMode`（只在不是 `normalFlow` 時寫出）；等車群組在兩個整分鐘之間下車轉乘時寫成 `sinceSeconds`（取代 `since`），並帶可上車的 `readyAtSeconds`。三者都是選填，舊的 fixture 不必改，schema 30 到 34 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
 - `network-passengers.json`：兩條相距 100 m 的軌道、四站、兩線，A 與 C 之間只能步行轉乘（passage 級，Ci 參考的 15 分 × 1.2 轉乘懲罰、5 km/h 步行、最小轉乘 120 秒），接著關閉、重開 B' 並讓 A 進站管制。預期值由 GameCore 記錄後逐項依規則人工核對（守恆、旅程、轉乘時刻），沒有獨立的計算器；`ReferenceWorld` 只實作直達路徑，所以 `ReferenceWorldGoldenTests` 跳過用到這兩個指令的 fixture。
 
+## Phase 6a：土地（schema 36）
+
+- 新指令 `foundTowns`、`setLand`，新結果 `invalidLand`，新觀察 `landCatchment`、`landCell`，最終狀態選填的 `land`（ARCHITECTURE 決策 72）。沒有土地的世界不寫 `land`，舊的 fixture 不必改，schema 30 到 35 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
+- `land-towns.json`：32 × 24 格（2048 × 1536 m）的世界，先以 `setLand` 驗證順序不拘、世界外與重複的格被拒絕且土地不變，再以種子 1 建立城鎮（只有第一座落在這個世界裡）。每一格的居民、就業與 800 m 腹地的總數都依規則手算，並另以獨立的 Python 實作（含 FNV-1a 抽籤）核對；`LandTests` 另有一份逐格重算的參考實作。`ReferenceWorld` 沒有土地，所以 `ReferenceWorldGoldenTests` 跳過用到土地的 fixture。

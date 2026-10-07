@@ -71,6 +71,12 @@ public struct GameWorld: Equatable, Sendable {
     /// ARCHITECTURE decision 50); `nil`, a blank map, in a new world. No
     /// rule reads it. Set by ``setGeoAnchor(_:)`` only.
     public internal(set) var geoAnchor: GeoAnchor?
+    /// The land round the railway (Phase 6a, ARCHITECTURE decision 72): who
+    /// lives and works in each 64 m cell. Empty in a new world and in saves
+    /// from before it; the app's new games start with towns or a real-world
+    /// map's people. No rule reads it yet. Set by ``setLand(_:)`` and
+    /// ``foundTowns(seed:)`` only.
+    public internal(set) var land: Land
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -107,6 +113,7 @@ public struct GameWorld: Equatable, Sendable {
         self.passengerRouteBalances = []
         self.accounts = CompanyAccounts()
         self.geoAnchor = nil
+        self.land = Land()
         self.nextStationID = 1
         self.nextTrainID = 1
         self.nextLineID = 1
@@ -3056,6 +3063,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
+        case land
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3135,6 +3143,7 @@ extension GameWorld: Codable {
             ? try container.decode([PassengerRouteBalance].self, forKey: .passengerRouteBalances) : []
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
+        land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3160,8 +3169,9 @@ extension GameWorld: Codable {
     /// network never had a node or an edge has no `"network"` key (Stage
     /// S3), and a save without one reads as an empty network; a world
     /// with traffic control off has no `"trafficControl"` key (Stage T),
-    /// which is also how saves made before it read; and a blank map has no
-    /// `"geoAnchor"` (Stage E2). An explicit `null` for any of them is
+    /// which is also how saves made before it read; a blank map has no
+    /// `"geoAnchor"` (Stage E2); and a world without land has no `"land"`
+    /// (Phase 6a). An explicit `null` for any of them is
     /// rejected. The world's extent is written as `"bounds"`, in world units
     /// (Stage F3d).
     public func encode(to encoder: any Encoder) throws {
@@ -3210,6 +3220,9 @@ extension GameWorld: Codable {
         }
         if let geoAnchor {
             try container.encode(geoAnchor, forKey: .geoAnchor)
+        }
+        if !land.isEmpty {
+            try container.encode(land, forKey: .land)
         }
     }
 
@@ -3407,6 +3420,7 @@ extension GameWorld: Codable {
             }
         }
         return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? demandEventProblem() ?? townGrowthProblem()
+            ?? land.problem(in: bounds)
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE
