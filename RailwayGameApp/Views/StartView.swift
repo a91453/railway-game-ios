@@ -72,7 +72,7 @@ struct StartView: View {
                     .accessibilityIdentifier("start.tutorial")
                     StartButton(
                         title: String(localized: "Demo Map"),
-                        detail: String(localized: "Two lines already running, with passengers"),
+                        detail: String(localized: "Three lines already running, in a city that grows"),
                         systemImage: "tram.fill",
                         accentColor: Palette.metroPurple
                     ) {

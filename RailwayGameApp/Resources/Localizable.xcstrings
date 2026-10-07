@@ -2302,6 +2302,16 @@
         }
       }
     },
+    "Three lines already running, in a city that grows" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有三條路線在營運，城市會跟著成長"
+          }
+        }
+      }
+    },
     "Timetable" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2418,16 +2428,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "教學"
-          }
-        }
-      }
-    },
-    "Two lines already running, with passengers" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已有兩條路線在營運，也有乘客"
           }
         }
       }

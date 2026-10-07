@@ -99,8 +99,8 @@ extension ConstructionCosts {
 }
 
 /// A small prebuilt network for trying the game and testing it on a
-/// device (Stage C4): a new game with two lines already running, built only
-/// on the track network, as the app builds since Stage F1.
+/// device (Stage C4): a new game with three lines already running, built
+/// only on the track network, as the app builds since Stage F1.
 ///
 /// Not a shortcut: it starts from ``GameWorld/newGame()`` and builds
 /// everything with ordinary `GameWorld` commands that charge their usual
