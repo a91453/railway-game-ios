@@ -50,6 +50,8 @@ enum Theme {
     /// Something is wrong: a negative balance, a failed action (4.85:1,
     /// 5.54:1).
     static let error = dynamic(light: 0xC62828, dark: 0xFF9B9B)
+    /// Text and icons on ``error`` (5.62:1 light, 6.59:1 dark).
+    static let onError = dynamic(light: 0xFFFFFF, dark: 0x262C57)
 
     private static func dynamic(
         light: UInt32,
@@ -89,6 +91,28 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
             .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
             .background(isActive ? Theme.primary : Color.clear, in: shape)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .contentShape(shape)
+    }
+}
+
+/// A screen's main action, flat and filled: ``Theme/primary``, or
+/// ``Theme/error`` for one that removes something; a quiet fill while it
+/// cannot be used.
+struct ThemeProminentButtonStyle: ButtonStyle {
+    var isDestructive = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
+        let fill = isDestructive ? Theme.error : Theme.primary
+        let text = isDestructive ? Theme.onError : Theme.onPrimary
+        configuration.label
+            .padding(.horizontal, 14)
+            .foregroundStyle(isEnabled ? text : Theme.textSecondary)
+            .background(isEnabled ? fill : Theme.panelBorder, in: shape)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .contentShape(shape)
