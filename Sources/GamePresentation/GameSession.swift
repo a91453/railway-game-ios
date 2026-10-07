@@ -126,6 +126,12 @@ public final class GameSession {
     /// Whether the next stretch continues the track at its ends smoothly
     /// (the default), or runs straight.
     public var networkFollowsTrack = true
+    /// Whether a tap near the track joins it (the default): a node, or a
+    /// turnout on an edge, whatever its height. Off, every tap is a new
+    /// point at ``networkHeight``, so a parallel track can be laid 4 m
+    /// beside another (``RailwayNetwork/trackSpacing``), closer than a tap
+    /// reaches, or a viaduct's end set over a track.
+    public var networkSnapsToTrack = true
     /// Whether a stretch between two tracks is built as an X (scissors)
     /// crossover, with the mirrored diagonal crossing it at a diamond in
     /// the middle (see ``networkPicksCrossover``), rather than one.
@@ -1089,6 +1095,12 @@ public final class GameSession {
         message = nil
     }
 
+    /// Clears `shown` if it is still the message (the banner's own timer,
+    /// ``StatusMessage/autoDismissDelay``): a newer message stays.
+    public func dismissMessage(_ shown: StatusMessage) {
+        if message == shown { message = nil }
+    }
+
     /// Runs one command against the world and records its outcome. Returns
     /// whether the command succeeded.
     @discardableResult
@@ -1195,5 +1207,12 @@ public struct StatusMessage: Hashable, Sendable {
     public init(kind: Kind, text: String) {
         self.kind = kind
         self.text = text
+    }
+
+    /// How long the banner shows the message before clearing it: a success
+    /// goes after 4 s, so it never stays over the row just edited at the
+    /// bottom of a panel; a problem stays until dismissed or replaced.
+    public var autoDismissDelay: Duration? {
+        kind == .success ? .seconds(4) : nil
     }
 }
