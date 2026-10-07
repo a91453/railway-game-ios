@@ -104,6 +104,27 @@ final class TrackSplitTests: XCTestCase {
         XCTAssertEqual(world.trackPlatforms(of: far), [TrackPlatform(station: far, edge: .edge(5), start: 2_048, end: 3_072)])
     }
 
+    /// A diagonal edge's parts are rounded to whole units and can end one
+    /// short of where the edge did: a platform at its far end moves back
+    /// with its length kept, so a train exactly as long still has a berth.
+    func testAPlatformAtTheFarEndKeepsItsLength() throws {
+        var world = try makeWorld(width: 40_960, height: 20_480, balance: 1_000_000)
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_000, y: 1_000))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 31_000, y: 18_000))
+        let edge = try world.buildTrackEdge(from: a, to: b)
+        let length = try XCTUnwrap(world.network.edge(edge)?.length)
+        let station = try world.buildStation(named: "S", at: PlanPoint(x: 30_000, y: 17_000)).id
+        try world.addTrackPlatform(station, on: edge, from: length - 4_096, to: length)
+        XCTAssertEqual(world.berths(of: station, length: 4_096).count, 2)
+        try world.splitTrackEdge(edge, at: 1_026)
+        let second = try XCTUnwrap(world.network.edges.last)
+        XCTAssertLessThan(1_026 + second.length, length, "the parts are a unit short")
+        XCTAssertEqual(world.trackPlatforms(of: station),
+                       [TrackPlatform(station: station, edge: second.id, start: second.length - 4_096, end: second.length)])
+        XCTAssertEqual(world.berths(of: station, length: 4_096).count, 2)
+        XCTAssertNoThrow(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)))
+    }
+
     func testRefusalsChangeNothing() throws {
         let world = try world()
         func refuses(_ expected: GameError, _ change: (inout GameWorld) throws -> Void = { _ in }, edge: TrackEdgeID = .edge(2),

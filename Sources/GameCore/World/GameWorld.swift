@@ -423,17 +423,21 @@ public struct GameWorld: Equatable, Sendable {
               exits(first, at: edge.from, in: after) == exits(id, at: edge.from, in: network),
               exits(second, at: edge.to, in: after) == exits(id, at: edge.to, in: network)
         else { throw .invalidTrackGeometry }
+        // The parts' lengths are rounded, so one can end a few units short
+        // of where the edge did: a platform past its end moves back, its
+        // length kept, so a train that fitted it still does.
+        func moved(_ platform: TrackPlatform, to part: TrackEdgeID, length: Int64, from offset: Int64) -> TrackPlatform {
+            let end = min(platform.end - offset, length)
+            let start = max(0, min(platform.start - offset, end - (platform.end - platform.start)))
+            return TrackPlatform(station: platform.station, edge: part, start: start, end: end)
+        }
         for platform in platforms {
-            let moved: TrackPlatform
-            if platform.end <= cut.chainage {
-                moved = TrackPlatform(station: platform.station, edge: first,
-                                      start: min(platform.start, firstGeometry.length - 1), end: min(platform.end, firstGeometry.length))
-            } else {
-                let start = platform.start - cut.chainage, end = platform.end - cut.chainage
-                moved = TrackPlatform(station: platform.station, edge: second,
-                                      start: min(start, secondGeometry.length - 1), end: min(end, secondGeometry.length))
+            let moved = platform.end <= cut.chainage
+                ? moved(platform, to: first, length: firstGeometry.length, from: 0)
+                : moved(platform, to: second, length: secondGeometry.length, from: cut.chainage)
+            guard moved.start >= 0, moved.start < moved.end, !after.platforms.contains(where: { $0.overlaps(moved) }) else {
+                throw .invalidTrackGeometry
             }
-            guard moved.start >= 0, moved.start < moved.end else { throw .invalidTrackGeometry }
             after.addPlatform(moved)
         }
         after.dropSpacedExemptions()
@@ -2274,7 +2278,7 @@ public struct GameWorld: Equatable, Sendable {
             aside.times?.run = fastest
             guard case .granted(let granted) = reserving(aside) else { continue }
             let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
-            trains[index] = granted
+            setOff(index, as: granted)
             if let left {
                 serve(departureOf: id, from: left, distance: passing.distance)
             }
