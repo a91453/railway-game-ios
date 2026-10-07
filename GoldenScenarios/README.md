@@ -279,6 +279,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `lateness`（schema 24） | `train` | `{ "found": true, "lateness": 秒 }`（負數是早到），沒有服務（或沒有這台列車）時 `{ "found": false }` | `lateness(of:)` |
 | `landCatchment`（schema 36） | `station` | `{ "found": true, "landTotals": { "residents", "jobs" } }`，沒有這座車站時 `{ "found": false }` | `landCatchment(of:)` |
 | `landCell`（schema 36） | `row`、`column` | `{ "found": true, "landCell": { "row", "column", "use", "residents", "jobs" } }`，那一格沒有人住或工作時 `{ "found": false }` | `land.cell(row:column:)` |
+| `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
@@ -624,3 +625,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - `city-buildings.json`：32 × 24 格的世界。容量表（每層 1536 m²、居民 48 m²、就業 32 m²、2／6／18／40 層、住宅占樓板 7／2／1 八分之一）、依主要用途選最低足夠的密度（住宅格看居民、商辦格看就業，另一項取表上的值與現有人數較大者）、四級都放不下的既有存量、以列與行編號、拒絕的土地不改建物、關閉再開啟得到同樣的建物，以及種子 1 的第一座城鎮的 437 棟（88 D1、188 D2、134 D3、27 D4）。
 - `city-buildings-growth.json`：2 × 2 格的世界、economy.json 的線路與列車，經營模式、土地需求、城鎮成長與城市建物都開啟。第二個午夜三站各以 12‰ 成長，各加 1 位居民與 1 個就業；Alpha、Beta 各在離它最近的空格蓋 4 人住宅，同時建立住宅 D1 建物（編號 3、4），Gamma 沒有空格可蓋。土地仍長到每格 400／1200，建物在 6c-1 不升級。土地與建物的值手算；鐵路、乘客與帳的值取自 GameCore（同 economy.json），成長率由它們的抵達數推得。
 - 兩份的建物與土地都另以獨立的 Python 實作核對：`python3 -I tools/golden-checks/city_buildings.py --check`。
+
+## Phase 6c-2：容量接上成長與自動升級（schema 38）
+
+- 新觀察 `townGrowth`（ARCHITECTURE 決策 75）。沒有用到它的 fixture 不必改，schema 30 到 37 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`city-buildings-growth.json`（schema 37）的格在那一晚都沒有滿、也沒有碰到容量，所以在 6c-2 的規則下結果相同。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`CityGrowthTests` 另有逐格重算的參考實作。
+- `city-buildings-raise.json`：8 × 2 格的世界、economy.json 的線路與列車。第二個午夜三站都服務 1000‰、可達 2 站：依車站編號，Alpha 升 1、2 號，Beta 略過它們、升 5、7 號，Gamma 升 8、9 號，10 號是 Gamma 的第三格不升；D4（3 號）、既有存量（4 號）不升；差一人的 503 人住宅當晚長滿 504 但不升；之後的成長每格停在建物容量，放不下的捨棄。三站各在最近的空格蓋 4 人住宅與 D1 建物。土地與建物的值由獨立的 Python 實作（`python3 -I tools/golden-checks/city_growth.py`）從規則與觀察到的服務量測算出；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。

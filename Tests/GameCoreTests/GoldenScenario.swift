@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 37
+    static let schemaVersion = 38
 
     var description: String
     var initialState: InitialState
@@ -179,7 +179,7 @@ struct GoldenScenario: Decodable {
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
-                 .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _): true
+                 .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _): true
             default: false
             }
         }
@@ -242,7 +242,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building
+        case landTotals, landCell, building, townGrowth
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -274,6 +274,9 @@ extension GoldenScenario.Step: Decodable {
             case .building:
                 try requireOnly([.found, .building], answering: "building")
                 self = try .observe(observation, expect: .building(Self.found(expect, .building, BuildingSummary.self)))
+            case .townGrowth:
+                try requireOnly([.found, .townGrowth], answering: "townGrowth")
+                self = try .observe(observation, expect: .townGrowth(Self.found(expect, .townGrowth, TownGrowthSummary.self)))
             case .scheduledWaits:
                 try requireOnly([.scheduledWaits], answering: "scheduledWaits")
                 self = try .observe(observation, expect: .scheduledWaits(expect.decode([TrafficWaitSummary].self, forKey: .scheduledWaits)))
@@ -1136,6 +1139,8 @@ enum ScenarioObservation: Equatable {
     case landCell(row: Int, column: Int)
     /// Schema 37 (Phase 6c-1): the building on a cell and what it holds.
     case building(row: Int, column: Int)
+    /// Schema 38 (Phase 6c-2): how town growth measures a station.
+    case townGrowth(StationID)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1143,6 +1148,8 @@ enum ScenarioObservation: Equatable {
             .landTotals(world.landCatchment(of: id).map(LandTotalsSummary.init))
         case .landCell(let row, let column):
             .landCell(world.land.cell(row: row, column: column).map(LandCellSummary.init))
+        case .townGrowth(let id):
+            .townGrowth(world.townGrowth(of: id).map(TownGrowthSummary.init))
         case .building(let row, let column):
             .building(world.buildings.building(row: row, column: column).flatMap { building in
                 world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
@@ -1258,6 +1265,9 @@ extension ScenarioObservation: Decodable {
         // Schema 37: city buildings (Phase 6c-1).
         case "building":
             self = try .building(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
+        // Schema 38: town growth's measures (Phase 6c-2).
+        case "townGrowth":
+            self = try .townGrowth(container.decodeStation(forKey: .station))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1428,6 +1438,7 @@ enum ObservationAnswer: Equatable {
     case landTotals(LandTotalsSummary?)
     case landCell(LandCellSummary?)
     case building(BuildingSummary?)
+    case townGrowth(TownGrowthSummary?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1438,7 +1449,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building
+        case landTotals, landCell, building, townGrowth
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1523,7 +1534,7 @@ extension ObservationAnswer: Encodable {
         case .lateness(let lateness?):
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
-        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil):
+        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1534,6 +1545,9 @@ extension ObservationAnswer: Encodable {
         case .building(let building?):
             try container.encode(true, forKey: .found)
             try container.encode(building, forKey: .building)
+        case .townGrowth(let place?):
+            try container.encode(true, forKey: .found)
+            try container.encode(place, forKey: .townGrowth)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1852,6 +1866,24 @@ struct CityBuildingsSummary: Codable, Equatable {
         d3 = city.count { $0.density == .d3 }
         d4 = city.count { $0.density == .d4 }
         existingStock = buildings.all.count - city.count
+    }
+}
+
+/// How town growth measures a station (schema 38): `{"base", "lastGrowth",
+/// "lastService", "lastReached"}`, its start, its last growth in
+/// thousandths, and the last day's service share (thousandths) and stations
+/// reached.
+struct TownGrowthSummary: Codable, Equatable {
+    var base: Int64
+    var lastGrowth: Int64
+    var lastService: Int64
+    var lastReached: Int64
+
+    init(_ place: TownGrowth.Place) {
+        base = place.base
+        lastGrowth = place.lastGrowth
+        lastService = place.lastService
+        lastReached = place.lastReached
     }
 }
 

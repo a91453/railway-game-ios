@@ -227,12 +227,20 @@ struct StationPanel: View {
                     .font(.footnote)
                     .monospacedDigit()
                     .accessibilityIdentifier("station.land")
-                // Phase 6c-1: the city's buildings there, by height.
+                // Phase 6c-1: the cells there by their buildings' density.
                 if let buildings = session.world.catchmentBuildingsText(of: station.id, in: session.language) {
                     Text(verbatim: buildings)
                         .font(.footnote)
                         .monospacedDigit()
                         .accessibilityIdentifier("station.buildings")
+                }
+                // Phase 6c-2: what town growth measured, and whether full
+                // buildings rise.
+                if let growth = session.world.cityGrowthText(of: station.id, in: session.language) {
+                    Text(verbatim: growth)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("station.cityGrowth")
                 }
             } header: {
                 Text(verbatim: session.language.text("Land", "土地"))

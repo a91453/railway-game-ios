@@ -21,7 +21,10 @@
 // - each midnight a station's daily growth rate (decision 70's: up to 1.5 %
 //   a day for good service and stations reached) grows the people of its
 //   catchment, and a growing station builds one new cell a day at the edge
-//   of its town, nearest to it. Land never shrinks.
+//   of its town, nearest to it. Land never shrinks;
+// - with the city's buildings on (Phase 6c-2, decision 75), a cell grows to
+//   its building's capacity, and a station that served most of its trips
+//   raises up to two full buildings of its catchment a density each night.
 //
 // Old saves and free play keep each station's own ridership: land drives it
 // only where ``GameWorld/landDemand`` is on (the app's new games) and the
@@ -33,11 +36,24 @@ public enum LandDemand {
     public static let tripsPerHundred: Int64 = 40
     /// The residents of a cell a growing station builds.
     public static let newCellResidents: Int64 = 4
-    /// How many residents, and how many jobs, growth fills a cell to: some
-    /// 98,000 and 290,000 a km², a dense city's centre. Land set or
-    /// imported above it keeps what it has and does not grow.
+    /// How many residents, and how many jobs, growth fills a cell to
+    /// without the city's buildings: some 98,000 and 290,000 a km², a dense
+    /// city's centre. Land set or imported above it keeps what it has and
+    /// does not grow. With the city's buildings on, each cell's building
+    /// sets them instead (Phase 6c-2, ARCHITECTURE decision 75).
     public static let grownResidents: Int64 = 400
     public static let grownJobs: Int64 = 1_200
+
+    // Raising the city's buildings (Phase 6c-2, ARCHITECTURE decision 75):
+    // this project's numbers (gap), the study's §7.2.
+
+    /// How many buildings a growing station raises a night, at most.
+    public static let upgradesPerStation = 2
+    /// The share of its trips a station must have served the day before, in
+    /// thousandths, to raise buildings: 80 %.
+    public static let upgradeService: Int64 = 800
+    /// The stations its passengers must have reached the day before.
+    public static let upgradeReached: Int64 = 1
 
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
@@ -165,23 +181,36 @@ extension GameWorld {
     /// decision 70's rate from yesterday's service; then, by ascending
     /// station, each with a positive rate `g`:
     ///
+    /// - with the city's buildings on, if it served at least
+    ///   ``LandDemand/upgradeService`` thousandths of its trips and reached
+    ///   at least ``LandDemand/upgradeReached`` stations (Phase 6c-2), raises
+    ///   up to ``LandDemand/upgradesPerStation`` city buildings of its
+    ///   catchment by one density, by row and column: those below D4 that
+    ///   were full when the midnight began (residents or jobs at their
+    ///   capacity), each at most once a night (a cell a lower station
+    ///   raised is passed over);
     /// - adds `(R × g + 500) / 1000` residents (at least 1) to its share's
     ///   `R` residents and likewise jobs, shared among the cells of its
     ///   catchment by their residents (jobs) by the largest remainder, each
-    ///   filled to at most ``LandDemand/grownResidents``
-    ///   (``LandDemand/grownJobs``); what does not fit is not added;
+    ///   filled to at most its building's capacity with the city's buildings
+    ///   on (Phase 6c-2), else ``LandDemand/grownResidents``
+    ///   (``LandDemand/grownJobs``); a count already there keeps what it
+    ///   has, and what does not fit is not added;
     /// - builds one new home of ``LandDemand/newCellResidents``: the empty
     ///   cell of its catchment, in the world, beside (north, south, east
     ///   or west of) a cell with people, nearest the station (then by row
     ///   and column), with its building (D1 homes) when the city's
     ///   buildings are on (Phase 6c-1).
     ///
-    /// The stations' ridership then follows the land, and each station's
-    /// last growth is how its daily trips changed, in thousandths.
+    /// Each station growth has seen before records that day's service share
+    /// and stations reached (``TownGrowth/Place/lastService``,
+    /// ``TownGrowth/Place/lastReached``). The stations' ridership then
+    /// follows the land, and each station's last growth is how its daily
+    /// trips changed, in thousandths.
     mutating func growLand(reached: [StationID: Int]) {
         guard var growth = townGrowth, drawsDemandFromLand else { return }
         var places: [TownGrowth.Place] = []
-        var growing: [(station: Station, rate: Int64)] = []
+        var growing: [(station: Station, rate: Int64, raises: Bool)] = []
         var before: [StationID: Int64] = [:]
         for record in passengers {
             guard let demand = record.demand, demand.dailyTrips > 0, let station = station(id: record.station) else { continue }
@@ -191,16 +220,28 @@ extension GameWorld {
                 continue
             }
             let served = record.arrived - place.counted
+            let stationReached = reached[record.station] ?? 0
             place.counted = record.arrived
+            place.lastService = TownGrowth.serviceShare(served: served, trips: demand.dailyTrips)
+            place.lastReached = TownGrowth.reachedCount(stationReached)
             places.append(place)
-            let rate = TownGrowth.growth(served: served, trips: demand.dailyTrips, reached: reached[record.station] ?? 0)
+            let rate = TownGrowth.growth(served: served, trips: demand.dailyTrips, reached: stationReached)
             if rate > 0 {
-                growing.append((station, rate))
+                let raises = place.lastService >= LandDemand.upgradeService && place.lastReached >= LandDemand.upgradeReached
+                growing.append((station, rate, raises))
             }
         }
         if !growing.isEmpty {
             let shares = LandDemand.shares(of: land, among: stations)
-            for (station, rate) in growing {
+            // Phase 6c-2: the buildings full as the midnight begins, and
+            // those raised tonight (membership only: the order is the
+            // stations' and the cells').
+            let full = cityBuildings ? fullBuildingCells() : []
+            var raised: Set<CellPosition> = []
+            for (station, rate, raises) in growing {
+                if raises, !full.isEmpty {
+                    raiseBuildings(around: station, full: full, raised: &raised)
+                }
                 let share = shares[station.id] ?? LandDemand.Share()
                 let jobs = share.officeJobs + share.shopJobs
                 grow(around: station, residents: Self.grown(share.residents, rate), jobs: Self.grown(jobs, rate))
@@ -225,9 +266,43 @@ extension GameWorld {
         return max(1, (amount * rate + 500) / 1_000)
     }
 
+    /// The cells of the city buildings below D4 that are full: residents or
+    /// jobs at (or above) a positive capacity.
+    private func fullBuildingCells() -> Set<CellPosition> {
+        var full: Set<CellPosition> = []
+        for cell in land.cells {
+            guard let building = buildings.building(row: cell.row, column: cell.column),
+                  building.kind == .city, building.density < .d4
+            else { continue }
+            let capacity = building.capacity(on: cell)
+            if (capacity.residents > 0 && cell.residents >= capacity.residents) || (capacity.jobs > 0 && cell.jobs >= capacity.jobs) {
+                full.insert(cell.position)
+            }
+        }
+        return full
+    }
+
+    /// Raises up to ``LandDemand/upgradesPerStation`` of the `full`
+    /// buildings of `station`'s catchment that no station has `raised`
+    /// tonight by one density, by row and then column.
+    private mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>) {
+        var cells: [CellPosition] = []
+        land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
+            let position = land.cells[index].position
+            if full.contains(position), !raised.contains(position) {
+                cells.append(position)
+            }
+        }
+        for position in cells.prefix(LandDemand.upgradesPerStation) {
+            buildings.raise(at: position)
+            raised.insert(position)
+        }
+    }
+
     /// Adds `residents` and `jobs` to the cells of `station`'s catchment,
     /// shared by their residents (jobs) by the largest remainder, each cell
-    /// filled to at most its growth limit.
+    /// filled to at most its growth limit: its building's capacity with the
+    /// city's buildings on (Phase 6c-2), else the fixed limits.
     private mutating func grow(around station: Station, residents: Int64, jobs: Int64) {
         var indices: [Int] = []
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
@@ -237,9 +312,11 @@ extension GameWorld {
         let addedJobs = Self.apportion(jobs, by: indices.map { land.cells[$0].jobs })
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
-            let newResidents = cell.residents >= LandDemand.grownResidents
-                ? cell.residents : min(LandDemand.grownResidents, cell.residents + addedResidents[offset])
-            let newJobs = cell.jobs >= LandDemand.grownJobs ? cell.jobs : min(LandDemand.grownJobs, cell.jobs + addedJobs[offset])
+            let capacity = cityBuildings ? buildings.building(row: cell.row, column: cell.column)?.capacity(on: cell) : nil
+            let residentLimit = capacity?.residents ?? LandDemand.grownResidents
+            let jobLimit = capacity?.jobs ?? LandDemand.grownJobs
+            let newResidents = cell.residents >= residentLimit ? cell.residents : min(residentLimit, cell.residents + addedResidents[offset])
+            let newJobs = cell.jobs >= jobLimit ? cell.jobs : min(jobLimit, cell.jobs + addedJobs[offset])
             land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use, residents: newResidents, jobs: newJobs)
         }
     }

@@ -71,9 +71,13 @@
 /// 13. City buildings (Phase 6c-1, ARCHITECTURE decision 74): the world can
 ///     have `"cityBuildings"` and `"buildings"`, the building on each cell
 ///     of land. A build that reads only version 12 would drop them.
+/// 14. Town growth's last service and stations reached (Phase 6c-2,
+///     ARCHITECTURE decision 75): a station's growth can have
+///     `"lastService"` and `"lastReached"`, which raise buildings. A build
+///     that reads only version 13 would drop them.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 13
+    public static let currentVersion = 14
 
     public let world: GameWorld
 
@@ -131,6 +135,9 @@ extension SavedGame: Codable {
         // city's buildings off and no `"buildings"`; its land keeps growing
         // to the fixed 400 residents and 1,200 jobs a cell (decision 73)
         // until they are turned on, which puts them up then.
+        // Version 13 to 14: a station's growth without `"lastService"` or
+        // `"lastReached"` has 0 of each until its next midnight measures
+        // them, so it raises no building that night.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -13,6 +13,9 @@ xcuserdata/
 *.xccheckout
 build/
 
+# Python
+__pycache__/
+
 # Editors
 .vscode/
 *.swp

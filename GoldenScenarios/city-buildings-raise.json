@@ -1,0 +1,1246 @@
+{
+  "schemaVersion": 38,
+  "description": "City buildings rise and hold their growth (Phase 6c-2, ARCHITECTURE decision 75) in a world 32768 x 8192 units, 8 x 2 cells of 64 m, on economy.json's line Main (Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00), managed, with demand from land, town growth and the city's buildings on. Every cell's middle is within 800 m of all three stations. The land as set, with its buildings (decision 74), numbered by row and column: row 0 column 0 homes of 56 (1: D1 56 / 12, full), 1 shops of 72 jobs (2: D1 16 / 72, full), 2 homes of 1120 (3: D4, full, no higher density), 3 homes of 1500 (4: existing stock, never raised), 4 offices of 84 jobs (5: D1 8 / 84, full), 5 homes of 503 (6: D3, one short), 6 homes of 168 (7: D2, full), 7 homes of 56 (8: D1, full); row 1 column 0 and 1 homes of 56 (9, 10: D1, full). The first midnight (the tick after 1440) town growth sees the stations, measuring nothing yet (lastService and lastReached 0). By the second (after 2880) each station had all its trips arrive and reached 2 stations: lastService 1000, lastReached 2 (GameCore's values, as the railway and passengers give them), so each grows at 10 + 2 = 12 thousandths and, with at least 800 served and 1 reached, raises buildings. The buildings full as that midnight began: 1, 2, 5, 7, 8, 9, 10 (3 is D4, 4 existing stock, 6 one short). By ascending station, each raises the first two by row and column that no station raised tonight, one density each: Alpha 1 and 2 (to D2), Beta 5 and 7 (D2, D3; 1 and 2 it passes over), Gamma 8 and 9 (D2); 10 is Gamma's third and stays D1. Then each grows its share (Alpha 1148 residents and 51 jobs, Beta 1174 and 52, Gamma 1193 and 53, by nearness) by (share x 12 + 500) / 1000, 14 residents and 1 job each, shared over the cells by their counts by the largest remainder, each cell held at its building's capacity: the homes of 503 fill to 504 (D3) and are not raised tonight; 2 (1120, D4), 4 (existing stock 1500) and the D1 homes of 56 at 10 keep what they have, and what does not fit is dropped, not given to another cell; the raised homes of 168 grow to 170 into their new D3 room; the offices' jobs reach 86. Each station then builds the empty cell beside people nearest it, homes of 4 with their D1 building: Alpha row 1 column 2 (11), Beta 1, 3 (12), Gamma 1, 4 (13). The land and buildings after the night are worked out from the rules and the measured service by an independent Python implementation (tools/golden-checks/city_growth.py); the railway, passenger and account values are GameCore's, as in economy.json.",
+  "initialState": {"worldWidth": 32768, "worldHeight": 8192, "balance": 1000000, "costs": {"track": 1000, "station": 50000, "train": 200000}, "gameMinutes": 1380, "speed": "normal"},
+  "steps": [
+    {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLand", "cells": [{"row": 0, "column": 0, "use": "residential", "residents": 56, "jobs": 0}, {"row": 0, "column": 1, "use": "commercial", "residents": 0, "jobs": 72}, {"row": 0, "column": 2, "use": "residential", "residents": 1120, "jobs": 0}, {"row": 0, "column": 3, "use": "residential", "residents": 1500, "jobs": 0}, {"row": 0, "column": 4, "use": "office", "residents": 0, "jobs": 84}, {"row": 0, "column": 5, "use": "residential", "residents": 503, "jobs": 0}, {"row": 0, "column": 6, "use": "residential", "residents": 168, "jobs": 0}, {"row": 0, "column": 7, "use": "residential", "residents": 56, "jobs": 0}, {"row": 1, "column": 0, "use": "residential", "residents": 56, "jobs": 0}, {"row": 1, "column": 1, "use": "residential", "residents": 56, "jobs": 0}]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLandDemand", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTownGrowth", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "commercial", "density": 1, "residents": 16, "jobs": 72}}},
+    {"observe": {"type": "building", "row": 0, "column": 2}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "residential", "density": 4, "residents": 1120, "jobs": 240}}},
+    {"observe": {"type": "building", "row": 0, "column": 3}, "expect": {"found": true, "building": {"id": 4, "kind": "existingStock", "use": "residential", "density": 4, "residents": 1500, "jobs": 240}}},
+    {"observe": {"type": "building", "row": 0, "column": 4}, "expect": {"found": true, "building": {"id": 5, "kind": "city", "use": "office", "density": 1, "residents": 8, "jobs": 84}}},
+    {"observe": {"type": "building", "row": 0, "column": 5}, "expect": {"found": true, "building": {"id": 6, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
+    {"observe": {"type": "building", "row": 0, "column": 6}, "expect": {"found": true, "building": {"id": 7, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
+    {"observe": {"type": "building", "row": 0, "column": 7}, "expect": {"found": true, "building": {"id": 8, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 1, "column": 0}, "expect": {"found": true, "building": {"id": 9, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 1, "column": 1}, "expect": {"found": true, "building": {"id": 10, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"command": {"type": "buildTrackNode", "x": 512, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 1536, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 2560, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 3584, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 4608, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 5632, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 6656, "y": 1536, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 2, "to": 3, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 3, "to": 4, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 4, "to": 5, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 5, "to": 6, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 6, "to": 7, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Alpha", "point": {"x": 1536, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Beta", "point": {"x": 3584, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Gamma", "point": {"x": 5632, "y": 512}}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 1, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 1, "edge": 2, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 3, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 2, "edge": 4, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 5, "start": 512, "end": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "addTrackPlatform", "station": 3, "edge": 6, "start": 0, "end": 512}, "expect": {"result": "ok"}},
+    {"command": {"type": "purchaseTrain", "name": "Blue"}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeTrain", "train": 1, "position": {"type": "edge", "edge": 1, "direction": "forward", "offset": 1024}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setTrainMovementRate", "train": 1, "rate": 1024}, "expect": {"result": "ok"}},
+    {"command": {"type": "createLine", "name": "Main", "stops": [1, 2, 3]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLinePerformance", "line": 1, "performance": {"acceleration": 250, "braking": 250, "topSpeed": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineServiceWindow", "line": 1, "window": {"type": "allDay"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLineTrainsInService", "line": 1, "trains": {"peak": 1, "offPeak": 1, "low": 1}}, "expect": {"result": "ok"}},
+    {"command": {"type": "assignTrain", "train": 1, "line": 1}, "expect": {"result": "ok"}},
+    {"command": {"type": "advance", "ticks": 61}, "expect": {"result": "ok"}},
+    {"observe": {"type": "townGrowth", "station": 1}, "expect": {"found": true, "townGrowth": {"base": 480, "lastGrowth": 0, "lastService": 0, "lastReached": 0}}},
+    {"observe": {"type": "townGrowth", "station": 2}, "expect": {"found": true, "townGrowth": {"base": 490, "lastGrowth": 0, "lastService": 0, "lastReached": 0}}},
+    {"observe": {"type": "townGrowth", "station": 3}, "expect": {"found": true, "townGrowth": {"base": 498, "lastGrowth": 0, "lastService": 0, "lastReached": 0}}},
+    {"command": {"type": "advance", "ticks": 1440}, "expect": {"result": "ok"}},
+    {"observe": {"type": "townGrowth", "station": 1}, "expect": {"found": true, "townGrowth": {"base": 480, "lastGrowth": 4, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "townGrowth", "station": 2}, "expect": {"found": true, "townGrowth": {"base": 490, "lastGrowth": 4, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "townGrowth", "station": 3}, "expect": {"found": true, "townGrowth": {"base": 498, "lastGrowth": 6, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 0}, "expect": {"found": true, "landCell": {"row": 0, "column": 0, "use": "residential", "residents": 56, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 1}, "expect": {"found": true, "landCell": {"row": 0, "column": 1, "use": "commercial", "residents": 0, "jobs": 72}}},
+    {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "commercial", "density": 2, "residents": 48, "jobs": 216}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 2}, "expect": {"found": true, "landCell": {"row": 0, "column": 2, "use": "residential", "residents": 1120, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 2}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "residential", "density": 4, "residents": 1120, "jobs": 240}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 3}, "expect": {"found": true, "landCell": {"row": 0, "column": 3, "use": "residential", "residents": 1500, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 3}, "expect": {"found": true, "building": {"id": 4, "kind": "existingStock", "use": "residential", "density": 4, "residents": 1500, "jobs": 240}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 4}, "expect": {"found": true, "landCell": {"row": 0, "column": 4, "use": "office", "residents": 0, "jobs": 86}}},
+    {"observe": {"type": "building", "row": 0, "column": 4}, "expect": {"found": true, "building": {"id": 5, "kind": "city", "use": "office", "density": 2, "residents": 24, "jobs": 252}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 5}, "expect": {"found": true, "landCell": {"row": 0, "column": 5, "use": "residential", "residents": 504, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 5}, "expect": {"found": true, "building": {"id": 6, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 6}, "expect": {"found": true, "landCell": {"row": 0, "column": 6, "use": "residential", "residents": 170, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 6}, "expect": {"found": true, "building": {"id": 7, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 7}, "expect": {"found": true, "landCell": {"row": 0, "column": 7, "use": "residential", "residents": 56, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 0, "column": 7}, "expect": {"found": true, "building": {"id": 8, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 0}, "expect": {"found": true, "landCell": {"row": 1, "column": 0, "use": "residential", "residents": 56, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 1, "column": 0}, "expect": {"found": true, "building": {"id": 9, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 1}, "expect": {"found": true, "landCell": {"row": 1, "column": 1, "use": "residential", "residents": 56, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 1, "column": 1}, "expect": {"found": true, "building": {"id": 10, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 2}, "expect": {"found": true, "landCell": {"row": 1, "column": 2, "use": "residential", "residents": 4, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": true, "building": {"id": 11, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 3}, "expect": {"found": true, "landCell": {"row": 1, "column": 3, "use": "residential", "residents": 4, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 1, "column": 3}, "expect": {"found": true, "building": {"id": 12, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 4}, "expect": {"found": true, "landCell": {"row": 1, "column": 4, "use": "residential", "residents": 4, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 1, "column": 4}, "expect": {"found": true, "building": {"id": 13, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "landCell", "row": 1, "column": 5}, "expect": {"found": false}},
+    {"observe": {"type": "building", "row": 1, "column": 5}, "expect": {"found": false}},
+    {"observe": {"type": "landCell", "row": 1, "column": 6}, "expect": {"found": false}},
+    {"observe": {"type": "building", "row": 1, "column": 6}, "expect": {"found": false}},
+    {"observe": {"type": "landCell", "row": 1, "column": 7}, "expect": {"found": false}},
+    {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": false}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 2881,
+    "speed": "normal",
+    "balance": -2609800,
+    "stations": [
+      {
+        "id": 1,
+        "name": "Alpha",
+        "point": {
+          "x": 1536,
+          "y": 512
+        }
+      },
+      {
+        "id": 2,
+        "name": "Beta",
+        "point": {
+          "x": 3584,
+          "y": 512
+        }
+      },
+      {
+        "id": 3,
+        "name": "Gamma",
+        "point": {
+          "x": 5632,
+          "y": 512
+        }
+      }
+    ],
+    "trains": [
+      {
+        "cars": 1,
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "waiting"
+        },
+        "id": 1,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "rate": 1024
+        },
+        "name": "Blue",
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 1024,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "times": {
+          "arrival": 172842,
+          "departure": 172722,
+          "exchangeEnd": 172851
+        },
+        "timetable": [
+          {
+            "arrival": 2878,
+            "departureSeconds": 172722,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrivalSeconds": 172842,
+            "departureSeconds": 172902,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrivalSeconds": 173022,
+            "departureSeconds": 173142,
+            "reverse": true,
+            "station": 3
+          },
+          {
+            "arrivalSeconds": 173262,
+            "departureSeconds": 173322,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrivalSeconds": 173442,
+            "departureSeconds": 173442,
+            "reverse": true,
+            "station": 1
+          }
+        ],
+        "trailEdges": []
+      }
+    ],
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": 2878,
+        "name": "Main",
+        "patterns": [],
+        "performance": {
+          "acceleration": 250,
+          "braking": 250,
+          "topSpeed": 1
+        },
+        "stops": [
+          1,
+          2,
+          3
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [
+          1
+        ],
+        "trainsInService": {
+          "low": 1,
+          "offPeak": 1,
+          "peak": 1
+        },
+        "window": {
+          "type": "allDay"
+        }
+      }
+    ],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 3,
+          "id": 3,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 4
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 4,
+          "id": 4,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 5
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 5,
+          "id": 5,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 6
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 6,
+          "id": 6,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 7
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 512,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 1536,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 2560,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 4,
+          "x": 3584,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 5,
+          "x": 4608,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 6,
+          "x": 5632,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 7,
+          "x": 6656,
+          "y": 1536,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 1024,
+          "start": 512,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 512,
+          "start": 0,
+          "station": 1
+        },
+        {
+          "edge": 3,
+          "end": 1024,
+          "start": 512,
+          "station": 2
+        },
+        {
+          "edge": 4,
+          "end": 512,
+          "start": 0,
+          "station": 2
+        },
+        {
+          "edge": 5,
+          "end": 1024,
+          "start": 512,
+          "station": 3
+        },
+        {
+          "edge": 6,
+          "end": 512,
+          "start": 0,
+          "station": 3
+        }
+      ]
+    },
+    "trafficControl": false,
+    "passengers": [
+      {
+        "abandoned": 0,
+        "arrived": 480,
+        "demand": {
+          "dailyTrips": 482,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 482,
+        "station": 1,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 2,
+            "direction": "outbound",
+            "line": 1,
+            "since": 2879
+          },
+          {
+            "count": 1,
+            "destination": 3,
+            "direction": "outbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      },
+      {
+        "abandoned": 0,
+        "arrived": 490,
+        "demand": {
+          "dailyTrips": 492,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 492,
+        "station": 2,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 1,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      },
+      {
+        "abandoned": 0,
+        "arrived": 498,
+        "demand": {
+          "dailyTrips": 501,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 500,
+        "station": 3,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 1,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          },
+          {
+            "count": 1,
+            "destination": 2,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      }
+    ],
+    "riders": [
+      {
+        "groups": [
+          {
+            "count": 1,
+            "destination": 3,
+            "origin": 2
+          }
+        ],
+        "train": 1
+      }
+    ],
+    "accounts": {
+      "days": [
+        {
+          "day": 0,
+          "energyCost": 37200,
+          "fareRevenue": 500,
+          "maintenanceCost": 1400,
+          "operatingCost": 142800,
+          "staffCost": 234000
+        },
+        {
+          "day": 1,
+          "energyCost": 37200,
+          "fareRevenue": 733500,
+          "maintenanceCost": 33600,
+          "operatingCost": 3267600,
+          "staffCost": 234000
+        }
+      ],
+      "fareRules": null,
+      "ledger": [
+        {
+          "amount": -143700,
+          "breakdown": [
+            {
+              "amount": 500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 3,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1440
+        },
+        {
+          "amount": -37200,
+          "breakdown": [
+            {
+              "amount": -1200,
+              "item": "routeEnergy"
+            },
+            {
+              "amount": -36000,
+              "item": "trainEnergy"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyEnergy",
+          "time": 1439
+        },
+        {
+          "amount": -234000,
+          "breakdown": [
+            {
+              "amount": -186000,
+              "item": "stationStaff"
+            },
+            {
+              "amount": -48000,
+              "item": "trainStaff"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyStaff",
+          "time": 1439
+        },
+        {
+          "amount": -133100,
+          "breakdown": [
+            {
+              "amount": 3500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 6,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1500
+        },
+        {
+          "amount": -134600,
+          "breakdown": [
+            {
+              "amount": 2000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1560
+        },
+        {
+          "amount": -133600,
+          "breakdown": [
+            {
+              "amount": 3000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1620
+        },
+        {
+          "amount": -132600,
+          "breakdown": [
+            {
+              "amount": 4000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 6,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1680
+        },
+        {
+          "amount": -134100,
+          "breakdown": [
+            {
+              "amount": 2500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 3,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1740
+        },
+        {
+          "amount": -126100,
+          "breakdown": [
+            {
+              "amount": 10500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 1800
+        },
+        {
+          "amount": -104700,
+          "breakdown": [
+            {
+              "amount": 39500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 25,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 1860
+        },
+        {
+          "amount": -67100,
+          "breakdown": [
+            {
+              "amount": 69500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 41,
+            "maxWaiting": 7
+          },
+          "kind": "hourlyNet",
+          "time": 1920
+        },
+        {
+          "amount": -65100,
+          "breakdown": [
+            {
+              "amount": 71500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 7
+          },
+          "kind": "hourlyNet",
+          "time": 1980
+        },
+        {
+          "amount": -90100,
+          "breakdown": [
+            {
+              "amount": 46500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 2040
+        },
+        {
+          "amount": -110100,
+          "breakdown": [
+            {
+              "amount": 26500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2100
+        },
+        {
+          "amount": -112600,
+          "breakdown": [
+            {
+              "amount": 24000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2160
+        },
+        {
+          "amount": -114600,
+          "breakdown": [
+            {
+              "amount": 22000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2220
+        },
+        {
+          "amount": -118200,
+          "breakdown": [
+            {
+              "amount": 26000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2280
+        },
+        {
+          "amount": -112600,
+          "breakdown": [
+            {
+              "amount": 24000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2340
+        },
+        {
+          "amount": -102100,
+          "breakdown": [
+            {
+              "amount": 34500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 25,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 2400
+        },
+        {
+          "amount": -83600,
+          "breakdown": [
+            {
+              "amount": 53000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 5
+          },
+          "kind": "hourlyNet",
+          "time": 2460
+        },
+        {
+          "amount": -65600,
+          "breakdown": [
+            {
+              "amount": 71000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 34,
+            "maxWaiting": 5
+          },
+          "kind": "hourlyNet",
+          "time": 2520
+        },
+        {
+          "amount": -66100,
+          "breakdown": [
+            {
+              "amount": 70500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 2580
+        },
+        {
+          "amount": -91100,
+          "breakdown": [
+            {
+              "amount": 45500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2640
+        },
+        {
+          "amount": -111700,
+          "breakdown": [
+            {
+              "amount": 32500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2700
+        },
+        {
+          "amount": -105600,
+          "breakdown": [
+            {
+              "amount": 31000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 2760
+        },
+        {
+          "amount": -119100,
+          "breakdown": [
+            {
+              "amount": 17500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2820
+        },
+        {
+          "amount": -133600,
+          "breakdown": [
+            {
+              "amount": 3000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2880
+        },
+        {
+          "amount": -37200,
+          "breakdown": [
+            {
+              "amount": -1200,
+              "item": "routeEnergy"
+            },
+            {
+              "amount": -36000,
+              "item": "trainEnergy"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyEnergy",
+          "time": 2879
+        },
+        {
+          "amount": -234000,
+          "breakdown": [
+            {
+              "amount": -186000,
+              "item": "stationStaff"
+            },
+            {
+              "amount": -48000,
+              "item": "trainStaff"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyStaff",
+          "time": 2879
+        }
+      ],
+      "mode": "management",
+      "openedAt": 2880,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 500,
+        "fareTrips": 1,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "land": {
+      "cells": 13,
+      "jobs": 158,
+      "residents": 3530
+    },
+    "landDemand": true,
+    "cityBuildings": {
+      "buildings": 13,
+      "d1": 4,
+      "d2": 5,
+      "d3": 2,
+      "d4": 1,
+      "existingStock": 1
+    }
+  }
+}
