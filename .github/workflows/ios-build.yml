@@ -105,8 +105,9 @@ jobs:
     name: Xcode build (iOS Simulator)
     runs-on: macos-26
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
-    # on a slower runner, so the limit only catches a hang.
-    timeout-minutes: 45
+    # on a slower runner, so the limit only catches a hang. Room too for a
+    # first boot's data migration (up to 14 minutes) and the warm-up launch.
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
 
@@ -217,9 +218,28 @@ jobs:
 
       # Boot explicitly before XCTest installs its runner. A cold Simulator
       # otherwise leaves xcodebuild waiting without any test progress logs.
+      # A never-booted device's first boot migrates its data first: run
+      # 37121712618 spent 7m38s in "Waiting on Data Migration" (locationd)
+      # and was stopped at 8 minutes; others took up to 6m28s.
       - name: Boot the selected iPhone Simulator
-        timeout-minutes: 8
+        timeout-minutes: 14
         run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
+      # The first launch on a freshly booted device is the slow one: in run
+      # 37112399702 xcodebuild did not start launching the app for 80 s and
+      # the first UI test timed out, while the next launched in under a
+      # second. Launch the built app once here, outside any test.
+      - name: Warm up the app's first launch
+        timeout-minutes: 5
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          xcrun simctl install "$SIMULATOR_UDID" "$app"
+          if xcrun simctl launch "$SIMULATOR_UDID" io.github.a91453.RailwayGame -ui-testing; then
+            sleep 10
+            xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame || true
+          else
+            echo "::warning::The warm-up launch failed; the UI tests launch the app themselves."
+          fi
 
       # A pull request runs the gate list; everything else runs all the UI
       # tests. The gate keeps what only a Simulator can answer and leaves the
@@ -326,8 +346,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ipad == 'true'
     runs-on: macos-26
-    # Room for the step limits below (boot 8, tests 20) and the rest.
-    timeout-minutes: 40
+    # Room for the step limits below (boot 14, tests 20) and the rest.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -358,7 +378,9 @@ jobs:
           PY
 
       - name: Boot the selected iPad Simulator
-        timeout-minutes: 8
+        # A first boot's data migration can take most of 8 minutes (see the
+        # iPhone job).
+        timeout-minutes: 14
         run: xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
 
       - name: iPad tutorial tests (bilingual and large text)

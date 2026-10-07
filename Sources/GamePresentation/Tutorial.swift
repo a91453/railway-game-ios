@@ -27,6 +27,8 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case selectTool = "tool.select"
     case networkTool = "tool.network"
     case trainTool = "tool.train"
+    /// The train tool's Buy button.
+    case buyTrain = "train.buy"
     /// The network tool's modes: build, platform, remove.
     case networkModes = "network.modes"
     /// The button that applies the tool: Build Track, Add Platform, Place
@@ -338,7 +340,7 @@ extension Tutorial {
         // No reference step: the reference's lines come with their trains.
         TutorialStep(
             id: "train.place",
-            targets: [.trainTool, .actionButton],
+            targets: [.trainTool, .buyTrain, .actionButton],
             goal: .placeTrain,
             title: ("Buy a train and place it", "購買並放置列車"),
             body: (

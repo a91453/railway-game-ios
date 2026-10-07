@@ -8,18 +8,11 @@ import SwiftUI
 /// ridership (Stage C2).
 struct InspectorView: View {
     let session: GameSession
-    @State private var showsStation = false
+    @Environment(GameScreenState.self) private var screen
 
     var body: some View {
         inspector
             .metroCard(padding: 10, cornerRadius: 12)
-            .sheet(isPresented: $showsStation) {
-                StationPanel(session: session)
-                    .presentationDetents([.medium, .large])
-                    // The map stays usable behind the half-height sheet, so
-                    // another station can be selected.
-                    .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-            }
     }
 
     @ViewBuilder
@@ -88,7 +81,7 @@ struct InspectorView: View {
             Spacer(minLength: 0)
             if session.selectedStation != nil {
                 Button {
-                    showsStation = true
+                    screen.panel = .station
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "person.2.fill")
@@ -99,7 +92,7 @@ struct InspectorView: View {
                     .padding(.horizontal, 8)
                     .frame(height: 30)
                 }
-                .buttonStyle(SelectableButtonStyle(isActive: showsStation))
+                .buttonStyle(SelectableButtonStyle(isActive: screen.panel == .station))
                 .accessibilityLabel("Ridership")
                 .accessibilityHint("Shows the station's ridership: what kind of place it serves, its trips and its passengers.")
             }

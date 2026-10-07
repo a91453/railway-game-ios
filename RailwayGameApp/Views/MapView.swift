@@ -23,14 +23,9 @@ struct MapView: View {
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
-    /// The layer's opacity once the player has moved its slider (the
-    /// reference's `_popTravelOpacityUserSet`); until then each layer's own
-    /// (``PopTravel/baseOpacity(for:compactWidth:)``).
-    @State private var popTravelOpacity: Double?
-    /// The timeline's hour, and whether it plays (view state, as the
-    /// reference's `G.popTravelHour` and `G.popTravelPlaying`).
-    @State private var popTravelHour = PopTravel.defaultHour
-    @State private var popTravelPlay: Task<Void, Never>?
+    /// The open panel, and the layer's opacity, hour and playback: kept
+    /// above both layouts (``GameScreenState``).
+    @Environment(GameScreenState.self) private var screen
     /// The population grid laid out on this map, made once for a grid and
     /// a map (``PopulationHeatmap``), and a number that changes with it.
     @State private var heatmap: PopulationHeatmap?
@@ -47,38 +42,19 @@ struct MapView: View {
     /// tapped (`pop-grid-tooltip`).
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var showsDataSources = false
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
-    @State private var showsMapLayers = false
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
 
     private var mapLayers: MapLayerPreferences {
-        get {
-            MapLayerPreferences(
-                showsStationNames: showsStationNames,
-                showsWaitingCounts: showsWaitingCounts,
-                showsCatchmentRings: showsCatchmentRings,
-                popTravelMode: PopTravelMode(rawValue: popTravelModeName)
-            )
-        }
-        // The binding below sets this from a non-mutating context; the
-        // @AppStorage values it writes need no mutable self.
-        nonmutating set {
-            showsStationNames = newValue.showsStationNames
-            showsWaitingCounts = newValue.showsWaitingCounts
-            showsCatchmentRings = newValue.showsCatchmentRings
-            popTravelModeName = newValue.popTravelMode?.rawValue ?? ""
-        }
-    }
-
-    private var mapLayersBinding: Binding<MapLayerPreferences> {
-        Binding(
-            get: { mapLayers },
-            set: { mapLayers = $0 }
+        MapLayerPreferences(
+            showsStationNames: showsStationNames,
+            showsWaitingCounts: showsWaitingCounts,
+            showsCatchmentRings: showsCatchmentRings,
+            popTravelMode: PopTravelMode(rawValue: popTravelModeName)
         )
     }
 
@@ -127,7 +103,10 @@ struct MapView: View {
                         let point = projection.planPoint(at: location)
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
                         showCellTooltip(at: location, projection: projection)
-                        if session.tool == .network {
+                        // With the lines panel open the map is where the
+                        // player picks stations for a line (the tutorial's
+                        // line step), whichever tool is chosen.
+                        if session.tool == .network, screen.panel != .lines {
                             session.tapNetwork(at: point, reach: reach)
                         } else {
                             session.tapMap(at: point, reach: reach)
@@ -179,8 +158,8 @@ struct MapView: View {
                                 mode: mode,
                                 language: session.language,
                                 opacity: opacityBinding(for: mode),
-                                hour: $popTravelHour,
-                                isPlaying: popTravelPlay != nil,
+                                hour: Bindable(screen).popTravelHour,
+                                isPlaying: screen.isPlayingPopTravel,
                                 onTogglePlay: togglePopTravelPlay
                             ) {
                                 stopPopTravelPlay()
@@ -224,12 +203,6 @@ struct MapView: View {
                         language: session.language
                     )
                 }
-            }
-            .sheet(isPresented: $showsDataSources) {
-                DataSourcesView(language: session.language)
-            }
-            .sheet(isPresented: $showsMapLayers) {
-                MapLayerSheet(layers: mapLayersBinding)
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
@@ -276,16 +249,13 @@ struct MapView: View {
                 travelDemand = session.world.travelDemandMap()
             }
         }
-        .onChange(of: TravelTilesKey(mode: mapLayers.popTravelMode, hour: popTravelHour, demand: travelDemand), initial: true) { _, key in
+        .onChange(of: TravelTilesKey(mode: mapLayers.popTravelMode, hour: screen.popTravelHour, demand: travelDemand), initial: true) { _, key in
             travelTiles = key.mode.map { key.demand.tiles(for: $0, at: key.hour) } ?? []
             travelTilesVersion &+= 1
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
             if mode?.usesHour != true { stopPopTravelPlay() }
-        }
-        .onDisappear {
-            stopPopTravelPlay()
         }
         .onChange(of: session.world.network, initial: true) { _, network in
             // Edges are immutable and IDs are never reused. Keep their
@@ -319,13 +289,13 @@ struct MapView: View {
     /// The layer's opacity: the player's, or the layer's own until set
     /// (narrow screens, the reference's `innerWidth <= 768`, are compact).
     private func opacity(for mode: PopTravelMode) -> Double {
-        popTravelOpacity ?? PopTravel.baseOpacity(for: mode, compactWidth: sizeClass == .compact)
+        screen.popTravelOpacity ?? PopTravel.baseOpacity(for: mode, compactWidth: sizeClass == .compact)
     }
 
     private func opacityBinding(for mode: PopTravelMode) -> Binding<Double> {
         Binding(
             get: { opacity(for: mode) },
-            set: { popTravelOpacity = PopTravel.clampedOpacity($0) }
+            set: { screen.popTravelOpacity = PopTravel.clampedOpacity($0) }
         )
     }
 
@@ -333,25 +303,18 @@ struct MapView: View {
     /// (`startPopTravelPlay`); played on population, it shows travel
     /// demand, as the reference switches to its travel tab.
     private func togglePopTravelPlay() {
-        if popTravelPlay != nil {
+        if screen.isPlayingPopTravel {
             stopPopTravelPlay()
             return
         }
         if mapLayers.popTravelMode == .population || mapLayers.popTravelMode == nil {
             popTravelModeName = PopTravelMode.travel.rawValue
         }
-        popTravelPlay = Task { @MainActor in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: PopTravel.playInterval)
-                guard !Task.isCancelled else { return }
-                popTravelHour = PopTravel.nextHour(after: popTravelHour)
-            }
-        }
+        screen.startPopTravelPlay()
     }
 
     private func stopPopTravelPlay() {
-        popTravelPlay?.cancel()
-        popTravelPlay = nil
+        screen.stopPopTravelPlay()
     }
 
     /// Shows the tapped cell's people and density while the population
@@ -405,7 +368,7 @@ struct MapView: View {
                 .accessibilityIdentifier("map.realRailways")
             }
             Button {
-                showsDataSources = true
+                screen.panel = .dataSources
             } label: {
                 Label("Data Sources", systemImage: "info.circle")
             }
@@ -422,7 +385,7 @@ struct MapView: View {
 
     private var mapLayersButton: some View {
         Button {
-            showsMapLayers = true
+            screen.panel = .mapLayers
         } label: {
             Image(systemName: "square.3.layers.3d")
                 .font(.title3)
@@ -904,5 +867,34 @@ private struct MapGestures: UIViewRepresentable {
                 self.glide = glide
             }
         }
+    }
+}
+
+/// The map layers sheet over the stored preferences the map reads
+/// (``MapView``'s `@AppStorage` keys), so it can be presented from above
+/// both layouts (``ContentView``).
+struct StoredMapLayerSheet: View {
+    @AppStorage("mapShowsStationNames") private var showsStationNames = true
+    @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
+    @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
+    @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+
+    var body: some View {
+        MapLayerSheet(layers: Binding(
+            get: {
+                MapLayerPreferences(
+                    showsStationNames: showsStationNames,
+                    showsWaitingCounts: showsWaitingCounts,
+                    showsCatchmentRings: showsCatchmentRings,
+                    popTravelMode: PopTravelMode(rawValue: popTravelModeName)
+                )
+            },
+            set: { layers in
+                showsStationNames = layers.showsStationNames
+                showsWaitingCounts = layers.showsWaitingCounts
+                showsCatchmentRings = layers.showsCatchmentRings
+                popTravelModeName = layers.popTravelMode?.rawValue ?? ""
+            }
+        ))
     }
 }
