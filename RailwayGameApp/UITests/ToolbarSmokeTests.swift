@@ -16,10 +16,12 @@ final class ToolbarSmokeTests: XCTestCase {
         ])
     }
 
-    func testJapaneseBrand() {
+    /// The app has no Japanese interface: someone who reads Japanese first
+    /// and Traditional Chinese second gets the Chinese one, not English.
+    func testJapaneseThenTraditionalChineseGetsChinese() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(ja)", "-AppleLocale", "ja_JP"]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(ja, zh-Hant)", "-AppleLocale", "ja_JP"]
         app.launch()
         defer { app.terminate() }
         let brand = app.staticTexts["start.brand"]
