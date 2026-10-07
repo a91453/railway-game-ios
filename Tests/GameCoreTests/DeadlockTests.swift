@@ -51,6 +51,23 @@ final class DeadlockTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// The dispatcher's departure for a passing place records the train's
+    /// visit where it leaves (decision 59), as every other departure does:
+    /// a train waiting to be overtaken by it is then let go.
+    func testTheDispatchersDepartureRecordsItsVisit() throws {
+        var world = try SingleTrackMeet.world()
+        let (east, _) = try expresses(&world)
+        try world.advance(ticks: 1)
+        let index = try XCTUnwrap(world.trains.firstIndex { $0.id == east })
+        XCTAssertEqual(world.trains[index].execution, .waitingAtStop(0))
+        var waiting = world.trains[index]
+        waiting.trafficVisits = [TrafficVisit(station: SingleTrackMeet.west, stop: 0, cycle: 0, arrival: .zero, departure: nil)]
+        world = world.replacing(waiting)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.trains[index].execution, .travellingToStop(1), "the dispatcher sends it to the passing place")
+        XCTAssertEqual(world.trains[index].trafficVisits.first?.departure, GameTime(minutes: 1))
+    }
+
     func testThePassingPlaceIsTheFirstThatLetsAnotherGo() throws {
         var world = try SingleTrackMeet.world()
         let (east, west) = try expresses(&world)

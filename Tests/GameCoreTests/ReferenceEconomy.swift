@@ -137,7 +137,8 @@ extension ReferenceWorld {
             let key = ServiceKey(line: line.id, service: 0)
             if memo.journeys[key] == nil { memo.journeys[key] = .some(serviceJourney(line, 0)) }
             if let journey = memo.journeys[key]! {
-                for leg in journey.legs[0..<(journey.legs.count / 2)] { route += leg.path.distance }
+                // A ring's journey is one lap, its whole route.
+                for leg in journey.legs[0..<(line.ring ? journey.legs.count : journey.legs.count / 2)] { route += leg.path.distance }
             }
             trainCount += Int64([line.trains[.peak]!, line.trains[.offPeak]!, line.trains[.low]!].max()!)
             for pattern in line.patterns {

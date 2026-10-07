@@ -162,6 +162,30 @@ final class RealRailwayGameplayTests: XCTestCase {
         XCTAssertEqual(session.world.lines.last?.targetHeadways, TargetHeadways.none)
     }
 
+    /// A line on a real line runs its trains by target headway, so
+    /// assigning one leaves its counts at none: the tutorial's "start
+    /// service" step still counts it as running the train.
+    func testTheTutorialCountsALineRunningByTargetHeadway() throws {
+        var world = GameWorld.newGame()
+        let tamsui = try world.buildStation(named: "淡水", at: PlanPoint(x: 64_000, y: 64_000)).id
+        let hongshulin = try world.buildStation(named: "紅樹林", at: PlanPoint(x: 128_000, y: 64_000)).id
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        session.selectStation(tamsui)
+        session.addSelectedStationToLineDraft()
+        session.selectStation(hongshulin)
+        session.addSelectedStationToLineDraft()
+        session.createLineFromDraft()
+        XCTAssertEqual(session.selectedLine?.targetHeadways, TargetHeadways(peak: 6, offPeak: 9))
+        session.purchaseTrain()
+        let step = try XCTUnwrap(Tutorial.standardSteps.first { $0.goal == .startService })
+        session.tutorial = Tutorial(steps: [step], over: session.world)
+        XCTAssertFalse(session.isTutorialStepDone)
+        session.assignSelectedTrainToSelectedLine()
+        XCTAssertEqual(session.selectedLine?.trainsInService, TrainsInService.none, "the targets set the count")
+        XCTAssertTrue(session.isTutorialStepDone)
+    }
+
     func testTheHighSpeedRailTakesItsHeadwaysFromItsTrains() throws {
         let operations = try XCTUnwrap(BundledRealData.railways().operations)
         let thsr = try XCTUnwrap(operations.line(id: "THSR", inSystem: "thsr"))

@@ -194,9 +194,11 @@ public final class GameLauncher {
         }
     }
 
-    /// Autosaves and goes back to the start screen.
+    /// Autosaves and goes back to the start screen. If the autosave fails
+    /// the game stays, with the failure on its status line, rather than
+    /// being thrown away unsaved.
     public func returnToStart() {
-        autosaveCurrentGame()
+        guard session == nil || autosaveCurrentGame() else { return }
         session?.stopGameLoop()
         session = nil
         message = nil

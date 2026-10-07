@@ -125,6 +125,42 @@ final class TownGrowthTests: XCTestCase {
         XCTAssertEqual(batched, stepped)
     }
 
+    /// Midnight grows towns from the plan of the day that ended, however
+    /// the calls fall: one call across midnight, minute steps, a call that
+    /// starts at midnight and a save loaded at midnight agree. With weekly
+    /// demand A sends C one passenger a day on Saturday and none on Sunday,
+    /// so a plan worked out for Sunday reaches one station fewer.
+    func testMidnightGrowsFromTheDayThatEndedHoweverTheCallsFall() throws {
+        var world = try world()
+        let c = try TestLine(tiles: 7).buildStation(named: "C", beside: 3, at: 1, in: &world)
+        try world.setLineStops(world.lines[0].id, to: [a, c, b])
+        world.setWeeklyDemand(true)
+        try world.advance(ticks: 1_440 * 6 - 5)
+        // A's Saturday and Sunday trips, shared between B and C by their
+        // trips: C's share rounds to one passenger on Saturday, none on
+        // Sunday.
+        let trips = try XCTUnwrap(world.stationDemand(of: a)?.dailyTrips)
+        let sunday = (trips * 840 + 500) / 1_000
+        try world.setStationDemand(b, to: StationDemand(kind: .office, dailyTrips: 2 * sunday))
+        try world.setStationDemand(c, to: StationDemand(kind: .office, dailyTrips: 1))
+        XCTAssertEqual(world.dailyDemand(from: a, to: c), 1, "Saturday")
+
+        var batched = world
+        try batched.advance(ticks: 10)
+        var stepped = world
+        for _ in 0..<10 { try stepped.advance(ticks: 1) }
+        var split = world
+        try split.advance(ticks: 5)
+        XCTAssertEqual(split.clock.now.seconds % GameTime.secondsPerDay, 0)
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(split))
+        try split.advance(ticks: 5)
+        try loaded.advance(ticks: 5)
+        for other in [stepped, split, loaded] {
+            XCTAssertEqual(other.townGrowth, batched.townGrowth)
+            XCTAssertEqual(other.stationDemand(of: a), batched.stationDemand(of: a))
+        }
+    }
+
     /// Demand set by the player is the new start: growth neither pulls it
     /// back up to the old start nor records growth out of range.
     func testSetDemandStartsGrowthAgain() throws {

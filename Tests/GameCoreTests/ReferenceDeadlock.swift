@@ -250,7 +250,8 @@ extension ReferenceWorld {
             aside.service = request.candidate.service
             let fastest = run(aside, length: way.path.distance, scheduled: nil)
             aside.service?.run = fastest
-            guard case .success(let granted) = admitted(aside) else { continue }
+            guard case .success(var granted) = admitted(aside) else { continue }
+            granted.trafficVisits = scheduledDepartureHistory(trains[i])
             trains[i] = granted
             if before.waiting {
                 refuseLeftBehind(i, stop: before.stop)

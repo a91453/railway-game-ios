@@ -48,6 +48,13 @@ struct LinesPanel: View {
             }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
+            // The pattern's stops are indices into the selected line's:
+            // another line starts from its own first two.
+            .onChange(of: session.selectedLineID) {
+                patternFirst = 0
+                patternLast = 1
+                patternExpress = false
+            }
             .renameAlert(
                 title: session.language.text("Rename Line", "線路更名"),
                 name: $renamingLine,

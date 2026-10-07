@@ -72,6 +72,36 @@ final class TurnbackTests: XCTestCase {
         return (world, model, ids[0], ids[1])
     }
 
+    /// Taking a train off a line with a mid-route turnback while it carries
+    /// passengers beyond the turnback: off the line the turnback ends its
+    /// direction (``GameWorld/directionEnd(of:from:)``), so those riders
+    /// leave at once, counted as abandoned, and the world still loads.
+    func testUnassigningASwitchbackTrainWithRidersStillLoads() throws {
+        var (world, _, line, train) = try Self.switchback()
+        let a = StationID(rawValue: 1), c = StationID(rawValue: 3)
+        for station in [a, StationID(rawValue: 2), c] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 0))
+        }
+        let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == a })
+        world.passengers[record].release(5, to: c, along: PassengerTrip(line: line, direction: .outbound), at: .zero)
+        var boarded = false
+        for _ in 0..<1_200 {
+            try world.advance(ticks: 1)
+            if world.riderCount(of: train) > 0, case .travellingToStop(1, _)? = world.train(id: train)?.execution {
+                boarded = true
+                break
+            }
+        }
+        XCTAssertTrue(boarded)
+        XCTAssertNil(world.riderProblem())
+        try world.unassignTrain(train)
+        XCTAssertNil(world.riderProblem())
+        XCTAssertNil(world.passengerProblem())
+        XCTAssertEqual(world.riderCount(of: train), 0)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5)
+        XCTAssertNoThrow(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)))
+    }
+
     func testReverseSidingSkipsNearMainBerthAndBothTrainsFinish() throws {
         var (world, model, east, west) = try Self.reverseSiding()
         try world.advance(ticks: 590); XCTAssertNil(model.advance(ticks: 590))

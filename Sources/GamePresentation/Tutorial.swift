@@ -216,7 +216,10 @@ public struct Tutorial: Hashable, Sendable {
                       let id = world.assignedLine(of: train.id),
                       let line = world.lines.first(where: { $0.id == id })
                 else { return false }
-                return line.trainsInService != .none || line.patterns.contains { $0.trainsInService != .none }
+                // Target headways set the count when they are set
+                // (see ``ServiceLine/service(at:roundTrip:)`` in GameCore).
+                return line.trainsInService != .none || line.targetHeadways != .none
+                    || line.patterns.contains { $0.trainsInService != .none || $0.targetHeadways != .none }
             }
         case .changeSpeed:
             return world.clock.speed != before.speed

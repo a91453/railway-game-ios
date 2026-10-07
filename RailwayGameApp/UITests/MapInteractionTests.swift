@@ -126,8 +126,18 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(app.buttons["Zoom in"].isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
 
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35)).tap()
-        XCTAssertTrue(clear.isEnabled, "Taps after navigating must still reach the network tool")
+        // After a pinch to the closest zoom an accessibility query can hold
+        // the app's main thread for seconds (run 37161734560's recording),
+        // and a touch held across that is failed by the tap recognizer: wait
+        // for the anchor, and tap once more if the first touch was lost.
+        let anchor = map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35))
+        func anchored() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: clear)],
+                             timeout: 10) == .completed
+        }
+        anchor.tap()
+        if !anchored() { anchor.tap() }
+        XCTAssertTrue(anchored(), "Taps after navigating must still reach the network tool")
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.35)).tap()
         let build = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         XCTAssertTrue(build.isEnabled, "Two taps after a pinch must make a buildable preview")

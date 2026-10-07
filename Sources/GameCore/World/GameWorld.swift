@@ -336,7 +336,8 @@ public struct GameWorld: Equatable, Sendable {
     /// at the new node and the edges the old one joined at its ends, and a
     /// platform on the edge moves to the part it lies on, at the same
     /// distances from the edge's `from` node (the second part's less the
-    /// first part's length).
+    /// first part's length); one that would end past its part's rounded
+    /// end moves back to end there, its length kept.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
     ///   ``GameError/invalidTrackGeometry`` for an edge that is not level
@@ -423,17 +424,21 @@ public struct GameWorld: Equatable, Sendable {
               exits(first, at: edge.from, in: after) == exits(id, at: edge.from, in: network),
               exits(second, at: edge.to, in: after) == exits(id, at: edge.to, in: network)
         else { throw .invalidTrackGeometry }
+        // The parts' lengths are rounded, so one can end a few units short
+        // of where the edge did: a platform past its end moves back, its
+        // length kept, so a train that fitted it still does.
+        func moved(_ platform: TrackPlatform, to part: TrackEdgeID, length: Int64, from offset: Int64) -> TrackPlatform {
+            let end = min(platform.end - offset, length)
+            let start = max(0, min(platform.start - offset, end - (platform.end - platform.start)))
+            return TrackPlatform(station: platform.station, edge: part, start: start, end: end)
+        }
         for platform in platforms {
-            let moved: TrackPlatform
-            if platform.end <= cut.chainage {
-                moved = TrackPlatform(station: platform.station, edge: first,
-                                      start: min(platform.start, firstGeometry.length - 1), end: min(platform.end, firstGeometry.length))
-            } else {
-                let start = platform.start - cut.chainage, end = platform.end - cut.chainage
-                moved = TrackPlatform(station: platform.station, edge: second,
-                                      start: min(start, secondGeometry.length - 1), end: min(end, secondGeometry.length))
+            let moved = platform.end <= cut.chainage
+                ? moved(platform, to: first, length: firstGeometry.length, from: 0)
+                : moved(platform, to: second, length: secondGeometry.length, from: cut.chainage)
+            guard moved.start >= 0, moved.start < moved.end, !after.platforms.contains(where: { $0.overlaps(moved) }) else {
+                throw .invalidTrackGeometry
             }
-            guard moved.start >= 0, moved.start < moved.end else { throw .invalidTrackGeometry }
             after.addPlatform(moved)
         }
         after.dropSpacedExemptions()
@@ -1490,6 +1495,22 @@ public struct GameWorld: Equatable, Sendable {
         clock.setSpeed(speed)
     }
 
+    /// How many destinations each origin sends passengers to in the plan
+    /// of the day that ends at midnight `now`: `release`'s, worked out at
+    /// `time`, unless that is `now` itself (a call that starts at
+    /// midnight, or a service level that changes there, works out the new
+    /// day's plan first). Then the plan is worked out afresh as at the
+    /// day's last second, as a call across midnight has it, so a day's
+    /// growth does not depend on where calls of ``advance(ticks:)`` end.
+    func reachedStations(endingDayAt now: GameTime, release: PassengerRelease?, workedOutAt time: GameTime) -> [StationID: Int] {
+        guard townGrowth != nil, accounts.mode == .management else { return [:] }
+        guard time >= now, now.seconds > Int64.min else { return release.map(Self.reachedStations) ?? [:] }
+        var day = self
+        day.clock = GameClock(now: GameTime(seconds: now.seconds - 1))
+        day.passengerPlan = PassengerPlanCache()
+        return day.passengerRelease().map(Self.reachedStations) ?? [:]
+    }
+
     /// Advances the simulation by `ticks` ticks at the current speed.
     ///
     /// A basic step is one game second (Stage W2a). A tick runs the speed's
@@ -1721,6 +1742,9 @@ public struct GameWorld: Equatable, Sendable {
             passengerPlan = PassengerPlanCache()
         }
         var release = remaining > 0 ? passengerRelease() : nil
+        // When `release` was worked out: midnight's growth reads the plan
+        // of the day that ended.
+        var releasedFrom = clock.now
         var passengerLevels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
@@ -1738,6 +1762,7 @@ public struct GameWorld: Equatable, Sendable {
                         if let release { keepRemainders(of: release) }
                         passengerPlan = PassengerPlanCache()
                         release = passengerRelease()
+                        releasedFrom = start
                         passengerLevels = levels
                     }
                 }
@@ -1745,7 +1770,7 @@ public struct GameWorld: Equatable, Sendable {
                 // events start and end, at midnight.
                 let midnight = (demandEvents != nil || townGrowth != nil) && start.seconds % GameTime.secondsPerDay == 0
                 if midnight {
-                    growTowns(reached: release.map(Self.reachedStations) ?? [:])
+                    growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom))
                     startDemandEventDay(dayIndex(of: start))
                 }
                 // Weekly demand and events: each day releases its own day's
@@ -1754,6 +1779,7 @@ public struct GameWorld: Equatable, Sendable {
                     if let release { keepRemainders(of: release) }
                     passengerPlan = PassengerPlanCache()
                     release = passengerRelease()
+                    releasedFrom = start
                 }
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {
@@ -2253,7 +2279,7 @@ public struct GameWorld: Equatable, Sendable {
             aside.times?.run = fastest
             guard case .granted(let granted) = reserving(aside) else { continue }
             let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
-            trains[index] = granted
+            setOff(index, as: granted)
             if let left {
                 serve(departureOf: id, from: left, distance: passing.distance)
             }
