@@ -89,7 +89,7 @@ public final class GameLauncher {
         begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:))), keepingAutosave: true)
     }
 
-    /// Opens ``DemoWorld``: two lines already running.
+    /// Opens ``DemoWorld``: three lines already running.
     public func openDemo() {
         begin(DemoWorld.make(in: language), keepingAutosave: true)
     }
