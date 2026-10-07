@@ -24,9 +24,9 @@
 //   out; a cell too full for D4 gets existing stock, which holds what it
 //   has or D4's, whichever is more.
 //
-// In 6c-1 capacity is only recorded: land still grows to 400 residents and
-// 1,200 jobs a cell (decision 73), and buildings are not raised; growth up
-// to capacity and raising buildings are 6c-2.
+// Since 6c-2 (decision 75) land grows up to its buildings' capacity instead
+// of 400 residents and 1,200 jobs a cell, and well-served stations raise
+// full buildings a density a night (``GameWorld/growLand(reached:)``).
 
 /// A building's number: handed out from 1 in order, never reused while the
 /// buildings stand.
@@ -228,6 +228,17 @@ public struct CityBuildings: Sendable {
         return overflow ? nil : BuildingID(rawValue: next)
     }
 
+    /// Raises the city building on `cell` one density (Phase 6c-2): its
+    /// number, kind, use and cells stay. Only a city building below D4 is
+    /// raised.
+    mutating func raise(at cell: CellPosition) {
+        guard let index = onCell[cell], all[index].kind == .city,
+              let density = BuildingDensity(rawValue: all[index].density.rawValue + 1)
+        else { return }
+        let building = all[index]
+        all[index] = Building(id: building.id, kind: building.kind, use: building.use, density: density, cells: building.cells)
+    }
+
     /// Adds `building`, numbered after every other and on free cells.
     mutating func append(_ building: Building) {
         for cell in building.cells {
@@ -265,8 +276,10 @@ extension GameWorld {
     /// of land gets the building that holds it (see
     /// ``Building/fitting(_:id:)``), numbered from 1 by row and then
     /// column, and land set, towns founded or built by growth from then on
-    /// gets its buildings with it. Off, the buildings are gone. Nothing
-    /// else changes: in 6c-1 no rule reads capacity.
+    /// gets its buildings with it. Off, the buildings are gone. While on,
+    /// land grows to its buildings' capacity and well-served stations raise
+    /// them (Phase 6c-2, ``growLand(reached:)``); off, it grows to the fixed
+    /// ``LandDemand/grownResidents`` and ``LandDemand/grownJobs``.
     public mutating func setCityBuildings(_ enabled: Bool) {
         guard enabled != cityBuildings else { return }
         cityBuildings = enabled

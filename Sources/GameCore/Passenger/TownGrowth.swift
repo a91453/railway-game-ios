@@ -34,12 +34,23 @@ public struct TownGrowth: Hashable, Codable, Sendable {
         /// How much it grew at the last midnight, in thousandths: negative
         /// when it shrank.
         public internal(set) var lastGrowth: Int64
+        /// The share of its trips served on the day that ended at the last
+        /// midnight, in thousandths (``TownGrowth/serviceShare(served:trips:)``),
+        /// and how many stations its passengers could reach that day, at
+        /// most ``TownGrowth/reachedStations`` (Phase 6c-2, ARCHITECTURE
+        /// decision 75). Measured each midnight where the land grows
+        /// (``GameWorld/landDemand``); 0 until the first midnight after
+        /// growth first saw the station, and in saves from before them.
+        public internal(set) var lastService: Int64
+        public internal(set) var lastReached: Int64
 
         init(station: StationID, base: Int64, counted: Int64) {
             self.station = station
             self.base = base
             self.counted = counted
             lastGrowth = 0
+            lastService = 0
+            lastReached = 0
         }
     }
 
@@ -64,10 +75,20 @@ public struct TownGrowth: Hashable, Codable, Sendable {
     /// reach `reached` stations: negative when nothing was served.
     public static func growth(served: Int64, trips: Int64, reached: Int) -> Int64 {
         guard served > 0 else { return -decline }
-        // Whole once served reaches the day's trips, which keeps a large
-        // `served` from a save from overflowing.
-        let share = served >= trips ? 1_000 : served * 1_000 / max(1, trips)
-        return share * serviceGrowth / 1_000 + min(Int64(reached), reachedStations) * reachGrowth
+        return serviceShare(served: served, trips: trips) * serviceGrowth / 1_000 + reachedCount(reached) * reachGrowth
+    }
+
+    /// The share of a day's `trips` that `served` is, in thousandths: 0 when
+    /// nothing was served, 1,000 once `served` reaches `trips` (which keeps
+    /// a large `served` from a save from overflowing), else rounded down.
+    public static func serviceShare(served: Int64, trips: Int64) -> Int64 {
+        guard served > 0 else { return 0 }
+        return served >= trips ? 1_000 : served * 1_000 / max(1, trips)
+    }
+
+    /// The stations reached that count: `reached`, 0 to ``reachedStations``.
+    public static func reachedCount(_ reached: Int) -> Int64 {
+        max(0, min(Int64(reached), reachedStations))
     }
 }
 
@@ -144,9 +165,47 @@ extension GameWorld {
         }
         for place in growth.places {
             guard station(id: place.station) != nil, (1...StationDemand.maximumDailyTrips).contains(place.base),
-                  place.counted >= 0, (-1_000...1_000).contains(place.lastGrowth)
+                  place.counted >= 0, (-1_000...1_000).contains(place.lastGrowth),
+                  (0...1_000).contains(place.lastService), (0...TownGrowth.reachedStations).contains(place.lastReached)
             else { return "A station's town growth is out of range." }
         }
         return nil
+    }
+}
+
+// MARK: - Codable
+
+extension TownGrowth.Place {
+    private enum CodingKeys: String, CodingKey {
+        case station, base, counted, lastGrowth, lastService, lastReached
+    }
+
+    /// Decodes a place; a save from before Phase 6c-2 has no
+    /// `"lastService"` or `"lastReached"`, which read as 0 (an explicit
+    /// `null` is refused).
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        station = try container.decode(StationID.self, forKey: .station)
+        base = try container.decode(Int64.self, forKey: .base)
+        counted = try container.decode(Int64.self, forKey: .counted)
+        lastGrowth = try container.decode(Int64.self, forKey: .lastGrowth)
+        lastService = container.contains(.lastService) ? try container.decode(Int64.self, forKey: .lastService) : 0
+        lastReached = container.contains(.lastReached) ? try container.decode(Int64.self, forKey: .lastReached) : 0
+    }
+
+    /// Encodes a place, leaving out `"lastService"` and `"lastReached"`
+    /// while they are 0, so worlds without them save as before.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(station, forKey: .station)
+        try container.encode(base, forKey: .base)
+        try container.encode(counted, forKey: .counted)
+        try container.encode(lastGrowth, forKey: .lastGrowth)
+        if lastService != 0 {
+            try container.encode(lastService, forKey: .lastService)
+        }
+        if lastReached != 0 {
+            try container.encode(lastReached, forKey: .lastReached)
+        }
     }
 }

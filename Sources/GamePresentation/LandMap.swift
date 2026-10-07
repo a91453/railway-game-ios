@@ -40,11 +40,11 @@ extension GameWorld {
         )
     }
 
-    /// The city's buildings within 800 m of station `id` (Phase 6c-1), by
-    /// height: "Buildings within 800 m: low-rise 120 · mid-rise 30 ·
-    /// high-rise 5 · towers 1 · existing stock 2" (D1 to D4, each left out
-    /// when there are none), or `nil` when none stand there or the station
-    /// does not exist.
+    /// The cells of land within 800 m of station `id` by their building's
+    /// density (Phase 6c-1, one building a cell): "Cells within 800 m by
+    /// density: low-rise 120 · mid-rise 30 · high-rise 5 · towers 1 ·
+    /// existing stock 2" (D1 to D4, each left out when there are none), or
+    /// `nil` when no building stands there or the station does not exist.
     public func catchmentBuildingsText(of id: StationID, in language: DisplayLanguage) -> String? {
         guard let buildings = catchmentBuildings(of: id), !buildings.isEmpty else { return nil }
         let names: [(BuildingDensity, String, String)] = [
@@ -55,17 +55,36 @@ extension GameWorld {
             let count = buildings.count { $0.kind == .city && $0.density == density }
             if count > 0 {
                 let number = Money(Int64(count)).displayText
-                parts.append(("\(english) \(number)", "\(chinese) \(number) 棟"))
+                parts.append(("\(english) \(number)", "\(chinese) \(number) 格"))
             }
         }
         let stock = buildings.count { $0.kind == .existingStock }
         if stock > 0 {
             let number = Money(Int64(stock)).displayText
-            parts.append(("existing stock \(number)", "既有存量 \(number) 棟"))
+            parts.append(("existing stock \(number)", "既有存量 \(number) 格"))
         }
         return language.text(
-            "Buildings within 800 m: " + parts.map(\.0).joined(separator: " · "),
-            "800 公尺內建物：" + parts.map(\.1).joined(separator: " · ")
+            "Cells within 800 m by density: " + parts.map(\.0).joined(separator: " · "),
+            "800 公尺內各密度的格：" + parts.map(\.1).joined(separator: " · ")
+        )
+    }
+
+    /// What station `id`'s town growth measured at the last midnight and
+    /// whether it raises the city's buildings (Phase 6c-2): "Yesterday:
+    /// 100% of trips served · 2 stations reached · full buildings rise", or
+    /// "... · full buildings rise at 80% served and 1 station reached";
+    /// `nil` while the land does not grow there with the city's buildings.
+    public func cityGrowthText(of id: StationID, in language: DisplayLanguage) -> String? {
+        guard landDemand, cityBuildings, accounts.mode == .management, let place = townGrowth(of: id) else { return nil }
+        let percent = "\(place.lastService / 10)%"
+        let reached = place.lastReached
+        let rises = place.lastService >= LandDemand.upgradeService && place.lastReached >= LandDemand.upgradeReached
+        let need = "\(LandDemand.upgradeService / 10)%"
+        return language.text(
+            "Yesterday: \(percent) of trips served · \(reached) \(reached == 1 ? "station" : "stations") reached · "
+                + (rises ? "full buildings rise" : "full buildings rise at \(need) served and \(LandDemand.upgradeReached) station reached"),
+            "昨日：旅次服務 \(percent) · 可達 \(reached) 站 · "
+                + (rises ? "滿格的建物會升級" : "服務達 \(need) 且可達至少 \(LandDemand.upgradeReached) 站時，滿格的建物才會升級")
         )
     }
 }

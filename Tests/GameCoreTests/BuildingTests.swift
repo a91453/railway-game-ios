@@ -261,12 +261,9 @@ final class BuildingTests: XCTestCase {
 
     func testGrowthBuildsANewCellsHomesWithIt() throws {
         var world = try growingWorld(buildings: true)
-        var without = try growingWorld(buildings: false)
         let before = world.land
         let reached: [StationID: Int] = [StationID(rawValue: 1): 1, StationID(rawValue: 2): 1]
         world.growLand(reached: reached)
-        without.growLand(reached: reached)
-        XCTAssertEqual(world.land, without.land, "in 6c-1 buildings change nothing of growth: 400 and 1,200 still")
         let added = world.land.cells.filter { before.cell(row: $0.row, column: $0.column) == nil }
         XCTAssertEqual(added.count, 2, "each growing station built a cell")
         for (offset, cell) in added.sorted(by: { world.buildings.building(row: $0.row, column: $0.column)!.id < world.buildings.building(row: $1.row, column: $1.column)!.id }).enumerated() {
@@ -299,8 +296,8 @@ final class BuildingTests: XCTestCase {
 
     /// A served line through the first town, with the city's buildings on:
     /// the land and its buildings grow the same whether advanced a day at
-    /// a time, minute by minute, or saved and loaded on the way, and the
-    /// land the same as without buildings.
+    /// a time, minute by minute, or saved and loaded on the way
+    /// (`CityGrowthTests` also slices the days and idles over midnight).
     func testTheCityGrowsTheSameHoweverTheDaysAreAdvanced() throws {
         func start(buildings: Bool) throws -> GameWorld {
             var start = world()
@@ -342,9 +339,6 @@ final class BuildingTests: XCTestCase {
         XCTAssertGreaterThan(daily.land.cells.count, first.land.cells.count, "a served town spreads")
         XCTAssertNil(daily.buildingProblem())
         XCTAssertEqual(daily.buildings.all.count, daily.land.cells.count)
-        var plain = try start(buildings: false)
-        for _ in 0..<days { try plain.advance(ticks: 1_440) }
-        XCTAssertEqual(plain.land, daily.land, "without buildings the land grows the same (400 and 1,200)")
     }
 
     // MARK: - Saving

@@ -448,8 +448,15 @@ final class GoldenScenarioTests: XCTestCase {
 
     private static func wrongAnswers(for answer: ObservationAnswer) -> [ObservationAnswer] {
         switch answer {
-        case .landTotals(nil), .landCell(nil), .building(nil):
+        case .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil):
             return []
+        case .townGrowth(let place?):
+            var base = place, growth = place, service = place, reached = place
+            base.base += 1
+            growth.lastGrowth += 1
+            service.lastService = place.lastService == 1_000 ? 999 : place.lastService + 1
+            reached.lastReached = place.lastReached == 5 ? 4 : place.lastReached + 1
+            return [.townGrowth(nil), .townGrowth(base), .townGrowth(growth), .townGrowth(service), .townGrowth(reached)]
         case .building(let building?):
             var id = building, density = building, kind = building, residents = building, jobs = building
             id.id += 1

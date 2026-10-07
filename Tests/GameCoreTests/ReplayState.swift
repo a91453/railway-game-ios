@@ -107,6 +107,11 @@ enum ReplayState {
         for cell in world.land.cells {
             line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
         }
+        // Phase 6c-2: a station's last service and stations reached, only
+        // once measured, so earlier recordings keep their checksums.
+        for place in world.townGrowth?.places ?? [] where place.lastService != 0 || place.lastReached != 0 {
+            line("townGrowth \(place.station.rawValue) service \(place.lastService) reached \(place.lastReached)")
+        }
         // Phase 6c-1: likewise only a world with the city's buildings on.
         if world.cityBuildings {
             line("cityBuildings")

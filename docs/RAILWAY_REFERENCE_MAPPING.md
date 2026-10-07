@@ -873,3 +873,17 @@ V 實際放行 → T、U（保證不互穿）
 | 本 repo 6b `LandDemand.spread(towards:)` | 同一處經 `GameWorld.addLand(_:)` 建立住宅 D1 | 沿用 6b 的擴張規則，只多建物 |
 
 定點比例：容量是整數人／職位；格 4096 世界單位（64 m）、4096 m²；樓板 1536 m²／層；沒有小數。
+
+## Phase 6c-2：容量接上成長與自動升級（決策 75）
+
+同一個參考庫版本（`2db0c5a`），再查 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`binary_reference/relevant_source_paths.txt`）與 `Railway/taipei_gta_reference/`。來源沒有建物升級、容量限制成長或服務門檻，所以門檻與配額是原生的（gap）。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`town_cmd.cpp`、`industry_cmd.cpp`，只有路徑；「consume transport accessibility metrics」） | `GameWorld.growLand(reached:)` 的升級與容量 | gap → 原生：沿用決策 70 的服務比例與可達車站當作升級條件（800‰、1 站、每站 2 格） |
+| 同檔固定 tick 順序（`EconomySystem.tick()` → `TownSystem.tick()`） | 午夜：結算後才成長；每站「升級 → 成長 → 擴張」 | 沿用「城鎮在經濟之後」的順序；站內順序是原生的 |
+| `Railway/taipei_gta_reference/source/assets/world-*.js`：`floorsFor`、區域 `style.floors` | `BuildingDensity` D1 → D4 一次一級 | 只有外觀樓層，沒有升級規則（gap） |
+| 本 repo 決策 70 `TownGrowth.growth(served:trips:reached:)` | `TownGrowth.serviceShare(served:trips:)`、`reachedCount(_:)`、`Place.lastService`、`Place.lastReached` | 抽出同一個比例保存，值不變 |
+| 本 repo 決策 73／74 `LandDemand.grow`、`Building.capacity(on:)` | `grow` 改用建物容量 | 取代 400／1200；放不下的捨棄 |
+
+定點比例：服務比例千分比（0…1000），可達站 0…5，容量整數人／職位。

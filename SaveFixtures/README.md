@@ -55,6 +55,13 @@ growing to the fixed 400 residents and 1,200 jobs a cell, and turning them
 on puts them up from the land the save holds. A build before version 13
 refuses a version 13 save rather than dropping the buildings.
 
+Since version 14 (Phase 6c-2, ARCHITECTURE decision 75) a station's town
+growth can hold `"lastService"` and `"lastReached"`, the last day's service
+share and stations reached, which raise the city's buildings; each is
+written only when not 0. Earlier saves read both as 0 until the next
+midnight measures them. A build before version 14 refuses a version 14
+save rather than dropping them.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -76,3 +83,4 @@ hand could hold, is refused with that reason
 | `v12-land-towns.json` | 12 | Land (Phase 6a, ARCHITECTURE decision 72): a world 131072 × 98304 units (32 × 24 cells of 64 m) with the first town of seed 1 round its middle as Phase 6a first drew it (half the density 6b settled on), 437 cells with 24,984 residents and 16,614 jobs, saved as runs of cells (`"land"`); no demand from land; a line from West to Middle with a train, a managed company, after 30 minutes. Written by the version 12 build. |
 | `v12-land-demand.json` | 12 | Demand from land (Phase 6b, ARCHITECTURE decision 73): the same world and town (at the density 6b settled on), managed, with `"landDemand": true` and town growth; a line from West to East through the town with one train, after two days and ten hours. The land has grown from 437 to 441 cells (50,189 → 51,256 residents) and set both stations' ridership. Written by the version 12 build. |
 | `v13-city-buildings.json` | 13 | City buildings (Phase 6c-1, ARCHITECTURE decision 74): `v12-land-demand.json` with an office cell of 5,000 jobs set at row 0, column 0 (existing stock: D4 holds 1,680), the city's buildings turned on (`"cityBuildings": true`, 442 buildings numbered by row and column) and one day more. The land grew two cells that day, and each got its D1 homes, buildings 443 and 444: 444 cells and buildings, 94 D1, 187 D2, 129 D3, 33 D4 and one existing stock. Written by the version 13 build. |
+| `v14-city-growth.json` | 14 | City growth (Phase 6c-2, ARCHITECTURE decision 75): `v13-city-buildings.json` a day later. Both stations served all their trips and reached one station (`"lastService": 1000`, `"lastReached": 1`), so each raised two full buildings (63, 67, 89 and 134, D2 to D3) and the land grew to its buildings' capacity: 446 cells and buildings, 96 D1, 183 D2, 133 D3, 33 D4 and one existing stock. Written by the version 14 build. |

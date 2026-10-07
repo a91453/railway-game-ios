@@ -204,19 +204,42 @@ final class LandImportTests: XCTestCase {
         XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 50,189 residents · 33,276 jobs")
         XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 50,189 人 · 就業 33,276 個")
         XCTAssertNil(world.landCatchmentText(of: StationID(rawValue: 99), in: .english))
-        // Phase 6c-1: the first town's buildings, by height.
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Buildings within 800 m: low-rise 88 · mid-rise 188 · high-rise 134 · towers 27")
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內建物：低層 88 棟 · 中層 188 棟 · 高層 134 棟 · 超高層 27 棟")
+        // Phase 6c-1: the first town's cells by their buildings' density.
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: low-rise 88 · mid-rise 188 · high-rise 134 · towers 27")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：低層 88 格 · 中層 188 格 · 高層 134 格 · 超高層 27 格")
         XCTAssertNil(world.catchmentBuildingsText(of: StationID(rawValue: 99), in: .english))
         try world.setLand([
             LandCell(row: 128, column: 128, use: .office, residents: 0, jobs: 5_000),
             LandCell(row: 128, column: 127, use: .residential, residents: 300, jobs: 0),
         ])
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Buildings within 800 m: high-rise 1 · existing stock 1")
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內建物：高層 1 棟 · 既有存量 1 棟")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: high-rise 1 · existing stock 1")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：高層 1 格 · 既有存量 1 格")
         world.setCityBuildings(false)
         XCTAssertNil(world.catchmentBuildingsText(of: station, in: .english), "no buildings, no line")
         try world.setLand([])
         XCTAssertNil(world.landCatchmentText(of: station, in: .english), "no land, no line")
+    }
+
+    /// Phase 6c-2 (ARCHITECTURE decision 75): the station panel says what
+    /// town growth measured and whether full buildings rise. The version 14
+    /// save measured both stations at full service and one station reached;
+    /// the version 13 save, a day earlier, had measured nothing yet.
+    func testTheStationPanelSaysWhetherBuildingsRise() throws {
+        let fixtures = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures")
+        let measured = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v14-city-growth.json"))).world
+        let station = StationID(rawValue: 1)
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .english), "Yesterday: 100% of trips served · 1 station reached · full buildings rise")
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .traditionalChinese), "昨日：旅次服務 100% · 可達 1 站 · 滿格的建物會升級")
+        let earlier = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v13-city-buildings.json"))).world
+        XCTAssertEqual(earlier.cityGrowthText(of: station, in: .english),
+                       "Yesterday: 0% of trips served · 0 stations reached · full buildings rise at 80% served and 1 station reached")
+        XCTAssertEqual(earlier.cityGrowthText(of: station, in: .traditionalChinese),
+                       "昨日：旅次服務 0% · 可達 0 站 · 服務達 80% 且可達至少 1 站時，滿格的建物才會升級")
+        XCTAssertNil(measured.cityGrowthText(of: StationID(rawValue: 99), in: .english))
+        var off = measured
+        off.setCityBuildings(false)
+        XCTAssertNil(off.cityGrowthText(of: station, in: .english), "no buildings, no line")
     }
 }
