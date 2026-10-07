@@ -87,10 +87,17 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(zoomIn.isEnabled)
         XCTAssertTrue(zoomIn.isHittable)
 
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "en-large-map-whole"
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        // Screenshots are only for a person to look at (CLAUDE.md): a busy
+        // runner's "Timed out while requesting screenshot" (run 37635507497)
+        // must not fail the test, so its issue is expected, never required.
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = "en-large-map-whole"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
 
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue((map.value as? String)?.contains("Central") == true,

@@ -64,10 +64,17 @@ final class ToolbarSmokeTests: XCTestCase {
             // test runner sleeps; the app can finish rendering its new state.
             Thread.sleep(forTimeInterval: 1)
 
-            let attachment = XCTAttachment(screenshot: app.screenshot())
-            attachment.name = "\(language)-0\(index + 1)-\(tools[index])"
-            attachment.lifetime = .keepAlways
-            add(attachment)
+            // Screenshots are only for a person to look at (CLAUDE.md): a busy
+            // runner's "Timed out while requesting screenshot" (run 37635507497)
+            // must not fail the test, so its issue is expected, never required.
+            let options = XCTExpectedFailure.Options()
+            options.isStrict = false
+            XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
+                let attachment = XCTAttachment(screenshot: app.screenshot())
+                attachment.name = "\(language)-0\(index + 1)-\(tools[index])"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
         }
     }
 }
