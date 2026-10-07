@@ -87,7 +87,7 @@ struct ContentView: View {
         case .mapLayers:
             StoredMapLayerSheet()
         case .dataSources:
-            DataSourcesView(language: session.language)
+            DataSourcesView(launcher: launcher)
         }
     }
 

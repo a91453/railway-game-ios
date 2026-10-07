@@ -162,8 +162,10 @@ public final class GameSession {
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are
     /// there, a station name still as first suggested is suggested again
-    /// from them, at the middle of a real-world map.
-    @ObservationIgnored public var railways: RealRailways? {
+    /// from them, at the middle of a real-world map. Observed: they can
+    /// arrive after the game starts (``GameLauncher/loadRealWorldData(reading:)``),
+    /// and the map then draws them.
+    public var railways: RealRailways? {
         didSet {
             let middle = RealWorldFrame(world: world).map { PlanPoint(x: Int64($0.middleX), y: Int64($0.middleY)) }
             suggestStationName(at: middle)

@@ -93,6 +93,10 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let demo = app.buttons["start.realWorldDemo"]
         XCTAssertTrue(demo.waitForExistence(timeout: 15))
         if !demo.isHittable { app.swipeUp() }
+        // Disabled until the real-world data, read in the background at
+        // launch, is there.
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
+        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 15), .completed, "The real-world demo button never became enabled")
         demo.tap()
         let pause = app.buttons["Pause"]
         XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
