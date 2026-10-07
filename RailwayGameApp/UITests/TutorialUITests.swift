@@ -275,9 +275,16 @@ final class TutorialUITests: XCTestCase {
     private func capture(_ app: XCUIApplication, name: String) {
         // A window screenshot can use stale portrait bounds after rotating
         // on iOS 26, cropping the game and filling the rest with black.
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        // Screenshots are only for a person to look at (CLAUDE.md): a busy
+        // runner's "Timed out while requesting screenshot" (run 37635507497)
+        // must not fail the test, so its issue is expected, never required.
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = name
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
     }
 }
