@@ -8,8 +8,8 @@ A native iPhone / iPad railway and city management game (long-term goal: gamepla
 depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
 Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md)
 and may also absorb implementation and data from the owner's
-`a91453/railway-reference-private` repository. Treat both `Ci/` and
-`Railway/` there as authorized implementation sources, not reference-only
+`a91453/railway-reference-private` repository. Treat `Ci/`, `Railway/`, and
+`Simulator/` there as authorized implementation sources, not reference-only
 material.
 
 Port and reuse faithfully. When useful, directly copy, vendor, adapt, translate,
@@ -47,8 +47,11 @@ mapping table in the PR (reference file/function → target file/function, with
 any fixed-point scale where relevant). Check all available implementation
 sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
 `Railway/railway_game_reference_clean/` (start with its
-`00_READ_ME_FIRST.md`), and `Railway/taipei_gta_reference/` (start with its
-`00_READ_ME_FIRST.md` and `source/`).
+`00_READ_ME_FIRST.md`), `Railway/taipei_gta_reference/` (start with its
+`00_READ_ME_FIRST.md` and `source/`), and `Simulator/` (start with
+`REFERENCE_REFRESH_2026-10-07.md` and `SANITIZATION_REPORT.md`, then inspect
+`reference_snapshot/` for reusable simulator runtime/UI, track geometry,
+templates/data, and 3D assets).
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
