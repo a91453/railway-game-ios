@@ -132,4 +132,18 @@ final class DemandEventTests: XCTestCase {
         world.setDemandEvents(seed: nil)
         XCTAssertNil(world.demandEvents)
     }
+
+    /// A save at the most draws a save may count loads, and so does every
+    /// save after it: the draws stop there rather than count one more than
+    /// a save may hold.
+    func testTheLastDrawASaveMayCountIsTheLast() throws {
+        var world = try world()
+        world.demandEvents!.draws = 1 << 40
+        world.demandEvents!.nextDraw = 0
+        world = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        try world.advance(ticks: 1_440 * 2)
+        XCTAssertEqual(world.demandEvents?.draws, 1 << 40)
+        XCTAssertNil(world.demandEventProblem())
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
 }
