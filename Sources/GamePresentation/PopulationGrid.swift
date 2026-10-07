@@ -113,8 +113,16 @@ struct GridCounts: Sendable {
         return false
     }
 
+    /// The cell `latitude`° north, `longitude`° east is in. A place far off
+    /// any real grid (a world anchored at a pole puts points at longitudes
+    /// far beyond ±180°) or not a number gives a cell far outside it, where
+    /// no one lives, instead of trapping on the way to an `Int`.
     func cell(latitude: Double, longitude: Double) -> Cell {
-        Cell(row: Int(((north - latitude) / cellDegrees).rounded(.down)), column: Int(((longitude - west) / cellDegrees).rounded(.down)))
+        func index(_ cells: Double) -> Int {
+            guard cells.isFinite else { return Int(Int32.min) }
+            return Int(min(max(cells.rounded(.down), Double(Int32.min)), Double(Int32.max)))
+        }
+        return Cell(row: index((north - latitude) / cellDegrees), column: index((longitude - west) / cellDegrees))
     }
 
     func middle(of cell: Cell) -> (latitude: Double, longitude: Double) {
