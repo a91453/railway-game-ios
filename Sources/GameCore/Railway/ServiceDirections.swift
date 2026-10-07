@@ -143,7 +143,9 @@ extension GameWorld {
         }
         for line in lines {
             for service in 0..<line.serviceCount {
-                let lengths = Set(line.trains(ofService: service).compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
+                // Another placed train will run the plan: the candidate
+                // itself is never protected from its own line.
+                let lengths = Set(line.trains(ofService: service).filter { $0 != candidate.id }.compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
                 guard !lengths.isEmpty else { continue }
                 let orders = line.isRing ? RingDirection.allCases.map { line.ringCalls($0) }
                     : [line.calls(ofService: service) + line.calls(ofService: service).dropLast().reversed()]
