@@ -88,7 +88,7 @@ struct NetworkControls: View {
                     HStack(spacing: 6) {
                         Image(systemName: "ruler")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(Palette.metroBlue)
+                            .foregroundStyle(Theme.primary)
                         Text(preview.text(in: session.language))
                             .font(.footnote.weight(.semibold))
                             .monospacedDigit()
@@ -97,15 +97,15 @@ struct NetworkControls: View {
                         HStack(spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(Palette.metroAmber)
+                                .foregroundStyle(Theme.warning)
                             Text(problem)
                                 .font(.footnote.weight(.medium))
-                                .foregroundStyle(Palette.metroAmber)
+                                .foregroundStyle(Theme.warning)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
                 .padding(.top, 2)

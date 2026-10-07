@@ -17,7 +17,7 @@ struct TrainLoadBar: View {
             HStack {
                 Text(verbatim: language.text("Load Factor", "載客率"))
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                 Spacer()
                 Text(verbatim: "\(load.percentage)%")
                     .font(.caption.weight(.bold).monospacedDigit())
@@ -26,9 +26,9 @@ struct TrainLoadBar: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Palette.paxBarTrack)
+                        .fill(Theme.panelBorder)
                     Capsule()
-                        .fill(load.isOverload ? Palette.paxBarOverload : Palette.paxBarFill)
+                        .fill(load.isOverload ? Theme.error : Theme.textPrimary)
                         .frame(width: proxy.size.width * load.barFraction)
                 }
             }
@@ -40,7 +40,7 @@ struct TrainLoadBar: View {
                 "當前載客 \(load.passengerCount) · 額定載客 \(load.capacity)"
             ))
             .font(.caption2.monospacedDigit())
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.textSecondary)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: language.text("Load Factor", "載客率")))

@@ -546,6 +546,8 @@ private struct TrafficLegend: View {
     var body: some View {
         if let summary = traffic.summary(in: language) {
             let deadlocked = traffic.waits.filter(\.isDeadlocked).count
+            // Theme: kept for Phase 8. The counts are in the traffic
+            // overlay's colours on the map.
             HStack(spacing: 8) {
                 count(traffic.authorities.count, Palette.metroGreen)
                 count(traffic.waits.count - deadlocked, Palette.metroAmber)

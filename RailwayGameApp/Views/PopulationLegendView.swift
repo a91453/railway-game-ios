@@ -31,6 +31,7 @@ struct PopulationLegendView: View {
             HStack(spacing: 8) {
                 Text(verbatim: title)
                     .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
                 Spacer(minLength: 4)
                 if let onDismiss {
                     Button {
@@ -38,7 +39,7 @@ struct PopulationLegendView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text(verbatim: language.text("Close population legend", "關閉人口圖例")))
@@ -54,18 +55,18 @@ struct PopulationLegendView: View {
                     Text(verbatim: highText)
                 }
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
             }
 
             if mode == .movement {
                 Text(verbatim: language.text("Darker means a bigger change", "顏色越深表示變化越大"))
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             if mode == .landValue {
                 Text(verbatim: language.text("Dollars a square metre; tap a cell for its parts", "單位：每平方公尺美元；點一格看分項"))
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
 
             HStack {
@@ -75,6 +76,7 @@ struct PopulationLegendView: View {
                     .monospacedDigit()
             }
             .font(.caption2)
+            .foregroundStyle(Theme.textPrimary)
             Slider(value: $opacity, in: PopTravel.opacityRange, step: 0.01)
                 .accessibilityLabel(Text(verbatim: language.text("\(title) opacity", "\(title)透明度")))
                 .accessibilityIdentifier("map.popTravel.opacity")
@@ -85,10 +87,10 @@ struct PopulationLegendView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
         .frame(maxWidth: 260)
         .accessibilityElement(children: .contain)
@@ -130,6 +132,9 @@ struct PopulationLegendView: View {
         }
     }
 
+    // Theme: kept for Phase 8. The scale's colours are the map layer's own
+    // (PopTravel, CityMap) and must match what the map draws; they move
+    // with the map's colours when its renderer is replaced.
     @ViewBuilder
     private var scale: some View {
         switch mode {
@@ -166,6 +171,7 @@ struct PopulationLegendView: View {
                     HStack(spacing: 6) {
                         Text(verbatim: language.text(use.1, use.2))
                             .font(.caption2)
+                            .foregroundStyle(Theme.textPrimary)
                             .frame(width: 48, alignment: .leading)
                         HStack(spacing: 0) {
                             ForEach(1...4, id: \.self) { density in
@@ -191,7 +197,7 @@ struct PopulationLegendView: View {
                     ForEach(CityMap.valueSteps, id: \.self) { step in
                         Text(verbatim: "\(step)")
                             .font(.system(size: 8).monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -210,6 +216,7 @@ struct PopulationLegendView: View {
                         RoundedRectangle(cornerRadius: 2).fill(Color(entry.0)).frame(width: 14, height: 10)
                         Text(verbatim: language.text(entry.1, entry.2))
                             .font(.caption2)
+                            .foregroundStyle(Theme.textPrimary)
                     }
                 }
             }
@@ -223,6 +230,7 @@ struct PopulationLegendView: View {
         HStack(spacing: 8) {
             Text(verbatim: PopTravel.hourLabel(hour))
                 .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("map.popTravel.hourLabel")
             Slider(
                 value: Binding(get: { Double(hour) }, set: { hour = PopTravel.clampedHour(Int($0.rounded())) }),

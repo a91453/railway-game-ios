@@ -238,42 +238,6 @@ struct StatusBanner: View {
     }
 }
 
-/// Filled when active, outlined otherwise, so state does not rely on colour.
-struct SelectableButtonStyle: ButtonStyle {
-    let isActive: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        configuration.label
-            .padding(.vertical, 4)
-            // On the app's tint (the AccentColor asset), whose dark variant
-            // is too light for white (Theme.onPrimary).
-            .foregroundStyle(isActive ? Theme.onPrimary : Color.primary)
-            .background(
-                isActive
-                    ? AnyShapeStyle(Color.accentColor)
-                    : AnyShapeStyle(Palette.cardBackground),
-                in: shape
-            )
-            .overlay(
-                shape.strokeBorder(
-                    isActive ? Color.white.opacity(0.2) : Palette.cardBorder,
-                    lineWidth: 1
-                )
-            )
-            .shadow(
-                color: isActive ? Color.accentColor.opacity(0.3) : Color.black.opacity(0.04),
-                radius: isActive ? 4 : 2,
-                x: 0,
-                y: 1
-            )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
-            .contentShape(shape)
-    }
-}
-
 extension ConstructionTool {
     var systemImage: String {
         switch self {

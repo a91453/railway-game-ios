@@ -51,7 +51,7 @@ struct StationPanel: View {
                     Section {
                         Text("Select a station on the map, or choose one above.")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
             }
@@ -113,7 +113,7 @@ struct StationPanel: View {
             if platforms.isEmpty {
                 Text(verbatim: language.text("No platform yet. Add one with the network tool.", "還沒有月台。請用路網工具加上月台。"))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(platforms.enumerated()), id: \.offset) { index, platform in
                 Menu {
@@ -193,14 +193,14 @@ struct StationPanel: View {
                                 .font(.subheadline.weight(.semibold))
                         } icon: {
                             Image(systemName: "person.3.sequence.fill")
-                                .foregroundStyle(Palette.metroBlue)
+                                .foregroundStyle(Theme.primary)
                         }
 
                         Spacer()
 
                         Text(verbatim: "\(residents.formatted()) \(session.language.text("people", "人"))")
                             .font(.headline.weight(.bold).monospacedDigit())
-                            .foregroundStyle(Palette.metroBlue)
+                            .foregroundStyle(Theme.primary)
                     }
 
                     Text(verbatim: session.language.text(
@@ -208,7 +208,7 @@ struct StationPanel: View {
                         "約 10 分鐘步行服務範圍 · 衍生約 \(estimatedTrips.formatted()) 旅次/日（每百人約 40 旅次）"
                     ))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                 }
                 .padding(.vertical, 2)
             } header: {
@@ -239,7 +239,7 @@ struct StationPanel: View {
                 if let growth = session.world.cityGrowthText(of: station.id, in: session.language) {
                     Text(verbatim: growth)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("station.cityGrowth")
                 }
                 // Phase 6c-3: what the land within 800 m is worth.
@@ -271,7 +271,7 @@ struct StationPanel: View {
                 if let growth = session.world.townGrowthText(of: station.id, in: session.language) {
                     Text(verbatim: growth)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
                         .accessibilityIdentifier("station.growth")
                 }
@@ -324,7 +324,7 @@ struct StationPanel: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .buttonStyle(SelectableButtonStyle(isActive: isActive))
+                    .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                     .accessibilityLabel(kind.title(in: language))
                     .accessibilityHint("Sets when its trips start and end over the day.")
                     .accessibilityAddTraits(isActive ? .isSelected : [])
@@ -416,7 +416,7 @@ struct StationPanel: View {
             if pairs.isEmpty {
                 Text("No trips to or from other stations yet.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(pairs, id: \.station) { pair in
                 Text(session.world.demandPairText(pair, in: session.language))
@@ -472,7 +472,7 @@ private struct HourlyBarChart: View {
             axis
             Text(verbatim: StationFlow.summaryText(of: hours, in: language))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
             Text(verbatim: StationFlow.hourText(shown, of: hours, in: language))
                 .font(.caption.weight(.semibold))
         }
@@ -495,7 +495,7 @@ private struct HourlyBarChart: View {
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(0..<24, id: \.self) { hour in
                     UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                        .fill(hour == shown ? Palette.metroBlue : Palette.metroBlue.opacity(0.25))
+                        .fill(hour == shown ? Theme.primary : Theme.primary.opacity(0.25))
                         .frame(height: max(1, Self.height * CGFloat(hours[hour]) / top))
                         .frame(maxWidth: 24, maxHeight: .infinity, alignment: .bottom)
                 }
@@ -509,7 +509,7 @@ private struct HourlyBarChart: View {
         .frame(height: Self.height)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.secondary.opacity(0.4))
+                .fill(Theme.textSecondary.opacity(0.4))
                 .frame(height: 1)
         }
     }
@@ -524,7 +524,7 @@ private struct HourlyBarChart: View {
                         if hour % 6 == 0 {
                             Text(verbatim: "\(hour)")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                                 .fixedSize()
                         }
                     }

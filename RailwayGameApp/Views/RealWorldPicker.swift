@@ -92,6 +92,9 @@ struct RealWorldPicker: View {
                     .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
             }
             .mapOverlayLevel(level: .aboveRoads)
+            // Theme: kept for Phase 8. The 16 km square and its centre mark
+            // use the game map's station colour, so the preview matches the
+            // map the game draws; they move with the map's colours.
             MapPolygon(coordinates: Self.square(around: middle))
                 .foregroundStyle(Palette.station.opacity(0.08))
                 .stroke(Palette.station, lineWidth: 2)
@@ -131,7 +134,7 @@ struct RealWorldPicker: View {
                         ProgressView()
                     } else if let results = search.results, results.isEmpty {
                         Text("No places found.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                     }
                     ForEach(search.results ?? []) { result in
                         Button {
@@ -142,7 +145,7 @@ struct RealWorldPicker: View {
                                 if !result.detail.isEmpty {
                                     Text(verbatim: result.detail)
                                         .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Theme.textSecondary)
                                 }
                             }
                         }
@@ -152,7 +155,7 @@ struct RealWorldPicker: View {
             Section {
                 Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(RealWorldPlace.Region.allCases, id: \.self) { region in
                 Section {
@@ -163,10 +166,10 @@ struct RealWorldPicker: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.subheadline)
-                                    .foregroundStyle(Palette.station)
+                                    .foregroundStyle(Theme.primary)
                                 Text(verbatim: place.name(in: launcher.language))
                                     .font(.body)
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(Theme.textPrimary)
                             }
                         }
                         .accessibilityIdentifier("place.\(place.id)")
@@ -209,12 +212,12 @@ struct RealWorldPicker: View {
                     .foregroundStyle(Color(station.palette.color(.auto, on: colorScheme == .dark ? .dark : .light)))
                 Text(verbatim: station.name(in: launcher.language))
                     .font(.body)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                 if showsSystem {
                     Spacer()
                     Text(verbatim: station.system.name(in: launcher.language))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
         }

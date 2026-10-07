@@ -16,8 +16,9 @@ import UIKit
 /// at least 4.5:1 on the colour they sit on. ``accent`` and ``panelBorder``
 /// are fills and edges, never text.
 ///
-/// Screens move to these colours one at a time; until then they use
-/// ``Palette``. The map's colours stay in ``Palette``.
+/// Every screen uses these. The map's colours and the lines' colours stay in
+/// ``Palette``; what is kept there, and until when, is listed in
+/// docs/UI_THEME.md and marked "Theme: kept" where it is used.
 enum Theme {
     /// Teal: the app's tint and its main colour (the `AccentColor` asset,
     /// #0D766A light, #45D3C0 dark), for controls, icons and selection.
@@ -37,6 +38,9 @@ enum Theme {
     static let panel = dynamic(light: 0xFFFFFF, dark: 0x30376A)
     /// The edge of a ``panel``.
     static let panelBorder = dynamic(light: 0x262C57, dark: 0xECEEF6, lightAlpha: 0.14, darkAlpha: 0.16)
+    /// A faint fill for chips and icon tiles on a ``panel`` or glass; never
+    /// under text that needs more than its own contrast with the panel.
+    static let chip = dynamic(light: 0x262C57, dark: 0xECEEF6, lightAlpha: 0.06, darkAlpha: 0.08)
 
     /// Body text: the icon's buildings (11.47:1 light, 9.64:1 dark).
     static let textPrimary = dynamic(light: 0x262C57, dark: 0xECEEF6)
@@ -77,10 +81,9 @@ enum Theme {
 }
 
 /// A button that is on or off, in ``Theme`` colours: filled with
-/// ``Theme/primary`` while on, and only its label while off, for the glass
-/// it sits on (`glassBackground(in:interactive:)`). Flat, like
-/// the icon. It replaces ``SelectableButtonStyle`` as screens move to the
-/// theme.
+/// ``Theme/primary`` while on, and only its label in a
+/// ``Theme/panelBorder`` outline while off, so the state does not depend on
+/// colour alone. Flat, like the icon.
 struct ThemeSelectableButtonStyle: ButtonStyle {
     let isActive: Bool
 
@@ -90,6 +93,7 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
             .padding(.vertical, 4)
             .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
             .background(isActive ? Theme.primary : Color.clear, in: shape)
+            .overlay(shape.strokeBorder(isActive ? Color.clear : Theme.panelBorder, lineWidth: 1))
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
@@ -122,8 +126,7 @@ struct ThemeProminentButtonStyle: ButtonStyle {
 extension View {
     /// A flat card in ``Theme`` colours: ``Theme/panel`` with a
     /// ``Theme/panelBorder`` edge, so text on it keeps its stated contrast
-    /// even over glass. It replaces `metroCard` as screens move to the
-    /// theme.
+    /// even over glass.
     func themeCard(padding: CGFloat = 12, cornerRadius: CGFloat = 14) -> some View {
         self
             .padding(padding)
