@@ -2,8 +2,10 @@ import GameCore
 import SwiftUI
 import UIKit
 
-/// Map and UI colours, each with a light and a dark variant so the app stays
-/// readable and aesthetically pleasing in both appearances.
+/// The map's colours and the lines' colours, each with a light and a dark
+/// variant. The interface's colours are ``Theme``'s; these stay as they are
+/// until Phase 8 replaces the map's renderer (docs/UI_THEME.md), and the
+/// lines' colours stay for good.
 enum Palette {
     static let land = dynamic(light: (0.86, 0.91, 0.81), dark: (0.16, 0.21, 0.16))
     static let mapEdge = dynamic(light: (0.55, 0.62, 0.52), dark: (0.30, 0.36, 0.30))
@@ -26,14 +28,6 @@ enum Palette {
     /// it draws under a followed train's route.
     static let followCase = dynamic(light: (1.00, 0.992, 0.965), dark: (0.063, 0.078, 0.110))
 
-    // The `Ci/` reference's train-panel load bar (app-panels CSS): the
-    // track is `--metro-user-panel-field` (#d1d4d7 light, #484d54 dark),
-    // the fill one neutral ink (#000 on the light card, #f9fafb on the
-    // dark panel) and `.is-overload` red (#d85946 light, #ef4444 dark).
-    static let paxBarTrack = dynamic(light: (0.820, 0.831, 0.843), dark: (0.282, 0.302, 0.329))
-    static let paxBarFill = dynamic(light: (0.0, 0.0, 0.0), dark: (0.976, 0.980, 0.984))
-    static let paxBarOverload = dynamic(light: (0.847, 0.349, 0.275), dark: (0.937, 0.267, 0.267))
-
     /// The colour a line is drawn with in the lines panel and the follow
     /// bar's dot: the one the player chose (`custom`, the line's
     /// ``LineColor``), or else one picked from the line's ID, as the lines
@@ -55,11 +49,6 @@ enum Palette {
         )
     }
 
-    // Surfaces and Borders
-    static let cardBackground = dynamic(light: (1.00, 1.00, 1.00), dark: (0.14, 0.15, 0.18))
-    static let cardBorder = dynamicAlpha(light: (0.0, 0.0, 0.0, 0.08), dark: (1.0, 1.0, 1.0, 0.12))
-    static let chipBackground = dynamicAlpha(light: (0.0, 0.0, 0.0, 0.05), dark: (1.0, 1.0, 1.0, 0.08))
-
     private static func dynamic(
         light: (Double, Double, Double),
         dark: (Double, Double, Double)
@@ -68,37 +57,5 @@ enum Palette {
             let rgb = traits.userInterfaceStyle == .dark ? dark : light
             return UIColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1)
         })
-    }
-
-    private static func dynamicAlpha(
-        light: (Double, Double, Double, Double),
-        dark: (Double, Double, Double, Double)
-    ) -> Color {
-        Color(uiColor: UIColor { traits in
-            let rgba = traits.userInterfaceStyle == .dark ? dark : light
-            return UIColor(red: rgba.0, green: rgba.1, blue: rgba.2, alpha: rgba.3)
-        })
-    }
-}
-
-/// A clean, tactile card modifier for grouping management options.
-struct MetroCardModifier: ViewModifier {
-    var padding: CGFloat = 12
-    var cornerRadius: CGFloat = 14
-
-    func body(content: Content) -> some View {
-        content
-            .padding(padding)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Palette.cardBorder, lineWidth: 1)
-            }
-    }
-}
-
-extension View {
-    func metroCard(padding: CGFloat = 12, cornerRadius: CGFloat = 14) -> some View {
-        modifier(MetroCardModifier(padding: padding, cornerRadius: cornerRadius))
     }
 }

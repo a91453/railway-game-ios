@@ -28,7 +28,7 @@ struct TimetableEditor: View {
                 } else {
                     Text("No train yet. Buy one with the train tool.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             .navigationTitle(session.selectedTrain.map { Text(verbatim: $0.name) } ?? Text("Timetable"))
@@ -66,7 +66,7 @@ struct TimetableEditor: View {
             if let lock = lock(of: train) {
                 Label(lock, systemImage: "lock")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.warning)
             }
             Text(session.world.timetableSummary(of: train.id, in: language) ?? String(localized: "No timetable yet. Add its first stop below."))
                 .font(.subheadline)
@@ -154,7 +154,7 @@ struct TimetableEditor: View {
             }
             Text(verbatim: row.detailText)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .monospacedDigit()
             Stepper(
                 onIncrement: { session.moveSelectedTrainArrival(at: row.index, by: TimetableEditing.step) },

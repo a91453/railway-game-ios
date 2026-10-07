@@ -16,8 +16,9 @@ import UIKit
 /// at least 4.5:1 on the colour they sit on. ``accent`` and ``panelBorder``
 /// are fills and edges, never text.
 ///
-/// Screens move to these colours one at a time; until then they use
-/// ``Palette``. The map's colours stay in ``Palette``.
+/// Every screen uses these. The map's colours and the lines' colours stay in
+/// ``Palette``; what is kept there, and until when, is listed in
+/// docs/UI_THEME.md and marked "Theme: kept" where it is used.
 enum Theme {
     /// Teal: the app's tint and its main colour (the `AccentColor` asset,
     /// #0D766A light, #45D3C0 dark), for controls, icons and selection.
@@ -125,8 +126,7 @@ struct ThemeProminentButtonStyle: ButtonStyle {
 extension View {
     /// A flat card in ``Theme`` colours: ``Theme/panel`` with a
     /// ``Theme/panelBorder`` edge, so text on it keeps its stated contrast
-    /// even over glass. It replaces `metroCard` as screens move to the
-    /// theme.
+    /// even over glass.
     func themeCard(padding: CGFloat = 12, cornerRadius: CGFloat = 14) -> some View {
         self
             .padding(padding)

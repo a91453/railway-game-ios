@@ -46,7 +46,7 @@ private struct TutorialOverlay: View {
             ForEach(frames.indices, id: \.self) { index in
                 let frame = frames[index]
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Palette.metroAmber, lineWidth: 3)
+                    .strokeBorder(Theme.accent, lineWidth: 3)
                     .background {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(Color.black.opacity(0.35), lineWidth: 5)
@@ -162,13 +162,12 @@ private struct TutorialCard: View {
         }
         .padding(16)
         .controlSize(.large)
-        .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Palette.cardBorder, lineWidth: 1)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
                 .allowsHitTesting(false)
         }
-        .shadow(color: .black.opacity(0.16), radius: 14, y: 5)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tutorial.card")
         // The card is new for each step (`.id`). Move VoiceOver to its title
@@ -185,14 +184,14 @@ private struct TutorialCard: View {
             HStack(spacing: 6) {
                 Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(Palette.metroBlue)
+                    .foregroundStyle(Theme.primary)
                     .monospacedDigit()
                     .accessibilityIdentifier("tutorial.progress")
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Palette.metroBlue.opacity(0.12), in: Capsule())
+            .background(Theme.primary.opacity(0.14), in: Capsule())
 
             Text(verbatim: tutorial.step.title(in: session.language))
                 .font(.headline.weight(.bold))
@@ -206,18 +205,19 @@ private struct TutorialCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.tap.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Palette.metroAmber)
+                        .foregroundStyle(Theme.warning)
                     Text("Complete this step to continue.")
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(Palette.metroAmber)
+                        .foregroundStyle(Theme.warning)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Palette.metroAmber.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(Theme.textPrimary)
     }
 
     @ViewBuilder
@@ -233,14 +233,16 @@ private struct TutorialCard: View {
         Button {
             session.showNextTutorialStep()
         } label: {
-            if tutorial.isLastStep {
-                Text("Done")
-            } else {
-                Text("Next")
+            Group {
+                if tutorial.isLastStep {
+                    Text("Done")
+                } else {
+                    Text("Next")
+                }
             }
+            .frame(minHeight: 44)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(Palette.metroBlue)
+        .buttonStyle(ThemeProminentButtonStyle())
         .disabled(!session.isTutorialStepDone)
         .accessibilityIdentifier("tutorial.next")
     }

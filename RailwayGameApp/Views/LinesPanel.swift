@@ -173,7 +173,7 @@ struct LinesPanel: View {
             if session.world.lines.isEmpty {
                 Text("No lines yet. Pick stations under New Line to create one.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 ForEach(session.world.lines) { line in
                     Button {
@@ -181,7 +181,7 @@ struct LinesPanel: View {
                     } label: {
                         lineRow(line)
                     }
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                     .accessibilityAddTraits(line.id == session.selectedLineID ? .isSelected : [])
                 }
             }
@@ -195,6 +195,8 @@ struct LinesPanel: View {
         let color = Palette.lineColor(line.id, custom: line.color)
         return HStack(spacing: 10) {
             ZStack {
+                // Theme: kept for good. The badge is the line's own colour
+                // (the player's or the default), with white on it.
                 Circle()
                     .fill(color)
                     .frame(width: 28, height: 28)
@@ -215,12 +217,12 @@ struct LinesPanel: View {
                     .font(.subheadline.weight(.semibold))
                 Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             Spacer(minLength: 8)
             if line.id == session.selectedLineID {
                 Image(systemName: "checkmark")
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Theme.primary)
                     .accessibilityHidden(true)
             }
         }
@@ -285,7 +287,7 @@ struct LinesPanel: View {
                 ))
                 Text("Trains go on from the last stop back to the first: half in the order of the stops, half the other way. They run in pairs.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
@@ -295,20 +297,20 @@ struct LinesPanel: View {
             if let journey = session.world.lineJourneyText(line.id, in: session.language) {
                 Text(journey)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
             // Stage C2: single or double track between its stops (Stage S1).
             ForEach(Array(session.world.lineTrackCountTexts(line.id, in: session.language).enumerated()), id: \.offset) { _, text in
                 Label(text, systemImage: "road.lanes")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
                 if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
                         .font(.footnote)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.warning)
                 }
             }
             Button("Remove \(line.name)", role: .destructive) {
@@ -389,7 +391,7 @@ struct LinesPanel: View {
             }
             Text("\(summary.assigned) assigned · \(summary.running) on a trip")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
             if let train = session.selectedTrain {
                 Button("Assign \(train.name) Here") {
                     session.assignSelectedTrainToSelectedLine(pattern: summary.pattern)
@@ -476,7 +478,7 @@ struct LinesPanel: View {
                         .font(.subheadline)
                     Text(level.text(in: session.language))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
                 }
             }
@@ -526,7 +528,7 @@ struct LinesPanel: View {
             if session.lineDraft.isEmpty {
                 Text("Select a station on the map, then add it here. Add two or more, in order.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 Text(session.lineDraft.map { name(of: $0) }.joined(separator: " → "))
                     .font(.subheadline)

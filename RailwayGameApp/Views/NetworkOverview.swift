@@ -17,7 +17,7 @@ struct NetworkOverview: View {
                 Spacer(minLength: 8)
                 Text(world.networkSummary(in: session.language))
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
             .accessibilityElement(children: .combine)
@@ -25,7 +25,7 @@ struct NetworkOverview: View {
             if world.stations.isEmpty {
                 Text("No stations yet. Choose Network, then Platform, and tap the track to build one.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8)], alignment: .leading, spacing: 8) {
                     ForEach(world.stations) { station in
@@ -44,7 +44,7 @@ struct NetworkOverview: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "tram.fill")
-                    .foregroundStyle(isSelected ? Color.white : Palette.station)
+                    .foregroundStyle(isSelected ? Theme.onPrimary : Theme.primary)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(station.name)
@@ -60,7 +60,7 @@ struct NetworkOverview: View {
             .padding(.horizontal, 10)
             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
         }
-        .buttonStyle(SelectableButtonStyle(isActive: isSelected))
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isSelected))
         .accessibilityLabel("\(station.name) station, \(place)")
         .accessibilityHint("Selects it on the map.")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
