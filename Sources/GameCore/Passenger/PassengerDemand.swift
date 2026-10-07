@@ -687,9 +687,12 @@ extension GameWorld {
     /// journey or the service it can run depends on (its track, platforms,
     /// performance, route preferences and trains): every group waiting for
     /// a trip no line takes that way any more leaves its station (see
-    /// ``PassengerLedger/abandoned``), so the world still loads.
+    /// ``PassengerLedger/abandoned``), and every rider whose train no
+    /// longer calls at their destination before it turns round leaves the
+    /// train (see ``abandonStrandedRiders()``), so the world still loads.
     mutating func abandonUnservedPassengers() {
         passengerPlan = PassengerPlanCache()
+        abandonStrandedRiders()
         let world = self
         let valid = servedWaitingLegs()
         var abandoned: [StationID: Int64] = [:]

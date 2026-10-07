@@ -354,6 +354,42 @@ extension GameWorld {
         riders.remove(at: slot)
     }
 
+    /// After a command that can move where a running train's direction ends
+    /// (``directionEnd(of:from:)`` reads its line, whether that is a ring
+    /// and its pattern): riders going beyond the new end leave the train at
+    /// once, abandoned, as they would leave it there, so the world still
+    /// loads (see ``riderProblem()``).
+    mutating func abandonStrandedRiders() {
+        for slot in riders.indices.reversed() {
+            guard let train = train(id: riders[slot].train), let ahead = riderReach(of: train) else { continue }
+            var kept: [RidingGroup] = []
+            for group in riders[slot].groups {
+                if ahead.contains(where: { train.timetable[$0].station == group.destination }) {
+                    kept.append(group)
+                } else {
+                    passengers[passengerIndex(of: group.origin)].abandoned += group.count
+                }
+            }
+            if kept.isEmpty {
+                riders.remove(at: slot)
+            } else {
+                riders[slot].groups = kept
+            }
+        }
+    }
+
+    /// The timetable entries `train`'s riders may still ride to, or `nil`
+    /// for a train running no service. A train waiting at a stop may
+    /// already carry those it took on there, for the calls after it (Stage
+    /// W2b).
+    private func riderReach(of train: Train) -> ClosedRange<Int>? {
+        switch train.execution {
+        case .waitingAtStop(let stop, _)?: stop...directionEnd(of: train, from: min(stop + 1, train.timetable.count - 1))
+        case .travellingToStop(let stop, _)?: stop...directionEnd(of: train, from: stop)
+        case nil: nil
+        }
+    }
+
     /// The index of station `id`'s record, which every rider's origin has.
     private func passengerIndex(of id: StationID) -> Int {
         passengers.firstIndex { $0.station == id }!
@@ -377,16 +413,10 @@ extension GameWorld {
         var riding: [StationID: Int64] = [:]
         for entry in riders {
             let id = entry.train.rawValue
-            guard let train = train(id: entry.train), let execution = train.execution else {
+            guard let train = train(id: entry.train), let ahead = riderReach(of: train) else {
                 return "Passengers ride train \(id), which runs no service."
             }
             guard entry.count <= train.capacity else { return "More passengers ride train \(id) than it takes." }
-            // A train waiting at a stop may already carry those it took on
-            // there, for the calls after it (Stage W2b).
-            let ahead: ClosedRange<Int> = switch execution {
-            case .waitingAtStop(let stop, _): stop...directionEnd(of: train, from: min(stop + 1, train.timetable.count - 1))
-            case .travellingToStop(let stop, _): stop...directionEnd(of: train, from: stop)
-            }
             for group in entry.groups {
                 guard passengers.contains(where: { $0.station == group.origin }) else {
                     return "Passengers ride train \(id) from station \(group.origin.rawValue), which released none."

@@ -169,8 +169,9 @@ extension GameWorld {
     /// stations (each line's own, once each: a station two lines call at
     /// counts for both, as the reference counts each line's stations,
     /// `metroEconomyFixedAssets`), its route
-    /// length (each line's own service, out to its far end, in world
-    /// units; 0 for one that cannot be driven) and its trains (each
+    /// length (each line's own service, out to its far end, or once round
+    /// a ring, in world units; 0 for one that cannot be driven) and its
+    /// trains (each
     /// service's most at any level).
     struct FixedAssets {
         let stations: Int64
@@ -192,7 +193,10 @@ extension GameWorld {
                 memo.journeys[line.id, default: [:]][0] = journey
             }
             if let journey {
-                length += journey.legs.prefix(journey.legs.count / 2).reduce(0) { $0 + $1.path.distance }
+                // A ring's journey is one lap (see ``LineJourney/legs``), its
+                // whole route, as the reference measures a ring closed.
+                let route = journey.isRing ? journey.legs[...] : journey.legs.prefix(journey.legs.count / 2)
+                length += route.reduce(0) { $0 + $1.path.distance }
             }
             for service in 0..<line.serviceCount {
                 let counts = service == 0 ? line.trainsInService : line.patterns[service - 1].trainsInService

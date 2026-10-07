@@ -122,9 +122,9 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, true)
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
         checkToolIsUncovered(app, identifier: "tool.select")
-        app.buttons["tool.select"].tap()
+        selectTool(app, "tool.select")
         waitForEnabled(app, false)
-        app.buttons["tool.network"].tap()
+        selectTool(app, "tool.network")
         waitForEnabled(app, true)
         capture(app, name: "\(screenshotPrefix)-tutorial-tool")
         next.tap()
@@ -143,14 +143,15 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(skip.isHittable)
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
-        app.buttons["tool.select"].tap()
+        selectTool(app, "tool.select")
         waitForEnabled(app, false)
-        app.buttons["tool.network"].tap()
+        selectTool(app, "tool.network")
         waitForEnabled(app, true)
         capture(app, name: "\(screenshotPrefix)-tutorial-landscape")
         skip.tap()
         XCTAssertFalse(next.exists)
-        app.buttons["tool.select"].tap()
+        // The restarted tutorial's first step waits for Network again.
+        selectTool(app, "tool.select")
 
         // The game menu starts the tutorial again without leaving this game.
         // Pause through the real HUD so a rapidly changing game clock does
@@ -204,6 +205,27 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 
+    /// Taps tool `identifier` until it is selected, at most twice. A touch
+    /// synthesized while the Simulator settles a rotation, or while the
+    /// app answers a slow accessibility query, can be lost (the recordings
+    /// of runs 37196759420 and 37515199643 show the touch landing on the
+    /// uncovered button with no effect); the step reads which tool is
+    /// selected, so that is what must be true before going on.
+    private func selectTool(
+        _ app: XCUIApplication, _ identifier: String,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        for _ in 0..<2 {
+            app.buttons[identifier].tap()
+            let deadline = Date().addingTimeInterval(5)
+            repeat {
+                if app.buttons[identifier].isSelected { return }
+                Thread.sleep(forTimeInterval: 0.25)
+            } while Date() < deadline
+        }
+        XCTFail("\(identifier) is not selected after two taps", file: file, line: line)
+    }
+
     private func waitForEnabled(
         _ app: XCUIApplication, _ enabled: Bool, _ message: String = "",
         buttonDescription: String = "tutorial.next",
@@ -223,7 +245,11 @@ final class TutorialUITests: XCTestCase {
             Thread.sleep(forTimeInterval: min(0.25, remaining))
         } while Date() < deadline
 
+        // One slow query can use up the whole wait: the final state counts.
         let buttons = query(app).allElementsBoundByIndex
+        if buttons.count == 1, buttons[0].isEnabled == enabled {
+            return
+        }
         let states = buttons.enumerated().map { index, button in
             "[\(index)] isEnabled=\(button.isEnabled)"
         }.joined(separator: ", ")

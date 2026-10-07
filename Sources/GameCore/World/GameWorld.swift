@@ -1490,6 +1490,22 @@ public struct GameWorld: Equatable, Sendable {
         clock.setSpeed(speed)
     }
 
+    /// How many destinations each origin sends passengers to in the plan
+    /// of the day that ends at midnight `now`: `release`'s, worked out at
+    /// `time`, unless that is `now` itself (a call that starts at
+    /// midnight, or a service level that changes there, works out the new
+    /// day's plan first). Then the plan is worked out afresh as at the
+    /// day's last second, as a call across midnight has it, so a day's
+    /// growth does not depend on where calls of ``advance(ticks:)`` end.
+    func reachedStations(endingDayAt now: GameTime, release: PassengerRelease?, workedOutAt time: GameTime) -> [StationID: Int] {
+        guard townGrowth != nil, accounts.mode == .management else { return [:] }
+        guard time >= now, now.seconds > Int64.min else { return release.map(Self.reachedStations) ?? [:] }
+        var day = self
+        day.clock = GameClock(now: GameTime(seconds: now.seconds - 1))
+        day.passengerPlan = PassengerPlanCache()
+        return day.passengerRelease().map(Self.reachedStations) ?? [:]
+    }
+
     /// Advances the simulation by `ticks` ticks at the current speed.
     ///
     /// A basic step is one game second (Stage W2a). A tick runs the speed's
@@ -1721,6 +1737,9 @@ public struct GameWorld: Equatable, Sendable {
             passengerPlan = PassengerPlanCache()
         }
         var release = remaining > 0 ? passengerRelease() : nil
+        // When `release` was worked out: midnight's growth reads the plan
+        // of the day that ended.
+        var releasedFrom = clock.now
         var passengerLevels = lines.map { serviceLevel(of: $0.id, at: clock.now) }
         let minute = GameTime.secondsPerMinute
         while remaining > 0 {
@@ -1738,6 +1757,7 @@ public struct GameWorld: Equatable, Sendable {
                         if let release { keepRemainders(of: release) }
                         passengerPlan = PassengerPlanCache()
                         release = passengerRelease()
+                        releasedFrom = start
                         passengerLevels = levels
                     }
                 }
@@ -1745,7 +1765,7 @@ public struct GameWorld: Equatable, Sendable {
                 // events start and end, at midnight.
                 let midnight = (demandEvents != nil || townGrowth != nil) && start.seconds % GameTime.secondsPerDay == 0
                 if midnight {
-                    growTowns(reached: release.map(Self.reachedStations) ?? [:])
+                    growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom))
                     startDemandEventDay(dayIndex(of: start))
                 }
                 // Weekly demand and events: each day releases its own day's
@@ -1754,6 +1774,7 @@ public struct GameWorld: Equatable, Sendable {
                     if let release { keepRemainders(of: release) }
                     passengerPlan = PassengerPlanCache()
                     release = passengerRelease()
+                    releasedFrom = start
                 }
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {

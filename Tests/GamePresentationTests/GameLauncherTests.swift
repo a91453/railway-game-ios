@@ -130,4 +130,22 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(GameLauncher.autosaveInterval, .seconds(900), "the reference's AUTOSAVE_INTERVAL_MS")
         }
     }
+
+    /// Going back to the start screen keeps the game when its autosave
+    /// fails: the failure is on the game's status line, and the game is
+    /// not thrown away unsaved.
+    func testAFailedAutosaveKeepsTheGame() async throws {
+        // A file where the save folder should be: every save fails.
+        try Data("x".utf8).write(to: directory)
+        let library = SaveLibrary(directory: directory)
+        await MainActor.run {
+            let launcher = GameLauncher(library: library, language: .english)
+            launcher.openDemo()
+            XCTAssertNotNil(launcher.session)
+            launcher.returnToStart()
+            XCTAssertNotNil(launcher.session, "the unsaved game is kept")
+            XCTAssertEqual(launcher.session?.message?.kind, .failure)
+            XCTAssertNil(launcher.autosave)
+        }
+    }
 }

@@ -338,6 +338,43 @@ final class RingLineTests: XCTestCase {
         XCTAssertEqual(world.passengerLedger(of: beta).abandoned + world.passengerLedger(of: delta).abandoned, 0)
     }
 
+    /// Making a ring a line again while its trains carry passengers moves
+    /// where their direction ends (``GameWorld/directionEnd(of:from:)``):
+    /// those riding past it leave at once, counted as abandoned, so the
+    /// world still loads and every passenger is still counted.
+    func testUnRingingWithRidersStillLoads() throws {
+        var world = try makeRingWorld(trains: 2, running: pairs(2), minute: 480)
+        try world.setStationDemand(beta, to: StationDemand(kind: .residential, dailyTrips: 200_000))
+        try world.setStationDemand(delta, to: StationDemand(kind: .office, dailyTrips: 200_000))
+        let inner = TrainID(rawValue: 1)
+        try world.advance(ticks: 5)
+        XCTAssertEqual(world.train(id: inner)?.execution, .travellingToStop(2))
+        let riding = world.riderCount(of: inner)
+        XCTAssertTrue(world.riders(of: inner).contains { $0.destination == delta })
+        let abandoned = world.passengerLedger(of: beta).abandoned
+        try world.setLineRing(ring, to: false)
+        XCTAssertNil(world.riderProblem())
+        XCTAssertNil(world.passengerProblem())
+        XCTAssertEqual(world.riderCount(of: inner), 0, "Delta is past where the inner train's direction now ends")
+        XCTAssertEqual(world.passengerLedger(of: beta).abandoned, abandoned + riding)
+        XCTAssertNoThrow(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)))
+    }
+
+    // MARK: - Economy
+
+    /// A ring's route is its whole lap, as the reference measures it
+    /// (`calcLinePathLengthM` with `buildSplinePathClosed`), not half its
+    /// legs as a line's round trip.
+    func testARingsRouteLengthIsItsWholeLap() throws {
+        var world = try makeLoopWorld()
+        let line = try world.createLine(named: "Ring", stops: [alpha, beta, gamma, delta]).id
+        try world.setLineRing(line, to: true)
+        let journey = try XCTUnwrap(world.journey(of: XCTUnwrap(world.line(id: line)), service: 0))
+        XCTAssertEqual(journey.legs.count, 4)
+        var memo = GameWorld.DispatchMemo()
+        XCTAssertEqual(world.fixedAssets(memo: &memo).routeLength, journey.legs.reduce(0) { $0 + $1.path.distance })
+    }
+
     // MARK: - Saving
 
     /// A ring saves `"ring": true` and, once it has sent a train out the
