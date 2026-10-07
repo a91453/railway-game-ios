@@ -39,6 +39,7 @@ struct StationPanel: View {
                     platformsSection(station)
                     realStationSection(station)
                     catchmentPopulationSection(station)
+                    landSection(station)
                     demandSection(station)
                     eventsSection(station)
                     if let flow = session.world.stationFlow(of: station.id) {
@@ -212,6 +213,21 @@ struct StationPanel: View {
                 .padding(.vertical, 2)
             } header: {
                 Text(verbatim: session.language.text("Catchment & Demographics", "站區腹地與人口"))
+            }
+        }
+    }
+
+    /// Who lives and works within 800 m (Phase 6a): the world's land.
+    @ViewBuilder
+    private func landSection(_ station: Station) -> some View {
+        if let text = session.world.landCatchmentText(of: station.id, in: session.language) {
+            Section {
+                Text(verbatim: text)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("station.land")
+            } header: {
+                Text(verbatim: session.language.text("Land", "土地"))
             }
         }
     }

@@ -99,6 +99,14 @@ enum ReplayState {
         for riders in world.riders {
             line("riders \(riders.train.rawValue) \(json(riders.groups.map(RidingGroupSummary.init)))")
         }
+        // Phase 6a: only a world with land writes it, so the recordings
+        // made before it keep their checksums.
+        if world.landDemand {
+            line("landDemand")
+        }
+        for cell in world.land.cells {
+            line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
+        }
         return lines.joined(separator: "\n")
     }
 }

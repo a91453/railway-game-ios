@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 36,
+  "description": "Land (Phase 6a, ARCHITECTURE decision 72) in a world 131072 x 98304 units (2048 x 1536 m): 32 columns and 24 rows of 64 m cells (4096 units), so its middle (65536, 49152) is in row 12, column 16. Middle is a station there and Edge one 800 m (51200) east of it. Before any land Middle's catchment is empty. setLand lists cells in any order: an office cell at row 12, column 16 with 500 jobs, whose middle (67584, 51200) is within 800 m of Middle, and a home at row 0, column 31 with 7 residents. A cell in column 32 or row 24 is outside the world, and a cell listed twice, both rejected (invalidLand) without changing the land. foundTowns with seed 1 replaces the land with the towns a blank map starts with; here only the first fits, round the middle cell with a radius of 12 cells and 260 residents in its middle cell: a cell d cells away (d^2 < 144) holds 260 x ((144 - d^2) x 1000 / 144) / 1000 residents, rounded down at each step; in its core (9d^2 < 144) shops or offices (drawn per cell from the seed's FNV-1a hash of `town.0.cell.<dr>.<dc>`) with a quarter of those residents and three times as many jobs. So row 12, column 16 (d^2 = 0) is offices, 260 / 4 = 65 residents and 780 jobs; column 19 (d^2 = 9) shops, 243 full, 60 residents and 729 jobs; column 20 (d^2 = 16, 9 x 16 = 144, not the core) homes with 260 x 888 / 1000 = 230; column 27 (d^2 = 121) homes with 260 x 159 / 1000 = 41; column 28 (d^2 = 144) is outside the town. The town is 437 cells, 50,189 residents and 33,276 jobs, all within Middle's 800 m (the farthest cell middle is sqrt 143 x 64 ~ 765 m away); Edge's catchment is the cells whose middles lie closer than 51200 to (116736, 49152): 21,555 residents and 18,558 jobs. The other two towns lie 2 km or more off the middle in both directions, outside this world. A station that does not exist has no catchment.",
+  "initialState": {
+    "worldWidth": 131072,
+    "worldHeight": 98304,
+    "balance": 10000,
+    "costs": { "track": 100, "station": 1000, "train": 5000 },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    { "command": { "type": "buildStationAt", "name": "Middle", "point": { "x": 65536, "y": 49152 } }, "expect": { "result": "ok" } },
+    { "command": { "type": "buildStationAt", "name": "Edge", "point": { "x": 116736, "y": 49152 } }, "expect": { "result": "ok" } },
+    { "observe": { "type": "landCatchment", "station": 1 }, "expect": { "found": true, "landTotals": { "residents": 0, "jobs": 0 } } },
+    { "command": { "type": "setLand", "cells": [
+      { "row": 12, "column": 16, "use": "office", "residents": 0, "jobs": 500 },
+      { "row": 0, "column": 31, "use": "residential", "residents": 7, "jobs": 0 }
+    ] }, "expect": { "result": "ok" } },
+    { "observe": { "type": "landCatchment", "station": 1 }, "expect": { "found": true, "landTotals": { "residents": 0, "jobs": 500 } } },
+    { "observe": { "type": "landCell", "row": 0, "column": 31 }, "expect": { "found": true, "landCell": { "row": 0, "column": 31, "use": "residential", "residents": 7, "jobs": 0 } } },
+    { "command": { "type": "setLand", "cells": [{ "row": 0, "column": 32, "use": "residential", "residents": 1, "jobs": 0 }] }, "expect": { "result": "invalidLand" } },
+    { "command": { "type": "setLand", "cells": [{ "row": 24, "column": 0, "use": "residential", "residents": 1, "jobs": 0 }] }, "expect": { "result": "invalidLand" } },
+    { "command": { "type": "setLand", "cells": [
+      { "row": 3, "column": 3, "use": "residential", "residents": 1, "jobs": 0 },
+      { "row": 3, "column": 3, "use": "commercial", "residents": 0, "jobs": 1 }
+    ] }, "expect": { "result": "invalidLand" } },
+    { "observe": { "type": "landCell", "row": 0, "column": 31 }, "expect": { "found": true, "landCell": { "row": 0, "column": 31, "use": "residential", "residents": 7, "jobs": 0 } } },
+    { "command": { "type": "foundTowns", "seed": 1 }, "expect": { "result": "ok" } },
+    { "observe": { "type": "landCell", "row": 0, "column": 31 }, "expect": { "found": false } },
+    { "observe": { "type": "landCell", "row": 12, "column": 16 }, "expect": { "found": true, "landCell": { "row": 12, "column": 16, "use": "office", "residents": 65, "jobs": 780 } } },
+    { "observe": { "type": "landCell", "row": 12, "column": 19 }, "expect": { "found": true, "landCell": { "row": 12, "column": 19, "use": "commercial", "residents": 60, "jobs": 729 } } },
+    { "observe": { "type": "landCell", "row": 12, "column": 20 }, "expect": { "found": true, "landCell": { "row": 12, "column": 20, "use": "residential", "residents": 230, "jobs": 0 } } },
+    { "observe": { "type": "landCell", "row": 12, "column": 27 }, "expect": { "found": true, "landCell": { "row": 12, "column": 27, "use": "residential", "residents": 41, "jobs": 0 } } },
+    { "observe": { "type": "landCell", "row": 12, "column": 28 }, "expect": { "found": false } },
+    { "observe": { "type": "landCatchment", "station": 1 }, "expect": { "found": true, "landTotals": { "residents": 50189, "jobs": 33276 } } },
+    { "observe": { "type": "landCatchment", "station": 2 }, "expect": { "found": true, "landTotals": { "residents": 21555, "jobs": 18558 } } },
+    { "observe": { "type": "landCatchment", "station": 99 }, "expect": { "found": false } }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 8000,
+    "stations": [
+      { "id": 1, "name": "Middle", "point": { "x": 65536, "y": 49152 } },
+      { "id": 2, "name": "Edge", "point": { "x": 116736, "y": 49152 } }
+    ],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": { "nodes": [], "edges": [], "platforms": [] },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "free",
+      "fareRules": null,
+      "openedAt": null,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [],
+      "days": []
+    },
+    "land": { "cells": 437, "residents": 50189, "jobs": 33276 }
+  }
+}

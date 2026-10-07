@@ -379,6 +379,16 @@ extension GameError {
             )
         case .loanNeedsManagement:
             language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
+        case .stationDemandFromLand:
+            language.text(
+                "A managed company's ridership comes from the land round its stations.",
+                "經營模式的客流來自車站周邊的土地，不能直接設定。"
+            )
+        case .invalidLand:
+            language.text(
+                "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
+                "每格土地須在世界範圍內、只列一次，居民與就業各 0 到 \(Money(Land.maximumPerCell).displayText)，且不能都是 0。"
+            )
         }
     }
 }

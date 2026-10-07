@@ -1,0 +1,2539 @@
+{
+  "saveVersion" : 12,
+  "world" : {
+    "accounts" : {
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 57100,
+          "fareRevenue" : 16601500,
+          "maintenanceCost" : 409200,
+          "operatingCost" : 4865500,
+          "staffCost" : 172000
+        },
+        {
+          "day" : 1,
+          "energyCost" : 57100,
+          "fareRevenue" : 16772500,
+          "maintenanceCost" : 408300,
+          "operatingCost" : 4854000,
+          "staffCost" : 172000
+        },
+        {
+          "day" : 2,
+          "energyCost" : 0,
+          "fareRevenue" : 4817000,
+          "maintenanceCost" : 153000,
+          "operatingCost" : 1818800,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : 317800,
+          "breakdown" : [
+            {
+              "amount" : 535500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 41
+          },
+          "kind" : "hourlyNet",
+          "time" : 43200
+        },
+        {
+          "amount" : 344800,
+          "breakdown" : [
+            {
+              "amount" : 562500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 39,
+            "maxWaiting" : 17
+          },
+          "kind" : "hourlyNet",
+          "time" : 46800
+        },
+        {
+          "amount" : 312300,
+          "breakdown" : [
+            {
+              "amount" : 530000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 52
+          },
+          "kind" : "hourlyNet",
+          "time" : 50400
+        },
+        {
+          "amount" : 381300,
+          "breakdown" : [
+            {
+              "amount" : 599000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 49,
+            "maxWaiting" : 27
+          },
+          "kind" : "hourlyNet",
+          "time" : 54000
+        },
+        {
+          "amount" : 589300,
+          "breakdown" : [
+            {
+              "amount" : 819500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 90,
+            "maxWaiting" : 57
+          },
+          "kind" : "hourlyNet",
+          "time" : 57600
+        },
+        {
+          "amount" : 989800,
+          "breakdown" : [
+            {
+              "amount" : 1207500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 131,
+            "maxWaiting" : 84
+          },
+          "kind" : "hourlyNet",
+          "time" : 61200
+        },
+        {
+          "amount" : 1341800,
+          "breakdown" : [
+            {
+              "amount" : 1559500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 152,
+            "maxWaiting" : 131
+          },
+          "kind" : "hourlyNet",
+          "time" : 64800
+        },
+        {
+          "amount" : 1402300,
+          "breakdown" : [
+            {
+              "amount" : 1620000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 107
+          },
+          "kind" : "hourlyNet",
+          "time" : 68400
+        },
+        {
+          "amount" : 882800,
+          "breakdown" : [
+            {
+              "amount" : 1100500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 53,
+            "maxWaiting" : 23
+          },
+          "kind" : "hourlyNet",
+          "time" : 72000
+        },
+        {
+          "amount" : 447800,
+          "breakdown" : [
+            {
+              "amount" : 665500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 62
+          },
+          "kind" : "hourlyNet",
+          "time" : 75600
+        },
+        {
+          "amount" : 477300,
+          "breakdown" : [
+            {
+              "amount" : 695000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 56,
+            "maxWaiting" : 31
+          },
+          "kind" : "hourlyNet",
+          "time" : 79200
+        },
+        {
+          "amount" : 154300,
+          "breakdown" : [
+            {
+              "amount" : 384500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 9,
+            "maxWaiting" : 5
+          },
+          "kind" : "hourlyNet",
+          "time" : 82800
+        },
+        {
+          "amount" : -153200,
+          "breakdown" : [
+            {
+              "amount" : 64500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 7,
+            "maxWaiting" : 4
+          },
+          "kind" : "hourlyNet",
+          "time" : 86400
+        },
+        {
+          "amount" : -57100,
+          "breakdown" : [
+            {
+              "amount" : -21100,
+              "item" : "routeEnergy"
+            },
+            {
+              "amount" : -36000,
+              "item" : "trainEnergy"
+            }
+          ],
+          "kind" : "dailyEnergy",
+          "time" : 86340
+        },
+        {
+          "amount" : -172000,
+          "breakdown" : [
+            {
+              "amount" : -124000,
+              "item" : "stationStaff"
+            },
+            {
+              "amount" : -48000,
+              "item" : "trainStaff"
+            }
+          ],
+          "kind" : "dailyStaff",
+          "time" : 86340
+        },
+        {
+          "amount" : -153700,
+          "breakdown" : [
+            {
+              "amount" : 64000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 5
+          },
+          "kind" : "hourlyNet",
+          "time" : 90000
+        },
+        {
+          "amount" : -153200,
+          "breakdown" : [
+            {
+              "amount" : 64500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 5
+          },
+          "kind" : "hourlyNet",
+          "time" : 93600
+        },
+        {
+          "amount" : -151200,
+          "breakdown" : [
+            {
+              "amount" : 66500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 2
+          },
+          "kind" : "hourlyNet",
+          "time" : 97200
+        },
+        {
+          "amount" : -156200,
+          "breakdown" : [
+            {
+              "amount" : 61500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 6
+          },
+          "kind" : "hourlyNet",
+          "time" : 100800
+        },
+        {
+          "amount" : -149700,
+          "breakdown" : [
+            {
+              "amount" : 68000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 3
+          },
+          "kind" : "hourlyNet",
+          "time" : 104400
+        },
+        {
+          "amount" : 50300,
+          "breakdown" : [
+            {
+              "amount" : 280500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 41,
+            "maxWaiting" : 28
+          },
+          "kind" : "hourlyNet",
+          "time" : 108000
+        },
+        {
+          "amount" : 697300,
+          "breakdown" : [
+            {
+              "amount" : 915000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 128,
+            "maxWaiting" : 82
+          },
+          "kind" : "hourlyNet",
+          "time" : 111600
+        },
+        {
+          "amount" : 1356800,
+          "breakdown" : [
+            {
+              "amount" : 1574500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 154,
+            "maxWaiting" : 132
+          },
+          "kind" : "hourlyNet",
+          "time" : 115200
+        },
+        {
+          "amount" : 1418800,
+          "breakdown" : [
+            {
+              "amount" : 1636500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 107
+          },
+          "kind" : "hourlyNet",
+          "time" : 118800
+        },
+        {
+          "amount" : 824300,
+          "breakdown" : [
+            {
+              "amount" : 1042000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 44,
+            "maxWaiting" : 18
+          },
+          "kind" : "hourlyNet",
+          "time" : 122400
+        },
+        {
+          "amount" : 320800,
+          "breakdown" : [
+            {
+              "amount" : 538500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 51
+          },
+          "kind" : "hourlyNet",
+          "time" : 126000
+        },
+        {
+          "amount" : 348300,
+          "breakdown" : [
+            {
+              "amount" : 566000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 46,
+            "maxWaiting" : 25
+          },
+          "kind" : "hourlyNet",
+          "time" : 129600
+        },
+        {
+          "amount" : 318300,
+          "breakdown" : [
+            {
+              "amount" : 548500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 47,
+            "maxWaiting" : 30
+          },
+          "kind" : "hourlyNet",
+          "time" : 133200
+        },
+        {
+          "amount" : 343300,
+          "breakdown" : [
+            {
+              "amount" : 561000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 55,
+            "maxWaiting" : 35
+          },
+          "kind" : "hourlyNet",
+          "time" : 136800
+        },
+        {
+          "amount" : 356800,
+          "breakdown" : [
+            {
+              "amount" : 574500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 50,
+            "maxWaiting" : 43
+          },
+          "kind" : "hourlyNet",
+          "time" : 140400
+        },
+        {
+          "amount" : 599800,
+          "breakdown" : [
+            {
+              "amount" : 817500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 83
+          },
+          "kind" : "hourlyNet",
+          "time" : 144000
+        },
+        {
+          "amount" : 1045300,
+          "breakdown" : [
+            {
+              "amount" : 1263000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 95,
+            "maxWaiting" : 42
+          },
+          "kind" : "hourlyNet",
+          "time" : 147600
+        },
+        {
+          "amount" : 1298800,
+          "breakdown" : [
+            {
+              "amount" : 1516500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 171
+          },
+          "kind" : "hourlyNet",
+          "time" : 151200
+        },
+        {
+          "amount" : 1490300,
+          "breakdown" : [
+            {
+              "amount" : 1708000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 117,
+            "maxWaiting" : 64
+          },
+          "kind" : "hourlyNet",
+          "time" : 154800
+        },
+        {
+          "amount" : 839300,
+          "breakdown" : [
+            {
+              "amount" : 1069500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 66,
+            "maxWaiting" : 40
+          },
+          "kind" : "hourlyNet",
+          "time" : 158400
+        },
+        {
+          "amount" : 485300,
+          "breakdown" : [
+            {
+              "amount" : 703000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 66,
+            "maxWaiting" : 42
+          },
+          "kind" : "hourlyNet",
+          "time" : 162000
+        },
+        {
+          "amount" : 447800,
+          "breakdown" : [
+            {
+              "amount" : 665500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 57,
+            "maxWaiting" : 48
+          },
+          "kind" : "hourlyNet",
+          "time" : 165600
+        },
+        {
+          "amount" : 181800,
+          "breakdown" : [
+            {
+              "amount" : 399500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 8
+          },
+          "kind" : "hourlyNet",
+          "time" : 169200
+        },
+        {
+          "amount" : -149200,
+          "breakdown" : [
+            {
+              "amount" : 68500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 2
+          },
+          "kind" : "hourlyNet",
+          "time" : 172800
+        },
+        {
+          "amount" : -57100,
+          "breakdown" : [
+            {
+              "amount" : -21100,
+              "item" : "routeEnergy"
+            },
+            {
+              "amount" : -36000,
+              "item" : "trainEnergy"
+            }
+          ],
+          "kind" : "dailyEnergy",
+          "time" : 172740
+        },
+        {
+          "amount" : -172000,
+          "breakdown" : [
+            {
+              "amount" : -124000,
+              "item" : "stationStaff"
+            },
+            {
+              "amount" : -48000,
+              "item" : "trainStaff"
+            }
+          ],
+          "kind" : "dailyStaff",
+          "time" : 172740
+        },
+        {
+          "amount" : -156200,
+          "breakdown" : [
+            {
+              "amount" : 61500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 7
+          },
+          "kind" : "hourlyNet",
+          "time" : 176400
+        },
+        {
+          "amount" : -149200,
+          "breakdown" : [
+            {
+              "amount" : 68500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 4
+          },
+          "kind" : "hourlyNet",
+          "time" : 180000
+        },
+        {
+          "amount" : -164700,
+          "breakdown" : [
+            {
+              "amount" : 65500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -212400,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -17800,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 6,
+            "maxWaiting" : 4
+          },
+          "kind" : "hourlyNet",
+          "time" : 183600
+        },
+        {
+          "amount" : -152700,
+          "breakdown" : [
+            {
+              "amount" : 65000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 7,
+            "maxWaiting" : 5
+          },
+          "kind" : "hourlyNet",
+          "time" : 187200
+        },
+        {
+          "amount" : -152200,
+          "breakdown" : [
+            {
+              "amount" : 65500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 5,
+            "maxWaiting" : 4
+          },
+          "kind" : "hourlyNet",
+          "time" : 190800
+        },
+        {
+          "amount" : 56800,
+          "breakdown" : [
+            {
+              "amount" : 274500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 40
+          },
+          "kind" : "hourlyNet",
+          "time" : 194400
+        },
+        {
+          "amount" : 738800,
+          "breakdown" : [
+            {
+              "amount" : 956500,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 94,
+            "maxWaiting" : 42
+          },
+          "kind" : "hourlyNet",
+          "time" : 198000
+        },
+        {
+          "amount" : 1315300,
+          "breakdown" : [
+            {
+              "amount" : 1533000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 172
+          },
+          "kind" : "hourlyNet",
+          "time" : 201600
+        },
+        {
+          "amount" : 1509300,
+          "breakdown" : [
+            {
+              "amount" : 1727000,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -200800,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -16900,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 119,
+            "maxWaiting" : 65
+          },
+          "kind" : "hourlyNet",
+          "time" : 205200
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 205200,
+      "pending" : {
+        "departures" : 18,
+        "fareRevenue" : 1012000,
+        "fareTrips" : 2024,
+        "passengers" : 2176,
+        "seats" : 23040,
+        "trainDistance" : 1124352
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 208800,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 125209000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 12,
+        "residents" : [
+          12,
+          25,
+          34,
+          39,
+          41,
+          39,
+          34,
+          25,
+          12
+        ],
+        "row" : 1,
+        "use" : "residential"
+      },
+      {
+        "column" : 10,
+        "residents" : [
+          14,
+          34,
+          50,
+          64,
+          74,
+          81,
+          83,
+          79,
+          74,
+          64,
+          50,
+          34,
+          14
+        ],
+        "row" : 2,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "residents" : [
+          25,
+          48,
+          70,
+          86,
+          99,
+          110,
+          115,
+          117,
+          115,
+          108,
+          99,
+          86,
+          70,
+          48,
+          25
+        ],
+        "row" : 3,
+        "use" : "residential"
+      },
+      {
+        "column" : 8,
+        "residents" : [
+          28,
+          55,
+          81,
+          101,
+          117,
+          130,
+          141,
+          146,
+          148,
+          146,
+          139,
+          130,
+          117,
+          101,
+          81,
+          55,
+          28
+        ],
+        "row" : 4,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "residents" : [
+          25,
+          55,
+          84,
+          108,
+          128,
+          144,
+          159,
+          168,
+          173,
+          175,
+          173,
+          168,
+          157,
+          144,
+          128,
+          108,
+          84,
+          55,
+          25
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          14,
+          48,
+          81,
+          108,
+          132,
+          151,
+          169,
+          182,
+          191,
+          199,
+          201,
+          199,
+          191,
+          182,
+          167,
+          151,
+          132,
+          108,
+          81,
+          48,
+          14
+        ],
+        "row" : 6,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          34,
+          70,
+          101,
+          128,
+          151,
+          171,
+          189,
+          204,
+          214,
+          220,
+          222,
+          220,
+          214,
+          204,
+          187,
+          171,
+          151,
+          128,
+          101,
+          70,
+          34
+        ],
+        "row" : 7,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          12,
+          50,
+          86,
+          117,
+          144,
+          167,
+          187,
+          208,
+          222,
+          231,
+          237,
+          238,
+          237,
+          231,
+          222,
+          205,
+          187,
+          167,
+          144,
+          117,
+          86,
+          50,
+          12
+        ],
+        "row" : 8,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          25,
+          64,
+          99,
+          130,
+          157,
+          180,
+          204,
+          222,
+          235
+        ],
+        "row" : 9,
+        "use" : "residential"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 9,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          738,
+          744
+        ],
+        "residents" : [
+          60,
+          60
+        ],
+        "row" : 9,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          738
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 9,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 9,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "residents" : [
+          235,
+          222,
+          201,
+          180,
+          157,
+          130,
+          99,
+          64,
+          25
+        ],
+        "row" : 9,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          34,
+          74,
+          108,
+          139,
+          166,
+          189,
+          214,
+          231
+        ],
+        "row" : 10,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          750
+        ],
+        "residents" : [
+          61
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          767,
+          773
+        ],
+        "residents" : [
+          62,
+          65
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          767
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          750
+        ],
+        "residents" : [
+          61
+        ],
+        "row" : 10,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 10,
+        "use" : "office"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          231,
+          211,
+          189,
+          166,
+          139,
+          108,
+          74,
+          34
+        ],
+        "row" : 10,
+        "use" : "residential"
+      },
+      {
+        "column" : 4,
+        "residents" : [
+          4,
+          39,
+          79,
+          113,
+          144,
+          171,
+          196,
+          220,
+          237
+        ],
+        "row" : 11,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          738
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          767
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          785,
+          791
+        ],
+        "residents" : [
+          68,
+          68
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          785
+        ],
+        "residents" : [
+          68
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          767
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 11,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          738
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 11,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          237,
+          216,
+          196,
+          171,
+          144,
+          113,
+          79,
+          39,
+          4
+        ],
+        "row" : 11,
+        "use" : "residential"
+      },
+      {
+        "column" : 4,
+        "residents" : [
+          4,
+          41,
+          81,
+          115,
+          146,
+          173,
+          198,
+          222,
+          238
+        ],
+        "row" : 12,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          744
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          773
+        ],
+        "residents" : [
+          64
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          791,
+          798
+        ],
+        "residents" : [
+          68,
+          69
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          791
+        ],
+        "residents" : [
+          68
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          773
+        ],
+        "residents" : [
+          64
+        ],
+        "row" : 12,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          744
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 12,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          238,
+          218,
+          198,
+          173,
+          146,
+          115,
+          81,
+          41,
+          4
+        ],
+        "row" : 12,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          39,
+          79,
+          113,
+          144,
+          171,
+          196,
+          220,
+          237
+        ],
+        "row" : 13,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          738
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          766
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          785,
+          791
+        ],
+        "residents" : [
+          68,
+          68
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          785
+        ],
+        "residents" : [
+          67
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          766
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 13,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          737
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 13,
+        "use" : "office"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          237,
+          216,
+          196,
+          171,
+          144,
+          113,
+          79,
+          39
+        ],
+        "row" : 13,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          34,
+          74,
+          108,
+          139,
+          166,
+          189,
+          214,
+          231
+        ],
+        "row" : 14,
+        "use" : "residential"
+      },
+      {
+        "column" : 13,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          750
+        ],
+        "residents" : [
+          61
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          766,
+          773
+        ],
+        "residents" : [
+          62,
+          64
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          766
+        ],
+        "residents" : [
+          62
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          750
+        ],
+        "residents" : [
+          61
+        ],
+        "row" : 14,
+        "use" : "office"
+      },
+      {
+        "column" : 19,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 14,
+        "use" : "commercial"
+      },
+      {
+        "column" : 20,
+        "residents" : [
+          231,
+          211,
+          189,
+          166,
+          139,
+          108,
+          74,
+          34
+        ],
+        "row" : 14,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          25,
+          63,
+          99,
+          130,
+          157,
+          180,
+          201,
+          222,
+          235
+        ],
+        "row" : 15,
+        "use" : "residential"
+      },
+      {
+        "column" : 14,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 15,
+        "use" : "office"
+      },
+      {
+        "column" : 15,
+        "jobs" : [
+          737,
+          744
+        ],
+        "residents" : [
+          60,
+          60
+        ],
+        "row" : 15,
+        "use" : "commercial"
+      },
+      {
+        "column" : 17,
+        "jobs" : [
+          737
+        ],
+        "residents" : [
+          60
+        ],
+        "row" : 15,
+        "use" : "office"
+      },
+      {
+        "column" : 18,
+        "jobs" : [
+          722
+        ],
+        "residents" : [
+          59
+        ],
+        "row" : 15,
+        "use" : "commercial"
+      },
+      {
+        "column" : 19,
+        "residents" : [
+          235,
+          218,
+          201,
+          180,
+          157,
+          130,
+          99,
+          64,
+          25
+        ],
+        "row" : 15,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "residents" : [
+          12,
+          50,
+          86,
+          117,
+          144,
+          167,
+          187,
+          208,
+          222,
+          231,
+          237,
+          238,
+          237,
+          231,
+          222,
+          205,
+          187,
+          167,
+          144,
+          117,
+          86,
+          50,
+          12
+        ],
+        "row" : 16,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          34,
+          70,
+          101,
+          128,
+          151,
+          171,
+          189,
+          204,
+          214,
+          220,
+          222,
+          220,
+          214,
+          204,
+          187,
+          171,
+          151,
+          128,
+          101,
+          70,
+          34
+        ],
+        "row" : 17,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "residents" : [
+          14,
+          48,
+          81,
+          108,
+          132,
+          151,
+          167,
+          182,
+          191,
+          199,
+          201,
+          199,
+          191,
+          180,
+          167,
+          151,
+          132,
+          108,
+          81,
+          48,
+          14
+        ],
+        "row" : 18,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "residents" : [
+          25,
+          55,
+          84,
+          108,
+          128,
+          144,
+          157,
+          168,
+          173,
+          175,
+          173,
+          166,
+          157,
+          144,
+          128,
+          108,
+          84,
+          55,
+          25
+        ],
+        "row" : 19,
+        "use" : "residential"
+      },
+      {
+        "column" : 8,
+        "residents" : [
+          28,
+          55,
+          81,
+          101,
+          117,
+          130,
+          141,
+          146,
+          148,
+          146,
+          139,
+          130,
+          117,
+          101,
+          81,
+          55,
+          28
+        ],
+        "row" : 20,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "residents" : [
+          25,
+          48,
+          70,
+          86,
+          99,
+          108,
+          115,
+          117,
+          113,
+          108,
+          99,
+          86,
+          70,
+          48,
+          25
+        ],
+        "row" : 21,
+        "use" : "residential"
+      },
+      {
+        "column" : 10,
+        "residents" : [
+          14,
+          34,
+          50,
+          63,
+          74,
+          77,
+          79,
+          79,
+          74,
+          64,
+          50,
+          34,
+          14
+        ],
+        "row" : 22,
+        "use" : "residential"
+      },
+      {
+        "column" : 12,
+        "residents" : [
+          12,
+          25,
+          34,
+          39,
+          41,
+          39,
+          34,
+          25,
+          12
+        ],
+        "row" : 23,
+        "use" : "residential"
+      }
+    ],
+    "landDemand" : true,
+    "lines" : [
+      {
+        "id" : 1,
+        "lastDispatch" : 208740,
+        "name" : "Main",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 24576,
+          "y" : 49152,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 106496,
+          "y" : 49152,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 12288,
+          "start" : 8192,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 73728,
+          "start" : 69632,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 2,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "arrived" : 36272,
+        "demand" : {
+          "dailyTrips" : 15717,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 36342,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 1530
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "arrived" : 42064,
+        "demand" : {
+          "dailyTrips" : 18198,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 42097,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 2790
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 11,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 208620
+          },
+          {
+            "count" : 11,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 208680
+          },
+          {
+            "count" : 11,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 208740
+          }
+        ]
+      }
+    ],
+    "riders" : [
+      {
+        "groups" : [
+          {
+            "count" : 70,
+            "destination" : 2,
+            "origin" : 1
+          }
+        ],
+        "train" : 1
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 34816,
+          "y" : 49152
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "East",
+        "point" : {
+          "x" : 96256,
+          "y" : 49152
+        }
+      }
+    ],
+    "townGrowth" : {
+      "places" : [
+        {
+          "base" : 15384,
+          "counted" : 30922,
+          "lastGrowth" : 11,
+          "station" : 1
+        },
+        {
+          "base" : 17823,
+          "counted" : 35820,
+          "lastGrowth" : 10,
+          "station" : 2
+        }
+      ]
+    },
+    "trains" : [
+      {
+        "cars" : 4,
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "end" : 73728,
+          "rate" : 512
+        },
+        "name" : "T",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 15584
+          }
+        },
+        "times" : {
+          "arrival" : 208740,
+          "departure" : 208782,
+          "run" : {
+            "length" : 62464,
+            "seconds" : 87,
+            "start" : 208782
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 208740,
+            "departure" : 208782,
+            "station" : 1
+          },
+          {
+            "arrival" : 208869,
+            "departure" : 208989,
+            "reverse" : true,
+            "station" : 2
+          },
+          {
+            "arrival" : 209076,
+            "departure" : 209076,
+            "reverse" : true,
+            "station" : 1
+          }
+        ]
+      }
+    ]
+  }
+}

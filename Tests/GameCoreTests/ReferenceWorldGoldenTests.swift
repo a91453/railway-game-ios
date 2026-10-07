@@ -14,7 +14,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             let name = url.lastPathComponent
             // The reference model routes passengers directly only: network
             // routing, walks and station modes (Phase 5F) are GameCore's.
-            guard !scenario.usesPassengerNetwork else { continue }
+            // Nor does it hold land (Phase 6a), which `LandTests` checks.
+            guard !scenario.usesPassengerNetwork, !scenario.usesLand else { continue }
             let initial = scenario.initialState
             var model = ReferenceWorld(
                 width: initial.worldWidth, height: initial.worldHeight, balance: initial.balance,
@@ -124,12 +125,16 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setFareRules(let rules): error = model.setFareRules(rules)
         case .setPassengerRoutingMode, .setStationOperationMode:
             preconditionFailure("the reference model does not run network routing")
+        case .foundTowns, .setLand, .setLandDemand:
+            preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok
     }
 
     private static func answer(_ observation: ScenarioObservation, in model: ReferenceWorld) -> ObservationAnswer {
         switch observation {
+        case .landCatchment, .landCell:
+            preconditionFailure("the reference model does not hold land")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))
         case .train(let id):

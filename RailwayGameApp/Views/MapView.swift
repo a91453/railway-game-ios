@@ -38,6 +38,11 @@ struct MapView: View {
     /// and a number that changes with them.
     @State private var travelTiles: [TravelDemandMap.Tile] = []
     @State private var travelTilesVersion = 0
+    /// A blank map's population layer: the world's land (Phase 6a,
+    /// ``LandMap``), made when the land changes, and a number that changes
+    /// with it.
+    @State private var landTiles: [TravelDemandMap.Tile] = []
+    @State private var landTilesVersion = 0
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
@@ -244,6 +249,11 @@ struct MapView: View {
             }
             heatmapVersion &+= 1
         }
+        .onChange(of: session.world.land, initial: true) { _, land in
+            // A real-world map draws WorldPop's grid, which its land is from.
+            landTiles = session.world.geoAnchor == nil ? LandMap.tiles(of: land) : []
+            landTilesVersion &+= 1
+        }
         .onChange(of: TravelDemandKey(world: session.world, isShown: mapLayers.popTravelMode?.usesHour == true), initial: true) { _, key in
             if key.isShown {
                 travelDemand = session.world.travelDemandMap()
@@ -275,8 +285,12 @@ struct MapView: View {
         let alpha = opacity(for: mode)
         switch mode {
         case .population:
-            guard let heatmap, realWorld != nil else { return nil }
-            return PopTravelLayer(content: .population(heatmap), key: .population(version: heatmapVersion), opacity: alpha)
+            if let heatmap, realWorld != nil {
+                return PopTravelLayer(content: .population(heatmap), key: .population(version: heatmapVersion), opacity: alpha)
+            }
+            // A blank map's people are its land's (Phase 6a).
+            guard realWorld == nil, !landTiles.isEmpty else { return nil }
+            return PopTravelLayer(content: .travel(landTiles), key: .land(version: landTilesVersion), opacity: alpha)
         case .travel, .movement:
             return PopTravelLayer(
                 content: .travel(travelTiles),
@@ -570,6 +584,7 @@ struct PopTravelLayer: Equatable {
     enum Key: Equatable {
         case population(version: Int)
         case travel(version: Int)
+        case land(version: Int)
     }
 
     let content: Content

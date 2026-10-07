@@ -64,9 +64,13 @@
 ///     Older builds would silently drop an assigned path or platform.
 /// 11. Network passenger journeys and transfer queues (Phase 5C/5F).
 ///     Older builds would drop their remaining legs or route balances.
+/// 12. Land (Phase 6a, ARCHITECTURE decision 72): the world can have
+///     `"land"`, who lives and works in each 64 m cell. A build that reads
+///     only version 11 would drop it, and its next save would lose the
+///     city, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 11
+    public static let currentVersion = 12
 
     public let world: GameWorld
 
@@ -119,6 +123,7 @@ extension SavedGame: Codable {
         // to empty automatic selections in their validated decoders.
         // Version 10 to 11: absent passenger routing mode means direct;
         // old waiting and riding groups have no journey or route balance.
+        // Version 11 to 12: a world without `"land"` has none.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

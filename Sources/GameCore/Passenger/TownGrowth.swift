@@ -104,6 +104,8 @@ extension GameWorld {
     /// Midnight's growth, from the day that ended: `reached` is how many
     /// stations each origin's passengers could reach in that day's plan.
     mutating func growTowns(reached: [StationID: Int]) {
+        // Phase 6b: with demand from land, the land grows instead.
+        guard !landDemand else { return growLand(reached: reached) }
         guard var growth = townGrowth, accounts.mode == .management else { return }
         var places: [TownGrowth.Place] = []
         for index in passengers.indices {
