@@ -2997,7 +2997,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 76. 地價與城市圖層（Phase 6c-3、6d）
 
-2026-10-07。作者定案研究文件（PR #174，`docs/research/PHASE6C_BUILDINGS_STUDY.md`）§6 的地價與 6d 的城市圖層。來源檢查（私有參考 `2db0c5a`）：四處參考都沒有地價、租金、房地產或開發規則（研究文件 §4 的關鍵字搜尋；`Ci/` 的土地用途圖來自沒有收錄的向量圖磚），所以公式、係數與圖層的顏色都是原生的（gap），對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#phase-6c-36d地價與城市圖層決策-76)。
+2026-10-07。作者定案研究文件（PR #174，`docs/research/PHASE6C_BUILDINGS_STUDY.md`）§6 的地價與 6d 的城市圖層。來源檢查（私有參考 `2db0c5a`，以及加入 `Simulator/` 的 `3a19671`）：四處參考都沒有地價、租金、房地產或開發規則（研究文件 §4 的關鍵字搜尋；`Ci/` 的土地用途圖來自沒有收錄的向量圖磚），`Simulator/` 是模型火車佈景模擬器，建物只是佈景；所以公式、係數與圖層的顏色都是原生的（gap），對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#phase-6c-36d地價與城市圖層決策-76)。
 
 1. **只是查詢**：`GameWorld.landValue(row:column:) -> LandValue?`（世界外為 `nil`）與一次算整張圖的 `landValues()`、`landValues(rows:columns:)`。`LandValue` 有總價（美分／m²）與分項 `base`、`servicePremium`、`accessPremium`、決定價格的車站（可能為 `nil`）。不存檔、不存歷史、不進帳本，沒有交易、租金或費用（Phase 7）。存檔版本不變。
 2. **公式**（`LandValueRules`，全部整數、原生）：`base = floor(B × D / 1000)`；B 是用途基準（空格 1000、住宅 2000、商業 3000、辦公 3500 美分／m²，用途取建物的，沒有建物時取土地格的）；D 是密度係數（D1 1000、D2 1250、D3 1600、D4 2000，既有存量用它的 D4，沒有建物 1000）。每個腹地涵蓋這格（`d² < R²`，R = 51,200）而且 `lastService > 0` 的站算 `score = floor(w × lastService / 1000)`，`w = 1000 − floor(d² × 1000 / R²)`；取 score 最高的站（平手取編號小的），S 是它的 score、A 是它的 `lastReached`，沒有符合的站時 S = A = 0。`value = clamp(base + 15 × S + 1000 × A, 500, 50000)`。土地不決定客流的世界（自由模式、土地需求關閉或沒有城鎮成長）S = A = 0。目前的係數下最高是辦公 D4 滿服務、可達 5 站的 27,000（$270／m²）。

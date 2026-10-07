@@ -890,7 +890,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## Phase 6c-3／6d：地價與城市圖層（決策 76）
 
-同一個參考庫版本（`2db0c5a`）。研究文件 PR #174 §4 已在 `Ci/reference_snapshot/` 的 js／json／html 搜尋 `landValue`、`land_value`、`landPrice`、`propertyValue`、`realEstate`、`rent`、`地價`、`租金`、`房地產`、`開發`，並查 `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`，都沒有地價、租金或開發規則；本次再查 `Railway/site_archive_clean/` 與 `Railway/taipei_gta_reference/source/` 也沒有。所以地價與圖層是原生的（gap → 原生）。
+同一個參考庫版本（`2db0c5a`）。研究文件 PR #174 §4 已在 `Ci/reference_snapshot/` 的 js／json／html 搜尋 `landValue`、`land_value`、`landPrice`、`propertyValue`、`realEstate`、`rent`、`地價`、`租金`、`房地產`、`開發`，並查 `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`，都沒有地價、租金或開發規則；本次再查 `Railway/site_archive_clean/`、`Railway/taipei_gta_reference/source/` 與新加入的 `Simulator/`（`3a19671`，先讀 `REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`，再搜 `reference_snapshot/`：模型火車佈景模擬器，`office` 只是 KATO 佈景建物的軌道件與 3D 外觀，沒有 `landValue`、`zoning`、`residential`、`population` 或 `catchment`）也沒有。所以地價與圖層是原生的（gap → 原生）。
 
 | 來源／函式 | 目標 | 狀態／差異 |
 | --- | --- | --- |
