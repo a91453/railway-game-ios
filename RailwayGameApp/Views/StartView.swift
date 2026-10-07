@@ -31,7 +31,7 @@ struct StartView: View {
                             detail: detail(of: autosave),
                             systemImage: "play.fill",
                             isPrimary: true,
-                            accentColor: Palette.metroGreen
+                            tone: .primary
                         ) {
                             launcher.continueGame()
                         }
@@ -42,7 +42,7 @@ struct StartView: View {
                         detail: String(localized: "An empty map and \(GameWorld.newGame().economy.balance.moneyText) to build with"),
                         systemImage: "plus",
                         isPrimary: launcher.autosave == nil,
-                        accentColor: Palette.metroBlue
+                        tone: .primary
                     ) {
                         launcher.startNewGame()
                     }
@@ -55,7 +55,7 @@ struct StartView: View {
                         title: String(localized: "Real-World Map"),
                         detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Build on a map of a real place"),
                         systemImage: "globe.asia.australia",
-                        accentColor: Palette.metroCyan
+                        tone: .plain
                     ) {
                         choosesPlace = true
                     }
@@ -65,7 +65,7 @@ struct StartView: View {
                         title: String(localized: "Tutorial"),
                         detail: String(localized: "Learn to build and run a railway step by step"),
                         systemImage: "hand.point.up.left",
-                        accentColor: Palette.metroAmber
+                        tone: .accent
                     ) {
                         launcher.startTutorial()
                     }
@@ -74,7 +74,7 @@ struct StartView: View {
                         title: String(localized: "Demo Map"),
                         detail: String(localized: "Three lines already running, in a city that grows"),
                         systemImage: "tram.fill",
-                        accentColor: Palette.metroPurple
+                        tone: .accent
                     ) {
                         launcher.openDemo()
                     }
@@ -84,7 +84,7 @@ struct StartView: View {
                             title: String(localized: "Saved Games"),
                             detail: String(localized: "\(launcher.otherSaves.count) saves"),
                             systemImage: "tray.full",
-                            accentColor: Palette.station
+                            tone: .plain
                         ) {
                             showsSaves = true
                         }
@@ -94,7 +94,7 @@ struct StartView: View {
                         title: String(localized: "Import a Save"),
                         detail: String(localized: "A save file from Files or another device"),
                         systemImage: "square.and.arrow.down",
-                        accentColor: Palette.metroBlue
+                        tone: .plain
                     ) {
                         importsSave = true
                     }
@@ -104,7 +104,7 @@ struct StartView: View {
                         title: String(localized: "Real-World Demo"),
                         detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
                         systemImage: "map.fill",
-                        accentColor: Palette.metroCyan
+                        tone: .accent
                     ) {
                         if let railways = launcher.railways {
                             launcher.openRealWorldDemo(railways: railways)
@@ -123,11 +123,11 @@ struct StartView: View {
                             .font(.footnote.weight(.medium))
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .foregroundStyle(message.kind == .success ? Palette.metroGreen : Palette.metroAmber)
+                    .foregroundStyle(message.kind == .success ? Theme.success : Theme.warning)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.12), in: Capsule())
-                    .overlay(Capsule().strokeBorder((message.kind == .success ? Palette.metroGreen : Palette.metroAmber).opacity(0.35), lineWidth: 1))
+                    .background(Theme.panel, in: Capsule())
+                    .overlay(Capsule().strokeBorder((message.kind == .success ? Theme.success : Theme.warning).opacity(0.5), lineWidth: 1))
                 }
                 HStack(spacing: 10) {
                     // iOS keeps each app's language in Settings (the
@@ -155,7 +155,7 @@ struct StartView: View {
             .padding(.vertical, 40)
             .frame(maxWidth: .infinity)
         }
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(Theme.background)
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
         }
@@ -183,28 +183,20 @@ struct StartView: View {
 
     private var header: some View {
         VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Palette.station, Palette.metroAmber],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .shadow(color: Palette.station.opacity(0.35), radius: 12, x: 0, y: 6)
-                Image(systemName: "tram.fill")
-                    .font(.system(size: 42, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            .accessibilityHidden(true)
+            // The app icon, light or dark with the appearance.
+            Image("BrandMark")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 88, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .accessibilityHidden(true)
             Text("Along the Line")
                 .font(.system(.largeTitle, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("start.brand")
             Text("Along the Line is a railway and city-building simulation where the railway shapes the growth of the city.")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
         }
@@ -220,11 +212,11 @@ struct StartView: View {
     private func chip(_ label: some View) -> some View {
         label
             .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
-            .background(Palette.chipBackground, in: Capsule())
-            .overlay(Capsule().strokeBorder(Palette.cardBorder, lineWidth: 1))
+            .background(Theme.panel, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
     }
 
     /// The save's game time, cash and size, and when it was saved.
@@ -235,13 +227,20 @@ struct StartView: View {
     }
 }
 
-/// One choice on the start screen: a title over what it does.
+/// One choice on the start screen: a title over what it does, beside an
+/// icon on a flat tile in the app icon's colours.
 private struct StartButton: View {
+    /// The icon's tile: teal for starting a game, the icon's warm yellow for
+    /// the guided and ready-made games, a light teal for the rest.
+    enum Tone {
+        case primary, accent, plain
+    }
+
     let title: String
     let detail: String
     let systemImage: String
     var isPrimary = false
-    var accentColor: Color = Color.accentColor
+    var tone = Tone.plain
     let action: () -> Void
 
     var body: some View {
@@ -249,50 +248,60 @@ private struct StartButton: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(accentColor.opacity(0.16))
+                        .fill(tileColor)
                         .frame(width: 44, height: 44)
                     Image(systemName: systemImage)
                         .font(.body.weight(.bold))
-                        .foregroundStyle(accentColor)
+                        .foregroundStyle(iconColor)
                 }
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.headline)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Theme.textPrimary)
                     Text(detail)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
-            .background(Palette.cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
-                        isPrimary ? accentColor.opacity(0.65) : Palette.cardBorder,
+                        isPrimary ? Theme.primary : Theme.panelBorder,
                         lineWidth: isPrimary ? 2 : 1
                     )
             }
-            .shadow(
-                color: isPrimary ? accentColor.opacity(0.16) : Color.black.opacity(0.04),
-                radius: isPrimary ? 8 : 4,
-                x: 0,
-                y: isPrimary ? 3 : 2
-            )
         }
         .buttonStyle(CardTapButtonStyle())
         .accessibilityElement(children: .combine)
+    }
+
+    private var tileColor: Color {
+        switch tone {
+        case .primary: Theme.primary
+        case .accent: Theme.accent
+        case .plain: Theme.primary.opacity(0.14)
+        }
+    }
+
+    private var iconColor: Color {
+        switch tone {
+        case .primary: Theme.onPrimary
+        case .accent: Theme.onAccent
+        case .plain: Theme.primary
+        }
     }
 }
 
@@ -320,7 +329,7 @@ struct SaveListView: View {
                     Section {
                         Label(message.text, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Theme.warning)
                     }
                 }
                 Section {
@@ -367,26 +376,26 @@ struct SaveListView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill((entry.problem != nil ? Palette.metroAmber : (entry.kind == .autosave ? Palette.metroGreen : Palette.metroBlue)).opacity(0.14))
+                    .fill(entry.problem != nil ? Theme.warning.opacity(0.14) : (entry.kind == .autosave ? Theme.accent : Theme.primary))
                     .frame(width: 36, height: 36)
                 Image(systemName: entry.problem != nil ? "exclamationmark.triangle.fill" : (entry.kind == .autosave ? "clock.arrow.circlepath" : "tram.fill"))
                     .font(.footnote.weight(.bold))
-                    .foregroundStyle(entry.problem != nil ? Palette.metroAmber : (entry.kind == .autosave ? Palette.metroGreen : Palette.metroBlue))
+                    .foregroundStyle(entry.problem != nil ? Theme.warning : (entry.kind == .autosave ? Theme.onAccent : Theme.onPrimary))
             }
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: title(of: entry))
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(entry.problem == nil ? Color.primary : Color.secondary)
+                    .foregroundStyle(entry.problem == nil ? Theme.textPrimary : Theme.textSecondary)
                 if let problem = entry.problem {
                     Text(problem.playerMessage(in: launcher.language))
                         .font(.footnote)
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(Theme.warning)
                 } else if let summary = entry.summary {
                     Text(summary.text(in: launcher.language))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
                 }
             }
