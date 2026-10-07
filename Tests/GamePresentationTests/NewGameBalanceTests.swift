@@ -60,8 +60,10 @@ final class NewGameBalanceTests: XCTestCase {
         XCTAssertTrue(world.landDemand)
         XCTAssertTrue(world.stations.allSatisfy { (world.stationDemand(of: $0.id)?.dailyTrips ?? 0) > 0 }, "the city gives every station ridership")
 
-        // The second whole day, its hours and its day settled.
-        try world.advance(ticks: 1 + 2 * 1_440)
+        // The first whole day, its hours and its day settled: the demo
+        // carries some 110,000 passengers a day, so a day takes long in a
+        // debug build.
+        try world.advance(ticks: 1 + 1_440)
         let day = world.financeReport(.day).previous
         XCTAssertGreaterThan(day.operatingProfit, .zero)
         let payback = Double(cost.amount) / Double(day.operatingProfit.amount)
