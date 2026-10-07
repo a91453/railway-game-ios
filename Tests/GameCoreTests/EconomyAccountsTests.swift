@@ -439,6 +439,13 @@ final class EconomyAccountsTests: XCTestCase {
                 days.append(days[0])
                 $0["days"] = days
             },
+            "a day after today": broken {
+                var days = $0["days"] as! [[String: Any]]
+                var later = days[days.count - 1]
+                later["day"] = 99_999
+                days.append(later)
+                $0["days"] = days
+            },
             "fares not in whole dollars": broken {
                 var pending = $0["pending"] as! [String: Any]
                 pending["fareRevenue"] = 150
