@@ -20,7 +20,8 @@ extension GameWorld {
     /// Its land (Phase 6a, ARCHITECTURE decision 72) is `land`, a
     /// real-world map's people (``LandImport``), or without it the towns
     /// ``Land/towns(seed:in:)`` draws from `eventSeed`: a blank map, or a
-    /// real-world one where the app has no people.
+    /// real-world one where the app has no people. Its city's buildings
+    /// (Phase 6c-1, ARCHITECTURE decision 74) stand on that land.
     public static func newGame(
         anchor: GeoAnchor? = nil, balance: Money = startingBalance, eventSeed: UInt32 = 1, land: [LandCell]? = nil
     ) -> GameWorld {
@@ -61,6 +62,9 @@ extension GameWorld {
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
+            // Phase 6c-1: the city's buildings stand on its land, each
+            // holding so many residents and jobs.
+            world.setCityBuildings(true)
             return world
         } catch {
             // An empty world has no trains to share track, and land comes

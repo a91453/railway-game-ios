@@ -857,3 +857,19 @@ V 實際放行 → T、U（保證不互穿）
 | 本 repo `taiwan_places.json`（OSM，ODbL，`PlaceGrid`） | `LandImport.jobsPerPlace`、`LandImport.cells(population:places:frame:bounds:)` | 原生係數：商店 25、辦公 500、學校 300、景點 50 個就業 |
 
 定點比例：分配權重 `1000 − ⌊1000 d² / R²⌋`（R = 51,200 單位），成長率千分比，旅次每 100 人 40。
+
+## Phase 6c-1：城市建物（決策 74）
+
+同一個參考庫版本（`2db0c5a`），四處來源都查過（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`）。建物在來源裡只有外觀（高度、樓層範圍、輪廓、模型），沒有居民或就業容量、升級或地價規則，所以容量表與選級是原生的（gap）。研究文件 PR #174 §2–§4、§9、§11 有逐檔盤點。
+
+| 來源／函式 | 目標 | 狀態／差異 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/assets/world-*.js`：`floorsFor`、`pickType`；`engine-*.js` 的區域 `style.floors`（例如 `[2,6]`、`[4,12]`、`[10,40]`） | `BuildingDensity.floors`（2／6／18／40） | gap → 原生：四個代表樓層參考來源的外觀跨度（店屋、公寓、大樓、信義上端），但選這四個值與容量換算是本專案的；來源的樓層只決定外觀 |
+| 同上（旋轉矩形、lot、site 佔地） | `Building.cells`（佔用的 64 m 格） | 改變：GameCore 只存佔格，輪廓與旋轉留給畫面（Phase 8） |
+| `Railway/site_archive_clean/rail-3d/blender-buildings.js`：`buildingCatalog`；`blender-buildings-v1`／`historic-buildings-v2` 的 catalog／placement | 沒有（Phase 8 素材） | 只有模型、尺寸與地理錨點，不推容量 |
+| `Ci/reference_snapshot/external/openfreemap-tiles/styles/liberty.json`：`building`、`building-3d`（`render_height`、`render_min_height`） | 沒有（畫面層） | 圖磚高度只給 extrusion，不是容量 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`town_cmd.cpp`，只有路徑） | `Building.fitting(_:id:)`、`GameWorld.setCityBuildings(_:)` | gap → 原生：城市自動產生建物、依主要用途選最低足夠的密度、既有存量 |
+| 搜尋 `building`、`capacity`、`floors`、`residentCapacity`、`jobCapacity`、`landValue`、`rent`、`地價`、`租金`、`開發` | `Building.tableCapacity(of:_:)` | gap → 原生：每層 1536 m²、居民 48 m²、就業 32 m²、住家八分之 7／2／1 |
+| 本 repo 6b `LandDemand.spread(towards:)` | 同一處經 `GameWorld.addLand(_:)` 建立住宅 D1 | 沿用 6b 的擴張規則，只多建物 |
+
+定點比例：容量是整數人／職位；格 4096 世界單位（64 m）、4096 m²；樓板 1536 m²／層；沒有小數。

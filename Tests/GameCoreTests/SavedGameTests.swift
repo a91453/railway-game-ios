@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 12)
+        XCTAssertEqual(SavedGame.currentVersion, 13)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 13, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 14, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -624,9 +624,58 @@ final class SavedGameTests: XCTestCase {
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        XCTAssertFalse(world.cityBuildings, "a version 12 save has no buildings")
         try world.advance(ticks: 1_440)
         XCTAssertGreaterThan(world.land.totals.residents, 51_256)
     }
 
+    /// Version 13 (Phase 6c-1, ARCHITECTURE decision 74): the city's
+    /// buildings. The version 12 save with demand from land, with an office
+    /// cell of 5,000 jobs added at row 0, column 0 (existing stock), the
+    /// city's buildings turned on and a day more: the two cells the land
+    /// grew that day have their D1 homes, numbered after the rest. The save
+    /// keeps them byte for byte, and they keep growing with the land.
+    func testVersionThirteenKeepsItsBuildings() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v13-city-buildings.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 13)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertTrue(world.cityBuildings)
+        XCTAssertEqual(world.land.cells.count, 444)
+        XCTAssertEqual(world.buildings.all.count, 444)
+        XCTAssertEqual(world.buildings.all.map(\.id.rawValue), Array(1...444))
+        XCTAssertEqual(world.buildings.building(row: 0, column: 0)?.kind, .existingStock)
+        XCTAssertEqual(world.buildingCapacity(row: 0, column: 0), BuildingCapacity(residents: 160, jobs: 5_000))
+        var densities = [0, 0, 0, 0]
+        for building in world.buildings.all where building.kind == .city {
+            densities[building.density.rawValue - 1] += 1
+        }
+        XCTAssertEqual(densities, [94, 187, 129, 33])
+        for id in [443, 444] {
+            let building = try XCTUnwrap(world.buildings.all.first { $0.id.rawValue == id })
+            XCTAssertEqual(building.density, .d1, "the day's new homes")
+            XCTAssertEqual(world.land.cell(row: building.cells[0].row, column: building.cells[0].column)?.residents, LandDemand.newCellResidents)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        try world.advance(ticks: 1_440)
+        XCTAssertGreaterThan(world.land.cells.count, 444)
+        XCTAssertTrue(Self.everyCellHasItsBuilding(world), "every new cell has its building")
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v12-land-demand.json"))
+        var old = try JSONDecoder().decode(SavedGame.self, from: older).world
+        XCTAssertFalse(old.cityBuildings)
+        XCTAssertTrue(old.buildings.isEmpty)
+        // Turning them on puts them up from the land the save holds.
+        old.setCityBuildings(true)
+        XCTAssertEqual(old.buildings.all.count, old.land.cells.count)
+        XCTAssertTrue(Self.everyCellHasItsBuilding(old))
+    }
+
+    private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {
+        world.buildings.all.count == world.land.cells.count
+            && world.land.cells.allSatisfy { world.buildings.building(row: $0.row, column: $0.column)?.use == $0.use }
+    }
 }

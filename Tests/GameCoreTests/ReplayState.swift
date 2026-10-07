@@ -107,6 +107,14 @@ enum ReplayState {
         for cell in world.land.cells {
             line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
         }
+        // Phase 6c-1: likewise only a world with the city's buildings on.
+        if world.cityBuildings {
+            line("cityBuildings")
+        }
+        for building in world.buildings.all {
+            let cells = building.cells.map { "\($0.row),\($0.column)" }.joined(separator: " ")
+            line("building \(building.id.rawValue) \(building.kind.rawValue) \(building.use.rawValue) \(building.density.rawValue) \(cells)")
+        }
         return lines.joined(separator: "\n")
     }
 }

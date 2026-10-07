@@ -68,9 +68,12 @@
 ///     `"land"`, who lives and works in each 64 m cell. A build that reads
 ///     only version 11 would drop it, and its next save would lose the
 ///     city, so it says the save is newer than it instead.
+/// 13. City buildings (Phase 6c-1, ARCHITECTURE decision 74): the world can
+///     have `"cityBuildings"` and `"buildings"`, the building on each cell
+///     of land. A build that reads only version 12 would drop them.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 12
+    public static let currentVersion = 13
 
     public let world: GameWorld
 
@@ -124,6 +127,10 @@ extension SavedGame: Codable {
         // Version 10 to 11: absent passenger routing mode means direct;
         // old waiting and riding groups have no journey or route balance.
         // Version 11 to 12: a world without `"land"` has none.
+        // Version 12 to 13: a world without `"cityBuildings"` has the
+        // city's buildings off and no `"buildings"`; its land keeps growing
+        // to the fixed 400 residents and 1,200 jobs a cell (decision 73)
+        // until they are turned on, which puts them up then.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
