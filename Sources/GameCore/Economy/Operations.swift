@@ -134,21 +134,26 @@ extension GameWorld {
     // MARK: - Accrual
 
     /// `count` passengers from `origin` to `destination` boarded: they pay
-    /// the fare now, in whole dollars (`Math.round(count × fare)`).
+    /// the fare now, in whole dollars (`Math.round(count × fare)`). The
+    /// hour's fares and counts stop at ``maximumHourly``, the most a save
+    /// holds: the largest fare the commands take, ``FareRules/maximumFare``,
+    /// reaches it with about a thousand boarders, far beyond any real fare.
     mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID) {
         guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination) else { return }
-        accounts.pending.fareRevenue = accounts.pending.fareRevenue + Self.wholeDollars(count * fare.amount)
-        accounts.pending.fareTrips += count
+        let fares = accounts.pending.fareRevenue.amount + Self.wholeDollars(count * fare.amount).amount
+        accounts.pending.fareRevenue = Money(min(fares, Self.maximumHourly / 100 * 100))
+        accounts.pending.fareTrips = min(accounts.pending.fareTrips + count, Self.maximumHourly)
     }
 
     /// A line's train left a stop for its next, `distance` world units
-    /// away, with `passengers` on board and `seats` rated.
+    /// away, with `passengers` on board and `seats` rated; each count stops
+    /// at its bound, as the fares do.
     mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64) {
         guard accounts.mode == .management else { return }
-        accounts.pending.departures += 1
-        accounts.pending.trainDistance += distance
-        accounts.pending.passengers += passengers
-        accounts.pending.seats += seats
+        accounts.pending.departures = min(accounts.pending.departures + 1, Self.maximumDepartures)
+        accounts.pending.trainDistance = min(accounts.pending.trainDistance + distance, Self.maximumHourly)
+        accounts.pending.passengers = min(accounts.pending.passengers + passengers, Self.maximumHourly)
+        accounts.pending.seats = min(accounts.pending.seats + seats, Self.maximumHourly)
     }
 
     /// `cents` rounded half up to whole dollars, in cents.

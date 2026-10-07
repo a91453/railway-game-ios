@@ -98,7 +98,7 @@ final class TutorialSessionTests: XCTestCase {
             session.createLineFromDraft()
         case 6:
             // A train bought and placed at the line's first stop.
-            Self.expect(session, step: 6, goal: .placeTrain, targets: [.trainTool, .actionButton])
+            Self.expect(session, step: 6, goal: .placeTrain, targets: [.trainTool, .buyTrain, .actionButton])
             session.selectTool(.train)
             session.purchaseTrain()
             XCTAssertFalse(session.isTutorialStepDone, "an unplaced train is not on the track")
@@ -305,7 +305,7 @@ final class TutorialSessionTests: XCTestCase {
         let names = TutorialTarget.allCases.map(\.rawValue)
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(names, [
-            "tool.select", "tool.network", "tool.train", "network.modes", "panel.action",
+            "tool.select", "tool.network", "tool.train", "train.buy", "network.modes", "panel.action",
             "map", "map.zoom", "hud.lines", "hud.speed", "hud.menu",
         ])
         for tool in ConstructionTool.allCases {

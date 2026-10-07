@@ -10,8 +10,7 @@ import UniformTypeIdentifiers
 struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
-    @State private var showsLines = false
-    @State private var showsEconomy = false
+    @Environment(GameScreenState.self) private var screen
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time
@@ -51,28 +50,17 @@ struct HUDView: View {
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
-        .sheet(isPresented: $showsEconomy) {
-            EconomyPanel(session: session)
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showsLines) {
-            LinesPanel(session: session)
-                .presentationDetents([.medium, .large])
-                // The map stays usable behind the half-height sheet, so
-                // stations can be selected for a new line.
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-        }
     }
 
     private var linesButton: some View {
         Button {
-            showsLines = true
+            screen.panel = .lines
         } label: {
             Image(systemName: "point.3.connected.trianglepath.dotted")
                 .font(.subheadline.weight(.bold))
                 .frame(width: 40, height: 32)
         }
-        .buttonStyle(SelectableButtonStyle(isActive: showsLines))
+        .buttonStyle(SelectableButtonStyle(isActive: screen.panel == .lines))
         .accessibilityLabel("Lines")
         .accessibilityHint("Shows the service lines and their timetables.")
         .tutorialTarget(.linesButton)
@@ -126,7 +114,7 @@ struct HUDView: View {
         let text = session.world.economy.balance.moneyText
         let isNegative = session.world.economy.balance < .zero
         return Button {
-            showsEconomy = true
+            screen.panel = .economy
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "banknote.fill")

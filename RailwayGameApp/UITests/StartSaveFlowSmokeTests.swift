@@ -97,8 +97,27 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertGreaterThan(frame.width, 0)
         XCTAssertGreaterThan(frame.height, 0)
         XCTAssertTrue(bounds.contains(center), "Menu action is outside the app: \(identifier)")
-        app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: center.x - bounds.minX, dy: center.y - bounds.minY)).tap()
+        let point = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: center.x - bounds.minX, dy: center.y - bounds.minY))
+        point.tap()
+        // A row can show its press highlight and still not run its action
+        // (run 37196737286: the menu stayed open and the map behind it was
+        // never hittable). The menu closes when the action runs, so touch
+        // it once more only while it is still open.
+        if !menuCloses(app.buttons.matching(identifier: identifier), timeout: 10) {
+            point.tap()
+        }
+    }
+
+    /// Whether no copy of the menu action is left that the player can
+    /// touch within `timeout` seconds.
+    private func menuCloses(_ query: XCUIElementQuery, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if !query.allElementsBoundByIndex.contains(where: { $0.isHittable }) { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        return false
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {

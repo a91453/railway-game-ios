@@ -386,6 +386,21 @@ final class EconomyAccountsTests: XCTestCase {
 
     // MARK: - Saving
 
+    /// The largest fare the commands take, with as many boarders an hour
+    /// as a busy line has, stays within what a save may hold: the hour's
+    /// accrued fares and counts stop at their bound, so the game still
+    /// loads.
+    func testAnHourAtTheLargestFareStillLoads() throws {
+        var world = try makeWorld()
+        try world.setFareBaseline(FareRules.maximumFare)
+        try world.setFareRules(.flat(FareRules.maximumFare))
+        world.chargeFares(1_100, from: alpha, to: gamma)
+        world.chargeFares(1_100, from: alpha, to: gamma)
+        XCTAssertEqual(world.accounts.pending.fareRevenue.amount, GameWorld.maximumHourly / 100 * 100)
+        XCTAssertNil(world.accountsProblem())
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
+    }
+
     func testAccountsRoundTripAndBrokenOnesAreRejected() throws {
         var world = try makeWorld()
         try wait(&world, 3, at: alpha, for: beta)

@@ -54,7 +54,7 @@ C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內�
 | 4 | `build.firstStation` | `network.modes`、`map`、`panel.action` | 這一步出現之後蓋了新的車站（`.buildStation`） |
 | 5 | `build.secondStation` | `network.modes`、`map`、`panel.action` | 同上（`.buildStation`） |
 | 6 | `line.create` | `hud.lines` | 這一步出現之後建了新的路線（`.createLine`） |
-| 7 | `train.place` | `tool.train`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
+| 7 | `train.place` | `tool.train`、`train.buy`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
 | 8 | `line.service` | `hud.lines` | 新指派了列車給一條設了上線列車數的路線（`.startService`） |
 | 9 | `station.ridership` | `map` | 讀完就好（`.read`） |
 | 10 | `time.speed` | `hud.speed` | 速度（含暫停）和這一步出現時不同（`.changeSpeed`） |
@@ -62,7 +62,7 @@ C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內�
 
 做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。要求「蓋了什麼」的條件比較的是這一步**第一次出現時**的世界（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次。
 
-C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 沒有加步驟（教學在空白地圖上，決策 50）。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
+C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱；後來步驟 7 加了 `train.buy`，大尺寸 iPhone 直向時卡片才不會蓋住「購買」。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 沒有加步驟（教學在空白地圖上，決策 50）。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
 
 **移動地圖（`.moveMap`，E1）**：相機是地圖 view 的狀態，不在 session 裡，所以地圖 view 在玩家捏合、拖曳或按縮放按鈕時呼叫 `session.mapDidMove()`（`MapView.swift` 已接好）。它只在等這個動作的那一步第一次呼叫時改變 session，手勢的每一幀都呼叫也沒關係。旋轉裝置、改變大小、選到遠方的車站時自動置中不要呼叫。
 
@@ -75,6 +75,7 @@ C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱。�
 | `tool.select` | `selectTool` | 工具列的「選取」 | `ControlPanel.swift` 的 `ToolPicker` |
 | `tool.network` | `networkTool` | 工具列的「路網」 | 同上 |
 | `tool.train` | `trainTool` | 工具列的「列車」 | 同上 |
+| `train.buy` | `buyTrain` | 列車工具的「購買」 | `TrainControls.swift` 的 `header`（步驟 7 框它，卡片就不會蓋住它） |
 | `network.modes` | `networkModes` | 路網工具的模式：鋪設、月台、拆除 | `NetworkControls.swift` |
 | `panel.action` | `actionButton` | 套用工具的按鈕：鋪設軌道、設置月台、拆除軌道、放置或派送列車 | `ControlPanel.swift` 的 `ActionButton` |
 | `map` | `map` | 地圖 | `ContentView.swift` 的 `map` |

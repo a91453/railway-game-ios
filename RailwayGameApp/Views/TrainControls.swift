@@ -14,8 +14,7 @@ import SwiftUI
 /// controls).
 struct TrainControls: View {
     @Bindable var session: GameSession
-    @State private var showsTimetable = false
-    @State private var showsFleetOverview = false
+    @Environment(GameScreenState.self) private var screen
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -28,7 +27,7 @@ struct TrainControls: View {
                 }
                 // Stage C2: its own timetable.
                 Button {
-                    showsTimetable = true
+                    screen.panel = .timetable
                 } label: {
                     Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
                         .font(.footnote)
@@ -80,13 +79,6 @@ struct TrainControls: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .sheet(isPresented: $showsTimetable) {
-            TimetableEditor(session: session)
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showsFleetOverview) {
-            FleetOverviewSheet(session: session)
-        }
     }
 
     /// The selected train, a menu to choose another, and the buy button.
@@ -123,7 +115,7 @@ struct TrainControls: View {
             }
 
             Button {
-                showsFleetOverview = true
+                screen.panel = .fleet
             } label: {
                 Image(systemName: "list.bullet.rectangle.portrait")
                     .font(.subheadline.weight(.semibold))
@@ -156,6 +148,8 @@ struct TrainControls: View {
             .tint(Palette.metroBlue)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityLabel("Buy a train for \(session.world.economy.costs.train.moneyText)")
+            // The step that asks for it keeps the card off it.
+            .tutorialTarget(.buyTrain)
         }
     }
 

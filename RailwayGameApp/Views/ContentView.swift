@@ -15,6 +15,10 @@ struct ContentView: View {
     @State private var isWide = false
     /// Lives above both layouts: switching them must not discard the camera.
     @State private var mapCamera: PlanCamera?
+    /// The open panel and the map's layer settings, above both layouts for
+    /// the same reason: turning the device swaps them and rebuilds every
+    /// view under them.
+    @State private var screen = GameScreenState()
 
     var body: some View {
         Group {
@@ -41,7 +45,50 @@ struct ContentView: View {
         // The map and controls share one screen, so text stops growing at the
         // largest standard size instead of pushing the map off screen.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .onChange(of: ObjectIdentifier(session)) { _, _ in mapCamera = nil }
+        // Presented from here, above both layouts, so a layout switch
+        // neither closes the panel nor loses what is typed in it.
+        .sheet(item: $screen.panel) { panel in
+            panelSheet(panel)
+        }
+        .environment(screen)
+        .onChange(of: ObjectIdentifier(session)) { _, _ in
+            mapCamera = nil
+            screen.stopPopTravelPlay()
+            screen = GameScreenState()
+        }
+        .onDisappear {
+            screen.stopPopTravelPlay()
+        }
+    }
+
+    @ViewBuilder
+    private func panelSheet(_ panel: GameScreenState.Panel) -> some View {
+        switch panel {
+        case .lines:
+            LinesPanel(session: session)
+                .presentationDetents([.medium, .large])
+                // The map stays usable behind the half-height sheet, so
+                // stations can be selected for a new line.
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        case .economy:
+            EconomyPanel(session: session)
+                .presentationDetents([.medium, .large])
+        case .station:
+            StationPanel(session: session)
+                .presentationDetents([.medium, .large])
+                // The map stays usable behind the half-height sheet, so
+                // another station can be selected.
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        case .timetable:
+            TimetableEditor(session: session)
+                .presentationDetents([.medium, .large])
+        case .fleet:
+            FleetOverviewSheet(session: session)
+        case .mapLayers:
+            StoredMapLayerSheet()
+        case .dataSources:
+            DataSourcesView(language: session.language)
+        }
     }
 
     private var tallLayout: some View {
@@ -124,5 +171,52 @@ struct ContentView: View {
             .tutorialTarget(.map)
             // The status banner is at the top of the map view, above its
             // construction HUD and traffic key.
+    }
+}
+
+/// What the game screen shows besides the world: the panel that is open and
+/// the population and travel layer's opacity, hour and playback. View state
+/// only, never game state; it lives above the tall and wide layouts
+/// (``ContentView``), so turning the device closes no panel and resets no
+/// layer setting.
+@MainActor
+@Observable
+final class GameScreenState {
+    /// The sheets the game screen presents, one at a time.
+    enum Panel: String, Identifiable {
+        case lines, economy, station, timetable, fleet, mapLayers, dataSources
+
+        var id: Self { self }
+    }
+
+    var panel: Panel?
+    /// The layer's opacity once the player has moved its slider (the
+    /// reference's `_popTravelOpacityUserSet`); until then each layer's own
+    /// (``PopTravel/baseOpacity(for:compactWidth:)``).
+    var popTravelOpacity: Double?
+    /// The timeline's hour, and whether it plays (the reference's
+    /// `G.popTravelHour` and `G.popTravelPlaying`).
+    var popTravelHour = PopTravel.defaultHour
+    private(set) var isPlayingPopTravel = false
+    @ObservationIgnored private var popTravelPlay: Task<Void, Never>?
+
+    /// Play: the next hour every 1.2 s, back to 0 after 23
+    /// (`startPopTravelPlay`).
+    func startPopTravelPlay() {
+        guard popTravelPlay == nil else { return }
+        isPlayingPopTravel = true
+        popTravelPlay = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: PopTravel.playInterval)
+                guard !Task.isCancelled, let self else { return }
+                self.popTravelHour = PopTravel.nextHour(after: self.popTravelHour)
+            }
+        }
+    }
+
+    func stopPopTravelPlay() {
+        popTravelPlay?.cancel()
+        popTravelPlay = nil
+        isPlayingPopTravel = false
     }
 }
