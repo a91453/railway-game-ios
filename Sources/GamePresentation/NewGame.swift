@@ -116,9 +116,15 @@ extension ConstructionCosts {
 ///   platform above the ring's, West and East Line 1's beside them. Lines 1
 ///   and 2 end inside the ring, so no track crosses another at its height.
 /// - Lines 1 and 2 have one four-car train each and the ring two two-car
-///   trains, one each way; all run all day, and every station has
-///   ridership, so passengers, fares and costs start at once. What is left
-///   of the starting money still builds the tutorial's first line.
+///   trains, one each way; all run all day, so passengers, fares and costs
+///   start at once. What is left of the starting money still builds the
+///   tutorial's first line.
+/// - Its stations draw their ridership from the land as a new game's do
+///   (Phase 6b, ARCHITECTURE decision 78): a city round Central, larger
+///   and denser than a new game's first town, which the demo's stations
+///   share, so the network pays for itself in about eight days; the new
+///   game's two outer towns are there to build to. The city grows round
+///   the stations, and its buildings go up a density as they fill.
 /// - Central is the middle of the map (Stage E1) and of what the demo
 ///   builds, so the map opens on it, with room to build on every side.
 public enum DemoWorld {
@@ -144,11 +150,51 @@ public enum DemoWorld {
     private static let ringRadius: Int64 = 12
     private static let reach: Int64 = 9
 
+    /// The demo's city (decision 78): a town of the new game's shape
+    /// (ARCHITECTURE decision 72) round Central, reaching `cityRadius`
+    /// cells (896 m) from its middle, so nearly every cell is within reach
+    /// of a station, with `cityPeak` people in its middle cell.
+    static let cityRadius: Int64 = 14
+    static let cityPeak: Int64 = 600
+
+    /// The demo's land: the city in place of the new game's first town,
+    /// and the new game's other two towns, 2 km and more away, as they are.
+    /// A cell `d` cells from the middle one has `cityPeak × (r² − d²) / r²`
+    /// people, as in a new game's town. Its middle third is offices west
+    /// of the middle column and shops from it east, each with a quarter of
+    /// its people living there and three times as many working.
+    static func land(replacingTheMiddleOf land: Land, in bounds: WorldBounds) -> [LandCell] {
+        let middleRow = Int((bounds.height / 2) / Land.cellLength), middleColumn = Int((bounds.width / 2) / Land.cellLength)
+        let squared = cityRadius * cityRadius
+        func distance(_ row: Int, _ column: Int) -> Int64 {
+            let dr = Int64(row - middleRow), dc = Int64(column - middleColumn)
+            return dr * dr + dc * dc
+        }
+        var cells = land.cells.filter { distance($0.row, $0.column) >= squared }
+        for dr in -cityRadius...cityRadius {
+            for dc in -cityRadius...cityRadius {
+                let row = middleRow + Int(dr), column = middleColumn + Int(dc)
+                let d = distance(row, column)
+                guard d < squared else { continue }
+                var residents = cityPeak * ((squared - d) * 1_000 / squared) / 1_000
+                var jobs: Int64 = 0
+                var use = LandUse.residential
+                if 9 * d < squared {
+                    use = dc < 0 ? .office : .commercial
+                    jobs = 3 * residents
+                    residents /= 4
+                }
+                guard residents + jobs > 0 else { continue }
+                cells.append(LandCell(row: row, column: column, use: use, residents: residents, jobs: jobs))
+            }
+        }
+        return cells
+    }
+
     private static func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
-        // The demo's stations keep the ridership it gives them (below), so
-        // what it shows does not depend on the towns; its land is there to
-        // see (Phase 6b).
-        world.setLandDemand(false)
+        // Decision 78: the demo's stations draw their ridership from its
+        // city, as a new game's do.
+        try world.setLand(land(replacingTheMiddleOf: world.land, in: world.bounds))
         let platform = Int64(cars) * Train.carLength
         let ringPlatform = Int64(ringCars) * Train.carLength
         // Central, the middle of the world: the demo is built around it.
@@ -225,17 +271,6 @@ public enum DemoWorld {
                 guard let length = world.network.edge(edge)?.length else { continue }
                 try world.addTrackPlatform(id, on: edge, from: length / 2 - ringPlatform / 2, to: length / 2 + ringPlatform / 2)
             }
-        }
-
-        let demands: [(StationID, StationDemandKind, Int64)] = [
-            (westStation, .residential, 20_000),
-            (central, .office, 30_000),
-            (eastStation, .shopping, 10_000),
-            (northStation, .residential, 15_000),
-            (southStation, .scenic, 5_000),
-        ]
-        for (id, kind, trips) in demands {
-            try world.setStationDemand(id, to: StationDemand(kind: kind, dailyTrips: trips))
         }
 
         let lines = language == .english ? ["Line 1", "Line 2", "Ring Line"] : ["1 號線", "2 號線", "環狀線"]

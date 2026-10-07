@@ -1,6 +1,6 @@
 import Foundation
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Stage C4: the demo map is built on the track network only (Stage F1),
@@ -86,6 +86,45 @@ final class DemoWorldTests: XCTestCase {
         XCTAssertEqual(chinese.stations.map(\.name), ["西站", "中央", "東站", "北站", "南站"])
         XCTAssertEqual(chinese.lines.map(\.name), ["1 號線", "2 號線", "環狀線"])
         XCTAssertEqual(chinese.trains.map(\.name), ["列車 1", "列車 2", "環狀線列車 1", "環狀線列車 2"])
+    }
+
+    /// ARCHITECTURE decision 78: the demo is a new game's city as well as
+    /// its railway. Its land is a city round Central in place of the new
+    /// game's first town, every one of whose cells is in a station's reach,
+    /// and the new game's other two towns as they are; its stations draw
+    /// their ridership from it, and it grows and builds as a new game's.
+    func testTheDemoStationsDrawTheirRidershipFromItsCity() throws {
+        let world = DemoWorld.make(in: .english)
+        XCTAssertTrue(world.landDemand)
+        XCTAssertTrue(world.cityBuildings)
+        XCTAssertNotNil(world.townGrowth)
+        XCTAssertEqual(world.buildings.all.count, world.land.cells.count, "a building on every cell")
+
+        // Central's cell, the middle of the city, is shops: a quarter of its
+        // 600 people living there and three times as many working.
+        XCTAssertEqual(world.land.cell(row: 128, column: 128), LandCell(row: 128, column: 128, use: .commercial, residents: 150, jobs: 1_800))
+        XCTAssertEqual(world.land.cell(row: 128, column: 127)?.use, .office, "offices west of the middle")
+        let middle = GameWorld.newGameBounds.width / 2
+        let city = world.land.cells.filter { cell in
+            let dr = Int64(cell.row - 128), dc = Int64(cell.column - 128)
+            return dr * dr + dc * dc < DemoWorld.cityRadius * DemoWorld.cityRadius
+        }
+        XCTAssertEqual(city.count, 609)
+        XCTAssertEqual(city.reduce(LandTotals()) { LandTotals(residents: $0.residents + $1.residents, jobs: $0.jobs + $1.jobs) },
+                       LandTotals(residents: 154_938, jobs: 117_108))
+        XCTAssertEqual(Set(world.land.cells).subtracting(city), Set(GameWorld.newGame().land.cells.filter { cell in
+            let dx = cell.middle.x - middle, dy = cell.middle.y - middle
+            return dx * dx + dy * dy > 4 * 1_000 * 1_000 * WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre
+        }), "the new game's outer towns, 2 km and more away")
+
+        // Each station's ridership is its share of the city: residents
+        // outnumber either kind of job at every one.
+        let shares = LandDemand.shares(of: world.land, among: world.stations)
+        for station in world.stations {
+            XCTAssertEqual(world.stationDemand(of: station.id), shares[station.id]?.demand, station.name)
+        }
+        XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.kind }, Array(repeating: .residential, count: 5))
+        XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.dailyTrips }, [21_012, 21_191, 22_647, 21_009, 22_642])
     }
 
     func testTheDemoMapRunsAtOnce() throws {
