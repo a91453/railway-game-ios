@@ -143,20 +143,6 @@ struct MapView: View {
                 .accessibilityValue(selectionDescription)
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
                 .clipped()
-                // After the map's own accessibility element, which ignores
-                // what lies inside it: the tooltips are read on their own.
-                .overlay(alignment: .topLeading) {
-                    if let cellTooltip {
-                        PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
-                            .allowsHitTesting(false)
-                    }
-                    if let cityTooltip {
-                        CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
-                            .allowsHitTesting(false)
-                    }
-                }
                 .overlay(alignment: .top) {
                     // One column down the top of the map, so none covers
                     // another: the status banner, the train follow bar when
@@ -214,6 +200,23 @@ struct MapView: View {
                         }
                     }
                     .padding(12)
+                }
+                // After the map's own accessibility element, which ignores
+                // what lies inside it: the tooltips are read on their own.
+                // And after the other overlays, so the legend and the zoom
+                // and layer buttons do not cover a tooltip near them (it
+                // takes no touches, so they can still be tapped).
+                .overlay(alignment: .topLeading) {
+                    if let cellTooltip {
+                        PopulationCellTooltip(info: cellTooltip.info, language: session.language)
+                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .allowsHitTesting(false)
+                    }
+                    if let cityTooltip {
+                        CityCellTooltip(info: cityTooltip.info, language: session.language)
+                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .allowsHitTesting(false)
+                    }
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)

@@ -89,6 +89,97 @@ final class SoundCueTests: XCTestCase {
         }
     }
 
+    /// A loop step can advance up to five ticks (``GameSession/maximumStepDuration``).
+    /// A step in which the train arrives at its last call and leaves it,
+    /// completing its service (GameCore then clears its service times),
+    /// still rings, as it does a tick at a time.
+    func testAnArrivalAtTheLastCallRingsWhenTheServiceEndsInTheSameStep() async throws {
+        let world = try makeServiceWorld()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            var heard: [SoundCue] = []
+            session.playSound = { heard.append($0) }
+
+            // Five ticks a step: minutes 0–5, then 5–10, in which the train
+            // arrives at East at 00:06 and leaves it at 00:08, its last call.
+            session.advance(realElapsed: GameSession.maximumStepDuration)
+            session.advance(realElapsed: GameSession.maximumStepDuration)
+
+            XCTAssertEqual(session.world.clock.now, GameTime(minutes: 10))
+            XCTAssertNil(session.world.trains.first?.times, "the service is complete")
+            XCTAssertEqual(heard, [.arrival(watched: false)])
+        }
+    }
+
+    /// A train that arrives at its last call early in a minute leaves it
+    /// (the terminal's 42 s) within the same 600× tick, completing its
+    /// service: that arrival still rings, a tick at a time.
+    func testAnArrivalAtTheLastCallRingsWhenTheServiceEndsInTheSameTick() async throws {
+        var world = try makeServiceWorld()
+        try world.stopTrainService(Self.tram)
+        try world.setTrainTimetable(Self.tram, to: [
+            ScheduledStop(station: Self.west, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 2)),
+            ScheduledStop(station: Self.east, arrival: GameTime(seconds: 365), departure: GameTime(seconds: 365)),
+        ])
+        try world.startTrainService(Self.tram)
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            var heard: [(minute: Int64, cue: SoundCue)] = []
+            session.playSound = { heard.append((session.world.clock.now.seconds / 60, $0)) }
+            for _ in 0..<6 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            XCTAssertEqual(session.world.trains.first?.times?.departure, GameTime(minutes: 2), "on its way to East")
+            // It arrives at 00:06:05 and its service is complete before
+            // 00:07, so its times are gone when that tick ends.
+            for _ in 0..<4 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            XCTAssertNil(session.world.trains.first?.times)
+            XCTAssertEqual(heard.map(\.cue), [.arrival(watched: false)])
+            XCTAssertEqual(heard.first?.minute, 7)
+        }
+    }
+
+    /// A line's train that arrives back at its last call, completes and is
+    /// sent out again within one step rings for that arrival.
+    func testALineTrainThatArrivesCompletesAndIsSentOutInOneStepRings() async throws {
+        var world = try makeServiceWorld()
+        try world.stopTrainService(Self.tram)
+        try world.setTrainTimetable(Self.tram, to: [])
+        let line = try world.createLine(named: "Shuttle", stops: [Self.west, Self.east]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(Self.tram, to: line)
+        // A tick at a time, counted apart from the sounds as the test
+        // above does: which five-tick steps leave the train standing at a
+        // station it was not standing at the tick before.
+        var single = world
+        var stepsWithArrivals = 0
+        for _ in 0..<8 {
+            var arrived = false
+            for _ in 0..<5 {
+                let before = single.stationsStoppedAt(by: Self.tram)
+                try single.advance(ticks: 1)
+                let after = single.stationsStoppedAt(by: Self.tram)
+                if !after.isEmpty && after != before { arrived = true }
+            }
+            if arrived { stepsWithArrivals += 1 }
+        }
+        await MainActor.run { [world, stepsWithArrivals] in
+            let session = GameSession(world: world)
+            var heard = 0
+            session.playSound = { _ in heard += 1 }
+            for _ in 0..<8 {
+                session.advance(realElapsed: GameSession.maximumStepDuration)
+            }
+            XCTAssertEqual(session.world.clock.now, GameTime(minutes: 40))
+            XCTAssertGreaterThan(stepsWithArrivals, 5, "the line ran")
+            // One sound a step, however many arrivals it holds.
+            XCTAssertEqual(heard, stepsWithArrivals)
+        }
+    }
+
     func testTheTrainThePlayerIsLookingAtChimesAsWatched() async throws {
         let world = try makeServiceWorld()
         await MainActor.run {

@@ -19,13 +19,15 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(sounds.waitForExistence(timeout: 10), "Missing the sound effects switch")
         let before = switchValue(sounds)
 
-        flip(sounds)
-        XCTAssertTrue(waitForValue(sounds, not: before), "The sound effects switch did not change")
-        flip(sounds)
-        XCTAssertTrue(waitForValue(sounds, is: before), "The sound effects switch did not change back")
+        XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
+        XCTAssertTrue(flip(sounds, from: switchValue(sounds)), "The sound effects switch did not change back")
+        XCTAssertEqual(switchValue(sounds), before)
 
         tap(app.buttons["settings.done"], name: "settings.done")
-        XCTAssertTrue(app.buttons["start.newGame"].waitForExistence(timeout: 10), "Done did not close the settings")
+        // The start screen's buttons exist under the sheet too: what shows
+        // the sheet closed is its Done button gone.
+        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not close the settings")
+        XCTAssertTrue(app.buttons["start.newGame"].waitForExistence(timeout: 10))
     }
 
     func testTheGameMenuOpensTheSameSettings() {
@@ -52,7 +54,8 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.switches["settings.music"].waitForExistence(timeout: 10), "Missing the music switch")
         XCTAssertTrue(app.switches["settings.sounds"].exists, "Missing the sound effects switch")
         tap(app.buttons["settings.done"], name: "settings.done")
-        XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10), "Done did not go back to the game")
+        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
+        XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10))
     }
 
     private func tap(_ element: XCUIElement, name: String) {
@@ -60,23 +63,30 @@ final class SettingsUITests: XCTestCase {
         element.tap()
     }
 
-    /// Taps the switch itself: a tap on a toggle row's label does not
-    /// always flip it.
-    private func flip(_ toggle: XCUIElement) {
-        let inner = toggle.switches.firstMatch
-        (inner.exists ? inner : toggle).tap()
+    /// Taps the switch itself (a tap on a toggle row's label does not
+    /// always flip it) until its value is no longer `value`. The sheet may
+    /// still be presenting when the switch first exists, and a tap then
+    /// can be lost (as the map layers sheet's, MapInteractionTests): wait
+    /// until it can be hit, and tap again while it has not changed.
+    private func flip(_ toggle: XCUIElement, from value: String) -> Bool {
+        for _ in 0..<3 {
+            let inner = toggle.switches.firstMatch
+            let target = inner.exists ? inner : toggle
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: target)], timeout: 5)
+            target.tap()
+            if waitForValue(toggle, not: value) { return true }
+        }
+        return false
     }
 
     private func switchValue(_ toggle: XCUIElement) -> String {
         toggle.value as? String ?? ""
     }
 
-    private func waitForValue(_ toggle: XCUIElement, is value: String? = nil, not other: String? = nil) -> Bool {
+    private func waitForValue(_ toggle: XCUIElement, not other: String) -> Bool {
         let deadline = Date().addingTimeInterval(10)
         repeat {
-            let now = switchValue(toggle)
-            if let value, now == value { return true }
-            if let other, now != other { return true }
+            if switchValue(toggle) != other { return true }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
         return false

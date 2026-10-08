@@ -18,6 +18,17 @@ struct RailwayGameApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        #if DEBUG
+        // Each UI test starts from the same settings, as from the same empty
+        // save folder: the map's layers and style (`@AppStorage`) and the
+        // sound switches stay on the device across launches, so a test that
+        // leaves the land value layer on, or stops between turning a switch
+        // off and on, changed how every later test began. Before anything
+        // reads them.
+        if DebugLaunch.isSet("-ui-testing"), let domain = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+        }
+        #endif
         let audio = GameAudio()
         let launcher = RailwayGameApp.makeLauncher()
         launcher.playSound = { audio.play($0) }
