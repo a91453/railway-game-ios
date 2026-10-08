@@ -249,6 +249,12 @@ jobs:
       # steady, to the full run, and the Traditional Chinese toolbar and
       # start/save flow and the Japanese fallback too: the English ones take
       # the same paths, and localization.yml checks the translations.
+      # Each test may run 8 minutes at most (the slowest, the line route
+      # test, took 188 s; a slow runner up to 1.8 times as long). A launch
+      # that hangs then fails its one test instead of the whole step: on
+      # #207's run Xcode could not resume the launched app (DTServiceHub
+      # "Failed to send signal 19 ... 3"), the next launch hung 22 minutes
+      # until the step's limit, and no result bundle was left to read.
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
         # The full list took 12m29s with the map interaction tests (7m42s
@@ -282,6 +288,9 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
             ${only[@]+"${only[@]}"} \
             -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 480 \
+            -maximum-test-execution-time-allowance 600 \
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
 
@@ -382,6 +391,9 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/ipad-tutorial.xcresult" \
             -only-testing:RailwayGameUITests/TutorialUITests \
             -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 480 \
+            -maximum-test-execution-time-allowance 600 \
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
 
