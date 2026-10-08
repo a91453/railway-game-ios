@@ -326,7 +326,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "worldPop", "appleMaps"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "worldPop", "appleMaps", "openFreeMap", "mapLibre"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -346,6 +346,15 @@ final class RealRailwaysTests: XCTestCase {
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
+        // Decision 97: the OpenStreetMap base map's credit, in OpenFreeMap's
+        // words.
+        XCTAssertEqual(DataSourceCredits.openStreetMapBaseMap(in: .english), "OpenFreeMap © OpenMapTiles Data from OpenStreetMap")
+        // MapLibre Native's licence and third-party notices come with the
+        // app, as its BSD 2-Clause licence asks of a binary.
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let licence = try String(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"), encoding: .utf8)
+        XCTAssertTrue(licence.contains("Copyright (c) 2021 MapLibre contributors"))
+        XCTAssertTrue(licence.contains("Redistributions in binary form must reproduce the above copyright"))
         XCTAssertEqual(
             DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first?.notice,
             "依「政府資料開放授權條款第 1 版」使用。"

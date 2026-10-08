@@ -1,0 +1,157 @@
+{
+  "saveVersion" : 23,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 2304000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "building",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 2305000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 997695000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 5,
+        "residents" : [
+          1000
+        ],
+        "row" : 5,
+        "use" : "residential"
+      }
+    ],
+    "landDemand" : true,
+    "nextPlacedBuildingID" : 2,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 400,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "placedBuildings" : [
+      {
+        "buildingCost" : 2048000,
+        "centre" : {
+          "x" : 24000,
+          "y" : 30000
+        },
+        "id" : 1,
+        "kind" : "house",
+        "landCost" : 256000
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S0",
+        "point" : {
+          "x" : 22528,
+          "y" : 22528
+        }
+      }
+    ],
+    "townGrowth" : {
+      "places" : [
+        {
+          "base" : 400,
+          "counted" : 0,
+          "lastGrowth" : 0,
+          "station" : 1
+        }
+      ]
+    },
+    "trains" : [
+
+    ],
+    "zones" : [
+      {
+        "column" : 3,
+        "count" : 5,
+        "row" : 3,
+        "zone" : "residential"
+      },
+      {
+        "column" : 4,
+        "count" : 3,
+        "row" : 10,
+        "zone" : "commercial"
+      },
+      {
+        "column" : 0,
+        "count" : 4,
+        "row" : 12,
+        "zone" : "noDevelopment"
+      },
+      {
+        "column" : 10,
+        "count" : 3,
+        "row" : 14,
+        "zone" : "reserved"
+      }
+    ]
+  }
+}

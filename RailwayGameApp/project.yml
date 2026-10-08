@@ -27,6 +27,12 @@ packages:
   # The repository root is the Swift package that provides GameCore.
   RailwayGame:
     path: ..
+  # MapLibre Native draws the OpenStreetMap base map of real-world maps
+  # (ARCHITECTURE decision 97; BSD 2-Clause, its licence and notices in
+  # Resources/Licenses). The binary distribution, pinned to one release.
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    exactVersion: 6.31.0
 
 targets:
   RailwayGame:
@@ -41,6 +47,8 @@ targets:
         product: GameCore
       - package: RailwayGame
         product: GamePresentation
+      - package: MapLibre
+        product: MapLibre
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.a91453.RailwayGame

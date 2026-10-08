@@ -24,6 +24,17 @@
         }
       }
     },
+    "OpenStreetMap" : {
+      "comment" : "A map style: OpenStreetMap's map, drawn by MapLibre (decision 97).",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenStreetMap"
+          }
+        }
+      }
+    },
     "Unfollow" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2458,6 +2469,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "X 型交叉渡線"
+          }
+        }
+      }
+    },
+    "Zoning" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "土地分區"
           }
         }
       }
