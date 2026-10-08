@@ -394,6 +394,7 @@ extension GameWorld {
         case .dailyStaff: [.stationStaff, .trainStaff]
         case .dailyInterest: [.loanInterest]
         case .dailyProperty: [.propertyRent, .propertyUpkeep, .propertyTax]
+        case .buildingDemolition: [.propertyDemolition]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent ? $0.amount >= .zero : $0.amount <= .zero }),

@@ -98,15 +98,23 @@ extension GameWorld {
     // MARK: - Commands
 
     /// Demolishes the company's building `id` (decision 94): a managed
-    /// company pays ``demolitionCost(of:)`` and writes off what is left of
-    /// it on the books; nothing is refunded. Its people go, and the stations
+    /// company pays ``demolitionCost(of:)``, a ledger row of its own that
+    /// counts with the buildings' costs, and writes off what is left of it
+    /// on the books; nothing is refunded. Its people go, and the stations
     /// near it lose their riders at once. Its ID is not handed out again.
     ///
     /// - Throws, checked in this order: ``GameError/unknownPlacedBuilding(_:)``
     ///   or ``GameError/insufficientFunds(required:available:)``.
     public mutating func removePlacedBuilding(_ id: PlacedBuildingID) throws(GameError) {
         guard let index = placedBuildings.firstIndex(where: { $0.id == id }) else { throw .unknownPlacedBuilding(id) }
-        try economy.spend(demolitionCost(of: placedBuildings[index]))
+        let fee = demolitionCost(of: placedBuildings[index])
+        guard economy.canAfford(fee) else { throw .insufficientFunds(required: fee, available: economy.balance) }
+        if fee > .zero {
+            write(LedgerEntry(
+                kind: .buildingDemolition, time: clock.now, amount: .zero - fee,
+                breakdown: [LedgerLine(item: .propertyDemolition, amount: .zero - fee)]
+            ), day: dayIndex(of: clock.now))
+        }
         placedBuildings.remove(at: index)
         disposeAsset(.building, owner: id.rawValue)
         refreshLandDemand()

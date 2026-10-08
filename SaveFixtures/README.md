@@ -114,7 +114,7 @@ building can carry `"residents"`, `"jobs"`, `"buildingCost"` and
 `"landCost"` (each written only when it is not zero), each paid-for building
 has an asset record of kind `"building"`, a day's account and a year's
 statement can carry `"propertyRevenue"` and `"propertyCost"`, a balance
-sheet `"buildings"`, and the ledger rows of kind `"dailyProperty"`. A version
+sheet `"buildings"`, and the ledger rows of kind `"dailyProperty"` and `"buildingDemolition"`. A version
 21 save's buildings read as empty and free, with no asset record; a build
 before version 22 refuses a version 22 save rather than dropping what they
 cost.

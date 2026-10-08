@@ -193,6 +193,7 @@ final class CompanyBuildingsTests: XCTestCase {
 
     func testDemolishingCostsATenthAndWritesOffTheRest() throws {
         var world = try world()
+        let opening: Money = 1_000_000_000
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
         world.fillPlacedBuildings()
         world.refreshLandDemand()
@@ -206,6 +207,14 @@ final class CompanyBuildingsTests: XCTestCase {
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
         XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, 5_811_200, "nothing written down yet: all of it")
+        // The fee is a ledger row of its own, counted with the buildings'
+        // costs, so the day's cash flow is what the balance did.
+        let row = try XCTUnwrap(world.accounts.entries.last)
+        XCTAssertEqual(row.kind, .buildingDemolition)
+        XCTAssertEqual(row.breakdown, [LedgerLine(item: .propertyDemolition, amount: -581_120)])
+        let day = world.financeReport(.day).current
+        XCTAssertEqual(day.propertyCost, 581_120)
+        XCTAssertEqual(day.netCashFlow, world.economy.balance - opening, "the station, the house and its demolition")
         XCTAssertEqual(world.stationDemand(of: station)?.dailyTrips, 400, "its riders go with it")
         XCTAssertThrowsGameError(try world.removePlacedBuilding(id), .unknownPlacedBuilding(id))
         XCTAssertEqual(try world.placeBuilding(.house, at: Self.housePoint).id.rawValue, 2, "its ID is not handed out again")

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 42,
-  "description": "The company's buildings (city building P0-C1, ARCHITECTURE decision 94) in a world 131072 x 98304 units (32 x 24 cells of 64 m), a managed company with $300,000 (30,000,000 cents) and no stations, so every cell is worth its empty base, 1,000 cents a m2. A managed company pays for a building: its floor at $40 (4,000 cents) a m2 and the right to use the land, the land value under its centre by its footprint. A house (512 m2 of floor, 256 of footprint) at (5000, 5000) costs 512 x 4,000 = 2,048,000 for the building and 256 x 1,000 = 256,000 for the land, 2,304,000 together: building 1, the balance 27,696,000. An office block (6,144 m2 of floor, 1,024 of footprint) at (40000, 40000) costs 24,576,000 + 1,024,000 = 25,600,000: building 2, the balance 2,096,000. A shop (1,152 and 576 m2) at (80000, 40000) would cost 4,608,000 + 576,000 = 5,184,000, more than there is: insufficientFunds, nothing changes. Demolishing the house costs a tenth of what it cost, rounded up: 230,400, the balance 1,865,600; building 1 is gone, and demolishing it again, or building 9, which never was, is unknownPlacedBuilding. Buildings are empty when built (no residents or jobs written). Every value worked out by hand.",
+  "description": "The company's buildings (city building P0-C1, ARCHITECTURE decision 94) in a world 131072 x 98304 units (32 x 24 cells of 64 m), a managed company with $300,000 (30,000,000 cents) and no stations, so every cell is worth its empty base, 1,000 cents a m2. A managed company pays for a building: its floor at $40 (4,000 cents) a m2 and the right to use the land, the land value under its centre by its footprint. A house (512 m2 of floor, 256 of footprint) at (5000, 5000) costs 512 x 4,000 = 2,048,000 for the building and 256 x 1,000 = 256,000 for the land, 2,304,000 together: building 1, the balance 27,696,000. An office block (6,144 m2 of floor, 1,024 of footprint) at (40000, 40000) costs 24,576,000 + 1,024,000 = 25,600,000: building 2, the balance 2,096,000. A shop (1,152 and 576 m2) at (80000, 40000) would cost 4,608,000 + 576,000 = 5,184,000, more than there is: insufficientFunds, nothing changes. Demolishing the house costs a tenth of what it cost, rounded up: 230,400, the balance 1,865,600, written as a buildingDemolition row and counted in day 0's propertyCost; building 1 is gone, and demolishing it again, or building 9, which never was, is unknownPlacedBuilding. Buildings are empty when built (no residents or jobs written). Every value worked out by hand.",
   "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 30000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
   "steps": [
     {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
@@ -37,8 +37,12 @@
       "fareRules": null,
       "openedAt": 0,
       "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
-      "ledger": [],
-      "days": []
+      "ledger": [
+        {"kind": "buildingDemolition", "time": 0, "amount": -230400, "breakdown": [{"item": "propertyDemolition", "amount": -230400}], "crowding": null}
+      ],
+      "days": [
+        {"day": 0, "fareRevenue": 0, "operatingCost": 0, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0, "propertyCost": 230400}
+      ]
     },
     "placedBuildings": [
       { "id": 2, "kind": "office", "x": 40000, "y": 40000, "buildingCost": 24576000, "landCost": 1024000 }

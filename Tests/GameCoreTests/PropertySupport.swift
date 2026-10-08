@@ -481,6 +481,7 @@ enum WorldInvariants {
             case .dailyStaff: [.stationStaff, .trainStaff]
             case .dailyInterest: [.loanInterest]
             case .dailyProperty: [.propertyRent, .propertyUpkeep, .propertyTax]
+            case .buildingDemolition: [.propertyDemolition]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {

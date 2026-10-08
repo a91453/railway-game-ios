@@ -60,6 +60,7 @@ extension LedgerEntry.Kind {
         case .dailyStaff: language.text("Staff (daily)", "員工費用（日結）")
         case .dailyInterest: language.text("Loan interest (daily)", "貸款利息（日結）")
         case .dailyProperty: language.text("Buildings (daily)", "建物收支（日結）")
+        case .buildingDemolition: language.text("Building demolished", "拆除建物")
         }
     }
 }
@@ -80,6 +81,7 @@ extension LedgerItem {
         case .propertyRent: language.text("Rent", "租金收入")
         case .propertyUpkeep: language.text("Building upkeep", "建物維護")
         case .propertyTax: language.text("Land tax", "土地資產稅")
+        case .propertyDemolition: language.text("Demolition", "拆除費")
         }
     }
 }

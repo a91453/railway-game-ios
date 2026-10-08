@@ -49,10 +49,11 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     case loanInterest
     /// The company's buildings (decision 94; native, the reference has no
     /// property): the day's rent in, their upkeep and the asset tax on the
-    /// land they use out.
+    /// land they use out, and what demolishing one cost, out.
     case propertyRent
     case propertyUpkeep
     case propertyTax
+    case propertyDemolition
 }
 
 /// One line of a ledger row's breakdown.
@@ -106,6 +107,9 @@ public struct LedgerEntry: Hashable, Sendable {
         /// A day's rent, upkeep and tax of the company's buildings
         /// (decision 94).
         case dailyProperty
+        /// What demolishing one of the company's buildings cost (decision
+        /// 94), written when it was demolished.
+        case buildingDemolition
     }
 
     public let kind: Kind
@@ -168,7 +172,7 @@ public struct DayAccount: Hashable, Sendable {
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
             case .propertyRent: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .propertyTax: propertyCost = propertyCost + cost
+            case .propertyUpkeep, .propertyTax, .propertyDemolition: propertyCost = propertyCost + cost
             }
         }
     }

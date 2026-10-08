@@ -3276,7 +3276,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 3. **入住**（`fillPlacedBuildings`，每個午夜在土地成長 `growLand` 的最後）：建物中心那一格地價的服務 `S`（0…1000，服務溢價 ÷ 15）> 0 時，居民與就業各加 `max(1, 容量 × (20 + S × 80 / 1000) / 1000)`，不超過容量；沒有車站服務時各減 `max(1, 現有 × 20 / 1000)`。蓋好時是空的。
 4. **運量**：有人的建物加入 `LandDemand.shares`，和土地一樣以中心點分給 800 m 內的車站（每 100 人每天 40 旅次），依 ID 順序；入住或拆除後立刻重算。
 5. **每日收支**（`settleProperty`，午夜結算在折舊之前，一列 `.dailyProperty`）：租金 `floor((R×1000 + J×1500) × (1000 + floor(S/2)) × V / 10,000,000)` 美分（R、J 是居民與就業、V 是地價）、維護 `ceil(建造費 × 2 / 10,000)`、土地資產稅 `round(土地使用權 × 1 / 10,000)`。用的是當晚入住之後的人數。三項都是 0 時不寫。`DayAccount` 與 `FinanceSummary` 多 `propertyRevenue`、`propertyCost`（不算 `totalCost`），營業利益 = 票收 − 營運成本 ＋ 不動產收入 − 不動產支出；只在不是 0 時寫進存檔。
-6. **拆除** `removePlacedBuilding(_:)`：依序拒絕不存在的建物（`unknownPlacedBuilding`）、餘額不足；經營模式付建造費的 10%（進位），剩下的帳面價值記為報廢損失，不退款；人立刻離開、車站的運量重算；ID 不重用。自由模式免費。
+6. **拆除** `removePlacedBuilding(_:)`：依序拒絕不存在的建物（`unknownPlacedBuilding`）、餘額不足；經營模式付建造費的 10%（進位），寫成一列 `.buildingDemolition`（`propertyDemolition`），算進當天的 `propertyCost`，所以現金流量和餘額的變化一致；剩下的帳面價值記為報廢損失，不退款；人立刻離開、車站的運量重算；ID 不重用。自由模式免費。
 7. **畫面**：建築工具多「建造／拆除」切換（`GameSession.buildingMode`、`tapBuildingTool(at:reach:)`；拆除點建物上或觸控半徑內最近的一棟），經營模式顯示估價（`buildingQuoteText`）與每日租金、維護與稅（`buildingEconomyText`）；蓋與拆的訊息帶金額，損益表、現金流量表與資產負債表多「建物」的列（不是 0 時才出現）。
 8. **存檔**：版本 22。建物只在不是 0 時寫 `residents`、`jobs`、`buildingCost`、`landCost`；讀檔檢查人數在容量內、費用在範圍內，`.building` 的資產要對到存在的建物。版本 21 的建物讀成空的、免費的建物（沒有資產紀錄）。新的 `SaveFixtures/v22-company-buildings.json`。
 9. **golden**：schema 42，新指令 `removePlacedBuilding`、結果 `unknownPlacedBuilding`、`placedBuildings` 選填的 `residents`、`jobs`、`buildingCost`、`landCost`；新的 `company-buildings.json`。既有 fixture 的預期值都沒有改變。

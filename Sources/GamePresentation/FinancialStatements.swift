@@ -65,7 +65,7 @@ extension FinanceSummary {
         // Decision 94: the company's buildings, only where it has some.
         let property = hasProperty(previous: previous) ? [
             row(LedgerItem.propertyRent.displayName(in: language), \.propertyRevenue),
-            row(language.text("Building upkeep and land tax", "建物維護與土地資產稅")) { out($0.propertyCost) },
+            row(language.text("Building upkeep, land tax and demolition", "建物維護、土地資產稅與拆除")) { out($0.propertyCost) },
         ] : []
         return [
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
@@ -94,7 +94,7 @@ extension FinanceSummary {
         let out = { (amount: Money) in Money.zero - amount }
         let property = hasProperty(previous: previous) ? [
             row(language.text("Rent received", "收取租金"), \.propertyRevenue),
-            row(language.text("Building upkeep and land tax paid", "建物維護與土地資產稅支出")) { out($0.propertyCost) },
+            row(language.text("Building upkeep, land tax and demolition paid", "建物維護、土地資產稅與拆除支出")) { out($0.propertyCost) },
         ] : []
         return [
             .section(language.text("Operating activities", "營業活動之現金流量")),
