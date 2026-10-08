@@ -9,7 +9,7 @@ final class LandDemandTests: XCTestCase {
     private static let middle: Int64 = 524_288
 
     private func world(seed: UInt32 = 1, management: Bool = true) -> GameWorld {
-        var world = GameWorld(bounds: .maximum, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.foundTowns(seed: seed)
         if management { world.setEconomyMode(.management) }
         world.setLandDemand(true)
@@ -288,7 +288,7 @@ final class LandDemandTests: XCTestCase {
             let tripsBefore = ids.map { world.stationDemand(of: $0)!.dailyTrips }
             world.growLand(reached: reached)
             XCTAssertEqual(world.land.cells, expected, "seed \(seed)")
-            XCTAssertEqual(world.land.cells.count, Land.towns(seed: seed, in: .maximum).cells.count + 2, "two growing stations built a cell each")
+            XCTAssertEqual(world.land.cells.count, Land.towns(seed: seed, in: .standard).cells.count + 2, "two growing stations built a cell each")
             for (index, id) in ids.enumerated() {
                 XCTAssertEqual(world.stationDemand(of: id), LandDemand.shares(of: world.land, among: world.stations)[id]?.demand)
                 let now = world.stationDemand(of: id)!.dailyTrips

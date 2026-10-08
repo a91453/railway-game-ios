@@ -454,7 +454,7 @@ struct MapView: View {
                         .tag(style)
                 }
             }
-            if session.railways?.lines(near: realWorld.anchor, within: 16_000).isEmpty == false {
+            if session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false {
                 Picker(selection: $trackStyle) {
                     ForEach(RealRailways.TrackStyle.allCases) { style in
                         Text(verbatim: style.name(in: session.language))

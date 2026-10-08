@@ -112,7 +112,7 @@ final class MapScaleTests: XCTestCase {
     }
 
     func testMaximumSizeMapCullsDistantTrackAndRetainsACrossing() throws {
-        let map = WorldBounds.maximum
+        let map = WorldBounds.standard
         // The map's north-west corner in the view's (a new camera opens in
         // the middle of the map).
         let camera = PlanCamera(bounds: map, viewport: ScreenSize(width: 402, height: 420)).panned(byX: 1e7, y: 1e7)

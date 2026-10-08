@@ -1,8 +1,9 @@
 import GameCore
 
 extension GameWorld {
-    /// The world a new game starts with: ``newGameBounds``, 16.384 km a
-    /// side, running at 600× (`normal`), with traffic control on (Phase 4.6
+    /// The world a new game starts with: `bounds`, ``newGameBounds``
+    /// (16.384 km a side) but for the whole of Taiwan (decision 88),
+    /// running at 600× (`normal`), with traffic control on (Phase 4.6
     /// Stage T): trains take their whole route before they leave, a
     /// managed company (G1c) in a city whose fare baseline is the standard
     /// fare, and passengers routed over the whole network (Phase 5F).
@@ -23,11 +24,12 @@ extension GameWorld {
     /// real-world one where the app has no people. Its city's buildings
     /// (Phase 6c-1, ARCHITECTURE decision 74) stand on that land.
     public static func newGame(
-        anchor: GeoAnchor? = nil, balance: Money = startingBalance, eventSeed: UInt32 = 1, land: [LandCell]? = nil
+        anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
+        land: [LandCell]? = nil
     ) -> GameWorld {
         do {
             var world = GameWorld(
-                bounds: newGameBounds,
+                bounds: bounds,
                 economy: GameEconomy(balance: balance, costs: .newGame),
                 clock: GameClock(speed: .normal)
             )
@@ -74,11 +76,12 @@ extension GameWorld {
         }
     }
 
-    /// A new game's world (Stage E1): the largest a world may be,
-    /// 1,048,576 units (16.384 km) a side, so lines kilometres long have
-    /// room to speed up and slow down. Saves of games begun before E1 keep
-    /// their 512 × 384 m.
-    public static let newGameBounds = WorldBounds.maximum
+    /// A new game's world (Stage E1): 1,048,576 units (16.384 km) a side,
+    /// the largest a world could be until decision 88, so lines kilometres
+    /// long have room to speed up and slow down. Saves of games begun
+    /// before E1 keep their 512 × 384 m. Only the whole of Taiwan is larger
+    /// (``WholeTaiwan/bounds``).
+    public static let newGameBounds = WorldBounds.standard
 
     /// What a new game starts with: $3,000,000, a first line and some to
     /// spare (ARCHITECTURE decision 46; the reference's starting cash is in

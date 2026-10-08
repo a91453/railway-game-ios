@@ -26,8 +26,8 @@ final class DisplayTextTests: XCTestCase {
     /// Stage F3d: the map's VoiceOver label gives how far the world reaches
     /// in kilometres, to the nearest tenth, not a count of tiles.
     func testTheMapLabelGivesTheWorldsSizeInKilometres() throws {
-        XCTAssertEqual(WorldBounds.maximum.mapLabel(in: .english), "Map, 16.4 by 16.4 kilometres")
-        XCTAssertEqual(WorldBounds.maximum.mapLabel(in: .traditionalChinese), "地圖，16.4 × 16.4 公里")
+        XCTAssertEqual(WorldBounds.standard.mapLabel(in: .english), "Map, 16.4 by 16.4 kilometres")
+        XCTAssertEqual(WorldBounds.standard.mapLabel(in: .traditionalChinese), "地圖，16.4 × 16.4 公里")
         // An old save's 512 × 384 m: 0.512 and 0.384 km.
         XCTAssertEqual(try WorldBounds(width: 32_768, height: 24_576).mapLabel(in: .english), "Map, 0.5 by 0.4 kilometres")
         // 50 m rounds up to a tenth; a unit rounds down to none.

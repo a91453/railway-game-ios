@@ -8,7 +8,7 @@ import XCTest
 final class BuildingTests: XCTestCase {
     private static let middle: Int64 = 524_288
 
-    private func world(bounds: WorldBounds = .maximum) -> GameWorld {
+    private func world(bounds: WorldBounds = .standard) -> GameWorld {
         GameWorld(bounds: bounds, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
     }
 

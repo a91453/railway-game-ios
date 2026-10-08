@@ -24,10 +24,10 @@ final class LandImportTests: XCTestCase {
     // MARK: - New games
 
     func testANewGameFoundsTheTownsOfItsSeedUnlessGivenLand() throws {
-        XCTAssertEqual(GameWorld.newGame().land, Land.towns(seed: 1, in: .maximum))
-        XCTAssertEqual(GameWorld.newGame(eventSeed: 77).land, Land.towns(seed: 77, in: .maximum))
+        XCTAssertEqual(GameWorld.newGame().land, Land.towns(seed: 1, in: .standard))
+        XCTAssertEqual(GameWorld.newGame(eventSeed: 77).land, Land.towns(seed: 77, in: .standard))
         let tokyo = try XCTUnwrap(GeoAnchor(latitudeDegrees: 35.681_2, longitudeDegrees: 139.767_1))
-        XCTAssertEqual(GameWorld.newGame(anchor: tokyo, eventSeed: 5).land, Land.towns(seed: 5, in: .maximum), "a real map without people")
+        XCTAssertEqual(GameWorld.newGame(anchor: tokyo, eventSeed: 5).land, Land.towns(seed: 5, in: .standard), "a real map without people")
         let cells = [LandCell(row: 3, column: 4, use: .residential, residents: 9, jobs: 0)]
         XCTAssertEqual(GameWorld.newGame(anchor: tokyo, land: cells).land.cells, cells)
         XCTAssertTrue(GameWorld.newGame(land: []).land.isEmpty)
@@ -164,7 +164,7 @@ final class LandImportTests: XCTestCase {
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startNewGame(at: anchor)
             let seed = try XCTUnwrap(launcher.session?.world.demandEvents?.seed)
-            XCTAssertEqual(launcher.session?.world.land, Land.towns(seed: seed, in: .maximum), "without the app's people, towns")
+            XCTAssertEqual(launcher.session?.world.land, Land.towns(seed: seed, in: .standard), "without the app's people, towns")
             launcher.returnToStart()
             launcher.population = grid
             launcher.startNewGame(at: anchor)
@@ -173,14 +173,14 @@ final class LandImportTests: XCTestCase {
             launcher.returnToStart()
             launcher.startNewGame()
             let blank = try XCTUnwrap(launcher.session?.world)
-            XCTAssertEqual(blank.land, Land.towns(seed: try XCTUnwrap(blank.demandEvents?.seed), in: .maximum), "a blank map has towns")
+            XCTAssertEqual(blank.land, Land.towns(seed: try XCTUnwrap(blank.demandEvents?.seed), in: .standard), "a blank map has towns")
         }
     }
 
     // MARK: - On the map and in the panel
 
     func testTheBlankMapsPopulationLayerIsItsLand() throws {
-        var land = GameWorld(bounds: .maximum, economy: GameEconomy(balance: 0, costs: ConstructionCosts(track: 1, station: 1, train: 1)))
+        var land = GameWorld(bounds: .standard, economy: GameEconomy(balance: 0, costs: ConstructionCosts(track: 1, station: 1, train: 1)))
         try land.setLand([
             LandCell(row: 2, column: 3, use: .residential, residents: 41, jobs: 0),
             LandCell(row: 2, column: 4, use: .office, residents: 0, jobs: 500),

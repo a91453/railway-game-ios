@@ -143,7 +143,7 @@ final class CityGrowthTests: XCTestCase {
 
     // MARK: - Worlds
 
-    private func world(cells: [LandCell]? = nil, seed: UInt32 = 1, bounds: WorldBounds = .maximum, buildings: Bool = true) throws -> GameWorld {
+    private func world(cells: [LandCell]? = nil, seed: UInt32 = 1, bounds: WorldBounds = .standard, buildings: Bool = true) throws -> GameWorld {
         var world = GameWorld(bounds: bounds, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         if let cells {
             try world.setLand(cells)

@@ -77,6 +77,12 @@ public struct GameWorld: Equatable, Sendable {
     /// map's people. No rule reads it yet. Set by ``setLand(_:)`` and
     /// ``foundTowns(seed:)`` only.
     public internal(set) var land: Land
+    /// The blocks of land read in so far, by row and then column, when the
+    /// land is read in as it is needed (decision 88: a map of the whole of
+    /// Taiwan); `nil`, the land is whole, in a new world and in saves from
+    /// before it. Set by ``setLandOnDemand()``, ``expandLand(_:cells:)``,
+    /// ``setLand(_:)`` and ``foundTowns(seed:)`` only.
+    public internal(set) var landBlocks: [LandBlock]?
     /// Whether a managed company's stations take their ridership from the
     /// land (Phase 6b, ARCHITECTURE decision 73). Off in a new world and in
     /// saves from before it; the app's new games turn it on. Set by
@@ -3281,7 +3287,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3362,6 +3368,12 @@ extension GameWorld: Codable {
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
+        if container.contains(.landBlocks) {
+            guard let blocks = LandBlockRun.blocks(of: try container.decode([LandBlockRun].self, forKey: .landBlocks)) else {
+                throw DecodingError.dataCorruptedError(forKey: .landBlocks, in: container, debugDescription: "A run of land blocks is empty or too long.")
+            }
+            landBlocks = blocks
+        }
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         cityBuildings = container.contains(.cityBuildings) ? try container.decode(Bool.self, forKey: .cityBuildings) : false
         buildings = container.contains(.buildings) ? try container.decode(CityBuildings.self, forKey: .buildings) : CityBuildings()
@@ -3395,7 +3407,8 @@ extension GameWorld: Codable {
     /// with traffic control off has no `"trafficControl"` key (Stage T),
     /// which is also how saves made before it read; a blank map has no
     /// `"geoAnchor"` (Stage E2); a world without land has no `"land"`
-    /// (Phase 6a); a world with the city's buildings off has no
+    /// (Phase 6a), and one whose land is whole no `"landBlocks"` (decision
+    /// 88); a world with the city's buildings off has no
     /// `"cityBuildings"` and no `"buildings"` (Phase 6c-1); and one without
     /// transfer groups has no `"transferGroups"`, and one that never had
     /// one no `"nextTransferGroupID"` (decision 81). An explicit
@@ -3451,6 +3464,9 @@ extension GameWorld: Codable {
         }
         if !land.isEmpty {
             try container.encode(land, forKey: .land)
+        }
+        if let landBlocks {
+            try container.encode(LandBlockRun.runs(of: landBlocks), forKey: .landBlocks)
         }
         if landDemand {
             try container.encode(true, forKey: .landDemand)
@@ -3665,7 +3681,7 @@ extension GameWorld: Codable {
             }
         }
         return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? scenarioProblem() ?? demandEventProblem() ?? townGrowthProblem()
-            ?? land.problem(in: bounds) ?? buildingProblem()
+            ?? land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

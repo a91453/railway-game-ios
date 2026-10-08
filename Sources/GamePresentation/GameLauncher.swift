@@ -100,6 +100,12 @@ public final class GameLauncher {
         begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:))), keepingAutosave: true)
     }
 
+    /// Starts a new game on the whole of Taiwan (decision 88), its land
+    /// read in round each station as it is built.
+    public func startWholeTaiwan() {
+        begin(.newWholeTaiwanGame(eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+    }
+
     /// Starts a new game on a blank map with `challenge`'s goals (decision
     /// 86), its towns drawn from a new seed.
     public func startChallenge(_ challenge: Challenge) {
@@ -208,6 +214,9 @@ public final class GameLauncher {
         started.population = population
         started.places = places
         started.railways = railways
+        // Decision 88: land not read round a station built while the app
+        // had no population.
+        started.readLandRoundStations()
         started.playSound = playSound
         session = started
         message = nil

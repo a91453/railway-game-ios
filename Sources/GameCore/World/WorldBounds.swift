@@ -9,13 +9,19 @@
 /// of 1024-unit tiles (`GridMap`), whose size a save still gives in tiles
 /// before save version 6 (see ``SavedGame``).
 public struct WorldBounds: Hashable, Sendable {
-    /// The longest either side may be: 2^20 units, 16,384 m. A new game's
-    /// world is this large both ways (Stage E1), and every coordinate in it
-    /// stays far inside ``WorldCoordinate/limit``.
-    public static let maximumSide: Int64 = 1 << 20
+    /// The longest either side may be: 2^25 units, 524,288 m, enough for
+    /// the whole of Taiwan (decision 88). Until then it was 2^20 units,
+    /// 16,384 m, a new game's world both ways (Stage E1), which a new game
+    /// still is. Every coordinate in it stays inside
+    /// ``WorldCoordinate/limit`` (2^29).
+    public static let maximumSide: Int64 = 1 << 25
 
-    /// The largest world, a new game's (Stage E1): 16.384 km a side.
+    /// The largest world: 524.288 km a side.
     public static let maximum = WorldBounds(checkedWidth: maximumSide, height: maximumSide)
+
+    /// The world of 2^20 units, 16.384 km, a side: the largest until
+    /// decision 88, and a new game's (Stage E1).
+    public static let standard = WorldBounds(checkedWidth: 1 << 20, height: 1 << 20)
 
     /// East to west, in world units.
     public let width: Int64

@@ -90,8 +90,9 @@ public struct TrackGeometry: Hashable, Sendable {
 
     /// The largest rise and length a sloping edge may have, so the height
     /// rules never overflow: `rise × distance²` stays within 2^61 (Stage
-    /// S4). A world's track is far within both: heights span 8192 and maps
-    /// are at most 2^20 units a side.
+    /// S4). Heights span 8192, so a world's track is within the rise; a
+    /// sloping edge is at most 2^24 units (262 km) long, though a map may
+    /// be 2^25 a side (decision 88).
     static let maximumRise: Int64 = 1 << 13
     static let maximumSlopingLength: Int64 = 1 << 24
 

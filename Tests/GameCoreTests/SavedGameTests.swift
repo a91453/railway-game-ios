@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 17)
+        XCTAssertEqual(SavedGame.currentVersion, 18)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 18, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 19, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -111,7 +111,7 @@ final class SavedGameTests: XCTestCase {
         for version in 1...7 {
             XCTAssertEqual(try load(width: 16, height: 8, version: version), world, "version \(version)")
         }
-        XCTAssertEqual(try load(width: 1_024, height: 1_024).bounds, .maximum)
+        XCTAssertEqual(try load(width: 1_024, height: 1_024).bounds, .standard)
         XCTAssertEqual(try load(width: 1_024, height: 9).bounds, try WorldBounds(width: 1_048_576, height: 9_216))
         XCTAssertEqual(try load(width: 10, height: 5).bounds, try WorldBounds(width: 10_240, height: 5_120), "the last node, at x 9216, and East, at y 4608, inside")
         // The line's last node, at x 9216, lies outside a map 9 tiles wide,
@@ -143,7 +143,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNil(load { $0["bounds"] = nil }, "neither")
         XCTAssertNil(load { $0["map"] = ["width": 16, "height": 8, "occupied": [Any]()] }, "both")
         XCTAssertNil(load { $0["bounds"] = ["width": 16_384, "height": 0] }, "no height")
-        XCTAssertNil(load { $0["bounds"] = ["width": 1_048_577, "height": 8_192] }, "too wide")
+        XCTAssertNil(load { $0["bounds"] = ["width": 33_554_433, "height": 8_192] }, "too wide")
         XCTAssertNil(load { $0["bounds"] = ["width": 9_215, "height": 8_192] }, "the line's last node, at x 9216, outside")
         XCTAssertEqual(load { $0["bounds"] = ["width": 9_217, "height": 4_609] }?.bounds, try WorldBounds(width: 9_217, height: 4_609), "a unit beyond the last node and East")
     }
@@ -307,7 +307,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual((map["occupied"] as? [Any])?.count, 0)
 
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world.bounds, .maximum, "1024 tiles of 1024 units a side")
+        XCTAssertEqual(world.bounds, .standard, "1024 tiles of 1024 units a side")
         XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertEqual(world.stations[1].point, PlanPoint(x: 524_288, y: 524_288))
@@ -357,7 +357,7 @@ final class SavedGameTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world.geoAnchor, GeoAnchor(latitude: 250_479_308, longitude: 1_215_170_046))
         XCTAssertEqual(world.clock.now, GameTime(minutes: 90))
-        XCTAssertEqual(world.bounds, .maximum)
+        XCTAssertEqual(world.bounds, .standard)
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
         XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
@@ -430,7 +430,7 @@ final class SavedGameTests: XCTestCase {
         let game = try JSONDecoder().decode(SavedGame.self, from: data)
         let five = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v5-demo-siding-90-minutes.json"))).world
         XCTAssertEqual(game.world, five)
-        XCTAssertEqual(game.world.bounds, .maximum)
+        XCTAssertEqual(game.world.bounds, .standard)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let eight = try Data(contentsOf: Self.fixtures.appendingPathComponent("v8-demo-siding-90-minutes.json"))
@@ -845,6 +845,62 @@ final class SavedGameTests: XCTestCase {
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v16-assets-closed-year.json"))
         XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.scenario)
+    }
+
+    /// The world of `v18-whole-island-land.json`: a world 2^25 by 3 × 2^23
+    /// units (524 by 393 km, wider and taller than any before version 18),
+    /// a managed company with demand from land and the city's buildings,
+    /// its land read in as it is needed: a station far out in it, the
+    /// blocks within 2 km of it read with five cells of people round it,
+    /// run ten minutes.
+    private static func wholeIslandWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 1 << 25, height: 3 << 23), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        world.setLandDemand(true)
+        world.setCityBuildings(true)
+        world.setLandOnDemand()
+        let point = PlanPoint(x: 20_000_000, y: 18_000_000)
+        let station = try world.buildStation(named: "Far", at: point).id
+        let row = Int(point.y / Land.cellLength), column = Int(point.x / Land.cellLength)
+        let cells = [(0, 0, LandUse.office), (0, 1, .commercial), (-1, 0, .residential), (1, 0, .residential), (0, -1, .residential)].map {
+            LandCell(row: row + $0.0, column: column + $0.1, use: $0.2, residents: $0.2 == .residential ? 300 : 50, jobs: $0.2 == .residential ? 0 : 900)
+        }
+        try world.expandLand(Land.blocks(within: 128_000, of: point, in: world.bounds), cells: cells)
+        precondition(world.landCatchment(of: station)?.residents == 1_000)
+        try world.advance(ticks: 10)
+        return world
+    }
+
+    /// Version 18 (decision 88): a world larger than 2^20 units a side
+    /// with its land read in as it is needed. It saves byte for byte, is
+    /// the world the build that wrote it makes, and its blocks stay read.
+    /// A version 17 save's land is whole.
+    func testVersionEighteenKeepsAWholeIslandWorldAndTheBlocksItRead() throws {
+        let url = Self.fixtures.appendingPathComponent("v18-whole-island-land.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["WHOLE_ISLAND_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.wholeIslandWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 18)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.wholeIslandWorld())
+        XCTAssertEqual(world.bounds, try WorldBounds(width: 33_554_432, height: 25_165_824))
+        XCTAssertEqual(world.landBlocks?.count, 22, "the blocks of 1,024 m some part of which is within 2 km of the station")
+        XCTAssertEqual(world.land.cells.count, 5)
+        XCTAssertEqual(world.buildings.all.count, 5)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        let blocks = world.landBlocks
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.landBlocks, blocks)
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v17-scenario-fast.json"))
+        XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.landBlocks)
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {

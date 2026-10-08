@@ -91,29 +91,52 @@ public enum LandDemand {
     public static func shares(of land: Land, among stations: [Station]) -> [StationID: Share] {
         let radius = Land.catchmentRadius
         let squaredRadius = radius * radius
-        // Each cell's stations (in the stations' order) and their weights.
-        var reaching: [Int: [(station: Int, weight: Int64)]] = [:]
+        // Each cell's stations (in the stations' order) and their weights,
+        // by cell and then station.
+        var reaching: [(cell: Int, station: Int, weight: Int64)] = []
         for (position, station) in stations.enumerated() {
             land.forEachCell(within: radius, of: station.location) { index, squared in
-                reaching[index, default: []].append((position, 1_000 - squared * 1_000 / squaredRadius))
+                reaching.append((index, position, 1_000 - squared * 1_000 / squaredRadius))
             }
         }
-        var shares: [StationID: Share] = [:]
-        for index in reaching.keys.sorted() {
-            guard let near = reaching[index] else { continue }
-            let cell = land.cells[index]
-            let weights = near.map(\.weight)
-            let residents = GameWorld.apportion(cell.residents, by: weights)
-            let jobs = GameWorld.apportion(cell.jobs, by: weights)
-            for (offset, entry) in near.enumerated() {
-                var share = shares[stations[entry.station].id, default: Share()]
-                share.residents += residents[offset]
-                if cell.use == .office {
-                    share.officeJobs += jobs[offset]
-                } else {
-                    share.shopJobs += jobs[offset]
+        reaching.sort { ($0.cell, $0.station) < ($1.cell, $1.station) }
+        var byStation = [Share?](repeating: nil, count: stations.count)
+        func add(_ residents: Int64, _ jobs: Int64, of cell: LandCell, to station: Int) {
+            var share = byStation[station] ?? Share()
+            share.residents += residents
+            if cell.use == .office {
+                share.officeJobs += jobs
+            } else {
+                share.shopJobs += jobs
+            }
+            byStation[station] = share
+        }
+        var start = 0
+        while start < reaching.count {
+            var end = start + 1
+            while end < reaching.count, reaching[end].cell == reaching[start].cell {
+                end += 1
+            }
+            let cell = land.cells[reaching[start].cell]
+            if end - start == 1 {
+                // One station has it all, as the largest remainder of one
+                // weight gives.
+                add(cell.residents, cell.jobs, of: cell, to: reaching[start].station)
+            } else {
+                let near = reaching[start..<end]
+                let weights = near.map(\.weight)
+                let residents = GameWorld.apportion(cell.residents, by: weights)
+                let jobs = GameWorld.apportion(cell.jobs, by: weights)
+                for (offset, entry) in near.enumerated() {
+                    add(residents[offset], jobs[offset], of: cell, to: entry.station)
                 }
-                shares[stations[entry.station].id] = share
+            }
+            start = end
+        }
+        var shares: [StationID: Share] = [:]
+        for (position, share) in byStation.enumerated() {
+            if let share {
+                shares[stations[position].id] = share
             }
         }
         return shares
