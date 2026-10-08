@@ -14,7 +14,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 ## V1：單線交會（`single-track-meet.json`）
 
-49 步、7 遊戲分鐘的短情境（schema 30，決策 57）：W — M — E 的單線，M 有主線 e2 與交會線 e5 的兩個月台，e4 / e6 是兩端的曲線道岔支線。兩車都是兩節（車間距 1024），從兩端向 M 出發，無占用時都選 e2。第 42 秒先出發的 Eastbound 整條取得 e2，14336 單位；同一秒 Westbound 避開其持有，整條取得 e6 → e5，14972 單位，兩車都用原排定的 120 秒段間曲線。第 3 分鐘都停妥在 M，之後各自開到對面，第 7 分鐘都完成服務。
+49 步、7 遊戲分鐘的短情境（schema 30，決策 57）：W — M — E 的單線，M 有主線 e2 與交會線 e5 的兩個月台，e4 / e6 是兩端的曲線轉轍器支線。兩車都是兩節（車間距 1024），從兩端向 M 出發，無占用時都選 e2。第 42 秒先出發的 Eastbound 整條取得 e2，14336 單位；同一秒 Westbound 避開其持有，整條取得 e6 → e5，14972 單位，兩車都用原排定的 120 秒段間曲線。第 3 分鐘都停妥在 M，之後各自開到對面，第 7 分鐘都完成服務。
 
 新 fixture 的值先由 GameCore 取得，再由 `ReferenceWorldGoldenTests` 的獨立鬆弛選路與逐秒推進確認。沒有修改任何既有 golden 預期值，也沒有修改 SaveFixtures 或 ReplayFixtures；golden schema 維持 30，存檔版本維持 7。既有 `train-following.json` 繼續驗證沒有替代路時的 U2 跟車。
 
@@ -30,7 +30,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 ## Schema（`schemaVersion: 30`／`31`）
 
-除了每個步驟在 `command` 與 `observe` 之間擇一，線路指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與線路的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的線路 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
+除了每個步驟在 `command` 與 `observe` 之間擇一，路線指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與路線的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的路線 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
 
 | 欄位 | 內容 |
 | --- | --- |
@@ -47,7 +47,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **時間**（schema 23，Stage W2a 起 GameCore 的時鐘以秒計，決策 37；schema 24 起時刻表與服務時刻可以落在兩分鐘之間，決策 39）：
   - 時鐘寫成 `gameMinutes`（開局以來的整分鐘）或 `gameSeconds`（開局以來的秒），恰好其中一個。整分鐘一律寫成 `gameMinutes`，`gameSeconds` 只用在落在兩分鐘之間的時刻，所以每個時刻只有一種寫法。
   - 其他時間欄位仍然是分鐘：時刻表的 `arrival`、`departure` 與重複的 `minutes`、`lastDispatch`、`since`、`openedAt`、帳本列的 `time`、`serviceLevel` 的 `gameMinutes`。GameCore 以秒保存它們（分鐘 × 60）。
-  - 時刻表停靠的時間（schema 24，Stage W2b）可以落在兩分鐘之間：線路的時刻表在派車 42 秒後才離開第一站。這樣的時間寫成 `arrivalSeconds`、`departureSeconds`（開局以來的秒），取代 `arrival`、`departure`；和時鐘一樣，整分鐘一律寫成分鐘，每一站的到達與離開各恰好一種寫法。
+  - 時刻表停靠的時間（schema 24，Stage W2b）可以落在兩分鐘之間：路線的時刻表在派車 42 秒後才離開第一站。這樣的時間寫成 `arrivalSeconds`、`departureSeconds`（開局以來的秒），取代 `arrival`、`departure`；和時鐘一樣，整分鐘一律寫成分鐘，每一站的到達與離開各恰好一種寫法。
   - 服務時刻（`times`，schema 24）一律是開局以來的秒。
   - `ticks` 是模擬 tick 數。每個 tick 在 `paused` / `x1` / `x10` / `x60` / `normal` / `double` 下推進 0 / 0.1 / 1 / 6 / 60 / 120 秒（宿主每 100 ms 一個 tick，所以 `x1` 是真實時間）。不到一秒的部分累積在 `pendingTenths`（十分之一秒，1 到 9），跨過速度的改變與暫停；是 0 時不寫這個 key。
 - **被拒絕的點**（`outOfBounds` 的結果，schema 30）：`x`、`y`，指令裡那一點的世界座標（`x` 向東、`y` 向南，`(0, 0)` 是西北角）。點在世界裡是 `0 <= x < worldWidth`、`0 <= y < worldHeight`；世界沒有格子（Stage F3d）。
@@ -75,29 +75,29 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - `stop` 是從 0 開始的**時刻表索引**，不是車站 ID（時刻表可以重複同一個車站）。
   - `cycle` 是重複的時刻表已經重新開始的次數，從 0 起；第 `k` 輪的每個時刻是時刻表記錄的時刻加上 `k × minutes`。只跑一次的時刻表永遠是 0。
 - **服務時刻（times）**（schema 24，Stage W2b，決策 39）：`{ "arrival", "exchangeEnd", "closing", "departure", "run" }`，時刻都是開局以來的秒；`arrival` 必填，另外四個只在有值時寫（不可寫 `null`）。
-  - `arrival`：到達正在等待的這一站（行駛中則是上一個等待過的站）的時刻；啟動服務與線路派車算是在那一刻到達第一站。
+  - `arrival`：到達正在等待的這一站（行駛中則是上一個等待過的站）的時刻；啟動服務與路線派車算是在那一刻到達第一站。
   - `exchangeEnd`：只在等待時、車門開好之後才有：乘客上下車到哪一刻為止。
   - `closing`：只在等待時：開始關門的時刻；離開是它的 9 秒後。
   - `departure`：實際離開前一站的時刻；這個服務還沒離開過任何一站時沒有。
   - `run`（schema 25，Stage W2c，決策 40）：只在行駛中、列車跟著行駛曲線時有：`{ "start", "length", "seconds" }`，列車在 `start`（開局以來的秒）出發，用 `seconds` 秒（1 到 4294967）走完 `length` 單位（至少 1）到下一站的停車位置（見下面「行駛曲線」）。
 - **服務等級**：`"peak"`、`"offPeak"`、`"low"`（尖峰、離峰、低峰）。
-- **線路**：`{ "id", "name", "stops", "performance", "window", "trainsInService", "targetHeadways", "trains", "lastDispatch", "patterns" }`，除了 `performance` 都必填：
-  - `id`：線路 ID，世界依序配發，從 1 開始、失敗的指令不消耗 ID、刪除的線路 ID 不再使用。指令、結果與觀察以 `line` 欄位寫線路 ID。
+- **路線**：`{ "id", "name", "stops", "performance", "window", "trainsInService", "targetHeadways", "trains", "lastDispatch", "patterns" }`，除了 `performance` 都必填：
+  - `id`：路線 ID，世界依序配發，從 1 開始、失敗的指令不消耗 ID、刪除的路線 ID 不再使用。指令、結果與觀察以 `line` 欄位寫路線 ID。
   - `stops`：依序停靠的車站 ID 陣列。列車從第一站開到最後一站再折返回來。
   - `performance`（schema 25，Stage W2c，取代以前的 `rate`）：規劃行程時間用的性能（形式見下面「行駛曲線」）；標準性能時省略，不可寫 `null`。
   - `window`：營運時間，以 `type` 區分：`{ "type": "allDay" }`，或 `{ "type": "hours", "open", "close" }`（一天中的分鐘，`close` 可以超過 1440，也就是隔天清晨）。
   - `trainsInService`：`{ "peak", "offPeak", "low" }`，各服務等級要跑的列車數。
   - `targetHeadways`：`{ "peak", "offPeak", "low" }`，三個 key 都必填；各等級的目標班距（分鐘），沒有目標的等級是 `null`，由 `trainsInService` 決定。
-  - `trains`：指派給這條線路的列車 ID，依 ID 遞增；沒有是 `[]`。
-  - `lastDispatch`：線路上次從第一站派出列車的遊戲分鐘；從未派車是 `null`。
-  - `patterns`：線路的服務模式陣列，順序就是分配容量的順序；沒有是 `[]`。
+  - `trains`：指派給這條路線的列車 ID，依 ID 遞增；沒有是 `[]`。
+  - `lastDispatch`：路線上次從第一站派出列車的遊戲分鐘；從未派車是 `null`。
+  - `patterns`：路線的服務模式陣列，順序就是分配容量的順序；沒有是 `[]`。
   - `ring`（schema 27，決策 49）：只有環線有，而且只寫 `true`；不是環線時省略，不可寫 `false`。
   - `outerLastDispatch`（schema 27）：只有環線有而且必填：環線上次往外環方向派車的遊戲分鐘，從未派車是 `null`。`lastDispatch` 在環線上是內環方向的。
-  - 指令裡的線路值照原樣讀取、不檢查，是否合法由 GameCore 判定。
+  - 指令裡的路線值照原樣讀取、不檢查，是否合法由 GameCore 判定。
 - **服務模式（pattern）**：`{ "calls", "trainsInService", "targetHeadways", "trains", "lastDispatch" }`，五個欄位都必填：
-  - `calls`：停靠的站，是線路 `stops` 的索引（從 0 起）、嚴格遞增；連續的索引是交路，跳過的索引是快車通過的站。
-  - 其他四個欄位的形式與意義和線路的相同，只是屬於這個模式；`lastDispatch` 是它上次從第一個停靠站派車的分鐘。
-  - 模式以在 `patterns` 裡的索引（從 0 起）指定。`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以加上整數的 `pattern`；沒有這個 key 就是線路自己的服務（停靠每一站），不可寫 `null`。
+  - `calls`：停靠的站，是路線 `stops` 的索引（從 0 起）、嚴格遞增；連續的索引是區間車，跳過的索引是快車通過的站。
+  - 其他四個欄位的形式與意義和路線的相同，只是屬於這個模式；`lastDispatch` 是它上次從第一個停靠站派車的分鐘。
+  - 模式以在 `patterns` 裡的索引（從 0 起）指定。`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以加上整數的 `pattern`；沒有這個 key 就是路線自己的服務（停靠每一站），不可寫 `null`。
 - **服務日**：`[{ "start", "level" }, ...]`，每一段從一天中的某分鐘開始，到下一段開始為止。
 - **軌道資源**（schema 16）：`{ "type": "networkNode", "node" }` 或 `{ "type": "networkSpan", "edge", "start", "end" }`（邊的編號與 span 的里程，從邊的 `from` 節點量起）。邊切成 n = ⌈長度 ÷ 1024⌉ 段，第 k 個分界在 ⌊k × 長度 ÷ n⌋（Stage S3A）。資源的順序是先所有節點、依編號，再所有 span、依邊的編號、同一條邊依里程（見決策 26、29）。
 - **連續路網**（schema 16，決策 29）：
@@ -113,12 +113,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 縱斷面的分段：`{ "kind", "start", "end" }`，`kind` 是 `"level"`、`"up"`、`"down"` 或 `"transition"`，里程從邊的 `from` 端量起。
   - 路網上的月台：`{ "edge", "start", "end" }`（邊的編號、從邊的 `from` 端量起的起訖里程）。
 - **路徑**（schema 18，決策 31）：`{ "traversals": [行進方向, ...], "end", "distance" }`：列車在車頭所在的邊之後依序進入的行進方向、車頭停在最後一條（沒有時是車頭所在的那一條）的哪裡（沿行進方向量起；走到終點時不寫 `end`），以及車頭從現在的位置走到那裡的精確距離。
-- **線路行程**：`{ "start", "legs", "roundTripSeconds", "roundTripMinutes" }`。`start` 是列車位置（路網上的停車位置，`edge`）；`legs` 是 `[{ "from", "to", "path", "seconds" }, ...]`：`from`、`to` 是線路 `stops` 的索引，`path` 是那一段的路（上面的「路徑」，schema 18），`seconds` 是一段的秒數（schema 25）；`roundTripSeconds` 是整趟的秒數，`roundTripMinutes` 是它無條件進位到整分鐘。環線的行程（schema 27）另外有 `"ring": true`，其他行程沒有這個 key。
+- **路線行程**：`{ "start", "legs", "roundTripSeconds", "roundTripMinutes" }`。`start` 是列車位置（路網上的停車位置，`edge`）；`legs` 是 `[{ "from", "to", "path", "seconds" }, ...]`：`from`、`to` 是路線 `stops` 的索引，`path` 是那一段的路（上面的「路徑」，schema 18），`seconds` 是一段的秒數（schema 25）；`roundTripSeconds` 是整趟的秒數，`roundTripMinutes` 是它無條件進位到整分鐘。環線的行程（schema 27）另外有 `"ring": true`，其他行程沒有這個 key。
 - **乘客**（schema 20，決策 34）：
   - 需求（`demand`）：`{ "kind", "dailyTrips" }`，`kind` 是 `"residential"`、`"office"`、`"shopping"` 或 `"scenic"`，`dailyTrips` 是整數；指令裡照原樣讀取，是否合法由 GameCore 判定。
-  - 沿線路的方向：`"outbound"`（往線路 `stops` 的後面）或 `"inbound"`（往前面）。
+  - 沿路線的方向：`"outbound"`（往路線 `stops` 的後面）或 `"inbound"`（往前面）。
   - 旅次（`trip`）：`{ "line", "direction" }`。
-  - 等車的一組（`groups` 的一項、最終狀態的 `waiting`）：`{ "line", "direction", "destination", "since", "count" }`：要坐的線路與方向、迄點車站、釋出的遊戲分鐘與人數，依排隊的順序（先來的在前）。
+  - 等車的一組（`groups` 的一項、最終狀態的 `waiting`）：`{ "line", "direction", "destination", "since", "count" }`：要坐的路線與方向、迄點車站、釋出的遊戲分鐘與人數，依排隊的順序（先來的在前）。
   - 守恆稽核（`ledger`）：`{ "released", "waiting", "riding", "arrived", "overflowed", "abandoned", "refused" }`（`riding`、`arrived`、`refused` 自 schema 21，決策 35），七個欄位都必填。
   - 車上的一組（`riders` 的一項，schema 21）：`{ "origin", "destination", "count" }`：上車的車站、迄點車站與人數，依（起點、迄點）排序。
 - **經營**（schema 22，決策 36）：金額都是整數美分。
@@ -202,17 +202,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trainServiceNotActive` | `train` | 列車沒有執行中的服務可以停止 |
 | `noTimetable` | `train` | 列車沒有時刻表，無法啟動服務 |
 | `trainNotAtFirstStop` | `train` | 列車沒有停在時刻表第一站的車站，無法啟動服務 |
-| `unknownLine` | `line` | 沒有這個 ID 的線路 |
-| `invalidLineStops` | — | 線路少於兩站，或同一個車站連續出現兩次 |
-| `invalidTrainPerformance`（schema 25，取代 `invalidLineRate`） | — | 列車或線路的性能不合法（見下面「行駛曲線」） |
+| `unknownLine` | `line` | 沒有這個 ID 的路線 |
+| `invalidLineStops` | — | 路線少於兩站，或同一個車站連續出現兩次 |
+| `invalidTrainPerformance`（schema 25，取代 `invalidLineRate`） | — | 列車或路線的性能不合法（見下面「行駛曲線」） |
 | `invalidServiceWindow` | — | 營運時間不合法：`open` 不在 0…1439，`close` 不晚於 `open`，或晚於 1800（隔天 06:00） |
 | `invalidTrainsInService` | — | 某個服務等級的列車數是負數 |
 | `invalidServiceDay` | — | 服務日不從分鐘 0 開始，或各段的開始時間沒有在一天內嚴格遞增 |
 | `invalidHeadway` | — | 某個等級的目標班距不在 2…1440 分鐘 |
-| `trainOnLine` | `train` | 列車屬於一條線路：由線路設定它的時刻表、啟動它的服務，不能手動設定時刻表、啟動或停止服務，也不能再指派一次，要先取回 |
-| `trainNotOnLine` | `train` | 列車不屬於任何線路，沒有可以取回的 |
-| `invalidLinePattern` | — | 服務模式的 `calls` 少於兩個、沒有嚴格遞增，或不是線路的站的索引；或新的站數會讓某個模式停靠超出最後一站 |
-| `unknownLinePattern` | `pattern` | 線路沒有這個索引的服務模式 |
+| `trainOnLine` | `train` | 列車屬於一條路線：由路線設定它的時刻表、啟動它的服務，不能手動設定時刻表、啟動或停止服務，也不能再指派一次，要先取回 |
+| `trainNotOnLine` | `train` | 列車不屬於任何路線，沒有可以取回的 |
+| `invalidLinePattern` | — | 服務模式的 `calls` 少於兩個、沒有嚴格遞增，或不是路線的站的索引；或新的站數會讓某個模式停靠超出最後一站 |
+| `unknownLinePattern` | `pattern` | 路線沒有這個索引的服務模式 |
 | `invalidTrainLength` | — | 節數不在 1…16 |
 | `unknownTrackNode` | `node` | 連續路網沒有這個編號的節點 |
 | `unknownTrackEdge` | `edge` | 連續路網沒有這個編號的邊 |
@@ -229,7 +229,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trackReserved` | `train` | 交通控制開啟時，這台列車（編號最小的一台）持有指令需要的軌道：新的路或放置要取得的預約範圍，或要拆除、改變的鐵軌（schema 19） |
 | `trainsShareTrack` | `trains`（`[a, b]`） | 開啟交通控制時，兩台列車需要同一段軌道：`b` 是依 ID 第一台與前面某台相交的列車，`a` 是與它相交的最小編號（schema 19） |
 | `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
-| `stationDemandFromLand` | — | 土地決定經營模式的客流時不能設定車站的需求（schema 36，決策 73） |
+| `stationDemandFromLand` | — | 土地決定經營模式的運量時不能設定車站的需求（schema 36，決策 73） |
 | `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
@@ -244,7 +244,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `wholeTrainStops` | `train` | `{ "stations": [id, ...] }` | `stationsBesideWholeTrain(_:)` |
 | `timetable` | `train` | `{ "timetable": [{ "station", "arrival", "departure" }, ...] }` | `train(id:)?.timetable` |
 | `execution` | `train` | `{ "execution": { "type", ... } }`（見上面「服務」） | `train(id:)?.execution` |
-| `serviceLevel` | `line`、`gameMinutes` | `{ "level": "peak" }`，停止營運或沒有這條線路時是 `"closed"` | `serviceLevel(of:at:)` |
+| `serviceLevel` | `line`、`gameMinutes` | `{ "level": "peak" }`，停止營運或沒有這條路線時是 `"closed"` | `serviceLevel(of:at:)` |
 | `lineJourney` | `line`，可加 `pattern` | `{ "found": true, "journey": {...} }` 或 `{ "found": false }` | `lineJourney(_:pattern:)` |
 | `lineMaximumTrains` | `line`，可加 `pattern` | `{ "found": true, "trains": n }` 或 `{ "found": false }` | `lineMaximumTrains(_:pattern:)` |
 | `lineTrainsInService` | `line`、`level`，可加 `pattern` | 與 `lineMaximumTrains` 相同 | `lineTrainsInService(_:at:pattern:)` |
@@ -321,8 +321,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `pathToStation`：從車頭所在的位置到該站某個停車位置、總距離最短的路；距離是 `(邊長 − offset) +` 中間每條邊的長度 `+` 最後一條上的 `end`（只在車頭所在的邊上時是 `end − offset`）。同樣短時逐步比較選擇：同一條行進方向上前方的停車位置在前（依里程），轉向在後、依邊的編號遞增。不立即折返。起點不在路網上、車站不存在、沒有夠長的月台或到不了時是 `{ "found": false }`；已在停車位置時是沒有 `traversals`、距離 0 的路。
 - 停站（`stationStops`）：路走完（沒有剩下的邊，車頭在 `end`；沒有 `end` 時在邊的終點），而且車頭所在的邊上有該站的月台、車頭的里程在它的起訖之間（含兩端）。只看車頭所在的那一條邊。`wholeTrainStops` 另外要求整列車都在同一個月台內。要讓放在月台上的列車停站，給它一條在原地結束的路：`setTrainPath` 以 `path: []` 與 `end` 為目前的 `offset`（在邊的終點時省略 `end`）。
 - `setTrainPath` 的 `end`：在最後一條邊上 `0 <= end <` 邊長；有剩下的邊時 `end >= 1`；沒有剩下的邊時不能在車頭後面（`end >= offset`）。否則是 `invalidContinuation`。
-- 服務與線路出發時的路就是 `pathToStation` 的結果，寫成 `edges` 與 `end`；距離 0 表示已停在那一站。`reverse` 的停靠先原地折返（與 `reverseTrain` 相同），再讓列車的路在原地結束（`end` 是新的車頭位置），之後照常求路。
-- `lineJourney` 從路網的停車位置出發時，每一段是 `pathToStation` 的路，秒數是線路的性能走完 `distance` 的最少整秒（schema 25）；每段之後列車在停車位置，車身沿走過的路；到最後一站原地折返。
+- 服務與路線出發時的路就是 `pathToStation` 的結果，寫成 `edges` 與 `end`；距離 0 表示已停在那一站。`reverse` 的停靠先原地折返（與 `reverseTrain` 相同），再讓列車的路在原地結束（`end` 是新的車頭位置），之後照常求路。
+- `lineJourney` 從路網的停車位置出發時，每一段是 `pathToStation` 的路，秒數是路線的性能走完 `distance` 的最少整秒（schema 25）；每段之後列車在停車位置，車身沿走過的路；到最後一站原地折返。
 - `removeTrackPlatform`：在 `invalidPlatform` 之後，有服務正在用這個月台時是 `trainServiceActive`（編號最小的列車）：等待中的服務停在這一站、車頭在這個月台上，或行駛中的服務前往這一站、路的最後一條邊就是這個月台的邊。
 
 交通控制與進路預約規則（schema 19，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 32）：
@@ -332,23 +332,23 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - 預約範圍：從車尾現在的位置沿車身與路一直到路的終點，這一整段依佔用的規則碰到的資源（碰到的每個節點；和這一段有一個嚴格落在邊的兩端之間的共同點的每個 span，所以落在 span 分界上時兩邊都算），再加上它的限界節點。
 - 限界：節點上一條邊的端點，若這個節點上還有另一條邊的端點不和它相通，就是限界端；列車（車身或預約範圍）在這條邊上有一點離這個節點不到 1024 時，也持有這個節點。只存在於路網。
 - 持有 = 佔用 ∪ 限界 ∪ 預約（`heldResources`）。取得預約時和其他列車的持有有交集就被拒絕或等待，阻擋者是編號最小的一台。
-- 取得：`placeTrain`、`reverseTrain`、`setTrainContinuation`、`setTrainPath`、服務的出發、線路的派車與開啟交通控制，一次取得整個預約範圍，取代舊的預約；路的長度為 0 時預約是 `[]`。被拒絕的指令回報 `trackReserved`，錯誤順序排在既有的檢查之後。服務的出發被擋時什麼都不改（也不折返），下一個基本步長再試；線路的列車取不到時不就緒，不派出、不改 `lastDispatch`。派出的列車在同一段立刻出發。
+- 取得：`placeTrain`、`reverseTrain`、`setTrainContinuation`、`setTrainPath`、服務的出發、路線的派車與開啟交通控制，一次取得整個預約範圍，取代舊的預約；路的長度為 0 時預約是 `[]`。被拒絕的指令回報 `trackReserved`，錯誤順序排在既有的檢查之後。服務的出發被擋時什麼都不改（也不折返），下一個基本步長再試；路線的列車取不到時不就緒，不派出、不改 `lastDispatch`。派出的列車在同一段立刻出發。
 - 解除：列車走到路的終點的那一步移動之後、`unplaceTrain`、關閉交通控制。`setTrainMovementRate`（包括 0）與 `stopTrainService` 不動預約。
 - 通過後釋放（Stage U，ARCHITECTURE 決策 55，schema 不變）：列車每次移動之後，預約只留下它從現在的位置還需要的那一段（也就是上面的預約範圍），車尾離開的軌道在同一步釋放，下一個基本步長起別的列車就能取得；等待中的出發在它需要的軌道空出來的那一秒重試，所以以分鐘推進和逐秒推進結果相同。
 - 基礎設施：交通控制開啟時，`removeTrackEdge`（預約了那條邊的 span）、`addTrackPlatform` 與 `removeTrackPlatform`（持有那條邊的 span）、`buildTrackEdge`（持有新邊一端的節點，或那個節點上某條邊離它不到 1024 的 span，檢查排在 `idsExhausted` 之後、扣款之前）回報 `trackReserved`。
 - `setTrafficControl` 開啟時依 ID 為每台已放置的列車算出它應有的持有，任兩台相交（或互相妨礙，見下）就是 `trainsShareTrack`，世界不變；關閉一定成功並清除所有預約。
 - 妨礙（Stage F2b，ARCHITECTURE 決策 53，schema 不變）：兩條不同的邊上，同一高度（高差不到 512）、平面上不到 256 的兩點，沿軌道相距超過 512（或沒有軌道相連）時，兩點所在的 span 互相妨礙（量法同上面「線間距」，點落在 span 分界上時兩邊的 span 都算）。交通控制下，需要的軌道與別台持有的軌道相同或互相妨礙時就是 `trackReserved` / `trainsShareTrack`；`heldResources`、`reservation`、`occupancy` 只列列車自己的軌道。交通控制下拆邊會讓兩台已持有的軌道變成互相妨礙時是 `trackReserved`（依 ID 第一對的較小編號），在 `trackReserved`（預約了那條邊）之後、`tracksWouldBeTooClose` 之前。
-- `routeHolder`：服務停在某站、排定出發已到時，或線路的列車就緒只差預約、線路該派車時，第一個出發的預約範圍被哪台列車持有（編號最小的一台）；其他情況（包括交通控制關閉）是 `{ "found": false }`。
+- `routeHolder`：服務停在某站、排定出發已到時，或路線的列車就緒只差預約、路線該派車時，第一個出發的預約範圍被哪台列車持有（編號最小的一台）；其他情況（包括交通控制關閉）是 `{ "found": false }`。
 
 車站需求與乘客規則（schema 20，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 34）：
 
 - 新世界的車站都沒有需求，行為與 schema 19 完全相同。`setStationDemand` 免費，檢查順序 `unknownStation` → `invalidStationDemand`；`null` 清除需求，已經在等的人留下。
-- 旅次（`passengerTrip`）：編號最小、同時停起點與迄點的線路；方向依兩站在它的 `stops` 裡第一次出現的索引（迄點在後是 `outbound`）。同一站或沒有這樣的線路是 `{ "found": false }`。
+- 旅次（`passengerTrip`）：編號最小、同時停起點與迄點的路線；方向依兩站在它的 `stops` 裡第一次出現的索引（迄點在後是 `outbound`）。同一站或沒有這樣的路線是 `{ "found": false }`。
 - 每天的旅次（`daily`）：起點的 `dailyTrips` 分給它有旅次可到、而且 `dailyTrips` 大於 0 的車站，比例是那些車站的 `dailyTrips`，用最大餘數法（整數部分，剩下的依餘數由大到小各加 1，平手給站號小的）。
 - 每小時的旅次（`hourly`）：一天的旅次依權重 `P[h] × D_o[h] × A_d[h]` 以最大餘數法分到 24 小時（平手給較早的小時）。`P` 是 `100, 100, 100, 100, 100, 100, 720, 1500, 1800, 1500, 800, 820, 840, 860, 880, 900, 1500, 1500, 1800, 1500, 1000, 1020, 1040, 100`；`D_o` 是起點類型的出發曲線、`A_d` 是迄點類型的到達曲線，都是 `1 + a·exp(−½((h − μ)/σ)²)` 乘上 24 ÷ 一天的合計、再乘 1000 四捨五入（`Math.round`）：住宅出發與辦公到達 `a = 0.6, μ = 8, σ = 1.15`；住宅到達與辦公出發 `μ = 18`；商業出發 `0.42·g(14, 2.4) + 0.5·g(19, 1.8)`、到達 `0.42·g(13, 2.4) + 0.5·g(18, 1.8)`；景點出發 `0.75·g(16, 2.1)`、到達 `0.75·g(11, 2.1)`。
 - 釋出：每個基本步長（從分鐘 `T` 到 `T + 1`）一開始、在派車之前，每一對依起點、再依迄點的順序，把 `(60 − m)·R_h + m·R_{h+1}` 加到自己的餘數（`h`、`m` 是 `T` 在一天中的小時與分，`R_{h+1}` 在 23 時是 0 時的），餘數整除 3600 的人數在這一分鐘釋出，其餘留下。
-- 排隊：釋出的人在起點成為一組（這一分鐘、這個迄點、坐的線路與方向），排在最後；車站等車的總數最多 4000，放不下的離開（`overflowed`）。
-- 線路刪除或改停靠後，線路不再以那個方向載去迄點的組離開（`abandoned`），其他組的順序不變。
+- 排隊：釋出的人在起點成為一組（這一分鐘、這個迄點、坐的路線與方向），排在最後；車站等車的總數最多 4000，放不下的離開（`overflowed`）。
+- 路線刪除或改停靠後，路線不再以那個方向載去迄點的組離開（`abandoned`），其他組的順序不變。
 - 每一站 `released = waiting + overflowed + abandoned`。
 
 時刻表規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 19）：
@@ -373,49 +373,49 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 行駛曲線（schema 25，Stage W2c，完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 40）：
 
 - **性能（performance）**：寫成預設的名稱 `"standard"`、`"metro"`、`"local"`、`"express"`、`"semiExpress"`、`"ordinary"`、`"highSpeed"`、`"dieselRailcar"`、`"dieselExpress"`、`"forestRailway"`、`"tiltingTaroko"`、`"tiltingPuyuma"`、`"pushPull"`、`"emu3000"`（值見 `TrainPerformance`），或物件 `{ "acceleration", "braking", "topSpeed" }`，另外可以有 `"alternativeAcceleration"`、`"alternativeBraking"` 與 `"coast": { "deceleration", "speedRatio" }`。加速度、減速度、惰行的減速度以千分之一 km/h／秒計，最高速度以 km/h 計，速度比以千分之一計。等於某個預設時，寫入端寫成它的名稱（同值時取上面清單裡最先的）；讀取端兩種都接受，指令裡照原樣讀取，是否合法由 GameCore 判定。
-- 合法的性能：每個加速度、減速度與最高速度都在 1 到 2^20；有惰行時，它的減速度在 1 到 2^20 且小於 `braking`，速度比在 0 到 999。新購的列車與新線路是標準性能（`standard`：1500、2500、110）。
+- 合法的性能：每個加速度、減速度與最高速度都在 1 到 2^20；有惰行時，它的減速度在 1 到 2^20 且小於 `braking`，速度比在 0 到 999。新購的列車與新路線是標準性能（`standard`：1500、2500、110）。
 - `setTrainPerformance` 的檢查順序：`unknownTrain` → `trainServiceActive`（服務執行中不能換）→ `invalidTrainPerformance`。`setLinePerformance`：`unknownLine` → `invalidTrainPerformance`。
 - 單位：64 單位一公尺（1024 單位是 16 公尺），1 km/h 是每秒 160/9 單位。曲線是 Railway 參考的 `buildProfile`（Stage W1，`RunningCurve`）：加速、等速、有惰行時惰行、減速到停；位置是曲線在那一刻的距離，無條件捨去到整數單位。
 - 列車離開一站（`travelling` 開始）時得到一段行駛（`run`）：排定的時間 T 是下一站在該輪的 `arrival` 減這一站的 `departure`（秒）。T 在 1 到 4294967 而且列車的性能做得出 T 秒的曲線時，這一段走 T 秒；否則走性能做得出曲線的最少整秒（盡快跑）；連最少的也沒有時沒有行駛曲線，列車照 rate 移動。所以晚出發的列車整段往後移、晚到同樣多；排得太緊的一段以最少的秒數跑完而晚到。
 - 跟著行駛曲線時，每一秒走曲線在這一秒結束與開始時的距離差（rate 只要大於 0；rate 為 0 不動）。被擋住（rate 為 0，或前方鐵軌被拆）而在這一步結束時剩下的路比曲線剩下的長時，丟掉這段行駛；之後 rate 大於 0、還有路、而且能往前走 1 單位時，從停止狀態以最少的整秒重新出發，走剩下的路。
-- 線路的性能決定線路的時刻表給每一段的時間；列車的性能決定它跑不跑得完：做得到時照時刻表的時間跑，做不到時以自己的最少秒數跑而晚到。
+- 路線的性能決定路線的時刻表給每一段的時間；列車的性能決定它跑不跑得完：做得到時照時刻表的時間跑，做不到時以自己的最少秒數跑而晚到。
 
-線路規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 22）：
+路線規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 22）：
 
-- 線路是計畫資料：不移動、不求路、不排班任何列車。新線路的營運時間是 06:00–24:00（`{ "type": "hours", "open": 360, "close": 1440 }`），性能是標準性能，各等級都是 0 台。
-- 檢查順序：`createLine` 是 `invalidName` → `invalidLineStops` → `unknownStation`（第一個不存在的車站）→ `idsExhausted`；其他線路指令先檢查 `unknownLine`，再檢查自己的值；`setLineStops` 的 `unknownStation` 在 `invalidLineStops` 之後。
+- 路線是計畫資料：不移動、不求路、不排班任何列車。新路線的營運時間是 06:00–24:00（`{ "type": "hours", "open": 360, "close": 1440 }`），性能是標準性能，各等級都是 0 台。
+- 檢查順序：`createLine` 是 `invalidName` → `invalidLineStops` → `unknownStation`（第一個不存在的車站）→ `idsExhausted`；其他路線指令先檢查 `unknownLine`，再檢查自己的值；`setLineStops` 的 `unknownStation` 在 `invalidLineStops` 之後。
 - 新世界的服務日：0 起低峰、420 起尖峰、600 起離峰、960 起尖峰、1200 起離峰、1260 起低峰。
 - `serviceLevel`：營運時間內是服務日在那一分鐘的等級，否則是 `"closed"`。一天中的分鐘是 `gameMinutes` 除以 1440 的非負餘數。營運時間從 `open` 到 `close`，`open` 之前的分鐘算作隔天的（加 1440）。
 - `lineJourney`：從第一站的一個停車位置出發，依序以 `pathToStation` 的規則（1 節的列車）求路到每一站；到最後一站原地折返，再依相反順序回到第一站。
   - 起點會試遍路網上第一站的每個月台（依 `network.platforms` 的順序）的前進、後退兩個停車位置（schema 18），取來回時間最短的，同樣時取最先的。
-  - 每一段的秒數是線路的性能走完距離的最少整秒（schema 25，見下面「行駛曲線」）；距離是路徑的 `distance`（見上面「路網上的營運」）。整趟（各段加上停站）無條件進位到整分鐘，線路以這個分鐘數規劃列車數與班距。
+  - 每一段的秒數是路線的性能走完距離的最少整秒（schema 25，見下面「行駛曲線」）；距離是路徑的 `distance`（見上面「路網上的營運」）。整趟（各段加上停站）無條件進位到整分鐘，路線以這個分鐘數規劃列車數與班距。
   - 來回時間是各段加上停留：兩端之間的每一站去回各 1 分鐘，兩端各 2 分鐘。
   - 任何一段沒有路時是 `{ "found": false }`。
 - `lineMaximumTrains`：來回時間 ÷ 2（最短班距 2 分鐘），無條件捨去，至少 1。
 - `lineTrainsInService`：該等級設定的列車數，但不超過 `lineMaximumTrains`。該等級有目標班距時，是來回時間 ÷ 目標班距（無條件進位），同樣不超過 `lineMaximumTrains`。
 - `lineHeadway`：來回時間 ÷ 該等級的列車數，無條件進位；有目標班距時是目標班距，但不短於前者。沒有列車時是 `{ "found": false }`。
 - 服務模式（完整說明見決策 24）：
-  - 模式的行程和線路相同，只是依 `calls` 停靠：從第一個停靠站出發、在最後一個折返；`legs` 的 `from`、`to` 仍是線路 `stops` 的索引。兩端之間的停靠站去回各停 1 分鐘，兩端各 2 分鐘，通過的站不停。
-  - 區段 `i` 是線路第 `i` 站到第 `i + 1` 站，每天每個方向最多 720 班。一個服務以 `⌈1440 ÷ 班距⌉` 佔用它從第一個停靠站到最後一個停靠站之間的每一段。
-  - 各服務依序取得容量：線路自己的服務最先，再依 `patterns` 的順序。每個服務先照上面的規則算出單獨時的列車數，再取不超過它、而且每一段加上前面服務的負載都不超過 720 的最多列車數；一台都放不下時是 0。班距用減少後的列車數重算。
+  - 模式的行程和路線相同，只是依 `calls` 停靠：從第一個停靠站出發、在最後一個折返；`legs` 的 `from`、`to` 仍是路線 `stops` 的索引。兩端之間的停靠站去回各停 1 分鐘，兩端各 2 分鐘，通過的站不停。
+  - 區段 `i` 是路線第 `i` 站到第 `i + 1` 站，每天每個方向最多 720 班。一個服務以 `⌈1440 ÷ 班距⌉` 佔用它從第一個停靠站到最後一個停靠站之間的每一段。
+  - 各服務依序取得容量：路線自己的服務最先，再依 `patterns` 的順序。每個服務先照上面的規則算出單獨時的列車數，再取不超過它、而且每一段加上前面服務的負載都不超過 720 的最多列車數；一台都放不下時是 0。班距用減少後的列車數重算。
   - `lineSegmentLoads`：每一段的負載，依區段順序；為 0 的區段在該等級沒有列車經過。
-  - 派車時，每條線路依序處理自己的服務與每個模式；模式的列車從它的第一個停靠站派出，時刻表只列出停靠的車站。
+  - 派車時，每條路線依序處理自己的服務與每個模式；模式的列車從它的第一個停靠站派出，時刻表只列出停靠的車站。
 - 環線（schema 27，完整說明見決策 49，`Ci/` 的 `isRing`）：
-  - `setLineRing` 的檢查順序：`unknownLine` → 設為環線時，少於三站或第一站與最後一站相同是 `invalidLineStops` → 有服務模式是 `invalidLinePattern`。設為環線時各等級的列車數變成偶數（無條件捨去）；設回一般線路時忘掉 `outerLastDispatch`，列車數不變。不花錢。
+  - `setLineRing` 的檢查順序：`unknownLine` → 設為環線時，少於三站或第一站與最後一站相同是 `invalidLineStops` → 有服務模式是 `invalidLinePattern`。設為環線時各等級的列車數變成偶數（無條件捨去）；設回一般路線時忘掉 `outerLastDispatch`，列車數不變。不花錢。
   - 環線上：`setLineStops` 也要至少三站、第一站與最後一站不同（否則 `invalidLineStops`，在 `unknownStation` 之前）；`addLinePattern` 一律是 `invalidLinePattern`；`setLineTrainsInService` 把各等級的數字變成偶數（無條件捨去）後保存。
   - 列車依 ID 遞增的順序輪流分到兩個方向：第 1、3、5…台走內環（依 `stops` 的順序），第 2、4、6…台走外環（反過來）。
-  - `lineJourney`：內環方向繞一圈：從第一站出發（起點的試法和一般線路相同），依序到每一站，最後一段從最後一站回到第一站，從不折返；`legs` 有 `stops` 個。整圈的秒數是各段加上每一站 1 分鐘，沒有端點的 2 分鐘。
-  - 每個方向是一條以整圈為來回時間的線路：`lineMaximumTrains` 是 2 ×（整圈分鐘 ÷ 2，無條件捨去，至少 1）；`lineTrainsInService` 是 2 × 每個方向的列車數，每個方向是該等級列車數的一半（有目標班距時是整圈 ÷ 目標班距，無條件進位），不超過每個方向的最多列車數；`lineHeadway` 是每個方向的班距：整圈 ÷ 每個方向的列車數，無條件進位，有目標班距時不短於目標。
+  - `lineJourney`：內環方向繞一圈：從第一站出發（起點的試法和一般路線相同），依序到每一站，最後一段從最後一站回到第一站，從不折返；`legs` 有 `stops` 個。整圈的秒數是各段加上每一站 1 分鐘，沒有端點的 2 分鐘。
+  - 每個方向是一條以整圈為來回時間的路線：`lineMaximumTrains` 是 2 ×（整圈分鐘 ÷ 2，無條件捨去，至少 1）；`lineTrainsInService` 是 2 × 每個方向的列車數，每個方向是該等級列車數的一半（有目標班距時是整圈 ÷ 目標班距，無條件進位），不超過每個方向的最多列車數；`lineHeadway` 是每個方向的班距：整圈 ÷ 每個方向的列車數，無條件進位，有目標班距時不短於目標。
   - `lineSegmentLoads` 有 `stops` 個區段，最後一個是最後一站回到第一站；每一段都是 `⌈1440 ÷ 班距⌉`（每個方向各自的量）。
   - 派車：每個方向各自派車，內環先：方向的列車從第一站派出、班距從該方向自己的上次派車（`lastDispatch` 或 `outerLastDispatch`）算起、執行服務的該方向列車少於列車數的一半時才派。時刻表：派車那一刻到達第一站，36 秒後離開（先折返時 42 秒），之後每一站是前一站離開加上該段秒數到達、停 1 分鐘再離開，最後回到第一站結束；只有先折返時第一站的 `reverse` 是 `true`。
   - 停站：環線列車的第一站與最後一站不算端點，最少停 36 秒；折返的站仍是 42 秒。
-  - 乘客：環線列車在一站接走該線路兩個方向排隊的乘客，只要目的地在這一圈結束前會停靠；不坐過第一站。
+  - 乘客：環線列車在一站接走該路線兩個方向排隊的乘客，只要目的地在這一圈結束前會停靠；不坐過第一站。
 
 ### 最終狀態
 
 - `stations`：`{ "id", "name", "point": { "x", "y" } }`（建在一個點上，世界單位，決策 44），依 ID 遞增。車站在路網上的月台屬於鐵路網，寫在 `network` 的 `platforms`。
 - `trains`：`{ "id", "name", "position", "movement", "timetable", "repeat", "execution", "times", "cars", "trailEdges", "reservation", "performance" }`，依 ID 遞增（`performance` 只在不是標準性能時有，schema 25；`movement` 只在路網上的路停在邊的中段時有 `end`，schema 18；`times` 只在列車執行服務時有，形式見上面「服務時刻」，schema 24）；`position`、`movement`、`timetable`、`repeat`、`execution` 的形式見上面「列車位置」「列車移動」「時刻表」「重複」「服務」；`cars` 是節數，`trail` 是方格上的車身（`[{ "x", "y" }, ...]`，見上面「車站設施」），`trailEdges` 是連續路網上車頭所在邊之後車身經過的邊（編號，由近到遠，到車尾所在的那一條為止）；1 節的列車是 `1`、`[]` 與 `[]`。`reservation`（schema 19）是列車在交通控制下預約的資源（形式見上面「軌道資源」，依資源的順序），沒有預約是 `[]`。
-- `lines`：線路（形式見上面「線路」），依 ID 遞增；沒有線路是 `[]`。
+- `lines`：路線（形式見上面「路線」），依 ID 遞增；沒有路線是 `[]`。
 - `serviceDay`：服務日（形式見上面「服務日」）。
 - `network`（schema 16）：`{ "nodes": [{ "id", "x", "y", "z" }, ...], "edges": [{ "id", "from", "to", "curve", "length", "profile", "structure" }, ...] }`，各自依編號遞增；`length` 是 GameCore 由兩端與曲線推導出的長度，fixture 以它釘住長度的整數規則；`profile` 與 `structure`（schema 17）必填；`platforms`（schema 17）必填：`[{ "station", "edge", "start", "end" }, ...]`，沿鐵軌的順序（依邊的編號、再依起點）。沒有路網是 `{ "nodes": [], "edges": [], "platforms": [] }`。
 - `trafficControl`（schema 19）：交通控制是否開啟，布林值。
@@ -448,34 +448,34 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **8**（Phase 4 Stage O）：新增 `setTrainTimetable` 指令，`invalidTimetable`、`unknownStation` 結果，`timetable` 觀察，最終狀態每台列車新增必填的 `timetable`，以及 `train-timetable.json`。既有的七個 fixture 把 `schemaVersion` 從 7 改成 8，並為最終狀態的 12 台列車（`build-starter-line.json` 1 台、`station-stop.json` 2 台、`train-movement.json` 3 台、`train-position.json` 4 台、`train-route.json` 2 台）加上 `"timetable": []`：這些列車從未設定時刻表，新購列車的時刻表是空的。它們的指令、結果、觀察、時間、金額、軌道、車站、ID、位置與 movement 預期值都沒有改變（`train` 觀察沒有加入時刻表）。
 - **9**（Phase 4 Stage P）：新增 `startTrainService`、`stopTrainService` 指令，`trainServiceActive`、`trainServiceNotActive`、`noTimetable`、`trainNotAtFirstStop` 結果，`execution` 觀察，最終狀態每台列車新增必填的 `execution`，以及 `train-service.json`。既有的八個 fixture 把 `schemaVersion` 從 8 改成 9，並為最終狀態的 14 台列車（`build-starter-line.json` 1 台、`station-stop.json` 2 台、`train-movement.json` 3 台、`train-position.json` 4 台、`train-route.json` 2 台、`train-timetable.json` 2 台）加上 `"execution": { "type": "inactive" }`：這些列車從未啟動服務，新購列車沒有服務。它們的指令、結果、觀察、時間、金額、軌道、車站、ID、位置、movement 與時刻表預期值都沒有改變（`train-timetable.json` 裡停在排定車站、時間超過出發時刻仍不動的列車，因為沒有啟動服務，行為不變）。
 - **10**（Phase 4 Stage Q1）：時刻表的每一站新增必填的 `reverse`，`setTrainTimetable` 指令與最終狀態每台列車新增必填的 `repeat`，`waiting`、`travelling` 服務新增必填的 `cycle`，`invalidTimetable` 也涵蓋不合法的週期，以及 `train-repeat.json`。既有的九個 fixture 把 `schemaVersion` 從 9 改成 10，並只加上中性的值：`train-service.json` 與 `train-timetable.json` 裡每個停靠（指令、`timetable` 觀察與最終狀態）加上 `"reverse": false`，22 個 `setTrainTimetable` 指令加上 `"repeat": { "type": "once" }`，最終狀態的 16 台列車加上 `"repeat": { "type": "once" }`，`train-service.json` 裡 15 個 `waiting` / `travelling` 服務（觀察與最終狀態）加上 `"cycle": 0`。這些值就是 Stage Q1 之前唯一的行為（不折返、只跑一次、第 0 輪），所以其他預期值都沒有改變。
-- **11**（Phase 4 Stage Q2a）：新增 `createLine`、`removeLine`、`setLineStops`、`setLineRate`、`setLineServiceWindow`、`setLineTrainsInService`、`setServiceDay` 指令，`unknownLine`、`invalidLineStops`、`invalidLineRate`、`invalidServiceWindow`、`invalidTrainsInService`、`invalidServiceDay` 結果，`serviceLevel`、`lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察，最終狀態必填的 `lines` 與 `serviceDay`，以及 `service-line.json`。既有的十個 fixture 把 `schemaVersion` 從 10 改成 11，並在最終狀態加上 `"lines": []` 與新世界的服務日：它們從未建立線路，也沒有改變服務日。其他預期值都沒有改變。
-- **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，線路必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓線路派車，但只派指派給線路的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條線路加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。
-- **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，線路必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條線路加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。
+- **11**（Phase 4 Stage Q2a）：新增 `createLine`、`removeLine`、`setLineStops`、`setLineRate`、`setLineServiceWindow`、`setLineTrainsInService`、`setServiceDay` 指令，`unknownLine`、`invalidLineStops`、`invalidLineRate`、`invalidServiceWindow`、`invalidTrainsInService`、`invalidServiceDay` 結果，`serviceLevel`、`lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察，最終狀態必填的 `lines` 與 `serviceDay`，以及 `service-line.json`。既有的十個 fixture 把 `schemaVersion` 從 10 改成 11，並在最終狀態加上 `"lines": []` 與新世界的服務日：它們從未建立路線，也沒有改變服務日。其他預期值都沒有改變。
+- **12**（Phase 4 Stage Q2b）：新增 `setLineTargetHeadways`、`assignTrain`、`unassignTrain` 指令，`invalidHeadway`、`trainOnLine`、`trainNotOnLine` 結果，路線必填的 `targetHeadways`、`trains`、`lastDispatch`，以及 `line-dispatch.json`。`advance` 在每個基本步長的出發之前讓路線派車，但只派指派給路線的列車。既有的十一個 fixture 把 `schemaVersion` 從 11 改成 12；`service-line.json` 最終狀態的兩條路線加上 `"targetHeadways": { "peak": null, "offPeak": null, "low": null }`、`"trains": []`、`"lastDispatch": null`：它們沒有目標班距、沒有列車，所以從未派車。其他預期值都沒有改變。
+- **13**（Phase 4 Stage Q3）：新增 `addLinePattern`、`removeLinePattern` 指令，`invalidLinePattern`、`unknownLinePattern` 結果，`lineSegmentLoads` 觀察，`setLineTrainsInService`、`setLineTargetHeadways`、`assignTrain` 指令與 `lineJourney`、`lineMaximumTrains`、`lineTrainsInService`、`lineHeadway` 觀察可以省略的 `pattern`，路線必填的 `patterns`，以及 `line-patterns.json`。既有的十二個 fixture 把 `schemaVersion` 從 12 改成 13；`service-line.json` 與 `line-dispatch.json` 最終狀態的三條路線加上 `"patterns": []`：它們沒有服務模式，所以派車與推導都和之前相同。其他預期值都沒有改變。
 - **14**（Phase 4.5 Stage S1）：新增 `buildTurnout`、`buildCrossing` 指令，`exits`、`occupancy`、`conflicts`、`trackSections`、`parallelTracks` 觀察，最終狀態每條鐵軌必填的 `layout`，以及 `track-resources.json`。既有的十三個 fixture 把 `schemaVersion` 從 13 改成 14，並為最終狀態的 85 條鐵軌加上 `"layout": { "type": "open" }`：它們都是一般鐵軌，轉向與路徑規則不變。其他預期值都沒有改變。
 - **15**（Phase 4.5 Stage S2）：新增 `extendStation`、`setTrainCars` 指令，`invalidStationTile`、`invalidTrainLength` 結果，`wholeTrainStops`、`platformTracks` 觀察，`routeToStation` 可以省略的 `cars`，最終狀態每座車站必填的 `annexes`、每台列車必填的 `cars` 與 `trail`，以及 `station-facilities.json`。既有的十四個 fixture 把 `schemaVersion` 從 14 改成 15，並為最終狀態的車站加上 `"annexes": []`、列車加上 `"cars": 1, "trail": []`：它們的車站都只有一格，列車都是 1 節（沒有車身），行為不變。其他預期值都沒有改變。讀取端只接受 15。
 - **16**（Phase 4.5 Stage S3）：新增連續路網：`buildTrackNode`、`buildTrackEdge`、`removeTrackEdge`、`removeTrackNode`、`setTrainPath` 指令，`unknownTrackNode`、`unknownTrackEdge`、`invalidTrackGeometry`、`trackNodeInUse`、`trackEdgeInUse` 結果，`trackEdge`、`edgeLocation`、`transitions`、`pathToNode`、`bodyPath` 觀察，`edge` 列車位置，`networkNode`、`networkSpan` 資源（Stage S3A 把整條邊的資源改成 span，這個 schema 還沒有合併，所以不另加版本），列車移動必填的 `edges`、最終狀態每台列車必填的 `trailEdges` 與必填的 `network`，以及手算的 `continuous-track.json`（曲線的取樣另以獨立的精確分數計算核對）。既有的十五個 fixture 把 `schemaVersion` 從 15 改成 16，並只加上中性的值：86 個列車移動（最終狀態與 `train` 觀察）加上 `"edges": []`，最終狀態的 30 台列車加上 `"trailEdges": []`，最終狀態加上 `"network": { "nodes": [], "edges": [] }`：它們都沒有連續路網，行為不變。其他預期值都沒有改變。
 - **17**（Phase 4.5 Stage S4）：新增立體鐵路：`buildTrackEdge` 可加的 `profile` 與 `structure`，`addTrackPlatform`、`removeTrackPlatform` 指令，`trackTooSteep`、`invalidTrackStructure`、`trackConflict`、`trackEdgeHasPlatform`、`invalidPlatform` 結果，`edgePose`、`edgeAlignment`、`tunnelPortals`、`trackPlatformsAlongTrain`、`platformLevels` 觀察，最終狀態 `network` 必填的 `platforms`（月台屬於鐵路網，見決策 30）與每條邊必填的 `profile`、`structure`，以及手算的 `vertical-railway.json`（高度與坡度另以獨立的精確分數計算核對）。既有的十六個 fixture 把 `schemaVersion` 從 16 改成 17，並只加上中性的值：最終狀態的 `network` 加上 `"platforms": []`，`continuous-track.json` 最終狀態的 6 條邊加上 `"profile": { "startTransition": 0, "endTransition": 0 }, "structure": "surface"`。**一個刻意的行為改變**：`continuous-track.json` 的第 7 步原本以 `z: 5` 驗證 S3 的「節點一律在地面」，S4 取消這條規則（5 是合法的高度），所以這一步改成 `z: 5000`（超出 ±4096），預期結果仍是 `invalidTrackGeometry`，說明文字同步更新；其他預期值都沒有改變。
 - **18**（Phase 4.5 Stage S5）：路網上的營運：`setTrainPath` 可加的 `end`，列車移動只在有值時出現的 `end`，`pathToStation` 觀察（回答 `trainPath`），路網出發的 `lineJourney` 每一段以 `path` 取代 `route`，`removeTrackPlatform` 的 `trainServiceActive`，以及手算的 `network-service.json`（彎道、隧道與地下月台的距離另以獨立的精確分數計算核對）。既有的十七個 fixture 只把 `schemaVersion` 從 17 改成 18：它們的路網上沒有服務、沒有停在邊中段的路，所以沒有 `end`，方格的行程仍以 `route` 表示；其他預期值都沒有改變。
-- **19**（Phase 4.6 Stage T）：交通控制與進路預約：`setTrafficControl` 指令，`trackReserved`、`trainsShareTrack` 結果，`reservation`、`heldResources`、`routeHolder` 觀察，最終狀態每台列車必填的 `reservation` 與必填的 `trafficControl`，以及手算的 `traffic-reservation.json`（道岔的限界、單線上的等待與放行、span 分界上的車尾與停車位置、立體交叉互不衝突、預約中的邊不能加月台或拆除）。既有的十八個 fixture 把 `schemaVersion` 從 18 改成 19，並只加上中性的值：最終狀態的 37 台列車加上 `"reservation": []`，最終狀態加上 `"trafficControl": false`：它們從未開啟交通控制，新世界的交通控制是關閉的，所以行為不變。其他預期值都沒有改變。
-- **20**（G1a）：車站需求與乘客：`setStationDemand` 指令，`invalidStationDemand` 結果，`passengerTrip`、`demand`、`waitingPassengers`、`passengerLedger` 觀察，最終狀態必填的 `passengers`，以及手算的 `station-demand.json`（一天一個旅次在 08:59 釋出、百萬旅次在兩分鐘內讓車站滿、溢出、線路改停靠後放棄等車，每一站都守恆；預期值另以獨立的 Python 實作依規則計算）。既有的十九個 fixture 把 `schemaVersion` 從 19 改成 20，並只在最終狀態加上 `"passengers": []`：它們的車站都沒有需求，新世界的車站沒有需求，所以沒有人被釋出。其他預期值都沒有改變。
-- **21**（G1b）：上下車與容量：`riders` 觀察，守恆稽核加上必填的 `riding`、`arrived`、`refused`，最終狀態車站的乘客加上必填的 `arrived`、`refused`、最終狀態必填的 `riders`，以及手算的 `boarding.json`（1 節列車 352 人的容量、下車站遠的先上、被拒絕的人數、下車、在遠端折返後載回程的人、線路的列車不能停止服務、離開線路後停止服務而放棄車上的人；預期值另以獨立的 Python 實作依規則計算）。既有的二十個 fixture 把 `schemaVersion` 從 20 改成 21，最終狀態加上 `"riders": []`，`station-demand.json` 的守恆稽核與最終狀態的乘客加上值為 0 的新欄位：它們都沒有列車載客。其他預期值都沒有改變。
+- **19**（Phase 4.6 Stage T）：交通控制與進路預約：`setTrafficControl` 指令，`trackReserved`、`trainsShareTrack` 結果，`reservation`、`heldResources`、`routeHolder` 觀察，最終狀態每台列車必填的 `reservation` 與必填的 `trafficControl`，以及手算的 `traffic-reservation.json`（轉轍器的限界、單線上的等待與放行、span 分界上的車尾與停車位置、立體交叉互不衝突、預約中的邊不能加月台或拆除）。既有的十八個 fixture 把 `schemaVersion` 從 18 改成 19，並只加上中性的值：最終狀態的 37 台列車加上 `"reservation": []`，最終狀態加上 `"trafficControl": false`：它們從未開啟交通控制，新世界的交通控制是關閉的，所以行為不變。其他預期值都沒有改變。
+- **20**（G1a）：車站需求與乘客：`setStationDemand` 指令，`invalidStationDemand` 結果，`passengerTrip`、`demand`、`waitingPassengers`、`passengerLedger` 觀察，最終狀態必填的 `passengers`，以及手算的 `station-demand.json`（一天一個旅次在 08:59 釋出、百萬旅次在兩分鐘內讓車站滿、溢出、路線改停靠後放棄等車，每一站都守恆；預期值另以獨立的 Python 實作依規則計算）。既有的十九個 fixture 把 `schemaVersion` 從 19 改成 20，並只在最終狀態加上 `"passengers": []`：它們的車站都沒有需求，新世界的車站沒有需求，所以沒有人被釋出。其他預期值都沒有改變。
+- **21**（G1b）：上下車與容量：`riders` 觀察，守恆稽核加上必填的 `riding`、`arrived`、`refused`，最終狀態車站的乘客加上必填的 `arrived`、`refused`、最終狀態必填的 `riders`，以及手算的 `boarding.json`（1 節列車 352 人的容量、下車站遠的先上、被拒絕的人數、下車、在遠端折返後載回程的人、路線的列車不能停止服務、離開路線後停止服務而放棄車上的人；預期值另以獨立的 Python 實作依規則計算）。既有的二十個 fixture 把 `schemaVersion` 從 20 改成 21，最終狀態加上 `"riders": []`，`station-demand.json` 的守恆稽核與最終狀態的乘客加上值為 0 的新欄位：它們都沒有列車載客。其他預期值都沒有改變。
 - **22**（G1c）：票價、帳本與經營：`setEconomyMode`、`setFareRules` 指令，`invalidFareRules` 結果，`tripFare`、`accounts`、`financeReport` 觀察，最終狀態必填的 `accounts`，以及 `economy.json`（從 23:00 開始經營，被拒絕與接受的距離票價、兩段票價的邊界、需求受票價影響、午夜的小時列與能源、人事列、日報表的本期與上期、跨日後的下一個小時；預期值另以獨立的 Python 實作依規則計算）。既有的二十一個 fixture 把 `schemaVersion` 從 21 改成 22，並只在最終狀態加上初始的 `accounts`：新的世界是自由模式，什麼都不收、不記，所以行為不變。其他預期值都沒有改變。
 - **23**（Stage W2a）：GameCore 的時鐘改以秒計（決策 37）：時鐘可以寫成 `gameSeconds`（只用在兩分鐘之間的時刻），最終狀態可以有 `pendingTenths`，新的速度 `x1`、`x10`、`x60`，以及 `clock-seconds.json`（真實時間累積十分之一秒、跨過速度的改變，列車每秒走它這一秒的份，跨過整分鐘時和以前一步一分鐘走到同一個地方，最後停在兩分鐘之間）。其他時間欄位仍然寫分鐘，GameCore 以秒保存，讀取端換算。既有的二十二個 fixture 只把 `schemaVersion` 從 22 改成 23：它們都以 `paused`、`normal` 或 `double` 推進整分鐘，Stage W2a 在整分鐘的行為不變（發車、派車、乘客與帳都還在整分鐘處理，到站在分鐘之內記下也不改變整分鐘看到的結果，列車在整分鐘時的位置與以前一步一分鐘相同），所以其他預期值都沒有改變。
 - **24**（Stage W2b）：停站、上下車與實際時刻（決策 39）：時刻表停靠可以寫成 `arrivalSeconds`、`departureSeconds`（只用在兩分鐘之間的時間），最終狀態執行服務的列車必有的 `times`，`serviceTimes`、`lateness` 觀察，以及手算的 `station-dwell.json`（開門 8 秒的那一步才上下車、端點最短停站 42 秒、早到的列車等到排定出發前 9 秒才關門、晚到的列車只停最短的 36 秒、在最後一站停完才結束服務、每一刻的誤點秒數）。既有的二十三個 fixture 把 `schemaVersion` 從 23 改成 24。**刻意的行為改變**，每個改變的值都另以獨立的參考模型（`ReferenceWorld` 逐秒依規則執行）核對：
   - 服務在每一站停站才離開：啟動服務與派車算是在那一刻到達第一站，至少停 42 秒（端點與折返的站）或 36 秒（中間的站），所以列車比以前晚離開，之後的位置、服務與停在哪些車站也跟著晚：`train-repeat.json`、`train-service.json`、`line-dispatch.json`、`line-patterns.json`、`network-service.json`、`economy.json` 的位置、`execution`、`stationStops` 觀察與最終狀態。晚 42 秒、每分鐘 1024 的列車在整分鐘時還差一段的 308（= 1024 − ⌊1024 × 42 ÷ 60⌋）才到節點，晚 36 秒時差 410；每分鐘 2048 的路網列車少走 1433（= ⌊2048 × 42 ÷ 60⌋）。
-  - 線路的時刻表在派車 42 秒後才離開第一站，之後的時間都晚 42 秒（寫成 `arrivalSeconds`、`departureSeconds`）：`line-dispatch.json`、`line-patterns.json`、`network-service.json`、`boarding.json`、`economy.json` 的 `timetable` 觀察與最終狀態。`line-patterns.json` 的 Shuttle 一趟因此要 8 分鐘（以前 7 分鐘），最後一次派車從 599 變成 600。
-  - 被拒絕的人數改在客滿的列車離開時才計（等車中、可以上這班車卻沒上的人）：`boarding.json` 第一趟在 481:01 離開時記 4000（以前在 480 派車時記 3648），第二趟離開前已經取回線路，不再記；`economy.json` 最終狀態 Alpha 的 `refused` 18678 → 19192。
+  - 路線的時刻表在派車 42 秒後才離開第一站，之後的時間都晚 42 秒（寫成 `arrivalSeconds`、`departureSeconds`）：`line-dispatch.json`、`line-patterns.json`、`network-service.json`、`boarding.json`、`economy.json` 的 `timetable` 觀察與最終狀態。`line-patterns.json` 的 Shuttle 一趟因此要 8 分鐘（以前 7 分鐘），最後一次派車從 599 變成 600。
+  - 被拒絕的人數改在客滿的列車離開時才計（等車中、可以上這班車卻沒上的人）：`boarding.json` 第一趟在 481:01 離開時記 4000（以前在 480 派車時記 3648），第二趟離開前已經取回路線，不再記；`economy.json` 最終狀態 Alpha 的 `refused` 18678 → 19192。
   - 車門開著的時候每個整分鐘釋出的人也會上車，票價依每次上車的人數各自四捨五入到整美元：`economy.json` 第 1 個小時的票價收入 65600 → 65500（帳本列、日帳、報表與餘額跟著少 100）。
   - 執行服務的列車加上 `times`。其他預期值都沒有改變。
-- **25**（Stage W2c）：行駛曲線（決策 40）：列車與線路的 `performance`（取代線路的 `rate`），`setTrainPerformance`、`setLinePerformance` 指令（取代 `setLineRate`），`invalidTrainPerformance` 結果（取代 `invalidLineRate`），服務時刻的 `run`，線路行程每段的 `seconds`（取代 `minutes`）與整趟的 `roundTripSeconds`，以及手算的 `service-run.json`（性能指令的檢查順序、線路以性能規劃的秒數、時刻表給的時間、排得太緊時的最少秒數、加速段的位置 a·t²/2、被擋住時丟掉行駛、放行後從停止重新出發、晚到的誤點秒數）。既有的二十四個 fixture 把 `schemaVersion` 從 24 改成 25，線路去掉 `rate`、行程的 `minutes` 改名 `seconds`。**刻意的行為改變**，每個改變的值都另以獨立的參考模型（`ReferenceWorld` 逐秒依規則執行，自己寫的最少秒數與行駛規則）核對：
+- **25**（Stage W2c）：行駛曲線（決策 40）：列車與路線的 `performance`（取代路線的 `rate`），`setTrainPerformance`、`setLinePerformance` 指令（取代 `setLineRate`），`invalidTrainPerformance` 結果（取代 `invalidLineRate`），服務時刻的 `run`，路線行程每段的 `seconds`（取代 `minutes`）與整趟的 `roundTripSeconds`，以及手算的 `service-run.json`（性能指令的檢查順序、路線以性能規劃的秒數、時刻表給的時間、排得太緊時的最少秒數、加速段的位置 a·t²/2、被擋住時丟掉行駛、放行後從停止重新出發、晚到的誤點秒數）。既有的二十四個 fixture 把 `schemaVersion` 從 24 改成 25，路線去掉 `rate`、行程的 `minutes` 改名 `seconds`。**刻意的行為改變**，每個改變的值都另以獨立的參考模型（`ReferenceWorld` 逐秒依規則執行，自己寫的最少秒數與行駛規則）核對：
   - 列車照時刻表給的時間跑完一段，不再照 rate：準時出發就準時到達，不早到；兩站之間的位置是曲線的距離（例如 240 秒走 4 個連結，出發 18 秒後在 302，以前 308）。`train-service.json`、`train-repeat.json`、`station-dwell.json`、`traffic-reservation.json`、`network-service.json` 的位置、`execution`、`stationStops`、服務時刻與最終狀態跟著改變。
-  - 為了保留原來要驗證的情境，幾個 fixture 改了指令（只改輸入，不改規則）：`boarding.json`、`economy.json`、`line-patterns.json`、`service-line.json` 的線路用 1 km/h 的慢速性能 `{ 250, 250, 1 }`（兩個連結 120 秒，和以前一樣）；`line-dispatch.json` 用 `{ 125, 100, 1 }`（四個連結 240 秒）；`network-service.json` 的 Tube 用 2 km/h 的 `{ 25, 25, 2 }`（往返 52 分鐘，和以前一樣），Mole 的時刻表改成 Deep 22/30、Harbour 53/62、每 63 分鐘（和以前照 rate 跑到的時間相近）；`traffic-reservation.json` 的時刻表 East 11 → 10、West 12 → 9（和以前到達的時間相同）；`station-dwell.json` 的列車用 `{ 250, 250, 1 }`，第一段排得太緊（60 秒）而以最少的 120 秒跑完、第二段從晚出發整段後移，最後一次 `advance` 119 → 179；`train-service.json` 的 Local 2 手動開到 Beta 多一個 tick（3 → 4），時刻表 Beta 29 → 30、Gamma 到達 45 → 44；`service-line.json` 的第二個性能 700 → 慢速性能（`setLineRate` 的 0 改成加速度 0 的性能）。
-  - 線路的行程以秒計：`service-line.json` 的標準性能一段 16 秒（以前 2 分鐘），整趟 424 秒、8 分鐘，最多 4 台、班距 2、3、8 分鐘。
-  - 執行服務、行駛中的列車加上 `run`；不是標準性能的列車與線路加上 `performance`。其他預期值都沒有改變。
+  - 為了保留原來要驗證的情境，幾個 fixture 改了指令（只改輸入，不改規則）：`boarding.json`、`economy.json`、`line-patterns.json`、`service-line.json` 的路線用 1 km/h 的慢速性能 `{ 250, 250, 1 }`（兩個連結 120 秒，和以前一樣）；`line-dispatch.json` 用 `{ 125, 100, 1 }`（四個連結 240 秒）；`network-service.json` 的 Tube 用 2 km/h 的 `{ 25, 25, 2 }`（往返 52 分鐘，和以前一樣），Mole 的時刻表改成 Deep 22/30、Harbour 53/62、每 63 分鐘（和以前照 rate 跑到的時間相近）；`traffic-reservation.json` 的時刻表 East 11 → 10、West 12 → 9（和以前到達的時間相同）；`station-dwell.json` 的列車用 `{ 250, 250, 1 }`，第一段排得太緊（60 秒）而以最少的 120 秒跑完、第二段從晚出發整段後移，最後一次 `advance` 119 → 179；`train-service.json` 的 Local 2 手動開到 Beta 多一個 tick（3 → 4），時刻表 Beta 29 → 30、Gamma 到達 45 → 44；`service-line.json` 的第二個性能 700 → 慢速性能（`setLineRate` 的 0 改成加速度 0 的性能）。
+  - 路線的行程以秒計：`service-line.json` 的標準性能一段 16 秒（以前 2 分鐘），整趟 424 秒、8 分鐘，最多 4 台、班距 2、3、8 分鐘。
+  - 執行服務、行駛中的列車加上 `run`；不是標準性能的列車與路線加上 `performance`。其他預期值都沒有改變。
 - **26**（Stage F1）：建在任意座標的車站（決策 44）：`buildStationAt` 指令，最終狀態車站的 `point` 形式，以及手算的 `free-station.json`（點上的車站不占格：同一格可以有兩個點上的車站，土地、方格軌道與方格車站的規則不變，旁邊的方格軌道不是它的月台；沒有名字、點在地圖外時拒絕，地圖外報點所在的格（向下取整）；一樣花一個車站的錢；不能長到格上；路網上的月台、往車站的路徑與停靠和其他車站相同）。既有的二十五個 fixture 只把 `schemaVersion` 從 25 改成 26，其他預期值都沒有改變。
-- **27**（環線，決策 49）：`setLineRing` 指令，線路的 `ring` 與 `outerLastDispatch`、環線行程的 `ring`，以及手算的 `ring-line.json`（方格上的一圈軌道與四站：設定環線的檢查與偶數化、整圈的行程與規劃、兩個方向各自派車與各自的時刻表）。既有的二十六個 fixture 只把 `schemaVersion` 從 26 改成 27，其他預期值都沒有改變：它們沒有環線。
-- **28**（Stage F3c，ARCHITECTURE 決策 51）：GameCore 拿掉方格。最終狀態不再有 `tracks`、列車的 `trail` 與移動的 `continuation`（schema 27 時它們只能是 `[]`）；方格的指令、觀察與結果，`node`／`link` 位置與資源，`{ "x", "y", "annexes" }` 的車站都不屬於 schema（讀取端拒絕並說明方格已經移除）；線路行程的一段只有 `path`。二十五個 fixture 把 `schemaVersion` 從 27 改成 28，並拿掉這三個一律是空陣列的 key（`tracks` 25 處、`trail` 44 處、`continuation` 134 處，共 203 處；逐檔以 JSON 比對確認其餘內容不變），其他預期值都沒有改變。
-- **29**（Stage F2，ARCHITECTURE 決策 52）：新增線間距（上面「線間距」）與 `trackTooClose`、`tracksWouldBeTooClose` 結果，以及手算的 `track-spacing.json`（最終狀態、長度、餘額與每一個沿軌道的距離都照規則手算）。二十五個既有 fixture 把 `schemaVersion` 從 28 改成 29，其他預期值都沒有改變：唯一在平面上不到 256 的地方是 `network-construction.json` 的 c 離支線 b–d 約 255.5，沿軌道約 8200，是道岔分開的那一段。
+- **27**（環線，決策 49）：`setLineRing` 指令，路線的 `ring` 與 `outerLastDispatch`、環線行程的 `ring`，以及手算的 `ring-line.json`（方格上的一圈軌道與四站：設定環線的檢查與偶數化、整圈的行程與規劃、兩個方向各自派車與各自的時刻表）。既有的二十六個 fixture 只把 `schemaVersion` 從 26 改成 27，其他預期值都沒有改變：它們沒有環線。
+- **28**（Stage F3c，ARCHITECTURE 決策 51）：GameCore 拿掉方格。最終狀態不再有 `tracks`、列車的 `trail` 與移動的 `continuation`（schema 27 時它們只能是 `[]`）；方格的指令、觀察與結果，`node`／`link` 位置與資源，`{ "x", "y", "annexes" }` 的車站都不屬於 schema（讀取端拒絕並說明方格已經移除）；路線行程的一段只有 `path`。二十五個 fixture 把 `schemaVersion` 從 27 改成 28，並拿掉這三個一律是空陣列的 key（`tracks` 25 處、`trail` 44 處、`continuation` 134 處，共 203 處；逐檔以 JSON 比對確認其餘內容不變），其他預期值都沒有改變。
+- **29**（Stage F2，ARCHITECTURE 決策 52）：新增線間距（上面「線間距」）與 `trackTooClose`、`tracksWouldBeTooClose` 結果，以及手算的 `track-spacing.json`（最終狀態、長度、餘額與每一個沿軌道的距離都照規則手算）。二十五個既有 fixture 把 `schemaVersion` 從 28 改成 29，其他預期值都沒有改變：唯一在平面上不到 256 的地方是 `network-construction.json` 的 c 離支線 b–d 約 255.5，沿軌道約 8200，是轉轍器分開的那一段。
 
 - **30**（Stage F3d，ARCHITECTURE 決策 54）：世界沒有格子。`initialState` 的 `mapWidth`、`mapHeight`（格）改成 `worldWidth`、`worldHeight`（世界單位）；`outOfBounds` 的結果帶被拒絕的那一點（以前是底下的格）。票價從兩站的點之間精確的距離算（以前從底下的格），但每份 fixture 的車站都在格子中心，所以距離一樣：**沒有任何指令的結果、觀察的答案或最終狀態改變**。逐檔見下面「F3d」。
 
@@ -553,11 +553,11 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
 - **F3a-1**：`network-service.json`、`traffic-reservation.json`、`vertical-railway.json`、`station-demand.json` 的方格車站改成在同一格中心的點車站（`buildStationAt`），最終狀態的車站改寫成 `point`。其他預期值都沒有改變。
 - **F3a-2**：十二份規則和軌道無關的 fixture 在路網上重寫。共同的配置：方格的每一格軌道換成格中心的一個節點，相鄰兩格之間一條 1024 長的直線邊（邊 k 連接第 k、k+1 個節點）；車站是原來那一格中心的點車站，在它的節點兩側各有半格月台（西邊那條邊的 [512, 1024]、東邊那條邊的 [0, 512]），列車往哪個方向都停在節點上，兩站之間跑的距離和方格一樣。方格上停在節點的列車寫成停在邊的端點（往東是西邊那條邊的 forward 1024，往西是東邊那條邊的 backward 1024）。路網的列車沒有路徑時會跑到所在邊的盡頭（方格上會停在原地），折返後在新方向月台的近端，路徑完全走進之後記成 `edges: []`、`cursor: 0`。預期值的變化：
   - 每份的餘額：軌道的錢照邊算（每條邊 `ceil(長度 / 1024)` 格的價錢），N 格軌道是 N − 1 條邊，所以多一格的錢：`clock-seconds.json` 4400 → 4500，其他每份多 1000（`ring-line.json` 不變：四條直線各 1 格、四個彎道各 2 格，和方格的 12 格一樣）。
-  - 線路規劃的行程（`lineJourney`）從讓來回最短的停車點出發：第一站節點東側月台往東的那一端，在節點東邊 512，所以第一段少 512。`service-run.json`、`line-patterns.json`、`service-line.json` 的 `lineJourney` 起點、路徑、第一段的秒數與來回秒數因此改變（例如 `service-line.json` 標準性能 424 → 422 秒、慢速 840 → 811 秒，`line-patterns.json` 1200 → 1171、480 → 451、940 → 911 秒）；整數分鐘、可派的車數與班距都沒有改變。列車實際的時刻表從它停的節點出發，和方格一樣。
-  - `economy.json`：線路長度也是照這個行程算（3584，以前 4096），每天的路線能源 round(220 × 0.056) = 12 美元（以前 14）：`dailyEnergy` −37400 → −37200（`routeEnergy` −1400 → −1200）、日報表與週報表的 `energyCost` 37400 → 37200，最終餘額再多 200。
+  - 路線規劃的行程（`lineJourney`）從讓來回最短的停車點出發：第一站節點東側月台往東的那一端，在節點東邊 512，所以第一段少 512。`service-run.json`、`line-patterns.json`、`service-line.json` 的 `lineJourney` 起點、路徑、第一段的秒數與來回秒數因此改變（例如 `service-line.json` 標準性能 424 → 422 秒、慢速 840 → 811 秒，`line-patterns.json` 1200 → 1171、480 → 451、940 → 911 秒）；整數分鐘、可派的車數與班距都沒有改變。列車實際的時刻表從它停的節點出發，和方格一樣。
+  - `economy.json`：路線長度也是照這個行程算（3584，以前 4096），每天的路線能源 round(220 × 0.056) = 12 美元（以前 14）：`dailyEnergy` −37400 → −37200（`routeEnergy` −1400 → −1200）、日報表與週報表的 `energyCost` 37400 → 37200，最終餘額再多 200。
   - `service-line.json`：Gamma 與 Delta 在路網上不能共用月台，Delta 的月台接在 Gamma 東側月台後面（`e6` [512, 1024]）；`Shared` 從不用移動（0 秒、240 秒、4 分鐘）變成去程 512（8 秒）、回程 1024（12 秒），260 秒、5 分鐘，最多仍是 2 台。拆掉 e 那一格改成先拆 Beta 東側的月台、再拆 `e4`（有月台的邊不能拆）。
   - `train-service.json`：Gamma 與 Delta 的月台相接（`e5` [0, 512] 與 [512, 1024]），停在 512 的列車同時在兩站（`stationStops` [3, 4]）；Beta 到 Gamma 是 1536（以前 2048），同樣 60 秒，11 分時在 `e4` 609（以前 d 之後 811）；Gamma 到 Delta 變成 512 的一段，晚 72 秒出發，13 分時還在路上、13:12 到。Echo 的月台在蓋 g 時一起蓋。到終點後掉頭的列車沒有路徑，跑回 f（`e6` backward 1024）。
-  - `line-dispatch.json`、`line-patterns.json`：在第一站掉頭的列車停在節點東側月台的 forward 0，所以之後的路徑不含它所在的那條邊（例如 `[3, 4, 5]`、`cursor: 0`，以前四格、`cursor: 1`），最終狀態路徑的 `end` 是 0。`line-dispatch.json` 的 Delta 沒有月台（沒有線路停它）。
+  - `line-dispatch.json`、`line-patterns.json`：在第一站掉頭的列車停在節點東側月台的 forward 0，所以之後的路徑不含它所在的那條邊（例如 `[3, 4, 5]`、`cursor: 0`，以前四格、`cursor: 1`），最終狀態路徑的 `end` 是 0。`line-dispatch.json` 的 Delta 沒有月台（沒有路線停它）。
   - `ring-line.json`：路網的邊只在節點反向離開時才相接，所以四個角各是一條三次曲線（把手 1338），長度剛好 2048，和方格繞過角的兩個連結一樣；每站一個月台，在順時針進站那條邊的最後 512，所以兩個方向站與站之間都是 3072。行程、時刻表與規劃的值都沒有改變；Outer 放好後給一條空路徑停在月台的另一端（不然它會跑到邊的盡頭），最終狀態它的路徑 `end` 是 512。
   - `train-timetable.json`：Alpha 的月台是整條 e1、Beta 的是整條 e4，Gamma 沒有月台；`platforms` 觀察改成 `pathToStation`（到 Gamma 找不到路）；往 b 的 continuation 改成停在 e1 的 512、Alpha 的月台上的空路徑（`end: 512`）。
   - `train-repeat.json`：路網上在車站掉頭的列車停在新方向月台的近端，不是原來的停車點，所以 Shuttle 改成從東邊到 b 的方向放置（`e2` backward 1024），時刻表在每一圈開始的 Alpha 掉頭（`reverse` 從 [false, true, true]，在最後一站掉頭，改成 [true, true, false]）：每一圈離開 Alpha、到 Gamma 與回 Alpha 的時刻和距離都和以前一樣。
@@ -569,15 +569,15 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
   - `network-train-movement.json`（← `train-movement`）：每秒的距離、恰好到邊的盡頭不看下一項、走完的路徑記成 `[]`、拆掉的邊讓列車停在前一條邊的盡頭等（重建的邊是新 ID，舊路徑不會恢復）、rate 0 與暫停、2 倍速一個 tick 兩分鐘、反向與取下清掉路徑。
   - `network-route.json`（← `train-route`）：`pathToNode` 的最短長度、同長時每個節點依邊的編號遞增、不立即折返、經由折返線（balloon loop）到列車後方的節點、面對盡頭沒有路、空路徑、找不到的情形，以及列車照路徑走。
   - `network-station-stop.json`（← `station-stop` 與 `station-facilities` 的車長規則）：`pathToStation` 到列車放得下的月台的停車點、停車的條件（路徑走完、車頭在月台上）、相接的兩個月台都算、經過或還沒到路徑終點不算、反向會清掉路徑與 `end`、加在停著的列車下的月台立刻算、兩節車在月台上與車尾超出月台。
-  - `network-junctions.json`（← `track-connectivity`、`track-resources`）：節點上兩個邊端反向（1/16 以內，整數判斷，剛好 1/16 也算）才相接的道岔、菱形交叉、占用的節點與 span、衝突。
+  - `network-junctions.json`（← `track-connectivity`、`track-resources`）：節點上兩個邊端反向（1/16 以內，整數判斷，剛好 1/16 也算）才相接的轉轍器、菱形交叉、占用的節點與 span、衝突。
   - `free-station.json` 的點車站部分本來就在路網上；方格的部分在 F3c 一起拿掉。
-  - 路網沒有對應、F3c 會和方格一起消失的規則：格子的出口與相接（`connectedNeighbors`、`isConnected`、`exits`）、四鄰格自動成為月台（`platforms`、`platformTracks`、`routeToStation`）、方格車站與 `extendStation`、格內的道岔與平交道（`buildTurnout`、`buildCrossing`）、`trackSections`、`parallelTracks`、`node`／`link` 位置與 heading、北東南西的平手規則，以及拆掉再蓋回同一格會沿原來的路徑繼續（路網的 ID 不重用）。
+  - 路網沒有對應、F3c 會和方格一起消失的規則：格子的出口與相接（`connectedNeighbors`、`isConnected`、`exits`）、四鄰格自動成為月台（`platforms`、`platformTracks`、`routeToStation`）、方格車站與 `extendStation`、格內的轉轍器與平交道（`buildTurnout`、`buildCrossing`）、`trackSections`、`parallelTracks`、`node`／`link` 位置與 heading、北東南西的平手規則，以及拆掉再蓋回同一格會沿原來的路徑繼續（路網的 ID 不重用）。
 
 ### F3a 之後暫時沒有改的地方
 
 以下不是遺漏，而是排在 F3b、F3c 的工作；F3a 只動 fixture 與文件。
 
-- **GameCore 完全沒有改**：方格的鐵軌、`node`／`link` 位置、方格車站、格內的道岔與平交道、方格的尋路與停站都還在，行為、存檔格式與 golden schema（27）都不變。→ F3c。
+- **GameCore 完全沒有改**：方格的鐵軌、`node`／`link` 位置、方格車站、格內的轉轍器與平交道、方格的尋路與停站都還在，行為、存檔格式與 golden schema（27）都不變。→ F3c。
 - **九份方格 fixture 一個值都沒動**（`build-starter-line`、`free-station`、`station-facilities`、`station-stop`、`track-connectivity`、`track-resources`、`train-movement`、`train-position`、`train-route`），照常執行，和新的 `network-*.json` 並存。→ F3c 刪除。
 - **Golden 執行器**（`Tests/GameCoreTests/GoldenScenario.swift`）的方格指令、觀察與最終狀態的寫法（`tracks`、車站的 `x`／`y`／`annexes`、`node`／`link` 位置）還在。→ F3c（schema 28）。
 - **單元測試、property／差分／mutation campaign 與獨立參考模型**（`ReferenceWorld` 等）的方格部分還在方格上，campaign 的 digest 不變。→ F3b。
@@ -604,11 +604,11 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 指令 `buildTrack`、`buildTurnout`、`buildCrossing`、`removeTrack`、`buildStation`、`extendStation`、`setTrainContinuation`；觀察 `connectedNeighbors`、`isConnected`、`route`、`routeToStation`、`platforms`、`platformTracks`、`exits`、`trackSections`；結果 `tileOccupied`、`invalidTrackConnections`、`noTrackToRemove`、`trackInUse`、`invalidStationTile`。
 - `node`／`link` 位置、`node`／`link` 資源、`{x, y, annexes}` 的車站。
-- schema 27 還寫的最終狀態 `tracks`、列車的 `trail` 與 `movement.continuation`：照舊讀寫，但只能是 `[]`。線路行程的一段只有 `path`（方格的 `route` 拿掉）。
+- schema 27 還寫的最終狀態 `tracks`、列車的 `trail` 與 `movement.continuation`：照舊讀寫，但只能是 `[]`。路線行程的一段只有 `path`（方格的 `route` 拿掉）。
 
 這三個 key 在 schema 28（F3c-4）拿掉，見上面的「Schema 版本紀錄」。
 
-## Phase 5F：跨線路網的乘客（schema 35）
+## Phase 5F：跨路線的乘客（schema 35）
 
 - 新指令 `setPassengerRoutingMode`、`setStationOperationMode`；最終狀態可以有 `passengerRoutingMode`（只在 `"network"` 時寫出）與車站的 `operationMode`（只在不是 `normalFlow` 時寫出）；等車群組在兩個整分鐘之間下車轉乘時寫成 `sinceSeconds`（取代 `since`），並帶可上車的 `readyAtSeconds`。三者都是選填，舊的 fixture 不必改，schema 30 到 34 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
 - `network-passengers.json`：兩條相距 100 m 的軌道、四站、兩線，A 與 C 之間只能步行轉乘（passage 級，Ci 參考的 15 分 × 1.2 轉乘懲罰、5 km/h 步行、最小轉乘 120 秒），接著關閉、重開 B' 並讓 A 進站管制。預期值由 GameCore 記錄後逐項依規則人工核對（守恆、旅程、轉乘時刻），沒有獨立的計算器；`ReferenceWorld` 只實作直達路徑，所以 `ReferenceWorldGoldenTests` 跳過用到這兩個指令的 fixture。
@@ -617,22 +617,22 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `foundTowns`、`setLand`，新結果 `invalidLand`，新觀察 `landCatchment`、`landCell`，最終狀態選填的 `land`（ARCHITECTURE 決策 72）。沒有土地的世界不寫 `land`，舊的 fixture 不必改，schema 30 到 35 照樣讀取：**沒有任何既有 fixture 的預期值改變**。
 - `land-towns.json`：32 × 24 格（2048 × 1536 m）的世界，先以 `setLand` 驗證順序不拘、世界外與重複的格被拒絕且土地不變，再以種子 1 建立城鎮（只有第一座落在這個世界裡）。每一格的居民、就業與 800 m 腹地的總數都依規則手算，並另以獨立的 Python 實作（含 FNV-1a 抽籤）核對；`LandTests` 另有一份逐格重算的參考實作。`ReferenceWorld` 沒有土地，所以 `ReferenceWorldGoldenTests` 跳過用到土地的 fixture。
-- `land-demand.json`（決策 73）：三格土地與三站，經營模式。開啟土地需求之前車站沒有需求；開啟後 West 單獨分到住宅與辦公兩格，之後蓋的 Annex 依距離權重 1000 與 975 以最大餘數法分走一部分，Market 單獨分到商店格；土地決定客流時設定需求被拒絕（`stationDemandFromLand`），自由模式可以設定，切回經營模式時土地重新決定。每個數值都手算，並另以獨立的 Python 實作核對。
+- `land-demand.json`（決策 73）：三格土地與三站，經營模式。開啟土地需求之前車站沒有需求；開啟後 West 單獨分到住宅與辦公兩格，之後蓋的 Annex 依距離權重 1000 與 975 以最大餘數法分走一部分，Market 單獨分到商店格；土地決定運量時設定需求被拒絕（`stationDemandFromLand`），自由模式可以設定，切回經營模式時土地重新決定。每個數值都手算，並另以獨立的 Python 實作核對。
 - `land-towns.json` 的城鎮數值是決策 73 加倍後的密度（中心格 260 人）；這份 fixture 和密度的改變在同一個尚未合併的 PR 裡。
 
 ## Phase 6c-1：城市建物（schema 37）
 
 - 新指令 `setCityBuildings`、`setTownGrowth`，新觀察 `building`，最終狀態選填的 `cityBuildings`（ARCHITECTURE 決策 74）。城市建物關閉的世界不寫 `cityBuildings`，舊的 fixture 不必改，schema 30 到 36 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地與建物，`ReferenceWorldGoldenTests` 跳過這兩份；`BuildingTests` 另有逐格重算的參考實作。
 - `city-buildings.json`：32 × 24 格的世界。容量表（每層 1536 m²、居民 48 m²、就業 32 m²、2／6／18／40 層、住宅占樓板 7／2／1 八分之一）、依主要用途選最低足夠的密度（住宅格看居民、商辦格看就業，另一項取表上的值與現有人數較大者）、四級都放不下的既有存量、以列與行編號、拒絕的土地不改建物、關閉再開啟得到同樣的建物，以及種子 1 的第一座城鎮的 437 棟（88 D1、188 D2、134 D3、27 D4）。
-- `city-buildings-growth.json`：2 × 2 格的世界、economy.json 的線路與列車，經營模式、土地需求、城鎮成長與城市建物都開啟。第二個午夜三站各以 12‰ 成長，各加 1 位居民與 1 個就業；Alpha、Beta 各在離它最近的空格蓋 4 人住宅，同時建立住宅 D1 建物（編號 3、4），Gamma 沒有空格可蓋。土地仍長到每格 400／1200，建物在 6c-1 不升級。土地與建物的值手算；鐵路、乘客與帳的值取自 GameCore（同 economy.json），成長率由它們的抵達數推得。
+- `city-buildings-growth.json`：2 × 2 格的世界、economy.json 的路線與列車，經營模式、土地需求、城鎮成長與城市建物都開啟。第二個午夜三站各以 12‰ 成長，各加 1 位居民與 1 個就業；Alpha、Beta 各在離它最近的空格蓋 4 人住宅，同時建立住宅 D1 建物（編號 3、4），Gamma 沒有空格可蓋。土地仍長到每格 400／1200，建物在 6c-1 不升級。土地與建物的值手算；鐵路、乘客與帳的值取自 GameCore（同 economy.json），成長率由它們的抵達數推得。
 - 兩份的建物與土地都另以獨立的 Python 實作核對：`python3 -I tools/golden-checks/city_buildings.py --check`。
 
 ## Phase 6c-2：容量接上成長與自動升級（schema 38）
 
 - 新觀察 `townGrowth`（ARCHITECTURE 決策 75）。沒有用到它的 fixture 不必改，schema 30 到 37 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`city-buildings-growth.json`（schema 37）的格在那一晚都沒有滿、也沒有碰到容量，所以在 6c-2 的規則下結果相同。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`CityGrowthTests` 另有逐格重算的參考實作。
-- `city-buildings-raise.json`：8 × 2 格的世界、economy.json 的線路與列車。第二個午夜三站都服務 1000‰、可達 2 站：依車站編號，Alpha 升 1、2 號，Beta 略過它們、升 5、7 號，Gamma 升 8、9 號，10 號是 Gamma 的第三格不升；D4（3 號）、既有存量（4 號）不升；差一人的 503 人住宅當晚長滿 504 但不升；之後的成長每格停在建物容量，放不下的捨棄。三站各在最近的空格蓋 4 人住宅與 D1 建物。土地與建物的值由獨立的 Python 實作（`python3 -I tools/golden-checks/city_growth.py`）從規則與觀察到的服務量測算出；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。
+- `city-buildings-raise.json`：8 × 2 格的世界、economy.json 的路線與列車。第二個午夜三站都服務 1000‰、可達 2 站：依車站編號，Alpha 升 1、2 號，Beta 略過它們、升 5、7 號，Gamma 升 8、9 號，10 號是 Gamma 的第三格不升；D4（3 號）、既有存量（4 號）不升；差一人的 503 人住宅當晚長滿 504 但不升；之後的成長每格停在建物容量，放不下的捨棄。三站各在最近的空格蓋 4 人住宅與 D1 建物。土地與建物的值由獨立的 Python 實作（`python3 -I tools/golden-checks/city_growth.py`）從規則與觀察到的服務量測算出；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。
 
 ## Phase 6c-3：地價（schema 39）
 
 - 新觀察 `landValue`（ARCHITECTURE 決策 76）。沒有用到它的 fixture 不必改，schema 30 到 38 照樣讀取：**沒有任何既有 fixture 的預期值改變**。地價只是查詢，不在最終狀態裡。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`LandValueTests` 另有逐格的參考實作。
-- `land-value.json`：8 × 2 格的世界、economy.json 的線路與列車。量測之前每格只有基準（住宅 D2 2500、商業 D2 3750、辦公 D4 7000、既有存量 4000、空格 1000），世界外的格沒有；第二個午夜三站都量到 1000‰、可達 2 站之後，每格依最近（w 最高）的站加上服務與可達溢價，兩站同分時取編號小的；自由模式又只剩基準。每個地價都依規則手算，並以獨立的 Python 實作（`python3 -I tools/golden-checks/land_value.py`）從觀察到的建物與量測核對；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。
+- `land-value.json`：8 × 2 格的世界、economy.json 的路線與列車。量測之前每格只有基準（住宅 D2 2500、商業 D2 3750、辦公 D4 7000、既有存量 4000、空格 1000），世界外的格沒有；第二個午夜三站都量到 1000‰、可達 2 站之後，每格依最近（w 最高）的站加上服務與可達溢價，兩站同分時取編號小的；自由模式又只剩基準。每個地價都依規則手算，並以獨立的 Python 實作（`python3 -I tools/golden-checks/land_value.py`）從觀察到的建物與量測核對；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。

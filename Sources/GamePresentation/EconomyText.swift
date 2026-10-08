@@ -71,7 +71,7 @@ extension LedgerItem {
         case .fareRevenue: language.text("Fares", "票價收入")
         case .operatingCost: language.text("Operating", "營運成本")
         case .maintenanceCost: language.text("Maintenance", "維護成本")
-        case .routeEnergy: language.text("Line power and traction", "線路供電與牽引用電")
+        case .routeEnergy: language.text("Line power and traction", "路線供電與牽引用電")
         case .trainEnergy: language.text("Train power", "列車日用電")
         case .stationStaff: language.text("Station staff", "車站員工")
         case .trainStaff: language.text("Drivers and dispatchers", "司機與調度員工")

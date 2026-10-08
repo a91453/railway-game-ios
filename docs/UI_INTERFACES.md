@@ -15,7 +15,7 @@
 
 檔案：`Sources/GamePresentation/Tutorial.swift`、`Sources/GamePresentation/TutorialSession.swift`；測試：`Tests/GamePresentationTests/TutorialSessionTests.swift`。
 
-照 `Ci/` 的地鐵導覽（`TUTORIAL_STEPS`、`startTutorial`、`showTutorialStep`、`_tutorialOnAction`、`dismissTutorial`）：遊戲畫面上一張步驟卡，有標題與說明，框出這一步講的控制項，按鈕是上一步、下一步（最後一步是「完成」）與略過。教學只是畫面狀態：不存檔，GameCore 不知道它。
+照 `Ci/` 的捷運導覽（`TUTORIAL_STEPS`、`startTutorial`、`showTutorialStep`、`_tutorialOnAction`、`dismissTutorial`）：遊戲畫面上一張步驟卡，有標題與說明，框出這一步講的控制項，按鈕是上一步、下一步（最後一步是「完成」）與略過。教學只是畫面狀態：不存檔，GameCore 不知道它。
 
 ### 畫面讀的資料
 
@@ -154,7 +154,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 | `centered(on:)` | 把某一點移到畫面中央（例如選到的車站），到邊緣停住 |
 | `centerX`、`centerY`、`viewport`、`mapRegion` | 唯讀 |
 
-**示範地圖的中心**（2026-10-03 起的約定）：`DemoWorld` 的中心永遠是叫 Central（中文「中央」）的車站，在地圖的正中央（第 (512, 512) 格的西北角），`WorldRegion.built(in:)` 的中心就是它（`DemoWorldTests` 釘住），所以打開示範地圖時畫面中央是 Central。UI 測試可以依賴這一點；示範地圖的其他配置（站數、線路、環線的大小）之後還會改，不要依賴。
+**示範地圖的中心**（2026-10-03 起的約定）：`DemoWorld` 的中心永遠是叫 Central（中文「中央」）的車站，在地圖的正中央（第 (512, 512) 格的西北角），`WorldRegion.built(in:)` 的中心就是它（`DemoWorldTests` 釘住），所以打開示範地圖時畫面中央是 Central。UI 測試可以依賴這一點；示範地圖的其他配置（站數、路線、環線的大小）之後還會改，不要依賴。
 
 **縮放範圍**：每 16 公尺最多 64 點；最少到整張地圖放得下，但不小於必要（新遊戲 16 公里的地圖在手機上每 16 公尺不到 0.4 點）。地圖西北角對齊畫面左上角時，`screenPoint(of:)`、`planPoint(at:)`、`worldDistance(_:)` 和 `MapScale.center(of:referenceSize:)`、`MapScale.worldPoint`、`MapScale.worldDistance` 結果相同（測試釘住）。E1 只改了開局的位置與按鈕的步長，其餘介面不變。
 
@@ -163,7 +163,7 @@ CX-5 的覆蓋層這樣讀（示意）：
 - **繪製收 `some MapProjection`**：`TileArt`（F3d 起叫 `MapArt`）的函式改收 `some MapProjection`，不要收 `PlanCamera`。E2 的實景模式原本設想用 MapKit 的相機實作同一個 protocol；實作時改成照舊用 `PlanCamera`，Apple 地圖（`AppleMapBackground`）跟著它（決策 50），畫面一樣不用重寫。之後可以旋轉與傾斜的相機仍然走這個 protocol，所以每個點都用 `screenPoint` 換算，不要假設整個畫面同一個比例、也不要用位移量自己推。
 - **只畫畫面內**：路網的邊用 `WorldRegion(enclosing: geometry.points)` 和 `visibleRegion.expanded(by:)` 比，相交才畫；車站、月台、列車同理。
 - **相機是 view 的狀態**：地圖 view 用 `@State` 保存 `PlanCamera?`，在 `GeometryReader` 第一次拿到大小時建立，大小改變時 `resized(to:)`。不放進 `GameSession`，也不放進 GameCore。
-- **點擊**：`session.tapMap(at: camera.planPoint(at: location), reach: camera.worldDistance(NetworkBuilding.touchRadius))`，路網工具用 `tapNetwork`，和現在一樣。
+- **點選**：`session.tapMap(at: camera.planPoint(at: location), reach: camera.worldDistance(NetworkBuilding.touchRadius))`，路網工具用 `tapNetwork`，和現在一樣。
 - **縮放按鈕保留**（VoiceOver、沒辦法用兩指時），並保留 `.tutorialTarget(.zoomControls)`。
 - **細節等級**：現在的 `MapDetail` 有 `overview` 與 `full` 兩級。需要更多級時，CX-4 可以改 `MapScale.swift` 的 `MapDetail`、`detail(forReferenceSize:)`（F3d 前叫 `detail(forTileSize:)`）與 `MapScaleTests`（只影響呈現，不影響模擬）。
 
@@ -251,26 +251,26 @@ CX-5 的覆蓋層這樣讀（示意）：
 
 照 `Railway/` 的 `renderFollowBar`：圓點（列車的顏色，這裡是路線的 `Palette.lineColor`）、粗體車名、`種類　起站→終站　HH:MM–HH:MM　· 狀態`、「取消跟隨」（英文 "Stop following"）。內容由 `world.followBarInfo(of:in:)`（`FollowBarInfo`）從時刻表推導：種類是 `assignedServiceName`，起訖是時刻表的第一站與最後一站，時間是這一輪（重複時刻表的 cycle）第一站的發車與最後一站的到達；狀態照 `setFollowStatus`：在第一站等發車是「尚未發車」（`pre`），停在最後一站（不重複的時刻表）是「已抵達」（`done`），行駛中不寫。參考的 `.followbar.miss` 只用在車次搜尋找不到（`showSearchMiss`）；這個 App 沒有車次搜尋，所以沒有做。
 
-## 8. 人口與出行資料（GamePresentation）
+## 8. 人口與旅運資料（GamePresentation）
 
-2026-10-06 定（U2）。照 `Ci/` 的 `panel-poptravel`（人口與出行數據）與地圖圖層面板的三個勾選與時間軸。檔案：`Sources/GamePresentation/PopTravel.swift`（常數與顏色）、`PopulationHeatmap.swift`（人口格網的排版）、`TravelDemandMap.swift`（出行需求與需求變化）、`MapLayers.swift`（`MapLayerPreferences.popTravelMode`）；App：`MapView.swift`（`MapBaseCanvas`、點格子的提示）、`MapArt.drawBase`、`PopulationLegendView.swift`（圖例、透明度、時間軸）、`MapLayerSheet.swift`；測試：`PopTravelTests`、`MapLayersTests`。
+2026-10-06 定（U2）。照 `Ci/` 的 `panel-poptravel`（人口與旅運資料）與地圖圖層面板的三個勾選與時間軸。檔案：`Sources/GamePresentation/PopTravel.swift`（常數與顏色）、`PopulationHeatmap.swift`（人口格網的排版）、`TravelDemandMap.swift`（旅運需求與需求變化）、`MapLayers.swift`（`MapLayerPreferences.popTravelMode`）；App：`MapView.swift`（`MapBaseCanvas`、點格子的提示）、`MapArt.drawBase`、`PopulationLegendView.swift`（圖例、透明度、時間軸）、`MapLayerSheet.swift`；測試：`PopTravelTests`、`MapLayersTests`。
 
 | 要做的 | 讀法 |
 | --- | --- |
 | 顯示哪一層（一次一層，`togglePopTravelLayerFromMapPanel`） | `MapLayerPreferences.popTravelMode`（`.population`、`.travel`、`.movement`、`nil`）；`setShows(_:_:)`；`showsPopulationHeatmap` 仍是人口那一層 |
-| 透明度（`getPopTravelBaseOpacityForMode`、`clampPopTravelOpacity`） | `PopTravel.baseOpacity(for:compactWidth:)`：人口 0.72，出行與變化 0.85（窄畫面 1）；玩家拉過滑桿後沿用玩家的值（`_popTravelOpacityUserSet`），範圍 `PopTravel.opacityRange`（0.1…1） |
-| 時間軸（`poptravel-hour-range`、`startPopTravelPlay`） | 0–23 時，起始 `PopTravel.defaultHour`（8，HTML 的 `value="8"`）；播放每 `PopTravel.playInterval`（1.2 秒）一小時，23 之後回到 0（`nextHour(after:)`）；在人口層按播放會換到出行需求（參考切到 travel） |
+| 透明度（`getPopTravelBaseOpacityForMode`、`clampPopTravelOpacity`） | `PopTravel.baseOpacity(for:compactWidth:)`：人口 0.72，旅運需求與變化 0.85（窄畫面 1）；玩家拉過滑桿後沿用玩家的值（`_popTravelOpacityUserSet`），範圍 `PopTravel.opacityRange`（0.1…1） |
+| 時間軸（`poptravel-hour-range`、`startPopTravelPlay`） | 0–23 時，起始 `PopTravel.defaultHour`（8，HTML 的 `value="8"`）；播放每 `PopTravel.playInterval`（1.2 秒）一小時，23 之後回到 0（`nextHour(after:)`）；在人口層按播放會換到旅運需求（參考切到 travel） |
 | 人口格網 | `PopulationHeatmap(grid:frame:)`：每張實景地圖排一次；`tiles(in:blockSize:)` 只回傳畫面內的格子；`blockSize(pointsPerUnit:)`：一格畫不到 6 點時合併成 2、4、8…格一邊的方塊 |
 | 人口的顏色 | `chinaGrid` 的 1 km 圖例：0 到 10000+ 的漸層（`PopTravel.populationGradient`，10 個色標在 0、10、20、30、40、52、64、76、88、100%），分成 40 段（每 250 人，`populationBand(people:)`）；邊線（格子 12 點以上才畫）用 LandScan 格網的 `rgba(8,48,107,0.45)`、寬 0.4 |
 | 點格子的提示（`pop-grid-tooltip`） | `heatmap.cellInfo(atX:y:)`：估算人口與人口密度（人/平方公里，最多兩位小數）；點地圖照常選取，提示只是另外顯示 |
-| 出行需求、需求變化 | `world.travelDemandMap()`（`TravelDemandMap`）：每個車站每小時出發的旅次（`stationFlow(of:)` 的 entries）加到它所在的 1 km 方格；`tiles(for:at:)` 依等級 1–10 上色（`metroHeatmovePmtilesColorExpression` 的 10 色：出行 #000088→#FF1100，減少 #AAD2FF→#002668，增加 #FFD0D0→#9E1010） |
+| 旅運需求、需求變化 | `world.travelDemandMap()`（`TravelDemandMap`）：每個車站每小時出發的旅次（`stationFlow(of:)` 的 entries）加到它所在的 1 km 方格；`tiles(for:at:)` 依等級 1–10 上色（`metroHeatmovePmtilesColorExpression` 的 10 色：旅運需求 #000088→#FF1100，減少 #AAD2FF→#002668，增加 #FFD0D0→#9E1010） |
 
-**效能**：地圖分兩個 canvas。`MapBaseCanvas`（陸地與這一層）只在相機、地圖或這一層改變時重畫，列車移動的 tick 不重畫它；格子的排版每張地圖算一次；每次只取畫面內的列與欄（每列的格子依欄排序、二分搜尋），不再逐格查整個矩形；同一段顏色的格子合成一條 path 填一次。出行需求只在車站、需求或路線改變而且這一層開著時重算。
+**效能**：地圖分兩個 canvas。`MapBaseCanvas`（陸地與這一層）只在相機、地圖或這一層改變時重畫，列車移動的 tick 不重畫它；格子的排版每張地圖算一次；每次只取畫面內的列與欄（每列的格子依欄排序、二分搜尋），不再逐格查整個矩形；同一段顏色的格子合成一條 path 填一次。旅運需求只在車站、需求或路線改變而且這一層開著時重算。
 
 **參考沒有、這裡自己定的**（gap）：
 
 - 參考的人口顏色在 `ChinaPopulationGridLayer`（不在快照裡），只留下圖例的漸層；這裡照圖例的漸層上色。舊的 100/250/…/10k 分級不是參考的，已移除。
-- 參考的出行與變化格網與等級 `g`、`g_abs` 由伺服器產生（「AI模擬」，不在快照裡）。這裡由車站需求推導，等級是 `ceil(10 × 值 / 全天最大值)`（`PopTravel.grade`）。
-- 需求變化照參考的說明（`map.population.movementDescription`：「相鄰小時出行需求量的增減」）是和前一小時比（0 時和 23 時比），不是和前一天比；GameCore 沒有前一天的紀錄，也不需要。
+- 參考的旅運需求與變化格網與等級 `g`、`g_abs` 由伺服器產生（「AI模擬」，不在快照裡）。這裡由車站需求推導，等級是 `ceil(10 × 值 / 全天最大值)`（`PopTravel.grade`）。
+- 需求變化照參考的說明（`map.population.movementDescription`：「相鄰小時旅運需求量的增減」）是和前一小時比（0 時和 23 時比），不是和前一天比；GameCore 沒有前一天的紀錄，也不需要。
 - 合併方塊（縮小時）：參考的向量圖磚本來就依縮放簡化；這裡用 2 的冪次方塊代替。
 - 800 公尺的車站腹地照 `metroFlowCatchmentRadiusForType`；它的 400 公尺只用在 APM 與空軌，遊戲沒有這兩種路線。

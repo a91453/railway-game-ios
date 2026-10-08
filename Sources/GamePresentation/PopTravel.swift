@@ -13,7 +13,7 @@ import GameCore
 public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// People per grid cell (`setPopTravelTab('population')`, 人口数据).
     case population
-    /// Trips starting in each place in the chosen hour (`travel`, 出行需求).
+    /// Trips starting in each place in the chosen hour (`travel`, 旅運需求).
     case travel
     /// How those trips grow or fall from the hour before (`movement`,
     /// 需求变化: "相邻小时出行需求量的增减").
@@ -32,8 +32,8 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// `map.layers.demandChange`).
     public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .population: language.text("Population", "人口數據")
-        case .travel: language.text("Travel demand", "出行需求")
+        case .population: language.text("Population", "人口資料")
+        case .travel: language.text("Travel demand", "旅運需求")
         case .movement: language.text("Demand change", "需求變化")
         case .landUse: language.text("Land use", "土地用途")
         case .landValue: language.text("Land value", "地價")
@@ -54,12 +54,12 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .travel:
             language.text(
                 "Trips that start in each area in each hour from 0 to 23, from the stations' demand.",
-                "依車站需求推算 0–23 時各區域的出行需求。"
+                "依車站需求推算 0–23 時各區域的旅運需求。"
             )
         case .movement:
             language.text(
                 "How the trips starting in each area rise or fall from the hour before.",
-                "相鄰小時出行需求量的增減。"
+                "相鄰小時旅運需求量的增減。"
             )
         case .landUse:
             language.text(

@@ -297,7 +297,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "經營模式下，各站的客流由城市決定；自由模式可以修改。"
+            "value" : "經營模式下，各站的運量由城市決定；自由模式可以修改。"
           }
         }
       }
@@ -337,7 +337,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "預設會保留車站的日客流。旅次分給路線能到、而且有客流的車站，依各站自己的日客流分配。"
+            "value" : "預設會保留車站的日運量。旅次分給路線能到、而且有運量的車站，依各站自己的日運量分配。"
           }
         }
       }
@@ -367,7 +367,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入交路"
+            "value" : "加入服務模式"
           }
         }
       }
@@ -437,7 +437,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "套用到全線路"
+            "value" : "套用到整條路線"
           }
         }
       }
@@ -647,7 +647,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇車站服務的地區類型。沒有客流的車站不會產生旅次，也不會吸引旅次。"
+            "value" : "選擇車站服務的地區類型。沒有運量的車站不會產生旅次，也不會吸引旅次。"
           }
         }
       }
@@ -727,7 +727,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "複製客流設定"
+            "value" : "複製運量設定"
           }
         }
       }
@@ -957,7 +957,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自由模式不收票價、沒有營運成本，各站的客流由你設定。切換後無法再改回經營模式。"
+            "value" : "自由模式不收票價、沒有營運成本，各站的運量由你設定。切換後無法再改回經營模式。"
           }
         }
       }
@@ -1277,7 +1277,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還沒有路線連到其他有客流的車站：長條顯示它自己的旅次在一天中的分布。"
+            "value" : "還沒有路線連到其他有運量的車站：長條顯示它自己的旅次在一天中的分布。"
           }
         }
       }
@@ -1447,7 +1447,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "貼上客流設定"
+            "value" : "貼上運量設定"
           }
         }
       }
@@ -1457,7 +1457,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "交路仍停靠清單中相同位置的站。等候路線不再提供之行程的乘客會離開。"
+            "value" : "服務模式仍停靠清單中相同位置的站。等候路線不再提供之行程的乘客會離開。"
           }
         }
       }
@@ -1637,7 +1637,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除客流"
+            "value" : "移除運量"
           }
         }
       }
@@ -1657,7 +1657,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "刪除這個交路"
+            "value" : "刪除這個服務模式"
           }
         }
       }
@@ -1727,7 +1727,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "客流"
+            "value" : "運量"
           }
         }
       }
@@ -1997,7 +1997,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示車站的客流：服務的地區類型、旅次與乘客。"
+            "value" : "顯示車站的運量：服務的地區類型、旅次與乘客。"
           }
         }
       }
@@ -2447,7 +2447,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟後，乘客會轉乘其他線路，也會步行到附近的車站；關閉時只搭兩站都停靠的線路。"
+            "value" : "開啟後，乘客會轉乘其他路線，也會步行到附近的車站；關閉時只搭兩站都停靠的路線。"
           }
         }
       }
@@ -2507,7 +2507,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出行需求"
+            "value" : "旅運需求"
           }
         }
       }
@@ -2527,7 +2527,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "人口與出行數據"
+            "value" : "人口與旅運資料"
           }
         }
       }
@@ -2537,7 +2537,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "人口：實景地圖上的 WorldPop 約 1km 人口格網（每格 0 至 10,000+ 人），空白地圖上城鎮的 64 m 土地格（每平方公里人數）。出行需求：依車站需求推算每小時從各 1km 方格出發的出行量。需求變化：與前一小時相比的增減。"
+            "value" : "人口：實景地圖上的 WorldPop 約 1km 人口格網（每格 0 至 10,000+ 人），空白地圖上城鎮的 64 m 土地格（每平方公里人數）。旅運需求：依車站需求推算每小時從各 1km 方格出發的旅次量。需求變化：與前一小時相比的增減。"
           }
         }
       }

@@ -38,7 +38,7 @@ final class StationOperationSessionTests: XCTestCase {
 
     func testTheModesReadInBothLanguages() {
         XCTAssertEqual(StationOperationMode.allCases.map { $0.title(in: .english) }, ["Normal", "Flow control", "Closed"])
-        XCTAssertEqual(StationOperationMode.allCases.map { $0.title(in: .traditionalChinese) }, ["正常運行", "流量控制", "車站關閉"])
+        XCTAssertEqual(StationOperationMode.allCases.map { $0.title(in: .traditionalChinese) }, ["正常營運", "流量控制", "車站關閉"])
         for mode in StationOperationMode.allCases {
             XCTAssertFalse(mode.detail(in: .english).isEmpty)
             XCTAssertFalse(mode.detail(in: .traditionalChinese).isEmpty)

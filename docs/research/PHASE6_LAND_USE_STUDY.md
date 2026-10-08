@@ -15,8 +15,8 @@
 | `Sources/GameCore/World/WorldBounds.swift`：`WorldBounds.maximum`、`maximumSide`、`contains(_:)`；`Sources/GameCore/Geometry/WorldCoordinate.swift`：`WorldCoordinate.unitsPerMetre` | 每邊最多 `2^20 = 1,048,576` 世界單位，`64` 單位／公尺，即 **16,384 m 見方**。世界點是半開範圍；鐵路不是方格。新的土地格不能成為鐵路 topology 或車站座標的限制（決策 28、54）。 |
 | `Sources/GameCore/Passenger/StationDemand.swift`：`StationDemandKind`、`StationDemand`、`maximumDailyTrips` | 四種車站需求型別：`residential`、`office`、`shopping`、`scenic`；權威資料為 `kind` 與 `dailyTrips`。有效範圍 `0...1_000_000`，解碼也檢查。每種型別的出發／抵達曲線各有 24 個整數，比例為 **1/1000**；`dayShape` 與 `weekendShape` 也是 24 小時表。不是人口或就業模型。 |
 | `Sources/GameCore/Passenger/PassengerDemand.swift`：`GameWorld.setStationDemand(_:to:)` | 先檢查車站存在，再檢查需求範圍；`nil` 清除需求。免費，已候車者保留。使 `PassengerPlanCache` 失效，並移除該站的 `townGrowth.places`，讓下次成長重新記錄起點。由車站 ID 排序的 `StationPassengers` 儲存需求。 |
-| 同檔：`stationDemand(of:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`、`makePassengerPlan()`、`makeNetworkPassengerPlan(memo:)` | 現在起點總量、迄點吸引力都讀車站每日旅次；直達模式依共同停靠線路分配，網路模式依可行旅程與廣義時間。日量分迄點、日量分小時用最大餘數法。Phase 6 要替換這裡的需求輸入，不另造一套候車或上下車系統。 |
-| 同檔：`PassengerPlanKey`、`passengerPlanKey()`、`PassengerPlanCache`、`releaseUnit` | 網路計畫鍵含線路、車站含營運狀態、路網、列車長度／容量、服務日／等級、需求、票價、每週開關與事件。計畫是推導資料，不存檔、世界相等不看它。釋出單位 `3600`，每 OD 的餘數是權威狀態；土地需求改變也必須納入鍵或使計畫失效。 |
+| 同檔：`stationDemand(of:)`、`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`、`makePassengerPlan()`、`makeNetworkPassengerPlan(memo:)` | 現在起點總量、迄點吸引力都讀車站每日旅次；直達模式依共同停靠路線分配，網路模式依可行旅程與廣義時間。日量分迄點、日量分小時用最大餘數法。Phase 6 要替換這裡的需求輸入，不另造一套候車或上下車系統。 |
+| 同檔：`PassengerPlanKey`、`passengerPlanKey()`、`PassengerPlanCache`、`releaseUnit` | 網路計畫鍵含路線、車站含營運狀態、路網、列車長度／容量、服務日／等級、需求、票價、每週開關與事件。計畫是推導資料，不存檔、世界相等不看它。釋出單位 `3600`，每 OD 的餘數是權威狀態；土地需求改變也必須納入鍵或使計畫失效。 |
 | `Sources/GameCore/Passenger/StationPassengers.swift`：`StationPassengers`、`WaitingGroup`、`PassengerLedger`；`Boarding.swift` 的上下車流程 | 候車、釋出、溢出、放棄、車上與抵達的守恆帳。轉乘者仍歸原起站；`arrived` 是該起站旅客完成旅程的累計，不是目的地站的下車人數。城市量測不能誤用這個方向。 |
 | `Sources/GameCore/Passenger/PassengerRoutes.swift`：`PassengerRouteGraph`、`PassengerTransferRules`、`walkingTransfer(from:to:)`；`PassengerCrowding.swift`：`PassengerCrowding` | 決策 65：跨站步行距離 **嚴格小於 450 m**，5 km/h、最短換車 120 s；感知懲罰基準 15 分鐘，依級別乘 0.8／0.8／1.2／1.7。同站換線感知成本 12 分鐘。網路需求另有 BPR `0.15 × 負載^4`（負載上限 2）與超過 30 廣義分鐘的需求衰減。土地服務半徑不是這個轉乘半徑。 |
 
@@ -24,7 +24,7 @@
 
 - `StationDemand.weekdayFactors = [840, 1040, 1020, 1020, 1040, 1120, 920]`，週日起；`weekday(ofDay:)` 讓第 0 天為星期一。`trips(onDay:)` 用 `(dailyTrips × factor + 500) / 1000`，週六、週日換 `weekendShape`。
 - `PassengerDemand.swift` 的 `setWeeklyDemand(_:)`、`demandDay`、`isDemandWeekend`、`trips(of:at:)`、`attraction(of:at:)`：每週係數乘起站出發量；事件乘出發量與迄點吸引權重。迄點權重沒有再乘星期係數。
-- `DemandEvents.swift`：`DemandEventSchedule { seed: UInt32, events, nextDraw, draws }`、`setDemandEvents(seed:)`、`startDemandEventDay(_:)`、`drawDemandEvent(_:on:)`、`demandMultiplier(at:)`。FNV-1a 32 位元雜湊 UTF-8 的 `seed|key`，初值 `2_166_136_261`、乘數 `16_777_619`；第一次抽籤 3–7 天，之後 8–12 天除以 `max(1, 有需求站數 / 10)`，至少 1 天。熱門前五分之一的門檻以上旅次權重乘 10。展覽 3–7 天、加成 200–500 千分比；大客流 1–2 天、加成 500–1000；提前 2–5 天公布。同站多事件取最大加成，倍數 `1000 + max(boost)`。
+- `DemandEvents.swift`：`DemandEventSchedule { seed: UInt32, events, nextDraw, draws }`、`setDemandEvents(seed:)`、`startDemandEventDay(_:)`、`drawDemandEvent(_:on:)`、`demandMultiplier(at:)`。FNV-1a 32 位元雜湊 UTF-8 的 `seed|key`，初值 `2_166_136_261`、乘數 `16_777_619`；第一次抽籤 3–7 天，之後 8–12 天除以 `max(1, 有需求站數 / 10)`，至少 1 天。熱門前五分之一的門檻以上旅次權重乘 10。展覽 3–7 天、加成 200–500 千分比；大量人潮 1–2 天、加成 500–1000；提前 2–5 天公布。同站多事件取最大加成，倍數 `1000 + max(boost)`。
 - `World/GameWorld.swift` 的 `advance(ticks:)`：基本步長是一個遊戲秒，整分鐘釋出乘客；每日午夜先 `growTowns`，再 `startDemandEventDay`，儲存 OD 餘數並重建計畫，然後 `settleAccounts`、釋出與派車。`dayWake` 阻止 idle shortcut 跨過午夜。不能把 UI 的更新頻率當成每日更新時點。
 
 ### 1.2 決策 70：城鎮成長目前其實長的是車站旅次
@@ -43,7 +43,7 @@
 
 `Tests/GameCoreTests/TownGrowthTests.swift` 已有批次／逐分鐘、存檔續玩、安靜午夜、從午夜開始與每週需求的案例。此處只閱讀測試內容，未執行。現行規則不能解讀為「人口每天成長 1.5%」；它沒有居民數，也沒有貨物或產業模型。
 
-### 1.3 GamePresentation 如何給新站初始客流
+### 1.3 GamePresentation 如何給新站初始運量
 
 完整呼叫鏈是 **`GameLauncher` 傳入資料 → `GameSession.newStationDemand(at:)` 推估 → `addNetworkPlatform()` 在世界副本建站 → 經營模式呼叫 `GameWorld.setStationDemand`**。資料格與熱圖不會自行改世界。
 
@@ -54,8 +54,8 @@
 | 同檔：`StationDemand.realWorld(residents:kind:)`、`catchmentRadius`、`tripsPerHundredResidents` | 半徑 **800 m**；每 100 居民每天 40 旅次，先整除，再四捨五入至 100 旅次；最少 100、最多 1,000,000。只有人口時型別為住宅。這是本 repo 的政策，不是參考伺服器公式。 |
 | `Sources/GamePresentation/PlaceGrid.swift`：`PlaceGrid.Kind`、`places(within:ofLatitude:longitude:)`、`StationDemandKind.realWorld(residents:places:totals:population:)` | 四層 `shops/offices/schools/attractions`，沿用同一 `GridCounts`。以周邊地點量除「居民按全臺比例預期量」，最小預期 shops 30、offices 5、schools 3、attractions 1；office 合計辦公與學校。最高比率達 **1.5** 就採該類，否則住宅；平手依辦公、購物、景點。**地點數只選曲線，不增加旅次，也不是工作機會數。** |
 | `Sources/GamePresentation/NetworkSession.swift`：`GameSession.newStationDemand(at:)`、`addNetworkPlatform()` | 有人口與 `RealWorldFrame` 才估算；人口未涵蓋或空白模式回 `.cityDefault`。建新站且經營模式才設定需求；替既有站增月臺不重設。先在世界副本完成建站與月臺指令，再換回，保持失敗原子性。 |
-| `Sources/GamePresentation/StationDemandText.swift`：`defaultDailyTrips`、`cityDefault`、`dailyTripSteps` | 城市預設住宅 **10,000** 旅次；操作步階為 100 到 1,000,000 的 1／2／5 系列。`GameSession` 的客流操作也經世界指令，不能當作另一份需求權威。 |
-| `Sources/GamePresentation/PopTravel.swift`：`PopTravelMode`、`PopTravel` | population／travel／movement 三頁、預設 8 時、每 1,200 ms 播一小時、透明度 0.1...1；人口預設 0.72，其他 0.85／窄螢幕 1。顏色與圖例；**不決定新站客流**。 |
+| `Sources/GamePresentation/StationDemandText.swift`：`defaultDailyTrips`、`cityDefault`、`dailyTripSteps` | 城市預設住宅 **10,000** 旅次；操作步階為 100 到 1,000,000 的 1／2／5 系列。`GameSession` 的運量操作也經世界指令，不能當作另一份需求權威。 |
+| `Sources/GamePresentation/PopTravel.swift`：`PopTravelMode`、`PopTravel` | population／travel／movement 三頁、預設 8 時、每 1,200 ms 播一小時、透明度 0.1...1；人口預設 0.72，其他 0.85／窄螢幕 1。顏色與圖例；**不決定新站運量**。 |
 | `Sources/GamePresentation/PopulationHeatmap.swift`：`PopulationHeatmap`、`tiles(in:blockSize:)`、`cellInfo(atX:y:)`、`blockSize(pointsPerUnit:)` | 把人口格投影為世界矩形，固定由北到南、西到東，螢幕尺寸不足 **6 points** 就以 2、4、8…格合併；依平均人口著色、提示人口與人／km²。只供呈現，不是城市模擬的細格。 |
 | `Sources/GamePresentation/TravelDemandMap.swift`：`TravelDemandMap`、`cellMetres` | 從世界每小時需求產生旅次與需求變化圖層，以 **1,000 m** 格彙總；土地輸入改變後應繼續讀世界查詢，不自行產生旅次。 |
 | `Sources/GamePresentation/NewGame.swift`：`GameWorld.newGame(anchor:balance:eventSeed:)` | 世界最大範圍、600 倍速、經營模式、交通控制、`.network`、每週需求、種子事件、城鎮成長全開，再設錨點。預設 `eventSeed = 1`；沒有初始化土地。`DemoWorld.make(in:)` 以普通指令設定五站固定旅次（20,000／30,000／10,000／15,000／5,000）。 |
@@ -164,16 +164,16 @@ GameWorld 仍是唯一權威；新型別需保持值語意、`Codable` 解碼驗
 | --- | --- | --- |
 | 土地使用與分區 | `LandUse`: vacant／residential／commercial／office／industrial／civic／park／water。`zoning` 是允許發展用途，`use` 是目前用途；另存 `developable`、開發級別。第一版單格一種主要用途，混合基地由建物各用途容量表達。水域、保留地不能自動轉成可建地。 | 玩家修改的分區、目前用途／開發級別為**存檔權威**；來源遮罩屬不可變基底或明存匯入格。分類是原生提案，不是抄到的 LAND_* enum。 |
 | 人口 | 每格 `residents: Int64`，只能在明確日更新／命令改變；人數非負且有界。住房容量約束人口，人口增減作為移入／移出記錄，不能由旅次直接叫作人口。 | **存檔權威**；全市、站區、個別建物分配的人口是**推導**。不在每個建物再儲存另一份居民總數。 |
-| 就業與活動 | 每格 `jobs: Int64` 為實際工作機會；可另有上學／訪客的活動基數。商店／辦公 POI 到工作數的對照需作者定政策。工業先只提供工作機會，貨物另提案。 | 每格工作數／活動基數為**存檔權威**；工作容量、站點吸引權重為**推導**。不能將 OSM 一筆 office 算成一名員工而不標原生規則。 |
+| 就業與活動 | 每格 `jobs: Int64` 為實際工作機會；可另有上學／訪客的活動基數。商店／辦公 POI 到工作數的對照需作者定政策。工業先只提供工作機會，貨物另提案。 | 每格工作數／活動基數為**存檔權威**；工作容量、車站吸引權重為**推導**。不能將 OSM 一筆 office 算成一名員工而不標原生規則。 |
 | 建物 | `Building { id, type, anchor:PlanPoint, footprint:[PlanPoint], floors, heightUnits, constructionDay }`；必要時存擺放角度的整數代碼與版本化定點旋轉規則。建物型別表決定每層住房／工作／訪客容量。既有建物不得因換模型而變容量。 | 存在、幾何、型別、樓層、完成日為**存檔權威**；容量、覆蓋格、入住分配、mesh／材質／LOD 為**推導**。若 height 可由型別×floors 唯一得出就不另存。 |
 | 初始建物／既有存量 | 6a 尚未有可見建物時，可存每格的「初始住房／工作容量」代表抽象既有存量；6c 遷移成抽象建物或明確建物後扣掉／移除相同容量。純裝飾地標另標不增加容量。 | 初始存量為**存檔權威**；**不得同時計算初始存量與同一批匯入建物的容量**。6c 驗收需證明轉換前後人口與容量不重複。 |
 | 地價 | 初版 `landValue(at:)`：情境基準＋距離服務／可達性／用途／開發指標，以**美分／m²**整數計算、明確夾限。先沒有平滑滯後或土地買賣。 | 基準與政策版本為**存檔／不可變規則**，當前價為**推導**；Phase 7 真有買賣時，交易實付金額是**存檔權威**。若作者要逐日平滑價格，上一日價格也必須升級為權威。來源無公式，暫不捏造平衡值。 |
 | 車站影響 | `stationInfluence(at:)`／`landCatchment(of:)`，整數平方距離；站區常住人口、就業、出發／抵達活動各自有聚合。 | 全為**推導**；車站點原已存檔。索引或 revision cache 不作城市真值。 |
 | 城市日更新 | `CityGrowthState { seed, rulesVersion, lastUpdatedDay, yesterdayMetrics, remainders }`。每日量測含釋出／抵達／未服務、可達性，依 cell→station 昨日配額分回土地。 | 種子、已結算日期、昨日基準／不可從現狀重建的歷史與餘數為**存檔權威**；今日可達性圖、計畫、彙總為**推導**。 |
 
-建議服務半徑先沿用 **800 m = 51,200 世界單位**，以格中心至站點的 `d² < R²` 判定；不使用鐵路格距，也不拿 450 m 轉乘範圍替代。權重可先提案 `w = 1000 - floor(d² × 1000 / R²)`，範圍內為 1...1000，外為 0；這是**原生候選**，不是來源公式。64 m 格的服務邊緣有量化誤差；若作者要求精確圓／格交集，應另選固定子取樣與明確面積分母。
+建議服務半徑先沿用 **800 m = 51,200 世界單位**，以格中心至車站的 `d² < R²` 判定；不使用鐵路格距，也不拿 450 m 轉乘範圍替代。權重可先提案 `w = 1000 - floor(d² × 1000 / R²)`，範圍內為 1...1000，外為 0；這是**原生候選**，不是來源公式。64 m 格的服務邊緣有量化誤差；若作者要求精確圓／格交集，應另選固定子取樣與明確面積分母。
 
-**重疊站區必須分配，不得每站重複加總整份居民與工作。** 同格的活動依各站距離權重以最大餘數法分配，平手給站號小者；無可服務站就保留為未服務活動。站點上限 1,000,000 只是相容保護，不能讓 cap 多出旅客；超出量要記為未服務或依明確政策再分配，不靜默消失。各欄位與乘積上限在 6a／6b 定案；距離平方 <2^41，`d² × 1000` 安全，但跨站／全城數量乘權重不能僅憑單站上限宣稱安全，需 checked arithmetic／現有 `WideInteger` 或先正規化。
+**重疊站區必須分配，不得每站重複加總整份居民與工作。** 同格的活動依各站距離權重以最大餘數法分配，平手給站號小者；無可服務站就保留為未服務活動。車站上限 1,000,000 只是相容保護，不能讓 cap 多出旅客；超出量要記為未服務或依明確政策再分配，不靜默消失。各欄位與乘積上限在 6a／6b 定案；距離平方 <2^41，`d² × 1000` 安全，但跨站／全城數量乘權重不能僅憑單站上限宣稱安全，需 checked arithmetic／現有 `WideInteger` 或先正規化。
 
 ### 3.3 需求由土地推導，取代 5A 的單一站型曲線
 
@@ -245,7 +245,7 @@ GameWorld 仍是唯一權威；新型別需保持值語意、`Codable` 解碼驗
 | --- | --- | --- | --- |
 | **6a 土地資料與初始情境** | City 土地 enum／格／權威人口就業、世界命令與失敗原子性、非預設格編碼、種子／generator 版本、空白情境；實景匯入先處理現有臺灣資料。需求仍 legacy。GameCore／存檔由 Claude Code。 | 越界／重複／排序／負數／無效格拒絕；64 m 末格與小 bounds 正確；同種子同格；匯入裁切與最大餘數總量守恆；v1–11 仍可讀；新存檔往返；報告實際稀疏／稠密大小。不開城市時不影響現有需求。 | 64 m 是否接受；單格主要用途或分用途份額；初始聚落／地形政策；實景未涵蓋的後備；舊局保留或明確遷移；新存檔版本邊界。 |
 | **6b 土地需求與城市成長** | 新需求來源模式、混合時段、分出發／吸引、重疊站區分配、接現有每週／事件／路徑／釋出；landUse 世界不再長 StationDemand；城市量測與整數餘數。 | 重疊站不重複人數；無站／不可達／封站／flowControl 與上限有明確未服務帳；OD／小時／路徑總量守恆；批次／逐分鐘／午夜續玩完全一致；新 golden／replay 與獨立小世界分配對照。記錄舊／新 fixture 實際影響。 | 800 m 與衰減；居民 40/100 是否保留；工作／學校／商業／景點活動係數；回程權重；成長率／容量約束；服務用昨日哪種分母；自由模式 override 與切換基準。 |
-| **6c 建物、容量與地價** | building 型別與任意整數輪廓、placement 合法性、容量／施工完成、初始抽象存量轉建物；推導地價。地標先不變更客流；貨物產業另開規格。 | 移動／旋轉／拆除命令失敗不改世界；禁止水域／保留地；任意形狀重疊規約明確；初始存量轉換前後容量不重複、人口就業不丟失；價格單位、邊界、整數 overflow 明確；外觀更換不改容量。 | 允許輪廓與旋轉精度；開發密度／建物每層容量；拆除後的居民工作處理；地價靜態推導或每日滯後；是否一起加入土地買賣／維護費用（會觸及 Phase 7）；貨物另案的範圍。 |
+| **6c 建物、容量與地價** | building 型別與任意整數輪廓、placement 合法性、容量／施工完成、初始抽象存量轉建物；推導地價。地標先不變更運量；貨物產業另開規格。 | 移動／旋轉／拆除命令失敗不改世界；禁止水域／保留地；任意形狀重疊規約明確；初始存量轉換前後容量不重複、人口就業不丟失；價格單位、邊界、整數 overflow 明確；外觀更換不改容量。 | 允許輪廓與旋轉精度；開發密度／建物每層容量；拆除後的居民工作處理；地價靜態推導或每日滯後；是否一起加入土地買賣／維護費用（會觸及 Phase 7）；貨物另案的範圍。 |
 | **6d 土地與建物畫面** | Population／PopTravel 接城市查詢；用途、站區、未服務與地價圖層；分區筆刷／建物預覽經核心命令；Phase 8 快照與 LOD adapter，先用既有 Canvas 也可。 | 畫面只讀世界；預覽結果與命令合法性一致；臺灣繁中與英文；可見範圍／LOD／效能模式不改 checksum；存檔載入後建物位置／資料來源可說明。資產缺檔有明確後備。 | 先做 2D 用途／量測或直接做 3D；哪些遠景模型先用；保留真實地圖建築背景時如何辨遊戲建物；近景缺資產是否補取得。 |
 
 每個 PR 只有相關範圍；正式 ARCHITECTURE／ROADMAP／REFERENCE_MAPPING、schema 編號與 fixture 由 Claude Code 落地，Codex 可依確定規格做匯入工具／呈現。研究本身不鎖定演算法的平衡常數。**產業完整產銷、貨物運輸、道路可達性、土地所有權與買賣仍需後續規格**；第一版 industrial jobs 不表示已實現這些功能。
@@ -273,6 +273,6 @@ GameWorld 仍是唯一權威；新型別需保持值語意、`Codable` 解碼驗
 
 **VERIFIED（雲端 Linux 工作區，靜態查閱／資料計數）**：clone 私有 repo、上述兩個提交；按指定順序讀規範；以 `rg --files`、`rg` 在四處列檔／搜尋，再讀命中的原始檔；用 Prettier 3.6.2 在 repo **外**展開 minified JS 後閱讀；JSON 用 Python 標準函式庫計數／欄位檢查，CITIES 只評估抽出的常數物件計數；用檔案存在與 bytes 核對 near/far 和動態 import 缺檔。沒有修改參考 repo 或重新產生臺灣資料。
 
-**UNVERIFIED**：沒有執行 Swift 建置／測試、iOS Simulator／實機、網頁遊戲或 Three.js 場景；未跑效能／存檔大小基準、未量測提案的 64 m 量化誤差；未解碼每個二進位網格／驗證全部 SHA-256／逐件授權與外觀；未檢查所有 vendor／角色／任務模組的完整執行行為。沒有向來源站點抓取缺少的 PMTiles、AnyCity／flow 服務、近景資產或外部 OpenTTD 原始碼；沒有查到的資料格式／演算法明確列 gap，不以網路記憶補充。
+**UNVERIFIED**：沒有執行 Swift 建置／測試、iOS Simulator／實機、網頁遊戲或 Three.js 場景；未跑效能／存檔大小基準、未量測提案的 64 m 量化誤差；未解碼每個二進位網格／驗證全部 SHA-256／逐件授權與外觀；未檢查所有 vendor／角色／任務模組的完整執行行為。沒有向來源網站抓取缺少的 PMTiles、AnyCity／flow 服務、近景資產或外部 OpenTTD 原始碼；沒有查到的資料格式／演算法明確列 gap，不以網路記憶補充。
 
 作者最先需要決定的是：**64 m 格是否合適、初始聚落與實景後備、人口／就業到活動的係數、土地成長如何限制、舊局是否保留 legacy、自由模式如何覆寫、地價是否存歷史，以及 6c 是否同時含 Phase 7 費用**。這些決定齊備後再開實作 PR；本研究不增加正式決策編號，也不升存檔或 golden 版本。

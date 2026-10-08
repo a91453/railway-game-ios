@@ -38,7 +38,7 @@
 | `S/_next/static/chunks/5758-131911c5f04a436f.js` | 參數／程序 mesh；JS | 1 | 104,939 | 3D 道床、枕木、鋼軌、橋、橋墩、月台、站房、跨線橋、機關庫、隧道等；三角形數依配置生成 | P1 |
 | `S/_next/static/chunks/4193-d08071182eb33d9c.js` | 參數／資料；JS 常數與 catalog | 1 | 69,777 | TOMIX／KATO 軌道與結構物尺寸、商品資料、模板接點；不是實體鐵路工程規格 | P1／D1 |
 | `S/_next/static/chunks/8423-2d349fd9568cd1c6.js` 的幾何模組 `14687` | 參數；JS | 1 | 10,022（整個 chunk） | 複線橋面、曲線／高架支承取樣；chunk 的其他模組不屬於素材 | P1 |
-| `S/api/track-sets.json` | 資料；JSON | 1／6 套 | 7,747 | 共 101 個放置零件，含曲線、直線、道岔、高架組合 | D1 |
+| `S/api/track-sets.json` | 資料；JSON | 1／6 套 | 7,747 | 共 101 個放置零件，含曲線、直線、轉轍器、高架組合 | D1 |
 | `S/api/templates/*.json` | 資料；JSON | 9／9 模板 | 115,962 | 共 865 筆 `layout.placed`；毫米座標與旋轉，逐件見 §8.3 | D1 |
 | `S/api/landing-preview.json` | 資料；JSON | 1 | 13,223 | 示範 `layout`，不是地形／模型 | D1 |
 | `R3/assets/blender-map-v1/*.bin` | mesh；自訂 Float32LE | 40 | 34,564,920 | 864,123 頂點／288,041 三角形；沒有貼圖 UV、skin 或動畫 | G2 |
@@ -106,7 +106,7 @@
 
 ### 2.2 軌道、橋梁與月台參數
 
-Simulator 尺寸以模型鐵道 **mm** 記錄。可借用造型、零件生成方法與 catalog，但它的曲線半徑、道岔尺寸、商品價與模型橋高度不是本遊戲的建造規則。需要原比例外觀時，先按素材族明訂模型比例再換成公尺；不能對全部檔案一律乘 150，也不能把 280 mm 直接當 280 m。
+Simulator 尺寸以模型鐵道 **mm** 記錄。可借用造型、零件生成方法與 catalog，但它的曲線半徑、轉轍器尺寸、商品價與模型橋高度不是本遊戲的建造規則。需要原比例外觀時，先按素材族明訂模型比例再換成公尺；不能對全部檔案一律乘 150，也不能把 280 mm 直接當 280 m。
 
 | 來源／項目 | 實值 | 建議用途 |
 | --- | --- | --- |
@@ -201,7 +201,7 @@ S4 明定 GameCore 不存橋墩、隧道壁或 mesh。以上目標都是 App／G
 | `C/external/openfreemap-tiles/planet.json`、`styles/liberty.json`、`sprites/ofm_f384/ofm_2x.*`；`C/external/osm/copyright/index.html` | planet.attribution 明列 **OpenFreeMap、© OpenMapTiles、Data from OpenStreetMap**；OSM copyright 頁明列 ODbL | 使用相應底圖／資料時保留完整 attribution。sprite 的 atlas 有資料描述但沒有逐圖示授權全文，採用時補確切 sprite 來源／條款，不能用 ODbL 當所有圖示的通用圖像授權。 |
 | `R3/vendor/three.module.js`、`R/memories/tainan-2026-09-12/vendor/three.module.js` | 檔頭 **MIT、Copyright 2010–2024 Three.js Authors**；R3 revision 170 | 複製／隨 App 或轉換工具散布時帶 MIT 全文、copyright。取自己生成的 mesh 不等於要在 App 帶整個 Three.js。 |
 | `T/assets/{atlasWorker-B8bbVoYM,atlasWorker-BiyGkkc_,bodyWorker-5BH0DlL0,buildWorker-BPjJt4Vl,charWorker-CMbjchSu,figureWorker-BtaIpxG6,paintWorker-BRX03GCZ,paintWorker-omaNBQOP,peopleWorker-iseFJOiU}.js` | 九檔內嵌註解 **MIT、Copyright 2010–2026 Three.js Authors** | 沿用 worker／內嵌 Three 部份時保留 MIT；這是本次補查的明示條款，不能沿用舊研究「所有 T bundle 未見告示」的概括說法。 |
-| `R/vendor/maplibre-gl.js`、`C/external/openfreemap/_astro/maplibre-gl-worker-DttxN3zb.js` | 檔頭 **BSD-3-Clause**；分別指向 v5.9.0／v6.11.2 LICENSE | 採 web renderer／複製代碼才帶 copyright、三條條件與免責全文；不以作者／組織名稱背書產品。SceneKit 等原生 loader 不需這些 JS。 |
+| `R/vendor/maplibre-gl.js`、`C/external/openfreemap/_astro/maplibre-gl-worker-DttxN3zb.js` | 檔頭 **BSD-3-Clause**；分別指向 v5.9.0／v6.11.2 LICENSE | 採 web renderer／複製程式碼才帶 copyright、三條條件與免責全文；不以作者／組織名稱背書產品。SceneKit 等原生 loader 不需這些 JS。 |
 | `C/fonts/cross-platform-ui/inter-variable__q_21383692569c82f8.woff2` | 字型 name 13 **SIL OFL 1.1**；Copyright 2016 The Inter Project Authors | 可轉容器／嵌入，附 OFL／copyright；不可單獨出售字型，修改時核對 reserved font names，字型衍生仍用 OFL。 |
 | `R/assets/fonts/rail-emoji.woff2` | name 0 **Copyright 2013 Google LLC**、family Noto Emoji SemiBold；沒有內嵌 license 欄。另查 [Noto Emoji LICENSE](https://github.com/googlefonts/noto-emoji/blob/e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/LICENSE) 為 OFL 1.1 | 若採此 subset，確認其與上游的對應／修改記錄，附正確 OFL／copyright，依 reserved names 規則處理；不是看到 Google 字樣就臆測 Apache。 |
 | §8.5 的全部 `Roboto` WOFF／WOFF2 | name 14 指 **Apache License 2.0**；非憑新版本 Roboto 的記憶替舊檔換授權 | 轉換時保留字型 copyright、Apache 全文；若有 NOTICE 帶相應內容，標明修改，不能刪字型 name 告示。 |

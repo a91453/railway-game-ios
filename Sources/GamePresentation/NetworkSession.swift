@@ -527,7 +527,7 @@ extension GameSession {
             guard let start = networkStart else {
                 return language.text(
                     "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.",
-                    "請點軌道的起點：既有的節點、軌道上（在那裡設道岔），或任何地方建立新節點。"
+                    "請點軌道的起點：既有的節點、軌道上（在那裡設轉轍器），或任何地方建立新節點。"
                 )
             }
             guard let end = networkEnd else {
@@ -560,7 +560,7 @@ extension NetworkAnchor {
         switch self {
         case .node(let id): id.displayText(in: language)
         case .point: language.text("a new node", "新節點")
-        case .track(let point): language.text("a turnout on \(point.edge.displayText(in: language).lowercased())", "\(point.edge.displayText(in: language)) 上的新道岔")
+        case .track(let point): language.text("a turnout on \(point.edge.displayText(in: language).lowercased())", "\(point.edge.displayText(in: language)) 上的新轉轍器")
         }
     }
 }

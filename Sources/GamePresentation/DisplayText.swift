@@ -277,10 +277,10 @@ extension GameError {
         case .invalidLinePattern:
             language.text(
                 "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",
-                "交路至少要依路線的順序，停靠路線上的兩站以上。環線不能有交路。"
+                "服務模式至少要依路線的順序，停靠路線上的兩站以上。環線不能有服務模式。"
             )
         case .unknownLinePattern(let index):
-            language.text("The line has no pattern #\(index + 1).", "這條路線沒有交路 #\(index + 1)。")
+            language.text("The line has no pattern #\(index + 1).", "這條路線沒有服務模式 #\(index + 1)。")
         case .invalidTrainLength:
             language.text(
                 "A train has \(Train.minimumCars) to \(Train.maximumCars) cars.",
@@ -382,7 +382,7 @@ extension GameError {
         case .stationDemandFromLand:
             language.text(
                 "A managed company's ridership comes from the land round its stations.",
-                "經營模式的客流來自車站周邊的土地，不能直接設定。"
+                "經營模式的運量來自車站周邊的土地，不能直接設定。"
             )
         case .invalidTransferGroup:
             language.text("A station cannot be linked with itself.", "車站不能和自己組成轉乘群組。")

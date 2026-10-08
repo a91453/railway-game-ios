@@ -373,7 +373,7 @@ extension Tutorial {
             body: (
                 "Select a station on the map, then tap the people icon (Ridership) to see the trips it starts by the hour "
                     + "and the passengers waiting. The fares they pay are your income; the cash in the top bar follows.",
-                "在地圖上選一座車站，點人形圖示（客流），可以看它每小時的進出站人次和候車的乘客。乘客付的票價是你的收入，上方的現金會跟著變。"
+                "在地圖上選一座車站，點人形圖示（運量），可以看它每小時的進出站人次和候車的乘客。乘客付的票價是你的收入，上方的現金會跟著變。"
             )
         ),
         // Reference step 10, "控制模拟".

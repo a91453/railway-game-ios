@@ -43,7 +43,7 @@
 | `GridMap.neighbor(of:toward:)` | [GridMap.swift:67](../../Sources/GameCore/World/GridMap.swift#L67) | 方格四方向相鄰格；`GridMap` 的尺寸／範圍用途另列 §1.5。 |
 | `TrackResource.tile`、`.link(between:and:)` 與 `tile/link` codec | [TrackResources.swift:26](../../Sources/GameCore/Railway/TrackResources.swift#L26)、[31](../../Sources/GameCore/Railway/TrackResources.swift#L31)、[74](../../Sources/GameCore/Railway/TrackResources.swift#L74)、[80](../../Sources/GameCore/Railway/TrackResources.swift#L80)、[98](../../Sources/GameCore/Railway/TrackResources.swift#L98)、[104](../../Sources/GameCore/Railway/TrackResources.swift#L104) | 這是工廠方法／wire tag，**不是** `TrackResource` 的 enum case；實際 case 是共用 `.node/.span`。 |
 | `TrackSection`、`nodes`、`links`；私有 `Arc` | [TrackResources.swift:159](../../Sources/GameCore/Railway/TrackResources.swift#L159)、[176](../../Sources/GameCore/Railway/TrackResources.swift#L176)、[357](../../Sources/GameCore/Railway/TrackResources.swift#L357) | 方格支點間的 chain／loop，以及計算平行方格路徑的有向連結。 |
-| `LineLeg.route`、`TrackTraversal.tileAhead`、`TrainPlacement.trail` | [LineJourney.swift:46](../../Sources/GameCore/Railway/LineJourney.swift#L46)、[ServicePath.swift:51](../../Sources/GameCore/Railway/ServicePath.swift#L51)、[63](../../Sources/GameCore/Railway/ServicePath.swift#L63) | 共用線路／服務模型裡的方格投影與車身欄位；保留路網 `path/traversals/trailEdges`。 |
+| `LineLeg.route`、`TrackTraversal.tileAhead`、`TrainPlacement.trail` | [LineJourney.swift:46](../../Sources/GameCore/Railway/LineJourney.swift#L46)、[ServicePath.swift:51](../../Sources/GameCore/Railway/ServicePath.swift#L51)、[63](../../Sources/GameCore/Railway/ServicePath.swift#L63) | 共用路線／服務模型裡的方格投影與車身欄位；保留路網 `path/traversals/trailEdges`。 |
 
 ### 1.2 方格指令與查詢
 
@@ -84,7 +84,7 @@
 | `LineJourney` | 搜尋起始位置 [210](../../Sources/GameCore/Railway/LineJourney.swift#L210) 列舉所有方格月台 × cardinal heading，再加路網 berths；其餘行程／環線／時間計算共用。 |
 | `TimetableExecution` | `fits` 的 node/link 分支 [75](../../Sources/GameCore/Railway/TimetableExecution.swift#L75)，用 remainingContinuation 判斷到站；路網另用 edges/end。 |
 
-[RailwaySnapshot.swift:77](../../Sources/GameCore/Railway/RailwaySnapshot.swift#L77) 的 `trackAlignment`、[110](../../Sources/GameCore/Railway/RailwaySnapshot.swift#L110) 的 `railwaySnapshot` 與 Passenger 的停站查詢會經由上述泛用 API 讀到方格列車；它們沒有另一份方格權威，也不能因 adapter 移除而整個刪掉。Passenger、Boarding、服務／線路與 Economy 的規則本身多數以站／列車 ID 為準，測試建置資料卻大量使用方格，見 §3。
+[RailwaySnapshot.swift:77](../../Sources/GameCore/Railway/RailwaySnapshot.swift#L77) 的 `trackAlignment`、[110](../../Sources/GameCore/Railway/RailwaySnapshot.swift#L110) 的 `railwaySnapshot` 與 Passenger 的停站查詢會經由上述泛用 API 讀到方格列車；它們沒有另一份方格權威，也不能因 adapter 移除而整個刪掉。Passenger、Boarding、服務／路線與 Economy 的規則本身多數以站／列車 ID 為準，測試建置資料卻大量使用方格，見 §3。
 
 ### 1.4 舊世界序列化橋接
 
@@ -110,7 +110,7 @@
 
 ## 2. GoldenScenarios：逐份指令與可改寫性
 
-全部 27 份 JSON 都是 schema **27**。下表的數字是 `steps` 中的**指令出現次數，含被拒絕的指令**，不是成功建成的數量；`placeTrain(node/link)` 是 fixture 的 position `type`，對應 Core `atNode/onLink`。沒有列入的 `purchaseTrain`、`reverseTrain`、`unplaceTrain`、rate、timetable、線路、乘客、經濟與時鐘指令本身是共用的，但當世界／列車在方格上時仍走 §1 的方格分支。
+全部 27 份 JSON 都是 schema **27**。下表的數字是 `steps` 中的**指令出現次數，含被拒絕的指令**，不是成功建成的數量；`placeTrain(node/link)` 是 fixture 的 position `type`，對應 Core `atNode/onLink`。沒有列入的 `purchaseTrain`、`reverseTrain`、`unplaceTrain`、rate、timetable、路線、乘客、經濟與時鐘指令本身是共用的，但當世界／列車在方格上時仍走 §1 的方格分支。
 
 「可以」表示規則可在現有路網 API 上重新表達，**不表示只改 command 名就能保留所有 expected 值**。`node/link` 與 `edge` 位置、ID、tracks／network final state、建設費用、月台停點、車身與路程都可能需要作者重新手算與 review。方格每格花一次軌道費；路網按邊長進位收費，兩者也不能自動視為相等。
 
@@ -118,19 +118,19 @@
 
 | Fixture | 方格指令（次數） | 規則與只用路網改寫的判斷 |
 | --- | --- | --- |
-| [boarding.json](../../GoldenScenarios/boarding.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：上下車順序、容量、拒載、棄乘、守恆與 dwell 可用等距路網月台／同一線路重建；須核對每段距離、班表與經濟建設餘額。 |
+| [boarding.json](../../GoldenScenarios/boarding.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：上下車順序、容量、拒載、棄乘、守恆與 dwell 可用等距路網月台／同一路線重建；須核對每段距離、班表與經濟建設餘額。 |
 | [build-starter-line.json](../../GoldenScenarios/build-starter-line.json) | `buildStation` × 10、`buildTrack` × 10、`removeTrack` × 4 | 部分可以：資金、空白名稱、ID 與拒絕原子性可重寫；格子佔用、空出口 bit、格座標越界、拆非軌格與檢查順序是方格 API 契約，不能只換路網指令保留。 |
 | [clock-seconds.json](../../GoldenScenarios/clock-seconds.json) | `buildTrack` × 6、`placeTrain(node)` × 1、`setTrainContinuation` × 1 | 可以：tick 十分之一秒餘數、各速度、逐秒分配 1300 單位可換等長路網；車頭與 cursor 觀察須改 edge 表示。 |
 | [clock-speed-and-pause.json](../../GoldenScenarios/clock-speed-and-pause.json) | 無 | 已無方格指令：只驗證速度、pause/resume 與時間；initial map 尺寸／空 tracks final summary 仍來自共用 schema。 |
 | [continuous-track.json](../../GoldenScenarios/continuous-track.json) | 無 | 已無方格指令：連續幾何、長度、切線轉向、span、車身、反向與拆軌拒絕都在路網；1024 距離單位不是方格鐵軌。 |
-| [economy.json](../../GoldenScenarios/economy.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：票價級距／需求因子、上車收費與整點／午夜帳本可用等距路網重建；目前票價採站 position 格差，改點距離不能默認 expected 不變。 |
-| [free-station.json](../../GoldenScenarios/free-station.json) | `buildTrack` × 2、`buildStation` × 1、`extendStation` × 1 | 部分可以：點車站名稱、範圍、成本、路網月台與停站保留；與格軌重疊、拒建方格站、沒有方格月台、拒格擴建是相容層交互契約，移除後不能原樣表達。 |
+| [economy.json](../../GoldenScenarios/economy.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：票價級距／需求因子、上車收費與整點／午夜帳本可用等距路網重建；目前票價採站 position 格差，改點距離不能假定 expected 不變。 |
+| [free-station.json](../../GoldenScenarios/free-station.json) | `buildTrack` × 2、`buildStation` × 1、`extendStation` × 1 | 部分可以：點車站名稱、範圍、成本、路網月台與停站保留；與格軌重疊、拒建方格站、沒有方格月台、拒格擴建是相容層互動契約，移除後不能原樣表達。 |
 | [line-dispatch.json](../../GoldenScenarios/line-dispatch.json) | `buildTrack` × 7、`buildStation` × 5、`placeTrain(node)` × 3 | 可以：派車 ID 順序、班距、window、ready 條件、列車歸屬與服務完成可用路網 berths；須重算行程與位置觀察。 |
 | [line-patterns.json](../../GoldenScenarios/line-patterns.json) | `buildTrack` × 9、`buildStation` × 4、`placeTrain(node)` × 2 | 可以：short working／express、區段容量分配、pattern 索引與派車可用路網；維持 stops、路程與服務時間後重核 expected。 |
 | [network-service.json](../../GoldenScenarios/network-service.json) | `buildStation` × 2 | 可以：行駛已是路網，兩個 buildStation 換 buildStationAt；月台、timetable、repeat、車身停靠與路徑規則不需要格站，需改站 final summary。 |
 | [ring-line.json](../../GoldenScenarios/ring-line.json) | `buildTrack` × 12、`buildStation` × 4、`placeTrain(node)` × 2 | 可以：環線整圈、雙方向派車、偶數車數、無終點 dwell 與 passenger 方向可用連續環路；格角須改曲線／切線相接，圈長與 timetable 重新手算。 |
 | [service-line.json](../../GoldenScenarios/service-line.json) | `buildTrack` × 7、`buildStation` × 5、`removeTrack` × 1 | 可以：stops/window/level/headway、行程與移除軌道後查詢可換路網；格子 route 觀察與規劃距離／時間須改。 |
-| [service-run.json](../../GoldenScenarios/service-run.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：running curve、秒級位置、late run、performance 與線路計畫可用等距路網；改 edge 位置、stand/end 與距離觀察。 |
+| [service-run.json](../../GoldenScenarios/service-run.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：running curve、秒級位置、late run、performance 與路線計畫可用等距路網；改 edge 位置、stand/end 與距離觀察。 |
 | [station-demand.json](../../GoldenScenarios/station-demand.json) | `buildStation` × 3 | 可以：只用三座方格站的 ID，需求曲線、旅次、釋出餘數、候車／溢出與守恆不需鐵軌；改 buildStationAt 即可承接規則及站 summary。 |
 | [station-dwell.json](../../GoldenScenarios/station-dwell.json) | `buildTrack` × 7、`buildStation` × 3、`placeTrain(node)` × 1 | 可以：開門／關門、最低停站秒數、lateness 與 execution 可用同距離路網月台；需以 path end 表達停住。 |
 | [station-facilities.json](../../GoldenScenarios/station-facilities.json) | `buildTrack` × 11、`buildStation` × 2、`extendStation` × 7、`placeTrain(node)` × 3、`removeTrack` × 1、`setTrainContinuation` × 3 | 部分可以：車長、整列車進月台、反向車身、佔用／拆軌拒絕可用路網；相鄰格擴站、扣一格站費、格月台 chain／一車一格的條件不能只換指令保留。 |
@@ -178,7 +178,7 @@ Golden 執行器本身也要遷移：`ScenarioCommand` 的格軌／站／列車�
 | [PassengerDemandTests:19](../../Tests/GameCoreTests/PassengerDemandTests.swift#L19) | 三座格站的 ID；需求、釋出、守恆規則可換點站，沒有必要格軌。 |
 | [BoardingTests:38](../../Tests/GameCoreTests/BoardingTests.swift#L38) | 上／下車 helper 的格軌、格站、atNode；守恆與容量規則可換路網。 |
 | [EconomyAccountsTests:29](../../Tests/GameCoreTests/EconomyAccountsTests.swift#L29) | 格線營運、格站距離、建設餘額、整點／日帳本與報表。 |
-| [CarPriceTests（EconomyTests.swift）:72](../../Tests/GameCoreTests/EconomyTests.swift#L72) | 負餘額 helper 建格站／線路以結算，供 testFreeCarsAreAddedEvenWithANegativeBalance 與 testPricedCarsAreStillRefusedWithANegativeBalance 使用；其他車廂價格測試只需未放置列車。EconomyTests 本身不依賴方格鐵路。 |
+| [CarPriceTests（EconomyTests.swift）:72](../../Tests/GameCoreTests/EconomyTests.swift#L72) | 負餘額 helper 建格站／路線以結算，供 testFreeCarsAreAddedEvenWithANegativeBalance 與 testPricedCarsAreStillRefusedWithANegativeBalance 使用；其他車廂價格測試只需未放置列車。EconomyTests 本身不依賴方格鐵路。 |
 | [IDAllocationTests:43](../../Tests/GameCoreTests/IDAllocationTests.swift#L43) | 格軌／格站 helper、ID 上限的保存 JSON、名字→格→ID→資金檢查順序。 |
 | [PersistenceAndDeterminismTests:9](../../Tests/GameCoreTests/PersistenceAndDeterminismTests.swift#L9) | 建格線／站、dense map、站與格不一致、ID 延續與同操作同編碼；成本／clock malformed tests 是共用。 |
 | [RailwayNetworkAuthorityTests:38](../../Tests/GameCoreTests/RailwayNetworkAuthorityTests.swift#L38) | 方格鐵軌的唯一權威、土地互斥、舊 map codec、grid link 一個 span 與兩類 pathAhead；路網 span 子測試保留。 |
@@ -186,7 +186,7 @@ Golden 執行器本身也要遷移：`ScenarioCommand` 的格軌／站／列車�
 | [VerticalRailwayTests:426](../../Tests/GameCoreTests/VerticalRailwayTests.swift#L426) | Hub/Annex 等用格站建立路網月台；466 行拒 grid link 為 platform 邊。縱斷面／淨空主體不需格軌。 |
 | [NetworkServiceTests:62](../../Tests/GameCoreTests/NetworkServiceTests.swift#L62) | 路網營運 helper 仍建方格站；另有格／路網隔離斷言，不能把全類視為已脫離方格。 |
 | [TrafficControlTests:17](../../Tests/GameCoreTests/TrafficControlTests.swift#L17) | 混合：格軌預約／支撐與路網 junction-zone／span／服務；格資源 helper 從 21 行開始。 |
-| [FreeStationTests:13](../../Tests/GameCoreTests/FreeStationTests.swift#L13) | 點站與格軌／格站相容交互、拒格擴建、格投影／outOfBounds；純點站／路網月台部分保留。 |
+| [FreeStationTests:13](../../Tests/GameCoreTests/FreeStationTests.swift#L13) | 點站與格軌／格站相容互動、拒格擴建、格投影／outOfBounds；純點站／路網月台部分保留。 |
 | [SavedGameTests:20](../../Tests/GameCoreTests/SavedGameTests.swift#L20) | 自造 mixed 世界含格站；[65](../../Tests/GameCoreTests/SavedGameTests.swift#L65) 注入舊 dense map 的格軌，[83](../../Tests/GameCoreTests/SavedGameTests.swift#L83) 大地圖格站，[89](../../Tests/GameCoreTests/SavedGameTests.swift#L89) sparse map mutation。[135](../../Tests/GameCoreTests/SavedGameTests.swift#L135) 起的四份 committed fixture 本身無格站／軌。 |
 | [GoldenScenarioTests:138](../../Tests/GameCoreTests/GoldenScenarioTests.swift#L138) | 跑全部 golden，並故意變更 annexes／trail／continuation、格 direction／resource 等摘要以驗證 mismatch；須隨 schema 使用評估。 |
 | [ReferenceWorldGoldenTests:10](../../Tests/GameCoreTests/ReferenceWorldGoldenTests.swift#L10) | 在差分 reference 上跑全部 golden，40 行起比對格站／軌摘要，105 行起 apply 方格指令；不只驗證 Core。 |
@@ -210,7 +210,7 @@ Campaign 名稱照程式中的 `runCampaign` 字串，方便在 `PROPERTY_REPLAY
 | [KernelDifferentialTests:759](../../Tests/GameCoreTests/KernelDifferentialTests.swift#L759) | `kernel.differential、kernel.replay` | 基礎格世界，格 Operation、雙 model apply、每一步 grid/position/route 差異與 shrinker／digest。 |
 | [TimetablePropertyTests:71](../../Tests/GameCoreTests/TimetablePropertyTests.swift#L71) | `timetable.differential、timetable.replay、timetable.generator` | 沿 Kernel Setup／Operation，格軌／站／位置；擴 timetable operation。 |
 | [ServicePropertyTests:147](../../Tests/GameCoreTests/ServicePropertyTests.swift#L147) | `service.differential、service.repeating、service.replay` | 沿 Kernel makeSetup，scriptedService 選方格 platforms × heading，與格 reference 的服務／repeat 比較。 |
-| [ServiceLinePropertyTests:124](../../Tests/GameCoreTests/ServiceLinePropertyTests.swift#L124) | `line.differential` | 27 行 generator 沿 Kernel 格世界，新增線路／level／window 指令。 |
+| [ServiceLinePropertyTests:124](../../Tests/GameCoreTests/ServiceLinePropertyTests.swift#L124) | `line.differential` | 27 行 generator 沿 Kernel 格世界，新增路線／level／window 指令。 |
 | [LineDispatchPropertyTests:236](../../Tests/GameCoreTests/LineDispatchPropertyTests.swift#L236) | `line.dispatch、dispatch.replay` | 35 行格形狀 Setup，72–84 行用格月台與 heading 選 ready 位置；含 ring 設定。 |
 | [LinePatternPropertyTests:182](../../Tests/GameCoreTests/LinePatternPropertyTests.swift#L182) | `line.patterns` | 30 行 Kernel 格世界，68–78 行格月台與 routes 決定 stops／pattern。 |
 | [TrackResourcePropertyTests:161](../../Tests/GameCoreTests/TrackResourcePropertyTests.swift#L161) | `track.resources` | Kernel 格世界 + turnout/crossing；轉向表、tile/link 佔用、section／parallelTracks。 |
@@ -231,7 +231,7 @@ Campaign 名稱照程式中的 `runCampaign` 字串，方便在 `PROPERTY_REPLAY
 | [save.timetableMutation:192](../../Tests/GameCoreTests/SaveMutationTests.swift#L192) | TimetablePropertyTests.generate：方格建置與 timetable。 |
 | [save.serviceMutation:278](../../Tests/GameCoreTests/SaveMutationTests.swift#L278) | ServicePropertyTests.generate：方格營運。 |
 | [save.repeatMutation:379](../../Tests/GameCoreTests/SaveMutationTests.swift#L379) | ServicePropertyTests.generate(repeating:)：方格重複服務。 |
-| [save.lineMutation:486](../../Tests/GameCoreTests/SaveMutationTests.swift#L486) | ServiceLinePropertyTests.generate：方格線路。 |
+| [save.lineMutation:486](../../Tests/GameCoreTests/SaveMutationTests.swift#L486) | ServiceLinePropertyTests.generate：方格路線。 |
 | [save.dispatchMutation:566](../../Tests/GameCoreTests/SaveMutationTests.swift#L566) | LineDispatchPropertyTests.generate：方格派車。 |
 | [save.patternMutation:645](../../Tests/GameCoreTests/SaveMutationTests.swift#L645) | LinePatternPropertyTests.generate：方格 pattern。 |
 | [save.trackMutation:724](../../Tests/GameCoreTests/SaveMutationTests.swift#L724) | TrackResourcePropertyTests.generate：turnout/crossing、方格 resources。 |
@@ -392,12 +392,12 @@ GameLauncher／SaveLibrary 會呼叫共用 SavedGame 的 JSON encode/decode，�
 
 GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路網上產生世界，獨立參考模型（`ReferenceWorld`）原本就有路網的指令，沒有改。
 
-**共用的路網產生器** [`KernelNetwork`](../../Tests/GameCoreTests/KernelNetwork.swift)（取代方格的 `NetworkShape`）：節點在格心，橫豎的直邊各 1024，轉彎用曲線；邊在節點只有反方向、差 1/16 以內才相接，所以轉角是曲線、分岔是同方向離開的道岔。形狀對應方格的用途：
+**共用的路網產生器** [`KernelNetwork`](../../Tests/GameCoreTests/KernelNetwork.swift)（取代方格的 `NetworkShape`）：節點在格心，橫豎的直邊各 1024，轉彎用曲線；邊在節點只有反方向、差 1/16 以內才相接，所以轉角是曲線、分岔是同方向離開的轉轍器。形狀對應方格的用途：
 
 | 形狀 | 對應方格的 | 內容 |
 | --- | --- | --- |
 | `line` | `line` | 一條直線，偶爾有 2–3 格長的邊（長列車放得下的月台） |
-| `loopWithTails` | `loopWithTails` | 兩條直邊加兩端曲線的環，轉角接出尾線（道岔） |
+| `loopWithTails` | `loopWithTails` | 兩條直邊加兩端曲線的環，轉角接出尾線（轉轍器） |
 | `ladder` | `ladder` | 兩條平行線，用 S 形渡線同方向接起來：等長的替代路線 |
 | `crossings` | `grid` | 共用節點但不相接的平面交叉：列車只能直走過去 |
 | `twoLines` | `twoComponents` | 兩條不相通的線 |
@@ -436,17 +436,17 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 | Campaign | 下限 | 原因 |
 | --- | --- | --- |
 | `kernel.differential` | 新增路網指令的下限：移動列車的 advance 300、給出路徑的送車 200、成功的 stand 250、place 350、buildEdge 200、removeEdge 200、addPlatform 100、removePlatform 200、buildStationAt 200、拆有列車的邊被拒 100 | 方格版沒有逐類的下限；路網版確認每一類指令都真的跑到 |
-| `line.patterns` | case 6 → 10 | 路網的形狀較稀疏，6 個 case 跑不到足夠的交路與快車 |
+| `line.patterns` | case 6 → 10 | 路網的形狀較稀疏，6 個 case 跑不到足夠的區間車與快車 |
 | `line.differential` | 拿掉「沒有移動的一段」（≥ 100） | 路網上兩站不會共用 berth（方格可以共用月台格），兩站之間的一段一定要移動 |
 | `line.dispatch` | 「跑完的趟」150 → 100 | 路網上一個 case 內跑完的趟較少：設定時四個 seed 共 134 |
-| `boarding.differential` | 「同時載往幾個迄點」200 → 20 | 路網上的線路較稀疏：設定時四個 seed 共 43 |
+| `boarding.differential` | 「同時載往幾個迄點」200 → 20 | 路網上的路線較稀疏：設定時四個 seed 共 43 |
 | `service.differential` | 「沒有時刻表」60 → 40 | 設定時四個 seed 共 59 |
 
 **修正的測試支援**：`WorldInvariants` 原本假設每座車站都佔一格，點車站（Stage F1）不佔格；改成點車站檢查「位置是點底下的格、沒有擴站」，格站照舊。存檔變異 campaign 的「車站在它的格上」也只對格站檢查。
 
 點車站的存檔被變異成沒有車站、只剩一座車站或沒有列車時仍讀得進來（地圖沒有格指向它們；方格車站時這種變異會被拒絕），而存檔變異 campaign 會在讀進來的世界上接著跑各 campaign 的產生器。完整測試因此抓到三個產生器在這種世界會當掉：乘客（沒有車站、少於兩站時排停靠站）、路網服務與交通管制（沒有車站或列車；只剩一站時排時刻表）。它們在這種世界改送 advance 或空的時刻表（GameCore 拒絕）。只有那種世界才走新的分支，其他情況抽到的亂數不變，digest 不受影響（乘客、路網服務與交通管制的 digest 在加了防呆前後相同）。
 
-方格本身是主題的 `station.facilities` 借用線路派車 campaign 的產生器（`scriptedLine`、`nextDispatchOperation`），那兩個改到路網後，它在方格上派不出長列車。它改用一份方格版的複本（`gridScriptedLine`、`gridDispatchOperation`，F3b-2 之前的寫法），digest 回到原值；F3c 和方格一起刪。
+方格本身是主題的 `station.facilities` 借用路線派車 campaign 的產生器（`scriptedLine`、`nextDispatchOperation`），那兩個改到路網後，它在方格上派不出長列車。它改用一份方格版的複本（`gridScriptedLine`、`gridDispatchOperation`，F3b-2 之前的寫法），digest 回到原值；F3c 和方格一起刪。
 
 ### 7.4 F3b-2 之後暫時沒有改的地方
 
@@ -463,7 +463,7 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 | 參考 | Swift | 說明 |
 | --- | --- | --- |
 | `desync.md` §2.2 指令紀錄 | `ReplayCommand`（純值的 Codable，不用 GameCore 會拒絕無效值的 coding） | 有效與被拒的指令都記 |
-| §3.2 每段 checksum | `ReplayState.checksum(of:)`：時間、金錢與帳、路網與月台、車站與乘客、列車的位置／車身／路徑／服務、線路與交路、乘客群（FNV-1a 64） | 算遊戲狀態的描述，不是存檔位元組：存檔格式改了但值不變時 checksum 不變 |
+| §3.2 每段 checksum | `ReplayState.checksum(of:)`：時間、金錢與帳、路網與月台、車站與乘客、列車的位置／車身／路徑／服務、路線與區間車、乘客群（FNV-1a 64） | 算遊戲狀態的描述，不是存檔位元組：存檔格式改了但值不變時 checksum 不變 |
 | §3.1 重播、§3.2 縮小區間 | `ReplayFixtureTests.testEveryRecordedStreamReplaysToTheSameStates`、`firstDifference` | 第一個不同的 checksum 指出分歧的指令區間 |
 | §2.1 每 tick 檢查快取 | 每個指令後跑 `WorldInvariants` | |
 
@@ -482,11 +482,11 @@ GameCore 沒有改。差分 campaign 和它們的存檔變異 campaign 改在路
 | S1 的 `parallelTracks`（不共用連結的路徑數；`tra_track_sections.json` 的 ≥ 0.5 沒有移植，見下） | `GameWorld.parallelTracks(between:and:)` = 方格 + `networkParallelTracks`：每段軌道容量 1 的最大流，廣度優先 | 世界單位 |
 | — | 差分模型 `ReferenceWorld.networkParallelTracks`：深度優先、以邊與段落命名的頂點 | — |
 
-- **區段**：分歧點是「不是正好兩條相接的邊」的節點：道岔、交叉、盡頭，以及兩條邊在那裡不相接的節點。從分歧點出發的區段依（節點編號、邊編號）最小的那一端排，從那一端走；沒有分歧點的環依最小的邊編號排，從那條邊的 `from` 節點順著走。沒有邊的節點不屬於任何區段（方格的孤立格是一格的區段；路網的節點不是軌道）。
+- **區段**：分歧點是「不是正好兩條相接的邊」的節點：轉轍器、交叉、盡頭，以及兩條邊在那裡不相接的節點。從分歧點出發的區段依（節點編號、邊編號）最小的那一端排，從那一端走；沒有分歧點的環依最小的邊編號排，從那條邊的 `from` 節點順著走。沒有邊的節點不屬於任何區段（方格的孤立格是一格的區段；路網的節點不是軌道）。
 - **和參考不同的地方**：參考的一組只列普通節點；我們另外列出邊與行進方向，以及兩端的分歧點（和方格的 `trackSections()` 一樣）。參考數相鄰的節點、看 `switch` 標記；GameCore 沒有標記，所以數邊端並用相接規則（決策 29），同一對節點之間的兩條邊是兩股（參考是重複的 OSM way，共用一個資源）。盡頭在參考裡屬於一組，在我們這裡是區段的端點。
 - **單雙線**：沿用 S1 的定義，路網上路徑不共用任何一段軌道：一條邊，在兩站的月台處切開（同一條邊上的兩站之間的那一段也算一段，長度 0 也算）。路徑只在相接的邊之間轉換，可以在邊上折返（S1 也不看轉向規則）；從月台往邊的兩個方向都可以出發。方格與路網不相連，兩個數相加。
 - **驗證**：`NetworkSectionTests`（7 個，預期值手算：避車線、切斷避車線、環、同一條邊上的兩站、菱形交叉、空路網）；新的 campaign `network.sections`（`NetworkSectionPropertyTests`，16 個 case × 4 個 seed，kernel 的路網與指令，每一步比對區段與每一對車站的單雙線，另外檢查每條邊正好在一個區段、區段內的節點都是普通節點）。改壞 GameCore 的三處（每段容量 2、普通節點不看相接、環從另一端反向走）時這個 campaign 都會失敗。`track.resources` 的 digest 不變（696BB5A1406DD105），方格的查詢沒有變。
-- **行為**：兩個都是唯讀查詢，沒有規則讀它們，golden 也沒有觀察路網的這兩個查詢，所以遊戲行為、golden、存檔與 replay fixture 都不變。改變的是路網世界的查詢結果（原本沒有區段、單雙線一律 0）與文字：線路面板的單雙線原本在路網世界一律是「方格上沒有軌道」，現在是單線、雙線或「沒有軌道」；區段摘要也數路網。
+- **行為**：兩個都是唯讀查詢，沒有規則讀它們，golden 也沒有觀察路網的這兩個查詢，所以遊戲行為、golden、存檔與 replay fixture 都不變。改變的是路網世界的查詢結果（原本沒有區段、單雙線一律 0）與文字：路線面板的單雙線原本在路網世界一律是「方格上沒有軌道」，現在是單線、雙線或「沒有軌道」；區段摘要也數路網。
 
 ### 8.2 F3c-1 之後暫時沒有改的地方
 
@@ -500,7 +500,7 @@ GameCore 沒有改。GamePresentation 與 App 不再呼叫方格的鐵軌、車�
 
 | 拿掉的 | 之後 |
 | --- | --- |
-| 工具 `buildTrack`、`buildStation`、`removeTrack`，`TrackPiece`、`TrackPieceKind`，`GameSession` 的軌道形狀、道岔共用端、擴站（F1 起 App 已經不提供） | 工具只有選取、路網、列車；車站由路網工具的月台模式建（F1） |
+| 工具 `buildTrack`、`buildStation`、`removeTrack`，`TrackPiece`、`TrackPieceKind`，`GameSession` 的軌道形狀、轉轍器共用端、擴站（F1 起 App 已經不提供） | 工具只有選取、路網、列車；車站由路網工具的月台模式建（F1） |
 | 放置列車在選取的格（`placeTrain(.atNode)`） | 只放在選取車站的路網月台；沒選車站時說「請選擇要放置 T 的車站」 |
 | 送到選取的格（方格路徑 `route(to:)`、`setTrainContinuation(to:)`） | 只送到選取的車站（`path(from:toStation:length:)`）；沒選車站時說「請選擇 T 要前往的車站」（原本是「路網上的列車只能前往車站」） |
 | 放置方向用 GameCore 的 `TrackDirection` | GamePresentation 自己的 `CompassHeading`（北東南西，畫面不變） |
@@ -526,7 +526,7 @@ GameCore 沒有改。GamePresentation 與 App 不再呼叫方格的鐵軌、車�
 
 - **對 GameCore 列舉的完整 switch**：`TrainPosition.atNode／onLink`、`TrackNodeID.tile`、`TrackEdgeID.link` 的顯示文字與方格的 `GameError` 訊息（以及測它們的 DisplayText、Localization、NetworkDisplay 測試）還在，GameCore 拿掉那些 case 時（F3c-3）一起刪。
 - **`GameSession.selection`** 仍是 `GridPosition`：點到的那一格土地，決策 51 保留 `GridPosition`（點車站底下的格）。
-- **VoiceOver 在地圖上移動選取**：方格的四個動作拿掉後，地圖沒有替代的動作；VoiceOver 使用者從車站清單（路網總覽、線路面板）選站。參考沒有這個功能，需要時另外設計。
+- **VoiceOver 在地圖上移動選取**：方格的四個動作拿掉後，地圖沒有替代的動作；VoiceOver 使用者從車站清單（路網總覽、路線面板）選站。參考沒有這個功能，需要時另外設計。
 - **UNVERIFIED — App（SwiftUI）**：Linux 不能編譯 App；`RailwayGameApp/` 的改動（ControlPanel、TrainControls、MapView、TileArt、字串目錄）要靠 macOS CI 的建置與 UI 測試確認。
 
 ### 8.5 F3c-3a：只有方格測試測到的規則，先在路網上測
@@ -537,7 +537,7 @@ GameCore 沒有改。刪方格的單元測試之前，先盤點每個方格測�
 | --- | --- |
 | TrainMovementTests `testAHugeRateEndsWithTheContinuationWithoutOverflow` | NetworkRuleTests `testAHugeRateEndsAtThePathsEndWithoutOverflow` |
 | TrainMovementTests `testZeroDistanceChangesNothing` | `testZeroTicksAndARateOfZeroMoveNothing` |
-| TrainMovementTests `testTheWaitingTrainChecksOnlyItsOwnNextLink` | `testAWaitingTrainChecksOnlyTheEdgeItsPathNames`（道岔的分支被拆，直行的路通也不改走） |
+| TrainMovementTests `testTheWaitingTrainChecksOnlyItsOwnNextLink` | `testAWaitingTrainChecksOnlyTheEdgeItsPathNames`（轉轍器的分支被拆，直行的路通也不改走） |
 | TrainMovementTests `testEachTrainMovesAsIfItWereAlone` | `testEachTrainMovesAsIfItWereAlone` |
 | TrainMovementTests 時間盡頭的三個測試 | `testTheLastMinutesCanBeReachedExactlyWithATrainMoving`、`testABatchPastTheEndOfTimeIsRejectedWholeWithATrainMoving` |
 | TrainMovementTests `testIdleTrainsAreSavedWithoutAMovement…`、`testMalformedMovementIsRejectedNotReadAsIdle` | `testIdleTrainsAreSavedWithoutAMovementAndOldSavesReadAsIdle`、`testMalformedNetworkMovementIsRejectedNotReadAsIdle`（壞的 rate、cursor、edges、`end`，路網上的方格 continuation，未放置卻有 movement） |
@@ -545,7 +545,7 @@ GameCore 沒有改。刪方格的單元測試之前，先盤點每個方格測�
 | TrainRouteTests `testALargeGridIsSearchedWithoutTrouble` | `testALongLineIsSearchedWithoutTrouble`（199 條邊） |
 | StationStopTests 等待被拆的軌道不算停站、ID 順序、不明的站與列車 | `testWaitingAtAPlatformForRemovedTrackIsNotAStop`、`testStationsAreListedInAscendingIDOrder`、`testUnknownStationsAndTrainsHaveNoPlatformsOrStops` |
 | StationFacilityTests 設定節數、節數的存檔 | `testCarsAreSetOffTheTrack`、`testCarsAreSavedOnlyAboveOneAndRefusedOutOfRange` |
-| TrackResourceTests 不明線路沒有單雙線 | `testAnUnknownLineHasNoTrackCounts` |
+| TrackResourceTests 不明路線沒有單雙線 | `testAnUnknownLineHasNoTrackCounts` |
 | TrafficControlTests `testWithoutTrafficControlTrainsShareTrackAsBefore` | TrafficControlTests `testWithoutTrafficControlNetworkTrainsShareTrackAsBefore` |
 | TrafficControlTests `testTurningTrafficControlOnAndOff` | `testTurningTrafficControlOnAndOffOnTheNetwork` |
 | TrafficControlTests `testGridRoutesAreTakenWholeAndKeptForTheTrip`（rate 0 保留預約；「使用中」先於「已預約」） | `testANetworkReservationOutlastsRate0AndTrackInUseComesFirst` |
@@ -579,7 +579,7 @@ GameCore 沒有改。方格是主題的測試、campaign 與 golden 刪掉；它
 
 **Golden 執行器的自我檢查**（GoldenScenarioTests）：「每種預期值至少有一份 fixture 用到」原本要求方格的鄰格順序、方格路徑、方格月台、出口、區段、雙線、月台軌道、擴站與方格車身；換成路網的：跨兩條邊以上的路徑、到車站的這種路徑、長列車的路徑、跨兩條邊以上的車身（`trailEdges`，也加上它的變異：多一條、少一條、反序）。方格那幾種的變異留著（沒有 fixture 會進去），F3c-3c 和 schema 一起刪。
 
-**`traffic.reservation` 只剩路網**：原本奇數 case 建方格、偶數 case 建路網；現在 40 個 case 都是路網。偶數 case 的指令流不變（沒有方格時它們從來沒有抽過方格的亂數）；給未放置列車的「放到方格節點 (0, 0)」（一定被拒絕 `invalidTrainPosition`）換成同樣被拒絕、也不抽亂數的「放到不存在的邊」。digest `B4ACB2397A8CFAD1` → `BDDE41B7E5A824DB`（奇數 case 換成路網）。量：拿到預約 1027、被拒絕的取得 358、出發與派車拿到 186、服務等待 2330、線路派車等待 305、路網 span 衝突 489、長列車預約 691、月台中段的停車點 490、打開被拒絕 113、設施被拒絕 131、路線結束時釋放 445；「方格上的衝突」的下限拿掉，其餘下限不變。`save.trafficMutation` 跟著只剩路網：載入 399、拒絕 1041、瞄準 1084、翻轉 63、有預約的世界 151，下限不變。
+**`traffic.reservation` 只剩路網**：原本奇數 case 建方格、偶數 case 建路網；現在 40 個 case 都是路網。偶數 case 的指令流不變（沒有方格時它們從來沒有抽過方格的亂數）；給未放置列車的「放到方格節點 (0, 0)」（一定被拒絕 `invalidTrainPosition`）換成同樣被拒絕、也不抽亂數的「放到不存在的邊」。digest `B4ACB2397A8CFAD1` → `BDDE41B7E5A824DB`（奇數 case 換成路網）。量：拿到預約 1027、被拒絕的取得 358、出發與派車拿到 186、服務等待 2330、路線派車等待 305、路網 span 衝突 489、長列車預約 691、月台中段的停車點 490、打開被拒絕 113、設施被拒絕 131、路線結束時釋放 445；「方格上的衝突」的下限拿掉，其餘下限不變。`save.trafficMutation` 跟著只剩路網：載入 399、拒絕 1041、瞄準 1084、翻轉 63、有預約的世界 151，下限不變。
 
 其他 campaign 的 digest 都不變（它們從 F3b-2 起就只在路網上）。
 

@@ -194,7 +194,7 @@ struct StationPanel: View {
         } footer: {
             Text(verbatim: language.text(
                 "A platform track runs beside the platform with a turnout at each end. Island: one platform between the tracks, 11 m apart. Side: a platform outside each track, 5 m apart.",
-                "月台軌道會建在月台旁，兩端各有一組道岔。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
+                "月台軌道會建在月台旁，兩端各有一組轉轍器。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
             ))
         }
     }
