@@ -75,6 +75,9 @@ extension ReferenceWorld {
         case .office: shape { 1 + bell($0, 18, 1.15) * 0.6 }
         case .shopping: shape { 1 + bell($0, 14, 2.4) * 0.42 + bell($0, 19, 1.8) * 0.5 }
         case .scenic: shape { 1 + bell($0, 16, 2.1) * 0.75 }
+        // Not the reference's: decision 91's school day, the office's curve
+        // with pupils leaving at 16.
+        case .civic: shape { 1 + bell($0, 16, 1.15) * 0.6 }
         }
     }
 
@@ -84,6 +87,8 @@ extension ReferenceWorld {
         case .office: shape { 1 + bell($0, 8, 1.15) * 0.6 }
         case .shopping: shape { 1 + bell($0, 13, 2.4) * 0.42 + bell($0, 18, 1.8) * 0.5 }
         case .scenic: shape { 1 + bell($0, 11, 2.1) * 0.75 }
+        // Decision 91's school day: pupils arrive at 7.
+        case .civic: shape { 1 + bell($0, 7, 1.15) * 0.6 }
         }
     }
 

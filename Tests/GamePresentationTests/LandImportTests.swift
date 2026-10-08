@@ -113,7 +113,9 @@ final class LandImportTests: XCTestCase {
         var world = GameWorld.newGame(anchor: anchor, land: cells)
         XCTAssertEqual(world.land.totals.residents, without.reduce(0) { $0 + $1.residents }, "the same people")
         XCTAssertTrue((1_500_000 ... 3_000_000).contains(world.land.totals.jobs), "\(world.land.totals.jobs) jobs round Taipei")
-        XCTAssertEqual(Set(cells.map(\.use)), Set(LandUse.allCases), "homes, shops and offices")
+        // Decision 91: schools and sights make land of their own; factories,
+        // farms and parks have no layer of real-world data yet.
+        XCTAssertEqual(Set(cells.map(\.use)), [.residential, .commercial, .office, .civic, .leisure])
         // Taipei Main Station: an office station, its ridership its share.
         let station = try world.buildStation(named: "Taipei", at: PlanPoint(x: 524_288, y: 524_288)).id
         let demand = try XCTUnwrap(world.stationDemand(of: station))
@@ -130,18 +132,21 @@ final class LandImportTests: XCTestCase {
         let world = GameWorld.newGame(anchor: anchor, land: cells)
         XCTAssertTrue(world.cityBuildings)
         XCTAssertEqual(world.buildings.all.count, world.land.cells.count)
-        var counts: [LandUse: [Int]] = [.residential: [0, 0, 0, 0], .commercial: [0, 0, 0, 0], .office: [0, 0, 0, 0]]
+        var counts: [LandUse: [Int]] = [:]
         for building in world.buildings.all {
             XCTAssertEqual(building.kind, .city, "no cell is too full for D4")
-            counts[building.use]![building.density.rawValue - 1] += 1
+            counts[building.use, default: [0, 0, 0, 0]][building.density.rawValue - 1] += 1
         }
         // 64,829 cells by density, D1 to D4: no cell needs D4, as each is
-        // chosen by its main count only (residents of homes, jobs of shops
-        // and offices; the fullest office cell, 78 residents and 285 jobs,
-        // is D3).
-        XCTAssertEqual(counts[.residential], [26_392, 32_303, 2_214, 0])
-        XCTAssertEqual(counts[.commercial], [1_462, 0, 0, 0])
-        XCTAssertEqual(counts[.office], [390, 1_873, 195, 0])
+        // chosen by its main count only (residents of homes, jobs of the
+        // rest; the fullest office cell, 78 residents and 285 jobs, is D3).
+        // Decision 91 gives schools and sights cells of their own, which
+        // were offices and shops before, and a cell they made offices or
+        // shops without outnumbering its people is homes now.
+        XCTAssertEqual(counts, [
+            .residential: [26_587, 32_485, 2_214, 0], .commercial: [206, 0, 0, 0], .office: [0, 1_691, 195, 0],
+            .civic: [195, 0, 0, 0], .leisure: [1_256, 0, 0, 0],
+        ])
         for cell in world.land.cells {
             let capacity = try XCTUnwrap(world.buildingCapacity(row: cell.row, column: cell.column))
             XCTAssertGreaterThanOrEqual(capacity.residents, cell.residents)
@@ -201,12 +206,14 @@ final class LandImportTests: XCTestCase {
     func testTheStationPanelSaysWhoLivesAndWorksNearBy() throws {
         var world = GameWorld.newGame()
         let station = try world.buildStation(named: "Middle", at: PlanPoint(x: 524_288, y: 524_288)).id
-        XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 50,189 residents · 33,276 jobs")
-        XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 50,189 人 · 就業 33,276 個")
+        // Decision 91's first town: its schools, sights and factories have
+        // jobs where homes were, and its farms and parks reach the edge.
+        XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 44,394 residents · 42,396 jobs")
+        XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 44,394 人 · 就業 42,396 個")
         XCTAssertNil(world.landCatchmentText(of: StationID(rawValue: 99), in: .english))
         // Phase 6c-1: the first town's cells by their buildings' density.
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: low-rise 88 · mid-rise 188 · high-rise 134 · towers 27")
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：低層 88 格 · 中層 188 格 · 高層 134 格 · 超高層 27 格")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: low-rise 102 · mid-rise 189 · high-rise 130 · towers 27")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：低層 102 格 · 中層 189 格 · 高層 130 格 · 超高層 27 格")
         XCTAssertNil(world.catchmentBuildingsText(of: StationID(rawValue: 99), in: .english))
         try world.setLand([
             LandCell(row: 128, column: 128, use: .office, residents: 0, jobs: 5_000),

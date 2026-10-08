@@ -20,6 +20,19 @@ final class BuildingTests: XCTestCase {
         (.residential, .d1, 56, 12, 2), (.residential, .d2, 168, 36, 6), (.residential, .d3, 504, 108, 18), (.residential, .d4, 1_120, 240, 40),
         (.commercial, .d1, 16, 72, 2), (.commercial, .d2, 48, 216, 6), (.commercial, .d3, 144, 648, 18), (.commercial, .d4, 320, 1_440, 40),
         (.office, .d1, 8, 84, 2), (.office, .d2, 24, 252, 6), (.office, .d3, 72, 756, 18), (.office, .d4, 160, 1_680, 40),
+        // Decision 91's uses: factories all jobs, schools and public
+        // offices and sights split as offices, farms as shops, parks
+        // holding no one.
+        (.industrial, .d1, 0, 96, 2), (.industrial, .d2, 0, 288, 6), (.industrial, .d3, 0, 864, 18), (.industrial, .d4, 0, 1_920, 40),
+        (.civic, .d1, 8, 84, 2), (.civic, .d2, 24, 252, 6), (.civic, .d3, 72, 756, 18), (.civic, .d4, 160, 1_680, 40),
+        (.leisure, .d1, 8, 84, 2), (.leisure, .d2, 24, 252, 6), (.leisure, .d3, 72, 756, 18), (.leisure, .d4, 160, 1_680, 40),
+        (.agricultural, .d1, 16, 72, 2), (.agricultural, .d2, 48, 216, 6), (.agricultural, .d3, 144, 648, 18), (.agricultural, .d4, 320, 1_440, 40),
+        (.park, .d1, 0, 0, 2), (.park, .d2, 0, 0, 6), (.park, .d3, 0, 0, 18), (.park, .d4, 0, 0, 40),
+    ]
+
+    /// The eighths of each use's floor that are homes (a park has no floor).
+    private static let homeEighths: [LandUse: Int64] = [
+        .residential: 7, .commercial: 2, .office: 1, .industrial: 0, .civic: 1, .leisure: 1, .agricultural: 2,
     ]
 
     private static func row(_ use: LandUse, _ density: BuildingDensity) -> (residents: Int64, jobs: Int64) {
@@ -72,11 +85,14 @@ final class BuildingTests: XCTestCase {
         for (use, density, residents, jobs, floors) in Self.table {
             XCTAssertEqual(density.floors, floors)
             XCTAssertEqual(Building.tableCapacity(of: use, density), BuildingCapacity(residents: residents, jobs: jobs), "\(use) \(density)")
-            // Worked out again: 1,536 m² a storey, 7, 2 or 1 eighths homes
+            // Worked out again: 1,536 m² a storey, 7, 2, 1 or no eighths homes
             // at 48 m² a resident, the rest jobs at 32 m², with nothing
             // left over.
+            guard let homes = Self.homeEighths[use] else {
+                XCTAssertEqual(use, .park)
+                continue
+            }
             let floor = 1_536 * floors
-            let homes: Int64 = use == .residential ? 7 : use == .commercial ? 2 : 1
             XCTAssertEqual(floor * homes % (8 * 48), 0)
             XCTAssertEqual(floor * (8 - homes) % (8 * 32), 0)
             XCTAssertEqual(floor * homes / 8 / 48, residents)
@@ -110,6 +126,14 @@ final class BuildingTests: XCTestCase {
             (.office, 65, 780, .city, .d4, 160, 1_680),
             (.office, 0, 1_681, .existingStock, .d4, 160, 1_681),
             (.office, 100_000, 100_000, .existingStock, .d4, 100_000, 100_000),
+            // Decision 91's uses.
+            (.industrial, 0, 96, .city, .d1, 0, 96),
+            (.industrial, 0, 97, .city, .d2, 0, 288),
+            (.industrial, 0, 1_921, .existingStock, .d4, 0, 1_921),
+            (.civic, 50, 200, .city, .d2, 50, 252),
+            (.leisure, 0, 900, .city, .d4, 160, 1_680),
+            (.agricultural, 3, 8, .city, .d1, 16, 72), // a town's farm
+            (.park, 0, 0, .city, .d1, 0, 0),
         ]
         for (use, residents, jobs, kind, density, residentCapacity, jobCapacity) in cases {
             let cell = LandCell(row: 3, column: 4, use: use, residents: residents, jobs: jobs)
@@ -150,30 +174,28 @@ final class BuildingTests: XCTestCase {
         XCTAssertEqual(Self.densities(world), Self.expectedSeedOne)
     }
 
-    /// Seed 1's three towns on the largest map (887 cells): how many cells
-    /// get each density (homes, shops, offices) and existing stock.
-    private static let expectedSeedOne = DensityCount(residential: [200, 416, 168, 0], commercial: [0, 0, 18, 33], office: [0, 0, 47, 5], existingStock: 0)
+    /// Seed 1's three towns on the largest map: how many cells of each use
+    /// get each density, and existing stock. Decision 91's towns have farms
+    /// round them and factories, schools, sights and parks among them; a
+    /// park's building has density 1 and holds no one.
+    private static let expectedSeedOne = DensityCount(byUse: [
+        .residential: [183, 376, 144, 0], .commercial: [0, 0, 18, 33], .office: [0, 0, 47, 5],
+        .industrial: [16, 27, 21, 0], .civic: [0, 5, 0, 0], .leisure: [0, 3, 0, 0], .agricultural: [113, 0, 0, 0], .park: [9, 0, 0, 0],
+    ], existingStock: 0)
 
     struct DensityCount: Equatable {
-        var residential: [Int]
-        var commercial: [Int]
-        var office: [Int]
+        var byUse: [LandUse: [Int]]
         var existingStock: Int
     }
 
     private static func densities(_ world: GameWorld) -> DensityCount {
-        var count = DensityCount(residential: [0, 0, 0, 0], commercial: [0, 0, 0, 0], office: [0, 0, 0, 0], existingStock: 0)
+        var count = DensityCount(byUse: [:], existingStock: 0)
         for building in world.buildings.all {
             guard building.kind == .city else {
                 count.existingStock += 1
                 continue
             }
-            let index = building.density.rawValue - 1
-            switch building.use {
-            case .residential: count.residential[index] += 1
-            case .commercial: count.commercial[index] += 1
-            case .office: count.office[index] += 1
-            }
+            count.byUse[building.use, default: [0, 0, 0, 0]][building.density.rawValue - 1] += 1
         }
         return count
     }

@@ -86,7 +86,7 @@ final class StationDemandSessionTests: XCTestCase {
         XCTAssertEqual(StationDemand.tripsText(1_000_000, in: .traditionalChinese), "每日 1,000,000 人次")
         XCTAssertEqual(
             StationDemandKind.allCases.map { $0.title(in: .traditionalChinese) },
-            ["住宅區", "辦公區", "購物中心", "景點"]
+            ["住宅區", "辦公區", "購物中心", "景點", "公共設施"]
         )
         XCTAssertEqual(StationDemand(kind: .scenic, dailyTrips: 2_500).displayText(in: .traditionalChinese), "景點 · 每日 2,500 人次")
     }

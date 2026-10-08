@@ -1002,6 +1002,23 @@ V 實際放行 → T、U（保證不互穿）
 
 縮放的換算：MapLibre 的 z 是地球 512 · 2^z 點寬；世界單位是錨點緯度的 1/64 公尺，所以 2^z = 每單位點數 × 64 × 2πR cos(緯度) ÷ 512。
 
+## 八種土地用途（決策 91）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `industrial`、`landuse`、`school`、`park`、`farm`、`leisure`、`工業`、`學校`、`公園`、`用途`、`地價` 等。`Simulator/`（模型鐵道的軌道配置）與 `MapBuilder/`（路線圖編輯器）沒有土地用途的內容。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`landuseLabelByClass`、`landuseColorByClass`（居住、商務辦公、商業服務、工業、道路、機場、行政辦公、教育、醫療、體育文化、公園綠地） | `LandUse`（`industrial`、`civic`、`park`） | adapted：行政辦公、教育、醫療併成 `civic`；道路與機場不是土地用途（路網另外有）；顏色沒有採用：城市圖層每種用途有四級密度的色階（決策 76），沿用同一套 ColorBrewer 色系 |
+| `Ci/reference_snapshot/lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`／`map.layers.buildingCategory.*`（agriculture、civic、industrial、public_facility、education……）與 `map.layers.poi.*`（leisure 含遊樂園、度假村；farmland、parks） | `LandUse.leisure`、`.agricultural`；`LandUse.names` | adapted：分類與用語 |
+| `Ci/reference_snapshot/lib/virtual_island_city__q_21ffa7f6ae58fc9e.js`／`landuse`（cbd、industrial、institution）、`amenities`（park、school、hospital） | `Land.towns(seed:in:)` 的分區抽籤 | adapted：虛構城市的分區種類；參考只有樣式，沒有比例，比例是原生 |
+| 同 `app__q_….js`／`buildStationFlowPresetCurves(e, kind)`：`1 + 0.6 · G(μ, 1.15)`，辦公進 8、出 18 | `StationDemand.civicArrivals`／`civicDepartures`（進 7、出 16） | adapted：同一個形式與權重，學校的時刻是原生；其他四種不變（決策 34） |
+| 同上／`scenic`：`1 + 0.75 · G(11, 2.1)`、`1 + 0.75 · G(16, 2.1)` | `LandUse.leisure` 的就業算 `StationDemandKind.scenic` | direct：觀光休閒用既有的景點曲線 |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/surroundings/model.json`／`heightRule`（各類建物的預設樓層） | — | 不採用：只有高度，沒有居民與就業；容量照決策 74 的表 |
+| （參考沒有） | `Building.homeEighths(of:)` 的新用途、`LandValueRules.base(of:)` 的新基準、`parkPremium`／`parkReach`、`LandDemand.Share.civicJobs`／`leisureJobs`、`StationDemandKind.realWorld` 的學校、存檔版本 20 | gap → 原生 |
+| `Railway/site_archive_clean/data/taiwan_land.json`（MOI 縣市界合併的海岸線，GeoJSON MultiPolygon，65 KB，政府資料開放授權 1.0） | — | 下一個 PR（地形與海的遮罩） |
+
+比例：地價基準與溢價是美分／m²（600 = $6／m²）；公園的距離 25,600 單位 = 400 m。
+
 ## 城市建造 P0-A：玩家放置建物（決策 92）
 
 2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `placeBuilding`、`buildingPlacement`、`addBuilding`、`buildingTool`、`buildMode`、`placeMode`、`addStructure`、`放置建築`、`建造建築`。命中的只有 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_buildModeLinePostWorkTimers`（蓋地鐵路線的模式）與 `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `buildMode`（場景載入的程度），都不是放置建物。

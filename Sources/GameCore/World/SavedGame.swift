@@ -94,8 +94,13 @@
 ///     reads only version 17 would call a larger world damaged, or drop the
 ///     blocks and read none again, so it says the save is newer than it
 ///     instead.
-/// 21. Buildings the player places (decision 92; 19 and 20 are reserved by
-///     other work, issue #231): the world can have `"placedBuildings"` and
+/// 20. Eight land uses (decision 91): land and buildings can be factories,
+///     schools and public offices, sights, farms and parks (a park with no
+///     one in it), and a station's demand can be a school's or public
+///     office's. A build that reads only an earlier version would call such
+///     land or demand damaged, so it says the save is newer than it instead.
+/// 21. Buildings the player places (decision 92; 19 is reserved by other
+///     work, issue #231): the world can have `"placedBuildings"` and
 ///     `"nextPlacedBuildingID"`. A build that reads only an earlier version
 ///     would drop them, and its next save would lose the player's
 ///     buildings, so it says the save is newer than it instead.
@@ -172,6 +177,9 @@ extension SavedGame: Codable {
         // day without `"fareTrips"` had none counted.
         // Version 17 to 18: a world without `"landBlocks"` has its land
         // whole, as every world before had.
+        // Version 19 to 20: a world before version 20 has only homes, shops
+        // and offices, and demands of the four reference kinds, which
+        // version 20 reads as before.
         // Version 20 to 21: a world without `"placedBuildings"` has none,
         // and hands out placed building IDs from 1.
         // Later versions add their steps here.
