@@ -52,7 +52,7 @@
 | **每週需求：已完成**（舊 §5） | #156、決策 68；`StationDemand.swift`、`PassengerDemand.swift`、`GameWorld.setWeeklyDemand`。星期係數、週末形狀、午夜重建與整數釋出；選填開關維持版本。 | 國定假日需求 O4；時刻表的日期選表不等於需求日曆。 |
 | **需求事件：部分完成**（舊 §5） | #156、決策 69；`DemandEvents.swift`、`StationDemandText.swift`。展覽／大客流、可重現種子、預告與倍率已完成；來源缺席的事件數值採原生規則，當時維持 v11。 | 天氣、停駛、自動封站列 O4。 |
 | **城鎮、土地、城市建物與地價：已完成一般城市規則**（舊 §5 RailwayCore 城鎮） | #157；#173 的 6a／6b；#175、#177、#178 的 6c／6d；#181 修正主要用途與封站腹地；#186 示範地圖土地客流。`Passenger/TownGrowth.swift`、`City/{Land,LandDemand,Building,LandValue}.swift`。來源無可讀相同規則，屬 **gap → 原生**。6a v12／36、6c-1 v13／37、6c-2 v14／38、地價 v14／39。 | 64 m 土地、三用途 × D1–D4 容量／升級已完成；公司所有權 P7-2，產業 O10，3D 外觀 P8-2。 |
-| **現有公司帳與貸款：已完成** | G1c／G1d 的票價、營運／維修／能源／人事、購車；#156／決策 67 的借還款、每日利息與淨利。`Economy/{Operations,Accounts,GameEconomy}.swift`、`GameWorld.borrow`／`repayLoan`、`EconomyText.swift`、`EconomyPanel.swift`；選填貸款／利息維持版本。 | 折舊、資產負債表與房地產沒有完成，列 Phase 7。 |
+| **現有公司帳與貸款：已完成** | G1c／G1d 的票價、營運／維修／能源／人事、購車；#156／決策 67 的借還款、每日利息與淨利。`Economy/{Operations,Accounts,GameEconomy}.swift`、`GameWorld.borrow`／`repayLoan`、`EconomyText.swift`、`EconomyPanel.swift`；選填貸款／利息維持版本。 | 折舊、資產負債表與年度決算已完成（決策 85，存檔版本 16）；房地產列 P7-2。 |
 | **V4b 逐段路徑／股道／月台偏好：已完成適配**（舊 §5） | #120、#123；`LineRoutePreference.swift`、`ServiceDirections.swift`、`LineJourney.swift`、`ScheduledTraffic.swift`、`GameWorld.setLineRoutePreferences`、`LinesPanel.swift`；v10／schema 32。 | `plan-binding.js`／`dispatch.json` 的共享路徑與等待語義已適配，來源網路／逐班借用資料未全匯入，列 O2。 |
 | **V4c 單線服務容量：已完成**（舊 §1） | #125、決策 62；`LineCapacity.swift`，由玩家股道、可停全列月台與站間工作量推導。維持 v10、schema 33。 | 來源沒有可照抄的完整容量公式。 |
 | **V4d 中途換向／倒進側線：已完成**（舊 §5） | #131（接續 #128）、決策 63；`ServiceDirections.swift`、`ServiceRun.swift`、`Deadlock.swift`、`RouteReservation.swift`，停妥全列反向、一次反向待避／安全續行。維持 v10、schema 34。 | 無列明停留的折返 easing、推拉外觀 P8-1；多次調車不是已完成範圍。 |
@@ -82,7 +82,7 @@
 
 | 編號／項目 | 可重用來源、接點與缺口 | 升存檔 | 升 golden schema | 動字串 | 動地圖 |
 | --- | --- | --- | --- | --- | --- |
-| **P7-1 資產成本、折舊、資產負債表** | `C` 的 `metroEconomyFixedAssets`、期間報表／帳分項；`O/01_MIGRATION_MAP.md` §8。接 `Economy/Accounts.swift`／`Operations.swift`。fixedAssets 是營運量，來源沒有購入成本、折舊或資產負債表，需原生契約。 | **是（提案）**：歷史成本／結算與舊資產遷移。 | **是（提案）**：新資產／折舊／報表觀察。 | **條件式**：`EconomyText` 可提供文字；新 App 按鈕／標題需 key。 | **否**：先做帳與報表。 |
+| **P7-1 資產成本、折舊、資產負債表：已完成**（決策 85） | `C` 的 `metroEconomyFixedAssets`、期間報表／帳分項；`O/01_MIGRATION_MAP.md` §8。接 `Economy/Accounts.swift`／`Operations.swift`。fixedAssets 是營運量，來源沒有購入成本、折舊或資產負債表，需原生契約。 | **是（提案）**：歷史成本／結算與舊資產遷移。 | **是（提案）**：新資產／折舊／報表觀察。 | **條件式**：`EconomyText` 可提供文字；新 App 按鈕／標題需 key。 | **否**：先做帳與報表。 |
 | **P7-2 公司土地／建物買入、自建、收益與出售** | O §8–§9 只列公司／城鎮路徑；T 的 lot／claims、R3 catalog 只供外觀。接 `Land`／`Building`／`LandValue`／`LandDemand`。所有權、成交成本、租金／維護、可選稅、出售損益均是 gap，按 #179 的 7b／7c 提案定案。 | **是（提案）**：所有權、成本、日結游標。 | **是（提案）**：交易／自建指令與物業／損益觀察。 | **是**：交易、報價與條件，也補 Presentation 雙語。 | **是**：選地、所有權、建造預覽；3D 接 Phase 8。 |
 | **P7-3 依車種購車價格／營運成本** | `TRAIN_TYPES` 只有容量；`metroPurchaseQuote`／`window.MetroEconomy` 正式引擎缺。接 `TrainType.swift`、`GameEconomy.swift`／`Operations.swift`。車種已存在，價格／成本是原生平衡缺口。 | **否（固定價表）**；保存購入成本則與 P7-1 判定。 | **否（既有指令／帳）**；新報價／成本欄位才升，仍須說明金額差異。 | **條件式**：既有金額格式否；新價目／說明是。 | **否**。 |
 | **P7-4 配額經濟與補貼**（舊 §5） | `metroQuotaRingItems`、`metroQuotaPurchaseCatalogItems`、`metroRules().operatingSubsidy` 只有備用 catalog／呼叫端，正式引擎缺。#179 建議維持現金經濟，不等於核定全面排除；採用時補完整購買／退回／消耗契約。 | **是（採持久化配額時）**；補貼沿現有分項另評估。 | **是（新配額指令／觀察）**；純平衡值否。 | **是（採用時）**。 | **條件式**：面板否；建造成本預覽／不足提示是。 |

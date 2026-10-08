@@ -182,6 +182,15 @@ public struct FinanceSummary: Hashable, Sendable {
     public let staffCost: Money
     /// Interest paid on the loan (decision 67).
     public let interestCost: Money
+    /// Assets written down and written off (Phase 7a): costs that pay no
+    /// cash.
+    public var depreciationCost: Money = .zero
+    public var writeOffCost: Money = .zero
+    /// Cash paid for new assets, borrowed and repaid (Phase 7a): no profit
+    /// or loss.
+    public var capitalSpending: Money = .zero
+    public var loanBorrowed: Money = .zero
+    public var loanRepaid: Money = .zero
 
     public var totalCost: Money {
         operatingCost + maintenanceCost + energyCost + staffCost
@@ -192,9 +201,33 @@ public struct FinanceSummary: Hashable, Sendable {
         fareRevenue - totalCost
     }
 
-    /// The operating profit less the loan's interest (decision 67).
+    /// The operating profit less the loan's interest (decision 67) and the
+    /// assets written down and off (Phase 7a).
     public var netProfit: Money {
+        operatingProfit - interestCost - depreciationCost - writeOffCost
+    }
+
+    /// The cash the running of the network brought in: fares less the
+    /// running costs and interest, all paid in cash (the reference's
+    /// `operatingCashFlow`, with the interest it has no loan for).
+    public var operatingCashFlow: Money {
         operatingProfit - interestCost
+    }
+
+    /// The cash spent on new assets, as negative (the reference's
+    /// `investingCashFlow`, there quota purchases).
+    public var investingCashFlow: Money {
+        .zero - capitalSpending
+    }
+
+    /// The cash borrowed less repaid (native: the reference has no loan).
+    public var financingCashFlow: Money {
+        loanBorrowed - loanRepaid
+    }
+
+    /// The change in cash over the period (the reference's `netCashFlow`).
+    public var netCashFlow: Money {
+        operatingCashFlow + investingCashFlow + financingCashFlow
     }
 }
 
@@ -229,6 +262,14 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// ``loanStep``s up to ``maximumLoan``; interest is paid every midnight
     /// while the company is managed.
     public internal(set) var loan: Money = .zero
+    /// What the company bought and still has, at what it paid, in the order
+    /// bought (Phase 7a).
+    public internal(set) var assets: [AssetRecord] = []
+    /// The latest days with any depreciation, write-off, capital spending
+    /// or loan movement, by ascending day: at most ``keptCapitalDays``.
+    public internal(set) var capitalDays: [CapitalDay] = []
+    /// The closed years, by ascending year: at most ``keptYears``.
+    public internal(set) var years: [AnnualStatement] = []
 
     /// Loans are taken and repaid $100,000 at a time.
     public static let loanStep: Money = 10_000_000
@@ -252,7 +293,7 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// Whether there is nothing in the accounts: a world before G1c.
     var isPristine: Bool {
         mode == .free && fareRules == nil && fareBaseline == FareRules.demandBaseline && pending == .empty && openedAt == nil
-            && entries.isEmpty && days.isEmpty && loan == .zero
+            && entries.isEmpty && days.isEmpty && loan == .zero && assets.isEmpty && capitalDays.isEmpty && years.isEmpty
     }
 
     /// The rules trips pay by.
@@ -286,11 +327,21 @@ public struct CompanyAccounts: Hashable, Sendable {
             func total(_ value: (DayAccount) -> Money) -> Money {
                 inPeriod.reduce(.zero) { $0 + value($1) }
             }
-            return FinanceSummary(
+            let capital = capitalDays.filter { Self.floorDivide($0.day, period.days) == index }
+            func capitalTotal(_ value: (CapitalDay) -> Money) -> Money {
+                capital.reduce(.zero) { $0 + value($1) }
+            }
+            var summary = FinanceSummary(
                 index: index, fareRevenue: total(\.fareRevenue), operatingCost: total(\.operatingCost),
                 maintenanceCost: total(\.maintenanceCost), energyCost: total(\.energyCost), staffCost: total(\.staffCost),
                 interestCost: total(\.interestCost)
             )
+            summary.depreciationCost = capitalTotal(\.depreciation)
+            summary.writeOffCost = capitalTotal(\.writeOff)
+            summary.capitalSpending = capitalTotal(\.capitalSpending)
+            summary.loanBorrowed = capitalTotal(\.borrowed)
+            summary.loanRepaid = capitalTotal(\.repaid)
+            return summary
         }
         return (summary(current), summary(current - 1))
     }
@@ -306,6 +357,7 @@ public struct CompanyAccounts: Hashable, Sendable {
 extension HourlyAccrual: Codable {}
 extension LedgerLine: Codable {}
 extension CrowdingMetrics: Codable {}
+extension FinanceSummary: Codable {}
 extension DayAccount: Codable {
     private enum CodingKeys: String, CodingKey {
         case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
@@ -366,7 +418,7 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan
+        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -383,6 +435,10 @@ extension CompanyAccounts: Codable {
         entries = try container.decode([LedgerEntry].self, forKey: .entries)
         days = try container.decode([DayAccount].self, forKey: .days)
         loan = container.contains(.loan) ? try container.decode(Money.self, forKey: .loan) : .zero
+        // Phase 7a: accounts before save version 16 kept no assets.
+        assets = container.contains(.assets) ? try container.decode([AssetRecord].self, forKey: .assets) : []
+        capitalDays = container.contains(.capitalDays) ? try container.decode([CapitalDay].self, forKey: .capitalDays) : []
+        years = container.contains(.years) ? try container.decode([AnnualStatement].self, forKey: .years) : []
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -402,6 +458,15 @@ extension CompanyAccounts: Codable {
         try container.encode(days, forKey: .days)
         if loan != .zero {
             try container.encode(loan, forKey: .loan)
+        }
+        if !assets.isEmpty {
+            try container.encode(assets, forKey: .assets)
+        }
+        if !capitalDays.isEmpty {
+            try container.encode(capitalDays, forKey: .capitalDays)
+        }
+        if !years.isEmpty {
+            try container.encode(years, forKey: .years)
         }
     }
 }

@@ -79,9 +79,14 @@
 ///     `"transferGroups"` and `"nextTransferGroupID"`, stations passengers
 ///     walk between however far apart. A build that reads only version 14
 ///     would drop them, and its passengers' journeys across one with them.
+/// 16. Fixed assets and closed years (Phase 7a, ARCHITECTURE decision 85):
+///     the accounts can have `"assets"`, what each track edge, station,
+///     train and car cost and how far it is written down, `"capitalDays"`
+///     and `"years"`. A build that reads only version 15 would drop them,
+///     and its next save would lose what everything cost.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 15
+    public static let currentVersion = 16
 
     public let world: GameWorld
 
@@ -144,6 +149,10 @@ extension SavedGame: Codable {
         // them, so it raises no building that night.
         // Version 14 to 15: a world without `"transferGroups"` has none,
         // and hands out transfer group IDs from 1.
+        // Version 15 to 16: accounts without `"assets"` kept no record of
+        // what anything cost: what was built before is on the books at
+        // nothing (``GameWorld/unrecordedAssetCount()``), and is never
+        // written down or off; there are no capital days or closed years.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 15)
+        XCTAssertEqual(SavedGame.currentVersion, 16)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 16, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 17, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -729,12 +729,73 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(waiting.readyAt.map { $0.seconds - waiting.since.seconds }, 432)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
         try world.advance(ticks: 40)
         XCTAssertEqual(world.passengerLedger(of: StationID(rawValue: 1)).arrived, 5)
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v14-city-growth.json"))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: older).world.transferGroups, [])
+    }
+
+    /// The world of `v16-assets-closed-year.json`: a managed company with
+    /// a 128 m edge split in two, a station and a train of three cars, a
+    /// $100,000 loan, run through the end of its first year, then a car
+    /// taken off.
+    private static func assetWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 16_384, height: 8_192),
+            economy: GameEconomy(balance: 10_000_000, costs: ConstructionCosts(track: 9_000, station: 720_000, train: 360_000, car: 36_000)),
+            clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 4_096))
+        let edge = try world.buildTrackEdge(from: a, to: b)
+        _ = try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 2_048))
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.setTrainCars(train, to: 3)
+        try world.borrow(CompanyAccounts.loanStep)
+        try world.advance(ticks: 1_441)
+        try world.splitTrackEdge(edge, at: 2_048)
+        try world.advance(ticks: 359 * 1_440 + 30)
+        try world.setTrainCars(train, to: 2)
+        return world
+    }
+
+    /// Version 16 (Phase 7a, decision 85): a managed company's asset
+    /// records, written down for 360 days (the split edge's parts sharing
+    /// its cost and depreciation), its capital days, and its first year
+    /// closed with the balance sheet at its end. It saves byte for byte and
+    /// is the world the build that wrote it makes. A version 15 save has no
+    /// records: what it built is on the books at nothing.
+    func testVersionSixteenKeepsItsAssetsAndClosedYear() throws {
+        let url = Self.fixtures.appendingPathComponent("v16-assets-closed-year.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["ASSET_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.assetWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 16)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.assetWorld())
+        XCTAssertEqual(world.accounts.assets.map(\.kind), [.track, .track, .station, .train, .cars])
+        XCTAssertEqual(world.accounts.assets.map(\.cost), [18_000, 54_000, 720_000, 360_000, 36_000])
+        XCTAssertEqual(world.accounts.assets.map(\.days), [360, 360, 360, 360, 360])
+        let year = try XCTUnwrap(world.accounts.years.first)
+        XCTAssertEqual(world.accounts.years.count, 1)
+        XCTAssertEqual(year.closing.totalAssets, year.closing.loan + year.closing.equity)
+        XCTAssertEqual(year.income.depreciationCost, 82_800)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.accounts.assets.map(\.days), [361, 361, 361, 361, 361])
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v1-demo-90-minutes.json"))
+        let old = try JSONDecoder().decode(SavedGame.self, from: older).world
+        XCTAssertEqual(old.accounts.assets, [])
+        XCTAssertGreaterThan(old.unrecordedAssetCount(), 0)
+        XCTAssertEqual(old.balanceSheet().fixedAssets, .zero)
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {

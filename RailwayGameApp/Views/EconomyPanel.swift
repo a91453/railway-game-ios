@@ -4,8 +4,9 @@ import SwiftUI
 
 /// The company's money (G1c, decision 36), after the reference's economy
 /// details: the balance, free play or management, the fare rules, the last
-/// hour by item, the finance report for a period (this one and the last),
-/// and the last rows of the ledger.
+/// hour by item, the income or cash flow statement for a period (this one
+/// and the last), the balance sheet, the closed years (Phase 7a, decision
+/// 85) and the last rows of the ledger.
 ///
 /// Everything shown is read from `session.world` when the view is drawn,
 /// and every control calls a `GameSession` method that applies one
@@ -14,6 +15,7 @@ struct EconomyPanel: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
     @State private var period: FinancePeriod = .day
+    @State private var statement: Statement = .income
     @State private var flatFare: Int64 = 500
     @State private var confirmsFreePlay = false
 
@@ -25,6 +27,8 @@ struct EconomyPanel: View {
                 faresSection
                 lastHourSection
                 reportSection
+                balanceSheetSection
+                closedYearsSection
                 ledgerSection
             }
             .navigationTitle("Economy")
@@ -156,6 +160,13 @@ struct EconomyPanel: View {
         }
     }
 
+    /// Which statement the report shows (Phase 7a): the reference's
+    /// income and cash flow statements, switched as its
+    /// `flow-dashboard-statement-switch` does.
+    private enum Statement: Hashable, CaseIterable {
+        case income, cashFlow
+    }
+
     private var reportSection: some View {
         Section("Report") {
             Picker("Period", selection: $period) {
@@ -164,42 +175,71 @@ struct EconomyPanel: View {
                 }
             }
             .pickerStyle(.segmented)
+            Picker(selection: $statement) {
+                Text(verbatim: session.language.text("Income", "損益表")).tag(Statement.income)
+                Text(verbatim: session.language.text("Cash flows", "現金流量表")).tag(Statement.cashFlow)
+            } label: {
+                Text(verbatim: session.language.text("Statement", "報表類型"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("economy.statement")
             let report = session.world.financeReport(period)
-            Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 4) {
-                GridRow {
-                    Text(verbatim: "").gridColumnAlignment(.leading)
-                    Text("This").fontWeight(.semibold)
-                    Text("Last").fontWeight(.semibold)
-                }
-                reportRow("Fares", report.current.fareRevenue, report.previous.fareRevenue)
-                reportRow("Operating", report.current.operatingCost, report.previous.operatingCost)
-                reportRow("Maintenance", report.current.maintenanceCost, report.previous.maintenanceCost)
-                reportRow("Energy", report.current.energyCost, report.previous.energyCost)
-                reportRow("Staff", report.current.staffCost, report.previous.staffCost)
-                reportRow("Profit", report.current.operatingProfit, report.previous.operatingProfit)
-                if report.current.interestCost > .zero || report.previous.interestCost > .zero {
-                    verbatimRow(session.language.text("Interest", "利息"), report.current.interestCost, report.previous.interestCost)
-                    verbatimRow(session.language.text("Net profit", "淨利"), report.current.netProfit, report.previous.netProfit)
+            StatementGrid(
+                rows: statement == .income
+                    ? report.current.incomeStatementRows(previous: report.previous, in: session.language)
+                    : report.current.cashFlowRows(previous: report.previous, in: session.language),
+                currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
+            )
+        }
+    }
+
+    /// Phase 7a: the balance sheet now, beside the last year's closing.
+    private var balanceSheetSection: some View {
+        Section {
+            let sheet = session.world.balanceSheet()
+            let closed = session.world.lastClosedYear
+            StatementGrid(
+                rows: sheet.rows(previous: closed?.closing, in: session.language),
+                currentTitle: session.language.text("Now", "目前"),
+                previousTitle: closed.map { session.language.text("\($0.yearText(in: session.language)) end", "\($0.yearText(in: session.language))底") }
+            )
+            .accessibilityIdentifier("economy.balanceSheet")
+        } header: {
+            Text(verbatim: session.language.text("Balance sheet", "資產負債表"))
+        } footer: {
+            let sheet = session.world.balanceSheet()
+            let lines = AssetClass.allCases.map { sheet.depreciationText(of: $0, in: session.language) }
+                + [session.world.unrecordedAssetsText(in: session.language)].compactMap { $0 }
+            Text(verbatim: lines.joined(separator: "\n"))
+        }
+    }
+
+    /// Phase 7a: every closed year kept, the latest first, each opening its
+    /// year-end report.
+    private var closedYearsSection: some View {
+        Section {
+            let years = session.world.accounts.years
+            if years.isEmpty {
+                Text(verbatim: session.language.text("A year closes every 360 days.", "每 360 天結算一次年度決算。"))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(years.reversed(), id: \.year) { year in
+                NavigationLink {
+                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: year.titleText(in: session.language))
+                            .fontWeight(.semibold)
+                        Text(verbatim: year.headlineText(in: session.language))
+                            .font(.caption)
+                            .foregroundStyle(year.income.netProfit < .zero ? Theme.error : Theme.textSecondary)
+                    }
+                    .font(.footnote)
+                    .monospacedDigit()
                 }
             }
-            .font(.footnote)
-            .monospacedDigit()
-        }
-    }
-
-    private func reportRow(_ title: LocalizedStringKey, _ current: Money, _ previous: Money) -> some View {
-        GridRow {
-            Text(title).gridColumnAlignment(.leading)
-            Text(current.moneyText)
-            Text(previous.moneyText)
-        }
-    }
-
-    private func verbatimRow(_ title: String, _ current: Money, _ previous: Money) -> some View {
-        GridRow {
-            Text(verbatim: title).gridColumnAlignment(.leading)
-            Text(current.moneyText)
-            Text(previous.moneyText)
+        } header: {
+            Text(verbatim: session.language.text("Year-end closings", "年度決算"))
         }
     }
 

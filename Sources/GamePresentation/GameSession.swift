@@ -104,6 +104,23 @@ public final class GameSession {
     /// (``StatusMessage/autoDismissDelay``, ``dismissMessage(posted:)``).
     public private(set) var messageSerial: UInt64 = 0
 
+    /// The year that closed while the game ran, until the player has seen
+    /// its year-end report (Phase 7a, decision 85): which year it is, never
+    /// a copy of the statement, which stays the world's. Read it through
+    /// ``yearEndStatement``. Not set by loading a game whose years closed
+    /// before.
+    public private(set) var yearEndYear: Int64?
+
+    /// The statement of ``yearEndYear``, as the world has it.
+    public var yearEndStatement: AnnualStatement? {
+        yearEndYear.flatMap { year in world.accounts.years.last { $0.year == year } }
+    }
+
+    /// The player has seen the year-end report.
+    public func dismissYearEnd() {
+        yearEndYear = nil
+    }
+
     /// The line the line panel shows: an ID only, never a copy of the line.
     /// Read the line itself through ``selectedLine``.
     public private(set) var selectedLineID: LineID?
@@ -519,6 +536,12 @@ public final class GameSession {
         }
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
+            let closedBefore = world.accounts.years.last?.year
+            defer {
+                if let closed = world.accounts.years.last?.year, closed != closedBefore {
+                    yearEndYear = closed
+                }
+            }
             do throws(GameError) {
                 if let playSound {
                     // A tick at a time, comparing only the arrival times

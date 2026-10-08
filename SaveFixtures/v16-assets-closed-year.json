@@ -1,0 +1,5421 @@
+{
+  "saveVersion" : 16,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 18000,
+          "days" : 360,
+          "depreciation" : 900,
+          "kind" : "track",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 54000,
+          "days" : 360,
+          "depreciation" : 2700,
+          "kind" : "track",
+          "owner" : 3
+        },
+        {
+          "acquired" : 0,
+          "cost" : 720000,
+          "days" : 360,
+          "depreciation" : 36000,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 360000,
+          "days" : 360,
+          "depreciation" : 36000,
+          "kind" : "train",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cars" : 1,
+          "cost" : 36000,
+          "days" : 360,
+          "depreciation" : 3600,
+          "kind" : "cars",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "borrowed" : 10000000,
+          "capitalSpending" : 1224000,
+          "day" : 0,
+          "depreciation" : 230
+        },
+        {
+          "day" : 1,
+          "depreciation" : 230
+        },
+        {
+          "day" : 2,
+          "depreciation" : 229
+        },
+        {
+          "day" : 3,
+          "depreciation" : 231
+        },
+        {
+          "day" : 4,
+          "depreciation" : 229
+        },
+        {
+          "day" : 5,
+          "depreciation" : 231
+        },
+        {
+          "day" : 6,
+          "depreciation" : 229
+        },
+        {
+          "day" : 7,
+          "depreciation" : 231
+        },
+        {
+          "day" : 8,
+          "depreciation" : 229
+        },
+        {
+          "day" : 9,
+          "depreciation" : 231
+        },
+        {
+          "day" : 10,
+          "depreciation" : 229
+        },
+        {
+          "day" : 11,
+          "depreciation" : 231
+        },
+        {
+          "day" : 12,
+          "depreciation" : 229
+        },
+        {
+          "day" : 13,
+          "depreciation" : 231
+        },
+        {
+          "day" : 14,
+          "depreciation" : 229
+        },
+        {
+          "day" : 15,
+          "depreciation" : 231
+        },
+        {
+          "day" : 16,
+          "depreciation" : 229
+        },
+        {
+          "day" : 17,
+          "depreciation" : 231
+        },
+        {
+          "day" : 18,
+          "depreciation" : 229
+        },
+        {
+          "day" : 19,
+          "depreciation" : 231
+        },
+        {
+          "day" : 20,
+          "depreciation" : 229
+        },
+        {
+          "day" : 21,
+          "depreciation" : 231
+        },
+        {
+          "day" : 22,
+          "depreciation" : 229
+        },
+        {
+          "day" : 23,
+          "depreciation" : 231
+        },
+        {
+          "day" : 24,
+          "depreciation" : 229
+        },
+        {
+          "day" : 25,
+          "depreciation" : 231
+        },
+        {
+          "day" : 26,
+          "depreciation" : 229
+        },
+        {
+          "day" : 27,
+          "depreciation" : 231
+        },
+        {
+          "day" : 28,
+          "depreciation" : 229
+        },
+        {
+          "day" : 29,
+          "depreciation" : 231
+        },
+        {
+          "day" : 30,
+          "depreciation" : 229
+        },
+        {
+          "day" : 31,
+          "depreciation" : 231
+        },
+        {
+          "day" : 32,
+          "depreciation" : 229
+        },
+        {
+          "day" : 33,
+          "depreciation" : 231
+        },
+        {
+          "day" : 34,
+          "depreciation" : 229
+        },
+        {
+          "day" : 35,
+          "depreciation" : 231
+        },
+        {
+          "day" : 36,
+          "depreciation" : 229
+        },
+        {
+          "day" : 37,
+          "depreciation" : 231
+        },
+        {
+          "day" : 38,
+          "depreciation" : 229
+        },
+        {
+          "day" : 39,
+          "depreciation" : 231
+        },
+        {
+          "day" : 40,
+          "depreciation" : 229
+        },
+        {
+          "day" : 41,
+          "depreciation" : 231
+        },
+        {
+          "day" : 42,
+          "depreciation" : 229
+        },
+        {
+          "day" : 43,
+          "depreciation" : 231
+        },
+        {
+          "day" : 44,
+          "depreciation" : 229
+        },
+        {
+          "day" : 45,
+          "depreciation" : 231
+        },
+        {
+          "day" : 46,
+          "depreciation" : 229
+        },
+        {
+          "day" : 47,
+          "depreciation" : 231
+        },
+        {
+          "day" : 48,
+          "depreciation" : 229
+        },
+        {
+          "day" : 49,
+          "depreciation" : 231
+        },
+        {
+          "day" : 50,
+          "depreciation" : 229
+        },
+        {
+          "day" : 51,
+          "depreciation" : 231
+        },
+        {
+          "day" : 52,
+          "depreciation" : 229
+        },
+        {
+          "day" : 53,
+          "depreciation" : 231
+        },
+        {
+          "day" : 54,
+          "depreciation" : 229
+        },
+        {
+          "day" : 55,
+          "depreciation" : 231
+        },
+        {
+          "day" : 56,
+          "depreciation" : 229
+        },
+        {
+          "day" : 57,
+          "depreciation" : 231
+        },
+        {
+          "day" : 58,
+          "depreciation" : 229
+        },
+        {
+          "day" : 59,
+          "depreciation" : 231
+        },
+        {
+          "day" : 60,
+          "depreciation" : 229
+        },
+        {
+          "day" : 61,
+          "depreciation" : 231
+        },
+        {
+          "day" : 62,
+          "depreciation" : 229
+        },
+        {
+          "day" : 63,
+          "depreciation" : 231
+        },
+        {
+          "day" : 64,
+          "depreciation" : 229
+        },
+        {
+          "day" : 65,
+          "depreciation" : 231
+        },
+        {
+          "day" : 66,
+          "depreciation" : 229
+        },
+        {
+          "day" : 67,
+          "depreciation" : 231
+        },
+        {
+          "day" : 68,
+          "depreciation" : 229
+        },
+        {
+          "day" : 69,
+          "depreciation" : 231
+        },
+        {
+          "day" : 70,
+          "depreciation" : 229
+        },
+        {
+          "day" : 71,
+          "depreciation" : 231
+        },
+        {
+          "day" : 72,
+          "depreciation" : 229
+        },
+        {
+          "day" : 73,
+          "depreciation" : 231
+        },
+        {
+          "day" : 74,
+          "depreciation" : 229
+        },
+        {
+          "day" : 75,
+          "depreciation" : 231
+        },
+        {
+          "day" : 76,
+          "depreciation" : 229
+        },
+        {
+          "day" : 77,
+          "depreciation" : 231
+        },
+        {
+          "day" : 78,
+          "depreciation" : 229
+        },
+        {
+          "day" : 79,
+          "depreciation" : 231
+        },
+        {
+          "day" : 80,
+          "depreciation" : 229
+        },
+        {
+          "day" : 81,
+          "depreciation" : 231
+        },
+        {
+          "day" : 82,
+          "depreciation" : 229
+        },
+        {
+          "day" : 83,
+          "depreciation" : 231
+        },
+        {
+          "day" : 84,
+          "depreciation" : 229
+        },
+        {
+          "day" : 85,
+          "depreciation" : 231
+        },
+        {
+          "day" : 86,
+          "depreciation" : 229
+        },
+        {
+          "day" : 87,
+          "depreciation" : 231
+        },
+        {
+          "day" : 88,
+          "depreciation" : 229
+        },
+        {
+          "day" : 89,
+          "depreciation" : 231
+        },
+        {
+          "day" : 90,
+          "depreciation" : 229
+        },
+        {
+          "day" : 91,
+          "depreciation" : 231
+        },
+        {
+          "day" : 92,
+          "depreciation" : 229
+        },
+        {
+          "day" : 93,
+          "depreciation" : 231
+        },
+        {
+          "day" : 94,
+          "depreciation" : 229
+        },
+        {
+          "day" : 95,
+          "depreciation" : 231
+        },
+        {
+          "day" : 96,
+          "depreciation" : 229
+        },
+        {
+          "day" : 97,
+          "depreciation" : 231
+        },
+        {
+          "day" : 98,
+          "depreciation" : 229
+        },
+        {
+          "day" : 99,
+          "depreciation" : 231
+        },
+        {
+          "day" : 100,
+          "depreciation" : 229
+        },
+        {
+          "day" : 101,
+          "depreciation" : 231
+        },
+        {
+          "day" : 102,
+          "depreciation" : 229
+        },
+        {
+          "day" : 103,
+          "depreciation" : 231
+        },
+        {
+          "day" : 104,
+          "depreciation" : 229
+        },
+        {
+          "day" : 105,
+          "depreciation" : 231
+        },
+        {
+          "day" : 106,
+          "depreciation" : 229
+        },
+        {
+          "day" : 107,
+          "depreciation" : 231
+        },
+        {
+          "day" : 108,
+          "depreciation" : 229
+        },
+        {
+          "day" : 109,
+          "depreciation" : 231
+        },
+        {
+          "day" : 110,
+          "depreciation" : 229
+        },
+        {
+          "day" : 111,
+          "depreciation" : 231
+        },
+        {
+          "day" : 112,
+          "depreciation" : 229
+        },
+        {
+          "day" : 113,
+          "depreciation" : 231
+        },
+        {
+          "day" : 114,
+          "depreciation" : 229
+        },
+        {
+          "day" : 115,
+          "depreciation" : 231
+        },
+        {
+          "day" : 116,
+          "depreciation" : 229
+        },
+        {
+          "day" : 117,
+          "depreciation" : 231
+        },
+        {
+          "day" : 118,
+          "depreciation" : 229
+        },
+        {
+          "day" : 119,
+          "depreciation" : 231
+        },
+        {
+          "day" : 120,
+          "depreciation" : 229
+        },
+        {
+          "day" : 121,
+          "depreciation" : 231
+        },
+        {
+          "day" : 122,
+          "depreciation" : 229
+        },
+        {
+          "day" : 123,
+          "depreciation" : 231
+        },
+        {
+          "day" : 124,
+          "depreciation" : 229
+        },
+        {
+          "day" : 125,
+          "depreciation" : 231
+        },
+        {
+          "day" : 126,
+          "depreciation" : 229
+        },
+        {
+          "day" : 127,
+          "depreciation" : 231
+        },
+        {
+          "day" : 128,
+          "depreciation" : 229
+        },
+        {
+          "day" : 129,
+          "depreciation" : 231
+        },
+        {
+          "day" : 130,
+          "depreciation" : 229
+        },
+        {
+          "day" : 131,
+          "depreciation" : 231
+        },
+        {
+          "day" : 132,
+          "depreciation" : 229
+        },
+        {
+          "day" : 133,
+          "depreciation" : 231
+        },
+        {
+          "day" : 134,
+          "depreciation" : 229
+        },
+        {
+          "day" : 135,
+          "depreciation" : 231
+        },
+        {
+          "day" : 136,
+          "depreciation" : 229
+        },
+        {
+          "day" : 137,
+          "depreciation" : 231
+        },
+        {
+          "day" : 138,
+          "depreciation" : 229
+        },
+        {
+          "day" : 139,
+          "depreciation" : 231
+        },
+        {
+          "day" : 140,
+          "depreciation" : 229
+        },
+        {
+          "day" : 141,
+          "depreciation" : 231
+        },
+        {
+          "day" : 142,
+          "depreciation" : 229
+        },
+        {
+          "day" : 143,
+          "depreciation" : 231
+        },
+        {
+          "day" : 144,
+          "depreciation" : 229
+        },
+        {
+          "day" : 145,
+          "depreciation" : 231
+        },
+        {
+          "day" : 146,
+          "depreciation" : 229
+        },
+        {
+          "day" : 147,
+          "depreciation" : 231
+        },
+        {
+          "day" : 148,
+          "depreciation" : 229
+        },
+        {
+          "day" : 149,
+          "depreciation" : 231
+        },
+        {
+          "day" : 150,
+          "depreciation" : 229
+        },
+        {
+          "day" : 151,
+          "depreciation" : 231
+        },
+        {
+          "day" : 152,
+          "depreciation" : 229
+        },
+        {
+          "day" : 153,
+          "depreciation" : 231
+        },
+        {
+          "day" : 154,
+          "depreciation" : 229
+        },
+        {
+          "day" : 155,
+          "depreciation" : 231
+        },
+        {
+          "day" : 156,
+          "depreciation" : 229
+        },
+        {
+          "day" : 157,
+          "depreciation" : 231
+        },
+        {
+          "day" : 158,
+          "depreciation" : 229
+        },
+        {
+          "day" : 159,
+          "depreciation" : 231
+        },
+        {
+          "day" : 160,
+          "depreciation" : 229
+        },
+        {
+          "day" : 161,
+          "depreciation" : 231
+        },
+        {
+          "day" : 162,
+          "depreciation" : 229
+        },
+        {
+          "day" : 163,
+          "depreciation" : 231
+        },
+        {
+          "day" : 164,
+          "depreciation" : 229
+        },
+        {
+          "day" : 165,
+          "depreciation" : 231
+        },
+        {
+          "day" : 166,
+          "depreciation" : 229
+        },
+        {
+          "day" : 167,
+          "depreciation" : 231
+        },
+        {
+          "day" : 168,
+          "depreciation" : 229
+        },
+        {
+          "day" : 169,
+          "depreciation" : 231
+        },
+        {
+          "day" : 170,
+          "depreciation" : 229
+        },
+        {
+          "day" : 171,
+          "depreciation" : 231
+        },
+        {
+          "day" : 172,
+          "depreciation" : 229
+        },
+        {
+          "day" : 173,
+          "depreciation" : 231
+        },
+        {
+          "day" : 174,
+          "depreciation" : 229
+        },
+        {
+          "day" : 175,
+          "depreciation" : 231
+        },
+        {
+          "day" : 176,
+          "depreciation" : 229
+        },
+        {
+          "day" : 177,
+          "depreciation" : 231
+        },
+        {
+          "day" : 178,
+          "depreciation" : 229
+        },
+        {
+          "day" : 179,
+          "depreciation" : 231
+        },
+        {
+          "day" : 180,
+          "depreciation" : 229
+        },
+        {
+          "day" : 181,
+          "depreciation" : 231
+        },
+        {
+          "day" : 182,
+          "depreciation" : 229
+        },
+        {
+          "day" : 183,
+          "depreciation" : 231
+        },
+        {
+          "day" : 184,
+          "depreciation" : 229
+        },
+        {
+          "day" : 185,
+          "depreciation" : 231
+        },
+        {
+          "day" : 186,
+          "depreciation" : 229
+        },
+        {
+          "day" : 187,
+          "depreciation" : 231
+        },
+        {
+          "day" : 188,
+          "depreciation" : 229
+        },
+        {
+          "day" : 189,
+          "depreciation" : 231
+        },
+        {
+          "day" : 190,
+          "depreciation" : 229
+        },
+        {
+          "day" : 191,
+          "depreciation" : 231
+        },
+        {
+          "day" : 192,
+          "depreciation" : 229
+        },
+        {
+          "day" : 193,
+          "depreciation" : 231
+        },
+        {
+          "day" : 194,
+          "depreciation" : 229
+        },
+        {
+          "day" : 195,
+          "depreciation" : 231
+        },
+        {
+          "day" : 196,
+          "depreciation" : 229
+        },
+        {
+          "day" : 197,
+          "depreciation" : 231
+        },
+        {
+          "day" : 198,
+          "depreciation" : 229
+        },
+        {
+          "day" : 199,
+          "depreciation" : 231
+        },
+        {
+          "day" : 200,
+          "depreciation" : 229
+        },
+        {
+          "day" : 201,
+          "depreciation" : 231
+        },
+        {
+          "day" : 202,
+          "depreciation" : 229
+        },
+        {
+          "day" : 203,
+          "depreciation" : 231
+        },
+        {
+          "day" : 204,
+          "depreciation" : 229
+        },
+        {
+          "day" : 205,
+          "depreciation" : 231
+        },
+        {
+          "day" : 206,
+          "depreciation" : 229
+        },
+        {
+          "day" : 207,
+          "depreciation" : 231
+        },
+        {
+          "day" : 208,
+          "depreciation" : 229
+        },
+        {
+          "day" : 209,
+          "depreciation" : 231
+        },
+        {
+          "day" : 210,
+          "depreciation" : 229
+        },
+        {
+          "day" : 211,
+          "depreciation" : 231
+        },
+        {
+          "day" : 212,
+          "depreciation" : 229
+        },
+        {
+          "day" : 213,
+          "depreciation" : 231
+        },
+        {
+          "day" : 214,
+          "depreciation" : 229
+        },
+        {
+          "day" : 215,
+          "depreciation" : 231
+        },
+        {
+          "day" : 216,
+          "depreciation" : 229
+        },
+        {
+          "day" : 217,
+          "depreciation" : 231
+        },
+        {
+          "day" : 218,
+          "depreciation" : 229
+        },
+        {
+          "day" : 219,
+          "depreciation" : 231
+        },
+        {
+          "day" : 220,
+          "depreciation" : 229
+        },
+        {
+          "day" : 221,
+          "depreciation" : 231
+        },
+        {
+          "day" : 222,
+          "depreciation" : 229
+        },
+        {
+          "day" : 223,
+          "depreciation" : 231
+        },
+        {
+          "day" : 224,
+          "depreciation" : 229
+        },
+        {
+          "day" : 225,
+          "depreciation" : 231
+        },
+        {
+          "day" : 226,
+          "depreciation" : 229
+        },
+        {
+          "day" : 227,
+          "depreciation" : 231
+        },
+        {
+          "day" : 228,
+          "depreciation" : 229
+        },
+        {
+          "day" : 229,
+          "depreciation" : 231
+        },
+        {
+          "day" : 230,
+          "depreciation" : 229
+        },
+        {
+          "day" : 231,
+          "depreciation" : 231
+        },
+        {
+          "day" : 232,
+          "depreciation" : 229
+        },
+        {
+          "day" : 233,
+          "depreciation" : 231
+        },
+        {
+          "day" : 234,
+          "depreciation" : 229
+        },
+        {
+          "day" : 235,
+          "depreciation" : 231
+        },
+        {
+          "day" : 236,
+          "depreciation" : 229
+        },
+        {
+          "day" : 237,
+          "depreciation" : 231
+        },
+        {
+          "day" : 238,
+          "depreciation" : 229
+        },
+        {
+          "day" : 239,
+          "depreciation" : 231
+        },
+        {
+          "day" : 240,
+          "depreciation" : 229
+        },
+        {
+          "day" : 241,
+          "depreciation" : 231
+        },
+        {
+          "day" : 242,
+          "depreciation" : 229
+        },
+        {
+          "day" : 243,
+          "depreciation" : 231
+        },
+        {
+          "day" : 244,
+          "depreciation" : 229
+        },
+        {
+          "day" : 245,
+          "depreciation" : 231
+        },
+        {
+          "day" : 246,
+          "depreciation" : 229
+        },
+        {
+          "day" : 247,
+          "depreciation" : 231
+        },
+        {
+          "day" : 248,
+          "depreciation" : 229
+        },
+        {
+          "day" : 249,
+          "depreciation" : 231
+        },
+        {
+          "day" : 250,
+          "depreciation" : 229
+        },
+        {
+          "day" : 251,
+          "depreciation" : 231
+        },
+        {
+          "day" : 252,
+          "depreciation" : 229
+        },
+        {
+          "day" : 253,
+          "depreciation" : 231
+        },
+        {
+          "day" : 254,
+          "depreciation" : 229
+        },
+        {
+          "day" : 255,
+          "depreciation" : 231
+        },
+        {
+          "day" : 256,
+          "depreciation" : 229
+        },
+        {
+          "day" : 257,
+          "depreciation" : 231
+        },
+        {
+          "day" : 258,
+          "depreciation" : 229
+        },
+        {
+          "day" : 259,
+          "depreciation" : 231
+        },
+        {
+          "day" : 260,
+          "depreciation" : 229
+        },
+        {
+          "day" : 261,
+          "depreciation" : 231
+        },
+        {
+          "day" : 262,
+          "depreciation" : 229
+        },
+        {
+          "day" : 263,
+          "depreciation" : 231
+        },
+        {
+          "day" : 264,
+          "depreciation" : 229
+        },
+        {
+          "day" : 265,
+          "depreciation" : 231
+        },
+        {
+          "day" : 266,
+          "depreciation" : 229
+        },
+        {
+          "day" : 267,
+          "depreciation" : 231
+        },
+        {
+          "day" : 268,
+          "depreciation" : 229
+        },
+        {
+          "day" : 269,
+          "depreciation" : 231
+        },
+        {
+          "day" : 270,
+          "depreciation" : 229
+        },
+        {
+          "day" : 271,
+          "depreciation" : 231
+        },
+        {
+          "day" : 272,
+          "depreciation" : 229
+        },
+        {
+          "day" : 273,
+          "depreciation" : 231
+        },
+        {
+          "day" : 274,
+          "depreciation" : 229
+        },
+        {
+          "day" : 275,
+          "depreciation" : 231
+        },
+        {
+          "day" : 276,
+          "depreciation" : 229
+        },
+        {
+          "day" : 277,
+          "depreciation" : 231
+        },
+        {
+          "day" : 278,
+          "depreciation" : 229
+        },
+        {
+          "day" : 279,
+          "depreciation" : 231
+        },
+        {
+          "day" : 280,
+          "depreciation" : 229
+        },
+        {
+          "day" : 281,
+          "depreciation" : 231
+        },
+        {
+          "day" : 282,
+          "depreciation" : 229
+        },
+        {
+          "day" : 283,
+          "depreciation" : 231
+        },
+        {
+          "day" : 284,
+          "depreciation" : 229
+        },
+        {
+          "day" : 285,
+          "depreciation" : 231
+        },
+        {
+          "day" : 286,
+          "depreciation" : 229
+        },
+        {
+          "day" : 287,
+          "depreciation" : 231
+        },
+        {
+          "day" : 288,
+          "depreciation" : 229
+        },
+        {
+          "day" : 289,
+          "depreciation" : 231
+        },
+        {
+          "day" : 290,
+          "depreciation" : 229
+        },
+        {
+          "day" : 291,
+          "depreciation" : 231
+        },
+        {
+          "day" : 292,
+          "depreciation" : 229
+        },
+        {
+          "day" : 293,
+          "depreciation" : 231
+        },
+        {
+          "day" : 294,
+          "depreciation" : 229
+        },
+        {
+          "day" : 295,
+          "depreciation" : 231
+        },
+        {
+          "day" : 296,
+          "depreciation" : 229
+        },
+        {
+          "day" : 297,
+          "depreciation" : 231
+        },
+        {
+          "day" : 298,
+          "depreciation" : 229
+        },
+        {
+          "day" : 299,
+          "depreciation" : 231
+        },
+        {
+          "day" : 300,
+          "depreciation" : 229
+        },
+        {
+          "day" : 301,
+          "depreciation" : 231
+        },
+        {
+          "day" : 302,
+          "depreciation" : 229
+        },
+        {
+          "day" : 303,
+          "depreciation" : 231
+        },
+        {
+          "day" : 304,
+          "depreciation" : 229
+        },
+        {
+          "day" : 305,
+          "depreciation" : 231
+        },
+        {
+          "day" : 306,
+          "depreciation" : 229
+        },
+        {
+          "day" : 307,
+          "depreciation" : 231
+        },
+        {
+          "day" : 308,
+          "depreciation" : 229
+        },
+        {
+          "day" : 309,
+          "depreciation" : 231
+        },
+        {
+          "day" : 310,
+          "depreciation" : 229
+        },
+        {
+          "day" : 311,
+          "depreciation" : 231
+        },
+        {
+          "day" : 312,
+          "depreciation" : 229
+        },
+        {
+          "day" : 313,
+          "depreciation" : 231
+        },
+        {
+          "day" : 314,
+          "depreciation" : 229
+        },
+        {
+          "day" : 315,
+          "depreciation" : 231
+        },
+        {
+          "day" : 316,
+          "depreciation" : 229
+        },
+        {
+          "day" : 317,
+          "depreciation" : 231
+        },
+        {
+          "day" : 318,
+          "depreciation" : 229
+        },
+        {
+          "day" : 319,
+          "depreciation" : 231
+        },
+        {
+          "day" : 320,
+          "depreciation" : 229
+        },
+        {
+          "day" : 321,
+          "depreciation" : 231
+        },
+        {
+          "day" : 322,
+          "depreciation" : 229
+        },
+        {
+          "day" : 323,
+          "depreciation" : 231
+        },
+        {
+          "day" : 324,
+          "depreciation" : 229
+        },
+        {
+          "day" : 325,
+          "depreciation" : 231
+        },
+        {
+          "day" : 326,
+          "depreciation" : 229
+        },
+        {
+          "day" : 327,
+          "depreciation" : 231
+        },
+        {
+          "day" : 328,
+          "depreciation" : 229
+        },
+        {
+          "day" : 329,
+          "depreciation" : 231
+        },
+        {
+          "day" : 330,
+          "depreciation" : 229
+        },
+        {
+          "day" : 331,
+          "depreciation" : 231
+        },
+        {
+          "day" : 332,
+          "depreciation" : 229
+        },
+        {
+          "day" : 333,
+          "depreciation" : 231
+        },
+        {
+          "day" : 334,
+          "depreciation" : 229
+        },
+        {
+          "day" : 335,
+          "depreciation" : 231
+        },
+        {
+          "day" : 336,
+          "depreciation" : 229
+        },
+        {
+          "day" : 337,
+          "depreciation" : 231
+        },
+        {
+          "day" : 338,
+          "depreciation" : 229
+        },
+        {
+          "day" : 339,
+          "depreciation" : 231
+        },
+        {
+          "day" : 340,
+          "depreciation" : 229
+        },
+        {
+          "day" : 341,
+          "depreciation" : 231
+        },
+        {
+          "day" : 342,
+          "depreciation" : 229
+        },
+        {
+          "day" : 343,
+          "depreciation" : 231
+        },
+        {
+          "day" : 344,
+          "depreciation" : 229
+        },
+        {
+          "day" : 345,
+          "depreciation" : 231
+        },
+        {
+          "day" : 346,
+          "depreciation" : 229
+        },
+        {
+          "day" : 347,
+          "depreciation" : 231
+        },
+        {
+          "day" : 348,
+          "depreciation" : 229
+        },
+        {
+          "day" : 349,
+          "depreciation" : 231
+        },
+        {
+          "day" : 350,
+          "depreciation" : 229
+        },
+        {
+          "day" : 351,
+          "depreciation" : 231
+        },
+        {
+          "day" : 352,
+          "depreciation" : 229
+        },
+        {
+          "day" : 353,
+          "depreciation" : 231
+        },
+        {
+          "day" : 354,
+          "depreciation" : 229
+        },
+        {
+          "day" : 355,
+          "depreciation" : 231
+        },
+        {
+          "day" : 356,
+          "depreciation" : 229
+        },
+        {
+          "day" : 357,
+          "depreciation" : 231
+        },
+        {
+          "day" : 358,
+          "depreciation" : 229
+        },
+        {
+          "day" : 359,
+          "depreciation" : 231
+        },
+        {
+          "day" : 360,
+          "writeOff" : 32400
+        }
+      ],
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 1,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 2,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 3,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 4,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 5,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 6,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 7,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 8,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 9,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 10,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 11,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 12,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 13,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 14,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 15,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 16,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 17,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 18,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 19,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 20,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 21,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 22,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 23,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 24,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 25,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 26,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 27,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 28,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 29,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 30,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 31,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 32,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 33,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 34,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 35,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 36,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 37,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 38,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 39,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 40,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 41,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 42,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 43,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 44,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 45,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 46,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 47,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 48,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 49,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 50,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 51,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 52,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 53,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 54,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 55,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 56,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 57,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 58,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 59,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 60,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 61,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 62,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 63,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 64,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 65,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 66,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 67,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 68,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 69,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 70,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 71,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 72,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 73,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 74,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 75,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 76,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 77,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 78,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 79,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 80,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 81,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 82,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 83,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 84,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 85,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 86,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 87,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 88,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 89,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 90,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 91,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 92,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 93,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 94,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 95,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 96,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 97,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 98,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 99,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 100,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 101,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 102,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 103,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 104,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 105,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 106,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 107,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 108,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 109,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 110,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 111,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 112,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 113,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 114,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 115,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 116,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 117,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 118,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 119,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 120,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 121,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 122,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 123,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 124,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 125,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 126,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 127,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 128,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 129,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 130,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 131,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 132,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 133,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 134,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 135,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 136,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 137,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 138,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 139,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 140,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 141,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 142,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 143,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 144,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 145,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 146,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 147,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 148,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 149,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 150,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 151,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 152,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 153,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 154,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 155,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 156,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 157,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 158,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 159,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 160,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 161,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 162,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 163,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 164,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 165,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 166,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 167,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 168,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 169,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 170,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 171,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 172,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 173,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 174,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 175,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 176,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 177,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 178,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 179,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 180,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 181,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 182,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 183,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 184,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 185,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 186,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 187,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 188,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 189,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 190,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 191,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 192,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 193,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 194,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 195,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 196,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 197,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 198,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 199,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 200,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 201,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 202,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 203,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 204,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 205,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 206,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 207,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 208,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 209,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 210,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 211,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 212,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 213,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 214,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 215,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 216,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 217,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 218,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 219,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 220,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 221,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 222,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 223,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 224,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 225,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 226,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 227,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 228,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 229,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 230,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 231,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 232,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 233,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 234,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 235,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 236,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 237,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 238,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 239,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 240,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 241,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 242,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 243,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 244,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 245,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 246,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 247,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 248,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 249,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 250,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 251,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 252,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 253,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 254,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 255,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 256,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 257,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 258,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 259,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 260,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 261,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 262,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 263,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 264,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 265,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 266,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 267,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 268,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 269,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 270,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 271,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 272,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 273,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 274,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 275,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 276,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 277,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 278,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 279,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 280,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 281,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 282,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 283,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 284,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 285,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 286,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 287,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 288,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 289,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 290,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 291,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 292,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 293,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 294,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 295,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 296,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 297,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 298,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 299,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 300,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 301,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 302,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 303,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 304,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 305,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 306,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 307,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 308,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 309,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 310,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 311,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 312,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 313,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 314,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 315,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 316,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 317,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 318,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 319,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 320,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 321,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 322,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 323,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 324,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 325,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 326,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 327,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 328,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 329,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 330,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 331,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 332,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 333,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 334,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 335,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 336,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 337,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 338,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 339,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 340,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 341,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 342,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 343,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 344,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 345,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 346,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 347,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 348,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 349,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 350,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 351,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 352,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 353,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 354,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 355,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 356,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 357,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 358,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        },
+        {
+          "day" : 359,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "interestCost" : 1400,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 26870340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 26956740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27043140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27129540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27215940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27302340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27388740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27475140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27561540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27647940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27734340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27820740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27907140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 27993540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28079940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28166340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28252740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28339140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28425540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28511940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28598340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28684740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28771140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28857540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 28943940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29030340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29116740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29203140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29289540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29375940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29462340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29548740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29635140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29721540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29807940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29894340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 29980740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30067140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30153540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30239940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30326340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30412740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30499140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30585540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30671940
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30758340
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30844740
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 30931140
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 31017540
+        },
+        {
+          "amount" : -1400,
+          "breakdown" : [
+            {
+              "amount" : -1400,
+              "item" : "loanInterest"
+            }
+          ],
+          "kind" : "dailyInterest",
+          "time" : 31103940
+        }
+      ],
+      "loan" : 10000000,
+      "mode" : "management",
+      "openedAt" : 31104000,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      },
+      "years" : [
+        {
+          "closing" : {
+            "cash" : 18272000,
+            "loan" : 10000000,
+            "rollingStock" : {
+              "cost" : 432000,
+              "depreciation" : 43200
+            },
+            "stations" : {
+              "cost" : 720000,
+              "depreciation" : 36000
+            },
+            "track" : {
+              "cost" : 72000,
+              "depreciation" : 3600
+            }
+          },
+          "income" : {
+            "capitalSpending" : 1224000,
+            "depreciationCost" : 82800,
+            "energyCost" : 0,
+            "fareRevenue" : 0,
+            "index" : 0,
+            "interestCost" : 504000,
+            "loanBorrowed" : 10000000,
+            "loanRepaid" : 0,
+            "maintenanceCost" : 0,
+            "operatingCost" : 0,
+            "staffCost" : 0,
+            "writeOffCost" : 0
+          },
+          "year" : 0
+        }
+      ]
+    },
+    "bounds" : {
+      "height" : 8192,
+      "width" : 16384
+    },
+    "clock" : {
+      "now" : 31105860,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 18272000,
+      "costs" : {
+        "car" : 36000,
+        "station" : 720000,
+        "track" : 9000,
+        "train" : 360000
+      }
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 4,
+      "nextNodeID" : 4,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 1024,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 9216,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 3072,
+          "y" : 4096,
+          "z" : 0
+        }
+      ]
+    },
+    "nextStationID" : 2,
+    "nextTrainID" : 2,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 2048,
+          "y" : 2048
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "cars" : 2,
+        "id" : 1,
+        "name" : "T1"
+      }
+    ]
+  }
+}
