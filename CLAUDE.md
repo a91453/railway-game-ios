@@ -74,10 +74,14 @@ inventing a solution, in this order:
    decides otherwise. Data keeps its own license and attribution (for
    example OpenStreetMap's ODbL, credited in `DataSourceCredits`).
 
+When neither has anything usable, write it yourself, without waiting to ask:
+the search decides what to reuse, not whether the work goes ahead.
+
 Say in the PR what was searched and what was found: the reference rows go in
 the mapping table, an outside project with its URL, license and what was
-taken from it, and "nothing usable" when nothing was. Adding a dependency is
-still avoided unless the user agrees (Workflow).
+taken from it, and "nothing usable" when nothing was (and the code is this
+project's own). Adding a dependency is still avoided unless the user agrees
+(Workflow).
 
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
