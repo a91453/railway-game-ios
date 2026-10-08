@@ -19,8 +19,8 @@ public struct CityMap: Sendable {
     public let rows: Int
     public let columns: Int
     /// The cells a layer can draw, by row and then column: those with land
-    /// (and so a building), those a station's catchment reaches and those
-    /// near a park (decision 91). Every other cell has no use, is worth an
+    /// (and so a building), those a station's catchment reaches, those
+    /// near a park (decision 91) and those zoned (decision 98). Every other cell has no use, is worth an
     /// empty cell with no service (``LandValueRules/vacantBase``: a cell is
     /// worth more only with land, a station with service within the
     /// catchment or a park near by) and is not covered, so no layer draws
@@ -41,6 +41,9 @@ public struct CityMap: Sendable {
         let covered: Bool
         /// Whether anyone lives or works in it (not a park, decision 91).
         let peopled: Bool
+        /// Its zone (decision 98): 0 for none, else 1 to 8 in ``Zone``'s
+        /// order (``zoneCode(_:)``).
+        let zone: UInt8
     }
 
     /// The smallest a drawn rectangle may be on screen, in points.
@@ -97,15 +100,26 @@ public struct CityMap: Sendable {
                 }
             }
         }
-        let positions = Set(kinds.keys).union(covered).union(nearParks).sorted()
+        // Decision 98: the zoned cells.
+        var zones: [CellPosition: UInt8] = [:]
+        for cell in world.zones.cells where cell.row < rows && cell.column < columns {
+            zones[cell.position] = UInt8(Self.zoneCode(cell.zone))
+        }
+        let positions = Set(kinds.keys).union(covered).union(nearParks).union(zones.keys).sorted()
         let values = world.landValues(at: positions)
         cells = zip(positions, values).map { position, value in
             let kind = kinds[position]
             return Cell(
                 row: position.row, column: position.column, value: value.value,
-                kind: kind ?? 0, covered: covered.contains(position), peopled: peopled.contains(position)
+                kind: kind ?? 0, covered: covered.contains(position), peopled: peopled.contains(position), zone: zones[position] ?? 0
             )
         }
+    }
+
+    /// A zone's number, 1 to 8 in ``Zone``'s order: the order a block's tie
+    /// goes by and ``zoneColors`` follows.
+    static func zoneCode(_ zone: Zone) -> Int {
+        (Zone.allCases.firstIndex(of: zone) ?? 0) + 1
     }
 
     /// A use's number, 1 to 8 in ``LandUse``'s order: the order a block's
@@ -140,6 +154,9 @@ public struct CityMap: Sendable {
     /// - Land value: each cell with land, or worth more than an empty cell
     ///   with no service, by its value's step (``valueColor(cents:)``); a
     ///   block by its cells' average.
+    /// - Zoning (decision 98): each zoned cell in its zone's colour
+    ///   (``zoneColors``); a block takes the zone most of its zoned cells
+    ///   have (in ``Zone``'s order on a tie).
     /// - Coverage: cells with people that no station reaches in
     ///   ``uncoveredColor``, else the cells a catchment reaches in
     ///   ``coveredColor`` (stronger with people); a block is uncovered if
@@ -158,6 +175,7 @@ public struct CityMap: Sendable {
         let lowColumn = firstColumn / size * size, highColumn = min(columns - 1, (lastColumn / size + 1) * size - 1)
         struct Block {
             var uses = [Int](repeating: 0, count: LandUse.allCases.count + 1), densities = 0, drawn = 0, total: Int64 = 0
+            var zones = [Int](repeating: 0, count: Zone.allCases.count + 1)
             var anyCovered = false, anyPeopled = false, anyUncovered = false
         }
         var blocks: [CellPosition: Block] = [:]
@@ -182,6 +200,10 @@ public struct CityMap: Sendable {
             case .landValue:
                 guard cell.peopled || cell.value > LandValueRules.vacantBase else { continue }
                 block.total += cell.value
+                block.drawn += 1
+            case .zoning:
+                guard cell.zone > 0 else { continue }
+                block.zones[Int(cell.zone)] += 1
                 block.drawn += 1
             default:
                 if cell.covered {
@@ -209,6 +231,12 @@ public struct CityMap: Sendable {
                 guard block.drawn > 0 else { continue }
                 value = block.total / Int64(block.drawn)
                 color = Self.valueColor(cents: value)
+            case .zoning:
+                let zones = block.zones
+                guard block.drawn > 0, let zone = (1...Zone.allCases.count).max(by: { zones[$0] < zones[$1] || (zones[$0] == zones[$1] && $0 > $1) })
+                else { continue }
+                color = Self.zoneColors[zone - 1]
+                value = Int64(zone)
             default:
                 if block.anyUncovered {
                     color = Self.uncoveredColor
@@ -278,6 +306,22 @@ public struct CityMap: Sendable {
         valueColors[valueStep(cents: cents)]
     }
 
+    /// Each zone's colour, in ``Zone``'s order (decision 98): `Ci/`'s land
+    /// use palette (`landuseColorByClass`: homes 居住用地, shops 商业服务,
+    /// offices 商务办公, factories 工业用地, public 行政办公, sights 教育用地's
+    /// cyan, as `Ci/` has no sights class), its nature reserve extent
+    /// (`map.legend.reserveExtent`) for no development and its airport
+    /// extent (`map.legend.airportExtent`) for reserved land.
+    public static let zoneColors: [PopTravel.RGB] = [
+        PopTravel.RGB(0xFFB74D), PopTravel.RGB(0xFF7043), PopTravel.RGB(0xEF5350), PopTravel.RGB(0xAB47BC),
+        PopTravel.RGB(0x42A5F5), PopTravel.RGB(0x26C6DA), PopTravel.RGB(0x1B5E20), PopTravel.RGB(0x78909C),
+    ]
+
+    /// The colour of `zone`.
+    public static func zoneColor(_ zone: Zone) -> PopTravel.RGB {
+        zoneColors[zoneCode(zone) - 1]
+    }
+
     /// Cells a catchment reaches with people, and without.
     public static let coveredColor = PopTravel.RGB(0x2B8CBE)
     public static let coveredEmptyColor = PopTravel.RGB(0xA6BDDB)
@@ -299,6 +343,8 @@ public struct CityCellInfo: Hashable, Sendable {
     public let value: LandValue
     /// The name of the station the premiums are measured at.
     public let stationName: String?
+    /// What the player zoned it for (decision 98), or `nil`.
+    public var zone: Zone? = nil
 
     /// "Homes · D2 (6 storeys)", "Residents 120 · Jobs 4", "Land value
     /// $ 194.85 a m²", "Base $ 25.00 · Service + $ 149.85 · Access +
@@ -330,6 +376,13 @@ public struct CityCellInfo: Hashable, Sendable {
             let park = Money(value.parkPremium).centsText
             lines.append(language.text("Near a park + \(park)", "鄰近公園 + \(park)"))
         }
+        if value.companyPremium > 0 {
+            let company = Money(value.companyPremium).centsText
+            lines.append(language.text("Near your buildings + \(company)", "鄰近公司建物 + \(company)"))
+        }
+        if let zone {
+            lines.append(language.text("Zoned: \(zone.title(in: .english))", "分區：\(zone.title(in: .traditionalChinese))"))
+        }
         if let stationName {
             lines.append(language.text("Set by \(stationName)", "決定價格的車站：\(stationName)"))
         } else {
@@ -352,7 +405,7 @@ extension GameWorld {
         return CityCellInfo(
             row: row, column: column, use: building?.use ?? cell?.use, kind: building?.kind, density: building?.density,
             residents: cell?.residents ?? 0, jobs: cell?.jobs ?? 0, value: value,
-            stationName: value.station.flatMap { station(id: $0)?.name }
+            stationName: value.station.flatMap { station(id: $0)?.name }, zone: zones.zone(row: row, column: column)
         )
     }
 

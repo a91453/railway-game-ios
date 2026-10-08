@@ -139,6 +139,15 @@ struct MapView: View {
                         cellTooltip = nil
                         cityTooltip = nil
                         session.mapDidMove()
+                    }, paintsWithOneFinger: isZoning, onPaint: { start, end, phase in
+                        // Decision 98: one finger drags out the cells to
+                        // zone; two still move and zoom the map.
+                        let from = projection.planPoint(at: start), to = projection.planPoint(at: end)
+                        switch phase {
+                        case .moved: session.dragZone(from: from, to: to)
+                        case .ended: session.endZoneDrag(from: from, to: to)
+                        case .cancelled: session.cancelZoneDrag()
+                        }
                     }) { location in
                         let point = projection.planPoint(at: location)
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
@@ -278,6 +287,13 @@ struct MapView: View {
                     }
                 }
             }
+            .onChange(of: isZoning) { _, zoning in
+                // Decision 98: zoning shows the zones.
+                if zoning {
+                    stopPopTravelPlay()
+                    popTravelModeName = PopTravelMode.zoning.rawValue
+                }
+            }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
             }
@@ -393,10 +409,16 @@ struct MapView: View {
                 key: .travel(version: travelTilesVersion),
                 opacity: alpha
             )
-        case .landUse, .landValue, .coverage:
+        case .landUse, .landValue, .coverage, .zoning:
             guard let cityMap else { return nil }
             return PopTravelLayer(content: .city(cityMap, mode), key: .city(version: cityMapVersion, mode: mode), opacity: alpha)
         }
+    }
+
+    /// Whether the building tool zones (decision 98): a one-finger drag on
+    /// the map zones cells instead of moving it.
+    private var isZoning: Bool {
+        session.tool == .building && session.buildingMode == .zone && screen.panel != .lines
     }
 
     /// The layer's opacity: the player's, or the layer's own until set
@@ -829,6 +851,10 @@ private struct CityMapKey: Equatable {
     let stations: [Station]
     let growth: TownGrowth?
     let setsRidership: Bool
+    /// Decision 98: the zones, and the company's buildings that make zoned
+    /// land worth more.
+    let zones: Zoning?
+    let placed: [PlacedBuilding]
     let isShown: Bool
 
     init(world: GameWorld, isShown: Bool) {
@@ -837,6 +863,8 @@ private struct CityMapKey: Equatable {
         buildings = isShown ? world.buildings : nil
         stations = isShown ? world.stations : []
         growth = isShown ? world.townGrowth : nil
+        zones = isShown ? world.zones : nil
+        placed = isShown ? world.placedBuildings : []
         setsRidership = isShown && world.landDemand && world.accounts.mode == .management
     }
 }
@@ -878,12 +906,25 @@ private struct TravelDemandKey: Equatable {
     }
 }
 
+/// What a painting drag did (decision 98).
+enum MapPaintPhase {
+    case moved
+    case ended
+    case cancelled
+}
+
 /// UIKit recognizers arbitrate taps, single-finger drags and pinches:
 /// navigating must never also select a point for the construction tool.
 /// A pinch uses its starting camera and centroid, including centroid drift.
 private struct MapGestures: UIViewRepresentable {
     let camera: PlanCamera
     let onCameraChange: (PlanCamera) -> Void
+    /// Whether a one-finger drag paints (decision 98's zoning) rather than
+    /// moving the map: `onPaint` gets where it began, where the finger is
+    /// and whether it moved, lifted or was cancelled (a second finger
+    /// cancels it and moves the map).
+    let paintsWithOneFinger: Bool
+    let onPaint: (ScreenPoint, ScreenPoint, MapPaintPhase) -> Void
     let onTap: (ScreenPoint) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -925,6 +966,8 @@ private struct MapGestures: UIViewRepresentable {
         private var panStart: PlanCamera?
         private var pinchStart: PlanCamera?
         private var pinchAnchor = CGPoint.zero
+        /// Where a painting drag began (decision 98), while it goes on.
+        private var paintStart: CGPoint?
         /// The camera the gestures set last: `parent.camera` catches up only
         /// when SwiftUI next updates the view.
         private var latest: PlanCamera?
@@ -977,8 +1020,28 @@ private struct MapGestures: UIViewRepresentable {
             if gesture.state == .began {
                 stopGliding()
                 glideStopper = nil
-                panStart = parent.camera
-                latest = parent.camera
+                if parent.paintsWithOneFinger, pinchStart == nil {
+                    let location = gesture.location(in: gesture.view), moved = gesture.translation(in: gesture.view)
+                    paintStart = CGPoint(x: location.x - moved.x, y: location.y - moved.y)
+                } else {
+                    panStart = parent.camera
+                    latest = parent.camera
+                }
+            }
+            if let start = paintStart {
+                let point = gesture.location(in: gesture.view)
+                let from = ScreenPoint(x: start.x, y: start.y), to = ScreenPoint(x: point.x, y: point.y)
+                switch gesture.state {
+                case .began, .changed:
+                    parent.onPaint(from, to, .moved)
+                case .ended:
+                    paintStart = nil
+                    parent.onPaint(from, to, .ended)
+                default:
+                    paintStart = nil
+                    parent.onPaint(from, to, .cancelled)
+                }
+                return
             }
             if gesture.state == .began || gesture.state == .changed || gesture.state == .ended,
                pinchStart == nil, let start = panStart {
@@ -998,6 +1061,11 @@ private struct MapGestures: UIViewRepresentable {
                 stopGliding()
                 glideStopper = nil
                 panStart = nil
+                // A second finger ends a painting drag without painting.
+                if let start = paintStart {
+                    paintStart = nil
+                    parent.onPaint(ScreenPoint(x: start.x, y: start.y), ScreenPoint(x: start.x, y: start.y), .cancelled)
+                }
                 pinchStart = parent.camera
                 latest = parent.camera
                 pinchAnchor = gesture.location(in: gesture.view)

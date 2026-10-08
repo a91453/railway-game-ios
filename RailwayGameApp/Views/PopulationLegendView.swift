@@ -53,7 +53,7 @@ struct PopulationLegendView: View {
 
             scale
 
-            if mode != .coverage {
+            if mode != .coverage, mode != .zoning {
                 HStack {
                     Text(verbatim: lowText)
                     Spacer()
@@ -111,7 +111,7 @@ struct PopulationLegendView: View {
         case .population: language.text("Population grid", "人口網格")
         case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
-        case .landUse, .landValue, .coverage: mode.title(in: language)
+        case .landUse, .landValue, .coverage, .zoning: mode.title(in: language)
         }
     }
 
@@ -122,7 +122,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Decrease", "減少")
         case .landUse: language.text("Low-rise (D1)", "低層（D1）")
         case .landValue: "$ 0"
-        case .coverage: ""
+        case .coverage, .zoning: ""
         }
     }
 
@@ -133,7 +133,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Increase", "增加")
         case .landUse: language.text("Towers (D4)", "超高層（D4）")
         case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
-        case .coverage: ""
+        case .coverage, .zoning: ""
         }
     }
 
@@ -228,6 +228,21 @@ struct PopulationLegendView: View {
                 }
             }
             .accessibilityIdentifier("map.coverageLegend")
+        case .zoning:
+            // Decision 98: each zone's colour.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
+                ForEach(Zone.allCases, id: \.self) { zone in
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2).fill(Color(CityMap.zoneColor(zone))).frame(width: 14, height: 10)
+                        Text(verbatim: zone.title(in: language))
+                            .font(.caption2)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
+            }
+            .accessibilityIdentifier("map.zoningLegend")
         }
     }
 

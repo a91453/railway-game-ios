@@ -191,4 +191,7 @@ public enum GameError: Error, Hashable, Sendable {
     case buildingOnStation(StationID)
     /// There is no building of the player's with this ID (decision 94).
     case unknownPlacedBuilding(PlacedBuildingID)
+    /// A rectangle of cells to zone that reaches outside the world, or is
+    /// more than ``Zoning/maximumSide`` cells a side (decision 98).
+    case invalidZoneArea
 }

@@ -1098,3 +1098,19 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：城市建物的正方形 2,560 單位（40 m，每公尺 64 單位），在 4,096 單位的格子中央（內縮 768）；收購價是百分比（120）；金額美分。
 
 外部專案（研究 §3，只取想法、沒有複製程式碼）：A 列車 Exp 說明書（他人的建物要「買收撤去」，比自己蓋貴）、OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 或商業作品，只採用概念；收購價的公式與數值是本專案的。
+
+## 城市建造 P0-B：土地分區（決策 98）
+
+2026-10-08 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`）、`Railway/taipei_gta_reference/`（`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找分區、保護區、筆刷或框選、地價加成與依分區成長。**參考庫沒有玩家劃分區、保護區規則、計算的地價或隨時間的成長**（「zone」的命中多半是音樂、速限、時區）；可以用的是筆刷的操作與土地用途的顏色。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `onTerrainStroke`（一筆只存一次復原快照、格子稀疏存成 `col,row` 的表、依列行排序）；`chunks/5758-131911c5f04a436f.js` 的指標處理（畫面座標 → `floor(x / cellMm)` 的格、`select` 模式點一格） | `GameSession.dragZone(from:to:)`、`endZoneDrag(from:to:)`（放開才是一個編輯）、`zoneRectangle(from:to:)`、`tapBuildingTool` 的 `.zone`；`Zoning`（依列、行排序的稀疏格）；App `MapGestures` 的單指繪製 | 改寫：圓形筆刷改成矩形（作者要「單點或拖曳」），座標 → 64 m 格是 `Land.cellIndex` |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `landuseColorByClass`／`landuseLabelByClass`、`renderBuildingLegend` | `CityMap.zoneColors`（住宅 `#FFB74D`、商業 `#FF7043`、辦公 `#EF5350`、工業 `#AB47BC`、公共設施 `#42A5F5`、觀光借教育的 `#26C6DA`）、`PopulationLegendView` 的分區圖例 | 直接沿用顏色；`Ci/` 沒有觀光類別 |
+| `Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html` 的 `map.legend.reserveExtent`（`#1B5E20`）、`map.legend.airportExtent`（`#78909C`） | `CityMap.zoneColors` 的不開發、保留地 | 直接沿用顏色（只有圖例、沒有規則） |
+| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `reservedRects`／`overlapsReserved`（保留的矩形不長程序化建物） | `Zone.reserved`、`spread(towards:)` 跳過劃了分區的格 | 只取想法：參考是一次性的種子生成，這裡是每晚的成長 |
+| （參考沒有） | `Zone`、`GameWorld.setZone(_:rows:columns:)`、`invalidZoneArea`、`spread(towards:)` 的分區優先、`grow`／`raiseBuildings` 的不開發、`LandValueRules.companyPremium`、存檔版本 23、golden schema 43 | gap → 原生 |
+
+固定小數：格是 4,096 單位（64 m）；一次最多 128 格一邊；地價加成 600 美分／m²、距離 25,600 單位（400 m），比較的是平方（整數）；新格的人數以 `LandDemand.newCellResidents`（4）為底。
+
+外部專案（研究文件 §3 已讀，這次再確認做法，沒有程式碼進入本 repository）：Micropolis（GPL-3.0）分區依需求閥與地價評估成長、Cytopia（GPL-3.0）每格的分區層、Citybound（AGPL-3.0）多邊形分區，都是 copyleft，只取「分區是另一層」「地價高的分區先長」的想法；A 列車 Exp（商業遊戲，說明書）的開發凍結區與保留地、子公司誘導開發，只參考玩法。規則與數值是本專案的。

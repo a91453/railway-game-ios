@@ -5,17 +5,21 @@ import GameCore
 // (decision 94) a managed company pays for it, and the tool can demolish the
 // company's buildings too. Since P0-C2 (decision 95) a tap only chooses the
 // site: the map shows the building there, what it costs and the city's
-// buildings it would buy out, and the action button builds it.
+// buildings it would buy out, and the action button builds it. Since P0-B
+// (decision 98) its third mode zones cells (ZoningSession.swift).
 
 /// What a tap with the building tool does (decision 94).
 public enum BuildingToolMode: CaseIterable, Hashable, Sendable {
     case build
     case demolish
+    /// Zones the cell tapped, or the rectangle dragged (decision 98).
+    case zone
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .build: language.text("Build", "建造")
         case .demolish: language.text("Demolish", "拆除")
+        case .zone: language.text("Zone", "分區")
         }
     }
 }
@@ -37,7 +41,8 @@ extension GameSession {
     /// land there on a map whose land is read as it is needed, so the
     /// preview counts the city's buildings in the way; in
     /// ``BuildingToolMode/demolish`` it demolishes the company's building
-    /// there or within `reach` of it, the one whose centre is nearest.
+    /// there or within `reach` of it, the one whose centre is nearest; in
+    /// ``BuildingToolMode/zone`` it zones the cell tapped (decision 98).
     @discardableResult
     public func tapBuildingTool(at point: PlanPoint, reach: Int64) -> Bool {
         switch buildingMode {
@@ -58,6 +63,9 @@ extension GameSession {
                 return false
             }
             return demolishBuilding(building.id)
+        case .zone:
+            guard let cell = zoneRectangle(from: point, to: point) else { return false }
+            return zone(cell)
         }
     }
 
@@ -208,6 +216,10 @@ extension GameSession {
         guard tool == .building else { return nil }
         var overlay = BuildingOverlay()
         overlay.showsCityBuildingSites = buildingMode == .build
+        if buildingMode == .zone, let drag = zoneDrag {
+            overlay.zoneDrag = drag.planRect
+            overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
+        }
         if let preview = buildingPreview {
             let half = preview.kind.side / 2
             overlay.site = PlanRect(minX: preview.centre.x - half, minY: preview.centre.y - half,
@@ -292,6 +304,10 @@ public struct BuildingOverlay: Hashable, Sendable {
     public var siteIsBuildable = false
     /// The squares of the city's buildings it would buy out.
     public var boughtOut: [PlanRect] = []
+    /// The cells a zoning drag would zone (decision 98), and the zone's
+    /// colour (`nil` when it clears them).
+    public var zoneDrag: PlanRect?
+    public var zoneDragColor: PopTravel.RGB?
 
     public init() {}
 }

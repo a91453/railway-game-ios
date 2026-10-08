@@ -521,6 +521,17 @@ enum MapArt {
     /// would buy out marked in red, and the building itself, green where it
     /// can stand and red where it cannot.
     private static func drawBuildingOverlay(_ overlay: BuildingOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        // Decision 98: the cells a zoning drag would zone, in the zone's
+        // colour (grey, outlined only, when it clears them).
+        if let drag = overlay.zoneDrag {
+            let rect = screenRect(minX: Double(drag.minX), minY: Double(drag.minY), maxX: Double(drag.maxX), maxY: Double(drag.maxY), projection)
+            let colour = overlay.zoneDragColor.map { Color($0) } ?? Color.gray
+            let shape = Path(rect)
+            if overlay.zoneDragColor != nil {
+                context.fill(shape, with: .color(colour.opacity(0.35)))
+            }
+            context.stroke(shape, with: .color(colour), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+        }
         for rect in overlay.boughtOut {
             drawMarked(rect, colour: Color.red, projection: projection, in: context)
         }

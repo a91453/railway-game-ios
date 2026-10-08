@@ -274,7 +274,10 @@ extension GameWorld {
     ///   cell of its catchment, in the world, beside (north, south, east
     ///   or west of) a cell with people, nearest the station (then by row
     ///   and column), with its building (D1 homes) when the city's
-    ///   buildings are on (Phase 6c-1).
+    ///   buildings are on (Phase 6c-1); since decision 98, the zoned empty
+    ///   cell worth most first, with its zone's use (``spread(towards:)``).
+    ///
+    /// Decision 98: cells zoned no development neither grow nor are raised.
     ///
     /// Each station growth has seen before records that day's service share
     /// and stations reached (``TownGrowth/Place/lastService``,
@@ -372,11 +375,12 @@ extension GameWorld {
     /// Raises up to ``LandDemand/upgradesPerStation`` of the `full`
     /// buildings of `station`'s catchment that no station has `raised`
     /// tonight by one density, by row and then column.
-    private mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>) {
+    mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>) {
         var cells: [CellPosition] = []
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
             let position = land.cells[index].position
-            if full.contains(position), !raised.contains(position) {
+            // Decision 98: nothing is raised on land zoned no development.
+            if full.contains(position), !raised.contains(position), allowsGrowth(row: position.row, column: position.column) {
                 cells.append(position)
             }
         }
@@ -390,7 +394,7 @@ extension GameWorld {
     /// shared by their residents (jobs) by the largest remainder, each cell
     /// filled to at most its growth limit: its building's capacity with the
     /// city's buildings on (Phase 6c-2), else the fixed limits.
-    private mutating func grow(around station: Station, residents: Int64, jobs: Int64) {
+    mutating func grow(around station: Station, residents: Int64, jobs: Int64) {
         var indices: [Int] = []
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
             indices.append(index)
@@ -399,6 +403,9 @@ extension GameWorld {
         let addedJobs = Self.apportion(jobs, by: indices.map { land.cells[$0].jobs })
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
+            // Decision 98: nothing grows on land zoned no development; its
+            // share is not added.
+            guard allowsGrowth(row: cell.row, column: cell.column) else { continue }
             let capacity = cityBuildings ? buildings.building(row: cell.row, column: cell.column)?.capacity(on: cell) : nil
             let residentLimit = capacity?.residents ?? LandDemand.grownResidents
             let jobLimit = capacity?.jobs ?? LandDemand.grownJobs
@@ -408,9 +415,20 @@ extension GameWorld {
         }
     }
 
-    /// Builds the new home of a growing `station` (see ``growLand(reached:)``),
-    /// if its catchment has an empty cell beside one with people that none
-    /// of the company's buildings claims (decision 95).
+    /// Builds the new cell of a growing `station` (see ``growLand(reached:)``),
+    /// on an empty cell of its catchment that none of the company's
+    /// buildings claims (decision 95):
+    ///
+    /// - decision 98: if any such cell is zoned for a use, the one worth
+    ///   most (``landValue(row:column:)``; then the nearest, then by row
+    ///   and column), with that use and its zone's new cell
+    ///   (``Zone/newCell``), whether or not people live beside it;
+    /// - else a new home of ``LandDemand/newCellResidents`` on the one
+    ///   nearest the station (then by row and column) beside (north, south,
+    ///   east or west of) a cell with people, none zoned: a cell zoned no
+    ///   development or reserved is passed over.
+    ///
+    /// A world without zones builds as before decision 98.
     mutating func spread(towards station: Station) {
         let radius = Land.catchmentRadius, length = Land.cellLength
         let point = station.location
@@ -418,7 +436,9 @@ extension GameWorld {
         let firstRow = max(0, Land.cellIndex(point.y - radius)), lastRow = min(rows - 1, Land.cellIndex(point.y + radius))
         let firstColumn = max(0, Land.cellIndex(point.x - radius)), lastColumn = min(columns - 1, Land.cellIndex(point.x + radius))
         guard firstRow <= lastRow, firstColumn <= lastColumn else { return }
+        let zoned = !zones.isEmpty && zones.hasZone(rows: firstRow...lastRow, columns: firstColumn...lastColumn)
         var best: (squared: Int64, row: Int, column: Int)?
+        var candidates: [(squared: Int64, position: CellPosition, use: LandUse, zone: Zone)] = []
         for row in firstRow...lastRow {
             for column in firstColumn...lastColumn {
                 let dx = Int64(column) * length + length / 2 - point.x
@@ -427,12 +447,31 @@ extension GameWorld {
                 guard squared < radius * radius, land.cell(row: row, column: column) == nil,
                       !isClaimedByPlacedBuilding(row: row, column: column)
                 else { continue }
+                if zoned, let zone = zones.zone(row: row, column: column) {
+                    if let use = zone.use {
+                        candidates.append((squared, CellPosition(row: row, column: column), use, zone))
+                    }
+                    continue
+                }
+                guard candidates.isEmpty else { continue }
                 if let best, (best.squared, best.row, best.column) <= (squared, row, column) { continue }
                 let beside = [(row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)]
                 // A park beside it has no people (decision 91).
                 guard beside.contains(where: { land.cell(row: $0.0, column: $0.1).map { $0.residents + $0.jobs > 0 } ?? false }) else { continue }
                 best = (squared, row, column)
             }
+        }
+        if !candidates.isEmpty {
+            // By row and then column, so a tie keeps the first.
+            let values = landValues(at: candidates.map(\.position)).map(\.value)
+            var chosen = 0
+            for index in candidates.indices.dropFirst()
+            where (values[index], -candidates[index].squared) > (values[chosen], -candidates[chosen].squared) {
+                chosen = index
+            }
+            let cell = candidates[chosen], counts = cell.zone.newCell
+            addLand(LandCell(row: cell.position.row, column: cell.position.column, use: cell.use, residents: counts.residents, jobs: counts.jobs))
+            return
         }
         guard let best else { return }
         addLand(LandCell(row: best.row, column: best.column, use: .residential, residents: LandDemand.newCellResidents, jobs: 0))

@@ -401,6 +401,11 @@ extension GameError {
             language.text("A building cannot stand on station #\(id.rawValue).", "建物不能蓋在車站 #\(id.rawValue) 上。")
         case .unknownPlacedBuilding(let id):
             language.text("There is no building #\(id.rawValue).", "沒有建物 #\(id.rawValue)。")
+        case .invalidZoneArea:
+            language.text(
+                "Zone cells inside the map, at most \(Zoning.maximumSide) cells a side at a time.",
+                "分區要在地圖內，一次最多 \(Zoning.maximumSide) × \(Zoning.maximumSide) 格。"
+            )
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
