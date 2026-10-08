@@ -54,8 +54,17 @@ public final class GameSession {
     /// Whether a tap with the building tool builds or demolishes (decision
     /// 94).
     public var buildingMode: BuildingToolMode = .build {
-        didSet { buildingSite = nil }
+        didSet {
+            buildingSite = nil
+            zoneDrag = nil
+        }
     }
+    /// What the zoning mode zones cells for (decision 98), or `nil` to
+    /// clear their zones.
+    public var zoningZone: Zone? = .residential
+    /// The cells a drag with the zoning mode would zone, while the finger
+    /// is down (decision 98).
+    public internal(set) var zoneDrag: CellRectangle?
     /// Where the building tool would build, once the player tapped there
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
@@ -427,6 +436,7 @@ public final class GameSession {
         guard newTool != tool else { return }
         tool = newTool
         buildingSite = nil
+        zoneDrag = nil
         message = nil
         playSound?(.transition)
     }

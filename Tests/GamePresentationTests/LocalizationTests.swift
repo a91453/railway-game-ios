@@ -32,9 +32,9 @@ final class LocalizationTests: XCTestCase {
             .invalidTrackStructure, .trackConflict(.edge(4)), .trackTooClose(.edge(6)), .tracksWouldBeTooClose(.edge(6), .edge(7)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
             .buildingOverlaps(PlacedBuildingID(rawValue: 2)), .buildingOnTrack(.edge(3)), .buildingOnStation(StationID(rawValue: 1)),
-            .unknownPlacedBuilding(PlacedBuildingID(rawValue: 4)),
+            .unknownPlacedBuilding(PlacedBuildingID(rawValue: 4)), .invalidZoneArea,
         ]
-        XCTAssertEqual(Set(errors).count, 50, "one of every case")
+        XCTAssertEqual(Set(errors).count, 51, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")

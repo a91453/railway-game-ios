@@ -179,6 +179,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
 | `placeBuilding`（schema 41） | `kind`（`"house"`、`"shop"` 或 `"office"`）、`point`（`{ "x", "y" }`，建物的中心） | `placeBuilding(_:at:)` |
+| `setZone`（schema 43） | `zone`（必填：`"residential"`、`"commercial"`、`"office"`、`"industrial"`、`"civic"`、`"leisure"`、`"noDevelopment"`、`"reserved"`，或 `null` 清除）、`rows`、`columns`（各是 `[first, last]`，含兩端） | `setZone(_:rows:columns:)` |
 
 ### 結果（`expect.result`）
 
@@ -235,6 +236,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `buildingOverlaps` | `building` | 新建物會和這棟玩家建物重疊（schema 41，決策 92） |
 | `buildingOnTrack` | `edge` | 新建物離這條邊的軌道中心線不到 128（2 m）（schema 41） |
 | `buildingOnStation` | `station` | 新建物離這座車站的點不到 128（schema 41） |
+| `invalidZoneArea` | — | 要劃分區的矩形超出世界，或一邊超過 128 格（schema 43，決策 98） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -286,6 +288,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `landValue`（schema 39） | `row`、`column` | `{ "found": true, "landValue": { "value", "base", "servicePremium", "accessPremium", "station" } }`：那一格的地價（美分／m²）、三個分項與決定價格的車站（沒有時 `null`）；世界外的格 `{ "found": false }` | `landValue(row:column:)` |
 | `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
 | `placedBuilding`（schema 41） | `building` | `{ "found": true, "placedBuilding": { "id", "kind", "x", "y" } }`：玩家建物的種類與中心；沒有這棟時 `{ "found": false }` | `placedBuilding(id:)` |
+| `zone`（schema 43） | `row`、`column` | `{ "found": true, "zone": "commercial" }`：那一格的分區；沒有分區時 `{ "found": false }` | `zones.zone(row:column:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
@@ -431,6 +434,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `landDemand`（schema 36，選填）：土地需求開啟時是 `true`；關閉時不寫。
 - `cityBuildings`（schema 37，選填）：城市建物開啟時是 `{ "buildings", "d1", "d2", "d3", "d4", "existingStock" }`，建物總數、各密度的一般建物數與既有存量數；關閉時不寫。
 - `placedBuildings`（schema 41，選填）：玩家建物 `[{ "id", "kind", "x", "y" }, ...]`，依編號；沒有時不寫。
+- `zones`（schema 43，選填）：`{ "cells": n, "<zone>": n, ... }`，劃了分區的格數與每種有格的分區的格數；沒有分區時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -669,3 +673,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 沒有新的指令、觀察或欄位：收購併入 `placedBuilding` 的 `landCost`，搬進來的人是 `residents`、`jobs`，拆遷是帳本的 `buildingDemolition` 列與每日帳的 `propertyCost`，都是 schema 42 已有的。**沒有任何既有 fixture 的預期值改變**（規則只在玩家建物存在時改變結果；`placed-buildings.json` 的軌道與車站都離建物 2 m 以上，也沒有土地）。
 - `company-buildings-clearing.json`：經營模式、$4,000,000、城市建物開啟、沒有車站。辦公樓蓋在 D4 住宅格的中央，收購價（61,440 m² × 4,000 ＋ 1,600 m² × 4,000）× 120% = 302,592,000，加上辦公樓本身 24,576,000 + 4,096,000；1,000 位居民與 3 個就業搬進來，最多 16 與 168：16 與 3；那一格土地與城市建物不見，隔壁的商店格不受影響。小住宅之後被一段直線軌道穿過，付 1,200 + 230,400；離辦公樓不到 2 m 的車站付 1,000 + 33,126,400。每個值都手算，寫在 description 裡。
 
+## 決策 98：土地分區（schema 43）
+
+- 新指令 `setZone`、觀察 `zone`、結果 `invalidZoneArea`，最終狀態選填的 `zones`，`landValue` 觀察多了選填的 `companyPremium`（不是 0 時才寫）（ARCHITECTURE 決策 98，城市建造 P0-B）。沒有分區的世界不寫 `zones`，地價也沒有 `companyPremium`（只有劃了用途分區的格才有），舊的 fixture 不必改，schema 30 到 42 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到分區的 fixture；`ZoningTests` 另外手算驗證成長、升級與保護區。
+- `zoning.json`：`city-buildings-growth.json` 的世界、土地與鐵路，(1, 1) 劃商業區、(1, 0) 劃不開發。第二個午夜 Alpha 的新格蓋在劃了用途的空格 (1, 1)，是商業（1 位居民、12 個就業，D1 商業建物 3 號），不必在有人的格旁邊；Beta 只剩 (1, 0) 這個空格，是不開發，所以不蓋。土地 3 格、244／255，Gamma 的需求 66 → 67（手算的腹地分配）。超出世界的矩形是 `invalidZoneArea`。
+- `zoning-land-value.json`：自由模式、沒有車站與土地（每格都是空地的 1,000）。小住宅的中心在 (10, 12) 的中點；劃了辦公區、中點在 400 m（25,600）內的 (10, 12)、(10, 10) 地價加 600；不開發的 (11, 12)、沒有分區的 (10, 13)、28,672 外的觀光區 (10, 19) 不加；清除 (10, 12) 的分區後回到 1,000。每個值都手算，寫在 description 裡。

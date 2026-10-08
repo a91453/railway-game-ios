@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 42
+    static let schemaVersion = 43
 
     var description: String
     var initialState: InitialState
@@ -181,7 +181,8 @@ struct GoldenScenario: Decodable {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
-                 .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _): true
+                 .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
+                 .command(.setZone, _), .observe(.zone, _): true
             default: false
             }
         }
@@ -244,7 +245,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -279,6 +280,9 @@ extension GoldenScenario.Step: Decodable {
             case .placedBuilding:
                 try requireOnly([.found, .placedBuilding], answering: "placedBuilding")
                 self = try .observe(observation, expect: .placedBuilding(Self.found(expect, .placedBuilding, PlacedBuildingSummary.self)))
+            case .zone:
+                try requireOnly([.found, .zone], answering: "zone")
+                self = try .observe(observation, expect: .zone(Self.found(expect, .zone, Zone.self)))
             case .landValue:
                 try requireOnly([.found, .landValue], answering: "landValue")
                 self = try .observe(observation, expect: .landValue(Self.found(expect, .landValue, LandValueSummary.self)))
@@ -497,6 +501,8 @@ enum ScenarioCommand: Equatable {
     case placeBuilding(PlacedBuildingKind, PlanPoint)
     /// Schema 42 (decision 94): demolishing one.
     case removePlacedBuilding(PlacedBuildingID)
+    /// Schema 43 (decision 98): zoning a rectangle of cells, or clearing it.
+    case setZone(Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -600,6 +606,8 @@ enum ScenarioCommand: Equatable {
                 try world.placeBuilding(kind, at: point)
             case .removePlacedBuilding(let id):
                 try world.removePlacedBuilding(id)
+            case .setZone(let zone, let rows, let columns):
+                try world.setZone(zone, rows: rows, columns: columns)
             }
             return .ok
         } catch {
@@ -617,6 +625,7 @@ extension ScenarioCommand: Decodable {
         case performance, point, routePreferences
         case seed, cells
         case kind, building
+        case zone, rows, columns
     }
 
     init(from decoder: any Decoder) throws {
@@ -641,6 +650,17 @@ extension ScenarioCommand: Decodable {
         // Schema 42: demolishing the company's buildings (decision 94).
         case "removePlacedBuilding":
             self = .removePlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
+        // Schema 43: zoning (decision 98). `"zone"` is required, `null` to
+        // clear; `"rows"` and `"columns"` are `[first, last]`.
+        case "setZone":
+            guard container.contains(.zone) else {
+                throw DecodingError.keyNotFound(CodingKeys.zone, DecodingError.Context(codingPath: container.codingPath, debugDescription: "setZone needs \"zone\"."))
+            }
+            let rows = try container.decode([Int].self, forKey: .rows), columns = try container.decode([Int].self, forKey: .columns)
+            guard rows.count == 2, columns.count == 2, rows[0] <= rows[1], columns[0] <= columns[1] else {
+                throw DecodingError.dataCorruptedError(forKey: .rows, in: container, debugDescription: "setZone's rows and columns are [first, last].")
+            }
+            self = try .setZone(container.decodeIfPresent(Zone.self, forKey: .zone), rows: rows[0]...rows[1], columns: columns[0]...columns[1])
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -962,6 +982,8 @@ extension StepOutcome: Codable {
             self = try .rejected(.buildingOnStation(container.decodeStation(forKey: .station)))
         case "unknownPlacedBuilding":
             self = .rejected(.unknownPlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building))))
+        case "invalidZoneArea":
+            self = .rejected(.invalidZoneArea)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1126,6 +1148,8 @@ extension StepOutcome: Codable {
         case .rejected(.buildingOnStation(let id)):
             try container.encode("buildingOnStation", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.invalidZoneArea):
+            try container.encode("invalidZoneArea", forKey: .result)
         case .rejected(.unknownPlacedBuilding(let id)):
             try container.encode("unknownPlacedBuilding", forKey: .result)
             try container.encode(id.rawValue, forKey: .building)
@@ -1201,6 +1225,8 @@ enum ScenarioObservation: Equatable {
     case landValue(row: Int, column: Int)
     /// Schema 41 (decision 92): a building the player placed.
     case placedBuilding(PlacedBuildingID)
+    /// Schema 43 (decision 98): a cell's zone.
+    case zone(row: Int, column: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1214,6 +1240,8 @@ enum ScenarioObservation: Equatable {
             .landValue(world.landValue(row: row, column: column).map(LandValueSummary.init))
         case .placedBuilding(let id):
             .placedBuilding(world.placedBuilding(id: id).map(PlacedBuildingSummary.init))
+        case .zone(let row, let column):
+            .zone(world.zones.zone(row: row, column: column))
         case .building(let row, let column):
             .building(world.buildings.building(row: row, column: column).flatMap { building in
                 world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
@@ -1338,6 +1366,9 @@ extension ScenarioObservation: Decodable {
         // Schema 41: buildings the player places (decision 92).
         case "placedBuilding":
             self = .placedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
+        // Schema 43: zoning (decision 98).
+        case "zone":
+            self = try .zone(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1511,6 +1542,7 @@ enum ObservationAnswer: Equatable {
     case townGrowth(TownGrowthSummary?)
     case landValue(LandValueSummary?)
     case placedBuilding(PlacedBuildingSummary?)
+    case zone(Zone?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1521,7 +1553,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1606,7 +1638,7 @@ extension ObservationAnswer: Encodable {
         case .lateness(let lateness?):
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
-        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil):
+        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1626,6 +1658,9 @@ extension ObservationAnswer: Encodable {
         case .placedBuilding(let building?):
             try container.encode(true, forKey: .found)
             try container.encode(building, forKey: .placedBuilding)
+        case .zone(let zone?):
+            try container.encode(true, forKey: .found)
+            try container.encode(zone, forKey: .zone)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1713,6 +1748,9 @@ struct WorldSummary: Codable, Equatable {
     /// The buildings the player placed (schema 41, decision 92), by ID;
     /// left out when there are none.
     var placedBuildings: [PlacedBuildingSummary]?
+    /// How many cells are zoned, in all and of each zone that has any
+    /// (schema 43, decision 98); left out when none is.
+    var zones: [String: Int]?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -1924,6 +1962,7 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
+        zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }
     }
 }
 
@@ -1960,6 +1999,9 @@ struct LandValueSummary: Equatable {
     var servicePremium: Int64
     var accessPremium: Int64
     var station: Int?
+    /// Schema 43 (decision 98): the premium of a zoned cell near the
+    /// company's buildings, written only when it is not 0.
+    var companyPremium: Int64
 
     init(_ value: LandValue) {
         self.value = value.value
@@ -1967,12 +2009,13 @@ struct LandValueSummary: Equatable {
         servicePremium = value.servicePremium
         accessPremium = value.accessPremium
         station = value.station?.rawValue
+        companyPremium = value.companyPremium
     }
 }
 
 extension LandValueSummary: Codable {
     private enum CodingKeys: String, CodingKey {
-        case value, base, servicePremium, accessPremium, station
+        case value, base, servicePremium, accessPremium, station, companyPremium
     }
 
     /// `"station"` is required, `null` for none.
@@ -1986,6 +2029,7 @@ extension LandValueSummary: Codable {
             throw DecodingError.keyNotFound(CodingKeys.station, DecodingError.Context(codingPath: container.codingPath, debugDescription: "landValue needs \"station\"."))
         }
         station = try container.decodeIfPresent(Int.self, forKey: .station)
+        companyPremium = try container.decodeIfPresent(Int64.self, forKey: .companyPremium) ?? 0
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1995,6 +2039,9 @@ extension LandValueSummary: Codable {
         try container.encode(servicePremium, forKey: .servicePremium)
         try container.encode(accessPremium, forKey: .accessPremium)
         try container.encode(station, forKey: .station)
+        if companyPremium != 0 {
+            try container.encode(companyPremium, forKey: .companyPremium)
+        }
     }
 }
 

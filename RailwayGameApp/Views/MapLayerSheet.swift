@@ -70,6 +70,12 @@ struct MapLayerSheet: View {
                         Label("Catchment Coverage", systemImage: "scope")
                     }
                     .accessibilityIdentifier("layer.catchmentCoverage")
+
+                    // Decision 98: the zones the player drew.
+                    Toggle(isOn: modeBinding(.zoning)) {
+                        Label("Zoning", systemImage: "square.grid.3x3.fill")
+                    }
+                    .accessibilityIdentifier("layer.zoning")
                 } header: {
                     Text("City")
                 } footer: {

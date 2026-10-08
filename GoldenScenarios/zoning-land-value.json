@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 43,
+  "description": "The company's buildings make zoned land worth more (city building P0-B, ARCHITECTURE decision 98) in a world 131072 x 98304 units (32 x 24 cells of 64 m), free play, no land and no stations, so every cell is worth an empty cell with no service: base 1000 cents a m2 (vacant base 1000 x 1000 / 1000), no service or access premium, no station. A house is placed with its centre on the middle of cell (10, 12), (12 x 4096 + 2048, 10 x 4096 + 2048) = (51200, 43008), free of charge. Without zones nothing is worth more: (10, 12) is 1000. setZone zones every cell of rows [first, last] by columns [first, last]: offices on row 10, columns 10 to 12; no development at (11, 12); sights at (10, 19). A cell zoned for a use whose middle lies closer than 25600 (400 m) to a company building's centre gets companyPremium 600 (as a park's, decision 91): (10, 12), 0 away, 1600; (10, 10), 8192 away, 1600. Not the others: (11, 12) is zoned no development, which is no use; (10, 13) is not zoned; (10, 19)'s middle (79872, 43008) is 28672 away. Clearing (10, 12)'s zone (zone null) takes its premium away: 1000 again, and the zone observation finds none there, while (10, 11) stays offices. Rows 0 to 128 reach past the world's 24 rows (and 129 is more than 128 a side): invalidZoneArea. The final state lists the house and zones: 4 cells, 2 office, 1 noDevelopment, 1 leisure. companyPremium is written only when it is not 0, so every earlier landValue expectation reads as 0. Every value worked out by hand.",
+  "initialState": {
+    "worldWidth": 131072,
+    "worldHeight": 98304,
+    "balance": 10000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "house",
+        "point": {
+          "x": 51200,
+          "y": 43008
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 12
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "office",
+        "rows": [
+          10,
+          10
+        ],
+        "columns": [
+          10,
+          12
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "noDevelopment",
+        "rows": [
+          11,
+          11
+        ],
+        "columns": [
+          12,
+          12
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "leisure",
+        "rows": [
+          10,
+          10
+        ],
+        "columns": [
+          19,
+          19
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 12
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1600,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null,
+          "companyPremium": 600
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 10
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1600,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null,
+          "companyPremium": 600
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 11,
+        "column": 12
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 13
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 19
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": null,
+        "rows": [
+          10,
+          10
+        ],
+        "columns": [
+          12,
+          12
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 10,
+        "column": 12
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "zone",
+        "row": 10,
+        "column": 11
+      },
+      "expect": {
+        "found": true,
+        "zone": "office"
+      }
+    },
+    {
+      "observe": {
+        "type": "zone",
+        "row": 10,
+        "column": 12
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "office",
+        "rows": [
+          0,
+          128
+        ],
+        "columns": [
+          0,
+          0
+        ]
+      },
+      "expect": {
+        "result": "invalidZoneArea"
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 10000,
+    "gameMinutes": 0,
+    "lines": [],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "placedBuildings": [
+      {
+        "id": 1,
+        "kind": "house",
+        "x": 51200,
+        "y": 43008
+      }
+    ],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [],
+    "trafficControl": false,
+    "trains": [],
+    "zones": {
+      "cells": 4,
+      "leisure": 1,
+      "noDevelopment": 1,
+      "office": 2
+    }
+  }
+}

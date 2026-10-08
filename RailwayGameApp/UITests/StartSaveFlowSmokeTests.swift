@@ -62,6 +62,48 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
     }
 
+    /// City building P0-B (decision 98): the building tool's zoning mode
+    /// zones the cells a one-finger drag crosses, and the zones survive
+    /// saving and continuing. Not on the pull request gate: the drag is a
+    /// gesture only a Simulator can make, but the zoning itself is pinned
+    /// by GameCore's and GamePresentation's tests.
+    func testCellsZonedByADragAreKeptBySavingAndContinuing() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton("start.newGame", in: app).tap()
+        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        requiredButton("tool.building", in: app).tap()
+        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
+        requiredButton("building.zone.commercial", in: app).tap()
+        let count = app.staticTexts["building.zoneCount"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the zoned cell count")
+        XCTAssertEqual(count.label, "0 cells zoned")
+
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.25))
+        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.4))
+        start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        let zoned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "0 cells zoned"), object: count)
+        XCTAssertEqual(XCTWaiter().wait(for: [zoned], timeout: 10), .completed, "The drag zoned nothing: \(count.label)")
+        let label = count.label
+
+        openGameMenu(in: app)
+        tapMenuAction("menu.saveGame", in: app)
+        openGameMenu(in: app)
+        tapMenuAction("menu.backToStart", in: app)
+        requiredButton("start.continue", in: app).tap()
+
+        requiredButton("tool.building", in: app).tap()
+        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the zoned cell count after continuing")
+        XCTAssertEqual(count.label, label, "The zones did not survive saving and continuing")
+    }
+
     private func checkFlow(language: String, locale: String) {
         continueAfterFailure = false
         let app = XCUIApplication()

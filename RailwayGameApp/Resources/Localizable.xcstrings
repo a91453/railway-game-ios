@@ -2473,6 +2473,16 @@
         }
       }
     },
+    "Zoning" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "土地分區"
+          }
+        }
+      }
+    },
     "Zoom in" : {
       "localizations" : {
         "zh-Hant" : {
