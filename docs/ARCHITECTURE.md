@@ -3130,7 +3130,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 86. 目標、挑戰與快轉
 
-2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是 A 列車式遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 的遊戲沒有目標，`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務，所以目標、評等、挑戰內容都是原生（gap → 原生）。存檔版本 17。
+2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是 A 列車式遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 有一個已停用的挑戰模式（`openMetroChallengeStartModal` 直接回傳「挑战模式已从当前经济设计中移除」；`startMetroChallengeFromModal` 跑 1 個模擬日、以當天載客數 `metroChallengeCurrentPassengerScore` 計分，事件是 Holiday Peak／May Day Rush，計分引擎 `MetroEconomy.startChallenge`、`calculateChallengeScore` 不在快照），是單日的計分賽而不是目標與期限；`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務。所以目標、評等與期限是原生（gap → 原生）；`Ci/` 挑戰模式的成績上傳與排行榜留給決策 87 之後的排行榜。存檔版本 17。
 
 1. **目標**（GameCore，`Goal`）：只讀遊戲已經有的資料，判定是 deterministic 的。
    - `connect(points:radius:)`：每個地點半徑內都有路線停靠的車站，而且這些車站在同一個路網（路線共用車站，或停靠同一個轉乘群組的車站，決策 81）。
