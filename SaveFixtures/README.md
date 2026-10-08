@@ -68,6 +68,15 @@ Since version 15 (ARCHITECTURE decision 81) a world can hold
 from 1. A build before version 15 refuses a version 15 save rather than
 dropping the groups and the journeys across them.
 
+Since version 16 (Phase 7a, ARCHITECTURE decision 85) a managed company's
+accounts can hold `"assets"`, what each track edge, station, train and car
+cost and how far it is written down, `"capitalDays"`, each day's
+depreciation, write-offs, purchases and loan movements, and `"years"`, the
+closed years with their balance sheets. Earlier saves have none: what they
+built is on the books at nothing and is never written down or off. A build
+before version 16 refuses a version 16 save rather than dropping what
+everything cost.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -91,3 +100,4 @@ hand could hold, is refused with that reason
 | `v13-city-buildings.json` | 13 | City buildings (Phase 6c-1, ARCHITECTURE decision 74): `v12-land-demand.json` with an office cell of 5,000 jobs set at row 0, column 0 (existing stock: D4 holds 1,680), the city's buildings turned on (`"cityBuildings": true`, 442 buildings numbered by row and column) and one day more. The land grew two cells that day, and each got its D1 homes, buildings 443 and 444: 444 cells and buildings, 94 D1, 187 D2, 129 D3, 33 D4 and one existing stock. Written by the version 13 build. |
 | `v14-city-growth.json` | 14 | City growth (Phase 6c-2, ARCHITECTURE decision 75): `v13-city-buildings.json` a day later. Both stations served all their trips and reached one station (`"lastService": 1000`, `"lastReached": 1`), so each raised two full buildings (63, 67, 89 and 134, D2 to D3) and the land grew to its buildings' capacity: 446 cells and buildings, 96 D1, 183 D2, 133 D3, 33 D4 and one existing stock. Written by the version 14 build. |
 | `v15-transfer-group.json` | 15 | Transfer groups (ARCHITECTURE decision 81): the walking-transfer test world with B and B' 600 m apart, too far to walk, linked in transfer group 1 (`"nextTransferGroupID": 2`); five passengers from A rode First to B, walked to B' (432 s at 5 km/h, a virtual transfer) and wait there for Second to C, after 2 minutes. Written by the version 15 build. |
+| `v16-assets-closed-year.json` | 16 | Fixed assets and a closed year (Phase 7a, ARCHITECTURE decision 85): a managed company with a 128 m edge (split at 32 m on day 1, its $720 and depreciation shared $180 / $540), a $7,200 station, a $3,600 train with two $360 cars and a $100,000 loan, run through the end of its first year and taken a car off: five asset records written down for 360 days, 361 capital days and year 0 closed (net loss $5,868, closing cash $182,720, equity $94,132). Written by the version 16 build (`SavedGameTests.assetWorld()`, `ASSET_SAVE_NEW=1`). |

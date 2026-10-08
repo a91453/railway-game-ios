@@ -74,6 +74,7 @@ extension GameWorld {
               economy.balance.amount <= Self.maximumBalance - amount.amount else { throw .invalidLoanAmount }
         accounts.loan = accounts.loan + amount
         economy.earn(amount)
+        bookLoan(borrowed: amount)
     }
 
     /// Repays `amount` of the loan from the balance (decision 67), in whole
@@ -88,6 +89,7 @@ extension GameWorld {
         guard Self.isLoanStep(amount), amount <= accounts.loan else { throw .invalidLoanAmount }
         try economy.spend(amount)
         accounts.loan = accounts.loan - amount
+        bookLoan(repaid: amount)
     }
 
     private static func isLoanStep(_ amount: Money) -> Bool {
@@ -286,6 +288,10 @@ extension GameWorld {
                 ]
             ), day: day)
         }
+        // Phase 7a: the assets are written down for the day, then a year's
+        // last day closes the year.
+        depreciateAssets(day: day)
+        closeYear(endingWith: day)
     }
 
     /// A day's interest on `loan`: `loan × 5 % ÷ 360`, rounded half up to
@@ -366,7 +372,7 @@ extension GameWorld {
         guard accounts.entries.allSatisfy(Self.isWellFormed) else {
             return "A ledger row must have its kind's items, fares in and costs out, adding up to its amount."
         }
-        return nil
+        return assetsProblem()
     }
 
     /// Whether `entry` is shaped as settlements write it: its kind's items

@@ -282,10 +282,13 @@ public struct GameWorld: Equatable, Sendable {
         }) {
             throw .trackReserved(train.id)
         }
-        try economy.spend(try edgeCost(length: geometry.length, structure: structure))
+        let price = try edgeCost(length: geometry.length, structure: structure)
+        try economy.spend(price)
 
         let id = network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
         network.dropSpacedExemptions()
+        // Phase 7a: the edge is on the books at what it cost.
+        acquireAsset(.track, owner: id.networkNumber ?? 0, cost: price)
         return id
     }
 
@@ -341,6 +344,9 @@ public struct GameWorld: Equatable, Sendable {
         }
 
         network.removeEdge(id)
+        if let number = id.networkNumber {
+            disposeAsset(.track, owner: number)
+        }
         abandonUnservedPassengers()
     }
 
@@ -470,6 +476,9 @@ public struct GameWorld: Equatable, Sendable {
         }
         after.dropSpacedExemptions()
         network = after
+        if let edge = id.networkNumber, let firstNumber = first.networkNumber, let secondNumber = second.networkNumber {
+            splitTrackAsset(edge, into: (firstNumber, firstGeometry.length), (secondNumber, secondGeometry.length))
+        }
         return node
     }
 
@@ -715,6 +724,7 @@ public struct GameWorld: Equatable, Sendable {
         let station = Station(id: StationID(rawValue: id), name: name, point: point)
         nextStationID = nextID
         stations.append(station)
+        acquireAsset(.station, owner: id, cost: economy.costs.station)
         // Phase 6b: a managed company's new station draws its ridership
         // from the land, and takes its share from its neighbours.
         refreshLandDemand()
@@ -844,6 +854,7 @@ public struct GameWorld: Equatable, Sendable {
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
+        disposeAsset(.station, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()
@@ -865,6 +876,7 @@ public struct GameWorld: Equatable, Sendable {
         let train = Train(id: TrainID(rawValue: id), name: name)
         nextTrainID = nextID
         trains.append(train)
+        acquireAsset(.train, owner: id, cost: economy.costs.train)
         return train
     }
 
@@ -936,7 +948,12 @@ public struct GameWorld: Equatable, Sendable {
             guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
             // Free cars are added even in the red: `spend` would refuse a
             // price of 0 against a negative balance.
-            if price > 0 { try economy.spend(Money(price)) }
+            if price > 0 {
+                try economy.spend(Money(price))
+                acquireAsset(.cars, owner: id.rawValue, cars: Int(added), cost: Money(price))
+            }
+        } else if added < 0 {
+            removeCarAssets(of: id.rawValue, count: Int(-added))
         }
         trains[index].cars = cars
         // The longest train of a line sets where its trains can pass, and

@@ -932,3 +932,21 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroBranchSharedTrackLaneLayout`（`(index − (count − 1)/2) × 5 px`，只用於支線群組） | — | 不採用：和 MapBuilder 的偏移是同一組位置、順序不同；採 MapBuilder 的 |
 | 同檔／`_buildTransferCorridorLineFeaturesGcj`（轉乘走廊，站到站的直線） | — | 不採用：採 MapBuilder 依站序的一條連線 |
 | （參考沒有） | 何時重算（`LineMapKey`，背景執行緒）、隧道裡淡化、App 圖示的地圖配色 | gap → 原生 |
+
+
+## 資產、折舊、資產負債表與年度決算（決策 85）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`），搜尋 `depreciation`、`balanceSheet`、`fixedAssets`、`annualReport`、`fiscal`、`yearEnd`、`netWorth`、`equity`。只有 `Ci/` 的財務儀表板有報表結構；其他來源沒有成本、折舊或年度結算（`PHASE7_COMPANY_STUDY.md` §2 的盤點仍然成立）。金額一律是美分（`Money`），一年是 360 天。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`flowDashboardBuildModeIncomeStatement`（`revenue`、`operatingCost`、`maintenanceCost`、`energyCost`、`staffCost`、`operatingProfit`、`netProfit: operatingProfit`） | `FinanceSummary`、`incomeStatementRows(previous:in:)` | adapted：`netProfit` 另扣原生的利息（決策 67）、折舊與報廢損失 |
+| 同檔／`flowDashboardBuildModeCashFlowStatement`（`operatingCashFlow`、`fareCashInflow`、各項 `CashOutflow`、`investingCashFlow`、`netCashIncrease`） | `FinanceSummary.operatingCashFlow`、`investingCashFlow`、`netCashFlow`、`cashFlowRows(previous:in:)` | adapted：投資活動從配額購買（`quotaPurchaseCashOutflow`）換成購置軌道、車站與車輛；營業活動加上利息 |
+| （參考沒有籌資活動） | `FinanceSummary.financingCashFlow`（借入 − 償還） | gap → 原生：參考沒有貸款 |
+| 同檔／`balanceSheet: {cash, metroQuotas, hsrQuotas, aviationQuotas, assetValuation: 0}` | `GameWorld.balanceSheet()`、`BalanceSheet`、`rows(previous:in:)` | adapted：現金照參考；`assetValuation` 的 0 換成三類資產的帳面價值，加上借款與權益；配額沒有（P7-4） |
+| 同檔／`flowDashboardFinanceStatementHtml`（`section`、`group`、`colhead`「本期／环比」、`is-subtotal`、`is-total`）與 `flow-dashboard-statement-switch`（利润表／现金流量表） | `StatementRow`（`section`、`item`、`subtotal`、`total`）、App 的 `StatementGrid`、`EconomyPanel` 的報表切換 | adapted：比較欄是上期的金額，不是差額（手機寬度放不下三欄數字以外的差額） |
+| 同檔／`metroUiText("finance.*")`（`incomeStatement` 利润表、`cashFlowStatement` 现金流量表、`operatingActivities`、`investingActivities`、`operatingNet`、`investingNet`、`netCashChange`、`netIncrease`） | `FinancialStatements.swift` 的中英文標題 | adapted：改用台灣會計用語（損益表、現金流量表、營業活動之現金流量、投資活動淨額、本期現金淨增減） |
+| 同檔／`FLOW_DASHBOARD_FINANCE_BUCKETS`（年 `days: 360`、`max: 50`） | `CompanyAccounts.keptYears = 50`、`closeYear(endingWith:)` | adapted：年報表最多 50 年照參考；決算時把年底的資產負債表一起存 |
+| 同檔／`metroEconomyFixedAssets`（站數、路線長、列車數） | 既有的 `fixedAssets(memo:)`（營運量，決策 36） | 不是帳面資產：資產紀錄另外做（`AssetRecord`） |
+| （參考沒有） | `AssetRecord`、`acquireAsset`、`depreciateAssets`（直線法，軌道與車站 7200 天、車輛 3600 天）、`splitTrackAsset`、`disposeAsset`、`removeCarAssets`、`AnnualStatement`、`CapitalDay`、存檔版本 16 | gap → 原生：購入成本、折舊、報廢損失與年度決算 |
+
