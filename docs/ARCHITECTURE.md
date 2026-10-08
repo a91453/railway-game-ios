@@ -21,7 +21,7 @@
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
 - **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額；英文與繁體中文，決策 38）與地圖縮放換算；Stage C4 起還有開始畫面與存檔（`GameLauncher`、`SaveLibrary`）。它只依賴 GameCore、Swift 標準函式庫的 `Observation`，以及只為存檔的 JSON 與檔案使用的 Foundation（決策 45；Linux 的 Swift 工具鏈也有），不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
-- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有 `GameLauncher`，它持有正在玩的那一局的 `GameSession`（同時只有一個，決策 45）；畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
+- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有 `GameLauncher`，它持有正在玩的那一局的 `GameSession`（同時只有一個，決策 45）；畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。App 唯一的外部套件是 MapLibre Native（決策 97，實景地圖的 OpenStreetMap 底圖；BSD 2-Clause，版本鎖在 `Package.resolved`），GameCore 與 GamePresentation 不依賴它。
 
 ### GameCore 內部的依賴方向（2026-09 決定）
 
@@ -3347,6 +3347,25 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
    - **自然保護區**（13,328 km²，多半和森林重疊）：同森林，不當障礙；之後可以讓保護區裡的建設比較貴。
 5. **數字**（16 km 地圖，居民都不變）：台北的公園格 4,481 → 4,568、農地 297 → 325；彰化的公園 85 → 247、農地 10,781 → 10,960；雲林口湖（魚塭區）的農地 20,161 → 22,446。地圖中心車站的類型與運量幾乎不變（口湖 672 → 674 人次）。
 6. **不動**：GameCore、存檔（版本 21）、golden（schema 41）、replay；地點（商店、辦公、學校、景點）與車站類型。
+
+### 97. 實景地圖的 OpenStreetMap 底圖（MapLibre，E3）
+
+2026-10-08，作者問 3D 模型要不要先搬，接著問「還是底層圖層先換 OSM」。判斷：先換底圖。遊戲的鐵道、車站、分區、地點都來自 OSM（決策 93、96），底圖用 Apple 地圖會和它們對不齊；參考 `Ci/` 的地圖引擎就是 MapLibre ＋ OpenFreeMap；MapLibre 本身能傾斜、旋轉、畫 OSM 建物的 3D 量體與地形，是之後 3D（Phase 8）的捷徑。作者同意新增依賴 MapLibre Native，並選「先加成選項」：地圖樣式選單多一個「OpenStreetMap」，預設仍是 Apple 地圖，實機確認後再決定預設。
+
+參考檢查（`a91453/railway-reference-private` `a7e377b6`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「實景地圖的 OpenStreetMap 底圖（決策 97）」）：`Ci/` 的 `initOsmMapEngine`（MapLibre GL）、`osmStyleKey` 預設 `positron`（另有 `dark`、`fiord`、`liberty`）、`osmLabelLang` 預設 `local`、地圖下方的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」。
+
+1. **依賴**：`maplibre-gl-native-distribution` 6.31.0（2026-09-11，`exactVersion`；二進位 XCFramework，sha256 `de3aaa43…` 由套件清單核對），只給 App target。`project.yml` 加套件、XcodeGen 2.46.0 重新產生；CI 與 Xcode Cloud 不自動解析套件（`-disableAutomaticPackageResolution`），所以提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved`（版本 6.31.0，commit `13e41ab3`）。
+2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
+3. **圖磚與樣式**：OpenFreeMap 的公開服務（免費、免金鑰、可商用，沒有服務保證），淺色用 Positron、深色外觀用 Dark（`OpenStreetMapBase.styleURL`）。
+4. **相機**（`OpenStreetMapBase.camera`，GamePresentation，有測試）：MapLibre 的中心是遊戲畫面中點下的地點，縮放等級讓一個世界公尺（錨點緯度的一公尺）畫成和遊戲一樣多的點：z = log2(每公尺點數 × 赤道周長 × cos 錨點緯度 ÷ 512)，沿用 `StationLabels.zoom`。測試確認畫面兩角換到 MapLibre 的像素正好差畫面的寬與高。平面、北朝上，不接受自己的手勢，和 Apple 地圖相同（決策 50）。
+5. **標籤**：OpenFreeMap 的樣式把拉丁名稱與當地名稱疊成兩行；照 `Ci/` 的 `osmLabelLang`，改成一種語言：中文介面依序取 `name:zh-Hant`、`name:zh`、`name`，英文取 `name:en`、`name_en`、`name:latin`、`name`（`OpenStreetMapBase.labelText`）。只換顯示名稱的圖層，道路編號（`ref`）、門牌照舊（`showsName`）。
+6. **真實鐵道**：和 Apple 地圖上相同的資料、順序、顏色與寬度（決策 50）：每個 `sortKey` 先畫外框再畫各色路線，最後畫車站圓點，全部插在樣式第一個標籤圖層下面（道路之上、地名之下）。MapLibre 的圓圈外框畫在半徑外，所以中心半徑是 `stationRadius − stationRing / 2`；`stationsMinimumZoom` 起才畫。
+7. **不動**：GameCore、存檔、golden、replay；Apple 地圖與它的三種樣式照舊（仍是預設）。
+
+**限制**：
+- 這個環境（Linux）不能編譯 App，App 端只由 CI 的 Xcode 建置驗證；畫面是否對齊、好不好看要在實機（TestFlight）確認。
+- 沒有網路或 OpenFreeMap 停止服務時，底圖是空白的（Apple 地圖也一樣）；沒有離線圖磚。
+- 還沒有傾斜、旋轉、3D 建築與地形，也還沒照 `Ci/` 隱藏軍事設施的標示（`applyOsmSensitiveFacilityLabelFilter`）；選點的畫面（`RealWorldPicker`）仍是 Apple 地圖。
 
 ### 98. 城市建造 P0-B：土地分區
 

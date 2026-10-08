@@ -265,14 +265,28 @@ struct MapView: View {
             }
             .background {
                 if let realWorld {
-                    AppleMapBackground(
-                        realWorld: realWorld,
-                        camera: projection,
-                        style: mapStyle,
-                        railways: session.railways,
-                        trackStyle: trackStyle,
-                        language: session.language
-                    )
+                    Group {
+                        if mapStyle == .openStreetMap {
+                            // Decision 97: OpenStreetMap's map, drawn by
+                            // MapLibre, in place of Apple's.
+                            OSMMapBackground(
+                                realWorld: realWorld,
+                                camera: projection,
+                                railways: session.railways,
+                                trackStyle: trackStyle,
+                                language: session.language
+                            )
+                        } else {
+                            AppleMapBackground(
+                                realWorld: realWorld,
+                                camera: projection,
+                                style: mapStyle,
+                                railways: session.railways,
+                                trackStyle: trackStyle,
+                                language: session.language
+                            )
+                        }
+                    }
                     // Phase 6d: under the land use layer Apple's map, with
                     // its own buildings, is washed out so the cells' uses
                     // read clearly; its legal strip stays as it is.
