@@ -113,7 +113,7 @@ final class LandImportTests: XCTestCase {
         var world = GameWorld.newGame(anchor: anchor, land: cells)
         XCTAssertEqual(world.land.totals.residents, without.reduce(0) { $0 + $1.residents }, "the same people")
         XCTAssertTrue((1_500_000 ... 3_000_000).contains(world.land.totals.jobs), "\(world.land.totals.jobs) jobs round Taipei")
-        // Decision 90: schools and sights make land of their own; factories,
+        // Decision 91: schools and sights make land of their own; factories,
         // farms and parks have no layer of real-world data yet.
         XCTAssertEqual(Set(cells.map(\.use)), [.residential, .commercial, .office, .civic, .leisure])
         // Taipei Main Station: an office station, its ridership its share.
@@ -140,7 +140,7 @@ final class LandImportTests: XCTestCase {
         // 64,829 cells by density, D1 to D4: no cell needs D4, as each is
         // chosen by its main count only (residents of homes, jobs of the
         // rest; the fullest office cell, 78 residents and 285 jobs, is D3).
-        // Decision 90 gives schools and sights cells of their own, which
+        // Decision 91 gives schools and sights cells of their own, which
         // were offices and shops before, and a cell they made offices or
         // shops without outnumbering its people is homes now.
         XCTAssertEqual(counts, [
@@ -206,7 +206,7 @@ final class LandImportTests: XCTestCase {
     func testTheStationPanelSaysWhoLivesAndWorksNearBy() throws {
         var world = GameWorld.newGame()
         let station = try world.buildStation(named: "Middle", at: PlanPoint(x: 524_288, y: 524_288)).id
-        // Decision 90's first town: its schools, sights and factories have
+        // Decision 91's first town: its schools, sights and factories have
         // jobs where homes were, and its farms and parks reach the edge.
         XCTAssertEqual(world.landCatchmentText(of: station, in: .english), "Within 800 m: 44,394 residents · 42,396 jobs")
         XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 44,394 人 · 就業 42,396 個")

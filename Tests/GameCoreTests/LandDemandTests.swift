@@ -120,7 +120,7 @@ final class LandDemandTests: XCTestCase {
         XCTAssertEqual(LandDemand.Share(residents: 10, officeJobs: 10, shopJobs: 10).demand?.kind, .residential, "homes on a tie")
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 10, shopJobs: 10).demand?.kind, .office, "then offices")
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 10).demand?.kind, .shopping)
-        // Decision 90: schools and public offices, then sights, after shops.
+        // Decision 91: schools and public offices, then sights, after shops.
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 10, civicJobs: 10).demand?.kind, .shopping)
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 9, civicJobs: 10, leisureJobs: 10).demand?.kind, .civic)
         XCTAssertEqual(LandDemand.Share(residents: 9, civicJobs: 9, leisureJobs: 10).demand?.kind, .scenic)
@@ -163,14 +163,14 @@ final class LandDemandTests: XCTestCase {
         var world = world()
         let a = try world.buildStation(named: "A", at: PlanPoint(x: Self.middle, y: Self.middle)).id
         let whole = try XCTUnwrap(world.stationDemand(of: a))
-        // The whole first town and its nearest farms (decision 90; 33,386
+        // The whole first town and its nearest farms (decision 91; 33,386
         // before): (44,394 + 42,396) × 40 / 100.
         XCTAssertEqual(whole, StationDemand(kind: .residential, dailyTrips: 34_716))
         let b = try world.buildStation(named: "B", at: PlanPoint(x: Self.middle + 25_600, y: Self.middle)).id
         let after = try XCTUnwrap(world.stationDemand(of: a)).dailyTrips
         XCTAssertLessThan(after, whole.dailyTrips, "B takes part of A's town")
         let both = after + (world.stationDemand(of: b)?.dailyTrips ?? 0)
-        // B also reaches farms beyond A's reach (decision 90).
+        // B also reaches farms beyond A's reach (decision 91).
         let either = world.land.cells.filter { cell in
             world.stations.contains { Self.squaredDistance(row: cell.row, column: cell.column, $0.location) < Self.reach }
         }
@@ -187,7 +187,7 @@ final class LandDemandTests: XCTestCase {
         free.foundTowns(seed: 2)
         XCTAssertEqual(free.stationDemand(of: a), StationDemand(kind: .scenic, dailyTrips: 300))
         free.setEconomyMode(.management)
-        // Seed 2's first town (decision 90; 33,386 before).
+        // Seed 2's first town (decision 91; 33,386 before).
         XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 34_698, "managed, the land sets it")
         let before = free
         XCTAssertThrowsError(try free.setStationDemand(a, to: StationDemand(kind: .office, dailyTrips: 5))) {
@@ -300,7 +300,7 @@ final class LandDemandTests: XCTestCase {
                 rates[id] = TownGrowth.growth(served: record.arrived - place.counted, trips: record.demand!.dailyTrips, reached: reached[id] ?? 0)
             }
             // Fully served and two reached: 10 + 2; half served (5: an even
-            // number of trips since decision 90's towns; just under half,
+            // number of trips since decision 91's towns; just under half,
             // 4, before) and nine reached (five count): 10; none served: −2.
             XCTAssertEqual(ids.map { rates[$0]! }, [12, 10, -2])
             let expected = Self.referenceGrowth(world.land.cells, world.stations, rates: rates, in: world.bounds)

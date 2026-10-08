@@ -43,7 +43,7 @@ final class LandValueTests: XCTestCase {
         guard row >= 0, column >= 0, row < rows, column < columns else { return nil }
         let uses: [LandUse: Int64] = [
             .residential: 2_000, .commercial: 3_000, .office: 3_500,
-            // Decision 90's.
+            // Decision 91's.
             .industrial: 1_500, .civic: 2_500, .leisure: 3_000, .agricultural: 600, .park: 1_200,
         ]
         let factors: [Int64] = [1_000, 1_250, 1_600, 2_000]
@@ -71,7 +71,7 @@ final class LandValueTests: XCTestCase {
                 }
             }
         }
-        // Decision 90: 600 within 400 m of a park's middle.
+        // Decision 91: 600 within 400 m of a park's middle.
         let nearPark = world.land.cells.contains { cell in
             let dx = Int64(cell.column - column) * 4_096, dy = Int64(cell.row - row) * 4_096
             return cell.use == .park && dx * dx + dy * dy < 25_600 * 25_600
@@ -177,7 +177,7 @@ final class LandValueTests: XCTestCase {
         XCTAssertEqual(world.landValues(rows: 20...40, columns: 30...40).count, 4 * 2)
     }
 
-    /// Decision 90: the five more uses' bases, and a park adds 600 to every
+    /// Decision 91: the five more uses' bases, and a park adds 600 to every
     /// cell whose middle lies within 400 m of its middle.
     func testTheNewUsesBasesAndTheLandRoundAPark() throws {
         let world = try world([

@@ -49,7 +49,7 @@ final class SparseCityLandTests: XCTestCase {
     private static func denseCells(population: PopulationGrid, places: PlaceGrid?, frame: RealWorldFrame, bounds: WorldBounds) -> [LandCell]? {
         let grid = population.people
         let length = Double(Land.cellLength)
-        // Decision 90: offices, shops, schools and sights, each its own.
+        // Decision 91: offices, shops, schools and sights, each its own.
         func jobs(_ cell: GridCounts.Cell) -> [Int64] {
             guard let places else { return [0, 0, 0, 0] }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {

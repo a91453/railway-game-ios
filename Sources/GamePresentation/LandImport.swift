@@ -23,7 +23,7 @@ import GameCore
 /// set so Taiwan's places make some 8.6 million jobs, a little under two
 /// for every five people, about its working population). A cell is offices,
 /// shops, schools and public offices, or sights where that kind of place's
-/// jobs are the most of it and at least its people (decision 90: schools
+/// jobs are the most of it and at least its people (decision 91: schools
 /// and sights were counted with offices and shops before), and homes
 /// otherwise.
 public enum LandImport {
@@ -83,7 +83,7 @@ public enum LandImport {
             columnSpans[source] = (columnSpans[source]?.lowerBound ?? column)...column
         }
         // The jobs of a WorldPop cell: in offices, shops, schools and
-        // sights (decision 90 keeps the last two apart).
+        // sights (decision 91 keeps the last two apart).
         func jobs(_ cell: GridCounts.Cell) -> (office: Int64, shop: Int64, civic: Int64, leisure: Int64) {
             guard let places else { return (0, 0, 0, 0) }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {
@@ -118,7 +118,7 @@ public enum LandImport {
             }
             // The use most of it is: offices, then shops, then schools and
             // public offices, then sights on a tie with each other or with
-            // the people, else homes (decision 90).
+            // the people, else homes (decision 91).
             let uses: [(LandUse, Int64)] = [(.office, work.office), (.commercial, work.shop), (.civic, work.civic), (.leisure, work.leisure)]
             let most = uses.reduce((LandUse.residential, Int64(-1))) { best, use in use.1 > best.1 ? use : best }
             let use = most.1 >= people ? most.0 : .residential

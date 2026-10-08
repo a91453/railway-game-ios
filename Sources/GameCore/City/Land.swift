@@ -15,7 +15,7 @@
 //   grid is not drawn and does not bind the railway, which stays continuous
 //   (decisions 28, 54): only land is counted by cell;
 // - a cell is listed only while someone lives or works there, or while it
-//   is a park (decision 90), and holds one use, at most 100,000 residents
+//   is a park (decision 91), and holds one use, at most 100,000 residents
 //   and 100,000 jobs;
 // - a blank map starts with three towns drawn from a seed (``Land/towns(seed:in:)``),
 //   a real-world map with its people (`LandImport` in GamePresentation);
@@ -27,7 +27,7 @@
 // demand from land is Phase 6b.
 
 /// What a cell of land is used for: the three of Phase 6a, and since
-/// decision 90 the five more of the land use study
+/// decision 91 the five more of the land use study
 /// (`docs/research/PHASE6_LAND_USE_STUDY.md`) that a railway serves or that
 /// change what land is worth. Empty land, water and land nothing may be
 /// built on are not uses: a cell with no one is not listed.
@@ -238,7 +238,7 @@ public struct Land: Hashable, Sendable {
 extension Land {
     /// How many towns a blank map starts with.
     public static let townCount = 3
-    /// How many cells beyond a town's radius its farms reach (decision 90).
+    /// How many cells beyond a town's radius its farms reach (decision 91).
     static let farmBelt: Int64 = 3
 
     /// The land of the towns a blank map of `bounds` starts with, drawn from
@@ -257,7 +257,7 @@ extension Land {
     ///   rounded down in thousandths of the peak;
     /// - the core, `9d² < r²`, is shops or offices, drawn per cell: it holds
     ///   a quarter of those residents and three times as many jobs; the
-    ///   rest is homes, but for the cells decision 90 draws, one in twenty
+    ///   rest is homes, but for the cells decision 91 draws, one in twenty
     ///   each, from a key of their own (so the rest of a town is as before):
     ///   in the inner ring (`4d² < r²`) a school or public office (as many
     ///   jobs as those residents and a quarter of them living there), a
@@ -289,7 +289,7 @@ extension Land {
                     let row = middleRow + Int(dr), column = middleColumn + Int(dc)
                     guard (0..<rows).contains(row), (0..<columns).contains(column) else { continue }
                     guard distance < squared else {
-                        // Decision 90: the farms round the town.
+                        // Decision 91: the farms round the town.
                         if draw.roll("town.\(number).farm.\(dr).\(dc)", in: 0...5) == 0 {
                             cells.append(LandCell(row: row, column: column, use: .agricultural, residents: 3, jobs: 8))
                         }
@@ -304,7 +304,7 @@ extension Land {
                         jobs = 3 * residents
                         residents /= 4
                     } else {
-                        // Decision 90: the town's schools, sights, parks
+                        // Decision 91: the town's schools, sights, parks
                         // and factories, among its homes.
                         let district = draw.roll("town.\(number).district.\(dr).\(dc)", in: 0...19)
                         switch (4 * distance < squared, district) {

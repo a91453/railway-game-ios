@@ -136,7 +136,7 @@ public struct Building: Hashable, Sendable {
     public static let areaPerJob: Int64 = 32
 
     /// The eighths of a building's floor that are homes: 7 for homes, 2
-    /// for shops, 1 for offices; since decision 90, 1 for schools and
+    /// for shops, 1 for offices; since decision 91, 1 for schools and
     /// public offices and for sights, 2 for farms (the farmhouse) and none
     /// for factories or parks. The rest is jobs.
     public static func homeEighths(of use: LandUse) -> Int64 {
@@ -152,7 +152,7 @@ public struct Building: Hashable, Sendable {
     /// floor, `floorArea × floors`, by ``homeEighths(of:)`` into homes of
     /// ``areaPerResident`` and jobs of ``areaPerJob``, each step rounded
     /// down (none has a remainder).
-    /// A park holds no one at any density (decision 90).
+    /// A park holds no one at any density (decision 91).
     public static func tableCapacity(of use: LandUse, _ density: BuildingDensity) -> BuildingCapacity {
         guard use != .park else { return BuildingCapacity(residents: 0, jobs: 0) }
         let floor = floorArea * density.floors

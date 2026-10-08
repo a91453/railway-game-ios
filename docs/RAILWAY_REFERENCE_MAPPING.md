@@ -1002,7 +1002,7 @@ V 實際放行 → T、U（保證不互穿）
 
 縮放的換算：MapLibre 的 z 是地球 512 · 2^z 點寬；世界單位是錨點緯度的 1/64 公尺，所以 2^z = 每單位點數 × 64 × 2πR cos(緯度) ÷ 512。
 
-## 八種土地用途（決策 90）
+## 八種土地用途（決策 91）
 
 2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `industrial`、`landuse`、`school`、`park`、`farm`、`leisure`、`工業`、`學校`、`公園`、`用途`、`地價` 等。`Simulator/`（模型鐵道的軌道配置）與 `MapBuilder/`（路線圖編輯器）沒有土地用途的內容。
 
@@ -1014,7 +1014,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同 `app__q_….js`／`buildStationFlowPresetCurves(e, kind)`：`1 + 0.6 · G(μ, 1.15)`，辦公進 8、出 18 | `StationDemand.civicArrivals`／`civicDepartures`（進 7、出 16） | adapted：同一個形式與權重，學校的時刻是原生；其他四種不變（決策 34） |
 | 同上／`scenic`：`1 + 0.75 · G(11, 2.1)`、`1 + 0.75 · G(16, 2.1)` | `LandUse.leisure` 的就業算 `StationDemandKind.scenic` | direct：觀光休閒用既有的景點曲線 |
 | `Railway/site_archive_clean/memories/tainan-2026-09-12/surroundings/model.json`／`heightRule`（各類建物的預設樓層） | — | 不採用：只有高度，沒有居民與就業；容量照決策 74 的表 |
-| （參考沒有） | `Building.homeEighths(of:)` 的新用途、`LandValueRules.base(of:)` 的新基準、`parkPremium`／`parkReach`、`LandDemand.Share.civicJobs`／`leisureJobs`、`StationDemandKind.realWorld` 的學校、存檔版本 19 | gap → 原生 |
+| （參考沒有） | `Building.homeEighths(of:)` 的新用途、`LandValueRules.base(of:)` 的新基準、`parkPremium`／`parkReach`、`LandDemand.Share.civicJobs`／`leisureJobs`、`StationDemandKind.realWorld` 的學校、存檔版本 20 | gap → 原生 |
 | `Railway/site_archive_clean/data/taiwan_land.json`（MOI 縣市界合併的海岸線，GeoJSON MultiPolygon，65 KB，政府資料開放授權 1.0） | — | 下一個 PR（地形與海的遮罩） |
 
 比例：地價基準與溢價是美分／m²（600 = $6／m²）；公園的距離 25,600 單位 = 400 m。

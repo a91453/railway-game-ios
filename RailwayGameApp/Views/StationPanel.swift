@@ -632,7 +632,7 @@ extension StationDemandKind {
     /// The reference's preset icons (`station-icon-residential`, the
     /// office building, `station-icon-shopping`'s cart and
     /// `station-icon-scenic`'s mountains) as SF Symbols, which follow the
-    /// text size and dark mode; decision 90's schools and services, a
+    /// text size and dark mode; decision 91's schools and services, a
     /// mortarboard.
     var systemImage: String {
         switch self {

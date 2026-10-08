@@ -68,7 +68,7 @@ extension StationDemandKind {
     /// residents) a station's surroundings must have of one kind to serve
     /// that kind rather than homes: tuned on Taiwan's 544 real stations
     /// (2026-10-05), where it made 335 serve homes, 130 shops, 57 sights
-    /// and 22 offices; with schools a kind of their own (decision 90), 328
+    /// and 22 offices; with schools a kind of their own (decision 91), 328
     /// homes, 107 shops, 57 sights, 50 offices and 2 schools.
     public static let realWorldThreshold = 1.5
 
@@ -80,7 +80,7 @@ extension StationDemandKind {
     /// The kind of place a station on a real-world map serves, from the
     /// places within its catchment and the people living there.
     ///
-    /// For offices, shops, sights and (decision 90, counted with offices
+    /// For offices, shops, sights and (decision 91, counted with offices
     /// before) schools, the places nearby are compared with what the
     /// station's residents would have at the country's rate (`totals` ÷
     /// `population`), but never with fewer than a minimum (30 shops, 5

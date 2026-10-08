@@ -58,12 +58,12 @@ public enum LandDemand {
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
         public var residents: Int64 = 0
-        /// Jobs in offices (and, since decision 90, in factories and on
+        /// Jobs in offices (and, since decision 91, in factories and on
         /// farms, which commute as offices do), and in shops (with any jobs
         /// in homes).
         public var officeJobs: Int64 = 0
         public var shopJobs: Int64 = 0
-        /// Decision 90: the jobs, pupils and patients of schools, hospitals
+        /// Decision 91: the jobs, pupils and patients of schools, hospitals
         /// and public offices, and the visitors of sights.
         public var civicJobs: Int64 = 0
         public var leisureJobs: Int64 = 0
@@ -401,7 +401,7 @@ extension GameWorld {
                 guard squared < radius * radius, land.cell(row: row, column: column) == nil else { continue }
                 if let best, (best.squared, best.row, best.column) <= (squared, row, column) { continue }
                 let beside = [(row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)]
-                // A park beside it has no people (decision 90).
+                // A park beside it has no people (decision 91).
                 guard beside.contains(where: { land.cell(row: $0.0, column: $0.1).map { $0.residents + $0.jobs > 0 } ?? false }) else { continue }
                 best = (squared, row, column)
             }

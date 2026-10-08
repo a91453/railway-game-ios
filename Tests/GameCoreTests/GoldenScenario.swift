@@ -2034,7 +2034,7 @@ struct LandCellSummary: Codable, Equatable {
 
 /// A station's demand as a fixture value (schema 20): `{"kind",
 /// "dailyTrips"}`, the kind `"residential"`, `"office"`, `"shopping"`,
-/// `"scenic"` or (decision 90) `"civic"`.
+/// `"scenic"` or (decision 91) `"civic"`.
 struct DemandSummary: Codable, Equatable {
     var kind: String
     var dailyTrips: Int64

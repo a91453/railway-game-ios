@@ -13,7 +13,7 @@
 //     value = clamp(base + 15 × S + 1000 × A + P, 500, 50000)   cents a m²
 //
 // - B, the use's base: 1,000 for an empty cell, 2,000 homes, 3,000 shops,
-//   3,500 offices; since decision 90, 1,500 factories, 2,500 schools and
+//   3,500 offices; since decision 91, 1,500 factories, 2,500 schools and
 //   public offices, 3,000 sights, 600 farms and 1,200 parks;
 // - D, the density's factor in thousandths: 1,000, 1,250, 1,600, 2,000 for
 //   D1 to D4 (existing stock is D4), 1,000 without a building;
@@ -23,7 +23,7 @@
 //   the one with the highest `floor(w × lastService / 1000)`, where `w =
 //   1000 − floor(d² × 1000 / R²)` (ties to the lower station); S is that
 //   score, A its ``TownGrowth/Place/lastReached``;
-// - P, decision 90: 600 for a cell whose middle lies within 400 m of a
+// - P, decision 91: 600 for a cell whose middle lies within 400 m of a
 //   park's (a park's own included), else 0.
 //
 // The value reads the world and changes nothing: growth and raising
@@ -43,7 +43,7 @@ public struct LandValue: Hashable, Sendable {
     /// The station S and A are measured at, or `nil` when none is.
     public let station: StationID?
 
-    /// ``LandValueRules/parkPremium`` near a park, else 0 (decision 90).
+    /// ``LandValueRules/parkPremium`` near a park, else 0 (decision 91).
     public let parkPremium: Int64
 
     public init(value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?, parkPremium: Int64 = 0) {
@@ -90,7 +90,7 @@ public enum LandValueRules {
     public static let servicePremium: Int64 = 15
     /// Cents a m² for each station the best station reached (0 to 5).
     public static let accessPremium: Int64 = 1_000
-    /// Cents a m² near a park (decision 90), and how near: 400 m.
+    /// Cents a m² near a park (decision 91), and how near: 400 m.
     public static let parkPremium: Int64 = 600
     public static let parkReach: Int64 = 25_600
     /// The least and the most a cell is worth, in cents a m².
@@ -167,7 +167,7 @@ extension GameWorld {
         }
     }
 
-    /// The middles of the parks (decision 90), by their row.
+    /// The middles of the parks (decision 91), by their row.
     private func landValueParks() -> [Int: [PlanPoint]] {
         var parks: [Int: [PlanPoint]] = [:]
         for cell in land.cells where cell.use == .park {

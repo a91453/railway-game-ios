@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 19)
+        XCTAssertEqual(SavedGame.currentVersion, 20)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 20, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 21, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -903,9 +903,9 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.landBlocks)
     }
 
-    /// The world of `v19-land-uses.json`: a managed company with demand
+    /// The world of `v20-land-uses.json`: a managed company with demand
     /// from land, the city's buildings and town growth on a world 32 × 24
-    /// cells, with a cell of each of decision 90's uses (a factory, a
+    /// cells, with a cell of each of decision 91's uses (a factory, a
     /// school, a sight, a farm and a park) and homes; School reaches the
     /// school alone and serves it, Works the rest; run ten minutes.
     private static func landUsesWorld() throws -> GameWorld {
@@ -933,12 +933,12 @@ final class SavedGameTests: XCTestCase {
         return world
     }
 
-    /// Version 19 (decision 90): land and buildings of the five more uses,
+    /// Version 20 (decision 91): land and buildings of the five more uses,
     /// a park with no one in it, and a school's demand. It saves byte for
-    /// byte and is the world the build that wrote it makes. A version 18
+    /// byte and is the world the build that wrote it makes. An earlier
     /// save holds only homes, shops and offices.
-    func testVersionNineteenKeepsTheEightLandUses() throws {
-        let url = Self.fixtures.appendingPathComponent("v19-land-uses.json")
+    func testVersionTwentyKeepsTheEightLandUses() throws {
+        let url = Self.fixtures.appendingPathComponent("v20-land-uses.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["LAND_USES_SAVE_NEW"] != nil {
@@ -946,7 +946,7 @@ final class SavedGameTests: XCTestCase {
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 19)
+        XCTAssertEqual(object["saveVersion"] as? Int, 20)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, try Self.landUsesWorld())
         XCTAssertEqual(Set(world.land.cells.map(\.use)), [.residential, .industrial, .civic, .leisure, .agricultural, .park])

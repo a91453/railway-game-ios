@@ -56,7 +56,7 @@ final class PlaceGridTests: XCTestCase {
         XCTAssertEqual(kind(residents: 10_000, [.shops: 149]), .residential, "just under one and a half times the shops")
         XCTAssertEqual(kind(residents: 10_000, [.shops: 150]), .shopping, "one and a half times the shops")
         XCTAssertEqual(kind(residents: 10_000, [.offices: 30, .schools: 10]), .office)
-        // Decision 90: schools are a kind of their own, no longer counted
+        // Decision 91: schools are a kind of their own, no longer counted
         // with offices.
         XCTAssertEqual(kind(residents: 10_000, [.offices: 10, .schools: 20]), .civic)
         XCTAssertEqual(kind(residents: 10_000, [.attractions: 10]), .scenic)
@@ -91,7 +91,7 @@ final class PlaceGridTests: XCTestCase {
 
     /// The bundled grids decide real stations as they are: Taipei Main
     /// and Taipei City Hall among offices (Taipei Main was shops while
-    /// schools were counted with offices, before decision 90), Yong'an Market among
+    /// schools were counted with offices, before decision 91), Yong'an Market among
     /// homes, Houtong (the cat village) among sights.
     func testTaiwansStationsServeWhatIsAroundThem() throws {
         let root = URL(fileURLWithPath: #filePath)

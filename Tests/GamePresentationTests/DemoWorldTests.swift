@@ -119,7 +119,7 @@ final class DemoWorldTests: XCTestCase {
         let rest = Set(world.land.cells).subtracting(city), newGame = Set(GameWorld.newGame().land.cells)
         XCTAssertTrue(rest.isSubset(of: newGame))
         XCTAssertEqual(rest.filter(far), newGame.filter(far), "the new game's outer towns, 2 km and more away")
-        XCTAssertEqual(Set(rest.filter { !far($0) }.map(\.use)), [.agricultural], "and the farms round its first town (decision 90)")
+        XCTAssertEqual(Set(rest.filter { !far($0) }.map(\.use)), [.agricultural], "and the farms round its first town (decision 91)")
 
         // Each station's ridership is its share of the city: residents
         // outnumber either kind of job at every one.

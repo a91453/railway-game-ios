@@ -52,7 +52,7 @@ final class LandTests: XCTestCase {
                 for (number, town) in towns.enumerated() {
                     let dr = row - town.row, dc = column - town.column
                     let squared = town.radius * town.radius, distance = dr * dr + dc * dc
-                    // Decision 90: farms, one in six, in the three cells
+                    // Decision 91: farms, one in six, in the three cells
                     // beyond the radius.
                     let farmEdge = (town.radius + 3) * (town.radius + 3)
                     if distance >= squared {
@@ -69,7 +69,7 @@ final class LandTests: XCTestCase {
                         found.append(LandCell(row: Int(row), column: Int(column), use: use, residents: full / 4, jobs: 3 * full))
                         continue
                     }
-                    // Decision 90's districts among the homes: in the inner
+                    // Decision 91's districts among the homes: in the inner
                     // ring 0 a school, 1 a sight, 2 a park; in the outer, 0
                     // or 1 a factory.
                     let inner = 4 * distance < squared
@@ -110,7 +110,7 @@ final class LandTests: XCTestCase {
         let one = Land.towns(seed: 1, in: .standard)
         XCTAssertEqual(one, Land.towns(seed: 1, in: .standard))
         XCTAssertNotEqual(one, Land.towns(seed: 2, in: .standard))
-        // Decision 90's farms, factories, schools, sights and parks: 887
+        // Decision 91's farms, factories, schools, sights and parks: 887
         // cells of 90,900 residents and 67,413 jobs before.
         XCTAssertEqual(one.cells.count, 1_000)
         XCTAssertEqual(one.totals, LandTotals(residents: 81_427, jobs: 83_339))
@@ -123,7 +123,7 @@ final class LandTests: XCTestCase {
             XCTAssertEqual(middle?.jobs, 780)
             XCTAssertNotEqual(middle?.use, .residential)
         }
-        // A factory 11 cells east of the middle (decision 90; a home before):
+        // A factory 11 cells east of the middle (decision 91; a home before):
         // twice the 260 × (144 − 121) / 144 who would live there work there.
         let factory = one.cell(row: 128, column: 139)
         XCTAssertEqual(factory, LandCell(row: 128, column: 139, use: .industrial, residents: 0, jobs: 82))
@@ -171,7 +171,7 @@ final class LandTests: XCTestCase {
             [LandCell(row: 0, column: 0, use: .residential, residents: -1, jobs: 5)],
             [LandCell(row: 0, column: 0, use: .office, residents: 0, jobs: Land.maximumPerCell + 1)],
             [good, LandCell(row: 2, column: 2, use: .office, residents: 0, jobs: 1)],
-            // Decision 90: a park holds no one, and only a park is empty.
+            // Decision 91: a park holds no one, and only a park is empty.
             [LandCell(row: 0, column: 0, use: .park, residents: 1, jobs: 0)],
             [LandCell(row: 0, column: 0, use: .park, residents: 0, jobs: 1)],
             [LandCell(row: 0, column: 0, use: .agricultural, residents: 0, jobs: 0)],
@@ -225,7 +225,7 @@ final class LandTests: XCTestCase {
         let far = try world.buildStation(named: "Far", at: PlanPoint(x: 10_000, y: 10_000)).id
         XCTAssertEqual(world.landCatchment(of: middle), world.land.totals(within: 51_200, of: PlanPoint(x: 524_288, y: 524_288)))
         // The whole first town, 437 cells: 768 m reaches no farther than
-        // the 800 m; and since decision 90 the nearest of its farms, with
+        // the 800 m; and since decision 91 the nearest of its farms, with
         // its schools, sights and factories working where homes were
         // (50,189 residents and 33,276 jobs before).
         XCTAssertEqual(world.landCatchment(of: middle), LandTotals(residents: 44_394, jobs: 42_396))

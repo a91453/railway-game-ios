@@ -10,7 +10,7 @@
 
 /// The kind of place a station serves, which shapes when its trips start
 /// and end over the day: the four presets of the `Ci/` reference, and
-/// schools and public services (decision 90, this project's: the reference
+/// schools and public services (decision 91, this project's: the reference
 /// has no such preset).
 public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
     /// Homes: trips leave in the morning and come back in the evening.
@@ -21,7 +21,7 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
     case shopping
     /// Sights: trips arrive before midday and leave in the afternoon.
     case scenic
-    /// Schools, hospitals and public offices (decision 90): trips arrive
+    /// Schools, hospitals and public offices (decision 91): trips arrive
     /// early in the morning and leave in the afternoon, before the evening
     /// rush.
     case civic
@@ -71,7 +71,7 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
         834, 834, 834, 834, 834, 835, 839, 849, 874, 921, 994, 1082,
         1157, 1193, 1190, 1185, 1219, 1279, 1291, 1207, 1064, 939, 870, 843,
     ]
-    // Decision 90, the presets' form with this project's hours (gap):
+    // Decision 91, the presets' form with this project's hours (gap):
     // `1 + 0.6·g(h; 7, 1.15)` arriving, a school's or a hospital's day
     // starting before the offices', and `1 + 0.6·g(h; 16, 1.15)` leaving,
     // as classes end.

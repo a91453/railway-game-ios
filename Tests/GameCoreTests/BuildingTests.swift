@@ -20,7 +20,7 @@ final class BuildingTests: XCTestCase {
         (.residential, .d1, 56, 12, 2), (.residential, .d2, 168, 36, 6), (.residential, .d3, 504, 108, 18), (.residential, .d4, 1_120, 240, 40),
         (.commercial, .d1, 16, 72, 2), (.commercial, .d2, 48, 216, 6), (.commercial, .d3, 144, 648, 18), (.commercial, .d4, 320, 1_440, 40),
         (.office, .d1, 8, 84, 2), (.office, .d2, 24, 252, 6), (.office, .d3, 72, 756, 18), (.office, .d4, 160, 1_680, 40),
-        // Decision 90's uses: factories all jobs, schools and public
+        // Decision 91's uses: factories all jobs, schools and public
         // offices and sights split as offices, farms as shops, parks
         // holding no one.
         (.industrial, .d1, 0, 96, 2), (.industrial, .d2, 0, 288, 6), (.industrial, .d3, 0, 864, 18), (.industrial, .d4, 0, 1_920, 40),
@@ -126,7 +126,7 @@ final class BuildingTests: XCTestCase {
             (.office, 65, 780, .city, .d4, 160, 1_680),
             (.office, 0, 1_681, .existingStock, .d4, 160, 1_681),
             (.office, 100_000, 100_000, .existingStock, .d4, 100_000, 100_000),
-            // Decision 90's uses.
+            // Decision 91's uses.
             (.industrial, 0, 96, .city, .d1, 0, 96),
             (.industrial, 0, 97, .city, .d2, 0, 288),
             (.industrial, 0, 1_921, .existingStock, .d4, 0, 1_921),
@@ -175,7 +175,7 @@ final class BuildingTests: XCTestCase {
     }
 
     /// Seed 1's three towns on the largest map: how many cells of each use
-    /// get each density, and existing stock. Decision 90's towns have farms
+    /// get each density, and existing stock. Decision 91's towns have farms
     /// round them and factories, schools, sights and parks among them; a
     /// park's building has density 1 and holds no one.
     private static let expectedSeedOne = DensityCount(byUse: [

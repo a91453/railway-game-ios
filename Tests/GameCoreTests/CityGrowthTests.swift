@@ -18,7 +18,7 @@ final class CityGrowthTests: XCTestCase {
             .residential: [(56, 12), (168, 36), (504, 108), (1_120, 240)],
             .commercial: [(16, 72), (48, 216), (144, 648), (320, 1_440)],
             .office: [(8, 84), (24, 252), (72, 756), (160, 1_680)],
-            // Decision 90's.
+            // Decision 91's.
             .industrial: [(0, 96), (0, 288), (0, 864), (0, 1_920)],
             .civic: [(8, 84), (24, 252), (72, 756), (160, 1_680)],
             .leisure: [(8, 84), (24, 252), (72, 756), (160, 1_680)],
@@ -89,7 +89,7 @@ final class CityGrowthTests: XCTestCase {
         }
         let full = Set(land.keys.filter { key in
             let plot = land[key]!
-            // A park holds no one, so is never full (decision 90).
+            // A park holds no one, so is never full (decision 91).
             guard plot.kind == .city, plot.density < 4, plot.use != .park else { return false }
             // Full by the main count only (decision 77): the table's
             // residents of homes, jobs of shops and offices.

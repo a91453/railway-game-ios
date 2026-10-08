@@ -20,7 +20,7 @@ public struct CityMap: Sendable {
     public let columns: Int
     /// The cells a layer can draw, by row and then column: those with land
     /// (and so a building), those a station's catchment reaches and those
-    /// near a park (decision 90). Every other cell has no use, is worth an
+    /// near a park (decision 91). Every other cell has no use, is worth an
     /// empty cell with no service (``LandValueRules/vacantBase``: a cell is
     /// worth more only with land, a station with service within the
     /// catchment or a park near by) and is not covered, so no layer draws
@@ -39,7 +39,7 @@ public struct CityMap: Sendable {
         let kind: UInt8
         /// Whether a station's catchment reaches it.
         let covered: Bool
-        /// Whether anyone lives or works in it (not a park, decision 90).
+        /// Whether anyone lives or works in it (not a park, decision 91).
         let peopled: Bool
     }
 
@@ -79,7 +79,7 @@ public struct CityMap: Sendable {
                 }
             }
         }
-        // Decision 90: the cells a park makes worth more.
+        // Decision 91: the cells a park makes worth more.
         var nearParks: Set<CellPosition> = []
         let parkReach = LandValueRules.parkReach
         for cell in world.land.cells where cell.use == .park {
@@ -232,7 +232,7 @@ public struct CityMap: Sendable {
 
     /// A use's four shades, D1 to D4 (existing stock draws as D4): homes
     /// green, shops blue, offices amber, darker for taller buildings; since
-    /// decision 90 factories purple, schools and public offices red, sights
+    /// decision 91 factories purple, schools and public offices red, sights
     /// teal, farms brown and parks a light green (ColorBrewer's sequential
     /// schemes, as the first three).
     static let useShades: [[PopTravel.RGB]] = [
