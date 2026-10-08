@@ -131,6 +131,9 @@ public struct DayAccount: Hashable, Sendable {
     /// Interest paid on the loan (decision 67): not a running cost, so not
     /// in ``totalCost``.
     public internal(set) var interestCost: Money = .zero
+    /// Passengers who paid a fare that day (decision 86): what a riders
+    /// goal reads. Not money, so in no statement.
+    public internal(set) var fareTrips: Int64 = 0
 
     public init(day: Int64) {
         self.day = day
@@ -318,6 +321,13 @@ public struct CompanyAccounts: Hashable, Sendable {
         days.removeAll { $0.day <= day - Int64(Self.keptDays) }
     }
 
+    /// Adds `trips` fare-paying passengers to day `day`, which a row has
+    /// just been written to, stopping at the most a save holds.
+    mutating func addTrips(_ trips: Int64, day: Int64) {
+        guard trips > 0, let index = days.firstIndex(where: { $0.day == day }) else { return }
+        days[index].fareTrips = min(days[index].fareTrips + trips, GameWorld.maximumAccrued)
+    }
+
     /// The statements of the period `period` containing day `day` and of
     /// the one before it.
     public func report(_ period: FinancePeriod, day: Int64) -> (current: FinanceSummary, previous: FinanceSummary) {
@@ -360,7 +370,7 @@ extension CrowdingMetrics: Codable {}
 extension FinanceSummary: Codable {}
 extension DayAccount: Codable {
     private enum CodingKeys: String, CodingKey {
-        case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
+        case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost, fareTrips
     }
 
     /// Decodes a day; a day without interest, as every day before loans,
@@ -374,6 +384,7 @@ extension DayAccount: Codable {
         energyCost = try container.decode(Money.self, forKey: .energyCost)
         staffCost = try container.decode(Money.self, forKey: .staffCost)
         interestCost = container.contains(.interestCost) ? try container.decode(Money.self, forKey: .interestCost) : .zero
+        fareTrips = container.contains(.fareTrips) ? try container.decode(Int64.self, forKey: .fareTrips) : 0
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -386,6 +397,9 @@ extension DayAccount: Codable {
         try container.encode(staffCost, forKey: .staffCost)
         if interestCost != .zero {
             try container.encode(interestCost, forKey: .interestCost)
+        }
+        if fareTrips != 0 {
+            try container.encode(fareTrips, forKey: .fareTrips)
         }
     }
 }

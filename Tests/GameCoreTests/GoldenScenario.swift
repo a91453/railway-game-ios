@@ -800,7 +800,7 @@ enum StepOutcome: Equatable {
 
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
-        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains
+        case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains, trainType
     }
 
     init(from decoder: any Decoder) throws {
@@ -930,6 +930,10 @@ extension StepOutcome: Codable {
             self = .rejected(.stationDemandFromLand)
         case "invalidTransferGroup":
             self = .rejected(.invalidTransferGroup)
+        case "invalidScenario":
+            self = .rejected(.invalidScenario)
+        case "trainTypeUnavailable":
+            self = .rejected(.trainTypeUnavailable(try container.decode(TrainType.self, forKey: .trainType)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1080,6 +1084,11 @@ extension StepOutcome: Codable {
             try container.encode("stationDemandFromLand", forKey: .result)
         case .rejected(.invalidTransferGroup):
             try container.encode("invalidTransferGroup", forKey: .result)
+        case .rejected(.invalidScenario):
+            try container.encode("invalidScenario", forKey: .result)
+        case .rejected(.trainTypeUnavailable(let type)):
+            try container.encode("trainTypeUnavailable", forKey: .result)
+            try container.encode(type, forKey: .trainType)
         }
         // Fixtures name network nodes and edges by number.
         func encodeNode(_ node: TrackNodeID) throws {
@@ -2597,6 +2606,7 @@ struct SpeedName: Codable, Equatable {
         case .x60: "x60"
         case .normal: "normal"
         case .double: "double"
+        case .fast: "fast"
         }
     }
 

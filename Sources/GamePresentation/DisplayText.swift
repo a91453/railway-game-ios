@@ -386,6 +386,13 @@ extension GameError {
             )
         case .invalidTransferGroup:
             language.text("A station cannot be linked with itself.", "車站不能和自己組成轉乘群組。")
+        case .invalidScenario:
+            language.text("This challenge cannot be started here.", "這個挑戰無法在這裡開始。")
+        case .trainTypeUnavailable(let type):
+            language.text(
+                "This era has no \(type.title(in: language)) trains.",
+                "這個年代還沒有\(type.title(in: language))列車。"
+            )
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
@@ -466,6 +473,7 @@ extension GameSpeed {
         case .x60: "60×"
         case .normal: "600×"
         case .double: "1200×"
+        case .fast: "6000×"
         }
     }
 
@@ -478,6 +486,7 @@ extension GameSpeed {
         case .x60: language.text("60 times real time", "真實時間的 60 倍")
         case .normal: language.text("600 times real time", "真實時間的 600 倍")
         case .double: language.text("1200 times real time", "真實時間的 1200 倍")
+        case .fast: language.text("6000 times real time, fast forward", "真實時間的 6000 倍，快轉")
         }
     }
 }

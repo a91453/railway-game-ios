@@ -84,9 +84,13 @@
 ///     train and car cost and how far it is written down, `"capitalDays"`
 ///     and `"years"`. A build that reads only version 15 would drop them,
 ///     and its next save would lose what everything cost.
+/// 17. Goals and fast forward (decision 86): the world can have a
+///     `"scenario"`, its goals and how far they are met, the accounts' days
+///     their `"fareTrips"`, and the clock can run `"fast"`. A build that
+///     reads only version 16 would drop the scenario, or refuse the speed.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 16
+    public static let currentVersion = 17
 
     public let world: GameWorld
 
@@ -153,6 +157,8 @@ extension SavedGame: Codable {
         // what anything cost: what was built before is on the books at
         // nothing (``GameWorld/unrecordedAssetCount()``), and is never
         // written down or off; there are no capital days or closed years.
+        // Version 16 to 17: a world without `"scenario"` has no goals, and a
+        // day without `"fareTrips"` had none counted.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -560,6 +560,7 @@ struct ReferenceWorld: Equatable {
         case .x60: 60
         case .normal: 600
         case .double: 1200
+        case .fast: 6000
         }
         // The tenths in full width: ticks × tenths per tick + pending.
         let product = Int64(ticks).multipliedFullWidth(by: tenthsPerTick)

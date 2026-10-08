@@ -95,6 +95,9 @@ public struct GameWorld: Equatable, Sendable {
     /// The stations linked for transfers however far apart (decision 81),
     /// in ascending ID order. A new world has none.
     public internal(set) var transferGroups: [TransferGroup] = []
+    /// The scenario being played, its goals and how far they are met
+    /// (decision 86), or `nil`: a game without goals.
+    public internal(set) var scenario: ScenarioState?
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -996,11 +999,17 @@ public struct GameWorld: Equatable, Sendable {
     /// doors it has (see ``TrainType``). Free, and only while the train is
     /// off the track, as its cars are (see ``setTrainCars(_:to:)``).
     ///
-    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
-    ///   ``GameError/trainAlreadyPlaced(_:)``.
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainAlreadyPlaced(_:)``, or
+    ///   ``GameError/trainTypeUnavailable(_:)`` for a type the scenario's era
+    ///   does not have (decision 86).
     public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
+        // Decision 86: a scenario's era has only its own train types.
+        if let type, let allowed = scenario?.scenario.trainTypes, !allowed.contains(type) {
+            throw .trainTypeUnavailable(type)
+        }
         trains[index].type = type
     }
 
@@ -3272,7 +3281,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID
+        case land, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3358,6 +3367,7 @@ extension GameWorld: Codable {
         buildings = container.contains(.buildings) ? try container.decode(CityBuildings.self, forKey: .buildings) : CityBuildings()
         transferGroups = container.contains(.transferGroups) ? try container.decode([TransferGroup].self, forKey: .transferGroups) : []
         nextTransferGroupID = container.contains(.nextTransferGroupID) ? try container.decode(Int.self, forKey: .nextTransferGroupID) : 1
+        scenario = try container.decodeIfPresent(ScenarioState.self, forKey: .scenario)
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3457,6 +3467,7 @@ extension GameWorld: Codable {
         if nextTransferGroupID != 1 {
             try container.encode(nextTransferGroupID, forKey: .nextTransferGroupID)
         }
+        try container.encodeIfPresent(scenario, forKey: .scenario)
     }
 
     /// The world's size as a save before version 6 holds it: a map of
@@ -3653,7 +3664,7 @@ extension GameWorld: Codable {
                 return "Train \(train.id.rawValue)'s service times are after the clock."
             }
         }
-        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? demandEventProblem() ?? townGrowthProblem()
+        return trafficProblem() ?? passengerProblem() ?? riderProblem() ?? accountsProblem() ?? scenarioProblem() ?? demandEventProblem() ?? townGrowthProblem()
             ?? land.problem(in: bounds) ?? buildingProblem()
     }
 

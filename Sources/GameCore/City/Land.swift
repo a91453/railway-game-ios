@@ -246,22 +246,7 @@ extension Land {
     /// the demand events' are, so a seed always makes the same towns.
     public static func towns(seed: UInt32, in bounds: WorldBounds) -> Land {
         let draw = SeedDraw(seed: seed)
-        let metre = WorldCoordinate.unitsPerMetre
-        let middle = (x: bounds.width / 2, y: bounds.height / 2)
-        // The quarter of the second town: 0 north-east, 1 south-east, 2
-        // south-west, 3 north-west; the third is opposite.
-        let quarter = draw.roll("town.quarter", in: 0...3)
-        var towns: [(x: Int64, y: Int64, radius: Int64, peak: Int64)] = [(middle.x, middle.y, 12, 260)]
-        for (number, side) in [(1, quarter), (2, (quarter + 2) % 4)] {
-            let east: Int64 = side == 0 || side == 1 ? 1 : -1
-            let south: Int64 = side == 1 || side == 2 ? 1 : -1
-            let dx = draw.roll("town.\(number).east", in: 2_000...5_000) * metre
-            let dy = draw.roll("town.\(number).south", in: 2_000...5_000) * metre
-            let radius = draw.roll("town.\(number).radius", in: 7...10)
-            let peak = draw.roll("town.\(number).peak", in: 160...240)
-            towns.append((middle.x + east * dx, middle.y + south * dy, radius, peak))
-        }
-
+        let towns = sites(seed: seed, in: bounds)
         let columns = columns(in: bounds), rows = rows(in: bounds)
         var cells: [LandCell] = []
         for (number, town) in towns.enumerated() {
@@ -290,6 +275,34 @@ extension Land {
         var land = Land()
         land.cells = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         return land
+    }
+
+    /// The middles of the towns ``towns(seed:in:)`` draws from `seed`, in
+    /// its order: the first in the middle of the world, then the other two
+    /// (a goal to link them, decision 86).
+    public static func townCentres(seed: UInt32, in bounds: WorldBounds) -> [PlanPoint] {
+        sites(seed: seed, in: bounds).map { PlanPoint(x: $0.x, y: $0.y) }
+    }
+
+    /// Each town's middle, radius in cells and middle cell's residents.
+    private static func sites(seed: UInt32, in bounds: WorldBounds) -> [(x: Int64, y: Int64, radius: Int64, peak: Int64)] {
+        let draw = SeedDraw(seed: seed)
+        let metre = WorldCoordinate.unitsPerMetre
+        let middle = (x: bounds.width / 2, y: bounds.height / 2)
+        // The quarter of the second town: 0 north-east, 1 south-east, 2
+        // south-west, 3 north-west; the third is opposite.
+        let quarter = draw.roll("town.quarter", in: 0...3)
+        var towns: [(x: Int64, y: Int64, radius: Int64, peak: Int64)] = [(middle.x, middle.y, 12, 260)]
+        for (number, side) in [(1, quarter), (2, (quarter + 2) % 4)] {
+            let east: Int64 = side == 0 || side == 1 ? 1 : -1
+            let south: Int64 = side == 1 || side == 2 ? 1 : -1
+            let dx = draw.roll("town.\(number).east", in: 2_000...5_000) * metre
+            let dy = draw.roll("town.\(number).south", in: 2_000...5_000) * metre
+            let radius = draw.roll("town.\(number).radius", in: 7...10)
+            let peak = draw.roll("town.\(number).peak", in: 160...240)
+            towns.append((middle.x + east * dx, middle.y + south * dy, radius, peak))
+        }
+        return towns
     }
 }
 

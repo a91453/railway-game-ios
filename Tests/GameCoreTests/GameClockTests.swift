@@ -65,9 +65,10 @@ final class GameClockTests: XCTestCase {
     // MARK: - Seconds (Stage W2a)
 
     /// A speed's name is how many times real time it runs at, with the host
-    /// ticking every 100 ms; normal and double are a minute and two a tick.
+    /// ticking every 100 ms; normal and double are a minute and two a tick,
+    /// fast (decision 86) ten.
     func testEachSpeedRunsItsTenthsOfASecondATick() throws {
-        let expected: [GameSpeed: Int64] = [.paused: 0, .x1: 1, .x10: 10, .x60: 60, .normal: 600, .double: 1_200]
+        let expected: [GameSpeed: Int64] = [.paused: 0, .x1: 1, .x10: 10, .x60: 60, .normal: 600, .double: 1_200, .fast: 6_000]
         XCTAssertEqual(Set(GameSpeed.allCases), Set(expected.keys))
         for (speed, tenths) in expected {
             XCTAssertEqual(speed.tenthsPerTick, tenths, "\(speed)")

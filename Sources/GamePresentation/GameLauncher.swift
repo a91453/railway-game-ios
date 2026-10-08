@@ -96,6 +96,12 @@ public final class GameLauncher {
         begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:))), keepingAutosave: true)
     }
 
+    /// Starts a new game on a blank map with `challenge`'s goals (decision
+    /// 86), its towns drawn from a new seed.
+    public func startChallenge(_ challenge: Challenge) {
+        begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+    }
+
     /// Opens ``DemoWorld``: three lines already running.
     public func openDemo() {
         begin(DemoWorld.make(in: language), keepingAutosave: true)

@@ -79,6 +79,10 @@ public enum GameSpeed: String, CaseIterable, Codable, Sendable {
     case x60
     case normal
     case double
+    /// Fast forward (decision 86): ten game minutes a tick, 6000 times real
+    /// time, so a 360-day year passes in about an hour and a half, as goals
+    /// and year-end closings measured in years need.
+    case fast
 
     /// Tenths of a game second that pass per tick at this speed: only
     /// ``x1`` runs less than a whole second a tick.
@@ -90,6 +94,7 @@ public enum GameSpeed: String, CaseIterable, Codable, Sendable {
         case .x60: 60
         case .normal: 600
         case .double: 1200
+        case .fast: 6000
         }
     }
 }
