@@ -174,7 +174,8 @@ private struct ToolOptions: View {
 /// map puts up, and how many the player has put up. GameCore decides
 /// whether a building fits where the player taps. Since P0-C1 (decision 94)
 /// it also demolishes, and shows a managed company what building costs and
-/// what its buildings earn.
+/// what its buildings earn. Since P0-B (decision 98) it zones cells: tap
+/// one, or drag across a rectangle.
 private struct BuildingControls: View {
     @Bindable var session: GameSession
 
@@ -194,6 +195,8 @@ private struct BuildingControls: View {
                 Label("Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost.", systemImage: "hand.tap")
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
+            case .zone:
+                zoneOptions
             }
             Text(verbatim: session.placedBuildingsText)
                 .font(.footnote.weight(.semibold))
@@ -253,6 +256,53 @@ private struct BuildingControls: View {
                     .accessibilityIdentifier("building.quote")
             }
         }
+    }
+}
+
+extension BuildingControls {
+    /// Decision 98: the zones, and clearing them, three a row; what the
+    /// chosen one does, and how many cells are zoned.
+    @ViewBuilder
+    private var zoneOptions: some View {
+        let choices: [Zone?] = Zone.allCases.map { $0 } + [nil]
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+            ForEach(Array(choices.enumerated()), id: \.offset) { _, zone in
+                let isActive = session.zoningZone == zone
+                Button {
+                    session.zoningZone = zone
+                } label: {
+                    HStack(spacing: 4) {
+                        if let zone {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color(CityMap.zoneColor(zone)))
+                                .frame(width: 10, height: 10)
+                        } else {
+                            Image(systemName: "eraser")
+                                .font(.caption.weight(.semibold))
+                        }
+                        Text(verbatim: zone?.title(in: session.language) ?? session.language.text("Clear", "清除"))
+                            .font(.caption.weight(isActive ? .bold : .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 34)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+                .accessibilityIdentifier("building.zone.\(zone?.rawValue ?? "clear")")
+                .accessibilityAddTraits(isActive ? .isSelected : [])
+            }
+        }
+        Label {
+            Text(verbatim: session.zoningHelpText)
+        } icon: {
+            Image(systemName: "hand.draw")
+        }
+        .font(.footnote)
+        .foregroundStyle(Theme.textSecondary)
+        Text(verbatim: session.zonedCellsText)
+            .font(.footnote.weight(.semibold))
+            .monospacedDigit()
+            .accessibilityIdentifier("building.zoneCount")
     }
 }
 

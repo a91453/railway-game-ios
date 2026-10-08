@@ -21,7 +21,7 @@
 - **GameCore** 是唯一的 source of truth。它只依賴 Swift 標準函式庫（連 Foundation 都沒有 import），CI 在 Linux 上建置，因此任何 SwiftUI / UIKit / SpriteKit / Metal 依賴都會直接編譯失敗。
 - **Presentation / Rendering** 只負責呈現、輸入與動畫。它們可以保存「畫面用」的衍生資料（sprite、插值中的列車位置、動畫進度），但這些資料**不得**成為模擬的真實狀態；所有遊戲狀態的變更都必須透過 `GameWorld` 的指令。
 - **GamePresentation**（Phase 2B 起）是與平台無關的 Presentation 邏輯：持有世界的 `GameSession`、`TickAccumulator`、玩家看到的文字（錯誤訊息、時間、金額；英文與繁體中文，決策 38）與地圖縮放換算；Stage C4 起還有開始畫面與存檔（`GameLauncher`、`SaveLibrary`）。它只依賴 GameCore、Swift 標準函式庫的 `Observation`，以及只為存檔的 JSON 與檔案使用的 Foundation（決策 45；Linux 的 Swift 工具鏈也有），不 import SwiftUI / UIKit，因此與 GameCore 一起在 Linux CI 上測試。
-- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有 `GameLauncher`，它持有正在玩的那一局的 `GameSession`（同時只有一個，決策 45）；畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。
+- **App**（`RailwayGameApp/`）只有 SwiftUI 畫面：`@main` App 以 `@State` 持有 `GameLauncher`，它持有正在玩的那一局的 `GameSession`（同時只有一個，決策 45）；畫面讀取 `session.world` 並呼叫 session 的方法。GameCore 維持不變、不為 UI 加上 observation。App 唯一的外部套件是 MapLibre Native（決策 97，實景地圖的 OpenStreetMap 底圖；BSD 2-Clause，版本鎖在 `Package.resolved`），GameCore 與 GamePresentation 不依賴它。
 
 ### GameCore 內部的依賴方向（2026-09 決定）
 
@@ -3348,6 +3348,48 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 5. **數字**（16 km 地圖，居民都不變）：台北的公園格 4,481 → 4,568、農地 297 → 325；彰化的公園 85 → 247、農地 10,781 → 10,960；雲林口湖（魚塭區）的農地 20,161 → 22,446。地圖中心車站的類型與運量幾乎不變（口湖 672 → 674 人次）。
 6. **不動**：GameCore、存檔（版本 21）、golden（schema 41）、replay；地點（商店、辦公、學校、景點）與車站類型。
 
+### 97. 實景地圖的 OpenStreetMap 底圖（MapLibre，E3）
+
+2026-10-08，作者問 3D 模型要不要先搬，接著問「還是底層圖層先換 OSM」。判斷：先換底圖。遊戲的鐵道、車站、分區、地點都來自 OSM（決策 93、96），底圖用 Apple 地圖會和它們對不齊；參考 `Ci/` 的地圖引擎就是 MapLibre ＋ OpenFreeMap；MapLibre 本身能傾斜、旋轉、畫 OSM 建物的 3D 量體與地形，是之後 3D（Phase 8）的捷徑。作者同意新增依賴 MapLibre Native，並選「先加成選項」：地圖樣式選單多一個「OpenStreetMap」，預設仍是 Apple 地圖，實機確認後再決定預設。
+
+參考檢查（`a91453/railway-reference-private` `a7e377b6`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「實景地圖的 OpenStreetMap 底圖（決策 97）」）：`Ci/` 的 `initOsmMapEngine`（MapLibre GL）、`osmStyleKey` 預設 `positron`（另有 `dark`、`fiord`、`liberty`）、`osmLabelLang` 預設 `local`、地圖下方的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」。
+
+1. **依賴**：`maplibre-gl-native-distribution` 6.31.0（2026-09-11，`exactVersion`；二進位 XCFramework，sha256 `de3aaa43…` 由套件清單核對），只給 App target。`project.yml` 加套件、XcodeGen 2.46.0 重新產生；CI 與 Xcode Cloud 不自動解析套件（`-disableAutomaticPackageResolution`），所以提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved`（版本 6.31.0，commit `13e41ab3`）。
+2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
+3. **圖磚與樣式**：OpenFreeMap 的公開服務（免費、免金鑰、可商用，沒有服務保證），淺色用 Positron、深色外觀用 Dark（`OpenStreetMapBase.styleURL`）。
+4. **相機**（`OpenStreetMapBase.camera`，GamePresentation，有測試）：MapLibre 的中心是遊戲畫面中點下的地點，縮放等級讓一個世界公尺（錨點緯度的一公尺）畫成和遊戲一樣多的點：z = log2(每公尺點數 × 赤道周長 × cos 錨點緯度 ÷ 512)，沿用 `StationLabels.zoom`。測試確認畫面兩角換到 MapLibre 的像素正好差畫面的寬與高。平面、北朝上，不接受自己的手勢，和 Apple 地圖相同（決策 50）。
+5. **標籤**：OpenFreeMap 的樣式把拉丁名稱與當地名稱疊成兩行；照 `Ci/` 的 `osmLabelLang`，改成一種語言：中文介面依序取 `name:zh-Hant`、`name:zh`、`name`，英文取 `name:en`、`name_en`、`name:latin`、`name`（`OpenStreetMapBase.labelText`）。只換顯示名稱的圖層，道路編號（`ref`）、門牌照舊（`showsName`）。
+6. **真實鐵道**：和 Apple 地圖上相同的資料、順序、顏色與寬度（決策 50）：每個 `sortKey` 先畫外框再畫各色路線，最後畫車站圓點，全部插在樣式第一個標籤圖層下面（道路之上、地名之下）。MapLibre 的圓圈外框畫在半徑外，所以中心半徑是 `stationRadius − stationRing / 2`；`stationsMinimumZoom` 起才畫。
+7. **不動**：GameCore、存檔、golden、replay；Apple 地圖與它的三種樣式照舊（仍是預設）。
+
+**限制**：
+- 這個環境（Linux）不能編譯 App，App 端只由 CI 的 Xcode 建置驗證；畫面是否對齊、好不好看要在實機（TestFlight）確認。
+- 沒有網路或 OpenFreeMap 停止服務時，底圖是空白的（Apple 地圖也一樣）；沒有離線圖磚。
+- 還沒有傾斜、旋轉、3D 建築與地形，也還沒照 `Ci/` 隱藏軍事設施的標示（`applyOsmSensitiveFacilityLabelFilter`）；選點的畫面（`RealWorldPicker`）仍是 Apple 地圖。
+
+### 98. 城市建造 P0-B：土地分區
+
+2026-10-08，作者要求做城市建造 P0-B，方向照研究文件（`docs/research/CITY_BUILDING_STUDY.md` §4.4）的建議：分區另存一層，不用沒有人的 `LandCell` 假裝；城市擴張只在劃了分區的空格長出那個用途，沒劃分區的地方照舊；「不開發」與「保留地」兩種保護區；玩家建物 400 m 內地價加成（誘導開發）；App 單點或拖曳劃分區、圖層顯示分區；玩家建物佔住的格（決策 95）仍不長。號碼依工作登記 #231：存檔 23、golden schema 43（決策 97 是 OSM 底圖的登記）。
+
+參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「城市建造 P0-B：土地分區（決策 98）」）：參考庫沒有分區、保護區、地價或依分區成長的規則（gap → 原生）。可以用的是操作與顏色：`Simulator/` 的地形筆刷（`onTerrainStroke`：一筆拖曳只存一次復原快照）是「一次拖曳是一個編輯」的做法；`Ci/` 的 `landuseColorByClass` 與 `map.legend.reserveExtent`／`airportExtent` 是分區圖層的顏色。
+
+1. **資料**（GameCore，`City/Zoning.swift`）：`Zone` 有八種：住宅、商業、辦公、工業、公共設施、觀光（`use` 是同名的 `LandUse`），以及「不開發」（`noDevelopment`）與「保留地」（`reserved`，`use` 是 `nil`）。`GameWorld.zones`（`Zoning`）是依列、行排序、每格一次的 `ZonedCell`，和土地（`land`）分開：分區不是人，土地格與城市建物的意義都不變。玩家建物佔住的格可以劃分區，但城市照決策 95 不在那裡長。
+2. **指令** `setZone(_:rows:columns:)`：把矩形裡每一格劃成那個分區，`nil` 清除；回傳改變的格數。矩形要在世界裡、每邊最多 128 格（`Zoning.maximumSide`，8 km），否則 `invalidZoneArea`，世界不變。免費，當下不改土地：城市成長時才照分區。
+3. **照分區開發**（`spread(towards:)`，決策 75 的成長每站每晚蓋一格）：
+   - 車站腹地裡有**劃了用途、空的、沒被玩家建物佔住**的格時，蓋在**地價最高**的那格（再依距離、列、行），用途是分區的用途，不必在有人的格旁邊（玩家允許了）；新格的人數照空白地圖城鎮的比例（決策 72、91）以 4 人為底：住宅 4／0、商業與辦公 1／12、公共設施 1／4、觀光 0／4、工業 0／8。
+   - 沒有這種格時照舊：離車站最近、在有人的格旁邊的空格蓋 4 人住宅，但**跳過劃了分區的格**（走到這一步時，腹地裡劃了分區的空格只剩不開發與保留地）。
+   - 腹地裡沒有任何分區時，結果和之前完全相同；沒有分區的世界不查地價。
+4. **兩種保護區**（A 列車的開發凍結與保留地）：
+   - 不開發：不蓋新格；已有的格不再成長（`grow` 不加人，那一份不補給別格）、不升級（`raiseBuildings` 跳過）。
+   - 保留地：不蓋新格；已有的照常成長與升級（留給玩家之後蓋軌道或公司建物）。
+5. **誘導開發**（地價，決策 76 的公式多一項 `C`）：**劃了用途分區**的格，中點離任何一棟玩家建物的中心不到 400 m（25,600 單位）時加 600 美分／m²（`LandValueRules.companyPremium`，和公園溢價相同）；`LandValue.companyPremium`。只加在劃了用途的格，所以沒有分區的世界地價不變（P0-C 的建造費、租金、收購價也不變）；玩家可以在自己的建物旁劃分區，提高那裡的地價，城市就先往那裡長。成長只為了選分區格讀地價，升級仍不讀（決策 75）。
+6. **畫面**：建築工具的模式多了「分區」（`BuildingToolMode.zone`）：選八種分區或「清除」，點一格劃一格，單指拖曳劃一個矩形（雙指仍可移動、縮放地圖；第二指放下時取消這次拖曳）；拖曳時地圖畫出矩形（分區的顏色，清除是灰框），放開才是一個可以復原的編輯（`GameSession.dragZone`、`endZoneDrag`、`zone(_:)`）。切到分區模式時地圖自動開「土地分區」圖層（`PopTravelMode.zoning`，也在地圖圖層表的「城市」）：每格依分區著色，縮小時區塊取最多的分區；點格的提示框寫出分區與「鄰近公司建物」的溢價。
+7. **存檔**：版本 23。世界只在有分區時寫 `"zones"`：同一列相鄰、同一分區的格寫成一段 `{"row", "column", "zone", "count"}`；讀檔檢查每格在世界裡、依序、不重複。版本 22 以前沒有分區。新的 `SaveFixtures/v23-zoning.json`。
+8. **golden**：schema 43，新指令 `setZone`、觀察 `zone`、結果 `invalidZoneArea`、最終狀態選填的 `zones`（各分區的格數）、`landValue` 選填的 `companyPremium`；新的 `zoning.json`（`city-buildings-growth.json` 加上分區：新格蓋在商業區、跳過不開發）與 `zoning-land-value.json`。既有 golden、存檔與 replay 的預期值都沒有改變（規則只在有分區時改變結果）。
+9. **UI 測試**：`StartSaveFlowSmokeTests.testCellsZonedByADragAreKeptBySavingAndContinuing`（拖曳劃商業區，存檔、繼續後仍在），在完整的 UI 測試，不在 PR 的 gate。
+
+**限制**：分區不會把已經有的格改成那個用途（只影響空格）；沒有住商工的需求閥（模擬城市的 RCI），成長量仍是決策 70／75 的車站服務；分區格的地價基準仍是空地，不因分區而提高；拖曳只能畫矩形（參考的筆刷是圓形一筆一筆畫，之後需要時再加）。
+
 ### 100. 起點＋終點建立路線
 
 2026-10-08，作者要求的 UI/UX 改版（UX-1a）：新路線原本要逐站「選車站 → 加入選取的車站」。改成玩家只點起點與終點，沿途車站依真實的軌道找出，再選停靠方式。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。
@@ -3398,7 +3440,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 運量由土地推導（決策 73）：App 的新遊戲（經營模式）每站的運量是它分到的腹地（重疊時依距離分）每 100 位居民與就業每天 40 旅次，類型是佔最多的；每個午夜服務好的車站讓腹地的人口成長並往車站蓋新的住宅格，土地不衰退。 關閉的車站不分土地（決策 77）。空白示範地圖也由土地決定運量（自己的城市取代第一座城鎮），實景示範保留固定運量（決策 78）。
 - 城市建物（決策 74）：城市建物開啟時（App 的新遊戲）每格土地有一棟建物（D1–D4 或既有存量），容量依主要用途的人數選最低足夠的密度，另一項不裁人；與土地一起設定、建立城鎮與擴張。
 - 容量與升級（決策 75）：城市建物開啟時土地長到每格建物的容量；每個午夜服務 ≥ 80%、可達 ≥ 1 站而且成長中的車站，依列、行把腹地裡午夜開始主要人數已滿（決策 77）的 D1–D3 一般建物升一級，每站每天最多 2 格、每格每天最多一級；`TownGrowth.Place` 保存最近一天的 `lastService`、`lastReached`。
-- 地價與城市圖層（決策 76）：`landValue(row:column:)` 即時算出每格的地價（美分／m²）＝用途基準 × 密度係數 ＋ 最好車站的服務與可達溢價 ＋ 400 m 內有公園時 600（決策 91），夾在 500…50,000；不存檔、不影響規則。地圖有用途、地價、腹地涵蓋三個圖層，車站面板顯示腹地平均地價。
+- 地價與城市圖層（決策 76）：`landValue(row:column:)` 即時算出每格的地價（美分／m²）＝用途基準 × 密度係數 ＋ 最好車站的服務與可達溢價 ＋ 400 m 內有公園時 600（決策 91）＋ 劃了用途分區、400 m 內有玩家建物時 600（決策 98），夾在 500…50,000；不存檔；成長只用它選分區格（決策 98）。地圖有用途、地價、腹地涵蓋與土地分區四個圖層，車站面板顯示腹地平均地價。
+- 土地分區（決策 98）：玩家可以把 64 m 格劃成住宅、商業、辦公、工業、公共設施、觀光，或不開發、保留地（`setZone`，一次最多 128 × 128 格，免費）。成長中的車站先在腹地裡地價最高的空分區格蓋那種用途，沒有時照舊在有人的格旁邊蓋住宅（跳過劃了分區的格）；不開發的格不蓋、不長、不升級，保留地只是不蓋。存檔版本 23。
 - 上下車與容量（決策 35、39）：列車到達一站 8 秒後車門開好，坐到那一站的人下車（`arrived`），同時路線上的列車讓那一站等它的路線、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1）；花的時間是較多的一邊 ÷ 每節每秒 8 人，進位到整秒；開著門時每個整分鐘釋出的人也上車。客滿的列車離開時，還在等、本來可以搭的人記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
 - 全網路徑與轉乘（Phase 5F，決策 65）：App 的新遊戲以 `.network` 釋出乘客，每對 OD 最多三條路徑（整數分鐘的候車、乘車、轉乘成本），依持久化的配額分配；乘客按旅程在同站換車或步行到 450 m 內的另一站（路徑選擇的感知成本：`Ci/` 的 15 分鐘 × 分級係數，同站換線 12 分鐘，加 5 km/h 步行；實際換車 max(120 s, 步行)，同一路線 0；常數集中於 `PassengerTransferRules`）；車站可設 flowControl／closed（車站面板），只在第一段付原起訖票價，守恆帳歸原起站。`GameWorld` 的新世界與舊存檔是 `.direct`。
 - 轉乘群組（決策 81）：玩家可以把車站連成轉乘群組，同一群組的車站之間不論距離都能步行轉乘（450 m 以上算 virtual，5 km/h）；群組有自己的 ID，存檔版本 15。

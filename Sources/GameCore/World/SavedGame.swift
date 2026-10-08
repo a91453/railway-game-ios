@@ -115,9 +115,13 @@
 ///     the day's property. A build that reads only an earlier version
 ///     would drop who lives in them and what they cost, so it says the save
 ///     is newer than it instead.
+/// 23. Zoning (decision 98): the world can have `"zones"`. A build that
+///     reads only an earlier version would drop them, and its next save
+///     would lose the player's zones, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 22
+    public static let currentVersion = 23
 
     public let world: GameWorld
 
@@ -199,6 +203,8 @@ extension SavedGame: Codable {
         // `"jobs"`, `"buildingCost"` or `"landCost"` is empty and was paid
         // nothing for, and has no asset record: on the books at nothing,
         // as decision 85 keeps what was built before it.
+        // Version 22 to 23: a world without `"zones"` has none, and grows
+        // as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

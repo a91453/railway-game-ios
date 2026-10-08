@@ -460,13 +460,18 @@ final class GoldenScenarioTests: XCTestCase {
             y.y += 1
             return [.placedBuilding(nil), .placedBuilding(id), .placedBuilding(kind), .placedBuilding(x), .placedBuilding(y)]
         case .landValue(let value?):
-            var total = value, base = value, service = value, access = value, station = value
+            var total = value, base = value, service = value, access = value, station = value, company = value
             total.value += 1
             base.base += 1
             service.servicePremium += 15
             access.accessPremium += 1_000
             station.station = value.station.map { $0 + 1 } ?? 1
-            return [.landValue(nil), .landValue(total), .landValue(base), .landValue(service), .landValue(access), .landValue(station)]
+            company.companyPremium = value.companyPremium == 0 ? LandValueRules.companyPremium : 0
+            return [.landValue(nil), .landValue(total), .landValue(base), .landValue(service), .landValue(access), .landValue(station), .landValue(company)]
+        case .zone(nil):
+            return [.zone(.residential)]
+        case .zone(let zone?):
+            return [.zone(nil), .zone(zone == .residential ? .reserved : .residential)]
         case .townGrowth(let place?):
             var base = place, growth = place, service = place, reached = place
             base.base += 1

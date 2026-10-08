@@ -19,6 +19,7 @@
 		1E9DD55C059CAB8D682CA656 /* afr.json in Resources */ = {isa = PBXBuildFile; fileRef = 52815B08C6FE03A12ABC22D5 /* afr.json */; };
 		225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222E67E267AF07C25D4745C9 /* DataSourcesView.swift */; };
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
+		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
 		298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */; };
 		2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B68167398B13543EA8C564A /* RealWorldPicker.swift */; };
@@ -35,6 +36,7 @@
 		4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */; };
 		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */ = {isa = PBXBuildFile; fileRef = 37971520DEDE438F5E6272D6 /* music-loop.caf */; };
+		5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F655E31850005DBAC32D5142 /* OSMMapBackground.swift */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
@@ -42,6 +44,7 @@
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
 		66CD628AEFF6AEC5001B87F0 /* track_lines.geojson in Resources */ = {isa = PBXBuildFile; fileRef = D8A3D706AFEA85A7941D8933 /* track_lines.geojson */; };
+		68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */; };
 		6FDAFF341E0A4ECA23966804 /* GameAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */; };
 		7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC5AEB0936E154EABD2610F /* YearEndReport.swift */; };
 		72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC137C507F9A22C91174E71 /* NetworkOverview.swift */; };
@@ -174,8 +177,10 @@
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
+		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F34F5FAD9996ED6204B4F23C /* tra_station_class.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_class.json; sourceTree = "<group>"; };
 		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
+		F655E31850005DBAC32D5142 /* OSMMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSMMapBackground.swift; sourceTree = "<group>"; };
 		F7E81C097849391C73D31AF5 /* krtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc.json; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -187,6 +192,7 @@
 			files = (
 				1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */,
 				DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */,
+				24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +281,7 @@
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
+				F655E31850005DBAC32D5142 /* OSMMapBackground.swift */,
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
@@ -299,6 +306,14 @@
 				2C7E3045294CC098C802F9DA /* railway-game-ios */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		8382CA8983A43BE4B8E22C4F /* Licenses */ = {
+			isa = PBXGroup;
+			children = (
+				F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */,
+			);
+			path = Licenses;
 			sourceTree = "<group>";
 		};
 		A1765EA1CC06988CA8C37FF3 = {
@@ -344,6 +359,7 @@
 				319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */,
 				B3A6A45B19F662183005E4CB /* Audio */,
 				A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */,
+				8382CA8983A43BE4B8E22C4F /* Licenses */,
 				4129AFF36D68297713804A78 /* RealRailways */,
 				2F8768290831E1C1F09B9C81 /* RealWorld */,
 			);
@@ -369,6 +385,7 @@
 			packageProductDependencies = (
 				B7E2B69371F0B985A7107860 /* GameCore */,
 				45EC5C77CE30354C4B4E2BAF /* GamePresentation */,
+				FD2BB5E656E35262DF9997FA /* MapLibre */,
 			);
 			productName = RailwayGame;
 			productReference = A7D933E24E26C2077E5BC12A /* RailwayGame.app */;
@@ -420,6 +437,7 @@
 			mainGroup = A1765EA1CC06988CA8C37FF3;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				0AEF159393F7894B4AEF45CB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 				B62E968A3FFCDAC313506A7E /* XCLocalSwiftPackageReference ".." */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -441,6 +459,7 @@
 				E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,
 				D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */,
+				68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */,
 				1E9DD55C059CAB8D682CA656 /* afr.json in Resources */,
 				B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */,
 				789C9FAADEA0419549125729 /* krtc_times.json in Resources */,
@@ -503,6 +522,7 @@
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
+				5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */,
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */,
@@ -803,6 +823,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		0AEF159393F7894B4AEF45CB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
+			requirement = {
+				kind = exactVersion;
+				version = 6.31.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		45EC5C77CE30354C4B4E2BAF /* GamePresentation */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -811,6 +842,11 @@
 		B7E2B69371F0B985A7107860 /* GameCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GameCore;
+		};
+		FD2BB5E656E35262DF9997FA /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0AEF159393F7894B4AEF45CB /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

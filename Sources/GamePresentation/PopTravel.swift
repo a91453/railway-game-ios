@@ -25,8 +25,10 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// what each cell is worth (``GameCore/LandValue``);
     case landValue
     /// which cells the stations' 800 m catchments reach, and which cells
-    /// with people none does.
+    /// with people none does;
     case coverage
+    /// what the player zoned each cell for (decision 98).
+    case zoning
 
     /// The tab's title (`map.layers.population`, `map.layers.travelDemand`,
     /// `map.layers.demandChange`).
@@ -38,6 +40,7 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .landUse: language.text("Land use", "土地用途")
         case .landValue: language.text("Land value", "地價")
         case .coverage: language.text("Catchment coverage", "腹地涵蓋")
+        case .zoning: language.text("Zoning", "土地分區")
         }
     }
 
@@ -76,13 +79,18 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
                 "The cells within 800 m of a station, and the cells with people that no station reaches.",
                 "車站 800 公尺內的格，以及有人但不在任何車站腹地裡的格。"
             )
+        case .zoning:
+            language.text(
+                "What you zoned each 64 m cell for: the city builds that use on empty zoned cells first; no development and reserved land keep it off.",
+                "每個 64 公尺格劃設的分區：城市先在空的分區格蓋那種用途；不開發與保留地不讓城市長。"
+            )
         }
     }
 
     /// Whether the layer is one of the city's (Phase 6d), drawn from the
     /// world's land.
     public var isCityLayer: Bool {
-        self == .landUse || self == .landValue || self == .coverage
+        self == .landUse || self == .landValue || self == .coverage || self == .zoning
     }
 
     /// Whether the layer follows the timeline's hour.

@@ -100,7 +100,8 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, false, "The station step waits for a station")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         app.buttons["tutorial.skip"].tap()
-        XCTAssertFalse(next.exists)
+        // The card may still be closing right after Skip: wait for it to go.
+        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
     }
 
@@ -165,7 +166,8 @@ final class TutorialUITests: XCTestCase {
         selectTool(app, "tool.network")
         waitForEnabled(app, true)
         skip.tap()
-        XCTAssertFalse(next.exists)
+        // The card may still be closing right after Skip: wait for it to go.
+        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
         // The restarted tutorial's first step waits for Network again.
         selectTool(app, "tool.select")
 
@@ -188,7 +190,8 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(back.exists)
         waitForEnabled(app, false)
         skip.tap()
-        XCTAssertFalse(next.exists)
+        // The card may still be closing right after Skip: wait for it to go.
+        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
     }
 
     private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
