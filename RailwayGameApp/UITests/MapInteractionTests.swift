@@ -299,11 +299,10 @@ final class MapInteractionTests: XCTestCase {
 
         let row = app.switches["layer.landValue"]
         // The city's section is below the others: grow the sheet and
-        // scroll until it shows.
-        for _ in 0..<4 where !(row.exists && row.isHittable) {
-            app.swipeUp()
-        }
-        XCTAssertTrue(row.waitForExistence(timeout: 5), "The land value row must exist")
+        // scroll until the row lies wholly on screen. A `swipeUp()` could
+        // fling it to the screen's bottom edge, "hittable" but not tapped
+        // (as LineRoutePreferenceUITests' row on main a383f27).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row), "The land value row must come into view")
         let toggle = row.switches.firstMatch
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         for _ in 0..<3 where toggle.value as? String != "1" {

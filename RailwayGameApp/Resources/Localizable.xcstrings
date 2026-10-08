@@ -1832,12 +1832,12 @@
         }
       }
     },
-    "Saves the game, exports it as a file, or goes back to the start screen." : {
+    "Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "儲存遊戲、匯出成檔案，或回到開始畫面。"
+            "value" : "儲存遊戲、匯出成檔案、開啟教學或設定，或回到開始畫面。"
           }
         }
       }
