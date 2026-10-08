@@ -324,9 +324,9 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "places", "population", "map"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "places", "worldPop", "appleMaps"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "openStreetMap", "operators", "worldPop", "appleMaps"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -348,7 +348,7 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
         XCTAssertEqual(
             DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first?.notice,
-            "依政府資料開放授權條款第 1 版使用。"
+            "依「政府資料開放授權條款第 1 版」使用。"
         )
     }
 
