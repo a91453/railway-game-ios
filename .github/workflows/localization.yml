@@ -18,8 +18,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request cancels its older run. Every commit on main
+# keeps its own run: with one group for all of main, GitHub cancelled every
+# queued run but the newest (six merges of 2026-10-07 were never checked).
 concurrency:
-  group: localization-${{ github.ref }}
+  group: localization-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
