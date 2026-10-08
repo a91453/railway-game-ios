@@ -1041,6 +1041,18 @@ V 實際放行 → T、U（保證不互穿）
 沒有比例換算：建物的邊長 1,024／1,536／2,048 單位（16／24／32 m，每公尺 64 單位），離軌道與車站 128 單位（2 m）。外部開源專案沒有搜尋：在平面上放正方形、檢查與折線的距離不是難題。
 
 
+## 分區收更多 OSM 標籤（決策 96）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `landuse`、`military`、`cemetery`、`forest`、`wood`、`aquaculture`、`orchard`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/338-b3d18c994bd13868.js`／`fetchAndHandleBuildings` 的用途對照（`warehouse`、`factory` → `industrial`；`college`、`university`、`government` → `civic`） | `build_zone_grid.py` 的 `TAGS` | adapted：同樣把細分類歸進少數幾種用途；參考對照的是建物，這裡是土地 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`applyOsmSensitiveFacilityLabelFilter`（隱藏 `military` 等敏感設施的標示） | 決策 96 第 4 點：軍事區不建模、不標示 | adapted：參考只是不顯示標示，這裡連用途都不建 |
+| （參考沒有） | 森林、墓地、水域的處理（決策 96 第 4 點）、新的就業數 | gap → 原生 |
+
+外部專案：沒有另外搜尋；標籤的意義照 OpenStreetMap wiki 的 `Key:landuse`、`Key:leisure`。
+
 ## 實景的工業區、公園與農地（決策 93）
 
 2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `farmland`、`landuse=industrial`、`"industrial"`、`leisure=park`、`areaByUsage`。決策 91 的檢查寫 `MapBuilder/` 沒有土地用途的內容；這次找到它的車站資訊面板用 OSM 算周邊的建物用途與公園面積，所以補上一列。
