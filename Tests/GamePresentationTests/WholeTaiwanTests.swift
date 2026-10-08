@@ -168,6 +168,22 @@ final class WholeTaiwanTests: XCTestCase {
         XCTAssertEqual(session.world.land, before)
     }
 
+    /// An empty whole-Taiwan map opens on the whole island (decision 89);
+    /// once something is built, on what is built, as any map does. A blank
+    /// new game opens where the camera puts it.
+    func testAnEmptyWholeTaiwanMapOpensOnTheWholeIsland() throws {
+        var world = GameWorld.newWholeTaiwanGame()
+        XCTAssertEqual(WorldRegion.opening(in: world), WorldRegion(bounds: world.bounds))
+        let phone = ScreenSize(width: 390, height: 700)
+        let camera = PlanCamera(bounds: world.bounds, viewport: phone, showing: WorldRegion.opening(in: world))
+        XCTAssertEqual(camera.visibleRegion.width, Double(world.bounds.width), accuracy: Double(world.bounds.width) * 0.01, "the island across the phone")
+        XCTAssertEqual(MapScale.detail(forReferenceSize: camera.referenceSize), .overview)
+        let taipei = point(25.0479308, 121.5170046)
+        _ = try world.buildStation(named: "Taipei", at: taipei)
+        XCTAssertEqual(WorldRegion.opening(in: world), WorldRegion.built(in: world))
+        XCTAssertNil(WorldRegion.opening(in: .newGame()))
+    }
+
     func testTheLauncherStartsTheWholeOfTaiwan() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("WholeTaiwanTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -105,6 +105,15 @@ public struct WorldRegion: Hashable, Sendable {
         points += world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
         return WorldRegion(enclosing: points)
     }
+
+    /// Where `world`'s map opens: what is built on it (``built(in:)``),
+    /// or, on a map whose land is read in as it is needed with nothing
+    /// built yet (decision 89: the whole of Taiwan), the whole map, so the
+    /// player starts seeing the island rather than a few hundred metres of
+    /// it; `nil`, the camera's own opening, otherwise.
+    public static func opening(in world: GameWorld) -> WorldRegion? {
+        built(in: world) ?? (world.landBlocks != nil ? WorldRegion(bounds: world.bounds) : nil)
+    }
 }
 
 /// Where the world is drawn on the map view, and back: everything the map's
