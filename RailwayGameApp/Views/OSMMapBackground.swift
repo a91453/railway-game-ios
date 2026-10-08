@@ -319,7 +319,7 @@ private final class StyleObserver: NSObject, MLNMapViewDelegate {
     }
 
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
-        let loaded = loaded
+        let loaded = self.loaded
         MainActor.assumeIsolated { loaded() }
     }
 }
