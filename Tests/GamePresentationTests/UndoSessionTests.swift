@@ -96,6 +96,64 @@ final class UndoSessionTests: XCTestCase {
         XCTAssertFalse(session.canUndo)
     }
 
+    /// One drag of the rate slider (`beginEditGesture()` …
+    /// `endEditGesture()`) is one edit: however many rates it sets, one
+    /// snapshot, and one Undo goes back to the rate before the drag.
+    func testADragOfTheRateIsOneEdit() throws {
+        var world = DemoWorld.make(in: .english)
+        world.pause()
+        let session = GameSession(world: world)
+        let start = session.world
+        let train = try XCTUnwrap(session.selectedTrain)
+        XCTAssertNotNil(train.position, "the demo's trains are on the track")
+        let before = train.movement.rate
+
+        session.beginEditGesture()
+        for rate: Int64 in [100, 200, 300, 400] {
+            session.selectedTrainRate = rate
+        }
+        session.endEditGesture()
+        XCTAssertEqual(session.selectedTrainRate, 400)
+        XCTAssertEqual(session.undoCount, 1)
+
+        session.undo()
+        XCTAssertEqual(session.selectedTrainRate, before)
+        XCTAssertEqual(session.world, start)
+        XCTAssertFalse(session.canUndo)
+
+        // Outside a drag each rate is an edit of its own.
+        session.selectedTrainRate = 100
+        session.selectedTrainRate = 200
+        XCTAssertEqual(session.undoCount, 2)
+
+        // A drag that sets nothing new keeps nothing.
+        session.beginEditGesture()
+        session.selectedTrainRate = 200
+        session.endEditGesture()
+        XCTAssertEqual(session.undoCount, 2)
+    }
+
+    /// Undo during a drag takes the drag back; its next change keeps a new
+    /// snapshot.
+    func testUndoDuringADragLetsItsNextChangeKeepASnapshot() throws {
+        var world = DemoWorld.make(in: .english)
+        world.pause()
+        let session = GameSession(world: world)
+        let before = session.selectedTrainRate
+
+        session.beginEditGesture()
+        session.selectedTrainRate = 100
+        session.selectedTrainRate = 200
+        session.undo()
+        XCTAssertEqual(session.selectedTrainRate, before)
+        session.selectedTrainRate = 300
+        session.selectedTrainRate = 400
+        session.endEditGesture()
+        XCTAssertEqual(session.undoCount, 1)
+        session.undo()
+        XCTAssertEqual(session.selectedTrainRate, before)
+    }
+
     /// Any tick of game time empties the history; pausing, the speed and the
     /// selection are not edits.
     func testGameTimeMovingOnEmptiesTheHistory() throws {

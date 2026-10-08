@@ -184,6 +184,12 @@ public final class GameSession {
     /// and the start screen (each a new session) start without any.
     private(set) var undoHistory: [GameWorld] = []
 
+    /// Whether a control is being dragged (``beginEditGesture()``), so its
+    /// edits make one snapshot between them.
+    @ObservationIgnored private var isEditGestureOpen = false
+    /// Whether the open gesture has already kept its snapshot.
+    @ObservationIgnored private var editGestureHasSnapshot = false
+
     /// Plays the sounds the session's changes call for (``SoundCue``): a
     /// train in service arriving at a station, track built, another tool.
     /// The app's player, set by the launcher; `nil` plays nothing. Never
@@ -512,6 +518,7 @@ public final class GameSession {
                 try world.advance(ticks: ticks)
                 // Game time moved on: no edit before it can be undone.
                 undoHistory.removeAll()
+                editGestureHasSnapshot = false
                 endFollowIfGone()
                 if let arrivals {
                     let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
@@ -571,7 +578,10 @@ public final class GameSession {
 
     /// The selected train's rate as GameCore has it (0 without a selected
     /// train). Setting it calls ``setSelectedTrainRate(_:)``, so a control
-    /// bound to it never holds a rate of its own.
+    /// bound to it never holds a rate of its own. A slider bound to it
+    /// brackets each drag with ``beginEditGesture()`` and
+    /// ``endEditGesture()`` (its `onEditingChanged`), so one drag is one
+    /// edit to undo.
     public var selectedTrainRate: Int64 {
         get { selectedTrain?.movement.rate ?? 0 }
         set { setSelectedTrainRate(newValue) }
@@ -1168,8 +1178,10 @@ public final class GameSession {
     /// place. A command that throws leaves the world and the undo history
     /// as they were, even after it changed part of its copy; one that
     /// succeeds without changing anything leaves no snapshot, so Undo never
-    /// takes back nothing. The oldest snapshot goes once there are
-    /// ``undoLimit``.
+    /// takes back nothing. Between ``beginEditGesture()`` and
+    /// ``endEditGesture()`` only the first edit that changes the world keeps
+    /// a snapshot: the world as it was when the drag began. The oldest
+    /// snapshot goes once there are ``undoLimit``.
     ///
     /// Everything the player builds, removes or sets goes through it;
     /// pausing, the speed, the selection, the camera and the map layers do
@@ -1184,12 +1196,33 @@ public final class GameSession {
         var edited = world
         let result = try command(&edited)
         guard edited != world else { return result }
-        if undoHistory.count >= Self.undoLimit {
-            undoHistory.removeFirst(undoHistory.count - Self.undoLimit + 1)
+        if !editGestureHasSnapshot {
+            if undoHistory.count >= Self.undoLimit {
+                undoHistory.removeFirst(undoHistory.count - Self.undoLimit + 1)
+            }
+            undoHistory.append(world)
+            editGestureHasSnapshot = isEditGestureOpen
         }
-        undoHistory.append(world)
         world = edited
         return result
+    }
+
+    /// A drag of a control that edits as it moves (a slider's
+    /// `onEditingChanged(true)`) begins: its edits until
+    /// ``endEditGesture()`` are one edit to ``undo()``, which goes back to
+    /// the world as it was when the drag began. A tick of game time during
+    /// the drag empties the history as ever, and the drag's next change
+    /// keeps a new snapshot.
+    public func beginEditGesture() {
+        isEditGestureOpen = true
+        editGestureHasSnapshot = false
+    }
+
+    /// The drag ends (`onEditingChanged(false)`): each edit after it is
+    /// one edit to undo again.
+    public func endEditGesture() {
+        isEditGestureOpen = false
+        editGestureHasSnapshot = false
     }
 
     /// How many edits ``undo()`` could take back, one at a time, up to
@@ -1228,6 +1261,8 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: language.text("Nothing to undo.", "沒有可復原的編輯。"))
             return
         }
+        // A drag still under way keeps a new snapshot at its next change.
+        editGestureHasSnapshot = false
         restored.setSpeed(world.clock.runningSpeed)
         if world.clock.isPaused { restored.pause() }
         world = restored
