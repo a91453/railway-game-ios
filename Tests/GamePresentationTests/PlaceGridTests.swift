@@ -101,8 +101,10 @@ final class PlaceGridTests: XCTestCase {
             .appendingPathComponent("RailwayGameApp/Resources/RealWorld")
         let population = try PopulationGrid(data: Data(contentsOf: root.appendingPathComponent("taiwan_population.json")))
         let places = try PlaceGrid(data: Data(contentsOf: root.appendingPathComponent("taiwan_places.json")))
-        // OpenStreetMap's places of 2026-10-05, counted once each.
-        XCTAssertEqual(PlaceGrid.Kind.allCases.map { places.total(of: $0) }, [102_090, 8_614, 4_588, 6_511])
+        // OpenStreetMap's places of Taiwan's 2026-10-06 extract, counted
+        // once each (decision 93; 102,090, 8,614, 4,588 and 6,511 from
+        // Overpass on 2026-10-05, Xiamen's by Kinmen with them).
+        XCTAssertEqual(PlaceGrid.Kind.allCases.map { places.total(of: $0) }, [101_189, 8_485, 4_393, 6_300])
         let totals = Dictionary(uniqueKeysWithValues: PlaceGrid.Kind.allCases.map { ($0, places.total(of: $0)) })
         let stations: [(String, Double, Double, StationDemandKind)] = [
             ("Taipei Main", 25.047_931, 121.517_005, .office),

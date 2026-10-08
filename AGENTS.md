@@ -24,6 +24,9 @@ not only Claude Code. Read it first and follow it. In particular:
   something to port, then look for open-source projects on GitHub, minding
   their licenses (`CLAUDE.md`, after the reference check). When neither has
   anything usable, write it yourself.
+- OpenStreetMap data of Taiwan comes from a whole `.pbf` extract
+  (osmtoday.com's `asia/taiwan.pbf`, read with pyosmium), not from Overpass
+  (`CLAUDE.md`, after the reference check).
 
 Its Claude-specific parts translate as follows:
 

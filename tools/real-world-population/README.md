@@ -28,10 +28,20 @@
 
 同一個地方建站時，類型（住宅、辦公、商業、景點）照半徑 800 公尺內的地點決定：
 
-- 地點來自 OpenStreetMap（ODbL 1.0），由 `build_place_grid.py` 經 Overpass API 逐區下載、數到人口格網的同一批格子，打包成 `RailwayGameApp/Resources/RealWorld/taiwan_places.json`（256 KB）。2026-10-05 的資料：商店 102,090（含餐廳、咖啡、小吃、市場、酒吧）、辦公 8,614、學校 4,588（含大學、專科）、景點 6,511（景點、博物館、觀景台、動物園、水族館、藝廊、主題樂園）。路和建物以中心點計，同一筆只算一次。
+- 地點來自 OpenStreetMap（ODbL 1.0），由 `build_place_grid.py` 數到人口格網的同一批格子，打包成 `RailwayGameApp/Resources/RealWorld/taiwan_places.json`。來源可以是 Overpass API（逐區下載），或一整包台灣的 OSM 檔（決策 93 起打包的資料用這個，和分區同一份）。osmtoday.com 2026-10-06 的台灣檔：商店 101,189（含餐廳、咖啡、小吃、市場、酒吧）、辦公 8,485、學校 4,393（含大學、專科）、景點 6,300（景點、博物館、觀景台、動物園、水族館、藝廊、主題樂園）。路和建物以外框的中心點計，同一筆只算一次。之前 2026-10-05 從 Overpass 抓的是 102,090、8,614、4,588、6,511：金門那一格的範圍蓋到廈門，把廈門的地點也算進來了，整包檔只有台灣。
 - 判斷：辦公（辦公加學校）、商業、景點三類，各自把附近的數量跟「這麼多居民照全台平均該有多少」比較，但期望值至少 30 間商店、5 間辦公加 3 所學校、1 個景點，免得小村子的幾間店被當成商圈。超過期望最多的一類，達到 1.5 倍就是那一類，否則是住宅區；平手時依辦公、商業、景點的順序。
-- 門檻用台灣 544 個真實車站調整過：335 站住宅、130 站商業、57 站景點、22 站辦公。台北車站、西門、公館是商業，市政府是辦公，永安市場、頂溪、板橋是住宅，猴硐、菁桐、十分、平溪、動物園、阿里山、鶯歌是景點。
+- 門檻用台灣 544 個真實車站調整過：335 站住宅、130 站商業、57 站景點、22 站辦公（學校分開之後是 328、107、57、50 與 2 所學校；決策 93 的整包檔是 326、107、58、51、2：機捷台北車站從商業變辦公、中里從住宅變景點、老街溪從住宅變商業）。台北車站、西門、公館是商業，市政府是辦公，永安市場、頂溪、板橋是住宅，猴硐、菁桐、十分、平溪、動物園、阿里山、鶯歌是景點。
 - 限制：OSM 標得少的地方會判成住宅，例如南港軟體園區（辦公標得少）、新北投（溫泉旅館不算景點）。人數仍照居民計算，類型只改變一天中出發與到達的時段。
+
+## 工業區、公園與農地（分區，決策 93）
+
+實景地圖的土地除了人和地點，還有 OSM 畫成**面積**的三種土地：工業區（`landuse=industrial`、礦場）、公園（`leisure=park`、高爾夫球場、運動公園）與農地（`landuse=farmland`、果園、魚塭、農舍、溫室、苗圃；決策 96，標籤在 `build_zone_grid.py` 的 `TAGS`）。森林、墓地、軍事區與水域不是用途（決策 96 說明原因）。`build_zone_grid.py` 經 Overpass 逐區、逐種下載它們的多邊形，加進 `taiwan_places.json` 的 `zones`：
+
+- 每個人口格（30″）切成 4 × 4 個分區格（7.5″，約 230 × 210 公尺），每個分區格取 4 × 4 = 16 個點，記下有幾點落在那種土地裡（奇偶規則，relation 的內環是洞；同一種土地重疊的地方只算一次）。
+- 作法照參考 MapBuilder 的 `fetchAndHandleParks`（Overpass 抓公園、算面積），見 `docs/RAILWAY_REFERENCE_MAPPING.md` 的「實景的工業區、公園與農地（決策 93）」。
+- 遊戲裡，一個 64 公尺格的中點所在的分區格至少一半是同一種土地，那格就是那種用途：公園沒有人，工廠與農地有固定的就業，人口只住在沒有分區的格（`LandImport`）。
+
+2026-10-08 的資料（osmtoday.com 的台灣整包檔，2026-10-06，決策 96 的標籤）：工業區 454.6 km²（8,826 塊）、公園 182.3 km²（8,886 塊）、農地 2,677.6 km²（61,650 塊）；`taiwan_places.json`（地點與分區同一份整包檔）1.17 MB。工廠每格 29 個就業、農地每格 1 個，依製造業約 300 萬人、農業約 53 萬人與分出來的格數（102,817、677,182）定的（決策 93、96）。
 
 ## 重新產生
 
@@ -52,4 +62,26 @@ python3 tools/real-world-population/build_place_grid.py \
   RailwayGameApp/Resources/RealWorld/taiwan_places.json
 ```
 
-人口的腳本只接受 sha256 相符的 GeoTIFF（`eae984f0…`，2026-10-05 下載）。地點會隨 OSM 更新而變，重新產生後要一起更新 `PlaceGridTests` 的總數，並重新檢查真實車站的判斷結果。換成新年份或其他來源時，要一起更新腳本裡的 sha256、`PopulationGridTests` 的總人數與資料來源畫面的文字。
+用整包檔時把 `osm-tiles/` 換成 `taiwan.pbf`（需要 pyosmium，約 1 分鐘）。這會重寫整個地點檔，所以之後要再跑一次下面的分區。
+
+分區（接在地點之後；第一個參數是地點檔，其他內容原樣保留）。最快的是一整包台灣的 OSM 檔，約 20 秒，需要 pyosmium（`pip install osmium`，BSD 2-Clause；只有這個用法需要）：
+
+```sh
+curl -LO https://osmtoday.com/asia/taiwan.pbf
+python3 tools/real-world-population/build_zone_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  taiwan.pbf \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json
+```
+
+沒有整包檔時也可以問 Overpass（只用 Python 內建模組；伺服器忙的時候可以用逗號列出幾個，輪流使用，一塊一直失敗會切成四小塊再問，可能要幾個小時）：
+
+```sh
+OVERPASS_URL=https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass.private.coffee/api/interpreter \
+python3 tools/real-world-population/build_zone_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  osm-zone-tiles/ \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json
+```
+
+人口的腳本只接受 sha256 相符的 GeoTIFF（`eae984f0…`，2026-10-05 下載）。地點會隨 OSM 更新而變，重新產生後要一起更新 `PlaceGridTests` 的總數（分區是 `LandZoneTests` 的面積），並重新檢查真實車站的判斷結果。換成新年份或其他來源時，要一起更新腳本裡的 sha256、`PopulationGridTests` 的總人數與資料來源畫面的文字。

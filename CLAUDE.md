@@ -83,6 +83,16 @@ taken from it, and "nothing usable" when nothing was (and the code is this
 project's own). Adding a dependency is still avoided unless the user agrees
 (Workflow).
 
+OpenStreetMap data of Taiwan (places, land use, anything tagged) is read from
+a whole extract, not asked of Overpass: osmtoday.com's `asia/taiwan.pbf`
+(some 350 MB; this environment can download it, Geofabrik's is blocked),
+read with pyosmium (`pip install osmium`, BSD 2-Clause; the owner agreed to
+it for the data tools, ARCHITECTURE decision 93). The extract takes a minute;
+the public Overpass servers are often too busy (hours of 504s), and asking by
+0.25° tiles reaches across the border (Kinmen's tile counted Xiamen's places).
+`tools/real-world-population/README.md` has the commands; a new tool that
+needs OSM data reads the same extract.
+
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
 - `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project
