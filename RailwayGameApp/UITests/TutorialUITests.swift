@@ -31,7 +31,7 @@ final class TutorialUITests: XCTestCase {
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
-        app.buttons["tool.network"].tap()
+        selectTool(app, "tool.network")
         waitForEnabled(app, true)
         next.tap()
         waitForEnabled(app, false)
@@ -134,7 +134,10 @@ final class TutorialUITests: XCTestCase {
 
         // The outlined button must receive the touch underneath the overlay.
         checkToolIsUncovered(app, identifier: "tool.network")
-        app.buttons["tool.network"].tap()
+        // Through selectTool, as the later taps: a single synthesized touch
+        // can be lost (run 37797595561 left Next disabled after one tap on
+        // an uncovered network tool, in Traditional Chinese on the iPad).
+        selectTool(app, "tool.network")
         waitForEnabled(app, true)
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
         checkToolIsUncovered(app, identifier: "tool.select")
