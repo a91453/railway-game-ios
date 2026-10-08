@@ -409,8 +409,9 @@ extension GameWorld {
     }
 
     /// Builds the new home of a growing `station` (see ``growLand(reached:)``),
-    /// if its catchment has an empty cell beside one with people.
-    private mutating func spread(towards station: Station) {
+    /// if its catchment has an empty cell beside one with people that none
+    /// of the company's buildings claims (decision 95).
+    mutating func spread(towards station: Station) {
         let radius = Land.catchmentRadius, length = Land.cellLength
         let point = station.location
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
@@ -423,7 +424,9 @@ extension GameWorld {
                 let dx = Int64(column) * length + length / 2 - point.x
                 let dy = Int64(row) * length + length / 2 - point.y
                 let squared = dx * dx + dy * dy
-                guard squared < radius * radius, land.cell(row: row, column: column) == nil else { continue }
+                guard squared < radius * radius, land.cell(row: row, column: column) == nil,
+                      !isClaimedByPlacedBuilding(row: row, column: column)
+                else { continue }
                 if let best, (best.squared, best.row, best.column) <= (squared, row, column) { continue }
                 let beside = [(row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)]
                 // A park beside it has no people (decision 91).

@@ -244,6 +244,17 @@ public struct CityBuildings: Sendable {
         all[index] = Building(id: building.id, kind: building.kind, use: building.use, density: density, cells: building.cells)
     }
 
+    /// Removes the buildings standing on any of `cells` (decision 95);
+    /// the others keep their numbers.
+    mutating func remove(on cells: Set<CellPosition>) {
+        let kept = all.filter { building in !building.cells.contains(where: cells.contains) }
+        guard kept.count != all.count else { return }
+        self = CityBuildings()
+        for building in kept {
+            append(building)
+        }
+    }
+
     /// Adds `building`, numbered after every other and on free cells.
     mutating func append(_ building: Building) {
         for cell in building.cells {
@@ -326,12 +337,24 @@ extension GameWorld {
     // MARK: - Land
 
     /// Puts `land` in place with its buildings, when the city's buildings
-    /// are on.
+    /// are on; none on the cells the company's buildings claim (decision
+    /// 95).
     mutating func replaceLand(with land: Land) {
+        var land = land
+        if !placedBuildings.isEmpty {
+            land.cells.removeAll { isClaimedByPlacedBuilding(row: $0.row, column: $0.column) }
+        }
         if cityBuildings {
             buildings = CityBuildings.fitting(land)
         }
         self.land = land
+    }
+
+    /// Removes the cells of land at `cells`, and the city's buildings on
+    /// them (decision 95: the company bought them out).
+    mutating func removeLand(at cells: Set<CellPosition>) {
+        land.cells.removeAll { cells.contains($0.position) }
+        buildings.remove(on: cells)
     }
 
     /// Adds `cell`, which is not listed yet, with the building that holds

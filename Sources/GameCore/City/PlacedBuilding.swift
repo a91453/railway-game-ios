@@ -6,7 +6,8 @@
 // its kind's size. Since P0-C1 (decision 94) it is the company's: a managed
 // company pays for it and keeps it on its books, it fills with residents and
 // jobs who ride from the stations near it, and it earns rent (see
-// CompanyBuildings.swift).
+// CompanyBuildings.swift). Since P0-C2 (decision 95) it buys out the city's
+// buildings in its way, and track and stations built later clear it.
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.
@@ -135,7 +136,10 @@ extension GameWorld {
     /// numbered next, in no one's way, empty. Since decision 94 a managed
     /// company pays ``placedBuildingQuote(_:at:)`` for it, the building and
     /// the right to use the land, and keeps it on its books; free play pays
-    /// nothing.
+    /// nothing. Since decision 95 it buys out the city's buildings it
+    /// claims (``cityCells(claimedBy:)``), which are pulled down with their
+    /// cells of land: their residents and jobs move in, up to what it
+    /// holds, and the rest leave. Track in a tunnel is not in its way.
     ///
     /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
@@ -165,10 +169,17 @@ extension GameWorld {
         try economy.spend(quote.total)
         var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre)
         building.buildingCost = quote.building
-        building.landCost = quote.land
+        building.landCost = quote.land + quote.buyOut
+        let cleared = cityCells(claimedBy: candidate)
+        building.residents = min(kind.capacity.residents, cleared.reduce(0) { $0 + $1.residents })
+        building.jobs = min(kind.capacity.jobs, cleared.reduce(0) { $0 + $1.jobs })
         nextPlacedBuildingID = next
         placedBuildings.append(building)
         acquireAsset(.building, owner: id, cost: quote.total)
+        if !cleared.isEmpty {
+            removeLand(at: Set(cleared.map(\.position)))
+            refreshLandDemand()
+        }
         return building
     }
 
@@ -191,17 +202,26 @@ extension GameWorld {
     /// The lowest numbered edge whose centre line comes closer than the
     /// clearance to `building`'s square (its points `minX ... maxX` by
     /// `minY ... maxY`), or `nil`: one passing a whole clearance away is
-    /// clear.
+    /// clear, and so (decision 95) is one in a tunnel, which passes under.
     private func edgeInTheWay(of building: PlacedBuilding) -> TrackEdgeID? {
-        let c = PlacedBuildingRules.clearance
-        let box = (minX: building.minX - c + 1, minY: building.minY - c + 1, maxX: building.maxX + c - 1, maxY: building.maxY + c - 1)
-        for edge in network.edges.sorted(by: { $0.id < $1.id }) {
+        for edge in network.edges.sorted(by: { $0.id < $1.id }) where edge.structure != .tunnel {
             guard let points = network.geometry(of: edge.id)?.points.map(\.plan) else { continue }
-            for (a, b) in zip(points, points.dropFirst()) where Self.segment(a, b, crosses: box) {
+            if Self.line(points, comesNear: building) {
                 return edge.id
             }
         }
         return nil
+    }
+
+    /// Whether the line through `points` comes closer than the clearance
+    /// to `building`'s square.
+    static func line(_ points: [PlanPoint], comesNear building: PlacedBuilding) -> Bool {
+        let c = PlacedBuildingRules.clearance
+        let box = (minX: building.minX - c + 1, minY: building.minY - c + 1, maxX: building.maxX + c - 1, maxY: building.maxY + c - 1)
+        if points.count == 1, let point = points.first {
+            return isNear(point, building)
+        }
+        return zip(points, points.dropFirst()).contains { Self.segment($0, $1, crosses: box) }
     }
 
     /// Whether the segment from `a` to `b` has a point strictly inside
