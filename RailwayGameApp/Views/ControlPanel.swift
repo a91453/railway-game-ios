@@ -7,8 +7,11 @@ import SwiftUI
 /// which the screen can fold away (``ContentView``).
 struct ControlPanel: View {
     enum Arrangement {
-        /// The tool picker alone.
+        /// The tool picker alone, in a row.
         case tools
+        /// The tool picker alone, as a list with what each tool does and
+        /// costs: an iPad's open control card, which has the room.
+        case detailedTools
         /// The selection inspector, the tool's options and the action
         /// button, in one column.
         case details
@@ -19,9 +22,9 @@ struct ControlPanel: View {
 
     var body: some View {
         switch arrangement {
-        case .tools:
-            HStack(spacing: 8) {
-                ToolPicker(session: session)
+        case .tools, .detailedTools:
+            HStack(alignment: arrangement == .detailedTools ? .top : .center, spacing: 8) {
+                ToolPicker(session: session, showsDetails: arrangement == .detailedTools)
                 // Hidden during the tutorial, as the details toggle is, so
                 // its steps' spotlights stay where they were; the session
                 // refuses Undo then too (``GameSession/canUndo``).
@@ -41,19 +44,28 @@ struct ControlPanel: View {
 }
 
 /// One button per tool the app offers (Stage F1: the track network only),
-/// in a row. The active tool is filled and its name bold, so the state does
-/// not depend on colour alone.
+/// in a row, or a list with what each tool does and costs where there is
+/// room. The active tool is filled and its name bold, so the state does not
+/// depend on colour alone.
 private struct ToolPicker: View {
     let session: GameSession
+    var showsDetails = false
 
     var body: some View {
-        HStack(spacing: 6) {
+        let layout = showsDetails
+            ? AnyLayout(VStackLayout(spacing: 6))
+            : AnyLayout(HStackLayout(spacing: 6))
+        layout {
             ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
                 Button {
                     session.selectTool(tool)
                 } label: {
-                    label(for: tool, isActive: isActive)
+                    if showsDetails {
+                        detailedLabel(for: tool, isActive: isActive)
+                    } else {
+                        label(for: tool, isActive: isActive)
+                    }
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
@@ -80,6 +92,34 @@ private struct ToolPicker: View {
                 .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, minHeight: 38)
+    }
+
+    private func detailedLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: tool.systemImage)
+                .font(.body.weight(.semibold))
+                .frame(width: 34, height: 34)
+                .background(isActive ? Theme.onPrimary.opacity(0.2) : Theme.chip, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tool.title(in: session.language))
+                    .font(.subheadline.weight(isActive ? .bold : .semibold))
+                Text(detail(for: tool))
+                    .font(.caption)
+                    .foregroundStyle(isActive ? Theme.onPrimary : Theme.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+    }
+
+    private func detail(for tool: ConstructionTool) -> String {
+        let costs = session.world.economy.costs
+        switch tool {
+        case .select: return String(localized: "Inspect stations and track")
+        case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
+        case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
+        }
     }
 }
 

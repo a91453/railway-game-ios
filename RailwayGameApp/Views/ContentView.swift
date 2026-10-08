@@ -324,13 +324,18 @@ private struct ControlCard: View {
     /// The player's choice: open or folded, `nil` to follow what there is
     /// to show.
     @State private var choice: Bool?
+    /// Regular height: an iPad, not a phone on its side.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         let isOpen = ControlDetails.isOpen(session, choice: choice)
+        // An iPad's open card lists what each tool does and costs; folded,
+        // or on a phone's short side, the tools stay a row.
+        let showsToolDetails = isOpen && verticalSizeClass == .regular
         VStack(alignment: .leading, spacing: 12) {
             HUDView(session: session, launcher: launcher)
-            HStack(spacing: 8) {
-                ControlPanel(session: session, arrangement: .tools)
+            HStack(alignment: showsToolDetails ? .top : .center, spacing: 8) {
+                ControlPanel(session: session, arrangement: showsToolDetails ? .detailedTools : .tools)
                 if session.tutorial == nil {
                     ControlDetailsToggle(isOpen: isOpen, opensDownward: true) {
                         choice = !isOpen
