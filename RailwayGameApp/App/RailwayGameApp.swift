@@ -28,8 +28,13 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), let domain = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: domain)
         }
+        // And silently: the music and sounds only take the runner's CPU
+        // (``GameAudio/init(defaults:plays:)``); no test listens to them.
+        let plays = !DebugLaunch.isSet("-ui-testing")
+        #else
+        let plays = true
         #endif
-        let audio = GameAudio()
+        let audio = GameAudio(plays: plays)
         let launcher = RailwayGameApp.makeLauncher()
         launcher.playSound = { audio.play($0) }
         _audio = State(initialValue: audio)
