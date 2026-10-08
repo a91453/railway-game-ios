@@ -56,6 +56,13 @@ public final class GameLauncher {
     /// (``RealWorldData/issues``); empty until they have been read.
     public private(set) var realWorldIssues: [RealDataLoadIssue] = []
 
+    /// The app's sound player, handed to every game it starts
+    /// (``GameSession/playSound``); `nil` plays nothing. Going into or out
+    /// of a game whooshes (``SoundCue/transition``).
+    @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)? {
+        didSet { session?.playSound = playSound }
+    }
+
     @ObservationIgnored let library: SaveLibrary
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
@@ -177,8 +184,10 @@ public final class GameLauncher {
         started.population = population
         started.places = places
         started.railways = railways
+        started.playSound = playSound
         session = started
         message = nil
+        playSound?(.transition)
         if isActive {
             started.startGameLoop()
         }
@@ -255,10 +264,14 @@ public final class GameLauncher {
     /// being thrown away unsaved.
     public func returnToStart() {
         guard session == nil || autosaveCurrentGame() else { return }
+        let left = session != nil
         session?.stopGameLoop()
         session = nil
         message = nil
         refresh()
+        if left {
+            playSound?(.transition)
+        }
     }
 
     public func delete(_ entry: SaveLibrary.Entry) {

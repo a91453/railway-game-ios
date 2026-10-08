@@ -169,6 +169,7 @@ extension GameSession {
         if done {
             networkStart = nil
             networkEnd = nil
+            playSound?(.track)
         }
     }
 }

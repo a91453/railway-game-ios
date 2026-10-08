@@ -13,6 +13,7 @@ struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
     @Environment(GameScreenState.self) private var screen
+    @Environment(GameAudio.self) private var audio
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time
@@ -68,8 +69,9 @@ struct HUDView: View {
         .tutorialTarget(.linesButton)
     }
 
-    /// Saving, exporting the game as a file and going back to the start
-    /// screen, which autosaves first.
+    /// Saving, exporting the game as a file, the tutorial, turning the
+    /// music and sounds on or off, and going back to the start screen,
+    /// which autosaves first.
     private var gameMenu: some View {
         Menu {
             Button {
@@ -88,6 +90,15 @@ struct HUDView: View {
                 Label("Tutorial", systemImage: "hand.point.up.left")
             }
             .accessibilityIdentifier("menu.tutorial")
+            Divider()
+            Toggle(isOn: Binding(get: { audio.musicOn }, set: { audio.setMusicOn($0) })) {
+                Label("Music", systemImage: "music.note")
+            }
+            .accessibilityIdentifier("menu.music")
+            Toggle(isOn: Binding(get: { audio.soundsOn }, set: { audio.setSoundsOn($0) })) {
+                Label("Sound Effects", systemImage: "speaker.wave.2")
+            }
+            .accessibilityIdentifier("menu.sounds")
             Divider()
             Button {
                 launcher.returnToStart()

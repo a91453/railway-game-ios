@@ -138,6 +138,7 @@ extension GameSession {
         if let built {
             networkStart = .node(built.to)
             networkEnd = nil
+            playSound?(.track)
         }
     }
 

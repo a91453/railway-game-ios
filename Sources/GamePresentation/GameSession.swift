@@ -176,6 +176,24 @@ public final class GameSession {
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?
 
+    /// Plays the sounds the session's changes call for (``SoundCue``): a
+    /// train in service arriving at a station, track built, another tool.
+    /// The app's player, set by the launcher; `nil` plays nothing. Never
+    /// saved.
+    @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
+
+    /// The trains the player is looking at, whose arrivals ring at full
+    /// volume (``SoundCue/arrival(watched:)``): the one the camera follows,
+    /// the one last tapped on the map, and the selected one while the
+    /// train tool is open.
+    public var watchedTrainIDs: Set<TrainID> {
+        var watched = Set([followedTrainID, tappedTrainID].compactMap { $0 })
+        if tool == .train, let selectedTrainID {
+            watched.insert(selectedTrainID)
+        }
+        return watched
+    }
+
     /// Real time per simulation tick. At 600× (``GameSpeed/normal``) a tick
     /// is one game minute, so a game day lasts 144 real seconds; at 1× it is
     /// a tenth of a game second (Stage W2a).
@@ -348,6 +366,7 @@ public final class GameSession {
         guard newTool != tool else { return }
         tool = newTool
         message = nil
+        playSound?(.transition)
     }
 
     // MARK: - Speed
@@ -478,9 +497,19 @@ public final class GameSession {
         }
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
+            // Only the arrival times: holding the whole world would copy
+            // what the ticks change.
+            let arrivals = playSound == nil ? nil : SoundCue.arrivals(in: world)
             do throws(GameError) {
                 try world.advance(ticks: ticks)
                 endFollowIfGone()
+                if let arrivals {
+                    let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
+                    if !arrived.isEmpty {
+                        let watched = watchedTrainIDs
+                        playSound?(.arrival(watched: arrived.contains { watched.contains($0) }))
+                    }
+                }
             } catch {
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             }
