@@ -10,20 +10,33 @@ struct RailwayGameApp: App {
     /// that game's world. Views get the session and change the world only
     /// through its methods, which apply `GameWorld` commands; nothing else
     /// keeps a copy of the world.
-    @State private var launcher = RailwayGameApp.makeLauncher()
+    @State private var launcher: GameLauncher
+    /// The music and sounds, for the app's lifetime: the launcher hands
+    /// its player to every game.
+    @State private var audio: GameAudio
     /// The combined phase of all the app's scenes.
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let audio = GameAudio()
+        let launcher = RailwayGameApp.makeLauncher()
+        launcher.playSound = { audio.play($0) }
+        _audio = State(initialValue: audio)
+        _launcher = State(initialValue: launcher)
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView(launcher: launcher)
+                .environment(audio)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // One game loop for the whole app, however many windows are
             // open. It runs only while the app is active; leaving the
             // foreground autosaves, and time spent in the background is not
-            // replayed when the app returns.
+            // replayed when the app returns. The music plays only then too.
             launcher.setActive(phase == .active)
+            audio.setActive(phase == .active)
         }
     }
 
