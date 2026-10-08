@@ -38,7 +38,7 @@
    - 營運路線面板（[`LinesPanel.swift`](../../RailwayGameApp/Views/LinesPanel.swift)）：全日運行時段帶（尖峰/離峰/低峰）、路線清單、起訖停站順序調整、配車數與目標班距、短途/快車 Pattern、V4b 實體路徑選單。
    - 經濟財務面板（[`EconomyPanel.swift`](../../RailwayGameApp/Views/EconomyPanel.swift)）：帳戶餘額、模式切換（自由/經營）、單一票價設定、最近一小時流水、週期財務報表（日/週/月/年）、會計分類帳。
    - 時刻表編輯器（[`TimetableEditor.swift`](../../RailwayGameApp/Views/TimetableEditor.swift)）：個別列車固定時刻表編輯。
-   - 教學引導（[`TutorialOverlay.swift`](../../RailwayGameApp/Views/TutorialOverlay.swift)）：步驟卡片高亮目標引導。
+   - 教學引導（[`TutorialOverlay.swift`](../../RailwayGameApp/Views/TutorialOverlay.swift)）：步驟卡片醒目標示目標引導。
 
 ---
 
@@ -142,7 +142,7 @@ flowchart LR
 | 路線顏色自訂與圓形標章 | 路線編輯面板中的顏色選擇器 | **DEFER_DATA_MODEL**（若需持久化） | 先決定並建立 saved line-color contract；純 session preview 不作為正式實作 |
 | 車站更名 | StationPanel 編輯名稱 | **DEFER_DATA_MODEL** | main 無 `GameWorld.renameStation`；需 authoritative rename API / save compatibility |
 | 3D 建築擠出與 GIS 屬性查詢 | 地圖建築圖層與區塊點選 | **DEFER_DATA_PIPELINE** | 需向量圖磚資料管線，現階段不排入 |
-| 移動授權 (Movement Authority) | 軌道鎖定綠色/黃色高亮 | **DEFER_TO_V** | 依賴 Stage V4e |
+| 移動授權 (Movement Authority) | 軌道鎖定綠色/黃色醒目標示 | **DEFER_TO_V** | 依賴 Stage V4e |
 | 死結標示 (Deadlock Markers) | 地圖紅色驚嘆號閃爍標記 | **DEFER_TO_V** | 依賴 Stage V4e |
 
 ---
@@ -267,7 +267,7 @@ flowchart LR
 ### UI 互動呈現定義：
 1. **地圖層級（Global Overlay）**：
    - 透過 `MapLayerSheet` 可獨立勾選：
-     - `[v] 800m 車站服務圈`（同心圓半透明高亮，重疊處顏色加深）
+     - `[v] 800m 車站服務圈`（同心圓半透明醒目標示，重疊處顏色加深）
      - `[v] 人口分佈網格`（以 1km 方格呈現密度梯度）
 2. **微觀檢查器層級（Inspector Level）**：
    - 當玩家點選車站時，`StationPanel` 顯示：

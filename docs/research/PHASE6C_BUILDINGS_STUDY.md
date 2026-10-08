@@ -535,7 +535,7 @@ avatar gap：`jie-lod1.glb`（宣告186800）、`wen-lod1.glb`（202992）、`of
 | 47 far.mesh.bin＋model/placement | 自訂SCNGeometry，PBR材質；bin不具內建loader | MeshDescriptor／submesh adapter，或離線USDZ | 可沿用24bytes緩衝與draw ranges；自訂shader/material | 驗hash／bounds／drawGroups→米尺度／Z-up轉目標軸→按placement一次定位→material mapping→批次／實例／LOD。保留源JSON與轉換manifest，普通容量不用這些浮點數。 |
 | 3現存site／proxy、build JS | 幾何／材質重建或離線烘焙 | 同左，再轉USD／USDZ | 重建mesh／atlas，Three shader要改寫 | JS不是Swift可直接載入的模型；先以完整依賴產生網格與atlas，再輸出iOS格式。來源缺模組時可從現存proxy做低細節外觀，不稱為原近景。 |
 | 8角色GLB＋KTX2 | 無內建完整GLB／meshopt／basisu支援，需離線／loader | 一般走USD／USDZ，不直接吃這些required extensions | 自訂glTF／meshopt解碼、頂點解量化、native轉碼／骨架 | 解EXT_meshopt→展開quantization→貼圖Basis/UASTC解碼／ASTC或目標USD貼圖→骨架rest pose→ANM1 retarget/bake→USD/USDA/USDC/USDZ或renderer自訂資料。 |
-| PNG／WebP／SVG | PNG可直接圖片使用；其他先轉換／decoder | 同左，與幾何loader分開 | 解碼後upload；ASTC壓縮texture用匹配格式 | 材質sRGB/linear、alpha premultiplication、normal方向、mips分開核對。 |
+| PNG／WebP／SVG | PNG可直接圖片使用；其他先轉換／decoder | 同左，與幾何loader分開 | 解碼後upload；ASTC壓縮texture用相符格式 | 材質sRGB/linear、alpha premultiplication、normal方向、mips分開核對。 |
 
 RealityKit／SceneKit的選擇不在這份研究鎖定；先用同一份代表素材比較，依Phase8量測決定。軸向建議Z-up ENU的 `(east,north,up)` 轉iOS常用Y-up `(east,up,-north)`，右手座標與normal一起轉，local-facade先依一次placement旋轉；與本遊戲平面y向南的世界位置adapter也要明確。模型公尺與GameCore世界單位僅在快照邊界乘／除64，**Float32網格不為了模擬而量化成整數**。
 

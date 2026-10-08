@@ -121,7 +121,7 @@ Sources/GameCore/Railway/LineJourney.swift：新 derived intermediateTurnbacks:[
 Sources/GameCore/Railway/LineRoutePreference.swift：matchedRoutes 隨中途翻向追 placement。
 Sources/GameCore/Railway/Deadlock.swift：passingContinuation 嘗試正向再反向離開 dead-end berth；goingOn 用對應起點／trail；passingPlace 回傳 reverses，先舊正向讓路，再控制ON＋全車在站才反向候選。
 Sources/GameCore/World/GameWorld.swift：resolveDeadlock 依 reverses 在候選 placement 翻向、follow/reserve；只有授權成功才改世界。
-Tests/GameCoreTests/ReferenceNetworkService.swift、ReferenceLines.swift、ReferenceLineRoutes.swift：獨立中途反向尋路、時刻與匹配。
+Tests/GameCoreTests/ReferenceNetworkService.swift、ReferenceLines.swift、ReferenceLineRoutes.swift：獨立中途反向尋路、時刻與比對。
 Tests/GameCoreTests/ReferenceDeadlock.swift：獨立 passingExit／反向候選，不呼叫 production helpers。
 Tests/GameCoreTests/TurnbackTests.swift：新兩個測試，含逐秒模型、等待、方向／預約、存讀與控制OFF／過長車拒絕。
 沒有改 fixtures、schema 或 save version，仍 schema33/save10。新 derived 欄位尚未加入 golden JourneySummary；若要可觀察摘要需評估34並保留33相容。
@@ -141,7 +141,7 @@ e6曲線長4732（不是研究草稿先前猜4414），points(21504,6144),(23552
 後續補安全等待／短月台／blocked/fouling／完整預約失敗不翻車／rate0／control toggle／存讀／逐秒=batch、獨立模型、新campaign、RealWorldDemo及舊回歸。ReferenceDeadlock loop indentation也待整理。decision63、ROADMAP、mapping、新golden/campaign尚未寫。不要隱藏先前build failure。
 
 四來源固定25229af，研究已做，正式mapping未做
-Railway/site_archive_clean/rail-3d/physical/turnbacks.js：AFR_TURNBACKS、isScheduledTurnback 用 a.to===b.from && a.nodeIds.at(-2)===b.nodeIds[1]（另有系統／站名白名單）；Swift要按拓撲適配，不拿站名或OSM ID當規則。
+Railway/site_archive_clean/rail-3d/physical/turnbacks.js：AFR_TURNBACKS、isScheduledTurnback 用 a.to===b.from && a.nodeIds.at(-2)===b.nodeIds[1]（另有系統／站名白名單）；Swift要按拓撲調整，不拿站名或OSM ID當規則。
 同目錄timing.js turnbackProgress：w=min(.15,20/max(1,next.arrSec-st.depSec))；departure w*(2u²-u³)、arrival1-w+w*(u+u²-u³)。源註明不虛構未公開dwell，既有window內減速；不可杜撰反轉20秒。
 Railway/railway_game_reference_clean/00_READ_ME_FIRST.md、migration§7及symbols：有 rail_depot_reverse_penalty 名稱，無數值／可讀planner；reverse priority明列adapted/gap，不稱忠實常數。
 Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js：查turnback/reverse，沒有可讀反向側線planner；1.5min headway不等於反轉dwell。
@@ -196,7 +196,7 @@ Stage V 接手更新（2026-10-05；本節取代下方歷史狀態）
 
 VERIFIED Linux Swift 6.4：warnings-as-errors build，/workspace/scratch/v4b-build-final.log；相關回歸初跑156項只有上述新出發觀察點的3個 assertion 失敗（同一 test），/workspace/scratch/v4b-focused.log；修正後 LineRoutePreferenceTests 全10項＋golden match／portableJSON 2項通過，/workspace/scratch/v4b-corrected-and-golden.log。最後完整相關 filter 158 項、1 項既有錄製 skip、0 failure（106.712 秒），/workspace/scratch/v4b-focused-final.log。Golden mutation mechanism 未本機全跑。
 VERIFIED campaigns-19：最後無偏好 memo 調整之後重跑，680步、digest 6ECB397836FA3785，21.571秒，coverage pass，/workspace/scratch/v4b-campaign19.log。shard自測通過，/workspace/scratch/v4b-shards-selftest.log。
-V4b draft PR #120：https://github.com/a91453/railway-game-ios/pull/120 。首 head e6629ed 的 Apple build／localization／unsigned archive 因跨模組 internal DisplayLanguage.text 失敗；50da302 改 App 內依 public enum 選同一文字。50da302 的 Swift全套779項／coverage、localization、unsigned archive、Wasm Probe VERIFIED success；iOS runtime失敗：新test放ToolbarSmokeTests而被整類gate選到，且找不到以label predicate匹配的月台選項。已新增選項accessibility ID，改精確ID、真實frame中心觸控、等待選取／清除文字更新，移到同檔的獨立LineRoutePreferenceUITests（只full lane）。workflow與gate list未改；新test修正後full lane runtime仍UNVERIFIED，不能把gate綠燈說成它已通過。
+V4b draft PR #120：https://github.com/a91453/railway-game-ios/pull/120 。首 head e6629ed 的 Apple build／localization／unsigned archive 因跨模組 internal DisplayLanguage.text 失敗；50da302 改 App 內依 public enum 選同一文字。50da302 的 Swift全套779項／coverage、localization、unsigned archive、Wasm Probe VERIFIED success；iOS runtime失敗：新test放ToolbarSmokeTests而被整類gate選到，且找不到以label predicate比對的月台選項。已新增選項accessibility ID，改精確ID、真實frame中心觸控、等待選取／清除文字更新，移到同檔的獨立LineRoutePreferenceUITests（只full lane）。workflow與gate list未改；新test修正後full lane runtime仍UNVERIFIED，不能把gate綠燈說成它已通過。
 
 50da302 CI時間：campaigns-1 976秒（Economy657.4、Continuous145.4、Kernel114.5、Passenger58.2）、campaigns-5 624秒、campaigns-8 586秒；沒有timeout，但超過約560秒目標。完整保留原測試與操作，重新分配：較小1類別移10；NetworkService／Timetable移19（本機五項448秒、coverage pass，/workspace/scratch/v4b-campaign19-rebalanced.log）；Economy仍12case×全部原seeds×全部原操作／差分／批次／不變量／存讀，按0–5及6–11分campaigns-1／20，兩半量下限相加等於原下限，未縮減。新test共780項；shard自測證明分區與失敗保護；build warnings-errors與split shards紀錄在scratch。最新head的CI結果以PR為準，不回報舊head等同新head。
 Economy分片初跑使用尚未拆量門檻的執行檔：6–11所有逐步檢查通過，但原整組cars beyond the balance門檻2，該半實際1，故failure（398.828秒，/workspace/scratch/v4b-campaign20.log）。最終門檻兩半各1、合計仍2；修正版build warnings-errors通過，/workspace/scratch/v4b-build-rebalanced-final.log。0–5與6–11最終重跑結果分別記錄 /workspace/scratch/v4b-campaign1-split.log、/workspace/scratch/v4b-campaign20-final.log；未完成前不得宣稱通過。

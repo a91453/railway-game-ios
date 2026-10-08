@@ -91,7 +91,7 @@
 
 **文件明寫**：SwiftUI `MapPolyline` 可呈現自己的座標資料並套 `StrokeStyle`；`Annotation` 可放 SwiftUI view。UIKit 的 `MKOverlayRenderer` 可自訂繪圖，`draw(_:zoomScale:in:)` 可能分塊、在多個背景執行緒同時呼叫，實作必須可並行安全。`MKMultiPolyline` 明確適合將多條同樣樣式的線集合，交給 `MKMultiPolylineRenderer`。[S03][S15][S16][S24]
 
-**未確認**：Apple 沒有在這些文件承諾 1,000／5,000 條線的幀率、最大頂點數、Annotation 數量或 SwiftUI 與 UIKit 的效能勝負。**本次沒有效能實測**，不能稱「上千條線沒問題」或直接指定必須換 renderer。[S15][S16][S24]
+**未確認**：Apple 沒有在這些文件承諾 1,000／5,000 條線的影格率、最大頂點數、Annotation 數量或 SwiftUI 與 UIKit 的效能勝負。**本次沒有效能實測**，不能稱「上千條線沒問題」或直接指定必須換 renderer。[S15][S16][S24]
 
 **建議（推論）**：
 

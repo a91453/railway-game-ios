@@ -12,7 +12,7 @@
 - **這份快照是可直接移植的實作來源，不只是研究資料。**
   - 專案作者已授權本專案重用其內容；可依需要把檔案或整理後的子集放進 repo、Reference/、App resources、Web resources 或轉換工具。
   - 可直接重用、改寫、包裝或轉譯 JavaScript、CSS、HTML、UI 字串、圖片、字型、圖示、資料檔、演算法、常數、平衡值與完整功能，不要求為了「乾淨重寫」而重新實作。
-  - GameCore 需要 Swift 與 deterministic 行為時才做必要的 Swift／整數／seeded-random 適配；Web、資源與其他層可以直接沿用適合的原始實作。
+  - GameCore 需要 Swift 與 deterministic 行為時才做必要的 Swift／整數／seeded-random 調整；Web、資源與其他層可以直接沿用適合的原始實作。
   - 原始時刻表、車站／路網／服務資料與即時資料都可直接匯入、保存並在功能需要時影響模擬，可直接作為完整實作來源。
   - 若某個具體檔案帶有明確的外部授權或 attribution 義務，就保留並遵守該義務；沒有具體授權衝突時，不得因舊文件的「第三方」概括標籤而拒絕移植。
 - **Stage / Phase 只用來整理工作，不是移植閘門。**
