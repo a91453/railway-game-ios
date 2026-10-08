@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 21)
+        XCTAssertEqual(SavedGame.currentVersion, 22)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 22, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 23, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -1011,46 +1011,35 @@ final class SavedGameTests: XCTestCase {
         XCTAssertTrue(Set(uses).isSubset(of: [.residential, .commercial, .office]))
     }
 
-    /// The world of `v21-placed-buildings.json`: a blank world 320 m a
-    /// side, managed, with a track edge and a station, and three buildings
-    /// the player placed (a house, a shop and an office block) beside them,
-    /// run ten minutes.
-    private static func placedBuildingsWorld() throws -> GameWorld {
-        var world = try GameWorld(
-            bounds: WorldBounds(width: 20_480, height: 20_480), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
-            clock: GameClock(speed: .normal)
-        )
-        world.setEconomyMode(.management)
-        let a = try world.buildTrackNode(at: WorldCoordinate(x: 2_000, y: 10_000, z: 0))
-        let b = try world.buildTrackNode(at: WorldCoordinate(x: 18_000, y: 10_000, z: 0))
-        try world.buildTrackEdge(from: a, to: b)
-        try world.buildStation(named: "Market", at: PlanPoint(x: 10_000, y: 10_000))
-        try world.placeBuilding(.house, at: PlanPoint(x: 8_000, y: 8_000))
-        try world.placeBuilding(.shop, at: PlanPoint(x: 10_000, y: 8_500))
-        try world.placeBuilding(.office, at: PlanPoint(x: 12_500, y: 12_000))
-        try world.advance(ticks: 10)
-        return world
-    }
-
     /// Version 21 (decision 92): the buildings the player placed and the
-    /// next ID. It saves byte for byte and is the world the build that
-    /// wrote it makes. An earlier save has none.
+    /// next ID. The save (a blank world 320 m a side, managed, with a
+    /// 250 m edge, the station Market, and a house, a shop and an office
+    /// block placed beside them free of charge, run ten minutes) was
+    /// written by the version 21 build, whose `placedBuildingsWorld()`
+    /// placed them free. Since decision 94 a managed company pays for its
+    /// buildings, so that world can no longer be made again: the save is
+    /// checked as it reads. Its buildings are empty and cost nothing (on
+    /// the books at nothing), and it saves byte for byte. An earlier save
+    /// has none.
     func testVersionTwentyOneKeepsThePlayersBuildings() throws {
-        let url = Self.fixtures.appendingPathComponent("v21-placed-buildings.json")
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["PLACED_BUILDINGS_SAVE_NEW"] != nil {
-            try encoder.encode(SavedGame(world: try Self.placedBuildingsWorld())).write(to: url)
-        }
-        let data = try Data(contentsOf: url)
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v21-placed-buildings.json"))
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 21)
-        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.placedBuildingsWorld())
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world.placedBuildings.map(\.kind), [.house, .shop, .office])
         XCTAssertEqual(world.placedBuildings.map(\.id.rawValue), [1, 2, 3])
+        XCTAssertEqual(world.placedBuildings.map(\.centre), [
+            PlanPoint(x: 8_000, y: 8_000), PlanPoint(x: 10_000, y: 8_500), PlanPoint(x: 12_500, y: 12_000),
+        ])
+        XCTAssertTrue(world.placedBuildings.allSatisfy { $0.residents == 0 && $0.jobs == 0 && $0.cost == .zero })
+        XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building }, "on the books at nothing")
+        XCTAssertEqual(world.stations.map(\.name), ["Market"])
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 10))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
-        XCTAssertEqual(try world.placeBuilding(.house, at: PlanPoint(x: 3_000, y: 3_000)).id.rawValue, 4, "numbered on")
+        let saved = try XCTUnwrap(object["world"] as? [String: Any])
+        XCTAssertEqual(saved["nextPlacedBuildingID"] as? Int, 4, "numbered on from 4")
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v18-whole-island-land.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.placedBuildings.isEmpty)

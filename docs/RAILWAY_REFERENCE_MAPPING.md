@@ -1067,3 +1067,19 @@ V 實際放行 → T、U（保證不互穿）
 比例：分區格是人口格（30″）切成 4 × 4；每格 16 個取樣點，至少 8 點是同一種土地才算那一種（平手依工業、公園、農地）。
 
 外部專案：Overpass 的伺服器太忙時，改讀整包的台灣 OSM 檔（osmtoday.com，ODbL），用 pyosmium（https://github.com/osmcode/pyosmium，BSD 2-Clause，作者同意作為工具的依賴；只用它的檔案讀取與多邊形組合，沒有複製程式碼）。商店、辦公、學校、景點的地點（`build_place_grid.py`）也改從同一份檔重算。多邊形的取樣是標準的掃描線填色，自己寫。
+
+## 城市建造 P0-C1：公司的建物（決策 94）
+
+2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）：參考庫沒有建物的所有權、租金、維護、出售、地價交易與公司資產帳，也沒有把玩家建物的居民與就業接到運量，所以這些是原生。可以沿用的是做法：`Ci/` 的 `metroCanPlaceWithinQuota`／`summarizeFinanceForTransport`（放置前先估價、不足就擋、記成投資現金流），以及已經移植的金額顯示（`metroEconomyMoneyText` → `Money.moneyText`）與決策 74 的建物容量規則。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| （參考沒有） | `PlacedBuildingRules`、`placedBuildingQuote`、`dailyRent`、`dailyUpkeep`、`demolitionCost`、`removePlacedBuilding`、`fillPlacedBuildings`、`settleProperty` | gap → 原生（公式：Phase 7 研究 §3.3） |
+| （參考沒有） | `AssetClass.buildings`、`BalanceSheet.buildings`、`LedgerEntry.Kind.dailyProperty`、`DayAccount`／`FinanceSummary` 的 `propertyRevenue`／`propertyCost`、存檔版本 22 | gap → 原生（接決策 85 的資產） |
+| `Ci/` 的 `metroCanPlaceWithinQuota`、`summarizeFinanceForTransport` | `placedBuildingQuote`（先估價）、`placeBuilding` 的 `insufficientFunds`、資產紀錄進投資現金流 | 改寫（配額改成以餘額限制，和車站相同） |
+| `Ci/` 的 `metroEconomyMoneyText`（已移植） | `Money.moneyText`（建造與拆除的訊息）、`Money.centsText`（每日收支） | 沿用既有的移植 |
+| （參考沒有） | `BuildingToolMode`、`GameSession.tapBuildingTool(at:reach:)`、`demolishBuilding(_:)`、`buildingQuoteText`、`buildingEconomyText`、App 的 `BuildingControls` | gap → 原生 |
+
+固定小數：金額是美分；樓地板 $40／m² = 4,000 美分；維護與稅是萬分之 2 與 1（basis point）；入住速度是千分比（20 + S × 80 / 1000，S 是 0…1000 的服務）；租金公式除以 10,000,000（人數 × 1000／1500 是千分之一美分的權重，× (1000 + S/2) 是千分比，× 地價美分／m²）。
+
+外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：A 列車 Exp 的官方說明書（商業遊戲）：建造費買的是土地使用權、拆除不補償、子公司誘導城市開發；OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。

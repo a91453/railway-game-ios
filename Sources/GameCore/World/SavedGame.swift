@@ -108,9 +108,16 @@
 ///     only an earlier version would drop them, and its next save would
 ///     lose the player's buildings, so it says the save is newer than it
 ///     instead.
+/// 22. The company's buildings (decision 94): a placed building can have
+///     `"residents"`, `"jobs"`, `"buildingCost"` and `"landCost"`; the
+///     accounts can have building asset records, days and closed years
+///     with `"propertyRevenue"` and `"propertyCost"`, and ledger rows of
+///     the day's property. A build that reads only an earlier version
+///     would drop who lives in them and what they cost, so it says the save
+///     is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 21
+    public static let currentVersion = 22
 
     public let world: GameWorld
 
@@ -188,6 +195,10 @@ extension SavedGame: Codable {
         // version 20 reads as before.
         // Version 20 to 21: a world without `"placedBuildings"` has none,
         // and hands out placed building IDs from 1.
+        // Version 21 to 22: a placed building without `"residents"`,
+        // `"jobs"`, `"buildingCost"` or `"landCost"` is empty and was paid
+        // nothing for, and has no asset record: on the books at nothing,
+        // as decision 85 keeps what was built before it.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

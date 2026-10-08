@@ -2811,6 +2811,26 @@
           }
         }
       }
+    },
+    "Building mode" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建物模式"
+          }
+        }
+      }
+    },
+    "Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點選自己的建物即可拆除。經營模式下要付建造成本的一成。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

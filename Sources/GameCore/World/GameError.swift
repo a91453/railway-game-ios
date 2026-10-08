@@ -189,4 +189,6 @@ public enum GameError: Error, Hashable, Sendable {
     case buildingOnTrack(TrackEdgeID)
     /// A building would stand on, or too near, this station (decision 92).
     case buildingOnStation(StationID)
+    /// There is no building of the player's with this ID (decision 94).
+    case unknownPlacedBuilding(PlacedBuildingID)
 }

@@ -21,14 +21,18 @@ public enum AssetClass: String, CaseIterable, Codable, Sendable {
     case stations
     /// Trains and the cars added to them.
     case rollingStock
+    /// The company's buildings, with the right to use the land under them
+    /// (decision 94).
+    case buildings
 
     /// The days an asset of the class is written down over, to nothing:
     /// track and stations 20 of the finance report's 360-day years, trains
-    /// and cars 10 (native, Phase 7a).
+    /// and cars 10 (native, Phase 7a), buildings 30 (decision 94).
     public var lifeDays: Int64 {
         switch self {
         case .track, .stations: 20 * FinancePeriod.year.days
         case .rollingStock: 10 * FinancePeriod.year.days
+        case .buildings: 30 * FinancePeriod.year.days
         }
     }
 }
@@ -44,12 +48,15 @@ public struct AssetRecord: Hashable, Sendable {
         case train
         /// Cars added to train ``owner`` at once (``cars`` of them).
         case cars
+        /// A building the player placed, ``owner`` its ID (decision 94).
+        case building
 
         public var assetClass: AssetClass {
             switch self {
             case .track: .track
             case .station: .stations
             case .train, .cars: .rollingStock
+            case .building: .buildings
             }
         }
     }
@@ -129,19 +136,25 @@ public struct AssetClassBalance: Hashable, Codable, Sendable {
 /// asset valuation it leaves at 0 filled in from the asset records): its
 /// cash, its fixed assets at book value, its loan and what is left, its
 /// equity. `totalAssets == loan + equity` always.
-public struct BalanceSheet: Hashable, Codable, Sendable {
+public struct BalanceSheet: Hashable, Sendable {
     /// The balance, which may be below zero.
     public let cash: Money
     public let track: AssetClassBalance
     public let stations: AssetClassBalance
     public let rollingStock: AssetClassBalance
+    /// The company's buildings (decision 94).
+    public let buildings: AssetClassBalance
     public let loan: Money
 
-    public init(cash: Money, track: AssetClassBalance, stations: AssetClassBalance, rollingStock: AssetClassBalance, loan: Money) {
+    public init(
+        cash: Money, track: AssetClassBalance, stations: AssetClassBalance, rollingStock: AssetClassBalance,
+        buildings: AssetClassBalance = .zero, loan: Money
+    ) {
         self.cash = cash
         self.track = track
         self.stations = stations
         self.rollingStock = rollingStock
+        self.buildings = buildings
         self.loan = loan
     }
 
@@ -150,12 +163,13 @@ public struct BalanceSheet: Hashable, Codable, Sendable {
         case .track: track
         case .stations: stations
         case .rollingStock: rollingStock
+        case .buildings: buildings
         }
     }
 
     /// The fixed assets at book value.
     public var fixedAssets: Money {
-        track.bookValue + stations.bookValue + rollingStock.bookValue
+        track.bookValue + stations.bookValue + rollingStock.bookValue + buildings.bookValue
     }
 
     public var totalAssets: Money {
@@ -263,7 +277,7 @@ extension GameWorld {
     public func balanceSheet() -> BalanceSheet {
         BalanceSheet(
             cash: economy.balance, track: accounts.assetBalance(.track), stations: accounts.assetBalance(.stations),
-            rollingStock: accounts.assetBalance(.rollingStock), loan: accounts.loan
+            rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), loan: accounts.loan
         )
     }
 
@@ -407,6 +421,7 @@ extension GameWorld {
             case .track: network.edge(.edge(record.owner)) != nil
             case .station: station(id: StationID(rawValue: record.owner)) != nil
             case .train, .cars: train(id: TrainID(rawValue: record.owner)) != nil
+            case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }
             if record.kind == .cars {
@@ -452,8 +467,9 @@ extension GameWorld {
         let flows = [
             income.fareRevenue, income.operatingCost, income.maintenanceCost, income.energyCost, income.staffCost, income.interestCost,
             income.depreciationCost, income.writeOffCost, income.capitalSpending, income.loanBorrowed, income.loanRepaid,
+            income.propertyRevenue, income.propertyCost,
         ]
-        let classes = [closing.track, closing.stations, closing.rollingStock]
+        let classes = [closing.track, closing.stations, closing.rollingStock, closing.buildings]
         return income.index == statement.year
             && flows.allSatisfy { (0...maximumAccrued).contains($0.amount) }
             && classes.allSatisfy { (0...CompanyAccounts.maximumAssetCost).contains($0.cost.amount) && (.zero...$0.cost).contains($0.depreciation) }
@@ -463,6 +479,36 @@ extension GameWorld {
 }
 
 // MARK: - Codable
+
+extension BalanceSheet: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case cash, track, stations, rollingStock, buildings, loan
+    }
+
+    /// Decodes a closing balance sheet; one without the company's
+    /// buildings (every year before save version 22) has no `"buildings"`.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        cash = try container.decode(Money.self, forKey: .cash)
+        track = try container.decode(AssetClassBalance.self, forKey: .track)
+        stations = try container.decode(AssetClassBalance.self, forKey: .stations)
+        rollingStock = try container.decode(AssetClassBalance.self, forKey: .rollingStock)
+        buildings = try container.decodeIfPresent(AssetClassBalance.self, forKey: .buildings) ?? .zero
+        loan = try container.decode(Money.self, forKey: .loan)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(cash, forKey: .cash)
+        try container.encode(track, forKey: .track)
+        try container.encode(stations, forKey: .stations)
+        try container.encode(rollingStock, forKey: .rollingStock)
+        if buildings != .zero {
+            try container.encode(buildings, forKey: .buildings)
+        }
+        try container.encode(loan, forKey: .loan)
+    }
+}
 
 extension AssetRecord: Codable {
     private enum CodingKeys: String, CodingKey {

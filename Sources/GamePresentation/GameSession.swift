@@ -51,6 +51,9 @@ public final class GameSession {
 
     /// What the building tool places where the player taps (decision 92).
     public var buildingKind: PlacedBuildingKind = .house
+    /// Whether a tap with the building tool builds or demolishes (decision
+    /// 94).
+    public var buildingMode: BuildingToolMode = .build
 
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
