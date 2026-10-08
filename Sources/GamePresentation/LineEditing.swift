@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 // A line's stops and the service day (Stage C2): the screens for
@@ -24,6 +25,73 @@ public enum LineStopEditing {
         var edited = stops
         edited.remove(at: index)
         return edited
+    }
+
+    /// Where a station at `point` joins a line through stops at `stops`
+    /// (decision 80): MapBuilder's `ef`, which `handleAddStationToLine`
+    /// uses when no index is given. For each place, before the first stop,
+    /// between two, or after the last, it scores the turn the line would
+    /// make there (0 to 1: the angle between the two legs, or the station's
+    /// distance off the straight line in degrees of arc if larger, over
+    /// 180°) plus the new leg's length over a typical one (the distance to
+    /// the stop at index min(9, (n − 1) / 2) of the sorted distances), and
+    /// keeps the lowest score up to 2, the later of equals; 0 when nothing
+    /// scores 2 or less. A line of fewer than two stops gets it first.
+    ///
+    /// Floating point, as the reference's: it only chooses the index, and
+    /// GameCore checks the stops it gives.
+    public static func insertionIndex(of point: PlanPoint, into stops: [PlanPoint]) -> Int {
+        guard stops.count >= 2 else { return 0 }
+        let typical = stops.map { distance(point, $0) }.sorted()[min(9, (stops.count - 1) / 2)]
+        var best = 0
+        var bestScore = 2.0
+        for index in 0...stops.count {
+            let (before, at, after, leg): (PlanPoint, PlanPoint, PlanPoint, Double)
+            if index == 0 {
+                (before, at, after) = (point, stops[0], stops[1])
+                leg = distance(before, at)
+            } else if index == stops.count {
+                (before, at, after) = (stops[index - 2], stops[index - 1], point)
+                leg = distance(at, after)
+            } else {
+                (before, at, after) = (stops[index - 1], point, stops[index])
+                leg = min(distance(before, at), distance(at, after))
+            }
+            var turn = abs(bearing(before, at) - bearing(at, after)).truncatingRemainder(dividingBy: 360)
+            if turn > 180 { turn = 360 - turn }
+            let off = distance(at, toSegment: before, after) / Double(WorldCoordinate.unitsPerMetre) / metresPerDegree
+            let score = max(turn, off) / 180 + leg / typical
+            if score <= bestScore {
+                best = index
+                bestScore = score
+            }
+        }
+        return best
+    }
+
+    /// Metres in a degree of arc on turf's sphere (radius 6,371,008.8 m),
+    /// the unit of the reference's `pointToLineDistance(…, {units: "degrees"})`.
+    private static let metresPerDegree = 6_371_008.8 * Double.pi / 180
+
+    private static func distance(_ a: PlanPoint, _ b: PlanPoint) -> Double {
+        let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
+        return (dx * dx + dy * dy).squareRoot()
+    }
+
+    /// The direction from `a` to `b` in degrees, −180…180; 0 when they are
+    /// the same point, as turf's `bearing`.
+    private static func bearing(_ a: PlanPoint, _ b: PlanPoint) -> Double {
+        atan2(Double(b.x - a.x), Double(a.y - b.y)) * 180 / .pi
+    }
+
+    /// How far `point` is from the segment `a`–`b`.
+    private static func distance(_ point: PlanPoint, toSegment a: PlanPoint, _ b: PlanPoint) -> Double {
+        let abx = Double(b.x - a.x), aby = Double(b.y - a.y)
+        let apx = Double(point.x - a.x), apy = Double(point.y - a.y)
+        let length = abx * abx + aby * aby
+        let t = length == 0 ? 0 : min(max((apx * abx + apy * aby) / length, 0), 1)
+        let dx = apx - t * abx, dy = apy - t * aby
+        return (dx * dx + dy * dy).squareRoot()
     }
 
     /// `stops` with the stop at `index` swapped with its neighbour `offset`
@@ -159,6 +227,56 @@ extension GameSession {
     public func moveStopOfSelectedLine(at index: Int, by offset: Int) {
         guard let line = requireSelectedLine() else { return }
         setStops(of: line, to: LineStopEditing.moving(index, by: offset, in: line.stops))
+    }
+
+    /// Adds `station` to the selected line where it fits best
+    /// (decision 80, MapBuilder's `handleAddStationToLine`): at
+    /// ``LineStopEditing/insertionIndex(of:into:)`` of where it stands.
+    /// Only for a line that exists: the stops picked for a new line
+    /// (``lineDraft``) keep the order they were picked in.
+    public func addStationToSelectedLine(_ station: StationID) {
+        guard let line = requireSelectedLine() else { return }
+        guard let point = world.station(id: station)?.point else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownStation(station).playerMessage(in: language))
+            return
+        }
+        let points = line.stops.compactMap { world.station(id: $0)?.point }
+        let index = points.count == line.stops.count ? LineStopEditing.insertionIndex(of: point, into: points) : line.stops.count
+        setStops(of: line, to: LineStopEditing.inserting(station, at: index, into: line.stops))
+    }
+
+    /// Reverses the order of the selected line's stops through
+    /// `GameWorld.reverseLineStops(_:)` (decision 80, MapBuilder's
+    /// `handleReverseStationOrder`).
+    public func reverseSelectedLine() {
+        guard let line = requireSelectedLine() else { return }
+        perform { world throws(GameError) in
+            try world.reverseLineStops(line.id)
+            let names = (world.line(id: line.id)?.stops ?? []).map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
+            return language.text("Reversed \(line.name): \(names).", "已反轉 \(line.name) 的站序：\(names)。")
+        }
+    }
+
+    /// Copies the selected line as "<name> - Fork" through
+    /// `GameWorld.duplicateLine(_:named:)` (decision 80, MapBuilder's
+    /// `handleLineDuplicate`) and selects the copy. It has no trains yet.
+    public func duplicateSelectedLine() {
+        guard let line = requireSelectedLine() else { return }
+        let name = language.text("\(line.name) - Fork", "\(line.name) - 分支")
+        var copied: LineID?
+        perform { world throws(GameError) in
+            copied = try world.duplicateLine(line.id, named: name).id
+            return language.text(
+                "Copied \(line.name) as \(name). Assign trains to run it.",
+                "已複製 \(line.name) 為 \(name)。請指派列車來營運。"
+            )
+        }
+        if let copied {
+            // Selecting clears the message; the copy's stays.
+            let shown = message
+            selectLine(copied)
+            message = shown
+        }
     }
 
     private func setStops(of line: ServiceLine, to stops: [StationID]) {

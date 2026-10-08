@@ -313,6 +313,14 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.warning)
                 }
             }
+            // Decision 80: MapBuilder's fork, without the trains.
+            Button {
+                session.duplicateSelectedLine()
+            } label: {
+                Label("Duplicate Line", systemImage: "plus.square.on.square")
+            }
+            .accessibilityHint("Copies the line's stops and settings as a new line, without its trains.")
+            .accessibilityIdentifier("line.duplicate")
             Button("Remove \(line.name)", role: .destructive) {
                 session.removeSelectedLine()
             }
@@ -361,6 +369,19 @@ struct LinesPanel: View {
             } label: {
                 Label("Add Stop at the End", systemImage: "plus.circle")
             }
+            // Decision 80: MapBuilder's add to line, where the station fits.
+            Menu {
+                stationButtons { session.addStationToSelectedLine($0) }
+            } label: {
+                Label("Add Stop Where It Fits", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+            }
+            .accessibilityIdentifier("line.addStopWhereItFits")
+            Button {
+                session.reverseSelectedLine()
+            } label: {
+                Label("Reverse Stop Order", systemImage: "arrow.left.arrow.right")
+            }
+            .accessibilityIdentifier("line.reverse")
         } header: {
             Text("Stops")
         } footer: {
