@@ -357,4 +357,66 @@ final class TrackSpacingTests: XCTestCase {
         try world.setTrainContinuation(two, along: [], stoppingAt: 10_240)
         XCTAssertNoThrow(try world.setTrafficControl(true))
     }
+
+    // MARK: - Filing pieces by cell
+
+    /// Every point less than the spacing from a piece lies in one of the
+    /// cells the piece is filed under, and those cells are among the ones
+    /// its box widened by the spacing covers: the column walk files no less
+    /// than it must, and never more than the box did. Random pieces at every
+    /// slope, and points scattered round them.
+    func testAPieceIsFiledUnderEveryCellAPointCloseToItLiesIn() {
+        let w = RailwayNetwork.trackSpacing
+        let size = TrackSpacing.Pieces.cellSize
+        var generator = SplitMix64(seed: 0x5BAC_1A6E)
+        func cellsOfBox(_ p: PlanPoint, _ q: PlanPoint) -> Set<TrackSpacing.Pieces.Cell> {
+            var cells: Set<TrackSpacing.Pieces.Cell> = []
+            for x in TrackSpacing.Pieces.Cell.cell(min(p.x, q.x) - w)...TrackSpacing.Pieces.Cell.cell(max(p.x, q.x) + w) {
+                for y in TrackSpacing.Pieces.Cell.cell(min(p.y, q.y) - w)...TrackSpacing.Pieces.Cell.cell(max(p.y, q.y) + w) {
+                    cells.insert(TrackSpacing.Pieces.Cell(x, y))
+                }
+            }
+            return cells
+        }
+        /// Whether `point` is less than `w` from the piece, exactly.
+        func isClose(_ point: PlanPoint, _ p: PlanPoint, _ q: PlanPoint) -> Bool {
+            let way = q.vector(from: p), offset = point.vector(from: p)
+            let along = offset.dot(way), squared = way.dot(way)
+            if along <= 0 { return offset.dot(offset) < w * w }
+            if along >= squared { let beyond = point.vector(from: q); return beyond.dot(beyond) < w * w }
+            let cross = way.cross(offset).magnitude
+            return WideInteger.product(cross, cross) < WideInteger.product(w * w, squared)
+        }
+        for trial in 0..<400 {
+            let reach: Int64 = trial % 4 == 0 ? 64 : (trial % 4 == 1 ? 3_000 : 40_000)
+            let p = PlanPoint(x: generator.int64(in: -50_000...50_000), y: generator.int64(in: -50_000...50_000))
+            var q = PlanPoint(x: p.x + generator.int64(in: -reach...reach), y: p.y + generator.int64(in: -reach...reach))
+            if trial % 7 == 0 { q = PlanPoint(x: p.x, y: q.y) }
+            if trial % 11 == 0 { q = PlanPoint(x: q.x, y: p.y) }
+            let filed = TrackSpacing.Pieces.cells(near: p, q, within: w)
+            let set = Set(filed)
+            XCTAssertEqual(set.count, filed.count, "no cell twice")
+            XCTAssertTrue(set.isSubset(of: cellsOfBox(p, q)), "within the box")
+            for _ in 0..<200 {
+                let t = Double(generator.below(1_001)) / 1_000
+                let near = PlanPoint(
+                    x: p.x + Int64((Double(q.x - p.x) * t).rounded()) + generator.int64(in: -(w + 2)...(w + 2)),
+                    y: p.y + Int64((Double(q.y - p.y) * t).rounded()) + generator.int64(in: -(w + 2)...(w + 2))
+                )
+                if isClose(near, p, q) {
+                    XCTAssertTrue(set.contains(TrackSpacing.Pieces.Cell(of: near)), "\(near) close to \(p)–\(q) in cell size \(size)")
+                }
+            }
+        }
+    }
+
+    /// A straight edge across a whole-island map is one piece: its cells
+    /// grow with its length, not with the square of it.
+    func testALongSlantingPieceIsFiledUnderAsManyCellsAsItIsLong() {
+        let w = RailwayNetwork.trackSpacing
+        let filed = TrackSpacing.Pieces.cells(near: PlanPoint(x: 0, y: 0), PlanPoint(x: 1 << 25, y: 1 << 25), within: w)
+        let columns = (1 << 25) / TrackSpacing.Pieces.cellSize
+        XCTAssertLessThanOrEqual(filed.count, Int(columns + 2) * 4, "a few cells a column, where the box had \(columns * columns)")
+        XCTAssertGreaterThanOrEqual(filed.count, Int(columns))
+    }
 }
