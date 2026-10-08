@@ -45,8 +45,10 @@ final class SettingsUITests: XCTestCase {
     }
 
     /// With the Lines panel open (a half-height sheet that leaves the HUD
-    /// usable) the game menu's Settings still opens: a sheet of the HUD's
-    /// own could not show while ContentView presented the panel (#202).
+    /// usable) the game menu's Settings still opens, in the panel's place.
+    /// It pins the behaviour only: with Settings back as a sheet of the
+    /// HUD's own (#202 reverted) it passed too on the iOS 26.5 Simulator
+    /// (run 37730023961), so it is no proof of that change.
     func testTheGameMenuOpensSettingsWithTheLinesPanelOpen() {
         continueAfterFailure = false
         let app = XCUIApplication()

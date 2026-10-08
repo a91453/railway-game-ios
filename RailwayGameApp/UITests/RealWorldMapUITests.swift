@@ -19,7 +19,6 @@ final class RealWorldMapUITests: XCTestCase {
         let taipei = tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei")
         XCTAssertEqual(taipei.label, "Taipei", "The references' places are listed")
         taipei.tap()
-        capture(app, name: "real-world-01-picker")
 
         tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
 
@@ -28,7 +27,6 @@ final class RealWorldMapUITests: XCTestCase {
         let style = app.buttons["map.style"]
         XCTAssertTrue(style.waitForExistence(timeout: 10), "Only a real-world map has a map style menu")
         XCTAssertTrue(app.buttons["Zoom in"].exists)
-        capture(app, name: "real-world-02-game")
 
         // Keep the live clock from rebuilding the native menus (the map
         // style's and the game's) while XCTest targets their actions, as in
@@ -37,7 +35,6 @@ final class RealWorldMapUITests: XCTestCase {
         tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        capture(app, name: "real-world-03-satellite")
 
         tappable(app.buttons.matching(identifier: "hud.menu"), name: "hud.menu").tap()
         tappable(app.buttons.matching(identifier: "menu.backToStart"), name: "menu.backToStart").tap()
@@ -69,7 +66,6 @@ final class RealWorldMapUITests: XCTestCase {
         let authority = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "Movement authority")).firstMatch
         XCTAssertTrue(authority.waitForExistence(timeout: 60), "The demo's trains take their routes under traffic control")
-        capture(app, name: "real-world-04-traffic")
     }
 
     /// A blank new game has no Apple map and no style menu.
@@ -113,20 +109,5 @@ final class RealWorldMapUITests: XCTestCase {
         }
         XCTFail("Button cannot be tapped: \(name)")
         return query.firstMatch
-    }
-
-    private func capture(_ app: XCUIApplication, name: String) {
-        Thread.sleep(forTimeInterval: 1)
-        // Screenshots are only for a person to look at (CLAUDE.md): a busy
-        // runner's "Timed out while requesting screenshot" (run 37635507497)
-        // must not fail the test, so its issue is expected, never required.
-        let options = XCTExpectedFailure.Options()
-        options.isStrict = false
-        XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
-            let attachment = XCTAttachment(screenshot: app.screenshot())
-            attachment.name = name
-            attachment.lifetime = .keepAlways
-            add(attachment)
-        }
     }
 }

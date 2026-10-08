@@ -3,14 +3,14 @@ import XCTest
 @MainActor
 final class StartSaveFlowSmokeTests: XCTestCase {
     func testEnglishStartSaveFlow() {
-        captureFlow(language: "en", locale: "en_US")
+        checkFlow(language: "en", locale: "en_US")
     }
 
     func testTraditionalChineseStartSaveFlow() {
-        captureFlow(language: "zh-Hant", locale: "zh_TW")
+        checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
-    private func captureFlow(language: String, locale: String) {
+    private func checkFlow(language: String, locale: String) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
@@ -18,11 +18,9 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         defer { app.terminate() }
 
         assertEmptyStart(in: app)
-        capture(app, name: "\(language)-flow-01-start-empty")
 
         requiredButton("start.demoMap", in: app).tap()
         assertGame(in: app)
-        capture(app, name: "\(language)-flow-02-demo-map")
 
         // Keep the live clock from rebuilding the native menu while XCTest
         // targets its actions, as in the tutorial UI tests. Use the real HUD.
@@ -31,14 +29,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         )), name: "Pause").tap()
 
         openGameMenu(in: app)
-        capture(app, name: "\(language)-flow-03-menu-save")
 
         tapMenuAction("menu.saveGame", in: app)
         assertGame(in: app)
-        capture(app, name: "\(language)-flow-04-game-saved")
 
         openGameMenu(in: app)
-        capture(app, name: "\(language)-flow-05-menu-return")
 
         tapMenuAction("menu.backToStart", in: app)
         _ = requiredButton("start.newGame", in: app)
@@ -47,19 +42,16 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // proves that Save Game wrote a manual save rather than doing nothing.
         _ = requiredButton("start.savedGames", in: app)
         _ = requiredButton("start.demoMap", in: app)
-        capture(app, name: "\(language)-flow-06-start-saved")
 
         requiredButton("start.continue", in: app).tap()
         assertGame(in: app)
         XCTAssertFalse(app.buttons["start.newGame"].exists, "Continue did not leave the start screen")
-        capture(app, name: "\(language)-flow-07-continued-map")
 
         // Prove that the same installation starts clean again after both a
         // manual save and an autosave, in each language.
         app.terminate()
         app.launch()
         assertEmptyStart(in: app)
-        capture(app, name: "\(language)-flow-08-start-reset")
     }
 
     private func assertEmptyStart(in app: XCUIApplication) {
@@ -84,6 +76,9 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("hud.menu", in: app).tap()
         _ = requiredButton("menu.saveGame", in: app)
         _ = requiredButton("menu.backToStart", in: app)
+        // Let the menu finish opening: tapMenuAction touches an action's
+        // frame as it reads it. The screenshot taken here used to pause so.
+        Thread.sleep(forTimeInterval: 1)
     }
 
     private func tapMenuAction(_ identifier: String, in app: XCUIApplication) {
@@ -145,22 +140,5 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // Existence can precede the end of a menu or screen transition.
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed, message)
-    }
-
-    private func capture(_ app: XCUIApplication, name: String) {
-        // Match the toolbar screenshots: let touch feedback and layout finish
-        // rendering after XCTest's idle check, without delaying the app itself.
-        Thread.sleep(forTimeInterval: 1)
-        // Screenshots are only for a person to look at (CLAUDE.md): a busy
-        // runner's "Timed out while requesting screenshot" (run 37635507497)
-        // must not fail the test, so its issue is expected, never required.
-        let options = XCTExpectedFailure.Options()
-        options.isStrict = false
-        XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
-            let attachment = XCTAttachment(screenshot: app.screenshot())
-            attachment.name = name
-            attachment.lifetime = .keepAlways
-            add(attachment)
-        }
     }
 }
