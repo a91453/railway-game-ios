@@ -1,0 +1,277 @@
+{
+  "saveVersion" : 19,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 2000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "buildings" : [
+      {
+        "column" : 4,
+        "density" : [
+          3
+        ],
+        "id" : 1,
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "density" : [
+          2
+        ],
+        "id" : 2,
+        "row" : 5,
+        "use" : "industrial"
+      },
+      {
+        "column" : 6,
+        "density" : [
+          2
+        ],
+        "id" : 3,
+        "row" : 5,
+        "use" : "civic"
+      },
+      {
+        "column" : 7,
+        "density" : [
+          4
+        ],
+        "id" : 4,
+        "row" : 5,
+        "use" : "leisure"
+      },
+      {
+        "column" : 8,
+        "density" : [
+          1
+        ],
+        "id" : 5,
+        "row" : 5,
+        "use" : "agricultural"
+      },
+      {
+        "column" : 9,
+        "density" : [
+          1
+        ],
+        "id" : 6,
+        "row" : 5,
+        "use" : "park"
+      },
+      {
+        "column" : 20,
+        "density" : [
+          4
+        ],
+        "id" : 7,
+        "row" : 15,
+        "use" : "civic"
+      }
+    ],
+    "cityBuildings" : true,
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 998000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 4,
+        "residents" : [
+          300
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "jobs" : [
+          97
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 5,
+        "use" : "industrial"
+      },
+      {
+        "column" : 6,
+        "jobs" : [
+          200
+        ],
+        "residents" : [
+          50
+        ],
+        "row" : 5,
+        "use" : "civic"
+      },
+      {
+        "column" : 7,
+        "jobs" : [
+          900
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 5,
+        "use" : "leisure"
+      },
+      {
+        "column" : 8,
+        "jobs" : [
+          8
+        ],
+        "residents" : [
+          3
+        ],
+        "row" : 5,
+        "use" : "agricultural"
+      },
+      {
+        "column" : 9,
+        "residents" : [
+          0
+        ],
+        "row" : 5,
+        "use" : "park"
+      },
+      {
+        "column" : 20,
+        "jobs" : [
+          1000
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 15,
+        "use" : "civic"
+      }
+    ],
+    "landDemand" : true,
+    "nextStationID" : 3,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 400,
+          "kind" : "civic"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 623,
+          "kind" : "scenic"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 2,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "School",
+        "point" : {
+          "x" : 83968,
+          "y" : 63488
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Works",
+        "point" : {
+          "x" : 30720,
+          "y" : 22528
+        }
+      }
+    ],
+    "townGrowth" : {
+      "places" : [
+        {
+          "base" : 400,
+          "counted" : 0,
+          "lastGrowth" : 0,
+          "station" : 1
+        },
+        {
+          "base" : 623,
+          "counted" : 0,
+          "lastGrowth" : 0,
+          "station" : 2
+        }
+      ]
+    },
+    "trains" : [
+
+    ]
+  }
+}

@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 18)
+        XCTAssertEqual(SavedGame.currentVersion, 19)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 19, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 20, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -949,7 +949,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 19)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, try Self.landUsesWorld())
-        XCTAssertEqual(Set(world.land.cells.map(\.use)), Set(LandUse.allCases))
+        XCTAssertEqual(Set(world.land.cells.map(\.use)), [.residential, .industrial, .civic, .leisure, .agricultural, .park])
         XCTAssertEqual(world.land.cell(row: 5, column: 9), LandCell(row: 5, column: 9, use: .park, residents: 0, jobs: 0))
         XCTAssertEqual(world.buildings.all.map(\.use), [.residential, .industrial, .civic, .leisure, .agricultural, .park, .civic])
         XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.kind }, [.civic, .scenic])
