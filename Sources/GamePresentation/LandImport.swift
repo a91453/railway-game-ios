@@ -47,18 +47,29 @@ public enum LandImport {
             }
             return (count(.offices) + count(.schools), count(.shops) + count(.attractions))
         }
+        // A cell's middle's latitude depends only on its row and its
+        // longitude only on its column (the frame is Web Mercator), and so
+        // do the WorldPop cell's row and column: work them out once a row
+        // and once a column, not once a cell, and lay each WorldPop cell's
+        // 64 m cells out row by row, as a walk over every cell would.
+        var sourceRows: [Int: [Int]] = [:], sourceColumns: [Int: [Int]] = [:]
+        for row in 0..<Land.rows(in: bounds) {
+            let latitude = frame.coordinate(worldX: 0, worldY: (Double(row) + 0.5) * length).latitude
+            sourceRows[grid.cell(latitude: latitude, longitude: grid.west).row, default: []].append(row)
+        }
+        for column in 0..<Land.columns(in: bounds) {
+            let longitude = frame.coordinate(worldX: (Double(column) + 0.5) * length, worldY: 0).longitude
+            sourceColumns[grid.cell(latitude: grid.north, longitude: longitude).column, default: []].append(column)
+        }
         var members: [GridCounts.Cell: [(row: Int, column: Int)]] = [:]
         var sourceJobs: [GridCounts.Cell: (office: Int64, shop: Int64)] = [:]
-        for row in 0..<Land.rows(in: bounds) {
-            for column in 0..<Land.columns(in: bounds) {
-                let place = frame.coordinate(worldX: (Double(column) + 0.5) * length, worldY: (Double(row) + 0.5) * length)
-                let source = grid.cell(latitude: place.latitude, longitude: place.longitude)
-                if members[source] == nil {
-                    let work = jobs(source)
-                    guard (grid.counts[source] ?? 0) > 0 || work.office + work.shop > 0 else { continue }
-                    sourceJobs[source] = work
-                }
-                members[source, default: []].append((row, column))
+        for (sourceRow, rows) in sourceRows {
+            for (sourceColumn, columns) in sourceColumns {
+                let source = GridCounts.Cell(row: sourceRow, column: sourceColumn)
+                let work = jobs(source)
+                guard (grid.counts[source] ?? 0) > 0 || work.office + work.shop > 0 else { continue }
+                sourceJobs[source] = work
+                members[source] = rows.flatMap { row in columns.map { (row, $0) } }
             }
         }
         guard !members.isEmpty else { return nil }

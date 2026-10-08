@@ -126,6 +126,20 @@ extension GameWorld {
         return values
     }
 
+    /// What the cells at `positions` are worth, in that order: the same as
+    /// ``landValue(row:column:)`` for each, worked out together. Positions
+    /// outside the world are left out. For a layer that needs only some
+    /// cells (the city map's: those with land or in a catchment), where
+    /// ``landValues()`` works out every cell of the world.
+    public func landValues(at positions: [CellPosition]) -> [LandValue] {
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
+        let stations = landValueStations()
+        return positions.compactMap { position in
+            guard (0..<rows).contains(position.row), (0..<columns).contains(position.column) else { return nil }
+            return landValue(row: position.row, column: position.column, near: stations)
+        }
+    }
+
     /// The stations that can set a value: open ones with a measured service,
     /// by ascending station, with their point, service and stations
     /// reached; none while the land does not set ridership.
