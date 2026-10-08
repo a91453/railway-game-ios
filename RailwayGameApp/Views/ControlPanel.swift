@@ -25,6 +25,11 @@ struct ControlPanel: View {
         case .tools, .detailedTools:
             HStack(alignment: arrangement == .detailedTools ? .top : .center, spacing: 8) {
                 ToolPicker(session: session, showsDetails: arrangement == .detailedTools)
+                // Decision 104: the lines and the company's figures, named,
+                // beside the tools.
+                if arrangement == .tools {
+                    QuickEntries(session: session)
+                }
                 // Hidden during the tutorial, as the details toggle is, so
                 // its steps' spotlights stay where they were; the session
                 // refuses Undo then too (``GameSession/canUndo``).
@@ -59,7 +64,11 @@ private struct ToolPicker: View {
             ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
                 Button {
-                    session.selectTool(tool)
+                    // Decision 104: the active tool again goes back to
+                    // looking at the map; not in the tutorial, whose steps
+                    // wait for a tool to stay chosen.
+                    let leaves = isActive && tool != .select && session.tutorial == nil
+                    session.selectTool(leaves ? .select : tool)
                 } label: {
                     if showsDetails {
                         detailedLabel(for: tool, isActive: isActive)
@@ -82,16 +91,10 @@ private struct ToolPicker: View {
         )
     }
 
+    /// Decision 104: the icon over its name, as a game's bottom bar, so
+    /// the tools and the entries beside them fit a phone's width.
     private func label(for tool: ConstructionTool, isActive: Bool) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: tool.systemImage)
-                .font(.subheadline.weight(.semibold))
-            Text(tool.title(in: session.language))
-                .font(.subheadline.weight(isActive ? .bold : .medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .frame(maxWidth: .infinity, minHeight: 38)
+        TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
     }
 
     private func detailedLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
@@ -121,6 +124,65 @@ private struct ToolPicker: View {
         case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
         case .building: return String(localized: "Houses, shops and offices, where you tap")
         }
+    }
+}
+
+/// An icon over a short name, for the tools and the entries beside them
+/// (decision 104).
+private struct TabLabel: View {
+    let systemImage: String
+    let title: String
+    var isActive = false
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+            Text(verbatim: title)
+                .font(.caption2.weight(isActive ? .bold : .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, minHeight: 38)
+    }
+}
+
+/// The lines and the company's figures, named beside the tools (decision
+/// 104): until now the lines were an unnamed icon in the HUD, and the
+/// figures opened only by tapping the cash.
+private struct QuickEntries: View {
+    let session: GameSession
+    @Environment(GameScreenState.self) private var screen
+
+    var body: some View {
+        HStack(spacing: 6) {
+            entry(.lines, systemImage: "point.3.connected.trianglepath.dotted",
+                  title: session.language.text("Lines", "路線"),
+                  name: session.language.text("Open the lines", "開啟路線"), id: "entry.lines")
+            entry(.economy, systemImage: "chart.bar.fill",
+                  title: session.language.text("Data", "資料"),
+                  name: session.language.text("Open the company's figures", "開啟經營資料"), id: "entry.economy")
+        }
+        .padding(3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
+        )
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func entry(_ panel: GameScreenState.Panel, systemImage: String, title: String, name: String, id: String) -> some View {
+        Button {
+            screen.panel = panel
+        } label: {
+            TabLabel(systemImage: systemImage, title: title, isActive: screen.panel == panel)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == panel))
+        .frame(minWidth: 44)
+        // Not "Lines": the HUD's button has that name, and UI tests find it
+        // by it.
+        .accessibilityLabel(Text(verbatim: name))
+        .accessibilityIdentifier(id)
     }
 }
 
