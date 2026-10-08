@@ -160,15 +160,16 @@ final class LandZoneTests: XCTestCase {
 
     /// The app's zones: OpenStreetMap's industrial land, parks and farmland
     /// of Taiwan (an osmtoday.com extract of 2026-10-06), as
-    /// `build_zone_grid.py` measured them.
+    /// `build_zone_grid.py` measured them with decision 96's tags (429.0,
+    /// 134.7 and 2,244.7 with decision 93's three).
     func testTaiwansZones() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let places = try PlaceGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_places.json")))
         // Square kilometres: every point of every zone cell, before the
         // half-a-cell rule picks a cell's one zone.
-        XCTAssertEqual(places.area(of: .industrial), 429.0, accuracy: 0.5)
-        XCTAssertEqual(places.area(of: .park), 134.7, accuracy: 0.5)
-        XCTAssertEqual(places.area(of: .farmland), 2_244.7, accuracy: 0.5)
+        XCTAssertEqual(places.area(of: .industrial), 454.0, accuracy: 0.5)
+        XCTAssertEqual(places.area(of: .park), 181.7, accuracy: 0.5)
+        XCTAssertEqual(places.area(of: .farmland), 2_681.6, accuracy: 0.5)
         XCTAssertEqual(places.zone(atLatitude: 25.0300, longitude: 121.5357), .park, "Daan Forest Park")
         XCTAssertEqual(places.zone(atLatitude: 24.7800, longitude: 121.0050), .industrial, "Hsinchu Science Park")
         XCTAssertEqual(places.zone(atLatitude: 23.1050, longitude: 120.2750), .industrial, "Southern Taiwan Science Park")

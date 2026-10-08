@@ -17,8 +17,9 @@ tile and one kind of land at a time with pauses, keeps each whole answer
 in the tiles folder (a run that stops part way picks up where it left
 off) and asks again for one the server cut short.
 
-The zones are areas, not points: `landuse=industrial`, `leisure=park` and
-`landuse=farmland` ways and multipolygon relations, as MapBuilder's
+The zones are areas, not points: industrial land, parks and farmland (TAGS:
+`landuse=industrial`, `leisure=park`, `landuse=farmland` and their kin) as
+ways and multipolygon relations, as MapBuilder's
 `fetchAndHandleParks` takes the parks' area around a station. Each WorldPop
 cell is cut into CUTS × CUTS zone cells (7.5″, some 230 × 210 m in
 Taiwan), and each zone cell into SAMPLES × SAMPLES points; a zone cell's
@@ -50,10 +51,19 @@ TILE = 0.25
 SPLITS = 2
 CUTS = 4
 SAMPLES = 4
+# The tags of each kind of land (decision 96): OpenStreetMap's land that
+# works, plays or farms like it. Woods, nature reserves, water, cemeteries
+# and military land are none of them (decision 96 says why), and neither are
+# `landuse=harbour` (often the harbour's water) or the shops' and schools'
+# own areas (their places are counted as points, `build_place_grid.py`).
+TAGS = {
+    'industrial': {'landuse': ('industrial', 'quarry')},
+    'park': {'leisure': ('park', 'golf_course'), 'landuse': ('recreation_ground',)},
+    'farmland': {'landuse': ('farmland', 'orchard', 'vineyard', 'aquaculture', 'farmyard', 'greenhouse_horticulture', 'plant_nursery')},
+}
 SETS = [
-    ('industrial', 'wr["landuse"="industrial"]({b});'),
-    ('park', 'wr["leisure"="park"]({b});'),
-    ('farmland', 'wr["landuse"="farmland"]({b});'),
+    (name, ''.join(f'wr["{key}"~"^({"|".join(values)})$"]({{b}});' for key, values in keys.items()))
+    for name, keys in TAGS.items()
 ]
 
 
@@ -217,13 +227,13 @@ def from_extract(places, path, inside):
     import osmium  # pyosmium: only for an extract.
     north, west, size = places['north'], places['west'], places['cellDegrees']
     step = size / (CUTS * SAMPLES)
-    tags = {'industrial': ('landuse', 'industrial'), 'park': ('leisure', 'park'), 'farmland': ('landuse', 'farmland')}
-    counts = {name: 0 for name in tags}
+    counts = {name: 0 for name in TAGS}
     newest = None
-    processor = osmium.FileProcessor(path).with_areas(osmium.filter.KeyFilter('landuse', 'leisure'))
+    keys = sorted({key for kinds in TAGS.values() for key in kinds})
+    processor = osmium.FileProcessor(path).with_areas(osmium.filter.KeyFilter(*keys))
     for area in processor.with_filter(osmium.filter.EntityFilter(osmium.osm.AREA)):
-        for name, (key, value) in tags.items():
-            if area.tags.get(key) != value:
+        for name, kinds in TAGS.items():
+            if not any(area.tags.get(key) in values for key, values in kinds.items()):
                 continue
             area_rings = []
             for outer in area.outer_rings():
