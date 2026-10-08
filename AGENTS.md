@@ -56,6 +56,12 @@ the large map are built against, the names of the controls the tutorial
 outlines, and who changes which file while they are built in parallel:
 [`docs/UI_INTERFACES.md`](docs/UI_INTERFACES.md).
 
+Before starting a task, every agent claims it in the work registry, issue
+#231, as `CLAUDE.md` (Workflow) describes: what it does, which files, and
+the save version, decision number and golden schema it reserves. An agent
+that does not bump the golden schema or add decisions still claims its task
+and files there.
+
 Shared files that conflict easily:
 
 - `RailwayGameApp/RailwayGame.xcodeproj` is generated. Never merge it by hand:

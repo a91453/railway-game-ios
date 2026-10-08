@@ -199,6 +199,15 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 
 - Inspect the latest remote state (`git fetch`, `main`, the files involved)
   rather than trusting memory from earlier sessions.
+- Several sessions work in parallel. Before starting a task, read every
+  comment of the work registry, issue #231, and post a claim there: the
+  session, branch, task, main files, and the save version, ARCHITECTURE
+  decision and golden schema the task reserves (or "不動"). Take each number
+  as one more than the largest on `main` or in any claim not yet released.
+  When another claim covers the same feature or files, coordinate first
+  (`send_message` to that session, or ask the user). Comment again when the
+  PR opens, the scope changes, it merges, or it is dropped (release its
+  numbers). Only comment; never edit the issue's body.
 - Work on a task branch and open a pull request. Never commit to `main`, never
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
