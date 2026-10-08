@@ -181,11 +181,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   campaign shards do not name. Move a long campaign to another shard in
   `classes_of` in that script when the shard timings drift apart.
 - Real-device visual checks are manual (internal TestFlight). CI's UI tests
-  (`RailwayGameApp/UITests/`, `ios-build.yml`) assert on the Simulator, and
-  their screenshots are only artifacts for a person to look at: a missing or
-  renamed screenshot never fails a run, and nothing compares images. A new UI
-  test joins the gate list in `ios-build.yml` only if it is steady and only a
-  Simulator can answer it; otherwise it runs in the full lane.
+  (`RailwayGameApp/UITests/`, `ios-build.yml`) assert on the Simulator and
+  take no screenshots (the owner checks the screens on devices); a failed
+  run's uploaded result bundle holds XCTest's own failure screenshots, and
+  nothing compares images. A new UI test joins the gate list in
+  `ios-build.yml` only if it is steady and only a Simulator can answer it;
+  otherwise it runs in the full lane.
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.

@@ -9,8 +9,9 @@ name: iOS App Build
 #
 # - Pull requests (the gate): the build, the project check and a short list of
 #   UI tests on an iPhone Simulator, the ones only a Simulator can answer: the
-#   start screen, the three tools in both languages, starting, saving and
-#   continuing a game, and the tutorial's first steps. The iPad job runs only
+#   start screen, the three tools, starting, saving and continuing a game
+#   (in English; the other languages run in the full lane), and the
+#   tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's screens. Kept short and steady so a
 #   red result means something.
 # - Pushes to main, a nightly run and manual runs (everything else): all the
@@ -19,9 +20,10 @@ name: iOS App Build
 #   fails the smoke test. A red result here does not block a pull request; it
 #   is fixed by the next one.
 #
-# The UI tests are the check. Their screenshots are only evidence for a person
-# to look at: they are uploaded as artifacts, and a missing or renamed
-# screenshot never fails a run.
+# The UI tests are the check. They take no screenshots and nothing compares
+# images: what the screen looks like is checked on devices through TestFlight.
+# A failed run uploads its result bundle, which holds XCTest's own screenshot
+# of each failure.
 #
 # Two jobs run in parallel, each on its own runner with its own Simulator, so
 # the wall time is the slower job rather than the sum. A cold Simulator boot
@@ -89,7 +91,7 @@ jobs:
             if files="$(git diff --name-only HEAD^1 HEAD)"; then
               echo "Changed files:"
               echo "$files"
-              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView|MapView|NetworkControls)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml|\.github/scripts/export-ui-smoke-screenshots\.py)' <<<"$files"; then
+              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView|MapView|NetworkControls)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml)' <<<"$files"; then
                 ipad=true
               else
                 ipad=false
@@ -244,7 +246,9 @@ jobs:
       # A pull request runs the gate list; everything else runs all the UI
       # tests. The gate keeps what only a Simulator can answer and leaves the
       # gesture, large-text and landscape tests, the slowest and the least
-      # steady, to the full run.
+      # steady, to the full run, and the Traditional Chinese toolbar and
+      # start/save flow and the Japanese fallback too: the English ones take
+      # the same paths, and localization.yml checks the translations.
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
         # The full list took 12m29s with the map interaction tests (7m42s
@@ -257,8 +261,8 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
             lane="gate (pull request): the short list"
             only=(
-              -only-testing:RailwayGameUITests/ToolbarSmokeTests
-              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests
+              -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar
+              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testEnglishStartSaveFlow
               -only-testing:RailwayGameUITests/MapInteractionTests/testSwitchingFollowTargetWhilePausedCentersTheCamera
               -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
@@ -281,26 +285,6 @@ jobs:
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
 
-      - name: Export UI screenshots as PNG
-        if: always() && steps.ui-smoke.outcome != 'skipped'
-        run: |
-          xcrun xcresulttool export attachments \
-            --path "$RUNNER_TEMP/ui-smoke.xcresult" \
-            --output-path "$RUNNER_TEMP/ui-smoke-attachments"
-          python3 .github/scripts/export-ui-smoke-screenshots.py \
-            "$RUNNER_TEMP/ui-smoke-attachments" "$RUNNER_TEMP/ui-smoke-screenshots"
-
-      - name: Upload UI screenshots
-        if: always() && steps.ui-smoke.outcome != 'skipped'
-        uses: actions/upload-artifact@v7
-        with:
-          # A re-run of a failed job uploads the same names again.
-          overwrite: true
-          name: ui-smoke-screenshots
-          path: ${{ runner.temp }}/ui-smoke-screenshots
-          if-no-files-found: warn
-          retention-days: 14
-
       - name: Upload failed UI test results
         if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
         uses: actions/upload-artifact@v7
@@ -314,7 +298,7 @@ jobs:
 
       # Proof that the smoke test can fail: nightly and on request, not on
       # every pull request. Restore the source afterwards; this broken build
-      # never replaces the normal screenshot run. It reuses the iPhone
+      # never replaces the normal test run. It reuses the iPhone
       # Simulator the smoke tests already booted.
       - name: Prove a missing toolbar button fails the smoke test
         id: missing-button
@@ -400,26 +384,6 @@ jobs:
             -parallel-testing-enabled NO \
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
-
-      - name: Export iPad tutorial screenshots
-        if: always() && steps.ipad-tutorial.outcome != 'skipped'
-        run: |
-          xcrun xcresulttool export attachments \
-            --path "$RUNNER_TEMP/ipad-tutorial.xcresult" \
-            --output-path "$RUNNER_TEMP/ipad-tutorial-attachments"
-          python3 .github/scripts/export-ui-smoke-screenshots.py \
-            "$RUNNER_TEMP/ipad-tutorial-attachments" "$RUNNER_TEMP/ipad-tutorial-screenshots"
-
-      - name: Upload iPad tutorial screenshots
-        if: always() && steps.ipad-tutorial.outcome != 'skipped'
-        uses: actions/upload-artifact@v7
-        with:
-          # A re-run of a failed job uploads the same names again.
-          overwrite: true
-          name: ipad-tutorial-screenshots
-          path: ${{ runner.temp }}/ipad-tutorial-screenshots
-          if-no-files-found: warn
-          retention-days: 14
 
       - name: Upload failed iPad tutorial results
         if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
