@@ -37,11 +37,38 @@ final class SettingsUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
+        openSettingsFromTheGameMenu(app)
+        XCTAssertTrue(app.switches["settings.sounds"].exists, "Missing the sound effects switch")
+        tap(app.buttons["settings.done"], name: "settings.done")
+        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
+        XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10))
+    }
+
+    /// With the Lines panel open (a half-height sheet that leaves the HUD
+    /// usable) the game menu's Settings still opens: a sheet of the HUD's
+    /// own could not show while ContentView presented the panel (#202).
+    func testTheGameMenuOpensSettingsWithTheLinesPanelOpen() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tap(app.buttons["Lines"], name: "Lines")
+        XCTAssertTrue(app.navigationBars["Lines"].waitForExistence(timeout: 10), "The Lines panel did not open")
+        openSettingsFromTheGameMenu(app)
+        XCTAssertFalse(app.navigationBars["Lines"].exists, "Settings takes the Lines panel's place")
+        tap(app.buttons["settings.done"], name: "settings.done")
+        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
+    }
+
+    /// Opens the game menu and chooses Settings, and waits for its music
+    /// switch. A native menu's action can report hittable and still fail
+    /// to compute its activation point (as in StartSaveFlowSmokeTests):
+    /// touch the middle of its frame, and once more if the menu is still
+    /// open.
+    private func openSettingsFromTheGameMenu(_ app: XCUIApplication) {
         tap(app.buttons["hud.menu"], name: "hud.menu")
-        // A native menu's action can report hittable and still fail to
-        // compute its activation point (as in StartSaveFlowSmokeTests):
-        // touch the middle of its frame, and once more if the menu is
-        // still open.
         let action = app.buttons["menu.settings"]
         XCTAssertTrue(action.waitForExistence(timeout: 30), "Missing menu.settings")
         let frame = action.frame, bounds = app.frame
@@ -52,10 +79,6 @@ final class SettingsUITests: XCTestCase {
             point.tap()
         }
         XCTAssertTrue(app.switches["settings.music"].waitForExistence(timeout: 10), "Missing the music switch")
-        XCTAssertTrue(app.switches["settings.sounds"].exists, "Missing the sound effects switch")
-        tap(app.buttons["settings.done"], name: "settings.done")
-        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
-        XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10))
     }
 
     private func tap(_ element: XCUIElement, name: String) {
