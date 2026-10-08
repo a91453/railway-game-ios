@@ -48,11 +48,7 @@ extension GameSession {
             // With snapping off a tap is always a new point at the height
             // being built, beside or over the track; on, track within reach
             // is joined whatever its height (a ramp starts there).
-            let anchor = networkSnapsToTrack
-                ? world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
-                    ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
-                    ?? .point(point)
-                : .point(point)
+            let anchor = networkAnchor(at: point, reach: reach)
             if networkStart == nil {
                 networkStart = anchor
             } else if anchor == networkStart {
@@ -74,6 +70,16 @@ extension GameSession {
         case .remove:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
         }
+    }
+
+    /// Where a tap or a drag at `point` picks an end of the next stretch
+    /// of track (see ``tapNetwork(at:reach:)``).
+    func networkAnchor(at point: PlanPoint, reach: Int64) -> NetworkAnchor {
+        networkSnapsToTrack
+            ? world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
+                ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
+                ?? .point(point)
+            : .point(point)
     }
 
     // MARK: - Building
@@ -538,7 +544,10 @@ extension GameSession {
                 )
             }
             guard let end = networkEnd else {
-                return language.text("From \(start.text(in: language)). Tap where it ends.", "從\(start.text(in: language))開始。請點終點。")
+                return language.text(
+                    "From \(start.text(in: language)). Tap where it ends, or drag there from the start.",
+                    "從\(start.text(in: language))開始。請點終點，或從起點拖曳過去。"
+                )
             }
             let ends = "\(start.text(in: language)) → \(end.text(in: language))"
             guard let real = realTrackSectionText(from: start, to: end) else { return ends }

@@ -78,7 +78,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
         session.tapNetwork(at: PlanPoint(x: 8_192, y: 4_200), reach: Self.reach)
         XCTAssertEqual(session.networkStart, .track(NetworkEdgePoint(edge: line, distance: 6_144)))
-        XCTAssertEqual(session.networkDraftText(), "From a turnout on edge #1. Tap where it ends.")
+        XCTAssertEqual(session.networkDraftText(), "From a turnout on edge #1. Tap where it ends, or drag there from the start.")
         session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: Self.reach)
         XCTAssertEqual(session.networkPreview?.joinsStart, true, "it leaves along the line")
         XCTAssertNil(session.networkPreview?.problem)
@@ -282,7 +282,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkStart, .point(Self.a))
-            XCTAssertEqual(session.networkDraftText(), "From a new node. Tap where it ends.")
+            XCTAssertEqual(session.networkDraftText(), "From a new node. Tap where it ends, or drag there from the start.")
             XCTAssertNil(session.networkPreview)
             session.tapNetwork(at: Self.b, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "a new node → a new node")
@@ -301,7 +301,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Edge #1: 64 m, surface, for $ 4."))
             XCTAssertEqual(session.networkStart, .node(.node(2)), "the next stretch starts where this one ended")
             XCTAssertNil(session.networkEnd)
-            XCTAssertEqual(session.networkDraftText(), "From Node #2. Tap where it ends.")
+            XCTAssertEqual(session.networkDraftText(), "From Node #2. Tap where it ends, or drag there from the start.")
         }
     }
 
@@ -633,7 +633,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.selectTool(.network)
             XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點、軌道上（在那裡設轉轍器），或任何地方建立新節點。")
             session.tapNetwork(at: Self.a, reach: Self.reach)
-            XCTAssertEqual(session.networkDraftText(), "從新節點開始。請點終點。")
+            XCTAssertEqual(session.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
             session.tapNetwork(at: Self.b, reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.text(in: .traditionalChinese), "64 公尺 · $ 4")
             session.buildNetworkTrack()

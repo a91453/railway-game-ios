@@ -193,6 +193,9 @@ public final class GameSession {
     /// ``buildNetworkTrack()``.
     public internal(set) var networkStart: NetworkAnchor?
     public internal(set) var networkEnd: NetworkAnchor?
+    /// While a finger draws track (decision 102): the end picked before the
+    /// drag began, which a cancelled drag puts back.
+    @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
     /// What carries the next stretch of track.
     public var networkStructure: TrackStructure = .surface
     /// How high a new node goes, in world units (64 to a metre).
