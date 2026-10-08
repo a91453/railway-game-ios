@@ -75,9 +75,13 @@
 ///     ARCHITECTURE decision 75): a station's growth can have
 ///     `"lastService"` and `"lastReached"`, which raise buildings. A build
 ///     that reads only version 13 would drop them.
+/// 15. Transfer groups (ARCHITECTURE decision 81): the world can have
+///     `"transferGroups"` and `"nextTransferGroupID"`, stations passengers
+///     walk between however far apart. A build that reads only version 14
+///     would drop them, and its passengers' journeys across one with them.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 14
+    public static let currentVersion = 15
 
     public let world: GameWorld
 
@@ -138,6 +142,8 @@ extension SavedGame: Codable {
         // Version 13 to 14: a station's growth without `"lastService"` or
         // `"lastReached"` has 0 of each until its next midnight measures
         // them, so it raises no building that night.
+        // Version 14 to 15: a world without `"transferGroups"` has none,
+        // and hands out transfer group IDs from 1.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

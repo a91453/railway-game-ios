@@ -175,4 +175,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// A managed company's ridership comes from the land while demand from
     /// land is on (Phase 6b): a station's cannot be set.
     case stationDemandFromLand
+    /// A transfer group needs two different stations (decision 81): a
+    /// station cannot be linked with itself.
+    case invalidTransferGroup
 }

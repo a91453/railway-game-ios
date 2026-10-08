@@ -384,6 +384,8 @@ extension GameError {
                 "A managed company's ridership comes from the land round its stations.",
                 "經營模式的客流來自車站周邊的土地，不能直接設定。"
             )
+        case .invalidTransferGroup:
+            language.text("A station cannot be linked with itself.", "車站不能和自己組成轉乘群組。")
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
