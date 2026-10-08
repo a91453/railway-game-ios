@@ -31,7 +31,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-        XCTAssertTrue(app.staticTexts["Built house #1."].waitForExistence(timeout: 10), "The house was not built")
+        // A new game is managed, so the message also says what the house
+        // cost (decision 94): "Built house #1 for $ …".
+        let built = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Built house #1 for $")).firstMatch
+        XCTAssertTrue(built.waitForExistence(timeout: 10), "The house was not built")
         XCTAssertEqual(count.label, "1 building placed")
 
         openGameMenu(in: app)
