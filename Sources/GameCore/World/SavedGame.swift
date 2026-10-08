@@ -94,9 +94,13 @@
 ///     reads only version 17 would call a larger world damaged, or drop the
 ///     blocks and read none again, so it says the save is newer than it
 ///     instead.
+/// 19. Festivals (decision 90): a scenario can hold `"events"`, festivals on
+///     the same day every year, and the demand events can be of kind
+///     `"festival"`. A build that reads only version 18 would drop the
+///     festivals, or refuse the kind.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 18
+    public static let currentVersion = 19
 
     public let world: GameWorld
 
@@ -167,6 +171,8 @@ extension SavedGame: Codable {
         // day without `"fareTrips"` had none counted.
         // Version 17 to 18: a world without `"landBlocks"` has its land
         // whole, as every world before had.
+        // Version 18 to 19: a scenario without `"events"` holds no
+        // festivals, and no demand event is a festival.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

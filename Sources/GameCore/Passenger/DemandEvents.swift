@@ -31,6 +31,9 @@ public enum DemandEventKind: String, CaseIterable, Codable, Sendable {
     case exhibition
     /// A crowd surge, such as a concert or a match (大量人潮事件).
     case crowdSurge
+    /// A festival a scenario holds on the same day every year, such as the
+    /// Pingxi Sky Lantern Festival (decision 90): never drawn.
+    case festival
 }
 
 /// One station's demand raised for some whole days.
@@ -81,6 +84,8 @@ public struct DemandEventSchedule: Hashable, Codable, Sendable {
     /// The most draws a save counts: more than one a day could make in any
     /// game, so counting them never overflows.
     static let maximumDraws: Int64 = 1 << 40
+    /// The most events a save holds at once.
+    static let maximumEvents = 64
 
     init(seed: UInt32, from day: Int64) {
         self.seed = seed
@@ -164,6 +169,19 @@ extension GameWorld {
     mutating func startDemandEventDay(_ day: Int64) {
         guard var schedule = demandEvents else { return }
         schedule.events.removeAll { $0.end <= day }
+        // Decision 88: the scenario's festivals, announced their notice
+        // before they start, every year, at stations still standing.
+        if let state = scenario {
+            for festival in state.scenario.events where station(id: festival.station) != nil {
+                let start = day + festival.notice
+                guard start > state.startDay, CompanyAccounts.floorDivide(start - festival.dayOfYear, FinancePeriod.year.days) * FinancePeriod.year.days
+                        == start - festival.dayOfYear,
+                      schedule.events.count < DemandEventSchedule.maximumEvents else { continue }
+                schedule.events.append(DemandEvent(
+                    kind: .festival, station: festival.station, announced: day, start: start, end: start + festival.days, boost: festival.boost
+                ))
+            }
+        }
         // A save counts at most 2^40 draws (``demandEventProblem()``): the
         // last it may count is the last.
         if schedule.nextDraw <= day, schedule.draws < DemandEventSchedule.maximumDraws {
@@ -219,7 +237,7 @@ extension GameWorld {
     func demandEventProblem() -> String? {
         guard let schedule = demandEvents else { return nil }
         let day = dayIndex(of: clock.now)
-        guard (0...DemandEventSchedule.maximumDraws).contains(schedule.draws), schedule.events.count <= 64 else { return "The demand events are out of range." }
+        guard (0...DemandEventSchedule.maximumDraws).contains(schedule.draws), schedule.events.count <= DemandEventSchedule.maximumEvents else { return "The demand events are out of range." }
         for event in schedule.events {
             guard event.isValid, station(id: event.station) != nil, event.announced <= day, day <= event.end else {
                 return "A demand event is not one the game could have drawn."

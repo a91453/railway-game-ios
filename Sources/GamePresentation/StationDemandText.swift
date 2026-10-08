@@ -421,6 +421,7 @@ extension DemandEventKind {
         switch self {
         case .exhibition: language.text("Exhibition", "大型展覽")
         case .crowdSurge: language.text("Crowd surge", "大量人潮事件")
+        case .festival: language.text("Festival", "節慶活動")
         }
     }
 }

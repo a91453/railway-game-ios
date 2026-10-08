@@ -56,6 +56,8 @@ final class DemandEventTests: XCTestCase {
             case .crowdSurge:
                 XCTAssertTrue((1...2).contains(event.end - event.start))
                 XCTAssertTrue((500...1_000).contains(event.boost))
+            case .festival:
+                XCTFail("Festivals are a scenario's (decision 90), never drawn")
             }
         }
         // The same seed gives the same events; another seed others.

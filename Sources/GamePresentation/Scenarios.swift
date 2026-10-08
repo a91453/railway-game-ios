@@ -7,14 +7,36 @@ import GameCore
 // No reference has railway goals: the challenges, their targets and their
 // stories are this project's.
 
-/// A challenge the start screen offers: its words, and the scenario it
-/// plays on a new game's map.
+/// The map a challenge is played on.
+public enum ChallengeMap: Hashable, Sendable {
+    /// A new game's blank map, its towns drawn from a seed.
+    case blank
+    /// The real-world demo's map, its Pingxi, Yilan and Shenao Lines built
+    /// (decision 90): it needs the app's real railways.
+    case pingxi
+}
+
+/// A challenge the start screen offers: its words, its map, and the
+/// scenario it plays there.
 public struct Challenge: Hashable, Sendable, Identifiable {
     public let id: String
     let titles: (english: String, chinese: String)
     let stories: (english: String, chinese: String)
-    /// The scenario on a blank map whose towns were drawn from `seed`.
+    public let map: ChallengeMap
+    /// The scenario on its map: on a blank one, the one whose towns were
+    /// drawn from `seed`.
     let rules: @Sendable (_ seed: UInt32, _ bounds: WorldBounds) -> Scenario
+
+    init(
+        id: String, titles: (english: String, chinese: String), stories: (english: String, chinese: String), map: ChallengeMap = .blank,
+        rules: @escaping @Sendable (_ seed: UInt32, _ bounds: WorldBounds) -> Scenario
+    ) {
+        self.id = id
+        self.titles = titles
+        self.stories = stories
+        self.map = map
+        self.rules = rules
+    }
 
     public func title(in language: DisplayLanguage) -> String {
         language.text(titles.english, titles.chinese)
@@ -48,9 +70,9 @@ extension Challenge {
     public static let sandbox: [Challenge] = [threeTowns, cityBuilder, tycoon]
 
     /// The challenge with `id`, as a save names its scenario: one of
-    /// ``sandbox``, or a week's (decision 87).
+    /// ``sandbox`` or ``history`` (decision 90), or a week's (decision 87).
     public static func named(_ id: String) -> Challenge? {
-        sandbox.first { $0.id == id } ?? WeeklyChallenge.named(id)?.challenge
+        (sandbox + history).first { $0.id == id } ?? WeeklyChallenge.named(id)?.challenge
     }
 
     private static let year = FinancePeriod.year.days

@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 18)
+        XCTAssertEqual(SavedGame.currentVersion, 19)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 19, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 20, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -901,6 +901,56 @@ final class SavedGameTests: XCTestCase {
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v17-scenario-fast.json"))
         XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.landBlocks)
+    }
+
+    /// The world of `v19-scenario-festival.json`: the version 17 world's
+    /// five stations and line, demand events from seed 1, and a scenario
+    /// whose festival at the second station runs 3 days from day 3 of each
+    /// year at two and a half times its demand, announced 2 days ahead;
+    /// played to the start of day 1 and a minute, when it was announced.
+    private static func festivalWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 400_000, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            clock: GameClock(speed: .fast)
+        )
+        world.setEconomyMode(.management)
+        world.setDemandEvents(seed: 1)
+        let ids = try (0..<5).map { index in
+            try world.buildStation(named: "S\(index + 1)", at: PlanPoint(x: 1_024 + Int64(index) * 64_000, y: 4_096)).id
+        }
+        try world.createLine(named: "Main", stops: [ids[0], ids[1]])
+        try world.startScenario(Scenario(
+            id: "test.festival", goals: [.population(1_000)], goldDays: 30, silverDays: 60, deadlineDays: 120,
+            events: [ScenarioEvent(station: ids[1], dayOfYear: 3, days: 3, boost: 1_500, notice: 2)]
+        ))
+        try world.advance(ticks: 145)
+        return world
+    }
+
+    /// Version 19 (decision 90): a scenario's festival, announced as a
+    /// demand event of kind festival. It saves byte for byte and is the
+    /// world the build that wrote it makes; the festival runs on its days.
+    /// A version 18 save has no festivals.
+    func testVersionNineteenKeepsItsFestival() throws {
+        let url = Self.fixtures.appendingPathComponent("v19-scenario-festival.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["FESTIVAL_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.festivalWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 19)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.festivalWorld())
+        XCTAssertEqual(world.scenario?.scenario.events.count, 1)
+        XCTAssertEqual(world.demandEvents?.events.map(\.kind), [.festival])
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        try world.advance(ticks: 2 * 144)
+        XCTAssertEqual(world.demandMultiplier(at: StationID(rawValue: 2)), 2_500)
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v17-scenario-fast.json"))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: older).world.scenario?.scenario.events, [])
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {

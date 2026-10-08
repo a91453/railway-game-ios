@@ -1001,3 +1001,14 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `WorldRegion.opening(in:)`、背景建立的 `CityMap` | gap → 原生 |
 
 縮放的換算：MapLibre 的 z 是地球 512 · 2^z 點寬；世界單位是錨點緯度的 1/64 公尺，所以 2^z = 每單位點數 × 64 × 2πR cos(緯度) ÷ 512。
+
+## 台灣鐵道史：平溪線與年度節慶（決策 90）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`。平溪線的車站、路線與營運都來自既有的實景示範（`Railway/site_archive_clean/` 的資料，見 E2 與實景示範的對照）；節慶沿用需求事件（`Ci/` 的 `metroEventDemandMultiplier`）。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/data/`（`tra.json`、`tra_station_info.json` 的平溪線各站與路線，經 `RealRailways`） | `RealWorldDemo.make`、`PingxiChallenge.make` | 沿用既有的移植 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroEventDemandMultiplier`（需求 × (1 + boost)） | `DemandEventKind.festival`、`ScenarioEvent` 排入的事件 | adapted：同一個倍率規則，事件由劇本每年固定排入，不是隨機抽出 |
+| （參考沒有每年固定的節慶、沒有平溪線劇本） | `ScenarioEvent`、`startDemandEventDay` 的節慶排程、`Challenge.history`、`PingxiChallenge` | gap → 原生 |
+

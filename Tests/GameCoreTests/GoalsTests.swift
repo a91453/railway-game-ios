@@ -24,9 +24,9 @@ final class GoalsTests: XCTestCase {
     }
 
     private func scenario(_ goals: [Goal], gold: Int64 = 2, silver: Int64 = 4, deadline: Int64 = 6, insolvency: Int64? = nil,
-                          types: [TrainType]? = nil) -> Scenario {
+                          types: [TrainType]? = nil, events: [ScenarioEvent] = []) -> Scenario {
         Scenario(id: "test", goals: goals, goldDays: gold, silverDays: silver, deadlineDays: deadline, insolvencyDays: insolvency,
-                 trainTypes: types)
+                 trainTypes: types, events: events)
     }
 
     func testAScenarioNeedsAManagedCompanyAndSoundRules() throws {
@@ -198,4 +198,43 @@ final class GoalsTests: XCTestCase {
     private func expect(_ expected: GameError, _ body: () throws -> Void, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertThrowsError(try body(), file: file, line: line) { XCTAssertEqual($0 as? GameError, expected, file: file, line: line) }
     }
+
+    /// Decision 88: a scenario's festival is announced its notice before
+    /// its day of each year, raises its station's demand while it runs, and
+    /// comes back the next year; a festival at a station that is gone is
+    /// not held, and one at a station that never was is refused.
+    func testAFestivalComesBackOnItsDayEveryYear() throws {
+        var (world, s) = try makeStations()
+        world.setDemandEvents(seed: 1)
+        let festival = ScenarioEvent(station: s[1], dayOfYear: 5, days: 3, boost: 1_500, notice: 2)
+        expect(.invalidScenario) {
+            try world.startScenario(scenario([.population(1)], gold: 400, silver: 500, deadline: 900,
+                                             events: [ScenarioEvent(station: StationID(rawValue: 99), dayOfYear: 5, days: 3, boost: 1_500, notice: 2)]))
+        }
+        try world.startScenario(scenario([.population(1)], gold: 400, silver: 500, deadline: 900, events: [festival]))
+        func festivals() -> [DemandEvent] {
+            world.demandEvents?.events.filter { $0.kind == .festival } ?? []
+        }
+        // Day 3 starts: announced for day 5.
+        try world.advance(ticks: 2 * 1_440 + 1)
+        XCTAssertEqual(festivals(), [])
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(festivals(), [DemandEvent(kind: .festival, station: s[1], announced: 3, start: 5, end: 8, boost: 1_500)])
+        XCTAssertEqual(world.demandMultiplier(at: s[1]), 1_000, "not yet")
+        try world.advance(ticks: 2 * 1_440)
+        XCTAssertEqual(world.demandMultiplier(at: s[1]), 2_500, "two and a half times")
+        try world.advance(ticks: 3 * 1_440)
+        XCTAssertEqual(festivals(), [], "over")
+        XCTAssertNil(world.demandEventProblem())
+        // The next year's is announced on day 363.
+        try world.advance(ticks: 355 * 1_440)
+        XCTAssertEqual(festivals().map(\.start), [365])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+
+        try world.removeStation(s[1])
+        XCTAssertEqual(festivals(), [])
+        try world.advance(ticks: 360 * 1_440)
+        XCTAssertEqual(festivals(), [], "its station is gone")
+    }
 }
+
