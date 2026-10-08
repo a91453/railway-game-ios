@@ -251,6 +251,7 @@ extension GameWorld {
         // hour that ends at midnight before the day turns.
         let day = dayIndex(of: GameTime(seconds: now.seconds - GameTime.secondsPerMinute))
         write(LedgerEntry(kind: .hourlyNet, time: now, amount: amount, breakdown: breakdown, crowding: crowding()), day: day)
+        accounts.addTrips(pending.fareTrips, day: day)
     }
 
     private mutating func settleDay(endingBefore now: GameTime, assets: FixedAssets) {
@@ -292,6 +293,8 @@ extension GameWorld {
         // last day closes the year.
         depreciateAssets(day: day)
         closeYear(endingWith: day)
+        // Decision 86: the goals are judged once the day is settled.
+        judgeScenario(endingWith: day)
     }
 
     /// A day's interest on `loan`: `loan × 5 % ÷ 360`, rounded half up to
@@ -366,6 +369,7 @@ extension GameWorld {
         let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
             + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost] }
         guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
+        guard accounts.days.allSatisfy({ (0...Self.maximumAccrued).contains($0.fareTrips) }) else { return "A day's trips are out of range." }
         guard accounts.days.allSatisfy({ [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost].allSatisfy { $0 >= .zero } }) else {
             return "Day accounts cannot be negative."
         }

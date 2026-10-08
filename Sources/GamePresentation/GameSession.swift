@@ -121,6 +121,16 @@ public final class GameSession {
         yearEndYear = nil
     }
 
+    /// Whether the scenario ended while the game ran (decision 86), until
+    /// the player has seen how: its goals panel opens. Not set by loading a
+    /// game whose scenario ended before.
+    public private(set) var scenarioJustEnded = false
+
+    /// The player has seen how the scenario ended.
+    public func dismissScenarioEnd() {
+        scenarioJustEnded = false
+    }
+
     /// The line the line panel shows: an ID only, never a copy of the line.
     /// Read the line itself through ``selectedLine``.
     public private(set) var selectedLineID: LineID?
@@ -537,9 +547,13 @@ public final class GameSession {
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
             let closedBefore = world.accounts.years.last?.year
+            let endedBefore = world.scenario?.outcome != nil
             defer {
                 if let closed = world.accounts.years.last?.year, closed != closedBefore {
                     yearEndYear = closed
+                }
+                if !endedBefore, world.scenario?.outcome != nil {
+                    scenarioJustEnded = true
                 }
             }
             do throws(GameError) {

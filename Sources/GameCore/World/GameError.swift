@@ -178,4 +178,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// A transfer group needs two different stations (decision 81): a
     /// station cannot be linked with itself.
     case invalidTransferGroup
+    /// A scenario needs a managed company, at least one goal, its days in
+    /// order and its targets positive and in the world (decision 86).
+    case invalidScenario
+    /// The scenario's era has no trains of this type (decision 86).
+    case trainTypeUnavailable(TrainType)
 }

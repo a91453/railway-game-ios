@@ -70,10 +70,10 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(GameTime(minutes: 8 * 60 + 30).displayText(in: zh), "第 1 日 · 08:30")
         XCTAssertEqual(GameTime(seconds: -1).displayTextWithSeconds(in: zh), "第 0 日 · 23:59:59")
         XCTAssertEqual(GameClock(now: GameTime(minutes: 90), speed: .x1).displayText(in: zh), "第 1 日 · 01:30:00")
-        XCTAssertEqual(GameSpeed.allCases.map { $0.label(in: zh) }, ["暫停", "1×", "10×", "60×", "600×", "1200×"])
+        XCTAssertEqual(GameSpeed.allCases.map { $0.label(in: zh) }, ["暫停", "1×", "10×", "60×", "600×", "1200×", "6000×"])
         XCTAssertEqual(
             GameSpeed.allCases.map { $0.accessibilityName(in: zh) },
-            ["已暫停", "真實時間", "真實時間的 10 倍", "真實時間的 60 倍", "真實時間的 600 倍", "真實時間的 1200 倍"]
+            ["已暫停", "真實時間", "真實時間的 10 倍", "真實時間的 60 倍", "真實時間的 600 倍", "真實時間的 1200 倍", "真實時間的 6000 倍，快轉"]
         )
         XCTAssertEqual(EconomyMode.allCases.map { $0.displayName(in: zh) }, ["自由模式", "經營模式"])
         XCTAssertEqual(FinancePeriod.allCases.map { $0.displayName(in: zh) }, ["日", "週", "月", "年"])

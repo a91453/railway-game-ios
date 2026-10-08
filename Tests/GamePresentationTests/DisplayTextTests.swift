@@ -120,10 +120,10 @@ final class GameTimeDisplayTests: XCTestCase {
     }
 
     func testSpeedLabels() {
-        XCTAssertEqual(GameSpeed.allCases.map { $0.label(in: .english) }, ["Pause", "1×", "10×", "60×", "600×", "1200×"])
+        XCTAssertEqual(GameSpeed.allCases.map { $0.label(in: .english) }, ["Pause", "1×", "10×", "60×", "600×", "1200×", "6000×"])
         XCTAssertEqual(
             GameSpeed.allCases.map { $0.accessibilityName(in: .english) },
-            ["Paused", "Real time", "10 times real time", "60 times real time", "600 times real time", "1200 times real time"]
+            ["Paused", "Real time", "10 times real time", "60 times real time", "600 times real time", "1200 times real time", "6000 times real time, fast forward"]
         )
     }
 }

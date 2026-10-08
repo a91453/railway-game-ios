@@ -77,6 +77,12 @@ built is on the books at nothing and is never written down or off. A build
 before version 16 refuses a version 16 save rather than dropping what
 everything cost.
 
+Since version 17 (decision 86) a world can hold a `"scenario"`, its goals,
+ratings and how far they are met, its accounts' days their `"fareTrips"`,
+and its clock can run `"fast"` (6000×). Earlier saves have no goals and no
+trips counted. A build before version 17 refuses a version 17 save rather
+than dropping the scenario or the speed.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -101,3 +107,4 @@ hand could hold, is refused with that reason
 | `v14-city-growth.json` | 14 | City growth (Phase 6c-2, ARCHITECTURE decision 75): `v13-city-buildings.json` a day later. Both stations served all their trips and reached one station (`"lastService": 1000`, `"lastReached": 1`), so each raised two full buildings (63, 67, 89 and 134, D2 to D3) and the land grew to its buildings' capacity: 446 cells and buildings, 96 D1, 183 D2, 133 D3, 33 D4 and one existing stock. Written by the version 14 build. |
 | `v15-transfer-group.json` | 15 | Transfer groups (ARCHITECTURE decision 81): the walking-transfer test world with B and B' 600 m apart, too far to walk, linked in transfer group 1 (`"nextTransferGroupID": 2`); five passengers from A rode First to B, walked to B' (432 s at 5 km/h, a virtual transfer) and wait there for Second to C, after 2 minutes. Written by the version 15 build. |
 | `v16-assets-closed-year.json` | 16 | Fixed assets and a closed year (Phase 7a, ARCHITECTURE decision 85): a managed company with a 128 m edge (split at 32 m on day 1, its $720 and depreciation shared $180 / $540), a $7,200 station, a $3,600 train with two $360 cars and a $100,000 loan, run through the end of its first year and taken a car off: five asset records written down for 360 days, 361 capital days and year 0 closed (net loss $5,868, closing cash $182,720, equity $94,132). Written by the version 16 build (`SavedGameTests.assetWorld()`, `ASSET_SAVE_NEW=1`). |
+| `v17-scenario-fast.json` | 17 | Goals and fast forward (decision 86): five stations 1 km apart in a managed world, a line from the first to the second, and a scenario (`test.fixture`) to connect the first two stations' places and reach 1,000 residents, gold by day 30, silver 60, bronze 120, lost after 30 midnights in the red, Type C and D trains only; run a day and a minute at `fast`: the connection met on day 0, the population not. Written by the version 17 build (`SavedGameTests.scenarioWorld()`, `SCENARIO_SAVE_NEW=1`). |

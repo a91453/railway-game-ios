@@ -115,6 +115,19 @@ struct HUDView: View {
                 Label("Tutorial", systemImage: "hand.point.up.left")
             }
             .accessibilityIdentifier("menu.tutorial")
+            // Decision 86: a game with a challenge shows its goals.
+            if session.world.scenario != nil {
+                Button {
+                    screen.panel = .goals
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Goals", "目標"))
+                    } icon: {
+                        Image(systemName: "flag.checkered")
+                    }
+                }
+                .accessibilityIdentifier("menu.goals")
+            }
             Divider()
             Button {
                 screen.panel = .settings

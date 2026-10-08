@@ -72,16 +72,23 @@ struct ContentView: View {
                 screen.panel = .yearEnd
             }
         }
+        // Decision 86: a scenario that ends while playing opens its goals,
+        // as a closed year opens its report.
+        .onChange(of: session.scenarioJustEnded) { _, ended in
+            if ended, screen.panel == nil {
+                screen.panel = .goals
+            }
+        }
         .onChange(of: screen.panel) { old, new in
-            if old == .yearEnd {
-                session.dismissYearEnd()
-            } else if new == nil, session.yearEndYear != nil {
-                // After the closing sheet has gone.
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(500))
-                    if screen.panel == nil, session.yearEndYear != nil {
-                        screen.panel = .yearEnd
-                    }
+            // The report or the goals that were shown have been seen.
+            if old == .yearEnd { session.dismissYearEnd() }
+            if old == .goals { session.dismissScenarioEnd() }
+            guard new == nil, pendingReport != nil else { return }
+            // After the closing sheet has gone.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                if screen.panel == nil, let report = pendingReport {
+                    screen.panel = report
                 }
             }
         }
@@ -93,6 +100,14 @@ struct ContentView: View {
         .onDisappear {
             screen.stopPopTravelPlay()
         }
+    }
+
+    /// What a closing left to show: how the scenario ended first, then the
+    /// year's report (decision 86, Phase 7a).
+    private var pendingReport: GameScreenState.Panel? {
+        if session.scenarioJustEnded { return .goals }
+        if session.yearEndYear != nil { return .yearEnd }
+        return nil
     }
 
     @ViewBuilder
@@ -126,6 +141,9 @@ struct ContentView: View {
             SettingsView(audio: audio)
         case .yearEnd:
             YearEndSheet(session: session)
+                .presentationDetents([.medium, .large])
+        case .goals:
+            GoalsPanel(session: session)
                 .presentationDetents([.medium, .large])
         }
     }
@@ -404,6 +422,8 @@ final class GameScreenState {
         case lines, economy, station, timetable, fleet, mapLayers, dataSources, settings
         /// A closed year's report (Phase 7a), opened by the year's closing.
         case yearEnd
+        /// The scenario's goals (decision 86), opened also when it ends.
+        case goals
 
         var id: Self { self }
     }

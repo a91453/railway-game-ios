@@ -950,3 +950,15 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`metroEconomyFixedAssets`（站數、路線長、列車數） | 既有的 `fixedAssets(memo:)`（營運量，決策 36） | 不是帳面資產：資產紀錄另外做（`AssetRecord`） |
 | （參考沒有） | `AssetRecord`、`acquireAsset`、`depreciateAssets`（直線法，軌道與車站 7200 天、車輛 3600 天）、`splitTrackAsset`、`disposeAsset`、`removeCarAssets`、`AnnualStatement`、`CapitalDay`、存檔版本 16 | gap → 原生：購入成本、折舊、報廢損失與年度決算 |
 
+
+## 目標、挑戰與快轉（決策 86）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源，搜尋 `mission`、`objective`、`goal`、`scenario`、`achievement`、`challenge`、`deadline`。沒有可移植的鐵路目標。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/assets/` 的 missions（動作遊戲的小任務） | — | 不採用：不同玩法 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`（`mission` 只出現在 `flow-admission` 等字串裡，沒有目標或劇本） | — | gap |
+| （參考沒有快轉） | `GameSpeed.fast`（6000×） | gap → 原生：以年為單位的目標需要更快的速度 |
+| （參考沒有） | `Goal`、`Scenario`、`ScenarioState`、`judgeScenario(endingWith:)`、`startScenario(_:)`、`Challenge`、`GoalsPanel`、存檔版本 17 | gap → 原生 |
+

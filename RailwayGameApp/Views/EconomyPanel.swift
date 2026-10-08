@@ -23,6 +23,9 @@ struct EconomyPanel: View {
         NavigationStack {
             Form {
                 balanceSection
+                if session.world.scenario != nil {
+                    goalsSection
+                }
                 loanSection
                 faresSection
                 lastHourSection
@@ -94,6 +97,32 @@ struct EconomyPanel: View {
             Text(accounts.mode == .management
                 ? "Passengers pay as they board. Running and upkeep are settled every hour, energy and staff every day, and the balance may go below zero."
                 : "Free play: no fares and no running costs.")
+        }
+    }
+
+    /// Decision 86: the challenge's goals, opening the goals panel's
+    /// sections.
+    private var goalsSection: some View {
+        Section {
+            NavigationLink {
+                Form {
+                    GoalsSections(session: session)
+                }
+                .navigationTitle(Text(verbatim: session.world.scenarioTitle(in: session.language) ?? ""))
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: session.world.scenarioTitle(in: session.language) ?? "")
+                        .fontWeight(.semibold)
+                    if let status = session.world.scenarioStatusText(in: session.language) {
+                        Text(verbatim: status)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
+            .accessibilityIdentifier("economy.goals")
+        } header: {
+            Text(verbatim: session.language.text("Challenge", "挑戰"))
         }
     }
 

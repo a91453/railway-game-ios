@@ -17,6 +17,7 @@ struct StartView: View {
     @State private var showsSaves = false
     @State private var importsSave = false
     @State private var choosesPlace = false
+    @State private var choosesChallenge = false
     @State private var showsDataSources = false
     @State private var showsSettings = false
     @Environment(\.openURL) private var openURL
@@ -116,6 +117,20 @@ struct StartView: View {
                     // sources screen) there is no demo to open.
                     .disabled(launcher.railways == nil)
                     .accessibilityIdentifier("start.realWorldDemo")
+                    // Decision 86: a new game with goals. Last, after the
+                    // buttons the UI tests reach.
+                    StartButton(
+                        title: launcher.language.text("Challenges", "挑戰"),
+                        detail: launcher.language.text(
+                            "Goals to reach by a deadline, rated gold, silver or bronze",
+                            "在期限內達成目標，依完成速度拿金、銀、銅牌"
+                        ),
+                        systemImage: "flag.checkered",
+                        tone: .accent
+                    ) {
+                        choosesChallenge = true
+                    }
+                    .accessibilityIdentifier("start.challenges")
                 }
                 if let message = launcher.message {
                     HStack(spacing: 8) {
@@ -149,6 +164,9 @@ struct StartView: View {
         }
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesChallenge) {
+            ChallengePicker(launcher: launcher)
         }
         .sheet(isPresented: $choosesPlace) {
             RealWorldPicker(launcher: launcher)

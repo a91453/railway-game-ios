@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 16)
+        XCTAssertEqual(SavedGame.currentVersion, 17)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 17, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 18, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -796,6 +796,55 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(old.accounts.assets, [])
         XCTAssertGreaterThan(old.unrecordedAssetCount(), 0)
         XCTAssertEqual(old.balanceSheet().fixedAssets, .zero)
+    }
+
+    /// The world of `v17-scenario-fast.json`: five stations 1 km apart, a
+    /// managed company, a line from the first to the second, and a
+    /// scenario to connect the first and the last and to reach a
+    /// population, played a day and a minute at fast forward.
+    private static func scenarioWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 400_000, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            clock: GameClock(speed: .fast)
+        )
+        world.setEconomyMode(.management)
+        let ids = try (0..<5).map { index in
+            try world.buildStation(named: "S\(index + 1)", at: PlanPoint(x: 1_024 + Int64(index) * 64_000, y: 4_096)).id
+        }
+        try world.createLine(named: "Main", stops: [ids[0], ids[1]])
+        try world.startScenario(Scenario(
+            id: "test.fixture",
+            goals: [.connect(points: [PlanPoint(x: 1_024, y: 4_096), PlanPoint(x: 65_024, y: 4_096)], radius: 2_048), .population(1_000)],
+            goldDays: 30, silverDays: 60, deadlineDays: 120, insolvencyDays: 30, trainTypes: [.c, .d]
+        ))
+        try world.advance(ticks: 145)
+        return world
+    }
+
+    /// Version 17 (decision 86): a scenario with a goal met on day 0 and
+    /// one not yet, at fast forward. It saves byte for byte and is the
+    /// world the build that wrote it makes. A version 16 save has none.
+    func testVersionSeventeenKeepsItsScenarioAndFastForward() throws {
+        let url = Self.fixtures.appendingPathComponent("v17-scenario-fast.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["SCENARIO_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.scenarioWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 17)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.scenarioWorld())
+        XCTAssertEqual(world.clock.speed, .fast)
+        XCTAssertEqual(world.scenario?.achieved, [0, nil])
+        XCTAssertNil(world.scenario?.outcome)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+        try world.advance(ticks: 144)
+        XCTAssertEqual(world.scenario?.achieved, [0, nil])
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v16-assets-closed-year.json"))
+        XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.scenario)
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {
