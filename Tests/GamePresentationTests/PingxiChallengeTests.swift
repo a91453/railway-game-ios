@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 88: the Pingxi Line challenge on the real-world demo's map, its
+/// Decision 90: the Pingxi Line challenge on the real-world demo's map, its
 /// goals and its Sky Lantern Festival at Shifen and Pingxi.
 final class PingxiChallengeTests: XCTestCase {
     private static func bundledRailways() throws -> RealRailways {

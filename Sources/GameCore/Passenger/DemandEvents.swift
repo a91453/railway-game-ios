@@ -169,7 +169,7 @@ extension GameWorld {
     mutating func startDemandEventDay(_ day: Int64) {
         guard var schedule = demandEvents else { return }
         schedule.events.removeAll { $0.end <= day }
-        // Decision 88: the scenario's festivals, announced their notice
+        // Decision 90: the scenario's festivals, announced their notice
         // before they start, every year, at stations still standing.
         if let state = scenario {
             for festival in state.scenario.events where station(id: festival.station) != nil {

@@ -199,7 +199,7 @@ final class GoalsTests: XCTestCase {
         XCTAssertThrowsError(try body(), file: file, line: line) { XCTAssertEqual($0 as? GameError, expected, file: file, line: line) }
     }
 
-    /// Decision 88: a scenario's festival is announced its notice before
+    /// Decision 90: a scenario's festival is announced its notice before
     /// its day of each year, raises its station's demand while it runs, and
     /// comes back the next year; a festival at a station that is gone is
     /// not held, and one at a station that never was is refused.

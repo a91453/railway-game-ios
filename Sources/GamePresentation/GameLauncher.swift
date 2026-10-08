@@ -113,7 +113,7 @@ public final class GameLauncher {
         case .blank:
             begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
         case .pingxi:
-            // Decision 88: on the real-world demo's map, which waits for the
+            // Decision 90: on the real-world demo's map, which waits for the
             // real railways, read at launch.
             guard let railways else {
                 message = StatusMessage(kind: .failure, text: language.text(

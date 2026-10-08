@@ -149,7 +149,7 @@ struct ChallengePicker: View {
                         "到台灣時間週日午夜前，大家都玩同一張地圖：還剩 \(weekly.daysLeft(from: Date())) 天。"
                     ))
                 }
-                // Decision 88: Taiwan's railway history, on real maps that
+                // Decision 90: Taiwan's railway history, on real maps that
                 // wait for the real-world data.
                 Section {
                     ForEach(Challenge.history) { challenge in
