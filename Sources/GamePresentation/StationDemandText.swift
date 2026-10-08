@@ -264,7 +264,7 @@ extension GameSession {
         guard let demand = world.stationDemand(of: station.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "Choose what kind of place \(station.name) serves first.",
-                "請先選擇 \(station.name) 的運量類型。"
+                "請先選擇 \(station.name) 的客源類型。"
             ))
             return
         }
@@ -279,7 +279,7 @@ extension GameSession {
             try world.setStationDemand(station.id, to: nil)
             return language.text(
                 "\(station.name) has no ridership now. Passengers already waiting stay.",
-                "已移除 \(station.name) 的運量。已在候車的乘客會留下。"
+                "已移除 \(station.name) 的客源。已在候車的乘客會留下。"
             )
         }
     }
@@ -291,14 +291,14 @@ extension GameSession {
         guard let demand = world.stationDemand(of: station.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(station.name) has no ridership to copy.",
-                "\(station.name) 沒有可複製的運量。"
+                "\(station.name) 沒有可複製的客源。"
             ))
             return
         }
         demandClipboard = demand
         message = StatusMessage(kind: .success, text: language.text(
             "Copied \(station.name)'s ridership: \(demand.displayText(in: language)).",
-            "已複製 \(station.name) 的運量設定：\(demand.displayText(in: language))。"
+            "已複製 \(station.name) 的客源設定：\(demand.displayText(in: language))。"
         ))
     }
 
@@ -309,7 +309,7 @@ extension GameSession {
     public func pasteDemandToSelectedStation() {
         guard requireDemandEditing(), let station = requireSelectedStation() else { return }
         guard let copied = demandClipboard else {
-            message = StatusMessage(kind: .failure, text: language.text("Copy a station's ridership first.", "請先複製一座車站的運量設定。"))
+            message = StatusMessage(kind: .failure, text: language.text("Copy a station's ridership first.", "請先複製一座車站的客源設定。"))
             return
         }
         setDemand(Self.demand(copied, for: station.id, in: world), of: station)
@@ -324,7 +324,7 @@ extension GameSession {
         guard let demand = world.stationDemand(of: station.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(station.name) has no ridership to apply.",
-                "\(station.name) 沒有可套用的運量。"
+                "\(station.name) 沒有可套用的客源。"
             ))
             return
         }
@@ -372,7 +372,7 @@ extension GameSession {
         guard canEditStationDemand else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "A managed company's city sets each station's ridership. Only free play can change it.",
-                "經營模式下，各站的運量由城市決定；只有自由模式可以修改。"
+                "經營模式下，各站的客源由城市決定；只有自由模式可以修改。"
             ))
             return false
         }

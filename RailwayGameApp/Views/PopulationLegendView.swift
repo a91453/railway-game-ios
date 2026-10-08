@@ -109,7 +109,7 @@ struct PopulationLegendView: View {
     private var title: String {
         switch mode {
         case .population: language.text("Population grid", "人口網格")
-        case .travel: language.text("Travel demand", "旅運需求")
+        case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
         case .landUse, .landValue, .coverage: mode.title(in: language)
         }

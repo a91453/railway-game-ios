@@ -171,7 +171,7 @@ extension GameWorld {
                 let time = clockText(minuteOfDay: open % 1_440)
                 return language.text("Waiting: \(line.name) opens at \(time)", "等候發車：\(line.name) \(time) 開始營運")
             }
-            return language.text("Waiting for service dispatch", "等候服務模式派車")
+            return language.text("Waiting for service dispatch", "等候派車")
         }
         return train.pathText(in: language)
     }

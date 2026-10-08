@@ -117,14 +117,14 @@ public enum DataSourceCredits {
             ),
             DataSourceSection(
                 id: "population",
-                title: language.text("Population and Ridership", "人口與運量"),
+                title: language.text("Population and Ridership", "人口與客源"),
                 credits: [
                     DataSourceCredit(
                         id: "worldPop",
                         title: "WorldPop",
                         detail: language.text(
                             "When you build a station on a real-world map of Taiwan, the game uses WorldPop’s 2025 population estimates per square kilometre (R2025A) to work out the people and ridership around it. The population grid layer uses the same data.",
-                            "在台灣實景地圖上蓋車站時，遊戲用 WorldPop 2025 年每平方公里的人口估計（R2025A）計算車站周邊的人口與運量。人口網格圖層也使用這份資料。"
+                            "在台灣實景地圖上蓋車站時，遊戲用 WorldPop 2025 年每平方公里的人口估計（R2025A）計算車站周邊的人口與客源。人口網格圖層也使用這份資料。"
                         ),
                         notice: language.text(
                             "WorldPop (www.worldpop.org), University of Southampton, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0); DOI 10.5258/SOTON/WP00840. The game rounds each square to whole people.",

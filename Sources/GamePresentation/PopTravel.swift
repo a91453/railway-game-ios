@@ -33,7 +33,7 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .population: language.text("Population", "人口資料")
-        case .travel: language.text("Travel demand", "旅運需求")
+        case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
         case .landUse: language.text("Land use", "土地用途")
         case .landValue: language.text("Land value", "地價")
@@ -54,12 +54,12 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .travel:
             language.text(
                 "Trips that start in each area in each hour from 0 to 23, from the stations' demand.",
-                "依車站需求推算 0–23 時各區域的旅運需求。"
+                "依車站需求推算 0–23 時各區域的交通需求。"
             )
         case .movement:
             language.text(
                 "How the trips starting in each area rise or fall from the hour before.",
-                "相鄰小時旅運需求量的增減。"
+                "相鄰小時交通需求量的增減。"
             )
         case .landUse:
             language.text(
