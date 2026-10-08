@@ -362,9 +362,11 @@ private struct ControlCard: View {
 final class GameScreenState {
     /// The sheets the game screen presents, one at a time.
     enum Panel: String, Identifiable {
-        // Settings is a panel too: a sheet of the HUD's own could not show
-        // while Lines or Station is open (the HUD stays usable behind them)
-        // and closed when turning the device rebuilt the HUD.
+        // Settings is a panel too, presented above both layouts: a sheet of
+        // the HUD's own would close when turning the device rebuilt the HUD
+        // (from the code; not checked on a device). Opening it with Lines
+        // open was thought to fail too, but the iOS 26.5 Simulator shows
+        // either way (run 37730023961).
         case lines, economy, station, timetable, fleet, mapLayers, dataSources, settings
 
         var id: Self { self }
