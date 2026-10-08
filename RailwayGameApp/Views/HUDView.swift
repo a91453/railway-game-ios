@@ -14,6 +14,7 @@ struct HUDView: View {
     let launcher: GameLauncher
     @Environment(GameScreenState.self) private var screen
     @Environment(GameAudio.self) private var audio
+    @State private var showsSettings = false
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time
@@ -69,8 +70,8 @@ struct HUDView: View {
         .tutorialTarget(.linesButton)
     }
 
-    /// Saving, exporting the game as a file, the tutorial, turning the
-    /// music and sounds on or off, and going back to the start screen,
+    /// Saving, exporting the game as a file, the tutorial, the settings
+    /// (music and sound effects), and going back to the start screen,
     /// which autosaves first.
     private var gameMenu: some View {
         Menu {
@@ -91,14 +92,12 @@ struct HUDView: View {
             }
             .accessibilityIdentifier("menu.tutorial")
             Divider()
-            Toggle(isOn: Binding(get: { audio.musicOn }, set: { audio.setMusicOn($0) })) {
-                Label("Music", systemImage: "music.note")
+            Button {
+                showsSettings = true
+            } label: {
+                Label("Settings", systemImage: "gearshape")
             }
-            .accessibilityIdentifier("menu.music")
-            Toggle(isOn: Binding(get: { audio.soundsOn }, set: { audio.setSoundsOn($0) })) {
-                Label("Sound Effects", systemImage: "speaker.wave.2")
-            }
-            .accessibilityIdentifier("menu.sounds")
+            .accessibilityIdentifier("menu.settings")
             Divider()
             Button {
                 launcher.returnToStart()
@@ -117,6 +116,9 @@ struct HUDView: View {
         .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
         .accessibilityIdentifier("hud.menu")
         .tutorialTarget(.gameMenu)
+        .sheet(isPresented: $showsSettings) {
+            SettingsView(audio: audio)
+        }
     }
 
     /// The balance in dollars; it opens the economy panel.

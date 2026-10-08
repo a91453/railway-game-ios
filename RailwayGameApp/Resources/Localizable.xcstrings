@@ -2661,6 +2661,36 @@
           }
         }
       }
+    },
+    "Settings" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        }
+      }
+    },
+    "Sound" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聲音"
+          }
+        }
+      }
+    },
+    "Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音效：列車到站的鈴聲、鋪好軌道的鐵軌聲，以及換工具時的「咻」聲。iPhone 在靜音模式時，遊戲不會發出聲音。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
