@@ -125,14 +125,20 @@ extension GameSession {
         perform { world throws(GameError) in
             var draft = world
             let result = try plan.build(in: &draft, structure: networkStructure)
+            let cleared = world.placedBuildings(clearedIn: draft).count
             world = draft
             built = result
             let cost = Money(balance.amount - world.economy.balance.amount)
             let length = NetworkBuilding.lengthText(plan.length, in: language)
             let structure = networkStructure.name(in: language)
+            // Decision 95: the company's buildings in the way come down.
+            let demolished = cleared == 0 ? ("", "") : (
+                cleared == 1 ? ", pulling down 1 of your buildings" : ", pulling down \(cleared) of your buildings",
+                "，拆除自己的建物 \(cleared) 棟"
+            )
             return language.text(
-                "Built \(result.edge.displayText(in: language)): \(length), \(structure.lowercased()), for \(cost.moneyText).",
-                "已建造\(result.edge.displayText(in: language))：\(length)，\(structure)，花費 \(cost.moneyText)。"
+                "Built \(result.edge.displayText(in: language)): \(length), \(structure.lowercased()), for \(cost.moneyText)\(demolished.0).",
+                "已建造\(result.edge.displayText(in: language))：\(length)，\(structure)，花費 \(cost.moneyText)\(demolished.1)。"
             )
         }
         if let built {
@@ -173,7 +179,8 @@ extension GameSession {
         return NetworkPreview(
             curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
             length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
-            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem
+            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem,
+            cleared: problem == nil ? world.placedBuildings(clearedIn: draft) : []
         )
     }
 
@@ -637,6 +644,9 @@ public struct NetworkOverlay: Hashable, Sendable {
     /// The centre line of what the platform or remove mode picked.
     public var highlight: [WorldCoordinate] = []
     public var highlightKind: Highlight = .removal
+    /// The company's buildings the next stretch would pull down (decision
+    /// 95).
+    public var cleared: [PlanRect] = []
 
     public init() {}
 }
@@ -656,6 +666,7 @@ extension GameSession {
             } else if let preview = networkPreview {
                 overlay.preview = preview.points
                 overlay.previewIsBuildable = preview.problem == nil
+                overlay.cleared = preview.cleared.map(PlanRect.init)
             }
         case .platform:
             if let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge), stretch.start < stretch.end {

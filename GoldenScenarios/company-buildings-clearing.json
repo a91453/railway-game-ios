@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 42,
+  "description": "Clearing the way (city building P0-C2, ARCHITECTURE decision 95) in a world 131072 x 98304 units (32 x 24 cells of 64 m), a managed company with $4,000,000 (400,000,000 cents), the city's buildings on, and no stations. Cell (5, 5) holds 1,000 residents and 3 jobs: homes, which need D4 (D3 holds 504); cell (5, 6) shops with 20 jobs (D1). A city building stands on the middle 40 m (2,560 units) of its cell. An office block (32 m, 2,048 units) centred on cell (5, 5), (22528, 22528), comes within the 128-unit clearance of that square, so the company buys it out: its 40 storeys of 1,536 m2 at $40, 61,440 x 4,000 = 245,760,000, and its 1,600 m2 at the land value, the D4 home's base of 4,000, 6,400,000, a fifth more: 302,592,000. The office itself: 6,144 m2 of floor at 4,000, 24,576,000, and 1,024 m2 of land at 4,000, 4,096,000. Together 331,264,000: building 1, the balance 68,736,000; it cost 24,576,000 for the building and 4,096,000 + 302,592,000 = 306,688,000 for the land. The cell of land and its city building come down, and their people move in up to the office's 16 residents and 168 jobs: 16 and 3. The shops' cell (5, 6), whose square starts at 25,344, beyond the office's 23,552 + 128, stays. A house (16 m) at (10000, 10000), on empty land at the base of 1,000 a m2, costs 2,048,000 + 256,000 = 2,304,000: building 2, the balance 66,432,000. Track from (4000, 10000) to (16000, 10000) runs through it: 12,000 units, 12 lengths of 1,024 at 100, 1,200, and the house comes down for a tenth of what it cost, 230,400: the balance 66,200,400. A station at (22528, 23679), one unit inside the clearance south of the office (its square ends at 23,552), costs 1,000 and pulls the office down for a tenth of 331,264,000, 33,126,400: the balance 33,073,000. Each demolition is a buildingDemolition row counted in day 0's propertyCost, 33,356,800 together. Every value worked out by hand.",
+  "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 400000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"command": {"type": "setLand", "cells": [{"row": 5, "column": 5, "use": "residential", "residents": 1000, "jobs": 3}, {"row": 5, "column": 6, "use": "commercial", "residents": 0, "jobs": 20}]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 22528, "y": 22528}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 1}, "expect": {"found": true, "placedBuilding": {"id": 1, "kind": "office", "x": 22528, "y": 22528, "residents": 16, "jobs": 3, "buildingCost": 24576000, "landCost": 306688000}}},
+    {"observe": {"type": "landCell", "row": 5, "column": 5}, "expect": {"found": false}},
+    {"observe": {"type": "building", "row": 5, "column": 5}, "expect": {"found": false}},
+    {"observe": {"type": "landCell", "row": 5, "column": 6}, "expect": {"found": true, "landCell": {"row": 5, "column": 6, "use": "commercial", "residents": 0, "jobs": 20}}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 10000, "y": 10000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 4000, "y": 10000, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 16000, "y": 10000, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 2}, "expect": {"found": false}},
+    {"command": {"type": "buildStationAt", "name": "Here", "point": {"x": 22528, "y": 23679}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 1}, "expect": {"found": false}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 33073000,
+    "stations": [{"id": 1, "name": "Here", "point": {"x": 22528, "y": 23679}}],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": {
+      "nodes": [{"id": 1, "x": 4000, "y": 10000, "z": 0}, {"id": 2, "x": 16000, "y": 10000, "z": 0}],
+      "edges": [{"id": 1, "from": 1, "to": 2, "curve": {"type": "straight"}, "profile": {"startTransition": 0, "endTransition": 0}, "structure": "surface", "length": 12000}],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0},
+      "ledger": [
+        {"kind": "buildingDemolition", "time": 0, "amount": -230400, "breakdown": [{"item": "propertyDemolition", "amount": -230400}], "crowding": null},
+        {"kind": "buildingDemolition", "time": 0, "amount": -33126400, "breakdown": [{"item": "propertyDemolition", "amount": -33126400}], "crowding": null}
+      ],
+      "days": [
+        {"day": 0, "fareRevenue": 0, "operatingCost": 0, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0, "propertyCost": 33356800}
+      ]
+    },
+    "land": {"cells": 1, "residents": 0, "jobs": 20},
+    "cityBuildings": {"buildings": 1, "d1": 1, "d2": 0, "d3": 0, "d4": 0, "existingStock": 0}
+  }
+}

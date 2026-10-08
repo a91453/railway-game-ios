@@ -1083,3 +1083,18 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：金額是美分；樓地板 $40／m² = 4,000 美分；維護與稅是萬分之 2 與 1（basis point）；入住速度是千分比（20 + S × 80 / 1000，S 是 0…1000 的服務）；租金公式除以 10,000,000（人數 × 1000／1500 是千分之一美分的權重，× (1000 + S/2) 是千分比，× 地價美分／m²）。
 
 外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：A 列車 Exp 的官方說明書（商業遊戲）：建造費買的是土地使用權、拆除不補償、子公司誘導城市開發；OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
+
+## 城市建造 P0-C2：收購、拆遷與預覽（決策 95）
+
+2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）重新看了可以用的部分：`Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)`（足跡在間距內碰到軌道就擋下）P0-A 已經用同一個想法；`Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的「認領」（大型地點認領矩形、移除那裡的程序化建物）就是收購的形式；`Simulator/` 的 `onDropStructure` 與 `Ci/` 的 `metroCanPlaceWithinQuota` 是「放置前預覽費用、確認才扣款」。參考庫沒有收購價、拆遷費或軌道穿過建物的規則，這些是原生。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的認領矩形（`reservedRects`） | `GameWorld.cityCells(claimedBy:)`、`claims(_:row:column:)`、`removeLand(at:)`、`isClaimedByPlacedBuilding` | 改寫：認領的是城市建物的格子中央 40 m 見方，認領後移除那一格，城市不再長回來 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)` | `GameWorld.line(_:comesNear:)`、`placedBuildings(inTheWayOf:)` | 改寫（P0-A 的間距檢查反過來用：新軌道對既有建物） |
+| `Simulator/reference_snapshot/…/page-38607521e5e99afd.js` 的 `onDropStructure`（先放、再確認）；`Ci/` 的 `metroCanPlaceWithinQuota` | `GameSession.buildingSite`、`buildingPreview`、`confirmBuilding()`、`BuildingOverlay`、App 的動作按鈕「建造 · $X」 | 改寫：點地圖選建地、預覽費用與原因、按鈕確認 |
+| （參考沒有） | `PlacedBuildingRules.cityBuildingSide`、`buyOutPercent`、`buyOutPrice(of:)`、`buildTrackEdge`／`buildStation` 的拆遷費、`clear(_:)` | gap → 原生 |
+
+固定小數：城市建物的正方形 2,560 單位（40 m，每公尺 64 單位），在 4,096 單位的格子中央（內縮 768）；收購價是百分比（120）；金額美分。
+
+外部專案（研究 §3，只取想法、沒有複製程式碼）：A 列車 Exp 說明書（他人的建物要「買收撤去」，比自己蓋貴）、OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 或商業作品，只採用概念；收購價的公式與數值是本專案的。

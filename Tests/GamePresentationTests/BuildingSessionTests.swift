@@ -5,7 +5,8 @@ import XCTest
 /// City building P0-A (ARCHITECTURE decision 92): the building tool places
 /// the chosen building where the player taps, as an edit Undo takes back,
 /// and says what happened. P0-C1 (decision 94): a managed company pays for
-/// it and can demolish it.
+/// it and can demolish it. P0-C2 (decision 95): a tap chooses the site, the
+/// preview shows what it costs and pulls down, and the action button builds.
 @MainActor
 final class BuildingSessionTests: XCTestCase {
     func testPlacingTheChosenBuildingAndUndoingIt() throws {
@@ -59,7 +60,14 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.buildingQuoteText, "House: $ 20,480 to build, plus the land's value for 256 m²")
         XCTAssertNil(session.buildingEconomyText, "nothing built yet")
 
+        // Decision 95: a tap chooses the site and shows what it costs; the
+        // action button builds there.
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 500))
+        XCTAssertTrue(session.world.placedBuildings.isEmpty, "a tap only chooses the site")
+        XCTAssertEqual(session.buildingPreview?.cost, 2_304_000)
+        XCTAssertEqual(session.buildingPreviewText, "Building $ 20,480 + land $ 2,560")
+        XCTAssertTrue(session.confirmBuilding())
+        XCTAssertNil(session.buildingSite, "built: the site is cleared")
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house #1 for $ 23,040."))
         XCTAssertEqual(session.world.economy.balance, 100_000_000 - 2_304_000)
         // Empty, so no rent; upkeep 2 bp of 2,048,000 is 410 cents, tax
@@ -98,5 +106,77 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 0))
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "拆除小住宅 #1。"))
         XCTAssertEqual(session.world.economy.balance, 10_000, "free")
+    }
+
+    func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        XCTAssertNil(session.buildingOverlay?.site)
+        XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, true)
+
+        // An office on the middle of the D4 home's cell buys it out (the
+        // numbers of CompanyBuildingsClearingTests).
+        session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingPreviewText, "Building $ 245,760 + land $ 40,960, buying out 1 city building $ 3,025,920")
+        let overlay = try XCTUnwrap(session.buildingOverlay)
+        XCTAssertEqual(overlay.site, PlanRect(minX: 21_504, minY: 21_504, maxX: 23_552, maxY: 23_552))
+        XCTAssertTrue(overlay.siteIsBuildable)
+        XCTAssertEqual(overlay.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
+        XCTAssertTrue(session.confirmBuilding())
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block #1 for $ 3,312,640, pulling down 1 city building."))
+        XCTAssertNil(session.world.land.cell(row: 5, column: 5))
+
+        // A site where it cannot stand says why, and cannot be built.
+        session.tapBuildingTool(at: PlanPoint(x: 22_600, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingPreviewText, "That would stand on building #1.")
+        XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, false)
+        XCTAssertNil(session.buildingPreview?.cost)
+
+        // Changing mode or tool forgets the site.
+        session.buildingMode = .demolish
+        XCTAssertNil(session.buildingSite)
+        session.buildingMode = .build
+        XCTAssertFalse(session.confirmBuilding())
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap the map where it goes first."))
+    }
+
+    func testFreePlaySaysWhichCityBuildingsComeDownAndReadsInChinese() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingPreviewText, "拆除城市建物 1 棟")
+        session.confirmBuilding()
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好辦公樓 #1，拆除城市建物 1 棟。"))
+        // Nothing in the way: nothing to say.
+        session.buildingKind = .house
+        session.tapBuildingTool(at: PlanPoint(x: 60_000, y: 60_000), reach: 0)
+        XCTAssertNil(session.buildingPreviewText)
+    }
+
+    func testTrackThroughACompanyBuildingSaysItComesDown() throws {
+        var world = try makeWorld(width: 20_480, height: 20_480, balance: 100_000_000)
+        world.setEconomyMode(.management)
+        let house = try world.placeBuilding(.house, at: PlanPoint(x: 10_000, y: 10_000))
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: 4_000, y: 10_000), reach: 0)
+        session.tapNetwork(at: PlanPoint(x: 16_000, y: 10_000), reach: 0)
+        // 12,000 units of track, 1,200, and the house's demolition, 230,400.
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertEqual(preview.cleared, [house])
+        XCTAssertEqual(preview.cost, 231_600)
+        XCTAssertEqual(session.networkOverlay?.cleared, [PlanRect(house)])
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertTrue(session.message?.text.hasSuffix("for $ 2,316, pulling down 1 of your buildings.") ?? false, session.message?.text ?? "")
+        XCTAssertTrue(session.world.placedBuildings.isEmpty)
     }
 }

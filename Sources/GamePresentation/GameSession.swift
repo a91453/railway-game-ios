@@ -53,7 +53,13 @@ public final class GameSession {
     public var buildingKind: PlacedBuildingKind = .house
     /// Whether a tap with the building tool builds or demolishes (decision
     /// 94).
-    public var buildingMode: BuildingToolMode = .build
+    public var buildingMode: BuildingToolMode = .build {
+        didSet { buildingSite = nil }
+    }
+    /// Where the building tool would build, once the player tapped there
+    /// (decision 95): the map shows the building there and what it would
+    /// cost and pull down, and the action button builds it.
+    public internal(set) var buildingSite: PlanPoint?
 
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
@@ -420,6 +426,7 @@ public final class GameSession {
     public func selectTool(_ newTool: ConstructionTool) {
         guard newTool != tool else { return }
         tool = newTool
+        buildingSite = nil
         message = nil
         playSound?(.transition)
     }
@@ -1271,6 +1278,13 @@ public final class GameSession {
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
         Self.readLand(roundStationsOf: &world, population: population, places: places)
+    }
+
+    /// Reads in the land within `reach` of `point` (decision 95: under a
+    /// building's site), as ``readLandRoundStations()`` does round
+    /// stations. Not an edit.
+    func readLand(within reach: Int64, of point: PlanPoint) {
+        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places)
     }
 
     @discardableResult

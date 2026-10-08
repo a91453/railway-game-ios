@@ -232,14 +232,26 @@ private struct BuildingControls: View {
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }
-        Label("Tap open ground on the map to build. It cannot stand on track, a station or another building.", systemImage: "hand.tap")
-            .font(.footnote)
-            .foregroundStyle(Theme.textSecondary)
-        if let quote = session.buildingQuoteText {
-            Text(verbatim: quote)
+        if let preview = session.buildingPreview {
+            // Decision 95: the site's cost and what it pulls down, or why
+            // it cannot stand there; the action button builds it.
+            if let text = session.buildingPreviewText {
+                Text(verbatim: text)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(preview.problem == nil ? Theme.textPrimary : Theme.error)
+                    .accessibilityIdentifier("building.preview")
+            }
+        } else {
+            Label("Tap the map to choose where it goes. It cannot stand on track or another of your buildings; a city building in the way is bought out.", systemImage: "hand.tap")
                 .font(.footnote)
-                .monospacedDigit()
-                .accessibilityIdentifier("building.quote")
+                .foregroundStyle(Theme.textSecondary)
+            if let quote = session.buildingQuoteText {
+                Text(verbatim: quote)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("building.quote")
+            }
         }
     }
 }
@@ -279,6 +291,7 @@ private struct ActionButton: View {
             .buttonStyle(ThemeProminentButtonStyle(isDestructive: isRemoval))
             .disabled(!isReady)
             .accessibilityHint(hint)
+            .accessibilityIdentifier(TutorialTarget.actionButton.rawValue)
             .tutorialTarget(.actionButton)
         }
     }
@@ -288,6 +301,7 @@ private struct ActionButton: View {
     }
 
     private var isReady: Bool {
+        if session.tool == .building { return session.buildingPreview.map { $0.problem == nil } ?? false }
         guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
@@ -296,6 +310,10 @@ private struct ActionButton: View {
     }
 
     private func act() {
+        if session.tool == .building {
+            session.confirmBuilding()
+            return
+        }
         guard session.tool == .network else {
             session.applyTool()
             return
@@ -309,13 +327,22 @@ private struct ActionButton: View {
 
     private var hint: String {
         guard !isReady else { return "" }
-        return session.tool == .network ? String(localized: "Tap the map first.") : String(localized: "Select a station on the map first.")
+        switch session.tool {
+        case .network: return String(localized: "Tap the map first.")
+        case .building: return String(localized: "Tap the map where it goes first.")
+        case .select, .train: return String(localized: "Select a station on the map first.")
+        }
     }
 
     private var title: String? {
         switch session.tool {
-        // The building tool acts on the tap itself.
-        case .select, .building: return nil
+        case .select: return nil
+        case .building:
+            // Decision 95: a tap chooses the site, this builds there;
+            // demolishing acts on the tap itself.
+            guard session.buildingMode == .build else { return nil }
+            guard let cost = session.buildingPreview?.cost, cost > .zero else { return String(localized: "Build") }
+            return String(localized: "Build · \(cost.moneyText)")
         case .network:
             switch session.networkMode {
             case .build:

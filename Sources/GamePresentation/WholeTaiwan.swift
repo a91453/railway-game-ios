@@ -74,11 +74,19 @@ extension GameSession {
     /// `places` (``LandImport/cells(in:population:places:frame:bounds:)``);
     /// nothing for any other map, or without the population.
     static func readLand(roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?) {
-        guard let read = world.landBlocks, !world.stations.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
+        readLand(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places)
+    }
+
+    /// Reads in the land within `reach` of each of `points` whose blocks
+    /// are not read yet, as ``readLand(roundStationsOf:population:places:)``
+    /// does round stations: also under a building about to be placed
+    /// (decision 95), so it buys out the city's buildings there.
+    static func readLand(within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?) {
+        guard let read = world.landBlocks, !points.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
         let have = Set(read)
         var wanted = Set<LandBlock>()
-        for station in world.stations {
-            for block in Land.blocks(within: WholeTaiwan.landReach, of: station.location, in: world.bounds) where !have.contains(block) {
+        for point in points {
+            for block in Land.blocks(within: reach, of: point, in: world.bounds) where !have.contains(block) {
                 wanted.insert(block)
             }
         }
@@ -89,7 +97,7 @@ extension GameSession {
         } catch {
             // The blocks are in the world and not read yet, and the cells
             // lie in them, so failing here is a programming error.
-            preconditionFailure("Could not read in the land round the stations: \(error)")
+            preconditionFailure("Could not read in the land: \(error)")
         }
     }
 }
