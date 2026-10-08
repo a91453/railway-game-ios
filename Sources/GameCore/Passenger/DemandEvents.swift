@@ -29,7 +29,7 @@
 public enum DemandEventKind: String, CaseIterable, Codable, Sendable {
     /// A large exhibition near the station (大型展覽).
     case exhibition
-    /// A crowd surge, such as a concert or a match (大客流事件).
+    /// A crowd surge, such as a concert or a match (大量人潮事件).
     case crowdSurge
 }
 

@@ -64,7 +64,7 @@ Web/npm dependencies 不引入 repository root、GameCore 或 native App；根�
 - 跨 JS 邊界的 Int64、金額、時間及可能超出安全範圍的 ID 使用十進位字串或明確的 BigInt binary 協定。禁止經過 `JSON.parse` 的 Number 再轉回 Int64；BigInt 也不能直接 `JSON.stringify`。
 - 第一版可使用 UTF-8 JSON bridge；明確定義 buffer 所有權、配置、長度、釋放與錯誤。不要把 Swift struct 記憶體 layout 當穩定 ABI。
 - `RailwaySnapshot` 目前是 Swift 值型別，沒有直接的 Web wire encoding。首次 renderer 實作時由 adapter 匯出需要的資料，不必改寫核心模擬型別或直接暴露整個 Train。
-- HUD 與線路查詢獨立於繪圖資料。未實作的地形、號誌、乘客與城市資料不先填假值，亦不當成目前功能。
+- HUD 與路線查詢獨立於繪圖資料。未實作的地形、號誌、乘客與城市資料不先填假值，亦不當成目前功能。
 - 參考網站的取樣式定位（依時刻表與事先算好的等待算出位置，見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md)）目前未整合進 Web 宿主；這是現況紀錄，不是移植閘門。現有 baseline 仍由 GameCore 推進、宿主插值顯示。
 
 ## 3D 座標與動畫
@@ -96,7 +96,7 @@ Swift 存檔由核心相容的 codec 匯出為不透明 bytes，在瀏覽器可�
 | W2：3D renderer | Babylon 場景、軌道 / 月台 / 多節列車、鏡頭控制 | 曲線、高架、隧道與坡道可繪製；只讀核心；WebGL2 與可用時的 WebGPU 路徑實測 |
 | W3：可玩原型 | 工具、列車操作、存讀與發布建置 | 手機與桌面操作、坏存檔拒絕、匯出 / 匯入還原、Safari / Chromium / Firefox 實測 |
 
-最新 main 的 S5 已將時刻表服務、停站與線路派車整合到連續路網，探針會自動納入相應 committed scenarios。交通控制 T/U/V 仍依 ROADMAP 發展；核心已有功能不代表 W0 已提供可玩的 Web 介面。
+最新 main 的 S5 已將時刻表服務、停站與路線派車整合到連續路網，探針會自動納入相應 committed scenarios。交通控制 T/U/V 仍依 ROADMAP 發展；核心已有功能不代表 W0 已提供可玩的 Web 介面。
 
 **W1 前置決策：ID / counter fixed-width compatibility strategy。** 目前 native Int = 64-bit、wasm32 Int = 32-bit；部分 ID / counter 使用 Int。W0 只發現、測試與記錄差異，之後以獨立 PR 處理固定寬度與存檔相容性策略；本 PR 不修改 GameCore ID 型別或 save schema，不 clamp、不在 JS 掩蓋差異，也不改 golden expected values。
 

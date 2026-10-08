@@ -64,7 +64,7 @@ struct LinesPanel: View {
                 patternLast = min(1, max(0, count - 1))
             }
             .renameAlert(
-                title: session.language.text("Rename Line", "線路更名"),
+                title: session.language.text("Rename Line", "路線更名"),
                 name: $renamingLine,
                 language: session.language
             ) { name in

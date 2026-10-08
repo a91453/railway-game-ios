@@ -467,11 +467,11 @@ public final class GameSession {
             return mode == .network
                 ? language.text(
                     "Passengers now plan journeys across the network and change trains.",
-                    "乘客現在會規劃跨線路網的旅程並轉乘。"
+                    "乘客現在會規劃跨路線的旅程並轉乘。"
                 )
                 : language.text(
                     "Passengers now take only a line that serves both their stations.",
-                    "乘客現在只搭兩站都停靠的線路。"
+                    "乘客現在只搭兩站都停靠的路線。"
                 )
         }
     }
@@ -516,7 +516,7 @@ public final class GameSession {
         performEdit { world in world.setEconomyMode(mode) }
         message = StatusMessage(kind: .success, text: language.text(
             "Free play: no fares or running costs, and you set each station's ridership.",
-            "自由模式：不收票價，也沒有營運成本；各站的客流由你設定。"
+            "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
         ))
     }
 
@@ -981,7 +981,7 @@ public final class GameSession {
         let chosen = routes
         perform { world throws(GameError) in
             try world.setLineRoutePreferences(line.id, to: chosen, pattern: pattern)
-            return language.text("Updated the service's physical path.", "已更新交路的股道與月台。")
+            return language.text("Updated the service's physical path.", "已更新停站模式的股道與月台。")
         }
     }
 
@@ -1073,7 +1073,7 @@ public final class GameSession {
             let title = world.serviceTitle(of: world.line(id: line.id)!, calls: calls, in: language)
             return language.text(
                 "Added \(title) to \(line.name) as pattern \(index + 1).",
-                "已在 \(line.name) 加入\(title)（交路 \(index + 1)）。"
+                "已在 \(line.name) 加入\(title)（停站模式 \(index + 1)）。"
             )
         }
     }
@@ -1084,7 +1084,7 @@ public final class GameSession {
         guard let line = requireSelectedLine() else { return }
         perform { world throws(GameError) in
             try world.removeLinePattern(line.id, at: index)
-            return language.text("Removed pattern \(index + 1) from \(line.name).", "已從 \(line.name) 刪除交路 \(index + 1)。")
+            return language.text("Removed pattern \(index + 1) from \(line.name).", "已從 \(line.name) 刪除停站模式 \(index + 1)。")
         }
     }
 

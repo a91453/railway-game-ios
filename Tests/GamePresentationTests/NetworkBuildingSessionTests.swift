@@ -631,7 +631,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點、軌道上（在那裡設道岔），或任何地方建立新節點。")
+            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點、軌道上（在那裡設轉轍器），或任何地方建立新節點。")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "從新節點開始。請點終點。")
             session.tapNetwork(at: Self.b, reach: Self.reach)
