@@ -367,6 +367,76 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         stops.count >= 3 && isStopList(stops) && stops.first != stops.last
     }
 
+    /// This line with station `id` taken out of its stops (decision 83,
+    /// MapBuilder's `handleStationDelete`, which filters it out of every
+    /// line's `stationIds`), with the patterns that no longer call at two
+    /// stops, by ascending index, taken out too; `nil` when the stops left
+    /// are no longer a line's (fewer than two, or on a ring three), which
+    /// the `Ci/` metro game deletes (`metro.edit.line.deleted_too_short`).
+    ///
+    /// Where the station stood between two stops of one station, they
+    /// become one stop (on a ring also the last and the first). Each
+    /// pattern keeps calling at the same stations, and each route
+    /// preference stays with the leg between the same two stations; a
+    /// preference for a leg to or from the station, or for a leg the line
+    /// no longer takes, goes.
+    func removingStation(_ id: StationID) -> (line: ServiceLine, droppedPatterns: [Int])? {
+        // The old index of each stop to its new one, or `nil` for the
+        // station's.
+        var index: [Int?] = []
+        var kept: [StationID] = []
+        for stop in stops {
+            if stop == id {
+                index.append(nil)
+            } else {
+                if kept.last != stop { kept.append(stop) }
+                index.append(kept.count - 1)
+            }
+        }
+        if isRing, kept.count > 1, kept.first == kept.last {
+            kept.removeLast()
+            index = index.map { $0 == kept.count ? 0 : $0 }
+        }
+        guard isRing ? Self.isRingStopList(kept) : Self.isStopList(kept) else { return nil }
+
+        func moved(_ routes: [LineRoutePreference]) -> [LineRoutePreference] {
+            routes.compactMap { route in
+                guard index.indices.contains(route.from), index.indices.contains(route.to),
+                      let from = index[route.from], let to = index[route.to] else { return nil }
+                return LineRoutePreference(from: from, to: to, tracks: route.tracks, platform: route.platform)
+            }
+        }
+        var line = self
+        line.stops = kept
+        line.routePreferences = moved(routePreferences)
+        var dropped: [Int] = []
+        for pattern in patterns.indices {
+            var calls: [Int] = []
+            for call in patterns[pattern].calls {
+                if let new = index[call], calls.last != new { calls.append(new) }
+            }
+            line.patterns[pattern].calls = calls
+            line.patterns[pattern].routePreferences = moved(patterns[pattern].routePreferences)
+            if !LinePattern.isCallList(calls, stopCount: kept.count) { dropped.append(pattern) }
+        }
+        for pattern in dropped.reversed() {
+            line.patterns.remove(at: pattern)
+        }
+        for service in 0..<line.serviceCount {
+            let order = line.routeOrder(service: service)
+            var legs: Set<[Int]> = []
+            let routes = line.routes(ofService: service).filter {
+                line.isValidRoute($0, order: order) && legs.insert([$0.from, $0.to]).inserted
+            }
+            if service == 0 {
+                line.routePreferences = routes
+            } else {
+                line.patterns[service - 1].routePreferences = routes
+            }
+        }
+        return (line, dropped)
+    }
+
     /// `count` made even, down: a ring runs its trains in pairs, one each
     /// way (the reference's `metroRingPairedTrainCountAtOrBelow`).
     static func paired(_ count: Int) -> Int {

@@ -3085,6 +3085,20 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：沒有重做（參考也沒有）；目前 App 沒有列車速率滑桿（只有暫停／恢復列車），`beginEditGesture()`／`endEditGesture()` 只有 GamePresentation 的測試在用；遊戲在跑的時候幾乎每 0.1 秒就有一個 tick，所以要先暫停才能復原。
 
+### 83. 拆除車站
+
+2026-10-08。移植 MapBuilder 的 `handleStationDelete`（`MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js`）與 `Ci/` 地鐵遊戲的 `confirmDeleteStationAllLines`、`_applyRemoveStationFromLine`、`clearStationWaitingPassengers`（`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`）。Phase 2B 起延後的「拆除車站」（ROADMAP Phase 2B、Stage N）補上。存檔格式不變（不升版），golden、replay 與 save fixture 都不變；沒有新的 `GameError`。對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#拆除車站決策-83)。
+
+1. **指令**（GameCore，`GameWorld.removeStation(_:)`）：免費、不退款（和拆軌道相同；`Ci/` 退還里程配額，本專案沒有配額經濟）。車站 ID 不再發出。
+2. **拒絕**（依序）：不存在的車站（`unknownStation`）；有列車的服務停靠這站、需要它的月台（和 `removeTrackPlatform` 相同的 `serviceNeeds`），或車上載著從這站出發、要到這站或在這站換車的乘客時，`trainServiceActive` 指出編號最小的那台（作者決定：先停止經過這站的列車，所以車上不會有乘客要處理；路線的列車要先離開路線才能停止）；交通控制下有列車持有月台所在軌段的區段時 `trackReserved`。拒絕時世界不變。參考是編輯器，刪站後重新派車（`spawnTrains`），沒有這些條件。
+3. **在站裡等車的乘客**：照 `Ci/` 封站的 `clearStationWaitingPassengers`（決策 65 的 `abandonPassengers(waitingAt:)`），全部離開，算在各自的起站放棄。`Ci/` 刪站時車站物件連同它的計數一起消失；這裡車站的乘客紀錄（需求、帳本、餘數）也一起刪除，所以從這站出發、正在別站等車的旅客跟著這站的帳本一起消失，不算在任何一站。其他站要到這站、經過或在這站換車的旅客，照 `setLineStops` 的 `abandonUnservedPassengers` 離開，算在起站放棄。其他站給這站的需求餘數、經過這站的路線分配（`passengerRouteBalances`）一起刪除。
+4. **路線**（`ServiceLine.removingStation(_:)`）：照 MapBuilder 把它從每條路線的站序拿掉。原本夾在同一站兩次之間時合成一站（環線也看最後一站與第一站）。剩下的站不足（非環線少於 2 站、環線少於 3 站）時整條路線刪除，照 `Ci/` 的「已删除不足两站的线路」（`metro.edit.line.deleted_too_short`），和 `removeLine` 相同：它的列車不再屬於路線。服務模式照新的索引停靠原本的車站；剩不到 2 站的服務模式刪除，和 `removeLinePattern` 相同（`reindexPassengerJourneys`）。路徑偏好跟著原本兩站之間的那一段；終點是這站、或那一段不再是路線走的段時刪除（`ServiceLine.isValidRoute(_:order:)`，從 `validRoutePreferences` 抽出，規則不變）。
+5. **列車**：沒有在跑服務的列車，時刻表拿掉這站；重複的時刻表剩 0 站時不再重複；它的交通到訪紀錄清空（和 `setTrainTimetable` 相同）。在跑服務的列車（一定沒有停靠這站）只拿掉在這站的到訪紀錄。
+6. **其他**：月台全部拆除；車站離開轉乘群組，剩一站的群組刪除（ID 不再發出）；這站的需求事件與城鎮成長紀錄刪除；經營模式下，鄰近車站收回它的腹地（`refreshLandDemand`）。
+7. **畫面**（GamePresentation 的 `GameSession.removeSelectedStation()`、App 的 `StationPanel`）：車站面板最下面加「拆除車站」，先確認（說明月台、路線與等車乘客會怎樣，不退款）。經過 `performEdit`，可以復原（決策 82）。成功後放掉指向已不存在實體的選取與草稿（`dropSelectionOfMissing`，原本只在復原後呼叫）。被路線的列車擋下時，訊息說要先讓它離開路線再停止服務。字串有 zh-Hant。
+
+**限制**：只拆一整座車站；`Ci/` 的「只從這條線移除」（`confirmDeleteStationSingleLine`）用既有的路線站序編輯；不能在地圖上直接拆，要從車站面板；拆站不會順便拆掉月台所在的軌道。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^20 單位，16,384 公尺，E1 起是新遊戲的大小）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

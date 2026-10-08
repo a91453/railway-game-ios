@@ -901,3 +901,19 @@ V 實際放行 → T、U（保證不互穿）
 | 本 repo 決策 75 的 `lastService`／`lastReached` | 地價的 S、A | 只讀，不改 |
 
 定點比例：地價美分／m²（Int64），w 與服務比例千分比，可達 0…5。
+
+## 拆除車站（決策 83）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源。`MapBuilder/` 與 `Ci/` 有刪站；`Railway/railway_game_reference_clean/` 只在 `binary_reference/relevant_symbols_and_settings.txt` 有 `CmdRemoveFromRailStation` 的符號名、`relevant_source_paths.txt` 有 `src/station_cmd.cpp` 的路徑，沒有原始碼；`Railway/site_archive_clean/`、`Railway/taipei_gta_reference/source/` 沒有刪站；`Simulator/` 是模型軌道，沒有車站物件。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js`／`handleStationDelete`：`delete stations[id]`、每條線 `stationIds.filter(id)`、`ev(id)`（離開轉乘站） | `GameWorld.removeStation(_:)`、`ServiceLine.removingStation(_:)` | direct：每條路線拿掉它，再離開轉乘群組（決策 81 的 `unlinkTransfer` 規則） |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`confirmDeleteStationAllLines`、`_applyRemoveStationFromLine`（`stations.splice`） | 同上 | adapted：從所有路線移除；`spawnTrains` 重新派車改成先要求停止服務（作者決定） |
+| 同檔／`confirmDeleteStationSingleLine`：兩站的線剩一站時連最後一站也移除（`metro.edit.line.deleted_too_short`） | `ServiceLine.removingStation(_:)` 回傳 `nil` → 路線刪除 | adapted：不足 2 站（環線 3 站）的路線刪除 |
+| 同檔／`clearStationWaitingPassengers`（封站時清空等車） | `abandonPassengers(waitingAt:)`（決策 65） | direct：等車的人離開，算在起站放棄 |
+| 同檔／車站物件連同 `waiting` 計數一起刪除 | 刪除車站的 `StationPassengers` 紀錄與起站是它的等車群組 | adapted：本專案的帳本依起站記錄，跟著車站一起刪 |
+| 同檔／`metroEconomyCommitQuotaRefund("metro.station.delete.commit")`（退還里程配額） | — | gap：沒有配額經濟（P7-4）；拆除免費、不退款，和拆軌道相同 |
+| 同檔／`_mergeSegmentAnchorsAfterStationRemoved` | `ServiceLine.removingStation(_:)` 的路徑偏好重排 | adapted：偏好跟著原本的兩站，不再成立的刪除 |
+| — | 拒絕條件（`trainServiceActive`、`trackReserved`）、服務模式重排、閒置列車的時刻表、需求事件、城鎮成長、腹地 | gap → 原生：參考是編輯器或沒有這些狀態 |
+

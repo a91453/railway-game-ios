@@ -18,6 +18,8 @@ struct StationPanel: View {
     @Environment(\.dismiss) private var dismiss
     /// The name being typed for the station, while its rename alert is up.
     @State private var renaming: String?
+    /// Whether the demolish confirmation is up.
+    @State private var confirmingRemoval = false
 
     var body: some View {
         NavigationStack {
@@ -48,6 +50,7 @@ struct StationPanel: View {
                     }
                     pairsSection(station)
                     passengersSection(station)
+                    removalSection(station)
                 } else {
                     Section {
                         Text("Select a station on the map, or choose one above.")
@@ -192,6 +195,47 @@ struct StationPanel: View {
             Text(verbatim: language.text(
                 "A platform track runs beside the platform with a turnout at each end. Island: one platform between the tracks, 11 m apart. Side: a platform outside each track, 5 m apart.",
                 "月台軌道會建在月台旁，兩端各有一組道岔。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
+            ))
+        }
+    }
+
+    /// Demolishing the station (decision 83), after a confirmation that
+    /// says what goes with it, through `GameSession.removeSelectedStation()`;
+    /// Undo puts it back.
+    private func removalSection(_ station: Station) -> some View {
+        let language = session.language
+        return Section {
+            Button(role: .destructive) {
+                confirmingRemoval = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Demolish Station", "拆除車站"))
+                } icon: {
+                    Image(systemName: "trash")
+                }
+            }
+            .accessibilityIdentifier("station.remove")
+            .confirmationDialog(
+                Text(verbatim: language.text("Demolish \(station.name)?", "要拆除 \(station.name) 嗎？")),
+                isPresented: $confirmingRemoval,
+                titleVisibility: .visible
+            ) {
+                Button(role: .destructive) {
+                    session.removeSelectedStation()
+                } label: {
+                    Text(verbatim: language.text("Demolish", "拆除"))
+                }
+                .accessibilityIdentifier("station.remove.confirm")
+            } message: {
+                Text(verbatim: language.text(
+                    "Its platforms go, and its lines no longer call there; a line left with too few stops goes too. Passengers waiting there leave. Nothing is refunded.",
+                    "它的月台會拆除，路線不再停靠這站；剩下的車站不足的路線也會刪除。在站裡等車的乘客會離開。不退還費用。"
+                ))
+            }
+        } footer: {
+            Text(verbatim: language.text(
+                "Stop the service of every train that calls here or carries its passengers first; take a line's train off its line to stop it.",
+                "請先停止停靠這站或載著這站乘客的列車的服務；路線的列車要先離開路線才能停止。"
             ))
         }
     }

@@ -752,6 +752,103 @@ public struct GameWorld: Equatable, Sendable {
         refreshLandDemand()
     }
 
+    /// Demolishes station `id` (decision 83; MapBuilder's
+    /// `handleStationDelete`, the `Ci/` metro game's
+    /// `confirmDeleteStationAllLines`). Free: like removing track, nothing
+    /// is refunded. Its ID is never handed out again.
+    ///
+    /// The station goes with everything that is only its: its platforms on
+    /// the track network, its passenger record (its demand, its ledger and
+    /// the remainders of its trips), its demand events and its town growth.
+    /// Everyone waiting there leaves first, counted as abandoned at their
+    /// original station, as when it closes (`clearStationWaitingPassengers`);
+    /// those who set out from it go with its ledger, wherever they wait.
+    /// Every line loses it from its stops (see
+    /// ``ServiceLine/removingStation(_:)``); a line left too short goes, as
+    /// after ``removeLine(_:)``, and so does a pattern left with fewer than
+    /// two calls, as after ``removeLinePattern(_:at:)``. A train not
+    /// running a service loses it from its timetable (a repeating one left
+    /// empty stops repeating) and forgets its traffic visits; a running
+    /// one forgets its visits there. The station leaves its transfer group,
+    /// and a group left with one station goes. Then, as after
+    /// ``setLineStops(_:to:)``, everyone waiting elsewhere for a trip that
+    /// went to, through or from it leaves, and a managed company's
+    /// neighbouring stations take back its catchment.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   ``GameError/trainServiceActive(_:)`` naming the lowest numbered
+    ///   train whose service calls at the station, needs one of its
+    ///   platforms (see ``removeTrackPlatform(_:on:from:)``) or carries
+    ///   passengers from it, to it or changing there (stop the service
+    ///   first; for a line's train, take it off the line), so no one on
+    ///   board is left with nowhere to go; or, under traffic control (Stage
+    ///   T), ``GameError/trackReserved(_:)`` while a train holds a span of a
+    ///   platform's edge.
+    public mutating func removeStation(_ id: StationID) throws(GameError) {
+        guard let stationIndex = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        let platforms = network.platforms.filter { $0.station == id }
+        func touches(_ group: RidingGroup) -> Bool {
+            group.origin == id || group.destination == id
+                || group.journey?.legs.contains { $0.from == id || $0.to == id } == true
+        }
+        if let train = trains.first(where: { train in
+            (train.execution != nil && train.timetable.contains { $0.station == id })
+                || platforms.contains { serviceNeeds(train, $0) }
+                || riders.contains { $0.train == train.id && $0.groups.contains(where: touches) }
+        }) {
+            throw .trainServiceActive(train.id)
+        }
+        for platform in platforms {
+            try requireSpansUnheld(on: platform.edge)
+        }
+
+        // The passengers: those waiting here leave, counted at their
+        // original station; the station's own go with its ledger.
+        abandonPassengers(waitingAt: id)
+        for index in passengers.indices where passengers[index].station != id {
+            _ = passengers[index].abandonGroups(unless: { $0.journey?.origin != id })
+            passengers[index].remainders.removeAll { $0.destination == id }
+        }
+        passengers.removeAll { $0.station == id }
+        passengerRouteBalances.removeAll { balance in
+            balance.origin == id || balance.destination == id
+                || balance.journeys.contains { $0.legs.contains { $0.from == id || $0.to == id } }
+        }
+
+        for index in network.platforms.indices.reversed() where network.platforms[index].station == id {
+            network.removePlatform(at: index)
+        }
+        for index in lines.indices.reversed() where lines[index].stops.contains(id) {
+            guard let (line, dropped) = lines[index].removingStation(id) else {
+                lines.remove(at: index)
+                continue
+            }
+            lines[index] = line
+            for pattern in dropped.reversed() {
+                reindexPassengerJourneys(on: line.id, removing: pattern)
+            }
+        }
+        for index in trains.indices {
+            if trains[index].execution == nil, trains[index].timetable.contains(where: { $0.station == id }) {
+                trains[index].timetable.removeAll { $0.station == id }
+                if trains[index].timetable.isEmpty { trains[index].timetablePeriod = nil }
+                trains[index].trafficVisits = []
+            } else {
+                trains[index].trafficVisits.removeAll { $0.station == id }
+            }
+        }
+        if let group = transferGroups.firstIndex(where: { $0.stations.contains(id) }) {
+            transferGroups[group].stations.removeAll { $0 == id }
+            if transferGroups[group].stations.count < 2 { transferGroups.remove(at: group) }
+        }
+        demandEvents?.events.removeAll { $0.station == id }
+        townGrowth?.places.removeAll { $0.station == id }
+        stations.remove(at: stationIndex)
+
+        abandonUnservedPassengers()
+        refreshLandDemand()
+    }
+
     /// Buys a new train and charges ``ConstructionCosts/train``.
     ///
     /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
