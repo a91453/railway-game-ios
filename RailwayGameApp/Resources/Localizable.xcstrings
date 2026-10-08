@@ -24,6 +24,17 @@
         }
       }
     },
+    "OpenStreetMap" : {
+      "comment" : "A map style: OpenStreetMap's map, drawn by MapLibre (decision 97).",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenStreetMap"
+          }
+        }
+      }
+    },
     "Unfollow" : {
       "localizations" : {
         "zh-Hant" : {

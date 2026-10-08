@@ -1098,3 +1098,19 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：城市建物的正方形 2,560 單位（40 m，每公尺 64 單位），在 4,096 單位的格子中央（內縮 768）；收購價是百分比（120）；金額美分。
 
 外部專案（研究 §3，只取想法、沒有複製程式碼）：A 列車 Exp 說明書（他人的建物要「買收撤去」，比自己蓋貴）、OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 或商業作品，只採用概念；收購價的公式與數值是本專案的。
+
+## 實景地圖的 OpenStreetMap 底圖（決策 97）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `openfreemap`、`positron`、`osmStyleKey`、`osmLabelLang`、`fill-extrusion`、`mlMap`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`initOsmMapEngine`（MapLibre GL 的 OSM 地圖引擎，`G.mlMap`） | `RailwayGameApp/Views/OSMMapBackground.swift`（MapLibre Native 的 `MLNMapView`） | adapted：同一個引擎的 iOS 版；地圖跟著遊戲的相機，不自己接手勢 |
+| 同上／`osmStyleKey` 預設 `positron`，`readStoredOsmStyleKey` 的 `ofm-positron`、`ofm-dark` | `OpenStreetMapBase.styleURL(dark:)` | direct：OpenFreeMap 的 Positron 與 Dark；深色外觀用 Dark |
+| 同上／`osmLabelLang`（預設 `local`）與地名圖層的判斷（`isOsmBaseMapNameLayer`） | `OpenStreetMapBase.labelText(in:)`、`showsName(_:)` | adapted：中文介面是當地名稱（台灣的 `name`），英文介面是英文名稱；只換顯示名稱的圖層 |
+| 同上／地圖下方的 `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | `DataSourceCredits.openStreetMapBaseMap(in:)`、資料來源畫面的「OpenFreeMap」 | direct：同一段文字 |
+| 同上／`applyOsmSensitiveFacilityLabelFilter`（隱藏軍事設施的標示） | — | 之後：這一步還沒做，見決策 97 的限制 |
+| 同上／建物的 `fill-extrusion` | — | 之後：3D 建築 |
+| `Railway/` 網站的 `glTracksInstall`（真實鐵道畫在 MapLibre 上的順序） | `FollowingMapLibreView.drawRailways(in:)` | direct：和 Apple 地圖上的畫法相同（決策 50），這次直接是 MapLibre 的圖層 |
+
+外部專案：MapLibre Native（https://github.com/maplibre/maplibre-native ，BSD 2-Clause；作者同意的依賴，用它的二進位套件 `maplibre-gl-native-distribution` 6.31.0，沒有複製程式碼；授權與第三方聲明打包在 `Resources/Licenses/`）。圖磚與樣式是 OpenFreeMap（https://openfreemap.org ，資料 © OpenStreetMap 貢獻者，ODbL）。也看過 MapLibre 官方的 SwiftUI 包裝 maplibre/swiftui-dsl（https://github.com/maplibre/swiftui-dsl ，BSD 3-Clause，1.0 以前、API 不保證穩定）：沒有採用，這裡的地圖不接自己的手勢、完全跟著遊戲的相機，直接包一層 `UIViewRepresentable` 比較單純，也不必多一個依賴；沒有從它複製程式碼。另外評估過 Mapbox Maps SDK：專有授權（Mapbox TOS），要帳號與金鑰、超過免費額度要付費，下載 SDK 要用帳號的金鑰，公開 repo 的 PR 建置拿不到，所以不用。

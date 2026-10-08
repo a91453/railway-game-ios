@@ -3,14 +3,16 @@ import GamePresentation
 import MapKit
 import SwiftUI
 
-/// The look of Apple's map under a real-world game (Stage E2): the
-/// references' choice of a light street map, satellite imagery or both
-/// (`Ci/`'s `positron` / `satellite` styles). A view preference, kept with
-/// the app's settings rather than the game.
+/// The look of the map under a real-world game (Stage E2): the references'
+/// choice of a light street map, satellite imagery or both (`Ci/`'s
+/// `positron` / `satellite` styles), from Apple, or OpenStreetMap's own
+/// (decision 97, ``OSMMapBackground``). A view preference, kept with the
+/// app's settings rather than the game.
 enum AppleMapStyle: String, CaseIterable, Identifiable {
     case standard
     case hybrid
     case satellite
+    case openStreetMap
 
     var id: Self { self }
 
@@ -19,6 +21,7 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
         case .standard: String(localized: "Map")
         case .hybrid: String(localized: "Satellite with Labels")
         case .satellite: String(localized: "Satellite")
+        case .openStreetMap: String(localized: "OpenStreetMap")
         }
     }
 
@@ -26,7 +29,7 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
     /// muted, so the railway stands out (as `Ci/`'s light `positron`).
     var configuration: MKMapConfiguration {
         switch self {
-        case .standard: MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
+        case .standard, .openStreetMap: MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
         case .hybrid: MKHybridMapConfiguration(elevationStyle: .flat)
         case .satellite: MKImageryMapConfiguration(elevationStyle: .flat)
         }
@@ -92,7 +95,7 @@ struct AppleMapBackground: UIViewRepresentable {
             map.preferredConfiguration = style.configuration
         }
         let theme: RealRailways.MapTheme = switch style {
-        case .standard: context.environment.colorScheme == .dark ? .dark : .light
+        case .standard, .openStreetMap: context.environment.colorScheme == .dark ? .dark : .light
         case .hybrid, .satellite: .satellite
         }
         map.showRailways(
@@ -361,13 +364,13 @@ final class StationDotsRenderer: MKOverlayRenderer {
     }
 }
 
-private extension UIColor {
+extension UIColor {
     convenience init(_ rgb: RealRailways.RGB) {
         self.init(red: CGFloat(rgb.red) / 255, green: CGFloat(rgb.green) / 255, blue: CGFloat(rgb.blue) / 255, alpha: 1)
     }
 }
 
-private extension CLLocationCoordinate2D {
+extension CLLocationCoordinate2D {
     init(_ coordinate: RealRailways.Coordinate) {
         self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
     }

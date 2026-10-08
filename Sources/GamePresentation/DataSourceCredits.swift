@@ -43,11 +43,23 @@ public enum DataSourceCredits {
     static let worldPopURL = "https://www.worldpop.org"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
+    static let openFreeMapURL = "https://openfreemap.org"
+    static let openMapTilesURL = "https://openmaptiles.org"
+    static let mapLibreURL = "https://github.com/maplibre/maplibre-native"
+    /// MapLibre Native's licence and its third-party notices, as the app
+    /// bundles them (`Resources/Licenses/`).
+    static let mapLibreLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
     public static func railwaysOnMap(in language: DisplayLanguage) -> String {
         language.text("Railways: MOTC TDX, © OpenStreetMap contributors", "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
+    }
+
+    /// The short credit on a real-world map whose base map is
+    /// OpenStreetMap's (decision 97): the wording OpenFreeMap asks for.
+    public static func openStreetMapBaseMap(in language: DisplayLanguage) -> String {
+        language.text("OpenFreeMap © OpenMapTiles Data from OpenStreetMap", "OpenFreeMap © OpenMapTiles，資料來自 OpenStreetMap")
     }
 
     /// Every source, by the part of the game that uses it. The same wording
@@ -154,6 +166,42 @@ public enum DataSourceCredits {
                             "授權聲明請見地圖左下角的「法律資訊」。"
                         ),
                         links: []
+                    ),
+                    // Decision 97: the OpenStreetMap base map, after `Ci/`'s
+                    // credit for it ("OpenFreeMap © OpenMapTiles Data from
+                    // OpenStreetMap").
+                    DataSourceCredit(
+                        id: "openFreeMap",
+                        title: "OpenFreeMap",
+                        detail: language.text(
+                            "The OpenStreetMap base map of real-world maps (the map style menu’s OSM): OpenFreeMap’s vector tiles in its Positron and Dark styles.",
+                            "實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」）：OpenFreeMap 的向量圖磚與它的 Positron、Dark 樣式。"
+                        ),
+                        notice: language.text(
+                            "OpenFreeMap © OpenMapTiles Data from OpenStreetMap. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0.",
+                            "OpenFreeMap © OpenMapTiles，資料來自 OpenStreetMap。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "OpenFreeMap", url: openFreeMapURL),
+                            DataSourceCredit.Link(title: "OpenMapTiles", url: openMapTilesURL),
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "mapLibre",
+                        title: "MapLibre Native",
+                        detail: language.text(
+                            "The software that draws the OpenStreetMap base map.",
+                            "繪製 OpenStreetMap 底圖的軟體。"
+                        ),
+                        notice: language.text(
+                            "Copyright (c) 2021 MapLibre contributors, (c) 2018-2021 MapTiler.com, (c) 2014-2020 Mapbox, under the BSD 2-Clause License. The licence and the notices of the software it includes come with the app and are at the link below.",
+                            "Copyright (c) 2021 MapLibre contributors, (c) 2018-2021 MapTiler.com, (c) 2014-2020 Mapbox，依 BSD 2-Clause 授權使用。授權條款與它包含的其他軟體的聲明隨 App 提供，也可以從下方連結閱讀。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "MapLibre Native", url: mapLibreURL),
+                            DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
+                        ]
                     ),
                 ]
             ),
