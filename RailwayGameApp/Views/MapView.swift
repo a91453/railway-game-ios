@@ -78,6 +78,9 @@ struct MapView: View {
     /// (decision 84), worked out off the main actor when the track, the
     /// lines or the groups change.
     @State private var lineMap = LineMap()
+    /// Which stations are named zoomed out (decision 89), worked out with
+    /// the lines' map.
+    @State private var stationLabels = StationLabels()
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
@@ -124,7 +127,8 @@ struct MapView: View {
                         edges: edges,
                         layers: mapLayers,
                         waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
-                        lines: lineMap
+                        lines: lineMap,
+                        labels: stationLabels
                     )
                     .equatable()
                 }
@@ -304,8 +308,11 @@ struct MapView: View {
             // A journey a line costs a route search a leg: on a large map
             // that is too slow for a frame.
             let world = session.world
-            let map = await Task.detached(priority: .userInitiated) { LineMap(world: world) }.value
-            if !Task.isCancelled { lineMap = map }
+            let (map, labels) = await Task.detached(priority: .userInitiated) { (LineMap(world: world), StationLabels(world: world)) }.value
+            if !Task.isCancelled {
+                lineMap = map
+                stationLabels = labels
+            }
         }
         .onChange(of: HeatmapKey(total: session.population?.total, realWorld: RealWorldFrame(world: session.world)), initial: true) { _, key in
             // The grid is laid out once for a map, not on every draw.
@@ -330,10 +337,21 @@ struct MapView: View {
             travelTiles = key.mode.map { key.demand.tiles(for: $0, at: key.hour) } ?? []
             travelTilesVersion &+= 1
         }
-        .onChange(of: CityMapKey(world: session.world, isShown: mapLayers.popTravelMode?.isCityLayer == true), initial: true) { _, key in
-            // Worked out once for what the layers read, not on every draw.
-            cityMap = key.isShown ? CityMap(world: session.world) : nil
-            cityMapVersion &+= 1
+        .task(id: CityMapKey(world: session.world, isShown: mapLayers.popTravelMode?.isCityLayer == true)) {
+            // Worked out once for what the layers read, not on every draw,
+            // and off the main thread (decision 89): on the whole of Taiwan
+            // it takes seconds with hundreds of stations.
+            guard mapLayers.popTravelMode?.isCityLayer == true else {
+                cityMap = nil
+                cityMapVersion &+= 1
+                return
+            }
+            let world = session.world
+            let map = await Task.detached(priority: .userInitiated) { CityMap(world: world) }.value
+            if !Task.isCancelled {
+                cityMap = map
+                cityMapVersion &+= 1
+            }
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -431,7 +449,7 @@ struct MapView: View {
     /// The camera a game opens on (Stage E1): what it has built, or the
     /// middle of its world.
     private func openingCamera(viewport: ScreenSize) -> PlanCamera {
-        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.built(in: session.world))
+        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world))
     }
 
     /// Whether the network tool previews a stretch, shown in the
@@ -645,6 +663,7 @@ private struct MapCanvas: View, Equatable {
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
     let lines: LineMap
+    let labels: StationLabels
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -661,11 +680,13 @@ private struct MapCanvas: View, Equatable {
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
             && lhs.lines == rhs.lines
+            && lhs.labels == rhs.labels
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
+        let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -680,6 +701,8 @@ private struct MapCanvas: View, Equatable {
                 layers: layers,
                 waitingCounts: waitingCounts,
                 lines: lines,
+                labels: labels,
+                latitude: latitude,
                 in: context
             )
         }

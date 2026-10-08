@@ -34,6 +34,8 @@ enum MapArt {
         layers: MapLayerPreferences = .default,
         waitingCounts: [StationID: Int64] = [:],
         lines: LineMap = LineMap(),
+        labels: StationLabels = StationLabels(),
+        latitude: Double = 0,
         in context: GraphicsContext
     ) {
         let referenceSize = projection.referenceSize
@@ -68,6 +70,9 @@ enum MapArt {
                 projection: projection,
                 in: context
             )
+        }
+        if detail != .full && layers.showsStationNames {
+            drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
         drawWaits(traffic, projection: projection, in: context)
@@ -568,6 +573,43 @@ enum MapArt {
                 context.stroke(pillPath, with: .color(Color(uiColor: .systemBackground)), lineWidth: 1)
                 context.draw(countText, at: CGPoint(x: center.x, y: pillY), anchor: .center)
             }
+        }
+    }
+
+    /// The most stations named on a zoomed-out map at once, and the most
+    /// names measured for it in a frame (measuring is the costly part).
+    private static let overviewNameLimit = 60
+    private static let overviewNamesMeasured = 150
+
+    /// Zoomed out (decision 89), the names of the stations whose lines'
+    /// level the map's zoom is above (MapBuilder's `zoomThreshold`), the
+    /// widest lines' first: a name that would cover one already drawn is
+    /// left out, and at most ``overviewNameLimit`` are drawn of the first
+    /// ``overviewNamesMeasured`` near the view. Each sits on
+    /// a pale plate so it reads over the lines and Apple's map.
+    private static func drawOverviewNames(
+        _ world: GameWorld, labels: StationLabels, latitude: Double, projection: some MapProjection, in context: GraphicsContext
+    ) {
+        let zoom = StationLabels.zoom(pointsPerUnit: projection.pointsPerUnit, latitude: latitude)
+        let view = context.clipBoundingRect
+        let near = view.insetBy(dx: -160, dy: -60)
+        let radius = max(5, projection.referenceSize * 0.32)
+        let points = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.id, $0) })
+        var placed: [CGRect] = []
+        var measured = 0
+        for entry in labels.named(atZoom: zoom) {
+            guard placed.count < overviewNameLimit, measured < overviewNamesMeasured else { break }
+            guard let station = points[entry.station] else { continue }
+            let center = projection.screenPoint(of: station.location)
+            guard near.contains(CGPoint(x: center.x, y: center.y)) else { continue }
+            measured += 1
+            let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
+            let size = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
+            let rect = CGRect(x: center.x - size.width / 2, y: center.y + radius + 2, width: size.width, height: size.height)
+            guard rect.intersects(view), !placed.contains(where: { $0.insetBy(dx: -3, dy: -1).intersects(rect) }) else { continue }
+            placed.append(rect)
+            context.fill(Path(roundedRect: rect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
+            context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 2), anchor: .top)
         }
     }
 

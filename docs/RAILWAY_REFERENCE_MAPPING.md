@@ -987,3 +987,17 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `LandDemand.shares` 的單站快速路徑（稀疏的 `CityMap` 與沿線段分格的 `TrackSpacing.Pieces` 在 #226、#228） | gap → 原生（行為不變的效能修改） |
 
 沒有比例換算：區塊是 16 格 × 4,096 單位 = 65,536 單位（1,024 m），2 km 是 128,000 單位。
+
+## 全島縮小時的畫面（決策 89）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：MapBuilder 的路線等級與縮放門檻，`Railway/` 網站的 `visibleRoutes`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/pages/_app-70b32b07723ca1d7.js`／`W`（`LOCAL` 2 km、9.5；`REGIONAL` 10 km、7；`LONG` 50 km、3.5；`XLONG` 無限、1.1） | `MapLineLevel`（`spacingThreshold`、`zoomThreshold`） | direct |
+| 同一個 chunk 目錄／`getLevel({avgSpacing})`（第一個 `avgSpacing < spacingThreshold` 的等級） | `MapLineLevel.level(averageSpacing:)`、`StationLabels.level(of:points:)` | adapted：每條路線各自算，不是整張地圖一個等級 |
+| `MapBuilder/.../chunks/338-b3d18c994bd13868.js`：`getZoom() > zoomThreshold` 才顯示細節 | `StationLabels.named(atZoom:)`、`StationLabels.zoom(pointsPerUnit:latitude:)`、App 的 `MapArt.drawOverviewNames` | adapted：只控制縮小時的站名，加上避免重疊與數量上限 |
+| `Railway/site_archive_clean/rail-3d/physical/client.js`／`visibleRoutes(lines, bounds)` | — | 不需要：MapKit 只畫畫面內的圖磚 |
+| （參考沒有） | `WorldRegion.opening(in:)`、背景建立的 `CityMap` | gap → 原生 |
+
+縮放的換算：MapLibre 的 z 是地球 512 · 2^z 點寬；世界單位是錨點緯度的 1/64 公尺，所以 2^z = 每單位點數 × 64 × 2πR cos(緯度) ÷ 512。
