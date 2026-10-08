@@ -140,42 +140,18 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(lowest.waitForNonExistence(timeout: 5), "The status message stayed over the list")
     }
 
-    /// Scrolls the Lines sheet until `row` lies wholly on screen, clear of
-    /// the navigation bar at the top and the home indicator and status
-    /// banner at the bottom. A fixed number of `swipeUp()` calls did not:
-    /// how far a swipe flings the list depends on the synthesized event's
-    /// timing, so one run stopped with the row's top 1 pt above the bottom
-    /// of the screen (main a383f27: "hittable", but the tap at its centre
-    /// opened no menu) and a slow one never brought it into existence
-    /// (main 11c511f). Each drag here holds before lifting, so the list
-    /// moves by the drag's length and does not fling.
+    /// Scrolls the Lines sheet until `row` lies wholly on screen
+    /// (``XCUIApplication/dragUntilWhollyOnScreen(_:)``). A fixed number
+    /// of `swipeUp()` calls did not: one run stopped with the row's top
+    /// 1 pt above the bottom of the screen (main a383f27: "hittable", but
+    /// the tap at its centre opened no menu) and a slow one never brought
+    /// it into existence (main 11c511f).
     private func bringIntoView(_ row: XCUIElement, in app: XCUIApplication) {
-        let screen = app.frame
-        let top = screen.minY + 140
-        let bottom = screen.maxY - 120
-        for _ in 0..<16 {
-            if row.exists {
-                let frame = row.frame
-                if frame.minY >= top, frame.maxY <= bottom, row.isHittable { return }
-                // Above the band: move the list down. Each drag is shorter
-                // than the band less the row, so the row cannot jump over it.
-                if frame.minY < top {
-                    drag(in: app, from: 0.45, to: 0.65)
-                    continue
-                }
-            }
-            drag(in: app, from: 0.75, to: 0.5)
+        guard app.dragUntilWhollyOnScreen(row) else {
+            recordRouteUI("row never came into view", in: app)
+            XCTFail("\(row) never lay wholly on screen")
+            return
         }
-        recordRouteUI("row never came into view", in: app)
-        XCTFail("\(row) never lay wholly on screen")
-    }
-
-    /// Drags vertically between two heights given as fractions of the
-    /// screen and holds before lifting, so the list does not fling.
-    private func drag(in app: XCUIApplication, from: CGFloat, to: CGFloat) {
-        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: from))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: to))
-        start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
     }
 
     private func tapMenuAction(_ button: XCUIElement, in app: XCUIApplication) {
@@ -204,5 +180,42 @@ final class LineRoutePreferenceUITests: XCTestCase {
         attachment.name = "Route menu — \(phase)"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+}
+
+@MainActor
+extension XCUIApplication {
+    /// Drags a sheet's list until `element` lies wholly on screen, clear of
+    /// the navigation bar at the top and the home indicator and a status
+    /// banner at the bottom; whether it does within 16 drags. How far a
+    /// `swipeUp()` flings a list depends on the synthesized event's
+    /// timing; each drag here holds before lifting, so the list moves by
+    /// the drag's length and does not fling. A sheet at its middle height
+    /// grows first, as a swipe would grow it.
+    func dragUntilWhollyOnScreen(_ element: XCUIElement) -> Bool {
+        let top = frame.minY + 140
+        let bottom = frame.maxY - 120
+        for _ in 0..<16 {
+            if element.exists {
+                let place = element.frame
+                if place.minY >= top, place.maxY <= bottom, element.isHittable { return true }
+                // Above the band: move the list down. Each drag is shorter
+                // than the band less a row, so a row cannot jump over it.
+                if place.minY < top {
+                    drag(from: 0.45, to: 0.65)
+                    continue
+                }
+            }
+            drag(from: 0.75, to: 0.5)
+        }
+        return false
+    }
+
+    /// Drags vertically between two heights given as fractions of the
+    /// screen and holds before lifting, so a list does not fling.
+    private func drag(from: CGFloat, to: CGFloat) {
+        let start = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: from))
+        let end = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: to))
+        start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
     }
 }

@@ -143,7 +143,10 @@ extension GameWorld {
             var trips = demand.dailyTrips + (demand.dailyTrips * rate + (rate >= 0 ? 500 : -500)) / 1_000
             if rate > 0, trips == demand.dailyTrips { trips += 1 }
             trips = max(place.base, min(limit, trips))
-            place.lastGrowth = (trips - demand.dailyTrips) * 1_000 / max(1, demand.dailyTrips)
+            // Held to the range a save allows, as the land's growth is: a
+            // station lifted back to a start more than twice its trips
+            // would otherwise record more than +1000.
+            place.lastGrowth = max(-1_000, min(1_000, (trips - demand.dailyTrips) * 1_000 / max(1, demand.dailyTrips)))
             if trips != demand.dailyTrips {
                 passengers[index].demand = StationDemand(kind: demand.kind, dailyTrips: trips)
                 passengerPlan = PassengerPlanCache()

@@ -111,7 +111,7 @@ struct HUDView: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Game menu")
-        .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
+        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
         .accessibilityIdentifier("hud.menu")
         .tutorialTarget(.gameMenu)
     }

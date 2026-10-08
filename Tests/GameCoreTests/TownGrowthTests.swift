@@ -178,6 +178,26 @@ final class TownGrowthTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
+    /// A save may hold a station whose start is more than twice its trips
+    /// (``TownGrowth/Place/base`` is checked only to be positive). Growth
+    /// lifts it back to its start at midnight, more than the most a day's
+    /// growth may be recorded as (±1000): the growth recorded is held to
+    /// that, as the land's is, so the next save still loads.
+    func testGrowthBackToTheStartIsRecordedWithinRange() throws {
+        var world = try world()
+        try world.advance(ticks: 1_441)
+        let place = try XCTUnwrap(world.townGrowth(of: a))
+        world.townGrowth!.places[0] = TownGrowth.Place(station: a, base: 3_000, counted: place.counted)
+        let saved = try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world))
+        XCTAssertEqual(saved, world, "a save the game reads")
+        world = saved
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.stationDemand(of: a)?.dailyTrips, 3_000, "never below the start")
+        XCTAssertEqual(world.townGrowth(of: a)?.lastGrowth, 1_000)
+        XCTAssertNil(world.townGrowthProblem())
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     func testBadGrowthIsRefused() throws {
         var world = try world()
         try world.advance(ticks: 1_441)
