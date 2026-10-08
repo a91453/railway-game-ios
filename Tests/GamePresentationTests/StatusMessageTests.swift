@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -20,9 +21,32 @@ final class StatusMessageTests: XCTestCase {
         session.buildNetworkTrack()
         let built = try XCTUnwrap(session.message)
         XCTAssertEqual(built.kind, .success)
-        session.dismissMessage(StatusMessage(kind: .failure, text: "an older one"))
+        let serial = session.messageSerial
+        session.dismissMessage(posted: serial - 1)
         XCTAssertEqual(session.message, built, "a newer message stays")
-        session.dismissMessage(built)
+        session.dismissMessage(posted: serial)
+        XCTAssertNil(session.message)
+    }
+
+    /// The same text again is a newer message: saving twice within 4 s,
+    /// the first save's timer leaves the second "Saved the game.", which
+    /// shows for its own 4 s.
+    @MainActor
+    func testTheTimerLeavesTheSameTextPostedAgain() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("StatusMessageTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.startNewGame()
+        let session = try XCTUnwrap(launcher.session)
+        launcher.saveCurrentGame()
+        let first = try XCTUnwrap(session.message)
+        let firstSerial = session.messageSerial
+        launcher.saveCurrentGame()
+        XCTAssertEqual(session.message, first, "the same text")
+        XCTAssertNotEqual(session.messageSerial, firstSerial, "a newer message")
+        session.dismissMessage(posted: firstSerial)
+        XCTAssertNotNil(session.message, "the first message's timer leaves the second")
+        session.dismissMessage(posted: session.messageSerial)
         XCTAssertNil(session.message)
     }
 }

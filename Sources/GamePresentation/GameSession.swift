@@ -94,7 +94,15 @@ public final class GameSession {
 
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
-    public internal(set) var message: StatusMessage?
+    public internal(set) var message: StatusMessage? {
+        didSet { messageSerial &+= 1 }
+    }
+
+    /// Counts each time ``message`` is set, the same message again
+    /// included: a second "Saved the game." is a newer message, which the
+    /// banner announces and shows for its own while
+    /// (``StatusMessage/autoDismissDelay``, ``dismissMessage(posted:)``).
+    public private(set) var messageSerial: UInt64 = 0
 
     /// The line the line panel shows: an ID only, never a copy of the line.
     /// Read the line itself through ``selectedLine``.
@@ -1139,10 +1147,12 @@ public final class GameSession {
         message = nil
     }
 
-    /// Clears `shown` if it is still the message (the banner's own timer,
-    /// ``StatusMessage/autoDismissDelay``): a newer message stays.
-    public func dismissMessage(_ shown: StatusMessage) {
-        if message == shown { message = nil }
+    /// Clears the message posted as `serial` (``messageSerial``) if it is
+    /// still the message (the banner's own timer,
+    /// ``StatusMessage/autoDismissDelay``): a newer message stays, even
+    /// one with the same text.
+    public func dismissMessage(posted serial: UInt64) {
+        if messageSerial == serial { message = nil }
     }
 
     /// Runs one command against the world and records its outcome. Returns

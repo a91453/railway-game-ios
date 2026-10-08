@@ -184,19 +184,22 @@ struct StatusBanner: View {
                 banner(for: message)
             }
         }
-        .onChange(of: session.message) { _, message in
-            if let message {
+        // By the serial, not the message: the same text posted again (a
+        // second save) is announced again and waits its own while.
+        .onChange(of: session.messageSerial) {
+            if let message = session.message {
                 AccessibilityNotification.Announcement(message.text).post()
             }
         }
         // A success clears itself (``StatusMessage/autoDismissDelay``), so
         // a panel's banner does not stay over its last row; a newer message
         // restarts the wait, and a problem stays until dismissed.
-        .task(id: session.message) {
+        .task(id: session.messageSerial) {
+            let serial = session.messageSerial
             guard let message = session.message, let delay = message.autoDismissDelay else { return }
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
-            session.dismissMessage(message)
+            session.dismissMessage(posted: serial)
         }
     }
 
