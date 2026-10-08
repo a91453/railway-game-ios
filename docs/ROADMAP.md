@@ -655,6 +655,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - **依最近的真實車站替新車站命名 ✅**：在實景地圖上建新站時，依 5 公里內最近且未使用的真實車站建議中／英文站名。
   - 還沒有：真實鐵道只在台灣；玩家自己沿真實路線自動建造（實景示範地圖的擬合可以重用）；示範地圖的雙線。
 - **E3 — MapLibre**（視需要，不佔固定的位置）：E2 實測之後，MapKit 不夠用時（例如每座城市都要 3D 建築、自訂樣式、離線圖磚）才加入。
+  - **第一步 ✅**（決策 97，2026-10-08 作者：底圖先換 OSM）：地圖樣式選單多一個「OpenStreetMap」，MapLibre Native 6.31.0 畫 OpenFreeMap 的 Positron／Dark，標籤用玩家的語言，真實鐵道照舊畫在上面；預設仍是 Apple 地圖，實機確認後再決定。之後：傾斜與 3D 建築、地形、隱藏軍事設施的標示、選點畫面也換成 OSM。
   - `Ci/` 用的就是 MapLibre 加 OpenFreeMap 的圖磚（中國用高德），3D 建築用 fill-extrusion。
   - MapLibre Native 是 BSD 2-Clause 授權，免費，要在 App 裡附上授權聲明；iOS 有 SwiftUI 的包裝。
   - OpenFreeMap 的公開服務免費、不用註冊或金鑰、不限次數、可以商用，要標示「© OpenMapTiles Data from OpenStreetMap」；沒有服務保證。
