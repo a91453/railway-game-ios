@@ -309,15 +309,17 @@ final class FollowingMapLibreView: MLNMapView {
 }
 
 /// Tells the map view when a style has loaded. MapLibre calls its delegate
-/// on the main thread, in a protocol Swift sees as nonisolated.
+/// on the main thread, in a protocol Swift sees as nonisolated: only the
+/// (Sendable) callback crosses to the main actor, not the observer.
 private final class StyleObserver: NSObject, MLNMapViewDelegate {
-    private let loaded: @MainActor () -> Void
+    private let loaded: @MainActor @Sendable () -> Void
 
-    init(loaded: @escaping @MainActor () -> Void) {
+    init(loaded: @escaping @MainActor @Sendable () -> Void) {
         self.loaded = loaded
     }
 
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+        let loaded = loaded
         MainActor.assumeIsolated { loaded() }
     }
 }
