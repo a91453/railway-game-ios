@@ -36,8 +36,12 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // (MapInteractionTests), so a lost tap is tried once more. The
         // count says whether it was built, not the "Built house #1 …"
         // banner: a success clears itself after 4 s, within one slow
-        // accessibility query, and main's run 37828454679 never found it.
-        let ground = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        // accessibility query. The tap is at the middle of the map, clear
+        // of the banner, legend and controls along its edges: at (0.5,
+        // 0.3) no full run since P0-A (main's 37828454679, the manual runs
+        // 37837094185 and 37838371614) ever built the house. A failure
+        // says what the screen showed.
+        let ground = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let build = app.buttons["panel.action"]
         func sited() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND isEnabled == true"), object: build)],
@@ -45,11 +49,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         }
         ground.tap()
         if !sited() { ground.tap() }
-        XCTAssertTrue(sited(), "A tap did not choose a site the house can stand on")
+        XCTAssertTrue(sited(), "A tap did not choose a site the house can stand on. \(screenText(in: app))")
         XCTAssertEqual(count.label, "0 buildings placed", "A tap only chooses where it goes")
         build.tap()
         let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)
-        XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "The house was not built: \(count.label)")
+        XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "The house was not built. \(screenText(in: app))")
 
         openGameMenu(in: app)
         tapMenuAction("menu.saveGame", in: app)
@@ -207,6 +211,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
         return false
+    }
+
+    /// What the screen shows, for a failure message: the building tool's
+    /// preview (why a site is refused), its count, the action button, the
+    /// map's selection and every other text on screen.
+    private func screenText(in app: XCUIApplication) -> String {
+        func label(_ element: XCUIElement) -> String { element.exists ? element.label : "(none)" }
+        let action = app.buttons["panel.action"]
+        let texts = app.staticTexts.allElementsBoundByIndex.prefix(40).map(\.label).filter { !$0.isEmpty }
+        return """
+            Preview: \(label(app.staticTexts["building.preview"])); count: \(label(app.staticTexts["building.count"])); \
+            action: \(label(action)) enabled \(action.exists && action.isEnabled); \
+            map value: \(String(describing: app.descendants(matching: .any)["map"].firstMatch.value)); \
+            texts: \(texts.joined(separator: " | "))
+            """
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
