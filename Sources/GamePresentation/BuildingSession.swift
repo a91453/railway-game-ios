@@ -3,7 +3,9 @@ import GameCore
 // City building P0-A (ARCHITECTURE decision 92): the building tool places
 // the chosen building where the player taps, through GameCore; since P0-C1
 // (decision 94) a managed company pays for it, and the tool can demolish the
-// company's buildings too.
+// company's buildings too. Since P0-C2 (decision 95) a tap only chooses the
+// site: the map shows the building there, what it costs and the city's
+// buildings it would buy out, and the action button builds it.
 
 /// What a tap with the building tool does (decision 94).
 public enum BuildingToolMode: CaseIterable, Hashable, Sendable {
@@ -31,14 +33,21 @@ extension PlacedBuildingKind {
 
 extension GameSession {
     /// A tap with the building tool at `point`: in ``BuildingToolMode/build``
-    /// it places ``buildingKind`` there (``placeBuilding(at:)``), in
+    /// it makes `point` the ``buildingSite`` (decision 95), reading in the
+    /// land there on a map whose land is read as it is needed, so the
+    /// preview counts the city's buildings in the way; in
     /// ``BuildingToolMode/demolish`` it demolishes the company's building
     /// there or within `reach` of it, the one whose centre is nearest.
     @discardableResult
     public func tapBuildingTool(at point: PlanPoint, reach: Int64) -> Bool {
         switch buildingMode {
         case .build:
-            return placeBuilding(at: point)
+            // Not an edit: as for a game's stations, reading land in is not
+            // something to undo.
+            readLand(within: Self.buildingLandReach, of: point)
+            buildingSite = point
+            message = nil
+            return true
         case .demolish:
             let near = world.placedBuildings.filter { building in
                 point.x >= building.minX - reach && point.x < building.maxX + reach
@@ -52,24 +61,45 @@ extension GameSession {
         }
     }
 
+    /// How far round a building's site the land is read in: 64 m, more
+    /// than any building and its clearance reach.
+    static let buildingLandReach: Int64 = Land.cellLength
+
+    /// Builds ``buildingKind`` on the ``buildingSite`` (``placeBuilding(at:)``)
+    /// and, once it stands, clears the site.
+    @discardableResult
+    public func confirmBuilding() -> Bool {
+        guard let site = buildingSite else {
+            message = StatusMessage(kind: .failure, text: language.text("Tap the map where it goes first.", "請先在地圖上點選位置。"))
+            return false
+        }
+        guard placeBuilding(at: site) else { return false }
+        buildingSite = nil
+        return true
+    }
+
     /// Places a building of ``buildingKind`` centred on `point` with
     /// ``GameWorld/placeBuilding(_:at:)``, as one edit that undo takes
-    /// back, and reports the outcome, with what it cost a managed company,
-    /// in ``message``. Returns whether it was placed.
+    /// back, and reports the outcome, with what it cost a managed company
+    /// and the city's buildings it bought out, in ``message``. Returns
+    /// whether it was placed.
     @discardableResult
     public func placeBuilding(at point: PlanPoint) -> Bool {
         let kind = buildingKind
+        let cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
         return perform { world throws(GameError) in
             let building = try world.placeBuilding(kind, at: point)
+            let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
+            let bought = cleared == 0 ? ("", "") : (
+                cleared == 1 ? ", pulling down 1 city building" : ", pulling down \(cleared) city buildings",
+                "，拆除城市建物 \(cleared) 棟"
+            )
             guard building.cost > .zero else {
-                return language.text(
-                    "Built \(kind.title(in: .english).lowercased()) #\(building.id.rawValue).",
-                    "蓋好\(kind.title(in: .traditionalChinese)) #\(building.id.rawValue)。"
-                )
+                return language.text("Built \(english) #\(id)\(bought.0).", "蓋好\(chinese) #\(id)\(bought.1)。")
             }
             return language.text(
-                "Built \(kind.title(in: .english).lowercased()) #\(building.id.rawValue) for \(building.cost.moneyText).",
-                "蓋好\(kind.title(in: .traditionalChinese)) #\(building.id.rawValue)，花費 \(building.cost.moneyText)。"
+                "Built \(english) #\(id) for \(building.cost.moneyText)\(bought.0).",
+                "蓋好\(chinese) #\(id)，花費 \(building.cost.moneyText)\(bought.1)。"
             )
         }
     }
@@ -127,6 +157,67 @@ extension GameSession {
         )
     }
 
+    /// What building on the ``buildingSite`` would do (decision 95): GameCore
+    /// places ``buildingKind`` there on a copy of the world; `nil` without a
+    /// site, or in another mode or tool.
+    public var buildingPreview: BuildingPreview? {
+        guard tool == .building, buildingMode == .build, let site = buildingSite else { return nil }
+        let kind = buildingKind
+        var draft = world
+        let cost: Money?, problem: String?
+        do throws(GameError) {
+            cost = try draft.placeBuilding(kind, at: site).cost
+            problem = nil
+        } catch {
+            cost = nil
+            problem = error.playerMessage(in: language)
+        }
+        return BuildingPreview(
+            kind: kind, centre: site, cost: cost, problem: problem,
+            quote: world.placedBuildingQuote(kind, at: site) ?? PlacedBuildingQuote(building: .zero, land: .zero)
+        )
+    }
+
+    /// What the preview says under the building tool: why it cannot be
+    /// built, or what a managed company pays for what, and the city's
+    /// buildings it pulls down.
+    public var buildingPreviewText: String? {
+        guard let preview = buildingPreview else { return nil }
+        if let problem = preview.problem { return problem }
+        let quote = preview.quote
+        let count = quote.cleared.count
+        var english: [String] = [], chinese: [String] = []
+        if world.accounts.mode == .management {
+            english.append("Building \(quote.building.moneyText) + land \(quote.land.moneyText)")
+            chinese.append("建物 \(quote.building.moneyText) + 土地 \(quote.land.moneyText)")
+            if count > 0 {
+                english.append("buying out \(count == 1 ? "1 city building" : "\(count) city buildings") \(quote.buyOut.moneyText)")
+                chinese.append("收購城市建物 \(count) 棟 \(quote.buyOut.moneyText)")
+            }
+        } else if count > 0 {
+            english.append(count == 1 ? "Pulls down 1 city building" : "Pulls down \(count) city buildings")
+            chinese.append("拆除城市建物 \(count) 棟")
+        } else {
+            return nil
+        }
+        return language.text(english.joined(separator: ", "), chinese.joined(separator: "，"))
+    }
+
+    /// What the map draws for the building tool; `nil` with another tool.
+    public var buildingOverlay: BuildingOverlay? {
+        guard tool == .building else { return nil }
+        var overlay = BuildingOverlay()
+        overlay.showsCityBuildingSites = buildingMode == .build
+        if let preview = buildingPreview {
+            let half = preview.kind.side / 2
+            overlay.site = PlanRect(minX: preview.centre.x - half, minY: preview.centre.y - half,
+                                    maxX: preview.centre.x - half + preview.kind.side, maxY: preview.centre.y - half + preview.kind.side)
+            overlay.siteIsBuildable = preview.problem == nil
+            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column) }
+        }
+        return overlay
+    }
+
     /// What ``buildingKind`` costs a managed company: its building, and the
     /// land under it at that land's value; `nil` in free play, where it is
     /// free.
@@ -143,5 +234,73 @@ extension GameSession {
     private func distance(_ building: PlacedBuilding, _ point: PlanPoint) -> Int64 {
         let dx = building.centre.x - point.x, dy = building.centre.y - point.y
         return dx * dx + dy * dy
+    }
+}
+
+/// What building ``GameSession/buildingKind`` on the
+/// ``GameSession/buildingSite`` would do (decision 95), as GameCore
+/// worked it out on a copy of the world.
+public struct BuildingPreview: Hashable, Sendable {
+    public let kind: PlacedBuildingKind
+    public let centre: PlanPoint
+    /// What it would cost, or `nil` when GameCore refused it.
+    public let cost: Money?
+    /// Why GameCore refused it, as the player reads it; `nil` when it
+    /// would stand.
+    public let problem: String?
+    /// The parts of what it costs, and the cells whose city buildings it
+    /// would buy out.
+    public let quote: PlacedBuildingQuote
+}
+
+/// A rectangle of the plan, in world units: `minX ..< maxX` by `minY ..< maxY`.
+public struct PlanRect: Hashable, Sendable {
+    public let minX: Int64
+    public let minY: Int64
+    public let maxX: Int64
+    public let maxY: Int64
+
+    public init(minX: Int64, minY: Int64, maxX: Int64, maxY: Int64) {
+        self.minX = minX
+        self.minY = minY
+        self.maxX = maxX
+        self.maxY = maxY
+    }
+
+    /// The square the city's building on the cell at `row`, `column`
+    /// stands on (decision 95): ``PlacedBuildingRules/cityBuildingSide``
+    /// across, in the middle of the cell.
+    public static func cityBuilding(row: Int, column: Int) -> PlanRect {
+        let inset = (Land.cellLength - PlacedBuildingRules.cityBuildingSide) / 2
+        let minX = Int64(column) * Land.cellLength + inset, minY = Int64(row) * Land.cellLength + inset
+        return PlanRect(minX: minX, minY: minY, maxX: minX + PlacedBuildingRules.cityBuildingSide, maxY: minY + PlacedBuildingRules.cityBuildingSide)
+    }
+
+    /// The square `building` stands on.
+    public init(_ building: PlacedBuilding) {
+        self.init(minX: building.minX, minY: building.minY, maxX: building.maxX, maxY: building.maxY)
+    }
+}
+
+/// What the map draws for the building tool (decision 95).
+public struct BuildingOverlay: Hashable, Sendable {
+    /// Whether to draw where the city's buildings stand, so the player sees
+    /// where a building would buy one out.
+    public var showsCityBuildingSites = false
+    /// The building on the site, and whether GameCore would build it.
+    public var site: PlanRect?
+    public var siteIsBuildable = false
+    /// The squares of the city's buildings it would buy out.
+    public var boughtOut: [PlanRect] = []
+
+    public init() {}
+}
+
+extension GameWorld {
+    /// The company's buildings that stand here but not in `after`, this
+    /// world once a command ran on it: those it pulled down.
+    func placedBuildings(clearedIn after: GameWorld) -> [PlacedBuilding] {
+        let standing = Set(after.placedBuildings.map(\.id))
+        return placedBuildings.filter { !standing.contains($0.id) }
     }
 }

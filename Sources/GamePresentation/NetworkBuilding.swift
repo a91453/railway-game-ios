@@ -75,6 +75,9 @@ public struct NetworkPreview: Hashable, Sendable {
     /// Why GameCore refused it, as the player reads it; `nil` when it
     /// would be built.
     public let problem: String?
+    /// The company's buildings it would pull down (decision 95); the cost
+    /// includes what demolishing them costs.
+    public var cleared: [PlacedBuilding] = []
 }
 
 /// The network tool's geometry, ported from the owner's `Ci/` reference

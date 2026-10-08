@@ -122,6 +122,7 @@ struct MapView: View {
                         highlightedTrainID: session.followedTrain?.id,
                         selectedStationID: session.selectedStation?.id,
                         network: session.networkOverlay,
+                        building: session.buildingOverlay,
                         traffic: traffic,
                         camera: projection,
                         edges: edges,
@@ -661,6 +662,8 @@ private struct MapCanvas: View, Equatable {
     let highlightedTrainID: TrainID?
     let selectedStationID: StationID?
     let network: NetworkOverlay?
+    /// The building tool's site and the city's buildings (decision 95).
+    let building: BuildingOverlay?
     let traffic: TrafficOverlay
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
@@ -679,6 +682,8 @@ private struct MapCanvas: View, Equatable {
             && lhs.highlightedTrainID == rhs.highlightedTrainID
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
+            && lhs.building == rhs.building
+            && (lhs.building == nil || lhs.world.land == rhs.world.land)
             && lhs.traffic == rhs.traffic
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
@@ -690,7 +695,7 @@ private struct MapCanvas: View, Equatable {
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
-        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
+        let selectedStationID = selectedStationID, network = network, building = building, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -700,6 +705,7 @@ private struct MapCanvas: View, Equatable {
                 highlightedTrainID: highlightedTrainID,
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
+                building: building,
                 traffic: traffic,
                 projection: camera,
                 edges: edges,

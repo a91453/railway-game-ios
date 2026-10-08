@@ -28,6 +28,7 @@ enum MapArt {
         highlightedTrainID: TrainID? = nil,
         selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
+        building: BuildingOverlay? = nil,
         traffic: TrafficOverlay = TrafficOverlay(),
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
@@ -61,7 +62,11 @@ enum MapArt {
         drawLines(lines, world: world, projection: projection, cached: edges, in: context)
         drawTransfers(lines, projection: projection, in: context)
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
+        if let building {
+            drawCityBuildingSites(world, overlay: building, projection: projection, in: context)
+        }
         drawPlacedBuildings(world, projection: projection, in: context)
+        if let building { drawBuildingOverlay(building, projection: projection, in: context) }
         for station in world.stations {
             drawPointStation(
                 station,
@@ -219,6 +224,10 @@ enum MapArt {
                 context.stroke(band, with: .color(Palette.ink), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.85), lineCap: .butt, lineJoin: .round))
                 context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
+        }
+        // Decision 95: the company's buildings it would pull down.
+        for rect in overlay.cleared {
+            drawMarked(rect, colour: Color.red, projection: projection, in: context)
         }
         // The next stretch, and an X crossover's mirrored diagonal.
         for points in [overlay.preview, overlay.crossing] where points.count > 1 {
@@ -484,6 +493,53 @@ enum MapArt {
             context.fill(shape, with: .color(colour))
             context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
         }
+    }
+
+    /// Where the city's buildings stand (decision 95), while the building
+    /// tool chooses a site: the middle square of each cell of land in view,
+    /// faintly, once a cell is 8 points or more across.
+    private static func drawCityBuildingSites(_ world: GameWorld, overlay: BuildingOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        guard overlay.showsCityBuildingSites, !world.land.isEmpty,
+              Double(Land.cellLength) * projection.pointsPerUnit >= 8 else { return }
+        let region = drawingRegion(projection)
+        let length = Double(Land.cellLength)
+        let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(Land.rows(in: world.bounds) - 1, Int((region.maxY / length).rounded(.down)))
+        let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(Land.columns(in: world.bounds) - 1, Int((region.maxX / length).rounded(.down)))
+        guard firstRow <= lastRow, firstColumn <= lastColumn else { return }
+        var sites = Path()
+        for row in firstRow...lastRow {
+            for column in firstColumn...lastColumn where world.land.cell(row: row, column: column) != nil {
+                let square = PlanRect.cityBuilding(row: row, column: column)
+                sites.addRect(screenRect(minX: Double(square.minX), minY: Double(square.minY), maxX: Double(square.maxX), maxY: Double(square.maxY), projection))
+            }
+        }
+        context.fill(sites, with: .color(Palette.ink.opacity(0.08)))
+        context.stroke(sites, with: .color(Palette.ink.opacity(0.3)), style: StrokeStyle(lineWidth: 0.75, dash: [3, 2]))
+    }
+
+    /// The building tool's site (decision 95): the city's buildings it
+    /// would buy out marked in red, and the building itself, green where it
+    /// can stand and red where it cannot.
+    private static func drawBuildingOverlay(_ overlay: BuildingOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        for rect in overlay.boughtOut {
+            drawMarked(rect, colour: Color.red, projection: projection, in: context)
+        }
+        guard let site = overlay.site else { return }
+        var rect = screenRect(minX: Double(site.minX), minY: Double(site.minY), maxX: Double(site.maxX), maxY: Double(site.maxY), projection)
+        if rect.width < 6 {
+            rect = rect.insetBy(dx: (rect.width - 6) / 2, dy: (rect.height - 6) / 2)
+        }
+        let colour = overlay.siteIsBuildable ? Palette.metroGreen : Color.red
+        let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
+        context.fill(shape, with: .color(colour.opacity(0.45)))
+        context.stroke(shape, with: .color(colour), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+    }
+
+    /// `rect` filled and edged in `colour`: something that would come down.
+    private static func drawMarked(_ rect: PlanRect, colour: Color, projection: some MapProjection, in context: GraphicsContext) {
+        let shape = Path(screenRect(minX: Double(rect.minX), minY: Double(rect.minY), maxX: Double(rect.maxX), maxY: Double(rect.maxY), projection))
+        context.fill(shape, with: .color(colour.opacity(0.3)))
+        context.stroke(shape, with: .color(colour), lineWidth: 1.5)
     }
 
     /// The screen rectangle of the world rectangle from (`minX`, `minY`)
