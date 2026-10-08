@@ -80,7 +80,9 @@ private struct TutorialOverlay: View {
 /// ``minimumFreeMap`` deep stays free beside the card: on a phone in
 /// portrait the map between the HUD and the open control drawer can be
 /// barely taller than the card, and a card over all of it would leave the
-/// player nowhere to tap. Covering the HUD's controls then costs less.
+/// player nowhere to tap. Covering the HUD's controls then costs less, and
+/// a card too tall for any place (large text) is measured shorter, its
+/// explanation scrolling, so that band stays free.
 private struct TutorialCardLayout: Layout {
     let target: CGRect?
     let controls: [CGRect]
@@ -91,6 +93,9 @@ private struct TutorialCardLayout: Layout {
     private let margin: CGFloat = 16
     private let gap: CGFloat = 12
     private let minimumFreeMap: CGFloat = 96
+    /// The shortest a card is measured to leave the map free: the step's
+    /// title, a few lines of its explanation and its buttons.
+    private let minimumCardHeight: CGFloat = 200
     /// Above covering any ordinary control with the whole card, below
     /// covering a sliver of the step's own controls.
     private let mapCoveredCost: CGFloat = 400_000
@@ -102,67 +107,85 @@ private struct TutorialCardLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard let card = subviews.first else { return }
         let available = bounds.insetBy(dx: min(margin, bounds.width / 4), dy: min(margin, bounds.height / 4))
-        let cardProposal = ProposedViewSize(width: min(340, available.width), height: available.height)
-        let size = card.sizeThatFits(cardProposal)
-        let centred = CGPoint(x: available.midX - size.width / 2, y: available.midY - size.height / 2)
-        var origin = centred
-
-        if let target {
-            // Anchors are local to the overlay's GeometryReader. Layout's
-            // placement bounds can have a nonzero origin, so put the target
-            // in that same coordinate space before comparing candidates.
-            let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
-            // Keep the other controls usable too. `controls` leaves out the
-            // map, which can be tapped outside the card.
-            let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-            let required = self.required.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-            let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
-            let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
-            let candidates = [
-                CGPoint(x: x, y: target.maxY + gap),
-                CGPoint(x: x, y: target.minY - gap - size.height),
-                CGPoint(x: target.maxX + gap, y: y),
-                CGPoint(x: target.minX - gap - size.width, y: y),
-                // Inside a target as large as the map, along its bottom or
-                // top: the rest of it stays free to tap.
-                CGPoint(x: x, y: target.maxY - gap - size.height),
-                CGPoint(x: x, y: target.minY + gap),
-                centred,
-                CGPoint(x: available.minX, y: centred.y),
-                CGPoint(x: available.maxX - size.width, y: centred.y),
-                CGPoint(x: centred.x, y: available.minY),
-                CGPoint(x: centred.x, y: available.maxY - size.height),
-                CGPoint(x: available.minX, y: available.minY),
-                CGPoint(x: available.maxX - size.width, y: available.minY),
-                CGPoint(x: available.minX, y: available.maxY - size.height),
-                CGPoint(x: available.maxX - size.width, y: available.maxY - size.height),
-            ]
-            func covered(_ rects: [CGRect], by frame: CGRect) -> CGFloat {
-                rects.reduce(0) { sum, rect in
-                    let common = rect.intersection(frame)
-                    return common.isNull ? sum : sum + common.width * common.height
+        let width = min(340, available.width)
+        var size = card.sizeThatFits(ProposedViewSize(width: width, height: available.height))
+        var best = placement(of: size, in: bounds, available: available)
+        // With large text a card can be too tall to leave the map, or the
+        // step's controls, free anywhere: measure it shorter, so its
+        // explanation scrolls, and place it again if that does better.
+        if best.cost >= mapCoveredCost, let map {
+            let height = max(minimumCardHeight, map.height - minimumFreeMap - gap)
+            if height < size.height {
+                let shorter = card.sizeThatFits(ProposedViewSize(width: width, height: height))
+                let retry = placement(of: shorter, in: bounds, available: available)
+                if retry.cost < best.cost {
+                    size = shorter
+                    best = retry
                 }
             }
-            let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
-            /// Whether a band of the map at least `minimumFreeMap` deep
-            /// stays free above, below or beside `frame`.
-            func leavesMapFree(_ frame: CGRect) -> Bool {
-                guard let map, frame.intersects(map) else { return true }
-                let bands = [frame.minY - map.minY, map.maxY - frame.maxY, frame.minX - map.minX, map.maxX - frame.maxX]
-                return (bands.max() ?? 0) >= minimumFreeMap
-            }
-            func cost(_ frame: CGRect) -> CGFloat {
-                covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
-                    + (leavesMapFree(frame) ? 0 : mapCoveredCost)
-            }
-            let placements = candidates
-                .map { CGRect(origin: $0, size: size) }
-                .filter { available.contains($0) }
-            // `min` keeps the first of equals, so the first placement that
-            // covers nothing wins, as the order above intends.
-            origin = placements.min { cost($0) < cost($1) }?.origin ?? centred
         }
-        card.place(at: origin, anchor: .topLeading, proposal: ProposedViewSize(size))
+        card.place(at: best.origin, anchor: .topLeading, proposal: ProposedViewSize(size))
+    }
+
+    /// Where a card of `size` goes, and what it costs there.
+    private func placement(of size: CGSize, in bounds: CGRect, available: CGRect) -> (origin: CGPoint, cost: CGFloat) {
+        let centred = CGPoint(x: available.midX - size.width / 2, y: available.midY - size.height / 2)
+        guard let target else { return (centred, 0) }
+        // Anchors are local to the overlay's GeometryReader. Layout's
+        // placement bounds can have a nonzero origin, so put the target
+        // in that same coordinate space before comparing candidates.
+        let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
+        // Keep the other controls usable too. `controls` leaves out the
+        // map, which can be tapped outside the card.
+        let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let required = self.required.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
+        let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
+        let candidates = [
+            CGPoint(x: x, y: target.maxY + gap),
+            CGPoint(x: x, y: target.minY - gap - size.height),
+            CGPoint(x: target.maxX + gap, y: y),
+            CGPoint(x: target.minX - gap - size.width, y: y),
+            // Inside a target as large as the map, along its bottom or
+            // top: the rest of it stays free to tap.
+            CGPoint(x: x, y: target.maxY - gap - size.height),
+            CGPoint(x: x, y: target.minY + gap),
+            centred,
+            CGPoint(x: available.minX, y: centred.y),
+            CGPoint(x: available.maxX - size.width, y: centred.y),
+            CGPoint(x: centred.x, y: available.minY),
+            CGPoint(x: centred.x, y: available.maxY - size.height),
+            CGPoint(x: available.minX, y: available.minY),
+            CGPoint(x: available.maxX - size.width, y: available.minY),
+            CGPoint(x: available.minX, y: available.maxY - size.height),
+            CGPoint(x: available.maxX - size.width, y: available.maxY - size.height),
+        ]
+        func covered(_ rects: [CGRect], by frame: CGRect) -> CGFloat {
+            rects.reduce(0) { sum, rect in
+                let common = rect.intersection(frame)
+                return common.isNull ? sum : sum + common.width * common.height
+            }
+        }
+        let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
+        /// Whether a band of the map at least `minimumFreeMap` deep
+        /// stays free above, below or beside `frame`.
+        func leavesMapFree(_ frame: CGRect) -> Bool {
+            guard let map, frame.intersects(map) else { return true }
+            let bands = [frame.minY - map.minY, map.maxY - frame.maxY, frame.minX - map.minX, map.maxX - frame.maxX]
+            return (bands.max() ?? 0) >= minimumFreeMap
+        }
+        func cost(_ frame: CGRect) -> CGFloat {
+            covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
+                + (leavesMapFree(frame) ? 0 : mapCoveredCost)
+        }
+        // `min` keeps the first of equals, so the first placement that
+        // covers nothing wins, as the order above intends.
+        let best = candidates
+            .map { CGRect(origin: $0, size: size) }
+            .filter { available.contains($0) }
+            .min { cost($0) < cost($1) }
+        guard let best else { return (centred, .infinity) }
+        return (best.origin, cost(best))
     }
 }
 
