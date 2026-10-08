@@ -20,7 +20,15 @@ struct ControlPanel: View {
     var body: some View {
         switch arrangement {
         case .tools:
-            ToolPicker(session: session)
+            HStack(spacing: 8) {
+                ToolPicker(session: session)
+                // Hidden during the tutorial, as the details toggle is, so
+                // its steps' spotlights stay where they were; the session
+                // refuses Undo then too (``GameSession/canUndo``).
+                if session.tutorial == nil {
+                    UndoButton(session: session)
+                }
+            }
         case .details:
             VStack(alignment: .leading, spacing: 12) {
                 InspectorView(session: session)
@@ -72,6 +80,29 @@ private struct ToolPicker: View {
                 .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, minHeight: 38)
+    }
+}
+
+/// Takes back the last edit (ARCHITECTURE decision 82, MapBuilder's undo
+/// button). Disabled while there is nothing to take back: before any edit,
+/// and once game time has moved on since, so in practice while paused.
+private struct UndoButton: View {
+    let session: GameSession
+
+    var body: some View {
+        Button {
+            session.undo()
+        } label: {
+            Image(systemName: "arrow.uturn.backward")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 40, height: 38)
+                .opacity(session.canUndo ? 1 : 0.4)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .disabled(!session.canUndo)
+        .accessibilityLabel("Undo")
+        .accessibilityHint("Takes back the last edit, refunding what it cost. Only until game time moves on.")
+        .accessibilityIdentifier("controls.undo")
     }
 }
 

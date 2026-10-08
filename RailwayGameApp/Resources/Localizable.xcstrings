@@ -2691,6 +2691,26 @@
           }
         }
       }
+    },
+    "Undo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復原"
+          }
+        }
+      }
+    },
+    "Takes back the last edit, refunding what it cost. Only until game time moves on." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤回上一步編輯，並退回它花的錢。只能在遊戲時間前進之前使用。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
