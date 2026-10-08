@@ -160,6 +160,24 @@ public final class GameSession {
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
     public private(set) var lineDraft: [StationID] = []
 
+    /// The stations along the track through ``lineDraft``
+    /// (`GameWorld.stationsAlongTrack(through:)`, decision 100), kept up to
+    /// date as the draft and the track change; `nil` for fewer than two
+    /// picked stations or when no track joins two picked in a row.
+    public private(set) var lineDraftRoute: [StationID]?
+
+    /// Which stations along ``lineDraftRoute`` the new line calls at.
+    public var lineDraftStopping: LineDraftStopping = .everyStation
+
+    /// The stations along the route the player left out with
+    /// ``LineDraftStopping/custom``.
+    public private(set) var lineDraftSkipped: Set<StationID> = []
+
+    /// Whether a tap on a station on the map adds it to ``lineDraft``
+    /// (decision 100), so the player picks a new line's ends on the map
+    /// without a button for each.
+    public private(set) var isPickingLineStops = false
+
     /// The station demand copied to paste onto other stations (Stage C2;
     /// see ``copySelectedStationDemand()``). Only a clipboard: GameCore
     /// checks it when it is pasted.
@@ -313,6 +331,9 @@ public final class GameSession {
             return
         }
         station = station ?? world.station(near: point, within: reach)?.id
+        if isPickingLineStops, let station {
+            appendToLineDraft(station)
+        }
         guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil else { return }
         selectedPoint = point
         selectedStationID = station
@@ -946,6 +967,13 @@ public final class GameSession {
             )
             return
         }
+        appendToLineDraft(station.id)
+    }
+
+    /// Adds station `id` to the end of the new line's stops, unless it is
+    /// already the last.
+    private func appendToLineDraft(_ id: StationID) {
+        guard let station = world.station(id: id) else { return }
         guard lineDraft.last != station.id else {
             message = StatusMessage(
                 kind: .failure,
@@ -957,6 +985,7 @@ public final class GameSession {
             return
         }
         lineDraft.append(station.id)
+        refreshLineDraftRoute()
         message = nil
     }
 
@@ -964,13 +993,75 @@ public final class GameSession {
     public func removeLastLineDraftStop() {
         guard !lineDraft.isEmpty else { return }
         lineDraft.removeLast()
+        refreshLineDraftRoute()
     }
 
     public func clearLineDraft() {
         lineDraft = []
+        lineDraftStopping = .everyStation
+        lineDraftSkipped = []
+        isPickingLineStops = false
+        refreshLineDraftRoute()
     }
 
-    /// Creates a line calling at the picked stops, in order, through
+    /// Starts adding the stations tapped on the map (``tapMap(at:reach:)``)
+    /// to the new line (decision 100). The app sends map taps there while
+    /// the lines panel is open, whichever tool is chosen.
+    public func startPickingLineStops() {
+        isPickingLineStops = true
+        message = StatusMessage(
+            kind: .success,
+            text: language.text(
+                "Tap the line's first station on the map, then its last. Tap a station between to choose the way.",
+                "在地圖上點路線的起點，再點終點。有分岔時，點中間的車站指定經過哪裡。"
+            )
+        )
+    }
+
+    /// Stops adding tapped stations to the new line; the draft stays.
+    public func stopPickingLineStops() {
+        isPickingLineStops = false
+    }
+
+    /// Leaves station `id` out of the new line, or puts it back
+    /// (``LineDraftStopping/custom``). The two ends are always called at.
+    public func toggleLineDraftStop(_ id: StationID) {
+        guard let route = lineDraftRoute, id != route.first, id != route.last else { return }
+        lineDraftStopping = .custom
+        if lineDraftSkipped.contains(id) {
+            lineDraftSkipped.remove(id)
+        } else {
+            lineDraftSkipped.insert(id)
+        }
+    }
+
+    /// The stops the new line will call at, in order: the stations along
+    /// the track as ``lineDraftStopping`` chooses them, or the picked
+    /// stations when no track joins them (``lineDraftRoute`` is `nil`).
+    public var lineDraftStops: [StationID] {
+        guard let route = lineDraftRoute else { return lineDraft }
+        switch lineDraftStopping {
+        case .everyStation:
+            return route
+        case .pickedStations:
+            return lineDraft
+        case .custom:
+            return route.enumerated().filter { index, station in
+                index == 0 || index == route.count - 1 || !lineDraftSkipped.contains(station)
+            }.map(\.element)
+        }
+    }
+
+    /// Finds ``lineDraftRoute`` again; a station skipped that is no
+    /// longer on it is forgotten.
+    func refreshLineDraftRoute() {
+        let route = world.stationsAlongTrack(through: lineDraft)
+        if route != lineDraftRoute { lineDraftRoute = route }
+        let along = Set(route ?? [])
+        if !lineDraftSkipped.isSubset(of: along) { lineDraftSkipped.formIntersection(along) }
+    }
+
+    /// Creates a line calling at ``lineDraftStops``, in order, through
     /// `GameWorld.createLine(named:stops:)`, and selects it. The draft is
     /// kept when GameCore refuses the stops.
     ///
@@ -980,7 +1071,8 @@ public final class GameSession {
     /// `GameWorld.setLineTargetHeadways(_:to:pattern:)` in the same step.
     public func createLineFromDraft() {
         var created: LineID?
-        let stops = lineDraft
+        refreshLineDraftRoute()
+        let stops = lineDraftStops
         let real = realLine(calling: stops).flatMap { match in
             realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
         }
@@ -1004,7 +1096,7 @@ public final class GameSession {
         }
         if let created {
             selectedLineID = created
-            lineDraft = []
+            clearLineDraft()
         }
     }
 
@@ -1337,6 +1429,9 @@ public final class GameSession {
         // Decision 88: a new station's land comes with it.
         Self.readLand(roundStationsOf: &edited, population: population, places: places)
         guard edited != world else { return result }
+        // Decision 100: the new line's route follows the track.
+        let trackChanged = lineDraft.count >= 2 && edited.network != world.network
+        defer { if trackChanged { refreshLineDraftRoute() } }
         if !editGestureHasSnapshot {
             if undoHistory.count >= Self.undoLimit {
                 undoHistory.removeFirst(undoHistory.count - Self.undoLimit + 1)
@@ -1438,6 +1533,7 @@ public final class GameSession {
         if let id = selectedStationID, world.station(id: id) == nil { selectedStationID = nil }
         if let id = platformStationID, world.station(id: id) == nil { platformStationID = nil }
         lineDraft.removeAll { world.station(id: $0) == nil }
+        refreshLineDraftRoute()
         if let id = selectedTrainID, world.train(id: id) == nil { selectedTrainID = nil }
         if let id = tappedTrainID, world.train(id: id) == nil { tappedTrainID = nil }
         endFollowIfGone()

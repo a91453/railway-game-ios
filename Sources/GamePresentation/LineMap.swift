@@ -116,13 +116,23 @@ public struct LineMap: Equatable, Sendable {
     /// The stretches of each edge `journey` runs along, from the edge's
     /// `from` node, in the order it drives them.
     static func ranges(of journey: LineJourney, in network: RailwayNetwork) -> [(TrackEdgeID, ClosedRange<Int64>)] {
+        pieces(of: journey, in: network).map { traversal, a, b in
+            let length = network.edge(traversal.edge)?.length ?? 0
+            let (from, to) = traversal.direction == .forward ? (a, b) : (length - a, length - b)
+            return (traversal.edge, min(from, to)...max(from, to))
+        }
+    }
+
+    /// The pieces of track `journey` drives, in order: each the way it is
+    /// driven along an edge, and where on it the piece starts and ends,
+    /// measured along that way (`a < b`). A leg that leaves from the other
+    /// end of the edge it reached turned round there.
+    static func pieces(of journey: LineJourney, in network: RailwayNetwork) -> [(TrackTraversal, Int64, Int64)] {
         guard case .onEdge(var traversal, var offset) = journey.start else { return [] }
-        var ranges: [(TrackEdgeID, ClosedRange<Int64>)] = []
+        var pieces: [(TrackTraversal, Int64, Int64)] = []
         func length(_ traversal: TrackTraversal) -> Int64 { network.edge(traversal.edge)?.length ?? 0 }
         func add(_ traversal: TrackTraversal, _ a: Int64, _ b: Int64) {
-            let length = length(traversal)
-            let (from, to) = traversal.direction == .forward ? (a, b) : (length - a, length - b)
-            if from != to { ranges.append((traversal.edge, min(from, to)...max(from, to))) }
+            if a != b { pieces.append((traversal, min(a, b), max(a, b))) }
         }
         func node(_ traversal: TrackTraversal, atEnd: Bool) -> TrackNodeID? {
             guard let edge = network.edge(traversal.edge) else { return nil }
@@ -150,7 +160,7 @@ public struct LineMap: Equatable, Sendable {
             traversal = last
             offset = end
         }
-        return ranges
+        return pieces
     }
 
     /// `ranges` joined where they meet or overlap, in order.
