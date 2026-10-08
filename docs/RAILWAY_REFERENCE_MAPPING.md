@@ -962,3 +962,15 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有快轉） | `GameSpeed.fast`（6000×） | gap → 原生：以年為單位的目標需要更快的速度 |
 | （參考沒有） | `Goal`、`Scenario`、`ScenarioState`、`judgeScenario(endingWith:)`、`startScenario(_:)`、`Challenge`、`GoalsPanel`、存檔版本 17 | gap → 原生 |
 
+
+## 每週挑戰與個人最佳紀錄（決策 87）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`，搜尋 `weekly`、`leaderboard`、`highscore`、`challenge`。沒有每週挑戰；`Ci/` 有已停用挑戰模式的成績上傳與排行榜。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroChallengeLeaderboardPayload`（`playerId`、`cityKey`、`eventId`、`rulesVersion`、`scorePassengers`） | `ChallengeRecord`（劇本 ID、`rulesVersion`、`riders`、天數、評等） | adapted：劇本 ID 已含地圖（每週的種子），所以不另存 `cityKey`；主要成績是完成天數，載客數是同天數時的比較；不存 `playerId`（不上傳） |
+| 同檔／`metroChallengeSubmitScore`、`metroChallengeFetchLeaderboard`（`/api/challenge-scores`）、`metroChallengeRenderLeaderboard`（前 20 名、名次或 Top %） | — | 之後：Game Center／官網排行榜 |
+| 同檔／`metroChallengePlayerId`（`localStorage` 的隨機 ID） | — | 不採用：不上傳，沒有玩家 ID |
+| （參考沒有每週地圖） | `WeeklyChallenge`（台灣時間週一換週、FNV-1a 種子）、`GameLauncher.startWeeklyChallenge(at:)`、`recordChallengeResult(at:)`、`ChallengePicker` 的本週區塊 | gap → 原生 |
+
