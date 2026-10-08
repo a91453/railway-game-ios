@@ -130,11 +130,10 @@ private struct TutorialCardLayout: Layout {
     /// Where a card of `size` goes, and what it costs there.
     private func placement(of size: CGSize, in bounds: CGRect, available: CGRect) -> (origin: CGPoint, cost: CGFloat) {
         let centred = CGPoint(x: available.midX - size.width / 2, y: available.midY - size.height / 2)
-        guard let target else { return (centred, 0) }
         // Anchors are local to the overlay's GeometryReader. Layout's
         // placement bounds can have a nonzero origin, so put the target
         // in that same coordinate space before comparing candidates.
-        let target = target.offsetBy(dx: bounds.minX, dy: bounds.minY)
+        guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
         // Keep the other controls usable too. `controls` leaves out the
         // map, which can be tapped outside the card.
         let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
@@ -180,12 +179,12 @@ private struct TutorialCardLayout: Layout {
         }
         // `min` keeps the first of equals, so the first placement that
         // covers nothing wins, as the order above intends.
-        let best = candidates
+        let cheapest = candidates
             .map { CGRect(origin: $0, size: size) }
             .filter { available.contains($0) }
             .min { cost($0) < cost($1) }
-        guard let best else { return (centred, .infinity) }
-        return (best.origin, cost(best))
+        guard let cheapest else { return (centred, .infinity) }
+        return (cheapest.origin, cost(cheapest))
     }
 }
 
