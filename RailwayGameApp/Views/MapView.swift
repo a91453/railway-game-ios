@@ -148,9 +148,9 @@ struct MapView: View {
                         if session.tool == .network, screen.panel != .lines {
                             session.tapNetwork(at: point, reach: reach)
                         } else if session.tool == .building, screen.panel != .lines {
-                            // Decision 92: the building tool builds where
-                            // the player taps.
-                            session.placeBuilding(at: point)
+                            // Decisions 92 and 94: the building tool builds
+                            // or demolishes where the player taps.
+                            session.tapBuildingTool(at: point, reach: reach)
                         } else {
                             session.tapMap(at: point, reach: reach)
                         }

@@ -241,6 +241,72 @@ final class CompanyBuildingsTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: tooFull)))
     }
 
+    // MARK: - The version 22 save
+
+    /// `SaveFixtures/` at the repository root.
+    private static let fixtures = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("SaveFixtures", isDirectory: true)
+
+    /// A save as the current version writes it: its own version replaced.
+    private static func currentVersion(of data: Data) -> Data {
+        Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 22,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
+    }
+
+    /// The world of `v22-company-buildings.json` (decision 94): a managed
+    /// company with demand from land and town growth on a world 32 × 24
+    /// cells, 1,000 people at a station, a house and an office block bought
+    /// beside it (each with its cost and asset record), run ten minutes,
+    /// then the station measured at 800 and 2 reached, the buildings filled
+    /// two nights' worth and the day's rent, upkeep and tax settled.
+    private static func companyBuildingsWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
+        world.setEconomyMode(.management)
+        world.setLandDemand(true)
+        world.setTownGrowth(true)
+        try world.buildStation(named: "S0", at: PlanPoint(x: 22_528, y: 22_528))
+        try world.placeBuilding(.house, at: PlanPoint(x: 24_000, y: 30_000))
+        try world.placeBuilding(.office, at: PlanPoint(x: 30_000, y: 30_000))
+        // Minute 0 is a midnight: town growth first sees the station there.
+        try world.advance(ticks: 10)
+        world.townGrowth!.places[0].lastService = 800
+        world.townGrowth!.places[0].lastReached = 2
+        world.fillPlacedBuildings()
+        world.fillPlacedBuildings()
+        world.refreshLandDemand()
+        world.settleProperty(day: 0, time: world.clock.now)
+        return world
+    }
+
+    /// Version 22 (decision 94): the company's buildings with their people
+    /// and cost, their asset records and the day's property row. It saves
+    /// byte for byte and is the world the build that wrote it makes. The
+    /// version 21 save's buildings are empty and cost nothing.
+    func testVersionTwentyTwoKeepsTheCompanysBuildings() throws {
+        let url = Self.fixtures.appendingPathComponent("v22-company-buildings.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["COMPANY_BUILDINGS_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.companyBuildingsWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 22)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.companyBuildingsWorld())
+        XCTAssertEqual(world.placedBuildings.map { [$0.residents, $0.jobs] }, [[2, 2], [2, 26]])
+        XCTAssertEqual(world.placedBuildings.map(\.buildingCost), [2_048_000, 24_576_000])
+        XCTAssertEqual(world.accounts.assets.filter { $0.kind == .building }.map(\.owner), [1, 2])
+        XCTAssertEqual(world.accounts.entries.last?.kind, .dailyProperty)
+        XCTAssertGreaterThan(world.accounts.days.last?.propertyRevenue ?? .zero, .zero)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+    }
+
     func testStatementsWithoutBuildingsSaveAsBefore() throws {
         // A closed year's statement and balance sheet without buildings
         // write no new keys, so saves before version 22 read and write the

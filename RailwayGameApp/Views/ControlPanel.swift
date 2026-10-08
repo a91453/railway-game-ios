@@ -172,40 +172,74 @@ private struct ToolOptions: View {
 
 /// The building tool (city building P0-A, decision 92): what a tap on the
 /// map puts up, and how many the player has put up. GameCore decides
-/// whether a building fits where the player taps.
+/// whether a building fits where the player taps. Since P0-C1 (decision 94)
+/// it also demolishes, and shows a managed company what building costs and
+/// what its buildings earn.
 private struct BuildingControls: View {
     @Bindable var session: GameSession
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                ForEach(PlacedBuildingKind.allCases, id: \.self) { kind in
-                    let isActive = session.buildingKind == kind
-                    Button {
-                        session.buildingKind = kind
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: kind.systemImage)
-                                .font(.subheadline.weight(.semibold))
-                            Text(kind.title(in: session.language))
-                                .font(.subheadline.weight(isActive ? .bold : .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                    }
-                    .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-                    .accessibilityIdentifier("building.kind.\(kind.rawValue)")
-                    .accessibilityAddTraits(isActive ? .isSelected : [])
+            Picker("Building mode", selection: $session.buildingMode) {
+                ForEach(BuildingToolMode.allCases, id: \.self) { mode in
+                    Text(mode.title(in: session.language)).tag(mode)
                 }
             }
-            Label("Tap open ground on the map to build. It cannot stand on track, a station or another building.", systemImage: "hand.tap")
-                .font(.footnote)
-                .foregroundStyle(Theme.textSecondary)
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("building.mode")
+            switch session.buildingMode {
+            case .build:
+                buildOptions
+            case .demolish:
+                Label("Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost.", systemImage: "hand.tap")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
             Text(verbatim: session.placedBuildingsText)
                 .font(.footnote.weight(.semibold))
                 .monospacedDigit()
                 .accessibilityIdentifier("building.count")
+            if let economy = session.buildingEconomyText {
+                Text(verbatim: economy)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("building.economy")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var buildOptions: some View {
+        HStack(spacing: 6) {
+            ForEach(PlacedBuildingKind.allCases, id: \.self) { kind in
+                let isActive = session.buildingKind == kind
+                Button {
+                    session.buildingKind = kind
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: kind.systemImage)
+                            .font(.subheadline.weight(.semibold))
+                        Text(kind.title(in: session.language))
+                            .font(.subheadline.weight(isActive ? .bold : .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+                .accessibilityIdentifier("building.kind.\(kind.rawValue)")
+                .accessibilityAddTraits(isActive ? .isSelected : [])
+            }
+        }
+        Label("Tap open ground on the map to build. It cannot stand on track, a station or another building.", systemImage: "hand.tap")
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+        if let quote = session.buildingQuoteText {
+            Text(verbatim: quote)
+                .font(.footnote)
+                .monospacedDigit()
+                .accessibilityIdentifier("building.quote")
         }
     }
 }

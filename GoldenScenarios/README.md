@@ -659,3 +659,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 新指令 `placeBuilding`、觀察 `placedBuilding`、結果 `buildingOverlaps`、`buildingOnTrack`、`buildingOnStation`，最終狀態選填的 `placedBuildings`（ARCHITECTURE 決策 92，城市建造 P0-A）。schema 40 是八種土地用途（決策 91）。沒有玩家建物的世界不寫 `placedBuildings`，舊的 fixture 不必改，schema 30 到 40 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過用到它們的 fixture；`PlacedBuildingTests` 另有線段與正方形相交的抽樣比對。
 - `placed-buildings.json`：320 m 見方的世界。小住宅 1、相鄰（只碰到邊）的商店 2；和兩者重疊的辦公樓被拒絕（指名較小的 1）；超出世界的小住宅被拒絕（指名中心）；一條直的軌道之後，離中心線 127 的小住宅被拒絕、剛好 128 的是 3；車站之後，離站點 127 的辦公樓被拒絕、128 的是 4；5 號不存在。每個值都手算，寫在 description 裡。
 
+## 決策 94：公司的建物（schema 42）
+
+- 新指令 `removePlacedBuilding`（`building`：建物的 ID）、結果 `unknownPlacedBuilding`（帶 `building`），`placedBuilding` 觀察與最終狀態的 `placedBuildings` 多了選填的 `residents`、`jobs`、`buildingCost`、`landCost`（是 0 時不寫）（ARCHITECTURE 決策 94，城市建造 P0-C1）。schema 41 的建物都是免費、空的，所以那些欄位都不寫，舊的 fixture 不必改，schema 30 到 41 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`placed-buildings.json` 沒有設定經營模式（自由模式），建物仍然免費、預期值不變。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過 `removePlacedBuilding`。
+- `company-buildings.json`：經營模式、$300,000、沒有車站（每格都是空地的基準地價 1,000 美分／m²）。小住宅 2,048,000 + 256,000、辦公樓 24,576,000 + 1,024,000；商店要 5,184,000、只剩 2,096,000，`insufficientFunds`；拆小住宅付 230,400，餘額 1,865,600；再拆一次與不存在的 9 號都是 `unknownPlacedBuilding`。每個值都手算，寫在 description 裡。入住、租金與每日收支需要好幾個午夜與車站的服務，由 `CompanyBuildingsTests` 手算驗證。
+
