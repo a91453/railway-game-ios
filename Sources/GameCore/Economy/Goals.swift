@@ -49,6 +49,31 @@ public enum ScenarioOutcome: Hashable, Sendable {
     case failed(day: Int64, reason: ScenarioFailure)
 }
 
+/// A festival a scenario holds every year (decision 90): station
+/// `station`'s demand raised by `boost` thousandths for `days` days from
+/// day `dayOfYear` of each 360-day year (day 0 the game's first), announced
+/// `notice` days before (a demand event of kind
+/// ``DemandEventKind/festival``).
+public struct ScenarioEvent: Hashable, Codable, Sendable {
+    public let station: StationID
+    public let dayOfYear: Int64
+    public let days: Int64
+    public let boost: Int64
+    public let notice: Int64
+
+    public init(station: StationID, dayOfYear: Int64, days: Int64, boost: Int64, notice: Int64) {
+        self.station = station
+        self.dayOfYear = dayOfYear
+        self.days = days
+        self.boost = boost
+        self.notice = notice
+    }
+
+    var isValid: Bool {
+        (0..<FinancePeriod.year.days).contains(dayOfYear) && (1...30).contains(days) && (1...2_000).contains(boost) && (0...30).contains(notice)
+    }
+}
+
 /// A scenario's rules (decision 86): its goals, the days from its start
 /// by which meeting them all earns gold, silver and bronze (the last its
 /// deadline), how many midnights in a row in the red lose it, and the train
@@ -66,10 +91,12 @@ public struct Scenario: Hashable, Sendable {
     /// The train types the player may give a train (the era's), or `nil`
     /// for all of them. A train without a type is always allowed.
     public let trainTypes: [TrainType]?
+    /// The festivals it holds every year (decision 90).
+    public let events: [ScenarioEvent]
 
     public init(
         id: String, goals: [Goal], goldDays: Int64, silverDays: Int64, deadlineDays: Int64,
-        insolvencyDays: Int64? = nil, trainTypes: [TrainType]? = nil
+        insolvencyDays: Int64? = nil, trainTypes: [TrainType]? = nil, events: [ScenarioEvent] = []
     ) {
         self.id = id
         self.goals = goals
@@ -78,6 +105,7 @@ public struct Scenario: Hashable, Sendable {
         self.deadlineDays = deadlineDays
         self.insolvencyDays = insolvencyDays
         self.trainTypes = trainTypes
+        self.events = events
     }
 
     /// The most goals a scenario has, and points a connection goal names.
@@ -91,7 +119,8 @@ public struct Scenario: Hashable, Sendable {
         guard (1...Self.maximumGoals).contains(goals.count), !id.isEmpty, id.count <= 64,
               1 <= goldDays, goldDays <= silverDays, silverDays <= deadlineDays, deadlineDays <= Self.maximumDays,
               insolvencyDays.map({ (1...Self.maximumDays).contains($0) }) ?? true,
-              trainTypes.map({ !$0.isEmpty && Set($0).count == $0.count }) ?? true
+              trainTypes.map({ !$0.isEmpty && Set($0).count == $0.count }) ?? true,
+              events.count <= Self.maximumGoals, events.allSatisfy(\.isValid)
         else { return false }
         return goals.allSatisfy { goal in
             switch goal {
@@ -155,9 +184,11 @@ extension GameWorld {
     ///
     /// - Throws: ``GameError/invalidScenario`` in free play, or for one with
     ///   no goals or too many, days out of order, a connection outside the
-    ///   world, or a target that is not positive.
+    ///   world, a target that is not positive, or a festival at a station
+    ///   that does not exist (decision 90).
     public mutating func startScenario(_ scenario: Scenario) throws(GameError) {
-        guard accounts.mode == .management, scenario.isValid(in: bounds) else { throw .invalidScenario }
+        guard accounts.mode == .management, scenario.isValid(in: bounds),
+              scenario.events.allSatisfy({ station(id: $0.station) != nil }) else { throw .invalidScenario }
         self.scenario = ScenarioState(scenario: scenario, startDay: dayIndex(of: clock.now))
     }
 
@@ -347,7 +378,7 @@ extension Goal: Codable {
 
 extension Scenario: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, goals, goldDays, silverDays, deadlineDays, insolvencyDays, trainTypes
+        case id, goals, goldDays, silverDays, deadlineDays, insolvencyDays, trainTypes, events
     }
 
     /// Decodes the rules; one without an insolvency limit or an era has no
@@ -360,7 +391,8 @@ extension Scenario: Codable {
             goldDays: try container.decode(Int64.self, forKey: .goldDays), silverDays: try container.decode(Int64.self, forKey: .silverDays),
             deadlineDays: try container.decode(Int64.self, forKey: .deadlineDays),
             insolvencyDays: try container.decodeIfPresent(Int64.self, forKey: .insolvencyDays),
-            trainTypes: try container.decodeIfPresent([TrainType].self, forKey: .trainTypes)
+            trainTypes: try container.decodeIfPresent([TrainType].self, forKey: .trainTypes),
+            events: try container.decodeIfPresent([ScenarioEvent].self, forKey: .events) ?? []
         )
     }
 
@@ -373,6 +405,9 @@ extension Scenario: Codable {
         try container.encode(deadlineDays, forKey: .deadlineDays)
         try container.encodeIfPresent(insolvencyDays, forKey: .insolvencyDays)
         try container.encodeIfPresent(trainTypes, forKey: .trainTypes)
+        if !events.isEmpty {
+            try container.encode(events, forKey: .events)
+        }
     }
 }
 

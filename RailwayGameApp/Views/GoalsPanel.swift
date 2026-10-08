@@ -149,6 +149,37 @@ struct ChallengePicker: View {
                         "到台灣時間週日午夜前，大家都玩同一張地圖：還剩 \(weekly.daysLeft(from: Date())) 天。"
                     ))
                 }
+                // Decision 90: Taiwan's railway history, on real maps that
+                // wait for the real-world data.
+                Section {
+                    ForEach(Challenge.history) { challenge in
+                        Button {
+                            dismiss()
+                            launcher.startChallenge(challenge)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                card(challenge, in: language)
+                                if challenge.map == .pingxi {
+                                    Label {
+                                        Text(verbatim: PingxiChallenge.festivalText(in: language))
+                                    } icon: {
+                                        Image(systemName: "sparkles")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.primary)
+                                }
+                            }
+                        }
+                        .disabled(launcher.railways == nil)
+                        .accessibilityIdentifier("challenge.\(challenge.id)")
+                    }
+                } header: {
+                    Text(verbatim: language.text("Taiwan railway history", "台灣鐵道史"))
+                } footer: {
+                    Text(verbatim: launcher.railways == nil
+                        ? language.text("Waiting for the real-world data.", "正在等待實景資料。")
+                        : language.text("On a map of the real place, with its real lines.", "在真實地點的地圖上，以真實的路線開局。"))
+                }
                 Section {
                     ForEach(Challenge.sandbox) { challenge in
                         Button {

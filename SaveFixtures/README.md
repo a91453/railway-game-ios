@@ -90,17 +90,21 @@ a row (`{"row", "column", "count"}`). Earlier saves are at most 2^20 a side
 and have their land whole. A build before version 18 refuses a version 18
 save rather than calling a larger world damaged or dropping the blocks.
 
+Since version 19 (decision 90) a scenario can hold `"events"`, festivals on
+the same day of every 360-day year, and a demand event can be of kind
+`"festival"`. Earlier saves have no festivals. A build before version 19
+refuses a version 19 save rather than dropping the festivals or refusing
+the kind.
+
 Since version 20 (decision 91) land and buildings can also be
 `"industrial"`, `"civic"`, `"leisure"`, `"agricultural"` or `"park"` (a
 park with no one in it: a run of `"residents": [0, …]` with no `"jobs"`),
 and a station's demand can be `"civic"`. The format is otherwise the same,
 and earlier saves hold only homes, shops and offices and the four reference
 kinds; a build before version 20 refuses a version 20 save rather than
-calling the new uses damaged. (Version 19 is reserved for the Pingxi Line
-scenario, issue #231.)
+calling the new uses damaged.
 
-Since version 21 (decision 92; 19 is reserved by other work, issue
-#231) a world can have `"placedBuildings"`, the buildings the player
+Since version 21 (decision 92) a world can have `"placedBuildings"`, the buildings the player
 placed (`{"id", "kind", "centre": {"x", "y"}}`, the kind `"house"`, `"shop"`
 or `"office"`), and `"nextPlacedBuildingID"`. Earlier saves have none; a
 build before version 21 refuses a version 21 save rather than dropping them.
@@ -131,5 +135,6 @@ hand could hold, is refused with that reason
 | `v16-assets-closed-year.json` | 16 | Fixed assets and a closed year (Phase 7a, ARCHITECTURE decision 85): a managed company with a 128 m edge (split at 32 m on day 1, its $720 and depreciation shared $180 / $540), a $7,200 station, a $3,600 train with two $360 cars and a $100,000 loan, run through the end of its first year and taken a car off: five asset records written down for 360 days, 361 capital days and year 0 closed (net loss $5,868, closing cash $182,720, equity $94,132). Written by the version 16 build (`SavedGameTests.assetWorld()`, `ASSET_SAVE_NEW=1`). |
 | `v17-scenario-fast.json` | 17 | Goals and fast forward (decision 86): five stations 1 km apart in a managed world, a line from the first to the second, and a scenario (`test.fixture`) to connect the first two stations' places and reach 1,000 residents, gold by day 30, silver 60, bronze 120, lost after 30 midnights in the red, Type C and D trains only; run a day and a minute at `fast`: the connection met on day 0, the population not. Written by the version 17 build (`SavedGameTests.scenarioWorld()`, `SCENARIO_SAVE_NEW=1`). |
 | `v18-whole-island-land.json` | 18 | The whole of Taiwan's scale (decision 88): a world 33,554,432 × 25,165,824 units (524 × 393 km), a managed company with demand from land and the city's buildings, its land read in as it is needed (`setLandOnDemand`): a station "Far" at (20,000,000, 18,000,000), the 22 blocks within 2 km of it read with five cells round it (1,000 residents, 1,800 jobs) and their five buildings, run ten minutes. Written by the version 18 build (`SavedGameTests.wholeIslandWorld()`, `WHOLE_ISLAND_SAVE_NEW=1`). |
+| `v19-scenario-festival.json` | 19 | Festivals (decision 90): the version 17 world's five stations and line with demand events from seed 1, and a scenario (`test.festival`) whose festival at the second station runs 3 days from day 3 of each year at +1500‰, announced 2 days ahead; run a day and ten minutes at `fast`, when it was announced. Written by the version 19 build (`SavedGameTests.festivalWorld()`, `FESTIVAL_SAVE_NEW=1`). |
 | `v20-land-uses.json` | 20 | Eight land uses (decision 91): a world 131,072 × 98,304 units (32 × 24 cells), a managed company with demand from land, the city's buildings and town growth; homes, a factory, a school, a sight, a farm and a park along row 5, and a second school at row 15, column 20; "School" alone reaches the second school (a `civic` demand of 400 trips), "Works" the row (`scenic`, the sight's visitors the most), run ten minutes. Written by the version 20 build (`SavedGameTests.landUsesWorld()`, `LAND_USES_SAVE_NEW=1`). |
 | `v21-placed-buildings.json` | 21 | Buildings the player placed (decision 92): a blank world 20,480 units (320 m) a side, managed, with a 250 m edge, the station Market on it, and a house, a shop and an office block beside them (`"nextPlacedBuildingID": 4`), run ten minutes. Written by the version 21 build (`SavedGameTests.placedBuildingsWorld()`, `PLACED_BUILDINGS_SAVE_NEW=1`). |
