@@ -143,15 +143,16 @@ final class LandImportTests: XCTestCase {
         // rest). Decision 91 gives schools and sights cells of their own,
         // which were offices and shops before, and a cell they made offices
         // or shops without outnumbering its people is homes now. Decision 93
-        // makes 4,481 cells parks, 2,244 factories and 297 farms; their
+        // makes 4,568 cells parks, 2,244 factories and 325 farms (with
+        // decision 96's tags; 4,481, 2,244 and 297 with decision 93's); their
         // people and the places' jobs move to the WorldPop cell's other
         // cells, which are fuller (D2 shops, more D3 homes) than before
         // (residential [26,587, 32,485, 2,214, 0], commercial [206, 0, 0,
         // 0], office [0, 1,691, 195, 0], civic [195, 0, 0, 0]).
         XCTAssertEqual(counts, [
-            .residential: [20_628, 30_711, 3_313, 0], .commercial: [24, 173, 0, 0], .office: [0, 1_376, 183, 0],
+            .residential: [20_532, 30_717, 3_313, 0], .commercial: [24, 173, 0, 0], .office: [0, 1_351, 183, 0],
             .civic: [143, 0, 0, 0], .leisure: [1_256, 0, 0, 0],
-            .industrial: [2_244, 0, 0, 0], .park: [4_481, 0, 0, 0], .agricultural: [297, 0, 0, 0],
+            .industrial: [2_244, 0, 0, 0], .park: [4_568, 0, 0, 0], .agricultural: [325, 0, 0, 0],
         ])
         for cell in world.land.cells {
             let capacity = try XCTUnwrap(world.buildingCapacity(row: cell.row, column: cell.column))

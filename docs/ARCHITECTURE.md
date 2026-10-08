@@ -3292,6 +3292,32 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 分區格約 230 × 210 m，比 64 m 格粗；格裡的位置照分區格決定，不是精確的邊界。
 - 打包的整包檔沒有時間戳，`osmData` 是那些地點（或三種土地）裡最新的一筆編輯時間。
 
+### 96. 分區收更多 OSM 標籤；森林、墓地、軍事區不是用途
+
+2026-10-08，作者同意把 OSM 的細分類歸進現有的八種用途，並問「森林、墓地、軍事區放進地形層」是否正確，要以玩家的角度判斷。決策 94、95 已由城市建造 P0-C 登記（工作登記 #231）。
+
+台灣整包檔（osmtoday.com，2026-10-06）各標籤的面積是判斷的依據：`natural=wood` 22,050 km²、`leisure=nature_reserve` 13,328、`landuse=farmland` 2,264、`natural=water` 902、`landuse=forest` 825、`landuse=residential` 519、`landuse=industrial` 472、`landuse=military` 351、`landuse=aquaculture` 233、`landuse=orchard` 183、`leisure=park` 137、`landuse=cemetery` 75（另有 `amenity=grave_yard` 22）、`landuse=harbour` 49、`leisure=golf_course` 42、`landuse=quarry` 25、`landuse=commercial` 23、`landuse=retail` 15。
+
+1. **只擴充有面積、沒有點的三種**（`build_zone_grid.py` 的 `TAGS`）：
+   - 工業：`landuse=industrial`、`quarry`（礦業也算工業部門）；
+   - 公園：`leisure=park`、`golf_course`，`landuse=recreation_ground`；
+   - 農業：`landuse=farmland`、`orchard`、`vineyard`、`aquaculture`（魚塭，農林漁牧的「漁」）、`farmyard`、`greenhouse_horticulture`、`plant_nursery`。
+
+   結果：工業區 429.0 → 454.0 km²、公園 134.7 → 181.7、農地 2,244.7 → 2,681.6（`taiwan_places.json` 1.06 → 1.17 MB）。
+2. **不收的**：
+   - `landuse=commercial`、`retail`、`education`：商業與學校已經用點計算（商店、學校，決策 91），再收面積會重複算就業。
+   - `landuse=harbour`：常常是港內的水面，水上不該有工廠的就業。
+   - `leisure=pitch`：多半是學校的操場，屬於學校。
+3. **就業數**：工廠格 102,817 格，製造業約 300 萬人 ÷ 格數約 29，`industrialJobsPerCell` 從 30 改成 29；農地 677,182 格，農業約 53 萬人 ÷ 格數不到 1，`farmJobsPerCell` 仍是 1（沒有人的農地至少要一個就業才是土地）。
+4. **森林、墓地、軍事區不是用途，也不全是「不能蓋」**（以玩家的角度）：
+   - **森林**：占台灣約六成，阿里山、平溪、南迴、花東這些最有名的鐵道都穿過森林。列為不能蓋，玩家就蓋不了山線，所以森林不能是障礙。之後的地形層用**坡度與高度**決定隧道、橋梁與造價；森林最多讓城鎮長得慢、鐵路多一點整地費。
+   - **墓地**：真實的鐵路、捷運與高鐵常常要遷葬，這本身是個有意思的選擇（繞路，或付遷葬費直線通過）。之後的地形層：城鎮不往墓地長、建物不能蓋，軌道與車站可以通過但要付遷移費。
+   - **軍事區**：351 km²，好幾處緊鄰城市與機場。對玩家來說，一大塊不能動的地只有阻擋、沒有選擇；參考的 `Ci/` 也刻意隱藏軍事設施的標示（`applyOsmSensitiveFacilityLabelFilter`）。所以先**不建模**：WorldPop 本來就幾乎沒有人住在那裡，就是一般的空地，不另外標示。
+   - **水域**（海、河、湖、`natural=water`）：真正的障礙，只能用橋或隧道過，城鎮不蓋到水上。這是 ROADMAP「地形與土地狀態」的第一步（海岸線的遮罩）。
+   - **自然保護區**（13,328 km²，多半和森林重疊）：同森林，不當障礙；之後可以讓保護區裡的建設比較貴。
+5. **數字**（16 km 地圖，居民都不變）：台北的公園格 4,481 → 4,568、農地 297 → 325；彰化的公園 85 → 247、農地 10,781 → 10,960；雲林口湖（魚塭區）的農地 20,161 → 22,446。地圖中心車站的類型與運量幾乎不變（口湖 672 → 674 人次）。
+6. **不動**：GameCore、存檔（版本 21）、golden（schema 41）、replay；地點（商店、辦公、學校、景點）與車站類型。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
