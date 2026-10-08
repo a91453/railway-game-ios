@@ -289,6 +289,8 @@ extension GameWorld {
                 ]
             ), day: day)
         }
+        // Decision 94: the company's buildings' rent, upkeep and tax.
+        settleProperty(day: day, time: time)
         // Phase 7a: the assets are written down for the day, then a year's
         // last day closes the year.
         depreciateAssets(day: day)
@@ -305,7 +307,7 @@ extension GameWorld {
 
     /// Writes `entry` and moves the balance by its amount, which may take
     /// it below zero (`allowNegativeBalance`).
-    private mutating func write(_ entry: LedgerEntry, day: Int64) {
+    mutating func write(_ entry: LedgerEntry, day: Int64) {
         economy.settle(entry.amount)
         accounts.record(entry, day: day)
     }
@@ -370,7 +372,10 @@ extension GameWorld {
             + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost] }
         guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
         guard accounts.days.allSatisfy({ (0...Self.maximumAccrued).contains($0.fareTrips) }) else { return "A day's trips are out of range." }
-        guard accounts.days.allSatisfy({ [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost].allSatisfy { $0 >= .zero } }) else {
+        guard accounts.days.allSatisfy({
+            [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.propertyRevenue, $0.propertyCost]
+                .allSatisfy { $0 >= .zero }
+        }) else {
             return "Day accounts cannot be negative."
         }
         guard accounts.entries.allSatisfy(Self.isWellFormed) else {
@@ -388,9 +393,10 @@ extension GameWorld {
         case .dailyEnergy: [.routeEnergy, .trainEnergy]
         case .dailyStaff: [.stationStaff, .trainStaff]
         case .dailyInterest: [.loanInterest]
+        case .dailyProperty: [.propertyRent, .propertyUpkeep, .propertyTax]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

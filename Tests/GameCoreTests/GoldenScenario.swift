@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 41
+    static let schemaVersion = 42
 
     var description: String
     var initialState: InitialState
@@ -181,7 +181,7 @@ struct GoldenScenario: Decodable {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
-                 .command(.placeBuilding, _), .observe(.placedBuilding, _): true
+                 .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _): true
             default: false
             }
         }
@@ -495,6 +495,8 @@ enum ScenarioCommand: Equatable {
     case setTownGrowth(Bool)
     /// Schema 41 (decision 92): a building the player places.
     case placeBuilding(PlacedBuildingKind, PlanPoint)
+    /// Schema 42 (decision 94): demolishing one.
+    case removePlacedBuilding(PlacedBuildingID)
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -596,6 +598,8 @@ enum ScenarioCommand: Equatable {
                 world.setTownGrowth(enabled)
             case .placeBuilding(let kind, let point):
                 try world.placeBuilding(kind, at: point)
+            case .removePlacedBuilding(let id):
+                try world.removePlacedBuilding(id)
             }
             return .ok
         } catch {
@@ -612,7 +616,7 @@ extension ScenarioCommand: Decodable {
         case profile, structure, start, end, enabled, demand, mode, rules
         case performance, point, routePreferences
         case seed, cells
-        case kind
+        case kind, building
     }
 
     init(from decoder: any Decoder) throws {
@@ -634,6 +638,9 @@ extension ScenarioCommand: Decodable {
         // Schema 41: buildings the player places (decision 92).
         case "placeBuilding":
             self = try .placeBuilding(container.decode(PlacedBuildingKind.self, forKey: .kind), container.decode(PlanPoint.self, forKey: .point))
+        // Schema 42: demolishing the company's buildings (decision 94).
+        case "removePlacedBuilding":
+            self = .removePlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -953,6 +960,8 @@ extension StepOutcome: Codable {
             self = try .rejected(.buildingOnTrack(.edge(container.decode(Int.self, forKey: .edge))))
         case "buildingOnStation":
             self = try .rejected(.buildingOnStation(container.decodeStation(forKey: .station)))
+        case "unknownPlacedBuilding":
+            self = .rejected(.unknownPlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building))))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1117,6 +1126,9 @@ extension StepOutcome: Codable {
         case .rejected(.buildingOnStation(let id)):
             try container.encode("buildingOnStation", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.unknownPlacedBuilding(let id)):
+            try container.encode("unknownPlacedBuilding", forKey: .result)
+            try container.encode(id.rawValue, forKey: .building)
         }
         // Fixtures name network nodes and edges by number.
         func encodeNode(_ node: TrackNodeID) throws {
@@ -2006,18 +2018,27 @@ struct TownGrowthSummary: Codable, Equatable {
 
 /// A building the player placed in a fixture (schema 41, decision 92):
 /// `{"id", "kind", "x", "y"}`, the kind `"house"`, `"shop"` or `"office"`
-/// and its centre.
+/// and its centre; since schema 42 (decision 94) also `"residents"`,
+/// `"jobs"`, `"buildingCost"` and `"landCost"`, each only when not 0.
 struct PlacedBuildingSummary: Codable, Equatable {
     var id: Int
     var kind: PlacedBuildingKind
     var x: Int64
     var y: Int64
+    var residents: Int64?
+    var jobs: Int64?
+    var buildingCost: Int64?
+    var landCost: Int64?
 
     init(_ building: PlacedBuilding) {
         id = building.id.rawValue
         kind = building.kind
         x = building.centre.x
         y = building.centre.y
+        residents = building.residents == 0 ? nil : building.residents
+        jobs = building.jobs == 0 ? nil : building.jobs
+        buildingCost = building.buildingCost == .zero ? nil : building.buildingCost.amount
+        landCost = building.landCost == .zero ? nil : building.landCost.amount
     }
 }
 

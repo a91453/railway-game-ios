@@ -102,7 +102,11 @@ public enum LandDemand {
     /// them in proportion to `1000 − 1000 d² / R²` (1 to 1000, nearer more)
     /// by the largest remainder, ties to the lower station; its residents
     /// and jobs separately. Stations reaching no land have none.
-    public static func shares(of land: Land, among stations: [Station]) -> [StationID: Share] {
+    ///
+    /// Decision 94: each building the player placed with someone in it is
+    /// shared the same way after the cells, by ascending ID, as a point at
+    /// its centre with its residents and jobs and its kind's use.
+    public static func shares(of land: Land, among stations: [Station], placed: [PlacedBuilding] = []) -> [StationID: Share] {
         let radius = Land.catchmentRadius
         let squaredRadius = radius * radius
         // Each cell's stations (in the stations' order) and their weights,
@@ -115,10 +119,10 @@ public enum LandDemand {
         }
         reaching.sort { ($0.cell, $0.station) < ($1.cell, $1.station) }
         var byStation = [Share?](repeating: nil, count: stations.count)
-        func add(_ residents: Int64, _ jobs: Int64, of cell: LandCell, to station: Int) {
+        func add(_ residents: Int64, _ jobs: Int64, of use: LandUse, to station: Int) {
             var share = byStation[station] ?? Share()
             share.residents += residents
-            switch cell.use {
+            switch use {
             case .office, .industrial, .agricultural:
                 share.officeJobs += jobs
             case .civic:
@@ -140,17 +144,31 @@ public enum LandDemand {
             if end - start == 1 {
                 // One station has it all, as the largest remainder of one
                 // weight gives.
-                add(cell.residents, cell.jobs, of: cell, to: reaching[start].station)
+                add(cell.residents, cell.jobs, of: cell.use, to: reaching[start].station)
             } else {
                 let near = reaching[start..<end]
                 let weights = near.map(\.weight)
                 let residents = GameWorld.apportion(cell.residents, by: weights)
                 let jobs = GameWorld.apportion(cell.jobs, by: weights)
                 for (offset, entry) in near.enumerated() {
-                    add(residents[offset], jobs[offset], of: cell, to: entry.station)
+                    add(residents[offset], jobs[offset], of: cell.use, to: entry.station)
                 }
             }
             start = end
+        }
+        for building in placed where building.residents + building.jobs > 0 {
+            let near = stations.enumerated().compactMap { position, station -> (station: Int, weight: Int64)? in
+                let dx = building.centre.x - station.location.x, dy = building.centre.y - station.location.y
+                let squared = dx * dx + dy * dy
+                return squared < squaredRadius ? (position, 1_000 - squared * 1_000 / squaredRadius) : nil
+            }
+            guard !near.isEmpty else { continue }
+            let weights = near.map(\.weight)
+            let residents = GameWorld.apportion(building.residents, by: weights)
+            let jobs = GameWorld.apportion(building.jobs, by: weights)
+            for (offset, entry) in near.enumerated() {
+                add(residents[offset], jobs[offset], of: building.kind.use, to: entry.station)
+            }
         }
         var shares: [StationID: Share] = [:]
         for (position, share) in byStation.enumerated() {
@@ -202,7 +220,8 @@ extension GameWorld {
     /// station has none (decision 77). Passengers already waiting stay.
     mutating func refreshLandDemand() {
         guard drawsDemandFromLand else { return }
-        let shares = LandDemand.shares(of: land, among: landStations)
+        // Decision 94: the people in the player's buildings ride too.
+        let shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
         var changed = false
         for station in stations {
             let demand = shares[station.id]?.demand
@@ -312,6 +331,12 @@ extension GameWorld {
         }
         growth.places = places
         townGrowth = growth
+        // Decision 94: the company's buildings fill or empty by the service
+        // measured tonight, and their riders count from now.
+        if !placedBuildings.isEmpty {
+            fillPlacedBuildings()
+            refreshLandDemand()
+        }
     }
 
     /// What `amount` grows by in a day at `rate` thousandths: rounded half

@@ -399,6 +399,8 @@ extension GameError {
             language.text("A building cannot stand on or right beside track.", "建物不能蓋在軌道上或緊貼軌道。")
         case .buildingOnStation(let id):
             language.text("A building cannot stand on station #\(id.rawValue).", "建物不能蓋在車站 #\(id.rawValue) 上。")
+        case .unknownPlacedBuilding(let id):
+            language.text("There is no building #\(id.rawValue).", "沒有建物 #\(id.rawValue)。")
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",

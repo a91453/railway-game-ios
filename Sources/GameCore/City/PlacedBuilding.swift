@@ -2,9 +2,11 @@
 // 92). The city's own buildings (decision 74) stand one on each 64 m cell
 // of land and are put up and raised by the city; these stand where the
 // player puts them, at any point of the world: the cells only count and
-// plan, they do not bind where a building goes. A first step: a building
-// is a square of its kind's size, placed free of charge, and does not yet
-// house anyone (cost, demolition and the people in it come with P0-C).
+// plan, they do not bind where a building goes. A building is a square of
+// its kind's size. Since P0-C1 (decision 94) it is the company's: a managed
+// company pays for it and keeps it on its books, it fills with residents and
+// jobs who ride from the stations near it, and it earns rent (see
+// CompanyBuildings.swift).
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.
@@ -46,21 +48,66 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
         case .office: .office
         }
     }
+
+    /// Its storeys (decision 94): a house and a shop 2, an office block 6.
+    public var floors: Int64 {
+        switch self {
+        case .house, .shop: 2
+        case .office: 6
+        }
+    }
+
+    /// The ground it stands on, in m²: 256, 576 and 1,024.
+    public var footprintArea: Int64 {
+        let metres = side / WorldCoordinate.unitsPerMetre
+        return metres * metres
+    }
+
+    /// Its floor, in m²: the footprint by the storeys.
+    public var floorArea: Int64 {
+        footprintArea * floors
+    }
+
+    /// Who it holds when full, by decision 74's rule: the eighths of the
+    /// floor of its use that are homes, at 48 m² a resident, the rest jobs
+    /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop 6
+    /// and 27, an office block 16 and 168.
+    public var capacity: BuildingCapacity {
+        let homes = Building.homeEighths(of: use)
+        return BuildingCapacity(
+            residents: floorArea * homes / 8 / Building.areaPerResident,
+            jobs: floorArea * (8 - homes) / 8 / Building.areaPerJob
+        )
+    }
 }
 
 /// A building the player placed: a square of its kind's ``PlacedBuildingKind/side``,
 /// its sides north–south and east–west, centred on ``centre``. It covers
 /// the points `x` in `centre.x − side / 2 ..< centre.x + side / 2`, and
 /// likewise `y`.
-public struct PlacedBuilding: Hashable, Codable, Sendable {
+public struct PlacedBuilding: Hashable, Sendable {
     public let id: PlacedBuildingID
     public let kind: PlacedBuildingKind
     public let centre: PlanPoint
+    /// Who lives and works in it now (decision 94): 0 when it is built,
+    /// filling towards its kind's capacity while a station serves it.
+    public internal(set) var residents: Int64 = 0
+    public internal(set) var jobs: Int64 = 0
+    /// What a managed company paid for it: the building, and the right to
+    /// use the land under it (decision 94); nothing in free play, and
+    /// nothing recorded for one placed before save version 22.
+    public internal(set) var buildingCost: Money = .zero
+    public internal(set) var landCost: Money = .zero
 
     public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint) {
         self.id = id
         self.kind = kind
         self.centre = centre
+    }
+
+    /// What was paid for it, together.
+    public var cost: Money {
+        buildingCost + landCost
     }
 
     /// The west, north, east and south edges: `minX ..< maxX`, `minY ..< maxY`.
@@ -85,8 +132,10 @@ public enum PlacedBuildingRules {
 
 extension GameWorld {
     /// Places a building of `kind` centred on `centre` (decision 92):
-    /// numbered next, free of charge, in no one's way. A first step: it
-    /// houses no one yet.
+    /// numbered next, in no one's way, empty. Since decision 94 a managed
+    /// company pays ``placedBuildingQuote(_:at:)`` for it, the building and
+    /// the right to use the land, and keeps it on its books; free play pays
+    /// nothing.
     ///
     /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
@@ -95,8 +144,9 @@ extension GameWorld {
     ///   ``GameError/buildingOnTrack(_:)`` naming the lowest numbered edge
     ///   whose centre line passes closer than ``PlacedBuildingRules/clearance``
     ///   to the square (or crosses it); ``GameError/buildingOnStation(_:)``
-    ///   naming the lowest numbered station whose point is that near; or
-    ///   ``GameError/idsExhausted``.
+    ///   naming the lowest numbered station whose point is that near;
+    ///   ``GameError/idsExhausted``; or
+    ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)
@@ -111,9 +161,14 @@ extension GameWorld {
             throw .buildingOnStation(station.id)
         }
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)
-        let building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre)
+        let quote = placedBuildingQuote(kind, at: centre) ?? PlacedBuildingQuote(building: .zero, land: .zero)
+        try economy.spend(quote.total)
+        var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre)
+        building.buildingCost = quote.building
+        building.landCost = quote.land
         nextPlacedBuildingID = next
         placedBuildings.append(building)
+        acquireAsset(.building, owner: id, cost: quote.total)
         return building
     }
 
@@ -181,7 +236,46 @@ extension GameWorld {
             if let other = placedBuildings[..<index].first(where: { $0.overlaps(building) }) {
                 return "Placed buildings \(other.id.rawValue) and \(building.id.rawValue) share ground."
             }
+            let capacity = building.kind.capacity
+            guard (0...capacity.residents).contains(building.residents), (0...capacity.jobs).contains(building.jobs),
+                  building.buildingCost >= .zero, building.landCost >= .zero,
+                  building.cost.amount <= CompanyAccounts.maximumAssetCost
+            else {
+                return "Placed building \(building.id.rawValue) holds more than it may or cost out of range."
+            }
         }
         return nil
+    }
+}
+
+extension PlacedBuilding: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, centre, residents, jobs, buildingCost, landCost
+    }
+
+    /// Decodes `{"id", "kind", "centre"}` and, since save version 22
+    /// (decision 94), `"residents"`, `"jobs"`, `"buildingCost"` and
+    /// `"landCost"`, each written only when not 0: a building placed before
+    /// is empty and was paid nothing for.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(PlacedBuildingID.self, forKey: .id)
+        kind = try container.decode(PlacedBuildingKind.self, forKey: .kind)
+        centre = try container.decode(PlanPoint.self, forKey: .centre)
+        residents = try container.decodeIfPresent(Int64.self, forKey: .residents) ?? 0
+        jobs = try container.decodeIfPresent(Int64.self, forKey: .jobs) ?? 0
+        buildingCost = try container.decodeIfPresent(Money.self, forKey: .buildingCost) ?? .zero
+        landCost = try container.decodeIfPresent(Money.self, forKey: .landCost) ?? .zero
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(centre, forKey: .centre)
+        if residents != 0 { try container.encode(residents, forKey: .residents) }
+        if jobs != 0 { try container.encode(jobs, forKey: .jobs) }
+        if buildingCost != .zero { try container.encode(buildingCost, forKey: .buildingCost) }
+        if landCost != .zero { try container.encode(landCost, forKey: .landCost) }
     }
 }

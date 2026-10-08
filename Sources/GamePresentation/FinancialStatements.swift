@@ -47,6 +47,7 @@ extension AssetClass {
         case .track: language.text("Track and structures", "軌道與結構物")
         case .stations: language.text("Stations", "車站")
         case .rollingStock: language.text("Trains and cars", "車輛")
+        case .buildings: language.text("Buildings", "建物")
         }
     }
 }
@@ -61,12 +62,18 @@ extension FinanceSummary {
             StatementRow(title: title, current: value(self), previous: previous.map(value), style: style)
         }
         let out = { (amount: Money) in Money.zero - amount }
+        // Decision 94: the company's buildings, only where it has some.
+        let property = hasProperty(previous: previous) ? [
+            row(LedgerItem.propertyRent.displayName(in: language), \.propertyRevenue),
+            row(language.text("Building upkeep and land tax", "建物維護與土地資產稅")) { out($0.propertyCost) },
+        ] : []
         return [
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
             row(LedgerItem.operatingCost.displayName(in: language)) { out($0.operatingCost) },
             row(LedgerItem.maintenanceCost.displayName(in: language)) { out($0.maintenanceCost) },
             row(language.text("Energy", "能源費用")) { out($0.energyCost) },
             row(language.text("Staff", "員工費用")) { out($0.staffCost) },
+        ] + property + [
             row(language.text("Operating profit", "營業利益"), \.operatingProfit, .subtotal),
             row(LedgerItem.loanInterest.displayName(in: language)) { out($0.interestCost) },
             row(language.text("Depreciation", "折舊費用")) { out($0.depreciationCost) },
@@ -85,14 +92,19 @@ extension FinanceSummary {
             StatementRow(title: title, current: value(self), previous: previous.map(value), style: style)
         }
         let out = { (amount: Money) in Money.zero - amount }
+        let property = hasProperty(previous: previous) ? [
+            row(language.text("Rent received", "收取租金"), \.propertyRevenue),
+            row(language.text("Building upkeep and land tax paid", "建物維護與土地資產稅支出")) { out($0.propertyCost) },
+        ] : []
         return [
             .section(language.text("Operating activities", "營業活動之現金流量")),
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
             row(language.text("Running costs paid", "營運支出")) { out($0.totalCost) },
+        ] + property + [
             row(language.text("Interest paid", "利息支出")) { out($0.interestCost) },
             row(language.text("Net from operating", "營業活動淨額"), \.operatingCashFlow, .subtotal),
             .section(language.text("Investing activities", "投資活動之現金流量")),
-            row(language.text("Track, stations and trains bought", "購置軌道、車站與車輛")) { out($0.capitalSpending) },
+            row(language.text("Track, stations, trains and buildings bought", "購置軌道、車站、車輛與建物")) { out($0.capitalSpending) },
             row(language.text("Net from investing", "投資活動淨額"), \.investingCashFlow, .subtotal),
             .section(language.text("Financing activities", "籌資活動之現金流量")),
             row(language.text("Borrowed", "借入款項"), \.loanBorrowed),
@@ -100,6 +112,12 @@ extension FinanceSummary {
             row(language.text("Net from financing", "籌資活動淨額"), \.financingCashFlow, .subtotal),
             row(language.text("Net change in cash", "本期現金淨增減"), \.netCashFlow, .total),
         ]
+    }
+
+    /// Whether this period or `previous` had the company's buildings' rent
+    /// or costs (decision 94).
+    private func hasProperty(previous: FinanceSummary?) -> Bool {
+        [self, previous].contains { $0.map { $0.propertyRevenue != .zero || $0.propertyCost != .zero } ?? false }
     }
 }
 
@@ -114,7 +132,10 @@ extension BalanceSheet {
         return [
             .section(language.text("Assets", "資產")),
             row(language.text("Cash", "現金"), \.cash),
-        ] + AssetClass.allCases.map { assetClass in
+        ] + AssetClass.allCases.filter { assetClass in
+            // Decision 94: buildings only once the company has had some.
+            assetClass != .buildings || self[.buildings] != .zero || previous.map { $0[.buildings] != .zero } ?? false
+        }.map { assetClass in
             row(assetClass.displayName(in: language)) { $0[assetClass].bookValue }
         } + [
             row(language.text("Total assets", "資產總計"), \.totalAssets, .subtotal),
