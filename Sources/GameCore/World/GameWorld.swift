@@ -999,8 +999,10 @@ public struct GameWorld: Equatable, Sendable {
     /// doors it has (see ``TrainType``). Free, and only while the train is
     /// off the track, as its cars are (see ``setTrainCars(_:to:)``).
     ///
-    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
-    ///   ``GameError/trainAlreadyPlaced(_:)``.
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
+    ///   ``GameError/trainAlreadyPlaced(_:)``, or
+    ///   ``GameError/trainTypeUnavailable(_:)`` for a type the scenario's era
+    ///   does not have (decision 86).
     public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
