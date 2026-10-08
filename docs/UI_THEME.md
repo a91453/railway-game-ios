@@ -2,7 +2,7 @@
 
 2026-10-07 定。App 的介面改成和 App 圖示同一套風格：扁平、圓角，四個主色取自圖示。地圖以外的畫面都用 `RailwayGameApp/Views/Theme.swift`；地圖和路線的顏色留在 `Palette.swift`，理由和預定時機見下方「刻意保留」。
 
-PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#194–#196 與本次（逐一替換）。
+PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#194–#196 與 #197（逐一替換）、地圖畫風（決策 84）。
 
 ## 取色
 
@@ -50,6 +50,24 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 `.borderedProminent` 固定用白字，在 Dark 的 `primary`（1.85:1）和 `error` 上都不到 AA，所以主要動作改用 `ThemeProminentButtonStyle`。`.bordered` 按鈕沿用全域 tint。
 
+## 地圖（決策 84）
+
+2026-10-08 作者決定，地圖不等 Phase 8，先改成圖示的畫風（`Palette`），並畫出路線、共線區段與轉乘群組（見 ARCHITECTURE 決策 84）。
+
+| 名稱 | Light | Dark | 用途 | 對比 Light／Dark |
+| --- | --- | --- | --- | --- |
+| `land` | `#ECEEF6` | `#262C57` | 地面 | — |
+| `mapEdge` | `#262C57` 30% | `#ECEEF6` 30% | 世界的邊界 | — |
+| `track` | `#10917F` | `#45D3C0` | 軌道道床（圖形，對地面） | 3.37／7.17 |
+| `trackCentre` | `#BDEFE7` | `#D4FAF4` | 軌道中間的淺色線 | — |
+| `ink` | `#262C57` | `#ECEEF6` | 站名、節點、隧道、車站外框、高架外框 | 11.47／9.64 |
+| `station` | `#FFC86B` | `#FFC86B` | 車站、月台（外框用 `ink`） | — |
+| `stationSymbol` | `#262C57` | `#262C57` | 車站裡的符號 | 8.69 |
+| `train` | `#262C57` | `#ECEEF6` | 列車 | 11.47／9.64（對地面） |
+| `transferLink`／`transferEdge` | `#FFFFFF`／`#262C57` | 同左 | 轉乘群組的連線（MapBuilder 的白線黑框） | — |
+
+圖示的淺色軌道 `#12A08F` 對地面只有 2.81:1，不到圖形的 3:1，所以淺色模式壓暗到 `#10917F`。路線用 `Palette.lineColor`（路線面板的顏色）。
+
 ## 刻意保留（程式碼裡標「Theme: kept」）
 
 ### 永久保留
@@ -61,12 +79,12 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 ### Phase 8（換地圖 renderer）時一起改
 
+地圖本身的畫法已在決策 84 改用圖示畫風（見上）；下列項目仍留到 Phase 8。
+
 | 位置 | 保留的 | 理由 |
 | --- | --- | --- |
-| `MapArt.swift`、`MapView.swift` 的地圖畫法 | 軌道、建物、圖層、列車、車站、土地等 `Palette` 色 | 地圖畫法由 Phase 8 重做 |
 | `MapView` 的交通圖例（`TrafficLegend`） | `metroGreen`／`metroAmber`／`metroRed` | 要和地圖上交通疊圖的顏色一致 |
 | `PopulationLegendView` 的色階與色票 | `PopTravel`、`CityMap` 的顏色 | 要和地圖圖層一致；外框、文字、底已改用 Theme |
-| `RealWorldPicker` 的 16 公里方框與中心十字 | `Palette.station` | 預覽要和遊戲地圖的車站色一致 |
 | `MapArt` 的選取標示（鋪軌預覽線、錨點、選取外圈） | `Color.accentColor`（已跟著全域 tint 變成綠松色） | 擁有者決定維持綠松色（#187）；Phase 8 再檢討 |
 
 ### 沿用系統樣式（目前不改）

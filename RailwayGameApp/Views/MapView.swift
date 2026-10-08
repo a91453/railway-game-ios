@@ -74,6 +74,10 @@ struct MapView: View {
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
+    /// The lines along their track and the transfer groups' links
+    /// (decision 84), worked out off the main actor when the track, the
+    /// lines or the groups change.
+    @State private var lineMap = LineMap()
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
@@ -119,7 +123,8 @@ struct MapView: View {
                         camera: projection,
                         edges: edges,
                         layers: mapLayers,
-                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world)
+                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        lines: lineMap
                     )
                     .equatable()
                 }
@@ -294,6 +299,13 @@ struct MapView: View {
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             traffic = session.world.trafficOverlay()
+        }
+        .task(id: LineMapKey(world: session.world)) {
+            // A journey a line costs a route search a leg: on a large map
+            // that is too slow for a frame.
+            let world = session.world
+            let map = await Task.detached(priority: .userInitiated) { LineMap(world: world) }.value
+            if !Task.isCancelled { lineMap = map }
         }
         .onChange(of: HeatmapKey(total: session.population?.total, realWorld: RealWorldFrame(world: session.world)), initial: true) { _, key in
             // The grid is laid out once for a map, not on every draw.
@@ -533,6 +545,32 @@ struct MapView: View {
 /// (a due departure starts a wait), the trains with their routes and
 /// reservations, the lines that send them out, the track and whether
 /// traffic control is on.
+/// What the lines' map (``LineMap``, decision 84) is worked out from: the
+/// track and its platforms, the lines' stops, ways and colours, the
+/// stations and the transfer groups; not the trains or the clock, so it is
+/// worked out again only after an edit.
+private struct LineMapKey: Equatable {
+    struct Line: Equatable {
+        let id: LineID
+        let stops: [StationID]
+        let routes: [LineRoutePreference]
+        let isRing: Bool
+        let color: LineColor?
+    }
+
+    let network: RailwayNetwork
+    let lines: [Line]
+    let stations: [PlanPoint]
+    let groups: [TransferGroup]
+
+    init(world: GameWorld) {
+        network = world.network
+        lines = world.lines.map { Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color) }
+        stations = world.stations.map(\.location)
+        groups = world.transferGroups
+    }
+}
+
 private struct TrafficKey: Equatable {
     let now: GameTime
     let isEnabled: Bool
@@ -606,6 +644,7 @@ private struct MapCanvas: View, Equatable {
     let edges: [TrackEdgeID: MapEdgeDrawing]
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
+    let lines: LineMap
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -621,11 +660,12 @@ private struct MapCanvas: View, Equatable {
             && lhs.edges == rhs.edges
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
+            && lhs.lines == rhs.lines
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
-        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts
+        let selectedStationID = selectedStationID, network = network, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -639,6 +679,7 @@ private struct MapCanvas: View, Equatable {
                 edges: edges,
                 layers: layers,
                 waitingCounts: waitingCounts,
+                lines: lines,
                 in: context
             )
         }
