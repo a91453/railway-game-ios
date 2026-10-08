@@ -175,8 +175,17 @@ final class TrainSessionPropertyTests: XCTestCase {
             } catch {}
         }
         switch action {
-        case .tap, .selectStation, .clearSelection, .selectTool, .selectTrain, .heading:
+        case .tap, .selectStation, .clearSelection, .selectTrain, .heading:
             return
+        case .selectTool(let tool):
+            // Decision 99: a building tool pauses a running game; leaving
+            // the building tools resumes it if the session paused it.
+            guard tool != session.tool else { return }
+            if tool.pausesGame {
+                if !shadow.clock.isPaused { shadow.pause() }
+            } else if session.isPausedForBuilding, shadow.clock.isPaused {
+                shadow.resume()
+            }
         case .purchase:
             _ = try? shadow.purchaseTrain(named: "Train \(shadow.trains.count + 1)")
         case .place:
