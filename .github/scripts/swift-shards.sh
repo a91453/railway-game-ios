@@ -11,8 +11,9 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-23   the long property, differential and mutation
-#                                campaigns, named below
+#   campaigns-1 .. campaigns-24   the long property, differential and mutation
+#                                campaigns, and the golden scenarios, named
+#                                below
 #   rest                         every test that no campaign shard names: the
 #                                ordinary unit and golden tests, the
 #                                GamePresentation tests, and whatever is added
@@ -116,6 +117,11 @@ set -euo pipefail
 # Phase 5F R1: PassengerPlanKeyTests (a 40-station network plan worked out
 # afresh twice, and a day of minute calls) took 312 s locally on Swift 6.4;
 # it runs alone in campaigns-23 rather than lengthen rest.
+# 2026-10-08: rest had become the slowest shard (14.1 min of job on #204's run
+# 37727430223, the others at most 11.6), and GoldenScenarioTests took 284 s of
+# its 728 s of tests there (RealWorldDemoTests 85, ScheduledTrafficTests 71,
+# WorldStateMachineTests 55, the rest under 40 each). The golden scenarios run
+# alone in campaigns-24, which leaves rest about 444 s.
 classes_of() {
   case "$1" in
     campaigns-1) echo "EconomyPropertyTests" ;;
@@ -141,10 +147,11 @@ classes_of() {
     campaigns-21) echo "SaveMutationSecondHalfTests" ;;
     campaigns-22) echo "SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
     campaigns-23) echo "PassengerPlanKeyTests" ;;
+    campaigns-24) echo "GoldenScenarioTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20 campaigns-21 campaigns-22 campaigns-23)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20 campaigns-21 campaigns-22 campaigns-23 campaigns-24)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""

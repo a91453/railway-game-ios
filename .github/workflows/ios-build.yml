@@ -52,12 +52,16 @@ on:
 permissions:
   contents: read
 
-# A newer push to a pull request cancels its older run. Every commit on main
-# keeps its own complete run: a later merge never cancels or replaces it (a
-# group shared by all of main would drop every queued run but the newest).
+# A newer push to a pull request cancels its older run, and a newer push to
+# main its older full run: the newest main commit always gets a complete run,
+# and it holds every change the cancelled ones did. Merges come in bursts,
+# and each full run took a macOS runner for 15 to 27 minutes, so pull
+# requests merged together queued behind one another (42.5 minutes of
+# waiting for a runner on 2026-10-07). The nightly run and manual runs keep
+# their own groups and are never cancelled.
 concurrency:
-  group: ios-build-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ios-build-${{ (github.event_name == 'pull_request' || github.event_name == 'push') && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 defaults:
   run:
@@ -172,6 +176,28 @@ jobs:
             exit 1
           fi
 
+      - name: Select an available iPhone Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          iphones = [device for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone Simulator")
+          device = iphones[0]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_UDID={device['udid']}\n")
+          PY
+          # Start booting it now, so it boots while the app builds (3
+          # minutes of booting waited for the build before): `boot` returns
+          # once the boot has begun, and the boot step below waits for it.
+          xcrun simctl boot "$(grep '^SIMULATOR_UDID=' "$GITHUB_ENV" | tail -n 1 | cut -d= -f2)" || echo "::warning::Could not start booting the Simulator early; the boot step boots it."
+
       # A generic destination needs no booted Simulator. Code signing is
       # disabled: Simulator builds need no certificate or Apple Developer account.
       # Package resolution is disabled as on Xcode Cloud, which only uses a
@@ -199,24 +225,6 @@ jobs:
             exit 1
           fi
           echo "The Debug app carries the Debug-only marker."
-
-      - name: Select an available iPhone Simulator
-        run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
-          iphones = [device for runtime, group in devices.items()
-                     if ".iOS-" in runtime for device in group
-                     if device["isAvailable"] and device["name"].startswith("iPhone")]
-          if not iphones:
-              raise SystemExit("No available iPhone Simulator")
-          device = iphones[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"SIMULATOR_UDID={device['udid']}\n")
-          PY
 
       # Boot explicitly before XCTest installs its runner. A cold Simulator
       # otherwise leaves xcodebuild waiting without any test progress logs.
