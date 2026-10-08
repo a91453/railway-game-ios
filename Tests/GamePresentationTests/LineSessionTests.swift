@@ -213,9 +213,12 @@ final class LineSessionTests: XCTestCase {
 
             session.selectStation(Self.stationC)
             session.addSelectedStationToLineDraft()
+            // Decision 100: Bravo stands on the track between, so the line
+            // calls there too unless the player says otherwise.
+            XCTAssertEqual(session.lineDraftRoute, [Self.stationA, Self.stationB, Self.stationC])
             session.createLineFromDraft()
             var expected = start
-            try expected.createLine(named: "Line 1", stops: [Self.stationA, Self.stationC])
+            try expected.createLine(named: "Line 1", stops: [Self.stationA, Self.stationB, Self.stationC])
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.selectedLineID, Self.main)
             XCTAssertEqual(session.lineDraft, [])

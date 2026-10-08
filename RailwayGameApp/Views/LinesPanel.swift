@@ -30,6 +30,9 @@ struct LinesPanel: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Decision 100: a new line first, where the sheet at half
+                // height shows it while stations are picked on the map.
+                draftSection
                 trafficSection
                 serviceDaySection
                 linesSection
@@ -44,7 +47,6 @@ struct LinesPanel: View {
                         addPatternSection(line)
                     }
                 }
-                draftSection
             }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
@@ -79,6 +81,10 @@ struct LinesPanel: View {
             }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session)
+            }
+            // Taps on the map select again once the panel is closed.
+            .onDisappear {
+                session.stopPickingLineStops()
             }
         }
     }
@@ -544,29 +550,122 @@ struct LinesPanel: View {
 
     // MARK: - New line
 
+    private func names(_ stations: [StationID]) -> String {
+        stations.map { name(of: $0) }.joined(separator: " → ")
+    }
+
+    /// A new line from its ends (decision 100): the player picks the first
+    /// and last stations on the map (and any on the way, to choose where
+    /// the line goes), the stations the track passes between are found,
+    /// and the player chooses which of them it calls at.
     private var draftSection: some View {
-        Section {
-            if session.lineDraft.isEmpty {
-                Text("Select a station on the map, then add it here. Add two or more, in order.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
+        let language = session.language
+        let draft = session.lineDraft
+        let stops = session.lineDraftStops
+        return Section {
+            if draft.isEmpty {
+                Text(verbatim: language.text(
+                    "Pick the line's first and last stations. The stations the track passes between them are found for you.",
+                    "選路線的起點和終點，沿途經過的車站會依軌道自動找出。"
+                ))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
             } else {
-                Text(session.lineDraft.map { name(of: $0) }.joined(separator: " → "))
-                    .font(.subheadline)
+                LabeledContent {
+                    Text(verbatim: names(draft))
+                } label: {
+                    Text(verbatim: language.text("Picked", "已點選"))
+                }
             }
+            Button {
+                if session.isPickingLineStops {
+                    session.stopPickingLineStops()
+                } else {
+                    session.startPickingLineStops()
+                }
+            } label: {
+                Label {
+                    Text(verbatim: session.isPickingLineStops
+                         ? language.text("Stop Picking", "停止選站")
+                         : language.text("Pick on Map", "在地圖上選站"))
+                } icon: {
+                    Image(systemName: session.isPickingLineStops ? "hand.tap.fill" : "hand.tap")
+                }
+            }
+            .accessibilityIdentifier("line.draft.pick")
             Button("Add Selected Station") {
                 session.addSelectedStationToLineDraft()
             }
             Button("Remove Last Stop") {
                 session.removeLastLineDraftStop()
             }
-            .disabled(session.lineDraft.isEmpty)
+            .disabled(draft.isEmpty)
+            if draft.count >= 2 {
+                if let route = session.lineDraftRoute {
+                    if route.count > draft.count {
+                        stoppingControls(route)
+                    }
+                } else {
+                    Text(verbatim: language.text(
+                        "No track joins these stations yet. The line calls at the stations picked; its trains run once track joins them.",
+                        "這些車站之間還沒有軌道相連。路線只停點選的車站，軌道接通後列車才能行駛。"
+                    ))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.warning)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: names(stops))
+                        .font(.subheadline)
+                    Text(verbatim: language.text("\(stops.count) stops", "共 \(stops.count) 站"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("line.draft.stops")
+            }
             Button("Create Line") {
                 session.createLineFromDraft()
             }
-            .disabled(session.lineDraft.count < 2)
+            .disabled(stops.count < 2)
+            .accessibilityIdentifier("line.draft.create")
+            if !draft.isEmpty {
+                Button(role: .destructive) {
+                    session.clearLineDraft()
+                } label: {
+                    Text(verbatim: language.text("Clear", "清除"))
+                }
+            }
         } header: {
             Text("New line")
+        }
+    }
+
+    /// Which stations along `route` the new line calls at: every one, only
+    /// those picked, or the player's own choice, one switch a station (the
+    /// ends always on).
+    @ViewBuilder
+    private func stoppingControls(_ route: [StationID]) -> some View {
+        let language = session.language
+        Picker(selection: Binding(get: { session.lineDraftStopping }, set: { session.lineDraftStopping = $0 })) {
+            ForEach(LineDraftStopping.allCases, id: \.self) { stopping in
+                Text(verbatim: stopping.title(in: language)).tag(stopping)
+            }
+        } label: {
+            Text(verbatim: language.text("Calls at", "停靠方式"))
+        }
+        .pickerStyle(.inline)
+        .accessibilityIdentifier("line.draft.stopping")
+        if session.lineDraftStopping == .custom {
+            ForEach(Array(route.enumerated()), id: \.offset) { index, station in
+                let isEnd = index == 0 || index == route.count - 1
+                Toggle(isOn: Binding(
+                    get: { isEnd || !session.lineDraftSkipped.contains(station) },
+                    set: { _ in session.toggleLineDraftStop(station) }
+                )) {
+                    Text(verbatim: name(of: station))
+                }
+                .disabled(isEnd)
+            }
         }
     }
 }
