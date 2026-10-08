@@ -15,9 +15,11 @@ struct HUDView: View {
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
-        // One row when it fits (iPad, sidebar), otherwise cash and time
-        // stack; with large text on a phone, the time gets a row of its own
-        // rather than being cut short ("Day 2 · 07…").
+        // One row when it fits, otherwise cash and time stack; with large
+        // text on a phone, the time gets a row of its own rather than being
+        // cut short ("Day 2 · 07…"). In the 360-point control card (iPad,
+        // a phone on its side) and with the largest text the buttons get a
+        // row of their own, so the cash is never cut short ("$ 3,0…").
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 20) {
                 cash
@@ -48,10 +50,34 @@ struct HUDView: View {
                 time
                     .minimumScaleFactor(0.75)
             }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    cash
+                    Spacer(minLength: 8)
+                    time
+                }
+                buttons
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                cash
+                time
+                    .minimumScaleFactor(0.75)
+                buttons
+            }
         }
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+    }
+
+    /// The buttons on a row of their own, at its trailing end.
+    private var buttons: some View {
+        HStack(spacing: 12) {
+            Spacer(minLength: 0)
+            linesButton
+            SpeedControl(session: session)
+            gameMenu
+        }
     }
 
     private var linesButton: some View {
