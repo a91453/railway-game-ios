@@ -91,7 +91,6 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(zoomIn.waitForExistence(timeout: 5))
         XCTAssertTrue(zoomIn.isHittable)
         XCTAssertFalse(card.frame.intersects(zoomIn.frame), "The tutorial card covers the zoom buttons")
-        capture(app, name: "en-tutorial-map-step")
         zoomIn.tap()
         waitForEnabled(app, true)
         next.tap()
@@ -100,7 +99,6 @@ final class TutorialUITests: XCTestCase {
         XCTAssertEqual(next.label, "Next")
         waitForEnabled(app, false, "The station step waits for a station")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
-        capture(app, name: "en-tutorial-station-step")
         app.buttons["tutorial.skip"].tap()
         XCTAssertFalse(next.exists)
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
@@ -114,7 +112,6 @@ final class TutorialUITests: XCTestCase {
         if largeText {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
         }
-        let screenshotPrefix = largeText ? "en-large-text" : language
         app.launch()
         defer {
             app.terminate()
@@ -145,13 +142,11 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, false)
         selectTool(app, "tool.network")
         waitForEnabled(app, true)
-        capture(app, name: "\(screenshotPrefix)-tutorial-tool")
         next.tap()
 
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         XCTAssertEqual(back.label, backLabel)
         waitForEnabled(app, false)
-        capture(app, name: "\(screenshotPrefix)-tutorial-map")
         back.tap()
         XCTAssertFalse(back.exists)
         waitForEnabled(app, true)
@@ -166,7 +161,6 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, false)
         selectTool(app, "tool.network")
         waitForEnabled(app, true)
-        capture(app, name: "\(screenshotPrefix)-tutorial-landscape")
         skip.tap()
         XCTAssertFalse(next.exists)
         // The restarted tutorial's first step waits for Network again.
@@ -277,23 +271,6 @@ final class TutorialUITests: XCTestCase {
         hierarchy.name = "waitForEnabled-\(buttonDescription)-hierarchy"
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
-        capture(app, name: "waitForEnabled-\(buttonDescription)-timeout")
         XCTFail(diagnostics, file: file, line: line)
-    }
-
-    private func capture(_ app: XCUIApplication, name: String) {
-        // A window screenshot can use stale portrait bounds after rotating
-        // on iOS 26, cropping the game and filling the rest with black.
-        // Screenshots are only for a person to look at (CLAUDE.md): a busy
-        // runner's "Timed out while requesting screenshot" (run 37635507497)
-        // must not fail the test, so its issue is expected, never required.
-        let options = XCTExpectedFailure.Options()
-        options.isStrict = false
-        XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
-            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-            attachment.name = name
-            attachment.lifetime = .keepAlways
-            add(attachment)
-        }
     }
 }

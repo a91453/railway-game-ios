@@ -57,7 +57,7 @@ private struct ToolPicker: View {
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
-                // Stable across localizations for screenshot-only UI tests.
+                // Stable across localizations for the Traditional Chinese toolbar UI test.
                 .accessibilityIdentifier("tool.\(tool)")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
                 .tutorialTarget(TutorialTarget(tool: tool))

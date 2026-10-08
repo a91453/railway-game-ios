@@ -3,15 +3,15 @@ import XCTest
 @MainActor
 final class ToolbarSmokeTests: XCTestCase {
     func testEnglishToolbar() {
-        captureToolbar(language: "en", locale: "en_US", queries: [
+        checkToolbar(language: "en", locale: "en_US", queries: [
             "Select tool", "Track network tool", "Train tool",
         ])
     }
 
-    func testTraditionalChineseScreenshots() {
-        // Use identifiers, not translated text: these are visual evidence,
-        // not assertions about the wording of the Traditional Chinese UI.
-        captureToolbar(language: "zh-Hant", locale: "zh_TW", queries: [
+    func testTraditionalChineseToolbar() {
+        // Identifiers, not translated text: the wording is the localization
+        // check's (localization.yml), not this test's.
+        checkToolbar(language: "zh-Hant", locale: "zh_TW", queries: [
             "tool.select", "tool.network", "tool.train",
         ])
     }
@@ -30,7 +30,7 @@ final class ToolbarSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["start.newGame"].exists)
     }
 
-    private func captureToolbar(language: String, locale: String, queries: [String]) {
+    private func checkToolbar(language: String, locale: String, queries: [String]) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
@@ -49,8 +49,7 @@ final class ToolbarSmokeTests: XCTestCase {
         }
         newGame.tap()
 
-        let tools = ["select", "network", "train"]
-        for (index, query) in queries.enumerated() {
+        for query in queries {
             let button = app.buttons[query]
             guard button.waitForExistence(timeout: 10) else {
                 XCTFail("Missing toolbar button: \(query)")
@@ -58,23 +57,6 @@ final class ToolbarSmokeTests: XCTestCase {
             }
             XCTAssertTrue(button.isHittable, "Toolbar button cannot be tapped: \(query)")
             button.tap()
-
-            // XCTest's idle check can finish before iOS has rendered the end
-            // of touch feedback and the tool panel's layout change. Only the
-            // test runner sleeps; the app can finish rendering its new state.
-            Thread.sleep(forTimeInterval: 1)
-
-            // Screenshots are only for a person to look at (CLAUDE.md): a busy
-            // runner's "Timed out while requesting screenshot" (run 37635507497)
-            // must not fail the test, so its issue is expected, never required.
-            let options = XCTExpectedFailure.Options()
-            options.isStrict = false
-            XCTExpectFailure("A screenshot is an artifact, not a check", options: options) {
-                let attachment = XCTAttachment(screenshot: app.screenshot())
-                attachment.name = "\(language)-0\(index + 1)-\(tools[index])"
-                attachment.lifetime = .keepAlways
-                add(attachment)
-            }
         }
     }
 }
