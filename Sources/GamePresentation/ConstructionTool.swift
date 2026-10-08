@@ -22,6 +22,17 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     /// them.
     public static let networkTools: [ConstructionTool] = allCases
 
+    /// Whether choosing the tool pauses a running game (ARCHITECTURE
+    /// decision 99): the tools that build and remove. Game time moving on
+    /// empties the undo history (decision 82), so an edit made while the
+    /// game runs can be undone only until the next tick.
+    public var pausesGame: Bool {
+        switch self {
+        case .network, .building: true
+        case .select, .train: false
+        }
+    }
+
     /// Short name for the tool picker.
     public func title(in language: DisplayLanguage) -> String {
         switch self {

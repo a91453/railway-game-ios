@@ -434,26 +434,54 @@ public final class GameSession {
 
     // MARK: - Tools
 
-    /// Switches tools. Never changes the world.
+    /// Switches tools. Changes nothing in the world but the clock:
+    /// choosing a tool that builds (``ConstructionTool/pausesGame``) pauses
+    /// a running game, and leaving those tools resumes it if the session
+    /// paused it and the player has not touched the speed since
+    /// (ARCHITECTURE decision 99).
     public func selectTool(_ newTool: ConstructionTool) {
         guard newTool != tool else { return }
         tool = newTool
         buildingSite = nil
         zoneDrag = nil
         message = nil
+        if newTool.pausesGame {
+            if !world.clock.isPaused {
+                world.pause()
+                isPausedForBuilding = true
+                message = StatusMessage(
+                    kind: .success,
+                    text: language.text(
+                        "Paused while you build, so every edit can be undone. Leave the tool or press play to go on.",
+                        "建造時自動暫停，每一步都能復原。換回其他工具或按播放就會繼續。"
+                    )
+                )
+            }
+        } else if isPausedForBuilding {
+            isPausedForBuilding = false
+            if world.clock.isPaused { world.resume() }
+        }
         playSound?(.transition)
     }
+
+    /// Whether the session paused the game itself when a building tool was
+    /// chosen (decision 99), so leaving the building tools resumes it.
+    /// Any speed change by the player, pausing and resuming included,
+    /// lets go of it: the speed is then the player's.
+    public private(set) var isPausedForBuilding = false
 
     // MARK: - Speed
 
     /// Changes the game speed through the world's clock, the only record of it.
     public func setSpeed(_ speed: GameSpeed) {
+        isPausedForBuilding = false
         world.setSpeed(speed)
     }
 
     /// Pauses a running game, or resumes a paused one at the speed it ran
     /// at (see `GameClock.runningSpeed`).
     public func togglePause() {
+        isPausedForBuilding = false
         if world.clock.isPaused {
             world.resume()
         } else {
