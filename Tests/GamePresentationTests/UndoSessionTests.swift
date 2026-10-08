@@ -184,6 +184,9 @@ final class UndoSessionTests: XCTestCase {
         session.selectStation(try XCTUnwrap(session.world.stations.first?.id))
         session.clearSelection()
         session.selectTool(.network)
+        // Decision 99: the network tool pauses the game; leaving it resumes.
+        session.selectTool(.select)
+        XCTAssertFalse(session.world.clock.isPaused)
         XCTAssertEqual(session.undoCount, 1, "only the purchase was an edit")
 
         session.advance(realElapsed: .milliseconds(50))
