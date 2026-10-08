@@ -79,7 +79,9 @@ map interactions, state/UI logic, styling, and related data assets).
   exactly its tests; pull requests that change nothing the package builds or
   tests skip the Swift jobs, and the `Swift CI (gate)` job always reports),
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
-  build, iPhone UI tests. A pull request runs a short gate list of UI tests,
+  build, iPhone UI tests; not run for changes the app cannot see: docs, the
+  package's tests and fixtures, `Web/`, `tools/`, the Linux checks' files.
+  A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's screens;
   pushes to `main`, a nightly run and manual runs run every UI test and the
   iPad tutorial tests (the missing-button proof nightly and on request), and
