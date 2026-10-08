@@ -16,16 +16,24 @@ public enum SoundCue: Hashable, Sendable {
     case transition
 
     /// When each train in service last arrived at a call, as its service
-    /// times record it (`ServiceTimes/arrival`), by train. Taken before the
-    /// world advances and compared after it with ``trainsArrived(since:in:)``.
-    static func arrivals(in world: GameWorld) -> [TrainID: GameTime] {
-        var arrivals: [TrainID: GameTime] = [:]
+    /// times record it (`ServiceTimes/arrival`), and whether it stands at
+    /// its timetable's last call, by train. Taken before the world advances
+    /// and compared after it with ``trainsArrived(since:in:)``.
+    static func arrivals(in world: GameWorld) -> [TrainID: Arrival] {
+        var arrivals: [TrainID: Arrival] = [:]
         for train in world.trains {
             if let times = train.times {
-                arrivals[train.id] = times.arrival
+                let atLastCall = if case .waitingAtStop(let stop, _) = train.execution { stop == train.timetable.count - 1 } else { false }
+                arrivals[train.id] = Arrival(time: times.arrival, atLastCall: atLastCall)
             }
         }
         return arrivals
+    }
+
+    /// A train's last arrival before a step (``arrivals(in:)``).
+    struct Arrival: Hashable, Sendable {
+        var time: GameTime
+        var atLastCall: Bool
     }
 
     /// The trains in service that arrived at a call in `world` since
@@ -43,11 +51,24 @@ public enum SoundCue: Hashable, Sendable {
     /// its way from its first call has `arrival < departure`. (At 600× a
     /// line sends a train out at a minute and it leaves 42 s later, within
     /// the same tick.)
-    static func trainsArrived(since before: [TrainID: GameTime], in world: GameWorld) -> [TrainID] {
+    ///
+    /// A train in service before the step that now has no service times
+    /// (or another service that has left no call yet) completed its
+    /// service within the step (and a line may have sent it out again).
+    /// Completing means leaving the last call, so unless it already stood
+    /// there before the step, it arrived there within the step: that
+    /// arrival counts too. GameCore keeps no times of a completed service,
+    /// and a loop step can hold several ticks
+    /// (``GameSession/maximumStepDuration``).
+    static func trainsArrived(since before: [TrainID: Arrival], in world: GameWorld) -> [TrainID] {
         world.trains.compactMap { train in
-            guard let times = train.times, let departure = times.departure else { return nil }
+            guard let times = train.times, let departure = times.departure else {
+                guard let earlier = before[train.id], !earlier.atLastCall else { return nil }
+                // Still the same send-out, not left yet: no arrival.
+                return train.times?.arrival == earlier.time ? nil : train.id
+            }
             if let earlier = before[train.id] {
-                return earlier != times.arrival ? train.id : nil
+                return earlier.time != times.arrival ? train.id : nil
             }
             return times.arrival >= departure ? train.id : nil
         }

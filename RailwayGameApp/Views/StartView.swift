@@ -131,33 +131,11 @@ struct StartView: View {
                     .background(Theme.panel, in: Capsule())
                     .overlay(Capsule().strokeBorder((message.kind == .success ? Theme.success : Theme.warning).opacity(0.5), lineWidth: 1))
                 }
-                HStack(spacing: 10) {
-                    // iOS keeps each app's language in Settings (the
-                    // reference's home screen has a language menu instead).
-                    Button {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            openURL(url)
-                        }
-                    } label: {
-                        chip(Label("Language", systemImage: "globe"))
-                    }
-                    .accessibilityHint("Opens Settings, where the game's language is chosen.")
-                    // Where the real-world data comes from (the `Railway/`
-                    // site's data sources page).
-                    Button {
-                        showsDataSources = true
-                    } label: {
-                        chip(Label("Data Sources", systemImage: "info.circle"))
-                    }
-                    .accessibilityIdentifier("start.dataSources")
-                    // The music and sound effects on or off; the game
-                    // menu opens the same settings.
-                    Button {
-                        showsSettings = true
-                    } label: {
-                        chip(Label("Settings", systemImage: "gearshape"))
-                    }
-                    .accessibilityIdentifier("start.settings")
+                // One row while it fits; with large text on a phone, a
+                // column, rather than squeezing the labels.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { chips }
+                    VStack(spacing: 10) { chips }
                 }
             }
             .frame(maxWidth: 420)
@@ -219,6 +197,37 @@ struct StartView: View {
     /// What a real-world button says while the real-world data is read.
     private var loadingDetail: String {
         launcher.language.text("Reading the real-world data…", "正在讀取實景資料…")
+    }
+
+    /// Language, Data Sources and Settings, under the start screen's
+    /// buttons.
+    @ViewBuilder private var chips: some View {
+        // iOS keeps each app's language in Settings (the
+        // reference's home screen has a language menu instead).
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                openURL(url)
+            }
+        } label: {
+            chip(Label("Language", systemImage: "globe"))
+        }
+        .accessibilityHint("Opens Settings, where the game's language is chosen.")
+        // Where the real-world data comes from (the `Railway/`
+        // site's data sources page).
+        Button {
+            showsDataSources = true
+        } label: {
+            chip(Label("Data Sources", systemImage: "info.circle"))
+        }
+        .accessibilityIdentifier("start.dataSources")
+        // The music and sound effects on or off; the game
+        // menu opens the same settings.
+        Button {
+            showsSettings = true
+        } label: {
+            chip(Label("Settings", systemImage: "gearshape"))
+        }
+        .accessibilityIdentifier("start.settings")
     }
 
     /// A small capsule under the start buttons.

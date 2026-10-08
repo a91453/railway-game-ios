@@ -72,14 +72,17 @@ final class TutorialUITests: XCTestCase {
         build.tap()
         // A press can be dropped on a loaded runner (run 37554617441: the
         // button highlighted, its action never ran): tap once more only
-        // while nothing was built (a built track disables the button).
-        let built = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Built ")).firstMatch
-        if !built.waitForExistence(timeout: 10) {
+        // while nothing was built. A built track disables the button for
+        // good (its end starts the next stretch); the "Built …" banner is
+        // no sign, as it clears itself after 4 s (#182), within one slow
+        // accessibility query.
+        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: build)
+        if XCTWaiter().wait(for: [built], timeout: 10) != .completed {
             let again = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
             if again.exists, again.isEnabled { again.tap() }
-            XCTAssertTrue(built.waitForExistence(timeout: 10), "Build Track did not build")
         }
-        waitForEnabled(app, true)
+        // The step's own check that track was built.
+        waitForEnabled(app, true, "Build Track did not build")
         next.tap()
         // Stage E1: the map step waits until the player moves the map. The
         // zoom buttons are among its controls, so the card leaves them free.

@@ -94,7 +94,15 @@ public final class GameSession {
 
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
-    public internal(set) var message: StatusMessage?
+    public internal(set) var message: StatusMessage? {
+        didSet { messageSerial &+= 1 }
+    }
+
+    /// Counts each time ``message`` is set, the same message again
+    /// included: a second "Saved the game." is a newer message, which the
+    /// banner announces and shows for its own while
+    /// (``StatusMessage/autoDismissDelay``, ``dismissMessage(posted:)``).
+    public private(set) var messageSerial: UInt64 = 0
 
     /// The line the line panel shows: an ID only, never a copy of the line.
     /// Read the line itself through ``selectedLine``.
@@ -511,21 +519,36 @@ public final class GameSession {
         }
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
-            // Only the arrival times: holding the whole world would copy
-            // what the ticks change.
-            let arrivals = playSound == nil ? nil : SoundCue.arrivals(in: world)
             do throws(GameError) {
-                try world.advance(ticks: ticks)
-                // Game time moved on: no edit before it can be undone.
-                undoHistory.removeAll()
-                editGestureHasSnapshot = false
-                endFollowIfGone()
-                if let arrivals {
-                    let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
+                if let playSound {
+                    // A tick at a time, comparing only the arrival times
+                    // (holding the whole world would copy what the ticks
+                    // change): a step of several ticks can hold a train
+                    // sent out, arriving and completing its service, and a
+                    // completed service keeps no times to compare. The
+                    // clock alone refuses a step, so trying it on a copy
+                    // first keeps the step all or nothing.
+                    var clock = world.clock
+                    try clock.advance(ticks: ticks)
+                    var arrived: [TrainID] = []
+                    for _ in 0..<ticks {
+                        let arrivals = SoundCue.arrivals(in: world)
+                        try world.advance(ticks: 1)
+                        arrived += SoundCue.trainsArrived(since: arrivals, in: world)
+                    }
+                    // Game time moved on: no edit before it can be undone.
+                    undoHistory.removeAll()
+                    editGestureHasSnapshot = false
+                    endFollowIfGone()
                     if !arrived.isEmpty {
                         let watched = watchedTrainIDs
-                        playSound?(.arrival(watched: arrived.contains { watched.contains($0) }))
+                        playSound(.arrival(watched: arrived.contains { watched.contains($0) }))
                     }
+                } else {
+                    try world.advance(ticks: ticks)
+                    undoHistory.removeAll()
+                    editGestureHasSnapshot = false
+                    endFollowIfGone()
                 }
             } catch {
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -1146,10 +1169,12 @@ public final class GameSession {
         message = nil
     }
 
-    /// Clears `shown` if it is still the message (the banner's own timer,
-    /// ``StatusMessage/autoDismissDelay``): a newer message stays.
-    public func dismissMessage(_ shown: StatusMessage) {
-        if message == shown { message = nil }
+    /// Clears the message posted as `serial` (``messageSerial``) if it is
+    /// still the message (the banner's own timer,
+    /// ``StatusMessage/autoDismissDelay``): a newer message stays, even
+    /// one with the same text.
+    public func dismissMessage(posted serial: UInt64) {
+        if messageSerial == serial { message = nil }
     }
 
     /// Runs one command against the world through ``performEdit(_:)`` and

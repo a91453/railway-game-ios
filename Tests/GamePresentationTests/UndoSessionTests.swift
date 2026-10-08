@@ -154,6 +154,25 @@ final class UndoSessionTests: XCTestCase {
         XCTAssertEqual(session.selectedTrainRate, before)
     }
 
+    /// A tick during a drag empties the history; the drag's next change
+    /// keeps the world after the tick.
+    func testATickDuringADragLetsItsNextChangeKeepASnapshot() throws {
+        var world = DemoWorld.make(in: .english)
+        world.setSpeed(.normal)
+        let session = GameSession(world: world)
+
+        session.beginEditGesture()
+        session.selectedTrainRate = 100
+        session.advance(realElapsed: .milliseconds(100))
+        XCTAssertEqual(session.undoCount, 0, "one tick")
+        session.selectedTrainRate = 200
+        session.selectedTrainRate = 300
+        session.endEditGesture()
+        XCTAssertEqual(session.undoCount, 1)
+        session.undo()
+        XCTAssertEqual(session.selectedTrainRate, 100, "the rate when game time last moved")
+    }
+
     /// Any tick of game time empties the history; pausing, the speed and the
     /// selection are not edits.
     func testGameTimeMovingOnEmptiesTheHistory() throws {

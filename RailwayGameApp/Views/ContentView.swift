@@ -16,6 +16,7 @@ struct ContentView: View {
     /// Saves the game and goes back to the start screen (Stage C4).
     let launcher: GameLauncher
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(GameAudio.self) private var audio
     @State private var isWide = false
     /// Lives above both layouts: switching them must not discard the camera.
     @State private var mapCamera: PlanCamera?
@@ -97,6 +98,8 @@ struct ContentView: View {
             StoredMapLayerSheet()
         case .dataSources:
             DataSourcesView(launcher: launcher)
+        case .settings:
+            SettingsView(audio: audio)
         }
     }
 
@@ -359,7 +362,10 @@ private struct ControlCard: View {
 final class GameScreenState {
     /// The sheets the game screen presents, one at a time.
     enum Panel: String, Identifiable {
-        case lines, economy, station, timetable, fleet, mapLayers, dataSources
+        // Settings is a panel too: a sheet of the HUD's own could not show
+        // while Lines or Station is open (the HUD stays usable behind them)
+        // and closed when turning the device rebuilt the HUD.
+        case lines, economy, station, timetable, fleet, mapLayers, dataSources, settings
 
         var id: Self { self }
     }

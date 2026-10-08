@@ -13,8 +13,6 @@ struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
     @Environment(GameScreenState.self) private var screen
-    @Environment(GameAudio.self) private var audio
-    @State private var showsSettings = false
 
     var body: some View {
         // One row when it fits (iPad, sidebar), otherwise cash and time
@@ -93,7 +91,7 @@ struct HUDView: View {
             .accessibilityIdentifier("menu.tutorial")
             Divider()
             Button {
-                showsSettings = true
+                screen.panel = .settings
             } label: {
                 Label("Settings", systemImage: "gearshape")
             }
@@ -113,12 +111,9 @@ struct HUDView: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Game menu")
-        .accessibilityHint("Saves the game, exports it as a file, or goes back to the start screen.")
+        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
         .accessibilityIdentifier("hud.menu")
         .tutorialTarget(.gameMenu)
-        .sheet(isPresented: $showsSettings) {
-            SettingsView(audio: audio)
-        }
     }
 
     /// The balance in dollars; it opens the economy panel.
