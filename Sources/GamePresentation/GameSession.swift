@@ -176,6 +176,14 @@ public final class GameSession {
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?
 
+    /// The world as it was before each of the latest edits, oldest first,
+    /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what
+    /// ``undo()`` goes back to. Snapshots only, never played or shown; the
+    /// world is ``world``. Pushed by ``performEdit(_:)``, emptied as soon as
+    /// game time moves on, and never saved, so a new game, a loaded save
+    /// and the start screen (each a new session) start without any.
+    private(set) var undoHistory: [GameWorld] = []
+
     /// Plays the sounds the session's changes call for (``SoundCue``): a
     /// train in service arriving at a station, track built, another tool.
     /// The app's player, set by the launcher; `nil` plays nothing. Never
@@ -464,7 +472,7 @@ public final class GameSession {
             ))
             return
         }
-        world.setEconomyMode(mode)
+        performEdit { world in world.setEconomyMode(mode) }
         message = StatusMessage(kind: .success, text: language.text(
             "Free play: no fares or running costs, and you set each station's ridership.",
             "自由模式：不收票價，也沒有營運成本；各站的客流由你設定。"
@@ -502,6 +510,8 @@ public final class GameSession {
             let arrivals = playSound == nil ? nil : SoundCue.arrivals(in: world)
             do throws(GameError) {
                 try world.advance(ticks: ticks)
+                // Game time moved on: no edit before it can be undone.
+                undoHistory.removeAll()
                 endFollowIfGone()
                 if let arrivals {
                     let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
@@ -686,7 +696,7 @@ public final class GameSession {
     public func setSelectedTrainRate(_ rate: Int64) {
         guard let train = requireSelectedTrain() else { return }
         do throws(GameError) {
-            try world.setTrainMovementRate(train.id, to: rate)
+            try performEdit { world throws(GameError) in try world.setTrainMovementRate(train.id, to: rate) }
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -1132,18 +1142,119 @@ public final class GameSession {
         if message == shown { message = nil }
     }
 
-    /// Runs one command against the world and records its outcome. Returns
-    /// whether the command succeeded.
+    /// Runs one command against the world through ``performEdit(_:)`` and
+    /// records its outcome. Returns whether the command succeeded.
     @discardableResult
     func perform(_ command: (inout GameWorld) throws(GameError) -> String) -> Bool {
         do throws(GameError) {
-            message = StatusMessage(kind: .success, text: try command(&world))
+            message = StatusMessage(kind: .success, text: try performEdit(command))
             endFollowIfGone()
             return true
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return false
         }
+    }
+
+    // MARK: - Editing and undo
+
+    /// How many edits ``undo()`` can take back: MapBuilder's `B.I6` (25),
+    /// the snapshots its `handleUndo` goes back through.
+    public static let undoLimit = 25
+
+    /// The one way an edit changes the world (ARCHITECTURE decision 82):
+    /// runs `command` on a copy of ``world`` and, only if it succeeds,
+    /// keeps the world as it was for ``undo()`` and puts the copy in its
+    /// place. A command that throws leaves the world and the undo history
+    /// as they were, even after it changed part of its copy; one that
+    /// succeeds without changing anything leaves no snapshot, so Undo never
+    /// takes back nothing. The oldest snapshot goes once there are
+    /// ``undoLimit``.
+    ///
+    /// Everything the player builds, removes or sets goes through it;
+    /// pausing, the speed, the selection, the camera and the map layers do
+    /// not, and are not edits. Returns what `command` returns, and throws
+    /// what it throws: a `GameError` from a GameWorld command, or nothing
+    /// for a command that cannot fail. It shows no message
+    /// (``perform(_:)`` does).
+    @discardableResult
+    public func performEdit<Result, Failure: Error>(
+        _ command: (inout GameWorld) throws(Failure) -> Result
+    ) throws(Failure) -> Result {
+        var edited = world
+        let result = try command(&edited)
+        guard edited != world else { return result }
+        if undoHistory.count >= Self.undoLimit {
+            undoHistory.removeFirst(undoHistory.count - Self.undoLimit + 1)
+        }
+        undoHistory.append(world)
+        world = edited
+        return result
+    }
+
+    /// How many edits ``undo()`` could take back, one at a time, up to
+    /// ``undoLimit``.
+    public var undoCount: Int {
+        undoHistory.count
+    }
+
+    /// Whether ``undo()`` has an edit to take back now: there is one since
+    /// game time last moved, and no tutorial is on screen.
+    public var canUndo: Bool {
+        !undoHistory.isEmpty && tutorial == nil
+    }
+
+    /// Takes back the latest edit (MapBuilder's `handleUndo`): the whole
+    /// world goes back to the snapshot ``performEdit(_:)`` kept before it,
+    /// money included, so what was built is refunded. Only the clock's
+    /// speed stays as the player has it now, since pausing and the speed
+    /// are not edits; game time is the snapshot's, which it still is (any
+    /// tick empties the history). The selection and the drafts let go of
+    /// stations, trains, lines and track the world no longer has.
+    ///
+    /// Refused, with a message, when there is nothing to take back, and
+    /// while the tutorial is on screen: its steps compare the world with
+    /// IDs it saw, and an undone station's ID is given to the next one, so
+    /// Next could wait for a second station.
+    public func undo() {
+        guard tutorial == nil else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "Undo is off during the tutorial.",
+                "教學進行中無法復原。"
+            ))
+            return
+        }
+        guard var restored = undoHistory.popLast() else {
+            message = StatusMessage(kind: .failure, text: language.text("Nothing to undo.", "沒有可復原的編輯。"))
+            return
+        }
+        restored.setSpeed(world.clock.runningSpeed)
+        if world.clock.isPaused { restored.pause() }
+        world = restored
+        dropSelectionOfMissing()
+        message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
+    }
+
+    /// Lets go of what the selection and the drafts name that ``world``
+    /// does not have (after ``undo()``); keeps the rest.
+    private func dropSelectionOfMissing() {
+        if let id = selectedStationID, world.station(id: id) == nil { selectedStationID = nil }
+        if let id = platformStationID, world.station(id: id) == nil { platformStationID = nil }
+        lineDraft.removeAll { world.station(id: $0) == nil }
+        if let id = selectedTrainID, world.train(id: id) == nil { selectedTrainID = nil }
+        if let id = tappedTrainID, world.train(id: id) == nil { tappedTrainID = nil }
+        endFollowIfGone()
+        if let id = selectedLineID, world.line(id: id) == nil { selectedLineID = nil }
+        func exists(_ anchor: NetworkAnchor?) -> Bool {
+            switch anchor {
+            case nil, .point: true
+            case .node(let id): world.network.node(id) != nil
+            case .track(let point): world.network.edge(point.edge) != nil
+            }
+        }
+        if !exists(networkStart) { networkStart = nil }
+        if !exists(networkEnd) { networkEnd = nil }
+        if let point = networkEdgePoint, world.network.edge(point.edge) == nil { networkEdgePoint = nil }
     }
 
     /// "Station N" (or "車站 N") with the lowest N from the next station
