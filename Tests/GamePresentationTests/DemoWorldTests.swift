@@ -112,10 +112,14 @@ final class DemoWorldTests: XCTestCase {
         XCTAssertEqual(city.count, 609)
         XCTAssertEqual(city.reduce(LandTotals()) { LandTotals(residents: $0.residents + $1.residents, jobs: $0.jobs + $1.jobs) },
                        LandTotals(residents: 154_938, jobs: 117_108))
-        XCTAssertEqual(Set(world.land.cells).subtracting(city), Set(GameWorld.newGame().land.cells.filter { cell in
+        func far(_ cell: LandCell) -> Bool {
             let dx = cell.middle.x - middle, dy = cell.middle.y - middle
             return dx * dx + dy * dy > 4 * 1_000 * 1_000 * WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre
-        }), "the new game's outer towns, 2 km and more away")
+        }
+        let rest = Set(world.land.cells).subtracting(city), newGame = Set(GameWorld.newGame().land.cells)
+        XCTAssertTrue(rest.isSubset(of: newGame))
+        XCTAssertEqual(rest.filter(far), newGame.filter(far), "the new game's outer towns, 2 km and more away")
+        XCTAssertEqual(Set(rest.filter { !far($0) }.map(\.use)), [.agricultural], "and the farms round its first town (decision 91)")
 
         // Each station's ridership is its share of the city: residents
         // outnumber either kind of job at every one.
@@ -124,7 +128,8 @@ final class DemoWorldTests: XCTestCase {
             XCTAssertEqual(world.stationDemand(of: station.id), shares[station.id]?.demand, station.name)
         }
         XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.kind }, Array(repeating: .residential, count: 5))
-        XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.dailyTrips }, [21_012, 21_191, 22_647, 21_009, 22_642])
+        // West and North reach a few of those farms.
+        XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.dailyTrips }, [21_016, 21_191, 22_647, 21_018, 22_642])
     }
 
     func testTheDemoMapRunsAtOnce() throws {

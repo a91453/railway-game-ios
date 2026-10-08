@@ -98,9 +98,14 @@
 ///     the same day every year, and the demand events can be of kind
 ///     `"festival"`. A build that reads only version 18 would drop the
 ///     festivals, or refuse the kind.
+/// 20. Eight land uses (decision 91): land and buildings can be factories,
+///     schools and public offices, sights, farms and parks (a park with no
+///     one in it), and a station's demand can be a school's or public
+///     office's. A build that reads only an earlier version would call such
+///     land or demand damaged, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 19
+    public static let currentVersion = 20
 
     public let world: GameWorld
 
@@ -173,6 +178,9 @@ extension SavedGame: Codable {
         // whole, as every world before had.
         // Version 18 to 19: a scenario without `"events"` holds no
         // festivals, and no demand event is a festival.
+        // Version 19 to 20: a world before version 20 has only homes, shops
+        // and offices, and demands of the four reference kinds, which
+        // version 20 reads as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

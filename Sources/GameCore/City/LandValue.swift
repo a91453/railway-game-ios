@@ -10,10 +10,11 @@
 // study's §6.2:
 //
 //     base  = floor(B × D / 1000)
-//     value = clamp(base + 15 × S + 1000 × A, 500, 50000)   cents a m²
+//     value = clamp(base + 15 × S + 1000 × A + P, 500, 50000)   cents a m²
 //
 // - B, the use's base: 1,000 for an empty cell, 2,000 homes, 3,000 shops,
-//   3,500 offices;
+//   3,500 offices; since decision 91, 1,500 factories, 2,500 schools and
+//   public offices, 3,000 sights, 600 farms and 1,200 parks;
 // - D, the density's factor in thousandths: 1,000, 1,250, 1,600, 2,000 for
 //   D1 to D4 (existing stock is D4), 1,000 without a building;
 // - S and A, the best station's service: of the stations whose catchment
@@ -21,14 +22,17 @@
 //   trips on the last measured day (``TownGrowth/Place/lastService`` > 0),
 //   the one with the highest `floor(w × lastService / 1000)`, where `w =
 //   1000 − floor(d² × 1000 / R²)` (ties to the lower station); S is that
-//   score, A its ``TownGrowth/Place/lastReached``.
+//   score, A its ``TownGrowth/Place/lastReached``;
+// - P, decision 91: 600 for a cell whose middle lies within 400 m of a
+//   park's (a park's own included), else 0.
 //
 // The value reads the world and changes nothing: growth and raising
 // buildings (decision 75) never read it.
 
 /// What a cell of land is worth, in cents a m², and its parts.
 public struct LandValue: Hashable, Sendable {
-    /// `clamp(base + servicePremium + accessPremium, minimum, maximum)`.
+    /// `clamp(base + servicePremium + accessPremium + parkPremium, minimum,
+    /// maximum)`.
     public let value: Int64
     /// `floor(B × D / 1000)`: the use's base by the density's factor.
     public let base: Int64
@@ -39,12 +43,16 @@ public struct LandValue: Hashable, Sendable {
     /// The station S and A are measured at, or `nil` when none is.
     public let station: StationID?
 
-    public init(value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?) {
+    /// ``LandValueRules/parkPremium`` near a park, else 0 (decision 91).
+    public let parkPremium: Int64
+
+    public init(value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?, parkPremium: Int64 = 0) {
         self.value = value
         self.base = base
         self.servicePremium = servicePremium
         self.accessPremium = accessPremium
         self.station = station
+        self.parkPremium = parkPremium
     }
 }
 
@@ -57,8 +65,12 @@ public enum LandValueRules {
     public static func base(of use: LandUse) -> Int64 {
         switch use {
         case .residential: 2_000
-        case .commercial: 3_000
+        case .commercial, .leisure: 3_000
         case .office: 3_500
+        case .industrial: 1_500
+        case .civic: 2_500
+        case .agricultural: 600
+        case .park: 1_200
         }
     }
 
@@ -78,13 +90,16 @@ public enum LandValueRules {
     public static let servicePremium: Int64 = 15
     /// Cents a m² for each station the best station reached (0 to 5).
     public static let accessPremium: Int64 = 1_000
+    /// Cents a m² near a park (decision 91), and how near: 400 m.
+    public static let parkPremium: Int64 = 600
+    public static let parkReach: Int64 = 25_600
     /// The least and the most a cell is worth, in cents a m².
     public static let minimum: Int64 = 500
     public static let maximum: Int64 = 50_000
 
     /// `base + service + access` within ``minimum`` … ``maximum``.
-    static func value(base: Int64, service: Int64, access: Int64) -> Int64 {
-        min(maximum, max(minimum, base + service + access))
+    static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0) -> Int64 {
+        min(maximum, max(minimum, base + service + access + park))
     }
 }
 
@@ -97,7 +112,7 @@ extension GameWorld {
     /// town growth) S and A are 0: the value is its base.
     public func landValue(row: Int, column: Int) -> LandValue? {
         guard (0..<Land.rows(in: bounds)).contains(row), (0..<Land.columns(in: bounds)).contains(column) else { return nil }
-        return landValue(row: row, column: column, near: landValueStations())
+        return landValue(row: row, column: column, near: landValueStations(), parks: landValueParks())
     }
 
     /// What every cell of the world is worth, by row and then column
@@ -115,12 +130,12 @@ extension GameWorld {
         let (firstColumn, lastColumn) = (max(0, columns.lowerBound), min(Land.columns(in: bounds) - 1, columns.upperBound))
         guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
         let rows = firstRow...lastRow, columns = firstColumn...lastColumn
-        let stations = landValueStations()
+        let stations = landValueStations(), parks = landValueParks()
         var values: [LandValue] = []
         values.reserveCapacity(rows.count * columns.count)
         for row in rows {
             for column in columns {
-                values.append(landValue(row: row, column: column, near: stations))
+                values.append(landValue(row: row, column: column, near: stations, parks: parks))
             }
         }
         return values
@@ -133,10 +148,10 @@ extension GameWorld {
     /// ``landValues()`` works out every cell of the world.
     public func landValues(at positions: [CellPosition]) -> [LandValue] {
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
-        let stations = landValueStations()
+        let stations = landValueStations(), parks = landValueParks()
         return positions.compactMap { position in
             guard (0..<rows).contains(position.row), (0..<columns).contains(position.column) else { return nil }
-            return landValue(row: position.row, column: position.column, near: stations)
+            return landValue(row: position.row, column: position.column, near: stations, parks: parks)
         }
     }
 
@@ -152,7 +167,18 @@ extension GameWorld {
         }
     }
 
-    private func landValue(row: Int, column: Int, near stations: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)]) -> LandValue {
+    /// The middles of the parks (decision 91), by their row.
+    private func landValueParks() -> [Int: [PlanPoint]] {
+        var parks: [Int: [PlanPoint]] = [:]
+        for cell in land.cells where cell.use == .park {
+            parks[cell.row, default: []].append(cell.middle)
+        }
+        return parks
+    }
+
+    private func landValue(
+        row: Int, column: Int, near stations: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)], parks: [Int: [PlanPoint]]
+    ) -> LandValue {
         let base: Int64
         if let building = buildings.building(row: row, column: column) {
             base = LandValueRules.base(of: building.use) * LandValueRules.densityFactor(building.density) / 1_000
@@ -178,9 +204,19 @@ extension GameWorld {
         }
         let service = LandValueRules.servicePremium * (best?.score ?? 0)
         let access = LandValueRules.accessPremium * (best?.reached ?? 0)
+        // Only the rows within the reach can hold a park near enough.
+        let parkReach = LandValueRules.parkReach * LandValueRules.parkReach
+        let parkRows = Int(LandValueRules.parkReach / Land.cellLength)
+        let nearPark = (row - parkRows...row + parkRows).contains { parkRow in
+            parks[parkRow]?.contains { park in
+                let dx = x - park.x, dy = y - park.y
+                return dx * dx + dy * dy < parkReach
+            } ?? false
+        }
+        let park = nearPark ? LandValueRules.parkPremium : 0
         return LandValue(
-            value: LandValueRules.value(base: base, service: service, access: access),
-            base: base, servicePremium: service, accessPremium: access, station: best?.id
+            value: LandValueRules.value(base: base, service: service, access: access, park: park),
+            base: base, servicePremium: service, accessPremium: access, station: best?.id, parkPremium: park
         )
     }
 }

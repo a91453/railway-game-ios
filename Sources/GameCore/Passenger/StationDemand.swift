@@ -9,7 +9,9 @@
 // the reference formula.
 
 /// The kind of place a station serves, which shapes when its trips start
-/// and end over the day: the four presets of the `Ci/` reference.
+/// and end over the day: the four presets of the `Ci/` reference, and
+/// schools and public services (decision 91, this project's: the reference
+/// has no such preset).
 public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
     /// Homes: trips leave in the morning and come back in the evening.
     case residential
@@ -19,6 +21,10 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
     case shopping
     /// Sights: trips arrive before midday and leave in the afternoon.
     case scenic
+    /// Schools, hospitals and public offices (decision 91): trips arrive
+    /// early in the morning and leave in the afternoon, before the evening
+    /// rush.
+    case civic
 
     /// How strongly trips leave the station in each hour of the day
     /// (`0..<24`), in thousandths: the reference's `out` curve, normalised
@@ -29,6 +35,7 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
         case .office: Self.eveningPeak
         case .shopping: Self.shoppingDepartures
         case .scenic: Self.scenicDepartures
+        case .civic: Self.civicDepartures
         }
     }
 
@@ -40,6 +47,7 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
         case .office: Self.morningPeak
         case .shopping: Self.shoppingArrivals
         case .scenic: Self.scenicArrivals
+        case .civic: Self.civicArrivals
         }
     }
 
@@ -62,6 +70,18 @@ public enum StationDemandKind: String, CaseIterable, Codable, Sendable {
     static let shoppingArrivals: [Int64] = [
         834, 834, 834, 834, 834, 835, 839, 849, 874, 921, 994, 1082,
         1157, 1193, 1190, 1185, 1219, 1279, 1291, 1207, 1064, 939, 870, 843,
+    ]
+    // Decision 91, the presets' form with this project's hours (gap):
+    // `1 + 0.6·g(h; 7, 1.15)` arriving, a school's or a hospital's day
+    // starting before the offices', and `1 + 0.6·g(h; 16, 1.15)` leaving,
+    // as classes end.
+    static let civicArrivals: [Int64] = [
+        933, 933, 933, 934, 951, 1056, 1316, 1492, 1316, 1056, 951, 934,
+        933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933,
+    ]
+    static let civicDepartures: [Int64] = [
+        933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933, 933,
+        934, 951, 1056, 1316, 1492, 1316, 1056, 951, 934, 933, 933, 933,
     ]
     // `1 + 0.75·g(h; 16, 2.1)`.
     static let scenicDepartures: [Int64] = [
