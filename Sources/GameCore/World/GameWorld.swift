@@ -1287,6 +1287,72 @@ public struct GameWorld: Equatable, Sendable {
         abandonUnservedPassengers()
     }
 
+    /// Reverses the order of a line's stops (decision 80, MapBuilder's
+    /// `handleReverseStationOrder`). Free. Its services call at the same
+    /// stations as before: each pattern's calls and every route preference
+    /// are mapped to the reversed indices, so a preferred path between two
+    /// stations stays theirs. A ring then goes round the other way, so its
+    /// two dispatch times swap with its directions. Passengers waiting for a
+    /// trip the line no longer takes leave, as after
+    /// ``setLineStops(_:to:)``; trains already sent out keep their
+    /// timetables.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func reverseLineStops(_ id: LineID) throws(GameError) {
+        let index = try lineIndex(of: id)
+        var line = lines[index]
+        let last = line.stops.count - 1
+        func reversed(_ routes: [LineRoutePreference]) -> [LineRoutePreference] {
+            routes.map { LineRoutePreference(from: last - $0.from, to: last - $0.to, tracks: $0.tracks, platform: $0.platform) }
+        }
+        line.stops.reverse()
+        line.routePreferences = reversed(line.routePreferences)
+        for pattern in line.patterns.indices {
+            line.patterns[pattern].calls = line.patterns[pattern].calls.reversed().map { last - $0 }
+            line.patterns[pattern].routePreferences = reversed(line.patterns[pattern].routePreferences)
+        }
+        if line.isRing {
+            swap(&line.lastDispatch, &line.outerLastDispatch)
+        }
+        lines[index] = line
+        abandonUnservedPassengers()
+    }
+
+    /// Copies line `id` as a new line named `name` (decision 80,
+    /// MapBuilder's `handleLineDuplicate`, which names the copy
+    /// "<name> - Fork"). Free. The copy has the line's stops, route
+    /// preferences, performance, window, train counts, target headways,
+    /// patterns, ring and colour, but no trains: those belong to the line
+    /// they are assigned to, so the copy sends nothing out until trains are
+    /// assigned to it. Its ID is the next line ID.
+    ///
+    /// - Throws, checked in this order: ``GameError/invalidName``,
+    ///   ``GameError/unknownLine(_:)`` or ``GameError/idsExhausted``.
+    @discardableResult
+    public mutating func duplicateLine(_ id: LineID, named name: String) throws(GameError) -> ServiceLine {
+        guard Self.isValidName(name) else { throw .invalidName }
+        let original = lines[try lineIndex(of: id)]
+        let (newID, nextID) = try Self.allocateID(from: nextLineID)
+        var copy = ServiceLine(id: LineID(rawValue: newID), name: name, stops: original.stops)
+        copy.routePreferences = original.routePreferences
+        copy.performance = original.performance
+        copy.window = original.window
+        copy.trainsInService = original.trainsInService
+        copy.targetHeadways = original.targetHeadways
+        copy.patterns = original.patterns.map { pattern in
+            var copied = pattern
+            copied.trains = []
+            copied.lastDispatch = nil
+            return copied
+        }
+        copy.isRing = original.isRing
+        copy.color = original.color
+        nextLineID = nextID
+        lines.append(copy)
+        passengerPlan = PassengerPlanCache()
+        return copy
+    }
+
     /// Makes a line a ring, or no longer one (decision 49, the `Ci/` metro
     /// game's `completeRingLine` and opening a ring with `metroSplitOpenRing`).
     /// Free.

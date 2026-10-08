@@ -3046,6 +3046,17 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：只有到站、鋪軌與換場三種音效；沒有音量調整；這次推進才開始服務、又在同一個 tick 內到站並離開下一站的列車不響（要派車、行駛、停站與出發都在一個 tick 內，1200× 也很少見）；服務結束與重新派車並出發都在同一個 tick 內時會多響一次。
 
+### 80. 路線編輯：自動排入車站、反轉站序、複製路線
+
+2026-10-08。移植 MapBuilder（`MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js`）的三個路線編輯：`handleAddStationToLine` 與它挑位置的 `ef`、`handleReverseStationOrder`、`handleLineDuplicate`。存檔格式不變（不升版），golden、replay 與 save fixture 都不變。
+
+1. **自動排入車站**（GamePresentation，`LineStopEditing.insertionIndex(of:into:)` 與 `GameSession.addStationToSelectedLine(_:)`）：照 `ef` 對每個位置（第一站前、兩站之間、最後一站後）算分數：路線在那裡轉的角度（兩段方位角的差，0…180°；車站離兩端連線的距離換成弧度的「度」若較大就用它）÷ 180，加上新的一段長度 ÷ 典型距離（車站到各站距離排序後第 min(9, (n − 1) / 2) 個）。取分數最低而且不超過 2 的，同分取後面的；都超過 2 時放第一站前；不到兩站時也放第一站前。方位與距離在平面上算（世界單位，弧度的「度」以 turf 的地球半徑 6,371,008.8 m 換算）。這是浮點數，但只用來選位置，結果交給 `setLineStops`，由 GameCore 檢查。**只用在既有路線**：建立新路線的草稿（`lineDraft`）照舊依點選順序，教學的「建立路線」步驟與 UI 測試不受影響。插入後服務模式照舊停在清單上的相同位置（Stage C2 的規則，路線面板的說明也這樣寫）。
+2. **反轉站序**（GameCore，`GameWorld.reverseLineStops(_:)`）：站序倒過來；每個服務模式的停靠與每條路徑偏好的起訖索引 `i` 換成 `n − 1 − i`（停靠再排回遞增），所以服務模式停的站、偏好的實體路徑都跟著原本的車站。環線改成往另一個方向繞，所以內環與外環的上次發車時間對調。指派的列車不變，已發出的列車照自己的時刻表跑完；等車的乘客若路線不再經過他們的行程就離開（`abandoned`），和 `setLineStops` 相同。免費。
+3. **複製路線**（GameCore，`GameWorld.duplicateLine(_:named:)`）：新路線拿下一個路線 ID，複製站序、路徑偏好、性能、營運時間、各等級列車數、目標班距、服務模式（不含列車與上次發車時間）、環線與顏色；**不複製列車**，因為一台列車只屬於一條路線，新路線要指派列車才會發車，上次發車時間也是空的。名稱照參考加「 - Fork」（中文「 - 分支」）。免費。名稱空白、路線不存在、ID 用完時拒絕，世界不變。
+4. **畫面**（App 的 `LinesPanel`）：站序區加「加入車站（自動排入適當位置）」選單與「反轉站序」，路線區加「複製路線」。三者都經過 `perform`，所以都能復原（決策 82）；複製後選取新路線。字串有 zh-Hant。
+
+**限制**：參考的刪除車站（`handleStationDelete`）沒有移植，車站目前仍不能拆除；參考的 `handleRemoveStationFromLine` 依車站移除，這裡沿用依位置移除。`Ci/` 的 `metroRemapLineOperationsAfterMiddleStationInsert` 在中間插站後會把快車停靠與路徑偏好的索引往後移；這裡照 Stage C2 的規則讓服務模式停在相同位置，沒有改。
+
 ### 82. 復原（undo）
 
 2026-10-08。移植 MapBuilder 的 `handleUndo`（`MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js`）：每次編輯前存一份完整快照，上限是 `B.I6`（模組 73277 的 `O`，在 `pages/_app-70b32b07723ca1d7.js`，值是 25）。三個並行 PR 協調時本來分配 79，但 79 已經是「音樂與音效」，所以用 82。GameCore 不變，存檔格式、golden、replay 都不變。

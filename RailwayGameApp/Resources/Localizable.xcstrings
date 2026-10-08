@@ -2711,6 +2711,46 @@
           }
         }
       }
+    },
+    "Add Stop Where It Fits" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入車站（自動排入適當位置）"
+          }
+        }
+      }
+    },
+    "Reverse Stop Order" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反轉站序"
+          }
+        }
+      }
+    },
+    "Duplicate Line" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製路線"
+          }
+        }
+      }
+    },
+    "Copies the line's stops and settings as a new line, without its trains." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把這條路線的車站與設定複製成新路線，不含列車。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
