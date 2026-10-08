@@ -1614,7 +1614,7 @@ public final class GameSession {
 
     /// "Train N" (or "列車 N") with the lowest N from the next train number
     /// upward that no existing train uses.
-    private static func suggestedTrainName(for world: GameWorld, in language: DisplayLanguage) -> String {
+    static func suggestedTrainName(for world: GameWorld, in language: DisplayLanguage) -> String {
         suggestedName(language.text("Train", "列車"), from: world.trains.count + 1, taken: Set(world.trains.map(\.name)))
     }
 
