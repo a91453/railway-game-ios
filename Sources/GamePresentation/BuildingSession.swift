@@ -47,11 +47,19 @@ extension GameSession {
     public func tapBuildingTool(at point: PlanPoint, reach: Int64) -> Bool {
         switch buildingMode {
         case .build:
+            // Decision 103: a tap on the building shown, where it can
+            // stand, builds it; with building on tap, every tap builds.
+            if let preview = buildingPreview, preview.problem == nil, isOnBuildingSite(point) {
+                return confirmBuilding()
+            }
             // Not an edit: as for a game's stations, reading land in is not
             // something to undo.
             readLand(within: Self.buildingLandReach, of: point)
             buildingSite = point
             message = nil
+            if buildingBuildsOnTap {
+                return confirmBuilding()
+            }
             return true
         case .demolish:
             let near = world.placedBuildings.filter { building in
@@ -67,6 +75,59 @@ extension GameSession {
             guard let cell = zoneRectangle(from: point, to: point) else { return false }
             return zone(cell)
         }
+    }
+
+    /// Whether `point` lies on the building shown at ``buildingSite``.
+    func isOnBuildingSite(_ point: PlanPoint) -> Bool {
+        guard let site = buildingSite else { return false }
+        let half = buildingKind.side / 2
+        return point.x >= site.x - half && point.x <= site.x + half && point.y >= site.y - half && point.y <= site.y + half
+    }
+
+    /// Whether a one-finger drag that starts at `point` moves the building
+    /// shown (decision 103) rather than the map: it starts on it.
+    public func buildingDragMoves(from point: PlanPoint) -> Bool {
+        tool == .building && buildingMode == .build && isOnBuildingSite(point)
+    }
+
+    /// The finger that went down on the building shown at `start` is at
+    /// `end`: the building moves with it, and the preview follows.
+    /// Changes nothing in the world.
+    public func dragBuildingSite(from start: PlanPoint, to end: PlanPoint) {
+        guard buildingMode == .build else { return }
+        if buildingDragSiteBefore == nil {
+            guard let site = buildingSite else { return }
+            buildingDragSiteBefore = site
+        }
+        guard let before = buildingDragSiteBefore else { return }
+        let moved = PlanPoint(x: before.x + end.x - start.x, y: before.y + end.y - start.y)
+        guard world.bounds.contains(moved) else { return }
+        buildingSite = moved
+    }
+
+    /// The finger lifted: the building stays shown where it was left, to
+    /// build with the action button or another tap on it.
+    public func endBuildingDrag(from start: PlanPoint, to end: PlanPoint) {
+        dragBuildingSite(from: start, to: end)
+        if let site = buildingSite {
+            readLand(within: Self.buildingLandReach, of: site)
+        }
+        buildingDragSiteBefore = nil
+    }
+
+    /// The drag was cancelled: the building goes back where it was.
+    public func cancelBuildingDrag() {
+        guard let before = buildingDragSiteBefore else { return }
+        buildingSite = before
+        buildingDragSiteBefore = nil
+    }
+
+    /// What building `kind` costs before its land (a managed company's
+    /// building cost; its land depends on where it stands): `nil` in free
+    /// play, where building is free.
+    public func buildingStartingCost(_ kind: PlacedBuildingKind) -> Money? {
+        guard world.accounts.mode == .management else { return nil }
+        return Money(kind.floorArea * PlacedBuildingRules.floorCost.amount)
     }
 
     /// How far round a building's site the land is read in: 64 m, more

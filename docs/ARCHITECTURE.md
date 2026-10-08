@@ -3449,6 +3449,20 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：一次拖曳只畫一段（一條邊，曲線由兩端方向決定）；拖出長的折線自動切成多段，留到之後。邊緣捲動只在 iOS 上，Linux 上無法測試（`NetworkDragTests` 測 session 的部分）。
 
+
+### 103. 一棟接一棟地蓋：再點一下就蓋、點一下直接蓋、拖曳虛影
+
+2026-10-08，作者要求的 UI/UX 改版（UX-2）：P0-C2（決策 95）起建築工具是「點地圖顯示虛影 → 按動作按鈕建造」，安全但每棟要在地圖與按鈕之間來回。研究 `CITY_BUILDING_STUDY.md` §4.5 的「虛影可以拖曳」也還沒做。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。
+
+1. **再點一下就蓋**（`tapBuildingTool`）：已顯示的虛影可以蓋（沒有問題）時，點在虛影上就建造（`confirmBuilding()`，和動作按鈕相同，一次編輯、可以復原）；點在別處照舊把虛影移過去。不能蓋的虛影（紅色）點了只是移動，所以絕不會蓋在被拒絕的地方。
+2. **點一下直接蓋**（`buildingBuildsOnTap`，預設關閉）：開啟時每點一下就在那裡建造，連續蓋一排房子只要一棟一下；每一棟都是一次可以復原的編輯，建造時遊戲自動暫停（決策 99）。GameCore 拒絕時照舊顯示原因、不扣款。
+3. **拖曳虛影**（`buildingDragMoves(from:)`、`dragBuildingSite`、`endBuildingDrag`、`cancelBuildingDrag`）：從虛影上開始的單指拖曳移動虛影，預覽（費用、收購、問題）跟著它；放手後讀入那裡的土地（和點選相同），取消時回到原處。其他拖曳照舊移動地圖。App 用決策 102 的 `paintsFrom` 判斷。
+4. **畫面**（`BuildingControls`）：經營模式下每種建物的按鈕顯示建造費（`buildingStartingCost`，不含依地價而定的土地使用權）；「點一下直接蓋」開關；可以蓋的虛影下方提示「再點一下就蓋，或把它拖到別的地方」。
+
+**參考**：`Simulator/` 的 `onDropStructure`（拖放後確認、拖曳區）是這裡拖曳虛影與確認的想法來源（`CITY_BUILDING_STUDY.md` §2）；旋轉把手不需要，三種建物都是正方形。程式是本專案自己寫的。
+
+**限制**：沒有「拖出一排自動蓋滿」；虛影的拖曳只在 iOS 上（`BuildingFlowTests` 測 session 的部分）。
+
 ### 104. 底部工具列：圖示加名稱、路線與資料入口、再點一下回到檢視
 
 2026-10-08，作者要求的 UI/UX 改版（UX-3 的第一步，主畫面以地圖為主）：路線原本只是 HUD 上一個沒有名字的圖示，經營資料只能點現金開啟，新玩家找不到；離開建造工具要特地按「選取」。只改 App：GamePresentation、GameCore、存檔、golden、replay 都不變。

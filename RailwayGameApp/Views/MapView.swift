@@ -146,7 +146,12 @@ struct MapView: View {
                         // stretch. Any other drag, and two fingers, move
                         // and zoom the map.
                         if isZoning { return true }
-                        guard session.tool == .network, screen.panel != .lines else { return false }
+                        guard screen.panel != .lines else { return false }
+                        // Decision 103: a drag on the building shown moves it.
+                        if session.tool == .building {
+                            return session.buildingDragMoves(from: projection.planPoint(at: location))
+                        }
+                        guard session.tool == .network else { return false }
                         return session.networkDragDraws(
                             from: projection.planPoint(at: location),
                             reach: projection.worldDistance(NetworkBuilding.touchRadius)
@@ -158,6 +163,12 @@ struct MapView: View {
                             case .moved: session.dragZone(from: from, to: to)
                             case .ended: session.endZoneDrag(from: from, to: to)
                             case .cancelled: session.cancelZoneDrag()
+                            }
+                        } else if session.tool == .building {
+                            switch phase {
+                            case .moved: session.dragBuildingSite(from: from, to: to)
+                            case .ended: session.endBuildingDrag(from: from, to: to)
+                            case .cancelled: session.cancelBuildingDrag()
                             }
                         } else {
                             let reach = projection.worldDistance(NetworkBuilding.touchRadius)
