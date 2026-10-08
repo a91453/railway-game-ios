@@ -497,18 +497,31 @@ public final class GameSession {
         }
         let ticks = tickAccumulator.ticks(for: elapsed)
         if ticks > 0 {
-            // Only the arrival times: holding the whole world would copy
-            // what the ticks change.
-            let arrivals = playSound == nil ? nil : SoundCue.arrivals(in: world)
             do throws(GameError) {
-                try world.advance(ticks: ticks)
-                endFollowIfGone()
-                if let arrivals {
-                    let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
+                if let playSound {
+                    // A tick at a time, comparing only the arrival times
+                    // (holding the whole world would copy what the ticks
+                    // change): a step of several ticks can hold a train
+                    // sent out, arriving and completing its service, and a
+                    // completed service keeps no times to compare. The
+                    // clock alone refuses a step, so trying it on a copy
+                    // first keeps the step all or nothing.
+                    var clock = world.clock
+                    try clock.advance(ticks: ticks)
+                    var arrived: [TrainID] = []
+                    for _ in 0..<ticks {
+                        let arrivals = SoundCue.arrivals(in: world)
+                        try world.advance(ticks: 1)
+                        arrived += SoundCue.trainsArrived(since: arrivals, in: world)
+                    }
+                    endFollowIfGone()
                     if !arrived.isEmpty {
                         let watched = watchedTrainIDs
-                        playSound?(.arrival(watched: arrived.contains { watched.contains($0) }))
+                        playSound(.arrival(watched: arrived.contains { watched.contains($0) }))
                     }
+                } else {
+                    try world.advance(ticks: ticks)
+                    endFollowIfGone()
                 }
             } catch {
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
