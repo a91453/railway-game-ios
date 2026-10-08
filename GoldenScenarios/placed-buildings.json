@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 41,
+  "description": "Buildings the player places (city building P0-A, ARCHITECTURE decision 92) in a world 20480 x 20480 units (320 m). A building is a square, its sides north-south and east-west, of its kind's side: a house 1024 (16 m), a shop 1536, an office block 2048; it covers centre - side / 2 up to (not including) centre + side / 2 each way, at any point of the world (the 64 m cells do not bind it). It is placed free of charge and houses no one yet. A house at (5000, 5000) covers 4488 to 5512 each way and is building 1. A shop at (6280, 5000) covers 5512 to 7048 east-west: it touches the house and shares no ground, so it is building 2. An office block at (6000, 5000) would cover 4976 to 7024 and share ground with both: buildingOverlaps names the lower, 1. A house at (511, 5000) would reach x = -1: outOfBounds names its centre. A straight edge from (2000, 10000) to (18000, 10000) (16000 units, 16 pricing lengths of 1024 rounded up, 1600) is edge 1. A building keeps 128 (2 m) from a track's centre line: a house at (6000, 9361) reaches 9873, 127 from the line, buildingOnTrack names edge 1; at (6000, 9360) it reaches 9872, exactly 128 away, and is building 3. Market (1000) stands at (12000, 6000). An office block at (12000, 7151) would start at y = 6127, 127 from the station's point: buildingOnStation names station 1; at (12000, 7152) it starts at 6128, 128 away, and is building 4. Building 5 does not exist. The balance: 10000 - 1600 - 1000 = 7400. Every value worked out by hand.",
+  "initialState": {"worldWidth": 20480, "worldHeight": 20480, "balance": 10000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 5000, "y": 5000}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 1}, "expect": {"found": true, "placedBuilding": {"id": 1, "kind": "house", "x": 5000, "y": 5000}}},
+    {"command": {"type": "placeBuilding", "kind": "shop", "point": {"x": 6280, "y": 5000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 6000, "y": 5000}}, "expect": {"result": "buildingOverlaps", "building": 1}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 511, "y": 5000}}, "expect": {"result": "outOfBounds", "x": 511, "y": 5000}},
+    {"command": {"type": "buildTrackNode", "x": 2000, "y": 10000, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackNode", "x": 18000, "y": 10000, "z": 0}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildTrackEdge", "from": 1, "to": 2, "curve": {"type": "straight"}}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 6000, "y": 9361}}, "expect": {"result": "buildingOnTrack", "edge": 1}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 6000, "y": 9360}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Market", "point": {"x": 12000, "y": 6000}}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 12000, "y": 7151}}, "expect": {"result": "buildingOnStation", "station": 1}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 12000, "y": 7152}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 4}, "expect": {"found": true, "placedBuilding": {"id": 4, "kind": "office", "x": 12000, "y": 7152}}},
+    {"observe": {"type": "placedBuilding", "building": 5}, "expect": {"found": false}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 7400,
+    "stations": [
+      { "id": 1, "name": "Market", "point": { "x": 12000, "y": 6000 } }
+    ],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": {
+      "nodes": [{ "id": 1, "x": 2000, "y": 10000, "z": 0 }, { "id": 2, "x": 18000, "y": 10000, "z": 0 }],
+      "edges": [{ "curve": { "type": "straight" }, "from": 1, "id": 1, "length": 16000, "profile": { "endTransition": 0, "startTransition": 0 }, "structure": "surface", "to": 2 }],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "free",
+      "fareRules": null,
+      "openedAt": null,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [],
+      "days": []
+    },
+    "placedBuildings": [
+      { "id": 1, "kind": "house", "x": 5000, "y": 5000 },
+      { "id": 2, "kind": "shop", "x": 6280, "y": 5000 },
+      { "id": 3, "kind": "house", "x": 6000, "y": 9360 },
+      { "id": 4, "kind": "office", "x": 12000, "y": 7152 }
+    ]
+  }
+}

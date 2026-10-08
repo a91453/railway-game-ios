@@ -393,6 +393,12 @@ extension GameError {
                 "This era has no \(type.title(in: language)) trains.",
                 "這個年代還沒有\(type.title(in: language))列車。"
             )
+        case .buildingOverlaps(let id):
+            language.text("That would stand on building #\(id.rawValue).", "這裡已經有建物 #\(id.rawValue)。")
+        case .buildingOnTrack:
+            language.text("A building cannot stand on or right beside track.", "建物不能蓋在軌道上或緊貼軌道。")
+        case .buildingOnStation(let id):
+            language.text("A building cannot stand on station #\(id.rawValue).", "建物不能蓋在車站 #\(id.rawValue) 上。")
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",

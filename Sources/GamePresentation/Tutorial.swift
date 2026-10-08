@@ -27,6 +27,8 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case selectTool = "tool.select"
     case networkTool = "tool.network"
     case trainTool = "tool.train"
+    /// The building tool (city building P0-A, decision 92).
+    case buildingTool = "tool.building"
     /// The train tool's Buy button.
     case buyTrain = "train.buy"
     /// The network tool's modes: build, platform, remove.
@@ -52,6 +54,7 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
         case .select: self = .selectTool
         case .network: self = .networkTool
         case .train: self = .trainTool
+        case .building: self = .buildingTool
         }
     }
 }

@@ -178,7 +178,7 @@ final class FreeStationSessionTests: XCTestCase {
     }
 
     func testTheAppOffersOnlyTheNetworkTools() {
-        XCTAssertEqual(ConstructionTool.networkTools, [.select, .network, .train])
+        XCTAssertEqual(ConstructionTool.networkTools, [.select, .network, .train, .building])
     }
 }
 

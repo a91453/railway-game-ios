@@ -103,9 +103,14 @@
 ///     one in it), and a station's demand can be a school's or public
 ///     office's. A build that reads only an earlier version would call such
 ///     land or demand damaged, so it says the save is newer than it instead.
+/// 21. Buildings the player places (decision 92): the world can have
+///     `"placedBuildings"` and `"nextPlacedBuildingID"`. A build that reads
+///     only an earlier version would drop them, and its next save would
+///     lose the player's buildings, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 20
+    public static let currentVersion = 21
 
     public let world: GameWorld
 
@@ -181,6 +186,8 @@ extension SavedGame: Codable {
         // Version 19 to 20: a world before version 20 has only homes, shops
         // and offices, and demands of the four reference kinds, which
         // version 20 reads as before.
+        // Version 20 to 21: a world without `"placedBuildings"` has none,
+        // and hands out placed building IDs from 1.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

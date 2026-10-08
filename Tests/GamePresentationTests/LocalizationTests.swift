@@ -31,8 +31,9 @@ final class LocalizationTests: XCTestCase {
             .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep,
             .invalidTrackStructure, .trackConflict(.edge(4)), .trackTooClose(.edge(6)), .tracksWouldBeTooClose(.edge(6), .edge(7)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
+            .buildingOverlaps(PlacedBuildingID(rawValue: 2)), .buildingOnTrack(.edge(3)), .buildingOnStation(StationID(rawValue: 1)),
         ]
-        XCTAssertEqual(Set(errors).count, 46, "one of every case")
+        XCTAssertEqual(Set(errors).count, 49, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")
@@ -53,7 +54,7 @@ final class LocalizationTests: XCTestCase {
         try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))
         let zh = DisplayLanguage.traditionalChinese
         XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 個軌段")
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建築"])
 
         XCTAssertEqual(TrainPosition.onEdge(TrackTraversal(edge: .edge(2), direction: .backward), offset: 256).displayText(in: zh), "軌段 #2 反向，距起點 256 單位")
         XCTAssertEqual(TrackNodeID.node(1).displayText(in: zh), "節點 #1")

@@ -35,6 +35,11 @@ enum Palette {
     /// white with the icon's navy.
     static let transferLink = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
     static let transferEdge = hex(light: 0x262C57, dark: 0x262C57)
+    /// The player's buildings (decision 92), edged in ``ink``: homes,
+    /// shops and offices in the land use layer's hues (orange, red, blue).
+    static let house = hex(light: 0xF4A259, dark: 0xF6B47A)
+    static let shop = hex(light: 0xE05A4F, dark: 0xEC7A70)
+    static let office = hex(light: 0x4C7FD0, dark: 0x7AA2E3)
 
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))

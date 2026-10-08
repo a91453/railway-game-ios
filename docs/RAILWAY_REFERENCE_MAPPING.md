@@ -1029,6 +1029,17 @@ V 實際放行 → T、U（保證不互穿）
 
 比例：地價基準與溢價是美分／m²（600 = $6／m²）；公園的距離 25,600 單位 = 400 m。
 
+## 城市建造 P0-A：玩家放置建物（決策 92）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `placeBuilding`、`buildingPlacement`、`addBuilding`、`buildingTool`、`buildMode`、`placeMode`、`addStructure`、`放置建築`、`建造建築`。命中的只有 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_buildModeLinePostWorkTimers`（蓋地鐵路線的模式）與 `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `buildMode`（場景載入的程度），都不是放置建物。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| （參考沒有） | `PlacedBuilding`、`PlacedBuildingKind`、`GameWorld.placeBuilding(_:at:)`、`placedBuildingProblem()`、存檔版本 21 | gap → 原生 |
+| （參考沒有） | `ConstructionTool.building`、`GameSession.placeBuilding(at:)`、App 的 `BuildingControls`、`MapArt.drawPlacedBuildings` | gap → 原生 |
+
+沒有比例換算：建物的邊長 1,024／1,536／2,048 單位（16／24／32 m，每公尺 64 單位），離軌道與車站 128 單位（2 m）。外部開源專案沒有搜尋：在平面上放正方形、檢查與折線的距離不是難題。
+
 
 ## 實景的工業區、公園與農地（決策 93）
 

@@ -4,7 +4,7 @@ import XCTest
 final class ToolbarSmokeTests: XCTestCase {
     func testEnglishToolbar() {
         checkToolbar(language: "en", locale: "en_US", queries: [
-            "Select tool", "Track network tool", "Train tool",
+            "Select tool", "Track network tool", "Train tool", "Building tool",
         ])
     }
 
@@ -12,7 +12,7 @@ final class ToolbarSmokeTests: XCTestCase {
         // Identifiers, not translated text: the wording is the localization
         // check's (localization.yml), not this test's.
         checkToolbar(language: "zh-Hant", locale: "zh_TW", queries: [
-            "tool.select", "tool.network", "tool.train",
+            "tool.select", "tool.network", "tool.train", "tool.building",
         ])
     }
 
