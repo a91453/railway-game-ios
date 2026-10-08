@@ -18,16 +18,29 @@ public struct CityMap: Sendable {
     /// The world's cells (``Land/rows(in:)`` × ``Land/columns(in:)``).
     public let rows: Int
     public let columns: Int
-    /// Each cell's value in cents a m², by row and then column.
-    let values: [Int64]
-    /// Each cell's use and density: 0 for no building or land, else
-    /// `use × 8 + density` (use 1 homes, 2 shops, 3 offices; density 1–4,
-    /// 5 for existing stock).
-    let kinds: [UInt8]
-    /// Whether a station's catchment reaches each cell.
-    let covered: [Bool]
-    /// Whether anyone lives or works in each cell.
-    let peopled: [Bool]
+    /// The cells a layer can draw, by row and then column: those with land
+    /// (and so a building) and those a station's catchment reaches. Every
+    /// other cell has no use, is worth an empty cell with no service
+    /// (``LandValueRules/vacantBase``: a cell is worth more only with land
+    /// or a station with service within the catchment) and is not covered,
+    /// so no layer draws it. They grow with what is built and lived in, not
+    /// with the map (docs/research/WHOLE_TAIWAN_MAP.md).
+    let cells: [Cell]
+
+    struct Cell: Sendable {
+        let row: Int
+        let column: Int
+        /// Its value in cents a m².
+        let value: Int64
+        /// Its use and density: 0 for no building or land, else
+        /// `use × 8 + density` (use 1 homes, 2 shops, 3 offices; density
+        /// 1–4, 5 for existing stock).
+        let kind: UInt8
+        /// Whether a station's catchment reaches it.
+        let covered: Bool
+        /// Whether anyone lives or works in it.
+        let peopled: Bool
+    }
 
     /// The smallest a drawn rectangle may be on screen, in points.
     public static let minimumTilePoints = 6.0
@@ -36,20 +49,17 @@ public struct CityMap: Sendable {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
         self.rows = rows
         self.columns = columns
-        values = world.landValues().map(\.value)
-        var kinds = [UInt8](repeating: 0, count: rows * columns)
-        var peopled = [Bool](repeating: false, count: rows * columns)
+        var kinds: [CellPosition: UInt8] = [:]
         for cell in world.land.cells where cell.row < rows && cell.column < columns {
-            let index = cell.row * columns + cell.column
-            peopled[index] = true
+            let position = CellPosition(row: cell.row, column: cell.column)
             if let building = world.buildings.building(row: cell.row, column: cell.column) {
                 let density = building.kind == .existingStock ? 5 : building.density.rawValue
-                kinds[index] = UInt8(Self.useCode(building.use) * 8 + density)
+                kinds[position] = UInt8(Self.useCode(building.use) * 8 + density)
             } else {
-                kinds[index] = UInt8(Self.useCode(cell.use) * 8)
+                kinds[position] = UInt8(Self.useCode(cell.use) * 8)
             }
         }
-        var covered = [Bool](repeating: false, count: rows * columns)
+        var covered: Set<CellPosition> = []
         let length = Land.cellLength, radius = Land.catchmentRadius
         // A closed station reaches no one (decision 77).
         for station in world.stations where station.operationMode != .closed {
@@ -62,14 +72,20 @@ public struct CityMap: Sendable {
                 for column in firstColumn...lastColumn {
                     let dx = Int64(column) * length + length / 2 - point.x
                     if dx * dx + dy * dy < radius * radius {
-                        covered[row * columns + column] = true
+                        covered.insert(CellPosition(row: row, column: column))
                     }
                 }
             }
         }
-        self.kinds = kinds
-        self.covered = covered
-        self.peopled = peopled
+        let positions = Set(kinds.keys).union(covered).sorted()
+        let values = world.landValues(at: positions)
+        cells = zip(positions, values).map { position, value in
+            let kind = kinds[position]
+            return Cell(
+                row: position.row, column: position.column, value: value.value,
+                kind: kind ?? 0, covered: covered.contains(position), peopled: kind != nil
+            )
+        }
     }
 
     private static func useCode(_ use: LandUse) -> Int {
@@ -119,64 +135,77 @@ public struct CityMap: Sendable {
         let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(rows - 1, Int((region.maxY / length).rounded(.down)))
         let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(columns - 1, Int((region.maxX / length).rounded(.down)))
         guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
-        var tiles: [TravelDemandMap.Tile] = []
-        let blockRows = (firstRow / size)...(lastRow / size), blockColumns = (firstColumn / size)...(lastColumn / size)
-        for blockRow in blockRows {
-            for blockColumn in blockColumns {
-                var uses = [0, 0, 0, 0], densities = 0, drawn = 0, total: Int64 = 0
-                var anyCovered = false, anyPeopled = false, anyUncovered = false
-                for row in (blockRow * size)..<min(rows, (blockRow + 1) * size) {
-                    for column in (blockColumn * size)..<min(columns, (blockColumn + 1) * size) {
-                        let index = row * columns + column
-                        switch mode {
-                        case .landUse:
-                            let kind = Int(kinds[index])
-                            guard kind > 0 else { continue }
-                            uses[kind / 8] += 1
-                            densities += max(1, min(4, kind % 8))
-                            drawn += 1
-                        case .landValue:
-                            guard peopled[index] || values[index] > LandValueRules.vacantBase else { continue }
-                            total += values[index]
-                            drawn += 1
-                        default:
-                            if covered[index] {
-                                anyCovered = true
-                                anyPeopled = anyPeopled || peopled[index]
-                            } else if peopled[index] {
-                                anyUncovered = true
-                            }
-                        }
-                    }
+        // Whole blocks, those at the region's edges too, as before.
+        let lowRow = firstRow / size * size, highRow = min(rows - 1, (lastRow / size + 1) * size - 1)
+        let lowColumn = firstColumn / size * size, highColumn = min(columns - 1, (lastColumn / size + 1) * size - 1)
+        struct Block {
+            var uses = [0, 0, 0, 0], densities = 0, drawn = 0, total: Int64 = 0
+            var anyCovered = false, anyPeopled = false, anyUncovered = false
+        }
+        var blocks: [CellPosition: Block] = [:]
+        // The first cell at or below the first row, by halving.
+        var low = 0, high = cells.count
+        while low < high {
+            let middle = (low + high) / 2
+            if cells[middle].row < lowRow { low = middle + 1 } else { high = middle }
+        }
+        for cell in cells[low...] {
+            guard cell.row <= highRow else { break }
+            guard (lowColumn...highColumn).contains(cell.column) else { continue }
+            let key = CellPosition(row: cell.row / size, column: cell.column / size)
+            var block = blocks[key] ?? Block()
+            switch mode {
+            case .landUse:
+                let kind = Int(cell.kind)
+                guard kind > 0 else { continue }
+                block.uses[kind / 8] += 1
+                block.densities += max(1, min(4, kind % 8))
+                block.drawn += 1
+            case .landValue:
+                guard cell.peopled || cell.value > LandValueRules.vacantBase else { continue }
+                block.total += cell.value
+                block.drawn += 1
+            default:
+                if cell.covered {
+                    block.anyCovered = true
+                    block.anyPeopled = block.anyPeopled || cell.peopled
+                } else if cell.peopled {
+                    block.anyUncovered = true
                 }
-                let color: PopTravel.RGB
-                let value: Int64
-                switch mode {
-                case .landUse:
-                    guard drawn > 0, let use = (1...3).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
-                    let density = (densities + drawn / 2) / drawn
-                    color = Self.useColor(use: use, density: density)
-                    value = Int64(use * 8 + density)
-                case .landValue:
-                    guard drawn > 0 else { continue }
-                    value = total / Int64(drawn)
-                    color = Self.valueColor(cents: value)
-                default:
-                    if anyUncovered {
-                        color = Self.uncoveredColor
-                        value = 2
-                    } else if anyCovered {
-                        color = anyPeopled ? Self.coveredColor : Self.coveredEmptyColor
-                        value = 1
-                    } else {
-                        continue
-                    }
-                }
-                let minX = Double(blockColumn * size) * length, minY = Double(blockRow * size) * length
-                tiles.append(TravelDemandMap.Tile(
-                    minX: minX, minY: minY, maxX: minX + Double(size) * length, maxY: minY + Double(size) * length, color: color, value: value
-                ))
             }
+            blocks[key] = block
+        }
+        var tiles: [TravelDemandMap.Tile] = []
+        for key in blocks.keys.sorted() {
+            guard let block = blocks[key] else { continue }
+            let color: PopTravel.RGB
+            let value: Int64
+            switch mode {
+            case .landUse:
+                let uses = block.uses
+                guard block.drawn > 0, let use = (1...3).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
+                let density = (block.densities + block.drawn / 2) / block.drawn
+                color = Self.useColor(use: use, density: density)
+                value = Int64(use * 8 + density)
+            case .landValue:
+                guard block.drawn > 0 else { continue }
+                value = block.total / Int64(block.drawn)
+                color = Self.valueColor(cents: value)
+            default:
+                if block.anyUncovered {
+                    color = Self.uncoveredColor
+                    value = 2
+                } else if block.anyCovered {
+                    color = block.anyPeopled ? Self.coveredColor : Self.coveredEmptyColor
+                    value = 1
+                } else {
+                    continue
+                }
+            }
+            let minX = Double(key.column * size) * length, minY = Double(key.row * size) * length
+            tiles.append(TravelDemandMap.Tile(
+                minX: minX, minY: minY, maxX: minX + Double(size) * length, maxY: minY + Double(size) * length, color: color, value: value
+            ))
         }
         return tiles
     }
