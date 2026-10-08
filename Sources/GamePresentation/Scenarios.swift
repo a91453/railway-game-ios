@@ -47,9 +47,10 @@ extension Challenge {
     /// equity from $3.1M to $14M, $37M and $75M.
     public static let sandbox: [Challenge] = [threeTowns, cityBuilder, tycoon]
 
-    /// The challenge with `id`, as a save names its scenario.
+    /// The challenge with `id`, as a save names its scenario: one of
+    /// ``sandbox``, or a week's (decision 87).
     public static func named(_ id: String) -> Challenge? {
-        sandbox.first { $0.id == id }
+        sandbox.first { $0.id == id } ?? WeeklyChallenge.named(id)?.challenge
     }
 
     private static let year = FinancePeriod.year.days

@@ -953,12 +953,24 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 目標、挑戰與快轉（決策 86）
 
-2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源，搜尋 `mission`、`objective`、`goal`、`scenario`、`achievement`、`challenge`、`deadline`。沒有可移植的鐵路目標。
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源，搜尋 `mission`、`objective`、`goal`、`scenario`、`achievement`、`challenge`、`deadline`。沒有可移植的鐵路目標；`Ci/` 有一個已停用的單日挑戰模式（下表）。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | `Railway/taipei_gta_reference/source/assets/` 的 missions（動作遊戲的小任務） | — | 不採用：不同玩法 |
-| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`（`mission` 只出現在 `flow-admission` 等字串裡，沒有目標或劇本） | — | gap |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`openMetroChallengeStartModal`、`startMetroChallengeFromModal`、`metroChallengeCurrentPassengerScore`（已停用的單日挑戰：跑 1 個模擬日，以載客數計分；`mission` 只出現在 `flow-admission` 等字串） | — | 不採用為目標：單日計分賽、已停用、計分引擎不在快照；成績與排行榜部分見決策 87 |
 | （參考沒有快轉） | `GameSpeed.fast`（6000×） | gap → 原生：以年為單位的目標需要更快的速度 |
 | （參考沒有） | `Goal`、`Scenario`、`ScenarioState`、`judgeScenario(endingWith:)`、`startScenario(_:)`、`Challenge`、`GoalsPanel`、存檔版本 17 | gap → 原生 |
+
+
+## 每週挑戰與個人最佳紀錄（決策 87）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`，搜尋 `weekly`、`leaderboard`、`highscore`、`challenge`。沒有每週挑戰；`Ci/` 有已停用挑戰模式的成績上傳與排行榜。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroChallengeLeaderboardPayload`（`playerId`、`cityKey`、`eventId`、`rulesVersion`、`scorePassengers`） | `ChallengeRecord`（劇本 ID、`rulesVersion`、`riders`、天數、評等） | adapted：劇本 ID 已含地圖（每週的種子），所以不另存 `cityKey`；主要成績是完成天數，載客數是同天數時的比較；不存 `playerId`（不上傳） |
+| 同檔／`metroChallengeSubmitScore`、`metroChallengeFetchLeaderboard`（`/api/challenge-scores`）、`metroChallengeRenderLeaderboard`（前 20 名、名次或 Top %） | — | 之後：Game Center／官網排行榜 |
+| 同檔／`metroChallengePlayerId`（`localStorage` 的隨機 ID） | — | 不採用：不上傳，沒有玩家 ID |
+| （參考沒有每週地圖） | `WeeklyChallenge`（台灣時間週一換週、FNV-1a 種子）、`GameLauncher.startWeeklyChallenge(at:)`、`recordChallengeResult(at:)`、`ChallengePicker` 的本週區塊 | gap → 原生 |
 

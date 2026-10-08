@@ -3130,7 +3130,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 ### 86. 目標、挑戰與快轉
 
-2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是 A 列車式遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 的遊戲沒有目標，`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務，所以目標、評等、挑戰內容都是原生（gap → 原生）。存檔版本 17。
+2026-10-08，作者交給 Claude Code 決定（「用台灣玩家會想玩的角度，以及對未來耐玩性的選擇」）。教學結束後玩家沒有方向，這是 A 列車式遊戲最大的缺口。參考庫沒有可移植的鐵路目標：`Ci/` 有一個已停用的挑戰模式（`openMetroChallengeStartModal` 直接回傳「挑战模式已从当前经济设计中移除」；`startMetroChallengeFromModal` 跑 1 個模擬日、以當天載客數 `metroChallengeCurrentPassengerScore` 計分，事件是 Holiday Peak／May Day Rush，計分引擎 `MetroEconomy.startChallenge`、`calculateChallengeScore` 不在快照），是單日的計分賽而不是目標與期限；`Railway/taipei_gta_reference/` 的 missions 是動作遊戲的小任務。所以目標、評等與期限是原生（gap → 原生）；`Ci/` 挑戰模式的成績上傳與排行榜留給決策 87 之後的排行榜。存檔版本 17。
 
 1. **目標**（GameCore，`Goal`）：只讀遊戲已經有的資料，判定是 deterministic 的。
    - `connect(points:radius:)`：每個地點半徑內都有路線停靠的車站，而且這些車站在同一個路網（路線共用車站，或停靠同一個轉乘群組的車站，決策 81）。
@@ -3145,6 +3145,17 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 7. **存檔**：版本 17。世界只在有劇本時寫 `"scenario"`，日帳只在有乘客時寫 `"fareTrips"`，時鐘可以是 `"fast"`；版本 16 以前沒有劇本。讀檔檢查：規則有效、達成日在開始與今天之間、完成時每個目標都在完成那天以前達成而且評等符合天數、失敗日在遊玩期間。新的 `SaveFixtures/v17-scenario-fast.json`；既有 fixture、golden 與 replay 都不變（新的拒絕名稱只加在測試的對照表）。
 
 **限制**：台灣鐵道史的劇本（平溪線觀光、劉銘傳鐵路、木柵線）是下一步，會用這裡的年代車種限制與實景地圖；平溪線的運煤史實版等貨運（O10）。目標數值只用無頭模擬量過一條固定的第一條線，沒有玩家擴張；挑戰的劇情文字是原創的，不是史實。
+
+### 87. 每週挑戰與個人最佳紀錄
+
+2026-10-08，作者同意的順序：先做能公平比較的每週挑戰，TestFlight 回饋之後再接 Game Center 的排行榜與成就，官網排行榜最後（要帳號、後端與隱私權政策的修改；屆時可以用 GameCore 的確定性重播在伺服器上驗證成績）。每週的地圖是原生（gap）；成績的欄位照 `Ci/` 已停用的挑戰模式（`metroChallengeLeaderboardPayload` 的 `eventId`、`rulesVersion`、`scorePassengers`，上傳到 `/api/challenge-scores`，伺服器回傳前 20 名與名次或百分位），之後的排行榜可以直接用。
+
+1. **週**（GamePresentation，`WeeklyChallenge`）：以台灣時間（UTC+8，全年不變）週一 00:00 為一週的開始，從 1970-01-05 起算。開局時讀裝置的時鐘決定是哪一週；之後的遊戲是 GameCore 的劇本（決策 86），不讀時鐘，所以仍然是確定性的。
+2. **同一張地圖**：城鎮的種子是 `"weekly.<週>"` 的 FNV-1a 雜湊，所以同一週所有玩家的地圖、城鎮位置與目標都一樣，下一週換新的。挑戰內容是「三鎮連線」，評等天數相同，劇本 ID 是 `"weekly.<週>"`（`Challenge.named` 認得它，存檔不需要新欄位）。
+3. **最佳紀錄**（`ChallengeRecords`）：每個劇本 ID（參考的 `eventId`）保留完成天數最少的一次，天數相同時取完成那天載客較多的（參考的 `scorePassengers`），連同評等與規則版本（參考的 `rulesVersion`，目前 `2026-10-goals-v1`；目標數值改變時換新版本，舊版本的紀錄讀檔時略過），存在存檔資料夾裡的 `challenge-records.data`（不是 `.json`，所以不會被當成存檔）；只留在裝置上，不傳到任何地方。挑戰完成時（以及每次自動存檔時）記錄，刷新紀錄時狀態列顯示。
+4. **畫面**：挑戰選單最上面是「本週」，顯示日期範圍、剩幾天與最佳紀錄；其他挑戰每次都是新地圖，也顯示最佳紀錄。
+
+**限制**：沒有連網，看不到別人的成績（下一步的 Game Center）；裝置時間可以手動改，所以本機紀錄不防作弊；週的界線用台灣時間，其他時區的玩家換週時間不同。GameCore、存檔版本、golden 與 replay 都不變。
 
 ## 目前規則摘要
 

@@ -64,6 +64,9 @@ public final class GameLauncher {
     }
 
     @ObservationIgnored let library: SaveLibrary
+    /// The player's best result in each challenge (decision 87), kept in
+    /// the saves' folder in a file that is not a save.
+    public private(set) var records: ChallengeRecords
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
@@ -71,6 +74,7 @@ public final class GameLauncher {
     public init(library: SaveLibrary, language: DisplayLanguage) {
         self.library = library
         self.language = language
+        records = ChallengeRecords(file: library.directory.appendingPathComponent("challenge-records.data"))
         refresh()
     }
 
@@ -100,6 +104,20 @@ public final class GameLauncher {
     /// 86), its towns drawn from a new seed.
     public func startChallenge(_ challenge: Challenge) {
         begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+    }
+
+    /// Starts the week's challenge (decision 87): the map every player gets
+    /// in the week containing `date`, Taiwan time.
+    public func startWeeklyChallenge(at date: Date = Date()) {
+        begin(.newGame(weekly: WeeklyChallenge(containing: date)), keepingAutosave: true)
+    }
+
+    /// Keeps the game's challenge result if it is the player's best
+    /// (decision 87), and says so on the status line.
+    public func recordChallengeResult(at date: Date = Date()) {
+        guard let session, records.record(session.world, at: date),
+              let record = session.world.scenario.flatMap({ records.best[$0.scenario.id] }) else { return }
+        session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
     }
 
     /// Opens ``DemoWorld``: three lines already running.
@@ -255,6 +273,7 @@ public final class GameLauncher {
     @discardableResult
     public func autosaveCurrentGame(at date: Date = Date()) -> Bool {
         guard let session else { return false }
+        recordChallengeResult(at: date)
         do throws(SaveError) {
             try library.save(session.world, as: .autosave, at: date)
             refresh()
