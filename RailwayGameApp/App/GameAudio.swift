@@ -34,6 +34,20 @@ final class GameAudio {
         self.defaults = defaults
         musicOn = defaults.object(forKey: Key.music) as? Bool ?? true
         soundsOn = defaults.object(forKey: Key.sounds) as? Bool ?? true
+        // A call, an alarm or another app can stop the music while the app
+        // stays active (a call declined from its banner): pick it up again
+        // when iOS says the interruption is over. The observer lives as
+        // long as the app, as this object does.
+        _ = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            guard let raw, AVAudioSession.InterruptionType(rawValue: raw) == .ended, let self else { return }
+            // Delivered on the main queue.
+            MainActor.assumeIsolated {
+                self.updateMusic()
+            }
+        }
     }
 
     func setMusicOn(_ on: Bool) {
