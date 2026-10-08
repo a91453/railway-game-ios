@@ -917,3 +917,18 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／`_mergeSegmentAnchorsAfterStationRemoved` | `ServiceLine.removingStation(_:)` 的路徑偏好重排 | adapted：偏好跟著原本的兩站，不再成立的刪除 |
 | — | 拒絕條件（`trainServiceActive`、`trackReserved`）、服務模式重排、閒置列車的時刻表、需求事件、城鎮成長、腹地 | gap → 原生：參考是編輯器或沒有這些狀態 |
 
+
+## 地圖畫出路線、共線區段與轉乘群組（決策 84）
+
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`。`MapBuilder/` 有完整的畫法（共線偏移與轉乘站連線）；`Ci/` 有共線錯開（`metroBranchSharedTrackLaneLayout`）與轉乘走廊（`_buildTransferCorridorLineFeaturesGcj`）；`Simulator/`、`Railway/site_archive_clean/`、`Railway/taipei_gta_reference/` 與 `Railway/railway_game_reference_clean/` 沒有路線在地圖上並排的畫法。只改畫面，沒有比例換算（偏移以線寬為單位，線寬依縮放）。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/pages/_app-70b32b07723ca1d7.js`／interline segments：相鄰兩站、各線 `color\|icon` 的集合，同集合的段串起來 | `LineMap(world:)`：每條邊在路線集合改變處切開 | adapted：路線跑在軌道上，以軌道邊（沿列車實際走的路）取代站到站的直線；路線依 `LineID` 排序（顏色不唯一） |
+| 同檔／`offsets`（奇數：0、−r、r、−2r…；偶數：r/2、−r/2、3r/2…，`r` 預設 8） | `LineMap.offsets(count:)`（以線寬為單位） | direct |
+| `MapBuilder/reference_snapshot/_next/static/chunks/352-cc4c9866d08d4d04.js`／`js-Map-segments--solid`（`line-width` 8、`line-offset`、`line-cap: butt`、`line-join: miter`） | `MapArt.drawLines`、`offsetPolyline` | adapted：線寬隨縮放；轉角沿角平分線（最多兩倍），接合用 round |
+| 同檔／`js-Map-interchanges--inner`（白、8）與 `--outer`（黑、2、gap 8），座標是轉乘站依序的站 | `LineMap.transfers`、`MapArt.drawTransfers` | adapted：白色內線加 App 圖示的深藍外框，寬度隨線寬 |
+| 同檔／`md_transfer` 車站圖示、`line-pattern`、聚焦路線閃爍、`js-Map-vehicles--*` 模擬車輛 | — | gap：沒有移植（地圖畫真正的列車） |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroBranchSharedTrackLaneLayout`（`(index − (count − 1)/2) × 5 px`，只用於支線群組） | — | 不採用：和 MapBuilder 的偏移是同一組位置、順序不同；採 MapBuilder 的 |
+| 同檔／`_buildTransferCorridorLineFeaturesGcj`（轉乘走廊，站到站的直線） | — | 不採用：採 MapBuilder 依站序的一條連線 |
+| （參考沒有） | 何時重算（`LineMapKey`，背景執行緒）、隧道裡淡化、App 圖示的地圖配色 | gap → 原生 |

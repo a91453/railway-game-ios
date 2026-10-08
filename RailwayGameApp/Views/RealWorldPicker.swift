@@ -92,12 +92,12 @@ struct RealWorldPicker: View {
                     .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
             }
             .mapOverlayLevel(level: .aboveRoads)
-            // Theme: kept for Phase 8. The 16 km square and its centre mark
-            // use the game map's station colour, so the preview matches the
-            // map the game draws; they move with the map's colours.
+            // The 16 km square and its centre mark in the game map's
+            // colours (decision 84): a station's warm fill with its navy
+            // edge, which Apple's light map would lose a warm line on.
             MapPolygon(coordinates: Self.square(around: middle))
-                .foregroundStyle(Palette.station.opacity(0.08))
-                .stroke(Palette.station, lineWidth: 2)
+                .foregroundStyle(Palette.station.opacity(0.15))
+                .stroke(Palette.ink, lineWidth: 2)
         }
         .mapStyle(.standard(emphasis: .muted))
         .onAppear {
@@ -111,7 +111,7 @@ struct RealWorldPicker: View {
         .overlay {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(Palette.station)
+                .foregroundStyle(Palette.ink)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }

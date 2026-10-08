@@ -33,6 +33,7 @@ enum MapArt {
         edges: [TrackEdgeID: MapEdgeDrawing],
         layers: MapLayerPreferences = .default,
         waitingCounts: [StationID: Int64] = [:],
+        lines: LineMap = LineMap(),
         in context: GraphicsContext
     ) {
         let referenceSize = projection.referenceSize
@@ -55,6 +56,8 @@ enum MapArt {
         }
 
         drawNetwork(world, projection: projection, cached: edges, in: context)
+        drawLines(lines, world: world, projection: projection, cached: edges, in: context)
+        drawTransfers(lines, projection: projection, in: context)
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
         for station in world.stations {
             drawPointStation(
@@ -192,9 +195,9 @@ enum MapArt {
         let radius = max(1.5, referenceSize * 0.08)
         for node in world.network.nodes where region.contains(node.position) {
             let dot = disc(at: projection.screenPoint(of: node.position), radius: radius)
-            context.fill(dot, with: .color(Palette.rail))
+            context.fill(dot, with: .color(Palette.ink))
             if world.isTunnelPortal(node.id) {
-                context.stroke(disc(at: projection.screenPoint(of: node.position), radius: radius * 2.5), with: .color(Palette.rail), lineWidth: max(1, radius * 0.6))
+                context.stroke(disc(at: projection.screenPoint(of: node.position), radius: radius * 2.5), with: .color(Palette.ink), lineWidth: max(1, radius * 0.6))
             }
         }
     }
@@ -207,7 +210,7 @@ enum MapArt {
             case .removal:
                 context.stroke(band, with: .color(Color.red.opacity(0.6)), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.6), lineCap: .round, lineJoin: .round))
             case .platform:
-                context.stroke(band, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.85), lineCap: .butt, lineJoin: .round))
+                context.stroke(band, with: .color(Palette.ink), style: StrokeStyle(lineWidth: max(6, referenceSize * 0.85), lineCap: .butt, lineJoin: .round))
                 context.stroke(band, with: .color(Palette.station), style: StrokeStyle(lineWidth: max(4, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
@@ -261,21 +264,107 @@ enum MapArt {
         return path
     }
 
+    /// The track as the app icon draws it (decision 84): a teal bed with a
+    /// pale line down the middle; a viaduct or bridge with a navy casing,
+    /// a tunnel dashed.
     private static func drawEdge(_ line: Path, structure: TrackStructure, detail: MapDetail, referenceSize: Double, in context: GraphicsContext) {
-        let rail = StrokeStyle(lineWidth: max(1.5, referenceSize * 0.1), lineCap: .round, lineJoin: .round)
+        let centre = StrokeStyle(lineWidth: max(1, referenceSize * 0.08), lineCap: .round, lineJoin: .round)
         switch (structure, detail) {
         case (.tunnel, _):
-            context.stroke(line, with: .color(Palette.rail.opacity(0.55)), style: StrokeStyle(lineWidth: rail.lineWidth, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))
+            context.stroke(line, with: .color(Palette.track.opacity(0.6)), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.14), lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))
         case (_, .overview):
-            context.stroke(line, with: .color(Palette.rail), style: StrokeStyle(lineWidth: max(1, referenceSize * 0.12), lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.16), lineCap: .round, lineJoin: .round))
         case (.surface, .full):
-            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .round, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.rail), style: rail)
+            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.trackCentre), style: centre)
         case (.elevated, .full), (.bridge, .full):
-            context.stroke(line, with: .color(Palette.rail.opacity(0.35)), style: StrokeStyle(lineWidth: referenceSize * 0.58, lineCap: .butt, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.ballast), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .butt, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.rail), style: rail)
+            context.stroke(line, with: .color(Palette.ink.opacity(0.35)), style: StrokeStyle(lineWidth: referenceSize * 0.58, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.trackCentre), style: centre)
         }
+    }
+
+    // MARK: - Lines and transfer groups (decision 84)
+
+    /// The width of a line drawn on the track; lines sharing track sit
+    /// this far apart, touching, as MapBuilder's 8 px lines do.
+    private static func lineWidth(_ projection: some MapProjection) -> Double {
+        projection.detail == .full ? max(2.5, projection.referenceSize * 0.22) : max(2, projection.referenceSize * 0.16)
+    }
+
+    /// Each line in its colour along the track its trains take, side by
+    /// side where lines share it (``LineMap``, MapBuilder's
+    /// `js-Map-segments--solid`: butt caps, each line its offset out); in
+    /// a tunnel, faded as the track is.
+    private static func drawLines(_ lines: LineMap, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+        guard !lines.stretches.isEmpty else { return }
+        let region = drawingRegion(projection)
+        let width = lineWidth(projection)
+        var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
+        for stretch in lines.stretches {
+            guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
+            drawings[stretch.edge] = drawing
+            guard region.intersects(drawing.bounds) else { continue }
+            let end = min(stretch.end, drawing.geometry.length)
+            guard stretch.start < end else { continue }
+            let points = drawing.geometry.points(from: stretch.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
+            let path = offsetPolyline(points, by: stretch.offset * width)
+            let color = Palette.lineColor(stretch.line, custom: stretch.color)
+            context.stroke(path, with: .color(drawing.edge.structure == .tunnel ? color.opacity(0.5) : color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+        }
+    }
+
+    /// Each transfer group as a white link with a navy edge through its
+    /// stations (MapBuilder's `js-Map-interchanges--inner` and `--outer`:
+    /// an 8 px white line inside a 2 px black edge), over the lines and
+    /// under the stations.
+    private static func drawTransfers(_ lines: LineMap, projection: some MapProjection, in context: GraphicsContext) {
+        let inner = lineWidth(projection) * 1.2
+        for group in lines.transfers {
+            let points = group.map { cgPoint(projection.screenPoint(of: $0)) }
+            guard let first = points.first else { continue }
+            var path = Path()
+            path.move(to: first)
+            for point in points.dropFirst() { path.addLine(to: point) }
+            guard path.boundingRect.insetBy(dx: -inner, dy: -inner).intersects(context.clipBoundingRect) else { continue }
+            context.stroke(path, with: .color(Palette.transferEdge), style: StrokeStyle(lineWidth: inner + 4, lineCap: .round, lineJoin: .round))
+            context.stroke(path, with: .color(Palette.transferLink), style: StrokeStyle(lineWidth: inner, lineCap: .round, lineJoin: .round))
+        }
+    }
+
+    /// `points` moved `distance` points to their left as they go (a
+    /// negative distance to the right), each corner on the bisector so the
+    /// line keeps its distance from the track, as Mapbox's `line-offset`.
+    private static func offsetPolyline(_ points: [CGPoint], by distance: Double) -> Path {
+        var path = Path()
+        var distinct: [CGPoint] = []
+        for point in points where distinct.last != point { distinct.append(point) }
+        guard distinct.count > 1 else { return path }
+        // The left of a step on the screen, whose y grows down.
+        func left(_ a: CGPoint, _ b: CGPoint) -> CGVector {
+            let dx = b.x - a.x, dy = b.y - a.y
+            let length = (dx * dx + dy * dy).squareRoot()
+            return CGVector(dx: dy / length, dy: -dx / length)
+        }
+        for index in distinct.indices {
+            let before = index > 0 ? left(distinct[index - 1], distinct[index]) : nil
+            let after = index < distinct.count - 1 ? left(distinct[index], distinct[index + 1]) : nil
+            var normal = after ?? before ?? CGVector(dx: 0, dy: 0)
+            if let before, let after {
+                let sx = before.dx + after.dx, sy = before.dy + after.dy
+                let length = (sx * sx + sy * sy).squareRoot()
+                if length > 1e-6 {
+                    // Out along the bisector, further at a sharper corner,
+                    // at most twice as far.
+                    let bisector = CGVector(dx: sx / length, dy: sy / length)
+                    let scale = 1 / max(0.5, bisector.dx * after.dx + bisector.dy * after.dy)
+                    normal = CGVector(dx: bisector.dx * scale, dy: bisector.dy * scale)
+                }
+            }
+            let shifted = CGPoint(x: distinct[index].x + normal.dx * distance, y: distinct[index].y + normal.dy * distance)
+            if index == 0 { path.move(to: shifted) } else { path.addLine(to: shifted) }
+        }
+        return path
     }
 
     private static func drawTrain(at location: TrackLocation, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
@@ -441,7 +530,7 @@ enum MapArt {
         let largest = CGRect(x: center.x - reach, y: center.y - radius - 20, width: reach * 2, height: radius * 2 + 20 + 48)
         guard largest.intersects(context.clipBoundingRect) else { return }
         let name = (projection.detail == .full && layers.showsStationNames)
-            ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.rail)) : nil
+            ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink)) : nil
         let nameSize = name?.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity)) ?? .zero
         let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
         // Include the measured label, not only the station's anchor: a name
@@ -450,7 +539,7 @@ enum MapArt {
             || nameRect.intersects(context.clipBoundingRect) else { return }
         let badge = Path(ellipseIn: badgeRect)
         context.fill(badge, with: .color(Palette.station))
-        context.stroke(badge, with: .color(Palette.rail.opacity(0.5)), lineWidth: 1)
+        context.stroke(badge, with: .color(Palette.ink), lineWidth: 1.5)
         if isSelected {
             let ring = disc(at: center, radius: radius + 3)
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)

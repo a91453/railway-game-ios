@@ -3,17 +3,38 @@ import SwiftUI
 import UIKit
 
 /// The map's colours and the lines' colours, each with a light and a dark
-/// variant. The interface's colours are ``Theme``'s; these stay as they are
-/// until Phase 8 replaces the map's renderer (docs/UI_THEME.md), and the
-/// lines' colours stay for good.
+/// variant. The interface's colours are ``Theme``'s.
+///
+/// Since decision 84 (2026-10-08, the owner's choice) the map is drawn in
+/// the app icon's style ahead of Phase 8's renderer: the icon's pale
+/// ground (#ECEEF6, dark #262C57), teal track (#12A08F, dark #45D3C0) with
+/// its pale centre line (#BDEFE7, dark #D4FAF4), warm stations (#FFC86B)
+/// and navy (#262C57, dark #ECEEF6) for what is drawn on them. The traffic
+/// and population colours below stay (docs/UI_THEME.md), and the lines'
+/// colours stay for good.
 enum Palette {
-    static let land = dynamic(light: (0.86, 0.91, 0.81), dark: (0.16, 0.21, 0.16))
-    static let mapEdge = dynamic(light: (0.55, 0.62, 0.52), dark: (0.30, 0.36, 0.30))
-    static let ballast = dynamic(light: (0.68, 0.64, 0.58), dark: (0.40, 0.38, 0.35))
-    static let rail = dynamic(light: (0.24, 0.21, 0.19), dark: (0.90, 0.88, 0.84))
-    static let station = dynamic(light: (0.82, 0.36, 0.08), dark: (0.93, 0.50, 0.18))
-    static let stationSymbol = Color.white
-    static let train = dynamic(light: (0.10, 0.36, 0.78), dark: (0.45, 0.68, 1.00))
+    static let land = hex(light: 0xECEEF6, dark: 0x262C57)
+    static let mapEdge = hex(light: 0x262C57, dark: 0xECEEF6, alpha: 0.3)
+    /// The track's bed: the icon's teal, a shade darker on the light map
+    /// (#10917F) so it stands out from the ground by 3:1 (3.37:1; the
+    /// icon's #12A08F is 2.81:1), as a graphic needs; 7.17:1 on the dark.
+    static let track = hex(light: 0x10917F, dark: 0x45D3C0)
+    /// The line down the middle of the track, as the icon's.
+    static let trackCentre = hex(light: 0xBDEFE7, dark: 0xD4FAF4)
+    /// Navy on the light map, pale on the dark: station names, nodes,
+    /// tunnels, the edges of stations and the casing of a viaduct (the
+    /// icon's buildings; ``Theme/textPrimary``, 11.47:1 and 9.64:1 on the
+    /// map's ground).
+    static let ink = hex(light: 0x262C57, dark: 0xECEEF6)
+    /// The icon's warm station, with ``ink`` round it and its symbol.
+    static let station = hex(light: 0xFFC86B, dark: 0xFFC86B)
+    static let stationSymbol = hex(light: 0x262C57, dark: 0x262C57)
+    static let train = hex(light: 0x262C57, dark: 0xECEEF6)
+    /// The link through a transfer group's stations: MapBuilder's
+    /// interchange, white with a black edge in either appearance, here
+    /// white with the icon's navy.
+    static let transferLink = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
+    static let transferEdge = hex(light: 0x262C57, dark: 0x262C57)
 
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))
@@ -47,6 +68,18 @@ enum Palette {
             green: Double((line.rgb >> 8) & 0xFF) / 255,
             blue: Double(line.rgb & 0xFF) / 255
         )
+    }
+
+    private static func hex(light: UInt32, dark: UInt32, alpha: Double = 1) -> Color {
+        Color(uiColor: UIColor { traits in
+            let rgb = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(
+                red: Double((rgb >> 16) & 0xFF) / 255,
+                green: Double((rgb >> 8) & 0xFF) / 255,
+                blue: Double(rgb & 0xFF) / 255,
+                alpha: alpha
+            )
+        })
     }
 
     private static func dynamic(
