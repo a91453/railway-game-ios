@@ -81,9 +81,11 @@ map interactions, state/UI logic, styling, and related data assets).
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
   build, iPhone UI tests. A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's screens;
-  pushes to `main`, a nightly run and manual runs run every UI test, the iPad
-  tutorial tests and the missing-button proof, and their red result does not
-  block a pull request),
+  pushes to `main`, a nightly run and manual runs run every UI test and the
+  iPad tutorial tests (the missing-button proof nightly and on request), and
+  their red result does not block a pull request; a newer push to `main`
+  cancels the older one's run, so the newest `main` commit always has a
+  complete one),
   `release-archive.yml` (unsigned Release device archive; manual, and
   on PRs that change project settings or app resources), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
