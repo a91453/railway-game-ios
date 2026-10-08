@@ -3057,6 +3057,20 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：參考的刪除車站（`handleStationDelete`）沒有移植，車站目前仍不能拆除；參考的 `handleRemoveStationFromLine` 依車站移除，這裡沿用依位置移除。`Ci/` 的 `metroRemapLineOperationsAfterMiddleStationInsert` 在中間插站後會把快車停靠與路徑偏好的索引往後移；這裡照 Stage C2 的規則讓服務模式停在相同位置，沒有改。
 
+### 81. 轉乘群組
+
+2026-10-08。移植 MapBuilder 的轉乘站（`handleCreateInterchange`、`handleRemoveStationFromInterchange`，`interchanges`）與 `Ci/` 地鐵遊戲的轉乘群組（`transferGroupId`、`metroSameTransferStationRef`）。決策 65 的步行轉乘只到 450 m 內的車站，`PassengerTransferRules` 的註解原本就寫明參考「超過步行距離的車站只能透過玩家建立的轉乘群組相連」；這裡補上那個群組。存檔版本 15。
+
+1. **資料**（GameCore，`TransferGroup`、`TransferGroupID`、`GameWorld.transferGroups`）：每個群組有自己的 ID（從 1 起，`nextTransferGroupID`，存檔）與至少兩個車站，依 ID 遞增；一個車站最多在一個群組。
+2. **連結**（`GameWorld.linkTransfer(_:_:)`，照 `handleCreateInterchange`）：兩站都不在群組時建立新群組（下一個 ID）；一站在群組時另一站加入；兩站各在不同群組時合併成一個，保留站數多的群組的 ID（一樣多時取第一站的），另一個群組刪除；已經在同一群組時不變。車站不存在時拒絕（`unknownStation`），同一站拒絕（新的 `invalidTransferGroup`），ID 用完時拒絕。免費。參考的 `ey`（依連線長度排站序，只用來畫轉乘站的連線）沒有移植：群組的站一律依 ID 排。
+3. **離開**（`GameWorld.unlinkTransfer(_:)`，照 `ev`）：車站離開群組，剩一站時群組刪除，它的 ID 不再發出；不在群組時不變。需要這段步行的等車乘客離開（`abandoned`，`abandonUnservedPassengers` 檢查行程各段能否相接），守恆不變。
+4. **乘客**：同一群組的兩站之間，不論距離都可以步行轉乘：`walkingTransfer(from:to:)` 與路徑圖的步行邊都納入群組。轉乘等級照距離分（決策 65 的 overlap／same-platform／passage），450 m 以上算 virtual（15 分鐘 × 1.7）；步行時間照 5 km/h 算，實際等候是 max(120 s, 步行)。例如相距 600 m：步行 432 秒（顯示 8 分鐘），轉乘成本 26 分鐘。群組不影響旅次的起訖、票價與守恆帳（照舊算在原起站），也不把到達群組裡的另一站當成到達（`Ci/` 的 `metroHasReachedDestAtTransferGroup` 沒有移植）。
+5. **ID 與復原**：復原（決策 82）把整份世界換回快照，`nextTransferGroupID` 也一起倒回，所以「建立群組 → 復原 → 再建立」會拿到同一個 ID；世界照樣有效、能存檔（`TransferGroupSessionTests`）。
+6. **存檔**：版本 15。世界只在有群組時寫 `"transferGroups"`，發過 ID 時寫 `"nextTransferGroupID"`；版本 14 以前讀成沒有群組、ID 從 1 發。讀檔檢查：ID 遞增且小於下一個 ID、每組至少兩站且依序、車站存在、一站只在一組。新的 `SaveFixtures/v15-transfer-group.json`；既有 fixture 都沒有改，golden 與 replay 不變（新的拒絕名稱 `invalidTransferGroup` 只加在測試的對照表）。
+7. **畫面**（App 的 `StationPanel`）：車站面板加「轉乘」區：顯示群組（「A / B / C」，照 `Ci/` 的 `_buildTransferGroupDisplayName`）、「設為轉乘」選單（最近的 20 站，附距離）與「離開轉乘群組」。都經過 `perform`，可以復原。字串有 zh-Hant。
+
+**限制**：地圖還不畫群組的連線；群組不改變轉乘等級以外的規則（例如不讓群組變成同站換乘的 12 分鐘）；參考的轉乘類型（`transferType`）不另存，一律由距離決定。
+
 ### 82. 復原（undo）
 
 2026-10-08。移植 MapBuilder 的 `handleUndo`（`MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js`）：每次編輯前存一份完整快照，上限是 `B.I6`（模組 73277 的 `O`，在 `pages/_app-70b32b07723ca1d7.js`，值是 25）。三個並行 PR 協調時本來分配 79，但 79 已經是「音樂與音效」，所以用 82。GameCore 不變，存檔格式、golden、replay 都不變。
@@ -3107,6 +3121,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 地價與城市圖層（決策 76）：`landValue(row:column:)` 即時算出每格的地價（美分／m²）＝用途基準 × 密度係數 ＋ 最好車站的服務與可達溢價，夾在 500…50,000；不存檔、不影響規則。地圖有用途、地價、腹地涵蓋三個圖層，車站面板顯示腹地平均地價。
 - 上下車與容量（決策 35、39）：列車到達一站 8 秒後車門開好，坐到那一站的人下車（`arrived`），同時線路上的列車讓那一站等它的線路、方向、而且迄點是它到下一次折返之前會停的站的人上車：下車站遠的先上，同一迄點先來的先上，最多到容量（每輛 352 人：額定 320 × 1.1）；花的時間是較多的一邊 ÷ 每節每秒 8 人，進位到整秒；開著門時每個整分鐘釋出的人也上車。客滿的列車離開時，還在等、本來可以搭的人記進 `refused`（次數，不是人數）。列車的服務在載客時被停止，車上的人記進 `abandoned`。每一站 `released = 等車 + 車上 + arrived + overflowed + abandoned`。
 - 全網路徑與轉乘（Phase 5F，決策 65）：App 的新遊戲以 `.network` 釋出乘客，每對 OD 最多三條路徑（整數分鐘的候車、乘車、轉乘成本），依持久化的配額分配；乘客按旅程在同站換車或步行到 450 m 內的另一站（路徑選擇的感知成本：`Ci/` 的 15 分鐘 × 分級係數，同站換線 12 分鐘，加 5 km/h 步行；實際換車 max(120 s, 步行)，同一線路 0；常數集中於 `PassengerTransferRules`）；車站可設 flowControl／closed（車站面板），只在第一段付原起訖票價，守恆帳歸原起站。`GameWorld` 的新世界與舊存檔是 `.direct`。
+- 轉乘群組（決策 81）：玩家可以把車站連成轉乘群組，同一群組的車站之間不論距離都能步行轉乘（450 m 以上算 virtual，5 km/h）；群組有自己的 ID，存檔版本 15。
 - 經營（決策 36）：新的世界是自由模式，什麼都不收、不記。經營模式下乘客上車時付票價（均一或依兩站的點之間精確的直線距離分段（決策 54），0 以下收 5 美元，每個迄點四捨五入到整美元），線路的列車每次離站記下班次、距離、乘客與座位；每個整點結算剛結束的一小時（營運 `75·班次 + 42·列車公里 + 18·車站`、維修 `12·路線公里 + 9·列車公里 + 8·列車`，車站是每條線路各自的停靠站），每個午夜結算前一天的能源（`220·路線公里 + 360·列車`）與人事（`620·車站 + 480·列車`），都以美元四捨五入，寫進帳本（最後 50 列）與每日的帳（720 天）。結算可以讓餘額變成負數。設定過票價時票價影響需求，以公司所在城市的基準票價比較（預設 0.75 美元，決策 46）。金額是美分。
 - 行駛曲線（決策 40）：列車與線路各有性能（加速、煞車、最高速度，可以有備用值與惰行；預設是標準性能），服務執行中不能換列車的性能。服務離開一站時得到一段行駛（出發時刻、長度、秒數），存檔；被擋住時丟掉，能動時從停止狀態以最少的秒數重新出發。
 - 貸款（決策 67）：經營模式的公司以 $100,000 為一步借入，最多 $5,000,000，隨時以一步償還；每個午夜付欠款 × 5% ÷ 360 的利息（整美元），寫進帳本，不算營運成本。

@@ -36,6 +36,7 @@ struct StationPanel: View {
                         .accessibilityIdentifier("station.rename")
                     }
                     operationSection(station)
+                    transferSection(station)
                     platformsSection(station)
                     realStationSection(station)
                     catchmentPopulationSection(station)
@@ -100,6 +101,56 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.operation")
         } footer: {
             Text(verbatim: mode.detail(in: session.language))
+        }
+    }
+
+    /// The station's transfer group (decision 81, MapBuilder's
+    /// interchanges): the stations passengers walk to from here however far
+    /// apart, a menu of the nearest stations to link it with, and leaving
+    /// the group.
+    private func transferSection(_ station: Station) -> some View {
+        let language = session.language
+        let group = session.world.transferGroupText(of: station.id)
+        return Section {
+            if let group {
+                Label {
+                    Text(verbatim: group)
+                } icon: {
+                    Image(systemName: "arrow.triangle.swap")
+                }
+                .accessibilityIdentifier("station.transferGroup")
+            }
+            Menu {
+                ForEach(session.world.transferCandidates(for: station.id)) { candidate in
+                    Button {
+                        session.linkSelectedStationForTransfer(with: candidate.id)
+                    } label: {
+                        Text(verbatim: "\(candidate.name) · \(NetworkBuilding.lengthText(session.world.distanceUnits(between: station.id, and: candidate.id) ?? 0, in: language))")
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Link for Transfers", "設為轉乘"))
+                } icon: {
+                    Image(systemName: "link")
+                }
+            }
+            .accessibilityIdentifier("station.linkTransfer")
+            if group != nil {
+                Button(role: .destructive) {
+                    session.unlinkSelectedStationTransfer()
+                } label: {
+                    Text(verbatim: language.text("Leave Transfer Group", "離開轉乘群組"))
+                }
+                .accessibilityIdentifier("station.unlinkTransfer")
+            }
+        } header: {
+            Text(verbatim: language.text("Transfers", "轉乘"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Passengers walk between the stations of a group to change trains, however far apart, at 5 km/h. Without one they walk only to stations under 450 m away.",
+                "同一轉乘群組的車站之間，乘客不論距離都會以時速 5 公里步行轉乘；沒有群組時只會走到 450 公尺內的車站。"
+            ))
         }
     }
 

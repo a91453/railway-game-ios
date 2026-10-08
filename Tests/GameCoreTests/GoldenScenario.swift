@@ -928,6 +928,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidLand)
         case "stationDemandFromLand":
             self = .rejected(.stationDemandFromLand)
+        case "invalidTransferGroup":
+            self = .rejected(.invalidTransferGroup)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1076,6 +1078,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidLand", forKey: .result)
         case .rejected(.stationDemandFromLand):
             try container.encode("stationDemandFromLand", forKey: .result)
+        case .rejected(.invalidTransferGroup):
+            try container.encode("invalidTransferGroup", forKey: .result)
         }
         // Fixtures name network nodes and edges by number.
         func encodeNode(_ node: TrackNodeID) throws {

@@ -92,6 +92,9 @@ public struct GameWorld: Equatable, Sendable {
     /// (``setCityBuildings(_:)``, ``setLand(_:)``, ``foundTowns(seed:)`` and
     /// the land's growth) only.
     public internal(set) var buildings = CityBuildings()
+    /// The stations linked for transfers however far apart (decision 81),
+    /// in ascending ID order. A new world has none.
+    public internal(set) var transferGroups: [TransferGroup] = []
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -106,6 +109,8 @@ public struct GameWorld: Equatable, Sendable {
     private var nextStationID: Int
     private var nextTrainID: Int
     private var nextLineID: Int
+    /// The next transfer group ID to hand out (decision 81).
+    var nextTransferGroupID = 1
 
     /// Creates an empty world reaching as far as `bounds`.
     public init(
@@ -3153,7 +3158,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land, landDemand, cityBuildings, buildings
+        case land, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3237,6 +3242,8 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         cityBuildings = container.contains(.cityBuildings) ? try container.decode(Bool.self, forKey: .cityBuildings) : false
         buildings = container.contains(.buildings) ? try container.decode(CityBuildings.self, forKey: .buildings) : CityBuildings()
+        transferGroups = container.contains(.transferGroups) ? try container.decode([TransferGroup].self, forKey: .transferGroups) : []
+        nextTransferGroupID = container.contains(.nextTransferGroupID) ? try container.decode(Int.self, forKey: .nextTransferGroupID) : 1
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3264,8 +3271,10 @@ extension GameWorld: Codable {
     /// with traffic control off has no `"trafficControl"` key (Stage T),
     /// which is also how saves made before it read; a blank map has no
     /// `"geoAnchor"` (Stage E2); a world without land has no `"land"`
-    /// (Phase 6a); and a world with the city's buildings off has no
-    /// `"cityBuildings"` and no `"buildings"` (Phase 6c-1). An explicit
+    /// (Phase 6a); a world with the city's buildings off has no
+    /// `"cityBuildings"` and no `"buildings"` (Phase 6c-1); and one without
+    /// transfer groups has no `"transferGroups"`, and one that never had
+    /// one no `"nextTransferGroupID"` (decision 81). An explicit
     /// `null` for any of them is
     /// rejected. The world's extent is written as `"bounds"`, in world units
     /// (Stage F3d).
@@ -3327,6 +3336,12 @@ extension GameWorld: Codable {
         }
         if !buildings.isEmpty {
             try container.encode(buildings, forKey: .buildings)
+        }
+        if !transferGroups.isEmpty {
+            try container.encode(transferGroups, forKey: .transferGroups)
+        }
+        if nextTransferGroupID != 1 {
+            try container.encode(nextTransferGroupID, forKey: .nextTransferGroupID)
         }
     }
 
@@ -3443,6 +3458,7 @@ extension GameWorld: Codable {
         guard Self.isStrictlyIncreasing(lines.map(\.id.rawValue), below: nextLineID) else {
             return "Line IDs must be unique, ascending and below nextLineID."
         }
+        if let problem = transferGroupProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }
@@ -3691,7 +3707,7 @@ extension GameWorld: Codable {
         return berths.contains(Berth(traversal: last, offset: end))
     }
 
-    private static func isStrictlyIncreasing(_ ids: [Int], below limit: Int) -> Bool {
+    static func isStrictlyIncreasing(_ ids: [Int], below limit: Int) -> Bool {
         zip(ids, ids.dropFirst()).allSatisfy { $0 < $1 } && (ids.last ?? 0) < limit && (ids.first ?? 1) >= 1
     }
 }

@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 14)
+        XCTAssertEqual(SavedGame.currentVersion, 15)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 15, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 16, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))
@@ -700,7 +700,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertTrue(Self.everyCellHasItsBuilding(world))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
         try world.advance(ticks: 1_440)
         XCTAssertTrue(Self.everyCellHasItsBuilding(world))
 
@@ -708,6 +708,33 @@ final class SavedGameTests: XCTestCase {
         let old = try JSONDecoder().decode(SavedGame.self, from: older).world
         XCTAssertEqual(old.townGrowth?.places.map(\.lastService), [0, 0])
         XCTAssertEqual(old.townGrowth?.places.map(\.lastReached), [0, 0])
+    }
+
+    /// Version 15 (decision 81): two stations 600 m apart in a transfer
+    /// group, and five passengers who walked between them waiting for
+    /// their second leg, ready when the 432 s walk is over. It saves byte
+    /// for byte, keeps the group and the next ID, and the walk goes on to
+    /// their arrival. A version 14 save has no groups.
+    func testVersionFifteenKeepsItsTransferGroup() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v15-transfer-group.json"))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 15)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        let b = StationID(rawValue: 2), nearB = StationID(rawValue: 3)
+        XCTAssertEqual(world.transferGroups.map(\.id), [TransferGroupID(rawValue: 1)])
+        XCTAssertEqual(world.transferGroups.map(\.stations), [[b, nearB]])
+        XCTAssertEqual(world.walkingTransfer(from: b, to: nearB)?.seconds, 432)
+        let waiting = try XCTUnwrap(world.waitingPassengers(at: nearB).first)
+        XCTAssertEqual(waiting.count, 5)
+        XCTAssertEqual(waiting.readyAt.map { $0.seconds - waiting.since.seconds }, 432)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        try world.advance(ticks: 40)
+        XCTAssertEqual(world.passengerLedger(of: StationID(rawValue: 1)).arrived, 5)
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v14-city-growth.json"))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: older).world.transferGroups, [])
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {

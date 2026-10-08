@@ -227,7 +227,8 @@ struct PassengerRouteGraph: Equatable {
         let open = served.filter(\.operationMode.allowsService)
         for from in open {
             for to in open where to.id != from.id {
-                if let walk = PassengerWalk(from: from.point, to: to.point, station: to.id) {
+                if let walk = PassengerWalk(from: from.point, to: to.point, station: to.id,
+                                            linked: world.areLinkedForTransfer(from.id, to.id)) {
                     walks[from.id, default: []].append(walk)
                 }
             }
@@ -476,15 +477,16 @@ extension GameWorld {
     public static var walkingTransferMetres: Int64 { PassengerTransferRules.maximumWalkMetres }
 
     /// The walk from station `origin` to `destination`, another station
-    /// less than ``walkingTransferMetres`` away: its time at the
-    /// reference's 5 km/h and its transfer tier (see ``PassengerWalk``).
-    /// `nil` for the same station, a station that does not exist, or one
-    /// too far away. The stations' operation modes are not read: the route
+    /// less than ``walkingTransferMetres`` away or in its transfer group
+    /// (decision 81): its time at the reference's 5 km/h and its transfer
+    /// tier (see ``PassengerWalk``). `nil` for the same station, a station
+    /// that does not exist, or one too far away and not in its group. The stations' operation modes are not read: the route
     /// graph walks only between open stations, and a journey's walk to or
     /// from a closed one is ended where it is served.
     public func walkingTransfer(from origin: StationID, to destination: StationID) -> PassengerWalk? {
         guard origin != destination, let from = station(id: origin), let to = station(id: destination) else { return nil }
-        return PassengerWalk(from: from.point, to: to.point, station: destination)
+        return PassengerWalk(from: from.point, to: to.point, station: destination,
+                             linked: areLinkedForTransfer(origin, destination))
     }
 
     /// Whether a journey may go on from `previous` to `next`: from the same
@@ -715,12 +717,14 @@ public struct PassengerWalk: Hashable, Sendable {
 
     /// The walk from `origin` to `destination`, the point of station
     /// `station`, or `nil` if they stand ``GameWorld/walkingTransferMetres``
-    /// or more apart. Exact on the squared distance.
-    init?(from origin: PlanPoint, to destination: PlanPoint, station: StationID) {
+    /// or more apart, unless they are `linked` in a transfer group
+    /// (decision 81): then any distance walks, ``PassengerTransferTier/virtual``
+    /// beyond the limit. Exact on the squared distance.
+    init?(from origin: PlanPoint, to destination: PlanPoint, station: StationID, linked: Bool = false) {
         let dx = origin.x - destination.x
         let dy = origin.y - destination.y
         let squared = dx * dx + dy * dy
-        guard let tier = PassengerTransferTier.of(squaredDistance: squared) else { return nil }
+        guard let tier = PassengerTransferTier.of(squaredDistance: squared) ?? (linked ? .virtual : nil) else { return nil }
         to = station
         seconds = PassengerTransferTier.walkSeconds(squaredDistance: squared)
         self.tier = tier

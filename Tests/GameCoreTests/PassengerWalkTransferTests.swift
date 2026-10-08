@@ -253,4 +253,56 @@ final class PassengerWalkTransferTests: XCTestCase {
             .station(id: c)?.operationMode, .normalFlow)
     }
 
+
+    // MARK: - Transfer groups (decision 81)
+
+    /// 600 m is too far to walk, unless the two stations are in one
+    /// transfer group: then a virtual transfer, 432 s at 5 km/h (38,400
+    /// units × 3,600 / 320,000), 8 minutes rounded up.
+    func testATransferGroupWalksBeyondTheLimit() throws {
+        var world = try world(apart: 600)
+        XCTAssertTrue(world.passengerRoutes(from: a, to: c).isEmpty)
+        XCTAssertNil(world.walkingTransfer(from: b, to: nearB))
+
+        try world.linkTransfer(b, nearB)
+        let walk = try XCTUnwrap(world.walkingTransfer(from: b, to: nearB))
+        XCTAssertEqual(walk.seconds, 432)
+        XCTAssertEqual(walk.tier, .virtual)
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        XCTAssertEqual(route.legs.map(\.from), [a, nearB])
+        XCTAssertEqual(route.walkMinutes, 8)
+        XCTAssertEqual(route.transferMinutes, 26, "virtual: 15 min × 1.7 = 25.5 min, rounded up")
+        XCTAssertNil(world.walkingTransfer(from: a, to: c), "only the group's stations")
+
+        try world.unlinkTransfer(nearB)
+        XCTAssertTrue(world.passengerRoutes(from: a, to: c).isEmpty)
+    }
+
+    /// Passengers walk across the group, change and arrive; leaving the
+    /// group sends those still needing the walk away, the ledger balanced.
+    func testPassengersWalkWithinAGroupAndLeaveWhenItGoes() throws {
+        var world = try world(apart: 600)
+        try world.linkTransfer(b, nearB)
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        var walked: WaitingGroup?
+        for _ in 0..<15 where walked == nil {
+            try world.advance(ticks: 1)
+            walked = world.waitingPassengers(at: nearB).first
+        }
+        let group = try XCTUnwrap(walked)
+        XCTAssertEqual(group.readyAt.map { $0.seconds - group.since.seconds }, 432, "the walk, longer than 120 s")
+        try assertConservedAndSaveable(world)
+        var arrived = world
+        try arrived.advance(ticks: 40)
+        XCTAssertEqual(arrived.passengerLedger(of: a).arrived, 5)
+        try assertConservedAndSaveable(arrived)
+
+        var left = try self.world(apart: 600)
+        try left.linkTransfer(b, nearB)
+        left.passengers[0].release(5, along: journey, at: left.clock.now)
+        try left.unlinkTransfer(b)
+        XCTAssertEqual(left.passengerLedger(of: a).abandoned, 5, "the walk is gone")
+        try assertConservedAndSaveable(left)
+    }
 }
