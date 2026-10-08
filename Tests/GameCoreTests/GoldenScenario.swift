@@ -3767,6 +3767,10 @@ struct DaySummary: Codable, Equatable {
     var maintenanceCost: Int64
     var energyCost: Int64
     var staffCost: Int64
+    /// Since schema 42 (decision 94): the company's buildings' rent, and
+    /// their upkeep, land tax and demolition; absent when 0.
+    var propertyRevenue: Int64?
+    var propertyCost: Int64?
 }
 
 /// The company's accounts (schema 22): `{"mode", "fareRules", "openedAt",
@@ -3800,7 +3804,9 @@ struct AccountsSummary: Codable, Equatable {
             days: accounts.days.map {
                 DaySummary(
                     day: $0.day, fareRevenue: $0.fareRevenue.amount, operatingCost: $0.operatingCost.amount,
-                    maintenanceCost: $0.maintenanceCost.amount, energyCost: $0.energyCost.amount, staffCost: $0.staffCost.amount
+                    maintenanceCost: $0.maintenanceCost.amount, energyCost: $0.energyCost.amount, staffCost: $0.staffCost.amount,
+                    propertyRevenue: $0.propertyRevenue == .zero ? nil : $0.propertyRevenue.amount,
+                    propertyCost: $0.propertyCost == .zero ? nil : $0.propertyCost.amount
                 )
             }
         )
