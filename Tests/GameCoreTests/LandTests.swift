@@ -6,7 +6,7 @@ import XCTest
 /// residents and jobs; the towns a blank map starts with, drawn from a
 /// seed; a station's catchment; the save form.
 final class LandTests: XCTestCase {
-    private func world(bounds: WorldBounds = .maximum) -> GameWorld {
+    private func world(bounds: WorldBounds = .standard) -> GameWorld {
         GameWorld(bounds: bounds, economy: GameEconomy(balance: 100_000_000, costs: testCosts))
     }
 
@@ -71,7 +71,7 @@ final class LandTests: XCTestCase {
         // In a world 300 m a side only part of the first town fits, and the
         // outer two lie outside it.
         let tiny = try WorldBounds(width: 19_200, height: 19_200)
-        for bounds in [WorldBounds.maximum, small, tiny] {
+        for bounds in [WorldBounds.standard, small, tiny] {
             for seed: UInt32 in [0, 1, 7, 2_026, .max] {
                 let land = Land.towns(seed: seed, in: bounds)
                 XCTAssertEqual(land.cells, Self.referenceTowns(seed: seed, in: bounds), "seed \(seed), \(bounds)")
@@ -83,16 +83,16 @@ final class LandTests: XCTestCase {
     /// A seed always makes the same towns, and the numbers a new game's
     /// map gets from seed 1 are pinned.
     func testASeedMakesTheSameTownsAndOtherSeedsMoveThem() throws {
-        let one = Land.towns(seed: 1, in: .maximum)
-        XCTAssertEqual(one, Land.towns(seed: 1, in: .maximum))
-        XCTAssertNotEqual(one, Land.towns(seed: 2, in: .maximum))
+        let one = Land.towns(seed: 1, in: .standard)
+        XCTAssertEqual(one, Land.towns(seed: 1, in: .standard))
+        XCTAssertNotEqual(one, Land.towns(seed: 2, in: .standard))
         XCTAssertEqual(one.cells.count, 887)
         XCTAssertEqual(one.totals, LandTotals(residents: 90_900, jobs: 67_413))
         XCTAssertEqual(Set(one.cells.map(\.use)), Set(LandUse.allCases))
         // The first town stands in the middle whatever the seed: its middle
         // cell is shops or offices with 65 residents (260 / 4) and 780 jobs.
         for seed: UInt32 in [1, 2, 99] {
-            let middle = Land.towns(seed: seed, in: .maximum).cell(at: PlanPoint(x: 524_288, y: 524_288))
+            let middle = Land.towns(seed: seed, in: .standard).cell(at: PlanPoint(x: 524_288, y: 524_288))
             XCTAssertEqual(middle?.residents, 65)
             XCTAssertEqual(middle?.jobs, 780)
             XCTAssertNotEqual(middle?.use, .residential)
@@ -107,7 +107,7 @@ final class LandTests: XCTestCase {
         var world = world()
         try world.setLand([LandCell(row: 0, column: 0, use: .residential, residents: 5, jobs: 0)])
         world.foundTowns(seed: 1)
-        XCTAssertEqual(world.land, Land.towns(seed: 1, in: .maximum))
+        XCTAssertEqual(world.land, Land.towns(seed: 1, in: .standard))
         XCTAssertNil(world.land.cell(row: 0, column: 0))
     }
 
@@ -155,7 +155,7 @@ final class LandTests: XCTestCase {
     // MARK: - Catchment
 
     func testTotalsWithinARadiusMatchEveryCellCounted() throws {
-        let land = Land.towns(seed: 7, in: .maximum)
+        let land = Land.towns(seed: 7, in: .standard)
         let points = [
             PlanPoint(x: 524_288, y: 524_288), PlanPoint(x: 520_000, y: 530_123), PlanPoint(x: 0, y: 0),
             PlanPoint(x: -60_000, y: 524_288), PlanPoint(x: 1_048_575, y: 1_048_575),

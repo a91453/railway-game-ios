@@ -8,7 +8,7 @@ import SwiftUI
 /// its "any city" from a point on the map): a place from the references'
 /// list or from a search moves the map there, the player moves it to taste,
 /// and the game's 16 km map starts with its middle at the middle of the
-/// view.
+/// view. Or the player starts on the whole of Taiwan (decision 88).
 ///
 /// Only that middle is kept, as the world's anchor. A search's results are
 /// Apple's map data, shown with the map and dropped (Attachment 6 §2.4 and
@@ -176,6 +176,36 @@ struct RealWorldPicker: View {
                     }
                 } header: {
                     Text(verbatim: region.name(in: launcher.language))
+                }
+                // Decision 88: one map of the whole of Taiwan, for lines from
+                // one end of it to the other, after Taiwan's places (which
+                // the UI tests tap without scrolling).
+                if region == .taiwan {
+                    Section {
+                        Button {
+                            dismiss()
+                            launcher.startWholeTaiwan()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "map.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.primary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: launcher.language.text("The whole of Taiwan", "全台灣"))
+                                        .font(.body)
+                                        .foregroundStyle(Theme.textPrimary)
+                                    Text(verbatim: launcher.language.text(
+                                        "The main island and Penghu, about 286 by 390 km. The land within 2 km of a station comes in as you build it.",
+                                        "本島加澎湖，約 286 × 390 公里。車站周圍 2 公里的土地在蓋站時才展開。"
+                                    ))
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.textSecondary)
+                                }
+                            }
+                        }
+                        .disabled(launcher.population == nil)
+                        .accessibilityIdentifier("realWorld.wholeTaiwan")
+                    }
                 }
                 if region == .taiwan, let railways = launcher.railways {
                     Section {

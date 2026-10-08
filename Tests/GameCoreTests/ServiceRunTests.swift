@@ -209,7 +209,7 @@ final class ServiceRunTests: XCTestCase {
     // MARK: - Following a run
 
     func testPhysicalMovementTravelsOneKilometreInOneMinute() throws {
-        var world = GameWorld(bounds: .maximum, economy: GameEconomy(balance: 10_000_000, costs: testCosts), clock: GameClock(speed: .x1))
+        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 10_000_000, costs: testCosts), clock: GameClock(speed: .x1))
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 103_424, y: 1_024))
         let edge = try world.buildTrackEdge(from: a, to: b)

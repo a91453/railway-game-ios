@@ -46,8 +46,8 @@ final class RealWorldMapTests: XCTestCase {
     /// 8,192 m away, and a world metre is 64 units.
     func testTheMapsMiddleIsAtTheAnchor() throws {
         let world = GameWorld.newGame(anchor: taipei)
-        XCTAssertEqual(world.bounds, .maximum, "16,384 m a side, as the map of 1024 tiles was (Stage F3d)")
-        XCTAssertEqual(GameWorld.newGame().bounds, .maximum)
+        XCTAssertEqual(world.bounds, .standard, "16,384 m a side, as the map of 1024 tiles was (Stage F3d)")
+        XCTAssertEqual(GameWorld.newGame().bounds, .standard)
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         XCTAssertEqual(frame.anchor, taipei)
         XCTAssertEqual(frame.middleX, 524_288)

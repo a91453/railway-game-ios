@@ -83,6 +83,13 @@ and its clock can run `"fast"` (6000×). Earlier saves have no goals and no
 trips counted. A build before version 17 refuses a version 17 save rather
 than dropping the scenario or the speed.
 
+Since version 18 (decision 88) a world's sides can be up to 2^25 units
+(524 km), and a world whose land is read in as it is needed (the whole of
+Taiwan) holds `"landBlocks"`, the 1,024 m blocks read so far, as runs along
+a row (`{"row", "column", "count"}`). Earlier saves are at most 2^20 a side
+and have their land whole. A build before version 18 refuses a version 18
+save rather than calling a larger world damaged or dropping the blocks.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -108,3 +115,4 @@ hand could hold, is refused with that reason
 | `v15-transfer-group.json` | 15 | Transfer groups (ARCHITECTURE decision 81): the walking-transfer test world with B and B' 600 m apart, too far to walk, linked in transfer group 1 (`"nextTransferGroupID": 2`); five passengers from A rode First to B, walked to B' (432 s at 5 km/h, a virtual transfer) and wait there for Second to C, after 2 minutes. Written by the version 15 build. |
 | `v16-assets-closed-year.json` | 16 | Fixed assets and a closed year (Phase 7a, ARCHITECTURE decision 85): a managed company with a 128 m edge (split at 32 m on day 1, its $720 and depreciation shared $180 / $540), a $7,200 station, a $3,600 train with two $360 cars and a $100,000 loan, run through the end of its first year and taken a car off: five asset records written down for 360 days, 361 capital days and year 0 closed (net loss $5,868, closing cash $182,720, equity $94,132). Written by the version 16 build (`SavedGameTests.assetWorld()`, `ASSET_SAVE_NEW=1`). |
 | `v17-scenario-fast.json` | 17 | Goals and fast forward (decision 86): five stations 1 km apart in a managed world, a line from the first to the second, and a scenario (`test.fixture`) to connect the first two stations' places and reach 1,000 residents, gold by day 30, silver 60, bronze 120, lost after 30 midnights in the red, Type C and D trains only; run a day and a minute at `fast`: the connection met on day 0, the population not. Written by the version 17 build (`SavedGameTests.scenarioWorld()`, `SCENARIO_SAVE_NEW=1`). |
+| `v18-whole-island-land.json` | 18 | The whole of Taiwan's scale (decision 88): a world 33,554,432 × 25,165,824 units (524 × 393 km), a managed company with demand from land and the city's buildings, its land read in as it is needed (`setLandOnDemand`): a station "Far" at (20,000,000, 18,000,000), the 22 blocks within 2 km of it read with five cells round it (1,000 residents, 1,800 jobs) and their five buildings, run ten minutes. Written by the version 18 build (`SavedGameTests.wholeIslandWorld()`, `WHOLE_ISLAND_SAVE_NEW=1`). |

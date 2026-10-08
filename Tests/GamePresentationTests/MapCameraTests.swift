@@ -182,7 +182,7 @@ final class MapCameraTests: XCTestCase {
     /// spare, but never closer than it would open without it, and kept on
     /// the map.
     func testACameraOpensOnWhatIsBuilt() throws {
-        let large = WorldBounds.maximum
+        let large = WorldBounds.standard
         // A network 28 × 20 tiles in the middle of a 16 km map.
         let demo = WorldRegion(minX: 498 * 1_024, minY: 502 * 1_024, maxX: 526 * 1_024, maxY: 522 * 1_024)
         let camera = PlanCamera(bounds: large, viewport: phone, showing: demo)
@@ -229,7 +229,7 @@ final class MapCameraTests: XCTestCase {
 
     /// The level of detail follows the zoom, as ``MapScale`` decides it.
     func testTheDetailFollowsTheZoom() {
-        let camera = PlanCamera(bounds: WorldBounds.maximum, viewport: phone)
+        let camera = PlanCamera(bounds: WorldBounds.standard, viewport: phone)
         var farther = camera
         while farther.canZoomOut {
             farther = farther.zoomedOut()

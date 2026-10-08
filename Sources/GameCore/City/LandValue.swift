@@ -126,6 +126,37 @@ extension GameWorld {
         return values
     }
 
+    /// What each of `cells` is worth, in their order: the same as
+    /// ``landValue(row:column:)`` for each cell of the world, worked out
+    /// together. Each cell is tried only against the stations of the
+    /// blocks (``Land/blockLength``, more than the catchment) round its
+    /// own, so a map's few cells near its stations (decision 88: the
+    /// whole of Taiwan) do not cost every station.
+    public func landValues(at cells: [CellPosition]) -> [LandValue] {
+        let stations = landValueStations()
+        let length = Land.blockLength
+        var byBlock: [LandBlock: [Int]] = [:]
+        for (index, station) in stations.enumerated() {
+            byBlock[LandBlock(row: Int(station.point.y / length), column: Int(station.point.x / length)), default: []].append(index)
+        }
+        // The stations of the blocks round each block, by ascending
+        // station as ``landValue(row:column:near:)`` ties them.
+        var near: [LandBlock: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)]] = [:]
+        return cells.map { cell in
+            let block = LandBlock(cellRow: cell.row, column: cell.column)
+            if near[block] == nil {
+                var found: [Int] = []
+                for row in (block.row - 1)...(block.row + 1) {
+                    for column in (block.column - 1)...(block.column + 1) {
+                        found += byBlock[LandBlock(row: row, column: column)] ?? []
+                    }
+                }
+                near[block] = found.sorted().map { stations[$0] }
+            }
+            return landValue(row: cell.row, column: cell.column, near: near[block] ?? [])
+        }
+    }
+
     /// The stations that can set a value: open ones with a measured service,
     /// by ascending station, with their point, service and stations
     /// reached; none while the land does not set ridership.

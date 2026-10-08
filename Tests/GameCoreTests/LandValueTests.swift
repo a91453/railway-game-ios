@@ -170,7 +170,7 @@ final class LandValueTests: XCTestCase {
     // MARK: - Every cell, against the reference
 
     func testEveryCellOfATownFollowsTheReference() throws {
-        var world = GameWorld(bounds: .maximum, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.foundTowns(seed: 5)
         world.setEconomyMode(.management)
         world.setLandDemand(true)

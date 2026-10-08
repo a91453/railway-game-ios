@@ -41,14 +41,19 @@ final class WorldBoundsTests: XCTestCase {
         }
     }
 
-    /// A new game's world (Stage E1) is the largest: 2^20 units, 16,384 m,
-    /// a side.
-    func testTheLargestWorldIsANewGames() throws {
-        XCTAssertEqual(WorldBounds.maximumSide, 1_048_576)
-        XCTAssertEqual(WorldBounds.maximumSide / WorldCoordinate.unitsPerMetre, 16_384)
-        XCTAssertEqual(WorldBounds.maximum, try WorldBounds(width: 1_048_576, height: 1_048_576))
-        XCTAssertTrue(WorldBounds.maximum.contains(PlanPoint(x: 1_048_575, y: 1_048_575)))
-        XCTAssertFalse(WorldBounds.maximum.contains(PlanPoint(x: 1_048_576, y: 0)))
+    /// The largest world (decision 88) is 2^25 units, 524,288 m, a side,
+    /// enough for the whole of Taiwan; the standard one, a new game's
+    /// (Stage E1) and the largest until then, 2^20 units, 16,384 m.
+    func testTheLargestWorldReachesAcrossTaiwanAndTheStandardOneIsANewGames() throws {
+        XCTAssertEqual(WorldBounds.maximumSide, 33_554_432)
+        XCTAssertEqual(WorldBounds.maximumSide / WorldCoordinate.unitsPerMetre, 524_288)
+        XCTAssertEqual(WorldBounds.maximum, try WorldBounds(width: 33_554_432, height: 33_554_432))
+        XCTAssertNoThrow(try WorldBounds(width: 33_554_432, height: 1), "a long, thin world")
+        XCTAssertEqual(WorldBounds.standard, try WorldBounds(width: 1_048_576, height: 1_048_576))
+        XCTAssertTrue(WorldBounds.standard.contains(PlanPoint(x: 1_048_575, y: 1_048_575)))
+        XCTAssertFalse(WorldBounds.standard.contains(PlanPoint(x: 1_048_576, y: 0)))
+        XCTAssertTrue(WorldBounds.maximum.contains(PlanPoint(x: 33_554_431, y: 1_048_576)))
+        XCTAssertLessThan(WorldBounds.maximumSide, WorldCoordinate.limit, "every point stays inside the geometry's limit")
     }
 
     func testBoundsRoundTripAndInvalidOnesAreRefusedAsTheyLoad() throws {
@@ -58,7 +63,7 @@ final class WorldBoundsTests: XCTestCase {
         let data = try encoder.encode(bounds)
         XCTAssertEqual(String(decoding: data, as: UTF8.self), #"{"height":2048,"width":9216}"#)
         XCTAssertEqual(try JSONDecoder().decode(WorldBounds.self, from: data), bounds)
-        for json in [#"{"width":0,"height":5}"#, #"{"width":5,"height":-1}"#, #"{"width":1048577,"height":5}"#, #"{"width":5}"#] {
+        for json in [#"{"width":0,"height":5}"#, #"{"width":5,"height":-1}"#, #"{"width":33554433,"height":5}"#, #"{"width":5}"#] {
             XCTAssertThrowsError(try JSONDecoder().decode(WorldBounds.self, from: Data(json.utf8)), json)
         }
     }

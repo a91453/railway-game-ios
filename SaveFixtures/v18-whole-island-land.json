@@ -1,0 +1,213 @@
+{
+  "saveVersion" : 18,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 1000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 25165824,
+      "width" : 33554432
+    },
+    "buildings" : [
+      {
+        "column" : 4882,
+        "density" : [
+          3
+        ],
+        "id" : 1,
+        "row" : 4393,
+        "use" : "residential"
+      },
+      {
+        "column" : 4881,
+        "density" : [
+          3
+        ],
+        "id" : 2,
+        "row" : 4394,
+        "use" : "residential"
+      },
+      {
+        "column" : 4882,
+        "density" : [
+          4
+        ],
+        "id" : 3,
+        "row" : 4394,
+        "use" : "office"
+      },
+      {
+        "column" : 4883,
+        "density" : [
+          4
+        ],
+        "id" : 4,
+        "row" : 4394,
+        "use" : "commercial"
+      },
+      {
+        "column" : 4882,
+        "density" : [
+          3
+        ],
+        "id" : 5,
+        "row" : 4395,
+        "use" : "residential"
+      }
+    ],
+    "cityBuildings" : true,
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 999000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 4882,
+        "residents" : [
+          300
+        ],
+        "row" : 4393,
+        "use" : "residential"
+      },
+      {
+        "column" : 4881,
+        "residents" : [
+          300
+        ],
+        "row" : 4394,
+        "use" : "residential"
+      },
+      {
+        "column" : 4882,
+        "jobs" : [
+          900
+        ],
+        "residents" : [
+          50
+        ],
+        "row" : 4394,
+        "use" : "office"
+      },
+      {
+        "column" : 4883,
+        "jobs" : [
+          900
+        ],
+        "residents" : [
+          50
+        ],
+        "row" : 4394,
+        "use" : "commercial"
+      },
+      {
+        "column" : 4882,
+        "residents" : [
+          300
+        ],
+        "row" : 4395,
+        "use" : "residential"
+      }
+    ],
+    "landBlocks" : [
+      {
+        "column" : 304,
+        "count" : 3,
+        "row" : 272
+      },
+      {
+        "column" : 303,
+        "count" : 5,
+        "row" : 273
+      },
+      {
+        "column" : 303,
+        "count" : 5,
+        "row" : 274
+      },
+      {
+        "column" : 303,
+        "count" : 5,
+        "row" : 275
+      },
+      {
+        "column" : 303,
+        "count" : 4,
+        "row" : 276
+      }
+    ],
+    "landDemand" : true,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 1120,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Far",
+        "point" : {
+          "x" : 20000000,
+          "y" : 18000000
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

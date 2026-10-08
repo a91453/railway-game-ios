@@ -164,11 +164,31 @@ enum TrackSpacing {
                 return min(p.x, q.x) - w < other.maximum.x && other.minimum.x - w < max(p.x, q.x)
                     && min(p.y, q.y) - w < other.maximum.y && other.minimum.y - w < max(p.y, q.y)
             }
+            // Each piece is filed column by column of cells (decision 88):
+            // under a column, only the cells beside the part of the piece a
+            // point there can be less than the spacing from, so a long
+            // slanting piece files cells as its length, not as its box's
+            // area (some 10^9 cells for a straight edge across Taiwan).
+            let size = Pieces.cellSize
             var cells: [Cell: [Int]] = [:]
             for i in indices {
                 let (p, q) = (points[i].plan, points[i + 1].plan)
-                for x in Cell.cell(min(p.x, q.x) - w)...Cell.cell(max(p.x, q.x) + w) {
-                    for y in Cell.cell(min(p.y, q.y) - w)...Cell.cell(max(p.y, q.y) + w) {
+                let (left, right) = p.x <= q.x ? (p, q) : (q, p)
+                for x in Cell.cell(left.x - w)...Cell.cell(right.x + w) {
+                    // A point in this column less than the spacing from the
+                    // piece is nearest a point of it within the spacing of
+                    // the column, between `from` and `to`; the piece's
+                    // heights there, a unit wider either way for the
+                    // division's rounding.
+                    let from = max(left.x, x * size - w), to = min(right.x, (x + 1) * size - 1 + w)
+                    var low = min(p.y, q.y), high = max(p.y, q.y)
+                    if left.x != right.x {
+                        let a = left.y + (from - left.x) * (right.y - left.y) / (right.x - left.x)
+                        let b = left.y + (to - left.x) * (right.y - left.y) / (right.x - left.x)
+                        low = max(low, min(a, b) - 1)
+                        high = min(high, max(a, b) + 1)
+                    }
+                    for y in Cell.cell(low - w)...Cell.cell(high + w) {
                         cells[Cell(x, y), default: []].append(i)
                     }
                 }

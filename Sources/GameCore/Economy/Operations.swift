@@ -115,8 +115,8 @@ extension GameWorld {
     /// The square of the straight-line distance between two stations'
     /// points, in world units, exactly (Stage F3d; until then it was the
     /// distance between the 1024-unit tiles under them). Stations stand in
-    /// the world's bounds, so each difference is below 2^20 and the sum of
-    /// the squares below 2^41.
+    /// the world's bounds, so each difference is below 2^25 and the sum of
+    /// the squares below 2^51.
     func squaredDistance(from origin: StationID, to destination: StationID) -> Int64? {
         guard let a = station(id: origin), let b = station(id: destination) else { return nil }
         let dx = a.point.x - b.point.x

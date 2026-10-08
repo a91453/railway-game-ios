@@ -88,9 +88,15 @@
 ///     `"scenario"`, its goals and how far they are met, the accounts' days
 ///     their `"fareTrips"`, and the clock can run `"fast"`. A build that
 ///     reads only version 16 would drop the scenario, or refuse the speed.
+/// 18. The whole of Taiwan (decision 88): a world's sides can be up to 2^25
+///     units (524 km), no longer 2^20, and its land can be read in as it is
+///     needed, with `"landBlocks"`, the blocks read so far. A build that
+///     reads only version 17 would call a larger world damaged, or drop the
+///     blocks and read none again, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 17
+    public static let currentVersion = 18
 
     public let world: GameWorld
 
@@ -159,6 +165,8 @@ extension SavedGame: Codable {
         // written down or off; there are no capital days or closed years.
         // Version 16 to 17: a world without `"scenario"` has no goals, and a
         // day without `"fareTrips"` had none counted.
+        // Version 17 to 18: a world without `"landBlocks"` has its land
+        // whole, as every world before had.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

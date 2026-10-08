@@ -36,7 +36,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | --- | --- |
 | `schemaVersion` | `30` |
 | `description` | 這個情境驗證什麼（給人看） |
-| `initialState` | `worldWidth`、`worldHeight`（世界的範圍，世界單位，每邊 1 到 2^20；schema 30）、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
+| `initialState` | `worldWidth`、`worldHeight`（世界的範圍，世界單位，每邊 1 到 `WorldBounds.maximumSide`：schema 30 時是 2^20，決策 88 起 2^25；現有的 golden 都在 2^20 以內）、`balance`、`costs`（`track` / `station` / `train`）、`gameMinutes` 或 `gameSeconds`、`speed` |
 | `steps` | 依序執行的陣列；每一步是指令 `{ "command": {...}, "expect": {...} }` 或觀察 `{ "observe": {...}, "expect": {...} }`，恰好擇一 |
 | `expectedFinalState` | `gameMinutes` 或 `gameSeconds`、`pendingTenths`（可以省略）、`speed`、`balance`、`stations`、`trains`、`lines`、`serviceDay`、`network`、`trafficControl`、`passengers`、`riders`、`accounts` |
 

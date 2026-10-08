@@ -1234,6 +1234,12 @@ public final class GameSession {
     /// the snapshots its `handleUndo` goes back through.
     public static let undoLimit = 25
 
+    /// How many of those edits may have read land in (decision 88): each
+    /// keeps a copy of a map's land and buildings, some 110 bytes a cell,
+    /// 45 MB with a hundred stations on the whole of Taiwan and 220 MB with
+    /// six hundred, so older edits are forgotten past three.
+    public static let landReadingUndoLimit = 3
+
     /// The one way an edit changes the world (ARCHITECTURE decision 82):
     /// runs `command` on a copy of ``world`` and, only if it succeeds,
     /// keeps the world as it was for ``undo()`` and puts the copy in its
@@ -1251,12 +1257,24 @@ public final class GameSession {
     /// what it throws: a `GameError` from a GameWorld command, or nothing
     /// for a command that cannot fail. It shows no message
     /// (``perform(_:)`` does).
+    /// Reads in the land round every station whose land is not read yet,
+    /// on a map whose land is read in as it is needed (decision 88, see
+    /// ``readLand(roundStationsOf:population:places:)``). Every edit does
+    /// it (``performEdit(_:)``), so a station's land comes with it and
+    /// Undo takes both back; a game that starts does it for the stations
+    /// built while the app had no population. Not an edit: nothing to undo.
+    public func readLandRoundStations() {
+        Self.readLand(roundStationsOf: &world, population: population, places: places)
+    }
+
     @discardableResult
     public func performEdit<Result, Failure: Error>(
         _ command: (inout GameWorld) throws(Failure) -> Result
     ) throws(Failure) -> Result {
         var edited = world
         let result = try command(&edited)
+        // Decision 88: a new station's land comes with it.
+        Self.readLand(roundStationsOf: &edited, population: population, places: places)
         guard edited != world else { return result }
         if !editGestureHasSnapshot {
             if undoHistory.count >= Self.undoLimit {
@@ -1264,9 +1282,29 @@ public final class GameSession {
             }
             undoHistory.append(world)
             editGestureHasSnapshot = isEditGestureOpen
+            forgetEditsPastTheLandReadingLimit(before: edited)
         }
         world = edited
         return result
+    }
+
+    /// Drops the oldest snapshots until at most ``landReadingUndoLimit``
+    /// of the edits up to `latest` read land in (their land's blocks are
+    /// not the next world's).
+    private func forgetEditsPastTheLandReadingLimit(before latest: GameWorld) {
+        guard latest.landBlocks != nil else { return }
+        var reads = 0
+        var next = latest
+        for index in undoHistory.indices.reversed() {
+            if undoHistory[index].landBlocks != next.landBlocks {
+                reads += 1
+                if reads > Self.landReadingUndoLimit {
+                    undoHistory.removeFirst(index + 1)
+                    return
+                }
+            }
+            next = undoHistory[index]
+        }
     }
 
     /// A drag of a control that edits as it moves (a slider's

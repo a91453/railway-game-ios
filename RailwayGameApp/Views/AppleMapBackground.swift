@@ -98,7 +98,9 @@ struct AppleMapBackground: UIViewRepresentable {
         map.showRailways(
             railways,
             near: realWorld.anchor,
-            look: FollowingMapView.RailwayLook(anchor: realWorld.anchor, style: trackStyle, theme: theme),
+            look: FollowingMapView.RailwayLook(
+                anchor: realWorld.anchor, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme
+            ),
             credit: DataSourceCredits.railwaysOnMap(in: language)
         )
         map.follow(realWorld, camera: camera)
@@ -116,13 +118,20 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// How the real railways are drawn: set again only when it changes.
     struct RailwayLook: Equatable {
         let anchor: GeoAnchor
+        /// How far from the anchor real railways are drawn, in metres.
+        let reach: Double
         let style: RealRailways.TrackStyle
         let theme: RealRailways.MapTheme
     }
 
-    /// How far from the anchor real railways are drawn: past the corners
-    /// of the largest map (8,192 m each way, Stage E1), with room to spare.
-    private static let railwayReach = 16_000.0
+    /// How far from the anchor real railways are drawn on a map reaching
+    /// as far as `region`: past its corners, at least 16 km (a 16 km map's
+    /// are 8,192 m each way, Stage E1), so the whole of Taiwan (decision
+    /// 88) draws all of them.
+    static func railwayReach(of region: WorldRegion) -> Double {
+        let unitsPerMetre = Double(WorldCoordinate.unitsPerMetre)
+        return max(16_000, (region.width * region.width + region.height * region.height).squareRoot() / 2 / unitsPerMetre + 2_000)
+    }
 
     private var railwayLook: RailwayLook?
     private var railwayOverlays: [any MKOverlay] = []
@@ -177,8 +186,8 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         strokes = [:]
         stations = nil
         if let railways {
-            railwayOverlays = lineStrokes(railways.lines(near: anchor, within: Self.railwayReach), look: look)
-            let marks = railways.stationMarks(near: anchor, within: Self.railwayReach)
+            railwayOverlays = lineStrokes(railways.lines(near: anchor, within: look.reach), look: look)
+            let marks = railways.stationMarks(near: anchor, within: look.reach)
             if !marks.isEmpty {
                 let stations = stationDots(marks, near: anchor, look: look)
                 self.stations = stations
@@ -231,7 +240,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         look: RailwayLook
     ) -> (overlay: MKPolygon, renderer: StationDotsRenderer) {
         let middle = MKMapPoint(CLLocationCoordinate2D(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees))
-        let reach = Self.railwayReach * MKMapPointsPerMeterAtLatitude(anchor.latitudeDegrees)
+        let reach = look.reach * MKMapPointsPerMeterAtLatitude(anchor.latitudeDegrees)
         let corners = [(-1.0, -1.0), (1, -1), (1, 1), (-1, 1)].map { MKMapPoint(x: middle.x + $0.0 * reach, y: middle.y + $0.1 * reach) }
         let square = MKPolygon(points: corners, count: corners.count)
         let dots = marks.map { mark in

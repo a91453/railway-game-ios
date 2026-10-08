@@ -962,3 +962,17 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有快轉） | `GameSpeed.fast`（6000×） | gap → 原生：以年為單位的目標需要更快的速度 |
 | （參考沒有） | `Goal`、`Scenario`、`ScenarioState`、`judgeScenario(endingWith:)`、`startScenario(_:)`、`Challenge`、`GoalsPanel`、存檔版本 17 | gap → 原生 |
 
+
+## 全島地圖：上限、全台灣與土地按需展開（決策 88）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`（研究用的是 `5f6ac80`，見 `docs/research/WHOLE_TAIWAN_MAP.md` §6），搜尋 `lazyLoad`、`visibleRoutes`、`chunk`、`tileSize`、`sector`。參考沒有按需展開的土地：`Railway/taipei_gta_reference/` 的 `lazyLoads`／`worldLazyMB` 是音訊緩衝區的延遲載入，不是土地；`Ci/` 與 `Railway/` 網站一次讀入整個城市的人口格。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js`：以錨點的 `MercatorCoordinate` 換算局部公尺 | `RealWorldFrame`（不變）、`WholeTaiwan.anchor`／`bounds` | 一致：全島照舊用 Web Mercator，錨點取框的 Mercator 中點 |
+| 同站 `rail-3d/physical/client.js`／`visibleRoutes(lines, bounds)`（依畫面外框裁切） | `FollowingMapView.railwayReach(of:)` | adapted：這一步只把畫的範圍放大到整張地圖；依畫面裁切與縮放分級留給下一個 PR |
+| （參考沒有） | `WorldBounds.maximumSide` 2^25、`WorldBounds.standard`、`LandBlock`、`GameWorld.landBlocks`、`setLandOnDemand()`、`expandLand(_:cells:)`、`landValues(at:)`、存檔版本 18 | gap → 原生 |
+| （參考沒有） | `LandImport.cells(in:population:places:frame:bounds:)`（依 WorldPop 格的列 × 欄矩形分配）、`GameSession.readLandRoundStations()`、`landReadingUndoLimit` | gap → 原生 |
+| （參考沒有） | 稀疏的 `CityMap`、沿線段分格的 `TrackSpacing.Pieces`、`LandDemand.shares` 的單站快速路徑 | gap → 原生（行為不變的效能修改） |
+
+沒有比例換算：區塊是 16 格 × 4,096 單位 = 65,536 單位（1,024 m），2 km 是 128,000 單位。
