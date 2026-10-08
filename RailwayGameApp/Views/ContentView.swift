@@ -65,6 +65,26 @@ struct ContentView: View {
             panelSheet(panel)
         }
         .environment(screen)
+        // Phase 7a: a year that closes while playing opens its year-end
+        // report, at once if no panel is open, else once the panel closes.
+        .onChange(of: session.yearEndYear) { _, year in
+            if year != nil, screen.panel == nil {
+                screen.panel = .yearEnd
+            }
+        }
+        .onChange(of: screen.panel) { old, new in
+            if old == .yearEnd {
+                session.dismissYearEnd()
+            } else if new == nil, session.yearEndYear != nil {
+                // After the closing sheet has gone.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    if screen.panel == nil, session.yearEndYear != nil {
+                        screen.panel = .yearEnd
+                    }
+                }
+            }
+        }
         .onChange(of: ObjectIdentifier(session)) { _, _ in
             mapCamera = nil
             screen.stopPopTravelPlay()
@@ -104,6 +124,9 @@ struct ContentView: View {
             DataSourcesView(launcher: launcher)
         case .settings:
             SettingsView(audio: audio)
+        case .yearEnd:
+            YearEndSheet(session: session)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -379,6 +402,8 @@ final class GameScreenState {
         // open was thought to fail too, but the iOS 26.5 Simulator shows
         // either way (run 37730023961).
         case lines, economy, station, timetable, fleet, mapLayers, dataSources, settings
+        /// A closed year's report (Phase 7a), opened by the year's closing.
+        case yearEnd
 
         var id: Self { self }
     }
