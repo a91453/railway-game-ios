@@ -24,14 +24,23 @@ final class GameAudio {
     @ObservationIgnored private var sounds: [SoundCue: [AVAudioPlayer]] = [:]
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
     @ObservationIgnored private var isActive = false
+    /// Whether anything is played at all: not in UI tests (see `init`).
+    @ObservationIgnored private let plays: Bool
 
     private enum Key {
         static let music = "audio.music"
         static let sounds = "audio.sounds"
     }
 
-    init(defaults: UserDefaults = .standard) {
+    /// `plays` false keeps the switches working and plays nothing: the UI
+    /// tests' Simulator runs on a 3-core runner, and the music, on by
+    /// default, looped through every test. On #211's run the audio I/O
+    /// thread reported "skipping cycle due to overload" while XCTest's
+    /// queries took 1 to 2 s each and a test timed out, though the app's
+    /// main thread answered every one in time.
+    init(defaults: UserDefaults = .standard, plays: Bool = true) {
         self.defaults = defaults
+        self.plays = plays
         musicOn = defaults.object(forKey: Key.music) as? Bool ?? true
         soundsOn = defaults.object(forKey: Key.sounds) as? Bool ?? true
         // A call, an alarm or another app can stop the music while the app
@@ -81,7 +90,7 @@ final class GameAudio {
     /// trains the player is not looking at ring quieter and at most every
     /// few seconds, so a busy network does not ring all the time.
     func play(_ cue: SoundCue) {
-        guard soundsOn, isActive else { return }
+        guard plays, soundsOn, isActive else { return }
         let now = ContinuousClock.now
         if let last = lastPlayed[cue], now - last < Self.spacing(of: cue) { return }
         let players = sounds[cue] ?? loadSound(cue)
@@ -97,7 +106,7 @@ final class GameAudio {
     }
 
     private func updateMusic() {
-        if musicOn && isActive {
+        if plays && musicOn && isActive {
             if music == nil {
                 music = Self.player(named: "music-loop", extension: "caf", volume: 0.45)
                 music?.numberOfLoops = -1
