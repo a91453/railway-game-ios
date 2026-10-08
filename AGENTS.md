@@ -20,6 +20,10 @@ not only Claude Code. Read it first and follow it. In particular:
   personal data: this repository is public.
 - Never commit to `main`, merge a pull request or enable auto-merge.
 - Report every check as **VERIFIED** (it ran, and where) or **UNVERIFIED**.
+- On a hard problem, first see whether the owner's reference repository has
+  something to port, then look for open-source projects on GitHub, minding
+  their licenses (`CLAUDE.md`, after the reference check). When neither has
+  anything usable, write it yourself.
 
 Its Claude-specific parts translate as follows:
 
@@ -55,6 +59,12 @@ The tutorial and map camera interfaces that the app's tutorial screens and
 the large map are built against, the names of the controls the tutorial
 outlines, and who changes which file while they are built in parallel:
 [`docs/UI_INTERFACES.md`](docs/UI_INTERFACES.md).
+
+Before starting a task, every agent claims it in the work registry, issue
+#231, as `CLAUDE.md` (Workflow) describes: what it does, which files, and
+the save version, decision number and golden schema it reserves. An agent
+that does not bump the golden schema or add decisions still claims its task
+and files there.
 
 Shared files that conflict easily:
 
