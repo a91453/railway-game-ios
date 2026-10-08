@@ -1,15 +1,15 @@
 # 私有參考移植盤點：已完成、Phase 7、Phase 8 與其他待辦
 
-更新日期：**2026-10-07（UTC）**。已重新讀 `AGENTS.md`、`CLAUDE.md`，並 fetch 兩個 repo 的 `main`：
+更新日期：**2026-10-08（UTC）**。已重新讀 `CLAUDE.md`，並 fetch 兩個 repo 的 `main`：
 
 | 基準 | 固定 commit |
 | --- | --- |
-| `a91453/railway-game-ios` 的 `origin/main` | `e7447f439464615647ff142d9dcb74c29d143f98`（PR #186 合併後） |
-| 實際 clone 的 `a91453/railway-reference-private` | `f27339b9d030f9bcc8d96388134cba719e0e0d2b` |
+| `a91453/railway-game-ios` 的 `origin/main` | `6dfccad069b183cb8dd8bc9f28e124819ef3600d`（PR #217 合併後） |
+| 實際 clone 的 `a91453/railway-reference-private` | `5f6ac80c233063c09c4c61571f629881af0b19ec`（加入 `MapBuilder/`） |
 
-本文件取代 2026-10-05、`77b0443`／參考庫 `2db0c5a` 基準的 V4 期間盤點。V4b–V4e 已合併，原來的「等 V4」「只能新增檔案」與存檔 11／golden schema 33 預排不再適用；參考庫也已加入 `Simulator/`，不能再寫成永久固定在 `2db0c5a`。本次只更新本文件，沒有修改程式、測試、golden、存檔、重播 fixture、workflow、版本號或設計決策，**沒有跑任何程式檢查**。
+本次更新與拆除車站（ARCHITECTURE 決策 83）放在同一個 PR：該 Stage 的參考檢查本來就要讀 `MapBuilder/`，所以順便把 2026-10-07（`e7447f4`／參考庫 `f27339b`）的基準更新到存檔版本 15，補上 `MapBuilder/` 的盤點（§5.4）與 #203–#210 已完成的移植（§2.1）。§3–§5 其他各列沒有重新查閱，仍是 10-07 的判讀。
 
-依 `CLAUDE.md`，**`Ci/`、`Railway/`、`Simulator/` 都是授權的實作來源**，可直接重用、打包、轉換或適配。未另標條款的作者內容視為可用；明示第三方授權／署名逐項保留。階段表示工作分組，有跨階段相依時可一起移植。部署密鑰、憑證與個資仍不得進公開 repo。
+依 `CLAUDE.md`，**`Ci/`、`Railway/`、`Simulator/`、`MapBuilder/` 都是授權的實作來源**，可直接重用、打包、轉換或適配。未另標條款的作者內容視為可用；明示第三方授權／署名逐項保留。階段表示工作分組，有跨階段相依時可一起移植。部署密鑰、憑證與個資仍不得進公開 repo。
 
 ## 1. 判讀方式與目前契約
 
@@ -23,8 +23,9 @@
 | O | `Railway/railway_game_reference_clean/` |
 | T | `Railway/taipei_gta_reference/source/` |
 | S | `Simulator/reference_snapshot/` |
+| M | `MapBuilder/reference_snapshot/` |
 
-目前 `Sources/GameCore/World/SavedGame.swift` 的 **`currentVersion = 14`**；`Tests/GameCoreTests/GoldenScenario.swift` 的 **`schemaVersion = 39`**，讀取端接受 30–39。待辦表的四個影響欄是**實作範圍的預估（UNVERIFIED）**，本 PR 不執行這些工作：
+目前 `Sources/GameCore/World/SavedGame.swift` 的 **`currentVersion = 15`**（#210 轉乘群組）；`Tests/GameCoreTests/GoldenScenario.swift` 的 **`schemaVersion = 39`**，讀取端接受 30–39。拆除車站不改存檔格式，兩者都不變。待辦表的四個影響欄是**實作範圍的預估（UNVERIFIED）**，本 PR 只做拆除車站，不執行其他工作：
 
 - **存檔**：「否」表示只做呈現或用既有指令／查詢；「是」表示提案需要新的持久化契約與遷移；「條件式」列出觸發範圍。相容選填欄位不必一律升版：車種、車站狀態、貸款、每週需求已有維持版本的實例。格式讓舊存檔無法讀取時，依 `CLAUDE.md` 升版、加遷移及新 fixture；其他新契約由存檔負責者定案，不預占下一個號碼。
 - **golden schema**：新增 fixture 或改變行為不等於一定升 schema；新增指令、觀察、結果名稱或欄位契約才需評估新 schema。行為改變即使不升 schema，也須逐值說明預期差異，不能為過關重寫答案。
@@ -58,6 +59,10 @@
 | **V4e 授權與死結位置：已完成**（舊 §1／§5） | #134、#137、決策 64；`GameWorld.contestedResources`／`routeWaits`、`TrafficOverlay.swift`、`MapArt.swift`；授權軌道、等候／死結外圈、互等位置與文字，維持 v10／34。 | 地圖檔案不再是 V4 未合併的占用範圍。 |
 | **分析圖層：部分完成**（舊 §5） | #133 腹地圈；#138、#149 人口／旅次；#178 用途／地價／腹地涵蓋。`MapLayers.swift`、`PopulationHeatmap.swift`、`TravelDemandMap.swift`、`CityMap.swift`、`MapLayerSheet.swift`。 | 共線顯示偏移與額外指標 P8-8，不能概括全部分析圖層未做。 |
 | **明暗外觀、更名、線路色：已完成目前功能** | `Palette.swift` 隨系統明暗切換；#157／決策 71 的 `renameStation`／`renameLine`／`setLineColor`、`ServiceLine.swift` 與來源 20 色色盤。 | 來源完整夜景／燈光仍列 P8-7。 |
+| **復原：已完成**（M，10-08） | #203、#205、決策 82；M `chunks/611-2cd22d6d6f5c40f4.js` 的 `handleUndo`、上限 `B.I6`（25）。`GameSession.performEdit`／`undo`、`ControlPanel` 的復原按鈕。 | 重做（redo）：M 沒有；S 的 `app/simulator/page-38607521e5e99afd.js` 有 `past`／`future` 兩疊（各 80 份，Shift-Z／Y），列 M6。 |
+| **路線編輯：已完成三項**（M，10-08） | #208、決策 80；M `611` 的 `handleAddStationToLine`／`ef`、`handleReverseStationOrder`、`handleLineDuplicate`。`LineStopEditing.insertionIndex`、`GameWorld.reverseLineStops`／`duplicateLine`、`LinesPanel.swift`。 | 車站／過路點互換與 `waypointOverrides` 列 M5。 |
+| **轉乘群組：已完成**（M＋C，10-08） | #210、決策 81；M 的 `handleCreateInterchange`／`handleRemoveStationFromInterchange`，C 的 `transferGroupId`。`TransferGroup.swift`、`StationPanel.swift`；存檔 15。 | 地圖畫群組連線列 M4。 |
+| **拆除車站：本 PR**（M＋C） | 決策 83；M `611` 的 `handleStationDelete`，C `lib/app__q_c234188b7c397f91.js` 的 `confirmDeleteStationAllLines`／`confirmDeleteStationSingleLine`／`_applyRemoveStationFromLine`、封站的 `clearStationWaitingPassengers`。`GameWorld.removeStation`、`ServiceLine.removingStation`、`StationRemoval.swift`、`StationPanel.swift`；存檔、golden schema 不變。 | 只從一條線移除（C 的 single-line）已有 `setLineStops`；C 的里程配額退款不適用（沒有配額經濟，P7-4）。 |
 | **繁中／英文：已完成現行介面**（舊 §5） | L1／決策 38；`Resources/Localizable.xcstrings`、`DisplayLanguage.swift` 與 Presentation 文字檔。#171 移除只有 App 名稱的日文 locale，避免錯誤 fallback。 | 沒有整份移植來源所有語言；新增日文等列 O12。 |
 
 表中的核心相對檔名位於 `Sources/GameCore/`，Presentation 相對檔名位於 `Sources/GamePresentation/`，View 位於 `RailwayGameApp/Views/`，`Resources/` 位於 `RailwayGameApp/`。
@@ -128,10 +133,27 @@ Phase 8 只讀 `railwaySnapshot()` 的中心線、縱斷面、結構物、洞口
 | **O12 更多語言／站名英譯品質工具**（舊 §3-8／§5） | `C/lib/{station_name_en_core,china-stationname-quality,international-stationname-quality}*.js`、`C/dist/vendor-pinyin*.js`、`R/i18n/{translations,content-translations}.js`、C locale。台灣站名英譯、繁中／英文介面完成；其他城市品質／拼音、完整日文未採用。`CITIES` 已有其他城市，舊表「只有台灣」不再適用。 | **否（顯示／名稱工具）**：已存玩家名字不重寫。 | **否**。 | **是（新增介面語言）**；純站名資料／拼音工具否；Presentation 語言 API 也需擴充。 | **條件式**：站名／圖例會變；離線品質工具否。 |
 | **O13 公車轉乘資訊卡**（舊 §4） | `R/bus-transfer-ui.js`、`i18n/bus-transfer-translations.js`；`/api/bus-transfer` 後端缺，先接可用靜態資料或補資料源，UI 仍可重用。資訊卡不等於新增公車模擬。 | **否（資訊卡）**；公車玩法另訂契約。 | **否（資訊卡）**。 | **是**。 | **否（面板卡片）**；公車圖層另案。 |
 | **O14 台北包任務／內容／建造流程**（舊 §4 整包） | `T/assets/{content-Bs2Ca5A2,missions-*,build-*,actors-Cx0CrTrM}.js`。美術／renderer 已拆 P8-2／3／11；任務、互動商品、場景建造不是房地產規則。可適配有用流程，content／world 缺依賴見 #185，不把整包標成已移植或不可用。 | **否（教學／展示）**；保存任務／角色玩法需新契約。 | **否（呈現）**；新權威命令需評估。 | **是（採用互動內容時）**。 | **條件式**：面板否；場景建造／任務位置是。 |
-| **O15 Simulator 模板／零件資料匯入**（新增來源） | `S/api/templates/*.json`（9 份／865 放置）、`api/track-sets.json`（6 套／101 零件）、catalog／幾何 chunk。可作展示／建造情境，需明訂模型毫米 → 遊戲公尺／世界單位、道岔／接點映射。`priceNTD` 是模型零件估價，不套作遊戲建造費。 | **否（既有建造指令）**；新零件狀態才評估。 | **否（既有 DSL）**；新接點／模板命令才評估。 | **是（加入模板選擇時）**。 | **是（預覽／放置）**。 |
+| **O15 Simulator 模板／零件資料匯入**（新增來源） | `S/api/templates/*.json`（9 份／865 放置）、`api/track-sets.json`（6 套／101 零件）、catalog／幾何 chunk。可作展示／建造情境，需明訂模型毫米 → 遊戲公尺／世界單位、道岔／接點映射。`priceNTD` 是模型零件估價，不套作遊戲建造費。10-08 補查：`4193` 的零件型錄約 93 種（直軌、曲軌、道岔、交叉、雙線、橋），各零件的端點公式與接合判定（距離 ≤ 1.5 mm、角度差 ≤ 1°）、`nodes`／`joints` 拓樸格式（回報未接合、斷開），可對應 `RailwayNetwork` 的節點接合與「接在端點上放置」；路線圖的端點合併 16 mm、列車只有等速（80／160／320 mm/s），沒有加減速、閉塞或號誌。 | **否（既有建造指令）**；新零件狀態才評估。 | **否（既有 DSL）**；新接點／模板命令才評估。 | **是（加入模板選擇時）**。 | **是（預覽／放置）**。 |
 | **O16 Web 宿主縮放／存檔 I/O** | `O/web_runtime/` 的雙指縮放、IndexedDB／虛擬檔案系統、匯入匯出。原生已具相機／`SaveLibrary`；這批程式可直接用未來 Web 宿主，尚未完成 Web 產品，包裝既有 `SavedGame` 不另定權威格式。 | **否（既有 SavedGame）**。 | **否**。 | **否（純 Web）**：Web 翻譯另處理。 | **否（iOS）**；Web 地圖／觸控是。 |
 
-### 5.3 舊項目追蹤，避免整包被誤標完成
+### 5.3 MapBuilder（M，10-08 新增來源）
+
+M 是 Next.js 的路線圖編輯器：玩家在地圖上畫路線、車站與轉乘站。專案自己的邏輯在 `chunks/611-2cd22d6d6f5c40f4.js`（編輯指令、自動命名、自動存檔）、`338-b3d18c994bd13868.js`（路線與車站面板）、`352-cc4c9866d08d4d04.js`（地圖圖層、車輛動畫）與 `pages/_app-70b32b07723ca1d7.js` 的常數模組（73277）。其餘 bundle 多是第三方：Mapbox GL JS 3.4.0（專有條款，不重用；遊戲用 MapKit）、Firebase（Apache-2.0）、Turf（MIT，地球半徑 6,371,008.8 m）、recharts／chroma／lodash（`371`）、Mapbox geocoder（`783`）、linkify-it（`650`）。已移植的復原、路線編輯、轉乘群組與拆除車站見 §2.1。
+
+| 編號／項目 | 可重用來源、對應與缺口 | 升存檔 | 升 golden schema | 動字串 | 動地圖 |
+| --- | --- | --- | --- | --- | --- |
+| **M1 運輸模式表與行車時間估算** | `_app` 的 `H=[...]`：纜車、公車、路面電車、渡輪、BRT、輕軌、捷運（預設）、區域、中長途、高鐵、飛機，各有 `speed`（km／分）、`acceleration`、`pause`（ms）、`defaultGrade`、`useAdminName`；`338` 的 `renderStats` 以「加速、巡航、減速＋每站停留」估算路線時間。可給路線面板快速估算；加入公車／輕軌／渡輪時是模式的起點。定點：速度換 m／分 × 1000、停留換秒。 | **否（只估算）**；路線存模式才是。 | **否（衍生）**；新模式指令才評估。 | **是**。 | **否**。 |
+| **M2 車站自動命名** | `611` 的 `ed`／`el`：Overpass 查 25 m 內建物的 `addr:street`、100 m 內具名道路、25 m 內具名建物；`useAdminName` 模式改查行政區（`admin_level` ≤ 8，優先 `name:en`）與 500 m 內道路。實景模式可改用 MapKit 反向地理編碼，照它的優先順序；既有的最近真實車站命名（§2.1）保留在前。 | **否**。 | **否**。 | **是**。 | **否**。 |
+| **M3 車站密度與用途分數** | `338` 的 `getInfo`／`fetchAndHandleBuildings`：0.5 × 0.5 英里（647,497 m²）內的 OSM 建物分住宅、旅館、商業、工業、公共、其他，樓高 3.048／3.6576／3.3528 m，`densityScore` 公式與圓餅色。可接實景模式的人口需求與 Phase 6 土地。**缺口**：運量、造價、人口、就業（`/ridership`、`/density`）在伺服器，快照只有欄位名。 | **否（衍生顯示）**；改權威需求才評估。 | **否**。 | **是**。 | **條件式**：面板否；圖層是。 |
+| **M4 共線區段並排與轉乘群組連線** | `_app` 的 `$()` 與 `352` 的圖層：共線段依顏色／圖示分組，每條偏移 `奇數 ? ⌊(i+1)/2⌋·8 : 4 + ⌊i/2⌋·8` px、正負交替，線寬 8；轉乘連線是白色 8 px 內線加黑色 2 px 外框。與 P8-8 的 C `metroBranchSharedTrackLaneLayout` 擇一或合併；顯示偏移不改實體股道。 | **否**。 | **否**。 | **否**。 | **是**。 |
+| **M5 過路點與 `waypointOverrides`** | `611` 的車站／過路點互換、移除過路點、某線通過某站不停（`waypointOverrides`）。遊戲的「不停」已由服務模式（Q3）表達；過路點對應路網上的路徑，路線本身不需要。若要做，是路線編輯的呈現。 | **條件式**：保存每線不停站才是。 | **條件式**。 | **是**。 | **是**。 |
+| **M6 重做（redo）** | M 沒有；S 的 page bundle 有 `past`／`future`（各 80，`canRedo`）。接 `GameSession.performEdit`／`undo`，紀錄只在 session 裡、時鐘前進就清空（決策 82）。 | **否**。 | **否**。 | **是**。 | **否**。 |
+| **M7 地圖圖示、線色與色名** | `assets/map/{station,station-discon,transfer,waypoint-dark,waypoint-light}.png`；`_app` 的 21 色預設（第一個未用的顏色、21 條以上隨機）與亮度判斷 `.2126R+.7152G+.0722B > 128`；`assets/colors.json` 的 801 個色名（自訂色找最近的色名）。遊戲已有 20 色預設（`LineColor.presets`，來自 C），換色盤要另行決定。 | **否**。 | **否**。 | **條件式**：色名是。 | **是（圖示）**。 |
+| **M8 字型與圖示的授權** | Lato（8 份 `.woff2`，SIL OFL 1.1）；Font Awesome Free 5／6 字型（OFL 1.1）與圖示（CC BY 4.0），`assets/line/*.svg` 也是 Free 6.5.2，使用時保留署名。**`assets/user/*.svg` 13 份裡 12 份標示 Font Awesome Pro 6.2.1（Commercial License）**，這是明示的第三方條款，沒有 Pro 授權不能放進公開 repo，改用 SF Symbols 或 Free 圖示；只有 `basic.svg` 是 Free 6.5.1。 | **否**。 | **否**。 | **否**。 | **條件式**。 |
+
+`edit/new/index.html`、`explore/index.html` 只是 Next.js 外殼；`pages/explore-*.js` 的社群排行（星數、分數）與 Firestore 自動存檔不是本 App 的功能，不列待辦。
+
+### 5.4 舊項目追蹤，避免整包被誤標完成
 
 | 舊表範圍 | 本次去向 |
 | --- | --- |
@@ -141,7 +163,7 @@ Phase 8 只讀 `railwaySnapshot()` 的中心線、縱斷面、結構物、洞口
 | §5 的配額、平交道、觀測／限速、RailwayCore | P7-4、O6／7／8／9／10；城鎮／建物已完成，公司所有權 P7-2。 |
 | §5 的 V4、地圖與翻譯 | V4b–V4e 完成 §2；精確綁定資料 O2、折返／推拉呈現 P8-1；底圖 P8-6、夜景 P8-7、共線 P8-8，更多語言 O12。 |
 
-### 5.4 部署與網站專屬內容
+### 5.5 部署與網站專屬內容
 
 舊表的 `C/api/config.json`、`config__q_7fd2022b8a156b8b.json`、`R/api/basemap-token.json` 是部署設定位置，**不是可公開打包的遊戲資料**。本次不複製內容、不記錄任何值，也不以清理報告推定所有 bundle 都沒有敏感設定。採用 source 時仍須移除密鑰、憑證、部署識別及個資。
 
@@ -150,7 +172,8 @@ Phase 8 只讀 `railwaySnapshot()` 的中心線、縱斷面、結構物、洞口
 ## 6. 查閱、驗證與接續方式
 
 - **VERIFIED（Linux，靜態查閱）**：fetch 最新 main 並固定以上 commit；讀規則、舊盤點、ROADMAP、ARCHITECTURE 決策 61–78、RAILWAY_REFERENCE_MAPPING 及對應實作／資源；核對 #143／#147 PR 說明、相關合併紀錄，參考 #172／#174／#179／#185 研究。其他 PR 的測試結果不當作本次驗證。
-- **VERIFIED（參考庫 clone，靜態查閱）**：讀 C／R refresh、`Ci/PROJECT_ABSORPTION_GUIDE.md`；O 的 `00_READ_ME_FIRST.md`／`01_MIGRATION_MAP.md`；T 的 `00_READ_ME_FIRST.md` 與 source 目錄；S 的 `REFERENCE_REFRESH_2026-10-07.md`／`SANITIZATION_REPORT.md` 與 snapshot 目錄。待辦路徑按實檔核對，素材明細沿同參考 commit 的 #185，未重做模型轉換。
+- **VERIFIED（10-08，參考庫 `5f6ac80`，靜態查閱）**：讀 M 的 `REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`REFERENCE_FILELIST_2026-10-08.tsv` 與 snapshot 的 `611`／`338`／`352`／`_app` bundle、`assets/`；S 的 page／`4193` bundle 補查。§5.3 的常數與條款逐項對原始碼核對過（模式表、`B.I6`、Font Awesome Pro 標示、接合容差）。
+- **VERIFIED（10-07，參考庫 clone，靜態查閱）**：讀 C／R refresh、`Ci/PROJECT_ABSORPTION_GUIDE.md`；O 的 `00_READ_ME_FIRST.md`／`01_MIGRATION_MAP.md`；T 的 `00_READ_ME_FIRST.md` 與 source 目錄；S 的 `REFERENCE_REFRESH_2026-10-07.md`／`SANITIZATION_REPORT.md` 與 snapshot 目錄。待辦路徑按實檔核對，素材明細沿同參考 commit 的 #185，未重做模型轉換。
 - **UNVERIFIED**：沒有執行 Swift build／test、Xcode／iOS UI、golden、存檔／重播、素材載入／轉換、效能檢查。影響欄是提案估計；開工時重新 fetch，依實際 diff 定案，不照本表預占版本。
 
 每個後續實作 PR 按 `CLAUDE.md` 做 Reference check，附「參考檔案／函式 → 目標檔案／函式／定點比例」對照與素材增量，保留具體授權／署名。新增 App 檔案／資源時依規則重生 Xcode 專案；字串只加自己的 key。核心規則、存檔、golden 契約、設計紀錄依 `AGENTS.md` 分工，不沿用已結束的 V4 特別授權。本次只更新本文件並開 draft PR，不觸發發佈或合併。
