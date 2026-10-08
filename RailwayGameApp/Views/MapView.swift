@@ -139,14 +139,33 @@ struct MapView: View {
                         cellTooltip = nil
                         cityTooltip = nil
                         session.mapDidMove()
-                    }, paintsWithOneFinger: isZoning, onPaint: { start, end, phase in
-                        // Decision 98: one finger drags out the cells to
-                        // zone; two still move and zoom the map.
+                    }, paintsFrom: { location in
+                        // Decision 98: zoning, one finger drags out the
+                        // cells to zone. Decision 102: building track, a
+                        // drag from the start or from track draws the next
+                        // stretch. Any other drag, and two fingers, move
+                        // and zoom the map.
+                        if isZoning { return true }
+                        guard session.tool == .network, screen.panel != .lines else { return false }
+                        return session.networkDragDraws(
+                            from: projection.planPoint(at: location),
+                            reach: projection.worldDistance(NetworkBuilding.touchRadius)
+                        )
+                    }, onPaint: { start, end, phase in
                         let from = projection.planPoint(at: start), to = projection.planPoint(at: end)
-                        switch phase {
-                        case .moved: session.dragZone(from: from, to: to)
-                        case .ended: session.endZoneDrag(from: from, to: to)
-                        case .cancelled: session.cancelZoneDrag()
+                        if isZoning {
+                            switch phase {
+                            case .moved: session.dragZone(from: from, to: to)
+                            case .ended: session.endZoneDrag(from: from, to: to)
+                            case .cancelled: session.cancelZoneDrag()
+                            }
+                        } else {
+                            let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                            switch phase {
+                            case .moved: session.dragNetwork(from: from, to: to, reach: reach)
+                            case .ended: session.endNetworkDrag(from: from, to: to, reach: reach)
+                            case .cancelled: session.cancelNetworkDrag()
+                            }
                         }
                     }) { location in
                         let point = projection.planPoint(at: location)
@@ -920,7 +939,7 @@ private struct TravelDemandKey: Equatable {
     }
 }
 
-/// What a painting drag did (decision 98).
+/// What a painting drag did (decisions 98 and 102).
 enum MapPaintPhase {
     case moved
     case ended
@@ -933,11 +952,13 @@ enum MapPaintPhase {
 private struct MapGestures: UIViewRepresentable {
     let camera: PlanCamera
     let onCameraChange: (PlanCamera) -> Void
-    /// Whether a one-finger drag paints (decision 98's zoning) rather than
-    /// moving the map: `onPaint` gets where it began, where the finger is
-    /// and whether it moved, lifted or was cancelled (a second finger
-    /// cancels it and moves the map).
-    let paintsWithOneFinger: Bool
+    /// Whether a one-finger drag that begins at a point paints (decision
+    /// 98's zoning, decision 102's track) rather than moving the map:
+    /// `onPaint` gets where it began, where the finger is and whether it
+    /// moved, lifted or was cancelled (a second finger cancels it and
+    /// moves the map). Near the edge of the view a painting finger scrolls
+    /// the map that way, and where it began moves with the map.
+    let paintsFrom: (ScreenPoint) -> Bool
     let onPaint: (ScreenPoint, ScreenPoint, MapPaintPhase) -> Void
     let onTap: (ScreenPoint) -> Void
 
@@ -971,6 +992,7 @@ private struct MapGestures: UIViewRepresentable {
 
     static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
         coordinator.stopGliding()
+        coordinator.stopEdgeScroll()
     }
 
     @MainActor
@@ -982,6 +1004,18 @@ private struct MapGestures: UIViewRepresentable {
         private var pinchAnchor = CGPoint.zero
         /// Where a painting drag began (decision 98), while it goes on.
         private var paintStart: CGPoint?
+        /// While a painting finger is near the edge of the view: where it
+        /// is, the view's bounds, the camera the scroll has reached and the
+        /// last frame's time (decision 102).
+        private var edgeFinger: CGPoint?
+        private var edgeBounds = CGRect.zero
+        private var edgeCamera: PlanCamera?
+        private var edgeTimestamp: CFTimeInterval?
+        private var edgeLink: CADisplayLink?
+        /// How close to the edge a painting finger scrolls the map, and how
+        /// fast at the very edge, in points a second.
+        private static let edgeZone: CGFloat = 44
+        private static let edgeSpeed: CGFloat = 480
         /// The camera the gestures set last: `parent.camera` catches up only
         /// when SwiftUI next updates the view.
         private var latest: PlanCamera?
@@ -1034,9 +1068,10 @@ private struct MapGestures: UIViewRepresentable {
             if gesture.state == .began {
                 stopGliding()
                 glideStopper = nil
-                if parent.paintsWithOneFinger, pinchStart == nil {
-                    let location = gesture.location(in: gesture.view), moved = gesture.translation(in: gesture.view)
-                    paintStart = CGPoint(x: location.x - moved.x, y: location.y - moved.y)
+                let location = gesture.location(in: gesture.view), moved = gesture.translation(in: gesture.view)
+                let origin = CGPoint(x: location.x - moved.x, y: location.y - moved.y)
+                if pinchStart == nil, parent.paintsFrom(ScreenPoint(x: origin.x, y: origin.y)) {
+                    paintStart = origin
                 } else {
                     panStart = parent.camera
                     latest = parent.camera
@@ -1048,11 +1083,14 @@ private struct MapGestures: UIViewRepresentable {
                 switch gesture.state {
                 case .began, .changed:
                     parent.onPaint(from, to, .moved)
+                    updateEdgeScroll(finger: point, bounds: gesture.view?.bounds ?? .zero)
                 case .ended:
                     paintStart = nil
+                    stopEdgeScroll()
                     parent.onPaint(from, to, .ended)
                 default:
                     paintStart = nil
+                    stopEdgeScroll()
                     parent.onPaint(from, to, .cancelled)
                 }
                 return
@@ -1078,6 +1116,7 @@ private struct MapGestures: UIViewRepresentable {
                 // A second finger ends a painting drag without painting.
                 if let start = paintStart {
                     paintStart = nil
+                    stopEdgeScroll()
                     parent.onPaint(ScreenPoint(x: start.x, y: start.y), ScreenPoint(x: start.x, y: start.y), .cancelled)
                 }
                 pinchStart = parent.camera
@@ -1102,6 +1141,62 @@ private struct MapGestures: UIViewRepresentable {
                     panStart = camera
                 }
             }
+        }
+
+        // MARK: Scrolling at the edge while painting (decision 102)
+
+        /// How fast a painting finger at `finger` scrolls the map: nothing
+        /// away from the edges, faster the nearer the edge, towards it.
+        private func edgeVelocity(finger: CGPoint, bounds: CGRect) -> CGVector {
+            func speed(_ value: CGFloat, _ low: CGFloat, _ high: CGFloat) -> CGFloat {
+                guard high - low > 3 * Self.edgeZone else { return 0 }
+                if value < low + Self.edgeZone { return Self.edgeSpeed * (1 - max(0, value - low) / Self.edgeZone) }
+                if value > high - Self.edgeZone { return -Self.edgeSpeed * (1 - max(0, high - value) / Self.edgeZone) }
+                return 0
+            }
+            return CGVector(dx: speed(finger.x, bounds.minX, bounds.maxX), dy: speed(finger.y, bounds.minY, bounds.maxY))
+        }
+
+        private func updateEdgeScroll(finger: CGPoint, bounds: CGRect) {
+            edgeFinger = finger
+            edgeBounds = bounds
+            if edgeVelocity(finger: finger, bounds: bounds) == .zero {
+                stopEdgeScroll()
+            } else if edgeLink == nil {
+                edgeCamera = parent.camera
+                edgeTimestamp = nil
+                let link = CADisplayLink(target: self, selector: #selector(edgeStep(_:)))
+                link.add(to: .main, forMode: .common)
+                edgeLink = link
+            }
+        }
+
+        func stopEdgeScroll() {
+            edgeLink?.invalidate()
+            edgeLink = nil
+            edgeFinger = nil
+            edgeCamera = nil
+            edgeTimestamp = nil
+        }
+
+        /// One frame of scrolling: the map moves, the ground where the drag
+        /// began moves with it, and the painting follows the finger.
+        @objc private func edgeStep(_ link: CADisplayLink) {
+            guard let start = paintStart, let finger = edgeFinger, let camera = edgeCamera else {
+                stopEdgeScroll()
+                return
+            }
+            let elapsed = edgeTimestamp.map { min(link.timestamp - $0, 0.05) } ?? 0
+            edgeTimestamp = link.timestamp
+            let velocity = edgeVelocity(finger: finger, bounds: edgeBounds)
+            guard elapsed > 0, velocity != .zero else { return }
+            let dx = Double(velocity.dx) * elapsed, dy = Double(velocity.dy) * elapsed
+            let moved = camera.panned(byX: dx, y: dy)
+            edgeCamera = moved
+            setCamera(moved)
+            let shifted = CGPoint(x: start.x + CGFloat(dx), y: start.y + CGFloat(dy))
+            paintStart = shifted
+            parent.onPaint(ScreenPoint(x: shifted.x, y: shifted.y), ScreenPoint(x: finger.x, y: finger.y), .moved)
         }
 
         /// Something other than the gestures moved the map (a zoom button,
