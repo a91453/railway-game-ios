@@ -41,7 +41,7 @@
 - 作法照參考 MapBuilder 的 `fetchAndHandleParks`（Overpass 抓公園、算面積），見 `docs/RAILWAY_REFERENCE_MAPPING.md` 的「實景的工業區、公園與農地（決策 93）」。
 - 遊戲裡，一個 64 公尺格的中點所在的分區格至少一半是同一種土地，那格就是那種用途：公園沒有人，工廠與農地有固定的就業，人口只住在沒有分區的格（`LandImport`）。
 
-ZONES_SUMMARY
+2026-10-08 的資料（osmtoday.com 的台灣整包檔，2026-10-06）：工業區 429.0 km²（8,548 塊）、公園 134.7 km²（8,433 塊）、農地 2,244.7 km²（40,002 塊）；`taiwan_places.json` 從 256 KB 變成 1.06 MB。工廠每格 30 個就業、農地每格 1 個，依製造業約 300 萬人、農業約 53 萬人與分出來的格數（97,356、569,425）定的（決策 93）。
 
 ## 重新產生
 
@@ -62,7 +62,17 @@ python3 tools/real-world-population/build_place_grid.py \
   RailwayGameApp/Resources/RealWorld/taiwan_places.json
 ```
 
-分區（接在地點之後；第一個參數是地點檔，其他內容原樣保留。Overpass 伺服器忙的時候可以用逗號列出幾個，輪流使用）：
+分區（接在地點之後；第一個參數是地點檔，其他內容原樣保留）。最快的是一整包台灣的 OSM 檔，約 20 秒，需要 pyosmium（`pip install osmium`，BSD 2-Clause；只有這個用法需要）：
+
+```sh
+curl -LO https://osmtoday.com/asia/taiwan.pbf
+python3 tools/real-world-population/build_zone_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  taiwan.pbf \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json
+```
+
+沒有整包檔時也可以問 Overpass（只用 Python 內建模組；伺服器忙的時候可以用逗號列出幾個，輪流使用，一塊一直失敗會切成四小塊再問，可能要幾個小時）：
 
 ```sh
 OVERPASS_URL=https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass.private.coffee/api/interpreter \

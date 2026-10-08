@@ -113,9 +113,10 @@ final class LandImportTests: XCTestCase {
         var world = GameWorld.newGame(anchor: anchor, land: cells)
         XCTAssertEqual(world.land.totals.residents, without.reduce(0) { $0 + $1.residents }, "the same people")
         XCTAssertTrue((1_500_000 ... 3_000_000).contains(world.land.totals.jobs), "\(world.land.totals.jobs) jobs round Taipei")
-        // Decision 91: schools and sights make land of their own; factories,
-        // farms and parks have no layer of real-world data yet.
-        XCTAssertEqual(Set(cells.map(\.use)), [.residential, .commercial, .office, .civic, .leisure])
+        // Decision 91: schools and sights make land of their own; decision
+        // 93: OpenStreetMap's industrial land, parks and farmland too, so
+        // Taipei has every use.
+        XCTAssertEqual(Set(cells.map(\.use)), Set(LandUse.allCases))
         // Taipei Main Station: an office station, its ridership its share.
         let station = try world.buildStation(named: "Taipei", at: PlanPoint(x: 524_288, y: 524_288)).id
         let demand = try XCTUnwrap(world.stationDemand(of: station))
@@ -139,13 +140,18 @@ final class LandImportTests: XCTestCase {
         }
         // 64,829 cells by density, D1 to D4: no cell needs D4, as each is
         // chosen by its main count only (residents of homes, jobs of the
-        // rest; the fullest office cell, 78 residents and 285 jobs, is D3).
-        // Decision 91 gives schools and sights cells of their own, which
-        // were offices and shops before, and a cell they made offices or
-        // shops without outnumbering its people is homes now.
+        // rest). Decision 91 gives schools and sights cells of their own,
+        // which were offices and shops before, and a cell they made offices
+        // or shops without outnumbering its people is homes now. Decision 93
+        // makes 4,481 cells parks, 2,244 factories and 297 farms; their
+        // people and the places' jobs move to the WorldPop cell's other
+        // cells, which are fuller (D2 shops, more D3 homes) than before
+        // (residential [26,587, 32,485, 2,214, 0], commercial [206, 0, 0,
+        // 0], office [0, 1,691, 195, 0], civic [195, 0, 0, 0]).
         XCTAssertEqual(counts, [
-            .residential: [26_587, 32_485, 2_214, 0], .commercial: [206, 0, 0, 0], .office: [0, 1_691, 195, 0],
-            .civic: [195, 0, 0, 0], .leisure: [1_256, 0, 0, 0],
+            .residential: [20_628, 30_711, 3_313, 0], .commercial: [24, 173, 0, 0], .office: [0, 1_376, 183, 0],
+            .civic: [143, 0, 0, 0], .leisure: [1_256, 0, 0, 0],
+            .industrial: [2_244, 0, 0, 0], .park: [4_481, 0, 0, 0], .agricultural: [297, 0, 0, 0],
         ])
         for cell in world.land.cells {
             let capacity = try XCTUnwrap(world.buildingCapacity(row: cell.row, column: cell.column))

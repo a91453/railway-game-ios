@@ -16,6 +16,11 @@ import GameCore
 //
 // Like the population, only the presentation reads it: the kind is given
 // through `GameWorld.setStationDemand(_:to:)` with the ridership.
+//
+// The same file holds OpenStreetMap's industrial land, parks and farmland
+// as areas on a finer cut of the grid (decision 93, `zones`, by
+// `build_zone_grid.py`), which a real-world map's land is laid out by
+// (`LandImport`).
 
 /// OpenStreetMap's places per cell of WorldPop's grid of Taiwan.
 public struct PlaceGrid: Sendable {

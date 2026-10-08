@@ -25,6 +25,17 @@ Taiwan), and each zone cell into SAMPLES × SAMPLES points; a zone cell's
 number is how many of its points lie inside that kind of land (even-odd, so
 a relation's inner rings are holes), from 0 to SAMPLES². A point inside
 several areas of one kind counts once. Standard library only.
+
+A whole extract of Taiwan (an OpenStreetMap `.pbf` file, for example
+osmtoday.com's `asia/taiwan.pbf`) can stand for the tiles folder, when the
+Overpass servers are too busy: it is read in a few minutes, with
+pyosmium (BSD 2-Clause; `pip install osmium`), the only time the script
+needs more than the standard library:
+
+    python3 tools/real-world-population/build_zone_grid.py \\
+        RailwayGameApp/Resources/RealWorld/taiwan_places.json \\
+        taiwan.pbf \\
+        RailwayGameApp/Resources/RealWorld/taiwan_places.json
 """
 import json
 import math
@@ -170,8 +181,8 @@ def fill(area, north, west, step, inside):
                 inside.add((row, column))
 
 
-def main(places_path, tiles_dir, out):
-    places = json.load(open(places_path))
+def from_overpass(places, tiles_dir, inside):
+    """Fill `inside` from Overpass, tile by tile; the servers' data times."""
     north, west, size = places['north'], places['west'], places['cellDegrees']
     tiles = set()
     for runs in places['layers'].values():
@@ -183,7 +194,6 @@ def main(places_path, tiles_dir, out):
     os.makedirs(tiles_dir, exist_ok=True)
     step = size / (CUTS * SAMPLES)
     seen = {name: set() for name, _ in SETS}
-    inside = {name: set() for name, _ in SETS}
     stamps = set()
     for n, (row, column) in enumerate(sorted(tiles)):
         for name, sets in SETS:
@@ -196,6 +206,45 @@ def main(places_path, tiles_dir, out):
                     seen[name].add(key)
                     fill(rings(element), north, west, step, inside[name])
         print(f'{n + 1}/{len(tiles)} {row * TILE:.2f},{column * TILE:.2f}', flush=True)
+    return {name: len(ids) for name, ids in seen.items()}, [min(stamps), max(stamps)]
+
+
+def from_extract(places, path, inside):
+    """Fill `inside` from a whole `.pbf` extract, its areas put together by
+    libosmium (closed ways and multipolygon relations, inner rings as
+    holes); the newest edit among them (an extract's header need not say
+    when it was made)."""
+    import osmium  # pyosmium: only for an extract.
+    north, west, size = places['north'], places['west'], places['cellDegrees']
+    step = size / (CUTS * SAMPLES)
+    tags = {'industrial': ('landuse', 'industrial'), 'park': ('leisure', 'park'), 'farmland': ('landuse', 'farmland')}
+    counts = {name: 0 for name in tags}
+    newest = None
+    processor = osmium.FileProcessor(path).with_areas(osmium.filter.KeyFilter('landuse', 'leisure'))
+    for area in processor.with_filter(osmium.filter.EntityFilter(osmium.osm.AREA)):
+        for name, (key, value) in tags.items():
+            if area.tags.get(key) != value:
+                continue
+            area_rings = []
+            for outer in area.outer_rings():
+                area_rings.append([(node.lat, node.lon) for node in outer])
+                for inner in area.inner_rings(outer):
+                    area_rings.append([(node.lat, node.lon) for node in inner])
+            fill(area_rings, north, west, step, inside[name])
+            counts[name] += 1
+            stamp = area.timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
+            newest = max(newest or stamp, stamp)
+    return counts, [newest, newest]
+
+
+def main(places_path, source, out):
+    places = json.load(open(places_path))
+    size = places['cellDegrees']
+    inside = {name: set() for name, _ in SETS}
+    if source.endswith('.pbf'):
+        counts, stamps = from_extract(places, source, inside)
+    else:
+        counts, stamps = from_overpass(places, source, inside)
     layers = {}
     for name, points in inside.items():
         cells = {}
@@ -213,9 +262,9 @@ def main(places_path, tiles_dir, out):
                 runs.append({'r': row, 'c': column, 'p': [cells[(row, column)]]})
         layers[name] = runs
     places['zones'] = {
-        'source': 'OpenStreetMap contributors, through the Overpass API',
+        'source': 'OpenStreetMap contributors, ' + (f'from the extract {os.path.basename(source)}' if source.endswith('.pbf') else 'through the Overpass API'),
         'licence': 'ODbL 1.0',
-        'osmData': [min(stamps), max(stamps)],
+        'osmData': stamps,
         'cuts': CUTS,
         'samples': SAMPLES * SAMPLES,
         'layers': layers,
@@ -224,8 +273,7 @@ def main(places_path, tiles_dir, out):
     open(out, 'w', encoding='utf-8').write(text)
     cell_km2 = (size / CUTS * 110.574) * (size / CUTS * 111.320 * math.cos(math.radians(23.7)))
     areas = {name: round(len(points) / SAMPLES ** 2 * cell_km2, 1) for name, points in inside.items()}
-    print(f'{out}: km² {areas}, areas {dict((name, len(ids)) for name, ids in seen.items())}, '
-          f'OSM data {min(stamps)} to {max(stamps)}, {len(text)} bytes')
+    print(f'{out}: km² {areas}, areas {counts}, OSM data {stamps[0]} to {stamps[1]}, {len(text)} bytes')
 
 
 if __name__ == '__main__':

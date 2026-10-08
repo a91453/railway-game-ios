@@ -43,10 +43,15 @@ public enum LandImport {
     /// office stands for many.
     public static let jobsPerPlace: [PlaceGrid.Kind: Int64] = [.shops: 25, .offices: 500, .schools: 300, .attractions: 50]
 
-    /// The jobs of a 64 m cell of industrial land (decision 93): FIXME.
-    public static let industrialJobsPerCell: Int64 = 40
+    /// The jobs of a 64 m cell of industrial land (decision 93): Taiwan's
+    /// some 3.0 million manufacturing jobs over the 97,356 cells
+    /// OpenStreetMap's industrial land makes, about 31 a cell, rounded
+    /// down (gap: the game's number, as ``jobsPerPlace``).
+    public static let industrialJobsPerCell: Int64 = 30
 
-    /// The jobs of a 64 m cell of farmland (decision 93): FIXME.
+    /// The jobs of a 64 m cell of farmland (decision 93): Taiwan's some
+    /// 530,000 farm jobs over its 569,425 cells of farmland, about one a
+    /// cell.
     public static let farmJobsPerCell: Int64 = 1
 
     /// The cells of a world of `bounds` laid over the Earth by `frame`, or
