@@ -147,6 +147,10 @@ struct MapView: View {
                         // line step), whichever tool is chosen.
                         if session.tool == .network, screen.panel != .lines {
                             session.tapNetwork(at: point, reach: reach)
+                        } else if session.tool == .building, screen.panel != .lines {
+                            // Decision 92: the building tool builds where
+                            // the player taps.
+                            session.placeBuilding(at: point)
                         } else {
                             session.tapMap(at: point, reach: reach)
                         }
@@ -670,6 +674,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.world.stations == rhs.world.stations
             && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
+            && lhs.world.placedBuildings == rhs.world.placedBuildings
             && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.highlightedTrainID == rhs.highlightedTrainID
             && lhs.selectedStationID == rhs.selectedStationID

@@ -119,6 +119,7 @@ private struct ToolPicker: View {
         case .select: return String(localized: "Inspect stations and track")
         case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
         case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
+        case .building: return String(localized: "Houses, shops and offices, where you tap")
         }
     }
 }
@@ -163,6 +164,58 @@ private struct ToolOptions: View {
             NetworkControls(session: session)
         case .train:
             TrainControls(session: session)
+        case .building:
+            BuildingControls(session: session)
+        }
+    }
+}
+
+/// The building tool (city building P0-A, decision 92): what a tap on the
+/// map puts up, and how many the player has put up. GameCore decides
+/// whether a building fits where the player taps.
+private struct BuildingControls: View {
+    @Bindable var session: GameSession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(PlacedBuildingKind.allCases, id: \.self) { kind in
+                    let isActive = session.buildingKind == kind
+                    Button {
+                        session.buildingKind = kind
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: kind.systemImage)
+                                .font(.subheadline.weight(.semibold))
+                            Text(kind.title(in: session.language))
+                                .font(.subheadline.weight(isActive ? .bold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                    }
+                    .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+                    .accessibilityIdentifier("building.kind.\(kind.rawValue)")
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
+                }
+            }
+            Label("Tap open ground on the map to build. It cannot stand on track, a station or another building.", systemImage: "hand.tap")
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            Text(verbatim: session.placedBuildingsText)
+                .font(.footnote.weight(.semibold))
+                .monospacedDigit()
+                .accessibilityIdentifier("building.count")
+        }
+    }
+}
+
+extension PlacedBuildingKind {
+    var systemImage: String {
+        switch self {
+        case .house: "house.fill"
+        case .shop: "storefront.fill"
+        case .office: "building.2.fill"
         }
     }
 }
@@ -227,7 +280,8 @@ private struct ActionButton: View {
 
     private var title: String? {
         switch session.tool {
-        case .select: return nil
+        // The building tool acts on the tap itself.
+        case .select, .building: return nil
         case .network:
             switch session.networkMode {
             case .build:
@@ -318,6 +372,7 @@ extension ConstructionTool {
         case .select: "hand.point.up.left"
         case .network: "point.topleft.down.curvedto.point.bottomright.up"
         case .train: "train.side.front.car"
+        case .building: "building.2"
         }
     }
 
@@ -326,6 +381,7 @@ extension ConstructionTool {
         case .select: String(localized: "Select tool")
         case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
+        case .building: String(localized: "Building tool")
         }
     }
 }

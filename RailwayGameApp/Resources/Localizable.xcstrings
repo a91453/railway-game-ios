@@ -2781,6 +2781,36 @@
           }
         }
       }
+    },
+    "Houses, shops and offices, where you tap" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "住宅、商店與辦公樓，點哪裡蓋哪裡"
+          }
+        }
+      }
+    },
+    "Building tool" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建築工具"
+          }
+        }
+      }
+    },
+    "Tap open ground on the map to build. It cannot stand on track, a station or another building." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點地圖上的空地就能蓋。不能蓋在軌道、車站或其他建物上。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
