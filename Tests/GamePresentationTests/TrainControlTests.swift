@@ -392,6 +392,9 @@ final class TrainControlTests: XCTestCase {
             for tool in ConstructionTool.allCases {
                 session.selectTool(tool)
             }
+            // The building tools pause the game (decision 99); leaving them
+            // resumes it.
+            session.selectTool(.select)
             session.clearSelection()
 
             XCTAssertEqual(session.world, world)

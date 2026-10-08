@@ -3390,6 +3390,19 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：分區不會把已經有的格改成那個用途（只影響空格）；沒有住商工的需求閥（模擬城市的 RCI），成長量仍是決策 70／75 的車站服務；分區格的地價基準仍是空地，不因分區而提高；拖曳只能畫矩形（參考的筆刷是圓形一筆一筆畫，之後需要時再加）。
 
+### 99. 建造時自動暫停
+
+2026-10-08，作者要求的 UI/UX 改版第一步（UX-0）：決策 82 第 4 點讓遊戲時間前進就清空復原紀錄，遊戲在跑時幾乎每 0.1 秒就有一個 tick，所以建造時一失手常常已經不能復原。只改 GamePresentation：GameCore、存檔、golden、replay 都不變。參考庫（MapBuilder 是編輯器，沒有時鐘；`Ci/`、`Simulator/` 也沒有「建造時暫停」）沒有可移植的做法，這是本專案的規則。
+
+1. **哪些工具**：`ConstructionTool.pausesGame`，路網與建築兩個會建造、拆除的工具是 `true`；選取與列車是 `false`（列車工具要看列車出發、行駛，暫停反而礙事）。
+2. **選工具時**（`GameSession.selectTool(_:)`）：選了會暫停的工具，而遊戲在跑，就暫停（`GameWorld.pause()`），記下 `isPausedForBuilding`，並顯示一則訊息說明為什麼時間停了、怎麼繼續。遊戲本來就是暫停的，不記、不顯示。
+3. **離開時**：換到不會暫停的工具時，若 `isPausedForBuilding` 而且時鐘仍是暫停，就恢復（`GameWorld.resume()`，回到暫停前的速度，`GameClock.resumeSpeed`）。在路網與建築兩個工具之間切換，維持暫停。
+4. **玩家自己的選擇優先**：玩家按暫停／播放（`togglePause()`）或選速度（`setSpeed(_:)`）就放掉 `isPausedForBuilding`：之後離開工具不再改速度。玩家在建造時按播放，遊戲照跑；之後再選一次會暫停的工具，又會暫停。
+5. **不算編輯**：暫停與恢復本來就不是編輯（決策 82 第 2 點），不推快照；復原保留目前的暫停與速度。`isPausedForBuilding` 只在 session 裡、不存檔；存檔裡的時鐘照原本記錄暫停與否。
+6. **測試**：`BuildPauseSessionTests`；`TrainSessionPropertyTests` 的參考模型照第 2、3 點對時鐘做同樣的事；原本假設選了路網工具時鐘仍在走的兩個測試（`UndoSessionTests`、`TrainControlTests`）改成先回到選取工具。
+
+**限制**：沒有設定可以關掉；路線面板的編輯（站序、停站模式）不是工具，不會自動暫停。
+
 ### 100. 起點＋終點建立路線
 
 2026-10-08，作者要求的 UI/UX 改版（UX-1a）：新路線原本要逐站「選車站 → 加入選取的車站」。改成玩家只點起點與終點，沿途車站依真實的軌道找出，再選停靠方式。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。
