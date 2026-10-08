@@ -18,6 +18,7 @@ struct StartView: View {
     @State private var importsSave = false
     @State private var choosesPlace = false
     @State private var showsDataSources = false
+    @State private var showsSettings = false
     @Environment(\.openURL) private var openURL
     @Environment(GameAudio.self) private var audio
 
@@ -149,15 +150,14 @@ struct StartView: View {
                         chip(Label("Data Sources", systemImage: "info.circle"))
                     }
                     .accessibilityIdentifier("start.dataSources")
-                    // The music plays here too; the game menu also turns
-                    // it, and the sounds, on or off.
+                    // The music and sound effects on or off; the game
+                    // menu opens the same settings.
                     Button {
-                        audio.setMusicOn(!audio.musicOn)
+                        showsSettings = true
                     } label: {
-                        chip(Label("Music", systemImage: audio.musicOn ? "music.note" : "speaker.slash"))
+                        chip(Label("Settings", systemImage: "gearshape"))
                     }
-                    .accessibilityAddTraits(audio.musicOn ? .isSelected : [])
-                    .accessibilityIdentifier("start.music")
+                    .accessibilityIdentifier("start.settings")
                 }
             }
             .frame(maxWidth: 420)
@@ -166,6 +166,9 @@ struct StartView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Theme.background)
+        .sheet(isPresented: $showsSettings) {
+            SettingsView(audio: audio)
+        }
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
         }

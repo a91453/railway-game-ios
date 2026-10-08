@@ -35,6 +35,7 @@
 		4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */; };
 		543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */; };
 		54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */ = {isa = PBXBuildFile; fileRef = 37971520DEDE438F5E6272D6 /* music-loop.caf */; };
+		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
 		6361F5D3D8B97DFA6D29B6F2 /* tra_track_sections.json in Resources */ = {isa = PBXBuildFile; fileRef = 95B22F52AC2B7370C697A499 /* tra_track_sections.json */; };
@@ -57,6 +58,7 @@
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
 		9CC22169A02628E88713776A /* tra_station_info.json in Resources */ = {isa = PBXBuildFile; fileRef = 150E696C9936773A65399191 /* tra_station_info.json */; };
+		A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C0B07BD9AF82071392AB20 /* SettingsView.swift */; };
 		A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */ = {isa = PBXBuildFile; fileRef = F04BA3646C6BDB8801CF770B /* station_transfers.json */; };
 		A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */; };
 		A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */; };
@@ -130,6 +132,7 @@
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
+		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		8363C536E3BE341871325469 /* MapLayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLayerSheet.swift; sourceTree = "<group>"; };
 		86547460C77F513B1976E1A4 /* thsr-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "thsr-schedule.json"; sourceTree = "<group>"; };
 		894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_places.json; sourceTree = "<group>"; };
@@ -161,6 +164,7 @@
 		C639F6C2DB822D36E3F0AB8A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
@@ -270,6 +274,7 @@
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
+				D4C0B07BD9AF82071392AB20 /* SettingsView.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
@@ -318,6 +323,7 @@
 			children = (
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
+				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
 				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
 				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
@@ -495,6 +501,7 @@
 				AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
+				A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
@@ -512,6 +519,7 @@
 			files = (
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
+				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
 				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
 				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,
