@@ -8,7 +8,7 @@
 
 - **可以做，但不能只把上限調大。** 整數運算在 2^25 單位（約 524 km）下大多夠用；真正的問題是幾個「隨地圖面積長大」的密集結構、一個隨邊長平方長大的軌道間距檢查，以及把全島人口一次展開成 64 m 土地格的做法。
 - **成本要跟著玩家蓋的東西走，不跟著地圖大小走。** 土地只在車站附近展開；城市圖層、地價改成只看有人的格子；軌道間距檢查改成沿線段走格子。
-- **城際需求要另外算。** 64 m 土地格的腹地只有 800 m，台北—台中這種旅次要用「城市對城市」的需求；參考裡的城際客流都在伺服器上算（`Ci` 的 `hsr-flow/model`、MapBuilder 的 `buildRidershipPayload`），快照裡沒有，這是缺口。
+- **城際需求要另外算。** 64 m 土地格的腹地只有 800 m，台北—台中這種旅次要用「城市對城市」的需求；參考裡的城際運量都在伺服器上算（`Ci` 的 `hsr-flow/model`、MapBuilder 的 `buildRidershipPayload`），快照裡沒有，這是缺口。
 - **投影建議維持 Web Mercator**，和 Apple 地圖完全對齊；全島南北兩端的比例誤差約 ±1.3%，必要時對距離做緯度修正。參考裡沒有 TWD97／TM2 的程式（缺口）。
 
 ## 2. 量測
@@ -114,7 +114,7 @@ Linux（雲端容器）、Swift 6.4、`swift test -c release`，暫時的量測�
 | 同站 `rail-3d/integration/map3d.js`：`MercatorCoordinate.fromLngLat([121,24])` 當錨點的局部公尺 | 維持 Web Mercator 的決定 | 一致 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`：`getMetroTrainOperationalCap`（高鐵不超載）、`HSR_TRAIN_CARS_CAPACITY = {8: 650, 16: 1200, 17: 1283}`、`HSR_TRAIN_SPEED_OPTS = [200, 250, 300, 350]`、`hsrFarePassengerPrice`（`max(20, round(km × .45))`） | 高鐵規則（步驟 C） | adapted：票價幣別要換算 |
 | 同檔：`hsrPassengerFlowModelOptions(){ maxTransferCount: 1, maxPathsPerOd: 5 }`、延後分批重算（`hsrEnsurePassengerFlowsForAllLines({defer})`）、8 ms 的幀預算 | 起訖路徑的上限與背景重算 | adapted（步驟 B／C） |
-| 同檔：`hsr-flow/model` 在伺服器算客流 | 城際需求 | gap：快照沒有模型，要自己定 |
+| 同檔：`hsr-flow/model` 在伺服器算運量 | 城際需求 | gap：快照沒有模型，要自己定 |
 | `Railway/railway_game_reference_clean/docs/linkgraph.md`：多商品流在獨立執行緒算、`recalc_time`、大地圖要調大時間 | 背景重算策略 | adapted |
 | 同 pack `binary_reference/relevant_symbols_and_settings.txt`：`demand_distance`、`demand_size`、`linkgraph.accuracy` | 城際需求的參數名稱 | gap：只有名稱，沒有數值與公式 |
 | `MapBuilder/.../pages/_app-*.js` 的路線尺度（`LOCAL`、`REGIONAL`、`LONG`，`zoomThreshold` 9.5／7／3.5） | 縮小時依路線尺度決定要不要畫 | adapted（步驟 B） |
