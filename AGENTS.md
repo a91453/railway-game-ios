@@ -20,6 +20,10 @@ not only Claude Code. Read it first and follow it. In particular:
   personal data: this repository is public.
 - Never commit to `main`, merge a pull request or enable auto-merge.
 - Report every check as **VERIFIED** (it ran, and where) or **UNVERIFIED**.
+- On a hard problem, first see whether the owner's reference repository has
+  something to port, then look for open-source projects on GitHub, minding
+  their licenses (`CLAUDE.md`, after the reference check). When neither has
+  anything usable, write it yourself.
 
 Its Claude-specific parts translate as follows:
 

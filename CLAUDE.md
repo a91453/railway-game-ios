@@ -56,6 +56,33 @@ templates/data, and 3D assets), and `MapBuilder/` (start with
 `reference_snapshot/` for reusable route/station editor behavior, map geometry,
 map interactions, state/UI logic, styling, and related data assets).
 
+When a problem is hard (an algorithm, a data source, a performance or
+platform limit, a design with no obvious answer), look for prior work before
+inventing a solution, in this order:
+
+1. The owner's reference repository: whether something in it can be ported
+   (the sources above). It is authorized; port it as described above.
+2. Open-source projects on GitHub that solve the same problem (for example
+   OpenTTD, Simutrans, A/B Street, MapLibre, OSM tooling, Swift packages).
+   Search the web or clone a public repository into the scratchpad; the
+   session's GitHub tools are scoped to this project's repositories, so do
+   not use their code search for other repositories. Read the project's
+   license before reusing anything: code under a permissive license (MIT,
+   BSD, Apache-2.0, zlib and the like) may be ported with its copyright
+   notice and license kept; copyleft code (GPL, LGPL, AGPL, MPL) and code
+   with no license is read for ideas only, never copied, unless the user
+   decides otherwise. Data keeps its own license and attribution (for
+   example OpenStreetMap's ODbL, credited in `DataSourceCredits`).
+
+When neither has anything usable, write it yourself, without waiting to ask:
+the search decides what to reuse, not whether the work goes ahead.
+
+Say in the PR what was searched and what was found: the reference rows go in
+the mapping table, an outside project with its URL, license and what was
+taken from it, and "nothing usable" when nothing was (and the code is this
+project's own). Adding a dependency is still avoided unless the user agrees
+(Workflow).
+
 - `Sources/GameCore/` — Swift package with the simulation core. **Authoritative
   source of truth** for all game state. Tests: `Tests/GameCoreTests/`.
 - `RailwayGameApp/` — minimal SwiftUI app (Presentation). Its Xcode project
