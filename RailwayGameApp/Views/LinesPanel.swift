@@ -23,6 +23,9 @@ struct LinesPanel: View {
     /// The name being typed for the selected line, while its rename alert
     /// is up.
     @State private var renamingLine: String?
+    /// How often a train should come, for the selected line's trains
+    /// (decision 101).
+    @State private var staffHeadway: Int64 = 10
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -33,6 +36,10 @@ struct LinesPanel: View {
                 // Decision 100: a new line first, where the sheet at half
                 // height shows it while stations are picked on the map.
                 draftSection
+                // Decision 101: a line without trains offers them next.
+                if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
+                    staffSection(line)
+                }
                 trafficSection
                 serviceDaySection
                 linesSection
@@ -545,6 +552,69 @@ struct LinesPanel: View {
             Text("Add a short working or express")
         } footer: {
             Text("Services share every stretch of the line: at most one train every 2 minutes each way, the line's own service first.")
+        }
+    }
+
+    // MARK: - Trains for a line (decision 101)
+
+    /// How often a train should come on `line`, and what that takes: the
+    /// trains its round trip needs, their price, and one button that buys,
+    /// places and assigns them.
+    private func staffSection(_ line: ServiceLine) -> some View {
+        let language = session.language
+        let plan = session.world.lineStaffingPlan(line.id, headway: staffHeadway)
+        return Section {
+            Picker(selection: $staffHeadway) {
+                ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
+                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A train every", "班距"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("line.staff.headway")
+            if let plan {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: language.text(
+                        "Round trip \(plan.roundTripMinutes) min: \(plan.trains) \(plan.trains == 1 ? "train" : "trains"), \(headwayText(minutes: plan.actualHeadway, in: language).lowercased())",
+                        "來回 \(plan.roundTripMinutes) 分鐘：需要 \(plan.trains) 列，\(headwayText(minutes: plan.actualHeadway, in: language))"
+                    ))
+                    .font(.subheadline)
+                    Text(verbatim: language.text("Cost \(plan.cost.moneyText)", "費用 \(plan.cost.moneyText)"))
+                        .font(.caption)
+                        .foregroundStyle(session.world.economy.balance < plan.cost ? Theme.error : Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("line.staff.plan")
+                Button {
+                    session.staffSelectedLine(headway: staffHeadway)
+                } label: {
+                    Label {
+                        Text(verbatim: language.text(
+                            "Buy \(plan.trains) and Start Service",
+                            "購買 \(plan.trains) 列並開始營運"
+                        ))
+                    } icon: {
+                        Image(systemName: "tram.fill")
+                    }
+                }
+                .disabled(session.world.economy.balance < plan.cost)
+                .accessibilityIdentifier("line.staff.start")
+            } else {
+                Text(verbatim: language.text(
+                    "Build track joining the line's stations, with a platform at each, and its trains can run.",
+                    "鋪設連接各站的軌道並在每站設置月台後，列車就能行駛。"
+                ))
+                .font(.footnote)
+                .foregroundStyle(Theme.warning)
+            }
+        } header: {
+            Text(verbatim: language.text("Trains for \(line.name)", "\(line.name) 的列車"))
+        } footer: {
+            Text(verbatim: language.text(
+                "The trains wait at the first station and leave one by one. Change counts per time of day below.",
+                "列車在第一站等候，依班距逐一發車。各時段的列車數可在下方調整。"
+            ))
         }
     }
 
