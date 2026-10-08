@@ -109,7 +109,20 @@ public final class GameLauncher {
     /// Starts a new game on a blank map with `challenge`'s goals (decision
     /// 86), its towns drawn from a new seed.
     public func startChallenge(_ challenge: Challenge) {
-        begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+        switch challenge.map {
+        case .blank:
+            begin(.newGame(challenge: challenge, eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+        case .pingxi:
+            // Decision 90: on the real-world demo's map, which waits for the
+            // real railways, read at launch.
+            guard let railways else {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "The real-world data is not ready yet.", "實景資料還沒準備好。"
+                ))
+                return
+            }
+            begin(PingxiChallenge.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor)), keepingAutosave: true)
+        }
     }
 
     /// Starts the week's challenge (decision 87): the map every player gets

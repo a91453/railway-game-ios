@@ -94,6 +94,10 @@
 ///     reads only version 17 would call a larger world damaged, or drop the
 ///     blocks and read none again, so it says the save is newer than it
 ///     instead.
+/// 19. Festivals (decision 90): a scenario can hold `"events"`, festivals on
+///     the same day every year, and the demand events can be of kind
+///     `"festival"`. A build that reads only version 18 would drop the
+///     festivals, or refuse the kind.
 /// 20. Eight land uses (decision 91): land and buildings can be factories,
 ///     schools and public offices, sights, farms and parks (a park with no
 ///     one in it), and a station's demand can be a school's or public
@@ -172,6 +176,8 @@ extension SavedGame: Codable {
         // day without `"fareTrips"` had none counted.
         // Version 17 to 18: a world without `"landBlocks"` has its land
         // whole, as every world before had.
+        // Version 18 to 19: a scenario without `"events"` holds no
+        // festivals, and no demand event is a festival.
         // Version 19 to 20: a world before version 20 has only homes, shops
         // and offices, and demands of the four reference kinds, which
         // version 20 reads as before.
