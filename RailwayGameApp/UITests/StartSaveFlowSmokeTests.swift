@@ -30,12 +30,20 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-        // A new game is managed, so the message also says what the house
-        // cost (decision 94): "Built house #1 for $ …".
-        let built = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Built house #1 for $")).firstMatch
-        XCTAssertTrue(built.waitForExistence(timeout: 10), "The house was not built")
-        XCTAssertEqual(count.label, "1 building placed")
+        // The count says whether it was built, not the "Built house #1 …"
+        // banner: a success clears itself after 4 s, within one slow
+        // accessibility query, and main's run 37828454679 never found it.
+        // A touch held across such a query is failed by the tap
+        // recognizer (MapInteractionTests), so a lost tap is tried once
+        // more.
+        let ground = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        func built() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)],
+                             timeout: 10) == .completed
+        }
+        ground.tap()
+        if !built() { ground.tap() }
+        XCTAssertTrue(built(), "The house was not built: \(count.label)")
 
         openGameMenu(in: app)
         tapMenuAction("menu.saveGame", in: app)
