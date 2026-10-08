@@ -335,9 +335,9 @@ extension Tutorial {
             goal: .createLine,
             title: ("Create the line", "建立路線"),
             body: (
-                "Tap Lines. Select a station on the map and tap Add Selected Station, then the other one, then Create Line. "
-                    + "The first stop is where trains start.",
-                "點「路線」。在地圖上選取一座車站，按「加入選取的車站」，再加入另一座，然後按「建立路線」。第一站是列車出發的地方。"
+                "Tap Lines, then Pick on Map. Tap the first station on the map, then the other one: the stations the track passes "
+                    + "between are found for you. Then tap Create Line. The first stop is where trains start.",
+                "點「路線」，再按「在地圖上選站」。在地圖上點第一座車站，再點另一座：軌道沿途經過的車站會自動找出。然後按「建立路線」。第一站是列車出發的地方。"
             )
         ),
         // No reference step: the reference's lines come with their trains.
