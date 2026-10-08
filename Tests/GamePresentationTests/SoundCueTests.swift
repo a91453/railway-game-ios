@@ -51,9 +51,57 @@ final class SoundCueTests: XCTestCase {
                 session.advance(realElapsed: GameSession.tickInterval)
             }
 
-            XCTAssertEqual(heard.map(\.cue), [.arrival])
+            XCTAssertEqual(heard.map(\.cue), [.arrival(watched: false)], "nobody is looking at it")
             XCTAssertEqual(heard.first?.minute, 6)
             XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
+        }
+    }
+
+    /// A line sends its train out at a whole minute and the train leaves
+    /// 42 s later, within the same 600× tick: that is no arrival. Only its
+    /// arrivals at East and back at West ring, each while it stands there.
+    func testALineTrainChimesOnlyWhenItArrivesNotWhenItIsSentOut() async throws {
+        var world = try makeServiceWorld()
+        try world.stopTrainService(Self.tram)
+        try world.setTrainTimetable(Self.tram, to: [])
+        let line = try world.createLine(named: "Shuttle", stops: [Self.west, Self.east]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(Self.tram, to: line)
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            var heard: [(cue: SoundCue, stoppedAt: [StationID])] = []
+            session.playSound = { heard.append(($0, session.world.stationsStoppedAt(by: Self.tram))) }
+            // Counted apart from the sounds: each step that leaves the
+            // train standing at a station it was not standing at before.
+            var arrivals = 0
+            for _ in 0..<40 {
+                let before = session.world.stationsStoppedAt(by: Self.tram)
+                session.advance(realElapsed: GameSession.tickInterval)
+                let after = session.world.stationsStoppedAt(by: Self.tram)
+                if !after.isEmpty && after != before { arrivals += 1 }
+            }
+
+            XCTAssertGreaterThan(arrivals, 10, "the line ran")
+            XCTAssertEqual(heard.count, arrivals, "each arrival at East and at West, and nothing else")
+            XCTAssertTrue(heard.allSatisfy { $0.cue == .arrival(watched: false) })
+            XCTAssertTrue(heard.allSatisfy { !$0.stoppedAt.isEmpty }, "it rings only standing at a station")
+        }
+    }
+
+    func testTheTrainThePlayerIsLookingAtChimesAsWatched() async throws {
+        let world = try makeServiceWorld()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            XCTAssertEqual(session.watchedTrainIDs, [], "selected, but the train tool is closed")
+            session.followTrain(Self.tram)
+            XCTAssertEqual(session.watchedTrainIDs, [Self.tram])
+            var heard: [SoundCue] = []
+            session.playSound = { heard.append($0) }
+            for _ in 0..<10 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            XCTAssertEqual(heard, [.arrival(watched: true)])
         }
     }
 
@@ -125,6 +173,8 @@ final class SoundCueTests: XCTestCase {
             XCTAssertEqual(heard, [.transition, .transition], "the game plays through the launcher's player")
             launcher.returnToStart()
             XCTAssertEqual(heard, [.transition, .transition, .transition])
+            launcher.returnToStart()
+            XCTAssertEqual(heard.count, 3, "no game to leave")
         }
     }
 }

@@ -19,6 +19,7 @@ struct StartView: View {
     @State private var choosesPlace = false
     @State private var showsDataSources = false
     @Environment(\.openURL) private var openURL
+    @Environment(GameAudio.self) private var audio
 
     var body: some View {
         ScrollView {
@@ -148,6 +149,15 @@ struct StartView: View {
                         chip(Label("Data Sources", systemImage: "info.circle"))
                     }
                     .accessibilityIdentifier("start.dataSources")
+                    // The music plays here too; the game menu also turns
+                    // it, and the sounds, on or off.
+                    Button {
+                        audio.setMusicOn(!audio.musicOn)
+                    } label: {
+                        chip(Label("Music", systemImage: audio.musicOn ? "music.note" : "speaker.slash"))
+                    }
+                    .accessibilityAddTraits(audio.musicOn ? .isSelected : [])
+                    .accessibilityIdentifier("start.music")
                 }
             }
             .frame(maxWidth: 420)

@@ -63,7 +63,9 @@ final class GameAudio {
 
     /// Plays the sound for `cue`, unless sounds are off, the app is not
     /// active, or the same sound played too recently: at high speed many
-    /// trains arrive within a second, and one chime stands for them.
+    /// trains arrive within a second, and one chime stands for them. The
+    /// trains the player is not looking at ring quieter and at most every
+    /// few seconds, so a busy network does not ring all the time.
     func play(_ cue: SoundCue) {
         guard soundsOn, isActive else { return }
         let now = ContinuousClock.now
@@ -72,6 +74,10 @@ final class GameAudio {
         // A free player of the sound's few, so a sound can overlap itself.
         guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
         lastPlayed[cue] = now
+        if cue == .arrival(watched: true) {
+            // The others' chime would only echo it.
+            lastPlayed[.arrival(watched: false)] = now
+        }
         player.currentTime = 0
         player.play()
     }
@@ -90,7 +96,8 @@ final class GameAudio {
 
     private func loadSound(_ cue: SoundCue) -> [AVAudioPlayer] {
         let (name, volume): (String, Float) = switch cue {
-        case .arrival: ("station-chime", 0.55)
+        case .arrival(watched: true): ("station-chime", 0.55)
+        case .arrival(watched: false): ("station-chime", 0.2)
         case .track: ("rail-joint", 0.7)
         case .transition: ("whoosh", 0.3)
         }
@@ -102,7 +109,8 @@ final class GameAudio {
     /// The least time between two plays of a sound.
     private static func spacing(of cue: SoundCue) -> Duration {
         switch cue {
-        case .arrival: .milliseconds(1_500)
+        case .arrival(watched: true): .milliseconds(500)
+        case .arrival(watched: false): .seconds(6)
         case .track: .milliseconds(100)
         case .transition: .milliseconds(250)
         }

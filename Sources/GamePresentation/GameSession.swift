@@ -182,6 +182,18 @@ public final class GameSession {
     /// saved.
     @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
 
+    /// The trains the player is looking at, whose arrivals ring at full
+    /// volume (``SoundCue/arrival(watched:)``): the one the camera follows,
+    /// the one last tapped on the map, and the selected one while the
+    /// train tool is open.
+    public var watchedTrainIDs: Set<TrainID> {
+        var watched = Set([followedTrainID, tappedTrainID].compactMap { $0 })
+        if tool == .train, let selectedTrainID {
+            watched.insert(selectedTrainID)
+        }
+        return watched
+    }
+
     /// Real time per simulation tick. At 600× (``GameSpeed/normal``) a tick
     /// is one game minute, so a game day lasts 144 real seconds; at 1× it is
     /// a tenth of a game second (Stage W2a).
@@ -491,8 +503,12 @@ public final class GameSession {
             do throws(GameError) {
                 try world.advance(ticks: ticks)
                 endFollowIfGone()
-                if let arrivals, SoundCue.arrived(since: arrivals, in: world) {
-                    playSound?(.arrival)
+                if let arrivals {
+                    let arrived = SoundCue.trainsArrived(since: arrivals, in: world)
+                    if !arrived.isEmpty {
+                        let watched = watchedTrainIDs
+                        playSound?(.arrival(watched: arrived.contains { watched.contains($0) }))
+                    }
                 }
             } catch {
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))

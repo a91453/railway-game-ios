@@ -264,11 +264,14 @@ public final class GameLauncher {
     /// being thrown away unsaved.
     public func returnToStart() {
         guard session == nil || autosaveCurrentGame() else { return }
+        let left = session != nil
         session?.stopGameLoop()
         session = nil
         message = nil
         refresh()
-        playSound?(.transition)
+        if left {
+            playSound?(.transition)
+        }
     }
 
     public func delete(_ entry: SaveLibrary.Entry) {
