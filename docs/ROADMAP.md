@@ -118,7 +118,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - iPhone 直向 / iPad 直向版面當時已以 Visual Smoke 截圖確認（該 workflow 已移除）；橫向版面（側邊欄）只經過編譯
 - GameCore 未修改：時間顯示換算放在 Presentation 層；拆除車站延後（見下）
 
-延後項目：拆除車站（GameCore 尚無指令）、拖曳連續鋪軌、軌道相鄰連接檢查（Phase 3 Stage I 已提供唯讀的連通查詢；鋪設時仍不要求相接）、存檔。
+延後項目：拆除車站（GameCore 尚無指令；2026-10-08 決策 83 補上）、拖曳連續鋪軌、軌道相鄰連接檢查（Phase 3 Stage I 已提供唯讀的連通查詢；鋪設時仍不要求相接）、存檔。
 
 ### 發佈管線 — 內部 TestFlight
 
@@ -199,7 +199,7 @@ Swift Playgrounds 只是可選環境，不是必要的開發或驗證步驟。
 - 沒有新指令或新錯誤；移動 kernel、Stage I–L 的契約不變（Stage L 的路徑 digest 不變）
 - App：Train 工具選取車站格時送到該站（GameCore 求路後原封不動提交），並顯示列車停在哪些車站
 - Golden scenario schema v7：`platforms`、`routeToStation`、`stationStops` 觀察與 `station-stop.json`（ARCHITECTURE 決策 18）
-- 尚未做：停留時間、時刻表與服務模式（Phase 4）、乘客、拆除車站、月台容量
+- 尚未做：停留時間、時刻表與服務模式（Phase 4）、乘客、拆除車站（2026-10-08 決策 83 補上）、月台容量
 
 順序調整的理由：route / pathfinder 產生的路徑，必須是列車移動核心真的能執行的東西。先確立列車位置與移動延續的契約（J、K），路徑搜尋（L）才有明確的輸出形式可以對準；反過來做，路徑的表示方式會先把位置與移動的設計鎖死。
 

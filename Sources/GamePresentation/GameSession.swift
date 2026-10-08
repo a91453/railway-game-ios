@@ -1296,8 +1296,9 @@ public final class GameSession {
     }
 
     /// Lets go of what the selection and the drafts name that ``world``
-    /// does not have (after ``undo()``); keeps the rest.
-    private func dropSelectionOfMissing() {
+    /// does not have (after ``undo()`` or a demolished station); keeps the
+    /// rest.
+    func dropSelectionOfMissing() {
         if let id = selectedStationID, world.station(id: id) == nil { selectedStationID = nil }
         if let id = platformStationID, world.station(id: id) == nil { platformStationID = nil }
         lineDraft.removeAll { world.station(id: $0) == nil }

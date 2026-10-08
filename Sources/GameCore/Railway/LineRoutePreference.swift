@@ -68,16 +68,26 @@ extension ServiceLine {
             let order = routeOrder(service: service)
             var keys: Set<[Int]> = []
             for route in routes(ofService: service) {
-                guard route.from >= 0, route.to >= 0, route.from != route.to,
-                      stops.indices.contains(route.from), stops.indices.contains(route.to),
-                      route.platform.station == stops[route.to], (route.platform.edge.networkNumber ?? 0) >= 1, route.tracks.allSatisfy({ ($0.edge.networkNumber ?? 0) >= 1 }), route.platform.start >= 0, route.platform.end > route.platform.start,
-                      route.tracks.isEmpty || route.tracks.last?.edge == route.platform.edge,
-                      keys.insert([route.from, route.to]).inserted,
-                      zip(order, order.dropFirst()).contains(where: { ($0 == route.from && $1 == route.to) || (isRing && $1 == route.from && $0 == route.to) })
-                else { return false }
+                guard isValidRoute(route, order: order), keys.insert([route.from, route.to]).inserted else { return false }
             }
         }
         return true
+    }
+
+    /// Whether `route` fits a service of this line whose timetable calls
+    /// at the stops of `order` (``routeOrder(service:direction:)``): two
+    /// different stops it takes one after the other, the platform one of
+    /// the second's, and a walk ending on the platform's edge. Whether
+    /// another of the service's preferences is for the same leg is not
+    /// checked.
+    func isValidRoute(_ route: LineRoutePreference, order: [Int]) -> Bool {
+        route.from >= 0 && route.to >= 0 && route.from != route.to
+            && stops.indices.contains(route.from) && stops.indices.contains(route.to)
+            && route.platform.station == stops[route.to] && (route.platform.edge.networkNumber ?? 0) >= 1
+            && route.tracks.allSatisfy({ ($0.edge.networkNumber ?? 0) >= 1 })
+            && route.platform.start >= 0 && route.platform.end > route.platform.start
+            && (route.tracks.isEmpty || route.tracks.last?.edge == route.platform.edge)
+            && zip(order, order.dropFirst()).contains(where: { ($0 == route.from && $1 == route.to) || (isRing && $1 == route.from && $0 == route.to) })
     }
 }
 
