@@ -21,7 +21,8 @@ final class SparseCityLandTests: XCTestCase {
     // MARK: - Land import
 
     /// Taipei's 16 km map, a map cut by the edge of the grid's people, and
-    /// small maps whose edges cut WorldPop cells, with and without places.
+    /// small maps whose edges cut WorldPop cells, with and without places
+    /// (and with them, the zones of decision 93).
     func testLandIsLaidOutAsTheCellByCellWalkLaidItOut() throws {
         let (population, places) = try Self.grids()
         let cases: [(Double, Double, WorldBounds)] = try [
@@ -57,41 +58,74 @@ final class SparseCityLandTests: XCTestCase {
             }
             return [count(.offices), count(.shops), count(.schools), count(.attractions)]
         }
-        var members: [GridCounts.Cell: [(row: Int, column: Int)]] = [:]
-        var sourceJobs: [GridCounts.Cell: [Int64]] = [:]
+        // Every 64 m cell, by the WorldPop cell its middle lies in, with
+        // the zone there (decision 93).
+        var members: [GridCounts.Cell: [(row: Int, column: Int, zone: PlaceGrid.Zone?)]] = [:]
         for row in 0..<Land.rows(in: bounds) {
             for column in 0..<Land.columns(in: bounds) {
                 let place = frame.coordinate(worldX: (Double(column) + 0.5) * length, worldY: (Double(row) + 0.5) * length)
                 let source = grid.cell(latitude: place.latitude, longitude: place.longitude)
-                if members[source] == nil {
-                    let work = jobs(source)
-                    guard (grid.counts[source] ?? 0) > 0 || work.reduce(0, +) > 0 else { continue }
-                    sourceJobs[source] = work
-                }
-                members[source, default: []].append((row, column))
+                let zone = places?.zone(atLatitude: place.latitude, longitude: place.longitude)
+                members[source, default: []].append((row, column, zone))
             }
         }
-        guard !members.isEmpty else { return nil }
+        members = members.filter { source, inside in
+            (grid.counts[source] ?? 0) > 0 || jobs(source).reduce(0, +) > 0 || inside.contains { $0.zone != nil }
+        }
+        guard members.contains(where: { source, inside in
+            (grid.counts[source] ?? 0) > 0 || jobs(source).reduce(0, +) > 0 || inside.contains { $0.zone == .industrial || $0.zone == .farmland }
+        }) else { return nil }
         let cellArea = length * length / Double(WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre)
         let lastRow = Land.rows(in: bounds) - 1, lastColumn = Land.columns(in: bounds) - 1
         var cells: [LandCell] = []
         for (source, inside) in members {
             let people = Int64(grid.counts[source] ?? 0)
-            let work = sourceJobs[source] ?? [0, 0, 0, 0]
+            let work = jobs(source)
             // The first kind with the most jobs, if they are at least the
             // people; else homes.
             let most = work.indices.first { work[$0] == work.max()! }!
             let use: LandUse = work[most] >= people ? [.office, .commercial, .civic, .leisure][most] : .residential
             let atEdge = inside.contains { $0.row == 0 || $0.column == 0 || $0.row == lastRow || $0.column == lastColumn }
             let slots = Int64(atEdge ? max(inside.count, Int((grid.area(of: source) / cellArea).rounded())) : inside.count)
-            func share(_ total: Int64, _ index: Int) -> Int64 {
-                let (base, extra) = total.quotientAndRemainder(dividingBy: slots)
-                return min(Land.maximumPerCell, base + (Int64(index) < extra ? 1 : 0))
+            // The people and jobs of the part inside, cell by cell as before
+            // decision 93, then shared among the cells that take them in.
+            func keptBefore(_ total: Int64) -> Int64 {
+                inside.indices.reduce(0) { sum, index in
+                    let (base, extra) = total.quotientAndRemainder(dividingBy: slots)
+                    return sum + base + (Int64(index) < extra ? 1 : 0)
+                }
+            }
+            let parksOnly = inside.allSatisfy { $0.zone == .park }
+            let hosts = parksOnly ? inside.indices.map { $0 }
+                : inside.contains(where: { $0.zone == nil }) ? inside.indices.filter { inside[$0].zone == nil }
+                : inside.contains(where: { $0.zone == .farmland }) ? inside.indices.filter { inside[$0].zone == .farmland }
+                : inside.indices.filter { inside[$0].zone == .industrial }
+            let residents = keptBefore(people), placeJobs = keptBefore(work.reduce(0, +))
+            func share(_ total: Int64, _ host: Int) -> Int64 {
+                let (base, extra) = total.quotientAndRemainder(dividingBy: Int64(hosts.count))
+                return min(Land.maximumPerCell, base + (Int64(host) < extra ? 1 : 0))
             }
             for (index, cell) in inside.enumerated() {
-                let residents = share(people, index), jobs = share(work.reduce(0, +), index)
-                guard residents + jobs > 0 else { continue }
-                cells.append(LandCell(row: cell.row, column: cell.column, use: use, residents: residents, jobs: jobs))
+                let host = hosts.firstIndex(of: index)
+                var cellResidents = host.map { share(residents, $0) } ?? 0
+                var cellJobs = host.map { share(placeJobs, $0) } ?? 0
+                var cellUse = use
+                switch parksOnly ? nil : cell.zone {
+                case .park?:
+                    cells.append(LandCell(row: cell.row, column: cell.column, use: .park, residents: 0, jobs: 0))
+                    continue
+                case .industrial?:
+                    cellUse = .industrial
+                    cellJobs = min(Land.maximumPerCell, cellJobs + LandImport.industrialJobsPerCell)
+                case .farmland?:
+                    cellUse = .agricultural
+                    cellJobs = min(Land.maximumPerCell, cellJobs + LandImport.farmJobsPerCell)
+                case nil:
+                    break
+                }
+                cellResidents = min(cellResidents, Land.maximumPerCell)
+                guard cellResidents + cellJobs > 0 else { continue }
+                cells.append(LandCell(row: cell.row, column: cell.column, use: cellUse, residents: cellResidents, jobs: cellJobs))
             }
         }
         return cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }

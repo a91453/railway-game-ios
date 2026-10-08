@@ -1040,6 +1040,21 @@ V 實際放行 → T、U（保證不互穿）
 
 沒有比例換算：建物的邊長 1,024／1,536／2,048 單位（16／24／32 m，每公尺 64 單位），離軌道與車站 128 單位（2 m）。外部開源專案沒有搜尋：在平面上放正方形、檢查與折線的距離不是難題。
 
+## 實景的工業區、公園與農地（決策 93）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `farmland`、`landuse=industrial`、`"industrial"`、`leisure=park`、`areaByUsage`。決策 91 的檢查寫 `MapBuilder/` 沒有土地用途的內容；這次找到它的車站資訊面板用 OSM 算周邊的建物用途與公園面積，所以補上一列。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/338-b3d18c994bd13868.js`／`fetchAndHandleParks`（Overpass 抓 `leisure=park` 的 node、way、relation，`osmtogeojson` 轉成多邊形，與車站範圍取交集後加總面積 `parklandInArea`） | `tools/real-world-population/build_zone_grid.py`（公園，另加 `landuse=industrial` 與 `landuse=farmland`）；`PlaceGrid.area(of:)` | adapted：同樣用 Overpass 取公園的**面積**而不是個數；交集改成事先在格網上取樣（每個 7.5″ 分區格 16 點、奇偶規則，relation 的內環是洞），因為 App 離線打包、不在遊戲中查 Overpass；node（沒有面積）不算 |
+| 同上／`fetchAndHandleBuildings` 的 `industrial`、`warehouse`、`factory` → `industrial` | `PlaceGrid.Zone.industrial` → `LandUse.industrial` | adapted：參考是看建物的 `building=*`，這裡看土地的 `landuse=industrial`（一個工業區一塊，資料小得多） |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／香港的 `hkParks`、`hkFarmland` 圖層 | — | 不採用：香港自己的圖層資料，不在快照裡，台灣沒有對應 |
+| （參考沒有） | `LandImport` 的分區格（公園沒有人、工廠與農地的固定就業、人口只住在沒有分區的格）、`LandImport.industrialJobsPerCell`、`farmJobsPerCell` | gap → 原生 |
+
+比例：分區格是人口格（30″）切成 4 × 4；每格 16 個取樣點，至少 8 點是同一種土地才算那一種（平手依工業、公園、農地）。
+
+外部專案：Overpass 的伺服器太忙時，改讀整包的台灣 OSM 檔（osmtoday.com，ODbL），用 pyosmium（https://github.com/osmcode/pyosmium，BSD 2-Clause，作者同意作為工具的依賴；只用它的檔案讀取與多邊形組合，沒有複製程式碼）。商店、辦公、學校、景點的地點（`build_place_grid.py`）也改從同一份檔重算。多邊形的取樣是標準的掃描線填色，自己寫。
+
 ## 城市建造 P0-C1：公司的建物（決策 94）
 
 2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）：參考庫沒有建物的所有權、租金、維護、出售、地價交易與公司資產帳，也沒有把玩家建物的居民與就業接到運量，所以這些是原生。可以沿用的是做法：`Ci/` 的 `metroCanPlaceWithinQuota`／`summarizeFinanceForTransport`（放置前先估價、不足就擋、記成投資現金流），以及已經移植的金額顯示（`metroEconomyMoneyText` → `Money.moneyText`）與決策 74 的建物容量規則。
@@ -1055,4 +1070,3 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：金額是美分；樓地板 $40／m² = 4,000 美分；維護與稅是萬分之 2 與 1（basis point）；入住速度是千分比（20 + S × 80 / 1000，S 是 0…1000 的服務）；租金公式除以 10,000,000（人數 × 1000／1500 是千分之一美分的權重，× (1000 + S/2) 是千分比，× 地價美分／m²）。
 
 外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：A 列車 Exp 的官方說明書（商業遊戲）：建造費買的是土地使用權、拆除不補償、子公司誘導城市開發；OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
-

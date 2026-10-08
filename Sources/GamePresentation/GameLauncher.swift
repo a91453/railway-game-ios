@@ -380,7 +380,7 @@ public struct RealWorldData: Sendable {
 
     /// Reads `taiwan_population.json`, `taiwan_places.json` and the
     /// railways' files (``RealRailways/load(file:)``) through `file` (a name
-    /// and extension to its contents). About 2.4 MB of JSON is
+    /// and extension to its contents). About 3.2 MB of JSON is
     /// decoded: call it off the main actor.
     public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []
