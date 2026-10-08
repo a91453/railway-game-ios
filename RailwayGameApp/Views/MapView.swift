@@ -9,6 +9,10 @@ extension EnvironmentValues {
     /// at the trailing side): the map's banners, keys and buttons keep
     /// clear of them. The map itself is drawn under them.
     @Entry var mapInsets = EdgeInsets()
+    /// How far down from the map's top the trailing edge's controls reach
+    /// (``mapInsets``' trailing inset): a folded control card ends there,
+    /// and below it the map's bottom-trailing buttons keep to the edge.
+    @Entry var mapTrailingInsetDepth = CGFloat.infinity
 }
 
 /// A viewport-sized map. The camera and derived geometry are view state;
@@ -64,6 +68,9 @@ struct MapView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
+    @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
+    /// The height of the bottom-trailing buttons and key, with their margin.
+    @State private var bottomTrailingHeight: CGFloat = 0
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -190,7 +197,11 @@ struct MapView: View {
                         zoomControls(camera: projection)
                     }
                     .padding(12)
-                    .padding(.trailing, insets.trailing)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomTrailingHeight = $0 }
+                    // Beside the trailing controls only where they reach:
+                    // under a folded control card the edge is free.
+                    .padding(.trailing, viewport.height - bottomTrailingHeight >= trailingInsetDepth ? 0 : insets.trailing)
+                    .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
                 }
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 8) {

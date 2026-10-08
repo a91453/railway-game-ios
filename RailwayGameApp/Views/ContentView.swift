@@ -29,6 +29,10 @@ struct ContentView: View {
     /// banners start.
     @State private var phoneMapTop: CGFloat = 0
     @State private var phoneHUDBottom: CGFloat = 0
+    /// How far down the map the control card reaches, with its margin, on
+    /// an iPad or a phone on its side: folded it leaves the map's
+    /// bottom-trailing buttons at the edge.
+    @State private var cardDepth = CGFloat.infinity
 
     var body: some View {
         Group {
@@ -162,10 +166,12 @@ struct ContentView: View {
             let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
             map
                 .environment(\.mapInsets, EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: width + Self.cardMargin))
+                .environment(\.mapTrailingInsetDepth, cardDepth)
                 .overlay(alignment: .topTrailing) {
                     ControlCard(session: session, launcher: launcher)
                         .frame(width: width)
                         .padding(Self.cardMargin)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
                         .padding(.bottom, strip)
                 }
         }
