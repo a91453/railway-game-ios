@@ -107,8 +107,16 @@ final class RealWorldDemoTests: XCTestCase {
             session.selectStation(id)
             session.addSelectedStationToLineDraft()
         }
+        // Decision 100: the track between passes the demo's stations on
+        // the way; the play-test's line calls at the two it picked.
+        let route = try XCTUnwrap(session.lineDraftRoute)
+        XCTAssertEqual(route.first, ids[0])
+        XCTAssertEqual(route.last, ids[1])
+        XCTAssertGreaterThan(route.count, 2, "stations between Ruifang and Shifen")
+        session.lineDraftStopping = .pickedStations
         session.createLineFromDraft()
         let line = try XCTUnwrap(session.selectedLine)
+        XCTAssertEqual(line.stops, ids)
         XCTAssertEqual(line.trainsInService, .none, "a new line runs no trains")
         XCTAssertEqual(line.window, .standard)
 
