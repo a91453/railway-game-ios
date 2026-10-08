@@ -39,7 +39,7 @@
 | `world: DO` | site anchors 的依賴已處理才選取，保留輸入索引的輸出；duplicate id 產生錯誤。同批 site 自指／批外依賴不阻塞；找不到可處理項（例如循環）就取剩餘第一項，交後續擺放檢查。 | 可改為依 BuildingID／CellKey 的固定順序，先計算整批佔格再原子提交。建議新核心拒絕循環或無效依賴，**不是來源 DO 已拒絕循環**；模型 anchors 仍屬匯入與畫面。 |
 | `world: lO` 的 bounds | rect 不得越過 `plan.bounds`。 | 可逐一驗證格 row／column 與完整格界線；不用權威矩形。來源 engine 的 bounds x `[-900,900]`、z `[-960,560]` m，換算為 x `[-57_600,57_600]`、z `[-61_440,35_840]` 單位，再由匯入端加明確原點偏移。不能直接放入本遊戲非負座標。 |
 | `lO` roads、`host`、`allowSidewalk` | host road 例外；`RD(rect,lot,-0.05)`；車道交疊回 `road`，其餘若未允許人行道回 `sidewalk`。 | 可把道路／人行道遮罩輸入為保留格，再驗證佔格交集；需要遮罩來源，**6a 沒有這份資料（gap）**。−0.05 m 建議離線四捨五入為 −3 單位；若直接升成整格禁建，公尺級退縮與 host 例外不會等價，需報量化誤差。不能讓整數格把鐵路吸附到方格。 |
-| `lO` requireBlock、`zD` | 預設必須在一個 block 內，可容差 **0.5**；`requireBlock:false` 關閉此項。 | 可檢查全部佔格屬同一可建街廓 ID；0.5 m = **32** 單位只在匯入遮罩生成時使用。格跨街廓時的保守拒絕是新政策；不能默認細小街廓可塞下完整 64 m 格。 |
+| `lO` requireBlock、`zD` | 預設必須在一個 block 內，可容差 **0.5**；`requireBlock:false` 關閉此項。 | 可檢查全部佔格屬同一可建街廓 ID；0.5 m = **32** 單位只在匯入遮罩生成時使用。格跨街廓時的保守拒絕是新政策；不能假定細小街廓可塞下完整 64 m 格。 |
 | `lO` landmarks、`RD` | 非 pedestrian 地標，擴 **2** m，回 `landmark:<id>`。 | 保留格不重疊可表達；**128** 單位外擴再格化。原來源在邊界相切不算交疊，整格化會多排除格。 |
 | `lO` transit、`VD` | entrances／obstacles 的旋轉矩形，外擴 **3** m；`rO` 粗搜半徑 `max(hw,hl)×1.5+3`。 | 在匯入端將禁建區轉為佔格清單；**192** 單位，不在核心存朝向或做 sin／cos。高度／地下共構例外需要另訂；第一版不能因有 mesh 空隙就允許穿越。 |
 | `lO` MRT、`HD` | 出口點離 lot 小於 **4** m，回 `mrt:<id>`。 | 禁建格遮罩可表達；半徑 **256**、平方 **65_536** 單位²。來源是點到 lot，不是格中心距離；離線格化要記錄所選規約。 |
@@ -48,7 +48,7 @@
 | `world: UD`、`PD`、`ID` | rect 四邊內縮 **0.3** m，x/z 各取低、中、高，共 **3×3 = 9 點**；第一個非允許 surface 就拒絕。預設 PD = lot／plaza／park；ID 是在預設集合加額外 surface。 | 核心逐一檢查佔格的可建旗標／用途；0.3 m 建議 **19** 單位（0.296875 m）。9 點無法證明全輪廓可建。plaza／park 可放 site 是來源場景需求，**不提案把城市公園自動改成住宅**。 |
 | `world: WO`、`qO` | 臨路搜尋：setback 預設 **0.5**、search **60**；wide relaxation 將 search ×2；沿路偏移按 0、±2、±4…m，交叉口加 **4** m；undercroft 要 elevated 且 `oD(road,1.2) >= 2`。lane 僅在placement.lane且mode=lot時搜尋，步長2，score含 **8+lane距離+偏移**；side另一側懲罰 **100000**，off-frontage／允許sidewalk各可加 **8**。qO再加 **0.5×IE(targets,中心)**，比最佳分數小逾 **1e-9** 才替換。 | 候選佔格可以固定排序再驗證，但沒有必要把完整車道搜尋搬進核心；建議匯入／預覽端輸出格清單。32／3840／7680／128／256 單位；1.2 m 建議 **77**、2 m = **128**。score另用1/1000比例時0.5→500、8→8000、100000→100000000；它不是費用。核心不用1e-9或浮點tie-break，依固定候選索引平手。64 m 粗格不保持沿路2 m搜尋或高架下店面語意。 |
 | `engine: hr.buildBlocks` | major x/z 道路按 at 排序，插入 minor roads；街廓扣 halfTotal；寬或深 **<20** m 跳過。路段範圍檢查容差 **1** m；生成 `{id,minX,maxX,minZ,maxZ,district,reserved,zones,north,south,west,east,edge}`。 | 可離線產生 block→可建格／保留格；20 m = **1280**、1 m = **64**。20 m 街廓可能沒有完整64 m格，所以**不能宣稱直接搬到核心等價**。小街廓與同格多棟外觀聚合成一個開發單元。 |
-| `hr.districtAt(x,z,gen=false)` | 先 Kn 的 **5** 覆寫矩形，再 V 順序；半開範圍。gen=true 跳過 `gen:false` 覆寫；無命中回 V 最後的大安。 | 可將格中心所屬 style ID 放到場景匯入／畫面表；不作居民／就業規則。需保留順序、gen 旗標與後備，不能把未涵蓋處默認合法可建。 |
+| `hr.districtAt(x,z,gen=false)` | 先 Kn 的 **5** 覆寫矩形，再 V 順序；半開範圍。gen=true 跳過 `gen:false` 覆寫；無命中回 V 最後的大安。 | 可將格中心所屬 style ID 放到場景匯入／畫面表；不作居民／就業規則。需保留順序、gen 旗標與後備，不能把未涵蓋處假定合法可建。 |
 | `hr.surfaceAt` | x<**−960** 或 z<**−1030** 為 water；道路段 ends 容差 **0.01** m，車道→road 或 pedestrian plaza、人行道→sidewalk（curb corner→road）；城外 terrain；K 的 park 矩形→park；其餘 lot。 | water／保留地遮罩可格化；門檻 −61_440／−65_920 單位，0.01 m 建議 **1** 單位。road/plaza/sidewalk 的視覺形狀與 LandUse 三用途是不同資料。格面積很大，中心判定和任一交疊判定需明訂，不能每次由畫面 query 重算權威。 |
 
 建議外部量化統一為**最近的 1/64 m，恰半向遠離 0**；以上 −0.05／0.01／0.2／0.3／1.2 m 是提案的量化值，並非來源已使用定點。若把參考footprint轉成有玩法的佔格，建議工具先量化輪廓，再取與輪廓**有正面積交集**的全部64 m格（相切不算），去重後按row／column輸出；禁建輪廓也採此保守規約，不能只採中心抽樣漏掉細道路。這項格化會排除更多小基地，是需量測的新政策；預設裝飾素材不必因此佔用核心格。GameCore只接收格清單與整數遮罩，不接收lot矩形、三角形或模型碰撞箱。`world` 的空間索引 `XD` 預設 **96 m**、每軸最多 **512**，只加速搜尋；不要當新的土地格規格。`GD` 的距世界邊 **10 m**（640單位）是fringe警告，不能誤寫成lO強制退縮。
@@ -307,7 +307,7 @@ blender目錄現存共 **8,064,361 bytes**（far **7,756,272**）；historic共 
 | `Ci/reference_snapshot/external/openfreemap-tiles/planet.json`：vector_layers[id=building] | **19,254 bytes**；fields `colour:String,hide_3d:Boolean,render_height:Number,render_min_height:Number`；minzoom **13**、maxzoom **14**。 | 是圖磚schema，建物本體圖磚沒在此檔；hide_3d 是呈現旗標。高度與底高以地圖extrusion的公尺語意使用，不是居民、租金或造價。 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`：`initOsmMapEngine`、`metroEnsureNonHongKongOsmBuilding3d` | 全檔 **4,378,323 bytes**；呼叫 `metroCreateOsmMapLikeSingaporeDemo`，傳 `pitch:0`、`initialBuilding3dEnabled:!香港2D模式`，其他城市以 `setBuilding3dEnabled(true)` 保持3D。 | 建物顯示開關；外部 `metroCreateOsmMapLikeSingaporeDemo/setBuilding3dEnabled` 定義未收錄（只找到呼叫，gap），不能假稱完整renderer已取得。 |
 | 同 app：`mlLayerBeforeBuilding3d` | 優先找 building-3d，再找fill-extrusion且id符合building/3d/extrud，最後找非metro-ridership-hex-ml的extrusion。 | 疊圖順序查詢，沒有建立建物或開發人口。 |
-| 同 app：`renderRidershipFlowCirclesMaplibre`／`renderHsrStationFlowCirclesMaplibre` | fill-extrusion使用 properties `extrudeH`，base **0**、opacity **.92／.9**；根據流量正規化產生高度，分別為一般路網與高鐵站客流。 | **是客流統計柱狀圖，不是建物高度**。不能將每個fill-extrusion命中都算為建物。 |
+| 同 app：`renderRidershipFlowCirclesMaplibre`／`renderHsrStationFlowCirclesMaplibre` | fill-extrusion使用 properties `extrudeH`，base **0**、opacity **.92／.9**；根據流量正規化產生高度，分別為一般路網與高鐵站運量。 | **是運量統計柱狀圖，不是建物高度**。不能將每個fill-extrusion命中都算為建物。 |
 | `Ci/reference_snapshot/lib/virtual_island_city__q_21ffa7f6ae58fc9e.js`：內部 `M`、`w` | **13,906 bytes**；id `virtual-island-original-buildings-v10`、source-layer **buildings**（複數）、type **fill**、minzoom **12**；`u` = office／retail／industrial／institution選色，opacity在zoom12為 **.4**、13.5為 **.95**。 | 此包虛擬島建物是2D；沒有從這個圖層讀height／樓層／入住容量。不能把 `u:retail` 當作工作人數。 |
 | 同 island：`METRO_VIRTUAL_ISLAND_SEMANTIC_MAP_URL`／`REFERENCE_MAP_URL` | 同一 `/data/virtual-island/tiles/city.pmtiles?v=20260905-osm-city-v15`；landuse.kind cbd／industrial／villa／institution／newtown。 | **gap：city.pmtiles本體缺**，無法盤點要素量、真實高度或用途數量。 |
 
@@ -403,7 +403,7 @@ blender目錄現存共 **8,064,361 bytes**（far **7,756,272**）；historic共 
 
 先釐清指定6b實作：`TownGrowth.Place.counted` 是**上次午夜的累計 arrived**。`LandDemand.swift` 的 `growLand(reached:)` 先算 `served=record.arrived−place.counted`，再覆寫 counted；因此覆寫後無法只靠 counted 還原昨天 served。`lastGrowth=clamp((nowTrips−beforeTrips)×1000/beforeTrips,−1000,1000)` 是午夜前後日旅次的實際變化，受成長夾限、擴張與整數旅次影響，不能拿來當 q 或 rate。`base` 也不是昨日旅次分母。**6b 沒有保存昨日服務比例，也沒有保存 reached**，初稿「已保存服務量測」不成立。
 
-為使日內唯讀地價、存檔續玩與滿格自動升級都能使用相同量測，**明確提議6c新增 `TownGrowth.Place.lastService:Int64`（0…1000）與 `lastReached:Int64`（0…5）兩個存檔欄位**，定義在既有 `Sources/GameCore/Passenger/TownGrowth.swift`，由既有 `City/LandDemand.swift` 的 `growLand(reached:)` 每晚更新一次。只保存最後一次量測，不存日序列或地價。升級在午夜直接用此次局部量測；價格在其後與日內讀保存值，避免存讀後失去午夜 reached 或另造客流統計。
+為使日內唯讀地價、存檔續玩與滿格自動升級都能使用相同量測，**明確提議6c新增 `TownGrowth.Place.lastService:Int64`（0…1000）與 `lastReached:Int64`（0…5）兩個存檔欄位**，定義在既有 `Sources/GameCore/Passenger/TownGrowth.swift`，由既有 `City/LandDemand.swift` 的 `growLand(reached:)` 每晚更新一次。只保存最後一次量測，不存日序列或地價。升級在午夜直接用此次局部量測；價格在其後與日內讀保存值，避免存讀後失去午夜 reached 或另造運量統計。
 
 | 輸入／資料鍵 | 規約與整數界線 |
 | --- | --- |
@@ -474,11 +474,11 @@ value = clamp(base + servicePremium + accessPremium, 500, 50_000)
 
 城市初始化、兩個最新量測欄位、buildingRulesVersion須保存；當晚局部快照／upgradedCells從每次午夜世界重算，不另存歷史。所有核心常數為整數；一般建物類型與升級順序不抽籤，畫面變體若抽籤才用存檔 SeedDraw/FNV-1a。
 
-### 7.3 接口草案與後續驗收
+### 7.3 介面草案與後續驗收
 
 在既有 `City/LandDemand.swift` 接三處即可：`growLand(reached:)` 保存q／k並建立滿格快照，在既有 growing 迴圈內呼叫私有 `upgradeCityBuildings(around:measurement:...)`；`grow(around:residents:jobs:)` 查 `BuildingCapacity` 取代400／1200；`spread(towards:)` 原子建立4人土地與R D1建物。`shares(of:among:)`／`Share.demand`／`grown`／`GameWorld.apportion` 的算式與順序不變。`City/Building.swift`／`BuildingTypes.swift` 提供資料與容量；`Passenger/TownGrowth.swift` 只補最新量測欄位；**不另造 LandService.swift、LandGrowth.swift 或另一份都市成長權威**。
 
-`setLand`／`foundTowns` 在容量啟用時先驗證、初始化兩份相符資料，再沿用 `refreshLandDemand`；單純升級未改人口，無須提前改客流，原growLand結尾一起刷新。spread的土地／建物不能只建立其中一份，ID不足或合法性失敗須留下相符世界。
+`setLand`／`foundTowns` 在容量啟用時先驗證、初始化兩份相符資料，再沿用 `refreshLandDemand`；單純升級未改人口，無須提前改運量，原growLand結尾一起刷新。spread的土地／建物不能只建立其中一份，ID不足或合法性失敗須留下相符世界。
 
 後續驗收（本文件未執行）：用6b的站成長量與最大餘數手算、容量替換後的168／504／1440／1680邊界、剩1位／已超舊限、分配不足不重分、g≤0不衰退但g>0滿格仍擴張、新格4人與D1自動配對；q=799／800、k=0／1、同站第2／第3候選、站ID與row／column平手、重疊格一天一級、當天才滿不升／D4不升、模型失敗不改容量；舊存檔初始化保留所有人口與工作、同用途兩項一起選級、兩個新量測缺鍵為0；午夜、idle、批量／逐秒／任意切分及存讀一致。地價獨立重算14500例與800m嚴格邊界，驗證不改世界且不寫價格歷史。
 
@@ -535,7 +535,7 @@ avatar gap：`jie-lod1.glb`（宣告186800）、`wen-lod1.glb`（202992）、`of
 | 47 far.mesh.bin＋model/placement | 自訂SCNGeometry，PBR材質；bin不具內建loader | MeshDescriptor／submesh adapter，或離線USDZ | 可沿用24bytes緩衝與draw ranges；自訂shader/material | 驗hash／bounds／drawGroups→米尺度／Z-up轉目標軸→按placement一次定位→material mapping→批次／實例／LOD。保留源JSON與轉換manifest，普通容量不用這些浮點數。 |
 | 3現存site／proxy、build JS | 幾何／材質重建或離線烘焙 | 同左，再轉USD／USDZ | 重建mesh／atlas，Three shader要改寫 | JS不是Swift可直接載入的模型；先以完整依賴產生網格與atlas，再輸出iOS格式。來源缺模組時可從現存proxy做低細節外觀，不稱為原近景。 |
 | 8角色GLB＋KTX2 | 無內建完整GLB／meshopt／basisu支援，需離線／loader | 一般走USD／USDZ，不直接吃這些required extensions | 自訂glTF／meshopt解碼、頂點解量化、native轉碼／骨架 | 解EXT_meshopt→展開quantization→貼圖Basis/UASTC解碼／ASTC或目標USD貼圖→骨架rest pose→ANM1 retarget/bake→USD/USDA/USDC/USDZ或renderer自訂資料。 |
-| PNG／WebP／SVG | PNG可直接圖片使用；其他先轉換／decoder | 同左，與幾何loader分開 | 解碼後upload；ASTC壓縮texture用匹配格式 | 材質sRGB/linear、alpha premultiplication、normal方向、mips分開核對。 |
+| PNG／WebP／SVG | PNG可直接圖片使用；其他先轉換／decoder | 同左，與幾何loader分開 | 解碼後upload；ASTC壓縮texture用相符格式 | 材質sRGB/linear、alpha premultiplication、normal方向、mips分開核對。 |
 
 RealityKit／SceneKit的選擇不在這份研究鎖定；先用同一份代表素材比較，依Phase8量測決定。軸向建議Z-up ENU的 `(east,north,up)` 轉iOS常用Y-up `(east,up,-north)`，右手座標與normal一起轉，local-facade先依一次placement旋轉；與本遊戲平面y向南的世界位置adapter也要明確。模型公尺與GameCore世界單位僅在快照邊界乘／除64，**Float32網格不為了模擬而量化成整數**。
 
@@ -618,7 +618,7 @@ T、R前綴在§2／§3明訂。目標檔案是供後續作者設計的草案，
 | 43site、postfx、5個content依賴 | import(／site-／build-／postfx／register-DEjbkm8D、逐路徑exists | §2列完；現存proxy／far後備，不宣稱完整網頁能跑。 |
 | 47near、94 GLB宣告、hero thumbnails／source snapshots／.blend | catalog.files／metadata／thumbnail、lods.file/glb、sourceSnapshot／referenceFile／sourceFile／source-layouts／near.mesh.bin／near.glb／far.glb／.blend | §3列每件大小；只有現存far是可用mesh。 |
 | 9avatar／17fallback／角色LOD | manifest.avatars.file/fallback/lod1、.glb與實際存在性 | §8列缺檔；manifest totals與實際總量分開。 |
-| 完整建物圖磚／語意圖／Ci外部3D接口 | PMTiles／city.pmtiles／render_height／building-3d／metroCreateOsmMapLikeSingaporeDemo／setBuilding3dEnabled | 僅採現有style/schema，不抓外部資料、不給不存在的要素統計。 |
+| 完整建物圖磚／語意圖／Ci外部3D介面 | PMTiles／city.pmtiles／render_height／building-3d／metroCreateOsmMapLikeSingaporeDemo／setBuilding3dEnabled | 僅採現有style/schema，不抓外部資料、不給不存在的要素統計。 |
 | 原生可建遮罩／公尺輪廓到64m量化精度 | Land／surfaceAt／claims／water／park／road／placement／footprint | 明定粗格語意，另補整數遮罩；沒有量測就不宣稱等價。 |
 | Rocketbox與依賴完整LICENSE/NOTICE | LICENSE／CREDITS／NOTICE／copyright／license／Microsoft／Rocketbox／ODbL與源metadata | 已有來源授權照規範，特定明示條款補告示；不替未知bundle推測條款。 |
 

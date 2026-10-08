@@ -70,7 +70,7 @@ enum PlatformTrackProblem: Error {
         case .noRoom:
             language.text(
                 "There is not enough track either side of the platform for the turnouts: the platform's track must run on past each end.",
-                "月台兩端外的軌道不夠長，放不下道岔：月台所在的軌道要在兩端外再延伸一段。"
+                "月台兩端外的軌道不夠長，放不下轉轍器：月台所在的軌道要在兩端外再延伸一段。"
             )
         }
     }

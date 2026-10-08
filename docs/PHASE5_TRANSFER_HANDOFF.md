@@ -49,7 +49,7 @@
 | --- | --- |
 | PR #136 的 `PassengerRoutes.swift`、`LineJourney.swift` | `passengerRoutes` 供需求選路；pattern、實體路網與班距以既有服務查詢為準 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_metroSpawnODSplitCountByOptions`、`_metroNormalizeDispatchOptionWeights`、`metroExpandODDispatchPath` | `PassengerDemand.swift` 的 route choices；`PassengerRouteBalance.allocate` 的原生 deterministic 配額 |
-| `Railway/site_archive_clean/data/station_transfers.json` 與 `index.html` 的站名／距離匹配 | 尚未接入；先定義跨 StationID 的轉乘資料模型與上下車行為 |
+| `Railway/site_archive_clean/data/station_transfers.json` 與 `index.html` 的站名／距離比對 | 尚未接入；先定義跨 StationID 的轉乘資料模型與上下車行為 |
 | `GameWorld.swift`、`StationPassengers.swift`、`Boarding.swift` | 權威狀態、候車群組、實際換車與原起站守恆 |
 | `SavedGame.swift`、`SaveFixtures/v11-network-transfer.json` | v11 解碼與向後相容測試 |
 

@@ -14,7 +14,7 @@
 
 | 問題 | 調查結果與證據層級 |
 | --- | --- |
-| SwiftUI `Map`／`MKMapView` 要金鑰嗎？ | **推論（API 與官方完整範例支持）**：不需另發 MapKit JS key、JWT 或 Maps Server API token。原生範例直接 `import MapKit`、建立 `Map`，`MKMapView` 也沒有要求傳入服務金鑰。這不免除上架所需的開發者資格與協議。[S02][S03][S11] |
+| SwiftUI `Map`／`MKMapView` 要金鑰嗎？ | **推論（API 與官方完整範例支援）**：不需另發 MapKit JS key、JWT 或 Maps Server API token。原生範例直接 `import MapKit`、建立 `Map`，`MKMapView` 也沒有要求傳入服務金鑰。這不免除上架所需的開發者資格與協議。[S02][S03][S11] |
 | 原生地圖是否收費、有每日配額？ | **查核結果／未確認**：已查閱的原生 API、Maps 入口與協議未列按地圖顯示次數收費的價目或固定每日配額；因此 E2 可先按「無另列原生 MapKit 用量帳單」規劃。**沒有找到可援引為永久免費承諾的明文**，也不能以「未公布配額」推成無限使用。Attachment 6 §2.7、§4 明寫 Apple 可限流或撤銷存取。[S01][S02][S03][S11] |
 | MapKit JS 有何差別？ | **文件明寫**：給網站與跨平台網頁使用；每日每份 Apple Developer Program membership 免費 **250,000 map views、25,000 service calls**，更多容量需聯絡 Apple。官方範例透過 `authorizationCallback` 提供 JWT；網站用量可在 JS dashboard 查看。這些數字**不是**原生 `Map`／`MKMapView` 的配額；也不是每位玩家各有 25,000 次。[S04] |
 | Web Snapshots／Server API 呢？ | **文件明寫**：Web Snapshots 另列每日每 membership **25,000 unique requests**；Maps Server API 是另一組 REST 服務。E2 原生畫面不必為此改走 JS／Web Snapshots，不能混用各服務的限制或宣稱超額自動付費。[S02][S04] |
@@ -39,7 +39,7 @@
 
 **文件明寫**：Attachment 6 §2.1 不得移除、遮蔽或變更 Apple、合作夥伴與授權者的著作權、商標、logo、法律文件與超連結；§4 明列遮掉 logo／embedded links 可導致撤銷服務。Maps Terms §1.3(ii) 也有相同方向的要求。[S01][S07]
 
-**建議（推論）**：HUD、工具列、列車標記、覆蓋層及底部面板都要避開 MapKit 內建的 Apple Maps 標誌與法律入口，並保留點擊區域。驗收要涵蓋 iPhone／iPad、橫直向、分割畫面、深淺色與面板展開；不要只在另一頁補寫「© Apple」就遮掉原有標示。[S01，Attachment 6 §2.1、§4]
+**建議（推論）**：HUD、工具列、列車標記、覆蓋層及底部面板都要避開 MapKit 內建的 Apple Maps 標誌與法律入口，並保留點選區域。驗收要涵蓋 iPhone／iPad、橫直向、分割畫面、深淺色與面板展開；不要只在另一頁補寫「© Apple」就遮掉原有標示。[S01，Attachment 6 §2.1、§4]
 
 ### 不能把地圖資料變成遊戲資料
 
@@ -91,13 +91,13 @@
 
 **文件明寫**：SwiftUI `MapPolyline` 可呈現自己的座標資料並套 `StrokeStyle`；`Annotation` 可放 SwiftUI view。UIKit 的 `MKOverlayRenderer` 可自訂繪圖，`draw(_:zoomScale:in:)` 可能分塊、在多個背景執行緒同時呼叫，實作必須可並行安全。`MKMultiPolyline` 明確適合將多條同樣樣式的線集合，交給 `MKMultiPolylineRenderer`。[S03][S15][S16][S24]
 
-**未確認**：Apple 沒有在這些文件承諾 1,000／5,000 條線的幀率、最大頂點數、Annotation 數量或 SwiftUI 與 UIKit 的效能勝負。**本次沒有效能實測**，不能稱「上千條線沒問題」或直接指定必須換 renderer。[S15][S16][S24]
+**未確認**：Apple 沒有在這些文件承諾 1,000／5,000 條線的影格率、最大頂點數、Annotation 數量或 SwiftUI 與 UIKit 的效能勝負。**本次沒有效能實測**，不能稱「上千條線沒問題」或直接指定必須換 renderer。[S15][S16][S24]
 
 **建議（推論）**：
 
 - 先剔除視窗外物件，依縮放簡化線段／隱藏細節；以穩定 ID 更新有變更的幾何，避免每個 tick 重建全路網。遊戲自己的衍生幾何快取與 Apple Map Data 的快取要分清楚。[S01，Attachment 6 §2.5][S16][S24]
 - 靜態軌道與移動列車分開更新；SwiftUI 原型若出現更新或繪圖瓶頸，評估 `MKMapView`，按樣式與空間分組 `MKMultiPolyline` 或自訂 renderer。renderer 只讀不可變的呈現快照，不能從背景繪圖 callback 修改／並行讀寫活躍的 `GameWorld`。[S16][S24；專案 ARCHITECTURE 的權威狀態規則]
-- E2 實作時量測 1,000／5,000 條可見線、每條 16／128 頂點、100／1,000 台移動列車；組合三種底圖、pitch 0／45 度，測平移、縮放、建造預覽。記錄幀時間、主執行緒時間、記憶體與點選延遲，涵蓋最低支援 iPhone 與 iPad。這是**建議測試矩陣，不是已通過的數據**。[S15][S16][S17][S24]
+- E2 實作時量測 1,000／5,000 條可見線、每條 16／128 頂點、100／1,000 台移動列車；組合三種底圖、pitch 0／45 度，測平移、縮放、建造預覽。記錄幀時間、主執行緒時間、記憶體與點選延遲，涵蓋最低支援 iPhone 與 iPad。這是**建議測試矩陣，不是已通過的資料**。[S15][S16][S17][S24]
 
 ### 離線
 
