@@ -36,6 +36,7 @@ import urllib.request
 
 OVERPASS_URLS = os.environ.get('OVERPASS_URL', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter').split(',')
 TILE = 0.25
+SPLITS = 2
 CUTS = 4
 SAMPLES = 4
 SETS = [
@@ -67,19 +68,28 @@ def incomplete(answer):
     return None
 
 
-def fetch(sets, box, path):
-    """The answer for one kind of land in a tile: kept from an earlier
-    run, or asked for now."""
+def fetch(sets, south, west, size, path, depth=0):
+    """The answers for one kind of land in a box: kept from an earlier run,
+    or asked for now. A box the servers keep failing on (a busy server
+    gives up on a slow question with 504) is asked for again as its four
+    quarters, smaller questions, down to a sixteenth of a tile; the
+    smallest is asked until it is answered or the waits run out."""
+    box = f'{south:.4f},{west:.4f},{south + size:.4f},{west + size:.4f}'
     if os.path.exists(path):
         try:
             kept = json.load(open(path))
             if incomplete(kept) is None:
-                return kept
+                return [kept]
         except ValueError:
             pass
-    time.sleep(1)  # A pause between questions to a shared server.
+    stem = path[:-len('.json')]
+    # An earlier run already asked for the quarters.
+    split = depth < SPLITS and os.path.exists(f'{stem}_0.json')
     data = urllib.parse.urlencode({'data': query(sets, box)}).encode()
-    for n, wait in enumerate((10, 20, 40, 60, 90, 120, 180, 180, 300, 300, 300, 600)):
+    waits = () if split else (10, 20, 40, 60, 90, 120, 180, 180, 300, 300, 300, 600) if depth == SPLITS else (10, 20, 40)
+    if waits:
+        time.sleep(1)  # A pause between questions to a shared server.
+    for n, wait in enumerate(waits):
         url = OVERPASS_URLS[n % len(OVERPASS_URLS)]
         try:
             request = urllib.request.Request(url, data=data, headers={'User-Agent': 'railway-game-ios-zones/1.0'})
@@ -89,11 +99,16 @@ def fetch(sets, box, path):
             if problem is not None:
                 raise ValueError(f'incomplete answer: {problem}')
             open(path, 'wb').write(body)
-            return answer
+            return [answer]
         except Exception as error:  # A busy server answers 504 or HTML.
             print(f'{box}: {url}: {error}; again in {wait} s', flush=True)
             time.sleep(wait)
-    sys.exit(f'{box}: no answer from {", ".join(OVERPASS_URLS)}')
+    if depth == SPLITS:
+        sys.exit(f'{box}: no answer from {", ".join(OVERPASS_URLS)}')
+    print(f'{box}: asking for its quarters', flush=True)
+    half = size / 2
+    return [answer for n, (row, column) in enumerate(((0, 0), (0, 1), (1, 0), (1, 1)))
+            for answer in fetch(sets, south + row * half, west + column * half, half, f'{stem}_{n}.json', depth + 1)]
 
 
 def rings(element):
@@ -171,17 +186,16 @@ def main(places_path, tiles_dir, out):
     inside = {name: set() for name, _ in SETS}
     stamps = set()
     for n, (row, column) in enumerate(sorted(tiles)):
-        box = f'{row * TILE:.2f},{column * TILE:.2f},{(row + 1) * TILE:.2f},{(column + 1) * TILE:.2f}'
         for name, sets in SETS:
-            answer = fetch(sets, box, os.path.join(tiles_dir, f'tile_{row}_{column}_{name}.json'))
-            stamps.add(answer['osm3s']['timestamp_osm_base'])
-            for element in answer['elements'][1:]:
-                key = (element['type'], element['id'])
-                if key in seen[name]:
-                    continue
-                seen[name].add(key)
-                fill(rings(element), north, west, step, inside[name])
-        print(f'{n + 1}/{len(tiles)} {box}', flush=True)
+            for answer in fetch(sets, row * TILE, column * TILE, TILE, os.path.join(tiles_dir, f'tile_{row}_{column}_{name}.json')):
+                stamps.add(answer['osm3s']['timestamp_osm_base'])
+                for element in answer['elements'][1:]:
+                    key = (element['type'], element['id'])
+                    if key in seen[name]:
+                        continue
+                    seen[name].add(key)
+                    fill(rings(element), north, west, step, inside[name])
+        print(f'{n + 1}/{len(tiles)} {row * TILE:.2f},{column * TILE:.2f}', flush=True)
     layers = {}
     for name, points in inside.items():
         cells = {}
