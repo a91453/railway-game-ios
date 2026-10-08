@@ -5,7 +5,7 @@
 ## 資料
 
 - 來源：WorldPop，Taiwan 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（DOI [10.5258/SOTON/WP00840](https://doi.org/10.5258/SOTON/WP00840)）。
-- 授權：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。遊戲的資料來源畫面（`DataSourceCredits` 的「實景地圖的車站客流」）已經標示出處、授權與修改方式（每格四捨五入到整數人）。
+- 授權：[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。遊戲的資料來源畫面（`DataSourceCredits` 的「人口與客流」）已經標示出處、授權與修改方式（每格四捨五入到整數人）。
 - 全台合計 23,163,504 人（四捨五入後），28,924 個有人的格子，檔案 159 KB。
 - 範圍包含台灣本島、澎湖、金門與馬祖。
 

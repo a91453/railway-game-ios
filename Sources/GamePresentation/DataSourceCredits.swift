@@ -50,26 +50,27 @@ public enum DataSourceCredits {
         language.text("Railways: MOTC TDX, © OpenStreetMap contributors", "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
     }
 
-    /// Every source, by the part of the game that uses it.
+    /// Every source, by the part of the game that uses it. The same wording
+    /// as the data sources page of the game's website.
     public static func sections(in language: DisplayLanguage) -> [DataSourceSection] {
         [
             DataSourceSection(
                 id: "railways",
-                title: language.text("Taiwan’s Railways on Real-World Maps and the Real-World Demo", "實景地圖與實景示範地圖上的台灣鐵道"),
+                title: language.text("Taiwan’s Railways", "台灣的鐵道"),
                 credits: [
                     DataSourceCredit(
                         id: "tdx",
                         title: language.text(
-                            "Ministry of Transportation and Communications, TDX",
+                            "MOTC Transport Data eXchange (TDX)",
                             "交通部 TDX 運輸資料流通服務"
                         ),
                         detail: language.text(
-                            "The shapes, station order and station names of the High Speed Rail, the metro and light rail lines and the Alishan Forest Railway; the positions of some TRA stations; the official colours of the Airport MRT, the Danhai and Ankeng light rail, the Sanying Line and the Taichung Metro; the official TRA and metro station codes, addresses, and line headways.",
-                            "高鐵、捷運、輕軌與阿里山林鐵的路線幾何、站序與站名，部分台鐵車站的座標，機場捷運、淡海與安坑輕軌、三鶯線與台中捷運的官方路線色，以及台鐵與捷運車站代碼、地址與各線營運班距。"
+                            "Routes, station order and names of the High Speed Rail, metro, light rail and Alishan Forest Railway lines; the positions of some TRA stations; official line colours, station codes, addresses and headways.",
+                            "提供高鐵、捷運、輕軌與阿里山林鐵的路線、站序與站名，部分台鐵車站的位置，各線的官方路線色、車站代碼、地址與營運班距。"
                         ),
                         notice: language.text(
                             "Used under the Open Government Data License, version 1.0.",
-                            "依政府資料開放授權條款第 1 版使用。"
+                            "依「政府資料開放授權條款第 1 版」使用。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),
@@ -83,12 +84,15 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The shapes of the TRA lines, some metro lines and part of the Alishan Forest Railway, the positions of stations, physical platform coordinates, single and double track estimates, and the shops, offices, schools and sights that decide what kind of place a company’s new station on a real-world map serves, from OpenStreetMap’s contributors.",
-                            "台鐵、部分捷運與阿里山林鐵部分路段的軌道幾何、車站的座標、實體月台座標與單雙線估算，以及決定公司在實景地圖上新建車站類型的商店、辦公、學校與景點，來自 OpenStreetMap 貢獻者。"
+                            "Track alignments of the TRA and some metro and forest railway sections, station and platform positions, single and double track, and places such as shops, offices, schools and sights that tell the game what kind of area a new station serves.",
+                            "提供台鐵與部分捷運、林鐵路段的軌道走向、車站與月台位置、單雙線資訊，以及商店、辦公室、學校、景點等地點，用來判斷新車站周邊是什麼樣的地方。"
                         ),
+                        // The ODbL asks for the derived files to be offered
+                        // under the same licence: the source repository link
+                        // below is where they are.
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The game’s railway, platforms, track sections and places files (track_lines.geojson, track_stations.geojson, tra_platforms.json, tra_track_sections.json and taiwan_places.json) are available under the same licence in its source repository.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲的鐵道、月台、單雙線與地點資料檔（track_lines.geojson、track_stations.geojson、tra_platforms.json、tra_track_sections.json、taiwan_places.json）依同一授權，在遊戲的原始碼儲存庫提供。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The data files the game derives from it are available under the same licence from the source repository below.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲據此整理的資料檔以相同授權提供，可從下方的原始碼儲存庫取得。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
@@ -100,31 +104,12 @@ public enum DataSourceCredits {
                         id: "operators",
                         title: language.text("Railway operators", "鐵道營運機構"),
                         detail: language.text(
-                            "The station order of the TRA lines (TRA open data) and of the Sanying Line (New Taipei Metro); the official colours of the Taipei and Kaohsiung Metro lines, from their operators’ websites; the colours of the TRA, High Speed Rail and Alishan Forest Railway lines, after their operators’ own colours.",
-                            "台鐵路線的站序（台鐵公開資料）與三鶯線的站序（新北捷運公司）；台北捷運與高雄捷運各線的官方路線色，取自營運機構的網站；台鐵、高鐵與阿里山林鐵路線的顏色，依各營運機構的公司色。"
+                            "Station order of the TRA lines (TRA open data) and the Sanying Line (New Taipei Metro); Taipei and Kaohsiung Metro line colours from the operators’ websites; TRA, High Speed Rail and Alishan Forest Railway colours after each operator’s own colours.",
+                            "台鐵與三鶯線的站序取自台鐵公開資料與新北捷運公司；台北捷運、高雄捷運的路線色取自各營運機構網站；台鐵、高鐵與阿里山林鐵的路線色參考各機構的代表色。"
                         ),
                         notice: language.text(
-                            "The lines and the English station names are compiled by Along the Line; the game is not affiliated with any operator.",
-                            "路線與車站的英文名稱由《沿線》整理；遊戲與各營運機構無關。"
-                        ),
-                        links: []
-                    ),
-                ]
-            ),
-            DataSourceSection(
-                id: "places",
-                title: language.text("Places to Start", "開始的地點"),
-                credits: [
-                    DataSourceCredit(
-                        id: "places",
-                        title: language.text("Stations and cities", "車站與城市"),
-                        detail: language.text(
-                            "Taiwan’s stations are the railways’ above; the other cities are the city centres of the author’s transit game.",
-                            "台灣的車站來自上面的鐵道資料；其他城市是作者的交通經營遊戲的城市中心。"
-                        ),
-                        notice: language.text(
-                            "Station positions © OpenStreetMap contributors (ODbL 1.0) and MOTC TDX.",
-                            "車站座標 © OpenStreetMap 貢獻者（ODbL 1.0）與交通部 TDX。"
+                            "English line and station names are compiled by Along the Line. The game is not affiliated with any operator.",
+                            "路線與車站的英文名稱由《沿線》整理。本遊戲與各營運機構沒有任何關係。"
                         ),
                         links: []
                     ),
@@ -132,18 +117,18 @@ public enum DataSourceCredits {
             ),
             DataSourceSection(
                 id: "population",
-                title: language.text("Station Ridership on Real-World Maps", "實景地圖的車站客流"),
+                title: language.text("Population and Ridership", "人口與客流"),
                 credits: [
                     DataSourceCredit(
                         id: "worldPop",
                         title: "WorldPop",
                         detail: language.text(
-                            "How many people live around a station a company builds on a real-world map in Taiwan, which sets its ridership: WorldPop’s 2025 estimates per square kilometre (R2025A).",
-                            "公司在台灣實景地圖上建站時，用來估計車站周邊住了多少人、決定它的客流：WorldPop 2025 年每平方公里的人口估計（R2025A）。"
+                            "When you build a station on a real-world map of Taiwan, the game uses WorldPop’s 2025 population estimates per square kilometre (R2025A) to work out the people and ridership around it. The population grid layer uses the same data.",
+                            "在台灣實景地圖上蓋車站時，遊戲用 WorldPop 2025 年每平方公里的人口估計（R2025A）計算車站周邊的人口與客流。人口網格圖層也使用這份資料。"
                         ),
                         notice: language.text(
                             "WorldPop (www.worldpop.org), University of Southampton, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0); DOI 10.5258/SOTON/WP00840. The game rounds each square to whole people.",
-                            "WorldPop（www.worldpop.org），南安普敦大學，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用；DOI 10.5258/SOTON/WP00840。遊戲把每一格的人數四捨五入到整數。"
+                            "WorldPop（www.worldpop.org），英國南安普敦大學，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用，DOI 10.5258/SOTON/WP00840。遊戲將每格人數四捨五入為整數。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
@@ -161,12 +146,12 @@ public enum DataSourceCredits {
                         id: "appleMaps",
                         title: language.text("Apple Maps", "Apple 地圖"),
                         detail: language.text(
-                            "The map under real-world games, and the place search.",
+                            "The base map and place search for real-world maps.",
                             "實景地圖的底圖與地點搜尋。"
                         ),
                         notice: language.text(
-                            "Its notices are behind the Legal link at the bottom of the map.",
-                            "授權聲明見地圖下方的法律聲明連結。"
+                            "See the Legal link at the bottom left of the map for its notices.",
+                            "授權聲明請見地圖左下角的「法律資訊」。"
                         ),
                         links: []
                     ),
