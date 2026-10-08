@@ -1029,3 +1029,18 @@ V 實際放行 → T、U（保證不互穿）
 
 比例：地價基準與溢價是美分／m²（600 = $6／m²）；公園的距離 25,600 單位 = 400 m。
 
+
+## 實景的工業區、公園與農地（決策 93）
+
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `farmland`、`landuse=industrial`、`"industrial"`、`leisure=park`、`areaByUsage`。決策 91 的檢查寫 `MapBuilder/` 沒有土地用途的內容；這次找到它的車站資訊面板用 OSM 算周邊的建物用途與公園面積，所以補上一列。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/338-b3d18c994bd13868.js`／`fetchAndHandleParks`（Overpass 抓 `leisure=park` 的 node、way、relation，`osmtogeojson` 轉成多邊形，與車站範圍取交集後加總面積 `parklandInArea`） | `tools/real-world-population/build_zone_grid.py`（公園，另加 `landuse=industrial` 與 `landuse=farmland`）；`PlaceGrid.area(of:)` | adapted：同樣用 Overpass 取公園的**面積**而不是個數；交集改成事先在格網上取樣（每個 7.5″ 分區格 16 點、奇偶規則，relation 的內環是洞），因為 App 離線打包、不在遊戲中查 Overpass；node（沒有面積）不算 |
+| 同上／`fetchAndHandleBuildings` 的 `industrial`、`warehouse`、`factory` → `industrial` | `PlaceGrid.Zone.industrial` → `LandUse.industrial` | adapted：參考是看建物的 `building=*`，這裡看土地的 `landuse=industrial`（一個工業區一塊，資料小得多） |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／香港的 `hkParks`、`hkFarmland` 圖層 | — | 不採用：香港自己的圖層資料，不在快照裡，台灣沒有對應 |
+| （參考沒有） | `LandImport` 的分區格（公園沒有人、工廠與農地的固定就業、人口只住在沒有分區的格）、`LandImport.industrialJobsPerCell`、`farmJobsPerCell` | gap → 原生 |
+
+比例：分區格是人口格（30″）切成 4 × 4；每格 16 個取樣點，至少 8 點是同一種土地才算那一種（平手依工業、公園、農地）。
+
+外部專案：沒有另外搜尋。MapBuilder 的作法（Overpass ＋ 面積）已經足夠，多邊形的取樣是標準的掃描線填色，自己寫。

@@ -33,6 +33,16 @@
 - 門檻用台灣 544 個真實車站調整過：335 站住宅、130 站商業、57 站景點、22 站辦公。台北車站、西門、公館是商業，市政府是辦公，永安市場、頂溪、板橋是住宅，猴硐、菁桐、十分、平溪、動物園、阿里山、鶯歌是景點。
 - 限制：OSM 標得少的地方會判成住宅，例如南港軟體園區（辦公標得少）、新北投（溫泉旅館不算景點）。人數仍照居民計算，類型只改變一天中出發與到達的時段。
 
+## 工業區、公園與農地（分區，決策 93）
+
+實景地圖的土地除了人和地點，還有 OSM 畫成**面積**的三種土地：工業區（`landuse=industrial`）、公園（`leisure=park`）與農地（`landuse=farmland`）。`build_zone_grid.py` 經 Overpass 逐區、逐種下載它們的多邊形，加進 `taiwan_places.json` 的 `zones`：
+
+- 每個人口格（30″）切成 4 × 4 個分區格（7.5″，約 230 × 210 公尺），每個分區格取 4 × 4 = 16 個點，記下有幾點落在那種土地裡（奇偶規則，relation 的內環是洞；同一種土地重疊的地方只算一次）。
+- 作法照參考 MapBuilder 的 `fetchAndHandleParks`（Overpass 抓公園、算面積），見 `docs/RAILWAY_REFERENCE_MAPPING.md` 的「實景的工業區、公園與農地（決策 93）」。
+- 遊戲裡，一個 64 公尺格的中點所在的分區格至少一半是同一種土地，那格就是那種用途：公園沒有人，工廠與農地有固定的就業，人口只住在沒有分區的格（`LandImport`）。
+
+ZONES_SUMMARY
+
 ## 重新產生
 
 ```sh
@@ -52,4 +62,14 @@ python3 tools/real-world-population/build_place_grid.py \
   RailwayGameApp/Resources/RealWorld/taiwan_places.json
 ```
 
-人口的腳本只接受 sha256 相符的 GeoTIFF（`eae984f0…`，2026-10-05 下載）。地點會隨 OSM 更新而變，重新產生後要一起更新 `PlaceGridTests` 的總數，並重新檢查真實車站的判斷結果。換成新年份或其他來源時，要一起更新腳本裡的 sha256、`PopulationGridTests` 的總人數與資料來源畫面的文字。
+分區（接在地點之後；第一個參數是地點檔，其他內容原樣保留。Overpass 伺服器忙的時候可以用逗號列出幾個，輪流使用）：
+
+```sh
+OVERPASS_URL=https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass.private.coffee/api/interpreter \
+python3 tools/real-world-population/build_zone_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  osm-zone-tiles/ \
+  RailwayGameApp/Resources/RealWorld/taiwan_places.json
+```
+
+人口的腳本只接受 sha256 相符的 GeoTIFF（`eae984f0…`，2026-10-05 下載）。地點會隨 OSM 更新而變，重新產生後要一起更新 `PlaceGridTests` 的總數（分區是 `LandZoneTests` 的面積），並重新檢查真實車站的判斷結果。換成新年份或其他來源時，要一起更新腳本裡的 sha256、`PopulationGridTests` 的總人數與資料來源畫面的文字。
