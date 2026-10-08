@@ -15,6 +15,14 @@ answers is used as it is. An answer the server cut short (a `remark`
 error, or fewer places than its counts) is asked for again, never kept. A place is its node, or the centre of its way or
 relation; one that several tiles return counts once, and one north or west
 of the population grid not at all. Standard library only.
+
+A whole extract of Taiwan (an OpenStreetMap `.pbf` file, for example
+osmtoday.com's `asia/taiwan.pbf`, the one `build_zone_grid.py` reads) can
+stand for the tiles folder: it is read in a few minutes with pyosmium (BSD
+2-Clause; `pip install osmium`), the only time the script needs more than
+the standard library. The places are the same: the same tags, the centre
+of a way or relation its bounding box's (as Overpass's `center`), counted
+where the centre's tile has people.
 """
 import json
 import math
@@ -89,15 +97,9 @@ def fetch(box, path):
     sys.exit(f'{box}: no answer from {OVERPASS_URL}')
 
 
-def main(population_path, tiles_dir, out):
-    grid = json.load(open(population_path))
-    north, west, size = grid['north'], grid['west'], grid['cellDegrees']
-    tiles = set()
-    for run in grid['runs']:
-        for offset in range(len(run['p'])):
-            latitude = north - (run['r'] + 0.5) * size
-            longitude = west + (run['c'] + offset + 0.5) * size
-            tiles.add((math.floor(latitude / TILE), math.floor(longitude / TILE)))
+def from_overpass(north, west, size, tiles, tiles_dir):
+    """The places of each kind per cell from Overpass, tile by tile, and
+    the servers' data times."""
     os.makedirs(tiles_dir, exist_ok=True)
     seen = {name: set() for name, _ in SETS}
     counts = {name: {} for name, _ in SETS}
@@ -123,6 +125,105 @@ def main(population_path, tiles_dir, out):
             if cell[0] < 0 or cell[1] < 0:
                 continue  # North or west of the population grid.
             counts[current][cell] = counts[current].get(cell, 0) + 1
+    return counts, [min(stamps), max(stamps)]
+
+
+# The tags of each kind, as SETS asks Overpass for them.
+SHOP_AMENITIES = {'restaurant', 'cafe', 'fast_food', 'food_court', 'marketplace', 'bar', 'pub'}
+SCHOOLS = {'school', 'university', 'college'}
+SIGHTS = {'attraction', 'museum', 'zoo', 'theme_park', 'viewpoint', 'aquarium', 'gallery'}
+
+
+def kinds_of(tags):
+    """The kinds of place an element with `tags` is, as SETS sees it."""
+    amenity = tags.get('amenity')
+    kinds = []
+    if 'shop' in tags or amenity in SHOP_AMENITIES:
+        kinds.append('shops')
+    if 'office' in tags:
+        kinds.append('offices')
+    if amenity in SCHOOLS:
+        kinds.append('schools')
+    if tags.get('tourism') in SIGHTS:
+        kinds.append('attractions')
+    return kinds
+
+
+def from_extract(north, west, size, tiles, path):
+    """The places of each kind per cell from a whole `.pbf` extract: nodes
+    where they are, ways and relations at the centre of their bounding box
+    (a relation's of its member nodes and ways), each counted once; and the
+    newest edit among them (an extract's header need not say when it was
+    made)."""
+    import osmium  # pyosmium: only for an extract.
+    counts = {name: {} for name, _ in SETS}
+    newest = None
+    relations = []  # (kinds, member nodes, member ways)
+    wanted_nodes, wanted_ways = set(), set()
+
+    def count(kinds, latitude, longitude):
+        if (math.floor(latitude / TILE), math.floor(longitude / TILE)) not in tiles:
+            return  # As Overpass is asked only for tiles with people.
+        cell = (math.floor((north - latitude) / size), math.floor((longitude - west) / size))
+        if cell[0] < 0 or cell[1] < 0:
+            return  # North or west of the population grid.
+        for kind in kinds:
+            counts[kind][cell] = counts[kind].get(cell, 0) + 1
+
+    def stamp(element):
+        nonlocal newest
+        text = element.timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
+        newest = max(newest or text, text)
+
+    processor = osmium.FileProcessor(path).with_locations().with_filter(osmium.filter.KeyFilter('shop', 'amenity', 'office', 'tourism'))
+    for element in processor:
+        kinds = kinds_of(element.tags)
+        if not kinds:
+            continue
+        stamp(element)
+        if element.is_node():
+            count(kinds, element.location.lat, element.location.lon)
+        elif element.is_way():
+            points = [(node.location.lat, node.location.lon) for node in element.nodes if node.location.valid()]
+            if points:
+                latitudes, longitudes = zip(*points)
+                count(kinds, (min(latitudes) + max(latitudes)) / 2, (min(longitudes) + max(longitudes)) / 2)
+        elif element.is_relation():
+            nodes = [member.ref for member in element.members if member.type == 'n']
+            ways = [member.ref for member in element.members if member.type == 'w']
+            relations.append((kinds, nodes, ways))
+            wanted_nodes.update(nodes)
+            wanted_ways.update(ways)
+    # The relations' members, in a second reading.
+    places = {}
+    if relations:
+        for element in osmium.FileProcessor(path, osmium.osm.NODE | osmium.osm.WAY).with_locations():
+            if element.is_node() and element.id in wanted_nodes:
+                places[('n', element.id)] = [(element.location.lat, element.location.lon)]
+            elif element.is_way() and element.id in wanted_ways:
+                places[('w', element.id)] = [(node.location.lat, node.location.lon) for node in element.nodes if node.location.valid()]
+    for kinds, nodes, ways in relations:
+        points = [point for ref in nodes for point in places.get(('n', ref), [])]
+        points += [point for ref in ways for point in places.get(('w', ref), [])]
+        if points:
+            latitudes, longitudes = zip(*points)
+            count(kinds, (min(latitudes) + max(latitudes)) / 2, (min(longitudes) + max(longitudes)) / 2)
+    return counts, [newest, newest]
+
+
+def main(population_path, source, out):
+    grid = json.load(open(population_path))
+    north, west, size = grid['north'], grid['west'], grid['cellDegrees']
+    tiles = set()
+    for run in grid['runs']:
+        for offset in range(len(run['p'])):
+            latitude = north - (run['r'] + 0.5) * size
+            longitude = west + (run['c'] + offset + 0.5) * size
+            tiles.add((math.floor(latitude / TILE), math.floor(longitude / TILE)))
+    if source.endswith('.pbf'):
+        counts, stamps = from_extract(north, west, size, tiles, source)
+    else:
+        counts, stamps = from_overpass(north, west, size, tiles, source)
     layers = {}
     for name, cells in counts.items():
         runs = []
@@ -133,9 +234,9 @@ def main(population_path, tiles_dir, out):
                 runs.append({'r': row, 'c': column, 'p': [cells[(row, column)]]})
         layers[name] = runs
     places = {
-        'source': 'OpenStreetMap contributors, through the Overpass API',
+        'source': 'OpenStreetMap contributors, ' + (f'from the extract {os.path.basename(source)}' if source.endswith('.pbf') else 'through the Overpass API'),
         'licence': 'ODbL 1.0',
-        'osmData': [min(stamps), max(stamps)],
+        'osmData': stamps,
         'north': north,
         'west': west,
         'cellDegrees': size,
@@ -144,7 +245,7 @@ def main(population_path, tiles_dir, out):
     text = json.dumps(places, ensure_ascii=False, separators=(',', ':')) + '\n'
     open(out, 'w', encoding='utf-8').write(text)
     totals = {name: sum(cells.values()) for name, cells in counts.items()}
-    print(f'{out}: {totals}, OSM data {min(stamps)} to {max(stamps)}, {len(text)} bytes')
+    print(f'{out}: {totals}, OSM data {stamps[0]} to {stamps[1]}, {len(text)} bytes')
 
 
 if __name__ == '__main__':

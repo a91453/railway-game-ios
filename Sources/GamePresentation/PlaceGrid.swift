@@ -152,7 +152,9 @@ extension StationDemandKind {
     /// that kind rather than homes: tuned on Taiwan's 544 real stations
     /// (2026-10-05), where it made 335 serve homes, 130 shops, 57 sights
     /// and 22 offices; with schools a kind of their own (decision 91), 328
-    /// homes, 107 shops, 57 sights, 50 offices and 2 schools.
+    /// homes, 107 shops, 57 sights, 50 offices and 2 schools; with the
+    /// places of the 2026-10-06 extract (decision 93), 326 homes, 107
+    /// shops, 58 sights, 51 offices and 2 schools.
     public static let realWorldThreshold = 1.5
 
     /// The fewest places of each kind a station's surroundings are

@@ -20,8 +20,9 @@ import GameCore
 ///
 /// The jobs are the places the app bundles counted on the same grid
 /// (``PlaceGrid``), each worth ``jobsPerPlace`` (gap: the game's numbers,
-/// set so Taiwan's places make some 8.6 million jobs, a little under two
-/// for every five people, about its working population). A cell is offices,
+/// set so Taiwan's places make some 8.4 million jobs, a little under two
+/// for every five people, about its working population; 8.6 million
+/// before decision 93 counted Xiamen's places by Kinmen). A cell is offices,
 /// shops, schools and public offices, or sights where that kind of place's
 /// jobs are the most of it and at least its people (decision 91: schools
 /// and sights were counted with offices and shops before), and homes

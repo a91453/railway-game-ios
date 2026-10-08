@@ -104,9 +104,9 @@ final class LandImportTests: XCTestCase {
     func testTheirPlacesBecomeJobsAndAStationTakesItsShare() throws {
         let grid = try Self.bundled()
         let places = try Self.bundledPlaces()
-        // Taiwan's places make some 8.6 million jobs.
+        // Taiwan's places make some 8.4 million jobs.
         let jobs = PlaceGrid.Kind.allCases.reduce(Int64(0)) { $0 + Int64(places.total(of: $1)) * (LandImport.jobsPerPlace[$1] ?? 0) }
-        XCTAssertEqual(jobs, 8_561_200)
+        XCTAssertEqual(jobs, 8_405_125)
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: Self.taipei.latitude, longitudeDegrees: Self.taipei.longitude))
         let cells = try XCTUnwrap(LandImport.cells(population: grid, places: places, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds))
         let without = try XCTUnwrap(LandImport.cells(population: grid, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds))
