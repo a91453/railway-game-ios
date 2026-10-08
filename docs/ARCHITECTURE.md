@@ -3221,7 +3221,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 2026-10-08，作者：「一次補完全部」。研究文件（`docs/research/PHASE6_LAND_USE_STUDY.md`）列的八種用途裡，6a 只做了住宅、商業、辦公；作者的分析把它分成三層：用途（這一步）、密度（D1–D4，決策 74，不變）與城市風格（Phase 8，不在這一步），並要求車站需求的種類和土地分區分開。學校的時間依作者的選擇用新的曲線，不借用最接近的種類。存檔版本 19，golden schema 40。
 
-REFERENCE_CHECK_PLACEHOLDER
+參考檢查（`a91453/railway-reference-private`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「八種土地用途（決策 90）」）：`Ci/` 的 `landuseLabelByClass`（居住、商務辦公、商業服務、工業、行政辦公、教育、醫療、體育文化、公園綠地等 11 類）與 zh-CN 語系的建物類別（農業、市政、工業、公共設施、教育……）支持這八種的分法；`Ci/` 的 `buildStationFlowPresetCurves` 是四種車站曲線的來源（決策 34），學校的曲線照它的形式寫；參考沒有學校或公共設施的曲線、地價、公園溢價或各用途的容量，這些是原生（gap → 原生）。
 
 1. **用途**（GameCore，`LandUse`）：`residential`、`commercial`、`office` 之後加 `industrial`（工廠與倉儲，貨運之後再說）、`civic`（學校、醫院與公部門）、`leisure`（景點、遊樂與度假）、`agricultural`（農地）、`park`（公園）。空地、水域與不能蓋的地不是用途：沒有人的格不列出（地形另外一層，下一個 PR）。
 2. **公園**：唯一可以沒有人的用途，而且必須沒有人（`residents + jobs == 0`）；其他用途仍然至少要有一個人（`invalidLand`）。存檔的格式不變（公園一段是 `"residents": [0, …]`、沒有 `"jobs"`）。公園的建物是 D1、容量 0；永遠不算「已滿」，不升級；成長分配依現有人數，所以不會分到人；新住宅只蓋在有人的格旁邊（公園旁邊不算）。
