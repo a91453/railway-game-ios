@@ -164,36 +164,51 @@ enum TrackSpacing {
                 return min(p.x, q.x) - w < other.maximum.x && other.minimum.x - w < max(p.x, q.x)
                     && min(p.y, q.y) - w < other.maximum.y && other.minimum.y - w < max(p.y, q.y)
             }
-            // Each piece is filed column by column of cells (decision 88):
-            // under a column, only the cells beside the part of the piece a
-            // point there can be less than the spacing from, so a long
-            // slanting piece files cells as its length, not as its box's
-            // area (some 10^9 cells for a straight edge across Taiwan).
-            let size = Pieces.cellSize
             var cells: [Cell: [Int]] = [:]
             for i in indices {
-                let (p, q) = (points[i].plan, points[i + 1].plan)
-                let (left, right) = p.x <= q.x ? (p, q) : (q, p)
-                for x in Cell.cell(left.x - w)...Cell.cell(right.x + w) {
-                    // A point in this column less than the spacing from the
-                    // piece is nearest a point of it within the spacing of
-                    // the column, between `from` and `to`; the piece's
-                    // heights there, a unit wider either way for the
-                    // division's rounding.
-                    let from = max(left.x, x * size - w), to = min(right.x, (x + 1) * size - 1 + w)
-                    var low = min(p.y, q.y), high = max(p.y, q.y)
-                    if left.x != right.x {
-                        let a = left.y + (from - left.x) * (right.y - left.y) / (right.x - left.x)
-                        let b = left.y + (to - left.x) * (right.y - left.y) / (right.x - left.x)
-                        low = max(low, min(a, b) - 1)
-                        high = min(high, max(a, b) + 1)
-                    }
-                    for y in Cell.cell(low - w)...Cell.cell(high + w) {
-                        cells[Cell(x, y), default: []].append(i)
-                    }
+                for cell in Self.cells(near: points[i].plan, points[i + 1].plan, within: w) {
+                    cells[cell, default: []].append(i)
                 }
             }
             self.cells = cells
+        }
+
+        /// The cells a point less than `w` from the piece from `p` to `q`
+        /// can lie in: column by column, the rows the piece runs through
+        /// within `w` of the column, widened by `w`. As many as the piece
+        /// is long, where the cells of its box widened by `w` grow with
+        /// the square of its length (a straight edge is one piece: 2^25
+        /// units on the slant would be a billion cells).
+        ///
+        /// A point less than `w` from the piece is less than `w` from some
+        /// point of it in x and in y; that point lies within `w` of the
+        /// point's column, so between the lowest and highest the piece runs
+        /// there (rounded outwards), and the point's row is within `w` of
+        /// those. Exact integer arithmetic: coordinates within
+        /// ``WorldCoordinate/limit`` keep the products below 2^61.
+        static func cells(near p: PlanPoint, _ q: PlanPoint, within w: Int64) -> [Cell] {
+            let (left, right) = p.x <= q.x ? (p, q) : (q, p)
+            let run = right.x - left.x, rise = right.y - left.y
+            /// The piece's height at `x`, rounded down or up.
+            func y(at x: Int64, roundingUp: Bool) -> Int64 {
+                let n = (x - left.x) * rise
+                let down = n >= 0 ? n / run : -((-n + run - 1) / run)
+                return left.y + (roundingUp && down * run != n ? down + 1 : down)
+            }
+            var found: [Cell] = []
+            for column in Cell.cell(left.x - w)...Cell.cell(right.x + w) {
+                let low = max(left.x, column * cellSize - w)
+                let high = min(right.x, (column + 1) * cellSize + w)
+                guard low <= high else { continue }
+                let (bottom, top) = run == 0
+                    ? (min(left.y, right.y), max(left.y, right.y))
+                    : (min(y(at: low, roundingUp: false), y(at: high, roundingUp: false)),
+                       max(y(at: low, roundingUp: true), y(at: high, roundingUp: true)))
+                for row in Cell.cell(bottom - w)...Cell.cell(top + w) {
+                    found.append(Cell(column, row))
+                }
+            }
+            return found
         }
 
         /// The pieces that may be less than the spacing from `point`, in

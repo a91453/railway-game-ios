@@ -126,34 +126,17 @@ extension GameWorld {
         return values
     }
 
-    /// What each of `cells` is worth, in their order: the same as
-    /// ``landValue(row:column:)`` for each cell of the world, worked out
-    /// together. Each cell is tried only against the stations of the
-    /// blocks (``Land/blockLength``, more than the catchment) round its
-    /// own, so a map's few cells near its stations (decision 88: the
-    /// whole of Taiwan) do not cost every station.
-    public func landValues(at cells: [CellPosition]) -> [LandValue] {
+    /// What the cells at `positions` are worth, in that order: the same as
+    /// ``landValue(row:column:)`` for each, worked out together. Positions
+    /// outside the world are left out. For a layer that needs only some
+    /// cells (the city map's: those with land or in a catchment), where
+    /// ``landValues()`` works out every cell of the world.
+    public func landValues(at positions: [CellPosition]) -> [LandValue] {
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         let stations = landValueStations()
-        let length = Land.blockLength
-        var byBlock: [LandBlock: [Int]] = [:]
-        for (index, station) in stations.enumerated() {
-            byBlock[LandBlock(row: Int(station.point.y / length), column: Int(station.point.x / length)), default: []].append(index)
-        }
-        // The stations of the blocks round each block, by ascending
-        // station as ``landValue(row:column:near:)`` ties them.
-        var near: [LandBlock: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)]] = [:]
-        return cells.map { cell in
-            let block = LandBlock(cellRow: cell.row, column: cell.column)
-            if near[block] == nil {
-                var found: [Int] = []
-                for row in (block.row - 1)...(block.row + 1) {
-                    for column in (block.column - 1)...(block.column + 1) {
-                        found += byBlock[LandBlock(row: row, column: column)] ?? []
-                    }
-                }
-                near[block] = found.sorted().map { stations[$0] }
-            }
-            return landValue(row: cell.row, column: cell.column, near: near[block] ?? [])
+        return positions.compactMap { position in
+            guard (0..<rows).contains(position.row), (0..<columns).contains(position.column) else { return nil }
+            return landValue(row: position.row, column: position.column, near: stations)
         }
     }
 

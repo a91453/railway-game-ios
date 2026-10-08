@@ -18,15 +18,20 @@ public struct CityMap: Sendable {
     /// The world's cells (``Land/rows(in:)`` × ``Land/columns(in:)``).
     public let rows: Int
     public let columns: Int
+    /// The cells a layer can draw, by row and then column: those with land
+    /// (and so a building) and those a station's catchment reaches. Every
+    /// other cell has no use, is worth an empty cell with no service
+    /// (``LandValueRules/vacantBase``: a cell is worth more only with land
+    /// or a station with service within the catchment) and is not covered,
+    /// so no layer draws it. They grow with what is built and lived in, not
+    /// with the map (docs/research/WHOLE_TAIWAN_MAP.md).
+    let cells: [Cell]
 
-    /// A cell with land or a catchment on it: every other cell has no
-    /// building, no one in it, no station's reach and the empty cell's
-    /// value, and draws on no layer (decision 88: the whole of Taiwan has
-    /// some 27 million cells, of which the land and the catchments are a
-    /// few hundred thousand).
-    struct Entry: Sendable {
-        /// `row × columns + column`.
-        let index: Int
+    struct Cell: Sendable {
+        let row: Int
+        let column: Int
+        /// Its value in cents a m².
+        let value: Int64
         /// Its use and density: 0 for no building or land, else
         /// `use × 8 + density` (use 1 homes, 2 shops, 3 offices; density
         /// 1–4, 5 for existing stock).
@@ -35,12 +40,7 @@ public struct CityMap: Sendable {
         let covered: Bool
         /// Whether anyone lives or works in it.
         let peopled: Bool
-        /// Its value in cents a m².
-        let value: Int64
     }
-
-    /// By ascending index: by row and then column.
-    let entries: [Entry]
 
     /// The smallest a drawn rectangle may be on screen, in points.
     public static let minimumTilePoints = 6.0
@@ -49,17 +49,17 @@ public struct CityMap: Sendable {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
         self.rows = rows
         self.columns = columns
-        var kinds: [Int: UInt8] = [:]
+        var kinds: [CellPosition: UInt8] = [:]
         for cell in world.land.cells where cell.row < rows && cell.column < columns {
-            let index = cell.row * columns + cell.column
+            let position = CellPosition(row: cell.row, column: cell.column)
             if let building = world.buildings.building(row: cell.row, column: cell.column) {
                 let density = building.kind == .existingStock ? 5 : building.density.rawValue
-                kinds[index] = UInt8(Self.useCode(building.use) * 8 + density)
+                kinds[position] = UInt8(Self.useCode(building.use) * 8 + density)
             } else {
-                kinds[index] = UInt8(Self.useCode(cell.use) * 8)
+                kinds[position] = UInt8(Self.useCode(cell.use) * 8)
             }
         }
-        var covered = Set<Int>()
+        var covered: Set<CellPosition> = []
         let length = Land.cellLength, radius = Land.catchmentRadius
         // A closed station reaches no one (decision 77).
         for station in world.stations where station.operationMode != .closed {
@@ -72,17 +72,19 @@ public struct CityMap: Sendable {
                 for column in firstColumn...lastColumn {
                     let dx = Int64(column) * length + length / 2 - point.x
                     if dx * dx + dy * dy < radius * radius {
-                        covered.insert(row * columns + column)
+                        covered.insert(CellPosition(row: row, column: column))
                     }
                 }
             }
         }
-        // Only a cell with land or a building, or in the catchment of a
-        // station that sets values, is worth more than an empty cell.
-        let indices = Set(kinds.keys).union(covered).sorted()
-        let values = world.landValues(at: indices.map { CellPosition(row: $0 / columns, column: $0 % columns) })
-        entries = zip(indices, values).map { index, value in
-            Entry(index: index, kind: kinds[index] ?? 0, covered: covered.contains(index), peopled: kinds[index] != nil, value: value.value)
+        let positions = Set(kinds.keys).union(covered).sorted()
+        let values = world.landValues(at: positions)
+        cells = zip(positions, values).map { position, value in
+            let kind = kinds[position]
+            return Cell(
+                row: position.row, column: position.column, value: value.value,
+                kind: kind ?? 0, covered: covered.contains(position), peopled: kind != nil
+            )
         }
     }
 
@@ -133,44 +135,42 @@ public struct CityMap: Sendable {
         let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(rows - 1, Int((region.maxY / length).rounded(.down)))
         let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(columns - 1, Int((region.maxX / length).rounded(.down)))
         guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
-        let blockRows = (firstRow / size)...(lastRow / size), blockColumns = (firstColumn / size)...(lastColumn / size)
-        // Each block in view adds up its cells, all of them, those past the
-        // view's edge too: only the entries count, as every other cell adds
-        // nothing on any layer.
+        // Whole blocks, those at the region's edges too, as before.
+        let lowRow = firstRow / size * size, highRow = min(rows - 1, (lastRow / size + 1) * size - 1)
+        let lowColumn = firstColumn / size * size, highColumn = min(columns - 1, (lastColumn / size + 1) * size - 1)
         struct Block {
             var uses = [0, 0, 0, 0], densities = 0, drawn = 0, total: Int64 = 0
             var anyCovered = false, anyPeopled = false, anyUncovered = false
         }
-        var blocks: [Int: Block] = [:]
-        let blockColumnCount = (columns + size - 1) / size
-        var position = firstEntry(atOrAfter: blockRows.lowerBound * size * columns)
-        let end = min(rows, (blockRows.upperBound + 1) * size) * columns
-        while position < entries.count, entries[position].index < end {
-            let entry = entries[position]
-            position += 1
-            let blockColumn = (entry.index % columns) / size
-            guard blockColumns.contains(blockColumn) else { continue }
-            let key = (entry.index / columns) / size * blockColumnCount + blockColumn
+        var blocks: [CellPosition: Block] = [:]
+        // The first cell at or below the first row, by halving.
+        var low = 0, high = cells.count
+        while low < high {
+            let middle = (low + high) / 2
+            if cells[middle].row < lowRow { low = middle + 1 } else { high = middle }
+        }
+        for cell in cells[low...] {
+            guard cell.row <= highRow else { break }
+            guard (lowColumn...highColumn).contains(cell.column) else { continue }
+            let key = CellPosition(row: cell.row / size, column: cell.column / size)
             var block = blocks[key] ?? Block()
             switch mode {
             case .landUse:
-                let kind = Int(entry.kind)
+                let kind = Int(cell.kind)
                 guard kind > 0 else { continue }
                 block.uses[kind / 8] += 1
                 block.densities += max(1, min(4, kind % 8))
                 block.drawn += 1
             case .landValue:
-                guard entry.peopled || entry.value > LandValueRules.vacantBase else { continue }
-                block.total += entry.value
+                guard cell.peopled || cell.value > LandValueRules.vacantBase else { continue }
+                block.total += cell.value
                 block.drawn += 1
             default:
-                if entry.covered {
+                if cell.covered {
                     block.anyCovered = true
-                    block.anyPeopled = block.anyPeopled || entry.peopled
-                } else if entry.peopled {
+                    block.anyPeopled = block.anyPeopled || cell.peopled
+                } else if cell.peopled {
                     block.anyUncovered = true
-                } else {
-                    continue
                 }
             }
             blocks[key] = block
@@ -178,7 +178,6 @@ public struct CityMap: Sendable {
         var tiles: [TravelDemandMap.Tile] = []
         for key in blocks.keys.sorted() {
             guard let block = blocks[key] else { continue }
-            let blockRow = key / blockColumnCount, blockColumn = key % blockColumnCount
             let color: PopTravel.RGB
             let value: Int64
             switch mode {
@@ -203,26 +202,12 @@ public struct CityMap: Sendable {
                     continue
                 }
             }
-            let minX = Double(blockColumn * size) * length, minY = Double(blockRow * size) * length
+            let minX = Double(key.column * size) * length, minY = Double(key.row * size) * length
             tiles.append(TravelDemandMap.Tile(
                 minX: minX, minY: minY, maxX: minX + Double(size) * length, maxY: minY + Double(size) * length, color: color, value: value
             ))
         }
         return tiles
-    }
-
-    /// The position in ``entries`` of the first entry at or after `index`.
-    private func firstEntry(atOrAfter index: Int) -> Int {
-        var low = 0, high = entries.count
-        while low < high {
-            let middle = (low + high) / 2
-            if entries[middle].index < index {
-                low = middle + 1
-            } else {
-                high = middle
-            }
-        }
-        return low
     }
 
     // MARK: - Colours

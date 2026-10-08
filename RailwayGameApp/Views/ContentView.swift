@@ -75,6 +75,10 @@ struct ContentView: View {
         // Decision 86: a scenario that ends while playing opens its goals,
         // as a closed year opens its report.
         .onChange(of: session.scenarioJustEnded) { _, ended in
+            // Decision 87: a best result is kept as soon as it is made.
+            if ended {
+                launcher.recordChallengeResult()
+            }
             if ended, screen.panel == nil {
                 screen.panel = .goals
             }

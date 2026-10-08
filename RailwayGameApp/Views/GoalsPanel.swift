@@ -120,44 +120,49 @@ struct GoalsSections: View {
     }
 }
 
-/// The start screen's challenges (decision 86): each with its story, goals
-/// and ratings; choosing one starts a new game on a blank map with it.
+/// The start screen's challenges (decision 86): the week's (decision 87),
+/// then the others, each with its story, goals, ratings and the player's
+/// best; choosing one starts a new game on a blank map with it.
 struct ChallengePicker: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
+    /// The week when the picker opened.
+    @State private var weekly = WeeklyChallenge(containing: Date())
 
     var body: some View {
         let language = launcher.language
         NavigationStack {
             List {
-                ForEach(Challenge.sandbox) { challenge in
+                Section {
                     Button {
                         dismiss()
-                        launcher.startChallenge(challenge)
+                        launcher.startWeeklyChallenge()
                     } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(verbatim: challenge.title(in: language))
-                                .font(.headline)
-                                .foregroundStyle(Theme.textPrimary)
-                            Text(verbatim: challenge.story(in: language))
-                                .font(.footnote)
-                                .foregroundStyle(Theme.textSecondary)
-                            ForEach(challenge.goalsText(in: language), id: \.self) { goal in
-                                Label {
-                                    Text(verbatim: goal)
-                                } icon: {
-                                    Image(systemName: "flag")
-                                }
-                                .font(.footnote)
-                                .foregroundStyle(Theme.textPrimary)
-                            }
-                            Text(verbatim: challenge.ratingsText(in: language))
-                                .font(.caption)
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        .padding(.vertical, 4)
+                        card(weekly.challenge, in: language)
                     }
-                    .accessibilityIdentifier("challenge.\(challenge.id)")
+                    .accessibilityIdentifier("challenge.weekly")
+                } header: {
+                    Text(verbatim: language.text("This week", "本週"))
+                } footer: {
+                    Text(verbatim: language.text(
+                        "Everyone gets the same map until Sunday night, Taiwan time: \(weekly.daysLeft(from: Date())) days left.",
+                        "到台灣時間週日午夜前，大家都玩同一張地圖：還剩 \(weekly.daysLeft(from: Date())) 天。"
+                    ))
+                }
+                Section {
+                    ForEach(Challenge.sandbox) { challenge in
+                        Button {
+                            dismiss()
+                            launcher.startChallenge(challenge)
+                        } label: {
+                            card(challenge, in: language)
+                        }
+                        .accessibilityIdentifier("challenge.\(challenge.id)")
+                    }
+                } header: {
+                    Text(verbatim: language.text("Challenges", "挑戰"))
+                } footer: {
+                    Text(verbatim: language.text("A new map each time.", "每次都是新的地圖。"))
                 }
             }
             .navigationTitle(Text(verbatim: language.text("Challenges", "挑戰")))
@@ -172,5 +177,38 @@ struct ChallengePicker: View {
                 }
             }
         }
+    }
+
+    private func card(_ challenge: Challenge, in language: DisplayLanguage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: challenge.title(in: language))
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            Text(verbatim: challenge.story(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+            ForEach(challenge.goalsText(in: language), id: \.self) { goal in
+                Label {
+                    Text(verbatim: goal)
+                } icon: {
+                    Image(systemName: "flag")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textPrimary)
+            }
+            Text(verbatim: challenge.ratingsText(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if let best = launcher.records.best[challenge.id] {
+                Label {
+                    Text(verbatim: best.text(in: language))
+                } icon: {
+                    Image(systemName: "medal.fill")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.success)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
