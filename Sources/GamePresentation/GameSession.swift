@@ -69,6 +69,13 @@ public final class GameSession {
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
     public internal(set) var buildingSite: PlanPoint?
+    /// Whether a tap with the building tool builds there at once rather
+    /// than showing the building first (decision 103): for putting up one
+    /// building after another. Undo takes each back.
+    public var buildingBuildsOnTap = false
+    /// While a finger drags the shown building (decision 103): where the
+    /// site was when the drag began, which a cancelled drag puts back.
+    @ObservationIgnored var buildingDragSiteBefore: PlanPoint?
 
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.

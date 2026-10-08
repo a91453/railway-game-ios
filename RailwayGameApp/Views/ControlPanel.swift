@@ -220,13 +220,23 @@ private struct BuildingControls: View {
                 Button {
                     session.buildingKind = kind
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: kind.systemImage)
-                            .font(.subheadline.weight(.semibold))
-                        Text(kind.title(in: session.language))
-                            .font(.subheadline.weight(isActive ? .bold : .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                    VStack(spacing: 2) {
+                        HStack(spacing: 6) {
+                            Image(systemName: kind.systemImage)
+                                .font(.subheadline.weight(.semibold))
+                            Text(kind.title(in: session.language))
+                                .font(.subheadline.weight(isActive ? .bold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        // Decision 103: what each costs before its land.
+                        if let cost = session.buildingStartingCost(kind) {
+                            Text(verbatim: cost.moneyText)
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
                     }
                     .frame(maxWidth: .infinity, minHeight: 38)
                 }
@@ -235,6 +245,12 @@ private struct BuildingControls: View {
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }
+        // Decision 103: one tap builds, for one building after another.
+        Toggle(isOn: $session.buildingBuildsOnTap) {
+            Text(verbatim: session.language.text("Build where I tap", "點一下直接蓋"))
+                .font(.footnote)
+        }
+        .accessibilityIdentifier("building.buildsOnTap")
         if let preview = session.buildingPreview {
             // Decision 95: the site's cost and what it pulls down, or why
             // it cannot stand there; the action button builds it.
@@ -244,6 +260,18 @@ private struct BuildingControls: View {
                     .monospacedDigit()
                     .foregroundStyle(preview.problem == nil ? Theme.textPrimary : Theme.error)
                     .accessibilityIdentifier("building.preview")
+            }
+            if preview.problem == nil {
+                Label {
+                    Text(verbatim: session.language.text(
+                        "Tap it again to build, or drag it somewhere else.",
+                        "再點一下就蓋，或把它拖到別的地方。"
+                    ))
+                } icon: {
+                    Image(systemName: "hand.tap")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
             }
         } else {
             Label("Tap the map to choose where it goes. It cannot stand on track or another of your buildings; a city building in the way is bought out.", systemImage: "hand.tap")
