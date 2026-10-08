@@ -10,6 +10,41 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
+    /// City building P0-A (decision 92): on a blank map, choose the house,
+    /// tap the ground, see it built, save, go back to the start and
+    /// continue: the house is still there.
+    func testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        requiredButton("start.newGame", in: app).tap()
+        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        requiredButton("tool.building", in: app).tap()
+        requiredButton("building.kind.house", in: app).tap()
+        let count = app.staticTexts["building.count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the building count")
+        XCTAssertEqual(count.label, "0 buildings placed")
+
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        XCTAssertTrue(app.staticTexts["Built house #1."].waitForExistence(timeout: 10), "The house was not built")
+        XCTAssertEqual(count.label, "1 building placed")
+
+        openGameMenu(in: app)
+        tapMenuAction("menu.saveGame", in: app)
+        openGameMenu(in: app)
+        tapMenuAction("menu.backToStart", in: app)
+        requiredButton("start.continue", in: app).tap()
+
+        requiredButton("tool.building", in: app).tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the building count after continuing")
+        XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
+    }
+
     private func checkFlow(language: String, locale: String) {
         continueAfterFailure = false
         let app = XCUIApplication()

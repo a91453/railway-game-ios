@@ -61,6 +61,7 @@ enum MapArt {
         drawLines(lines, world: world, projection: projection, cached: edges, in: context)
         drawTransfers(lines, projection: projection, in: context)
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
+        drawPlacedBuildings(world, projection: projection, in: context)
         for station in world.stations {
             drawPointStation(
                 station,
@@ -458,6 +459,31 @@ enum MapArt {
     private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+    }
+
+    /// The buildings the player placed (city building P0-A, decision 92):
+    /// each a square in its kind's colour, edged in ink, always at least a
+    /// few points across so it stays visible zoomed out.
+    private static func drawPlacedBuildings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
+        guard !world.placedBuildings.isEmpty else { return }
+        let region = drawingRegion(projection)
+        let minimum = 4.0
+        for building in world.placedBuildings {
+            let area = WorldRegion(minX: Double(building.minX), minY: Double(building.minY), maxX: Double(building.maxX), maxY: Double(building.maxY))
+            guard region.intersects(area) else { continue }
+            var rect = screenRect(minX: area.minX, minY: area.minY, maxX: area.maxX, maxY: area.maxY, projection)
+            if rect.width < minimum {
+                rect = rect.insetBy(dx: (rect.width - minimum) / 2, dy: (rect.height - minimum) / 2)
+            }
+            let colour: Color = switch building.kind {
+            case .house: Palette.house
+            case .shop: Palette.shop
+            case .office: Palette.office
+            }
+            let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
+            context.fill(shape, with: .color(colour))
+            context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
+        }
     }
 
     /// The screen rectangle of the world rectangle from (`minX`, `minY`)

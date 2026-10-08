@@ -183,4 +183,10 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidScenario
     /// The scenario's era has no trains of this type (decision 86).
     case trainTypeUnavailable(TrainType)
+    /// A building would share ground with this placed building (decision 92).
+    case buildingOverlaps(PlacedBuildingID)
+    /// A building would stand on, or too near, this edge's track (decision 92).
+    case buildingOnTrack(TrackEdgeID)
+    /// A building would stand on, or too near, this station (decision 92).
+    case buildingOnStation(StationID)
 }

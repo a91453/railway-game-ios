@@ -49,6 +49,9 @@ public final class GameSession {
     /// What the action button does.
     public private(set) var tool: ConstructionTool = .select
 
+    /// What the building tool places where the player taps (decision 92).
+    public var buildingKind: PlacedBuildingKind = .house
+
     /// Name for the next station. Pre-filled with a suggestion the player can
     /// edit; GameCore decides whether it is valid.
     public var stationName: String
@@ -1189,7 +1192,7 @@ public final class GameSession {
     public func applyTool() {
         guard selectedPoint != nil else { return }
         switch tool {
-        case .select, .network:
+        case .select, .network, .building:
             return
         case .train:
             // The selected station is where an unplaced train goes, or

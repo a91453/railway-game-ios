@@ -178,6 +178,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"`，schema 40（決策 91）起也可以是 `"industrial"`、`"civic"`、`"leisure"`、`"agricultural"`、`"park"`（`landCell` 與 `building` 觀察的 `use` 也一樣） | `setLand(_:)` |
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
+| `placeBuilding`（schema 41） | `kind`（`"house"`、`"shop"` 或 `"office"`）、`point`（`{ "x", "y" }`，建物的中心） | `placeBuilding(_:at:)` |
 
 ### 結果（`expect.result`）
 
@@ -231,6 +232,9 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
 | `stationDemandFromLand` | — | 土地決定經營模式的運量時不能設定車站的需求（schema 36，決策 73） |
 | `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36）；schema 40 起公園以外的格才是這樣，公園則是有居民或就業（決策 91） |
+| `buildingOverlaps` | `building` | 新建物會和這棟玩家建物重疊（schema 41，決策 92） |
+| `buildingOnTrack` | `edge` | 新建物離這條邊的軌道中心線不到 128（2 m）（schema 41） |
+| `buildingOnStation` | `station` | 新建物離這座車站的點不到 128（schema 41） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -281,6 +285,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `landCell`（schema 36） | `row`、`column` | `{ "found": true, "landCell": { "row", "column", "use", "residents", "jobs" } }`，那一格沒有人住或工作時 `{ "found": false }` | `land.cell(row:column:)` |
 | `landValue`（schema 39） | `row`、`column` | `{ "found": true, "landValue": { "value", "base", "servicePremium", "accessPremium", "station" } }`：那一格的地價（美分／m²）、三個分項與決定價格的車站（沒有時 `null`）；世界外的格 `{ "found": false }` | `landValue(row:column:)` |
 | `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
+| `placedBuilding`（schema 41） | `building` | `{ "found": true, "placedBuilding": { "id", "kind", "x", "y" } }`：玩家建物的種類與中心；沒有這棟時 `{ "found": false }` | `placedBuilding(id:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
@@ -425,6 +430,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `land`（schema 36，選填）：`{ "cells", "residents", "jobs" }`，土地列出的格數與全部的居民、就業；沒有土地時不寫。
 - `landDemand`（schema 36，選填）：土地需求開啟時是 `true`；關閉時不寫。
 - `cityBuildings`（schema 37，選填）：城市建物開啟時是 `{ "buildings", "d1", "d2", "d3", "d4", "existingStock" }`，建物總數、各密度的一般建物數與既有存量數；關閉時不寫。
+- `placedBuildings`（schema 41，選填）：玩家建物 `[{ "id", "kind", "x", "y" }, ...]`，依編號；沒有時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -647,3 +653,9 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - `land-towns.json` 第 17、18 步與最終狀態：Middle 的腹地 50,189／33,276 → 44,394／42,396，Edge 21,555／18,558 → 19,142／22,227，整座城鎮 437 格、50,189／33,276 → 469 格（多了 32 格農地）、44,457／42,564。
   - `city-buildings.json` 第 28–31 步：農地排在前面，所以中心格的辦公 D4 從 219 號變 238 號、商業 D4 從 222 號變 241 號；第 20 欄從住宅 D3（223 號）變成公園 D1（242 號，沒有人）；第 27 欄從住宅 D1（230 號）變成工廠 D1（249 號，0／96）。最終狀態 437 棟（88／188／134／27）→ 469 棟（123 D1、189 D2、130 D3、27 D4）。
   - 新值都先由 GameCore 取得，再以更新後的 `python3 -I tools/golden-checks/city_buildings.py --check`（照決策 91 的規則重寫的第一座城鎮）與另一份手寫的 Python 腹地計算核對，`LandTests` 的逐格參考實作也照新規則重寫。其他 fixture 的預期值都沒有改變。
+
+## 決策 92：玩家建物（schema 41）
+
+- 新指令 `placeBuilding`、觀察 `placedBuilding`、結果 `buildingOverlaps`、`buildingOnTrack`、`buildingOnStation`，最終狀態選填的 `placedBuildings`（ARCHITECTURE 決策 92，城市建造 P0-A）。schema 40 是八種土地用途（決策 91）。沒有玩家建物的世界不寫 `placedBuildings`，舊的 fixture 不必改，schema 30 到 40 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過用到它們的 fixture；`PlacedBuildingTests` 另有線段與正方形相交的抽樣比對。
+- `placed-buildings.json`：320 m 見方的世界。小住宅 1、相鄰（只碰到邊）的商店 2；和兩者重疊的辦公樓被拒絕（指名較小的 1）；超出世界的小住宅被拒絕（指名中心）；一條直的軌道之後，離中心線 127 的小住宅被拒絕、剛好 128 的是 3；車站之後，離站點 127 的辦公樓被拒絕、128 的是 4；5 號不存在。每個值都手算，寫在 description 裡。
+

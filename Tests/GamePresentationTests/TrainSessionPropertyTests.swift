@@ -188,7 +188,7 @@ final class TrainSessionPropertyTests: XCTestCase {
         case .applyTool:
             guard session.selectedPoint != nil else { return }
             switch session.tool {
-            case .select, .network: return
+            case .select, .network, .building: return
             case .train:
                 if let id, shadow.train(id: id)?.position != nil { send() } else { place() }
             }

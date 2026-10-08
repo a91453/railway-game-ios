@@ -1,0 +1,136 @@
+{
+  "saveVersion" : 21,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1600,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 2600,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 20480,
+      "width" : 20480
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 997400,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 2000,
+          "y" : 10000,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 18000,
+          "y" : 10000,
+          "z" : 0
+        }
+      ]
+    },
+    "nextPlacedBuildingID" : 4,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "placedBuildings" : [
+      {
+        "centre" : {
+          "x" : 8000,
+          "y" : 8000
+        },
+        "id" : 1,
+        "kind" : "house"
+      },
+      {
+        "centre" : {
+          "x" : 10000,
+          "y" : 8500
+        },
+        "id" : 2,
+        "kind" : "shop"
+      },
+      {
+        "centre" : {
+          "x" : 12500,
+          "y" : 12000
+        },
+        "id" : 3,
+        "kind" : "office"
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Market",
+        "point" : {
+          "x" : 10000,
+          "y" : 10000
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

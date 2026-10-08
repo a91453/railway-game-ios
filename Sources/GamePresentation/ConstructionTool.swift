@@ -13,6 +13,9 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
     /// Places the selected train at the selected station, or sends it
     /// there once it is on the track (see ``GameSession/applyTool()``).
     case train
+    /// Places the chosen building where the player taps (city building
+    /// P0-A, decision 92; see ``GameSession/placeBuilding(at:)``).
+    case building
 
     /// The tools the app offers: every tool. Stage F1 left the grid's
     /// track, station and remove tools out of the app; Stage F3c removed
@@ -25,6 +28,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
         case .select: language.text("Select", "選取")
         case .network: language.text("Network", "路網")
         case .train: language.text("Train", "列車")
+        case .building: language.text("Build", "建築")
         }
     }
 }
