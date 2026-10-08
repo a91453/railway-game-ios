@@ -94,9 +94,14 @@
 ///     reads only version 17 would call a larger world damaged, or drop the
 ///     blocks and read none again, so it says the save is newer than it
 ///     instead.
+/// 21. Buildings the player places (decision 92; 19 and 20 are reserved by
+///     other work, issue #231): the world can have `"placedBuildings"` and
+///     `"nextPlacedBuildingID"`. A build that reads only an earlier version
+///     would drop them, and its next save would lose the player's
+///     buildings, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 18
+    public static let currentVersion = 21
 
     public let world: GameWorld
 
@@ -167,6 +172,8 @@ extension SavedGame: Codable {
         // day without `"fareTrips"` had none counted.
         // Version 17 to 18: a world without `"landBlocks"` has its land
         // whole, as every world before had.
+        // Version 20 to 21: a world without `"placedBuildings"` has none,
+        // and hands out placed building IDs from 1.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

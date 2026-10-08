@@ -101,6 +101,9 @@ public struct GameWorld: Equatable, Sendable {
     /// The stations linked for transfers however far apart (decision 81),
     /// in ascending ID order. A new world has none.
     public internal(set) var transferGroups: [TransferGroup] = []
+    /// The buildings the player placed (decision 92), in ascending ID
+    /// order. A new world has none.
+    public internal(set) var placedBuildings: [PlacedBuilding] = []
     /// The scenario being played, its goals and how far they are met
     /// (decision 86), or `nil`: a game without goals.
     public internal(set) var scenario: ScenarioState?
@@ -120,6 +123,8 @@ public struct GameWorld: Equatable, Sendable {
     private var nextLineID: Int
     /// The next transfer group ID to hand out (decision 81).
     var nextTransferGroupID = 1
+    /// The next placed building ID to hand out (decision 92).
+    var nextPlacedBuildingID = 1
 
     /// Creates an empty world reaching as far as `bounds`.
     public init(
@@ -3288,6 +3293,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case placedBuildings, nextPlacedBuildingID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3380,6 +3386,8 @@ extension GameWorld: Codable {
         transferGroups = container.contains(.transferGroups) ? try container.decode([TransferGroup].self, forKey: .transferGroups) : []
         nextTransferGroupID = container.contains(.nextTransferGroupID) ? try container.decode(Int.self, forKey: .nextTransferGroupID) : 1
         scenario = try container.decodeIfPresent(ScenarioState.self, forKey: .scenario)
+        placedBuildings = container.contains(.placedBuildings) ? try container.decode([PlacedBuilding].self, forKey: .placedBuildings) : []
+        nextPlacedBuildingID = container.contains(.nextPlacedBuildingID) ? try container.decode(Int.self, forKey: .nextPlacedBuildingID) : 1
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3411,7 +3419,8 @@ extension GameWorld: Codable {
     /// 88); a world with the city's buildings off has no
     /// `"cityBuildings"` and no `"buildings"` (Phase 6c-1); and one without
     /// transfer groups has no `"transferGroups"`, and one that never had
-    /// one no `"nextTransferGroupID"` (decision 81). An explicit
+    /// one no `"nextTransferGroupID"` (decision 81); likewise
+    /// `"placedBuildings"` and `"nextPlacedBuildingID"` (decision 92). An explicit
     /// `null` for any of them is
     /// rejected. The world's extent is written as `"bounds"`, in world units
     /// (Stage F3d).
@@ -3484,6 +3493,12 @@ extension GameWorld: Codable {
             try container.encode(nextTransferGroupID, forKey: .nextTransferGroupID)
         }
         try container.encodeIfPresent(scenario, forKey: .scenario)
+        if !placedBuildings.isEmpty {
+            try container.encode(placedBuildings, forKey: .placedBuildings)
+        }
+        if nextPlacedBuildingID != 1 {
+            try container.encode(nextPlacedBuildingID, forKey: .nextPlacedBuildingID)
+        }
     }
 
     /// The world's size as a save before version 6 holds it: a map of
@@ -3600,6 +3615,7 @@ extension GameWorld: Codable {
             return "Line IDs must be unique, ascending and below nextLineID."
         }
         if let problem = transferGroupProblem() { return problem }
+        if let problem = placedBuildingProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }

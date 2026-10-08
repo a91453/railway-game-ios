@@ -450,6 +450,15 @@ final class GoldenScenarioTests: XCTestCase {
         switch answer {
         case .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil):
             return []
+        case .placedBuilding(nil):
+            return [.placedBuilding(PlacedBuildingSummary(PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: .house, centre: PlanPoint(x: 0, y: 0))))]
+        case .placedBuilding(let building?):
+            var id = building, kind = building, x = building, y = building
+            id.id += 1
+            kind.kind = building.kind == .house ? .shop : .house
+            x.x += 1
+            y.y += 1
+            return [.placedBuilding(nil), .placedBuilding(id), .placedBuilding(kind), .placedBuilding(x), .placedBuilding(y)]
         case .landValue(let value?):
             var total = value, base = value, service = value, access = value, station = value
             total.value += 1

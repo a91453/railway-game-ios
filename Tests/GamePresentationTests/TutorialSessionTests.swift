@@ -305,7 +305,7 @@ final class TutorialSessionTests: XCTestCase {
         let names = TutorialTarget.allCases.map(\.rawValue)
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(names, [
-            "tool.select", "tool.network", "tool.train", "train.buy", "network.modes", "panel.action",
+            "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "network.modes", "panel.action",
             "map", "map.zoom", "hud.lines", "hud.speed", "hud.menu",
         ])
         for tool in ConstructionTool.allCases {
