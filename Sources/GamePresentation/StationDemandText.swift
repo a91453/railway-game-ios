@@ -15,13 +15,15 @@ import GameCore
 
 extension StationDemandKind {
     /// The reference's preset names (`metro.station.flow.preset_*`: 居民区、
-    /// 办公区、购物中心、景区), in Taiwan's usage.
+    /// 办公区、购物中心、景区), in Taiwan's usage, and decision 91's schools
+    /// and public services.
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .residential: language.text("Residential", "住宅區")
         case .office: language.text("Office", "辦公區")
         case .shopping: language.text("Shopping", "購物中心")
         case .scenic: language.text("Scenic", "景點")
+        case .civic: language.text("Civic", "公共設施")
         }
     }
 }

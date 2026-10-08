@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 37,
-  "description": "City buildings (Phase 6c-1, ARCHITECTURE decision 74) in a world 131072 x 98304 units, 32 x 24 cells of 64 m. The table: a storey of a cell holds 1536 m2 of floor, D1 to D4 have 2, 6, 18 and 40 storeys; homes take 7, shops 2 and offices 1 eighths of the floor as homes of 48 m2 a resident, the rest is jobs of 32 m2: homes D1 3072 x 7 / 8 / 48 = 56 residents and 3072 x 1 / 8 / 32 = 12 jobs, D2 168 / 36, D3 504 / 108, D4 1120 / 240; shops D1 16 / 72, D2 48 / 216, D3 144 / 648, D4 320 / 1440; offices D1 8 / 84, D2 24 / 252, D3 72 / 756, D4 160 / 1680. A cell gets the lowest density whose table holds its main count (residents of homes, jobs of shops and offices); of the other count it holds the table's or what the cell has, whichever is more; when not even D4 holds the main count it gets existing stock (D4), holding the cell's or D4's of each, whichever is more. Before the city's buildings are on, and with no land, no cell has a building. setLand with them on puts one up on each cell, numbered from 1 by row and then column: row 1 homes 56 / 12 (column 2, 1: D1 exactly), 57 / 0 (2: D2, 57 > 56), 230 / 30 (3: the first town's fullest homes, D3), 505 / 0 (4: D4), 100 / 500 (5: D2 by its residents, holding its 500 jobs), 1121 / 300 (6: existing stock 1121 / 300); row 2 shops 16 / 72 (7: D1), 0 / 73 (8: D2), 65 / 780 (9: a town's core, 260 / 4 and 3 x 260: D3 holds 648 jobs, so D4), 10 / 1441 (10: existing stock 320 / 1441); row 3 offices 160 / 84 (11: D1 by its jobs, holding its 160 residents), 78 / 285 (12: Taipei's fullest office cell: D3 756 jobs, holding its 78 residents), 0 / 1681 (13: existing stock 160 / 1681), 65 / 780 (14: D4), and homes 0 / 5 (15: D1, no residents). Refused land changes neither the land nor its buildings. Turned off they are gone; turned on again the same buildings stand, numbered the same. foundTowns with seed 1 replaces the land and its buildings (the first town as in land-towns.json, 437 cells): row 12 column 16 offices 65 / 780 is D4 160 / 1680 (number 219: 218 cells come before it by row and column); column 19 shops 60 / 729 D4 320 / 1440; column 20 homes 230 / 0 D3; column 27 homes 41 / 0 D1; row 1 column 2 is no longer land. The town's 437 buildings: 88 D1, 188 D2, 134 D3, 27 D4, no existing stock. All values worked out by hand and checked with an independent Python implementation (tools/golden-checks/city_buildings.py).",
+  "schemaVersion": 40,
+  "description": "City buildings (Phase 6c-1, ARCHITECTURE decision 74) in a world 131072 x 98304 units, 32 x 24 cells of 64 m. The table: a storey of a cell holds 1536 m2 of floor, D1 to D4 have 2, 6, 18 and 40 storeys; homes take 7, shops 2 and offices 1 eighths of the floor as homes of 48 m2 a resident, the rest is jobs of 32 m2: homes D1 3072 x 7 / 8 / 48 = 56 residents and 3072 x 1 / 8 / 32 = 12 jobs, D2 168 / 36, D3 504 / 108, D4 1120 / 240; shops D1 16 / 72, D2 48 / 216, D3 144 / 648, D4 320 / 1440; offices D1 8 / 84, D2 24 / 252, D3 72 / 756, D4 160 / 1680. A cell gets the lowest density whose table holds its main count (residents of homes, jobs of shops and offices); of the other count it holds the table's or what the cell has, whichever is more; when not even D4 holds the main count it gets existing stock (D4), holding the cell's or D4's of each, whichever is more. Before the city's buildings are on, and with no land, no cell has a building. setLand with them on puts one up on each cell, numbered from 1 by row and then column: row 1 homes 56 / 12 (column 2, 1: D1 exactly), 57 / 0 (2: D2, 57 > 56), 230 / 30 (3: the first town's fullest homes, D3), 505 / 0 (4: D4), 100 / 500 (5: D2 by its residents, holding its 500 jobs), 1121 / 300 (6: existing stock 1121 / 300); row 2 shops 16 / 72 (7: D1), 0 / 73 (8: D2), 65 / 780 (9: a town's core, 260 / 4 and 3 x 260: D3 holds 648 jobs, so D4), 10 / 1441 (10: existing stock 320 / 1441); row 3 offices 160 / 84 (11: D1 by its jobs, holding its 160 residents), 78 / 285 (12: Taipei's fullest office cell: D3 756 jobs, holding its 78 residents), 0 / 1681 (13: existing stock 160 / 1681), 65 / 780 (14: D4), and homes 0 / 5 (15: D1, no residents). Refused land changes neither the land nor its buildings. Turned off they are gone; turned on again the same buildings stand, numbered the same. foundTowns with seed 1 replaces the land and its buildings (the first town as in land-towns.json, 469 cells with decision 91's farms, factories, schools, sights and parks; schema 40): row 12 column 16 offices 65 / 780 is D4 160 / 1680 (number 238: 237 cells come before it by row and column; 219 before decision 91); column 19 shops 60 / 729 D4 320 / 1440 (241; 222 before); column 20 a park, D1 holding no one (242; homes 230 / 0 D3, 223, before); column 27 a factory 0 / 82, D1 0 / 96 (3072 / 32 jobs; 249; homes 41 / 0 D1, 230, before); row 1 column 2 is no longer land. Decision 91's table: factories no eighths homes, schools and public offices and sights 1, farms 2, a park nothing. The town's 469 buildings: 123 D1, 189 D2, 130 D3, 27 D4, no existing stock (437: 88, 188, 134, 27 before). All values worked out by hand and checked with an independent Python implementation (tools/golden-checks/city_buildings.py).",
   "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 10000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
   "steps": [
     {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": false}},
@@ -31,10 +31,10 @@
     {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
     {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": true, "building": {"id": 6, "kind": "existingStock", "use": "residential", "density": 4, "residents": 1121, "jobs": 300}}},
     {"command": {"type": "foundTowns", "seed": 1}, "expect": {"result": "ok"}},
-    {"observe": {"type": "building", "row": 12, "column": 16}, "expect": {"found": true, "building": {"id": 219, "kind": "city", "use": "office", "density": 4, "residents": 160, "jobs": 1680}}},
-    {"observe": {"type": "building", "row": 12, "column": 19}, "expect": {"found": true, "building": {"id": 222, "kind": "city", "use": "commercial", "density": 4, "residents": 320, "jobs": 1440}}},
-    {"observe": {"type": "building", "row": 12, "column": 20}, "expect": {"found": true, "building": {"id": 223, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
-    {"observe": {"type": "building", "row": 12, "column": 27}, "expect": {"found": true, "building": {"id": 230, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
+    {"observe": {"type": "building", "row": 12, "column": 16}, "expect": {"found": true, "building": {"id": 238, "kind": "city", "use": "office", "density": 4, "residents": 160, "jobs": 1680}}},
+    {"observe": {"type": "building", "row": 12, "column": 19}, "expect": {"found": true, "building": {"id": 241, "kind": "city", "use": "commercial", "density": 4, "residents": 320, "jobs": 1440}}},
+    {"observe": {"type": "building", "row": 12, "column": 20}, "expect": {"found": true, "building": {"id": 242, "kind": "city", "use": "park", "density": 1, "residents": 0, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 12, "column": 27}, "expect": {"found": true, "building": {"id": 249, "kind": "city", "use": "industrial", "density": 1, "residents": 0, "jobs": 96}}},
     {"observe": {"type": "building", "row": 1, "column": 2}, "expect": {"found": false}}
   ],
   "expectedFinalState": {
@@ -94,15 +94,15 @@
       "days": []
     },
     "land": {
-      "cells": 437,
-      "residents": 50189,
-      "jobs": 33276
+      "cells": 469,
+      "residents": 44457,
+      "jobs": 42564
     },
     "cityBuildings": {
-      "buildings": 437,
-      "d1": 88,
-      "d2": 188,
-      "d3": 134,
+      "buildings": 469,
+      "d1": 123,
+      "d2": 189,
+      "d3": 130,
       "d4": 27,
       "existingStock": 0
     }

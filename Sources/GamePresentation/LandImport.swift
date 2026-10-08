@@ -21,9 +21,11 @@ import GameCore
 /// The jobs are the places the app bundles counted on the same grid
 /// (``PlaceGrid``), each worth ``jobsPerPlace`` (gap: the game's numbers,
 /// set so Taiwan's places make some 8.6 million jobs, a little under two
-/// for every five people, about its working population). A cell is offices where the
-/// offices' and schools' jobs are the most of it, shops where the shops'
-/// and sights' are, and homes otherwise.
+/// for every five people, about its working population). A cell is offices,
+/// shops, schools and public offices, or sights where that kind of place's
+/// jobs are the most of it and at least its people (decision 91: schools
+/// and sights were counted with offices and shops before), and homes
+/// otherwise.
 public enum LandImport {
     /// The jobs of each kind of place: a shop or restaurant 25, an office
     /// 500, a school 300 (its staff and pupils draw trips alike), a sight
@@ -80,14 +82,14 @@ public enum LandImport {
             let source = grid.cell(latitude: grid.north, longitude: longitude).column
             columnSpans[source] = (columnSpans[source]?.lowerBound ?? column)...column
         }
-        // The jobs of a WorldPop cell: in offices and schools, and in shops
-        // and sights.
-        func jobs(_ cell: GridCounts.Cell) -> (office: Int64, shop: Int64) {
-            guard let places else { return (0, 0) }
+        // The jobs of a WorldPop cell: in offices, shops, schools and
+        // sights (decision 91 keeps the last two apart).
+        func jobs(_ cell: GridCounts.Cell) -> (office: Int64, shop: Int64, civic: Int64, leisure: Int64) {
+            guard let places else { return (0, 0, 0, 0) }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {
                 Int64(places.layers[kind]?.counts[cell] ?? 0) * (jobsPerPlace[kind] ?? 0)
             }
-            return (count(.offices) + count(.schools), count(.shops) + count(.attractions))
+            return (count(.offices), count(.shops), count(.schools), count(.attractions))
         }
         var sources = Set(grid.counts.keys)
         if let places {
@@ -103,7 +105,8 @@ public enum LandImport {
             guard let rowSpan = rowSpans[source.row], let columnSpan = columnSpans[source.column] else { continue }
             let people = Int64(grid.counts[source] ?? 0)
             let work = jobs(source)
-            guard people > 0 || work.office + work.shop > 0 else { continue }
+            let allJobs = work.office + work.shop + work.civic + work.leisure
+            guard people > 0 || allJobs > 0 else { continue }
             reachesTheWorld = true
             if let blocks {
                 let firstBlock = LandBlock(cellRow: rowSpan.lowerBound, column: columnSpan.lowerBound)
@@ -113,9 +116,12 @@ public enum LandImport {
                 }
                 guard touches else { continue }
             }
-            let use: LandUse = work.office >= people && work.office >= work.shop
-                ? .office
-                : work.shop >= people ? .commercial : .residential
+            // The use most of it is: offices, then shops, then schools and
+            // public offices, then sights on a tie with each other or with
+            // the people, else homes (decision 91).
+            let uses: [(LandUse, Int64)] = [(.office, work.office), (.commercial, work.shop), (.civic, work.civic), (.leisure, work.leisure)]
+            let most = uses.reduce((LandUse.residential, Int64(-1))) { best, use in use.1 > best.1 ? use : best }
+            let use = most.1 >= people ? most.0 : .residential
             let inside = rowSpan.count * columnSpan.count
             let atEdge = rowSpan.lowerBound == 0 || columnSpan.lowerBound == 0 || rowSpan.upperBound == lastRow || columnSpan.upperBound == lastColumn
             let slots = Int64(atEdge ? max(inside, Int((grid.area(of: source) / cellArea).rounded())) : inside)
@@ -127,7 +133,7 @@ public enum LandImport {
                 for column in columnSpan {
                     if let blocks, !blocks.contains(LandBlock(cellRow: row, column: column)) { continue }
                     let index = (row - rowSpan.lowerBound) * columnSpan.count + column - columnSpan.lowerBound
-                    let residents = share(people, index), jobs = share(work.office + work.shop, index)
+                    let residents = share(people, index), jobs = share(allJobs, index)
                     guard residents + jobs > 0 else { continue }
                     cells.append(LandCell(row: row, column: column, use: use, residents: residents, jobs: jobs))
                 }

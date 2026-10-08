@@ -41,7 +41,11 @@ final class LandValueTests: XCTestCase {
     private static func reference(_ world: GameWorld, row: Int, column: Int) -> LandValue? {
         let rows = Int((world.bounds.height + 4_095) / 4_096), columns = Int((world.bounds.width + 4_095) / 4_096)
         guard row >= 0, column >= 0, row < rows, column < columns else { return nil }
-        let uses: [LandUse: Int64] = [.residential: 2_000, .commercial: 3_000, .office: 3_500]
+        let uses: [LandUse: Int64] = [
+            .residential: 2_000, .commercial: 3_000, .office: 3_500,
+            // Decision 91's.
+            .industrial: 1_500, .civic: 2_500, .leisure: 3_000, .agricultural: 600, .park: 1_200,
+        ]
         let factors: [Int64] = [1_000, 1_250, 1_600, 2_000]
         var b: Int64 = 1_000, d: Int64 = 1_000
         if let building = world.buildings.all.first(where: { $0.cells.contains(CellPosition(row: row, column: column)) }) {
@@ -67,8 +71,14 @@ final class LandValueTests: XCTestCase {
                 }
             }
         }
-        let total = min(50_000, max(500, base + 15 * s + 1_000 * a))
-        return LandValue(value: total, base: base, servicePremium: 15 * s, accessPremium: 1_000 * a, station: station)
+        // Decision 91: 600 within 400 m of a park's middle.
+        let nearPark = world.land.cells.contains { cell in
+            let dx = Int64(cell.column - column) * 4_096, dy = Int64(cell.row - row) * 4_096
+            return cell.use == .park && dx * dx + dy * dy < 25_600 * 25_600
+        }
+        let p: Int64 = nearPark ? 600 : 0
+        let total = min(50_000, max(500, base + 15 * s + 1_000 * a + p))
+        return LandValue(value: total, base: base, servicePremium: 15 * s, accessPremium: 1_000 * a, station: station, parkPremium: p)
     }
 
     // MARK: - The study's examples
@@ -165,6 +175,36 @@ final class LandValueTests: XCTestCase {
         XCTAssertEqual(world.landValues(rows: 0...3, columns: 40...50), [])
         XCTAssertEqual(world.landValues(rows: -5...(-1), columns: -5...(-1)), [])
         XCTAssertEqual(world.landValues(rows: 20...40, columns: 30...40).count, 4 * 2)
+    }
+
+    /// Decision 91: the five more uses' bases, and a park adds 600 to every
+    /// cell whose middle lies within 400 m of its middle.
+    func testTheNewUsesBasesAndTheLandRoundAPark() throws {
+        let world = try world([
+            LandCell(row: 1, column: 1, use: .industrial, residents: 0, jobs: 96),
+            LandCell(row: 1, column: 2, use: .civic, residents: 8, jobs: 84),
+            LandCell(row: 1, column: 3, use: .leisure, residents: 0, jobs: 84),
+            LandCell(row: 1, column: 4, use: .agricultural, residents: 3, jobs: 8),
+            LandCell(row: 10, column: 10, use: .park, residents: 0, jobs: 0),
+        ], stations: [], service: [], reached: [])
+        // All D1: factories 1500, schools 2500, sights 3000, farms 600.
+        XCTAssertEqual((1...4).map { world.landValue(row: 1, column: $0)?.value }, [1_500, 2_500, 3_000, 600])
+        XCTAssertEqual((1...4).map { world.landValue(row: 1, column: $0)?.parkPremium }, [0, 0, 0, 0])
+        // The park itself, 1200 and its own 600.
+        XCTAssertEqual(world.landValue(row: 10, column: 10), LandValue(value: 1_800, base: 1_200, servicePremium: 0, accessPremium: 0, station: nil, parkPremium: 600))
+        // Six cells east (393 m) is near, seven (459 m) is not; four
+        // across and four down (370 m) is, four and five (419 m) is not.
+        XCTAssertEqual(world.landValue(row: 10, column: 16)?.value, 1_600)
+        XCTAssertEqual(world.landValue(row: 10, column: 17)?.value, 1_000)
+        XCTAssertEqual(world.landValue(row: 14, column: 14)?.value, 1_600)
+        XCTAssertEqual(world.landValue(row: 14, column: 15)?.value, 1_000)
+        XCTAssertEqual(world.landValue(row: 4, column: 10)?.parkPremium, 600)
+        XCTAssertEqual(world.landValue(row: 3, column: 10)?.parkPremium, 0)
+        for row in 0..<24 {
+            for column in 0..<32 {
+                XCTAssertEqual(world.landValue(row: row, column: column), Self.reference(world, row: row, column: column), "\(row), \(column)")
+            }
+        }
     }
 
     // MARK: - Every cell, against the reference
