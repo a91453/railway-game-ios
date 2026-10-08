@@ -133,7 +133,9 @@ extension GameWorld {
               zip(sorted, sorted.dropFirst()).allSatisfy({ ($0.row, $0.column) < ($1.row, $1.column) })
         else { throw .invalidLand }
         var fresh: [LandCell] = []
-        for cell in sorted where land.cell(row: cell.row, column: cell.column) == nil {
+        // Decision 95: nor on a cell one of the company's buildings claims.
+        for cell in sorted where land.cell(row: cell.row, column: cell.column) == nil
+            && !isClaimedByPlacedBuilding(row: cell.row, column: cell.column) {
             if cityBuildings {
                 // No number left for its building: neither, as the land's
                 // growth does.

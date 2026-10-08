@@ -664,3 +664,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 新指令 `removePlacedBuilding`（`building`：建物的 ID）、結果 `unknownPlacedBuilding`（帶 `building`）、帳本的新種類 `dailyProperty`、`buildingDemolition` 與項目 `propertyRent`、`propertyUpkeep`、`propertyTax`、`propertyDemolition`，每日帳的 `propertyRevenue`、`propertyCost`（是 0 時不寫），`placedBuilding` 觀察與最終狀態的 `placedBuildings` 多了選填的 `residents`、`jobs`、`buildingCost`、`landCost`（是 0 時不寫）（ARCHITECTURE 決策 94，城市建造 P0-C1）。schema 41 的建物都是免費、空的，所以那些欄位都不寫，舊的 fixture 不必改，schema 30 到 41 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`placed-buildings.json` 沒有設定經營模式（自由模式），建物仍然免費、預期值不變。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過 `removePlacedBuilding`。
 - `company-buildings.json`：經營模式、$300,000、沒有車站（每格都是空地的基準地價 1,000 美分／m²）。小住宅 2,048,000 + 256,000、辦公樓 24,576,000 + 1,024,000；商店要 5,184,000、只剩 2,096,000，`insufficientFunds`；拆小住宅付 230,400，餘額 1,865,600，寫成一列 `buildingDemolition`（`propertyDemolition`），算進第 0 天的 `propertyCost`；再拆一次與不存在的 9 號都是 `unknownPlacedBuilding`。每個值都手算，寫在 description 裡。入住、租金與每日收支需要好幾個午夜與車站的服務，由 `CompanyBuildingsTests` 手算驗證。
 
+## 決策 95：收購與拆遷（schema 42，不動）
+
+- 沒有新的指令、觀察或欄位：收購併入 `placedBuilding` 的 `landCost`，搬進來的人是 `residents`、`jobs`，拆遷是帳本的 `buildingDemolition` 列與每日帳的 `propertyCost`，都是 schema 42 已有的。**沒有任何既有 fixture 的預期值改變**（規則只在玩家建物存在時改變結果；`placed-buildings.json` 的軌道與車站都離建物 2 m 以上，也沒有土地）。
+- `company-buildings-clearing.json`：經營模式、$4,000,000、城市建物開啟、沒有車站。辦公樓蓋在 D4 住宅格的中央，收購價（61,440 m² × 4,000 ＋ 1,600 m² × 4,000）× 120% = 302,592,000，加上辦公樓本身 24,576,000 + 4,096,000；1,000 位居民與 3 個就業搬進來，最多 16 與 168：16 與 3；那一格土地與城市建物不見，隔壁的商店格不受影響。小住宅之後被一段直線軌道穿過，付 1,200 + 230,400；離辦公樓不到 2 m 的車站付 1,000 + 33,126,400。每個值都手算，寫在 description 裡。
+

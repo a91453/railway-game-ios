@@ -297,12 +297,17 @@ public struct GameWorld: Equatable, Sendable {
             throw .trackReserved(train.id)
         }
         let price = try edgeCost(length: geometry.length, structure: structure)
+        // Decision 95: the company's buildings in its way come down, for
+        // what demolishing them costs; track in a tunnel passes under.
+        let cleared = structure == .tunnel ? [] : placedBuildings(inTheWayOf: geometry.points.map(\.plan))
+        try checkFunds(price, clearing: cleared)
         try economy.spend(price)
 
         let id = network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
         acquireAsset(.track, owner: id.networkNumber ?? 0, cost: price)
+        clear(cleared)
         return id
     }
 
@@ -710,6 +715,16 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
     ///   the price does not even fit in a ``Money``, so no balance could pay
     ///   it; `required` is then the largest amount there is.
+    /// Throws ``GameError/insufficientFunds(required:available:)`` unless
+    /// the balance covers `price` and clearing `cleared` together
+    /// (decision 95).
+    private func checkFunds(_ price: Money, clearing cleared: [PlacedBuilding]) throws(GameError) {
+        let (total, overflow) = price.amount.addingReportingOverflow(clearingCost(of: cleared).amount)
+        guard !overflow, economy.canAfford(Money(total)) else {
+            throw .insufficientFunds(required: overflow ? Money(.max) : Money(total), available: economy.balance)
+        }
+    }
+
     private func edgeCost(length: Int64, structure: TrackStructure) throws(GameError) -> Money {
         let priced = ConstructionCosts.trackPricingLength
         let lengths = max(1, (length + priced - 1) / priced)
@@ -722,18 +737,24 @@ public struct GameWorld: Equatable, Sendable {
     /// Builds a station standing at `point` (Stage F1) and charges
     /// ``ConstructionCosts/station``. Other stations may stand anywhere
     /// near it. It has no platforms until the track network gives it some
-    /// (``addTrackPlatform(_:on:from:to:)``).
+    /// (``addTrackPlatform(_:on:from:to:)``). Since decision 95 the
+    /// company's buildings closer than the clearance to `point` come down
+    /// with it, for what demolishing them costs.
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
     ///   ``GameError/outOfBounds(_:)`` naming `point` when it lies outside
     ///   the world's ``bounds``, ``GameError/idsExhausted``, or
-    ///   ``GameError/insufficientFunds(required:available:)``.
+    ///   ``GameError/insufficientFunds(required:available:)`` for the
+    ///   station and the clearing together.
     @discardableResult
     public mutating func buildStation(named name: String, at point: PlanPoint) throws(GameError) -> Station {
         guard Self.isValidName(name) else { throw .invalidName }
         guard bounds.contains(point) else { throw .outOfBounds(point) }
         let (id, nextID) = try Self.allocateID(from: nextStationID)
+        let cleared = placedBuildings(inTheWayOf: [point])
+        try checkFunds(economy.costs.station, clearing: cleared)
         try economy.spend(economy.costs.station)
+        clear(cleared)
 
         let station = Station(id: StationID(rawValue: id), name: name, point: point)
         nextStationID = nextID

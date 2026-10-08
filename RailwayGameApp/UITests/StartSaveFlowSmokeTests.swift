@@ -30,20 +30,26 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        // The count says whether it was built, not the "Built house #1 …"
+        // Decision 95: a tap chooses the site, which enables the action
+        // button; the button builds. A touch held across a slow
+        // accessibility query is failed by the tap recognizer
+        // (MapInteractionTests), so a lost tap is tried once more. The
+        // count says whether it was built, not the "Built house #1 …"
         // banner: a success clears itself after 4 s, within one slow
         // accessibility query, and main's run 37828454679 never found it.
-        // A touch held across such a query is failed by the tap
-        // recognizer (MapInteractionTests), so a lost tap is tried once
-        // more.
         let ground = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
-        func built() -> Bool {
-            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)],
+        let build = app.buttons["panel.action"]
+        func sited() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND isEnabled == true"), object: build)],
                              timeout: 10) == .completed
         }
         ground.tap()
-        if !built() { ground.tap() }
-        XCTAssertTrue(built(), "The house was not built: \(count.label)")
+        if !sited() { ground.tap() }
+        XCTAssertTrue(sited(), "A tap did not choose a site the house can stand on")
+        XCTAssertEqual(count.label, "0 buildings placed", "A tap only chooses where it goes")
+        build.tap()
+        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 building placed"), object: count)
+        XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "The house was not built: \(count.label)")
 
         openGameMenu(in: app)
         tapMenuAction("menu.saveGame", in: app)

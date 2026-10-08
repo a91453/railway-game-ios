@@ -2813,12 +2813,42 @@
         }
       }
     },
-    "Tap open ground on the map to build. It cannot stand on track, a station or another building." : {
+    "Tap the map to choose where it goes. It cannot stand on track or another of your buildings; a city building in the way is bought out." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點地圖上的空地就能蓋。不能蓋在軌道、車站或其他建物上。"
+            "value" : "點地圖選擇位置。不能蓋在軌道或自己的其他建物上；擋到的城市建物會被收購拆除。"
+          }
+        }
+      }
+    },
+    "Build" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建造"
+          }
+        }
+      }
+    },
+    "Build · %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建造 · %@"
+          }
+        }
+      }
+    },
+    "Tap the map where it goes first." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在地圖上點選位置。"
           }
         }
       }

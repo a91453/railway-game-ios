@@ -1084,6 +1084,21 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（研究文件 §3，只取想法，沒有程式碼進入本 repository）：A 列車 Exp 的官方說明書（商業遊戲）：建造費買的是土地使用權、拆除不補償、子公司誘導城市開發；OpenTTD（GPL-2.0）的 `HouseSpec` 人口與拆除費、`TownGenerateCargoOriginal` 房屋依人口產生乘客給腹地的車站；Micropolis（GPL-3.0）的地價與成長；Cities: Skylines（商業遊戲）的玩家建物付維護費。都是 copyleft 或商業作品，所以只採用規則的概念，公式與數值是本專案的（Phase 7 研究 §3.3）。
 
+## 城市建造 P0-C2：收購、拆遷與預覽（決策 95）
+
+2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）重新看了可以用的部分：`Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)`（足跡在間距內碰到軌道就擋下）P0-A 已經用同一個想法；`Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的「認領」（大型地點認領矩形、移除那裡的程序化建物）就是收購的形式；`Simulator/` 的 `onDropStructure` 與 `Ci/` 的 `metroCanPlaceWithinQuota` 是「放置前預覽費用、確認才扣款」。參考庫沒有收購價、拆遷費或軌道穿過建物的規則，這些是原生。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的認領矩形（`reservedRects`） | `GameWorld.cityCells(claimedBy:)`、`claims(_:row:column:)`、`removeLand(at:)`、`isClaimedByPlacedBuilding` | 改寫：認領的是城市建物的格子中央 40 m 見方，認領後移除那一格，城市不再長回來 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)` | `GameWorld.line(_:comesNear:)`、`placedBuildings(inTheWayOf:)` | 改寫（P0-A 的間距檢查反過來用：新軌道對既有建物） |
+| `Simulator/reference_snapshot/…/page-38607521e5e99afd.js` 的 `onDropStructure`（先放、再確認）；`Ci/` 的 `metroCanPlaceWithinQuota` | `GameSession.buildingSite`、`buildingPreview`、`confirmBuilding()`、`BuildingOverlay`、App 的動作按鈕「建造 · $X」 | 改寫：點地圖選建地、預覽費用與原因、按鈕確認 |
+| （參考沒有） | `PlacedBuildingRules.cityBuildingSide`、`buyOutPercent`、`buyOutPrice(of:)`、`buildTrackEdge`／`buildStation` 的拆遷費、`clear(_:)` | gap → 原生 |
+
+固定小數：城市建物的正方形 2,560 單位（40 m，每公尺 64 單位），在 4,096 單位的格子中央（內縮 768）；收購價是百分比（120）；金額美分。
+
+外部專案（研究 §3，只取想法、沒有複製程式碼）：A 列車 Exp 說明書（他人的建物要「買收撤去」，比自己蓋貴）、OpenTTD（GPL-2.0：拆城鎮房屋要付 `removal_cost`）、OpenRCT2（GPL-3.0：可以付費清除擋路的景物）。都是 copyleft 或商業作品，只採用概念；收購價的公式與數值是本專案的。
+
 ## 實景地圖的 OpenStreetMap 底圖（決策 97）
 
 2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`：搜尋 `openfreemap`、`positron`、`osmStyleKey`、`osmLabelLang`、`fill-extrusion`、`mlMap`。
@@ -1098,4 +1113,4 @@ V 實際放行 → T、U（保證不互穿）
 | 同上／建物的 `fill-extrusion` | — | 之後：3D 建築 |
 | `Railway/` 網站的 `glTracksInstall`（真實鐵道畫在 MapLibre 上的順序） | `FollowingMapLibreView.drawRailways(in:)` | direct：和 Apple 地圖上的畫法相同（決策 50），這次直接是 MapLibre 的圖層 |
 
-外部專案：MapLibre Native（https://github.com/maplibre/maplibre-native ，BSD 2-Clause；作者同意的依賴，用它的二進位套件 `maplibre-gl-native-distribution` 6.31.0，沒有複製程式碼；授權與第三方聲明打包在 `Resources/Licenses/`）。圖磚與樣式是 OpenFreeMap（https://openfreemap.org ，資料 © OpenStreetMap 貢獻者，ODbL）。
+外部專案：MapLibre Native（https://github.com/maplibre/maplibre-native ，BSD 2-Clause；作者同意的依賴，用它的二進位套件 `maplibre-gl-native-distribution` 6.31.0，沒有複製程式碼；授權與第三方聲明打包在 `Resources/Licenses/`）。圖磚與樣式是 OpenFreeMap（https://openfreemap.org ，資料 © OpenStreetMap 貢獻者，ODbL）。也看過 MapLibre 官方的 SwiftUI 包裝 maplibre/swiftui-dsl（https://github.com/maplibre/swiftui-dsl ，BSD 3-Clause，1.0 以前、API 不保證穩定）：沒有採用，這裡的地圖不接自己的手勢、完全跟著遊戲的相機，直接包一層 `UIViewRepresentable` 比較單純，也不必多一個依賴；沒有從它複製程式碼。另外評估過 Mapbox Maps SDK：專有授權（Mapbox TOS），要帳號與金鑰、超過免費額度要付費，下載 SDK 要用帳號的金鑰，公開 repo 的 PR 建置拿不到，所以不用。
