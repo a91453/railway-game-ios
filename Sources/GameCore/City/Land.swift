@@ -14,8 +14,9 @@
 // - a cell is 4096 × 4096 world units (64 m) from the world's origin; the
 //   grid is not drawn and does not bind the railway, which stays continuous
 //   (decisions 28, 54): only land is counted by cell;
-// - a cell is listed only while someone lives or works there, and holds one
-//   use, at most 100,000 residents and 100,000 jobs;
+// - a cell is listed only while someone lives or works there, or while it
+//   is a park (decision 90), and holds one use, at most 100,000 residents
+//   and 100,000 jobs;
 // - a blank map starts with three towns drawn from a seed (``Land/towns(seed:in:)``),
 //   a real-world map with its people (`LandImport` in GamePresentation);
 // - a station's catchment is the cells whose middles lie within 800 m of
@@ -25,7 +26,11 @@
 // (`StationDemand`) and town growth still grows it (decision 70); deriving
 // demand from land is Phase 6b.
 
-/// What a cell of land is used for.
+/// What a cell of land is used for: the three of Phase 6a, and since
+/// decision 90 the five more of the land use study
+/// (`docs/research/PHASE6_LAND_USE_STUDY.md`) that a railway serves or that
+/// change what land is worth. Empty land, water and land nothing may be
+/// built on are not uses: a cell with no one is not listed.
 public enum LandUse: String, CaseIterable, Codable, Sendable {
     /// Homes.
     case residential
@@ -33,6 +38,20 @@ public enum LandUse: String, CaseIterable, Codable, Sendable {
     case commercial
     /// Offices.
     case office
+    /// Factories and warehouses: jobs, commuting as offices do (freight is
+    /// a later stage).
+    case industrial
+    /// Schools, hospitals and public offices: jobs, and pupils and patients
+    /// who come in the morning and leave in the afternoon.
+    case civic
+    /// Sights, resorts and amusements: visitors who come before midday and
+    /// leave in the afternoon, more at weekends.
+    case leisure
+    /// Farms: a few homes and jobs spread thin.
+    case agricultural
+    /// Parks: no one lives or works there, and the land round them is worth
+    /// more.
+    case park
 }
 
 /// One cell of land with someone living or working in it.
@@ -43,7 +62,7 @@ public struct LandCell: Hashable, Sendable {
     public let column: Int
     public let use: LandUse
     /// The people living there and the jobs there: 0 to
-    /// ``Land/maximumPerCell`` each, not both 0.
+    /// ``Land/maximumPerCell`` each, not both 0; both 0 in a park.
     public let residents: Int64
     public let jobs: Int64
 
@@ -66,7 +85,7 @@ public struct LandCell: Hashable, Sendable {
     var isValid: Bool {
         row >= 0 && column >= 0
             && (0...Land.maximumPerCell).contains(residents) && (0...Land.maximumPerCell).contains(jobs)
-            && residents + jobs > 0
+            && (use == .park ? residents + jobs == 0 : residents + jobs > 0)
     }
 }
 
@@ -219,6 +238,8 @@ public struct Land: Hashable, Sendable {
 extension Land {
     /// How many towns a blank map starts with.
     public static let townCount = 3
+    /// How many cells beyond a town's radius its farms reach (decision 90).
+    static let farmBelt: Int64 = 3
 
     /// The land of the towns a blank map of `bounds` starts with, drawn from
     /// `seed` (gap, this project's):
@@ -236,7 +257,15 @@ extension Land {
     ///   rounded down in thousandths of the peak;
     /// - the core, `9d² < r²`, is shops or offices, drawn per cell: it holds
     ///   a quarter of those residents and three times as many jobs; the
-    ///   rest is homes;
+    ///   rest is homes, but for the cells decision 90 draws, one in twenty
+    ///   each, from a key of their own (so the rest of a town is as before):
+    ///   in the inner ring (`4d² < r²`) a school or public office (as many
+    ///   jobs as those residents and a quarter of them living there), a
+    ///   sight (as many visitors, no one living there) or a park (no one);
+    ///   in the outer ring, two in twenty, a factory (twice as many jobs, no
+    ///   one living there);
+    /// - farms (3 residents, 8 jobs) lie round each town, one cell in six of
+    ///   the three cells beyond its radius;
     /// - cells outside the bounds are left out. The towns never meet: the
     ///   outer two stand at least 2 km from the middle in both directions,
     ///   some 2.8 km away and farther from each other, and the widest two
@@ -252,12 +281,20 @@ extension Land {
         for (number, town) in towns.enumerated() {
             let middleRow = cellIndex(town.y), middleColumn = cellIndex(town.x)
             let radius = town.radius, squared = radius * radius
-            for dr in -radius...radius {
-                for dc in -radius...radius {
+            let farms = (radius + farmBelt) * (radius + farmBelt)
+            for dr in -(radius + farmBelt)...(radius + farmBelt) {
+                for dc in -(radius + farmBelt)...(radius + farmBelt) {
                     let distance = dr * dr + dc * dc
-                    guard distance < squared else { continue }
+                    guard distance < farms else { continue }
                     let row = middleRow + Int(dr), column = middleColumn + Int(dc)
                     guard (0..<rows).contains(row), (0..<columns).contains(column) else { continue }
+                    guard distance < squared else {
+                        // Decision 90: the farms round the town.
+                        if draw.roll("town.\(number).farm.\(dr).\(dc)", in: 0...5) == 0 {
+                            cells.append(LandCell(row: row, column: column, use: .agricultural, residents: 3, jobs: 8))
+                        }
+                        continue
+                    }
                     let share = (squared - distance) * 1_000 / squared
                     var residents = town.peak * share / 1_000
                     var jobs: Int64 = 0
@@ -266,8 +303,31 @@ extension Land {
                         use = draw.roll("town.\(number).cell.\(dr).\(dc)", in: 0...1) == 0 ? .office : .commercial
                         jobs = 3 * residents
                         residents /= 4
+                    } else {
+                        // Decision 90: the town's schools, sights, parks
+                        // and factories, among its homes.
+                        let district = draw.roll("town.\(number).district.\(dr).\(dc)", in: 0...19)
+                        switch (4 * distance < squared, district) {
+                        case (true, 0):
+                            use = .civic
+                            jobs = residents
+                            residents /= 4
+                        case (true, 1):
+                            use = .leisure
+                            jobs = residents
+                            residents = 0
+                        case (true, 2):
+                            use = .park
+                            residents = 0
+                        case (false, 0), (false, 1):
+                            use = .industrial
+                            jobs = 2 * residents
+                            residents = 0
+                        default:
+                            break
+                        }
                     }
-                    guard residents + jobs > 0 else { continue }
+                    guard residents + jobs > 0 || use == .park else { continue }
                     cells.append(LandCell(row: row, column: column, use: use, residents: residents, jobs: jobs))
                 }
             }

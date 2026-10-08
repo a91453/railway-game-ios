@@ -5,8 +5,9 @@ GoldenScenarios/city-buildings-growth.json.
 
 Written from the rules in the decision, not from the Swift code: the
 capacity table from its floor areas, the building each cell gets, the
-numbering, the first town of a seed (FNV-1a draws) and the spread of a
-growing station. It prints what each fixture observes and the final
+numbering, the first town of a seed (FNV-1a draws, with decision 90's
+farms, factories, schools, sights and parks) and the spread of a growing
+station. It prints what each fixture observes and the final
 building counts, and with --check compares them with the fixture files.
 
 Python 3 standard library only: python3 -I tools/golden-checks/city_buildings.py --check
@@ -17,11 +18,15 @@ import sys
 
 FLOOR_AREA, PER_RESIDENT, PER_JOB = 1536, 48, 32
 FLOORS = {1: 2, 2: 6, 3: 18, 4: 40}
-HOME_EIGHTHS = {"residential": 7, "commercial": 2, "office": 1}
+# Decision 90 adds factories (no homes), schools and public offices and
+# sights (as offices), farms (as shops) and parks (no floor, no one).
+HOME_EIGHTHS = {"residential": 7, "commercial": 2, "office": 1, "industrial": 0, "civic": 1, "leisure": 1, "agricultural": 2}
 CELL = 4096
 
 
 def table(use, density):
+    if use == "park":
+        return 0, 0
     floor = FLOOR_AREA * FLOORS[density]
     homes = HOME_EIGHTHS[use]
     assert floor * homes % (8 * PER_RESIDENT) == 0 and floor * (8 - homes) % (8 * PER_JOB) == 0
@@ -72,15 +77,18 @@ def first_town(seed, width, height):
     columns, rows = -(-width // CELL), -(-height // CELL)
     mx, my = width // 2, height // 2
     middle_row, middle_column = my // CELL, mx // CELL
-    radius, peak = 12, 260
+    radius, peak, belt = 12, 260, 3
     cells = {}
-    for dr in range(-radius, radius + 1):
-        for dc in range(-radius, radius + 1):
+    for dr in range(-radius - belt, radius + belt + 1):
+        for dc in range(-radius - belt, radius + belt + 1):
             d2 = dr * dr + dc * dc
-            if d2 >= radius * radius:
-                continue
             row, column = middle_row + dr, middle_column + dc
             if not (0 <= row < rows and 0 <= column < columns):
+                continue
+            if d2 >= radius * radius:
+                # Decision 90: farms, one in six, in the belt of three cells.
+                if d2 < (radius + belt) ** 2 and roll(seed, "town.0.farm.%d.%d" % (dr, dc), 0, 5) == 0:
+                    cells[(row, column)] = ("agricultural", 3, 8)
                 continue
             share = (radius * radius - d2) * 1000 // (radius * radius)
             residents, jobs, use = peak * share // 1000, 0, "residential"
@@ -88,7 +96,21 @@ def first_town(seed, width, height):
                 use = "office" if roll(seed, "town.0.cell.%d.%d" % (dr, dc), 0, 1) == 0 else "commercial"
                 jobs = 3 * residents
                 residents //= 4
-            if residents + jobs > 0:
+            else:
+                # Decision 90: in the inner ring (4 d^2 < r^2) a school, a
+                # sight or a park, one in twenty each; in the outer ring a
+                # factory, two in twenty.
+                district = roll(seed, "town.0.district.%d.%d" % (dr, dc), 0, 19)
+                inner = 4 * d2 < radius * radius
+                if inner and district == 0:
+                    use, residents, jobs = "civic", residents // 4, residents
+                elif inner and district == 1:
+                    use, residents, jobs = "leisure", 0, residents
+                elif inner and district == 2:
+                    use, residents, jobs = "park", 0, 0
+                elif not inner and district in (0, 1):
+                    use, residents, jobs = "industrial", 0, 2 * residents
+            if residents + jobs > 0 or use == "park":
                 cells[(row, column)] = (use, residents, jobs)
     return cells
 
@@ -120,7 +142,9 @@ def main():
 
     town = first_town(1, 131072, 98304)
     town_buildings = number(town)
-    assert len(town) == 437 and sum(c[1] for c in town.values()) == 50189 and sum(c[2] for c in town.values()) == 33276
+    # The town of land-towns.json (437 cells, 50,189 residents and 33,276
+    # jobs before decision 90).
+    assert len(town) == 469 and sum(c[1] for c in town.values()) == 44457 and sum(c[2] for c in town.values()) == 42564
     for pos in [(12, 16), (12, 19), (12, 20), (12, 27), (0, 16)]:
         results["town %s" % (pos,)] = dict(observation(town_buildings, *pos), use=town.get(pos, (None,))[0])
     results["town counts"] = counts(town_buildings)

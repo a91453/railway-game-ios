@@ -903,6 +903,64 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNil(try JSONDecoder().decode(SavedGame.self, from: older).world.landBlocks)
     }
 
+    /// The world of `v19-land-uses.json`: a managed company with demand
+    /// from land, the city's buildings and town growth on a world 32 × 24
+    /// cells, with a cell of each of decision 90's uses (a factory, a
+    /// school, a sight, a farm and a park) and homes; School reaches the
+    /// school alone and serves it, Works the rest; run ten minutes.
+    private static func landUsesWorld() throws -> GameWorld {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        world.setLandDemand(true)
+        world.setCityBuildings(true)
+        world.setTownGrowth(true)
+        try world.setLand([
+            LandCell(row: 5, column: 4, use: .residential, residents: 300, jobs: 0),
+            LandCell(row: 5, column: 5, use: .industrial, residents: 0, jobs: 97),
+            LandCell(row: 5, column: 6, use: .civic, residents: 50, jobs: 200),
+            LandCell(row: 5, column: 7, use: .leisure, residents: 0, jobs: 900),
+            LandCell(row: 5, column: 8, use: .agricultural, residents: 3, jobs: 8),
+            LandCell(row: 5, column: 9, use: .park, residents: 0, jobs: 0),
+            LandCell(row: 15, column: 20, use: .civic, residents: 0, jobs: 1_000),
+        ])
+        let school = try world.buildStation(named: "School", at: PlanPoint(x: 83_968, y: 63_488)).id
+        try world.buildStation(named: "Works", at: PlanPoint(x: 30_720, y: 22_528))
+        precondition(world.stationDemand(of: school)?.kind == .civic)
+        try world.advance(ticks: 10)
+        return world
+    }
+
+    /// Version 19 (decision 90): land and buildings of the five more uses,
+    /// a park with no one in it, and a school's demand. It saves byte for
+    /// byte and is the world the build that wrote it makes. A version 18
+    /// save holds only homes, shops and offices.
+    func testVersionNineteenKeepsTheEightLandUses() throws {
+        let url = Self.fixtures.appendingPathComponent("v19-land-uses.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["LAND_USES_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.landUsesWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 19)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.landUsesWorld())
+        XCTAssertEqual(Set(world.land.cells.map(\.use)), Set(LandUse.allCases))
+        XCTAssertEqual(world.land.cell(row: 5, column: 9), LandCell(row: 5, column: 9, use: .park, residents: 0, jobs: 0))
+        XCTAssertEqual(world.buildings.all.map(\.use), [.residential, .industrial, .civic, .leisure, .agricultural, .park, .civic])
+        XCTAssertEqual(world.stations.map { world.stationDemand(of: $0.id)?.kind }, [.civic, .scenic])
+        XCTAssertEqual(world.landValue(row: 5, column: 9)?.parkPremium, 600)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+
+        let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v18-whole-island-land.json"))
+        let uses = try JSONDecoder().decode(SavedGame.self, from: older).world.land.cells.map(\.use)
+        XCTAssertTrue(Set(uses).isSubset(of: [.residential, .commercial, .office]))
+    }
+
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {
         world.buildings.all.count == world.land.cells.count
             && world.land.cells.allSatisfy { world.buildings.building(row: $0.row, column: $0.column)?.use == $0.use }

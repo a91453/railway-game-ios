@@ -49,22 +49,23 @@ final class SparseCityLandTests: XCTestCase {
     private static func denseCells(population: PopulationGrid, places: PlaceGrid?, frame: RealWorldFrame, bounds: WorldBounds) -> [LandCell]? {
         let grid = population.people
         let length = Double(Land.cellLength)
-        func jobs(_ cell: GridCounts.Cell) -> (office: Int64, shop: Int64) {
-            guard let places else { return (0, 0) }
+        // Decision 90: offices, shops, schools and sights, each its own.
+        func jobs(_ cell: GridCounts.Cell) -> [Int64] {
+            guard let places else { return [0, 0, 0, 0] }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {
                 Int64(places.layers[kind]?.counts[cell] ?? 0) * (LandImport.jobsPerPlace[kind] ?? 0)
             }
-            return (count(.offices) + count(.schools), count(.shops) + count(.attractions))
+            return [count(.offices), count(.shops), count(.schools), count(.attractions)]
         }
         var members: [GridCounts.Cell: [(row: Int, column: Int)]] = [:]
-        var sourceJobs: [GridCounts.Cell: (office: Int64, shop: Int64)] = [:]
+        var sourceJobs: [GridCounts.Cell: [Int64]] = [:]
         for row in 0..<Land.rows(in: bounds) {
             for column in 0..<Land.columns(in: bounds) {
                 let place = frame.coordinate(worldX: (Double(column) + 0.5) * length, worldY: (Double(row) + 0.5) * length)
                 let source = grid.cell(latitude: place.latitude, longitude: place.longitude)
                 if members[source] == nil {
                     let work = jobs(source)
-                    guard (grid.counts[source] ?? 0) > 0 || work.office + work.shop > 0 else { continue }
+                    guard (grid.counts[source] ?? 0) > 0 || work.reduce(0, +) > 0 else { continue }
                     sourceJobs[source] = work
                 }
                 members[source, default: []].append((row, column))
@@ -76,8 +77,11 @@ final class SparseCityLandTests: XCTestCase {
         var cells: [LandCell] = []
         for (source, inside) in members {
             let people = Int64(grid.counts[source] ?? 0)
-            let work = sourceJobs[source] ?? (0, 0)
-            let use: LandUse = work.office >= people && work.office >= work.shop ? .office : work.shop >= people ? .commercial : .residential
+            let work = sourceJobs[source] ?? [0, 0, 0, 0]
+            // The first kind with the most jobs, if they are at least the
+            // people; else homes.
+            let most = work.indices.first { work[$0] == work.max()! }!
+            let use: LandUse = work[most] >= people ? [.office, .commercial, .civic, .leisure][most] : .residential
             let atEdge = inside.contains { $0.row == 0 || $0.column == 0 || $0.row == lastRow || $0.column == lastColumn }
             let slots = Int64(atEdge ? max(inside.count, Int((grid.area(of: source) / cellArea).rounded())) : inside.count)
             func share(_ total: Int64, _ index: Int) -> Int64 {
@@ -85,7 +89,7 @@ final class SparseCityLandTests: XCTestCase {
                 return min(Land.maximumPerCell, base + (Int64(index) < extra ? 1 : 0))
             }
             for (index, cell) in inside.enumerated() {
-                let residents = share(people, index), jobs = share(work.office + work.shop, index)
+                let residents = share(people, index), jobs = share(work.reduce(0, +), index)
                 guard residents + jobs > 0 else { continue }
                 cells.append(LandCell(row: cell.row, column: cell.column, use: use, residents: residents, jobs: jobs))
             }
@@ -152,16 +156,10 @@ private struct DenseCityMap {
         values = world.landValues().map(\.value)
         var kinds = [UInt8](repeating: 0, count: rows * columns)
         var peopled = [Bool](repeating: false, count: rows * columns)
-        func useCode(_ use: LandUse) -> Int {
-            switch use {
-            case .residential: 1
-            case .commercial: 2
-            case .office: 3
-            }
-        }
+        func useCode(_ use: LandUse) -> Int { (LandUse.allCases.firstIndex(of: use) ?? 0) + 1 }
         for cell in world.land.cells where cell.row < rows && cell.column < columns {
             let index = cell.row * columns + cell.column
-            peopled[index] = true
+            peopled[index] = cell.residents + cell.jobs > 0
             if let building = world.buildings.building(row: cell.row, column: cell.column) {
                 let density = building.kind == .existingStock ? 5 : building.density.rawValue
                 kinds[index] = UInt8(useCode(building.use) * 8 + density)
@@ -199,7 +197,7 @@ private struct DenseCityMap {
         var tiles: [TravelDemandMap.Tile] = []
         for blockRow in (firstRow / size)...(lastRow / size) {
             for blockColumn in (firstColumn / size)...(lastColumn / size) {
-                var uses = [0, 0, 0, 0], densities = 0, drawn = 0, total: Int64 = 0
+                var uses = [Int](repeating: 0, count: LandUse.allCases.count + 1), densities = 0, drawn = 0, total: Int64 = 0
                 var anyCovered = false, anyPeopled = false, anyUncovered = false
                 for row in (blockRow * size)..<min(rows, (blockRow + 1) * size) {
                     for column in (blockColumn * size)..<min(columns, (blockColumn + 1) * size) {
@@ -229,7 +227,7 @@ private struct DenseCityMap {
                 let value: Int64
                 switch mode {
                 case .landUse:
-                    guard drawn > 0, let use = (1...3).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
+                    guard drawn > 0, let use = (1...LandUse.allCases.count).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
                     let density = (densities + drawn / 2) / drawn
                     color = CityMap.useColor(use: use, density: density)
                     value = Int64(use * 8 + density)

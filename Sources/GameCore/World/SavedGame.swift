@@ -94,9 +94,14 @@
 ///     reads only version 17 would call a larger world damaged, or drop the
 ///     blocks and read none again, so it says the save is newer than it
 ///     instead.
+/// 19. Eight land uses (decision 90): land and buildings can be factories,
+///     schools and public offices, sights, farms and parks (a park with no
+///     one in it), and a station's demand can be a school's or public
+///     office's. A build that reads only version 18 would call such land
+///     or demand damaged, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 18
+    public static let currentVersion = 19
 
     public let world: GameWorld
 
@@ -167,6 +172,9 @@ extension SavedGame: Codable {
         // day without `"fareTrips"` had none counted.
         // Version 17 to 18: a world without `"landBlocks"` has its land
         // whole, as every world before had.
+        // Version 18 to 19: a version 18 world has only homes, shops and
+        // offices, and demands of the four reference kinds, which version
+        // 19 reads as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 40,
+  "description": "Eight land uses (ARCHITECTURE decision 90) in a world 131072 x 98304 units, 32 x 24 cells of 64 m, a managed company with the city's buildings on. Land a park with someone in it, or another use's cell with no one, is refused (invalidLand) and changes nothing. setLand then lists a factory at row 5, column 5 with 97 jobs, a school at column 6 with 50 residents and 200 jobs, a sight at column 7 with 900 visitors, a farm at column 8 with 3 residents and 8 jobs, a park at column 9 with no one, and a second school at row 15, column 20 with 1000 jobs. Their buildings, numbered 1 to 6 by row and column, from the table (1536 m2 a storey; 2, 6, 18, 40 storeys): factories no eighths homes, schools and sights 1 like offices, farms 2 like shops, the rest jobs at 32 m2 and homes at 48 m2. The factory's 97 jobs pass D1's 3072 / 32 = 96, so D2, 9216 / 32 = 288 jobs and none living there; the school's 200 jobs fit D2's 252 (D1 84), holding its 50 residents above the table's 24; the sight's 900 pass D3's 756, so D4, 160 / 1680; the farm D1, 16 / 72; the park D1 holding no one; the second school D4, 160 / 1680. With demand from land on, School stands at the middle of the second school (83968, 63488), which it alone reaches: 1000 school jobs, (1000 x 40 + 50) / 100 = 400 trips a day of schools and public offices (civic: they outnumber everything else). Works stands at the middle of the sight (30720, 22528), 2 cells or less from the five cells of row 5 and alone reaching them: 53 residents (50 + 3), 105 jobs that commute as offices' do (factory 97 and farm 8), 200 school jobs and 900 visitors, (1258 x 40 + 50) / 100 = 503 trips of sights (scenic, the most). Land value without town growth is the base B x D / 1000 and, within 400 m (25600 units) of a park's middle, 600 more: the park itself 1200 + 600 = 1800; the factory D2 1500 x 1250 / 1000 = 1875, 4 cells (16384) from the park, 2475; the second school D4 2500 x 2000 / 1000 = 5000, far from it; empty cells 1000, plus 600 at row 5, column 15 (6 cells, 24576) but not at column 16 (7 cells, 28672). Every value worked out by hand.",
+  "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 10000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setLand", "cells": [{"row": 5, "column": 9, "use": "park", "residents": 1, "jobs": 0}]}, "expect": {"result": "invalidLand"}},
+    {"command": {"type": "setLand", "cells": [{"row": 5, "column": 5, "use": "industrial", "residents": 0, "jobs": 0}]}, "expect": {"result": "invalidLand"}},
+    {"observe": {"type": "landCell", "row": 5, "column": 9}, "expect": {"found": false}},
+    {"command": {"type": "setLand", "cells": [{"row": 15, "column": 20, "use": "civic", "residents": 0, "jobs": 1000}, {"row": 5, "column": 5, "use": "industrial", "residents": 0, "jobs": 97}, {"row": 5, "column": 6, "use": "civic", "residents": 50, "jobs": 200}, {"row": 5, "column": 7, "use": "leisure", "residents": 0, "jobs": 900}, {"row": 5, "column": 8, "use": "agricultural", "residents": 3, "jobs": 8}, {"row": 5, "column": 9, "use": "park", "residents": 0, "jobs": 0}]}, "expect": {"result": "ok"}},
+    {"observe": {"type": "landCell", "row": 5, "column": 9}, "expect": {"found": true, "landCell": {"row": 5, "column": 9, "use": "park", "residents": 0, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 5, "column": 5}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "industrial", "density": 2, "residents": 0, "jobs": 288}}},
+    {"observe": {"type": "building", "row": 5, "column": 6}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "civic", "density": 2, "residents": 50, "jobs": 252}}},
+    {"observe": {"type": "building", "row": 5, "column": 7}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "leisure", "density": 4, "residents": 160, "jobs": 1680}}},
+    {"observe": {"type": "building", "row": 5, "column": 8}, "expect": {"found": true, "building": {"id": 4, "kind": "city", "use": "agricultural", "density": 1, "residents": 16, "jobs": 72}}},
+    {"observe": {"type": "building", "row": 5, "column": 9}, "expect": {"found": true, "building": {"id": 5, "kind": "city", "use": "park", "density": 1, "residents": 0, "jobs": 0}}},
+    {"observe": {"type": "building", "row": 15, "column": 20}, "expect": {"found": true, "building": {"id": 6, "kind": "city", "use": "civic", "density": 4, "residents": 160, "jobs": 1680}}},
+    {"command": {"type": "setLandDemand", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "School", "point": {"x": 83968, "y": 63488}}, "expect": {"result": "ok"}},
+    {"command": {"type": "buildStationAt", "name": "Works", "point": {"x": 30720, "y": 22528}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "landValue", "row": 5, "column": 9}, "expect": {"found": true, "landValue": {"value": 1800, "base": 1200, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 5, "column": 5}, "expect": {"found": true, "landValue": {"value": 2475, "base": 1875, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 15, "column": 20}, "expect": {"found": true, "landValue": {"value": 5000, "base": 5000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 5, "column": 15}, "expect": {"found": true, "landValue": {"value": 1600, "base": 1000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 5, "column": 16}, "expect": {"found": true, "landValue": {"value": 1000, "base": 1000, "servicePremium": 0, "accessPremium": 0, "station": null}}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 8000,
+    "stations": [
+      { "id": 1, "name": "School", "point": { "x": 83968, "y": 63488 } },
+      { "id": 2, "name": "Works", "point": { "x": 30720, "y": 22528 } }
+    ],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": { "nodes": [], "edges": [], "platforms": [] },
+    "trafficControl": false,
+    "passengers": [
+      { "station": 1, "demand": { "kind": "civic", "dailyTrips": 400 }, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 },
+      { "station": 2, "demand": { "kind": "scenic", "dailyTrips": 503 }, "waiting": [], "released": 0, "arrived": 0, "overflowed": 0, "abandoned": 0, "refused": 0 }
+    ],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": { "fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0 },
+      "ledger": [],
+      "days": []
+    },
+    "land": { "cells": 6, "residents": 53, "jobs": 2205 },
+    "landDemand": true,
+    "cityBuildings": { "buildings": 6, "d1": 2, "d2": 2, "d3": 0, "d4": 2, "existingStock": 0 }
+  }
+}

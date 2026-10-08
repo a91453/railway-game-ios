@@ -19,11 +19,12 @@ public struct CityMap: Sendable {
     public let rows: Int
     public let columns: Int
     /// The cells a layer can draw, by row and then column: those with land
-    /// (and so a building) and those a station's catchment reaches. Every
-    /// other cell has no use, is worth an empty cell with no service
-    /// (``LandValueRules/vacantBase``: a cell is worth more only with land
-    /// or a station with service within the catchment) and is not covered,
-    /// so no layer draws it. They grow with what is built and lived in, not
+    /// (and so a building), those a station's catchment reaches and those
+    /// near a park (decision 90). Every other cell has no use, is worth an
+    /// empty cell with no service (``LandValueRules/vacantBase``: a cell is
+    /// worth more only with land, a station with service within the
+    /// catchment or a park near by) and is not covered, so no layer draws
+    /// it. They grow with what is built and lived in, not
     /// with the map (docs/research/WHOLE_TAIWAN_MAP.md).
     let cells: [Cell]
 
@@ -33,12 +34,12 @@ public struct CityMap: Sendable {
         /// Its value in cents a m².
         let value: Int64
         /// Its use and density: 0 for no building or land, else
-        /// `use × 8 + density` (use 1 homes, 2 shops, 3 offices; density
-        /// 1–4, 5 for existing stock).
+        /// `use × 8 + density` (``useCode(_:)``, 1 homes to 8 parks;
+        /// density 1–4, 5 for existing stock).
         let kind: UInt8
         /// Whether a station's catchment reaches it.
         let covered: Bool
-        /// Whether anyone lives or works in it.
+        /// Whether anyone lives or works in it (not a park, decision 90).
         let peopled: Bool
     }
 
@@ -49,9 +50,10 @@ public struct CityMap: Sendable {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
         self.rows = rows
         self.columns = columns
-        var kinds: [CellPosition: UInt8] = [:]
+        var kinds: [CellPosition: UInt8] = [:], peopled: Set<CellPosition> = []
         for cell in world.land.cells where cell.row < rows && cell.column < columns {
             let position = CellPosition(row: cell.row, column: cell.column)
+            if cell.residents + cell.jobs > 0 { peopled.insert(position) }
             if let building = world.buildings.building(row: cell.row, column: cell.column) {
                 let density = building.kind == .existingStock ? 5 : building.density.rawValue
                 kinds[position] = UInt8(Self.useCode(building.use) * 8 + density)
@@ -77,23 +79,39 @@ public struct CityMap: Sendable {
                 }
             }
         }
-        let positions = Set(kinds.keys).union(covered).sorted()
+        // Decision 90: the cells a park makes worth more.
+        var nearParks: Set<CellPosition> = []
+        let parkReach = LandValueRules.parkReach
+        for cell in world.land.cells where cell.use == .park {
+            let point = cell.middle
+            let firstRow = max(0, Int((point.y - parkReach) / length) - 1), lastRow = min(rows - 1, Int((point.y + parkReach) / length) + 1)
+            let firstColumn = max(0, Int((point.x - parkReach) / length) - 1), lastColumn = min(columns - 1, Int((point.x + parkReach) / length) + 1)
+            guard firstRow <= lastRow, firstColumn <= lastColumn else { continue }
+            for row in firstRow...lastRow {
+                let dy = Int64(row) * length + length / 2 - point.y
+                for column in firstColumn...lastColumn {
+                    let dx = Int64(column) * length + length / 2 - point.x
+                    if dx * dx + dy * dy < parkReach * parkReach {
+                        nearParks.insert(CellPosition(row: row, column: column))
+                    }
+                }
+            }
+        }
+        let positions = Set(kinds.keys).union(covered).union(nearParks).sorted()
         let values = world.landValues(at: positions)
         cells = zip(positions, values).map { position, value in
             let kind = kinds[position]
             return Cell(
                 row: position.row, column: position.column, value: value.value,
-                kind: kind ?? 0, covered: covered.contains(position), peopled: kind != nil
+                kind: kind ?? 0, covered: covered.contains(position), peopled: peopled.contains(position)
             )
         }
     }
 
-    private static func useCode(_ use: LandUse) -> Int {
-        switch use {
-        case .residential: 1
-        case .commercial: 2
-        case .office: 3
-        }
+    /// A use's number, 1 to 8 in ``LandUse``'s order: the order a block's
+    /// tie goes by and ``useColor(use:density:)`` reads.
+    static func useCode(_ use: LandUse) -> Int {
+        (LandUse.allCases.firstIndex(of: use) ?? 0) + 1
     }
 
     // MARK: - Drawing
@@ -139,7 +157,7 @@ public struct CityMap: Sendable {
         let lowRow = firstRow / size * size, highRow = min(rows - 1, (lastRow / size + 1) * size - 1)
         let lowColumn = firstColumn / size * size, highColumn = min(columns - 1, (lastColumn / size + 1) * size - 1)
         struct Block {
-            var uses = [0, 0, 0, 0], densities = 0, drawn = 0, total: Int64 = 0
+            var uses = [Int](repeating: 0, count: LandUse.allCases.count + 1), densities = 0, drawn = 0, total: Int64 = 0
             var anyCovered = false, anyPeopled = false, anyUncovered = false
         }
         var blocks: [CellPosition: Block] = [:]
@@ -183,7 +201,7 @@ public struct CityMap: Sendable {
             switch mode {
             case .landUse:
                 let uses = block.uses
-                guard block.drawn > 0, let use = (1...3).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
+                guard block.drawn > 0, let use = (1...LandUse.allCases.count).max(by: { uses[$0] < uses[$1] || (uses[$0] == uses[$1] && $0 > $1) }) else { continue }
                 let density = (block.densities + block.drawn / 2) / block.drawn
                 color = Self.useColor(use: use, density: density)
                 value = Int64(use * 8 + density)
@@ -213,17 +231,32 @@ public struct CityMap: Sendable {
     // MARK: - Colours
 
     /// A use's four shades, D1 to D4 (existing stock draws as D4): homes
-    /// green, shops blue, offices amber, darker for taller buildings.
+    /// green, shops blue, offices amber, darker for taller buildings; since
+    /// decision 90 factories purple, schools and public offices red, sights
+    /// teal, farms brown and parks a light green (ColorBrewer's sequential
+    /// schemes, as the first three).
     static let useShades: [[PopTravel.RGB]] = [
         [PopTravel.RGB(0xC7E9C0), PopTravel.RGB(0x74C476), PopTravel.RGB(0x31A354), PopTravel.RGB(0x006D2C)],
         [PopTravel.RGB(0xC6DBEF), PopTravel.RGB(0x6BAED6), PopTravel.RGB(0x3182BD), PopTravel.RGB(0x08519C)],
         [PopTravel.RGB(0xFDD49E), PopTravel.RGB(0xFDAE61), PopTravel.RGB(0xE6550D), PopTravel.RGB(0xA63603)],
+        [PopTravel.RGB(0xDADAEB), PopTravel.RGB(0x9E9AC8), PopTravel.RGB(0x756BB1), PopTravel.RGB(0x54278F)],
+        [PopTravel.RGB(0xFCBBA1), PopTravel.RGB(0xFC9272), PopTravel.RGB(0xEF3B2C), PopTravel.RGB(0xA50F15)],
+        [PopTravel.RGB(0xC7EAE5), PopTravel.RGB(0x80CDC1), PopTravel.RGB(0x35978F), PopTravel.RGB(0x01665E)],
+        [PopTravel.RGB(0xF6E8C3), PopTravel.RGB(0xDFC27D), PopTravel.RGB(0xBF812D), PopTravel.RGB(0x8C510A)],
+        [PopTravel.RGB(0xB8E186), PopTravel.RGB(0x7FBC41), PopTravel.RGB(0x4D9221), PopTravel.RGB(0x276419)],
     ]
 
-    /// The colour of `use` (1 homes, 2 shops, 3 offices) at `density`
-    /// (1–4; 0, land without a building, draws as 1).
+    /// The colour of `use` (1 to 8 in ``LandUse``'s order: homes, shops,
+    /// offices, factories, schools and public offices, sights, farms,
+    /// parks) at `density` (1–4; 0, land without a building, draws as 1).
     public static func useColor(use: Int, density: Int) -> PopTravel.RGB {
-        useShades[min(max(use, 1), 3) - 1][min(max(density, 1), 4) - 1]
+        useShades[min(max(use, 1), useShades.count) - 1][min(max(density, 1), 4) - 1]
+    }
+
+    /// Each use's number for ``useColor(use:density:)`` and its name, for
+    /// the land use legend.
+    public static let useNames: [(use: Int, english: String, chinese: String)] = LandUse.allCases.map {
+        (useCode($0), $0.names.english, $0.names.chinese)
     }
 
     /// The land value legend's steps, in dollars a m²: a value at or above
@@ -272,13 +305,7 @@ public struct CityCellInfo: Hashable, Sendable {
     /// $ 20.00" and "Set by Alpha" (or "No station adds to it").
     public func lines(in language: DisplayLanguage) -> [String] {
         var lines: [String] = []
-        let useName: (String, String)? = use.map {
-            switch $0 {
-            case .residential: ("Homes", "住宅")
-            case .commercial: ("Shops", "商業")
-            case .office: ("Offices", "辦公")
-            }
-        }
+        let useName: (String, String)? = use.map { ($0.names.english, $0.names.chinese) }
         if let useName {
             if kind == .existingStock {
                 lines.append(language.text("\(useName.0) · existing stock", "\(useName.1) · 既有存量"))
@@ -299,6 +326,10 @@ public struct CityCellInfo: Hashable, Sendable {
         lines.append(language.text("Land value \(total) a m²", "地價 每平方公尺 \(total)"))
         let base = Money(value.base).centsText, service = Money(value.servicePremium).centsText, access = Money(value.accessPremium).centsText
         lines.append(language.text("Base \(base) · Service + \(service) · Access + \(access)", "基準 \(base) · 服務 + \(service) · 可達 + \(access)"))
+        if value.parkPremium > 0 {
+            let park = Money(value.parkPremium).centsText
+            lines.append(language.text("Near a park + \(park)", "鄰近公園 + \(park)"))
+        }
         if let stationName {
             lines.append(language.text("Set by \(stationName)", "決定價格的車站：\(stationName)"))
         } else {
@@ -358,5 +389,21 @@ extension GameWorld {
         guard !land.isEmpty, let value = catchmentLandValue(of: id) else { return nil }
         let text = Money(value).centsText
         return language.text("Average land value within 800 m: \(text) a m²", "腹地平均地價：每平方公尺 \(text)")
+    }
+}
+
+extension LandUse {
+    /// Its name on the city map, in English and in Traditional Chinese.
+    public var names: (english: String, chinese: String) {
+        switch self {
+        case .residential: ("Homes", "住宅")
+        case .commercial: ("Shops", "商業")
+        case .office: ("Offices", "辦公")
+        case .industrial: ("Industry", "工業物流")
+        case .civic: ("Public", "公共設施")
+        case .leisure: ("Leisure", "觀光休閒")
+        case .agricultural: ("Farms", "農業")
+        case .park: ("Parks", "公園綠地")
+        }
     }
 }

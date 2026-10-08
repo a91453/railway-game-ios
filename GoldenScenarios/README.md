@@ -115,7 +115,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - **路徑**（schema 18，決策 31）：`{ "traversals": [行進方向, ...], "end", "distance" }`：列車在車頭所在的邊之後依序進入的行進方向、車頭停在最後一條（沒有時是車頭所在的那一條）的哪裡（沿行進方向量起；走到終點時不寫 `end`），以及車頭從現在的位置走到那裡的精確距離。
 - **路線行程**：`{ "start", "legs", "roundTripSeconds", "roundTripMinutes" }`。`start` 是列車位置（路網上的停車位置，`edge`）；`legs` 是 `[{ "from", "to", "path", "seconds" }, ...]`：`from`、`to` 是路線 `stops` 的索引，`path` 是那一段的路（上面的「路徑」，schema 18），`seconds` 是一段的秒數（schema 25）；`roundTripSeconds` 是整趟的秒數，`roundTripMinutes` 是它無條件進位到整分鐘。環線的行程（schema 27）另外有 `"ring": true`，其他行程沒有這個 key。
 - **乘客**（schema 20，決策 34）：
-  - 需求（`demand`）：`{ "kind", "dailyTrips" }`，`kind` 是 `"residential"`、`"office"`、`"shopping"` 或 `"scenic"`，`dailyTrips` 是整數；指令裡照原樣讀取，是否合法由 GameCore 判定。
+  - 需求（`demand`）：`{ "kind", "dailyTrips" }`，`kind` 是 `"residential"`、`"office"`、`"shopping"`、`"scenic"` 或（schema 40，決策 90）`"civic"`，`dailyTrips` 是整數；指令裡照原樣讀取，是否合法由 GameCore 判定。
   - 沿路線的方向：`"outbound"`（往路線 `stops` 的後面）或 `"inbound"`（往前面）。
   - 旅次（`trip`）：`{ "line", "direction" }`。
   - 等車的一組（`groups` 的一項、最終狀態的 `waiting`）：`{ "line", "direction", "destination", "since", "count" }`：要坐的路線與方向、迄點車站、釋出的遊戲分鐘與人數，依排隊的順序（先來的在前）。
@@ -175,7 +175,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setStationOperationMode`（schema 35） | `station`、`mode`（`"normalFlow"`、`"flowControl"` 或 `"closed"`） | `setStationOperationMode(_:to:)` |
 | `foundTowns`（schema 36） | `seed`（0…4294967295） | `foundTowns(seed:)` |
 | `setLandDemand`（schema 36） | `enabled`（布林值） | `setLandDemand(_:)` |
-| `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"` | `setLand(_:)` |
+| `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"`，schema 40（決策 90）起也可以是 `"industrial"`、`"civic"`、`"leisure"`、`"agricultural"`、`"park"`（`landCell` 與 `building` 觀察的 `use` 也一樣） | `setLand(_:)` |
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
 
@@ -230,7 +230,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `trainsShareTrack` | `trains`（`[a, b]`） | 開啟交通控制時，兩台列車需要同一段軌道：`b` 是依 ID 第一台與前面某台相交的列車，`a` 是與它相交的最小編號（schema 19） |
 | `invalidStationDemand` | — | 車站每天的旅次不在 0…1,000,000（schema 20） |
 | `stationDemandFromLand` | — | 土地決定經營模式的運量時不能設定車站的需求（schema 36，決策 73） |
-| `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36） |
+| `invalidLand` | — | 土地有一格在世界外、重複、數量為負或超過 100,000，或居民與就業都是 0（schema 36）；schema 40 起公園以外的格才是這樣，公園則是有居民或就業（決策 90） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -636,3 +636,14 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新觀察 `landValue`（ARCHITECTURE 決策 76）。沒有用到它的 fixture 不必改，schema 30 到 38 照樣讀取：**沒有任何既有 fixture 的預期值改變**。地價只是查詢，不在最終狀態裡。`ReferenceWorldGoldenTests` 跳過用到它的 fixture；`LandValueTests` 另有逐格的參考實作。
 - `land-value.json`：8 × 2 格的世界、economy.json 的路線與列車。量測之前每格只有基準（住宅 D2 2500、商業 D2 3750、辦公 D4 7000、既有存量 4000、空格 1000），世界外的格沒有；第二個午夜三站都量到 1000‰、可達 2 站之後，每格依最近（w 最高）的站加上服務與可達溢價，兩站同分時取編號小的；自由模式又只剩基準。每個地價都依規則手算，並以獨立的 Python 實作（`python3 -I tools/golden-checks/land_value.py`）從觀察到的建物與量測核對；鐵路、乘客與帳的值取自 GameCore（同 economy.json）。
+
+## 決策 90：八種土地用途（schema 40）
+
+- 土地與建物的 `use` 多了 `"industrial"`（工業物流）、`"civic"`（學校與公共設施）、`"leisure"`（觀光休閒）、`"agricultural"`（農業）、`"park"`（公園，沒有人），車站需求的 `kind` 多了 `"civic"`；公園有人、或其他用途沒有人時是 `invalidLand`。只讀 schema 39 的讀取端不認得這些名稱，所以用到它們的 fixture 是 schema 40；沒有用到的 fixture 不必改，schema 30 到 39 照樣讀取。地價的觀察沒有改：公園的 600 溢價只在 `value` 裡（`value` − `base` − 兩個溢價）。
+- `land-uses.json`（新）：32 × 24 格、經營模式、城市建物開啟。公園有人與工廠沒有人都被拒絕；六格新用途的建物（工廠 D2 0／288、學校 D2 50／252、觀光 D4 160／1680、農地 D1 16／72、公園 D1 沒有人、第二所學校 D4）；School 只分到第二所學校，1000 個就業 → 400 旅次、`civic`；Works 分到第 5 列的五格，觀光 900 人最多 → 503 旅次、`scenic`；地價：公園 1200 + 600、4 格外的工廠 1875 + 600、遠的學校 5000、6 格的空格 1600、7 格的 1000。每個數值都手算（寫在 description 裡）。
+- **改變的既有預期值**（決策 90 改了空白地圖的城鎮：核心外的格依新的抽籤 `town.<n>.district.<dr>.<dc>` 有學校、觀光、公園與工廠，半徑外三格有農地 `town.<n>.farm.<dr>.<dc>`；其餘的格與之前完全相同）。兩份都改成 schema 40，description 寫了新舊值：
+  - `land-towns.json` 第 14 步：第 12 列第 20 欄（d² = 16，內圈）抽到 2，從 230 人的住宅變成沒有人的公園。
+  - `land-towns.json` 第 15 步：第 27 欄（d² = 121，外圈）抽到 0，從 41 人的住宅變成 82 個就業的工廠（2 × 41）。
+  - `land-towns.json` 第 17、18 步與最終狀態：Middle 的腹地 50,189／33,276 → 44,394／42,396，Edge 21,555／18,558 → 19,142／22,227，整座城鎮 437 格、50,189／33,276 → 469 格（多了 32 格農地）、44,457／42,564。
+  - `city-buildings.json` 第 28–31 步：農地排在前面，所以中心格的辦公 D4 從 219 號變 238 號、商業 D4 從 222 號變 241 號；第 20 欄從住宅 D3（223 號）變成公園 D1（242 號，沒有人）；第 27 欄從住宅 D1（230 號）變成工廠 D1（249 號，0／96）。最終狀態 437 棟（88／188／134／27）→ 469 棟（123 D1、189 D2、130 D3、27 D4）。
+  - 新值都先由 GameCore 取得，再以更新後的 `python3 -I tools/golden-checks/city_buildings.py --check`（照決策 90 的規則重寫的第一座城鎮）與另一份手寫的 Python 腹地計算核對，`LandTests` 的逐格參考實作也照新規則重寫。其他 fixture 的預期值都沒有改變。

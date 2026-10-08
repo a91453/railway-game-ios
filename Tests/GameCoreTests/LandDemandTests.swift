@@ -54,7 +54,12 @@ final class LandDemandTests: XCTestCase {
             for (index, (station, _)) in near.enumerated() {
                 var share = shares[station.id] ?? LandDemand.Share()
                 share.residents += residents[index]
-                if cell.use == .office { share.officeJobs += jobs[index] } else { share.shopJobs += jobs[index] }
+                switch cell.use {
+                case .office, .industrial, .agricultural: share.officeJobs += jobs[index]
+                case .civic: share.civicJobs += jobs[index]
+                case .leisure: share.leisureJobs += jobs[index]
+                case .residential, .commercial, .park: share.shopJobs += jobs[index]
+                }
                 shares[station.id] = share
             }
         }
@@ -78,7 +83,7 @@ final class LandDemandTests: XCTestCase {
                 squaredDistance(row: $0 / columns, column: $0 % columns, station.location) < reach
             }
             let addedResidents = largestRemainder(grown(share.residents), keys.map { land[$0]!.residents })
-            let addedJobs = largestRemainder(grown(share.officeJobs + share.shopJobs), keys.map { land[$0]!.jobs })
+            let addedJobs = largestRemainder(grown(share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs), keys.map { land[$0]!.jobs })
             for (offset, key) in keys.enumerated() {
                 let cell = land[key]!
                 let residents = cell.residents >= 400 ? cell.residents : min(400, cell.residents + addedResidents[offset])
@@ -91,7 +96,7 @@ final class LandDemandTests: XCTestCase {
                     let d2 = squaredDistance(row: row, column: column, station.location)
                     guard d2 < reach else { continue }
                     let beside = [(row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)].contains { r, c in
-                        (0..<rows).contains(r) && (0..<columns).contains(c) && land[r * columns + c] != nil
+                        (0..<rows).contains(r) && (0..<columns).contains(c) && (land[r * columns + c].map { $0.residents + $0.jobs > 0 } ?? false)
                     }
                     guard beside, best.map({ (d2, row, column) < $0 }) ?? true else { continue }
                     best = (d2, row, column)
@@ -115,6 +120,12 @@ final class LandDemandTests: XCTestCase {
         XCTAssertEqual(LandDemand.Share(residents: 10, officeJobs: 10, shopJobs: 10).demand?.kind, .residential, "homes on a tie")
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 10, shopJobs: 10).demand?.kind, .office, "then offices")
         XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 10).demand?.kind, .shopping)
+        // Decision 90: schools and public offices, then sights, after shops.
+        XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 10, civicJobs: 10).demand?.kind, .shopping)
+        XCTAssertEqual(LandDemand.Share(residents: 9, officeJobs: 9, shopJobs: 9, civicJobs: 10, leisureJobs: 10).demand?.kind, .civic)
+        XCTAssertEqual(LandDemand.Share(residents: 9, civicJobs: 9, leisureJobs: 10).demand?.kind, .scenic)
+        XCTAssertEqual(LandDemand.Share(residents: 100, officeJobs: 50, shopJobs: 50, civicJobs: 50, leisureJobs: 50).demand,
+                       StationDemand(kind: .residential, dailyTrips: 120), "every job counts")
         XCTAssertEqual(LandDemand.Share(residents: 10_000_000).demand?.dailyTrips, StationDemand.maximumDailyTrips)
     }
 
@@ -137,7 +148,7 @@ final class LandDemandTests: XCTestCase {
         // No one is counted twice: the shares add up to the land within
         // reach of any station.
         let reached = world.land.cells.filter { cell in world.stations.contains { Self.squaredDistance(row: cell.row, column: cell.column, $0.location) < Self.reach } }
-        let total = shares.values.reduce(Int64(0)) { $0 + $1.residents + $1.officeJobs + $1.shopJobs }
+        let total = shares.values.reduce(Int64(0)) { $0 + $1.residents + $1.officeJobs + $1.shopJobs + $1.civicJobs + $1.leisureJobs }
         XCTAssertEqual(total, reached.reduce(Int64(0)) { $0 + $1.residents + $1.jobs })
         XCTAssertNil(shares[StationID(rawValue: 8)], "the station far from the towns has no land")
         // And each station's ridership is its share's.
@@ -152,13 +163,20 @@ final class LandDemandTests: XCTestCase {
         var world = world()
         let a = try world.buildStation(named: "A", at: PlanPoint(x: Self.middle, y: Self.middle)).id
         let whole = try XCTUnwrap(world.stationDemand(of: a))
-        // The whole first town: (50,189 + 33,276) × 40 / 100.
-        XCTAssertEqual(whole, StationDemand(kind: .residential, dailyTrips: 33_386))
+        // The whole first town and its nearest farms (decision 90; 33,386
+        // before): (44,394 + 42,396) × 40 / 100.
+        XCTAssertEqual(whole, StationDemand(kind: .residential, dailyTrips: 34_716))
         let b = try world.buildStation(named: "B", at: PlanPoint(x: Self.middle + 25_600, y: Self.middle)).id
         let after = try XCTUnwrap(world.stationDemand(of: a)).dailyTrips
         XCTAssertLessThan(after, whole.dailyTrips, "B takes part of A's town")
         let both = after + (world.stationDemand(of: b)?.dailyTrips ?? 0)
-        XCTAssertEqual(Double(both), Double(whole.dailyTrips), accuracy: 2, "shared, not counted twice (each rounded)")
+        // B also reaches farms beyond A's reach (decision 90).
+        let either = world.land.cells.filter { cell in
+            world.stations.contains { Self.squaredDistance(row: cell.row, column: cell.column, $0.location) < Self.reach }
+        }
+        let people = either.reduce(Int64(0)) { $0 + $1.residents + $1.jobs }
+        XCTAssertGreaterThan(people, 44_394 + 42_396)
+        XCTAssertEqual(Double(both), Double(people) * 0.4, accuracy: 2, "shared, not counted twice (each rounded)")
     }
 
     func testTheLandSetsOnlyAManagedCompanysRidership() throws {
@@ -169,7 +187,8 @@ final class LandDemandTests: XCTestCase {
         free.foundTowns(seed: 2)
         XCTAssertEqual(free.stationDemand(of: a), StationDemand(kind: .scenic, dailyTrips: 300))
         free.setEconomyMode(.management)
-        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 33_386, "managed, the land sets it")
+        // Seed 2's first town (decision 90; 33,386 before).
+        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 34_698, "managed, the land sets it")
         let before = free
         XCTAssertThrowsError(try free.setStationDemand(a, to: StationDemand(kind: .office, dailyTrips: 5))) {
             XCTAssertEqual($0 as? GameError, .stationDemandFromLand)
@@ -178,10 +197,10 @@ final class LandDemandTests: XCTestCase {
         // Turned off, the stations keep what the land gave them, and the
         // player may set it.
         free.setLandDemand(false)
-        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 33_386)
+        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 34_698)
         try free.setStationDemand(a, to: StationDemand(kind: .office, dailyTrips: 5))
         free.setLandDemand(true)
-        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 33_386)
+        XCTAssertEqual(free.stationDemand(of: a)?.dailyTrips, 34_698)
         // Land changes ridership at once; none leaves no ridership.
         try free.setLand([])
         XCTAssertNil(free.stationDemand(of: a))
@@ -208,7 +227,7 @@ final class LandDemandTests: XCTestCase {
         world.setTownGrowth(true)
         let a = try world.buildStation(named: "A", at: PlanPoint(x: Self.middle, y: Self.middle)).id
         try world.advance(ticks: 1_440)
-        XCTAssertEqual(world.townGrowth(of: a)?.base, 33_386, "growth has seen the whole town")
+        XCTAssertEqual(world.townGrowth(of: a)?.base, 34_716, "growth has seen the whole town")
         try world.setLand([LandCell(row: 128, column: 128, use: .residential, residents: 100, jobs: 0)])
         let kept = try XCTUnwrap(world.stationDemand(of: a))
         XCTAssertEqual(kept.dailyTrips, 40)
@@ -280,10 +299,10 @@ final class LandDemandTests: XCTestCase {
                 let place = world.townGrowth!.places.first { $0.station == id }!
                 rates[id] = TownGrowth.growth(served: record.arrived - place.counted, trips: record.demand!.dailyTrips, reached: reached[id] ?? 0)
             }
-            // Fully served and two reached: 10 + 2; half served (rounded
-            // down, so just under half: 4) and nine reached (five count):
-            // 9; none served: −2.
-            XCTAssertEqual(ids.map { rates[$0]! }, [12, 9, -2])
+            // Fully served and two reached: 10 + 2; half served (5: an even
+            // number of trips since decision 90's towns; just under half,
+            // 4, before) and nine reached (five count): 10; none served: −2.
+            XCTAssertEqual(ids.map { rates[$0]! }, [12, 10, -2])
             let expected = Self.referenceGrowth(world.land.cells, world.stations, rates: rates, in: world.bounds)
             let tripsBefore = ids.map { world.stationDemand(of: $0)!.dailyTrips }
             world.growLand(reached: reached)

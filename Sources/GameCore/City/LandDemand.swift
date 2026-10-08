@@ -58,28 +58,42 @@ public enum LandDemand {
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
         public var residents: Int64 = 0
-        /// Jobs in offices, and in shops (with any jobs in homes).
+        /// Jobs in offices (and, since decision 90, in factories and on
+        /// farms, which commute as offices do), and in shops (with any jobs
+        /// in homes).
         public var officeJobs: Int64 = 0
         public var shopJobs: Int64 = 0
+        /// Decision 90: the jobs, pupils and patients of schools, hospitals
+        /// and public offices, and the visitors of sights.
+        public var civicJobs: Int64 = 0
+        public var leisureJobs: Int64 = 0
 
-        public init(residents: Int64 = 0, officeJobs: Int64 = 0, shopJobs: Int64 = 0) {
+        public init(residents: Int64 = 0, officeJobs: Int64 = 0, shopJobs: Int64 = 0, civicJobs: Int64 = 0, leisureJobs: Int64 = 0) {
             self.residents = residents
             self.officeJobs = officeJobs
             self.shopJobs = shopJobs
+            self.civicJobs = civicJobs
+            self.leisureJobs = leisureJobs
         }
 
         /// The ridership it makes: ``tripsPerHundred`` for every 100
         /// residents and jobs, rounded half up, at most
         /// ``StationDemand/maximumDailyTrips``, of the kind most of it is
-        /// (homes, then offices, then shops on a tie); `nil` for none.
+        /// (homes, then offices, then shops, then schools and public
+        /// offices, then sights on a tie); `nil` for none.
         public var demand: StationDemand? {
-            let people = residents + officeJobs + shopJobs
+            let people = residents + officeJobs + shopJobs + civicJobs + leisureJobs
             let trips = min(StationDemand.maximumDailyTrips, (people * tripsPerHundred + 50) / 100)
             guard trips > 0 else { return nil }
-            let kind: StationDemandKind = residents >= officeJobs && residents >= shopJobs
-                ? .residential
-                : officeJobs >= shopJobs ? .office : .shopping
-            return StationDemand(kind: kind, dailyTrips: trips)
+            let kinds: [(StationDemandKind, Int64)] = [
+                (.residential, residents), (.office, officeJobs), (.shopping, shopJobs), (.civic, civicJobs), (.scenic, leisureJobs),
+            ]
+            // The first of the most, so the order above settles a tie.
+            var kind = kinds[0]
+            for candidate in kinds.dropFirst() where candidate.1 > kind.1 {
+                kind = candidate
+            }
+            return StationDemand(kind: kind.0, dailyTrips: trips)
         }
     }
 
@@ -104,9 +118,14 @@ public enum LandDemand {
         func add(_ residents: Int64, _ jobs: Int64, of cell: LandCell, to station: Int) {
             var share = byStation[station] ?? Share()
             share.residents += residents
-            if cell.use == .office {
+            switch cell.use {
+            case .office, .industrial, .agricultural:
                 share.officeJobs += jobs
-            } else {
+            case .civic:
+                share.civicJobs += jobs
+            case .leisure:
+                share.leisureJobs += jobs
+            case .residential, .commercial, .park:
                 share.shopJobs += jobs
             }
             byStation[station] = share
@@ -279,7 +298,7 @@ extension GameWorld {
                     raiseBuildings(around: station, full: full, raised: &raised)
                 }
                 let share = shares[station.id] ?? LandDemand.Share()
-                let jobs = share.officeJobs + share.shopJobs
+                let jobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
                 grow(around: station, residents: Self.grown(share.residents, rate), jobs: Self.grown(jobs, rate))
                 spread(towards: station)
             }
@@ -382,7 +401,8 @@ extension GameWorld {
                 guard squared < radius * radius, land.cell(row: row, column: column) == nil else { continue }
                 if let best, (best.squared, best.row, best.column) <= (squared, row, column) { continue }
                 let beside = [(row - 1, column), (row + 1, column), (row, column - 1), (row, column + 1)]
-                guard beside.contains(where: { land.cell(row: $0.0, column: $0.1) != nil }) else { continue }
+                // A park beside it has no people (decision 90).
+                guard beside.contains(where: { land.cell(row: $0.0, column: $0.1).map { $0.residents + $0.jobs > 0 } ?? false }) else { continue }
                 best = (squared, row, column)
             }
         }

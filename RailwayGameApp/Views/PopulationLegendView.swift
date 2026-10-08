@@ -171,16 +171,18 @@ struct PopulationLegendView: View {
             .frame(height: 12)
             .clipShape(Capsule())
         case .landUse:
-            VStack(alignment: .leading, spacing: 3) {
-                ForEach(Array([(1, "Homes", "住宅"), (2, "Shops", "商業"), (3, "Offices", "辦公")].enumerated()), id: \.offset) { _, use in
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
+                ForEach(Array(CityMap.useNames.enumerated()), id: \.offset) { _, use in
                     HStack(spacing: 6) {
-                        Text(verbatim: language.text(use.1, use.2))
+                        Text(verbatim: language.text(use.english, use.chinese))
                             .font(.caption2)
                             .foregroundStyle(Theme.textPrimary)
-                            .frame(width: 48, alignment: .leading)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(width: 52, alignment: .leading)
                         HStack(spacing: 0) {
                             ForEach(1...4, id: \.self) { density in
-                                Color(CityMap.useColor(use: use.0, density: density))
+                                Color(CityMap.useColor(use: use.use, density: density))
                             }
                         }
                         .frame(height: 10)
