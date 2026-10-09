@@ -103,7 +103,10 @@ public final class GameLauncher {
     /// map with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
         begin(
-            .newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? []),
+            .newGame(
+                anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
+                steep: anchor.map(steep(at:)) ?? []
+            ),
             keepingAutosave: true
         )
     }
@@ -130,7 +133,10 @@ public final class GameLauncher {
                 return
             }
             begin(
-                PingxiChallenge.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor)),
+                PingxiChallenge.make(
+                    in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
+                    steep: steep(at: RealWorldDemo.anchor)
+                ),
                 keepingAutosave: true
             )
         }
@@ -159,7 +165,10 @@ public final class GameLauncher {
     /// built on `railways` and running over Apple's map.
     public func openRealWorldDemo(railways: RealRailways) {
         begin(
-            RealWorldDemo.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor)),
+            RealWorldDemo.make(
+                in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
+                steep: steep(at: RealWorldDemo.anchor)
+            ),
             keepingAutosave: true
         )
     }
@@ -181,6 +190,12 @@ public final class GameLauncher {
     /// 105, ``WaterGrid``): none without the app's water.
     func water(at anchor: GeoAnchor) -> [CellPosition] {
         water?.cells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
+    }
+
+    /// The steep slopes of a new game's map with its middle at `anchor`
+    /// (decision 115, from the same file as the water): none without it.
+    func steep(at anchor: GeoAnchor) -> [CellPosition] {
+        water?.steepCells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }
 
     /// Starts a new game with the tutorial on its first step (the start
@@ -408,7 +423,7 @@ public struct RealWorldData: Sendable {
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
     /// `taiwan_water.json` and the railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
-    /// to its contents). About 3.7 MB of JSON is decoded: call it off the
+    /// to its contents). About 5.3 MB of JSON is decoded: call it off the
     /// main actor.
     public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []

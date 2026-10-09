@@ -284,6 +284,14 @@ public final class GameSession {
     /// saved.
     @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
 
+    /// The last thing the player put up, which the map marks (decision
+    /// 117, ``notePutUp(at:)``); `nil` before any. Never saved.
+    public internal(set) var buildPulse: BuildPulse?
+    /// The last money that came in, which the status pill floats up
+    /// (decision 117, ``noteIncome(since:)``); `nil` before any. Never
+    /// saved.
+    public internal(set) var incomePulse: IncomePulse?
+
     /// The trains the player is looking at, whose arrivals ring at full
     /// volume (``SoundCue/arrival(watched:)``): the one the camera follows,
     /// the one last tapped on the map, and the selected one while the
@@ -634,7 +642,10 @@ public final class GameSession {
         if ticks > 0 {
             let closedBefore = world.accounts.years.last?.year
             let endedBefore = world.scenario?.outcome != nil
+            let lastEntry = world.accounts.entries.last
             defer {
+                // Decision 117: fares and rent settled within the step.
+                noteIncome(since: lastEntry)
                 if let closed = world.accounts.years.last?.year, closed != closedBefore {
                     yearEndYear = closed
                 }

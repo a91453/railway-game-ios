@@ -74,11 +74,14 @@ public enum RealWorldDemo {
 
     /// The demo's game, built on `railways`, with `land` the map's people
     /// (``LandImport``; without it, the towns of a new game) and `water`
-    /// its water (``WaterGrid``, decision 105).
-    public static func make(in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = []) -> GameWorld {
+    /// its water (``WaterGrid``, decision 105) and steep slopes (decision
+    /// 115).
+    public static func make(
+        in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
+    ) -> GameWorld {
         let layout = Layout(railways: railways)
         var world = GameWorld.newGame(
-            anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame), land: land, water: water
+            anchor: anchor, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame), land: land, water: water, steep: steep
         )
         // The demo's stations keep the ridership it gives them (Phase 6b).
         // Unlike the blank demo (ARCHITECTURE decision 78) it does not take

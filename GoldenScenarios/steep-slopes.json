@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 46,
+  "description": "Steep slopes (ARCHITECTURE decision 115): free play, 32768 x 32768 units (8 x 8 cells of 64 m), no stations, no land. setWater makes row 0 water (8 cells); setSteep marks rows 4 to 7, columns 4 to 7 steep (four runs of 4, 16 cells). A steep cell on water, (0, 4), is refused with invalidTerrain and changes nothing. (5, 5) is steep, (3, 3) and the water at (0, 5) are not. A house centred at the middle of (5, 5), (22528, 22528), is refused with onSteepSlope naming (5, 5). Zoning rows 4 to 5 by columns 4 to 5 homes, every cell steep, is refused with onSteepSlope naming its first cell (4, 4); zoning rows 3 to 4 by columns 3 to 4 zones the three cells that are not steep, (3, 3), (3, 4) and (4, 3), and leaves (4, 4) without a zone. A house at the middle of (2, 2), (10240, 10240), is building 1, free in free play. A steep slope does not change land value: (5, 5) is the empty cell's 1000 (row 0's water lies 20480 units away, past the 10240 of decision 111). The final state counts 8 water and 16 steep cells and 3 zoned. Every value is worked out by hand.",
+  "initialState": {
+    "worldWidth": 32768,
+    "worldHeight": 32768,
+    "balance": 10000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "setWater",
+        "runs": [
+          {
+            "row": 0,
+            "column": 0,
+            "count": 8
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setSteep",
+        "runs": [
+          {
+            "row": 4,
+            "column": 4,
+            "count": 4
+          },
+          {
+            "row": 5,
+            "column": 4,
+            "count": 4
+          },
+          {
+            "row": 6,
+            "column": 4,
+            "count": 4
+          },
+          {
+            "row": 7,
+            "column": 4,
+            "count": 4
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setSteep",
+        "runs": [
+          {
+            "row": 0,
+            "column": 4,
+            "count": 1
+          }
+        ]
+      },
+      "expect": {
+        "result": "invalidTerrain"
+      }
+    },
+    {
+      "observe": {
+        "type": "steep",
+        "row": 5,
+        "column": 5
+      },
+      "expect": {
+        "steep": true
+      }
+    },
+    {
+      "observe": {
+        "type": "steep",
+        "row": 3,
+        "column": 3
+      },
+      "expect": {
+        "steep": false
+      }
+    },
+    {
+      "observe": {
+        "type": "steep",
+        "row": 0,
+        "column": 5
+      },
+      "expect": {
+        "steep": false
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "house",
+        "point": {
+          "x": 22528,
+          "y": 22528
+        }
+      },
+      "expect": {
+        "result": "onSteepSlope",
+        "row": 5,
+        "column": 5
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "residential",
+        "rows": [
+          4,
+          5
+        ],
+        "columns": [
+          4,
+          5
+        ]
+      },
+      "expect": {
+        "result": "onSteepSlope",
+        "row": 4,
+        "column": 4
+      }
+    },
+    {
+      "command": {
+        "type": "setZone",
+        "zone": "residential",
+        "rows": [
+          3,
+          4
+        ],
+        "columns": [
+          3,
+          4
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "zone",
+        "row": 4,
+        "column": 4
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "observe": {
+        "type": "zone",
+        "row": 4,
+        "column": 3
+      },
+      "expect": {
+        "found": true,
+        "zone": "residential"
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "house",
+        "point": {
+          "x": 10240,
+          "y": 10240
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 5,
+        "column": 5
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 10000,
+    "gameMinutes": 0,
+    "lines": [],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "placedBuildings": [
+      {
+        "id": 1,
+        "kind": "house",
+        "x": 10240,
+        "y": 10240
+      }
+    ],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [],
+    "trafficControl": false,
+    "trains": [],
+    "zones": {
+      "cells": 3,
+      "residential": 3
+    },
+    "water": 8,
+    "steep": 16
+  }
+}
