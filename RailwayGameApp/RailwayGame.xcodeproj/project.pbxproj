@@ -11,6 +11,7 @@
 		0CAEF26EBDE94052FA874ABE /* tra.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA79D875396E732FE48A605 /* tra.json */; };
 		0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */ = {isa = PBXBuildFile; fileRef = 411F6A0DAE0C614613B6B4CE /* thsr_track.json */; };
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
+		10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8372106A7EF953548452B15 /* MapBuildConfirm.swift */; };
 		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
 		196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B00B0A86FFD245909EF3231A /* ntdlrt_times.json */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
@@ -162,6 +163,7 @@
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
+		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		BDC928DD3917E8959E2930DD /* track_stations.geojson */ = {isa = PBXFileReference; path = track_stations.geojson; sourceTree = "<group>"; };
 		BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntalrt_times.json; sourceTree = "<group>"; };
@@ -278,6 +280,7 @@
 				908DF494BE421AA1D9D8EE60 /* InspectorView.swift */,
 				17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */,
 				A92B62C199B3DE4F7602175F /* MapArt.swift */,
+				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
@@ -520,6 +523,7 @@
 				9C344F54682319D6B608F56A /* InspectorView.swift in Sources */,
 				6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */,
 				4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */,
+				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,

@@ -33,6 +33,20 @@ final class BuildingFlowTests: XCTestCase {
         XCTAssertEqual(session.undoCount, 1)
     }
 
+    /// Decision 107: the map's cancel button drops the building shown and
+    /// builds nothing.
+    func testClearingTheSiteDropsTheBuildingShown() throws {
+        let session = try makeSession()
+        let start = session.world
+        session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 256)
+        XCTAssertNotNil(session.buildingPreview)
+        session.clearBuildingSite()
+        XCTAssertNil(session.buildingSite)
+        XCTAssertNil(session.buildingPreview)
+        XCTAssertEqual(session.world, start, "nothing built or spent")
+        XCTAssertEqual(session.undoCount, 0)
+    }
+
     func testATapOnABuildingThatCannotStandThereMovesItInstead() throws {
         let session = try makeSession()
         XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000)))

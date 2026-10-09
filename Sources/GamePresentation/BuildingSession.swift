@@ -147,6 +147,12 @@ extension GameSession {
         return true
     }
 
+    /// Drops the building shown, without building it: the map's cancel
+    /// button beside it (ARCHITECTURE decision 107).
+    public func clearBuildingSite() {
+        buildingSite = nil
+    }
+
     /// Places a building of ``buildingKind`` centred on `point` with
     /// ``GameWorld/placeBuilding(_:at:)``, as one edit that undo takes
     /// back, and reports the outcome, with what it cost a managed company

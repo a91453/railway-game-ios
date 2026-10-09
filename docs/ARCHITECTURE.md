@@ -3496,6 +3496,16 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫的網站（`Railway/site_archive_clean/index.html`）iPhone 上地圖約佔 85%：頂端一顆時鐘膠囊（`#clock`）、底部分頁（`.tabbar`）、點列車時左下的小卡片（`.follow-panel`）而不是半屏面板，訊息最多 3 則、5 秒（`showToast()`）；`Ci/` 的底部列（`#bottombar`）只有一排圓形圖示；`Simulator/` 手機版的進階選項收在預設關閉、有把手的抽屜（`.mobile-sheet-handle`）；`Railway/taipei_gta_reference/` 的 `notify()`（`game-vXklz4A8.js`）訊息時間 `min(9, 3.2 + 長度 × 0.09)` 秒、同樣的訊息不疊而是彈一下。外部的遊戲只看做法：TheoTown、SimCity BuildIt（作者的實機截圖）、Mindustry（GPL-3.0）、Unciv（MPL-2.0）、OpenTTD Android（GPL-2.0），沒有拿程式碼。程式是本專案自己寫的。
 
+### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
+
+2026-10-09，UI/UX 改版第二輪的 UX-5b（決策 106 之後）：作者的實機截圖裡，鋪軌時卡片塞滿工程選項（構造、新節點高度、平順曲線、緩和坡度、清除、吸附軌道），主要的「鋪設軌道」按鈕在選好兩點之前一直是灰的，而且在畫面的另一邊。只改 App 與 GamePresentation 的兩個小介面：GameCore、存檔、golden、replay 都不變。
+
+1. **起終點插旗**：路網工具預覽一段軌道時，起點插一面旗（`flag.fill`）、終點插一面方格旗（`flag.checkered`），旗子立在點的上方，點本身不被擋住（`MapBuildConfirm`）。位置由 `GameSession.networkStartPlanPoint`、`networkEndPlanPoint` 給（決策 102 的 `planPoint(of:)`：點、節點或軌道上的位置）。
+2. **在預覽旁確認**：終點下方（下方放不下時在上方）浮出一顆膠囊：「✗」取消（`clearNetworkDraft`）、「✓ $費用」建造（`buildNetworkTrack`），有問題或沒有費用時 ✓ 不能按。建築工具的虛影下方也是同一顆（✗ 是新的 `clearBuildingSite()`，✓ 是 `confirmBuilding()`）。膠囊避開狀態膠囊、工具列與細節卡片（`mapInsets`）。細節卡片的「鋪設軌道」按鈕照舊（教學與 UI 測試用它）；膠囊的無障礙名稱是「建造這一段，$…」「蓋在這裡，$…」，不以「Build Track」開頭，教學 UI 測試用這個前綴只找到卡片上那一顆。識別字 `map.build.confirm`、`map.build.cancel`。
+3. **進階選項收起**：構造、新節點高度、平順曲線、緩和坡度、吸附軌道收進「進階選項」，預設收起（每次選路網工具都收起，是畫面狀態）；收起時一行字說目前的設定（構造，以及關掉的開關）。「清除」與交叉渡線（只在選到兩條軌道時出現）照舊在外面。
+
+**參考**：參考庫 `Simulator/` 手機版的進階選項在預設關閉的抽屜（`.mobile-sheet-handle`，控制分頁）；`Ci/` 的費用膠囊（`.metro-cost-preview-pill`）已經是決策 102 的 `MapConstructionHUD`。作者的 SimCity BuildIt 截圖在拉好的路徑與擺好的建築旁放 ✗ 與 ✓、起終點插旗；OpenTTD Android（`build_confirmation_gui.cpp`，GPL-2.0）與 Mindustry（`MobileInput.java`，GPL-3.0）在拖曳結束處確認，只看做法。程式是本專案自己寫的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
