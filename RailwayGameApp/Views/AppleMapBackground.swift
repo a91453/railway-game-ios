@@ -18,7 +18,7 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .standard: String(localized: "Map")
+        case .standard: String(localized: "Apple Maps")
         case .hybrid: String(localized: "Satellite with Labels")
         case .satellite: String(localized: "Satellite")
         case .openStreetMap: String(localized: "OpenStreetMap")

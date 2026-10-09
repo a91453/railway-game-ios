@@ -142,7 +142,7 @@ private struct ToolOptions: View {
     var body: some View {
         switch session.tool {
         case .select:
-            Label("Choose Network to build track, platforms and stations. Selecting only inspects.", systemImage: "info.circle")
+            Label("Tap Build, then Network, to lay track, platforms and stations. With no tool, a tap on the map only looks.", systemImage: "info.circle")
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
         case .network:
