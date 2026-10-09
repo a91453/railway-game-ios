@@ -77,10 +77,10 @@ private struct TutorialOverlay: View {
 /// step's own controls first. Missing targets use the centre.
 ///
 /// Covering the map costs nothing, as long as a band of it at least
-/// ``minimumFreeMap`` deep stays free beside the card: on a phone in
-/// portrait the map between the HUD and the open control drawer can be
-/// barely taller than the card, and a card over all of it would leave the
-/// player nowhere to tap. Covering the HUD's controls then costs less, and
+/// ``minimumFreeMap`` deep stays free beside the card: on a phone, held on
+/// its side, the map between the status pill and the dock can be barely
+/// taller than the card, and a card over all of it would leave the player
+/// nowhere to tap. Covering the HUD's controls then costs less, and
 /// a card too tall for any place (large text) is measured shorter, its
 /// explanation scrolling, so that band stays free.
 private struct TutorialCardLayout: Layout {
@@ -96,6 +96,9 @@ private struct TutorialCardLayout: Layout {
     /// The shortest a card is measured to leave the map free: the step's
     /// title, a few lines of its explanation and its buttons.
     private let minimumCardHeight: CGFloat = 200
+    /// The narrowest a card is measured to leave a band of the map free
+    /// beside it.
+    private let minimumCardWidth: CGFloat = 240
     /// Above covering any ordinary control with the whole card, below
     /// covering a sliver of the step's own controls.
     private let mapCoveredCost: CGFloat = 400_000
@@ -122,6 +125,26 @@ private struct TutorialCardLayout: Layout {
                     size = shorter
                     best = retry
                 }
+            }
+        }
+        // A phone on its side (decision 106): the map between the status
+        // pill, the dock and the details card is wide but short, and a card
+        // of the full width can cover all of it. Narrower, 20 points at a
+        // time, until a band of the map stays free beside it; tall, or
+        // measured shorter as above.
+        if best.cost >= mapCoveredCost, let map {
+            let heights = [available.height, max(minimumCardHeight, map.height - minimumFreeMap - gap)]
+            var narrow = width - 20
+            while narrow >= minimumCardWidth, best.cost >= mapCoveredCost {
+                for height in heights {
+                    let narrower = card.sizeThatFits(ProposedViewSize(width: narrow, height: height))
+                    let retry = placement(of: narrower, in: bounds, available: available)
+                    if retry.cost < best.cost {
+                        size = narrower
+                        best = retry
+                    }
+                }
+                narrow -= 20
             }
         }
         card.place(at: best.origin, anchor: .topLeading, proposal: ProposedViewSize(size))

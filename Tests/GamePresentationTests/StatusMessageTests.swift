@@ -4,12 +4,17 @@ import GamePresentation
 import XCTest
 
 /// The status banner's message: a success clears itself after a while, so
-/// a panel's banner does not stay over the row just edited; a problem stays
-/// until dismissed; the banner's timer never clears a newer message.
+/// a panel's banner does not stay over the row just edited; a problem
+/// stays longer the longer it is (decision 106); the banner's timer never
+/// clears a newer message.
 final class StatusMessageTests: XCTestCase {
-    func testASuccessClearsItselfAndAProblemStays() {
+    func testASuccessClearsItselfAndAProblemStaysLongerTheLongerItIs() {
         XCTAssertEqual(StatusMessage(kind: .success, text: "Built").autoDismissDelay, .seconds(4))
-        XCTAssertNil(StatusMessage(kind: .failure, text: "Too steep").autoDismissDelay)
+        XCTAssertEqual(StatusMessage(kind: .failure, text: "Too steep").autoDismissDelay, .seconds(6), "at least 6 s")
+        let thirty = String(repeating: "x", count: 30)
+        XCTAssertEqual(StatusMessage(kind: .failure, text: thirty).autoDismissDelay, .seconds(7))
+        let long = String(repeating: "x", count: 300)
+        XCTAssertEqual(StatusMessage(kind: .failure, text: long).autoDismissDelay, .seconds(10), "at most 10 s")
     }
 
     @MainActor

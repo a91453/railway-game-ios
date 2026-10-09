@@ -25,6 +25,18 @@ extension GameSession {
         }
     }
 
+    /// Where the picked start stands on the plan (``planPoint(of:)``), for
+    /// the map's flag there (ARCHITECTURE decision 107).
+    public var networkStartPlanPoint: PlanPoint? {
+        networkStart.flatMap(planPoint(of:))
+    }
+
+    /// Where the picked end stands on the plan, for the map's flag and the
+    /// build button beside it (decision 107).
+    public var networkEndPlanPoint: PlanPoint? {
+        networkEnd.flatMap(planPoint(of:))
+    }
+
     /// Whether a one-finger drag that starts at `point` draws track
     /// (decision 102) rather than moving the map: with the network tool
     /// building, when it starts within `reach` of the picked start, or of

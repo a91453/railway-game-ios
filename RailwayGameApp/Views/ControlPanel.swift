@@ -1,17 +1,16 @@
 import GameCore
 import GamePresentation
 import SwiftUI
+import UIKit
 
 /// Tool picker, selection inspector, tool options and the action button,
-/// in two parts: the tool picker, always shown, and the details under it,
-/// which the screen can fold away (``ContentView``).
+/// in two parts: the tool picker, always shown in the dock, and the
+/// details, in a card the screen shows only when there is something to
+/// show (``ContentView``).
 struct ControlPanel: View {
     enum Arrangement {
-        /// The tool picker alone, in a row.
+        /// The tool picker, the lines and the figures, and Undo, in a row.
         case tools
-        /// The tool picker alone, as a list with what each tool does and
-        /// costs: an iPad's open control card, which has the room.
-        case detailedTools
         /// The selection inspector, the tool's options and the action
         /// button, in one column.
         case details
@@ -22,14 +21,12 @@ struct ControlPanel: View {
 
     var body: some View {
         switch arrangement {
-        case .tools, .detailedTools:
-            HStack(alignment: arrangement == .detailedTools ? .top : .center, spacing: 8) {
-                ToolPicker(session: session, showsDetails: arrangement == .detailedTools)
+        case .tools:
+            HStack(spacing: 8) {
+                ToolPicker(session: session)
                 // Decision 104: the lines and the company's figures, named,
                 // beside the tools.
-                if arrangement == .tools {
-                    QuickEntries(session: session)
-                }
+                QuickEntries(session: session)
                 // Hidden during the tutorial, as the details toggle is, so
                 // its steps' spotlights stay where they were; the session
                 // refuses Undo then too (``GameSession/canUndo``).
@@ -48,19 +45,13 @@ struct ControlPanel: View {
     }
 }
 
-/// One button per tool the app offers (Stage F1: the track network only),
-/// in a row, or a list with what each tool does and costs where there is
-/// room. The active tool is filled and its name bold, so the state does not
-/// depend on colour alone.
+/// One button per tool the app offers, in a row. The active tool is
+/// filled and its name bold, so the state does not depend on colour alone.
 private struct ToolPicker: View {
     let session: GameSession
-    var showsDetails = false
 
     var body: some View {
-        let layout = showsDetails
-            ? AnyLayout(VStackLayout(spacing: 6))
-            : AnyLayout(HStackLayout(spacing: 6))
-        layout {
+        HStack(spacing: 6) {
             ForEach(ConstructionTool.networkTools, id: \.self) { tool in
                 let isActive = session.tool == tool
                 Button {
@@ -70,11 +61,7 @@ private struct ToolPicker: View {
                     let leaves = isActive && tool != .select && session.tutorial == nil
                     session.selectTool(leaves ? .select : tool)
                 } label: {
-                    if showsDetails {
-                        detailedLabel(for: tool, isActive: isActive)
-                    } else {
-                        label(for: tool, isActive: isActive)
-                    }
+                    TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
                 }
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
                 .accessibilityLabel(tool.accessibilityName)
@@ -90,41 +77,6 @@ private struct ToolPicker: View {
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
     }
-
-    /// Decision 104: the icon over its name, as a game's bottom bar, so
-    /// the tools and the entries beside them fit a phone's width.
-    private func label(for tool: ConstructionTool, isActive: Bool) -> some View {
-        TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
-    }
-
-    private func detailedLabel(for tool: ConstructionTool, isActive: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: tool.systemImage)
-                .font(.body.weight(.semibold))
-                .frame(width: 34, height: 34)
-                .background(isActive ? Theme.onPrimary.opacity(0.2) : Theme.chip, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tool.title(in: session.language))
-                    .font(.subheadline.weight(isActive ? .bold : .semibold))
-                Text(detail(for: tool))
-                    .font(.caption)
-                    .foregroundStyle(isActive ? Theme.onPrimary : Theme.textSecondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
-    }
-
-    private func detail(for tool: ConstructionTool) -> String {
-        let costs = session.world.economy.costs
-        switch tool {
-        case .select: return String(localized: "Inspect stations and track")
-        case .network: return String(localized: "Track, platforms and stations · \(costs.track.moneyText) per 16 m")
-        case .train: return String(localized: "Place and send trains · \(costs.train.moneyText) each")
-        case .building: return String(localized: "Houses, shops and offices, where you tap")
-        }
-    }
 }
 
 /// An icon over a short name, for the tools and the entries beside them
@@ -138,18 +90,21 @@ private struct TabLabel: View {
         VStack(spacing: 2) {
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
+            // Decision 106: caption, not caption2, so the name reads on glass.
             Text(verbatim: title)
-                .font(.caption2.weight(isActive ? .bold : .medium))
+                .font(.caption.weight(isActive ? .bold : .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .frame(maxWidth: .infinity, minHeight: 38)
+        .padding(.horizontal, 4)
+        .frame(minWidth: 48, maxWidth: .infinity, minHeight: 40)
     }
 }
 
 /// The lines and the company's figures, named beside the tools (decision
-/// 104): until now the lines were an unnamed icon in the HUD, and the
-/// figures opened only by tapping the cash.
+/// 104). Since decision 106 the lines open only here: the HUD's unnamed
+/// icon is gone, and this entry took its name, "Lines", and its place in
+/// the tutorial.
 private struct QuickEntries: View {
     let session: GameSession
     @Environment(GameScreenState.self) private var screen
@@ -158,10 +113,12 @@ private struct QuickEntries: View {
         HStack(spacing: 6) {
             entry(.lines, systemImage: "point.3.connected.trianglepath.dotted",
                   title: session.language.text("Lines", "路線"),
-                  name: session.language.text("Open the lines", "開啟路線"), id: "entry.lines")
+                  name: Text("Lines"), id: "entry.lines")
+                .accessibilityHint("Shows the service lines and their timetables.")
+                .tutorialTarget(.linesButton)
             entry(.economy, systemImage: "chart.bar.fill",
                   title: session.language.text("Data", "資料"),
-                  name: session.language.text("Open the company's figures", "開啟經營資料"), id: "entry.economy")
+                  name: Text(verbatim: session.language.text("Open the company's figures", "開啟經營資料")), id: "entry.economy")
         }
         .padding(3)
         .overlay(
@@ -171,7 +128,7 @@ private struct QuickEntries: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func entry(_ panel: GameScreenState.Panel, systemImage: String, title: String, name: String, id: String) -> some View {
+    private func entry(_ panel: GameScreenState.Panel, systemImage: String, title: String, name: Text, id: String) -> some View {
         Button {
             screen.panel = panel
         } label: {
@@ -179,9 +136,7 @@ private struct QuickEntries: View {
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == panel))
         .frame(minWidth: 44)
-        // Not "Lines": the HUD's button has that name, and UI tests find it
-        // by it.
-        .accessibilityLabel(Text(verbatim: name))
+        .accessibilityLabel(name)
         .accessibilityIdentifier(id)
     }
 }
@@ -198,7 +153,7 @@ private struct UndoButton: View {
         } label: {
             Image(systemName: "arrow.uturn.backward")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 40, height: 38)
+                .frame(width: 40, height: 40)
                 .opacity(session.canUndo ? 1 : 0.4)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
@@ -519,13 +474,15 @@ struct StatusBanner: View {
                 AccessibilityNotification.Announcement(message.text).post()
             }
         }
-        // A success clears itself (``StatusMessage/autoDismissDelay``), so
-        // a panel's banner does not stay over its last row; a newer message
-        // restarts the wait, and a problem stays until dismissed.
+        // Every message clears itself (``StatusMessage/autoDismissDelay``),
+        // so none stays over the map or a panel's last row; a newer message
+        // restarts the wait. While VoiceOver runs a problem stays until
+        // dismissed, as before decision 106.
         .task(id: session.messageSerial) {
             let serial = session.messageSerial
-            guard let message = session.message, let delay = message.autoDismissDelay else { return }
-            try? await Task.sleep(for: delay)
+            guard let message = session.message else { return }
+            if message.kind == .failure, UIAccessibility.isVoiceOverRunning { return }
+            try? await Task.sleep(for: message.autoDismissDelay)
             guard !Task.isCancelled else { return }
             session.dismissMessage(posted: serial)
         }
@@ -565,6 +522,11 @@ struct StatusBanner: View {
                 .strokeBorder(tintColor.opacity(0.5), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
+        // The same message again, or a newer one, bumps the banner rather
+        // than stacking another (the reference's `notify()`).
+        .phaseAnimator([false, true], trigger: session.messageSerial) { banner, isBumped in
+            banner.scaleEffect(isBumped ? 1.04 : 1)
+        } animation: { _ in .spring(duration: 0.25, bounce: 0.5) }
         .padding(10)
     }
 }
