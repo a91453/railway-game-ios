@@ -147,4 +147,32 @@ final class LineDraftRouteTests: XCTestCase {
         session.undo()
         XCTAssertNil(session.lineDraftRoute)
     }
+
+    /// Decision 112: a selected station's card starts a new line there;
+    /// the next station tapped is its other end.
+    func testALineStartedAtTheSelectedStationEndsAtTheNextTapped() throws {
+        let start = try straightWorld()
+        let session = GameSession(world: start)
+        session.selectStation(Self.gamma)
+        session.addSelectedStationToLineDraft()
+        session.selectStation(Self.beta)
+
+        session.startLineFromSelectedStation()
+        XCTAssertEqual(session.lineDraft, [Self.beta], "the draft begun before is dropped")
+        XCTAssertTrue(session.isPickingLineStops)
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertEqual(session.world, start)
+
+        session.tapMap(at: TestLine.centre(7, 0), reach: 512)
+        XCTAssertEqual(session.lineDraft, [Self.beta, Self.delta])
+        XCTAssertEqual(session.lineDraftRoute, [Self.beta, Self.gamma, Self.delta])
+    }
+
+    func testALineCannotStartWithNoStationSelected() throws {
+        let session = GameSession(world: try straightWorld())
+        session.startLineFromSelectedStation()
+        XCTAssertEqual(session.lineDraft, [])
+        XCTAssertFalse(session.isPickingLineStops)
+        XCTAssertEqual(session.message?.kind, .failure)
+    }
 }
