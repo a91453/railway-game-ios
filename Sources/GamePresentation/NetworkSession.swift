@@ -540,11 +540,27 @@ struct EdgePlan {
     /// Builds it in `world`: a node for each new end, then the edge, with
     /// the ground under its way read in first from `heights` (decision 124).
     func build(in world: inout GameWorld, structure: TrackStructure, heights: HeightGrid?) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
-        try world.readGround(under: [from.plan, to.plan] + (geometry?.points.map(\.plan) ?? []), from: heights)
+        try world.readGround(under: [from.plan, to.plan] + surveyedPoints, from: heights)
         let first = try node(for: start, at: from, in: &world)
         let last = try node(for: end, at: to, in: &world)
         let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
         return (edge, last)
+    }
+
+    /// Where GameCore surveys the ground under the edge: the middle of each
+    /// pricing length (16 m). A straight edge's points are only its ends,
+    /// so a block it crosses between them would otherwise stay unread.
+    private var surveyedPoints: [PlanPoint] {
+        guard let geometry else { return [] }
+        let priced = ConstructionCosts.trackPricingLength
+        var points: [PlanPoint] = []
+        var start: Int64 = 0
+        while start < geometry.length {
+            let end = min(geometry.length, start + priced)
+            points.append(geometry.location(at: (start + end) / 2).position.plan)
+            start = end
+        }
+        return points
     }
 
     private func node(for anchor: NetworkAnchor, at position: WorldCoordinate, in world: inout GameWorld) throws(GameError) -> TrackNodeID {
