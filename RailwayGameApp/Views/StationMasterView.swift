@@ -123,6 +123,8 @@ struct StationMasterCorner: View {
 
     private func mood(_ advice: StationMasterAdvice?) -> StationMasterMood {
         guard let advice else { return .happy }
+        // Decision 128: pleased when a town grew.
+        if case .townGrew = advice { return .happy }
         return advice.isWorry ? .worried : .normal
     }
 
