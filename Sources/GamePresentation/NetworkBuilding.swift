@@ -78,6 +78,32 @@ public struct NetworkPreview: Hashable, Sendable {
     /// The company's buildings it would pull down (decision 95); the cost
     /// includes what demolishing them costs.
     public var cleared: [PlacedBuilding] = []
+    /// What the cost is made of (decision 124, H3): the track's parts and
+    /// what pulling down ``cleared`` costs; `nil` when GameCore refused it.
+    public var costParts: NetworkCostParts? = nil
+    /// The new edge over the ground, for the build card's long section
+    /// (decision 124, H3); `nil` when GameCore refused it, and for an X
+    /// crossover, which is level.
+    public var longSection: TrackLongSection? = nil
+}
+
+/// What a stretch of track the network tool would build costs, part by
+/// part (decision 124, H3), worked out by GameCore on the copy of the world
+/// the preview builds it on: the parts add up to ``NetworkPreview/cost``.
+public struct NetworkCostParts: Hashable, Sendable {
+    public let track: TrackCostParts
+    /// What pulling down the company's buildings in its way costs
+    /// (decision 95).
+    public let demolition: Money
+
+    public init(track: TrackCostParts, demolition: Money) {
+        self.track = track
+        self.demolition = demolition
+    }
+
+    public var total: Money {
+        track.total + demolition
+    }
 }
 
 /// The network tool's geometry, ported from the owner's `Ci/` reference

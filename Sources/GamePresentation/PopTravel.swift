@@ -29,6 +29,9 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     case coverage
     /// what the player zoned each cell for (decision 98).
     case zoning
+    /// The ground's height and the steep slopes (decision 124, H3;
+    /// ``TerrainMap``), one at a time with the others.
+    case terrain
 
     /// The tab's title (`map.layers.population`, `map.layers.travelDemand`,
     /// `map.layers.demandChange`).
@@ -41,6 +44,7 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .landValue: language.text("Land value", "地價")
         case .coverage: language.text("Catchment coverage", "腹地涵蓋")
         case .zoning: language.text("Zoning", "土地分區")
+        case .terrain: language.text("Height and steep slopes", "高度與陡坡")
         }
     }
 
@@ -84,6 +88,11 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
                 "What you zoned each 64 m cell for: the city builds that use on empty zoned cells first; no development and reserved land keep it off.",
                 "每個 64 公尺格劃設的分區：城市先在空的分區格蓋那種用途；不開發與保留地不讓城市長。"
             )
+        case .terrain:
+            language.text(
+                "The ground's height, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; the track's earthwork and structures follow the same ground.",
+                "地面的海拔，以西北方的光照出起伏；斜線是超過 30% 的陡坡，城市不能開發。軌道的土方與結構物量的是同一份地面。"
+            )
         }
     }
 
@@ -110,7 +119,7 @@ public enum PopTravel {
     /// narrow screen (`window.innerWidth <= 768`).
     /// The city's layers (Phase 6d) start at 0.8.
     public static func baseOpacity(for mode: PopTravelMode, compactWidth: Bool) -> Double {
-        if mode.isCityLayer { return 0.8 }
+        if mode.isCityLayer || mode == .terrain { return 0.8 }
         return mode == .population ? 0.72 : (compactWidth ? 1 : 0.85)
     }
 

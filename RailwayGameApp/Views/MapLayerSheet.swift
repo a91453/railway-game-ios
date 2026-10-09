@@ -81,6 +81,19 @@ struct MapLayerSheet: View {
                 } footer: {
                     Text("Land use: each 64 m cell's homes, shops or offices, darker for taller buildings. Land value: dollars a square metre from the cell's use, density and the best nearby service; tap a cell for its parts. Catchment coverage: the cells within 800 m of a station, and the cells with people no station reaches.")
                 }
+
+                // Decision 124, H3: the ground's height and the steep
+                // slopes, one layer at a time with those above.
+                Section {
+                    Toggle(isOn: modeBinding(.terrain)) {
+                        Label("Height and Steep Slopes", systemImage: "mountain.2")
+                    }
+                    .accessibilityIdentifier("layer.terrain")
+                } header: {
+                    Text("Terrain")
+                } footer: {
+                    Text("The ground's height on real-world maps, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; tap a cell for its height. Blank maps are flat.")
+                }
             }
             .navigationTitle("Map Layers")
             .navigationBarTitleDisplayMode(.inline)
