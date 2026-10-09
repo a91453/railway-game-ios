@@ -54,6 +54,22 @@ final class ZoningTests: XCTestCase {
         XCTAssertEqual(world.land.cells.count, 1)
     }
 
+    /// A cell zoned before its water was read (a map read as it is needed)
+    /// loses its zone when the rectangle is zoned again: that is a change,
+    /// whatever zone it had.
+    func testCellsClearedOnWaterCountAsChanged() {
+        var zoning = Zoning()
+        XCTAssertEqual(zoning.set(.residential, rows: 0...0, columns: 0...2), 3)
+        // Cell (0, 1) is water now.
+        let wet: (Int, Int) -> Bool = { $0 == 0 && $1 == 1 }
+        XCTAssertEqual(zoning.set(.residential, rows: 0...0, columns: 0...2, skipping: wet), 1, "only the wet cell lost its zone")
+        XCTAssertEqual(zoning.cells.map(\.column), [0, 2])
+        var other = Zoning()
+        _ = other.set(.office, rows: 0...0, columns: 0...1)
+        XCTAssertEqual(other.set(.residential, rows: 0...0, columns: 0...1, skipping: wet), 2, "rezoned and cleared")
+        XCTAssertEqual(other.cells.map(\.zone), [.residential])
+    }
+
     func testARectangleOutsideTheWorldOrTooLargeIsRefused() throws {
         var world = try world()
         let before = world
