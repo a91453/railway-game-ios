@@ -27,11 +27,21 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
 
     /// Flat, so the map is the plan the railway is drawn on; the street map
     /// muted, so the railway stands out (as `Ci/`'s light `positron`).
+    /// Without Apple's points of interest (decision 123): shops, cafés and
+    /// car parks crowded the game's stations and lines, and the stations
+    /// that matter are the game's own.
     var configuration: MKMapConfiguration {
         switch self {
-        case .standard, .openStreetMap: MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
-        case .hybrid: MKHybridMapConfiguration(elevationStyle: .flat)
-        case .satellite: MKImageryMapConfiguration(elevationStyle: .flat)
+        case .standard, .openStreetMap:
+            let configuration = MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
+            configuration.pointOfInterestFilter = .excludingAll
+            return configuration
+        case .hybrid:
+            let configuration = MKHybridMapConfiguration(elevationStyle: .flat)
+            configuration.pointOfInterestFilter = .excludingAll
+            return configuration
+        case .satellite:
+            return MKImageryMapConfiguration(elevationStyle: .flat)
         }
     }
 }
