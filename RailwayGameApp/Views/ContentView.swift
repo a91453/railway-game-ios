@@ -351,10 +351,11 @@ private struct ControlDock: View {
 
 /// The selection and the active tool's options (``ControlPanel``'s
 /// details) in a glass card at the trailing side (decision 106): a
-/// station's nameboard over them when one is selected, and on an iPad,
-/// which has the room, the network's overview under them. As tall as what
-/// it shows, up to `maxHeight`, then it scrolls. It floats over the map,
-/// so its height changing as the game runs moves nothing else.
+/// station's nameboard and its lines (decision 112) over them when one is
+/// selected, and on an iPad, which has the room, the network's overview
+/// under them. As tall as what it shows, up to `maxHeight`, then it
+/// scrolls. It floats over the map, so its height changing as the game
+/// runs moves nothing else.
 private struct DetailsCard: View {
     let session: GameSession
     let maxHeight: CGFloat
@@ -366,7 +367,10 @@ private struct DetailsCard: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 if session.tool == .select, let station = session.selectedStation {
-                    StationNameboard(name: station.name)
+                    VStack(alignment: .leading, spacing: 8) {
+                        StationNameboard(name: station.name)
+                        StationLineChips(session: session, station: station)
+                    }
                 }
                 ControlPanel(session: session, arrangement: .details)
                 if verticalSizeClass == .regular {
