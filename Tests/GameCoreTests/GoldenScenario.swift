@@ -512,7 +512,7 @@ enum ScenarioCommand: Equatable {
     /// Schema 44 (decision 105): a real-world map's water, as runs along
     /// rows.
     case setWater([WaterRun])
-    /// Schema 46 (decision 112): a real-world map's steep slopes, as runs.
+    /// Schema 46 (decision 115): a real-world map's steep slopes, as runs.
     case setSteep([WaterRun])
 
     /// Applies the command through the matching `GameWorld` command.
@@ -685,7 +685,7 @@ extension ScenarioCommand: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .runs, in: container, debugDescription: "setWater's runs hold 1 to 65,536 cells.")
             }
             self = .setWater(runs)
-        // Schema 46: steep slopes (decision 112), as setWater.
+        // Schema 46: steep slopes (decision 115), as setWater.
         case "setSteep":
             let runs = try container.decode([WaterRun].self, forKey: .runs)
             guard runs.allSatisfy({ $0.count > 0 && $0.count <= 1 << 16 }) else {
@@ -1019,7 +1019,7 @@ extension StepOutcome: Codable {
         // Schema 44 (decision 105).
         case "invalidTerrain":
             self = .rejected(.invalidTerrain)
-        // Schema 46 (decision 112).
+        // Schema 46 (decision 115).
         case "onSteepSlope":
             self = try .rejected(.onSteepSlope(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         // Schema 45 (decision 111).
@@ -1284,7 +1284,7 @@ enum ScenarioObservation: Equatable {
     case zone(row: Int, column: Int)
     /// Schema 44 (decision 105): whether a cell is water.
     case water(row: Int, column: Int)
-    /// Schema 46 (decision 112): whether a cell is steep.
+    /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
@@ -1435,7 +1435,7 @@ extension ScenarioObservation: Decodable {
         // Schema 44: water (decision 105).
         case "water":
             self = try .water(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
-        // Schema 46: steep slopes (decision 112).
+        // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
         case "train":
@@ -1829,7 +1829,7 @@ struct WorldSummary: Codable, Equatable {
     /// How many cells are water (schema 44, decision 105); left out when
     /// none is.
     var water: Int?
-    /// How many cells are steep (schema 46, decision 112); left out when
+    /// How many cells are steep (schema 46, decision 115); left out when
     /// none is.
     var steep: Int?
 

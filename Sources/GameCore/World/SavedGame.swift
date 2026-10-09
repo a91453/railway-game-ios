@@ -127,7 +127,7 @@
 ///     `"wharf"` or a `"marina"`. A build that reads only an earlier version
 ///     would call such a building damaged, so it says the save is newer
 ///     than it instead.
-/// 26. Steep slopes (decision 112): the world's `"terrain"` can have
+/// 26. Steep slopes (decision 115): the world's `"terrain"` can have
 ///     `"steep"`. A build that reads only an earlier version would drop
 ///     them, and its city would spread up the mountains again, so it says
 ///     the save is newer than it instead.

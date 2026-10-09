@@ -136,7 +136,7 @@ final class WholeTaiwanTests: XCTestCase {
             water: water.cells(frame: frame, bounds: westFirst.bounds, in: Set(blocks)),
             steep: water.steepCells(frame: frame, bounds: westFirst.bounds, in: Set(blocks))
         ))
-        XCTAssertGreaterThan(westFirst.terrain.steepCellCount, 0, "Keelung's hills (decision 112)")
+        XCTAssertGreaterThan(westFirst.terrain.steepCellCount, 0, "Keelung's hills (decision 115)")
         XCTAssertGreaterThan(westFirst.terrain.waterCellCount, 1_000, "the harbour and the sea")
         XCTAssertFalse(westFirst.land.cells.contains { westFirst.isWater(row: $0.row, column: $0.column) })
         XCTAssertEqual(

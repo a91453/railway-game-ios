@@ -193,7 +193,7 @@ public final class GameLauncher {
     }
 
     /// The steep slopes of a new game's map with its middle at `anchor`
-    /// (decision 112, from the same file as the water): none without it.
+    /// (decision 115, from the same file as the water): none without it.
     func steep(at anchor: GeoAnchor) -> [CellPosition] {
         water?.steepCells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }

@@ -75,7 +75,7 @@ public enum RealWorldDemo {
     /// The demo's game, built on `railways`, with `land` the map's people
     /// (``LandImport``; without it, the towns of a new game) and `water`
     /// its water (``WaterGrid``, decision 105) and steep slopes (decision
-    /// 112).
+    /// 115).
     public static func make(
         in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
     ) -> GameWorld {

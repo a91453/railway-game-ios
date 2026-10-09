@@ -15,7 +15,7 @@
 // the runs of the blocks read join up the same whatever order they came
 // in.
 //
-// Since decision 112 the terrain also marks steep slopes: dry cells on a
+// Since decision 115 the terrain also marks steep slopes: dry cells on a
 // hillside of more than 30 %, where the city puts up nothing new and raises
 // nothing, and the player neither builds nor zones. Land may stand on them
 // (people live on Jiufen's hillside); only what is new is held back. They
@@ -26,7 +26,7 @@
 // placement samples a building's footprint against the ground it may
 // stand on); its rules and numbers here are this project's (gap).
 
-/// Cells of water (or, since decision 112, of steep slope) next to each
+/// Cells of water (or, since decision 115, of steep slope) next to each
 /// other along a row: `count` cells from `column`.
 public struct WaterRun: Hashable, Codable, Sendable {
     public let row: Int
@@ -44,13 +44,13 @@ public struct WaterRun: Hashable, Codable, Sendable {
 }
 
 /// The world's terrain (decision 105): which of its 64 m cells are water,
-/// and (decision 112) which are steep.
+/// and (decision 115) which are steep.
 public struct Terrain: Hashable, Sendable {
     /// The water, by ascending row and then column: runs that neither
     /// overlap nor touch (two touching runs are one), so one set of cells
     /// is always the same runs.
     public private(set) var water: [WaterRun]
-    /// The steep slopes (decision 112), runs as the water's, none on water.
+    /// The steep slopes (decision 115), runs as the water's, none on water.
     public private(set) var steep: [WaterRun] = []
 
     public init() {
@@ -73,7 +73,7 @@ public struct Terrain: Hashable, Sendable {
         water.reduce(0) { $0 + $1.count }
     }
 
-    /// How many cells are steep (decision 112).
+    /// How many cells are steep (decision 115).
     public var steepCellCount: Int {
         steep.reduce(0) { $0 + $1.count }
     }
@@ -83,7 +83,7 @@ public struct Terrain: Hashable, Sendable {
         Self.contains(water, row: row, column: column)
     }
 
-    /// Whether the cell at `row`, `column` is steep (decision 112).
+    /// Whether the cell at `row`, `column` is steep (decision 115).
     public func isSteep(row: Int, column: Int) -> Bool {
         Self.contains(steep, row: row, column: column)
     }
@@ -162,7 +162,7 @@ public struct Terrain: Hashable, Sendable {
         water = Self.union(water, Self.runs(of: cells.sorted()))
     }
 
-    /// Adds `cells`, in any order, to the steep slopes (decision 112).
+    /// Adds `cells`, in any order, to the steep slopes (decision 115).
     mutating func addSteep(_ cells: [CellPosition]) {
         guard !cells.isEmpty else { return }
         steep = Self.union(steep, Self.runs(of: cells.sorted()))
@@ -240,7 +240,7 @@ extension GameWorld {
     /// - Throws: ``GameError/invalidTerrain`` for a world whose land is read
     ///   as it is needed, a cell outside the world, listed twice, or where
     ///   there is land (the land goes on the ground, so a real-world map
-    ///   sets its water first) or a steep slope (decision 112).
+    ///   sets its water first) or a steep slope (decision 115).
     public mutating func setWater(_ cells: [CellPosition]) throws(GameError) {
         guard landBlocks == nil else { throw .invalidTerrain }
         let sorted = cells.sorted()
@@ -255,7 +255,7 @@ extension GameWorld {
     }
 
     /// Replaces the world's steep slopes with `cells`, in any order
-    /// (decision 112): a real-world map's hillsides of more than 30 %, from
+    /// (decision 115): a real-world map's hillsides of more than 30 %, from
     /// GamePresentation's `WaterGrid`. An empty list clears them. Land may
     /// stand on them. Only for a world whose land is whole, as
     /// ``setWater(_:)``.
@@ -282,13 +282,13 @@ extension GameWorld {
         terrain.isWater(row: row, column: column)
     }
 
-    /// Whether the cell at `row`, `column` is steep (decision 112).
+    /// Whether the cell at `row`, `column` is steep (decision 115).
     public func isSteep(row: Int, column: Int) -> Bool {
         terrain.isSteep(row: row, column: column)
     }
 
     /// The steep cell under any part of `building`'s square (decision
-    /// 112), the first by row and then column, or `nil`.
+    /// 115), the first by row and then column, or `nil`.
     func steepUnder(_ building: PlacedBuilding) -> CellPosition? {
         guard !terrain.steep.isEmpty else { return nil }
         let firstRow = Land.cellIndex(building.minY), lastRow = Land.cellIndex(building.maxY - 1)
@@ -361,7 +361,7 @@ extension Terrain: Codable {
     }
 
     /// Decodes `{"water": [{"row", "column", "count"}, …]}` and, since save
-    /// version 26 (decision 112), `"steep"` alike, each left out when
+    /// version 26 (decision 115), `"steep"` alike, each left out when
     /// empty. The runs must be in order and apart; the world checks they
     /// lie in its bounds and no steep cell is water.
     public init(from decoder: any Decoder) throws {

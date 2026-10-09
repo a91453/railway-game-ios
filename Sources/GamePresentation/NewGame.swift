@@ -26,7 +26,7 @@ extension GameWorld {
     ///
     /// Its `water` (decision 105) is a real-world map's sea, rivers and
     /// lakes (``WaterGrid``), under which there is no land, and its `steep`
-    /// slopes (decision 112), where nothing new is built; a blank map has
+    /// slopes (decision 115), where nothing new is built; a blank map has
     /// neither.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,

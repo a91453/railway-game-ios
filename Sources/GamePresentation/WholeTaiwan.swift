@@ -73,7 +73,7 @@ extension GameSession {
     /// read in as it is needed (decision 88), from `population` and
     /// `places` (``LandImport/cells(in:population:places:water:frame:bounds:)``)
     /// and, since decision 105, the blocks' `water`
-    /// (``WaterGrid/cells(frame:bounds:in:)``) and, since decision 112,
+    /// (``WaterGrid/cells(frame:bounds:in:)``) and, since decision 115,
     /// their steep slopes; nothing for any other map, or without the
     /// population.
     static func readLand(roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil) {
@@ -98,7 +98,7 @@ extension GameSession {
         guard !wanted.isEmpty else { return }
         let cells = LandImport.cells(in: wanted, population: population, places: places, water: water, frame: frame, bounds: world.bounds)
         let wet = water?.cells(frame: frame, bounds: world.bounds, in: wanted) ?? []
-        // Decision 112: the steep slopes come from the same file.
+        // Decision 115: the steep slopes come from the same file.
         let steep = water?.steepCells(frame: frame, bounds: world.bounds, in: wanted) ?? []
         do throws(GameError) {
             try world.expandLand(wanted.sorted(), cells: cells, water: wet, steep: steep)

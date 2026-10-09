@@ -101,7 +101,7 @@ extension GameWorld {
 
     /// Makes the world's land read in as it is needed (decision 88): it
     /// has none yet, nor buildings, nor water (decision 105) or steep
-    /// slopes (decision 112), and no block has been read
+    /// slopes (decision 115), and no block has been read
     /// (``expandLand(_:cells:water:steep:)`` reads them).
     /// ``setLand(_:)`` and ``foundTowns(seed:)`` make the land whole again.
     public mutating func setLandOnDemand() {
@@ -121,7 +121,7 @@ extension GameWorld {
     /// cells join the world's (``terrain``), but for a cell the land grew
     /// onto before its block was read, which stays land. Water is the
     /// blocks', so it joins up the same whatever order they are read in.
-    /// Since decision 112 they bring their `steep` slopes alike, on which
+    /// Since decision 115 they bring their `steep` slopes alike, on which
     /// land may stand.
     ///
     /// - Throws: ``GameError/invalidLand`` for a world whose land is whole

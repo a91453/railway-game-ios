@@ -205,7 +205,7 @@ extension GameWorld {
     /// (``landValue(row:column:)``). Returns how many cells changed.
     ///
     /// Water is never zoned (decision 105), nor a steep slope (decision
-    /// 112): their cells in the rectangle are left without a zone, and the
+    /// 115): their cells in the rectangle are left without a zone, and the
     /// rest zoned.
     ///
     /// - Throws: ``GameError/invalidZoneArea`` for a rectangle reaching

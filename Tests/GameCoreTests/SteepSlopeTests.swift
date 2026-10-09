@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Steep slopes (ARCHITECTURE decision 112): hillsides of more than 30 %,
+/// Steep slopes (ARCHITECTURE decision 115): hillsides of more than 30 %,
 /// kept with the water in the terrain, where the city puts up nothing new
 /// and raises nothing, and the player neither builds nor zones; land may
 /// stand on them, and track still crosses them. Every number below is
@@ -114,7 +114,7 @@ final class SteepSlopeTests: XCTestCase {
         // From the flat onto the mountain: columns 5 and 6 of rows 2 and 3.
         XCTAssertEqual(try world.setZone(.commercial, rows: 2...3, columns: 5...9), 4)
         XCTAssertEqual(world.zones.cells.map(\.position), cells(2...3, 5...6))
-        // Water first: still onWater, as before decision 112.
+        // Water first: still onWater, as before decision 115.
         var wet = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
         try wet.setWater([CellPosition(row: 0, column: 0)])
         try wet.setSteep([CellPosition(row: 0, column: 1)])
@@ -248,7 +248,7 @@ final class SteepSlopeTests: XCTestCase {
         return world
     }
 
-    /// Version 26 (decision 112): the steep slopes. It saves byte for byte
+    /// Version 26 (decision 115): the steep slopes. It saves byte for byte
     /// and is the world the build that wrote it makes. The version 25 save
     /// has none.
     func testVersionTwentySixKeepsTheSteepSlopes() throws {

@@ -204,7 +204,7 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
                         ]
                     ),
-                    // Decision 112: the steep slopes, worked out from the
+                    // Decision 115: the steep slopes, worked out from the
                     // Copernicus DEM, whose licence asks for this notice.
                     DataSourceCredit(
                         id: "copernicusDEM",

@@ -145,7 +145,7 @@ final class WaterGridTests: XCTestCase {
         XCTAssertTrue(world.land.isEmpty)
     }
 
-    // MARK: - Steep slopes (decision 112)
+    // MARK: - Steep slopes (decision 115)
 
     /// The same file marks the hillsides of more than 30 %: none on water,
     /// few in the cities, most of Alishan; land stays on them, and a new
@@ -176,7 +176,7 @@ final class WaterGridTests: XCTestCase {
         // Taipei Main Station's cell is flat.
         let station = (row: try XCTUnwrap(Self.water.row(latitude: 25.0479)), column: try XCTUnwrap(Self.water.column(longitude: 121.5170)))
         XCTAssertFalse(Self.water.isSteep(row: station.row, column: station.column))
-        // A file without them (as before decision 112) has none.
+        // A file without them (as before decision 115) has none.
         let old = try WaterGrid(data: Data(#"{"north": 25, "west": 121, "cellDegrees": 0.01, "rows": 2, "columns": 2, "water": []}"#.utf8))
         XCTAssertTrue(old.steep.allSatisfy(\.isEmpty))
     }

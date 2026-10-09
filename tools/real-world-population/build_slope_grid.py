@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mark Taiwan's steep slopes on the water file's grid, and add them to the
 app's `Resources/RealWorld/taiwan_water.json` as its `steep` (ARCHITECTURE
-decision 112).
+decision 115).
 
     python3 tools/real-world-population/build_slope_grid.py \\
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\

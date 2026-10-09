@@ -124,7 +124,7 @@ enum ReplayState {
         for run in world.terrain.water {
             line("water \(run.row) \(run.column) \(run.count)")
         }
-        // Decision 112: likewise only a world with steep slopes.
+        // Decision 115: likewise only a world with steep slopes.
         for run in world.terrain.steep {
             line("steep \(run.row) \(run.column) \(run.count)")
         }

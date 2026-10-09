@@ -15,12 +15,12 @@ import GameCore
 // land (`GameWorld.expandLand(_:cells:water:steep:)`), and the world saves the
 // cells, so a save does not depend on the file.
 //
-// Since decision 112 the same file marks the steep slopes (`"steep"`, from
+// Since decision 115 the same file marks the steep slopes (`"steep"`, from
 // the Copernicus DEM by `tools/real-world-population/build_slope_grid.py`),
 // the hillsides of more than 30 % where nothing new is built: one file, so
 // the app's resources (and its Xcode project) do not change.
 
-/// Which cells of a grid over Taiwan are water, and (decision 112) which
+/// Which cells of a grid over Taiwan are water, and (decision 115) which
 /// are steep.
 public struct WaterGrid: Sendable {
     let north: Double
@@ -31,7 +31,7 @@ public struct WaterGrid: Sendable {
     /// Each row's runs of water, as columns, in order and apart; empty for
     /// a row with none.
     let water: [[Range<Int>]]
-    /// Each row's runs of steep slope (decision 112), alike; all empty for
+    /// Each row's runs of steep slope (decision 115), alike; all empty for
     /// a file without them.
     let steep: [[Range<Int>]]
 
@@ -114,7 +114,7 @@ public struct WaterGrid: Sendable {
     }
 
     /// Whether the cell at `row`, `column` of the grid is steep (decision
-    /// 112).
+    /// 115).
     func isSteep(row: Int, column: Int) -> Bool {
         Self.contains(steep[row], column)
     }
@@ -165,7 +165,7 @@ public struct WaterGrid: Sendable {
         cells(of: water, frame: frame, bounds: bounds, in: blocks)
     }
 
-    /// The 64 m cells of steep slope (decision 112), as ``cells(frame:bounds:in:)``
+    /// The 64 m cells of steep slope (decision 115), as ``cells(frame:bounds:in:)``
     /// gives the water's: a cell is steep when the grid's cell its middle
     /// lies in is.
     public func steepCells(frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>? = nil) -> [CellPosition] {

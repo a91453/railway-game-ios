@@ -172,7 +172,7 @@ extension GameWorld {
     ///   column, or for a kind that ``PlacedBuildingKind/standsOnShore``
     ///   ``GameError/needsShore`` (decision 111) unless the square has both water and land
     ///   under it; ``GameError/onSteepSlope(row:column:)`` naming the first
-    ///   steep cell under it (decision 112); ``GameError/idsExhausted``; or
+    ///   steep cell under it (decision 115); ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
