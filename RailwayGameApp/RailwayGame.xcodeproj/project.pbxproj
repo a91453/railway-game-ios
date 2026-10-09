@@ -28,6 +28,7 @@
 		2EAE2F5727457C096F6FB7CD /* ntalrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */; };
 		304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */; };
 		376974C84B7F85117BB54C8D /* MapAlertBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */; };
+		3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79941FA523AF01C8B9E74433 /* BuildToolRail.swift */; };
 		3CD0719BA9F8CDD5FC42B134 /* tymc.json in Resources */ = {isa = PBXBuildFile; fileRef = 9066371AFA922B8308EA3748 /* tymc.json */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
@@ -54,6 +55,7 @@
 		789C9FAADEA0419549125729 /* krtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = A1B80E3285C9871A9D98DECB /* krtc_times.json */; };
 		792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 68B0C0FD89F59C53A9685C67 /* sanying_times.json */; };
 		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
+		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
 		8163932343EEB39A635118DD /* taiwan_places.json in Resources */ = {isa = PBXBuildFile; fileRef = 894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
@@ -148,6 +150,7 @@
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
+		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
 		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMapView.swift; sourceTree = "<group>"; };
 		8363C536E3BE341871325469 /* MapLayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLayerSheet.swift; sourceTree = "<group>"; };
@@ -170,6 +173,7 @@
 		A92B62C199B3DE4F7602175F /* MapArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapArt.swift; sourceTree = "<group>"; };
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
+		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
@@ -280,6 +284,7 @@
 			isa = PBXGroup;
 			children = (
 				3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */,
+				79941FA523AF01C8B9E74433 /* BuildToolRail.swift */,
 				D490F999E435A0570BE04635 /* ContentView.swift */,
 				A07E2BC9805D886DEE596859 /* ControlPanel.swift */,
 				222E67E267AF07C25D4745C9 /* DataSourcesView.swift */,
@@ -295,6 +300,7 @@
 				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
+				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
@@ -527,6 +533,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */,
+				3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */,
 				44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */,
 				CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */,
 				225C04C52DFBA47A1A6F22A4 /* DataSourcesView.swift in Sources */,
@@ -543,6 +550,7 @@
 				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
+				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,

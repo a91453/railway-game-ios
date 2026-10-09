@@ -4,7 +4,7 @@ import XCTest
 final class ToolbarSmokeTests: XCTestCase {
     func testEnglishToolbar() {
         checkToolbar(language: "en", locale: "en_US", queries: [
-            "Select tool", "Track network tool", "Train tool", "Building tool",
+            "Construction", "Track network tool", "Train tool", "Building tool", "Done building",
         ])
     }
 
@@ -12,7 +12,7 @@ final class ToolbarSmokeTests: XCTestCase {
         // Identifiers, not translated text: the wording is the localization
         // check's (localization.yml), not this test's.
         checkToolbar(language: "zh-Hant", locale: "zh_TW", queries: [
-            "tool.select", "tool.network", "tool.train", "tool.building",
+            "dock.build", "tool.network", "tool.train", "tool.building", "tool.select",
         ])
     }
 
@@ -49,6 +49,8 @@ final class ToolbarSmokeTests: XCTestCase {
         }
         newGame.tap()
 
+        // Decision 114: Build opens the tools at the map's edge, and Done
+        // closes them; so each is tapped in this order.
         for query in queries {
             let button = app.buttons[query]
             guard button.waitForExistence(timeout: 10) else {

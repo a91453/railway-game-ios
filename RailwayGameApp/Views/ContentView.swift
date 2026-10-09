@@ -5,8 +5,9 @@ import SwiftUI
 /// The game screen (ARCHITECTURE decision 106): the map fills it, and
 /// the controls float over its edges, so it is never pushed aside. The
 /// status pill (cash, time, speed, menu) at the top leading corner, the
-/// dock (the tools, the lines and the company's figures, Undo) at the
-/// bottom leading corner, and the details card (the selection and the
+/// dock (Build, the lines and the company's figures, Undo) at the bottom
+/// leading corner, the tools down the leading edge while building
+/// (decision 114), and the details card (the selection and the
 /// tool's options) at the trailing side, only while there is something to
 /// show; the lines, a station and the company's figures slide in at that
 /// side too, rather than as sheets over the map. The same on every device:
@@ -79,6 +80,9 @@ struct ContentView: View {
             }
             .onChange(of: ControlDetails.Subject(session)) { _, _ in
                 detailsChoice = nil
+            }
+            .onChange(of: screen.detailsRequests) { _, _ in
+                detailsChoice = true
             }
             .onChange(of: ObjectIdentifier(session)) { _, _ in
                 mapCamera = nil
@@ -170,13 +174,18 @@ struct ContentView: View {
             let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
             let cardBottom = strip + (besideDock ? 0 : dockSize.height)
             let cardHeight = max(120, proxy.size.height - pillDepth - cardBottom - 2 * margin)
+            // Decision 114: the tools down the leading edge while building,
+            // between the pill and the dock.
+            let showsRail = BuildToolRail.isShown(session)
+            let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             map
                 .environment(\.mapInsets, EdgeInsets(
-                    top: pillDepth, leading: 0, bottom: dockSize.height,
+                    top: pillDepth, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
                     trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                 ))
                 // A panel beside the map runs down its whole side.
                 .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
+                .environment(\.mapDetailsOpen, isOpen)
                 .overlay(alignment: .topLeading) {
                     StatusPill(session: session, launcher: launcher)
                         .padding([.top, .leading, .trailing], margin)
@@ -190,6 +199,14 @@ struct ContentView: View {
                             .padding([.top, .trailing], margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
                             .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if showsRail {
+                        BuildToolRail(session: session, maxHeight: railHeight)
+                            .padding(.top, pillDepth)
+                            .padding([.top, .leading], margin)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -219,6 +236,7 @@ struct ContentView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: isOpen)
+                .animation(.easeInOut(duration: 0.2), value: showsRail)
                 .animation(.easeInOut(duration: 0.25), value: sidePanel)
         }
     }
@@ -270,7 +288,8 @@ private struct MapTutorialTarget: View {
 /// something to show (a tool other than Select, a selection) and not
 /// otherwise, so the map gets the screen; or as the player chose, until
 /// what it would show changes; and always during the tutorial, which
-/// points at controls in it.
+/// points at controls in it. A station selected while looking at the map
+/// shows its tag over it instead (decision 119), which opens the card.
 private enum ControlDetails {
     /// What the details would be about; a change drops the player's choice.
     struct Subject: Equatable {
@@ -292,7 +311,11 @@ private enum ControlDetails {
     /// there is to show.
     @MainActor
     static func isOpen(_ session: GameSession, choice: Bool?) -> Bool {
-        session.tutorial != nil || (choice ?? (session.tool != .select || session.selectionText() != nil))
+        if session.tutorial != nil { return true }
+        if let choice { return choice }
+        if session.tool != .select { return true }
+        // Decision 119: a station's tag stands in for the card.
+        return session.selectedStationID == nil && session.selectionText() != nil
     }
 }
 
@@ -328,7 +351,7 @@ private struct StatusPill: View {
     }
 }
 
-/// The tools, the lines and the company's figures, and Undo
+/// Build, the lines and the company's figures, and Undo
 /// (``ControlPanel``'s tools), in a glass dock at the bottom of the screen
 /// (decision 106), with the button that shows or hides the details card.
 private struct ControlDock: View {
@@ -421,6 +444,9 @@ final class GameScreenState {
     }
 
     var panel: Panel?
+    /// Counts the requests to open the details card from the map (the
+    /// station's tag, decision 119); the screen opens it on each.
+    var detailsRequests = 0
     /// The layer's opacity once the player has moved its slider (the
     /// reference's `_popTravelOpacityUserSet`); until then each layer's own
     /// (``PopTravel/baseOpacity(for:compactWidth:)``).
