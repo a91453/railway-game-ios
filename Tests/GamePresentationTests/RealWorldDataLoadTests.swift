@@ -38,6 +38,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(data.population)
         XCTAssertNotNil(data.places)
         XCTAssertNotNil(data.water)
+        XCTAssertNotNil(data.heights)
         XCTAssertNotNil(data.railways?.stationData?.overtakeTracks)
     }
 

@@ -205,15 +205,17 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 115: the steep slopes, worked out from the
-                    // Copernicus DEM, whose licence asks for this notice.
+                    // Copernicus DEM, whose licence asks for this notice;
+                    // decision 124: the ground's height, from the same
+                    // data, and the licence's sentence on liability.
                     DataSourceCredit(
                         id: "copernicusDEM",
                         title: "Copernicus DEM",
                         detail: language.text(
-                            "The heights of Taiwan, Penghu, Kinmen and Matsu (GLO-30, 30 m; Matsu GLO-90), from which the game works out the hillsides of more than 30 % where nothing new can be built.",
-                            "台灣、澎湖、金門與馬祖的地形高度（GLO-30，30 公尺；馬祖為 GLO-90），遊戲用它算出坡度超過 30%、不能新蓋的山坡地。"
+                            "The heights of Taiwan, Penghu, Kinmen and Matsu (GLO-30, 30 m; Matsu GLO-90): the ground's height on real-world maps, and the hillsides of more than 30 % where nothing new can be built.",
+                            "台灣、澎湖、金門與馬祖的地形高度（GLO-30，30 公尺；馬祖為 GLO-90）：實景地圖的地面高度，以及坡度超過 30%、不能新蓋的山坡地。"
                         ),
-                        notice: "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+                        notice: "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
                         links: [
                             DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
                         ]
