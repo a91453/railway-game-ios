@@ -59,7 +59,9 @@ struct InspectorView: View {
                     Text(verbatim: text)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(2)
+                        // Three lines: in a phone's card "Station · Ruifang ·
+                        // 2 platforms, 128 m" took two and lost its end.
+                        .lineLimit(3)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {

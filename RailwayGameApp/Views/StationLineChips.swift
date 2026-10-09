@@ -5,7 +5,8 @@ import SwiftUI
 /// The lines calling at the selected station, under its nameboard
 /// (ARCHITECTURE decision 112): a tag in each line's colour that opens the
 /// line, and one that starts a new line here, its other end tapped next on
-/// the map. A row that scrolls sideways when the station has many lines.
+/// the map. The tags wrap onto more rows (decision 123): a row that
+/// scrolled sideways showed its last tag cut in two, as if it were broken.
 /// The owner's site marks a stop's transfers with a bordered tag the same
 /// way (`Railway/site_archive_clean/index.html`, `.xfer-tag`).
 struct StationLineChips: View {
@@ -14,16 +15,13 @@ struct StationLineChips: View {
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(session.world.lines(callingAt: station.id), id: \.id) { line in
-                    chip(line)
-                }
-                newLine
+        ChipFlow(spacing: 6) {
+            ForEach(session.world.lines(callingAt: station.id), id: \.id) { line in
+                chip(line)
             }
-            .padding(.vertical, 2)
+            newLine
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .padding(.vertical, 2)
     }
 
     private func chip(_ line: ServiceLine) -> some View {
@@ -69,5 +67,58 @@ struct StationLineChips: View {
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
         .accessibilityIdentifier("station.newLine")
+    }
+}
+
+/// Lays its views out in rows, left to right, starting a new row when the
+/// next one would pass the width it is offered.
+private struct ChipFlow: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(subviews, width: proposal.width ?? .infinity)
+        let width = rows.map(\.width).max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(subviews, width: bounds.width) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(
+                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
+                    proposal: ProposedViewSize(width: min(size.width, bounds.width), height: size.height)
+                )
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func rows(_ subviews: Subviews, width: CGFloat) -> [Row] {
+        var rows: [Row] = []
+        var row = Row()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            if !row.indices.isEmpty, needed > width {
+                rows.append(row)
+                row = Row()
+            }
+            row.width = row.indices.isEmpty ? min(size.width, width) : row.width + spacing + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(index)
+        }
+        if !row.indices.isEmpty { rows.append(row) }
+        return rows
     }
 }
