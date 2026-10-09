@@ -1203,7 +1203,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Website/site/assets/app-icon-light.png`（黃點 `#FFC86B`） | 黃山雀的身體與燈的顏色 | 取顏色 |
 | （參考沒有） | `StationMasterTaiwan*`、`StationMasterLantern`、`StationMasterMood`、`RegionStyle.stationMasterArt` | gap → 原生 |
 
-2026-10-09 照真鳥羽色重畫（決策 122 第 6 點）：再查一次參考庫，仍然沒有角色可用。三張 SVG 是作者選定、用 Gemini 生的圖（作者提供），描圖工具 [vtracer](https://github.com/visioncortex/vtracer)（MIT，只在 scratchpad 用，沒有放進專案）；羽色的根據是農業部的鳥類圖鑑（只取「哪裡是什麼顏色」，沒有用圖鑑的圖）。
+2026-10-09 改成正面的圓胖黃山雀（決策 122 第 6 點）：再查一次參考庫，仍然沒有角色可用。三張 SVG 是作者選定、用 Gemini 生的圖（作者提供），頭換成藏青、翅膀換成深灰；取輪廓用 [scikit-image](https://scikit-image.org/)（BSD，只在 scratchpad 用，沒有放進專案）；羽色的根據是農業部的鳥類圖鑑（只取「哪裡是什麼顏色」，沒有用圖鑑的圖）。
 
 外部只取想法，沒有用到素材：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（動物站長的前例）；作者提供的 [neonwatty/logo-designer-skill](https://github.com/neonwatty/logo-designer-skill)（MIT，取它的流程：幾種方案讓作者挑、深淺色與小尺寸檢查）與 [supermemoryai/skills 的 svg-animations](https://github.com/supermemoryai/skills/blob/main/svg-animations/SKILL.md)（沒有授權，只讀想法）。
 
