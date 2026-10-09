@@ -16,7 +16,9 @@ import SwiftUI
 /// calls a `GameSession` method that applies one `GameWorld` command.
 struct LinesPanel: View {
     let session: GameSession
-    @Environment(\.dismiss) private var dismiss
+    /// Closes it (decision 106: shown beside the map, not presented, so
+    /// the environment's dismiss would do nothing).
+    @Environment(GameScreenState.self) private var screen
     @State private var patternFirst = 0
     @State private var patternLast = 1
     @State private var patternExpress = false
@@ -33,8 +35,9 @@ struct LinesPanel: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Decision 100: a new line first, where the sheet at half
-                // height shows it while stations are picked on the map.
+                // Decision 100: a new line first, where the panel beside
+                // the map (decision 106) shows it while stations are
+                // picked on the map.
                 draftSection
                 // Decision 101: a line without trains offers them next.
                 if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
@@ -82,7 +85,7 @@ struct LinesPanel: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        dismiss()
+                        screen.panel = nil
                     }
                 }
             }

@@ -5,13 +5,14 @@ import UIKit
 
 extension EnvironmentValues {
     /// How much of each edge of the map the screen's own controls float
-    /// over (``ContentView``: a phone's HUD at the top, the control card
-    /// at the trailing side): the map's banners, keys and buttons keep
-    /// clear of them. The map itself is drawn under them.
+    /// over (``ContentView``: the status pill at the top, the dock at the
+    /// bottom leading corner, the details card at the trailing side): the
+    /// map's banners, keys and buttons keep clear of them. The map itself
+    /// is drawn under them.
     @Entry var mapInsets = EdgeInsets()
     /// How far down from the map's top the trailing edge's controls reach
-    /// (``mapInsets``' trailing inset): a folded control card ends there,
-    /// and below it the map's bottom-trailing buttons keep to the edge.
+    /// (``mapInsets``' trailing inset): the details card ends there, and
+    /// below it the map's bottom-trailing buttons keep to the edge.
     @Entry var mapTrailingInsetDepth = CGFloat.infinity
 }
 
@@ -264,6 +265,8 @@ struct MapView: View {
                         }
                     }
                     .padding(12)
+                    // Above the dock (decision 106).
+                    .padding(.bottom, insets.bottom)
                 }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.

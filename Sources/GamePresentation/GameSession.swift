@@ -1657,8 +1657,15 @@ public struct StatusMessage: Hashable, Sendable {
 
     /// How long the banner shows the message before clearing it: a success
     /// goes after 4 s, so it never stays over the row just edited at the
-    /// bottom of a panel; a problem stays until dismissed or replaced.
-    public var autoDismissDelay: Duration? {
-        kind == .success ? .seconds(4) : nil
+    /// bottom of a panel; a problem, which explains itself, stays longer
+    /// the longer it is: 4 s and a tenth of a second a character, from 6 s
+    /// up to 10 s (ARCHITECTURE decision 106, after the reference's
+    /// `notify()`, `min(9, 3.2 + length × 0.09)` s). The banner keeps a
+    /// problem until dismissed while VoiceOver runs.
+    public var autoDismissDelay: Duration {
+        switch kind {
+        case .success: .seconds(4)
+        case .failure: .milliseconds(min(10_000, max(6_000, 4_000 + 100 * text.count)))
+        }
     }
 }

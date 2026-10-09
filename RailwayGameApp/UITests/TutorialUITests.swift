@@ -20,7 +20,7 @@ final class TutorialUITests: XCTestCase {
 
     func testBuildingTrackEnablesNextAndSkipEnds() {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -36,30 +36,47 @@ final class TutorialUITests: XCTestCase {
         next.tap()
         waitForEnabled(app, false)
 
-        // Tap the map in a row the card leaves free: the card may sit on the
-        // map (it may cover part of it, never a control), above or below.
+        // Tap the map where the card leaves it free: the card may sit on
+        // the map (it may cover part of it, never a control).
         // The underlying map and the outlined Build Track action stay usable.
         let map = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 5))
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        // On a phone the map runs up under the HUD, which floats over its
-        // top: only the map below the HUD can be tapped.
+        // The map runs up under the status pill, which floats over its
+        // top: only the map below the pill can be tapped.
         let gameTime = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
         let hudBottom = max(app.buttons["hud.menu"].frame.maxY, gameTime.frame.maxY) + 12
+        // The dock floats over the map's bottom (decision 106): only the
+        // map above it can be tapped too.
+        let dockTop = app.buttons["tool.select"].frame.minY - 12
         let wholeMap = map.frame.intersection(app.frame)
-        let visibleMap = wholeMap.divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
-        let row = freeRow(in: visibleMap, avoiding: card.frame)
-        // The row can be the map's bottom edge, where the Map Layers button
-        // sits in the leading corner: start the track to its right.
+        let visibleMap = wholeMap
+            .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
+            .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
+        // Two points 60 apart on the map that no control covers: not the
+        // card (on a wide screen it can stand beside the map's middle,
+        // so a free row alone is not enough), not the Map Layers button,
+        // and not the details card at the trailing side, where the Build
+        // Track button is (decision 106).
         let layers = app.buttons["map.layers"]
-        let left = layers.exists ? max(visibleMap.minX + 50, layers.frame.maxX + 24) : visibleMap.minX + 50
+        let action = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
+        var covered = [card.frame]
+        if layers.exists { covered.append(layers.frame) }
+        let free = action.exists
+            ? visibleMap.divided(atDistance: max(0, visibleMap.maxX - (action.frame.minX - 20)), from: .maxXEdge).remainder
+            : visibleMap
+        guard let points = freePoints(in: free, avoiding: covered) else {
+            return XCTFail("No free place on the map: map \(visibleMap), free \(free), card \(card.frame), layers \(layers.frame), action \(action.frame)")
+        }
+        let (first, second) = points
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        origin.withOffset(CGVector(dx: left, dy: row)).tap()
-        origin.withOffset(CGVector(dx: left + 80, dy: row)).tap()
-        waitForEnabled(app, false, "Choosing the ends only previews track")
+        origin.withOffset(CGVector(dx: first.x, dy: first.y)).tap()
+        origin.withOffset(CGVector(dx: second.x, dy: second.y)).tap()
+        let tapped = "taps \(first), \(second); card \(card.frame), free \(free)"
+        waitForEnabled(app, false, "Choosing the ends only previews track (\(tapped))")
         let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
         XCTAssertTrue(build.waitForExistence(timeout: 5))
         waitForEnabled(app, true, buttonDescription: "Build Track (label prefix)", query: {
@@ -107,7 +124,7 @@ final class TutorialUITests: XCTestCase {
 
     private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false) {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         if largeText {
@@ -116,7 +133,7 @@ final class TutorialUITests: XCTestCase {
         app.launch()
         defer {
             app.terminate()
-            XCUIDevice.shared.orientation = .portrait
+            XCUIDevice.shared.orientation = .landscapeLeft
         }
 
         let start = app.buttons["start.tutorial"]
@@ -156,7 +173,9 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, true)
 
         // Reflowing the card must preserve navigation and usable controls.
-        XCUIDevice.shared.orientation = .landscapeLeft
+        // A phone turns from one side to the other (decision 106: it
+        // plays only on its side); an iPad from upright to its side.
+        XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertTrue(skip.waitForExistence(timeout: 5))
         XCTAssertTrue(skip.isHittable)
         checkToolIsUncovered(app, identifier: "tool.network")
@@ -207,12 +226,26 @@ final class TutorialUITests: XCTestCase {
         return query.firstMatch
     }
 
-    /// A row of `map` 24 points from an edge of the part `card` does not
-    /// cover: above the card when there is room, otherwise below it.
-    private func freeRow(in map: CGRect, avoiding card: CGRect) -> CGFloat {
-        guard card.intersects(map) else { return map.minY + 24 }
-        if card.minY - map.minY >= 48 { return map.minY + 24 }
-        return min(card.maxY + 24, map.maxY - 24)
+    /// Two points of `map` 60 points apart in a row, each at least 12
+    /// points inside it and clear of every frame in `covered` by 12: the
+    /// first such pair, top row first, leading first. They fit the band of
+    /// the map the tutorial's card leaves free beside it (96 points).
+    private func freePoints(in map: CGRect, avoiding covered: [CGRect]) -> (CGPoint, CGPoint)? {
+        let blocked = covered.map { $0.insetBy(dx: -12, dy: -12) }
+        func isFree(_ point: CGPoint) -> Bool {
+            map.insetBy(dx: 12, dy: 12).contains(point) && !blocked.contains { $0.contains(point) }
+        }
+        var y = map.minY + 12
+        while y <= map.maxY - 12 {
+            var x = map.minX + 12
+            while x + 60 <= map.maxX - 12 {
+                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + 60, y: y)
+                if isFree(first), isFree(second) { return (first, second) }
+                x += 4
+            }
+            y += 8
+        }
+        return nil
     }
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {

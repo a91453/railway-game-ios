@@ -89,8 +89,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.25))
-        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.4))
+        // In the map's leading half: the details card floats over its
+        // trailing side while a tool is chosen (decision 106).
+        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.25))
+        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         let zoned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "0 cells zoned"), object: count)
         XCTAssertEqual(XCTWaiter().wait(for: [zoned], timeout: 10), .completed, "The drag zoned nothing: \(count.label)")
@@ -138,8 +140,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         _ = requiredButton("start.continue", in: app)
         // Back to Start creates only an autosave. This separate button also
         // proves that Save Game wrote a manual save rather than doing nothing.
-        _ = requiredButton("start.savedGames", in: app)
-        _ = requiredButton("start.demoMap", in: app)
+        // That it is there is the proof: on a phone on its side (decision
+        // 106) it is further down the start screen's column.
+        XCTAssertTrue(app.buttons["start.savedGames"].waitForExistence(timeout: 10), "Missing UI flow button: start.savedGames")
+        XCTAssertTrue(app.buttons["start.demoMap"].exists, "Missing UI flow button: start.demoMap")
 
         requiredButton("start.continue", in: app).tap()
         assertGame(in: app)
@@ -229,7 +233,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
+        // A phone on its side (decision 106) shows fewer of the start
+        // screen's buttons at once: scroll their column to the one wanted.
+        let button = app.buttons[identifier]
+        if identifier.hasPrefix("start."), button.waitForExistence(timeout: 10), !button.isHittable {
+            let column = app.scrollViews.containing(.button, identifier: identifier).firstMatch
+            for _ in 0..<4 where column.exists && !button.isHittable {
+                // Slowly, so the column does not fling past the button.
+                if button.frame.midY < column.frame.midY {
+                    column.swipeDown(velocity: .slow)
+                } else {
+                    column.swipeUp(velocity: .slow)
+                }
+            }
+        }
+        return requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
     }
 
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {
@@ -245,7 +263,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
-        XCTFail("UI flow button cannot be tapped: \(name)")
+        let button = query.firstMatch
+        XCTFail("UI flow button cannot be tapped: \(name) (exists \(button.exists), frame \(button.frame))")
         return query.firstMatch
     }
 

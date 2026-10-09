@@ -112,8 +112,10 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(clear.exists)
         XCTAssertFalse(clear.isEnabled)
 
-        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5))
-        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5))
+        // In the map's leading half: the details card floats over its
+        // trailing side while a tool is chosen (decision 106).
+        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
         XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
         map.pinch(withScale: 3, velocity: 1)
@@ -134,7 +136,7 @@ final class MapInteractionTests: XCTestCase {
         if !anchored() { anchor.tap() }
         XCTAssertTrue(anchored(), "Taps after navigating must still reach the network tool")
         // The far end, tried twice like the anchor: the same lost touch.
-        let far = map.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.35))
+        let far = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
         let build = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         func previewed() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: build)],
@@ -174,12 +176,14 @@ final class MapInteractionTests: XCTestCase {
 
     func testRotationKeepsTheCameraZoom() {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        // Decision 106: a phone plays on its side, so it turns from one
+        // side to the other.
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer {
-            XCUIDevice.shared.orientation = .portrait
+            XCUIDevice.shared.orientation = .landscapeLeft
             app.terminate()
         }
         let newGame = app.buttons["start.newGame"]
@@ -190,7 +194,7 @@ final class MapInteractionTests: XCTestCase {
         zoomIn.tap()
         XCTAssertFalse(zoomIn.isEnabled)
 
-        XCUIDevice.shared.orientation = .landscapeLeft
+        XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
         XCTAssertFalse(zoomIn.isEnabled, "Changing the layout must keep the camera's maximum zoom")
         app.buttons["Zoom out"].tap()
@@ -339,9 +343,11 @@ final class MapInteractionTests: XCTestCase {
         let hud = app.otherElements["map.constructionHUD"]
         XCTAssertFalse(hud.exists, "HUD must not exist before track is previewed")
 
-        // Tap start anchor and end anchor to trigger track preview
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35)).tap()
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.35)).tap()
+        // Tap start anchor and end anchor to trigger track preview, in the
+        // map's leading half: the details card floats over its trailing
+        // side while a tool is chosen (decision 106).
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
 
         XCTAssertTrue(hud.waitForExistence(timeout: 5), "MapConstructionHUD must appear when preview is active")
 
