@@ -127,8 +127,24 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
         map.pinch(withScale: 3, velocity: 1)
         XCTAssertFalse(clear.isEnabled, "Pinching must not pick a track anchor")
-        XCTAssertFalse(app.buttons["Zoom in"].isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
+        // Decision 123: beside a phone's details card the zoom buttons give
+        // way. Fold the card to read them, then open it again for Clear and
+        // Build Track; folding it must not pick an anchor either.
+        let zoomIn = app.buttons["Zoom in"]
+        let detailsToggle = app.buttons["controls.toggle"]
+        let folded = !zoomIn.exists
+        if folded {
+            XCTAssertTrue(detailsToggle.waitForExistence(timeout: 5))
+            detailsToggle.tap()
+            XCTAssertTrue(zoomIn.waitForExistence(timeout: 10), "Folding the details card must bring the zoom buttons back")
+        }
+        XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
+        if folded {
+            detailsToggle.tap()
+            XCTAssertTrue(clear.waitForExistence(timeout: 10), "Opening the details card again must show Clear")
+            XCTAssertFalse(clear.isEnabled, "Folding the details card must not pick a track anchor")
+        }
 
         // After a pinch to the closest zoom an accessibility query can hold
         // the app's main thread for seconds (run 37161734560's recording),
