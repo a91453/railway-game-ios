@@ -157,9 +157,11 @@ struct ContentView: View {
         }
     }
 
-    /// The map with the controls floating over its edges (decision 106).
-    /// Nothing floats over a real-world map's bottom strip, whose Apple
-    /// logo and legal link nothing may cover (``AppleMapBackground``).
+    /// The map with the controls floating over its edges (decision 106),
+    /// the map to the screen's edges and the controls inside the safe area
+    /// (decision 120). Nothing floats over a real-world map's bottom strip,
+    /// whose Apple logo and legal link nothing may cover
+    /// (``AppleMapBackground``).
     private var gameLayout: some View {
         GeometryReader { proxy in
             let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
@@ -178,14 +180,22 @@ struct ContentView: View {
             // between the pill and the dock.
             let showsRail = BuildToolRail.isShown(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
-            map
-                .environment(\.mapInsets, EdgeInsets(
-                    top: pillDepth, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
-                    trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
-                ))
-                // A panel beside the map runs down its whole side.
-                .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
-                .environment(\.mapDetailsOpen, isOpen)
+            // Decision 120: the map runs to the screen's edges, under the
+            // camera housing and the home indicator, as Apple's Maps does;
+            // the controls stay inside the safe area.
+            Color.clear
+                .background {
+                    map
+                        .environment(\.mapInsets, EdgeInsets(
+                            top: pillDepth, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
+                            trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
+                        ))
+                        // A panel beside the map runs down its whole side.
+                        .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
+                        .environment(\.mapDetailsOpen, isOpen)
+                        .environment(\.mapSafeArea, proxy.safeAreaInsets)
+                        .ignoresSafeArea(.container)
+                }
                 .overlay(alignment: .topLeading) {
                     StatusPill(session: session, launcher: launcher)
                         .padding([.top, .leading, .trailing], margin)
@@ -267,9 +277,11 @@ struct ContentView: View {
 }
 
 /// The part of the map the screen's own controls do not float over
-/// (``EnvironmentValues/mapInsets``), marked as the tutorial's map.
+/// (``EnvironmentValues/mapInsets``), nor the screen's edges hide
+/// (``EnvironmentValues/mapSafeArea``), marked as the tutorial's map.
 private struct MapTutorialTarget: View {
     @Environment(\.mapInsets) private var insets
+    @Environment(\.mapSafeArea) private var safeArea
 
     var body: some View {
         // The target inside the padding: marked outside it, it would be the
@@ -277,7 +289,7 @@ private struct MapTutorialTarget: View {
         // the map under the details card as free (decision 106).
         Color.clear
             .tutorialTarget(.map)
-            .padding(insets)
+            .padding(insets.adding(safeArea))
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

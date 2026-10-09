@@ -19,12 +19,16 @@ import SwiftUI
 struct OSMMapBackground: UIViewRepresentable {
     let realWorld: RealWorldFrame
     /// The game's camera. Its view is the top of this one, which is
-    /// ``AppleMapBackground/attributionHeight`` taller.
+    /// ``AppleMapBackground/attributionHeight`` and the safe area's bottom
+    /// taller.
     let camera: PlanCamera
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
     let railways: RealRailways?
     let trackStyle: RealRailways.TrackStyle
     let language: DisplayLanguage
+    /// The screen's safe area (decision 120): the map reaches the screen's
+    /// edges, and the credit and attribution button keep inside this.
+    let safeArea: EdgeInsets
 
     func makeUIView(context: Context) -> FollowingMapLibreView {
         FollowingMapLibreView(frame: .zero)
@@ -45,6 +49,7 @@ struct OSMMapBackground: UIViewRepresentable {
             look: look,
             credits: (DataSourceCredits.openStreetMapBaseMap(in: language), DataSourceCredits.railwaysOnMap(in: language))
         )
+        map.screenSafeArea = safeArea
         map.follow(realWorld, camera: camera)
     }
 }
@@ -71,6 +76,12 @@ final class FollowingMapLibreView: MLNMapView {
     private var creditTexts = (map: "", railways: "")
     /// MapLibre's delegate, which the map view holds weakly.
     private var observer: StyleObserver?
+    /// The screen's safe area, as SwiftUI gives it (decision 120).
+    var screenSafeArea = EdgeInsets() {
+        didSet {
+            if screenSafeArea != oldValue { setNeedsLayout() }
+        }
+    }
 
     private lazy var credit: UILabel = {
         let label = UILabel()
@@ -146,7 +157,27 @@ final class FollowingMapLibreView: MLNMapView {
     override func layoutSubviews() {
         super.layoutSubviews()
         apply()
+        placeAttributionButton()
         placeCredit()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        setNeedsLayout()
+    }
+
+    /// MapLibre puts its attribution button inside UIKit's safe area, which
+    /// may not be the screen's; whatever of the screen's it leaves out is
+    /// added to the margins, so the button clears the home indicator and
+    /// the camera housing either way.
+    private func placeAttributionButton() {
+        let margins = CGPoint(
+            x: 10 + max(0, screenSafeArea.trailing - safeAreaInsets.right),
+            y: 6 + max(0, screenSafeArea.bottom - safeAreaInsets.bottom)
+        )
+        if attributionButtonMargins != margins {
+            attributionButtonMargins = margins
+        }
     }
 
     private func apply() {
@@ -301,9 +332,12 @@ final class FollowingMapLibreView: MLNMapView {
     /// the right.
     private func placeCredit() {
         credit.text = railwayLayers.isEmpty ? creditTexts.map : "\(creditTexts.map) · \(creditTexts.railways)"
-        let width = min(credit.intrinsicContentSize.width + 8, bounds.width - 60)
+        let safe = screenSafeArea
+        let width = min(credit.intrinsicContentSize.width + 8, bounds.width - 60 - safe.leading - safe.trailing)
         let height = credit.intrinsicContentSize.height + 2
-        credit.frame = CGRect(x: 10, y: bounds.height - 6 - height, width: max(0, width), height: height)
+        credit.frame = CGRect(
+            x: 10 + safe.leading, y: bounds.height - 6 - safe.bottom - height, width: max(0, width), height: height
+        )
         bringSubviewToFront(credit)
     }
 }

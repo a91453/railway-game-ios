@@ -59,16 +59,20 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
 struct AppleMapBackground: UIViewRepresentable {
     let realWorld: RealWorldFrame
     /// The game's camera. Its view is the top of this one, which is
-    /// ``attributionHeight`` taller.
+    /// ``attributionHeight`` and the safe area's bottom taller.
     let camera: PlanCamera
     let style: AppleMapStyle
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
     let railways: RealRailways?
     let trackStyle: RealRailways.TrackStyle
     let language: DisplayLanguage
+    /// The screen's safe area (decision 120): the map reaches the screen's
+    /// edges, and the logo and legal link keep inside this.
+    let safeArea: EdgeInsets
 
     /// The strip at the bottom of the map view kept clear for Apple's logo
-    /// and legal link.
+    /// and legal link, above the home indicator (the safe area's bottom,
+    /// which the strip takes too).
     static let attributionHeight: CGFloat = 30
 
     func makeUIView(context: Context) -> FollowingMapView {
@@ -80,9 +84,9 @@ struct AppleMapBackground: UIViewRepresentable {
         map.showsCompass = false
         map.showsScale = false
         // The logo and legal link go in the strip at the bottom, and only
-        // there: the strip is part of the view, not of the safe area.
+        // there: the margins say where (``updateUIView(_:context:)``), not
+        // UIKit's safe area.
         map.insetsLayoutMarginsFromSafeArea = false
-        map.layoutMargins = UIEdgeInsets(top: 0, left: 10, bottom: 6, right: 10)
         map.preferredConfiguration = style.configuration
         map.appliedStyle = style
         map.delegate = map
@@ -90,6 +94,12 @@ struct AppleMapBackground: UIViewRepresentable {
     }
 
     func updateUIView(_ map: FollowingMapView, context: Context) {
+        let margins = UIEdgeInsets(
+            top: 0, left: 10 + safeArea.leading, bottom: 6 + safeArea.bottom, right: 10 + safeArea.trailing
+        )
+        if map.layoutMargins != margins {
+            map.layoutMargins = margins
+        }
         if map.appliedStyle != style {
             map.appliedStyle = style
             map.preferredConfiguration = style.configuration
