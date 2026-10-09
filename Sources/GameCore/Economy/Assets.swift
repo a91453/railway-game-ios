@@ -425,7 +425,8 @@ extension GameWorld {
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }
             if record.kind == .cars {
-                guard record.cars >= 1 else { return "A record of cars must hold at least one." }
+                // At most a train's cars each, so their sum cannot overflow.
+                guard (1...Train.maximumCars).contains(record.cars) else { return "A record of cars must hold one to a train's most." }
                 carsByTrain[record.owner, default: 0] += record.cars
             } else {
                 guard record.cars == 0, owners.insert("\(record.kind.rawValue) \(record.owner)").inserted else {

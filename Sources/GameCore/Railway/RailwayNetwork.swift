@@ -517,9 +517,11 @@ extension RailwayNetwork: Codable {
                 throw corrupt("Track edge \(number)'s curve or profile does not make an edge between its nodes.")
             }
             let priced = ConstructionCosts.trackPricingLength
-            guard (structure == .automatic) == !sections.isEmpty, sections.allSatisfy({ $0.lengths > 0 }),
+            let lengths = max(1, (geometry.length + priced - 1) / priced)
+            // Each run within the edge first, so the sum cannot overflow.
+            guard (structure == .automatic) == !sections.isEmpty, sections.allSatisfy({ $0.lengths > 0 && Int64($0.lengths) <= lengths }),
                   zip(sections, sections.dropFirst()).allSatisfy({ $0.kind != $1.kind }),
-                  sections.isEmpty || sections.reduce(0, { $0 + Int64($1.lengths) }) == max(1, (geometry.length + priced - 1) / priced)
+                  sections.isEmpty || sections.reduce(0, { $0 + Int64($1.lengths) }) == lengths
             else {
                 throw corrupt("Track edge \(number)'s sections must cover an automatic edge's every length once, runs apart, and only an automatic edge has them.")
             }
