@@ -50,12 +50,16 @@ final class TutorialUITests: XCTestCase {
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
         let hudBottom = max(app.buttons["hud.menu"].frame.maxY, gameTime.frame.maxY) + 12
         // The dock floats over the map's bottom (decision 106): only the
-        // map above it can be tapped too.
-        let dockTop = app.buttons["tool.select"].frame.minY - 12
+        // map above it can be tapped too. The tools run down the map's
+        // leading edge during the tutorial (decision 114): only the map
+        // beside them.
+        let dockTop = app.buttons["dock.build"].frame.minY - 12
+        let railEnd = app.buttons["tool.select"].frame.maxX + 12
         let wholeMap = map.frame.intersection(app.frame)
         let visibleMap = wholeMap
             .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
             .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
+            .divided(atDistance: max(0, railEnd - wholeMap.minX), from: .minXEdge).remainder
         // Two points 60 apart on the map that no control covers: not the
         // card (on a wide screen it can stand beside the map's middle,
         // so a free row alone is not enough), not the Map Layers button,
@@ -188,7 +192,10 @@ final class TutorialUITests: XCTestCase {
         // The card may still be closing right after Skip: wait for it to go.
         XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
         // The restarted tutorial's first step waits for Network again.
-        selectTool(app, "tool.select")
+        // Decision 114: outside the tutorial the tools show only while one
+        // is chosen, so Done closes them rather than staying selected.
+        app.buttons["tool.select"].tap()
+        XCTAssertTrue(app.buttons["tool.select"].waitForNonExistence(timeout: 5), "Done did not close the tools")
 
         // The game menu starts the tutorial again without leaving this game.
         // Pause through the real HUD so a rapidly changing game clock does

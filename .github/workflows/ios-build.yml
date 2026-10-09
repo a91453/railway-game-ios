@@ -73,7 +73,7 @@ on:
   workflow_dispatch:
     inputs:
       verify_missing_button:
-        description: Temporarily remove Select and prove the English smoke test fails
+        description: Temporarily remove Select (the tool rail's Done) and prove the English smoke test fails
         type: boolean
         default: false
 
