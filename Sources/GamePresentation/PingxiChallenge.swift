@@ -66,8 +66,8 @@ public enum PingxiChallenge {
 
     /// The challenge's world: the real-world demo's lines, running, and the
     /// scenario with the festival at its stations.
-    public static func make(in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil) -> GameWorld {
-        var world = RealWorldDemo.make(in: language, railways: railways, land: land)
+    public static func make(in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = []) -> GameWorld {
+        var world = RealWorldDemo.make(in: language, railways: railways, land: land, water: water)
         let events = festivalStations.compactMap { name -> ScenarioEvent? in
             guard let real = railways.stations.first(where: { $0.id == "tra_sched|\(name)" }),
                   let station = world.stations.first(where: { $0.name == real.name(in: language) }) else { return nil }

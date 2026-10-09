@@ -43,6 +43,17 @@
 
 2026-10-08 的資料（osmtoday.com 的台灣整包檔，2026-10-06，決策 96 的標籤）：工業區 454.6 km²（8,826 塊）、公園 182.3 km²（8,886 塊）、農地 2,677.6 km²（61,650 塊）；`taiwan_places.json`（地點與分區同一份整包檔）1.17 MB。工廠每格 29 個就業、農地每格 1 個，依製造業約 300 萬人、農業約 53 萬人與分出來的格數（102,817、677,182）定的（決策 93、96）。
 
+## 水域（決策 105）
+
+實景地圖的海、河川與湖泊是 GameCore 的地形層（`GameWorld.terrain`）：水上城鎮不擴張、不升級，玩家建物不能蓋，也不能劃分區。`build_water_grid.py` 從同一份 OSM 整包檔產生 `RailwayGameApp/Resources/RealWorld/taiwan_water.json`（`GamePresentation` 的 `WaterGrid` 讀取）：
+
+- 格網：人口格（30″）切成 16 × 16 個水域格（1.875″，約 58 × 53 公尺，大約一個 64 公尺格），範圍是台灣的陸地（本島、澎湖、金門、馬祖與小島）外加 0.1°；一格的中點在水裡就是水。檔案寫每一列有水的段：`[列, 起始欄, 長度, 間隔, 長度, …]`。
+- 海：`natural=coastline` 的 way 頭尾接成環，環外（奇偶規則）是海。被整包檔邊界切斷、接不成環的一段（金門北邊的中國大嶝島）不是台灣的，不算。整包檔只有台灣，所以範圍內對岸（廈門、連江）的陸地也算海；那裡 WorldPop 本來就沒有人。
+- 河湖：`natural=water`、`waterway=riverbank`、`waterway=dock`、`landuse=reservoir` 的面，內環是島；魚塭（`landuse=aquaculture`、`water=fishpond`）不算，決策 96 把它當農業。海灣、濕地、鹽田、滯洪池與河床的礫石不算。
+- 參考庫內政部的海岸線（`Railway/site_archive_clean/data/taiwan_land.json`，縣市界合併、約 150 公尺簡化，政府資料開放授權 1.0）可以當第四個參數，只用來核對：它畫到低潮線，彰化、雲林、嘉義、台南的潮間帶與金門的潮灘算陸地。
+
+2026-10-09 的資料（osmtoday.com 2026-10-06 的整包檔）：9,296 × 8,064 格、82,806 段、530 KB；704 個海岸線的環（1 個被切斷、不算）、44,102 個水體；陸地 36,381.6 km²、陸地上的河湖 798.4 km²。和內政部的海岸線比：99.79% 的格一致，內政部算陸地、OSM 算海的 434.5 km²，反過來 53.1 km²。約 30 秒，需要 pyosmium 與 numpy。
+
 ## 重新產生
 
 ```sh
@@ -73,6 +84,18 @@ python3 tools/real-world-population/build_zone_grid.py \
   taiwan.pbf \
   RailwayGameApp/Resources/RealWorld/taiwan_places.json
 ```
+
+水域（第一個參數是人口檔，只用它的格網；第四個參數可以省略）：
+
+```sh
+python3 tools/real-world-population/build_water_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_population.json \
+  taiwan.pbf \
+  RailwayGameApp/Resources/RealWorld/taiwan_water.json \
+  taiwan_land.json
+```
+
+重新產生水域後要一起更新 `WaterGridTests` 的格數與地圖的數字。
 
 沒有整包檔時也可以問 Overpass（只用 Python 內建模組；伺服器忙的時候可以用逗號列出幾個，輪流使用，一塊一直失敗會切成四小塊再問，可能要幾個小時）：
 
