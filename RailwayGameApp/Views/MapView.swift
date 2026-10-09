@@ -273,6 +273,10 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: insets)
                 }
+                // Decision 109: what needs the player, over its stations.
+                .overlay(alignment: .topLeading) {
+                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: insets)
+                }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
                 // And after the other overlays, so the legend and the zoom
