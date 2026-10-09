@@ -28,7 +28,10 @@
 // - C, decision 98: 600 for a cell zoned for a use whose middle lies
 //   within 400 m of the centre of one of the company's buildings, else 0
 //   (the A-Train's subsidiaries leading development; only zoned cells, so
-//   a world without zones is worth what it was).
+//   a world without zones is worth what it was);
+// - W, decision 111: 600 for a cell whose middle lies within 160 m of a
+//   cell of water's (water included), else 0: the sea view and the river
+//   bank (a world without water is worth what it was).
 //
 // The value reads the world and changes nothing: raising buildings
 // (decision 75) never reads it, and growth only to choose which zoned cell
@@ -37,7 +40,7 @@
 /// What a cell of land is worth, in cents a m², and its parts.
 public struct LandValue: Hashable, Sendable {
     /// `clamp(base + servicePremium + accessPremium + parkPremium +
-    /// companyPremium, minimum, maximum)`.
+    /// companyPremium + waterPremium, minimum, maximum)`.
     public let value: Int64
     /// `floor(B × D / 1000)`: the use's base by the density's factor.
     public let base: Int64
@@ -53,9 +56,12 @@ public struct LandValue: Hashable, Sendable {
     /// ``LandValueRules/companyPremium`` for a zoned cell near the
     /// company's buildings, else 0 (decision 98).
     public let companyPremium: Int64
+    /// ``LandValueRules/waterPremium`` by the water, else 0 (decision 111).
+    public let waterPremium: Int64
 
     public init(
-        value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?, parkPremium: Int64 = 0, companyPremium: Int64 = 0
+        value: Int64, base: Int64, servicePremium: Int64, accessPremium: Int64, station: StationID?, parkPremium: Int64 = 0, companyPremium: Int64 = 0,
+        waterPremium: Int64 = 0
     ) {
         self.value = value
         self.base = base
@@ -64,6 +70,7 @@ public struct LandValue: Hashable, Sendable {
         self.station = station
         self.parkPremium = parkPremium
         self.companyPremium = companyPremium
+        self.waterPremium = waterPremium
     }
 }
 
@@ -108,14 +115,18 @@ public enum LandValueRules {
     /// (decision 98), and how near their centres: 400 m, as a park.
     public static let companyPremium: Int64 = 600
     public static let companyReach: Int64 = 25_600
+    /// Cents a m² by the water (decision 111), and how near a cell of
+    /// water's middle: 160 m, two and a half cells.
+    public static let waterPremium: Int64 = 600
+    public static let waterReach: Int64 = 10_240
     /// The least and the most a cell is worth, in cents a m².
     public static let minimum: Int64 = 500
     public static let maximum: Int64 = 50_000
 
-    /// `base + service + access + park + company` within ``minimum`` …
-    /// ``maximum``.
-    static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0, company: Int64 = 0) -> Int64 {
-        min(maximum, max(minimum, base + service + access + park + company))
+    /// `base + service + access + park + company + water` within
+    /// ``minimum`` … ``maximum``.
+    static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0, company: Int64 = 0, water: Int64 = 0) -> Int64 {
+        min(maximum, max(minimum, base + service + access + park + company + water))
     }
 }
 
@@ -244,9 +255,12 @@ extension GameWorld {
             return dx * dx + dy * dy < companyReach
         }
         let company = nearCompany ? LandValueRules.companyPremium : 0
+        // Decision 111: by the water.
+        let water = terrain.isNearWater(row: row, column: column) ? LandValueRules.waterPremium : 0
         return LandValue(
-            value: LandValueRules.value(base: base, service: service, access: access, park: park, company: company),
-            base: base, servicePremium: service, accessPremium: access, station: best?.id, parkPremium: park, companyPremium: company
+            value: LandValueRules.value(base: base, service: service, access: access, park: park, company: company, water: water),
+            base: base, servicePremium: service, accessPremium: access, station: best?.id, parkPremium: park, companyPremium: company,
+            waterPremium: water
         )
     }
 }

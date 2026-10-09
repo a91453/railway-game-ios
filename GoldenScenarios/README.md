@@ -240,6 +240,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidZoneArea` | — | 要劃分區的矩形超出世界，或一邊超過 128 格（schema 43，決策 98） |
 | `invalidTerrain` | — | 水域的格在世界外、列了兩次、上面有土地，或世界的土地是按需展開的（schema 44，決策 105） |
 | `onWater` | `row`、`column` | 玩家建物蓋在水上，或要劃分區的矩形每一格都是水（schema 44，決策 105）；指名第一格水（依列、行） |
+| `needsShore` | — | 漁人碼頭（`wharf`）或遊艇港（`marina`）沒有蓋在岸邊：正方形下面要同時有水和陸地（schema 45，決策 111） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -688,3 +689,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `setWater`、觀察 `water`、結果 `invalidTerrain`、`onWater`（帶 `row`、`column`），最終狀態選填的 `water`（水域格數）（ARCHITECTURE 決策 105，地形與土地狀態的第一步）。沒有水的世界不寫 `water`，舊的 fixture 不必改，schema 30 到 43 照樣讀取：**沒有任何既有 fixture 的預期值改變**（規則只在有水時改變結果；空白地圖沒有水）。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到水域的 fixture；`TerrainTests` 另外手算驗證成長、分區、建物、按塊讀入與存檔。
 - `water-terrain.json`：`zoning.json` 的世界、土地與鐵路，(1, 1) 是水。土地蓋在 (1, 1) 是 `invalidLand`；水蓋在有土地的 (0, 0)、或同一格列兩次是 `invalidTerrain`；(1, 1) 劃商業區是 `onWater`，第 1 列第 0–1 欄劃商業區只劃到 (1, 0)；小住宅蓋在 (1, 1) 中央或跨 (1, 0)／(1, 1) 的邊都是 `onWater`。第二個午夜 Alpha 腹地裡的空格 (1, 0) 是不開發、(1, 1) 是水，都跳過，不蓋新格（`zoning.json` 的 (1, 1) 變成商店）。土地 2 格、243／243，三站各 65 人次（`zoning.json` 是 66、66、67）。土地、建物、分區與水手算，鐵路、乘客與帳由 GameCore 取得，除了需求都和 `zoning.json` 相同。
+
+## 決策 111：水岸建物與臨水地價（schema 45）
+
+- 新結果 `needsShore`，`landValue` 觀察多了選填的 `waterPremium`（不是 0 時才寫：中點離水格不到 160 m 的格 600），`placeBuilding` 的 `kind` 多了 `wharf`、`marina`（ARCHITECTURE 決策 111）。沒有水的世界地價沒有 `waterPremium`，舊的 fixture 不必改，schema 30 到 44 照樣讀取：**沒有任何既有 fixture 的預期值改變**（`water-terrain.json` 沒有觀察地價，也沒有蓋成建物）。
+- `waterfront.json`：自由模式、8 × 8 格、第 0、1 列是水。遊艇港整個在陸地或整個在水上都是 `needsShore`；跨第 1／2 列的漁人碼頭與遊艇港蓋得起來；小住宅跨岸是 `onWater`。地價：水格 (0, 0) 與離水 128 m 的 (3, 4) 是 1,600（加 600），192 m 的 (4, 4) 與 (7, 7) 是 1,000。每個值都手算，寫在 description 裡。

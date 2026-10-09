@@ -1149,3 +1149,17 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：水域格 1.875″（人口格 30″ ÷ 16）；遊戲的格 4,096 單位（64 m），每格看中點落在哪個水域格；區塊 16 × 16 格。
 
 外部專案（只取想法，沒有程式碼進入本 repository）：OpenTTD（GPL-2.0）的水是一種格（`MP_WATER`），城鎮的道路與房子不蓋在水上（`DC_NO_WATER`），過水要橋；Simutrans（Artistic License）的水是水位以下的地面；OSMCoastline（GPL-3.0）把 `natural=coastline` 接成環、陸地在左邊；A/B Street 的 OSM 匯入只確認了它處理海岸線，沒有取用。資料：OpenStreetMap（ODbL 1.0，資料來源畫面已列），內政部的海岸線只在工具裡核對、沒有打包。
+
+## 水岸建物與臨水地價（決策 111）
+
+延續決策 105 的檢查（`a91453/railway-reference-private` `a7e377b`，六個來源）：參考庫沒有水岸建物，也沒有地價（決策 76 已查過），所以規則與數值是本專案的。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `UD()`（建物的取樣點都要落在允許的地面） | `GameWorld.straddlesShore(_:)`：岸邊的建物正方形下面要同時有水和陸地 | 改寫：允許的地面從「一種」變成「兩種都要有」 |
+| 作者提供的 SimCity BuildIt 截圖（海岸的碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋） | `PlacedBuildingKind.wharf`、`.marina`、`standsOnShore`、`needsShore`；`LandValueRules.waterPremium` | 只參考玩法（商業遊戲，不取數值與素材）；挖湖、填海、橋列為之後 |
+| （參考沒有） | 岸邊建物的規則、`waterPremium`／`waterReach`、`Terrain.isNearWater`、存檔版本 25、golden schema 45 | gap → 原生 |
+
+固定小數：臨水的距離 10,240 單位（160 m），比較的是中點距離的平方（整數）；溢價 600 美分／m²，和公園、公司建物的溢價相同。
+
+外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格；Cities: Skylines（商業遊戲）的港口沿著岸線放。

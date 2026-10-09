@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 44
+    static let schemaVersion = 45
 
     var description: String
     var initialState: InitialState
@@ -1005,6 +1005,9 @@ extension StepOutcome: Codable {
         // Schema 44 (decision 105).
         case "invalidTerrain":
             self = .rejected(.invalidTerrain)
+        // Schema 45 (decision 111).
+        case "needsShore":
+            self = .rejected(.needsShore)
         case "onWater":
             self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         default:
@@ -1175,6 +1178,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidZoneArea", forKey: .result)
         case .rejected(.invalidTerrain):
             try container.encode("invalidTerrain", forKey: .result)
+        case .rejected(.needsShore):
+            try container.encode("needsShore", forKey: .result)
         case .rejected(.onWater(let row, let column)):
             try container.encode("onWater", forKey: .result)
             try container.encode(row, forKey: .row)
@@ -2045,6 +2050,9 @@ struct LandValueSummary: Equatable {
     /// Schema 43 (decision 98): the premium of a zoned cell near the
     /// company's buildings, written only when it is not 0.
     var companyPremium: Int64
+    /// Schema 45 (decision 111): the premium by the water, written only
+    /// when it is not 0.
+    var waterPremium: Int64
 
     init(_ value: LandValue) {
         self.value = value.value
@@ -2053,12 +2061,13 @@ struct LandValueSummary: Equatable {
         accessPremium = value.accessPremium
         station = value.station?.rawValue
         companyPremium = value.companyPremium
+        waterPremium = value.waterPremium
     }
 }
 
 extension LandValueSummary: Codable {
     private enum CodingKeys: String, CodingKey {
-        case value, base, servicePremium, accessPremium, station, companyPremium
+        case value, base, servicePremium, accessPremium, station, companyPremium, waterPremium
     }
 
     /// `"station"` is required, `null` for none.
@@ -2073,6 +2082,7 @@ extension LandValueSummary: Codable {
         }
         station = try container.decodeIfPresent(Int.self, forKey: .station)
         companyPremium = try container.decodeIfPresent(Int64.self, forKey: .companyPremium) ?? 0
+        waterPremium = try container.decodeIfPresent(Int64.self, forKey: .waterPremium) ?? 0
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -2084,6 +2094,9 @@ extension LandValueSummary: Codable {
         try container.encode(station, forKey: .station)
         if companyPremium != 0 {
             try container.encode(companyPremium, forKey: .companyPremium)
+        }
+        if waterPremium != 0 {
+            try container.encode(waterPremium, forKey: .waterPremium)
         }
     }
 }

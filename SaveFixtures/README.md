@@ -132,6 +132,11 @@ no land on them, and for land read as it is needed only in the blocks read.
 Earlier saves have no water and grow as before; a build before version 24
 refuses a version 24 save rather than dropping the water.
 
+Since version 25 (decision 111) a placed building can be a `"wharf"` or a
+`"marina"`, which stand on the shore. Earlier saves have neither; a build
+before version 25 refuses a version 25 save rather than calling those
+buildings damaged.
+
 None of these saves holds anything of the grid: the app never wrote one
 that did. Since Stage F3c (ARCHITECTURE decision 51) a save with grid
 track, a station on tiles or a train on the grid, which only a save made by
@@ -164,3 +169,4 @@ hand could hold, is refused with that reason
 | `v22-company-buildings.json` | 22 | The company's buildings (decision 94): a world 131,072 × 98,304 units, managed, with demand from land and town growth, one home cell at row 5, column 5 and the station S0 beside it; a house and an office block bought (2,304,000 and 25,600,000 cents with their land) and on the books, filled twice at a service of 800 (2 residents and 2 jobs, 2 and 26), and the day's rent, upkeep and land tax settled as a `dailyProperty` row. Written by the version 22 build (`CompanyBuildingsTests.companyBuildingsWorld()`, `COMPANY_BUILDINGS_SAVE_NEW=1`; it is in `CompanyBuildingsTests` because it fills and settles through GameCore's internal steps). |
 | `v23-zoning.json` | 23 | Zoning (decision 98): the version 22 world's land and station S0, a house bought beside it, homes zoned on row 3 (columns 3 to 7), shops on row 10 (4 to 6), no development on row 12 (0 to 3) and reserved land on row 14 (10 to 12), 15 cells in four runs, run ten minutes. Written by the version 23 build (`ZoningTests.zoningWorld()`, `ZONING_SAVE_NEW=1`). |
 | `v24-water.json` | 24 | Water (decision 105): the version 23 world's size, land (one home cell at row 5, column 5) and station S0, managed with demand from land and town growth, by the sea (rows 0 to 2, three runs of 32 cells) with a river down column 10 below it (rows 3 to 23, 21 runs of one cell): 117 cells of water in `"terrain": {"water": [...]}`; a house bought beside the river (touching its edge from the west), homes zoned on rows 2 to 3, columns 3 to 7, of which only row 3's five cells were zoned (row 2 is the sea), run ten minutes. Written by the version 24 build (`TerrainTests.waterWorld()`, `WATER_SAVE_NEW=1`). |
+| `v25-shore-buildings.json` | 25 | Shore buildings (decision 111): the version 24 world (the sea on rows 0 to 2, a river down column 10, one home cell, the station S0, homes zoned on row 3), with the house bought beside the river now paying for its land by the water (2,048,000 + 409,600 cents: 256 m² at 1,000 + 600 a m²) and a marina across the river's west bank (rows 14 to 15, columns 9 to 10; 8,192,000 + 1,638,400), run ten minutes. Written by the version 25 build (`TerrainTests.shoreWorld()`, `SHORE_SAVE_NEW=1`). |

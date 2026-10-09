@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 45,
+  "description": "Shore buildings and land by the water (ARCHITECTURE decision 111): free play, 32768 x 32768 units (8 x 8 cells of 64 m), no stations, no land. setWater makes rows 0 and 1 water (two runs of 8 cells, 16 cells). A wharf (24 m, 1536 units a side) and a marina (32 m, 2048) stand on the shore: part of their square over water and part on land. A marina centred at (20480, 20480), wholly on land in rows 4 and 5, or at (20480, 2048), wholly over the water of row 0, is refused with needsShore. A wharf centred at (6144, 8192), on row 2's north edge (y 7424 to 8960: rows 1, water, and 2, land), is building 1. A house there, centred at (14336, 8192) (x 13824 to 14848, column 3), is still refused with onWater naming (1, 3), the first water cell under it. A marina centred at (22528, 8192) (x 21504 to 23552, columns 5 and 6; rows 1 and 2) is building 2; free play pays nothing. Land value with no station is the empty cell's base, 1000 cents a m2; a cell whose middle lies within 160 m (10240 units) of a water cell's middle, the water's own cells included, adds waterPremium 600: (0, 0), water, 1600; (3, 4), 2 rows (8192 units, 128 m) from row 1, 1600; (4, 4), 3 rows (12288, 192 m), 1000; (7, 7), 1000. Every value is worked out by hand.",
+  "initialState": {
+    "worldWidth": 32768,
+    "worldHeight": 32768,
+    "balance": 10000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "setWater",
+        "runs": [
+          {
+            "row": 0,
+            "column": 0,
+            "count": 8
+          },
+          {
+            "row": 1,
+            "column": 0,
+            "count": 8
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "marina",
+        "point": {
+          "x": 20480,
+          "y": 20480
+        }
+      },
+      "expect": {
+        "result": "needsShore"
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "marina",
+        "point": {
+          "x": 20480,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "needsShore"
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "wharf",
+        "point": {
+          "x": 6144,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "house",
+        "point": {
+          "x": 14336,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "onWater",
+        "row": 1,
+        "column": 3
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "marina",
+        "point": {
+          "x": 22528,
+          "y": 8192
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "placedBuilding",
+        "building": 2
+      },
+      "expect": {
+        "found": true,
+        "placedBuilding": {
+          "id": 2,
+          "kind": "marina",
+          "x": 22528,
+          "y": 8192
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 0,
+        "column": 0
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1600,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null,
+          "waterPremium": 600
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 3,
+        "column": 4
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1600,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null,
+          "waterPremium": 600
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 4,
+        "column": 4
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "landValue",
+        "row": 7,
+        "column": 7
+      },
+      "expect": {
+        "found": true,
+        "landValue": {
+          "value": 1000,
+          "base": 1000,
+          "servicePremium": 0,
+          "accessPremium": 0,
+          "station": null
+        }
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 10000,
+    "gameMinutes": 0,
+    "lines": [],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "placedBuildings": [
+      {
+        "id": 1,
+        "kind": "wharf",
+        "x": 6144,
+        "y": 8192
+      },
+      {
+        "id": 2,
+        "kind": "marina",
+        "x": 22528,
+        "y": 8192
+      }
+    ],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [],
+    "trafficControl": false,
+    "trains": [],
+    "water": 16
+  }
+}
