@@ -36,8 +36,8 @@ final class TutorialUITests: XCTestCase {
         next.tap()
         waitForEnabled(app, false)
 
-        // Tap the map in a row the card leaves free: the card may sit on the
-        // map (it may cover part of it, never a control), above or below.
+        // Tap the map where the card leaves it free: the card may sit on
+        // the map (it may cover part of it, never a control).
         // The underlying map and the outlined Build Track action stay usable.
         let map = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
@@ -56,15 +56,27 @@ final class TutorialUITests: XCTestCase {
         let visibleMap = wholeMap
             .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
             .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
-        let row = freeRow(in: visibleMap, avoiding: card.frame)
-        // The row can be the map's bottom edge, where the Map Layers button
-        // sits in the leading corner: start the track to its right.
+        // Two points 80 apart on the map that no control covers: not the
+        // card (on a wide screen it can stand beside the map's middle,
+        // so a free row alone is not enough), not the Map Layers button,
+        // and not the details card at the trailing side, where the Build
+        // Track button is (decision 106).
         let layers = app.buttons["map.layers"]
-        let left = layers.exists ? max(visibleMap.minX + 50, layers.frame.maxX + 24) : visibleMap.minX + 50
+        let action = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
+        var covered = [card.frame]
+        if layers.exists { covered.append(layers.frame) }
+        let free = action.exists
+            ? visibleMap.divided(atDistance: max(0, visibleMap.maxX - (action.frame.minX - 30)), from: .maxXEdge).remainder
+            : visibleMap
+        guard let points = freePoints(in: free, avoiding: covered) else {
+            return XCTFail("No free place on the map: map \(visibleMap), free \(free), card \(card.frame), layers \(layers.frame), action \(action.frame)")
+        }
+        let (first, second) = points
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        origin.withOffset(CGVector(dx: left, dy: row)).tap()
-        origin.withOffset(CGVector(dx: left + 80, dy: row)).tap()
-        waitForEnabled(app, false, "Choosing the ends only previews track")
+        origin.withOffset(CGVector(dx: first.x, dy: first.y)).tap()
+        origin.withOffset(CGVector(dx: second.x, dy: second.y)).tap()
+        let tapped = "taps \(first), \(second); card \(card.frame), free \(free)"
+        waitForEnabled(app, false, "Choosing the ends only previews track (\(tapped))")
         let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
         XCTAssertTrue(build.waitForExistence(timeout: 5))
         waitForEnabled(app, true, buttonDescription: "Build Track (label prefix)", query: {
@@ -214,12 +226,25 @@ final class TutorialUITests: XCTestCase {
         return query.firstMatch
     }
 
-    /// A row of `map` 24 points from an edge of the part `card` does not
-    /// cover: above the card when there is room, otherwise below it.
-    private func freeRow(in map: CGRect, avoiding card: CGRect) -> CGFloat {
-        guard card.intersects(map) else { return map.minY + 24 }
-        if card.minY - map.minY >= 48 { return map.minY + 24 }
-        return min(card.maxY + 24, map.maxY - 24)
+    /// Two points of `map` 80 points apart in a row, each at least 24
+    /// points inside it and clear of every frame in `covered` by 16: the
+    /// first such pair, top row first, leading first.
+    private func freePoints(in map: CGRect, avoiding covered: [CGRect]) -> (CGPoint, CGPoint)? {
+        let blocked = covered.map { $0.insetBy(dx: -16, dy: -16) }
+        func isFree(_ point: CGPoint) -> Bool {
+            map.insetBy(dx: 24, dy: 24).contains(point) && !blocked.contains { $0.contains(point) }
+        }
+        var y = map.minY + 24
+        while y <= map.maxY - 24 {
+            var x = map.minX + 24
+            while x + 80 <= map.maxX - 24 {
+                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + 80, y: y)
+                if isFree(first), isFree(second) { return (first, second) }
+                x += 16
+            }
+            y += 16
+        }
+        return nil
     }
 
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {
