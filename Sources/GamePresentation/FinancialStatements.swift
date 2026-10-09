@@ -87,7 +87,16 @@ extension FinanceSummary {
     /// cash. The reference's investing activities are quota purchases;
     /// here they are what was paid for track, stations, trains and cars,
     /// and the financing activities are the loan, which it has not.
-    public func cashFlowRows(previous: FinanceSummary?, in language: DisplayLanguage) -> [StatementRow] {
+    ///
+    /// With `closingCash`, the cash at the period's end (and the previous
+    /// period's, if any), two more rows (decision 123): the cash at its
+    /// start and at its end, so the net change can be checked against the
+    /// cash in hand. Without them the real-world demo, which starts with the
+    /// money its lines cost and spends it at once, showed a day's purchases
+    /// of $ 6.6 million beside $ 3 million still in the bank.
+    public func cashFlowRows(
+        previous: FinanceSummary?, closingCash: (current: Money, previous: Money?)? = nil, in language: DisplayLanguage
+    ) -> [StatementRow] {
         func row(_ title: String, _ value: (FinanceSummary) -> Money, _ style: StatementRow.Style = .item) -> StatementRow {
             StatementRow(title: title, current: value(self), previous: previous.map(value), style: style)
         }
@@ -111,6 +120,31 @@ extension FinanceSummary {
             row(language.text("Repaid", "償還借款")) { out($0.loanRepaid) },
             row(language.text("Net from financing", "籌資活動淨額"), \.financingCashFlow, .subtotal),
             row(language.text("Net change in cash", "本期現金淨增減"), \.netCashFlow, .total),
+        ] + cashInHand(previous: previous, closingCash: closingCash, in: language)
+    }
+
+    private func cashInHand(
+        previous: FinanceSummary?, closingCash: (current: Money, previous: Money?)?, in language: DisplayLanguage
+    ) -> [StatementRow] {
+        guard let closingCash else { return [] }
+        let previousClosing = previous == nil ? nil : closingCash.previous
+        var previousOpening: Money?
+        if let previous, let previousClosing {
+            previousOpening = previousClosing - previous.netCashFlow
+        }
+        return [
+            StatementRow(
+                title: language.text("Cash at the start", "期初現金"),
+                current: closingCash.current - netCashFlow,
+                previous: previousOpening,
+                style: .subtotal
+            ),
+            StatementRow(
+                title: language.text("Cash at the end", "期末現金"),
+                current: closingCash.current,
+                previous: previousClosing,
+                style: .total
+            ),
         ]
     }
 
