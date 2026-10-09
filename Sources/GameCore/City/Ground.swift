@@ -126,11 +126,12 @@ extension GameWorld {
     /// ground from now on.
     ///
     /// - Throws: ``GameError/invalidGround`` when `blocks` is empty, or
-    ///   lists a block outside the world, twice, or already read.
+    ///   lists a block outside the world, twice, or already read; or when a
+    ///   world without ground has track, as ``mapGround()``.
     public mutating func setGround(_ blocks: [GroundBlock]) throws(GameError) {
         let rows = Land.blockRows(in: bounds), columns = Land.blockColumns(in: bounds)
         let sorted = blocks.sorted { $0.block < $1.block }
-        guard !sorted.isEmpty,
+        guard ground.isMapped || network.nodes.isEmpty, !sorted.isEmpty,
               sorted.allSatisfy({
                   (0..<rows).contains($0.block.row) && (0..<columns).contains($0.block.column) && ground.blocks[$0.block] == nil
               }),
