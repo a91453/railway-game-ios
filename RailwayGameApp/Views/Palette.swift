@@ -40,6 +40,10 @@ enum Palette {
     static let house = hex(light: 0xF4A259, dark: 0xF6B47A)
     static let shop = hex(light: 0xE05A4F, dark: 0xEC7A70)
     static let office = hex(light: 0x4C7FD0, dark: 0x7AA2E3)
+    /// Decision 111: the shore's buildings, a weathered pier's brown and a
+    /// sea teal.
+    static let wharf = hex(light: 0xA0704A, dark: 0xC09070)
+    static let marina = hex(light: 0x1F9E9A, dark: 0x4CC3BF)
 
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))

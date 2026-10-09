@@ -402,6 +402,8 @@ extension PlacedBuildingKind {
         case .house: "house.fill"
         case .shop: "storefront.fill"
         case .office: "building.2.fill"
+        case .wharf: "fish.fill"
+        case .marina: "sailboat.fill"
         }
     }
 }

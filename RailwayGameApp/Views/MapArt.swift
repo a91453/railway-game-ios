@@ -488,6 +488,8 @@ enum MapArt {
             case .house: Palette.house
             case .shop: Palette.shop
             case .office: Palette.office
+            case .wharf: Palette.wharf
+            case .marina: Palette.marina
             }
             let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
             context.fill(shape, with: .color(colour))

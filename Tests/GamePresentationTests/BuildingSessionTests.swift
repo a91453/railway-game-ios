@@ -39,8 +39,8 @@ final class BuildingSessionTests: XCTestCase {
 
     func testTheBuildingToolReadsInChinese() throws {
         let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
-        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公樓"])
-        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block"])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公樓", "漁人碼頭", "遊艇港"])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block", "Wharf", "Marina"])
         session.buildingKind = .shop
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好商店 #1。"))
@@ -162,6 +162,19 @@ final class BuildingSessionTests: XCTestCase {
         // On the shore, it can.
         session.tapBuildingTool(at: PlanPoint(x: 10_240, y: 21_000), reach: 0)
         XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, true)
+
+        // A marina goes on the shore, part over the water (decision 111).
+        session.buildingKind = .marina
+        session.tapBuildingTool(at: PlanPoint(x: 10_240, y: 30_720), reach: 0)
+        XCTAssertEqual(session.buildingPreviewText, "A wharf or a marina goes on the shore, part over the water.")
+        XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, false)
+        XCTAssertEqual(GameError.needsShore.playerMessage(in: .traditionalChinese), "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
+        session.tapBuildingTool(at: PlanPoint(x: 10_240, y: 20_480), reach: 0)
+        XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, true)
+        XCTAssertTrue(session.confirmBuilding())
+        XCTAssertEqual(session.world.placedBuildings.map(\.kind), [.marina])
+        XCTAssertEqual(PlacedBuildingKind.wharf.title(in: .traditionalChinese), "漁人碼頭")
+        XCTAssertEqual(PlacedBuildingKind.marina.title(in: .traditionalChinese), "遊艇港")
     }
 
     func testFreePlaySaysWhichCityBuildingsComeDownAndReadsInChinese() throws {
