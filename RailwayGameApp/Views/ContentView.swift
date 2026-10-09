@@ -5,8 +5,9 @@ import SwiftUI
 /// The game screen (ARCHITECTURE decision 106): the map fills it, and
 /// the controls float over its edges, so it is never pushed aside. The
 /// status pill (cash, time, speed, menu) at the top leading corner, the
-/// dock (the tools, the lines and the company's figures, Undo) at the
-/// bottom leading corner, and the details card (the selection and the
+/// dock (Build, the lines and the company's figures, Undo) at the bottom
+/// leading corner, the tools down the leading edge while building
+/// (decision 114), and the details card (the selection and the
 /// tool's options) at the trailing side, only while there is something to
 /// show; the lines, a station and the company's figures slide in at that
 /// side too, rather than as sheets over the map. The same on every device:
@@ -170,9 +171,13 @@ struct ContentView: View {
             let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
             let cardBottom = strip + (besideDock ? 0 : dockSize.height)
             let cardHeight = max(120, proxy.size.height - pillDepth - cardBottom - 2 * margin)
+            // Decision 114: the tools down the leading edge while building,
+            // between the pill and the dock.
+            let showsRail = BuildToolRail.isShown(session)
+            let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             map
                 .environment(\.mapInsets, EdgeInsets(
-                    top: pillDepth, leading: 0, bottom: dockSize.height,
+                    top: pillDepth, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
                     trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                 ))
                 // A panel beside the map runs down its whole side.
@@ -190,6 +195,14 @@ struct ContentView: View {
                             .padding([.top, .trailing], margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
                             .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if showsRail {
+                        BuildToolRail(session: session, maxHeight: railHeight)
+                            .padding(.top, pillDepth)
+                            .padding([.top, .leading], margin)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -219,6 +232,7 @@ struct ContentView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: isOpen)
+                .animation(.easeInOut(duration: 0.2), value: showsRail)
                 .animation(.easeInOut(duration: 0.25), value: sidePanel)
         }
     }
@@ -328,7 +342,7 @@ private struct StatusPill: View {
     }
 }
 
-/// The tools, the lines and the company's figures, and Undo
+/// Build, the lines and the company's figures, and Undo
 /// (``ControlPanel``'s tools), in a glass dock at the bottom of the screen
 /// (decision 106), with the button that shows or hides the details card.
 private struct ControlDock: View {

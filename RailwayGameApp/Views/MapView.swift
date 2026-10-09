@@ -228,6 +228,7 @@ struct MapView: View {
                         }
                     }
                     .padding(.top, insets.top)
+                    .padding(.leading, insets.leading)
                     .padding(.trailing, insets.trailing)
                 }
                 .overlay(alignment: .bottomTrailing) {
@@ -265,8 +266,10 @@ struct MapView: View {
                         }
                     }
                     .padding(12)
-                    // Above the dock (decision 106).
+                    // Above the dock (decision 106), beside the tools
+                    // (decision 114).
                     .padding(.bottom, insets.bottom)
+                    .padding(.leading, insets.leading)
                 }
                 // Decision 107: flags at the ends of the track previewed,
                 // and beside it, or the building shown, cancel and build.
@@ -285,12 +288,12 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .offset(x: max(insets.leading + 8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
                             .allowsHitTesting(false)
                     }
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .offset(x: max(insets.leading + 8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
                             .allowsHitTesting(false)
                     }
                 }
