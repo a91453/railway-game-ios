@@ -14,6 +14,20 @@ extension EnvironmentValues {
     /// (``mapInsets``' trailing inset): the details card ends there, and
     /// below it the map's bottom-trailing buttons keep to the edge.
     @Entry var mapTrailingInsetDepth = CGFloat.infinity
+    /// The screen's safe area (``ContentView``, decision 120): the map is
+    /// drawn to the screen's edges, under the camera housing and the home
+    /// indicator, and its banners, keys and buttons keep inside this.
+    @Entry var mapSafeArea = EdgeInsets()
+}
+
+extension EdgeInsets {
+    /// Both insets on each edge.
+    func adding(_ other: EdgeInsets) -> EdgeInsets {
+        EdgeInsets(
+            top: top + other.top, leading: leading + other.leading,
+            bottom: bottom + other.bottom, trailing: trailing + other.trailing
+        )
+    }
 }
 
 /// A viewport-sized map. The camera and derived geometry are view state;
@@ -70,8 +84,12 @@ struct MapView: View {
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
+    @Environment(\.mapSafeArea) private var safeArea
     /// The height of the bottom-trailing buttons and key, with their margin.
     @State private var bottomTrailingHeight: CGFloat = 0
+    /// How far down the column at the top of the map (the status banner,
+    /// the construction HUD or the traffic key) reaches.
+    @State private var topColumnDepth: CGFloat = 0
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -101,10 +119,24 @@ struct MapView: View {
         GeometryReader { proxy in
             let bounds = session.world.bounds
             // A real-world map (Stage E2) keeps a strip at its bottom for
-            // Apple's logo and legal link; the game's map is the rest.
+            // Apple's logo and legal link, above the home indicator; the
+            // game's map is the rest.
             let realWorld = RealWorldFrame(world: session.world)
-            let strip = realWorld == nil ? 0 : AppleMapBackground.attributionHeight
+            let strip = realWorld == nil ? 0 : AppleMapBackground.attributionHeight + safeArea.bottom
+            // Decision 120: the map reaches the screen's edges, and what
+            // floats over it keeps inside the safe area (the strip takes
+            // the bottom's part) and clear of the screen's controls.
+            let screenEdges = EdgeInsets(
+                top: safeArea.top, leading: safeArea.leading,
+                bottom: strip > 0 ? 0 : safeArea.bottom, trailing: safeArea.trailing
+            )
+            let clear = insets.adding(screenEdges)
             let viewport = ScreenSize(width: proxy.size.width, height: max(proxy.size.height - strip, 1))
+            // Whether the bottom-trailing buttons stand beside the trailing
+            // controls (``EnvironmentValues/mapTrailingInsetDepth``): under a
+            // folded control card the edge is free.
+            let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
+                < screenEdges.top + trailingInsetDepth
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
             VStack(spacing: 0) {
@@ -243,9 +275,10 @@ struct MapView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    .padding(.top, insets.top)
-                    .padding(.leading, insets.leading)
-                    .padding(.trailing, insets.trailing)
+                    .padding(.top, clear.top)
+                    .padding(.leading, clear.leading)
+                    .padding(.trailing, clear.trailing)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
                 }
                 .overlay(alignment: .bottomTrailing) {
                     VStack(alignment: .trailing, spacing: 8) {
@@ -281,9 +314,11 @@ struct MapView: View {
                     }
                     .padding(12)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomTrailingHeight = $0 }
-                    // Beside the trailing controls only where they reach:
-                    // under a folded control card the edge is free.
-                    .padding(.trailing, viewport.height - bottomTrailingHeight >= trailingInsetDepth ? 0 : insets.trailing)
+                    // Beside the trailing controls only where they reach,
+                    // and then above the dock too: moved in from the edge on
+                    // a phone, the zoom buttons were under it.
+                    .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
+                    .padding(.bottom, besideTrailing ? clear.bottom : screenEdges.bottom)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -296,21 +331,26 @@ struct MapView: View {
                     .padding(12)
                     // Above the dock (decision 106), beside the tools
                     // (decision 114).
-                    .padding(.bottom, insets.bottom)
-                    .padding(.leading, insets.leading)
+                    .padding(.bottom, clear.bottom)
+                    .padding(.leading, clear.leading)
                 }
                 // Decision 107: flags at the ends of the track previewed,
                 // and beside it, or the building shown, cancel and build.
                 .overlay(alignment: .topLeading) {
-                    MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: insets)
+                    // Under the construction HUD, which shows how long the
+                    // track is and what it costs.
+                    MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
+                        top: max(clear.top, topColumnDepth), leading: clear.leading,
+                        bottom: clear.bottom, trailing: clear.trailing
+                    ))
                 }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
-                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: insets)
+                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
-                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: insets)
+                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
                 // Decision 117: something just put up.
                 .overlay(alignment: .topLeading) {
@@ -324,12 +364,12 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(insets.leading + 8, min(cellTooltip.at.x + 12, viewport.width - insets.trailing - 220)), y: max(insets.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .offset(x: max(clear.leading + 8, min(cellTooltip.at.x + 12, viewport.width - clear.trailing - 220)), y: max(clear.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
                             .allowsHitTesting(false)
                     }
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(insets.leading + 8, min(cityTooltip.at.x + 12, viewport.width - insets.trailing - 280)), y: max(insets.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -355,7 +395,8 @@ struct MapView: View {
                                 camera: projection,
                                 railways: session.railways,
                                 trackStyle: trackStyle,
-                                language: session.language
+                                language: session.language,
+                                safeArea: safeArea
                             )
                         } else {
                             AppleMapBackground(
@@ -364,7 +405,8 @@ struct MapView: View {
                                 style: mapStyle,
                                 railways: session.railways,
                                 trackStyle: trackStyle,
-                                language: session.language
+                                language: session.language,
+                                safeArea: safeArea
                             )
                         }
                     }
