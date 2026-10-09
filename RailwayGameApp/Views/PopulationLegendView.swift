@@ -25,6 +25,9 @@ struct PopulationLegendView: View {
     @Binding var hour: Int
     let isPlaying: Bool
     let onTogglePlay: () -> Void
+    /// Whether the player has zoned nothing yet: the zoning layer then shows
+    /// nothing, and says so (decision 123).
+    var nothingZoned = false
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -244,6 +247,15 @@ struct PopulationLegendView: View {
                 }
             }
             .accessibilityIdentifier("map.zoningLegend")
+            if nothingZoned {
+                Text(verbatim: language.text(
+                    "Nothing zoned yet: draw zones with Build, then Buildings, then Zone.",
+                    "還沒有劃分區：點「建設」→「建物」→「分區」來劃。"
+                ))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

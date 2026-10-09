@@ -14,6 +14,14 @@ struct BuildToolRail: View {
     /// dock. Past it the rail scrolls.
     let maxHeight: CGFloat
     @State private var contentHeight: CGFloat = 0
+    /// The column's height with names under the icons, measured while it
+    /// has them (decision 123): a phone held sideways has less room than
+    /// that between the pill and the dock, and the last button, Done, was
+    /// cut in half. The icons alone fit; the names stay the buttons'
+    /// accessibility labels.
+    @State private var labelledHeight: CGFloat = 0
+
+    private var isCompact: Bool { labelledHeight > maxHeight }
 
     /// The column's width.
     static let width: CGFloat = 72
@@ -25,17 +33,25 @@ struct BuildToolRail: View {
     }
 
     var body: some View {
+        let compact = isCompact
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: compact ? 4 : 6) {
                 ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
-                    toolButton(tool)
+                    toolButton(tool, compact: compact)
                 }
-                Divider()
-                    .padding(.horizontal, 6)
-                doneButton
+                if !compact {
+                    Divider()
+                        .padding(.horizontal, 6)
+                }
+                doneButton(compact: compact)
             }
-            .padding(6)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+            .padding(compact ? 4 : 6)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                contentHeight = height
+                // Only the labelled column's height decides, so taking the
+                // names away cannot bring them back.
+                if !compact { labelledHeight = height }
+            }
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollIndicators(.hidden)
@@ -44,14 +60,14 @@ struct BuildToolRail: View {
         .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
-    private func toolButton(_ tool: ConstructionTool) -> some View {
+    private func toolButton(_ tool: ConstructionTool, compact: Bool) -> some View {
         let isActive = session.tool == tool
         return Button {
             // A tool chosen again stays chosen: Done, or Build in the dock,
             // goes back to looking at the map.
             session.selectTool(tool)
         } label: {
-            TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
+            label(tool.systemImage, tool.title(in: session.language), isActive: isActive, compact: compact)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
         .accessibilityLabel(tool.accessibilityName)
@@ -63,12 +79,12 @@ struct BuildToolRail: View {
 
     /// Back to looking at the map. Selected while no tool is chosen, which
     /// only shows during the tutorial (the rail is hidden otherwise).
-    private var doneButton: some View {
+    private func doneButton(compact: Bool) -> some View {
         let isActive = session.tool == .select
         return Button {
             session.selectTool(.select)
         } label: {
-            TabLabel(systemImage: "xmark", title: session.language.text("Done", "完成"), isActive: isActive)
+            label("xmark", session.language.text("Done", "完成"), isActive: isActive, compact: compact)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Done building", "完成建設")))
@@ -77,6 +93,19 @@ struct BuildToolRail: View {
         .accessibilityIdentifier("tool.select")
         .accessibilityAddTraits(isActive ? .isSelected : [])
         .tutorialTarget(TutorialTarget(tool: .select))
+    }
+
+    @ViewBuilder
+    private func label(_ systemImage: String, _ title: String, isActive: Bool, compact: Bool) -> some View {
+        if compact {
+            // 32 points and the style's 4 above and below: four buttons in
+            // the room a phone held sideways leaves.
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .frame(minWidth: 48, maxWidth: .infinity, minHeight: 32)
+        } else {
+            TabLabel(systemImage: systemImage, title: title, isActive: isActive)
+        }
     }
 }
 

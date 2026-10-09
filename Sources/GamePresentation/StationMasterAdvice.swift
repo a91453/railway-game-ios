@@ -65,6 +65,12 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// What the station master says when tapped with no advice to give
+    /// (decision 123): before, a tap then did nothing, as if it were broken.
+    public static func allWellText(in language: DisplayLanguage) -> String {
+        language.text("All running well. Keep it up!", "一切順利，繼續保持！")
+    }
+
     /// What the station master says.
     public func text(in language: DisplayLanguage) -> String {
         switch self {
@@ -90,8 +96,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .buildTrack:
             language.text(
-                "Welcome! Choose the track tool and lay some track to begin.",
-                "歡迎！先選軌道工具，鋪一段軌道吧。"
+                "Welcome! Tap Build, then Network, and lay some track to begin.",
+                "歡迎！點「建設」，再選「路網」，鋪一段軌道吧。"
             )
         case .buildStation:
             language.text(

@@ -633,12 +633,12 @@
         }
       }
     },
-    "Choose Network to build track, platforms and stations. Selecting only inspects." : {
+    "Tap Build, then Network, to lay track, platforms and stations. With no tool, a tap on the map only looks." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇「路網」來鋪設軌道、設置月台與車站。「選取」只會檢視。"
+            "value" : "點「建設」再選「路網」，就能鋪軌道、設月台與車站。沒有選工具時，點地圖只是查看。"
           }
         }
       }
@@ -1163,12 +1163,12 @@
         }
       }
     },
-    "Map" : {
+    "Apple Maps" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "地圖"
+            "value" : "Apple 地圖"
           }
         }
       }

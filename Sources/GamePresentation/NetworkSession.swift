@@ -552,7 +552,13 @@ extension GameSession {
                     "從\(start.text(in: language))開始。請點終點，或從起點拖曳過去。"
                 )
             }
-            let ends = "\(start.text(in: language)) → \(end.text(in: language))"
+            // Two new nodes say nothing an arrow between them would add.
+            let ends: String
+            if case .point = start, case .point = end {
+                ends = language.text("A new stretch of track", "一段新的軌道")
+            } else {
+                ends = "\(start.text(in: language)) → \(end.text(in: language))"
+            }
             guard let real = realTrackSectionText(from: start, to: end) else { return ends }
             return "\(ends) · \(real)"
         case .platform:

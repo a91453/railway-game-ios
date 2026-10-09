@@ -215,10 +215,17 @@ struct EconomyPanel: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("economy.statement")
             let report = session.world.financeReport(period)
+            // The cash now ends this period so far; the last one ended with
+            // what this one started with.
+            let cash = session.world.economy.balance
             StatementGrid(
                 rows: statement == .income
                     ? report.current.incomeStatementRows(previous: report.previous, in: session.language)
-                    : report.current.cashFlowRows(previous: report.previous, in: session.language),
+                    : report.current.cashFlowRows(
+                        previous: report.previous,
+                        closingCash: (cash, cash - report.current.netCashFlow),
+                        in: session.language
+                    ),
                 currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
             )
         }

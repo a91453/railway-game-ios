@@ -84,7 +84,9 @@ struct MiniMapView: View {
         Button {
             isOpen = true
         } label: {
-            Image(systemName: "map")
+            // Not the map style menu's "map" (decision 123): a small map in
+            // the corner of a larger one.
+            Image(systemName: "rectangle.inset.bottomright.filled")
                 .font(.title3)
                 .frame(width: 44, height: 44)
                 .glassBackground(in: Circle(), interactive: true)

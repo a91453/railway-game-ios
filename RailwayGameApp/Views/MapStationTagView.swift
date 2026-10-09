@@ -109,10 +109,11 @@ struct MapStationTagView: View {
     }
 
     /// Under `point`, clear of the station's mark (its bubbles, decision
-    /// 109, stand over it), or over it when there is no room below; kept
-    /// clear of the controls along the map's edges.
+    /// 109, stand over it) and of its name under the mark (decision 123:
+    /// the tag covered the name's lower half), or over it when there is no
+    /// room below; kept clear of the controls along the map's edges.
     private func placement(under point: ScreenPoint) -> CGSize {
-        let margin = 8.0, clearance = 16.0
+        let margin = 8.0, clearance = 34.0
         let width = Double(size.width), height = Double(size.height)
         let minX = Double(insets.leading) + margin
         let maxX = viewport.width - Double(insets.trailing) - width - margin

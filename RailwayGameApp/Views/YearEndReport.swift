@@ -81,7 +81,11 @@ struct YearEndReport: View {
                 Text(verbatim: language.text("Income statement", "損益表"))
             }
             Section {
-                StatementGrid(rows: statement.income.cashFlowRows(previous: previous?.income, in: language),
+                StatementGrid(rows: statement.income.cashFlowRows(
+                                  previous: previous?.income,
+                                  closingCash: (statement.closing.cash, previous?.closing.cash),
+                                  in: language
+                              ),
                               currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language))
             } header: {
                 Text(verbatim: language.text("Cash flows", "現金流量表"))

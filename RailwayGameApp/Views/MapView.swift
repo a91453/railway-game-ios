@@ -143,6 +143,16 @@ struct MapView: View {
             // folded control card the edge is free.
             let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
+            // Decision 123: beside a card or panel that takes more than a
+            // third of the width (a phone's), the zoom buttons would stand in
+            // the middle of the map, over what was selected; they give way,
+            // as the overview map does, and a pinch still zooms. Measured
+            // with their own fixed height (44 points and two paddings of
+            // 12 each side), not the column's, which they leave. The
+            // tutorial points at them, so they stay while it runs.
+            let zoomGivesWay = session.tutorial == nil
+                && insets.trailing > viewport.width / 3
+                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
             VStack(spacing: 0) {
@@ -299,7 +309,8 @@ struct MapView: View {
                                 opacity: opacityBinding(for: mode),
                                 hour: Bindable(screen).popTravelHour,
                                 isPlaying: screen.isPlayingPopTravel,
-                                onTogglePlay: togglePopTravelPlay
+                                onTogglePlay: togglePopTravelPlay,
+                                nothingZoned: session.world.zones.isEmpty
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
@@ -320,7 +331,9 @@ struct MapView: View {
                             }
                             .padding(.trailing, 12)
                         }
-                        zoomControls(camera: projection)
+                        if !zoomGivesWay {
+                            zoomControls(camera: projection)
+                        }
                     }
                     .padding(12)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomTrailingHeight = $0 }
@@ -404,6 +417,7 @@ struct MapView: View {
                                 railways: session.railways,
                                 trackStyle: trackStyle,
                                 language: session.language,
+                                stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 }
                             )
@@ -793,10 +807,12 @@ private struct TrafficLegend: View {
             let deadlocked = traffic.waits.filter(\.isDeadlocked).count
             // Theme: kept for Phase 8. The counts are in the traffic
             // overlay's colours on the map.
+            // Each count says what it counts (decision 123): "●3" alone
+            // meant nothing to a player.
             HStack(spacing: 8) {
-                count(traffic.authorities.count, Palette.metroGreen)
-                count(traffic.waits.count - deadlocked, Palette.metroAmber)
-                count(deadlocked, Palette.metroRed)
+                count(traffic.authorities.count, Palette.metroGreen, language.text("cleared", "可行駛"))
+                count(traffic.waits.count - deadlocked, Palette.metroAmber, language.text("waiting", "等候"))
+                count(deadlocked, Palette.metroRed, language.text("deadlocked", "死結"))
             }
             .font(.caption2.monospacedDigit().weight(.semibold))
             .padding(.horizontal, 8)
@@ -811,11 +827,11 @@ private struct TrafficLegend: View {
     }
 
     @ViewBuilder
-    private func count(_ value: Int, _ color: Color) -> some View {
+    private func count(_ value: Int, _ color: Color, _ name: String) -> some View {
         if value > 0 {
             HStack(spacing: 3) {
                 Circle().fill(color).frame(width: 8, height: 8)
-                Text(verbatim: "\(value)")
+                Text(verbatim: "\(value) \(name)")
             }
         }
     }

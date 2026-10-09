@@ -48,6 +48,21 @@ final class FinancialStatementsTests: XCTestCase {
         let flows = cash.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(flows.reduce(Money.zero, +), cash.last?.current)
 
+        // Decision 123: with the cash at the end, the cash at the start and
+        // at the end follow the net change, each period's start its end
+        // less its change.
+        let closing = Money(5_000_000)
+        let inHand = report.previous.cashFlowRows(previous: report.current, closingCash: (closing, Money(4_000_000)), in: .english)
+        XCTAssertEqual(inHand.dropLast(2).map(\.title), report.previous.cashFlowRows(previous: report.current, in: .english).map(\.title))
+        XCTAssertEqual(inHand.suffix(2).map(\.title), ["Cash at the start", "Cash at the end"])
+        XCTAssertEqual(inHand.last, StatementRow(title: "Cash at the end", current: closing, previous: Money(4_000_000), style: .total))
+        XCTAssertEqual(inHand[inHand.count - 2].current, closing - report.previous.netCashFlow)
+        XCTAssertEqual(inHand[inHand.count - 2].previous, Money(4_000_000) - report.current.netCashFlow)
+        XCTAssertEqual(
+            report.previous.cashFlowRows(previous: nil, closingCash: (closing, Money(1)), in: .english).last?.previous, nil,
+            "no previous period, no previous cash"
+        )
+
         let sheet = world.balanceSheet()
         let rows = sheet.rows(previous: nil, in: .english)
         XCTAssertEqual(rows.map(\.title), [
