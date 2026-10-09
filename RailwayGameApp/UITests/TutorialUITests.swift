@@ -20,7 +20,7 @@ final class TutorialUITests: XCTestCase {
 
     func testBuildingTrackEnablesNextAndSkipEnds() {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -44,13 +44,18 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(map.waitForExistence(timeout: 5))
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 5))
-        // On a phone the map runs up under the HUD, which floats over its
-        // top: only the map below the HUD can be tapped.
+        // The map runs up under the status pill, which floats over its
+        // top: only the map below the pill can be tapped.
         let gameTime = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
         let hudBottom = max(app.buttons["hud.menu"].frame.maxY, gameTime.frame.maxY) + 12
+        // The dock floats over the map's bottom (decision 106): only the
+        // map above it can be tapped too.
+        let dockTop = app.buttons["tool.select"].frame.minY - 12
         let wholeMap = map.frame.intersection(app.frame)
-        let visibleMap = wholeMap.divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
+        let visibleMap = wholeMap
+            .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
+            .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
         let row = freeRow(in: visibleMap, avoiding: card.frame)
         // The row can be the map's bottom edge, where the Map Layers button
         // sits in the leading corner: start the track to its right.
@@ -107,7 +112,7 @@ final class TutorialUITests: XCTestCase {
 
     private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false) {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
         if largeText {
@@ -116,7 +121,7 @@ final class TutorialUITests: XCTestCase {
         app.launch()
         defer {
             app.terminate()
-            XCUIDevice.shared.orientation = .portrait
+            XCUIDevice.shared.orientation = .landscapeLeft
         }
 
         let start = app.buttons["start.tutorial"]
@@ -156,7 +161,9 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, true)
 
         // Reflowing the card must preserve navigation and usable controls.
-        XCUIDevice.shared.orientation = .landscapeLeft
+        // A phone turns from one side to the other (decision 106: it
+        // plays only on its side); an iPad from upright to its side.
+        XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertTrue(skip.waitForExistence(timeout: 5))
         XCTAssertTrue(skip.isHittable)
         checkToolIsUncovered(app, identifier: "tool.network")

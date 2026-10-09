@@ -89,8 +89,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
-        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.25))
-        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.4))
+        // In the map's leading half: the details card floats over its
+        // trailing side while a tool is chosen (decision 106).
+        let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.25))
+        let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         let zoned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "0 cells zoned"), object: count)
         XCTAssertEqual(XCTWaiter().wait(for: [zoned], timeout: 10), .completed, "The drag zoned nothing: \(count.label)")

@@ -8,7 +8,7 @@ import XCTest
 final class RealWorldMapUITests: XCTestCase {
     func testARealWorldGameStartsFromAPlaceAndIsSavedAsOne() {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -50,7 +50,7 @@ final class RealWorldMapUITests: XCTestCase {
     /// trains take. Full lane only (not in the pull request gate).
     func testTheRealWorldDemoShowsMovementAuthorityOnTheMap() {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()

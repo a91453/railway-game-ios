@@ -77,10 +77,10 @@ private struct TutorialOverlay: View {
 /// step's own controls first. Missing targets use the centre.
 ///
 /// Covering the map costs nothing, as long as a band of it at least
-/// ``minimumFreeMap`` deep stays free beside the card: on a phone in
-/// portrait the map between the HUD and the open control drawer can be
-/// barely taller than the card, and a card over all of it would leave the
-/// player nowhere to tap. Covering the HUD's controls then costs less, and
+/// ``minimumFreeMap`` deep stays free beside the card: on a phone, held on
+/// its side, the map between the status pill and the dock can be barely
+/// taller than the card, and a card over all of it would leave the player
+/// nowhere to tap. Covering the HUD's controls then costs less, and
 /// a card too tall for any place (large text) is measured shorter, its
 /// explanation scrolling, so that band stays free.
 private struct TutorialCardLayout: Layout {

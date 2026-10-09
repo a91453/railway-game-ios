@@ -2,108 +2,91 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// The game screen: HUD, map and controls.
-///
-/// The map has the screen. On a phone in portrait it runs up under the
-/// status bar, the HUD floats over its top in glass, and the controls sit
-/// in a drawer under it that folds down to the tool picker
-/// (``ControlDrawer``). On an iPad either way up, and on a phone on its
-/// side, the map fills the screen and the HUD and controls float over its
-/// trailing side in a glass card that folds up the same way
-/// (``ControlCard``).
+/// The game screen (ARCHITECTURE decision 106): the map fills it, and
+/// the controls float over its edges, so it is never pushed aside. The
+/// status pill (cash, time, speed, menu) at the top leading corner, the
+/// dock (the tools, the lines and the company's figures, Undo) at the
+/// bottom leading corner, and the details card (the selection and the
+/// tool's options) at the trailing side, only while there is something to
+/// show. The same on every device: a phone is held on its side (decision
+/// 106), an iPad either way.
 struct ContentView: View {
     let session: GameSession
     /// Saves the game and goes back to the start screen (Stage C4).
     let launcher: GameLauncher
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(GameAudio.self) private var audio
-    @State private var isWide = false
-    /// Lives above both layouts: switching them must not discard the camera.
+    /// Lives above the layout: rebuilding it must not discard the camera.
     @State private var mapCamera: PlanCamera?
-    /// The open panel and the map's layer settings, above both layouts for
-    /// the same reason: turning the device swaps them and rebuilds every
-    /// view under them.
+    /// The open panel and the map's layer settings, above the layout for
+    /// the same reason: turning the device rebuilds every view under it.
     @State private var screen = GameScreenState()
-    /// Where a phone's map starts and its floating HUD ends, in the game
-    /// screen's coordinates (``screenSpace``): how far down the map's own
-    /// banners start.
-    @State private var phoneMapTop: CGFloat = 0
-    @State private var phoneHUDBottom: CGFloat = 0
-    /// How far down the map the control card reaches, with its margin, on
-    /// an iPad or a phone on its side: folded it leaves the map's
-    /// bottom-trailing buttons at the edge.
+    /// How far down the status pill reaches, with its margin.
+    @State private var pillDepth: CGFloat = 0
+    /// The dock's size, with its margin.
+    @State private var dockSize = CGSize.zero
+    /// How far down the details card reaches, with its margins.
     @State private var cardDepth = CGFloat.infinity
+    /// The player's choice for the details card: open or folded, `nil` to
+    /// follow what there is to show (``ControlDetails``).
+    @State private var detailsChoice: Bool?
 
     var body: some View {
-        Group {
-            if isWide || horizontalSizeClass == .regular {
-                cardLayout
-            } else {
-                phoneLayout
+        gameLayout
+            // Inside the text size limit below: the tutorial's card shares the
+            // screen with the controls it must not cover.
+            .tutorialOverlay(session: session)
+            // The map and controls share one screen, so text stops growing at the
+            // largest standard size instead of pushing the map off screen.
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            // Presented from here, above the layout, so rebuilding it
+            // neither closes the panel nor loses what is typed in it.
+            .sheet(item: $screen.panel) { panel in
+                panelSheet(panel)
             }
-        }
-        .background {
-            // Measured ignoring the keyboard: otherwise typing a station name
-            // on an iPad in portrait would flip the layout and end editing.
-            GeometryReader { proxy in
-                Color.clear
-                    .onChange(of: proxy.size, initial: true) { _, size in
-                        isWide = size.width > size.height
-                    }
-            }
-            .ignoresSafeArea(.keyboard)
-        }
-        // Inside the text size limit below: the tutorial's card shares the
-        // screen with the controls it must not cover.
-        .tutorialOverlay(session: session)
-        // The map and controls share one screen, so text stops growing at the
-        // largest standard size instead of pushing the map off screen.
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        // Presented from here, above both layouts, so a layout switch
-        // neither closes the panel nor loses what is typed in it.
-        .sheet(item: $screen.panel) { panel in
-            panelSheet(panel)
-        }
-        .environment(screen)
-        // Phase 7a: a year that closes while playing opens its year-end
-        // report, at once if no panel is open, else once the panel closes.
-        .onChange(of: session.yearEndYear) { _, year in
-            if year != nil, screen.panel == nil {
-                screen.panel = .yearEnd
-            }
-        }
-        // Decision 86: a scenario that ends while playing opens its goals,
-        // as a closed year opens its report.
-        .onChange(of: session.scenarioJustEnded) { _, ended in
-            // Decision 87: a best result is kept as soon as it is made.
-            if ended {
-                launcher.recordChallengeResult()
-            }
-            if ended, screen.panel == nil {
-                screen.panel = .goals
-            }
-        }
-        .onChange(of: screen.panel) { old, new in
-            // The report or the goals that were shown have been seen.
-            if old == .yearEnd { session.dismissYearEnd() }
-            if old == .goals { session.dismissScenarioEnd() }
-            guard new == nil, pendingReport != nil else { return }
-            // After the closing sheet has gone.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(500))
-                if screen.panel == nil, let report = pendingReport {
-                    screen.panel = report
+            .environment(screen)
+            // Phase 7a: a year that closes while playing opens its year-end
+            // report, at once if no panel is open, else once the panel closes.
+            .onChange(of: session.yearEndYear) { _, year in
+                if year != nil, screen.panel == nil {
+                    screen.panel = .yearEnd
                 }
             }
-        }
-        .onChange(of: ObjectIdentifier(session)) { _, _ in
-            mapCamera = nil
-            screen.stopPopTravelPlay()
-            screen = GameScreenState()
-        }
-        .onDisappear {
-            screen.stopPopTravelPlay()
-        }
+            // Decision 86: a scenario that ends while playing opens its goals,
+            // as a closed year opens its report.
+            .onChange(of: session.scenarioJustEnded) { _, ended in
+                // Decision 87: a best result is kept as soon as it is made.
+                if ended {
+                    launcher.recordChallengeResult()
+                }
+                if ended, screen.panel == nil {
+                    screen.panel = .goals
+                }
+            }
+            .onChange(of: screen.panel) { old, new in
+                // The report or the goals that were shown have been seen.
+                if old == .yearEnd { session.dismissYearEnd() }
+                if old == .goals { session.dismissScenarioEnd() }
+                guard new == nil, pendingReport != nil else { return }
+                // After the closing sheet has gone.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    if screen.panel == nil, let report = pendingReport {
+                        screen.panel = report
+                    }
+                }
+            }
+            .onChange(of: ControlDetails.Subject(session)) { _, _ in
+                detailsChoice = nil
+            }
+            .onChange(of: ObjectIdentifier(session)) { _, _ in
+                mapCamera = nil
+                detailsChoice = nil
+                screen.stopPopTravelPlay()
+                screen = GameScreenState()
+            }
+            .onDisappear {
+                screen.stopPopTravelPlay()
+            }
     }
 
     /// What a closing left to show: how the scenario ended first, then the
@@ -152,81 +135,58 @@ struct ContentView: View {
         }
     }
 
-    /// Phones in portrait: the map from the top of the screen down to the
-    /// control drawer, with the HUD floating over it in glass. The map ends
-    /// where the drawer starts rather than running under it too: a
-    /// real-world map's bottom strip holds Apple's logo and legal link,
-    /// which nothing may cover (``AppleMapBackground``).
-    private var phoneLayout: some View {
+    /// The map with the controls floating over its edges (decision 106).
+    /// Nothing floats over a real-world map's bottom strip, whose Apple
+    /// logo and legal link nothing may cover (``AppleMapBackground``).
+    private var gameLayout: some View {
         GeometryReader { proxy in
-            VStack(spacing: 0) {
-                map
-                    .environment(\.mapInsets, EdgeInsets(top: max(0, phoneHUDBottom - phoneMapTop) + 8, leading: 0, bottom: 0, trailing: 0))
-                    .onGeometryChange(for: CGFloat.self) { geometry in
-                        geometry.frame(in: .named(Self.screenSpace)).minY
-                    } action: { top in
-                        phoneMapTop = top
-                    }
-                    .ignoresSafeArea(.container, edges: .top)
-                ControlDrawer(
-                    session: session,
-                    detailsHeight: (proxy.size.height * Self.phoneDetailsShare).rounded()
-                )
-            }
-        }
-        .overlay(alignment: .top) {
-            HUDView(session: session, launcher: launcher)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .padding(.horizontal, 8)
-                .onGeometryChange(for: CGFloat.self) { geometry in
-                    geometry.frame(in: .named(Self.screenSpace)).maxY
-                } action: { bottom in
-                    phoneHUDBottom = bottom
-                }
-        }
-        .coordinateSpace(.named(Self.screenSpace))
-    }
-
-    /// The share of the height an open control drawer's details take on a
-    /// phone. A fixed share, not their own height: text that changes
-    /// length as the game runs (a train's status and riders) would resize
-    /// the map every game minute, and what it showed would slide up and
-    /// down.
-    private static let phoneDetailsShare: CGFloat = 0.42
-
-    /// The game screen's coordinates, in which a phone's HUD and map are
-    /// measured.
-    private nonisolated static let screenSpace = "gameScreen"
-
-    /// iPads either way up, and phones on their side: the map fills the
-    /// screen, and the HUD and controls float over its trailing side in a
-    /// glass card. The card stops above a real-world map's bottom strip,
-    /// whose Apple logo and legal link nothing may cover
-    /// (``AppleMapBackground``).
-    private var cardLayout: some View {
-        GeometryReader { proxy in
-            let width = min(Self.cardWidth, (proxy.size.width * Self.cardMaxShare).rounded())
             let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
+            let margin = Self.margin
+            let cardWidth = min(Self.cardWidth, (proxy.size.width * Self.cardMaxShare).rounded())
+            let isOpen = ControlDetails.isOpen(session, choice: detailsChoice)
+            // The card runs down to the screen's bottom edge, or stops above
+            // the dock where both would not fit side by side.
+            let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
+            let cardBottom = strip + (besideDock ? 0 : dockSize.height)
+            let cardHeight = max(120, proxy.size.height - pillDepth - cardBottom - 2 * margin)
             map
-                .environment(\.mapInsets, EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: width + Self.cardMargin))
-                .environment(\.mapTrailingInsetDepth, cardDepth)
-                .overlay(alignment: .topTrailing) {
-                    ControlCard(session: session, launcher: launcher)
-                        .frame(width: width)
-                        .padding(Self.cardMargin)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
-                        .padding(.bottom, strip)
+                .environment(\.mapInsets, EdgeInsets(
+                    top: pillDepth, leading: 0, bottom: dockSize.height,
+                    trailing: isOpen ? cardWidth + margin : 0
+                ))
+                .environment(\.mapTrailingInsetDepth, isOpen ? cardDepth : 0)
+                .overlay(alignment: .topLeading) {
+                    StatusPill(session: session, launcher: launcher)
+                        .padding([.top, .leading, .trailing], margin)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pillDepth = $0 }
                 }
+                .overlay(alignment: .topTrailing) {
+                    if isOpen {
+                        DetailsCard(session: session, maxHeight: cardHeight)
+                            .frame(width: cardWidth)
+                            .padding(.top, pillDepth)
+                            .padding([.top, .trailing], margin)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                .overlay(alignment: .bottomLeading) {
+                    ControlDock(session: session, isOpen: isOpen) {
+                        detailsChoice = !isOpen
+                    }
+                    .padding([.leading, .bottom], margin)
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
+                    .padding(.bottom, strip)
+                }
+                .animation(.easeInOut(duration: 0.2), value: isOpen)
         }
     }
 
-    /// The control card's width, as the sidebar it replaces, and the most
-    /// of the screen's width it takes on a small phone on its side.
-    private static let cardWidth: CGFloat = 360
-    private static let cardMaxShare: CGFloat = 0.45
-    private static let cardMargin: CGFloat = 10
+    /// The details card's width, as the sidebar it replaces, and the most
+    /// of the screen's width it takes on a phone.
+    private static let cardWidth: CGFloat = 340
+    private static let cardMaxShare: CGFloat = 0.4
+    private static let margin: CGFloat = 10
 
     private var map: some View {
         MapView(session: session, camera: $mapCamera)
@@ -234,7 +194,7 @@ struct ContentView: View {
             // belongs to the world it was drawn from.
             .id(ObjectIdentifier(session))
             // The tutorial outlines, and keeps free, the part of the map that
-            // shows: not what the HUD or the control card float over.
+            // shows: not what the pill, the dock or the card float over.
             .overlay {
                 MapTutorialTarget()
             }
@@ -257,13 +217,12 @@ private struct MapTutorialTarget: View {
     }
 }
 
-/// When the controls' details (``ControlPanel``'s details: the selection,
-/// the tool's options and the action button) show under the tool picker,
-/// in a phone's drawer and in the control card: by themselves when there
-/// is something to show (a tool other than Select, a selection) and not
+/// When the details card (``ControlPanel``'s details: the selection, the
+/// tool's options and the action button) shows: by itself when there is
+/// something to show (a tool other than Select, a selection) and not
 /// otherwise, so the map gets the screen; or as the player chose, until
-/// what they would show changes; and always during the tutorial, which
-/// points at controls in them.
+/// what it would show changes; and always during the tutorial, which
+/// points at controls in it.
 private enum ControlDetails {
     /// What the details would be about; a change drops the player's choice.
     struct Subject: Equatable {
@@ -289,130 +248,98 @@ private enum ControlDetails {
     }
 }
 
-/// Opens or folds the controls' details. Hidden during the tutorial, when
-/// they stay open.
+/// Shows or hides the details card, from the dock. Hidden during the
+/// tutorial, when the card stays open.
 private struct ControlDetailsToggle: View {
     let isOpen: Bool
-    /// Whether the details open below the button (the card) or above it
-    /// (the drawer).
-    let opensDownward: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: isOpen == opensDownward ? "chevron.up" : "chevron.down")
+            Image(systemName: isOpen ? "sidebar.trailing" : "info.circle")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 40, height: 38)
+                .frame(width: 40, height: 40)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
         .accessibilityIdentifier("controls.toggle")
     }
 }
 
-/// A phone's controls, in glass under the map: the tool picker always, and
-/// under it the details when they show (``ControlDetails``).
-private struct ControlDrawer: View {
+/// Cash, time, speed and the game menu (``HUDView``) in one glass pill at
+/// the top of the screen (decision 106), as wide as what it shows.
+private struct StatusPill: View {
     let session: GameSession
-    let detailsHeight: CGFloat
-    /// The player's choice: open or folded, `nil` to follow what there is
-    /// to show.
-    @State private var choice: Bool?
+    let launcher: GameLauncher
 
     var body: some View {
-        let isOpen = ControlDetails.isOpen(session, choice: choice)
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                ControlPanel(session: session, arrangement: .tools)
-                if session.tutorial == nil {
-                    ControlDetailsToggle(isOpen: isOpen, opensDownward: false) {
-                        choice = !isOpen
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-            if isOpen {
-                ScrollView {
-                    ControlPanel(session: session, arrangement: .details)
-                        .padding(.horizontal)
-                        .padding(.bottom)
-                }
-                .tutorialClip()
-                .frame(height: detailsHeight)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .background {
-            Color.clear
-                .glassBackground(in: Rectangle())
-                .ignoresSafeArea(.container, edges: .bottom)
-        }
-        .overlay(alignment: .top) {
-            Divider()
-        }
-        .animation(.easeInOut(duration: 0.2), value: isOpen)
-        .onChange(of: ControlDetails.Subject(session)) { _, _ in
-            choice = nil
-        }
+        HUDView(session: session, launcher: launcher)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
-/// The HUD and the controls on an iPad, or a phone on its side, in a glass
-/// card over the map: the HUD and the tool picker always, and under them
-/// the details and the network overview when the details show
-/// (``ControlDetails``). Open, the card runs down the map's side and its
-/// details scroll.
-private struct ControlCard: View {
+/// The tools, the lines and the company's figures, and Undo
+/// (``ControlPanel``'s tools), in a glass dock at the bottom of the screen
+/// (decision 106), with the button that shows or hides the details card.
+private struct ControlDock: View {
     let session: GameSession
-    let launcher: GameLauncher
-    /// The player's choice: open or folded, `nil` to follow what there is
-    /// to show.
-    @State private var choice: Bool?
-    /// Regular height: an iPad, not a phone on its side.
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    let isOpen: Bool
+    let toggle: () -> Void
 
     var body: some View {
-        let isOpen = ControlDetails.isOpen(session, choice: choice)
-        // An iPad's open card lists what each tool does and costs; folded,
-        // or on a phone's short side, the tools stay a row.
-        let showsToolDetails = isOpen && verticalSizeClass == .regular
-        VStack(alignment: .leading, spacing: 12) {
-            HUDView(session: session, launcher: launcher)
-            HStack(alignment: showsToolDetails ? .top : .center, spacing: 8) {
-                ControlPanel(session: session, arrangement: showsToolDetails ? .detailedTools : .tools)
-                if session.tutorial == nil {
-                    ControlDetailsToggle(isOpen: isOpen, opensDownward: true) {
-                        choice = !isOpen
-                    }
-                }
-            }
-            if isOpen {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        ControlPanel(session: session, arrangement: .details)
-                        Divider()
-                        NetworkOverview(session: session)
-                    }
-                }
-                .tutorialClip()
-                .transition(.opacity)
+        HStack(spacing: 8) {
+            ControlPanel(session: session, arrangement: .tools)
+            if session.tutorial == nil {
+                ControlDetailsToggle(isOpen: isOpen, action: toggle)
             }
         }
-        .padding(14)
+        .fixedSize()
+        .padding(8)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+/// The selection and the active tool's options (``ControlPanel``'s
+/// details) in a glass card at the trailing side (decision 106): a
+/// station's nameboard over them when one is selected, and on an iPad,
+/// which has the room, the network's overview under them. As tall as what
+/// it shows, up to `maxHeight`, then it scrolls. It floats over the map,
+/// so its height changing as the game runs moves nothing else.
+private struct DetailsCard: View {
+    let session: GameSession
+    let maxHeight: CGFloat
+    /// Regular height: an iPad, not a phone.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if session.tool == .select, let station = session.selectedStation {
+                    StationNameboard(name: station.name)
+                }
+                ControlPanel(session: session, arrangement: .details)
+                if verticalSizeClass == .regular {
+                    Divider()
+                    NetworkOverview(session: session)
+                }
+            }
+            .padding(14)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .tutorialClip()
+        .frame(height: min(max(contentHeight, 1), maxHeight))
         .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .animation(.easeInOut(duration: 0.2), value: isOpen)
-        .onChange(of: ControlDetails.Subject(session)) { _, _ in
-            choice = nil
-        }
     }
 }
 
 /// What the game screen shows besides the world: the panel that is open and
 /// the population and travel layer's opacity, hour and playback. View state
-/// only, never game state; it lives above the tall and wide layouts
-/// (``ContentView``), so turning the device closes no panel and resets no
-/// layer setting.
+/// only, never game state; it lives above the layout (``ContentView``), so
+/// turning the device closes no panel and resets no layer setting.
 @MainActor
 @Observable
 final class GameScreenState {
