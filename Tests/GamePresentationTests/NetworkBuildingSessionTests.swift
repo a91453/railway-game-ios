@@ -275,7 +275,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         let n1 = try expected.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 2_048))
         let n2 = try expected.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 2_048))
         // 4096 long: four tiles of track at 100 each.
-        try expected.buildTrackEdge(from: n1, to: n2)
+        try expected.buildTrackEdge(from: n1, to: n2, structure: .automatic)
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.network)
@@ -298,7 +298,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Edge #1: 64 m, surface, for $ 4."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Edge #1: 64 m, automatic: surface 64 m, for $ 4."))
             XCTAssertEqual(session.networkStart, .node(.node(2)), "the next stretch starts where this one ended")
             XCTAssertNil(session.networkEnd)
             XCTAssertEqual(session.networkDraftText(), "From Node #2. Tap where it ends, or drag there from the start.")
@@ -313,11 +313,11 @@ final class NetworkBuildingSessionTests: XCTestCase {
         var expected = world
         let n1 = try expected.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 2_048))
         let n2 = try expected.buildTrackNode(at: WorldCoordinate(x: 6_144, y: 2_048))
-        try expected.buildTrackEdge(from: n1, to: n2)
+        try expected.buildTrackEdge(from: n1, to: n2, structure: .automatic)
         let n3 = try expected.buildTrackNode(at: WorldCoordinate(x: 10_240, y: 4_096))
         // The chord (4096, 2048) is 4579.42 long: the start's handle 1526
         // east, the end's a third of the chord, (1365.33, 682.67), back.
-        try expected.buildTrackEdge(from: n2, to: n3, curve: .cubic(PlanPoint(x: 7_670, y: 2_048), PlanPoint(x: 8_875, y: 3_413)))
+        try expected.buildTrackEdge(from: n2, to: n3, curve: .cubic(PlanPoint(x: 7_670, y: 2_048), PlanPoint(x: 8_875, y: 3_413)), structure: .automatic)
         XCTAssertEqual(expected.network.node(n2)?.end(of: .edge(1))?.exits, [.edge(2)], "the edges join")
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
@@ -637,11 +637,12 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.b, reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.text(in: .traditionalChinese), "64 公尺 · $ 4")
             session.buildNetworkTrack()
-            XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，地面，花費 $ 4。")
+            XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，自動：地面 64 公尺，花費 $ 4。")
             session.tapNetwork(at: PlanPoint(x: 6_144 + 1_000, y: 2_048), reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.problem, "該位置與另一端太近：兩者至少要相距 22 公尺。")
             XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "月台", "拆除"])
-            XCTAssertEqual(TrackStructure.allCases.map { $0.name(in: .traditionalChinese) }, ["地面", "高架", "橋樑", "隧道"])
+            XCTAssertEqual(TrackStructure.allCases.map { $0.name(in: .traditionalChinese) }, ["地面", "高架", "橋樑", "隧道", "自動"])
+            XCTAssertEqual(TrackStructure.offered.map { $0.name(in: .traditionalChinese) }, ["自動", "地面", "高架", "橋樑", "隧道"])
         }
     }
 

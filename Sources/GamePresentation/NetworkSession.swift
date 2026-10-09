@@ -163,7 +163,7 @@ extension GameSession {
             built = result
             let cost = Money(balance.amount - world.economy.balance.amount)
             let length = NetworkBuilding.lengthText(plan.length, in: language)
-            let structure = networkStructure.name(in: language)
+            let structure = world.network.edge(result.edge)?.structureText(in: language) ?? networkStructure.name(in: language)
             // Decision 95: the company's buildings in the way come down.
             let demolished = cleared == 0 ? ("", "") : (
                 cleared == 1 ? ", pulling down 1 of your buildings" : ", pulling down \(cleared) of your buildings",
@@ -675,6 +675,17 @@ extension NetworkPreview {
     }
 }
 
+extension TrackEdge {
+    /// The edge's structure: "Elevated", or for an automatic edge what the
+    /// ground made of it, stretch by stretch (decision 124): "Automatic:
+    /// Surface 16 m, Viaduct 48 m".
+    func structureText(in language: DisplayLanguage) -> String {
+        guard structure == .automatic else { return structure.name(in: language) }
+        let stretches = sectionSpans.map { "\($0.kind.name(in: language)) \(NetworkBuilding.lengthText($0.end - $0.start, in: language))" }
+        return language.text("Automatic: \(stretches.joined(separator: ", "))", "自動：\(stretches.joined(separator: "、"))")
+    }
+}
+
 extension GameWorld {
     /// What edge `id` of the track network is: "Edge #3 · 75 m · Elevated
     /// · 8 m" when level, "Edge #3 · 300 m · Surface · 0 m → 8 m, 27‰ at
@@ -682,13 +693,7 @@ extension GameWorld {
     /// `nil` for an edge the network does not have.
     public func trackEdgeSummary(_ id: TrackEdgeID, in language: DisplayLanguage) -> String? {
         guard let edge = network.edge(id), let geometry = trackGeometry(of: id) else { return nil }
-        var parts = [id.displayText(in: language), NetworkBuilding.lengthText(edge.length, in: language), edge.structure.name(in: language)]
-        // Decision 124: what the ground made of an automatic edge, stretch
-        // by stretch.
-        if edge.structure == .automatic {
-            let stretches = edge.sectionSpans.map { "\($0.kind.name(in: language)) \(NetworkBuilding.lengthText($0.end - $0.start, in: language))" }
-            parts[2] = language.text("Automatic: \(stretches.joined(separator: ", "))", "自動：\(stretches.joined(separator: "、"))")
-        }
+        var parts = [id.displayText(in: language), NetworkBuilding.lengthText(edge.length, in: language), edge.structureText(in: language)]
         let start = NetworkBuilding.lengthText(geometry.startHeight, in: language)
         if geometry.startHeight == geometry.endHeight {
             parts.append(start)
