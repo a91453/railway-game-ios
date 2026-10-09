@@ -54,6 +54,7 @@
 		789C9FAADEA0419549125729 /* krtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = A1B80E3285C9871A9D98DECB /* krtc_times.json */; };
 		792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 68B0C0FD89F59C53A9685C67 /* sanying_times.json */; };
 		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
+		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
 		8163932343EEB39A635118DD /* taiwan_places.json in Resources */ = {isa = PBXBuildFile; fileRef = 894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
@@ -168,6 +169,7 @@
 		A92B62C199B3DE4F7602175F /* MapArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapArt.swift; sourceTree = "<group>"; };
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
+		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
@@ -293,6 +295,7 @@
 				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
+				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
@@ -540,6 +543,7 @@
 				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
+				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
