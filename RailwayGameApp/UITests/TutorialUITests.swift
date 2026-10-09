@@ -56,7 +56,7 @@ final class TutorialUITests: XCTestCase {
         let visibleMap = wholeMap
             .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
             .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
-        // Two points 80 apart on the map that no control covers: not the
+        // Two points 60 apart on the map that no control covers: not the
         // card (on a wide screen it can stand beside the map's middle,
         // so a free row alone is not enough), not the Map Layers button,
         // and not the details card at the trailing side, where the Build
@@ -226,23 +226,24 @@ final class TutorialUITests: XCTestCase {
         return query.firstMatch
     }
 
-    /// Two points of `map` 80 points apart in a row, each at least 24
-    /// points inside it and clear of every frame in `covered` by 16: the
-    /// first such pair, top row first, leading first.
+    /// Two points of `map` 60 points apart in a row, each at least 12
+    /// points inside it and clear of every frame in `covered` by 12: the
+    /// first such pair, top row first, leading first. They fit the band of
+    /// the map the tutorial's card leaves free beside it (96 points).
     private func freePoints(in map: CGRect, avoiding covered: [CGRect]) -> (CGPoint, CGPoint)? {
-        let blocked = covered.map { $0.insetBy(dx: -16, dy: -16) }
+        let blocked = covered.map { $0.insetBy(dx: -12, dy: -12) }
         func isFree(_ point: CGPoint) -> Bool {
-            map.insetBy(dx: 24, dy: 24).contains(point) && !blocked.contains { $0.contains(point) }
+            map.insetBy(dx: 12, dy: 12).contains(point) && !blocked.contains { $0.contains(point) }
         }
-        var y = map.minY + 24
-        while y <= map.maxY - 24 {
-            var x = map.minX + 24
-            while x + 80 <= map.maxX - 24 {
-                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + 80, y: y)
+        var y = map.minY + 12
+        while y <= map.maxY - 12 {
+            var x = map.minX + 12
+            while x + 60 <= map.maxX - 12 {
+                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + 60, y: y)
                 if isFree(first), isFree(second) { return (first, second) }
-                x += 16
+                x += 4
             }
-            y += 16
+            y += 8
         }
         return nil
     }
