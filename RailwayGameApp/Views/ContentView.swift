@@ -80,6 +80,9 @@ struct ContentView: View {
             .onChange(of: ControlDetails.Subject(session)) { _, _ in
                 detailsChoice = nil
             }
+            .onChange(of: screen.detailsRequests) { _, _ in
+                detailsChoice = true
+            }
             .onChange(of: ObjectIdentifier(session)) { _, _ in
                 mapCamera = nil
                 detailsChoice = nil
@@ -177,6 +180,7 @@ struct ContentView: View {
                 ))
                 // A panel beside the map runs down its whole side.
                 .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
+                .environment(\.mapDetailsOpen, isOpen)
                 .overlay(alignment: .topLeading) {
                     StatusPill(session: session, launcher: launcher)
                         .padding([.top, .leading, .trailing], margin)
@@ -283,7 +287,8 @@ private struct MapTutorialTarget: View {
 /// something to show (a tool other than Select, a selection) and not
 /// otherwise, so the map gets the screen; or as the player chose, until
 /// what it would show changes; and always during the tutorial, which
-/// points at controls in it.
+/// points at controls in it. A station selected while looking at the map
+/// shows its tag over it instead (decision 119), which opens the card.
 private enum ControlDetails {
     /// What the details would be about; a change drops the player's choice.
     struct Subject: Equatable {
@@ -305,7 +310,11 @@ private enum ControlDetails {
     /// there is to show.
     @MainActor
     static func isOpen(_ session: GameSession, choice: Bool?) -> Bool {
-        session.tutorial != nil || (choice ?? (session.tool != .select || session.selectionText() != nil))
+        if session.tutorial != nil { return true }
+        if let choice { return choice }
+        if session.tool != .select { return true }
+        // Decision 119: a station's tag stands in for the card.
+        return session.selectedStationID == nil && session.selectionText() != nil
     }
 }
 
@@ -434,6 +443,9 @@ final class GameScreenState {
     }
 
     var panel: Panel?
+    /// Counts the requests to open the details card from the map (the
+    /// station's tag, decision 119); the screen opens it on each.
+    var detailsRequests = 0
     /// The layer's opacity once the player has moved its slider (the
     /// reference's `_popTravelOpacityUserSet`); until then each layer's own
     /// (``PopTravel/baseOpacity(for:compactWidth:)``).
