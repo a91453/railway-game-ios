@@ -654,6 +654,34 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertEqual(MapScale.worldDistance(NetworkBuilding.touchRadius, referenceSize: 64), 384, "closer in, a finger reaches less of the world")
     }
 
+    /// The preview is worked out once for each draft and world (building it
+    /// on a copy takes milliseconds, and the map and its panels read it many
+    /// times a frame), and again as soon as either changes: here a loan
+    /// that pays for the stretch, then another structure.
+    func testThePreviewFollowsTheDraftAndTheWorld() async throws {
+        var world = try makeNetworkWorld(balance: 300)
+        world.setEconomyMode(.management)
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.selectTool(.network)
+            session.tapNetwork(at: Self.a, reach: Self.reach)
+            session.tapNetwork(at: Self.b, reach: Self.reach)
+            // 4,096 long: 4 lengths at 100, more than the 300 there is.
+            XCTAssertNil(session.networkPreview?.cost)
+            XCTAssertNotNil(session.networkPreview?.problem)
+            XCTAssertEqual(session.networkOverlay?.previewIsBuildable, false)
+
+            session.borrowLoanStep()
+            XCTAssertNil(session.networkPreview?.problem, "the loan pays for it")
+            XCTAssertEqual(session.networkPreview?.cost, 400)
+            XCTAssertEqual(session.networkOverlay?.previewIsBuildable, true)
+
+            session.networkStructure = .tunnel
+            XCTAssertEqual(session.networkPreview?.cost, 2_000, "five times as much underground")
+            XCTAssertTrue(session.world.network.edges.isEmpty, "nothing is built")
+        }
+    }
+
     func testTheOverlayDrawsWhatTheNetworkToolPicked() async throws {
         let world = try makeLineWorld()
         await MainActor.run {

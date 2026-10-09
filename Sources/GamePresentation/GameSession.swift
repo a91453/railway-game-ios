@@ -27,7 +27,15 @@ import Observation
 @Observable
 public final class GameSession {
     /// The authoritative game state. Only the session mutates it.
-    public private(set) var world: GameWorld
+    public private(set) var world: GameWorld {
+        didSet { worldRevision &+= 1 }
+    }
+    /// Counts the changes to ``world``, so what is worked out from it (the
+    /// track preview, ``networkPreview``) is kept until it changes.
+    @ObservationIgnored private(set) var worldRevision = 0
+    /// The track preview of the picked ends, kept for the draft and world it
+    /// was worked out for (see ``networkPreview``).
+    @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS

@@ -97,9 +97,31 @@ extension GameSession {
     /// GameCore would build it and for how much; `nil` until both ends are
     /// picked (or in another mode).
     public var networkPreview: NetworkPreview? {
+        networkDraftPreview?.preview
+    }
+
+    /// ``networkPreview``, with the middle of an X crossover (empty for one
+    /// stretch). Building it on a copy of the world takes milliseconds, and
+    /// the map, its build button and the panels read it many times a frame
+    /// while a finger draws; so it is worked out once for each draft (the
+    /// ends and the tool's options) and world, and kept until one changes.
+    var networkDraftPreview: (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
-        if let scissors = scissorsPreview() { return scissors.preview }
-        return preview(from: start, to: end)
+        // Read so that what shows the preview is redrawn when the world
+        // changes; the revision below says whether it did.
+        _ = world
+        let key = NetworkPreviewMemo.Key(
+            start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
+            buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade, worldRevision: worldRevision
+        )
+        if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
+        let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
+            scissors
+        } else {
+            preview(from: start, to: end).map { ($0, []) }
+        }
+        networkPreviewMemo = NetworkPreviewMemo(key: key, preview: found)
+        return found
     }
 
     /// Builds the stretch of track between the picked ends through
@@ -677,14 +699,11 @@ extension GameSession {
         switch networkMode {
         case .build:
             overlay.anchors = [networkStart, networkEnd].compactMap { $0.flatMap { world.position(of: $0, height: networkHeight) } }
-            if let scissors = scissorsPreview() {
-                overlay.preview = scissors.preview.points
-                overlay.crossing = scissors.crossing
-                overlay.previewIsBuildable = scissors.preview.problem == nil
-            } else if let preview = networkPreview {
-                overlay.preview = preview.points
-                overlay.previewIsBuildable = preview.problem == nil
-                overlay.cleared = preview.cleared.map(PlanRect.init)
+            if let draft = networkDraftPreview {
+                overlay.preview = draft.preview.points
+                overlay.crossing = draft.crossing
+                overlay.previewIsBuildable = draft.preview.problem == nil
+                overlay.cleared = draft.preview.cleared.map(PlanRect.init)
             }
         case .platform:
             if let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge), stretch.start < stretch.end {
@@ -749,4 +768,23 @@ extension MapScale {
         precondition(referenceSize > 0, "worldDistance(_:referenceSize:) requires a positive size")
         return Int64((points * Double(referenceLength) / referenceSize).rounded())
     }
+}
+
+/// The track preview of the picked ends, and what it was worked out for:
+/// the draft (the ends and the network tool's options) and the world's
+/// revision (``GameSession/networkDraftPreview``).
+struct NetworkPreviewMemo {
+    struct Key: Equatable {
+        let start: NetworkAnchor
+        let end: NetworkAnchor
+        let structure: TrackStructure
+        let height: Int64
+        let followsTrack: Bool
+        let buildsScissors: Bool
+        let easesGrade: Bool
+        let worldRevision: Int
+    }
+
+    let key: Key
+    let preview: (preview: NetworkPreview, crossing: [WorldCoordinate])?
 }
