@@ -352,7 +352,9 @@ private struct ControlDetailsToggle: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: isOpen ? "sidebar.trailing" : "info.circle")
+            // The card's own shape, open or not: the map's ⓘ is MapLibre's
+            // attribution, a different thing (decision 123).
+            Image(systemName: "sidebar.trailing")
                 .font(.subheadline.weight(.bold))
                 .frame(width: 40, height: 40)
         }
