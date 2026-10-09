@@ -135,6 +135,8 @@ struct HUDView: View {
         }
         .accessibilityLabel("Cash \(text)")
         .accessibilityHint("Shows fares, running costs and the ledger.")
+        // Decision 125: the tutorial's first fares come in here.
+        .tutorialTarget(.cash)
     }
 
     private var time: some View {

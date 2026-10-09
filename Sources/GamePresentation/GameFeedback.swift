@@ -39,15 +39,17 @@ extension CompanyAccounts {
 
     /// The money in among the ledger rows written after `last` (the
     /// newest row before; `nil` when there was none): the sum of their
-    /// ``incomeItems`` lines. Rows are only ever added at the end; when
-    /// `last` is no longer kept (``entries`` keeps the latest only), every
-    /// row kept is newer than it.
-    public static func income(writtenAfter last: LedgerEntry?, in entries: [LedgerEntry]) -> Money {
+    /// lines for `items` (``incomeItems`` unless given) that are money in.
+    /// Rows are only ever added at the end; when `last` is no longer kept
+    /// (``entries`` keeps the latest only), every row kept is newer than it.
+    public static func income(
+        writtenAfter last: LedgerEntry?, in entries: [LedgerEntry], of items: Set<LedgerItem> = incomeItems
+    ) -> Money {
         guard entries.last != last else { return .zero }
         let start = last.flatMap { entries.lastIndex(of: $0) }.map { $0 + 1 } ?? entries.startIndex
         var total = Money.zero
         for entry in entries[start...] {
-            for line in entry.breakdown where incomeItems.contains(line.item) && line.amount > .zero {
+            for line in entry.breakdown where items.contains(line.item) && line.amount > .zero {
                 total = total + line.amount
             }
         }

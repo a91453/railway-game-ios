@@ -49,6 +49,47 @@ enum Palette {
     /// so ``ink`` would not show): 3.11:1 or more on all ten.
     static let buildingGlyph = hex(light: 0x262C57, dark: 0x262C57)
 
+    /// Decision 126: the city's own buildings on the plain map, a pale roof
+    /// over a deeper wall in their use's hue (the land use layer's: homes
+    /// green, shops blue, offices amber, factories purple, schools and
+    /// public offices red, sights teal), edged in ``cityOutline``. Paler
+    /// than the player's buildings, which carry a glyph, so the town reads
+    /// as the ground the player builds on. The same in either appearance:
+    /// they are light on the dark map too.
+    static func cityRoof(_ use: LandUse) -> Color {
+        switch use {
+        case .residential: hex(light: 0xA8DCA8, dark: 0xA8DCA8)
+        case .commercial: hex(light: 0xA9CBEB, dark: 0xA9CBEB)
+        case .office: hex(light: 0xF5CD95, dark: 0xF5CD95)
+        case .industrial: hex(light: 0xCFC9E6, dark: 0xCFC9E6)
+        case .civic: hex(light: 0xF6BCAE, dark: 0xF6BCAE)
+        case .leisure: hex(light: 0xAEE0D8, dark: 0xAEE0D8)
+        case .agricultural: farmGround
+        case .park: parkGround
+        }
+    }
+
+    static func cityWall(_ use: LandUse) -> Color {
+        switch use {
+        case .residential: hex(light: 0x63B06F, dark: 0x63B06F)
+        case .commercial: hex(light: 0x5F95CB, dark: 0x5F95CB)
+        case .office: hex(light: 0xD99649, dark: 0xD99649)
+        case .industrial: hex(light: 0x9088C2, dark: 0x9088C2)
+        case .civic: hex(light: 0xDB7C6E, dark: 0xDB7C6E)
+        case .leisure: hex(light: 0x4CA597, dark: 0x4CA597)
+        case .agricultural: farmGround
+        case .park: parkGround
+        }
+    }
+
+    /// The buildings' edge: navy in either appearance, as
+    /// ``buildingGlyph``.
+    static let cityOutline = hex(light: 0x262C57, dark: 0x262C57)
+    /// Open ground (decision 126): a park's lawn and a farm's field, a
+    /// shade off the land.
+    static let parkGround = hex(light: 0xCDE8B5, dark: 0x3E6B3A)
+    static let farmGround = hex(light: 0xF1E6C8, dark: 0x5A5236)
+
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))
     static let metroGreen = dynamic(light: (0.13, 0.62, 0.36), dark: (0.22, 0.78, 0.48))

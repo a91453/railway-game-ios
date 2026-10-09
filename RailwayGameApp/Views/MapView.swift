@@ -78,6 +78,10 @@ struct MapView: View {
     /// the last measured service change, and a number that changes with it.
     @State private var cityMap: CityMap?
     @State private var cityMapVersion = 0
+    /// Decision 126: the city's buildings on the plain map, and a version
+    /// that changes when they are replaced.
+    @State private var skyline: CitySkyline?
+    @State private var skylineVersion = 0
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -163,6 +167,9 @@ struct MapView: View {
                     MapBaseCanvas(
                         bounds: bounds,
                         drawsLand: realWorld == nil,
+                        // Decision 126: a city layer colours the cells instead.
+                        skyline: realWorld == nil && mapLayers.popTravelMode?.isCityLayer != true
+                            ? skyline.map { SkylineLayer(skyline: $0, version: skylineVersion) } : nil,
                         layer: popTravelLayer(realWorld: realWorld),
                         camera: projection
                     )
@@ -534,6 +541,22 @@ struct MapView: View {
             if !Task.isCancelled {
                 cityMap = map
                 cityMapVersion &+= 1
+            }
+        }
+        .task(id: SkylineKey(world: session.world)) {
+            // Decision 126: what the plain map shows of the city, worked out
+            // off the main thread when the land or its buildings change
+            // (each night at most). A real-world map shows its own town.
+            guard session.world.geoAnchor == nil, !session.world.land.isEmpty else {
+                skyline = nil
+                skylineVersion &+= 1
+                return
+            }
+            let world = session.world
+            let built = await Task.detached(priority: .utility) { CitySkyline(world: world) }.value
+            if !Task.isCancelled {
+                skyline = built
+                skylineVersion &+= 1
             }
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
@@ -935,24 +958,37 @@ struct PopTravelLayer: Equatable {
     }
 }
 
+/// The city's buildings the base canvas draws (decision 126), compared by
+/// a version rather than lot by lot.
+struct SkylineLayer: Equatable {
+    let skyline: CitySkyline
+    let version: Int
+
+    static func == (lhs: SkylineLayer, rhs: SkylineLayer) -> Bool {
+        lhs.version == rhs.version
+    }
+}
+
 /// The land and the population and travel layer, in a canvas of their own
 /// under the map: redrawn only when the camera, the map or the layer
 /// changes, not on every tick that moves a train.
 private struct MapBaseCanvas: View, Equatable {
     let bounds: WorldBounds
     let drawsLand: Bool
+    let skyline: SkylineLayer?
     let layer: PopTravelLayer?
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapBaseCanvas, rhs: MapBaseCanvas) -> Bool {
-        lhs.bounds == rhs.bounds && lhs.drawsLand == rhs.drawsLand && lhs.layer == rhs.layer && lhs.camera == rhs.camera
+        lhs.bounds == rhs.bounds && lhs.drawsLand == rhs.drawsLand && lhs.skyline == rhs.skyline && lhs.layer == rhs.layer
+            && lhs.camera == rhs.camera
     }
 
     var body: some View {
-        let bounds = bounds, drawsLand = drawsLand, layer = layer, camera = camera
+        let bounds = bounds, drawsLand = drawsLand, skyline = skyline?.skyline, layer = layer, camera = camera
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            MapArt.drawBase(bounds: bounds, drawsLand: drawsLand, layer: layer, projection: camera, in: context)
+            MapArt.drawBase(bounds: bounds, drawsLand: drawsLand, skyline: skyline, layer: layer, projection: camera, in: context)
         }
         .allowsHitTesting(false)
     }
@@ -1009,6 +1045,20 @@ private struct CityCellTooltip: View {
 /// What the city layers are worked out from (Phase 6d): the land, its
 /// buildings, the stations, town growth's measures and whether the land
 /// sets ridership; nothing while no city layer is shown.
+/// What the plain map's city is made from (decision 126): the land, its
+/// buildings and whether the map is a real place's.
+private struct SkylineKey: Equatable {
+    /// `nil` on a real-world map, which draws none.
+    let land: Land?
+    let buildings: CityBuildings?
+
+    init(world: GameWorld) {
+        let drawn = world.geoAnchor == nil
+        land = drawn ? world.land : nil
+        buildings = drawn ? world.buildings : nil
+    }
+}
+
 private struct CityMapKey: Equatable {
     let land: Land?
     let buildings: CityBuildings?
