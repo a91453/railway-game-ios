@@ -380,6 +380,10 @@ public struct CityCellInfo: Hashable, Sendable {
             let company = Money(value.companyPremium).centsText
             lines.append(language.text("Near your buildings + \(company)", "鄰近公司建物 + \(company)"))
         }
+        if value.waterPremium > 0 {
+            let water = Money(value.waterPremium).centsText
+            lines.append(language.text("By the water + \(water)", "臨水 + \(water)"))
+        }
         if let zone {
             lines.append(language.text("Zoned: \(zone.title(in: .english))", "分區：\(zone.title(in: .traditionalChinese))"))
         }

@@ -201,4 +201,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// A building would stand on water, or every cell to zone is water
     /// (decision 105): the first such cell, by row and then column.
     case onWater(row: Int, column: Int)
+    /// A wharf or a marina stands on the shore (decision 111): part of it
+    /// over water and part on land.
+    case needsShore
 }

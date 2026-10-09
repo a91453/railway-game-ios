@@ -88,6 +88,39 @@ public struct Terrain: Hashable, Sendable {
         }
     }
 
+    /// Whether a cell of water's middle lies within ``LandValueRules/waterReach``
+    /// of the middle of the cell at `row`, `column` (the cell itself
+    /// included): the rows within reach, and in each the run nearest the
+    /// column.
+    func isNearWater(row: Int, column: Int) -> Bool {
+        guard !water.isEmpty else { return false }
+        let length = Land.cellLength, reach = LandValueRules.waterReach
+        let rows = Int(reach / length)
+        for dr in -rows...rows {
+            let target = row + dr
+            // The first run of that row ending after the column reach.
+            var low = 0, high = water.count
+            let from = column - rows
+            while low < high {
+                let middle = (low + high) / 2
+                if (water[middle].row, water[middle].end) <= (target, from) {
+                    low = middle + 1
+                } else {
+                    high = middle
+                }
+            }
+            var index = low
+            while index < water.count, water[index].row == target, water[index].column <= column + rows {
+                let run = water[index]
+                let nearest = min(max(column, run.column), run.end - 1)
+                let dx = Int64(nearest - column) * length, dy = Int64(dr) * length
+                if dx * dx + dy * dy < reach * reach { return true }
+                index += 1
+            }
+        }
+        return false
+    }
+
     /// Adds `cells`, in any order, to the water.
     mutating func add(_ cells: [CellPosition]) {
         guard !cells.isEmpty else { return }
@@ -175,6 +208,20 @@ extension GameWorld {
     /// Whether the cell at `row`, `column` is water.
     public func isWater(row: Int, column: Int) -> Bool {
         terrain.isWater(row: row, column: column)
+    }
+
+    /// Whether `building`'s square has both water and land under it: it
+    /// stands on the shore (decision 111).
+    func straddlesShore(_ building: PlacedBuilding) -> Bool {
+        let firstRow = Land.cellIndex(building.minY), lastRow = Land.cellIndex(building.maxY - 1)
+        let firstColumn = Land.cellIndex(building.minX), lastColumn = Land.cellIndex(building.maxX - 1)
+        var wet = false, dry = false
+        for row in firstRow...lastRow {
+            for column in firstColumn...lastColumn {
+                if terrain.isWater(row: row, column: column) { wet = true } else { dry = true }
+            }
+        }
+        return wet && dry
     }
 
     /// The water cell under any part of `building`'s square, the first by

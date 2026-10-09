@@ -23,7 +23,8 @@ public struct PlacedBuildingID: RawRepresentable, Hashable, Comparable, Codable,
     }
 }
 
-/// What the player can place: the three basic buildings.
+/// What the player can place: the three basic buildings, and since
+/// decision 111 two that stand on the shore.
 public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// A small house: 16 m a side.
     case house
@@ -31,13 +32,19 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     case shop
     /// An office block: 32 m a side.
     case office
+    /// A fishermen's wharf (decision 111): shops and restaurants on a pier,
+    /// as Tamsui's; 24 m a side, on the shore.
+    case wharf
+    /// A marina (decision 111): berths for pleasure boats and their club,
+    /// a sight; 32 m a side, on the shore.
+    case marina
 
     /// The length of a side, in world units.
     public var side: Int64 {
         switch self {
         case .house: 1_024
-        case .shop: 1_536
-        case .office: 2_048
+        case .shop, .wharf: 1_536
+        case .office, .marina: 2_048
         }
     }
 
@@ -45,16 +52,27 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     public var use: LandUse {
         switch self {
         case .house: .residential
-        case .shop: .commercial
+        case .shop, .wharf: .commercial
         case .office: .office
+        case .marina: .leisure
         }
     }
 
-    /// Its storeys (decision 94): a house and a shop 2, an office block 6.
+    /// Its storeys (decision 94): a house, a shop, a wharf and a marina 2,
+    /// an office block 6.
     public var floors: Int64 {
         switch self {
-        case .house, .shop: 2
+        case .house, .shop, .wharf, .marina: 2
         case .office: 6
+        }
+    }
+
+    /// Whether it stands on the shore (decision 111): part of it over
+    /// water, part on land. The others stand on land only.
+    public var standsOnShore: Bool {
+        switch self {
+        case .house, .shop, .office: false
+        case .wharf, .marina: true
         }
     }
 
@@ -71,8 +89,8 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
 
     /// Who it holds when full, by decision 74's rule: the eighths of the
     /// floor of its use that are homes, at 48 m² a resident, the rest jobs
-    /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop 6
-    /// and 27, an office block 16 and 168.
+    /// at 32 m², each rounded down. A house 9 residents and 2 jobs, a shop
+    /// and a wharf 6 and 27, an office block 16 and 168, a marina 5 and 56.
     public var capacity: BuildingCapacity {
         let homes = Building.homeEighths(of: use)
         return BuildingCapacity(
@@ -151,7 +169,9 @@ extension GameWorld {
     ///   naming the lowest numbered station whose point is that near;
     ///   ``GameError/onWater(row:column:)`` naming the first cell of water
     ///   (decision 105) under any part of the square, by row and then
-    ///   column; ``GameError/idsExhausted``; or
+    ///   column, or for a kind that ``PlacedBuildingKind/standsOnShore``
+    ///   ``GameError/needsShore`` (decision 111) unless the square has both water and land
+    ///   under it; ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
@@ -166,7 +186,9 @@ extension GameWorld {
         if let station = stations.first(where: { Self.isNear($0.point, candidate) }) {
             throw .buildingOnStation(station.id)
         }
-        if let water = waterUnder(candidate) {
+        if kind.standsOnShore {
+            guard straddlesShore(candidate) else { throw .needsShore }
+        } else if let water = waterUnder(candidate) {
             throw .onWater(row: water.row, column: water.column)
         }
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)

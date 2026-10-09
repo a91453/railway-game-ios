@@ -169,6 +169,68 @@ final class TerrainTests: XCTestCase {
         XCTAssertEqual(house.maxX, 40_960)
     }
 
+    /// A wharf and a marina stand on the shore: part of the square over
+    /// water, part on land; wholly on either is refused.
+    func testAWharfOrAMarinaStandsOnTheShore() throws {
+        var world = try world()
+        XCTAssertEqual(PlacedBuildingKind.wharf.capacity, BuildingCapacity(residents: 6, jobs: 27))
+        XCTAssertEqual(PlacedBuildingKind.marina.capacity, BuildingCapacity(residents: 5, jobs: 56))
+        XCTAssertEqual(PlacedBuildingKind.allCases.filter(\.standsOnShore), [.wharf, .marina])
+        let before = world
+        // On land (rows 5 and below, away from the river), or out at sea.
+        for point in [PlanPoint(x: 14_336, y: 30_720), PlanPoint(x: 14_336, y: 8_192)] {
+            XCTAssertThrowsError(try world.placeBuilding(.wharf, at: point)) { XCTAssertEqual($0 as? GameError, .needsShore) }
+            XCTAssertThrowsError(try world.placeBuilding(.marina, at: point)) { XCTAssertEqual($0 as? GameError, .needsShore) }
+        }
+        XCTAssertEqual(world, before)
+        // A wharf is 1,536 (24 m) a side: centred on row 5's north edge
+        // (y 20,480) it spans rows 4, the sea, and 5, the land.
+        let wharf = try world.placeBuilding(.wharf, at: PlanPoint(x: 14_336, y: 20_480))
+        XCTAssertEqual(wharf.kind.use, .commercial)
+        // A marina, 2,048 (32 m), across the river's west bank (x 40,960).
+        let marina = try world.placeBuilding(.marina, at: PlanPoint(x: 40_960, y: 61_440))
+        XCTAssertEqual(marina.kind.use, .leisure)
+        // A house there is still on water.
+        XCTAssertThrowsError(try world.placeBuilding(.house, at: PlanPoint(x: 18_432, y: 20_480))) {
+            XCTAssertEqual($0 as? GameError, .onWater(row: 4, column: 4))
+        }
+        // A world without water has no shore.
+        var dry = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        XCTAssertThrowsError(try dry.placeBuilding(.marina, at: PlanPoint(x: 14_336, y: 20_480))) { XCTAssertEqual($0 as? GameError, .needsShore) }
+    }
+
+    /// Land within 160 m of water (10,240 units between the middles, the
+    /// water's own cells too) is worth 600 cents a m² more.
+    func testLandByTheWaterIsWorthMore() throws {
+        let world = try world()
+        func premium(_ row: Int, _ column: Int) -> Int64? {
+            world.landValue(row: row, column: column)?.waterPremium
+        }
+        XCTAssertEqual(premium(5, 5), 600, "64 m from the sea")
+        XCTAssertEqual(premium(6, 5), 600, "128 m")
+        XCTAssertEqual(premium(7, 5), 0, "192 m")
+        XCTAssertEqual(premium(7, 8), 600, "128 m from the river")
+        XCTAssertEqual(premium(7, 7), 0, "192 m from the river and the sea")
+        // (6, 8): 128 m from the sea and from the river; (8, 9) beside the
+        // river.
+        XCTAssertEqual(premium(6, 8), 600)
+        XCTAssertEqual(premium(8, 9), 600)
+        XCTAssertEqual(premium(2, 2), 600, "the sea itself")
+        let value = try XCTUnwrap(world.landValue(row: 7, column: 8))
+        XCTAssertEqual(value.value, value.base + value.servicePremium + value.accessPremium + 600)
+        // A blank map's land is worth what it was.
+        let blank = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        XCTAssertEqual(blank.landValues().map(\.waterPremium).max(), 0)
+        // Every cell agrees with working it out the long way.
+        let wet = (0..<24).flatMap { row in (0..<32).filter { world.isWater(row: row, column: $0) }.map { (row, $0) } }
+        for row in 0..<24 {
+            for column in 0..<32 {
+                let near = wet.contains { let (dr, dc) = (Int64($0.0 - row) * 4_096, Int64($0.1 - column) * 4_096); return dr * dr + dc * dc < 10_240 * 10_240 }
+                XCTAssertEqual(premium(row, column), near ? 600 : 0, "(\(row), \(column))")
+            }
+        }
+    }
+
     func testTrackAndStationsStillCrossWater() throws {
         var world = try world()
         // Over the sea, from (5, 5) north to row 1.
@@ -266,11 +328,13 @@ final class TerrainTests: XCTestCase {
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("SaveFixtures")
 
-    /// The version 24 fixture: the zoning fixture's land and station
-    /// (``ZoningTests``) by the sea, rows 0 to 2, with a river down column
-    /// 10 below it; homes zoned from the sea onto the land on rows 2 to 3,
-    /// a house bought beside the river, run ten minutes.
-    static func waterWorld() throws -> GameWorld {
+    /// The version 25 fixture (decision 111): the version 24 world, the
+    /// zoning fixture's land and station (``ZoningTests``) by the sea, rows
+    /// 0 to 2, with a river down column 10 below it; homes zoned from the
+    /// sea onto the land on rows 2 to 3, a house bought beside the river
+    /// (its land now by the water) and a marina across its west bank, run
+    /// ten minutes.
+    static func shoreWorld() throws -> GameWorld {
         var world = try GameWorld(
             bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -284,32 +348,55 @@ final class TerrainTests: XCTestCase {
         world.setTownGrowth(true)
         try world.buildStation(named: "S0", at: PlanPoint(x: 22_528, y: 22_528))
         try world.placeBuilding(.house, at: PlanPoint(x: 40_448, y: 26_624))
+        try world.placeBuilding(.marina, at: PlanPoint(x: 40_960, y: 61_440))
         try world.setZone(.residential, rows: 2...3, columns: 3...7)
         try world.advance(ticks: 10)
         return world
     }
 
-    /// Version 24 (decision 105): the water. It saves byte for byte and is
-    /// the world the build that wrote it makes. The version 23 save has
+    /// Version 24 (decision 105): the water. It saves byte for byte. Its
+    /// builder is ``shoreWorld()`` without the marina; since decision 111
+    /// land by the water is worth more, so the house would cost more now,
+    /// and the test checks the save as it reads. The version 23 save has
     /// none.
     func testVersionTwentyFourKeepsTheWater() throws {
-        let url = Self.fixtures.appendingPathComponent("v24-water.json")
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v24-water.json"))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["WATER_SAVE_NEW"] != nil {
-            try encoder.encode(SavedGame(world: try Self.waterWorld())).write(to: url)
-        }
-        let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 24)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.waterWorld())
         XCTAssertEqual(world.terrain.waterCellCount, 3 * 32 + 21)
         XCTAssertEqual(world.zones.cells.count, 5, "row 2 is the sea")
+        XCTAssertEqual(world.placedBuildings.map(\.kind), [.house])
+        XCTAssertEqual(world.placedBuildings.first?.landCost, 256_000, "256 m² at the empty land's 1,000, as it was paid")
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 24,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v23-zoning.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.terrain.isEmpty)
+    }
+
+    /// Version 25 (decision 111): a placed building can be a wharf or a
+    /// marina, on the shore. It saves byte for byte and is the world the
+    /// build that wrote it makes. The version 24 save has neither.
+    func testVersionTwentyFiveKeepsTheShoreBuildings() throws {
+        let url = Self.fixtures.appendingPathComponent("v25-shore-buildings.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["SHORE_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.shoreWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 25)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.shoreWorld())
+        XCTAssertEqual(world.placedBuildings.map(\.kind), [.house, .marina])
+        // 256 and 1,024 m² at 1,600 a m², the empty land's 1,000 and 600 by
+        // the water.
+        XCTAssertEqual(world.placedBuildings.map(\.landCost), [409_600, 1_638_400])
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 25,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 }
