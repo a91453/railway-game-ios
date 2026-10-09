@@ -128,6 +128,10 @@ enum ReplayState {
         for run in world.terrain.steep {
             line("steep \(run.row) \(run.column) \(run.count)")
         }
+        // Decision 124: likewise only a world that has read ground.
+        for block in world.ground.sortedBlocks {
+            line("ground \(block.block.row) \(block.block.column) \(block.heights.map(String.init).joined(separator: " "))")
+        }
         return lines.joined(separator: "\n")
     }
 }

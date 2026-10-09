@@ -480,6 +480,10 @@ final class GoldenScenarioTests: XCTestCase {
             return [.water(!water)]
         case .steep(let steep):
             return [.steep(!steep)]
+        case .groundHeight(nil):
+            return [.groundHeight(0)]
+        case .groundHeight(let height?):
+            return [.groundHeight(nil), .groundHeight(height + 1), .groundHeight(height - 1)]
         case .townGrowth(let place?):
             var base = place, growth = place, service = place, reached = place
             base.base += 1

@@ -1179,6 +1179,23 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法）：SimCity 4、Cities: Skylines（商業遊戲）的建物不放在太陡的地形上。資料：Copernicus DEM GLO-30／GLO-90（ESA，授權要求標示出處，資料來源畫面已列）。門檻依據：建築技術規則建築設計施工編第 262 條（平均坡度超過 30% 不得開發建築）。
 
+## 地面高度（決策 124）
+
+軌道與地形的高度的第一步（H1，設計說明 `docs/research/TERRAIN_HEIGHT_DESIGN.md` 第 10 節是完整的清查）。這一步重新看了六個來源（`a91453/railway-reference-private` `05d7000`），找地面高度的資料與存法。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/terrain-source.js`、`terrain/manifest.json`（Mapterhorn 的 terrarium DEM 圖磚，PMTiles 切成 14 塊；圖磚本身沒有提交） | `taiwan_heights.dat`（`build_slope_grid.py`） | 只取想法；圖磚不在參考裡，改用決策 115 已在用的 Copernicus GLO-30 |
+| `Railway/site_archive_clean/rail-3d/integration/terrain-elevation.js`（海邊 0 m 是有效值，不把沒有資料當成海） | 高度檔：水與沒有圖磚的地方是 0（海面）；GameCore：沒讀過的區塊是 `nil`，不當成 0 | adapted |
+| `Railway/site_archive_clean/rail-3d/physical/level-profiles.json`（6,283 條 OSM 鐵路的縱斷面、`terrainValues`） | — | 留給 H2／全島步驟 C（預鋪真實路線） |
+| `Simulator/reference_snapshot/_next/static/chunks/5758-131911c5f04a436f.js`（模組 85873：整數格 × 整數層的稀疏地形、B-spline 取樣、筆刷） | `GroundBlock`：整數公尺的角點、整數雙線性內插 | 只取「整數格存高度」的想法；B-spline 是浮點數，不用；筆刷留給之後的挖湖與填海 |
+| `Railway/railway_game_reference_clean/binary_reference`（OpenTTD 15.3 的 wasm：`map_height_limit`、`heightmap_height`） | 角點存高度 | GPL，只取想法 |
+| （參考沒有） | `Ground`、`setGround`、`groundHeight(at:)`、`invalidGround`、`HeightGrid`、路網卡片的地面海拔、存檔版本 27、golden schema 47 | gap → 原生 |
+
+比例：1 世界單位 = 1/64 m；角點每 64 m（4,096 單位）一個，一塊 17 × 17 個；高度整數公尺，內插的結果是世界單位，四捨五入一次。資料格網 1.875″（約 58 × 53 m）；DEM 1″（馬祖 3″）取最近的樣本，再做 3 × 3 中位數。
+
+外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）把高度存在格的角點；GraphHopper（Apache-2.0）的 `EdgeElevationInterpolator`（橋與隧道內部不跟 DEM 起伏）留給 H2。資料：Copernicus DEM GLO-30／GLO-90（授權要求標示出處與免責句，資料來源畫面已列）。
+
 ## 地圖圖示（決策 121）
 
 查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。

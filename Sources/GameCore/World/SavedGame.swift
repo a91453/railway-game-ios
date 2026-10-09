@@ -131,9 +131,14 @@
 ///     `"steep"`. A build that reads only an earlier version would drop
 ///     them, and its city would spread up the mountains again, so it says
 ///     the save is newer than it instead.
+/// 27. The ground's height (decision 124): the world can have `"ground"`,
+///     the heights of the blocks read. A build that reads only an earlier
+///     version would drop it, and its next save would lose the ground the
+///     track is measured from, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 26
+    public static let currentVersion = 27
 
     public let world: GameWorld
 
@@ -223,6 +228,8 @@ extension SavedGame: Codable {
         // which version 25 reads as before.
         // Version 25 to 26: terrain without `"steep"` has no steep slopes,
         // and grows and builds as it did.
+        // Version 26 to 27: a world without `"ground"` has read no ground,
+        // and is flat at 0 m as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
