@@ -72,9 +72,9 @@ C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱；�
 
 | raw value | case | 控制項 | 標記的位置 |
 | --- | --- | --- | --- |
-| `tool.select` | `selectTool` | 工具列的「選取」 | `ControlPanel.swift` 的 `ToolPicker` |
-| `tool.network` | `networkTool` | 工具列的「路網」 | 同上 |
-| `tool.train` | `trainTool` | 工具列的「列車」 | 同上 |
+| `tool.select` | `selectTool` | 建設工具列的「完成」（回到選取；決策 114） | `BuildToolRail.swift` 的 `BuildToolRail` |
+| `tool.network` | `networkTool` | 建設工具列的「路網」 | 同上 |
+| `tool.train` | `trainTool` | 建設工具列的「列車」 | 同上 |
 | `train.buy` | `buyTrain` | 列車工具的「購買」 | `TrainControls.swift` 的 `header`（步驟 7 框它，卡片就不會蓋住它） |
 | `network.modes` | `networkModes` | 路網工具的模式：鋪設、月台、拆除 | `NetworkControls.swift` |
 | `panel.action` | `actionButton` | 套用工具的按鈕：鋪設軌道、設置月台、拆除軌道、放置或派送列車 | `ControlPanel.swift` 的 `ActionButton` |

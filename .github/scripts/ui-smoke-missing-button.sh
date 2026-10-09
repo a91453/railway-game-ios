@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Manual CI proof using the real app and the same English smoke test.
 set -euo pipefail
-source_file=RailwayGameApp/Views/ControlPanel.swift
+# Decision 114: the tools are in the rail at the map's edge, and Select is
+# its Done button.
+source_file=RailwayGameApp/Views/BuildToolRail.swift
 backup="$(mktemp)"
 cp "$source_file" "$backup"
 trap 'cp "$backup" "$source_file"; rm -f "$backup"' EXIT
@@ -11,11 +13,10 @@ from pathlib import Path
 import sys
 source = Path(sys.argv[1])
 text = source.read_text()
-original = r"ForEach(ConstructionTool.networkTools, id: \.self)"
-replacement = r"ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self)"
+original = "                doneButton\n"
 if text.count(original) != 1:
-    raise SystemExit("Could not remove exactly one Select toolbar button")
-source.write_text(text.replace(original, replacement))
+    raise SystemExit("Could not remove exactly one Select (Done) toolbar button")
+source.write_text(text.replace(original, ""))
 PY
 
 set +e
@@ -33,7 +34,7 @@ xcodebuild test \
 test_status=${PIPESTATUS[0]}
 set -e
 if [[ "$test_status" == 0 ]]; then
-  echo "::error::The smoke test passed despite the missing Select button."
+  echo "::error::The smoke test passed despite the missing Select (Done) button."
   exit 1
 fi
 
@@ -46,7 +47,7 @@ import json, sys
 from pathlib import Path
 summary = json.loads(Path(sys.argv[1]).read_text())
 assert summary["failedTests"] == 1, summary
-assert any("Missing toolbar button: Select tool" in failure["failureText"]
+assert any("Missing toolbar button: Done building" in failure["failureText"]
            for failure in summary["testFailures"]), summary
-print("VERIFIED: removing Select fails testEnglishToolbar at its missing-button assertion.")
+print("VERIFIED: removing Select (Done) fails testEnglishToolbar at its missing-button assertion.")
 PY
