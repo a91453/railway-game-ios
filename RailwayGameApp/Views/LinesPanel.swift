@@ -353,8 +353,13 @@ struct LinesPanel: View {
     /// station before it or remove it, and a menu to add a stop at the end.
     private func stopsSection(_ line: ServiceLine) -> some View {
         Section {
-            // Decision 110: the line drawn as its stops, on its colour.
-            RouteStrip(names: line.stops.map { name(of: $0) }, color: Palette.lineColor(line.id, custom: line.color))
+            // Decision 110: the line drawn as its stops, on its colour,
+            // with its trains on it (decision 113).
+            RouteStrip(
+                names: line.stops.map { name(of: $0) },
+                color: Palette.lineColor(line.id, custom: line.color),
+                trains: session.world.lineTrainDots(line.id)
+            )
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
