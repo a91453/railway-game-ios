@@ -149,7 +149,9 @@ extension GameWorld {
     ///   whose centre line passes closer than ``PlacedBuildingRules/clearance``
     ///   to the square (or crosses it); ``GameError/buildingOnStation(_:)``
     ///   naming the lowest numbered station whose point is that near;
-    ///   ``GameError/idsExhausted``; or
+    ///   ``GameError/onWater(row:column:)`` naming the first cell of water
+    ///   (decision 105) under any part of the square, by row and then
+    ///   column; ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
@@ -163,6 +165,9 @@ extension GameWorld {
         }
         if let station = stations.first(where: { Self.isNear($0.point, candidate) }) {
             throw .buildingOnStation(station.id)
+        }
+        if let water = waterUnder(candidate) {
+            throw .onWater(row: water.row, column: water.column)
         }
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)
         let quote = placedBuildingQuote(kind, at: centre) ?? PlacedBuildingQuote(building: .zero, land: .zero)

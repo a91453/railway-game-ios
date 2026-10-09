@@ -180,6 +180,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
 | `placeBuilding`（schema 41） | `kind`（`"house"`、`"shop"` 或 `"office"`）、`point`（`{ "x", "y" }`，建物的中心） | `placeBuilding(_:at:)` |
 | `setZone`（schema 43） | `zone`（必填：`"residential"`、`"commercial"`、`"office"`、`"industrial"`、`"civic"`、`"leisure"`、`"noDevelopment"`、`"reserved"`，或 `null` 清除）、`rows`、`columns`（各是 `[first, last]`，含兩端） | `setZone(_:rows:columns:)` |
+| `setWater`（schema 44） | `runs`（`[{ "row", "column", "count" }]`，水域的格，同一列連續的一段；每段 1 到 65,536 格） | `setWater(_:)`（每段展開成格） |
 
 ### 結果（`expect.result`）
 
@@ -237,6 +238,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `buildingOnTrack` | `edge` | 新建物離這條邊的軌道中心線不到 128（2 m）（schema 41） |
 | `buildingOnStation` | `station` | 新建物離這座車站的點不到 128（schema 41） |
 | `invalidZoneArea` | — | 要劃分區的矩形超出世界，或一邊超過 128 格（schema 43，決策 98） |
+| `invalidTerrain` | — | 水域的格在世界外、列了兩次、上面有土地，或世界的土地是按需展開的（schema 44，決策 105） |
+| `onWater` | `row`、`column` | 玩家建物蓋在水上，或要劃分區的矩形每一格都是水（schema 44，決策 105）；指名第一格水（依列、行） |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -289,6 +292,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
 | `placedBuilding`（schema 41） | `building` | `{ "found": true, "placedBuilding": { "id", "kind", "x", "y" } }`：玩家建物的種類與中心；沒有這棟時 `{ "found": false }` | `placedBuilding(id:)` |
 | `zone`（schema 43） | `row`、`column` | `{ "found": true, "zone": "commercial" }`：那一格的分區；沒有分區時 `{ "found": false }` | `zones.zone(row:column:)` |
+| `water`（schema 44） | `row`、`column` | `{ "water": true }`：那一格是不是水 | `isWater(row:column:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
@@ -435,6 +439,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 - `cityBuildings`（schema 37，選填）：城市建物開啟時是 `{ "buildings", "d1", "d2", "d3", "d4", "existingStock" }`，建物總數、各密度的一般建物數與既有存量數；關閉時不寫。
 - `placedBuildings`（schema 41，選填）：玩家建物 `[{ "id", "kind", "x", "y" }, ...]`，依編號；沒有時不寫。
 - `zones`（schema 43，選填）：`{ "cells": n, "<zone>": n, ... }`，劃了分區的格數與每種有格的分區的格數；沒有分區時不寫。
+- `water`（schema 44，選填）：水域的格數；沒有水時不寫。
 
 只比對有意義的遊戲狀態；不包含存檔格式、內部欄位（例如下一個 ID）或任何畫面狀態。
 
@@ -678,3 +683,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 新指令 `setZone`、觀察 `zone`、結果 `invalidZoneArea`，最終狀態選填的 `zones`，`landValue` 觀察多了選填的 `companyPremium`（不是 0 時才寫）（ARCHITECTURE 決策 98，城市建造 P0-B）。沒有分區的世界不寫 `zones`，地價也沒有 `companyPremium`（只有劃了用途分區的格才有），舊的 fixture 不必改，schema 30 到 42 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到分區的 fixture；`ZoningTests` 另外手算驗證成長、升級與保護區。
 - `zoning.json`：`city-buildings-growth.json` 的世界、土地與鐵路，(1, 1) 劃商業區、(1, 0) 劃不開發。第二個午夜 Alpha 的新格蓋在劃了用途的空格 (1, 1)，是商業（1 位居民、12 個就業，D1 商業建物 3 號），不必在有人的格旁邊；Beta 只剩 (1, 0) 這個空格，是不開發，所以不蓋。土地 3 格、244／255，Gamma 的需求 66 → 67（手算的腹地分配）。超出世界的矩形是 `invalidZoneArea`。
 - `zoning-land-value.json`：自由模式、沒有車站與土地（每格都是空地的 1,000）。小住宅的中心在 (10, 12) 的中點；劃了辦公區、中點在 400 m（25,600）內的 (10, 12)、(10, 10) 地價加 600；不開發的 (11, 12)、沒有分區的 (10, 13)、28,672 外的觀光區 (10, 19) 不加；清除 (10, 12) 的分區後回到 1,000。每個值都手算，寫在 description 裡。
+
+## 決策 105：水域（schema 44）
+
+- 新指令 `setWater`、觀察 `water`、結果 `invalidTerrain`、`onWater`（帶 `row`、`column`），最終狀態選填的 `water`（水域格數）（ARCHITECTURE 決策 105，地形與土地狀態的第一步）。沒有水的世界不寫 `water`，舊的 fixture 不必改，schema 30 到 43 照樣讀取：**沒有任何既有 fixture 的預期值改變**（規則只在有水時改變結果；空白地圖沒有水）。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到水域的 fixture；`TerrainTests` 另外手算驗證成長、分區、建物、按塊讀入與存檔。
+- `water-terrain.json`：`zoning.json` 的世界、土地與鐵路，(1, 1) 是水。土地蓋在 (1, 1) 是 `invalidLand`；水蓋在有土地的 (0, 0)、或同一格列兩次是 `invalidTerrain`；(1, 1) 劃商業區是 `onWater`，第 1 列第 0–1 欄劃商業區只劃到 (1, 0)；小住宅蓋在 (1, 1) 中央或跨 (1, 0)／(1, 1) 的邊都是 `onWater`。第二個午夜 Alpha 腹地裡的空格 (1, 0) 是不開發、(1, 1) 是水，都跳過，不蓋新格（`zoning.json` 的 (1, 1) 變成商店）。土地 2 格、243／243，三站各 65 人次（`zoning.json` 是 66、66、67）。土地、建物、分區與水手算，鐵路、乘客與帳由 GameCore 取得，除了需求都和 `zoning.json` 相同。
