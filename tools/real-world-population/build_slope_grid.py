@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Mark Taiwan's steep slopes on the water file's grid, and add them to the
 app's `Resources/RealWorld/taiwan_water.json` as its `steep` (ARCHITECTURE
-decision 115).
+decision 115); with a fourth argument, also write the ground's height on
+the same grid, the app's `Resources/RealWorld/taiwan_heights.bin`
+(decision 124).
 
     python3 tools/real-world-population/build_slope_grid.py \\
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
         copernicus-dem/ \\
-        RailwayGameApp/Resources/RealWorld/taiwan_water.json
+        RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
+        RailwayGameApp/Resources/RealWorld/taiwan_heights.bin
 
 The water file (`build_water_grid.py`) gives the grid: 1.875″ cells, some
 58 × 53 m; its other contents are kept as they are. The folder holds the
@@ -31,11 +34,24 @@ The file gains `"steep": [[row, column, count, gap, count, …], …]`, as
 `"water"`, and `"slopeSource"`. Reading the tiles needs tifffile and
 imagecodecs (`pip install tifffile imagecodecs numpy`), as the population
 grid's script; about a minute.
+
+The heights are the same median heights, rounded to whole metres; water,
+and anywhere no tile reaches, is 0 (the sea). The file is little-endian:
+the magic `TWHG`, version 1 (u16) and 0 (u16); the grid's north, west and
+cell size in degrees (f64 each) and its rows and columns (u32 each); then
+rows + 1 offsets (u32) from the start of the rows' bytes, row by row, the
+last the end. A row is its heights from the west, each the one before it
+(0 before the first) plus a difference, as varints (7 bits a byte, the low
+first, the high bit set on every byte but the last): a difference d other
+than 0 is (d << 1) ^ (d >> 31), never 0; a 0 is followed by how many
+differences of 0 there are in a row. About 12 MB, and each row reads alone
+(GamePresentation's `HeightGrid`).
 """
 import glob
 import json
 import math
 import os
+import struct
 import sys
 
 import numpy as np
@@ -132,7 +148,37 @@ def encode(mask):
     return encoded
 
 
-def main(water_path, folder, out):
+def varint(value, out):
+    while value >= 0x80:
+        out.append((value & 0x7F) | 0x80)
+        value >>= 7
+    out.append(value)
+
+
+def encode_heights(heights, data):
+    """The heights file's bytes (see the module's docstring)."""
+    rows, columns = heights.shape
+    body = bytearray()
+    offsets = [0]
+    for row in heights:
+        differences = np.diff(row.astype(np.int64), prepend=0)
+        # Where each run of equal (zero or not) differences starts.
+        zero = differences == 0
+        starts = np.flatnonzero(np.concatenate(([True], zero[1:] != zero[:-1])))
+        ends = np.append(starts[1:], len(differences))
+        for start, end in zip(starts.tolist(), ends.tolist()):
+            if zero[start]:
+                body.append(0)
+                varint(end - start, body)
+            else:
+                for d in differences[start:end].tolist():
+                    varint((d << 1) ^ (d >> 31), body)
+        offsets.append(len(body))
+    header = b'TWHG' + struct.pack('<HHdddII', 1, 0, data['north'], data['west'], data['cellDegrees'], rows, columns)
+    return header + struct.pack(f'<{len(offsets)}I', *offsets) + bytes(body)
+
+
+def main(water_path, folder, out, heights_out=None):
     data = json.load(open(water_path))
     rows, step = data['rows'], data['cellDegrees']
     water = water_mask(data)
@@ -164,10 +210,16 @@ def main(water_path, folder, out):
         return round(float((mask.sum(axis=1) * cell_km2).sum()), 1)
     runs = sum((len(numbers) - 1) // 2 for numbers in data['steep'])
     print(f'{out}: {count} tiles; land {km2(~water)} km², steep {km2(steep)} km² ({runs} runs); {len(text)} bytes')
+    if heights_out:
+        dry = ~water & ~np.isnan(grid)
+        heights = np.where(dry, np.clip(np.rint(smooth), -32768, 32767), 0).astype(np.int16)
+        encoded = encode_heights(heights, data)
+        open(heights_out, 'wb').write(encoded)
+        print(f'{heights_out}: {int(dry.sum())} dry cells, {int(heights.min())} to {int(heights.max())} m; {len(encoded)} bytes')
     return data, steep, grid
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
     main(*sys.argv[1:])
