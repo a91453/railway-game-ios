@@ -5,7 +5,9 @@ import SwiftUI
 /// What is being built where the player is looking (ARCHITECTURE decision
 /// 107): a flag at each end of the track previewed, and beside its end, or
 /// beside the building shown, a pill to cancel it or build it, with what
-/// it costs. The finger that drew it is already there, so the player need
+/// it costs. Beside a place picked for a platform (decision 108) the pill
+/// says who lives and works within a station's walk, and a ring shows how
+/// far that is. The finger that drew it is already there, so the player need
 /// not look away to the details card, whose button does the same.
 /// SimCity BuildIt puts ✗ and ✓ beside what is placed, and Train Valley 2
 /// and OpenTTD's touch build ask once, at the end of a drag; the code is
@@ -21,6 +23,9 @@ struct MapBuildConfirm: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if let build = BuildConfirmation(session) {
+                if build.showsCatchment {
+                    catchmentRing(at: camera.screenPoint(of: build.anchor))
+                }
                 if let start = build.start {
                     flag("flag.fill", at: camera.screenPoint(of: start), tint: Theme.primary)
                 }
@@ -50,7 +55,37 @@ struct MapBuildConfirm: View {
             .accessibilityHidden(true)
     }
 
+    /// A station's walk around the platform site (decision 108): 800 m,
+    /// ``Land/catchmentRadius``, at the map's scale.
+    private func catchmentRing(at point: ScreenPoint) -> some View {
+        let radius = Double(Land.catchmentRadius) * camera.pointsPerUnit
+        return Circle()
+            .fill(Theme.primary.opacity(0.10))
+            .overlay(Circle().strokeBorder(Theme.primary.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
+            .frame(width: radius * 2, height: radius * 2)
+            .offset(x: point.x - radius, y: point.y - radius)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
     private func pill(_ build: BuildConfirmation) -> some View {
+        VStack(spacing: 4) {
+            if let caption = build.caption {
+                Text(verbatim: caption)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .accessibilityIdentifier("map.build.catchment")
+            }
+            buttons(build)
+        }
+        .padding(6)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .fixedSize()
+    }
+
+    private func buttons(_ build: BuildConfirmation) -> some View {
         HStack(spacing: 6) {
             Button {
                 build.cancel()
@@ -79,13 +114,11 @@ struct MapBuildConfirm: View {
             .buttonStyle(ThemeProminentButtonStyle())
             .disabled(!build.canConfirm)
             // Not "Build Track …": the details card's button has that name,
-            // and the tutorial's UI test finds it, alone, by it.
+            // and the tutorial's UI test finds it, alone, by it
+            // (``BuildConfirmation/confirmName(in:)``).
             .accessibilityLabel(Text(verbatim: build.confirmName(in: session.language)))
             .accessibilityIdentifier("map.build.confirm")
         }
-        .padding(6)
-        .glassBackground(in: Capsule())
-        .fixedSize()
     }
 
     /// Where the pill goes: under `point`, past what is shown there by
@@ -120,12 +153,35 @@ private struct BuildConfirmation {
     let clearance: Double
     let cost: Money?
     let canConfirm: Bool
-    let isTrack: Bool
+    let kind: Kind
+    /// A line over the buttons: who lives and works around a platform site
+    /// (decision 108).
+    let caption: String?
+    let showsCatchment: Bool
     let cancel: @MainActor () -> Void
     let confirm: @MainActor () -> Void
 
+    enum Kind {
+        case track, platform, building
+    }
+
     init?(_ session: GameSession) {
         switch session.tool {
+        case .network where session.networkMode == .platform:
+            // Decision 108: the place picked for a platform, and who lives
+            // and works around it.
+            guard let site = session.platformSitePlanPoint, let catchment = session.platformSiteCatchment else { return nil }
+            start = nil
+            flaggedEnd = nil
+            anchor = site
+            clearance = 18
+            cost = nil
+            canConfirm = true
+            kind = .platform
+            caption = session.catchmentText(catchment)
+            showsCatchment = true
+            cancel = { session.clearNetworkDraft() }
+            confirm = { session.addNetworkPlatform() }
         case .network:
             guard session.networkMode == .build, let preview = session.networkPreview,
                   let end = session.networkEndPlanPoint else { return nil }
@@ -135,7 +191,9 @@ private struct BuildConfirmation {
             clearance = 18
             cost = preview.cost
             canConfirm = preview.problem == nil && preview.cost != nil
-            isTrack = true
+            kind = .track
+            caption = nil
+            showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
         case .building:
@@ -146,7 +204,9 @@ private struct BuildConfirmation {
             clearance = 44
             cost = preview.cost
             canConfirm = preview.problem == nil
-            isTrack = false
+            kind = .building
+            caption = nil
+            showsCatchment = false
             cancel = { session.clearBuildingSite() }
             confirm = { _ = session.confirmBuilding() }
         case .select, .train:
@@ -155,7 +215,13 @@ private struct BuildConfirmation {
     }
 
     func confirmName(in language: DisplayLanguage) -> String {
-        let what = isTrack ? language.text("Build this stretch", "建造這一段") : language.text("Build here", "蓋在這裡")
+        // Not "Build Track …" nor "Add Platform": the details card's
+        // buttons have those names.
+        let what = switch kind {
+        case .track: language.text("Build this stretch", "建造這一段")
+        case .platform: language.text("Put a platform here", "在這裡加月台")
+        case .building: language.text("Build here", "蓋在這裡")
+        }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"
     }

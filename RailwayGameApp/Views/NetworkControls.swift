@@ -15,6 +15,9 @@ struct NetworkControls: View {
     /// Whether the track options are unfolded (decision 107): view state,
     /// folded again each time the tool is chosen.
     @State private var showsAdvanced = false
+    /// The map's population and travel layer (``MapView``'s preference of
+    /// the same key), which the platform mode can turn to population.
+    @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -166,6 +169,22 @@ struct NetworkControls: View {
 
     private var platformOptions: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // Decision 108: where people live, while choosing where a
+            // station goes; the map's layers button turns it off again.
+            if popTravelModeName != PopTravelMode.population.rawValue {
+                Button {
+                    popTravelModeName = PopTravelMode.population.rawValue
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Show where people live", "顯示人口分布"))
+                    } icon: {
+                        Image(systemName: "person.3.fill")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .font(.footnote)
+                .accessibilityIdentifier("network.showPopulation")
+            }
             Stepper(value: $session.platformCars, in: Train.minimumCars...Train.maximumCars) {
                 Text(session.platformLengthText())
                     .font(.footnote)
