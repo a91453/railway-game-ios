@@ -17,7 +17,7 @@ public enum BuildingToolMode: CaseIterable, Hashable, Sendable {
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .build: language.text("Build", "建造")
+        case .build: language.text("Put up", "建造")
         case .demolish: language.text("Demolish", "拆除")
         case .zone: language.text("Zone", "分區")
         }

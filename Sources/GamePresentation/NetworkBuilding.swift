@@ -32,7 +32,7 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .build: language.text("Build", "鋪設")
+        case .build: language.text("Lay", "鋪設")
         case .platform: language.text("Platform", "月台")
         case .remove: language.text("Remove", "拆除")
         }

@@ -56,7 +56,7 @@ final class LocalizationTests: XCTestCase {
         try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))
         let zh = DisplayLanguage.traditionalChinese
         XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 個軌段")
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建築"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建物"])
 
         XCTAssertEqual(TrainPosition.onEdge(TrackTraversal(edge: .edge(2), direction: .backward), offset: 256).displayText(in: zh), "軌段 #2 反向，距起點 256 單位")
         XCTAssertEqual(TrackNodeID.node(1).displayText(in: zh), "節點 #1")
