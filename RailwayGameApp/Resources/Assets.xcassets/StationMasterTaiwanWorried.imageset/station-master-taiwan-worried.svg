@@ -18,6 +18,6 @@
   <circle cx="56" cy="50" r="23" fill="#FFC86B" stroke="#262C57" stroke-width="4"/>
   <path d="M40 36 Q40 8 62 4 Q58 16 70 22 Q76 26 74 34 Q58 28 40 36 Z" fill="#262C57" stroke="#262C57" stroke-width="3" stroke-linejoin="round"/>
   <circle cx="56" cy="18" r="4.5" fill="#FFC86B" stroke="#262C57" stroke-width="2"/>
-  <circle cx="49.5" cy="49" r="4.6" fill="#FFFFFF" stroke="#262C57" stroke-width="1.5"/><circle cx="48.6" cy="50" r="2.6" fill="#262C57"/><path d="M43 41 L55 44" stroke="#262C57" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M52.8 45 L45.4 48.2 L52.8 51.4" stroke="#262C57" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M74 27 Q81 36.5 78.2 41.4 Q75.6 45 72 42.8 Q68.6 40 74 27 Z" fill="#8DB6EE" stroke="#262C57" stroke-width="1.8" stroke-linejoin="round"/><path d="M72.6 35.6 Q71.8 38.6 73 40.2" stroke="#FFFFFF" stroke-width="1.2" fill="none" stroke-linecap="round"/>
   <path d="M35 51 L25 55 L35 58 Z" fill="#262C57" stroke="#262C57" stroke-width="2" stroke-linejoin="round"/>
 </svg>

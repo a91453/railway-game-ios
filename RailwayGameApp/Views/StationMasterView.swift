@@ -19,11 +19,16 @@ struct StationMasterAvatar: View {
     var mood: StationMasterMood = .normal
     @Environment(\.regionStyle) private var region
 
+    /// Narrower than this, the avatar shows the head alone, a size up, so
+    /// the face still reads (decision 122).
+    private static let headOnlyBelow: CGFloat = 60
+
     var body: some View {
         Image(region.stationMasterArt + mood.rawValue)
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
+            .scaleEffect(size < Self.headOnlyBelow ? 1.45 : 1, anchor: UnitPoint(x: 0.44, y: 0.3))
             .clipShape(Circle())
             .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
             .accessibilityHidden(true)
