@@ -52,6 +52,12 @@ enum MapArt {
         // The land (and the population and travel layer over it) is drawn
         // by ``drawBase``, in a canvas of its own under this one; over
         // Apple's map (Stage E2) the base draws no land, only this edge.
+        // Decision 123: past the edge the map is shaded, so the edge reads
+        // as where the game's map ends; over a real-world map, a lone line
+        // down the screen looked like a fault in the drawing.
+        var beyond = Path(context.clipBoundingRect)
+        beyond.addPath(land)
+        context.fill(beyond, with: .color(Palette.mapEdge.opacity(0.12)), style: FillStyle(eoFill: true))
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
 
         if layers.showsCatchmentRings {
