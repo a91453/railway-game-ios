@@ -3587,6 +3587,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫 `Ci/` 的路線資訊面板把一條線畫成直的站點條（`renderLineInfoPanel`、`#line-info-pipeline-bar`），上面有移動的列車點；這裡先畫橫的站點條，列車點之後再加。程式是本專案自己寫的。
 
+### 112. 車站的路線標籤、從車站開新路線
+
+2026-10-09，UI/UX 改版第二輪的 UX-5f：在地圖上選了車站，細節卡只有站名板與一行文字，看不出哪些路線停這站，要開路線也得先打開路線面板、再按「在地圖上選」。改成選取的車站就是路線的入口。GameCore、存檔、golden、replay 都不變。
+
+1. **路線標籤**（`StationLineChips`）：選取工具下選了車站，細節卡的站名板下排出停靠這站的路線（`GameWorld.lines(callingAt:)`，依 ID），每條一個路線色外框的標籤（色點加路線名，32 點高）；點了選取那條路線（`selectLine`）並打開路線面板。路線多時左右捲動。
+2. **從這站開新路線**：標籤列最後一個按鈕（識別字 `station.newLine`）。`GameSession.startLineFromSelectedStation()` 丟掉進行中的草稿，以選取的車站為第一站，開始在地圖上點選（決策 100 的 `isPickingLineStops`），提示玩家點終點站；沒有選取車站時照 `addSelectedStationToLineDraft()` 回報失敗。App 同時打開路線面板。不改世界。
+
+**參考**：參考庫的網站在停靠站旁用有外框的轉乘標籤（`Railway/site_archive_clean/index.html` 的 `.xfer-tag`：路線色的 1.5 px 外框、圓角、粗體小字），這裡照它的樣子做成可點的標籤。從車站開路線是本專案自己的設計（SimCity BuildIt 與 TheoTown 點建物後的資訊框裡有動作按鈕），程式是本專案自己寫的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
