@@ -3843,6 +3843,21 @@ GameCore、存檔、golden、replay 都不變。
 
 **參考**：參考庫沒有可以移植的 2D 城市畫法：`Ci/` 的土地來自它沒有附上的向量圖磚；`Railway/taipei_gta_reference/` 是 three.js 的 3D 台北（真實的建物幾何），留給 Phase 8 的 3D renderer。畫法是本專案自己的；SimCity BuildIt（作者的截圖，商業遊戲）只取「建物依密度長高、用途用顏色分」的想法。
 
+### 127. 設定頁的版本與「回報問題」
+
+2026-10-09，作者的評估把「玩家問題回報入口、版本資訊」列為開放測試前必做。之前設定頁只有音樂與音效；App 裡找不到版本，測試者回報時說不出是哪一版。
+
+1. **版本**：設定頁多一段「關於」，第一列是 `CFBundleShortVersionString (CFBundleVersion)`，例如「0.4.0 (12)」，可以選取複製。
+2. **回報問題**：`ShareLink` 分享一則寫好的訊息（`ProblemReport`）：三個問題（發生了什麼事、原本預期、怎麼重現），下面是版本、系統與機型代碼（`utsname.machine`，例如 `iPhone17,1`），從遊戲選單打開時再加一行遊戲的狀態（`GameSession.problemReportGame`：空白或實景、自由或經營、劇本的 id、時間、現金、站數、路線數、列車數、存檔版本）。主旨是「沿線 0.4.0 (12)：問題回報」。
+3. **不寫死收件者**：App 不知道也不放任何人的信箱或網址（這個 repository 是公開的，也不放個人資料）；玩家在分享表選郵件、訊息或其他 App，按下傳送前什麼都沒有送出。TestFlight 的測試者也可以照舊用 TestFlight 的截圖回饋，說明寫在這一段的註腳。
+4. **文字不進字串目錄**：新的字用 `DisplayLanguage.app` 選語言、`Text(verbatim:)` 顯示，和其他 GamePresentation 寫的文字一樣，翻譯檢查不需要新的條目。
+
+GameCore、存檔、golden、replay 都不變。
+
+**沒有驗證的**：Linux 不能建置 App；分享表、版本列的樣子與 iPhone 橫拿時放不放得下，要看 CI 的 Xcode 建置與實機。
+
+**參考**：參考庫沒有對應（`Ci/` 是網站，沒有 App 的版本與回報）；做法是 iOS 的 `ShareLink`，本專案自己寫的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
