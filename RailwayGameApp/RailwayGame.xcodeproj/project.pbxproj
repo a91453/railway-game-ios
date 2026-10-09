@@ -64,6 +64,7 @@
 		8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E428A92A98C07A45636F5E3 /* trtc_times.json */; };
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
+		9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24B425FF34AEB844CE2FA815 /* StationMasterView.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
 		9C967885AEABC53789FB4165 /* RouteStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649A13DFCE7328AD6D549B82 /* RouteStrip.swift */; };
 		9CC22169A02628E88713776A /* tra_station_info.json in Resources */ = {isa = PBXBuildFile; fileRef = 150E696C9936773A65399191 /* tra_station_info.json */; };
@@ -121,6 +122,7 @@
 		1FC5AEB0936E154EABD2610F /* YearEndReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearEndReport.swift; sourceTree = "<group>"; };
 		21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapInteractionTests.swift; sourceTree = "<group>"; };
 		222E67E267AF07C25D4745C9 /* DataSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourcesView.swift; sourceTree = "<group>"; };
+		24B425FF34AEB844CE2FA815 /* StationMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationMasterView.swift; sourceTree = "<group>"; };
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		2C7E3045294CC098C802F9DA /* railway-game-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "railway-game-ios"; path = ..; sourceTree = SOURCE_ROOT; };
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				D4C0B07BD9AF82071392AB20 /* SettingsView.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */,
+				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
@@ -554,6 +557,7 @@
 				A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */,
+				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
