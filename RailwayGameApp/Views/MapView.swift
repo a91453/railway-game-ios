@@ -82,6 +82,8 @@ struct MapView: View {
     /// Which stations are named zoomed out (decision 89), worked out with
     /// the lines' map.
     @State private var stationLabels = StationLabels()
+    /// The whole map, small (decision 116), worked out with the lines' map.
+    @State private var miniMap: MiniMap?
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
@@ -247,6 +249,15 @@ struct MapView: View {
                                 popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
+                        } else {
+                            // Decision 116: the whole map, small; it gives
+                            // way to a layer's legend, which needs the height.
+                            MiniMapView(map: miniMap, visible: projection.visibleRegion, language: session.language) { point in
+                                if session.followedTrain != nil { session.stopFollowingTrain() }
+                                camera = projection.centered(atX: point.x, y: point.y)
+                                session.mapDidMove()
+                            }
+                            .padding(.trailing, 12)
                         }
                         zoomControls(camera: projection)
                     }
@@ -389,10 +400,13 @@ struct MapView: View {
             // A journey a line costs a route search a leg: on a large map
             // that is too slow for a frame.
             let world = session.world
-            let (map, labels) = await Task.detached(priority: .userInitiated) { (LineMap(world: world), StationLabels(world: world)) }.value
+            let (map, labels, mini) = await Task.detached(priority: .userInitiated) {
+                (LineMap(world: world), StationLabels(world: world), MiniMap(world: world))
+            }.value
             if !Task.isCancelled {
                 lineMap = map
                 stationLabels = labels
+                miniMap = mini
             }
         }
         .onChange(of: HeatmapKey(total: session.population?.total, realWorld: RealWorldFrame(world: session.world)), initial: true) { _, key in
