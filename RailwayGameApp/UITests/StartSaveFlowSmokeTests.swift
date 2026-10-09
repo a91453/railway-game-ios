@@ -22,6 +22,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         requiredButton("start.newGame", in: app).tap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        // Decision 114: the tools show once Build is pressed.
+        requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         requiredButton("building.kind.house", in: app).tap()
         let count = app.staticTexts["building.count"]
@@ -61,6 +63,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         tapMenuAction("menu.backToStart", in: app)
         requiredButton("start.continue", in: app).tap()
 
+        // Decision 114: the tools show once Build is pressed.
+        requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the building count after continuing")
         XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
@@ -80,6 +84,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         requiredButton("start.newGame", in: app).tap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        // Decision 114: the tools show once Build is pressed.
+        requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
         requiredButton("building.zone.commercial", in: app).tap()
@@ -104,6 +110,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         tapMenuAction("menu.backToStart", in: app)
         requiredButton("start.continue", in: app).tap()
 
+        // Decision 114: the tools show once Build is pressed.
+        requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
         XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the zoned cell count after continuing")
@@ -169,7 +177,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 30), "Missing game map")
         assertHittable(map, timeout: 30, message: "Game map is not visible")
-        for identifier in ["tool.select", "tool.network", "tool.train", "hud.menu"] {
+        for identifier in ["dock.build", "entry.lines", "hud.menu"] {
             _ = requiredButton(identifier, in: app)
         }
     }
