@@ -123,9 +123,12 @@ public struct Zoning: Hashable, Sendable {
         }
     }
 
-    /// Zones every cell of `rows` × `columns` `zone`, or clears them for
-    /// `nil`, and returns how many cells changed.
-    mutating func set(_ zone: Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>) -> Int {
+    /// Zones every cell of `rows` × `columns` `zone`, but those `skipping`
+    /// (water, decision 105), which hold none, or clears them for `nil`, and
+    /// returns how many cells changed.
+    mutating func set(
+        _ zone: Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>, skipping: (_ row: Int, _ column: Int) -> Bool = { _, _ in false }
+    ) -> Int {
         var kept: [ZonedCell] = [], changed = 0, unchanged = 0
         kept.reserveCapacity(cells.count)
         for cell in cells {
@@ -142,7 +145,7 @@ public struct Zoning: Hashable, Sendable {
         var added: [ZonedCell] = []
         added.reserveCapacity(rows.count * columns.count)
         for row in rows {
-            for column in columns {
+            for column in columns where !skipping(row, column) {
                 added.append(ZonedCell(row: row, column: column, zone: zone))
             }
         }
@@ -201,15 +204,27 @@ extension GameWorld {
     /// zoned cells near the company's buildings are worth more
     /// (``landValue(row:column:)``). Returns how many cells changed.
     ///
+    /// Water is never zoned (decision 105): its cells in the rectangle are
+    /// left without a zone, and the rest zoned.
+    ///
     /// - Throws: ``GameError/invalidZoneArea`` for a rectangle reaching
-    ///   outside the world or more than ``Zoning/maximumSide`` cells a side.
+    ///   outside the world or more than ``Zoning/maximumSide`` cells a side;
+    ///   ``GameError/onWater(row:column:)`` naming its first cell when every
+    ///   cell of the rectangle is water and `zone` is not `nil`.
     @discardableResult
     public mutating func setZone(_ zone: Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>) throws(GameError) -> Int {
         guard rows.lowerBound >= 0, columns.lowerBound >= 0,
               rows.upperBound < Land.rows(in: bounds), columns.upperBound < Land.columns(in: bounds),
               rows.count <= Zoning.maximumSide, columns.count <= Zoning.maximumSide
         else { throw .invalidZoneArea }
-        return zones.set(zone, rows: rows, columns: columns)
+        guard zone != nil, terrain.hasWater(rows: rows, columns: columns) else {
+            return zones.set(zone, rows: rows, columns: columns)
+        }
+        let terrain = terrain
+        guard rows.contains(where: { row in columns.contains { !terrain.isWater(row: row, column: $0) } }) else {
+            throw .onWater(row: rows.lowerBound, column: columns.lowerBound)
+        }
+        return zones.set(zone, rows: rows, columns: columns) { terrain.isWater(row: $0, column: $1) }
     }
 
     // MARK: - Growth

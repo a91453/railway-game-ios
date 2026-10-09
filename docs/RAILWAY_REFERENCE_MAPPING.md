@@ -1130,3 +1130,22 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：格是 4,096 單位（64 m）；一次最多 128 格一邊；地價加成 600 美分／m²、距離 25,600 單位（400 m），比較的是平方（整數）；新格的人數以 `LandDemand.newCellResidents`（4）為底。
 
 外部專案（研究文件 §3 已讀，這次再確認做法，沒有程式碼進入本 repository）：Micropolis（GPL-3.0）分區依需求閥與地價評估成長、Cytopia（GPL-3.0）每格的分區層、Citybound（AGPL-3.0）多邊形分區，都是 copyleft，只取「分區是另一層」「地價高的分區先長」的想法；A 列車 Exp（商業遊戲，說明書）的開發凍結區與保留地、子公司誘導開發，只參考玩法。規則與數值是本專案的。
+
+## 地形：水域（決策 105）
+
+2026-10-09 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`relevant_source_paths.txt`）、`Railway/taipei_gta_reference/`（`00_READ_ME_FIRST.md`、`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找海岸線、河湖、海陸遮罩、水上的建造限制與橋。參考庫有一份海岸線資料與幾個可以照著做的規則；**沒有河湖的資料，也沒有「城鎮不往水上長」的規則**。`Simulator/` 只有地形筆刷與高度場、沒有水；`MapBuilder/` 的 Overpass 查詢只有建物、公園、行政區與路名，沒有水。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/data/taiwan_land.json`（內政部直轄市、縣市界線 1140318 合併的海岸線，GeoJSON MultiPolygon，39 塊，RDP 約 150 m；政府資料開放授權條款第 1 版，`index.html` 標示「臺灣輪廓：內政部」） | `tools/real-world-population/build_water_grid.py` 的第四個參數：和 OSM 的海岸線逐格比較（99.79% 一致） | 只用來核對，不打包：它畫到低潮線（潮間帶算陸地）、比 64 m 格粗；遮罩用 OSM（決策 105 第 2 點） |
+| `Railway/site_archive_clean/index.html` 的 `glLandLoad()`／`glLandInstall()`（陸地是底圖下的填色，海是背景色，`GL_SEA`） | 不畫水域圖層：Apple 地圖與 OSM 底圖（決策 97）本來就畫了水 | 只取想法：參考也不另外畫水，只畫陸地 |
+| `Railway/site_archive_clean/rail-3d/geo.js` 的 `inRing`／`inPolygon`（射線法、外環減內環） | `build_water_grid.py` 的 `fill`（每列的交點排序、成對填滿，奇偶規則） | 改寫：逐點判斷改成逐列掃描（9,296 × 8,064 格），同一個奇偶規則 |
+| `Railway/taipei_gta_reference/source/assets/engine-DKps_Gq_.js` 的 `surfaceAt(x, z)`（每個位置一種地面，`'water'` 是其中之一） | `Terrain`、`GameWorld.isWater(row:column:)`：和土地用途分開的一層 | 只取想法：參考是解析的曲線，這裡是存檔的格 |
+| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `UD()`（建物的 9 個取樣點都要落在允許的地面 `PD`，否則不放） | `placeBuilding` 的 `waterUnder(_:)`：正方形碰到的每一格都不能是水，拒絕時指名第一格（`onWater`） | 改寫：取樣點改成正方形碰到的整格，整數比較 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`（建造是否合法放在指令裡，不放在 renderer）；`relevant_source_paths.txt` 列的 OpenTTD `tunnelbridge_cmd.cpp`、`terraform_cmd.cpp`（只有路徑） | `placeBuilding`、`setZone`、`spread(towards:)` 在 GameCore 裡檢查水；橋與整地留給之後 | 照做（規則在 GameCore）；OpenTTD 的檔案沒有收錄 |
+| `MapBuilder/reference_snapshot/_next/static/chunks/371-b21952458407b892.js`（打包的 osmtogeojson：multipolygon 的外環與內環、`waterway` 白名單 riverbank、dock） | `build_water_grid.py` 的 `WATER_TAGS`（`natural=water`、`waterway=riverbank`、`dock`、`landuse=reservoir`）；面由 pyosmium 組 | 照它的標籤清單；組多邊形用 pyosmium（決策 93） |
+| （參考沒有） | 河湖的資料、魚塭除外的規則、`Terrain` 的段與按塊讀入、`setWater`、`expandLand(_:cells:water:)`、`invalidTerrain`、`onWater`、`LandImport` 只分給乾格、`WaterGrid`、存檔版本 24、golden schema 44 | gap → 原生 |
+
+固定小數：水域格 1.875″（人口格 30″ ÷ 16）；遊戲的格 4,096 單位（64 m），每格看中點落在哪個水域格；區塊 16 × 16 格。
+
+外部專案（只取想法，沒有程式碼進入本 repository）：OpenTTD（GPL-2.0）的水是一種格（`MP_WATER`），城鎮的道路與房子不蓋在水上（`DC_NO_WATER`），過水要橋；Simutrans（Artistic License）的水是水位以下的地面；OSMCoastline（GPL-3.0）把 `natural=coastline` 接成環、陸地在左邊；A/B Street 的 OSM 匯入只確認了它處理海岸線，沒有取用。資料：OpenStreetMap（ODbL 1.0，資料來源畫面已列），內政部的海岸線只在工具裡核對、沒有打包。

@@ -145,6 +145,25 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap the map where it goes first."))
     }
 
+    /// Decision 105: a site on water says so, in both languages, and
+    /// cannot be built; zoning only water is refused alike.
+    func testASiteOnWaterSaysSo() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setWater((0...4).flatMap { row in (0...31).map { CellPosition(row: row, column: $0) } })
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .house
+        session.tapBuildingTool(at: PlanPoint(x: 10_240, y: 10_240), reach: 0)
+        XCTAssertEqual(session.buildingPreviewText, "Nothing can be built or zoned on water.")
+        XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, false)
+        XCTAssertFalse(session.confirmBuilding())
+        XCTAssertTrue(session.world.placedBuildings.isEmpty)
+        XCTAssertEqual(GameError.onWater(row: 2, column: 2).playerMessage(in: .traditionalChinese), "水上不能蓋建物，也不能劃分區。")
+        // On the shore, it can.
+        session.tapBuildingTool(at: PlanPoint(x: 10_240, y: 21_000), reach: 0)
+        XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, true)
+    }
+
     func testFreePlaySaysWhichCityBuildingsComeDownAndReadsInChinese() throws {
         var world = try makeWorld(width: 131_072, height: 98_304)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])

@@ -194,4 +194,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// A rectangle of cells to zone that reaches outside the world, or is
     /// more than ``Zoning/maximumSide`` cells a side (decision 98).
     case invalidZoneArea
+    /// Water with a cell outside the world or its blocks read, listed twice,
+    /// or where there is land; or set on a world whose land is read as it is
+    /// needed (decision 105).
+    case invalidTerrain
+    /// A building would stand on water, or every cell to zone is water
+    /// (decision 105): the first such cell, by row and then column.
+    case onWater(row: Int, column: Int)
 }
