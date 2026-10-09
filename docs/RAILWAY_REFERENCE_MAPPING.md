@@ -1207,3 +1207,14 @@ V 實際放行 → T、U（保證不互穿）
 
 外部只取想法，沒有用到素材：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（動物站長的前例）；作者提供的 [neonwatty/logo-designer-skill](https://github.com/neonwatty/logo-designer-skill)（MIT，取它的流程：幾種方案讓作者挑、深淺色與小尺寸檢查）與 [supermemoryai/skills 的 svg-animations](https://github.com/supermemoryai/skills/blob/main/svg-animations/SKILL.md)（沒有授權，只讀想法）。
 
+## 城市建物畫在一般地圖上（決策 126）
+
+查 `a91453/railway-reference-private` `05d7000`：沒有 2D 地圖上依遊戲狀態畫城市建物的做法。
+
+| 參考檔案／函式 | 目標 | 方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/`（土地來自沒有附上的向量圖磚） | — | 沒有可移植的 |
+| `Railway/taipei_gta_reference/source/assets/buildWorker-*.js`（three.js 的 3D 台北，`extrudeXY` 擠出建物） | — | 不用：真實的 3D 幾何，留給 Phase 8 |
+| （參考沒有） | `CitySkyline`、`MapArt.drawSkyline`、`Palette.cityRoof`／`cityWall`／`parkGround`／`farmGround`、`SkylineLayer` | gap → 原生 |
+
+外部只取想法：SimCity BuildIt（作者的截圖，商業遊戲）建物依密度長高、用途用顏色分。沒有程式碼或素材。
