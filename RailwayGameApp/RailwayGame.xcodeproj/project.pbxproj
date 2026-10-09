@@ -64,6 +64,7 @@
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
 		9C344F54682319D6B608F56A /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908DF494BE421AA1D9D8EE60 /* InspectorView.swift */; };
+		9C967885AEABC53789FB4165 /* RouteStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649A13DFCE7328AD6D549B82 /* RouteStrip.swift */; };
 		9CC22169A02628E88713776A /* tra_station_info.json in Resources */ = {isa = PBXBuildFile; fileRef = 150E696C9936773A65399191 /* tra_station_info.json */; };
 		A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C0B07BD9AF82071392AB20 /* SettingsView.swift */; };
 		A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */ = {isa = PBXBuildFile; fileRef = F04BA3646C6BDB8801CF770B /* station_transfers.json */; };
@@ -140,6 +141,7 @@
 		56ABC6AFF31D91F9079F6044 /* trtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc.json; sourceTree = "<group>"; };
 		58D2ECE334BAC4B7C9744680 /* whoosh.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = whoosh.wav; sourceTree = "<group>"; };
 		611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetOverviewSheet.swift; sourceTree = "<group>"; };
+		649A13DFCE7328AD6D549B82 /* RouteStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStrip.swift; sourceTree = "<group>"; };
 		68B0C0FD89F59C53A9685C67 /* sanying_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_times.json; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
@@ -298,6 +300,7 @@
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
 				C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */,
+				649A13DFCE7328AD6D549B82 /* RouteStrip.swift */,
 				D4C0B07BD9AF82071392AB20 /* SettingsView.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
@@ -544,6 +547,7 @@
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
 				7620F6925D1B67C07C540F42 /* RegionStyle.swift in Sources */,
+				9C967885AEABC53789FB4165 /* RouteStrip.swift in Sources */,
 				A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,

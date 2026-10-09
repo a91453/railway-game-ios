@@ -353,6 +353,8 @@ struct LinesPanel: View {
     /// station before it or remove it, and a menu to add a stop at the end.
     private func stopsSection(_ line: ServiceLine) -> some View {
         Section {
+            // Decision 110: the line drawn as its stops, on its colour.
+            RouteStrip(names: line.stops.map { name(of: $0) }, color: Palette.lineColor(line.id, custom: line.color))
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
@@ -600,7 +602,11 @@ struct LinesPanel: View {
                     } icon: {
                         Image(systemName: "tram.fill")
                     }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                // Decision 110: the section's main action, as the theme draws one.
+                .buttonStyle(ThemeProminentButtonStyle())
                 .disabled(session.world.economy.balance < plan.cost)
                 .accessibilityIdentifier("line.staff.start")
             } else {
@@ -686,6 +692,8 @@ struct LinesPanel: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.warning)
                 }
+                // Decision 110: the new line drawn as its stops.
+                RouteStrip(names: stops.map { name(of: $0) }, color: Theme.primary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: names(stops))
                         .font(.subheadline)
@@ -696,9 +704,15 @@ struct LinesPanel: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.draft.stops")
             }
-            Button("Create Line") {
+            Button {
                 session.createLineFromDraft()
+            } label: {
+                Text("Create Line")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
             }
+            // Decision 110: the section's main action, as the theme draws one.
+            .buttonStyle(ThemeProminentButtonStyle())
             .disabled(stops.count < 2)
             .accessibilityIdentifier("line.draft.create")
             if !draft.isEmpty {
