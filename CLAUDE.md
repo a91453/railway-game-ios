@@ -251,6 +251,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Work on a task branch and open a pull request. Never commit to `main`, never
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
+- Before drawing or changing any icon, glyph, character or illustration for
+  the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
+  chose and how to check a drawing before showing it.
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,
