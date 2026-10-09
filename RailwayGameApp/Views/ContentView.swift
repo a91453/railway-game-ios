@@ -8,8 +8,9 @@ import SwiftUI
 /// dock (the tools, the lines and the company's figures, Undo) at the
 /// bottom leading corner, and the details card (the selection and the
 /// tool's options) at the trailing side, only while there is something to
-/// show. The same on every device: a phone is held on its side (decision
-/// 106), an iPad either way.
+/// show; the lines, a station and the company's figures slide in at that
+/// side too, rather than as sheets over the map. The same on every device:
+/// a phone is held on its side (decision 106), an iPad either way.
 struct ContentView: View {
     let session: GameSession
     /// Saves the game and goes back to the start screen (Stage C4).
@@ -39,8 +40,9 @@ struct ContentView: View {
             // largest standard size instead of pushing the map off screen.
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             // Presented from here, above the layout, so rebuilding it
-            // neither closes the panel nor loses what is typed in it.
-            .sheet(item: $screen.panel) { panel in
+            // neither closes the panel nor loses what is typed in it. The
+            // panels shown beside the map are not presented (decision 106).
+            .sheet(item: presentedPanel) { panel in
                 panelSheet(panel)
             }
             .environment(screen)
@@ -97,24 +99,40 @@ struct ContentView: View {
         return nil
     }
 
+    /// The open panel when it is one presented as a sheet; the panels
+    /// beside the map are not (``GameScreenState/Panel/isBesideMap``).
+    /// Turning to one of those drops the sheet without closing the panel.
+    private var presentedPanel: Binding<GameScreenState.Panel?> {
+        Binding {
+            screen.panel.flatMap { $0.isBesideMap ? nil : $0 }
+        } set: { panel in
+            if panel != nil || screen.panel?.isBesideMap != true {
+                screen.panel = panel
+            }
+        }
+    }
+
+    /// The panels beside the map (decision 106): the lines, a station and
+    /// the company's figures. A phone on its side shows every sheet over
+    /// the whole screen, so these, which the map is used with (picking a
+    /// line's stations, choosing another station), slide in at the
+    /// trailing side instead, and the map stays in sight and in reach.
+    @ViewBuilder
+    private func sidePanel(_ panel: GameScreenState.Panel) -> some View {
+        switch panel {
+        case .lines: LinesPanel(session: session)
+        case .station: StationPanel(session: session)
+        case .economy: EconomyPanel(session: session)
+        default: EmptyView()
+        }
+    }
+
     @ViewBuilder
     private func panelSheet(_ panel: GameScreenState.Panel) -> some View {
         switch panel {
-        case .lines:
-            LinesPanel(session: session)
-                .presentationDetents([.medium, .large])
-                // The map stays usable behind the half-height sheet, so
-                // stations can be selected for a new line.
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-        case .economy:
-            EconomyPanel(session: session)
-                .presentationDetents([.medium, .large])
-        case .station:
-            StationPanel(session: session)
-                .presentationDetents([.medium, .large])
-                // The map stays usable behind the half-height sheet, so
-                // another station can be selected.
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        case .lines, .station, .economy:
+            // Shown beside the map instead (``sidePanel(_:)``).
+            EmptyView()
         case .timetable:
             TimetableEditor(session: session)
                 .presentationDetents([.medium, .large])
@@ -143,7 +161,10 @@ struct ContentView: View {
             let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
             let margin = Self.margin
             let cardWidth = min(Self.cardWidth, (proxy.size.width * Self.cardMaxShare).rounded())
-            let isOpen = ControlDetails.isOpen(session, choice: detailsChoice)
+            let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
+            let sideWidth = min(Self.sidePanelWidth, (proxy.size.width * Self.sidePanelMaxShare).rounded())
+            // The details card gives way to a panel beside the map.
+            let isOpen = sidePanel == nil && ControlDetails.isOpen(session, choice: detailsChoice)
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
@@ -152,9 +173,10 @@ struct ContentView: View {
             map
                 .environment(\.mapInsets, EdgeInsets(
                     top: pillDepth, leading: 0, bottom: dockSize.height,
-                    trailing: isOpen ? cardWidth + margin : 0
+                    trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                 ))
-                .environment(\.mapTrailingInsetDepth, isOpen ? cardDepth : 0)
+                // A panel beside the map runs down its whole side.
+                .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
                 .overlay(alignment: .topLeading) {
                     StatusPill(session: session, launcher: launcher)
                         .padding([.top, .leading, .trailing], margin)
@@ -178,7 +200,26 @@ struct ContentView: View {
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     .padding(.bottom, strip)
                 }
+                .overlay(alignment: .trailing) {
+                    if let sidePanel {
+                        self.sidePanel(sidePanel)
+                            .frame(width: sideWidth)
+                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .strokeBorder(Theme.panelBorder, lineWidth: 1)
+                            }
+                            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+                            // Under the status pill, which it would cover
+                            // on a phone.
+                            .padding(.top, pillDepth)
+                            .padding([.top, .trailing], margin)
+                            .padding(.bottom, strip + margin)
+                            .transition(.move(edge: .trailing))
+                    }
+                }
                 .animation(.easeInOut(duration: 0.2), value: isOpen)
+                .animation(.easeInOut(duration: 0.25), value: sidePanel)
         }
     }
 
@@ -186,6 +227,10 @@ struct ContentView: View {
     /// of the screen's width it takes on a phone.
     private static let cardWidth: CGFloat = 340
     private static let cardMaxShare: CGFloat = 0.4
+    /// A panel beside the map's width, and the most of the screen's width
+    /// it takes on a phone.
+    private static let sidePanelWidth: CGFloat = 420
+    private static let sidePanelMaxShare: CGFloat = 0.5
     private static let margin: CGFloat = 10
 
     private var map: some View {
@@ -357,6 +402,15 @@ final class GameScreenState {
         case goals
 
         var id: Self { self }
+
+        /// Shown beside the map rather than presented over it (decision
+        /// 106, ``ContentView``): the panels the map is used with.
+        var isBesideMap: Bool {
+            switch self {
+            case .lines, .station, .economy: true
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals: false
+            }
+        }
     }
 
     var panel: Panel?

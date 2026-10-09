@@ -13,7 +13,9 @@ import SwiftUI
 /// `GameWorld` command.
 struct EconomyPanel: View {
     let session: GameSession
-    @Environment(\.dismiss) private var dismiss
+    /// Closes it (decision 106: shown beside the map, not presented, so
+    /// the environment's dismiss would do nothing).
+    @Environment(GameScreenState.self) private var screen
     @State private var period: FinancePeriod = .day
     @State private var statement: Statement = .income
     @State private var flatFare: Int64 = 500
@@ -39,7 +41,7 @@ struct EconomyPanel: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        dismiss()
+                        screen.panel = nil
                     }
                 }
             }

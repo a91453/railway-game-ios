@@ -15,7 +15,9 @@ import SwiftUI
 /// `GameSession` method that applies `GameWorld` commands.
 struct StationPanel: View {
     let session: GameSession
-    @Environment(\.dismiss) private var dismiss
+    /// Closes it (decision 106: shown beside the map, not presented, so
+    /// the environment's dismiss would do nothing).
+    @Environment(GameScreenState.self) private var screen
     /// The name being typed for the station, while its rename alert is up.
     @State private var renaming: String?
     /// Whether the demolish confirmation is up.
@@ -74,7 +76,7 @@ struct StationPanel: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        dismiss()
+                        screen.panel = nil
                     }
                 }
             }
