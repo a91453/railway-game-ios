@@ -65,6 +65,19 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 顏色的出處與這一輪改版的研究紀錄見 [`research/UX_REDESIGN_STUDY.md`](research/UX_REDESIGN_STUDY.md)。
 
+### 站長（決策 122）
+
+台灣的站長是提著號誌燈的黃山雀（`RegionStyle.stationMasterArt` = `StationMasterTaiwan`），圖在 `Assets.xcassets`，三種表情各一張多色 SVG，淺色、深色共用：
+
+| 顏色 | 用在 |
+| --- | --- |
+| `#FFC86B` | 身體、燈、站徽（App 圖示的黃點） |
+| `#262C57` | 外框、羽冠、喉部的黑紋、尾巴 |
+| `#5B6189`（白點） | 翅膀 |
+| `#1D4F91` | 領巾（和 `nameboard` 同一個藍皮普快的藍） |
+| `#FFE9BC` | 燈的光暈；擔心時燈變暗（`#E8D9B0`）、沒有光暈 |
+| `#BDEFE7`、`#12A08F`／`#D4FAF4` | 底色與一段軌道（圖示的軌道） |
+
 ## 地圖（決策 84）
 
 2026-10-08 作者決定，地圖不等 Phase 8，先改成圖示的畫風（`Palette`），並畫出路線、共線區段與轉乘群組（見 ARCHITECTURE 決策 84）。
