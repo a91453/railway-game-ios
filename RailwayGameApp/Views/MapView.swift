@@ -143,6 +143,16 @@ struct MapView: View {
             // folded control card the edge is free.
             let besideTrailing = viewport.height - screenEdges.bottom - bottomTrailingHeight
                 < screenEdges.top + trailingInsetDepth
+            // Decision 123: beside a card or panel that takes more than a
+            // third of the width (a phone's), the zoom buttons would stand in
+            // the middle of the map, over what was selected; they give way,
+            // as the overview map does, and a pinch still zooms. Measured
+            // with their own fixed height (44 points and two paddings of
+            // 12 each side), not the column's, which they leave. The
+            // tutorial points at them, so they stay while it runs.
+            let zoomGivesWay = session.tutorial == nil
+                && insets.trailing > viewport.width / 3
+                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
 
             VStack(spacing: 0) {
@@ -320,7 +330,9 @@ struct MapView: View {
                             }
                             .padding(.trailing, 12)
                         }
-                        zoomControls(camera: projection)
+                        if !zoomGivesWay {
+                            zoomControls(camera: projection)
+                        }
                     }
                     .padding(12)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomTrailingHeight = $0 }
